@@ -19,9 +19,15 @@
 > completo incl. `Float`/`Boolean`, cujo caminho genérico de downcall já é exercido
 > pelos e2es de Int/Long/Double/String/void (`pow` 2.0^10 →
 > `1024.0`, `strstr("hello world","wor")` → `world`; `srand(Int)` default `void`
-> via `kof_ffi_void`). Paridade ainda não alcançada: struct/pointer (D6),
-> callbacks/upcalls, variadics e handles opacos seguem `FFI001`; JS `FFI002` /
-> Native `FFI001` (§61) permanecem gaps honestos por target (R7). Decomposição
+> via `kof_ffi_void`). **Paridade JS FECHADA (fatia 3.6, mesmo dia):** a mesma ABI
+> escalar agora binda no target JS por um bridge FFM no host `KofJsFfiBridge`
+> (`extern`→`kofFfi`→`ProxyExecutable` `kof_platform.ffi` no runner GraalJS/node);
+> `FfiE2ETest` soma 7 casos `assertJvmJsParity` provando igualdade byte-a-byte JVM↔JS
+> (doubles `3.0`/`1024.0`, `Long` via `atol`→`labs`, `char*`→String, `void`); o browser
+> não tem host → degrade honesto em runtime (R7), e assinaturas não-escalares seguem
+> `FFI002`. Paridade ainda não alcançada: struct/pointer (D6),
+> callbacks/upcalls, variadics e handles opacos seguem `FFI001`;
+> Native `FFI001` (§61) permanece gap honesto por target (R7). Decomposição
 > completa em §R3-fatias do plano universal.
 >
 > **18/09 — §132 FECHADO (#83-JS) — o KofJS roda o supervisor OTP com paridade

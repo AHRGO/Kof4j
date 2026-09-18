@@ -133,15 +133,22 @@ Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
    FFM layout + Kof `Type` on the same generic downcall path, locked by
    `FfiSignatureTest` (libc offers no clean, deterministic `float`/`_Bool` call site
    reachable from Kof source). One runtime helper `kof_ffi(lib, name, sig,
-  Object[])` (FFM downcall; `sig` encodes the layout) replaced the old
-  `kof_ffi_i`/`_si`/`_dd` trio; gate `CompilerPipeline.isExternBound`. Still NOT
-  bound — honest `FFI001` at compile time, never a silent stub (R6): struct/array/pointer
-  ABI (design D6, ⛔ maintainer), callbacks/upcalls (3.4), variadics (3.5, ⛔) and
-  opaque handles/out-buffers (3.3, ⛔). JS emits
-  `FFI002` ("FFI not available on the JS target"); Native emits `FFI001`
-  (`<target>` not supported yet). A missing lib/symbol fails at **runtime** with
-  a `kof_ffi` exception naming `lib::symbol` (stack trace, not a surgical
-   message). Remaining R3 slices (structs/D6, callbacks/upcalls, JS/Native parity)
+   Object[])` (FFM downcall; `sig` encodes the layout) replaced the old
+   `kof_ffi_i`/`_si`/`_dd` trio; gate `CompilerPipeline.isExternBound`. **JS parity
+   (slice 3.6, 18/09)**: the SAME scalar ABI binds on the JS target through a host FFM
+   bridge `KofJsFfiBridge` (identical downcall to `kof_ffi`) reached via
+   `extern`→`kofFfi`→`kof_platform.ffi` on the GraalJS/node runner — `FfiE2ETest`
+   asserts byte-for-byte JVM↔JS equality (abs/atoi/sqrt/pow/`atol`→`labs` Long/strstr/
+   srand void); a browser has no `kof_platform.ffi` host so an extern call throws an
+   honest **runtime** error (R7, the same degrade as `kof.io`), and a **non-scalar**
+   signature (array/struct/pointer) still emits `FFI002` at compile time. Still NOT
+   bound — honest `FFI001` at compile time on JVM/Native, never a silent stub (R6): struct/array/pointer
+   ABI (design D6, ⛔ maintainer), callbacks/upcalls (3.4), variadics (3.5, ⛔) and
+   opaque handles/out-buffers (3.3, ⛔). Native emits `FFI001`
+   (`<target>` not supported yet, §61). A missing lib/symbol fails at **runtime** with
+   a `kof_ffi` exception naming `lib::symbol` (stack trace, not a surgical
+    message). Remaining R3 slices (structs/D6, callbacks/upcalls, variadics, handles,
+    Native parity; **JS scalar parity closed**)
    in
    `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431);
   `extern "c"` on Native depends on §61.

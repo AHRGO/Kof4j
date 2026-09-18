@@ -233,7 +233,7 @@ public final class CompilerPipeline {
                         String lib = ext.library() != null ? " in " + ext.library() : "";
                         String code = driver.target == Target.JS ? "FFI002" : "FFI001";
                         String msg = driver.target == Target.JS
-                                ? "extern '" + ext.name() + "'" + lib + ": FFI not available on the JS target (FFI002)"
+                                ? "extern '" + ext.name() + "'" + lib + ": FFI signature not bound on the JS target yet (FFI002)"
                                 : "extern '" + ext.name() + "'" + lib + ": FFI binding not implemented on the "
                                         + driver.target + " target yet (FFI001)";
                         diagnostics.error(sp != null ? sp.file() : "", sp != null ? sp.line() : 0,
@@ -445,7 +445,11 @@ public final class CompilerPipeline {
 
     // ── FFI (TIER 2.1.4) — binding suportado por target ──
     static boolean isExternBound(CompilerDriver driver, ExternalFunctionNode ext) {
-        if (driver.target == Target.JVM) {
+        // JVM e JS (runner) compartilham a MESMA ABI escalar: o KofJS roda no
+        // host GraalJS/node, que É uma JVM com java.lang.foreign (fatia 3.6 —
+        // bridge `KofJsFfiBridge` idêntico ao `kof_ffi` do target JVM; o browser
+        // não tem host e degrada em runtime como o resto do kof_platform, R7).
+        if (driver.target == Target.JVM || driver.target == Target.JS) {
             if (FfiSignature.returnChar(ext.returnType()) == null) return false;
             for (var param : ext.parameters()) {
                 if (FfiSignature.paramChar(param.type()) == null) return false;

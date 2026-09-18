@@ -19,9 +19,15 @@
 > whose generic downcall path is already exercised by the Int/Long/Double/String/void
 > e2es (`pow` 2.0^10 → `1024.0`, `strstr("hello world","wor")` → `world`;
 > `srand(Int)` default `void` via
-> `kof_ffi_void`). Parity not yet reached: struct/pointer (D6), callbacks/upcalls,
-> variadics and opaque handles stay `FFI001`; JS `FFI002` / Native `FFI001` (§61)
-> remain honest per-target gaps (R7). Full decomposition in §R3-slices of the
+> `kof_ffi_void`). **JS parity CLOSED (slice 3.6, same day):** the same scalar ABI
+> now binds on the JS target through a host FFM bridge `KofJsFfiBridge` (`extern`→
+> `kofFfi`→`kof_platform.ffi` `ProxyExecutable` on the GraalJS/node runner); `FfiE2ETest`
+> adds 7 `assertJvmJsParity` cases proving byte-for-byte JVM↔JS equality (doubles
+> `3.0`/`1024.0`, `Long` via `atol`→`labs`, `char*`→String, `void`); a browser has no
+> host → honest runtime degrade (R7), and non-scalar signatures still `FFI002`. Parity
+> not yet reached: struct/pointer (D6), callbacks/upcalls,
+> variadics and opaque handles stay `FFI001`; Native `FFI001` (§61)
+> remains an honest per-target gap (R7). Full decomposition in §R3-slices of the
 > universal plan.
 >
 > **18/09 — §132 CLOSED (#83-JS) — KofJS runs the OTP supervisor to parity

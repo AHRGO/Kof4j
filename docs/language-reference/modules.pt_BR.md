@@ -134,17 +134,24 @@ define as assinaturas. **Experimental** como superfície (muda entre versões).
   corretos no MESMO caminho genérico de downcall, travado por `FfiSignatureTest`
   (a libc não oferece um call site `float`/`_Bool` limpo e determinístico alcançável
   a partir do fonte Kof). Um único helper de
-  runtime `kof_ffi(lib, name, sig, Object[])` (downcall FFM; `sig` codifica o
-  layout) substituiu o trio `kof_ffi_i`/`_si`/`_dd`; gate
-  `CompilerPipeline.isExternBound`. Ainda NÃO bound — `FFI001` honesto em
-  compilação, nunca stub silencioso (R6): ABI de struct/array/pointer (design D6,
-  ⛔ mantenedora), callbacks/upcalls (3.4), variadics (3.5, ⛔) e handles
-  opacos/out-buffers (3.3, ⛔). JS emite `FFI002` ("FFI not
-  available on the JS target"); o Native emite `FFI001` (`<target>` not supported
-  yet). Lib/símbolo ausente falha em **runtime** com exceção `kof_ffi` nomeando
-  `lib::symbol` (stack trace, não mensagem cirúrgica). Fatias R3 restantes
-  (structs/D6, callbacks/upcalls, paridade JS/Native)
-  em
+   runtime `kof_ffi(lib, name, sig, Object[])` (downcall FFM; `sig` codifica o
+   layout) substituiu o trio `kof_ffi_i`/`_si`/`_dd`; gate
+   `CompilerPipeline.isExternBound`. **Paridade JS (fatia 3.6, 18/09)**: a MESMA ABI
+   escalar binda no target JS via bridge FFM no host `KofJsFfiBridge` (downcall
+   idêntico ao `kof_ffi`) alcançado por `extern`→`kofFfi`→`kof_platform.ffi` no runner
+   GraalJS/node — `FfiE2ETest` afirma igualdade byte-a-byte JVM↔JS (abs/atoi/sqrt/pow/
+   `atol`→`labs` Long/strstr/srand void); o browser não tem host `kof_platform.ffi`,
+   então uma chamada `extern` lança erro honesto em **runtime** (R7, o mesmo degrade do
+   `kof.io`); e uma assinatura **não-escalar** (array/struct/pointer) ainda emite
+   `FFI002` em compilação. Ainda NÃO bound — `FFI001` honesto em
+   compilação (JVM/Native), nunca stub silencioso (R6): ABI de struct/array/pointer (design D6,
+   ⛔ mantenedora), callbacks/upcalls (3.4), variadics (3.5, ⛔) e handles
+   opacos/out-buffers (3.3, ⛔). O Native emite `FFI001` (`<target>` not supported
+   yet, §61). Lib/símbolo ausente falha em **runtime** com exceção `kof_ffi` nomeando
+   `lib::symbol` (stack trace, não mensagem cirúrgica). Fatias R3 restantes
+   (structs/D6, callbacks/upcalls, variadics, handles, paridade Native; **paridade
+   escalar do JS fechada**)
+   em
   `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431);
   `extern "c"` no Native depende do §61.
 

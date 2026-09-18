@@ -33,6 +33,19 @@ public final class JsRuntimeIo {
                 kof_platform.print(String(x));
             }
 
+            // R3 fatia 3.6 (JS FFI parity): extern lowers to kofFfi/kofFfiVoid,
+            // which delegate to the host runner's kof_platform.ffi (KofJsFfiBridge,
+            // java.lang.foreign on the GraalJS/node host). No kof_platform host in a
+            // browser -> the kof_platform Proxy throws an honest runtime error, the
+            // same degrade as kof.io/console (R7), never a silent stub.
+            export function kofFfi(lib, name, sig, args) {
+                return kof_platform.ffi(lib, name, sig, args);
+            }
+
+            export function kofFfiVoid(lib, name, sig, args) {
+                kof_platform.ffi_void(lib, name, sig, args);
+            }
+
             export function kofArgs() {
                 if (kof_platform.args) {
                     return kof_platform.args();

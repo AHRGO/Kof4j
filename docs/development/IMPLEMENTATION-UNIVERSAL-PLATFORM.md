@@ -272,7 +272,7 @@ the same development experience.
 |---|-----------|--------|--------------|
 | R1 | Lock the core/platform boundary (§3.4 order as an invariant rule) | ✅ 17/09 | `5f1422c6` — `scripts/check_stdlib_boundary.sh` + ledger (31 namespaces) + CI + `--selftest`; AGENTS invariant 1 |
 | R2 | Generalize "capability/link by use" to all packages/domains | 🔵 | seed: SQLite/MySQL `.so` linked only when the literal DSN appears; extension pending |
-| R3 | Formalize FFI as first-class | 🟡 | **JVM scalar ABI + `void` 18/09 (`.18`)**: `kof_ffi`/`kof_ffi_void` bind arbitrary arity over {Int,Long,Float,Double,Boolean,String} in/out, `String` reads `char*`, `void` returns discarded as statement. `FfiE2ETest` covers `pow`/`strstr`/`srand`/`atol→labs` (Long) + `FfiSignatureTest` locks the full scalar→layout mapping. See §R3-slices for the full decomposition — **JS bridge F1 landed 18/09** (host `KofJsFfiBridge` + `KofJsFfiBridgeTest` 8/8, JS gate still `FFI002` — zero backend risk); remaining: opaque handles/out-buffers (3.3 ⛔), callbacks/upcalls (3.4), variadics (3.5 ⛔), JS parity F2/F3 (compiler routing + byte-parity E2E), Native parity (§61, 3.7), struct/array D6 (3.8 ⛔). Parity on JS (`FFI002`) / Native (`FFI001`) still honest per-target gaps (R7). |
+| R3 | Formalize FFI as first-class | 🟡 | **JVM scalar ABI + `void` 18/09 (`.18`)**: `kof_ffi`/`kof_ffi_void` bind arbitrary arity over {Int,Long,Float,Double,Boolean,String} in/out, `String` reads `char*`, `void` returns discarded as statement. `FfiE2ETest` covers `pow`/`strstr`/`srand`/`atol→labs` (Long) + `FfiSignatureTest` locks the full scalar→layout mapping. **JS parity CLOSED 18/09 (3.6 F1+F2+F3, `.18`)**: the same scalar ABI now binds on the JS target via the host FFM bridge `KofJsFfiBridge` (`extern`→`kofFfi`→`kof_platform.ffi` `ProxyExecutable`), proven byte-for-byte JVM↔JS (`FfiE2ETest` +7 `assertJvmJsParity`); a browser has no host → honest runtime degrade (R7, like `kof.io`). See §R3-slices for the full decomposition — remaining: opaque handles/out-buffers (3.3 ⛔), callbacks/upcalls (3.4), variadics (3.5 ⛔), struct/array D6 (3.8 ⛔), Native parity (§61, 3.7). Only Native (`FFI001`) + non-scalar signatures on JS (`FFI002`) remain honest per-target gaps (R7). |
 | R4 | Formalize compile-time codegen (`CodegenStep`) | 🔵 | does NOT exist at HEAD (2.2.2); blocks `infra "prod" {}` (3.2) and DDL/runner migration |
 | R5 | Stability tiers + official packages | 🟡 | tiers defined in `backend-parity.md` §Stability tiers; **per-namespace tier marking not yet applied** — decision ⛔ |
 | R6 | Keep "never silent" for new domains | ✅ 17/09 | machine gate `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` (`19a740f2`) + full ledger sweep (`c5897cd5`, found §278) |
@@ -296,22 +296,24 @@ Incremental R3 slices toward "total FFI parity" (maintainer directive 18/09).
 | 3.3 | JVM: opaque handles / out-buffers (void*, T*, Array<Byte> as buffer) — pointer-to-opaque / byte-buffer type, NOT the full D6 struct ABI | ⛔ surface decision | maintainer | design |
 | 3.4 | JVM: callbacks / upcalls (Linker.upcallStub) — a Kof function handed to C as a function pointer | 🔵 design | .18 + maintainer | closure semantics + GC rooting (R12/1.2) |
 | 3.5 | JVM: variadics (printf, execlp) — how to represent `...` in a Kof signature | ⛔ surface decision | maintainer | design |
-| 3.6 | JS: parity via host bridge (the GraalJS/node runner IS a JVM with java.lang.foreign on the host) — browser stays an honest FFI002 (R7: cannot dlopen) | 🟡 | .18 (fronte-5) | F1 done; F2/F3 below |
-| 3.6.F1 | Host FFM bridge `KofJsFfiBridge` + `KofJsFfiBridgeTest` (8/8) — same downcall as `kof_ffi`, proven at host level; compiler gate left CLOSED (JS extern still FFI002, zero backend risk) | ✅ 18/09 (.18) | .18 | — |
-| 3.6.F2 | Compiler JS routing: `isExternBound` JS branch + lower `extern`→`kof_platform.ffi(lib,name,sig,args)` + `JsRuntimeOps` route `kof_ffi_`→bridge + `KofJsRunner` `ProxyExecutable`; opens `KofFfi.supportedOn = JVM\|JS` | 🔵 | .18 | F1; runner must launch with `--enable-native-access` (future JDKs hard-block the downcall without it) |
-| 3.6.F3 | Byte-for-byte JVM↔JS parity E2E (same `.kf` source, same output on both) + browser keeps honest `FFI002` | 🔵 | .18 | F2 |
+| 3.6 | JS: parity via host bridge (the GraalJS/node runner IS a JVM with java.lang.foreign on the host) — browser stays an honest runtime degrade (R7: no host `kof_platform.ffi`) | ✅ 18/09 (.18) | .18 | 3.1/3.2 ABI |
+| 3.6.F1 | Host FFM bridge `KofJsFfiBridge` + `KofJsFfiBridgeTest` (8/8) — same downcall as `kof_ffi`, proven at host level; compiler gate left CLOSED (zero backend risk) | ✅ 18/09 (.18) | .18 | — |
+| 3.6.F2 | Compiler JS routing: `isExternBound` JS branch + lower `extern`→`kofFfi`/`kofFfiVoid`→`kof_platform.ffi` (`JsRuntimeOps` route + `JsRuntimeIo` helper + `KofJsRunner` `ProxyExecutable`) — opens the JS scalar gate | ✅ 18/09 (.18) | .18 | F1 |
+| 3.6.F3 | Byte-for-byte JVM↔JS parity E2E — `FfiE2ETest` +7 `assertJvmJsParity` (abs/atoi/sqrt/pow/atol→labs Long/strstr/srand void): same `.kf`, identical output on both targets | ✅ 18/09 (.18) | .18 | F2 |
 | 3.7 | Native: dlopen/dlsym in asm — depends on §61 (init glibc/TLS in _start) | 🔵 | native lane | §61 |
 | 3.8 | Struct/array ABI (full D6) | ⛔ | maintainer | D6 |
 | 3.9 | Meta-parity: same extern source with the same behavior on every CAPABLE target (R7 honest-scope on the incapable ones) | meta | — | 3.1–3.8 |
 
-3.1+3.2 landed 18/09 → the JVM has the full scalar ABI + void, now **proof-
-hardened**: `Int`/`Long`/`Double`/`String`/`void` are e2e-proven against libc/libm
-(`FfiE2ETest`, incl. `Long` via `atol`→`labs`) and the whole scalar set
-(incl. `Float`/`Boolean`) is mapping-locked by `FfiSignatureTest`. Next slice 3.6
-(JS bridge) is decomposed F1/F2/F3 above; **F1 landed 18/09** (host bridge + 8/8
-host test, JS gate still `FFI002` — zero backend risk). F2 is the multi-file
-compiler-routing step (opens the gate); F3 is the parity proof. Beyond that R3
-needs maintainer decisions (3.3/3.5/3.8) or the native §61 (3.7).
+3.1+3.2 landed 18/09 → the JVM has the full scalar ABI + void, **proof-hardened**
+(`Int`/`Long`/`Double`/`String`/`void` e2e-proven against libc/libm incl. `Long` via
+`atol`→`labs`; whole set mapping-locked by `FfiSignatureTest`). **3.6 (JS parity)
+CLOSED 18/09** across F1 (host bridge, gate closed) → F2 (compiler JS routing opens
+the scalar gate) → F3 (byte-for-byte JVM↔JS parity E2E, +7). On the JS target the
+**scalar ABI now binds on the GraalJS/node host runner** (FFM on the host, no guest
+bytecode); a browser has no `kof_platform.ffi` host so it throws an honest runtime
+error (R7, same degrade as `kof.io`); non-scalar signatures (array/struct/pointer)
+still `FFI002` at compile time (3.3/3.5/3.8 ⛔). Next R3 work is the native §61 (3.7,
+native lane) or maintainer decisions (3.3/3.5/3.8).
 
 ---
 
