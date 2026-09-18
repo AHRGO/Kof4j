@@ -10056,3 +10056,20 @@ O corpus (`backend-parity.md` linha de mídia + `stdlib-web.md` ×3 + mensagem A
 **Prova da análise (tudo medido, não chutado):** saídas das sondas acima; os três patches de checker foram validados green e REVERTIDOS da árvore de trabalho (zero half-fix em `beta-0.4.0`); reproduzidores mantidos no thread da issue (#396) — `Pipeline` verbatim + `Box.useTwice` mínima + controle `Box.get`.
 
 **Rio:** mesma água do §271 / Cluster A (#363/#365/#366/#385/#399/#295) — erasure de type-variable em tipos declarados compostos. §288 é a face FUNCTION-TYPE desse rio (camada checker documentada aqui; uma única resposta de design deve cobrir as duas camadas).
+
+## §289 — campos estático+instância de MESMO nome com descritores JVM DIFERENTES (`static Int a` + `Long a`) são legais na JVM mas o resolver amassou um símbolo por nome → `VerifyError` no load (JVM) / `COMP002: unknown local slot 0` (JS) — 🔴 OPEN (dono = compiler `.22`, busca de campo por (nome, staticness))
+
+**Achado caçando o #294 (18/09, medido dos dois lados do guard).** O guard do #294 (SEM076) só pega duplicata JVM VERDADEIRA (mesmo nome + mesmo descritor apagado). O par legítimo `static Int a` + `Long a` passa pelo guard (correto) e quebra adiante:
+- **JVM:** compila limpo; no load `VerifyError: Bad type on operand stack … @28: getfield` (o mapa de símbolos por NOME faz `classScope.define` sobrescrever: o acesso estático pega o símbolo de instância ou vice-versa).
+- **JS:** ICE em compile `KofJS: unknown local slot 0` (COMP002) — ICE nunca é válido (R6).
+- Pré-existente: re-medido com o guard EM STASH (as duas mesmas falhas no tip `d0bbfdde`) — NÃO causado pelo commit do SEM076.
+
+**Ponteiro do conserto:** a resolução de símbolo de campo precisa desambiguar por staticness (receiver `Type.ClassType`+instância vs `ClassName.member` estático já são distinguidos no typer de chamada — o caminho de campo tem que carregar o mesmo bit por `classScope.define`/`resolveFieldInHierarchy`). Reproduzir em `DuplicateFieldGuardTest` (controle mesmo-nome-descritor-diferente — hoje aserta que o guard NÃO dispara; vire-o para EXECUTAR quando este for consertado).
+
+## §290 — `static Int n` + `Int n` (uma classe) passava em todo check e emitia DOIS campos `n:I` → a classe morria no load com `ClassFormatError: Duplicate field name` — ✅ CORRIGIDO 18/09 (lane compiler `.22`, #294)
+
+**Causa raiz:** nenhum guard existia no namespace de CAMPO da JVM — JVMS §4.5 proíbe entradas `(nome, descritor)` duplicadas; staticness NÃO separa o namespace (a lição do #264/SEM061 para métodos, aplicada a campos). `defineClassMembers` definia os dois símbolos e o backend emitia os dois.
+
+**Correção (aditiva, analisador compartilhado):** `checkMemberSignatureDupes` agora anda os campos com chave `"F:" + nome + ":" + typeKey(apagado)` e reporta **SEM076** na segunda declaração (POSICIONAL — `Main.kf:3:11`, não `:0:0`), espelhando a escola SEM061 estabelecida: duplicata JVM VERDADEIRA é erro; pares legítimos (descritores diferentes, ex. `Int` static + `Long` instance) continuam compilando (a quebra pré-existente dessa forma é o §289, intocada por este guard).
+
+**Prova:** `DuplicateFieldGuardTest` 5/5 — verbatim #294 rejeitado com SEM076 + linha>0; duplicata static×2 rejeitada; par legítimo NÃO sinalizado (lado compile JVM — §289 anotado); shadowing de hierarquia (`Base.v`/`Child.v`) intacto; O MESMO diagnóstico dispara em JVM/NATIVE/JS (passada compartilhada, regra 5). Q0: checkout pré-guard → 3/5 RED. Vizinhos: consumidores SEM061 de `checkMemberSignatureDupes` verdes no mesmo run.

@@ -184,6 +184,28 @@ public final class SymbolTableBuilder {
             String key;
             String shown;
             SourcePosition pos;
+            if (member instanceof FieldDeclarationNode fd) {
+                // #294: o NAMESPACE DE CAMPO da JVMS §4.5 e (nome, descritor)
+                // — static e instance NAO colidem la, mas dois campos com
+                // mesmo nome+descritor SIM: `static Int n` + `Int n` saia do
+                // backend com dois campos "n":"I" e a classe morria no load
+                // (ClassFormatError silencioso, R6). Mesma escola do #264
+                // (SEM061 p/ metodos): chave = descritor APAGADO do tipo.
+                Type ft = MemberResolver.resolveType(sa, fd.type(), classScope);
+                key = "F:" + fd.name() + ":" + typeKey(ft);
+                shown = "field '" + fd.name() + "' of type '" + fd.type() + "'";
+                pos = fd.position();
+                SourcePosition prevF = seen.putIfAbsent(key, pos);
+                if (prevF != null && dc != null) {
+                    dc.error(pos != null ? pos.file() : "", pos != null ? pos.line() : 0,
+                            pos != null ? pos.column() : 0, 0,
+                            "'" + shown + "' is already defined in class '" + className
+                                    + "' at line " + prevF.line() + " — two fields (static or not)"
+                                    + " with the same name and JVM descriptor cannot coexist in one class",
+                            "SEM076");
+                }
+                continue;
+            }
             if (member instanceof MethodDeclarationNode m) {
                 SymbolTable.MethodSymbol ms = sa.methodSymbols().get(m);
                 if (ms == null) continue;

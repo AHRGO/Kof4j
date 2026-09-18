@@ -10558,3 +10558,20 @@ The corpus (`backend-parity.md` media row + `stdlib-web.md` ×3 + `KofCliSupport
 **Proof of the analysis (all measured, not guessed):** instrumented probe outputs above; the three checker-side patches were validated green then REVERTED from the working tree (zero half-fix in `beta-0.4.0`); reproducers kept at the issue thread (#396) — `Pipeline` verbatim + `Box.useTwice` minimal + `Box.get` control.
 
 **River:** same water as §271 / Cluster A (#363/#365/#366/#385/#399/#295) — type-variable erasure across composite declared types. §288 is the FUNCTION-TYPE face of that river (checker layer documented here; one design answer should cover both layers).
+
+## §289 — same-named static+instance fields with DIFFERENT JVM descriptors (`static Int a` + `Long a`) are legal on the JVM but the resolver clobbers one symbol by name → JVM `VerifyError` at load / JS `COMP002: unknown local slot 0` — 🔴 OPEN (owner = compiler `.22`, field lookup by (name, staticness))
+
+**Found hunting #294 (18/09, measured both sides of the guard).** The #294 guard (SEM076) only fires on TRUE JVM duplicates (same name + same erased descriptor). The legitimate pair `static Int a` + `Long a` still passes the guard (correctly) and then breaks downstream:
+- **JVM:** compiles clean; at load `VerifyError: Bad type on operand stack … @28: getfield` (the symbol map keyed by NAME makes `classScope.define` overwrite: the static access gets the instance symbol or vice-versa).
+- **JS:** compile-time ICE `KofJS: unknown local slot 0` (COMP002) — an ICE is never valid (R6).
+- Pre-existing: re-measured with the guard STASHED (same two failures at tip `d0bbfdde`) — NOT caused by the SEM076 commit.
+
+**Pointer for the fix:** field symbol lookup must disambiguate by staticness (receiver `Type.ClassType` + instance receiver vs `ClassName.member` static access are already distinguished in the call typer — the field path must carry the same bit through `classScope.define`/`resolveFieldInHierarchy`). Reproducer in `DuplicateFieldGuardTest` (same-name different-descriptor control — currently asserts the guard does NOT fire; flip it to EXECUTE when this one is fixed).
+
+## §290 — `static Int n` + `Int n` (one class) passed every check and emitted TWO fields `n:I` → class died at load `ClassFormatError: Duplicate field name` — ✅ FIXED 18/09 (lane compiler `.22`, #294)
+
+**Root cause:** no guard existed on the JVM FIELD namespace — JVMS §4.5 forbids duplicate `(name, descriptor)` field entries; staticness does NOT separate the namespace (the #264/SEM061 lesson for methods, applied to fields). `defineClassMembers` defined both symbols and the backend emitted both.
+
+**Fix (additive, shared analyzer):** `checkMemberSignatureDupes` now walks fields with key `"F:" + name + ":" + typeKey(erased)` and reports **SEM076** at the second declaration (POSITIONAL — `Main.kf:3:11`, not `:0:0`), mirroring the established SEM061 school: TRUE JVM duplicates are errors; legitimate pairs (different descriptors, e.g. `Int` static + `Long` instance) keep compiling (the separate pre-existing breakage of that shape is §289, unaffected by this guard).
+
+**Proof:** `DuplicateFieldGuardTest` 5/5 — verbatim #294 rejected with SEM076 + line>0; static×2 duplicate rejected; legitimate pair NOT flagged (JVM compile side — §289 noted); hierarchy shadowing (`Base.v`/`Child.v`) untouched; the SAME diagnostic fires on JVM/NATIVE/JS (shared pass, rule 5). Q0: pre-guard checkout → 3/5 RED. Neighbors: the SEM061 `checkMemberSignatureDupes` consumers green in the same run.
