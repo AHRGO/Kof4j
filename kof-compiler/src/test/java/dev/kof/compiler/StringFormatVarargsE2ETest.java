@@ -16,15 +16,41 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * The fix packs the extra arguments into an `Object[]` and emits the real
  * descriptor `(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;`.
  *
- * JVM-only on purpose: the JS backend has no `String.format` lowering at all
- * (pre-existing gap, catalogued as §236 — lane JS). Claiming JS parity here
- * would be false green (Q5).
+ * §239 (JS parity, 18/09): JS backend now lowers `String.format` via
+ * `kofStringFormat` → `kof_platform.stringFormat` → Java `String.format`
+ * (byte-for-byte parity on the GraalJS host; browser degrades honestly via
+ * the Proxy, same pattern as kof.io/ffi/process). Known limitation: JS
+ * identity-boxing collapses `Integer`/`Long`/`Double` to a single JS `number`
+ * (pre-existing KofJS constraint, not introduced here); on the host bridge we
+ * re-attach `Integer` when `Value.fitsInt()`, else `Long`, else `Double` — so
+ * an integral `30.0` literal becomes `Integer(30)` and formats as `"30"`
+ * (vs JVM `"30.0"`). Non-integral doubles (e.g. `3.5`) are unaffected.
  */
 public class StringFormatVarargsE2ETest {
 
     @TempDir Path tmp;
 
     private record Result(boolean success, String output) {}
+
+    private Result runJs(String code) throws Exception {
+        Files.writeString(tmp.resolve("S.kf"), code);
+        Path out = Files.createTempDirectory(tmp, "o");
+        CompilationResult r = new CompilerDriver().compile(tmp.resolve("S.kf"), out, Target.JS);
+        if (!r.success()) {
+            StringBuilder sb = new StringBuilder();
+            r.diagnostics().getDiagnostics().forEach(d -> sb.append(d.message()).append("\n"));
+            return new Result(false, sb.toString());
+        }
+        java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+        try {
+            int rc = dev.kof.runtime.KofJsRunner.run(
+                    out.resolve("Default.mjs"), buf,
+                    new java.io.ByteArrayInputStream(new byte[0]), buf);
+            return new Result(rc == 0, buf.toString());
+        } catch (Exception e) {
+            return new Result(false, "THROW: " + e.getMessage() + "\n" + buf);
+        }
+    }
 
     private Result runJvm(String code) throws Exception {
         Files.writeString(tmp.resolve("S.kf"), code);
@@ -53,9 +79,14 @@ public class StringFormatVarargsE2ETest {
 
     private void assertJvm(String code, String... expected) throws Exception {
         Result r = runJvm(code);
-        assertTrue(r.success(), () -> "compile/run failed: " + r.output());
+        assertTrue(r.success(), () -> "JVM compile/run failed: " + r.output());
         for (String e : expected) {
             assertTrue(r.output().contains(e), () -> "expected '" + e + "' in: " + r.output());
+        }
+        Result j = runJs(code);
+        assertTrue(j.success(), () -> "§239 JS compile/run failed: " + j.output());
+        for (String e : expected) {
+            assertTrue(j.output().contains(e), () -> "§239 JS expected '" + e + "' in: " + j.output());
         }
     }
 

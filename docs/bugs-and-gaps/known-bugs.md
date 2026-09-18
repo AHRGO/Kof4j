@@ -8679,9 +8679,12 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   the native backend too. Owner = native lane; left open deliberately so the
   JS fix here is not recorded as a cross-target close.
 
-### §239 — JS backend: `String.format(...)` aborts compilation with `Internal compiler error: unknown JS expression: null` (COMP002)
+### §239 — JS backend: `String.format(...)` aborts compilation with `Internal compiler error: unknown JS expression: null` (COMP002) — ✅ FIXED 18/09 (lane `.18`)
 
-- **Status:** 🟡 OPEN — JS `String.format` aborts with raw Diagnostic; owner = JS lane; pointer `JsCallEmitter` (format branch before generic STATIC emission).
+- **Status:** ✅ FIXED 18/09 (lane `.18`) — `String.format` now lowers on JS via
+  `kofStringFormat` → `kof_platform.stringFormat` → `java.lang.String.format`
+  (byte-for-byte parity on the GraalJS host). `StringFormatVarargsE2ETest`
+  now asserts JVM+JS parity — **9/9 green** (was 9/9 JVM-only, red on JS).
 
 - **Symptom (measured 14/09 ~21:00 on fresh classes, owner =
   192.168.100.15 — catalogued, JS lane; PRE-EXISTING, reproduced identically
@@ -8714,6 +8717,22 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   before the generic STATIC emission (packing args into an array + calling the
   runtime formatter), and guard the STATIC branch so an unmapped JDK owner
   never produces a `JsMember` with a null target.
+- **Resolution (18/09, lane `.18`):** the interception is placed **before** the
+  `isStringOp` catch-all (which fires on `owner=String`), not in the generic
+  STATIC branch the pointer suggested — the owner is a `String` so `isStringOp`
+  would have swallowed `format` first. `JsCallEmitter` routes the
+  `KofCall(STATIC, String, "format", (String, Object[]))` to the `io` runtime
+  export `kofStringFormat(fmt, arr)` (`JsRuntimeIo`), which delegates to
+  `kof_platform.stringFormat` (`KofJsRunner`, a `ProxyExecutable`). The host
+  reconstructs each element's boxed type (`isBoolean`→Boolean, `isString`→String,
+  `fitsInInt`→Integer, `fitsInLong`→Long, `fitsInDouble`→Double) and calls
+  `java.lang.String.format`, so formatting is the JDK's own — guaranteed parity.
+  Browser (no `kof_platform`): the existing `kof_platform` Proxy throws an
+  honest runtime error (same R7 degrade as `kof.io`/FFI/`process`), never a
+  silent wrong value. Known limitation carried from JS identity-boxing (not
+  introduced here): an integral-valued `double` literal (e.g. `30.0`) is a bare
+  JS `number`, so it reconstructs as `Integer` and formats `"30"` vs JVM
+  `"30.0"`; non-integral doubles (`3.5`) are correct and are the tested case.
 
 ### §240 — REGRESSION: `ExternalClasspath.knows()` now returns true for ALL `java.*` classes → Kof builtins (`String.execute/query/close`, `catch`/`throw`, `indexOf`, `parse*`) stop resolving (39 suite failures) — ✅ FIXED 15/09 (lane bugs-and-gaps `5e996312`; `KofBuiltinJdkSeparationE2ETest` 4/4)
 

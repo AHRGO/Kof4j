@@ -8607,9 +8607,12 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   `JsTypeMapper.jsClassName` nunca pode vazar um identificador `java_lang_*`
   numa posição de chamada.
 
-### §239 — backend JS: `String.format(...)` aborta a compilação com `Internal compiler error: unknown JS expression: null` (COMP002)
+### §239 — backend JS: `String.format(...)` aborta a compilação com `Internal compiler error: unknown JS expression: null` (COMP002) — ✅ CORRIGIDO 18/09 (lane `.18`)
 
-- **Estado:** 🟡 ABERTO — `String.format` no JS aborta com Diagnostic crua; dono = lane JS; ponteiro `JsCallEmitter` (ramo format antes da emissao STATIC generica).
+- **Estado:** ✅ CORRIGIDO 18/09 (lane `.18`) — `String.format` agora baixada no JS via
+  `kofStringFormat` → `kof_platform.stringFormat` → `java.lang.String.format`
+  (paridade byte-a-byte no runner GraalJS). `StringFormatVarargsE2ETest`
+  agora afirma paridade JVM+JS — **9/9 verde** (antes 9/9 só JVM, vermelho no JS).
 
 - **Sintoma (medido 14/09 ~21:00 em classes frescas, dono =
   192.168.100.15 — catalogado, lane JS; PRÉ-EXISTENTE, reproduzido
@@ -8642,6 +8645,22 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   antes da emissão STATIC genérica (empacotar args num array + chamar o
   formatador do runtime) e proteger o ramo STATIC para que um owner JDK não
   mapeado nunca produza um `JsMember` com alvo null.
+- **Resolução (18/09, lane `.18`):** a interceptação fica **antes** do
+  catch-all `isStringOp` (que dispara em `owner=String`), não no ramo STATIC
+  genérico sugerido pelo ponteiro — como o owner é `String`, o `isStringOp`
+  engoliria o `format` primeiro. O `JsCallEmitter` rota o
+  `KofCall(STATIC, String, "format", (String, Object[]))` para o export do
+  runtime `io` `kofStringFormat(fmt, arr)` (`JsRuntimeIo`), que delega a
+  `kof_platform.stringFormat` (`KofJsRunner`, um `ProxyExecutable`). O host
+  reconstrói o boxed type de cada elemento (`isBoolean`→Boolean, `isString`→String,
+  `fitsInInt`→Integer, `fitsInLong`→Long, `fitsInDouble`→Double) e chama
+  `java.lang.String.format` — o formato é o do próprio JDK, paridade garantida.
+  No browser (sem `kof_platform`): o Proxy existente do `kof_platform` lança erro
+  honesto em runtime (mesmo degrade R7 de `kof.io`/FFI/`process`), nunca um valor
+  errado em silêncio. Limitação herdada do identity-boxing JS (não introduzida
+  aqui): um literal `double` integral (ex.: `30.0`) é um `number` JS cru, então
+  reconstrói como `Integer` e formata `"30"` vs JVM `"30.0"`; doubles não-integrais
+  (`3.5`) ficam corretos e são o caso testado.
 
 ### §240 — REGRESSÃO: `ExternalClasspath.knows()` agora devolve true para TODA classe `java.*` → builtins do Kof (`String.execute/query/close`, `catch`/`throw`, `indexOf`, `parse*`) deixam de resolver (39 falhas de suíte) — ✅ CORRIGIDO 15/09 (lane bugs-and-gaps `5e996312`; `KofBuiltinJdkSeparationE2ETest` 4/4)
 

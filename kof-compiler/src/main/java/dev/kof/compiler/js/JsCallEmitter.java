@@ -134,6 +134,8 @@ void handleCall(MethodCtx ctx, List<Object> stack,
             stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofRecordEq"), args));
             return;
         }
+        // §239 (JS): String.format via host bridge — dispatch no p.rt (JsRuntimeOps)
+        if (p.rt.isStaticFormat(kc)) { p.rt.emitStaticFormat(stack, args); return; }
         if (isStringOp(kc)) {
             handleStringOp(ctx, stack, preambleExprs, kc, receiver, args);
             return;

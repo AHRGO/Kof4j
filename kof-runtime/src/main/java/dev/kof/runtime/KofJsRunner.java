@@ -210,6 +210,26 @@ public final class KofJsRunner {
                 return result;
             }
         });
+        // §239 (JS): String.format — ponte p/ o host java.lang.String.format
+        // (paridade byte-a-byte). Os varargs chegam como array JS (o lowering
+        // compart. empacota em Object[]); reconstruímos o boxed type de cada
+        // elemento p/ o Formatter do JDK. Limitaçao herdada do identity-boxing
+        // JS: double integral (30.0) vira Integer -> "30" (nao "30.0"); nao é
+        // testado e nao regressa face anterior (antes era ICE COMP002).
+        platform.put("stringFormat", (ProxyExecutable) args -> {
+            String fmt = args[0].asString();
+            java.util.List<Object> list = new java.util.ArrayList<>();
+            if (args.length > 1 && !args[1].isNull() && args[1].hasArrayElements()) {
+                long n = args[1].getArraySize();
+                if (n > Integer.MAX_VALUE) {
+                    throw new RuntimeException("lista excede o limite da ponte JS (" + n + ")");
+                }
+                for (long i = 0; i < n; i++) {
+                    list.add(toFormatArg(args[1].getArrayElement(i)));
+                }
+            }
+            return String.format(fmt, list.toArray());
+        });
         platform.put("args", (ProxyExecutable) args -> java.util.Arrays.asList(programArgs));
         platform.put("readLine", (ProxyExecutable) args -> readLine(in));
         platform.put("readFile", (ProxyExecutable) args -> {
@@ -523,6 +543,20 @@ public final class KofJsRunner {
 
     /** O ultimo arg da chamada de dbExecute/dbQuery e a lista de binds
      *  (array guest); extrai p/ Value[] na ordem. */
+    /** §239: reconstrói o boxed type de um elemento do varargs Object[] do
+     *  String.format que chegou como valor JS. Ordem importa: null / boolean /
+     *  string antes dos numericos (evita string numerica virar number); depois
+     *  fitsInt/fitsLong/fitsDouble. Fallback: toString (nunca lança). */
+    private static Object toFormatArg(Value v) {
+        if (v == null || v.isNull()) return null;
+        if (v.isBoolean()) return v.asBoolean() ? Boolean.TRUE : Boolean.FALSE;
+        if (v.isString()) return v.asString();
+        if (v.fitsInInt()) return v.asInt();
+        if (v.fitsInLong()) return v.asLong();
+        if (v.fitsInDouble()) return v.asDouble();
+        return v.toString();
+    }
+
     private static org.graalvm.polyglot.Value[] listValues(Value[] args, int listIndex) {
         if (args.length <= listIndex || args[listIndex] == null || !args[listIndex].hasArrayElements()) {
             return new org.graalvm.polyglot.Value[0];

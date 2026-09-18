@@ -65,6 +65,13 @@ public final class JsRuntimeIo {
                 };
             }
 
+            // §239 (JS): String.format delega ao host (java.lang.String.format ->
+            // paridade byte-a-byte). Sem kof_platform (browser) o Proxy acima da
+            // tabela lança erro honesto — nunca um resultado errado em silêncio (R6/R7).
+            export function kofStringFormat(fmt, argsArr) {
+                return kof_platform.stringFormat(fmt, argsArr);
+            }
+
             export function kofProcessExit(code) {
                 // sentinel: o runner converte no exit code do processo
                 throw { __kof_exit__: code };

@@ -503,4 +503,27 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
         }
         stack.add(call);
     }
+
+    // §239 (JS): String.format(String, Object...) — o lowering compartilhado
+    // (StringFormatCallLowerer) empacota os varargs num Object[] e emite um
+    // KofCall STATIC owner=java/lang/String. Sem ramo proprio caia no dispatch
+    // estatico generico do JsCallEmitter: jsClassName("java/lang/String") devolve
+    // null (nao ha java_lang_String no class map JS) -> JsMember(null) -> ICE
+    // COMP002 ("unknown JS expression: null"), familia do §235. Roteamos para o
+    // export `kofStringFormat` do runtime `io`, que delega ao host
+    // kof_platform.stringFormat -> java.lang.String.format (paridade byte-a-byte
+    // no runner GraalJS). Browser (sem kof_platform): o Proxy do kof_platform da
+    // erro honesto em runtime, mesmo degrade de kof.io/FFI/process (R6/R7), nunca
+    // um valor errado em silencio. args[0]=fmt, args[1]=Object[] (array JS).
+    boolean isStaticFormat(KofCall kc) {
+        return BuiltinTypes.isString(kc.ownerType()) && "format".equals(kc.methodName())
+                && kc.kind() == KofCallKind.STATIC && kc.parameterTypes().size() == 2
+                && kc.parameterTypes().get(1) instanceof Type.ArrayType;
+    }
+
+    void emitStaticFormat(List<Object> stack, List<JsIr.JsExpression> args) {
+        p.lc.registerIoRuntime("kofStringFormat");
+        stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofStringFormat"),
+                List.of(args.get(0), args.get(1))));
+    }
 }
