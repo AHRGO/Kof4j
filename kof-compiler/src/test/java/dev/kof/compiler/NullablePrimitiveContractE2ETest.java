@@ -239,6 +239,83 @@ class NullablePrimitiveContractE2ETest {
                 """, "true\n7");
     }
 
+    // ---- §294-2a: join heterogêneo Nullable(primitivo) × primitivo NÃO pode
+    // re-boxar o ramo já-boxed (boxPrimitiveBranch usava isPrimitiveType, que
+    // OLHA DENTRO do Nullable → emitia `valueOf:(Ljava/lang/Integer;)` sobre
+    // slot já Integer = NoSuchMethodError; script/JS passavam = divergência
+    // cross-target). Guard cru (Type.PrimitiveType) fecha as 3 faces.
+
+    @Test
+    void ternaryOnNarrowedNullableFromMapGet(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                main() {
+                    var m: Map<String, Int> = mapOf("a", 1)
+                    var a = m.get("a")
+                    println(if (a != null) a else -1)
+                }
+                """, "1");
+    }
+
+    @Test
+    void ternaryOnAbsentNullableFromMapGet(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                main() {
+                    var m: Map<String, Int> = mapOf("a", 1)
+                    var z = m.get("z")
+                    println(if (z != null) z else 9)
+                }
+                """, "9");
+    }
+
+    @Test
+    void ternaryLongPresentAndAbsent(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                main() {
+                    var m: Map<String, Long> = mapOf("a", 2L)
+                    var a = m.get("a")
+                    var z = m.get("z")
+                    println(if (a != null) a else -1L)
+                    println(if (z != null) z else -1L)
+                }
+                """, "2\n-1");
+    }
+
+    @Test
+    void ternaryBoolNarrowed(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                main() {
+                    var m: Map<String, Bool> = mapOf("a", true)
+                    var a = m.get("a")
+                    println(if (a != null) a else false)
+                }
+                """, "true");
+    }
+
+    @Test
+    void switchExprBranchOnNullableNarrowedNotReboxed(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                main() {
+                    var m: Map<String, Int> = mapOf("a", 5)
+                    var a = m.get("a")
+                    var flag = true
+                    println(switch (flag) { case true -> a default -> -1 })
+                }
+                """, "5");
+    }
+
+    @Test
+    void ternaryWithNullBranchStillJoinsAsReference(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                main() {
+                    var m: Map<String, Int> = mapOf("a", 5)
+                    var a = m.get("a")
+                    var z = m.get("z")
+                    if (a != null) { println(a) }
+                    println(if (z != null) z else null)
+                }
+                """, "5\nnull");
+    }
+
     // ---- I2/I5 estendido: ramo null de if/switch/var explícito não é default ----
     // §125-ext (opção A) foldava CADA ramo null de if/switch p/ o default do
     // primitivo antes do fix — sobrevivia mesmo depois do Commit A/B tratarem

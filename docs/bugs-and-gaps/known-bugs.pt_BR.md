@@ -10109,7 +10109,7 @@ O corpus (`backend-parity.md` linha de mídia + `stdlib-web.md` ×3 + mensagem A
 
 ---
 
-## §294 — null-check num `Map.get` de valor primitivo compila e morre em runtime com `NoSuchMethodError: 'java.lang.Object java.lang.Object.valueOf(int)'` (medido, tip 18/09) — 🟡 ABERTO (fix = familia D-NULL-INTENT, regra 6)
+## §294 — null-check num `Map.get` de valor primitivo compila e morre em runtime com `NoSuchMethodError: 'java.lang.Object java.lang.Object.valueOf(int)'` (medido, tip 18/09) — ✅ CORRIGIDO 18/09 (lane `.22`: #438 landou o contrato; face 2a do re-box fechada com o guard `294-2a` + 6 testes × 3 alvos)
 
 **Encontrado:** 18/09 ~14:35 UTC, esta lane, perseguindo o achado da mel na issue #386 ("o idioma getOrDefault crasha"). Medido no tip reactor com jars frescos, JVM.
 
@@ -10127,7 +10127,11 @@ Compila limpo. Roda: `NoSuchMethodError: 'java.lang.Object java.lang.Object.valu
 
 **Por que NAO corrigido aqui (regra 6).** As duas resolucoes honestas mudam semantica congelada: (a) rejeitar `z != null` em primitivo → quebra compatibilidade (fraca mas real) de todo programa que hoje sobrevive; (b) fazer `Map.get` primitivo retornar `V?` → a experiencia revertida de 07/09 (analise do §39) mostra que explode `==`/unboxing ate Nullable-de-primitivos landar atomicamente — que e exatamente o PR #438 (N1 atomico JVM/Script/JS, CI verde em `eaa22b57`, aguardando revisao da mantenedora). O fix correto e o #438 landar + este repro como um dos testes de aceitacao dele; um `if` solto no typer mascararia (Q0 proibido).
 
-**Status.** 🟡 ABERTO 18/09 — catalogado com medicoes; dono = quem landar #438/D-NULL-INTENT. Relacionados: #386 (origem do achado), #376/#278 (face anotada), §39 (irmao consumidor, corrigido), §293 (shadowing de window JS, corrigido nesta sessao).
+**Resolucao (medido 18/09, lane `.22`).** Duas faces, dois passos:
+1. **Face 1 (o `valueOf(int)` com receiver apagado)** — fechada pelo **landing do #438** (`250f6207`): `Map.get/put/remove` agora tipa para `V?`, o slot e fisicamente boxed (`Integer`), e `emitErasureBox`/`kof_box` nunca recebe um `int` cru. O repro minimo acima imprime `9` no JVM apos o #438.
+2. **Face 2a (o RE-BOX pos-#438)** — o #438 deixou um NOVO crash na esteira, pego pelos 6 testes de regressao adicionados com esta entrada: o guard de `boxPrimitiveBranch` (`ExpressionTyper.java:378`) usava `TypeMetrics.isPrimitiveType`, que **enxerga dentro de `NullableType`** — entao o ramo `Int?` ja boxado era boxado DE NOVO, emitindo `valueOf:(Ljava/lang/Integer;)` com receiver apagado para `Object` → `NoSuchMethodError: Object.valueOf(Integer)` (idem `Long`/`Boolean`). **Fix:** guard cru — so primitivo NAO-nulavel boxa ali (`branchT instanceof Type.PrimitiveType`). **Fail-first PROVADO:** com o guard antigo as 4 faces novas de ternaria/switch ficam VERMELHAS com exatamente essas assinaturas; com o guard cru, todas verdes. Script e JS concordam com o JVM em toda face (Q3 cross-target).
+
+**Testes (mesmo commit).** `NullablePrimitiveContractE2ETest` +6: `Int` presente/ausente, `Long` ×2, `Bool`, expressao-switch sobre `Int?` estreitado, e o join com ramo null (`if (z != null) z else null` permanece referencia, imprime `null`) — `runAll3` (JVM+Script+JS), 19/19 no modulo. Relacionado: #386 (origem do achado), #376 (face anotada), §39 (consumidor irmao, corrigido), §293 (sombreamento `window` no JS), §295 (faces relacionais da mesma familia D-NULL-INTENT — face (b) ainda ABERTA, dona `.22`).
 ## §300 — Re-render do KofJS vazava a subárvore anterior inteira para `__kofNodes` (e as ações de Button para `__kofActions`): `kofUiRender` soltava do DOM só o elemento raiz antigo — crescimento silencioso e ilimitado a cada mudança de estado — ✅ CORRIGIDO 18/09 (lane UI/style, dono = 192.168.100.17)
 
 - **Sintoma (medido 18/09, achado na varredura da Fase 9 de
