@@ -29,6 +29,10 @@ public final class KofUuid {
 
     record UuidCall(String function, Type returnType, List<Type> parameterTypes) {}
 
+
+    /** X10 fatia 1: nomes aceitos pelo staticMethod (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case literals do switch(name) abaixo. */
+    static List<String> functions() { return List.of("isUuid", "v4", "v7"); }
     static UuidCall staticMethod(String namespace, String name, List<Type> argTypes) {
         return switch (name) {
             // S3b-ext: isUuid — shape RFC 4122 (8-4-4-4-12 hex, hífens em

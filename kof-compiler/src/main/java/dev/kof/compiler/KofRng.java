@@ -36,6 +36,10 @@ public final class KofRng {
         return NAMESPACES.contains(name);
     }
 
+
+    /** X10 fatia 1: nomes aceitos pelo staticMethod (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case literals do switch(name) abaixo. */
+    static List<String> functions() { return List.of("seed", "int", "boolean", "double", "string"); }
     static RngCall staticMethod(String namespace, String name, List<Type> argTypes) {
         if (!"rng".equals(namespace)) return null;
         int argc = argTypes.size();

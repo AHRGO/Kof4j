@@ -33,6 +33,10 @@ public final class KofNet {
 
     record NetCall(String function, Type returnType, List<Type> parameterTypes) {}
 
+
+    /** X10 fatia 1: nomes aceitos pelo staticMethod (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case literals do switch(name) abaixo. */
+    static List<String> functions() { return List.of("scheme"); }
     static NetCall staticMethod(String namespace, String name, List<Type> argTypes) {
         int argc = argTypes.size();
         return switch (name) {
