@@ -169,6 +169,10 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_random_int", "kof_random_bool", "kof_random_boolean" -> "I";
             case "kof_random_string", "kof_random_hex" -> "Ljava/lang/String;";
             case "kof_random_double" -> "D";
+            // ── kof.rng (X8 fatia 1) ──────────────────────────────────────
+            case "kof_rng_int", "kof_rng_bool" -> "I";
+            case "kof_rng_string" -> "Ljava/lang/String;";
+            case "kof_rng_double" -> "D";
             // ── kof.observability (G5) ────────────────────────────────
             case "kof_observability_health", "kof_observability_request_id", "kof_observability_correlation_id",
                     "kof_observability_trace_id", "kof_observability_span_id",

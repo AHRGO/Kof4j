@@ -406,6 +406,12 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_random_double" -> "()D";
             case "kof_random_boolean" -> "()Z";
             case "kof_random_hex" -> "(I)Ljava/lang/String;";
+            // ── kof.rng (X8 fatia 1 — PRNG semeável, xorshift128) ─────────
+            case "kof_rng_seed" -> "(I)V";
+            case "kof_rng_int" -> "(I)I";
+            case "kof_rng_bool" -> "()Z";
+            case "kof_rng_double" -> "()D";
+            case "kof_rng_string" -> "(ILjava/lang/String;)Ljava/lang/String;";
             // ── kof.observability (G5) ────────────────────────────────
             case "kof_observability_health", "kof_observability_request_id", "kof_observability_correlation_id",
                     "kof_observability_trace_id", "kof_observability_span_id",

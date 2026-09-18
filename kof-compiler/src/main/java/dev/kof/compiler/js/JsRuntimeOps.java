@@ -35,6 +35,7 @@ boolean isRuntimeOp(KofCall kc) {
                 || name.startsWith("kof_encoding_")
                 || name.startsWith("kof_uuid_")
                 || name.startsWith("kof_random_")
+                || name.startsWith("kof_rng_")
                 || name.startsWith("kof_net_")
                 || name.startsWith("kof_enum_")
                 || name.startsWith("kof_config_")
