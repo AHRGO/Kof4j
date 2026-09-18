@@ -25,6 +25,7 @@ public final class RuntimeObservability3 {
             .Lstr_obs_span_2: .asciz "\\",\\"spanId\\":\\""
             .Lstr_obs_span_3: .asciz "\\",\\"durationMs\\":"
             .Lstr_obs_span_4: .asciz "}"
+            .Lstr_obs_pe_0: .asciz "{}"
             .Lstr_obs_pe_1: .asciz "\\",\\"parentSpanId\\":\\""
             .Lstr_obs_pe_2: .asciz "\\",\\"name\\":\\""
             .Lstr_obs_pe_3: .asciz "\\",\\"startMicros\\":"

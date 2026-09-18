@@ -38,6 +38,7 @@ import dev.kof.compiler.runtime.RuntimeNet;
 import dev.kof.compiler.runtime.RuntimeUri;
 import dev.kof.compiler.runtime.RuntimeObservability1;
 import dev.kof.compiler.runtime.RuntimeObservability2;
+import dev.kof.compiler.runtime.RuntimeObservabilitySpans;
 import dev.kof.compiler.runtime.RuntimeObservability3;
 import dev.kof.compiler.runtime.RuntimePrint;
 import dev.kof.compiler.runtime.RuntimePrintNum;
@@ -204,6 +205,7 @@ public final class NativeRuntime {
         RuntimeRandom.emit(sb);
         RuntimeObservability1.emit(sb);
         RuntimeObservability2.emit(sb);
+        RuntimeObservabilitySpans.emit(sb);
         RuntimeObservability3.emit(sb);
         RuntimeEnum.emit(sb);
         RuntimeMap.emit(sb);

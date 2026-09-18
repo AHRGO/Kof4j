@@ -40,6 +40,8 @@ public final class NativeRiscvAsm {
         return new StringBuilder()
                 .append(NativeRiscvAsmRtB0.RISCV_RUNTIME_ASM_B_0)
                 .append(NativeRiscvAsmRtB1.RISCV_RUNTIME_ASM_B_1)
+                // §272 face (c): observability spans/IDs reais (era stub constante no B1).
+                .append(NativeRiscvAsmObs.RISCV_ASM_OBS)
                 .append(NativeRiscvAsmRtB2.RISCV_RUNTIME_ASM_B_2)
                 .append(NativeRiscvAsmRtB3.RISCV_RUNTIME_ASM_B_3)
                 .append(NativeRiscvAsmRtB4.RISCV_RUNTIME_ASM_B_4)

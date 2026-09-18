@@ -139,6 +139,7 @@ class KofObservabilityTest {
                 assert(json.contains("\\"spanId\\":"))
                 assert(json.contains("\\"durationMicros\\":"))
                 assert(json.contains("\\"name\\":\\"op\\""))
+                assert(observability.spanEnd(h) == "{}")
                 println("ok")
             }
             """, "ok");
@@ -162,6 +163,11 @@ class KofObservabilityTest {
                 assert(json.contains("\\"startMicros\\":"))
                 assert(json.contains("\\"durationMicros\\":"))
                 assert(json.contains("\\"parentSpanId\\":\\"\\""))
+                assert(h.length() == 48)
+                assert(json.contains(h.substring(0, 32)))
+                assert(json.contains(h.substring(32)))
+                assert(observability.spanEnd(h) == "{}")
+                assert(observability.spanEnd("01234567890123456789012345678901234567890123456789") == "{}")
                 println("ok")
             }
             """, "ok");
@@ -176,6 +182,63 @@ class KofObservabilityTest {
                 println("esc-ok")
             }
             """, "esc-ok");
+    }
+
+    @Test
+    void spansCrossArchRiscv64(@TempDir Path tmp) throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                NativeRiscv64E2ETest.hasToolchain("riscv64"),
+                "cross toolchain riscv64 + qemu ausente — pulando (NATIVE002)");
+        runCross(tmp, Target.NATIVE_RISCV64, "riscv64");
+    }
+
+    @Test
+    void spansCrossArchAarch64(@TempDir Path tmp) throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                NativeRiscv64E2ETest.hasToolchain("aarch64"),
+                "cross toolchain aarch64 + qemu ausente — pulando (NATIVE002)");
+        runCross(tmp, Target.NATIVE_AARCH64, "aarch64");
+    }
+
+    // §272 face (c): riscv64 deixa de ser stub constante; aarch64 vem do MESMO
+    // emissor riscv via tradutor (regra 5). Afirma o golden da face (b): shape
+    // completo, IDs W3C reais (rand), handle 48, escape de nome, missing/dup
+    // -> "{}" (nunca null silencioso — R6).
+    private String runCross(Path tempDir, Target target, String arch) throws java.io.IOException {
+        Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, """
+            main() {
+                val h = observability.spanStart("op")
+                assert(h.length() == 48)
+                val json = observability.spanEnd(h)
+                assert(json.contains("\\"traceId\\":\\""))
+                assert(json.contains("\\"spanId\\":\\""))
+                assert(json.contains("\\"parentSpanId\\":\\"\\""))
+                assert(json.contains("\\"name\\":\\"op\\""))
+                assert(json.contains("\\"startMicros\\":"))
+                assert(json.contains("\\"endMicros\\":"))
+                assert(json.contains("\\"durationMicros\\":"))
+                assert(json.contains(h.substring(0, 32)))
+                assert(json.contains(h.substring(32)))
+                assert(observability.spanEnd(h) == "{}")
+                assert(observability.spanEnd("01234567890123456789012345678901234567890123456789") == "{}")
+                assert(observability.requestId().length() == 32)
+                assert(observability.traceId().length() == 32)
+                assert(observability.spanId().length() == 16)
+                assert(observability.traceId() != observability.traceId())
+                val e = observability.spanStart("a\\"b")
+                assert(observability.spanEnd(e).contains("\\"name\\":\\"a\\\\\\"b\\""))
+                println("x-ok")
+            }
+            """);
+        Path outDir = tempDir.resolve("out-" + System.nanoTime());
+        CompilationResult result = driver.compile(file, outDir, target);
+        assertTrue(result.success(), arch + " compile failed: " + result.diagnostics().getDiagnostics());
+        Path bin = outDir.resolve("Default/Main");
+        assertTrue(Files.exists(bin), arch + " binary should exist");
+        String output = NativeRiscv64E2ETest.runQemu(arch, bin);
+        assertEquals("x-ok", output, arch + " output");
+        return output;
     }
 
 @Test

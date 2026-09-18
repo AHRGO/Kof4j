@@ -22,8 +22,11 @@ public final class RuntimeSecurity11 {
                 pushq %r13
                 pushq %r14
                 movq %rdi, %rbx          # nbytes
-                # alloc n + 24 + 1
-                leaq 25(%rbx), %rdi
+                # alloc 24 (header) + 2n (hex) + 1 (NUL) — antes `leaq 25(%rbx)`
+                # (n+25) escrevia 57 num bloco de 48 p/ n=16: overflow do
+                # cabecalho do proximo bloco do arena (§292, latente p/ o bump
+                # self-heal do header; real sob free-list).
+                leaq 25(%rbx,%rbx), %rdi
                 call kof_alloc
                 movq %rax, %r12
                 movl $1, 0(%r12)

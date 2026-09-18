@@ -5,7 +5,7 @@
 **Última atualização:** 17 de setembro de 2026
 **Versão:** 0.4.0-beta (`VERSION` 0.4.0-beta)
 
-> **Status:** DONE (JVM/Native/JS) — `KofObservabilityTest` 10/10 (VERSION 0.4.0-beta, free-list Native); API confirmada em `KofObservability.java`; histogramas/spans/export Prometheus fechados como `OBS002` (16/09); **export OpenTelemetry (`exportSpans`) fechado como `OBS003` — JVM/JS ✅, gap honesto no Native**
+> **Status:** DONE (JVM/Native/JS) — `KofObservabilityTest` 12/12 (VERSION 0.4.0-beta, free-list Native); API confirmada em `KofObservability.java`; histogramas/spans/export Prometheus fechados como `OBS002` (16/09); **export OpenTelemetry (`exportSpans`) fechado como `OBS003` — JVM/JS ✅, gap honesto no Native**
 > **Módulo:** `kof.observability` — `observability.*`
 > **Targets:** JVM ✅ · Native x86_64 ✅ (free-list) · Native riscv64 ✅ · JS ✅ — G5 fechado 0.2.6-beta; OBS002 16/09; **`OBS003`: `exportSpans()` só no JVM/JS (o Native recusa em tempo de compilação — nunca stub)**
 
@@ -97,7 +97,7 @@ main() {
 - **Readiness/liveness:** `mov $1, %eax; ret`.
 - **Metrics:** `.bss` com 32 slots (`512` bytes) para counters e gauges — cada slot `16` bytes (`ptr` + `int` + pad). Busca linear com comparação de conteúdo (`length` em `16(%rdi)` + bytes em `24(%rdi)`); `counter`/`increment` incrementam, `gauge` sobrescreve. Sem persistência; overflow silencioso após 32 nomes distintos (retorna `0`).
 - **Histogramas/spans/metrics (`OBS002`):** slots `.bss` estendidos para histogramas (soma+contagem) e spans (nanos de início); `metrics()` monta o texto Prometheus em asm.
-- **Export OTel:** **não implementado** — `exportSpans()` é recusado em tempo de compilação com `OBS003` (R7: JVM-first; nunca stub). Faces residuais conhecidas do caminho de span no Native estão catalogadas em `docs/bugs-and-gaps/known-bugs.md`.
+- **Export OTel:** **não implementado** — `exportSpans()` é recusado em tempo de compilação com `OBS003` (R7: JVM-first; nunca stub). O próprio caminho de span no Native bate com o golden do JVM em x86_64/riscv64/aarch64 desde 18/09 (faces (b)+(c) do §272 fechadas; o overflow do `kof_sec_random_hex` achado no port foi fechado como §292).
 - **Request IDs:** tail-call para `kof_sec_random_hex(16)` — `getrandom(2)` → `32` hex chars (sem hífens, `318` syscall), mesma entropia do `kof.security`.
 
 ### JS (kof-runtime.mjs)
@@ -112,7 +112,7 @@ main() {
 
 ## 4. Testes
 
-`kof-compiler/src/test/java/dev/kof/compiler/KofObservabilityTest.java` — 10 testes (JVM/Native/JS), 10/10:
+`kof-compiler/src/test/java/dev/kof/compiler/KofObservabilityTest.java` — 12 testes (JVM/Native x86+riscv64+aarch64/JS), 12/12:
 
 - `observabilityJvm` / `observabilityNative` / `observabilityJs` — health/readiness/liveness, counter sequencial, gauge, `histogram` + `metrics()` (Prometheus `_count`/`_sum`), `requestId`/`correlationId`.
 - `tracingJvmNativeJs` — `traceId` (32 hex) / `spanId` (16 hex) W3C nos três targets.
@@ -143,7 +143,7 @@ Próximos passos (fora do P0-G5): rota HTTP `/metrics` servindo `observability.m
 
 - ✅ API idiomática (`observability.*`) + type safety (dispatch compile-time)
 - ✅ Targets JVM/Native/JS (sem gaps, `supportedOn` = true) — **exceto** `exportSpans()` (`OBS003`, JVM/JS; gap honesto no Native)
-- ✅ Testes `KofObservabilityTest` 10/10 + `KofSecurityTest` 25/25 + `KofValidationTest` 3/3 sem regressão
+- ✅ Testes `KofObservabilityTest` 12/12 + `KofSecurityTest` 25/25 + `KofValidationTest` 3/3 sem regressão
 - ✅ Benchmark não aplicável (operações O(1) / syscall `getrandom`)
 - ✅ Security review: `requestId` usa `SecureRandom` (JVM) / `getrandom` (Native) / `crypto.randomUUID` (JS) — sem vazamento
 - ✅ Export OTel: payload OTLP/JSON `resourceSpans` (JVM/JS), golden medido no oráculo JVM + GraalJS; `OBS003` no Native documentado em `backend-parity.md`
