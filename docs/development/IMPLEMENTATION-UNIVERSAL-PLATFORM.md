@@ -90,7 +90,7 @@ a new domain. **This stage closes before any Tier 6+ (R12).**
 | # | Item | Status | Owner | Proof / note |
 |---|------|--------|-------|--------------|
 | 1.3.1 | `CONC003` — real JS async/await/Promise | ✅ 03/09 | JS lane | residual `CONC003-JS-01` (only task-lambdas can be async) |
-| 1.3.2 | §132 — cooperative scheduling in KofJS (supervisor) | 🟡 | `.18` | multi-session redesign (generators + logical clock); `OTP002` gate stays until it lands |
+| 1.3.2 | §132 — cooperative scheduling in KofJS (supervisor) | ✅ 18/09 | `.18` | shipped as **cooperative async `time.sleep`** (`06d8b322`) — NOT the earlier generators+logical-clock sketch: await-point via `computeAsyncColoring` + Promise `kofTimeSleep` + `KofJsRunner` host pump; `OTP002` lifted. Proof: `AsyncSleepJsE2ETest` + `KofSupervisorE2ETest#supervisorJsParity`/`#supervisorJsS2Parity` (JS -> `restarts=2 fabrica=3`) |
 
 ### 1.4 Typed query DSL
 
@@ -307,7 +307,7 @@ Stage 8.
 Cross-cutting: **R3 (formalized FFI)** is the backbone of Stages 3–7 and
 **R4 (codegen hook)** gates Stage 3 (`infra`). Within Stage 1, the remaining
 non-decision items are parity gaps on the web/native lanes (1.1.3–1.1.10) and
-the §132 JS scheduling redesign (1.3.2, `.18`).
+the §132 JS scheduling redesign (1.3.2, `.18`) — **CLOSED 18/09** (`06d8b322`), so Stage 1 now awaits only the web/native parity gaps + the maintainer decisions D1–D3.
 
 See the companion [`UNIVERSAL-PLATFORM-VISION.md`](../architecture/UNIVERSAL-PLATFORM-VISION.md)
 for the *why* behind every item above.

@@ -91,7 +91,7 @@ domínio novo. **Este estágio fecha antes de qualquer Tier 6+ (R12).**
 | # | Item | Status | Dono | Prova / nota |
 |---|------|--------|------|--------------|
 | 1.3.1 | `CONC003` — async/await/Promise reais no JS | ✅ 03/09 | lane JS | residual `CONC003-JS-01` (só task-lambdas podem ser async) |
-| 1.3.2 | §132 — escalonamento cooperativo no KofJS (supervisor) | 🟡 | `.18` | redesign multi-sessão (generators + relógio lógico); gate `OTP002` fica até landar |
+| 1.3.2 | §132 — escalonamento cooperativo no KofJS (supervisor) | ✅ 18/09 | `.18` | entregue como **`time.sleep` async cooperativo** (`06d8b322`) — NÃO o rascunho generators+relógio lógico: ponto de await via `computeAsyncColoring` + Promise `kofTimeSleep` + bomba do host `KofJsRunner`; `OTP002` levantado. Prova: `AsyncSleepJsE2ETest` + `KofSupervisorE2ETest#supervisorJsParity`/`#supervisorJsS2Parity` (JS -> `restarts=2 fabrica=3`) |
 
 ### 1.4 DSL de query tipada
 
@@ -308,7 +308,7 @@ Estágio 7 → Estágio 8.
 Transversal: **R3 (FFI formalizada)** é a espinha dorsal dos Estágios 3–7 e
 **R4 (hook de codegen)** barra o Estágio 3 (`infra`). Dentro do Estágio 1, os
 itens restantes sem decisão são os gaps de paridade das lanes web/native
-(1.1.3–1.1.10) e o redesign de escalonamento JS do §132 (1.3.2, `.18`).
+(1.1.3–1.1.10) e o redesign de escalonamento JS do §132 (1.3.2, `.18`) — **FECHADO 18/09** (`06d8b322`); o Stage 1 agora só aguarda os gaps de paridade web/native + as decisões da mantenedora D1–D3.
 
 Veja o companion [`UNIVERSAL-PLATFORM-VISION.pt_BR.md`](../architecture/UNIVERSAL-PLATFORM-VISION.pt_BR.md)
 para o *porquê* por trás de cada item acima.
