@@ -121,6 +121,25 @@ main() {
 > (`(Int) -> Int f` não compila). A função chega como lambda anônimo no ponto
 > de chamada.
 
+## Sobrecarga (0.4.0-beta)
+
+Duas funções com o MESMO nome coexistem quando as assinaturas diferem
+(aridade ou tipos dos parâmetros):
+
+```kf
+main() {
+    println(g(4))       // 4
+    println(g(4, 5))    // 9
+}
+Int g(Int x) { return x }
+Int g(Int x, Int y) { return x + y }
+```
+
+Duplicata exata (mesmo nome + mesmos parâmetros) é erro (SEM047).
+Mudar SOMENTE o tipo de retorno não cria sobrecarga — a chamada fica
+ambígua (SEM057). Métodos de classe sobrecarregam igual
+(`training/idioms/classes.md`, §131).
+
 ## Exercícios
 
 1. Escreva `Int maximo(Int a, Int b)` em expression body e use-a.

@@ -121,6 +121,25 @@ main() {
 > (`(Int) -> Int f` does not compile). The function arrives as an anonymous lambda at the
 > call site.
 
+## Overloading (0.4.0-beta)
+
+Two functions with the SAME name coexist when their signatures differ
+(arity or parameter types):
+
+```kf
+main() {
+    println(g(4))       // 4
+    println(g(4, 5))    // 9
+}
+Int g(Int x) { return x }
+Int g(Int x, Int y) { return x + y }
+```
+
+An exact duplicate (same name + same parameters) is an error (SEM047).
+Changing ONLY the return type does not create an overload — the call
+becomes ambiguous (SEM057). Class methods overload the same way
+(`training/idioms/classes.md`, §131).
+
 ## Exercises
 
 1. Write `Int maximo(Int a, Int b)` as an expression body and use it.
