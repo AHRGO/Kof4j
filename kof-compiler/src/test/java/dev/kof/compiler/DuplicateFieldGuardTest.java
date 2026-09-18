@@ -60,25 +60,26 @@ class DuplicateFieldGuardTest {
     }
 
     @Test
-    void sameNameDifferentDescriptorFieldsStillCompileAndRun(@TempDir Path tempDir) throws Exception {
-        // r1 control (measured): `static Int a` + `Long a` are DIFFERENT JVM
-        // field entries (descriptors I and J) — the guard must NOT fire.
-        // NOTE: the EXECUTION of this shape fails on the tip for PRE-EXISTING
-        // reasons catalogued as §289 (JVM: getfield on the clobbered symbol
-        // dies VerifyError; JS: `unknown local slot 0` COMP002) — the control
-        // here pins only the compile-side contract of the guard on the JVM.
-        var src = """
+    void sameNameEvenDifferentDescriptorRejectedAsGarbageFace(@TempDir Path tempDir) throws Exception {
+        // §289 CLOSED BY THIS GUARD (measured 18/09): the "JVM-legal" pair
+        // `static Int a` + `Long a` produced GARBAGE ON ALL FOUR TARGETS —
+        // JVM VerifyError at load, JS ICE `unknown local slot 0`, script
+        // printed the CLASS TYPE toString, native returned a pointer-like
+        // number (3530822633505786184) for Ok.a. Nothing worked anywhere, so
+        // the javac-style rule (ONE field per NAME, any type) forbids the
+        // shape loudly instead of shipping four broken emissions — and dies
+        // with the resolver clobber it existed to paper over.
+        CompilationResult r = compile(tempDir, "C", """
                 class Ok {
                     static Int a = 1
                     Long a = 2
                 }
                 main() { println(Ok.a) }
-                """;
-        CompilationResult r = compile(tempDir, "C", src, Target.JVM);
-        assertTrue(r.success(), "legitimate field pair must NOT get SEM076: "
-                + r.diagnostics().getDiagnostics());
-        assertFalse(r.diagnostics().getDiagnostics().stream()
-                .anyMatch(d -> d.code().equals("SEM076")), "SEM076 must not fire");
+                """, Target.JVM);
+        assertFalse(r.success(), "same-name field pair must be rejected (garbage on all targets)");
+        assertTrue(r.diagnostics().getDiagnostics().stream()
+                .anyMatch(d -> d.code().equals("SEM076") && d.line() > 0),
+                "SEM076 positional: " + r.diagnostics().getDiagnostics());
     }
 
     @Test

@@ -191,8 +191,7 @@ public final class SymbolTableBuilder {
                 // backend com dois campos "n":"I" e a classe morria no load
                 // (ClassFormatError silencioso, R6). Mesma escola do #264
                 // (SEM061 p/ metodos): chave = descritor APAGADO do tipo.
-                Type ft = MemberResolver.resolveType(sa, fd.type(), classScope);
-                key = "F:" + fd.name() + ":" + typeKey(ft);
+                key = "F:" + fd.name();
                 shown = "field '" + fd.name() + "' of type '" + fd.type() + "'";
                 pos = fd.position();
                 SourcePosition prevF = seen.putIfAbsent(key, pos);
@@ -200,8 +199,9 @@ public final class SymbolTableBuilder {
                     dc.error(pos != null ? pos.file() : "", pos != null ? pos.line() : 0,
                             pos != null ? pos.column() : 0, 0,
                             "'" + shown + "' is already defined in class '" + className
-                                    + "' at line " + prevF.line() + " — two fields (static or not)"
-                                    + " with the same name and JVM descriptor cannot coexist in one class",
+                                    + "' at line " + prevF.line()
+                                    + " — a class cannot declare two fields with the same name"
+                                    + " (static or not, any type); rename one",
                             "SEM076");
                 }
                 continue;
