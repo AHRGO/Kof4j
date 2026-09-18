@@ -37,6 +37,8 @@
 
 Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
+> **✅ FEITO (18/09 ~13:55, dono = 192.168.100.15, lane docs): CELULA DO IDIOM `Map.get` CORREGIDA POS-#438 (EN+PT).** `training/idioms/collections` dizia "primitive: the type stays V" — apos o merge N1 isso e MENTIRA de doc (medido: `Int z = m.get("a")` → type-mismatch `NullableType[int]`; primitivos agora sao `V?` tambem). Celula atualizada com a promessa cumpida + alerta honesto do §294 (present×primitive null-check crasha no JVM; preferir `getOrDefault` `62bd455e`/`contains` ate fechar). docs-lang 0/0/0.
+
 > **✅ FEITO (18/09 ~13:45, dono = 192.168.100.15, lane docs, commit pending): POINTER 2.6 SINCRONIZADO COM O MERGE.** `roadmap.md`+PT fila 2.6: #438 era "pending maintainer review" — agora **MESCLADO `250f6207`** (12:53); N1 landou (absent-face medido `9`), presente×primitivo fica no §294-2a (dono `.22`), N2/I4 fora de escopo. docs-lang 0/0/0.
 
 > **✅ FEITO (18/09 ~13:35, dono = 192.168.100.15, lane bugs-and-gaps/docs, commit `9f018542`): §294 RE-MEDIDA PÓS-#438 (`250f6207`) — crash MUDOU DE LUGAR, não morreu.** #438 merged pela mantenedora 12:53 e caiu no meu tip via rebase. Medido com jars frescos: face AUSENTE consertada (`9` ✅); face PRESENTE×primitivo quebra para TODOS (Int/Long/Double/Boolean → `NoSuchMethodError Object.valueOf(boxed)` no narrowing, `T.kf:4`; String ok; Float → CCE Double→Float no sitio do mapa = bug adjacente de storage, anotado p/ `.22`). Script face: matriz 4/4 ✅. §294 segue OPEN com dono `.22` cluster erasure/boxing (NAO o #438) e lista de aceite registrada (presente×{Int,Long,Double,Boolean,String}×{JVM,JS} + script matrix + absent original). docs-lang 0/0/0; ledger rc=0; contagem 20 estavel.
