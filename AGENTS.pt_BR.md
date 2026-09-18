@@ -5,7 +5,7 @@
 Este é o guia **obrigatório** para qualquer agente de IA (ou humano) que
 escreva código Kof neste repositório. Leia antes de gerar qualquer `.kf`.
 
-**Versão:** 0.4.0-beta · Última atualização: 13/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe**; branch ativa = `beta-0.4.0`)
+**Versão:** 0.4.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09); branch ativa = `beta-0.4.0`)
 
 > **PRIORIDADE Nº 1: QUALIDADE.** Antes de qualquer feature, leia o
 > **Portão de qualidade — "nenhum bug sobe"** (§ abaixo), **universal para
