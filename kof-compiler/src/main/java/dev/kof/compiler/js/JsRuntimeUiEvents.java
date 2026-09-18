@@ -163,6 +163,12 @@ public final class JsRuntimeUiEvents {
                 // wrapper (fn.invoke.bind) is a new object every call, so
                 // indexOf(fn) on wrappers could never match.
                 st.subs.push({ raw: fn, f: f });
+                if (kofUiCurrentComponent) {
+                    // D-UI-AUTOUNSUB (A): made inside a component's lifecycle →
+                    // bound to that component, dropped when it leaves the tree.
+                    const comp = kofUiCurrentComponent;
+                    (comp._autoSubs = comp._autoSubs || []).push({ store: s, raw: fn });
+                }
                 // the subscriber receives the current value immediately
                 try { f(st.value); } catch (e) {}
             }
