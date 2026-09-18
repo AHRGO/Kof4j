@@ -10408,3 +10408,29 @@ The corpus (`backend-parity.md` media row + `stdlib-web.md` ×3 + `KofCliSupport
 - **(b) over-gating** — the JVM runtime is bundled with the APK, so add `ANDROID` to the allow-lists (the way `KofScheduler.java:29` already does).
 
 **Docs corrected in this unit (EN+PT):** `backend-parity.md` Android row + convention section now state the measured Android codes and point here; the "reserved codes" note no longer lists `DB001`/`SECN001`/`SECN003`/`SECN004` as dead — they are live on Android (measured). `docs/targets/KOFANDROID.md` §Restrictions gained the row. Pinned by `DomainGapCodesTest.androidRefusesDbAndCryptoWithTheDocumentedCodes` (SECN003 + DB001) so the R6 gate covers Android — when the compiler lane resolves (a)/(b), the pin turns RED and forces this record to move.
+
+
+### §279 — KofJS: an `if` on a **nullable primitive** whose condition the optimizer folds leaves the §267 `KofStatementIf` marker orphaned → `COMP002 unexpected op in expression statement` (ICE) — 🟡 OPEN (found 18/09 in the `.22` ISSUE-LANE triage, re-measured by lane bugs-and-gaps `.15`; fix owner = KofJS lane `.18` — regression of the §267 marker)
+
+- **Symptom (measured 18/09 on tip `a35067b9`, fresh `kof-compiler` build):** a JS compile of an `if` whose condition is a **nullable-primitive** null-check aborts with an internal compiler error instead of compiling:
+  - `Int?`/`Boolean?` null-check in an **else-if chain** → `Internal compiler error: KofJS: unexpected op in expression statement: KofStatementIf[branchTrueLabel=LabelId[id=5]]` (**COMP002**).
+  - `Int?`/`Boolean?` null-check in an `if` **without else** that is the **last statement of a void function** (implicit return) → `... KofReturnVoid[]` (**COMP002**).
+- **Minimal repro (verbatim, measured):**
+  ```kof
+  String probe(Int? v) {
+      if (v == null) { return "n" } else if (v > 0) { return "e" } else { return "z" }
+  }
+  main() { println(probe(null)) }
+  ```
+  ```kof
+  void probe(Boolean? flag) {
+      if (flag == null) { println("n") }
+  }
+  main() { probe(null) }
+  ```
+- **Trigger isolation (5 probes, same build):** `Boolean?` + plain `if/else` ✅; `String?` + else-if chain ✅; plain `Int` + else-if chain ✅ (no null); `Int?` + else-if chain ❌ ICE; `Boolean?` + `if`-without-else as the last statement ❌ ICE. The differentiator is the **nullable-primitive** condition — not the else-if nor the void-if per se.
+- **Root cause (IR-level, measured):** `StatementLowerer.IfStmt` (`StatementLowerer.java:195`) emits `KofStatementIf(thenLabel)` before the condition (§267). For a nullable-primitive null-check the optimizer folds the condition and the dead-code pass removes the untaken branch (`OptimizerConstantFold.foldConditionalJump` — the null-fold of two literal operands, `OptimizerConstantFold.java:292`; `Optimizer.java:160-205` DCEs the unreachable ops) **but the marker is not part of the folded `KofConditionalJump`, so it survives orphaned**. Measured IR of the void probe: the whole method body is just `[KofStatementIf(id=2), KofReturnVoid]` — condition and body gone. The JS dispatcher `JsControlFlowParser.parseStatement` (`:128`) consumes the marker and delegates to `p.expr.parseExpressionStatement`; with no condition/`CJump` to follow, the next op is the following statement (a nested `KofStatementIf` in the else-if) or the trailing `KofReturnVoid`, and `JsExpressionStatementParser` (`:195`) throws COMP002.
+- **Cross-target (measured, same build):** JVM compiles, Native compiles, Script compiles (the `COMP003` seen in a compile-to-dir call is the "target 'script' emits no artifacts" guard, not a code error); **JS is the only target that fails to compile**. (The runtime behaviour of the folded null-check itself is the parked D-NULL-INTENT parameter face — umbrella #278 — a separate matter; this record is the **JS ICE**, which is fix-now and does not wait on #278.)
+- **Why it matters (R6/Q7):** an ICE is never a valid outcome; a program that compiles on the other three targets must not abort the JS backend. It is a **regression introduced by §267** (`KofStatementIf`, 17/09) interacting with the pre-existing nullable-primitive fold.
+- **Files:** `kof-compiler/src/main/java/dev/kof/compiler/StatementLowerer.java:195` (marker emit), `.../backend/OptimizerConstantFold.java:292` (`foldConditionalJump`), `.../backend/Optimizer.java:160-205` (DCE), `.../js/JsControlFlowParser.java:128` (marker consume), `.../js/JsExpressionStatementParser.java:195` (throw).
+- **Fix direction (owner's call):** either the optimizer drops the `KofStatementIf` marker together with the folded `KofConditionalJump` (the marker must be part of the fold/DCE unit), or the JS dispatcher tolerates a marker with no following `CJump`. A regression test (`Int?` else-if + `Boolean?` void-tail, `runJs`) is required in the same commit as the fix.
