@@ -946,6 +946,8 @@ REVOGADA). Lane: **compiler** (contrato nos 4 backends — não a lane docs).
 | 2.6.3 | **N3** — `== null` em NÃO-nullable: legal, constant-foldable, NUNCA diagnóstico | a intenção é a própria comparação; regra 2 (retrocompat): código existente que compara continua compilando | N1 |
 | 2.6.4 | **N4** — auditar as faces restantes de null silencioso | map-miss `0` (SG-008), campo não-inicializado `0`, unbox-de-null `0` — cada um ganha decisão ou diagnóstico honesto (R6) | N1–N3 |
 
+**Estado da fila (18/09):** PR **#438** (fork externo, `fix/278-d-null-intent-atomic`) ataca o **2.6.1/N1** (JVM+Script+JS) sob a "Scope protection" do §D-NULL-INTENT — nao-draft, aguardando revisao da mantenedora (CI `Build + Tests` in_progress no head `7dc08ccb`); lanes nao devem abrir frente N1 paralela (regra 6 / um contrato, um PR).
+
 #### 2.7 — Value records / tipos de valor de primeira classe (fila de `D-VALUE-RECORD`, 16/09)
 
 **Decidido pela mantenedora 16/09** (registro: `DECISIONS.md` §D-VALUE-RECORD;

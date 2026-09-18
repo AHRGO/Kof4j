@@ -945,6 +945,8 @@ Lane: **compiler** (contract on the 4 backends — not the docs lane).
 | 2.6.3 | **N3** — `== null` on a NON-nullable: legal, constant-foldable, NEVER a diagnostic | intent reads the comparison itself; rule 2 (backward compat): existing code that compares keeps compiling | N1 |
 | 2.6.4 | **N4** — audit the remaining silent-null faces | map-miss `0` (SG-008), uninitialized field `0`, unbox-of-null `0` — each gets a decision or an honest diagnostic (R6) | N1–N3 |
 
+**Queue status (18/09):** PR **#438** (external fork, `fix/278-d-null-intent-atomic`) attacks **2.6.1/N1** (JVM+Script+JS) under §D-NULL-INTENT "Scope protection" — NOT draft, pending maintainer review; lanes must not open a parallel N1 front (rule 6 / one contract, one PR; CI `Build + Tests` in_progress at head `7dc08ccb`).
+
 #### 2.7 — Value records / first-class value types (queue of `D-VALUE-RECORD`, 16/09)
 
 **Decided by the maintainer 16/09** (record: `DECISIONS.md` §D-VALUE-RECORD;

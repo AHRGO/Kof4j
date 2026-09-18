@@ -58,6 +58,23 @@ println(b.all().size())
 
 Fix 01/09: `Set<T>`/`Map<K,V>` como campo/retorno de classe no JVM — o mapper mapeava só `List`→`ArrayList` (então `Set`/`Map` viravam `Lkof/Set;` → `NoClassDefFoundError`); agora `HashSet`/`HashMap`. Parser: método de classe com retorno genérico (`Set<Int> all(`) agora parseia (antes caía no ramo de campo). `KofMapSetTest.setMapAsFieldAndReturn`.
 
+## `listOf` com subtipos relacionados infere o ancestral comum (0.4.0-beta, §285)
+
+```kof
+interface Animal { String sound() }
+class Dog implements Animal { String sound() { return "woof" } }
+class Cat implements Animal { String sound() { return "meow" } }
+var animals = listOf(new Dog(), new Cat())   // inferido List<Animal>, nao List<Dog>
+animals.get(1).sound()                       // "meow" — sem ClassCastException
+```
+
+Elementos que COMPELHAM um supertipo (classe ou interface) sao homogeneos no
+nivel do ancestral: a inferencia alarga para o supertipo comum. Elementos
+nao relacionados (`listOf(new Dog(), 42)`) mantem a rejeicao de homogeneidade
+SEM056. Ate 0.3.x o tipo vinha so do PRIMEIRO argumento — o fix caminha por
+superclasses E interfaces (familia do §156). Medido 18/09 no tip:
+`woof`/`meow`.
+
 ## `Map.get` devolve `V?` para valores de referência (02/09)
 
 `m.get(chave)` retorna `V?` quando o valor é um tipo de referência
