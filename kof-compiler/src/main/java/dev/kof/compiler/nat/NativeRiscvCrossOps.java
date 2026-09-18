@@ -128,7 +128,7 @@ public final class NativeRiscvCrossOps {
     void emitCrossCallRiscv(StringBuilder sb, KofCall kc) {
         String mn = kc.methodName();
         Type argType = kc.parameterTypes().isEmpty() ? Type.UnknownType.UNKNOWN : kc.parameterTypes().get(0);
-        // §267 (GAP, stub catalogado — Q7): mesmo no-op do x86 — primitivo cru
+        // §284 (GAP, stub catalogado — Q7): mesmo no-op do x86 — primitivo cru
         // fica no lugar do ponteiro box (ver NativeX86Calls.emitCall). Dono: lane nat.
         if ("kof_box".equals(mn) || "kof_unbox".equals(mn)) return;
 

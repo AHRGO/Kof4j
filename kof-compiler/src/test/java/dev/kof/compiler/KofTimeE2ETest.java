@@ -255,7 +255,7 @@ class KofTimeE2ETest {
         // pthread_create do scheduler (exit 139) — o que este test prova e
         // que a forma workaround compila e o job roda nos dois archs.
         // aarch: o scheduler de intervalo ainda armado nao termina sob
-        // qemu-aarch (gap §266 — thread sem join na saida); o cancel
+        // qemu-aarch (gap §283 — thread sem join na saida); o cancel
         // explicito antes de sair e a forma que termina (medido: rc=0).
         // riscv: join explicito no runtime — termina sem cancel.
         if (has("riscv64-linux-gnu-as", "riscv64-linux-gnu-ld", "qemu-riscv64")) {

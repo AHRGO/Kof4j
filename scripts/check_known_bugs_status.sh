@@ -46,7 +46,7 @@ classify() { # $1=file -> "NNN status" lines
     sid != "" {
       # status-bearing lines only (chronological append wins)
       if ($0 ~ /\*\*[Ss]tatus\*\*/ || $0 ~ /^[>\- ]*\*\*(Status|Estado|Resolu|Fechamento|Resolution|Fix|✅|🟡|🔴|CORRIGIDO|FECHADO|FIXED|RESOLVIDO)/ || $0 ~ /— *(✅|🟡|🔴)/ || $0 ~ /\*\*(✅|🟡|🔴) /) {
-        if ($0 ~ /✅/ && $0 !~ /🟡|🔴|🟢.*🔴/) last = "closed"
+        if (($0 ~ /✅/ || $0 ~ /🟢/) && $0 !~ /🟡|🔴/) last = "closed"
         else if ($0 ~ /🟡|🔴|OPEN|ABERTO|PARTIAL|PARCIAL/) last = "live"
       }
     }
@@ -86,6 +86,13 @@ EN_UNK="$(echo "$EN_LEDGER" | awk '$2=="unknown"{print $1}' | sort -n | tr '\n' 
 PT_UNK="$(echo "$PT_LEDGER" | awk '$2=="unknown"{print $1}' | sort -n | tr '\n' ' ')"
 
 rc=0
+# duplicate-number check (collision fix 18/09: native copies of §266/§267 became §283/§284)
+for LEDGER in "$EN_LEDGER" "$PT_LEDGER"; do :; done
+EN_DUP="$(echo "$EN_LEDGER" | awk '{print $1}' | sort -n | uniq -d | tr '\n' ' ')"
+PT_DUP="$(echo "$PT_LEDGER" | awk '{print $1}' | sort -n | uniq -d | tr '\n' ' ')"
+if [[ -n "${EN_DUP// }" || -n "${PT_DUP// }" ]]; then
+  echo "DUPLICATED SECTION NUMBERS: EN[$EN_DUP] PT[$PT_DUP]"; rc=1
+fi
 echo "EN open/partial ($(echo "$EN_OPEN" | grep -c .)): $(echo "$EN_OPEN" | tr '\n' ' ')"
 echo "PT open/partial ($(echo "$PT_OPEN" | grep -c .)): $(echo "$PT_OPEN" | tr '\n' ' ')"
 if [[ "$EN_OPEN" != "$PT_OPEN" ]]; then
