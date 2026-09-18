@@ -50,6 +50,7 @@ porque existem em outras linguagens. Código assim **não compila** ou
 | Retorno/método com tipo genérico em classe (`List<String> foo()`) | ✅ Implemented (02/09 — parser parse-then-decide) |
 | Forma prefixada nullable `String? s` (tipo antes do nome) e retorno `String? f()` | ✅ Implemented (02/09 — statements, funções e classes). NOTA: inicializar com `= null` é SEM048 desde 10/09 — null só chega ao `T?` via API |
 | `Map.get` devolvendo `V?` para valores de referência | ✅ Implemented (02/09 — ausência = null, narrowing) |
+| `::twice` / referencia nua de funcao nomeada (`val f = twice`, `listOf(twice)`) | envoltorio lambda: `val f = (x: Int) -> twice(x)`; `listOf((x: Int) -> twice(x))` — medido 18/09: ref nua = SEM011, envoltorio = `42` |
 
 ## Bad example (ainda não compila)
 
