@@ -83,7 +83,7 @@
 | `native.risc` (riscv64) / `native.arm` (aarch64) | — | **core completo (02-03/09)**: plumbing + codegen/runtimes asm puro + qemu — `NativeRiscv64E2ETest 13/13` + `NativeAarch64E2ETest 13/13` (core: classes/arrays/List/switch/try-catch/pattern/Strings/recursão) — paridade avançada pendente — `docs/development/native-multiarch.md` | — | target separation 0.2.0 |
 | `kof fmt` (formatter parser real, idempotente) | ✅ 31/08 | ✅ | ✅ | `KofFormatter` (2c3e794) |
 | **KofJS no browser real** (`kof.ui` renderizando DOM via ES Modules) | — | — | ✅ 01/09 (`KofJsBrowserE2ETest` — Chrome headless + HTTP + captura de DOM; pula se Chrome ausente) | ESM via HTTP local (módulos não carregam via `file://`); `KofJsRunner` serve `appDir` em `127.0.0.1` |
-| Android (Fase 1: `kof build --target android` → projeto Maven + APK, host Activity em Kof) | ✅ (bytecode JVM) | — | — | gaps `AND00x` em compile-time |
+| Android (Fase 1: `kof build --target android` → projeto Maven + APK, host Activity em Kof) | ✅ (bytecode JVM) | — | — | gaps `AND00x` em compile-time **mais `DB001`/`SECN00x`/`GPU001`** (medido 17/09 — §278): o alvo com backend JVM ainda exclui `ANDROID` em vários checks de `supportedOn` |
 
 ## Gaps documentados (não mascarados)
 
@@ -93,7 +93,7 @@
 | spawn/await no Native | ✅ 31/08 (CONC001 fechado — pthread_create + trampoline + pthread_join + allocator thread-safe futex; join implícito) | |
 | spawn/await no JS | ✅ 03/09 (CONC003 fechado — async/await/Promise real; stmt + spawn-expr + await/poll/cancel/selectAny/channel bloqueante) | `cancelled()` sempre `0` (sem thread-local pra task atual); só task-lambdas podem ficar async (`CONC003-JS-01`) |
 | web no Native/JS (server, TLS, ws/sse) | ✅ server base (03/09): Native accept/route/lambda/body (`NativeWebRuntime.java`) + JS GraalJS HttpServer (`bc577aa`). JS: SSE handler-scoped ✅ 16/09. Residual (por feature): TLS `WEB002`, ws `WEB004`, sse `WEB003` (Native; push pós-return/multi-cliente no JS), resto `WEB001` (path params/keepalive) | `WEB002`/`WEB004`/`WEB003`/`WEB001` |
-| kof.http no Native | ✅ HTTP/1.1 asm (`NativeHttpRuntime.java`, 03/09) | https + DNS real ficam como gaps; **`timeout`/`retry`/`circuit` são REAIS nos 4 alvos nativos desde 17/09** (§259 FECHADO: connect não-bloqueante + deadline `poll` + `SO_RCVTIMEO`/`SO_SNDTIMEO` → `throw "kof.http: timeout"`; retry em exceção/`>=500`; circuito fail-fast 30s half-open — riscv64 portado, aarch64 herda; `KofHttpNativeResilienceCrossTest` 4/4 sob qemu, mensagens idênticas ao x86/JVM). `HTTP002` segue o único código HTTP emitido |
+| kof.http no Native | ✅ HTTP/1.1 asm (`NativeHttpRuntime.java`, 03/09) | https + DNS real ficam como gaps; **`timeout`/`retry`/`circuit` são REAIS nos 4 alvos nativos desde 17/09** (§259 FECHADO: connect não-bloqueante + deadline `poll` + `SO_RCVTIMEO`/`SO_SNDTIMEO` → `throw "kof.http: timeout"`; retry em exceção/`>=500`; circuito fail-fast 30s half-open — riscv64 portado, aarch64 herda; `KofHttpNativeResilienceCrossTest` 4/4 sob qemu, mensagens idênticas ao x86/JVM). `HTTP002` é o único código de gap HTTP *definido* — **não é emitido hoje**: `KofHttp.supportedOn` sempre devolve `true`, então o ramo `HTTP002` em `ExpressionHttpCallLowerer` está morto e `KofHttp.gapCode()` não tem chamadores (§259). Reservado para quando um alvo HTTP nativo ficar de fato sem suporte |
 | kof.db/orm no JS | **`kof.db` nao-tipado FECHADO 16/09** (ponte no host GraalJS) — `db.query<T>` tipado FECHADO 18/09 (`DB002` — bind no guest via `__kof_decode_<T>`); **`kof.orm` FECHADO 18/09** (`ORM001` — `KofJsOrmRuntime`/`KofJsOrmBridge`, mesmo SQL de `JvmOrmRuntime`, E2E byte-paridade) | feito |
 | `kof.media` (Image/Audio/Video/Mic + `app.serveDir`) no Native/JS | `MEDIA001` (handles), `MEDIA003` (mic), `WEB005` (`serveDir`) | só JVM: handles de mídia emitem o gap em `ExpressionUiMediaCallLowerer` (`MEDIA001`/`MEDIA003`); `app.serveDir` emite `WEB005` no gate web (`KofWeb.gapCode` + `ExpressionBuiltinInstanceCalls.lowerWeb`) — compile-time, R6 honesto, nunca stub silencioso. Medido 17/09: antes do fix o catch-all do gate web emitia `WEB001` enquanto as docs prometiam `WEB005` (código fantasma; o único mapeamento vivia no `KofMedia.appServeDir` morto). `KofMediaE2ETest` cobre `MEDIA003` (hardware ausente) + `WEB005` no Native/JS |
 | `kof.gpu` no JS | `GPU001` | JS não tem suporte: `KofGpu.supportedOn` é falso para JS e `ExpressionMethodCallLowerer` emite `GPU001` em compile-time (medido 18/09: `gpu.available()` com `--target js` → `gpu.available: not available on the JS driver.target yet (GPU001)`); os stubs asm do Native são honestos (`available=false` + fallback) |
@@ -147,18 +147,40 @@ que funciona de forma diferente ou quebra silenciosamente.
 
 Todo gap de capacidade tem um **código de diagnóstico** documentado aqui e
 emitido em compile-time. Domínios novos seguem o mesmo padrão dos existentes
-(`SECN00x`, `CONC003`, `DB001`, `HTTP002`, ...):
+(`SECN000`, `WEB002`, `WEB005`, `CRON001`, ...):
 
 | Prefixo | Domínio | Exemplos |
 |---------|---------|----------|
-| `HTTP`/`WEB`/`DB`/`ORM`/`MQ`/`SCHED`/`TIME`/`CONC`/`SECN`/`CRON`/`MEDIA`/`GPU`/`OBS`/`PROC` | Sistemas atuais | `HTTP002`, `WEB001`, `DB001`, `MQ001`, `SCHED001`, `CONC003`, `SECN000`/`SECN002`/`SECN006`, `CRON001` (`at(cron)` só Native, JVM/JS real), `MEDIA001` (handles de mídia), `MEDIA003` (mic), `WEB005` (`serveDir` no Native/JS), `GPU001` (`kof.gpu` no JS), `OBS003` (`exportSpans` no Native), `PROC001` (`kof.process` no Native) |
-| `AND` | Android | `AND001..004` |
-| `NATIVE` | codegen multiarch | `NATIVE002` |
+| `HTTP`/`WEB`/`DB`/`ORM`/`MQ`/`SCHED`/`TIME`/`CONC`/`SECN`/`CRON`/`MEDIA`/`GPU`/`OBS`/`PROC` | Sistemas atuais | `WEB001`/`WEB002`/`WEB003`/`WEB004`/`WEB005`/`WEB006` (gate web em não-JVM), `SECN000` (todo `kof.sec` em riscv64/aarch64), `SECN002` (chacha20 no Native), `SECN006` (cookies no Native), `SECN007` (OAuth resource-server em não-JVM), `CRON001` (`at(cron)` no Native; JVM/JS real), `MEDIA001`/`MEDIA003` (handles de mídia/mic em não-JVM), `GPU001` (`kof.gpu` no JS), `OBS003` (`exportSpans` no Native), `PROC001` (`kof.process` no Native), `ORM001` (`kof.orm` no Native) |
+| `AND` | Android | `AND002` (servidor web embutido no Android), `AND004` (android.jar ausente — warning); `AND001` fechado 31/08; `AND003` é caveat documentado (sem gate de compile-time) |
+| `NATIVE` | codegen multiarch | `NATIVE002` (rótulo do trabalho riscv64/aarch64; não é diagnóstico emitido) |
 | `INFRA` | infraestrutura / IaC | `INFRA00x` |
 | `DATA` | data engineering / dataframe / ML | `DATA00x` |
 | `SCI` | scientific computing / HPC | `SCI00x` |
 | `BIO` | bioinformática | `BIO00x` |
 | `SECPQ` | criptografia pós-quântica | `SECPQ` (gap de target, nunca stub) |
+
+**Códigos reservados (definidos, não emitidos).** Um par
+`gapCode`/`supportedOn` pode permanecer no fonte depois que a capacidade
+landou, como andaime para um alvo futuro sem suporte. Esses literais existem,
+mas **nenhum alvo os alcança hoje**, então não são gaps: `HTTP002`
+(`KofHttp.supportedOn` sempre devolve `true`), `MQ001` (`KofMq.supportedOn`
+sempre `true`), `SCHED001` (`KofScheduler` só gateia `at(cron)`, como
+`CRON001`; `SCRIPT` aborta antes com `COMP003`), `CONC003` (o residual JS vivo
+é `CONC003-JS-01`), `UUID001` (gate removido 10/09), `OBS001`, `SECN005`
+(`rate_limit`/`session`/`api_key` têm suporte em todo alvo). Não os cite como
+emitidos — o diagnóstico só aparece quando um alvo fica de fato sem suporte
+(R6: nunca silencioso, e nunca fantasma também).
+
+**Android é um alvo gateado de verdade (medido 17/09).** `--target android`
+reusa o `JvmBackend`, mas vários checks de `supportedOn` excluem `ANDROID`,
+então o compilador recusa honestamente em compile-time: `DB001` (`db.connect`),
+`SECN000` / `SECN001` (`passwords.hash`) / `SECN002` (chacha) / `SECN003`
+(`crypto.sha512`) / `SECN004` (`jwt.create`) / `SECN006` / `SECN007`
+(`kof.security`), `GPU001` (`kof.gpu`) e `AND002`/`AND004`. Se a exclusão é
+intencional (ART sem JDBC/JCA em runtime) ou over-gating é decisão da lane do
+compilador (§278); os códigos ficam listados aqui para a matriz não mentir
+sobre o que o Android aceita.
 
 Regra (R6): gap de domínio sempre tem **código + entrada nesta matriz** —
 nunca stub silencioso, nunca fallback fraco, nunca "paridade parcial" sem

@@ -83,7 +83,7 @@
 | `native.risc` (riscv64) / `native.arm` (aarch64) | — | **full core (02-03/09)**: plumbing + codegen/pure-asm runtimes + qemu — `NativeRiscv64E2ETest 13/13` + `NativeAarch64E2ETest 13/13` (core: classes/arrays/List/switch/try-catch/pattern/Strings/recursion) — advanced parity pending — `docs/development/native-multiarch.md` | — | target separation 0.2.0 |
 | `kof fmt` (real parser formatter, idempotent) | ✅ 31/08 | ✅ | ✅ | `KofFormatter` (2c3e794) |
 | **KofJS in a real browser** (`kof.ui` rendering DOM via ES Modules) | — | — | ✅ 01/09 (`KofJsBrowserE2ETest` — Chrome headless + HTTP + DOM capture; skips if Chrome absent) | ESM via local HTTP (modules don't load via `file://`); `KofJsRunner` serves `appDir` on `127.0.0.1` |
-| Android (Phase 1: `kof build --target android` → Maven project + APK, Activity host in Kof) | ✅ (JVM bytecode) | — | — | `AND00x` gaps at compile-time |
+| Android (Phase 1: `kof build --target android` → Maven project + APK, Activity host in Kof) | ✅ (JVM bytecode) | — | — | `AND00x` gaps at compile-time **plus `DB001`/`SECN00x`/`GPU001`** (measured 17/09 — §278): the JVM-backend target still excludes `ANDROID` in several `supportedOn` checks |
 
 ## Documented Gaps (not masked)
 
@@ -93,7 +93,7 @@
 | spawn/await on Native | ✅ 31/08 (CONC001 closed — pthread_create + trampoline + pthread_join + thread-safe allocator futex; implicit join) | |
 | spawn/await on JS | ✅ 03/09 (CONC003 closed — real async/await/Promise; stmt + spawn-expr + await/poll/cancel/selectAny/blocking channel) | `cancelled()` always `0` (no thread-local for the current task); only task-lambdas can be async (`CONC003-JS-01`) |
 | web on Native/JS (server, TLS, ws/sse) | ✅ base server (03/09): Native accept/route/lambda/body (`NativeWebRuntime.java`) + JS GraalJS HttpServer (`bc577aa`). JS: SSE handler-scoped ✅ 16/09. Residual (per feature): TLS `WEB002`, ws `WEB004`, sse `WEB003` (Native; JS post-return push/multi-client), rest `WEB001` (path params/keepalive) | `WEB002`/`WEB004`/`WEB003`/`WEB001` |
-| kof.http on Native | ✅ HTTP/1.1 asm (`NativeHttpRuntime.java`, 03/09) | https + real DNS remain gaps; **`timeout`/`retry`/`circuit` are REAL on the 4 native targets since 17/09** (§259 CLOSED: non-blocking connect + `poll` deadline + `SO_RCVTIMEO`/`SO_SNDTIMEO` → `throw "kof.http: timeout"`; retry on exception/`>=500`; circuit fail-fast 30s half-open — riscv64 ported, aarch64 inherits; `KofHttpNativeResilienceCrossTest` 4/4 under qemu, messages identical to x86/JVM). `HTTP002` remains the only emitted HTTP code |
+| kof.http on Native | ✅ HTTP/1.1 asm (`NativeHttpRuntime.java`, 03/09) | https + real DNS remain gaps; **`timeout`/`retry`/`circuit` are REAL on the 4 native targets since 17/09** (§259 CLOSED: non-blocking connect + `poll` deadline + `SO_RCVTIMEO`/`SO_SNDTIMEO` → `throw "kof.http: timeout"`; retry on exception/`>=500`; circuit fail-fast 30s half-open — riscv64 ported, aarch64 inherits; `KofHttpNativeResilienceCrossTest` 4/4 under qemu, messages identical to x86/JVM). `HTTP002` is the only HTTP gap code *defined* — it is **not emitted today**: `KofHttp.supportedOn` always returns `true`, so the `HTTP002` branch in `ExpressionHttpCallLowerer` is dead and `KofHttp.gapCode()` has no callers (§259). Reserved for when a native HTTP target becomes genuinely unsupported |
 | kof.db/orm on JS | **`kof.db` untyped CLOSED 16/09** (bridge on GraalJS host) — `db.query<T>` typed CLOSED 18/09 (`DB002` — guest-side bind via `__kof_decode_<T>`); **`kof.orm` CLOSED 18/09** (`ORM001` — `KofJsOrmRuntime`/`KofJsOrmBridge`, same SQL as `JvmOrmRuntime`, byte-parity E2E) | done |
 | `kof.media` (Image/Audio/Video/Mic + `app.serveDir`) on Native/JS | `MEDIA001` (handles), `MEDIA003` (mic), `WEB005` (`serveDir`) | JVM-only: media handles emit the gap in `ExpressionUiMediaCallLowerer` (`MEDIA001`/`MEDIA003`); `app.serveDir` emits `WEB005` in the web gate (`KofWeb.gapCode` + `ExpressionBuiltinInstanceCalls.lowerWeb`) — compile-time, honest R6, never a silent stub. Measured 17/09: before the fix the web gate's catch-all emitted `WEB001` while the docs promised `WEB005` (phantom code; the only mapping lived in the dead `KofMedia.appServeDir`). `KofMediaE2ETest` covers `MEDIA003` (missing hardware) + `WEB005` on Native/JS |
 | `kof.gpu` on JS | `GPU001` | JS has no support: `KofGpu.supportedOn` is false for JS and `ExpressionMethodCallLowerer` emits `GPU001` at compile-time (measured 18/09: `gpu.available()` with `--target js` → `gpu.available: not available on the JS driver.target yet (GPU001)`); Native asm stubs are honest (`available=false` + fallback) |
@@ -147,18 +147,38 @@ differently or breaks silently.
 
 Every capability gap has a **diagnostic code** documented here and emitted at
 compile-time. New domains follow the same pattern as the existing ones
-(`SECN00x`, `CONC003`, `DB001`, `HTTP002`, ...):
+(`SECN000`, `WEB002`, `WEB005`, `CRON001`, ...):
 
 | Prefix | Domain | Examples |
 |---------|---------|----------|
-| `HTTP`/`WEB`/`DB`/`ORM`/`MQ`/`SCHED`/`TIME`/`CONC`/`SECN`/`CRON`/`MEDIA`/`GPU`/`OBS`/`PROC` | Current systems | `HTTP002`, `WEB001`, `DB001`, `MQ001`, `SCHED001`, `CONC003`, `SECN000`/`SECN002`/`SECN006`, `CRON001` (`at(cron)` Native-only, JVM/JS real), `MEDIA001` (media handles), `MEDIA003` (mic), `WEB005` (`serveDir` on Native/JS), `GPU001` (`kof.gpu` on JS), `OBS003` (`exportSpans` on Native), `PROC001` (`kof.process` on Native) |
-| `AND` | Android | `AND001..004` |
-| `NATIVE` | multiarch codegen | `NATIVE002` |
+| `HTTP`/`WEB`/`DB`/`ORM`/`MQ`/`SCHED`/`TIME`/`CONC`/`SECN`/`CRON`/`MEDIA`/`GPU`/`OBS`/`PROC` | Current systems | `WEB001`/`WEB002`/`WEB003`/`WEB004`/`WEB005`/`WEB006` (web gate on non-JVM), `SECN000` (all `kof.sec` on riscv64/aarch64), `SECN002` (chacha20 on Native), `SECN006` (cookies on Native), `SECN007` (OAuth resource-server on non-JVM), `CRON001` (`at(cron)` on Native; JVM/JS real), `MEDIA001`/`MEDIA003` (media handles/mic on non-JVM), `GPU001` (`kof.gpu` on JS), `OBS003` (`exportSpans` on Native), `PROC001` (`kof.process` on Native), `ORM001` (`kof.orm` on Native) |
+| `AND` | Android | `AND002` (embedded web server on Android), `AND004` (android.jar missing — warning); `AND001` closed 31/08; `AND003` is a documented caveat (no compile-time gate) |
+| `NATIVE` | multiarch codegen | `NATIVE002` (label for the riscv64/aarch64 work; not an emitted diagnostic) |
 | `INFRA` | infrastructure / IaC | `INFRA00x` |
 | `DATA` | data engineering / dataframe / ML | `DATA00x` |
 | `SCI` | scientific computing / HPC | `SCI00x` |
 | `BIO` | bioinformatics | `BIO00x` |
 | `SECPQ` | post-quantum cryptography | `SECPQ` (target gap, never a stub) |
+
+**Reserved codes (defined, not emitted).** A `gapCode`/`supportedOn` pair may
+stay in the source after the capability landed, as scaffolding for a future
+unsupported target. Those literals exist but **no target reaches them today**,
+so they are not gaps: `HTTP002` (`KofHttp.supportedOn` always returns `true`),
+`MQ001` (`KofMq.supportedOn` always `true`), `SCHED001` (`KofScheduler` gates
+only `at(cron)`, as `CRON001`; `SCRIPT` aborts earlier with `COMP003`),
+`CONC003` (the live JS residual is `CONC003-JS-01`), `UUID001` (gate removed
+10/09), `OBS001`, `SECN005` (`rate_limit`/`session`/`api_key` are supported on
+every target). Do not cite them as emitted — a diagnostic appears only when a
+target is genuinely unsupported (R6: never silent, and never a phantom either).
+
+**Android is a real gated target (measured 17/09).** `--target android` reuses
+`JvmBackend`, but several `supportedOn` checks exclude `ANDROID`, so the
+compiler honestly refuses at compile-time: `DB001` (`db.connect`), `SECN000` /
+`SECN001` (`passwords.hash`) / `SECN002` (chacha) / `SECN003` (`crypto.sha512`)
+/ `SECN004` (`jwt.create`) / `SECN006` / `SECN007` (`kof.security`), `GPU001`
+(`kof.gpu`) and `AND002`/`AND004`. Whether the exclusion is intended (ART lacks
+JDBC/JCA at runtime) or over-gating is a compiler-lane decision (§278); the
+codes are listed here so the matrix does not lie about what Android accepts.
 
 Rule (R6): a domain gap always has a **code + entry in this matrix** — never a
 silent stub, never a weak fallback, never "partial parity" without a

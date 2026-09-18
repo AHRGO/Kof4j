@@ -1582,7 +1582,7 @@ arquiteturais futuras e guardrails.)
 - **Por quê:** impede o "tudo-faz opaco" — o que falta é sempre visível.
 - **Custo:** zero (padrão existente: `SECN00x`/`DB001`/`WEB002`...).
 - **Não fazer:** nunca stub silencioso; nunca paridade parcial sem diagnóstico.
-- **Gate de máquina (17/09):** `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` deriva os códigos que a guarda PROVA que o compilador EMITE (das próprias chamadas `assertGap`) e falha se algum não tiver linha em `docs/backend-parity.md` — o padrão do ledger do R1 aplicado ao R6, para a classe de drift do `WEB005` (§275) não poder voltar em silêncio.
+- **Gate de máquina (17/09):** `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` deriva os códigos que a guarda PROVA que o compilador EMITE (das próprias chamadas `assertGap`) e falha se algum não tiver linha em `docs/backend-parity.md` — o padrão do ledger do R1 aplicado ao R6, para a classe de drift do `WEB005` (§275) não poder voltar em silêncio. A primeira passada do ledger também revelou o **Android** como alvo gateado não documentado (§278): `--target android` reusa o `JvmBackend`, mas emite `DB001`/`SECN001`/`SECN002`/`SECN003`/`SECN004`/`GPU001` (medido 17/09), então a matriz agora declara esses códigos e a guarda os pina (`androidRefusesDbAndCryptoWithTheDocumentedCodes`).
 
 ## R7 — Escopo honesto por target (JVM-first interop / Native sistemas / JS web)
 - **O quê:** adotar explicitamente: capacidades pesadas chegam **JVM-first**

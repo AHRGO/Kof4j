@@ -1579,7 +1579,7 @@ dependencies and guardrails.)
 - **Why:** it prevents the opaque "does-everything" — what is missing is always visible.
 - **Cost:** zero (existing pattern: `SECN00x`/`DB001`/`WEB002`...).
 - **Not to do:** never a silent stub; never partial parity without diagnosis.
-- **Machine gate (17/09):** `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` derives the codes the guard proves the compiler EMITS (from its own `assertGap` calls) and fails if any lacks a row in `docs/backend-parity.md` — the R1-ledger pattern applied to R6, so the §275 `WEB005` drift class (a code the docs promised but nothing emitted, or the inverse) cannot recur silently.
+- **Machine gate (17/09):** `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` derives the codes the guard proves the compiler EMITS (from its own `assertGap` calls) and fails if any lacks a row in `docs/backend-parity.md` — the R1-ledger pattern applied to R6, so the §275 `WEB005` drift class (a code the docs promised but nothing emitted, or the inverse) cannot recur silently. The first ledger pass also surfaced **Android** as an undocumented gated target (§278): `--target android` reuses `JvmBackend` yet emits `DB001`/`SECN001`/`SECN002`/`SECN003`/`SECN004`/`GPU001` (measured 17/09), so the matrix now declares those codes and the guard pins them (`androidRefusesDbAndCryptoWithTheDocumentedCodes`).
 
 ## R7 — Honest scope per target (JVM-first interop / Native systems / JS web)
 - **What:** explicitly adopt: heavy capabilities arrive **JVM-first**

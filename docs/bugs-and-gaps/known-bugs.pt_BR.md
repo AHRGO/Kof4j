@@ -9886,3 +9886,20 @@ O corpus (`backend-parity.md` linha de mídia + `stdlib-web.md` ×3 + mensagem A
   `js success=true / native success=false` com a referência indefinida;
   pós-fix ambos `true`. Native de compilação única continua linkando e
   rodando (`nm`: `T kof_Function1_int_int_invoke`; binário imprime `7`/`14`).
+
+### §278 — Android (`--target android`) recusa `kof.db`/`kof.security`/`kof.gpu` com `DB001`/`SECN00x`/`GPU001`, que o corpus nunca atribui ao Android — 🟡 ABERTO (achado 17/09, lane bugs-and-gaps `.15`; dono da decisão = lane do compilador, regra 6)
+
+`--target android` reusa o backend JVM (`CompilerPipeline.java:186` → `new JvmBackend()`) e o `ExternalClasspath` do JVM (`:438`), então emite o mesmo bytecode que `--target jvm`. Mas vários gates de `supportedOn` listam só `JVM`/`JS`/`isNative()` e portanto **excluem `ANDROID`**, então o compilador recusa chamadas que o alvo JVM aceita, com códigos que o corpus atribui a outros alvos:
+
+- `KofDb.supportedOn` (`KofDb.java:54-58`) → false no `ANDROID` → **`DB001`**.
+- `KofSecurity.supportedOn` (`KofSecurity.java:203-244`) → false no `ANDROID` para `passwords.hash` (**`SECN001`**), `crypto.sha512` (**`SECN003`**), `jwt.create` (**`SECN004`**), chacha20 (**`SECN002`**), cookies (**`SECN006`**), OAuth resource-server (**`SECN007`**), csrf/auth (default **`SECN000`**).
+- `KofGpu.supportedOn` → **`GPU001`** no `ANDROID` também (a linha da matriz só citava JS).
+
+**Medido 17/09 (`CompilerDriver`, `Target.ANDROID` — o mesmo caminho que `kof check/build --target android` usa):** `db.connect("sqlite::memory:")` → `db: not available on the ANDROID driver.target yet (DB001)`; `passwords.hash("x")` → `SECN001`; `crypto.sha512("x")` → `SECN003`; `jwt.create("a","b")` → `SECN004`; `crypto.encryptChacha20("k","n")` → `SECN002`; `gpu.available()` → `GPU001`. As mesmas seis compilam limpas em `--target jvm`.
+
+**Por que importa (R6):** o `backend-parity.md` documentava o alvo Android só com gaps `AND00x`, e o §Restrições do `docs/targets/KOFANDROID.md` listava `AND001..004` — quem lê o corpus não sabia que `db`/`crypto`/`gpu` são recusados no Android. Duas resoluções honestas, ambas decisão da lane do compilador (regra 6 — não desta lane):
+
+- **(a) intencional** — ART sem JDBC/JCA/GPU: manter a recusa, documentar os códigos como gaps de Android e considerar re-codificá-los na família `AND` por coerência; ou
+- **(b) over-gating** — o runtime JVM é empacotado no APK, então incluir `ANDROID` nas allow-lists (como `KofScheduler.java:29` já faz).
+
+**Docs corrigidas nesta unidade (EN+PT):** a linha Android do `backend-parity.md` + a seção de convenção agora declaram os códigos medidos no Android e apontam para cá; a nota de "códigos reservados" deixou de listar `DB001`/`SECN001`/`SECN003`/`SECN004` como mortos — são vivos no Android (medido). O §Restrições do `docs/targets/KOFANDROID.md` ganhou a linha. Pinado por `DomainGapCodesTest.androidRefusesDbAndCryptoWithTheDocumentedCodes` (SECN003 + DB001) para o gate R6 cobrir o Android — quando a lane do compilador resolver (a)/(b), o pin fica RED e força este registro a mudar.

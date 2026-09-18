@@ -152,6 +152,29 @@ class DomainGapCodesTest {
     }
 
     /**
+     * Android reuses {@code JvmBackend} but several {@code supportedOn} gates
+     * exclude {@code ANDROID} — measured 17/09, catalogued in
+     * {@code known-bugs.md} §276 and in the matrix's Android row. Pinning the
+     * diagnosis here makes the R6 doc gate cover Android: when the compiler
+     * lane resolves §276 (documented gap vs over-gating), this turns RED and
+     * forces the matrix/§276 to move with it.
+     */
+    @Test
+    void androidRefusesDbAndCryptoWithTheDocumentedCodes(@TempDir Path tmp) throws Exception {
+        assertGap(tmp, Target.ANDROID, "DB001", """
+            main() {
+                val c = db.connect("sqlite::memory:")
+                println(c)
+            }
+            """);
+        assertGap(tmp, Target.ANDROID, "SECN003", """
+            main() {
+                println(crypto.sha512("x"))
+            }
+            """);
+    }
+
+    /**
      * R6 machine gate (mirrors the R1 boundary gate): every gap code this
      * guard pins — i.e. every code the compiler is proven to emit for a
      * domain namespace — must appear in {@code docs/backend-parity.md}. The
