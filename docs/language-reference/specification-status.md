@@ -130,6 +130,7 @@ Target-specific · Unspecified · Planned**.
 | collections (List/Map/Set) | Stable | `KofMapSetTest` |
 | string methods | Stable | `StringMethodRegistry` |
 | http / web / db / orm / cache / mq / time / scheduler / log / config / security / validation / observability / ui / media / process | **Experimental** | E2E per area |
+| `rng` (builtin namespace: `seed`/`int`/`boolean`/`double`/`string`) | **Experimental** — JVM+JS; NATIVE/ANDROID/cross gap `RNG001` (honest, R6); same seed ⇒ same sequence every backend | `KofRngTest` (8): `deterministicJvm/JsMatchesOracle`, `jvmJsParity`, `reseedRestartsSequence{Jvm,Js}`, `contractJvm/Js`, `nativeIsHonestGap` |
 | Map/Set with class type-arg | **Bug #33** | `known-bugs.md` |
 
 ---

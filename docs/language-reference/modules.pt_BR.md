@@ -108,7 +108,15 @@ reconhecidos pelo analisador (`SemExpressionTyper`/`MemberResolver`, lista de na
 json  process  KofWeb  KofConfig  KofCache  KofGpu  KofDb  KofOrm
 KofLog  KofSecurity  KofValidation  KofObservability  KofHttp  KofMq
 KofTime  KofScheduler  KofTetris  KofMedia  KofUi  Theme
+rng
 `
+
+Além do **namespace embutido** `rng` — PRNG determinístico com seed para
+testes property-based (`rng.seed(Int)`, `rng.int(Int)`, `rng.boolean()`,
+`rng.double()`, `rng.string(Int, String)`; `KofRng`/`KofStd`, sem classe
+`kof.*`, sem import). Mesma seed ⇒ mesma sequência em qualquer backend;
+JVM+JS hoje, NATIVE/ANDROID rejeitado com `RNG001` (R6). Ver
+`learn/39-stdlib.pt_BR.md` §rng e `training/idioms/stdlib.pt_BR.md` §rng.
 
 Cada área tem documento próprio em `docs/stdlib*.md` (não duplicados aqui). A
 **linguagem** define que esses nomes existem e como resolvem; a **biblioteca**

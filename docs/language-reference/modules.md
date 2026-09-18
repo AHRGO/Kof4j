@@ -108,7 +108,15 @@ recognized by the analyzer (`SemExpressionTyper`/`MemberResolver`, builtin names
 json  process  KofWeb  KofConfig  KofCache  KofGpu  KofDb  KofOrm
 KofLog  KofSecurity  KofValidation  KofObservability  KofHttp  KofMq
 KofTime  KofScheduler  KofTetris  KofMedia  KofUi  Theme
+rng
 `
+
+Plus the **builtin namespace** `rng` — a seedable deterministic PRNG for
+property-based testing (`rng.seed(Int)`, `rng.int(Int)`, `rng.boolean()`,
+`rng.double()`, `rng.string(Int, String)`; `KofRng`/`KofStd`, no `kof.*` class,
+no import). Same seed ⇒ same sequence on every backend; JVM+JS today,
+NATIVE/ANDROID rejected with `RNG001` (R6). See `learn/39-stdlib.md` §rng and
+`training/idioms/stdlib.md` §rng.
 
 Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
 **language** defines that these names exist and how they resolve; the
