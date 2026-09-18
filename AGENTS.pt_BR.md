@@ -750,7 +750,7 @@ pronta.
 > completa) provam. **Nenhum agente pode quebrar comportamento que já funciona.**
 
 1. **Zero regressão.** Nenhum commit pode fazer um teste existente passar a
-   falhar. A suíte completa (`mvn test`, hoje **2411** nos 4 módulos — ver
+   falhar. A suíte completa (`mvn test`, hoje **2507** nos 4 módulos — ver
    §"Loop de verificação" para o comando com o flag de failure.ignore) é **gate de merge** —
    mudança que não mantém tudo verde não entra. Exceção única: mudança de
    contrato **deliberada**, com bump de versão + docs atualizados + migração.
@@ -1116,9 +1116,15 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > ele, o Maven é fail-fast por módulo: qualquer falha em **kof-compiler aborta
 > o reactor** e **kof-script, kof-c-compiler e kof-cli nunca rodam** — você
 > acha que validou tudo mas só viu o primeiro módulo. O total real com o flag
-> é **2411 testes** (compiler 2058 + script 38 + kof-c 7 + cli 308, medição
-> 17/09 ~15:49 no tip `f276e966` — cresce com cada commit): **0 regressões / 0 erros** (a única falha que a
-> suíte já mostrou é o flake intermitente do §252 nativo — calado de novo (5ª corrida quieta seguida), último disparo 16/09 09:44)
+> é **2507 testes** (compiler 2154 + script 38 + kof-c 7 + cli 308, medição
+> 18/09 ~05:20 no tip `c56c74a7` — cresce com cada commit): **0 regressões / 0 erros**
+> (ATUALIZAÇÃO 18/09: o trio histórico de nativos vermelhos está FECHADO no código — §252
+> corrigido `20495e48` (o ret-addr do usleep clobberava a slot de tamanho cacheada; size
+> agora em `%r14` callee-saved), resíduo §181 cross corrigido `c56c74a7` (o `NEG` cross
+> rodava `neg` inteiro no bit pattern de float — -inf virava NaN; XOR do bit de sinal),
+> face (b) do §256 corrigida `3a593734` (golden sem HB — `await b` + acquire
+> `fence r,rw`/`dmb ish` nos consumidores cross). Primeira suíte kof-compiler sem
+> vermelho desde que o resíduo foi aberto em 14/09.)
 > (node agora presente
 > no host da medição — o antigo "13 erros = node ausente" não se aplica mais). O §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
 > regressão do fix §147 no `JsIfThrowElse`) foi **CORRIGIDO 13/09** — a raiz era
@@ -1139,13 +1145,18 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > (2×42, `NativeRiscv64/Aarch64E2ETest`) são **skipados** pelo guard
 > (`4408eb6`) + os outros guards de toolchain/BD externo + o guard de sysroot do §255 (`06e77e94`) → `2411/0/196-skip` (o flake §252 disparou 16/09 09:44, depois calou às 11:38, 15:09, 15:54 e 17/09 15:49 — ~1/4 das corridas completas)
 > (MEDIDO 17/09 ~15:49, run limpo no tip `f276e966`). Com qemu, **tudo executa** — os 84 cross rodam
-> verdes e o total fica `2411` com a contagem de skip caindo para o
-> resíduo externo de BD/ambiente `node`. Estado correto HOJE (17/09 ~15:49, run limpo no tip `f276e966`):
-> **0 regressões / 0 erros** (2411 = 2058+38+7+308, 196 skip) — a corrida completa das 09:44 teve o flake INTERMITENTE
+> verdes e o total fica igual com a contagem de skip caindo para o
+> resíduo externo de BD/ambiente `node`. Estado correto HOJE (18/09 ~05:20, run no tip `c56c74a7`,
+> qemu riscv64+aarch64 PRESENTE): **2507 = 2154+38+7+308, 0F / 0E / 11 skip** — o flake
+> §252, o resíduo cross §181 e o flake de poll §256(b) estão TODOS fechados no
+> código; os skips restantes são o gate opcional de asm e as guardas de toolchain.
+> **0 regressões / 0 erros** (2411 na época = 2058+38+7+308, 196 skip) — a corrida completa das 09:44 teve o flake INTERMITENTE
 > conhecido do §252 nativo (`spawnWorkerThrowPropagatesThroughSelectAnyNative`, dona lane
 > nativa `.18`/nat; às 11:38, 15:09 e 15:54 ele ficou calado — frequência ~1/4, ver §252), que
-> deve ser lido como um vermelho de TESTE, não regressão. O que importa continua
-> sendo nenhum FAILURE fora do flake do §252 e das guardas documentadas.
+> deve ser lido como um vermelho de TESTE, não regressão. **HISTÓRICO (superado 18/09):**
+> o §252 foi depois provado NÃO ser race — ver `known-bugs.md §252` (raiz +
+> fix `20495e48`). O que importa continua sendo nenhum FAILURE fora das guardas
+> documentadas.
 
 Para validar um snippet isolado (ex.: confirmar se um idiom compila),
 use o harness do projeto ou crie um teste E2E mínimo no pacote da área.

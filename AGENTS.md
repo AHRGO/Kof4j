@@ -751,7 +751,7 @@ ready.
 > suite) prove. **No agent may break behavior that already works.**
 
 1. **Zero regression.** No commit may make an existing test start to
-   fail. The full suite (`mvn test`, today **2411** across the 4 modules — see
+   fail. The full suite (`mvn test`, today **2507** across the 4 modules — see
    §"Verification loop" for the command with the failure.ignore flag) is a **merge gate** —
    a change that doesn't keep everything green doesn't get in. Single exception: a **deliberate**
    contract change, with a version bump + updated docs + migration.
@@ -1118,9 +1118,15 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > it, Maven is fail-fast per module: any failure in **kof-compiler aborts
 > the reactor** and **kof-script, kof-c-compiler and kof-cli never run** — you
 > think you validated everything but only saw the first module. The real total with the flag
-> is **2411 tests** (compiler 2058 + script 38 + kof-c 7 + cli 308, measurement
-> 17/09 ~15:49 — grows with each commit): **0 regressions / 0 errors** (the only failure the
-> suite ever shows is the intermittent §252 native flake — silent again, last fired 16/09 09:44)
+> is **2507 tests** (compiler 2154 + script 38 + kof-c 7 + cli 308, measurement
+> 18/09 ~05:20 on tip `c56c74a7` — grows with each commit): **0 regressions / 0 errors**
+> (UPDATE 18/09: the historical trio of natives red is CLOSED at code — §252
+> fixed `20495e48` (usleep-retaddr clobbered the cached list-size slot; size now
+> in callee-saved `%r14`), §181 cross residual fixed `c56c74a7` (cross `NEG` ran
+> integer `neg` on float bit patterns — -inf became NaN; sign-bit XOR), §256 face
+> (b) fixed `3a593734` (golden had no HB — `await b` + acquire `fence r,rw`/
+> `dmb ish` on the cross consumers). First 0-red kof-compiler run since the
+> residual was filed 14/09.)
 > (node now present on
 > the measuring host — the old "13 errors = node missing" no longer applies). The §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
 > regression of the §147 fix in `JsIfThrowElse`) was **FIXED 09/13** — the root was
@@ -1141,14 +1147,18 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > (2×42, `NativeRiscv64/Aarch64E2ETest`) are **skipped** by the guard
 > (`4408eb6`) + the other toolchain/external-DB guards + the §255 sysroot guard (`06e77e94`) → `2411/0/196-skip` (the flake §252 fired 16/09 09:44, then went silent at 11:38, 15:09, 15:54 and 17/09 15:49 — ~1/4 of full-suite runs)
 > (MEASURED 17/09 ~15:49, clean run on tip `f276e966`). With qemu, **everything executes** — the 84 cross run
-> green and the total stays `2411` with the skip count dropping to the
-> external-DB/`node`-env residual. Correct state TODAY (17/09 ~15:49, run on tip `f276e966`):
-> **0 regressions / 0 errors** (2411 = 2058+38+7+308, 196 skip) — the full run at 16/09 09:44 had the
+> green and the total stays the same with the skip count dropping to the
+> external-DB/`node`-env residual. Correct state TODAY (18/09 ~05:20, run on tip `c56c74a7`,
+> qemu riscv64+aarch64 PRESENT): **2507 = 2154+38+7+308, 0F / 0E / 11 skip** — the
+> §252 flake, the §181 cross residual and the §256(b) poll flake are ALL closed
+> at code; the remaining skips are the optional asm-gate and toolchain guards.
+> **0 regressions / 0 errors** (2411 at the time = 2058+38+7+308, 196 skip) — the full run at 16/09 09:44 had the
 > known INTERMITTENT §252
 > native flake (`spawnWorkerThrowPropagatesThroughSelectAnyNative`, owner native
 > lane `.18`/nat; the 11:38, 15:09 and 15:54 runs it stayed silent — ~1/4 frequency, see §252), which
-> must be read as a TEST red, not a regression. What matters remains no FAILURE
-> outside the §252 flake and the documented guards.
+> must be read as a TEST red, not a regression. **HISTORY (superseded 18/09):**
+> §252 was later proven NOT a race — see `known-bugs.md §252` (root cause +
+> fix `20495e48`). What matters remains no FAILURE outside the documented guards.
 
 To validate an isolated snippet (e.g., confirm whether an idiom compiles),
 use the project harness or create a minimal E2E test in the area's package.
