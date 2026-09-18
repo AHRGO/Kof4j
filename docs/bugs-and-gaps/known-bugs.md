@@ -10725,3 +10725,16 @@ GREEN-after: `CmdDeployTest` 9/9 + 1 honest skip (android w/o SDK). The old
 entry-only split behavior is also proven broken end-to-end in this session
 (`ERR_MODULE_NOT_FOUND` verbatim above). Fix is additive: JVM/native/android
 paths untouched (no `jsDeps` entries for them).
+
+
+## §299 — APK pipeline pinned `build-tools 34.0.0`: d8 (R8 8.2.x) cannot read the project's Java-21 bytecode → every real SDK run died at dex (and a relative keystore path died at CWD first)
+
+**Found:** 18/09 ~22:15 UTC, measured in CI — `CmdDeployTest.androidWithSdkPackagesApk` went RED on ubuntu (`90ea7c34`), after `84c82139` (X9 slice 3) shipped the android face with the pipeline **never executed on any SDK host** (local = honest skip; the weak-green family, Q5).
+
+**Status.** ✅ FIXED 18/09 — same commit as this entry (X9 lane `.15`): two root causes, both in `CmdBuild.runApkPipeline`.
+
+- **Face (a) — `keytool` with relative paths under `ProcessBuilder.directory(projDir)`:** `CmdDeploy` passes a relative `classes/` dir; the keystore arg stayed relative to the ORIGINAL cwd → resolved twice → `java.io.FileNotFoundException` (fixed first in `90ea7c34`: `projDir.toAbsolutePath().normalize()` at the pipeline entry).
+- **Face (b) — `build-tools` pinned to `34.0.0`:** its `d8` is R8 8.2.x, which rejects `class file major version 65` (Java 21 — the version `JvmBackend` emits, `cw.visit(V21)`). Measured verbatim: `Error ... kof-app.jar:Default/Main.class: IllegalArgumentException: Unsupported class file major version 65 → Compilation failed`. The pin chose an old d8 even on images that ship newer build-tools.
+- **Fix (root cause, additive):** `pickBuildTools(androidHome)` = semver-descending scan for the highest dir with `aapt2+d8+zipalign+apksigner` executable; honest gate: if the chosen d8 is pre-35 and the artifact is major 65, refuse with the explicit diagnostic (`build-tools >= 35.0.0 (DEP001 environment condition)`) — never a silent dex failure, never a fabricated APK (R6/Q7).
+- **Residual (decision pending, rule 6):** emitting ANDROID at **V17** (like `AndroidProjectWriter`'s pom) would make the face work on build-tools 34 images too; that changes the JVM-emitter's output contract → `docs/development/DECISIONS.md`/roadmap queue, maintainer's call — this entry carries the honest diagnostic until then.
+- **Proof.** New `CmdBuildApkToolchainTest` (4/4, deterministic — no SDK needed): highest-complete-version selection (9.0.0 < 34 < 35, incomplete 36 excluded), null-when-nothing, numeric-not-lexicographic semver, the Java-21 gate + the major reader. **RED-before measured during this unit:** `classMajorOf` initially compared signed bytes (`0xFE != -2`) and the test caught it (expected 65, got 0). CI: `90ea7c34` red with the exact message above; green-after = next CI run (e2e executes when the image has a usable d8, honest skip otherwise).
