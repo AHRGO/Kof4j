@@ -78,7 +78,7 @@ NOT APPLICABLE   → não se aplica à arquitetura Kof
 | Actuator | actuator | `kof.observability` | **EXISTS** | health/metrics/request IDs JVM/Native/JS |
 | Health checks | health | `kof.observability.health` | **EXISTS** | JVM/Native/JS |
 | Metrics | micrometer | `kof.observability` | **EXISTS** | counter/increment/gauge JVM/Native/JS |
-| Observability | tracing | `kof.observability` | **EXISTS** | health/metrics/histogramas/request IDs + `traceId`/`spanId` W3C e `spanStart`/`spanEnd` cronometrados (3 targets, `OBS002`); export OTel planejado |
+| Observability | tracing | `kof.observability` | **EXISTS** | health/metrics/histogramas/request IDs + `traceId`/`spanId` W3C e `spanStart`/`spanEnd` cronometrados (3 targets, `OBS002`); export OTel `exportSpans()` OTLP/JSON no JVM/JS (`OBS003`, Native gap honesto) |
 | Logging | logback | `kof.log` + `println` | **EXISTS** | `log.debug/info/warn/error` JVM/Native |
 | Graceful shutdown | shutdown | `web.close()` + spawn join | PARTIAL | |
 | CLI/tooling | spring CLI | `kof` CLI (build/run/serve/test/bench/profile/inspect) | EXISTS | |

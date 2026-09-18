@@ -327,7 +327,7 @@ the stream is closed and the task cancelled.
 - `app.serveDir` (static files + Range 206/416) is JVM-only (Native/JS `WEB005`).
 - PR6 hardening (connection cap, `maxFrameBytes`/`maxMessageBytes` limits,
   `idleMs`, `app.stats`) is JVM; backpressure and fragmentation remain follow-up.
-- `kof.http` client — ✅ JVM+JS (27/08; `timeout/retry/circuit` in parity 30/08), Native ✅ (asm HTTP/1.1; configurators `timeout/retry/circuit` are silent no-ops — see §259; HTTP002 branch is dead).
+- `kof.http` client — ✅ JVM+JS (27/08; `timeout/retry/circuit` in parity 30/08), Native ✅ (asm HTTP/1.1; configurators `timeout/retry/circuit` are REAL on the 4 native targets since 17/09 — §259 CLOSED; the `HTTP002` branch stays dead because `KofHttp.supportedOn` always returns `true`).
 - Middleware/routes for HTTP methods other than those listed: in the future.
 
 > Closed in this phase (27–30/08): status codes + custom headers
