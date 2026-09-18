@@ -15,6 +15,7 @@ class JsRuntimeSliceRegistryTest {
         return new StringBuilder()
                 .append(JsRuntimeCore.CORE_RUNTIME)
                 .append(JsRuntimeUiComponents.UI_COMPONENT_RUNTIME)
+                .append(JsRuntimeUiLinkImageIcon.UI_LINK_IMAGE_ICON_RUNTIME)
                 .append(JsRuntimeUiWidgets.UI_WIDGET_RUNTIME)
                 .append(JsRuntimeUiForms.UI_FORMS_RUNTIME)
                 .append(JsRuntimeUiLayout.UI_LAYOUT_RUNTIME)

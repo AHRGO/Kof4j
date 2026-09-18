@@ -191,8 +191,8 @@ public final class JsRuntimeUiWidgets {
                 window.__kofActions = window.__kofActions || {};
                 window.__kofActions[id] = action;
                 const node = window.__kofNodes[id];
-                if (node && typeof node.addEventListener === "function") {
-                    node.addEventListener("click", function () {
+                if (node) {
+                    kofUiOnDom(node, "click", function () {
                         action.invoke();
                     });
                 }
@@ -266,7 +266,7 @@ public final class JsRuntimeUiWidgets {
                     return -1;
                 }
                 const node = window.__kofNodes[id];
-                node.addEventListener("submit", function (ev) {
+                kofUiOnDom(node, "submit", function (ev) {
                     if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
                     const h = window.__kofFormSubmits && window.__kofFormSubmits[id];
                     if (h && typeof h.invoke === "function") h.invoke();

@@ -105,6 +105,100 @@ class ComponentCoreE2ETest {
     }
 
     @Test
+    void stableRootKindReusesNodeAndHandle(@TempDir Path tempDir) throws IOException {
+        // D-UI-DIFF (B) core claim: when the view keeps the same root kind,
+        // the OLD DOM node and the OLD handle survive a state write (the
+        // fresh node is discarded) — identity continuity, not just no-leak.
+        String program = """
+            main() {
+                var app = Component(0)
+                var win = Window("App")
+                app.view((s: Int) -> { return Label("v=" + s) })
+                win.bind(app)
+                win.show()
+                println("done")
+            }
+            """;
+        String probe = """
+            import { kofUiComponentStateSet } from './kof-runtime.mjs';
+            const before = Object.keys(window.__kofNodes).join(",");
+            const el = Object.values(window.__kofNodes)[0];
+            const text0 = el.textContent;
+            kofUiComponentStateSet(1, 7);
+            const after = Object.keys(window.__kofNodes).join(",");
+            const el2 = Object.values(window.__kofNodes)[0];
+            console.log("keysBefore=" + before + " keysAfter=" + after
+                + " sameNode=" + (el === el2) + " text0=" + text0 + " text=" + el2.textContent);
+            """;
+        String out = runJsProbe(tempDir, "rootreuse", program, probe);
+        assertEquals("done\nkeysBefore=2 keysAfter=2 sameNode=true text0=v=0 text=v=7",
+                out, "stable root kind must keep the same node and the same handle");
+    }
+
+    @Test
+    void buttonRootActionSurvivesReuseWithoutDoubling(@TempDir Path tempDir) throws IOException {
+        // (B) risk case: the root has a DOM listener (Button action). Reuse
+        // must MOVE it (remove the stale, register the fresh exactly once),
+        // re-home the action table key onto the surviving handle, and keep
+        // clicks firing with one listener per render.
+        String program = """
+            main() {
+                var app = Component(0)
+                var win = Window("App")
+                app.view((s: Int) -> { return Button("b" + s, () -> println("fired=" + s)) })
+                win.bind(app)
+                app.stateSet(4)
+                win.show()
+                println("done")
+            }
+            """;
+        String probe = """
+            const el = Object.values(window.__kofNodes)[0];
+            el.click();
+            kofUiComponentStateSet(1, 5);
+            const el2 = Object.values(window.__kofNodes)[0];
+            el2.click();
+            console.log("same=" + (el === el2) + " listeners=" + el2._kofDomListeners.length
+                + " actions=" + Object.keys(window.__kofActions || {}).length);
+            """;
+        String out = runJsProbe(tempDir, "buttonreuse", program, probe);
+        assertEquals("done\nfired=4\nfired=5\nsame=true listeners=1 actions=1",
+                out, "reused root must move (not stack) its click listener and re-home the action key");
+    }
+
+    @Test
+    void kindChangeStillRebuildsAndPrunes(@TempDir Path tempDir) throws IOException {
+        // (B) boundary: different root kind → the §295 path stays untouched
+        // (rebuild + prune), the reuse branch must NOT alias two different
+        // widgets onto one node.
+        String program = """
+            main() {
+                var app = Component(0)
+                var win = Window("App")
+                app.view((s: Int) -> {
+                    if (s < 5) { return Label("L" + s) }
+                    return Button("B" + s, () -> println("late"))
+                })
+                win.bind(app)
+                app.stateSet(1)
+                win.show()
+                println("done")
+            }
+            """;
+        String probe = """
+            const el = Object.values(window.__kofNodes)[0];
+            const tag0 = el.tagName;
+            kofUiComponentStateSet(1, 9);
+            const el2 = Object.values(window.__kofNodes)[0];
+            console.log("tag0=" + tag0 + " tag=" + el2.tagName + " changed=" + (el !== el2)
+                + " nodes=" + Object.keys(window.__kofNodes).length);
+            """;
+        String out = runJsProbe(tempDir, "kindchange", program, probe);
+        assertEquals("done\ntag0=SPAN tag=BUTTON changed=true nodes=1",
+                out, "a different root kind must still rebuild+prune (no aliasing across kinds)");
+    }
+
+    @Test
     void stateRoundTrip(@TempDir Path tempDir) throws IOException {
         String program = """
             main() {
