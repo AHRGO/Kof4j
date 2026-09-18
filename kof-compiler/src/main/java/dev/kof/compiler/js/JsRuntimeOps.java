@@ -485,7 +485,8 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             }
         }
         if (name.equals("kof_await") || name.equals("kof_await_timeout")
-                || name.equals("kof_select_any")) {
+                || name.equals("kof_select_any")
+                || name.equals("kof_time_sleep")) { // §132/#83-JS cooperative sleep
             call = new JsIr.JsAwait(call);
         }
         if (name.equals("kof_poll") && kc.returnType() instanceof Type.PrimitiveType) {

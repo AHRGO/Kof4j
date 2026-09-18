@@ -19,15 +19,16 @@ import java.util.List;
  * <p>Paridade honesta (regra 6 / R6): o núcleo observa falha de worker via
  * {@code try { await h } catch} no laço por filho. Desde §129 (DECISIONS §2,
  * opção B) o handler chain do Native x86 é PER-THREAD (TLS) e o trampolim do
- * spawn instala handler próprio: o {@code throw} de um worker marca o handle
- * como excepcional e {@code await}/{@code selectAny} relançam no consumidor —
- * x86 entrega o núcleo. riscv/aarch seguem {@code OTP001} (clone cru sem TLS
- * para a cadeia de handlers — os auxiliares poll/done/cancel/selectAny/
- * awaitTimeout existem desde 15/09, CONC001 fechado {@code e8364c97})
- * e JS {@code OTP002} (§132 event-loop single-thread: task spawned de dentro
- * de outra task não dispara). Nesses casos o diagnóstico é claro — NUNCA
- * fallback silencioso. JVM/ANDROID (JvmBackend), Script (interpretador) e
- * Native x86 entregam o núcleo.
+  * spawn instala handler próprio: o {@code throw} de um worker marca o handle
+  * como excepcional e {@code await}/{@code selectAny} relançam no consumidor —
+  * x86 entrega o núcleo. riscv/aarch seguem {@code OTP001} (clone cru sem TLS
+  * para a cadeia de handlers — os auxiliares poll/done/cancel/selectAny/
+  * awaitTimeout existem desde 15/09, CONC001 fechado {@code e8364c97}).
+  * JS entrega o núcleo desde 18/09 (§132 resolvido: {@code time.sleep} é ponto de
+  * await cooperativo, o worker spawnado de dentro de outra task dispara; o gate
+  * {@code OTP002} foi levantado). Em riscv/aarch o diagnóstico é claro — NUNCA
+  * fallback silencioso. JVM/ANDROID (JvmBackend), Script (interpretador),
+  * Native x86 e JS entregam o núcleo.
  */
 final class CompilerSupervisor {
 
@@ -64,16 +65,6 @@ final class CompilerSupervisor {
                             + "(crash/hang — known-bugs §129, fixed on x86). "
                             + "OTP core available on JVM, Script and Native x86.",
                     "OTP001");
-            return null;
-        }
-        if (driver.target == Target.JS) {
-            diagnostics.error(driver.currentSourceName, 0, 0, 0,
-                    "kof.supervisor on target js: the JS backend runs on an event-loop "
-                            + "single-thread and a task spawned from inside another "
-                            + "task is not scheduled without yielding (the worker never runs — "
-                            + "known-bugs §132). OTP core available on JVM and "
-                            + "Script (kof run --target script).",
-                    "OTP002");
             return null;
         }
         try (var in = CompilerDriver.class.getResourceAsStream("/dev/kof/supervisor-host.kf")) {

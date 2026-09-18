@@ -40,7 +40,8 @@ public class JsLoweringContext {
     // task esquecida (handle nunca esperado) já é coberto independentemente
     // pelo pump de kofActiveTasks em KofJsRunner, não pela coloração.
     static final Set<String> ASYNC_RUNTIME_OPS = Set.of(
-            "kof_await", "kof_await_timeout", "kof_channel_receive", "kof_select_any");
+            "kof_await", "kof_await_timeout", "kof_channel_receive", "kof_select_any",
+            "kof_time_sleep"); // §132/#83-JS: sleep is now an await-point so the host pump can advance concurrent tasks while main sleeps
 
     /** JS name for a top-level function call resolved by (name, arity). */
     String jsFunctionName(String name, int arity) {

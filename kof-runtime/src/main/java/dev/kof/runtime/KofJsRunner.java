@@ -76,7 +76,7 @@ public final class KofJsRunner {
                     .mimeType("application/javascript+module")
                     .build();
             context.eval(source);
-            drainActiveTasks(context);
+            KofJsAsyncPump.drainActiveTasks(context);
             if (openWindow) {
                 Value uiRoot = context.getBindings("js").getMember("kof__uiRootHtml");
                 if (uiRoot != null && uiRoot.isString()) {
@@ -143,7 +143,7 @@ public final class KofJsRunner {
                     .mimeType("application/javascript+module")
                     .build();
             context.eval(source);
-            drainActiveTasks(context);
+            KofJsAsyncPump.drainActiveTasks(context);
             Value html = context.getBindings("js").getMember("kof__uiRootHtml");
             return html.isString() && !html.asString().isEmpty() ? html.asString() : null;
         } catch (Exception e) {
@@ -156,14 +156,7 @@ public final class KofJsRunner {
      * GraalJS pode não drenar a fila após um único eval; sem isso spawn/async
      * terminam antes do programa sair.
      */
-    private static void drainActiveTasks(Context context) {
-        Value active = context.getBindings("js").getMember("kofActiveTasks");
-        while (active != null && active.isNumber() && active.asInt() > 0) {
-            context.eval(Source.newBuilder("js", "void 0;", "kof-pump.js").buildLiteral());
-            active = context.getBindings("js").getMember("kofActiveTasks");
-        }
-    }
-
+    // async-sleep host pump moved to KofJsAsyncPump (§132/#83-JS)
     /**
      * Exposes the kof_platform object: IO and console primitives implemented
      * in Java. The generated JavaScript never reaches for Node/browser APIs.

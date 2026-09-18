@@ -14,7 +14,7 @@
 522	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiLayout.java
 522	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiSecurity.java
 506	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiStdlib.java
-589	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiWeb.java
+543	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiWeb.java
 514	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java
 541	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmRuntimeJson.java
 512	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmRuntimeUi.java
@@ -36,4 +36,4 @@
 539	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
 533	kof-compiler/src/main/java/dev/kof/compiler/StatementAnalyzer.java
 596	kof-compiler/src/main/java/dev/kof/compiler/StatementLowerer.java
-547	kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java
+543	kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java

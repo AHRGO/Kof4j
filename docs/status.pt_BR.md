@@ -2,9 +2,24 @@
 
 # Status do Projeto Kof
 
-**Última atualização:** 15 de setembro de 2026
+**Última atualização:** 18 de setembro de 2026
 **Versão:** 0.4.0-beta (pom `revision`)
 
+> **18/09 — §132 FECHADO (#83-JS) — o KofJS roda o supervisor OTP com paridade
+> (dono = 192.168.100.18, lane development).** O `time.sleep` agora é um **ponto de
+> await** no backend JS: o compilador colore como async o método que alcança
+> `kof_time_sleep` via o fixpoint `computeAsyncColoring` já existente (o mesmo que já
+> regia `await`) e emite `await kof_time_sleep(ms)`; `kofTimeSleep` devolve uma Promise
+> (node/browser: `setTimeout` real; GraalJS embutido: fila de sleepers drenada pela bomba
+> do host `KofJsRunner`, que é o event-loop mínimo que uma única thread JS não consegue
+> ser sozinha). Como o host consegue dormir E avançar microtasks, as tasks spawnadas
+> irmãs/filhas agora rodam enquanto uma task dorme — o idiom `while(!done(h)){ time.sleep(10) }`
+> progride e o worker do supervisor dispara. `OTP002` é levantado (o `kof.supervisor` em JS
+> não é mais recusado no compile-time); `KofSupervisorE2ETest#supervisorJsParity` roda
+> `APP` → `restarts=2 escaladas=2 fabrica=3 parou vivos=0`. Relógio real preservado
+> (`time.now()`/`Date.now()` inalterados) — `KofTimeE2ETest` continua honesto. riscv/aarch
+> permanecem `OTP001` (unwinding entre threads §129, lane nat). Prova: `AsyncSleepJsE2ETest`
+> 3/3 + reator verde.
 > **15/09 — §129 FECHADO (DECISIONS §2 opção B) — o Native x86 desenrola por
 > thread (dono = 192.168.100.18, lane development).** O `kof_exc_chain` agora é
 > **TLS por thread** (`.section .tbss,"awT",@nobits` + `%fs:kof_exc_chain@tpoff`)

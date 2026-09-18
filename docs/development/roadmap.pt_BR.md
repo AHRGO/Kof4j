@@ -255,8 +255,12 @@ Estado 13/09: concorrência real **JVM** (virtual threads) + **Native**
 async/await/Promise reais) + **supervisão OTP** (`kof.supervisor`: 1ª fatia
 11/09 núcleo JVM+Script, **S2-JVM 13/09** `startAll`/`lacoUnico` — ver
 `planning-otp-supervision.md`; **Native x86 ✅ 15/09** — §129 fechado via
-DECISIONS §2 opção B, então `kof.supervisor` roda no Native x86; riscv/aarch=OTP001,
-JS=OTP002 §132 gates honestos). O SIGSEGV anterior de `spawn→await→spawn` (pilha
+DECISIONS §2 opção B, então `kof.supervisor` roda no Native x86; riscv/aarch=OTP001
+(gate honesto da era §132). **JS ✅ 18/09 — §132 resolvido:** `time.sleep` virou um
+ponto de await async cooperativo (o compilador colore async o método que o alcança,
+`kofTimeSleep` devolve Promise, a bomba do host `KofJsRunner` a drena), então um worker
+spawnado de dentro de outra task dispara e `OTP002` foi levantado — `kof.supervisor`
+agora roda em JS com paridade. O SIGSEGV anterior de `spawn→await→spawn` (pilha
 desalinhada no site do `pthread_create`) foi corrigido 01/09 com `andq $-16` em
 `kof_spawn_handle_new`. Um defeito latente relacionado apareceu e foi corrigido
 15/09 na mesma unidade do §129: `kof_await` não limpava o TID do handle após o
