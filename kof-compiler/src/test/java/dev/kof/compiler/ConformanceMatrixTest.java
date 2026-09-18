@@ -482,6 +482,10 @@ class ConformanceMatrixTest {
         // mesmo caminho:** o x86 `kof_map_remove` na rota de MISS fazia
         // 3 popq para 5 pushq (desequilíbrio de pilha → `ret` para lixo →
         // **SIGSEGV** em `m.remove(chave-ausente)`) — 5 pops simétricos.
+        // D-NULL-INTENT (#278, 18/09): supersede o `emitPrevValueUnbox`/
+        // `prevOrDefault` do §112 acima — `m.remove("zz")` (chave ausente)
+        // agora devolve null genuíno em JVM/Script/JS, não o default do
+        // primitivo. Set.of("native") = fase 2 do rollout, DECISIONS.md.
         matrix("mapmutret", """
                 main() {
                     var s = setOf(1, 2)
@@ -497,7 +501,7 @@ class ConformanceMatrixTest {
                     println(m.remove("zz"))
                     println(m.size)
                 }
-                """, "false\ntrue\n3\ntrue\nfalse\n1\n2\n2\n0\n0", Set.of(), tempDir);
+                """, "false\ntrue\n3\ntrue\nfalse\n1\n2\n2\nnull\n0", Set.of("native"), tempDir);
         // §104b-i (Native): `Thing.equals(...)` em classe NÂO-record dava
         // LINK_FAIL (Object.equals herdado sem símbolo no bare-metal).
         // Síntese de equals de identidade → oracle JVM (false entre
