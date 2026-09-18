@@ -750,7 +750,7 @@ pronta.
 > completa) provam. **Nenhum agente pode quebrar comportamento que já funciona.**
 
 1. **Zero regressão.** Nenhum commit pode fazer um teste existente passar a
-   falhar. A suíte completa (`mvn test`, hoje **2570** nos 4 módulos — ver
+   falhar. A suíte completa (`mvn test`, hoje **2575** nos 4 módulos — ver
    §"Loop de verificação" para o comando com o flag de failure.ignore) é **gate de merge** —
    mudança que não mantém tudo verde não entra. Exceção única: mudança de
    contrato **deliberada**, com bump de versão + docs atualizados + migração.
@@ -1127,8 +1127,8 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > ele, o Maven é fail-fast por módulo: qualquer falha em **kof-compiler aborta
 > o reactor** e **kof-script, kof-c-compiler e kof-cli nunca rodam** — você
 > acha que validou tudo mas só viu o primeiro módulo. O total real com o flag
-> é **2570 testes** (compiler 2216 + script 39 + kof-c 7 + cli 308, medição
-> 18/09 ~14:10 no job CI Build+Tests do tip `96ab646e` — cresce com cada commit): **0 regressões / 0 erros**
+> é **2575 testes** (compiler 2216 + script 39 + kof-c 7 + cli 313, medição
+> 18/09 ~15:20 no job CI Build+Tests do tip `d14275f0` — cresce com cada commit): **0 regressões / 0 erros**
 > (ATUALIZAÇÃO 18/09: o trio histórico de nativos vermelhos está FECHADO no código — §252
 > corrigido `20495e48` (o ret-addr do usleep clobberava a slot de tamanho cacheada; size
 > agora em `%r14` callee-saved), resíduo §181 cross corrigido `c56c74a7` (o `NEG` cross
@@ -1158,7 +1158,7 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > (MEDIDO 17/09 ~15:49, run limpo no tip `f276e966`). Com qemu, **tudo executa** — os 84 cross rodam
 > verdes e o total fica igual com a contagem de skip caindo para o
 > resíduo externo de BD/ambiente `node`. Estado correto HOJE (18/09 ~05:20, run no tip `c56c74a7`,
-> job CI Build+Tests do tip `96ab646e`): **2570 = 2216+39+7+308, 0F / 0E / 177 skip** — o flake
+ > job CI Build+Tests do tip `d14275f0`): **2575 = 2216+39+7+313, 0F / 0E / 177 skip** (cli 308→313 por `CmdBuildClasspathTest` da #441 em `d14275f0`; CI Build+Tests de `d14275f0` medido) — o flake
 > §252, o resíduo cross §181 e o flake de poll §256(b) estão TODOS fechados no
 > código; os skips restantes são o gate opcional de asm e as guardas de toolchain.
 > **0 regressões / 0 erros** (2411 na época = 2058+38+7+308, 196 skip) — a corrida completa das 09:44 teve o flake INTERMITENTE
