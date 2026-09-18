@@ -117,9 +117,11 @@ main() {
 }
 ```
 
-> **Nota:** não existe tipo de função **anotado** como parâmetro declarado
-> (`(Int) -> Int f` não compila). A função chega como lambda anônimo no ponto
-> de chamada.
+> **Nota:** um tipo de função É legal como parâmetro declarado nas DUAS formas —
+> type-first (`Int aplica((Int) -> Int f, Int x)`) e anotada (`Int aplica(f: (Int) -> Int, x: Int)`) —
+> medido 42/42 no tip 0.4.0 (fix do parser §277/#389, `NestedFnTypeArityTest`). Passe um
+> **lambda** anônimo no ponto de chamada: referência nua de função nomeada não liga
+> (`training/anti-patterns/fake-idioms.md`).
 
 ## Sobrecarga (0.4.0-beta)
 
