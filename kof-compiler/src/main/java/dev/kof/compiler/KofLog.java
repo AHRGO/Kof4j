@@ -33,6 +33,10 @@ public final class KofLog {
         return "log".equals(name);
     }
 
+/** X10 fatia 3: nomes aceitos pelo dispatch real (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case-literals da fonte abaixo. */
+    static List<String> functions() { return List.of("debug", "info", "warn", "error"); }
+
     static boolean isLogMethod(String name) {
         return switch (name) {
             case "debug", "info", "warn", "error" -> true;

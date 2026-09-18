@@ -84,10 +84,12 @@ class StdCatalogTest {
                 "KofUuid", "KofRandom", "KofRng"));
         assertEquals(dispatched, catalogClasses,
                 "dispatch do KofStd mudou sem atualizar o catálogo");
-        assertEquals(18, StdCatalog.namespaces().size(), StdCatalog.namespaces().toString());
+        assertEquals(31, StdCatalog.namespaces().size(), StdCatalog.namespaces().toString());
         for (String ns : List.of("math", "strings", "encoding", "net", "uuid", "random",
                 "rng", "time", "http", "db", "cache", "process", "passwords", "crypto",
-                "jwt", "secrets", "security", "auth")) {
+                "jwt", "secrets", "security", "auth", "json", "log", "orm", "config",
+                "gpu", "mq", "validation", "observability", "tetris", "Image", "Audio",
+                "Mic", "Video")) {
             assertTrue(StdCatalog.isNamespace(ns), ns);
         }
     }
@@ -242,6 +244,16 @@ class StdCatalogTest {
                 shapes.add(sh);
             }
         }
+        // misturas Int[]/Int do gpu.dispatch*/mv* (ArrayType no cabeçalho):
+        Type arr = new Type.ArrayType(Type.PrimitiveType.INT);
+        for (int n = 1; n <= 6; n++) {
+            for (int k = 0; k <= n; k++) {
+                List<Type> sh = new ArrayList<>();
+                for (int i2 = 0; i2 < k; i2++) sh.add(arr);
+                for (int i2 = k; i2 < n; i2++) sh.add(Type.PrimitiveType.INT);
+                shapes.add(sh);
+            }
+        }
         for (String fn : KofTime.functions()) {
             assertTrue(shapes.stream().anyMatch(sh -> KofTime.staticCall(fn, sh) != null),
                     "time." + fn);
@@ -266,6 +278,158 @@ class StdCatalogTest {
             for (String fn : KofSecurity.functions().get(ns)) {
                 assertTrue(shapes.stream().anyMatch(sh ->
                                 KofSecurity.staticMethod(ns, fn, sh) != null),
+                        ns + "." + fn);
+            }
+        }
+    }
+    // ── X10 fatia 3: receiver-typed (MemberCallNamespaces) ──
+
+    @Test
+    void slice3ListsMatchTyperSources() throws Exception {
+        assertEquals(topCaseNames(switchBlock(
+                methodBody(source("KofLog"), "isLogMethod(String name)"), "switch (name)")),
+                KofLog.functions(), "log");
+        assertEquals(topCaseNames(switchBlock(
+                methodBody(source("KofOrm"),
+                        "staticCall(String name, List<Type> argTypes, boolean typed"),
+                "switch (name)")),
+                KofOrm.functions(), "orm");
+        assertEquals(topCaseNames(switchBlock(
+                methodBody(source("KofConfig"), "staticCall(String name, List<Type> argTypes)"),
+                "switch (name)")),
+                KofConfig.functions(), "config");
+        assertEquals(topCaseNames(switchBlock(
+                methodBody(source("KofGpu"), "staticCall(String name, List<Type> argTypes)"),
+                "switch (name)")),
+                KofGpu.functions(), "gpu");
+        assertEquals(topCaseNames(switchBlock(
+                methodBody(source("KofMq"), "staticCall(String name, List<Type> argTypes)"),
+                "switch (name)")),
+                KofMq.functions(), "mq");
+        assertEquals(topCaseNames(switchBlock(
+                methodBody(source("KofValidation"),
+                        "staticMethod(String namespace, String name, List<Type> argTypes)"),
+                "switch (name)")),
+                KofValidation.functions(), "validation");
+        assertEquals(topCaseNames(switchBlock(
+                methodBody(source("KofObservability"),
+                        "staticMethod(String namespace, String name, List<Type> argTypes)"),
+                "switch (name)")),
+                KofObservability.functions(), "observability");
+        assertEquals(topCaseNames(switchBlock(
+                methodBody(source("KofTetris"),
+                        "staticMethod(String namespace, String name, int argCount)"),
+                "switch (name)")),
+                KofTetris.functions(), "tetris");
+    }
+
+    /** Image/Audio/Video/Mic: os maps aninhados do KofMedia são a fonte. */
+    @Test
+    void mediaNestedMatchesSource() throws Exception {
+        String body = methodBody(source("KofMedia"),
+                "staticCall(String namespace, String name, int argCount)");
+        Matcher outer = Pattern.compile("case \"(\\w+)\" -> switch \\(name\\)").matcher(body);
+        int seen = 0;
+        while (outer.find()) {
+            String ns = outer.group(1);
+            seen++;
+            int at = body.indexOf("case \"" + ns + "\" -> switch (name)");
+            List<String> inSource = topCaseNames(switchBlock(body.substring(at), "switch (name)"));
+            assertEquals(inSource, StdCatalog.membersOf(ns), "media ns " + ns);
+        }
+        assertEquals(4, seen, "esperava Image/Audio/Video/Mic");
+    }
+
+    /** json não tem dispatcher nomeado: a fonte é o bloco inline do MemberCallNamespaces. */
+    @Test
+    void jsonMembersPinnedToValidatorSource() throws Exception {
+        String src = Files.readString(
+                Path.of("src/main/java/dev/kof/compiler/MemberCallNamespaces.java"));
+        int i = src.indexOf("\"json\".equals(rid.name())");
+        assertTrue(i >= 0);
+        String block = src.substring(i, src.indexOf("\n        }", i));
+        List<String> names = new ArrayList<>();
+        Matcher m = Pattern.compile("\"(\\w+)\"\\.equals\\(mc\\.methodName\\(\\)\\)").matcher(block);
+        while (m.find()) names.add(m.group(1));
+        assertEquals(new LinkedHashSet<>(names), new LinkedHashSet<>(StdCatalog.membersOf("json")),
+                "json drift");
+    }
+
+    @Test
+    void slice3MembersResolveInRealDispatch() {
+        List<Type> ts = List.of(Type.PrimitiveType.INT, BuiltinTypes.STRING,
+                Type.PrimitiveType.BOOL, Type.PrimitiveType.DOUBLE,
+                Type.PrimitiveType.LONG, Type.PrimitiveType.CHAR,
+                Type.UnknownType.UNKNOWN);
+        List<List<Type>> shapes = new ArrayList<>();
+        shapes.add(List.of());
+        for (Type a : ts) {
+            shapes.add(List.of(a));
+            for (Type b : ts) {
+                shapes.add(List.of(a, b));
+                for (Type c : ts) {
+                    shapes.add(List.of(a, b, c));
+                    for (Type e : ts) shapes.add(List.of(a, b, c, e));
+                }
+            }
+        }
+        for (int n = 5; n <= 8; n++) {
+            for (Type fill : ts) {
+                List<Type> sh = new ArrayList<>();
+                for (int k = 0; k < n; k++) sh.add(fill);
+                shapes.add(sh);
+            }
+        }
+        Type arr = new Type.ArrayType(Type.PrimitiveType.INT);
+        for (int n = 1; n <= 6; n++) {
+            for (int k = 0; k <= n; k++) {
+                List<Type> sh = new ArrayList<>();
+                for (int i2 = 0; i2 < k; i2++) sh.add(arr);
+                for (int i2 = k; i2 < n; i2++) sh.add(Type.PrimitiveType.INT);
+                shapes.add(sh);
+            }
+        }
+        for (String fn : KofLog.functions()) {
+            assertTrue(shapes.stream().anyMatch(sh -> KofLog.staticCall(fn, sh) != null),
+                    "log." + fn);
+        }
+        for (String fn : KofOrm.functions()) {
+            assertTrue(shapes.stream().anyMatch(sh ->
+                            KofOrm.staticCall(fn, sh, false, null) != null
+                                    || KofOrm.staticCall(fn, sh, true, "User") != null),
+                    "orm." + fn);
+        }
+        for (String fn : KofConfig.functions()) {
+            assertTrue(shapes.stream().anyMatch(sh -> KofConfig.staticCall(fn, sh) != null),
+                    "config." + fn);
+        }
+        for (String fn : KofGpu.functions()) {
+            assertTrue(shapes.stream().anyMatch(sh -> KofGpu.staticCall(fn, sh) != null),
+                    "gpu." + fn);
+        }
+        for (String fn : KofMq.functions()) {
+            assertTrue(shapes.stream().anyMatch(sh -> KofMq.staticCall(fn, sh) != null),
+                    "mq." + fn);
+        }
+        for (String fn : KofValidation.functions()) {
+            assertTrue(shapes.stream().anyMatch(sh ->
+                            KofValidation.staticMethod("validation", fn, sh) != null),
+                    "validation." + fn);
+        }
+        for (String fn : KofObservability.functions()) {
+            assertTrue(shapes.stream().anyMatch(sh ->
+                            KofObservability.staticMethod("observability", fn, sh) != null),
+                    "observability." + fn);
+        }
+        for (String fn : KofTetris.functions()) {
+            assertTrue(java.util.stream.IntStream.rangeClosed(0, 8)
+                            .anyMatch(n -> KofTetris.staticMethod("tetris", fn, n) != null),
+                    "tetris." + fn);
+        }
+        for (String ns : List.of("Image", "Audio", "Video", "Mic")) {
+            for (String fn : StdCatalog.membersOf(ns)) {
+                assertTrue(java.util.stream.IntStream.rangeClosed(0, 8)
+                                .anyMatch(n -> KofMedia.staticCall(ns, fn, n) != null),
                         ns + "." + fn);
             }
         }

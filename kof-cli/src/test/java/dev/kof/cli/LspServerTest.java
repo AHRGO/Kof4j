@@ -428,6 +428,22 @@ class LspServerTest {
         assertTrue(c.contains("sha256") && c.contains("hmacSha256"), "crypto: " + c);
     }
 
+    /** X10 fatia 3: receiver-typed (json/log/mq/validation/media). */
+    @Test
+    void completionSlice3Namespaces() throws Exception {
+        assertEquals(List.of("encode", "decode"),
+                completionAt("json.", 0, 5).stream().map(i -> (String) i.get("label")).toList());
+        List<String> lg = completionAt("log.", 0, 4).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertEquals(List.of("debug", "info", "warn", "error"), lg);
+        List<String> mi = completionAt("Mic.", 0, 4).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertEquals(List.of("record", "list"), mi);
+        List<String> img = completionAt("Image.", 0, 6).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertEquals(List.of("open"), img);
+    }
+
     /** Fora do ponto, o completion de palavras/chaves existente nao regride. */
     @Test
     void completionStillOffersKeywordsAndVars() throws Exception {

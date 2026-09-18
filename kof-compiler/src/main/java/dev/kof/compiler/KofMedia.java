@@ -37,6 +37,16 @@ public final class KofMedia {
 
     record MediaCall(String function, Type returnType, List<Type> parameterTypes) {}
 
+    /** X10 fatia 3: membros estáticos por namespace (Image/Audio/Video/Mic).
+     *  GUARDA: StdCatalogTest exige == switches aninhados do staticCall. */
+    static java.util.Map<String, List<String>> functions() {
+        return java.util.Map.of(
+                "Image", List.of("open"),
+                "Audio", List.of("openWav"),
+                "Video", List.of("open"),
+                "Mic", List.of("record", "list"));
+    }
+
     /** Chamadas estáticas (sem receiver): {@code Image.open}, {@code Audio.openWav},
      *  {@code Mic.record}. O nome da classe-namespace vem primeiro. */
     static MediaCall staticCall(String namespace, String name, int argCount) {

@@ -8,16 +8,18 @@ import java.util.Set;
  * X10 fatia 1 (fila X, IMPLEMENTATION-UNIVERSAL-PLATFORM) — catálogo de
  * membros dos namespaces stdlib roteado por {@link KofStd#staticMethod}
  * (math, strings, encoding, net, uuid, random, rng — fatia 1; time, http, db,
- * cache, process e os 6 namespaces de segurança — fatia 2). Alimenta o completion
+ * cache, process e os 6 namespaces de segurança — fatia 2; json, log, orm, config,
+ * gpu, mq, validation, observability, tetris e Image/Audio/Video/Mic — fatia 3).
+ * Alimenta o completion
  * domain-aware do LSP SEM parser paralelo: os nomes são uma transcrição
  * dos `case` dos próprios typers, e o `StdCatalogTest` trava as duas pontas
  * contra a fonte real — lista ≠ case-literals do `switch (name)` ou
  * dispatch do KofStd ≠ chaves do catálogo ⇒ vermelho (padrão
  * RuntimeSlices: transcription protegida por teste, nunca confiança).
  *
- * <p>Escopo honesto: json/ui/ffi/web-server etc. têm roteamento ainda
- * próprio (receiver-typed) — faces seguintes do X10 (R6: não fingir
- * cobertura total).
+ * <p>Escopo honesto: o DSL de {@code web}/{@code app} (recebedores com
+ * semântica própria de rota) e {@code ui}/{@code ffi} ficam de fora — faces
+ * seguintes do X10 (R6: não fingir cobertura total).
  */
 public final class StdCatalog {
 
@@ -42,6 +44,17 @@ public final class StdCatalog {
         m.put("cache", KofCache.functions());
         m.put("process", KofProcess.functions());
         m.putAll(KofSecurity.functions());
+        // fatia 3: receiver-typed com dispatch próprio (MemberCallNamespaces)
+        m.put("json", List.of("encode", "decode"));
+        m.put("log", KofLog.functions());
+        m.put("orm", KofOrm.functions());
+        m.put("config", KofConfig.functions());
+        m.put("gpu", KofGpu.functions());
+        m.put("mq", KofMq.functions());
+        m.put("validation", KofValidation.functions());
+        m.put("observability", KofObservability.functions());
+        m.put("tetris", KofTetris.functions());
+        m.putAll(KofMedia.functions());
         MEMBERS = java.util.Collections.unmodifiableMap(m);
     }
 
