@@ -1098,6 +1098,16 @@ mvn test -o -pl kof-compiler,kof-script,kof-c-compiler,kof-cli -am \
 grep -rl "FAILURE" */target/surefire-reports/*.txt
 ```
 
+> **Windows hosts / Native validation:** the Native x86-64 backend invokes
+> real external assembler/linker tooling (`as`/`ld`) and Linux ELF runtime
+> dependencies. A `ToolchainMissing` / `as not available` / `ld not available`
+> result is an environment precondition failure, not by itself proof of a Kof
+> regression. When validating Native from Windows, run the relevant gate in a
+> Linux/WSL environment with the toolchain available. For nested build scripts
+> that explicitly use `bash -lc`, prefer `wsl.exe -e`/`--exec`; this is Kof
+> scripting guidance for predictable argument interpretation, not a WSL bug
+> claim. See `docs/debugging/debugging-native.md`.
+
 ### Pre-push checklist (Q0–Q7 — answer before `git push`, on ANY branch)
 
 0. Was the bug **fixed at the root cause** (not masked) and would the test that proves it
