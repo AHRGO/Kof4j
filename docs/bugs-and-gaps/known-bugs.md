@@ -10688,3 +10688,40 @@ main() {
 Compiles clean on JVM; running it dies at class LOAD with `java.lang.VerifyError: Bad type on operand stack … Type integer (current frame, stack[0]) is not assignable to reference type`, verifier frames `full_frame(@48,{Object#42,Integer,Integer,Integer}, …)` — the `Bool big`/`small` locals were allocated as **boxed `Integer` REFERENCE slots** (locals show three `Integer`s after the args), so storing the comparison's primitive `int` (0/1) into them is an `astore` of an `int` → reject. This is the **declaration/store** typing layer, NOT the condition shortcut fixed in face (a): a relational whose operand is `Nullable(primitive)` produces a result the `VarDecl` path treats as a boxed reference instead of a primitive `Bool`. Same `.22` erasure/typing cluster as §294 (present×primitive null-check dying at `Object.valueOf`) and the §241 "boxed half-landed" family. Left to `.22` with this measured repro. Cross-target for face (b) not asserted here.
 
 **Status.** ✅ face (a) FIXED 18/09 (condition shortcut, `CompilerComparisons.emitComparisonShortcut`, `NullablePrimitiveRelationalConditionTest`). 🟡 face (b) OPEN 18/09 (value/store typing — `Bool b = <Int? rel>` VerifyError; owner `.22`, D-NULL-INTENT #278/#438 typing; repro + error recorded above). The §279 `conformance-matrix.md` 4-target cell stays deferred until face (b) lands and `.22` pins Native/Script for relational-nullable.
+
+
+---
+
+## §298 — `kof deploy --target js` packages a release that cannot run (entry without its runtime)
+
+**Found:** 18/09 ~17:00, measured on tip `235061b3` (X9 slice 3) with fresh jars.
+
+**Status.** ✅ FIXED 18/09 (same commit as this entry — `CmdDeploy` copies the import
+closure of the JS entry + `CmdDeployTest.jsFacePackagesEntry` hardened to RUN node).
+
+**Symptom (verbatim):** `kof deploy App.kf --target js --output out` produces
+`out/deploy/App-0.0.0/App-0.0.0.mjs` + `RELEASE.md` (which tells the user
+`run: node App-0.0.0.mjs`). Copying the release dir to a clean location and running
+the promised command dies: `Error [ERR_MODULE_NOT_FOUND]: Cannot find module
+'.../kof-runtime.mjs'` — the generated entry does `import { kofPrintln } from
+'./kof-runtime.mjs'`, and `kof-runtime.mjs`/`kof-runtime-io.mjs` live **next to the
+entry in the build dir** (`JsArtifactWriter.writeRuntime`) but were never copied.
+
+**Root cause (read in code):** `CmdDeploy` modeled every face as a SINGLE artifact
+(`Files.copy(built, jarDst)`); JVM (fat jar) and NATIVE (static ELF) truly are
+single-file, ANDROID is a single APK — the JS face silently inherited the
+single-file assumption and shipped half a program. A **facade of a feature**
+(Q7): the slice was marked "JS packaged" but the packaged unit was not runnable.
+
+**Why the test let it through (Q5):** `jsFacePackagesEntry` asserted file existence,
+SHA256SUMS over the entry and RELEASE.md text — it never executed the artifact.
+The hardening now runs `node <entry>` **inside the packaged release dir** and
+asserts program output (`js ok`), plus SHA256SUMS covers the runtime files.
+Honest guard: `assumeTrue(node available)` — no node, no fake green.
+
+**Proof.** RED-before (green test × old `CmdDeploy.java`, stash-measured):
+`jsFacePackagesEntry:182 "runtime deve acompanhar o entry (SHA256SUMS)" FAILURE`.
+GREEN-after: `CmdDeployTest` 9/9 + 1 honest skip (android w/o SDK). The old
+entry-only split behavior is also proven broken end-to-end in this session
+(`ERR_MODULE_NOT_FOUND` verbatim above). Fix is additive: JVM/native/android
+paths untouched (no `jsDeps` entries for them).

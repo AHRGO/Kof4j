@@ -170,7 +170,21 @@ class CmdDeployTest {
         assertTrue(Files.isRegularFile(mjs), ".mjs ausente:\n" + r.out());
         String sums = Files.readString(dir.resolve("dist/deploy/webapp-0.9.0/SHA256SUMS"),
                 StandardCharsets.UTF_8);
-        assertEquals(CmdDeploy.sha256Hex(mjs) + "  webapp-0.9.0.mjs", sums.trim());
+        org.junit.jupiter.api.Assertions.assertTrue(
+                sums.startsWith(CmdDeploy.sha256Hex(mjs) + "  webapp-0.9.0.mjs"),
+                "linha do entry em SHA256SUMS:\n" + sums);
+        // §298: a release tem de ser AUTOCONTIDA — o entry importa o runtime
+        // relativo; sem os modulos irmaos o "node webapp-0.9.0.mjs" do
+        // RELEASE.md morre em ERR_MODULE_NOT_FOUND (bug medido no tip).
+        org.junit.jupiter.api.Assumptions.assumeTrue(hasNode(),
+                "node nao disponivel no host (skip honesto, nao verde falso)");
+        assertTrue(sums.contains("  kof-runtime.mjs"),
+                "runtime deve acompanhar o entry (SHA256SUMS):\n" + sums);
+        org.junit.jupiter.api.Assertions.assertTrue(
+                Files.isRegularFile(dir.resolve("dist/deploy/webapp-0.9.0/kof-runtime.mjs")),
+                "kof-runtime.mjs ausente na release");
+        String out = runNode(dir.resolve("dist/deploy/webapp-0.9.0"), "webapp-0.9.0.mjs");
+        assertTrue(out.contains("js ok"), "node na release empacotada:\n" + out);
         String release = Files.readString(dir.resolve("dist/deploy/webapp-0.9.0/RELEASE.md"),
                 StandardCharsets.UTF_8);
         assertTrue(release.contains("node webapp-0.9.0.mjs"), release);
@@ -234,6 +248,26 @@ class CmdDeployTest {
         CliResult r = run(dir, "deploy", src.toString(), "--target", "jvm", "--fat");
         assertEquals(1, r.exit(), "flag estranha deve recusar (R6): " + r.out());
         assertTrue(r.out().contains("unknown or incomplete flag"), r.out());
+    }
+
+    // ── §298 node helpers ──
+
+    private static boolean hasNode() {
+        try {
+            return new ProcessBuilder("node", "--version")
+                    .redirectErrorStream(true).start().waitFor() == 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static String runNode(Path releaseDir, String entry) throws Exception {
+        Process p = new ProcessBuilder("node", entry)
+                .directory(releaseDir.toFile())
+                .redirectErrorStream(true).start();
+        String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertEquals(0, p.waitFor(), "node " + entry + " (release autocontida):\n" + out);
+        return out;
     }
 
     // ── tar helpers ──

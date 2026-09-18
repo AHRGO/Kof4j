@@ -230,6 +230,19 @@ final class CmdDeploy {
         String artifact = name + "-" + version + ext;
         Path jarDst = releaseDir.resolve(artifact);
         Files.copy(built, jarDst, StandardCopyOption.REPLACE_EXISTING);
+        // §298: a release JS precisa ser AUTOCONTIDA — o entry importa módulos
+        // relativos do build (./kof-runtime.mjs, ./kof-runtime-io.mjs, ...), que
+        // vivem AO LADO dele; copiar só o entry deixava o "node <x>.mjs" do
+        // RELEASE.md morrendo em ERR_MODULE_NOT_FOUND. Closure de imports.
+        List<Path> jsDeps = new ArrayList<>();
+        if (target == Target.JS) {
+            for (Path dep : jsImportClosure(built)) {
+                Path depSrc = built.getParent().resolve(dep.toString());
+                Path dst = releaseDir.resolve(dep.toString());
+                Files.copy(depSrc, dst, StandardCopyOption.REPLACE_EXISTING);
+                jsDeps.add(dep);
+            }
+        }
 
         // 4) RELEASE.md (metadados legíveis) + SHA256SUMS (integridade)
         String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now().atOffset(ZoneOffset.UTC));
@@ -255,18 +268,62 @@ final class CmdDeploy {
                         + "- run: " + runCmd + "\n",
                 StandardCharsets.UTF_8);
         String sha256 = sha256Hex(jarDst);
-        Files.writeString(releaseDir.resolve("SHA256SUMS"),
-                sha256 + "  " + artifact + "\n", StandardCharsets.UTF_8);
+        StringBuilder sums = new StringBuilder(sha256 + "  " + artifact + "\n");
+        for (Path dep : jsDeps) {
+            sums.append(sha256Hex(releaseDir.resolve(dep))).append("  ").append(dep).append("\n");
+        }
+        Files.writeString(releaseDir.resolve("SHA256SUMS"), sums.toString(), StandardCharsets.UTF_8);
 
         // 5) tar.gz do conjunto (artefato de distribuição único)
-        List<Path> releaseFiles = new ArrayList<>(List.of(
-                jarDst.getFileName(), Path.of("RELEASE.md"), Path.of("SHA256SUMS")));
+        List<Path> releaseFiles = new ArrayList<>();
+        releaseFiles.add(jarDst.getFileName());
+        releaseFiles.addAll(jsDeps);
+        releaseFiles.add(Path.of("RELEASE.md"));
+        releaseFiles.add(Path.of("SHA256SUMS"));
         Path tgz = out.resolve("deploy").resolve(name + "-" + version + ".tar.gz");
         writeTarGz(tgz, releaseDir, releaseFiles, tarMode);
 
         System.out.println("deploy → " + releaseDir);
         System.out.println("artifact → " + tgz
                 + " (sha256 " + sha256.substring(0, 12) + "…)");
+    }
+
+    /**
+     * §298: closure (transitiva, sem ciclos) dos imports relativos de um
+     * módulo ES gerado pelo backend JS — os {@code ./x.mjs} que precisam
+     * acompanhar o entry para a release rodar fora do diretório de build.
+     */
+    static List<Path> jsImportClosure(Path entry) throws IOException {
+        List<Path> out = new ArrayList<>();
+        java.util.Set<Path> seen = new java.util.LinkedHashSet<>();
+        seen.add(entry.toAbsolutePath().normalize());
+        java.util.Deque<Path> queue = new java.util.ArrayDeque<>();
+        queue.add(entry);
+        while (!queue.isEmpty()) {
+            Path file = queue.poll();
+            for (Path dep : directJsImports(file)) {
+                Path key = dep.toAbsolutePath().normalize();
+                if (seen.add(key)) {
+                    out.add(dep.getFileName());
+                    queue.add(dep);
+                }
+            }
+        }
+        return out;
+    }
+
+    private static List<Path> directJsImports(Path file) throws IOException {
+        List<Path> deps = new ArrayList<>();
+        for (String line : Files.readAllLines(file)) {
+            String t = line.trim();
+            if (!t.startsWith("import ") || !t.contains(" from './")) continue;
+            int a = t.indexOf("from './") + "from '".length();
+            int b = t.indexOf("'", a);
+            if (b < 0) continue;
+            Path dep = file.getParent().resolve(t.substring(a, b));
+            if (Files.isRegularFile(dep)) deps.add(dep);
+        }
+        return deps;
     }
 
     private static Path findJsEntry(Path dir) throws IOException {
