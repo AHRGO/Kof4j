@@ -110,7 +110,10 @@ final class KofJsFfiMarshal {
      * função C via `Linker.upcallStub`. A ponte chama `fn.getMember("invoke").execute(...)`
      * reentrante na mesma thread (medido na C3.1, `KofJsFfiCallbackBridgeTest`); o stub vive
      * na arena confined da chamada → contrato síncrono/não-escapante. `inner` =
-     * "r"+chars dos params do callback (só primitivos i/j/f/d/b, retorno pode ser v).
+     * "r"+chars dos params do callback (primitivos i/j/f/d/b OU String 'S' como ARGUMENTO
+     * — um `char*` que a ponte lê via {@code getString}; o RETORNO continua só primitivo/
+     * void, 'S' fica fora). O carrier ADDRESS de um param 'S' chega como {@code
+     * MemorySegment} e é convertido p/ String em {@code executeJs*}.
      */
     private static MemorySegment jsCallbackStub(Value fn, String inner, Arena arena)
             throws Throwable {
@@ -121,7 +124,10 @@ final class KofJsFfiMarshal {
         for (int k = 0; k < arity; k++) {
             char c = inner.charAt(k + 1);
             il[k] = ffiLayout(c);
-            prim[k] = ffiCarrier(c);
+            // 'S' = char*: o carrier NATIVO do stub é ADDRESS -> MemorySegment; a ponte
+            // abaixo o converte em String antes de chamar `invoke` (paridade com o
+            // `kof_ffi_cstr` do JVM). Só 'S' diverge; primitivos ficam iguais.
+            prim[k] = (c == 'S') ? MemorySegment.class : ffiCarrier(c);
         }
         Class<?> ret = rb == 'v' ? void.class : ffiCarrier(rb);
         // asVarargsCollector (não asSpreader): o alvo varargs `executeJsX(Value, Object...)`
@@ -138,12 +144,26 @@ final class KofJsFfiMarshal {
         return Linker.nativeLinker().upcallStub(h, cb, arena);
     }
 
-    static int executeJsI(Value fn, Object... a) { return fn.getMember("invoke").execute(a).asInt(); }
-    static long executeJsJ(Value fn, Object... a) { return fn.getMember("invoke").execute(a).asLong(); }
-    static float executeJsF(Value fn, Object... a) { return fn.getMember("invoke").execute(a).asFloat(); }
-    static double executeJsD(Value fn, Object... a) { return fn.getMember("invoke").execute(a).asDouble(); }
-    static boolean executeJsB(Value fn, Object... a) { return fn.getMember("invoke").execute(a).asBoolean(); }
-    static void executeJsV(Value fn, Object... a) { fn.getMember("invoke").execute(a); }
+    // Os args chegam do upcall com os primitivos já boxados; um param 'S' chega como
+    // MemorySegment (carrier do ADDRESS). A ponte lê o `char*` -> String UTF-8 (NULL ->
+    // null) ANTES de entregar ao `invoke` Kof, espelhando o `kof_ffi_cstr` do JVM. Uma
+    // String vira automaticamente um host->JS string no Value.execute. Primitivos: id.
+    static int executeJsI(Value fn, Object... a) { return fn.getMember("invoke").execute(jsBridgeArgs(a)).asInt(); }
+    static long executeJsJ(Value fn, Object... a) { return fn.getMember("invoke").execute(jsBridgeArgs(a)).asLong(); }
+    static float executeJsF(Value fn, Object... a) { return fn.getMember("invoke").execute(jsBridgeArgs(a)).asFloat(); }
+    static double executeJsD(Value fn, Object... a) { return fn.getMember("invoke").execute(jsBridgeArgs(a)).asDouble(); }
+    static boolean executeJsB(Value fn, Object... a) { return fn.getMember("invoke").execute(jsBridgeArgs(a)).asBoolean(); }
+    static void executeJsV(Value fn, Object... a) { fn.getMember("invoke").execute(jsBridgeArgs(a)); }
+
+    private static Object[] jsBridgeArgs(Object[] a) {
+        for (int k = 0; k < a.length; k++) {
+            if (a[k] instanceof MemorySegment s) {
+                a[k] = (s == null || s.address() == 0L)
+                        ? null : s.reinterpret(Long.MAX_VALUE).getString(0L);
+            }
+        }
+        return a;
+    }
 
     static Class<?> ffiCarrier(char c) {
         return switch (c) {

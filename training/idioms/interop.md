@@ -30,14 +30,15 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — Stri
 
 // (c) CALLBACKS (C2 ✅ + JS parity C3.2/C3.3 ✅, 18/09): a Kof function handed to C as a
 // function pointer. Function-typed parameter + lambda at the call site;
-// PRIMITIVE callback ABI only (synchronous, non-escaping):
+// PRIMITIVE + String-arg callback ABI (synchronous, non-escaping):
 extern "libcallback.so" kof_cb_add(Int a, Int b, (Int, Int) -> Int cb): Int
 // call site — the lambda becomes the C function pointer (Linker.upcallStub):
 kof_cb_add(20, 22, (x: Int, y: Int) -> x + y)   // 42 measured
 kof_cb_mixed(3, 2.5, (i: Int, d: Double) -> i * d)  // mixed scalar ABI ok
-// JS (host runner) binds callbacks too (C3.2 ✅ 18/09, byte-for-byte JVM~JS;
-// browser = honest runtime degrade R7); String/struct/pointer-in-callback
-// and callback-as-return -> FFI001 (JVM) — never a silent stub.
+kof_cb_slen("hello", (x: String) -> x.length())  // char* -> String arg (C3.4)
+// JS (host runner) binds callbacks too (C3.2/C3.4 ✅ 18/09, byte-for-byte JVM~JS;
+// browser = honest runtime degrade R7); struct/pointer-in-callback, a String
+// RETURN, and callback-as-return -> FFI001 (JVM) — never a silent stub.
 ```
 
 ## BAD → GOOD
@@ -53,4 +54,4 @@ kof_cb_mixed(3, 2.5, (i: Int, d: Double) -> i * d)  // mixed scalar ABI ok
 
 `docs/language-reference/syntax.md` (§FFI to C), `grammar.md`
 (`extern-declaration`), `modules.md` §6; gaps `FFI001`/`FFI002`;
-R3 landed: JVM arbitrary scalar (arity/void/String-return, 18/09) + JS host parity (3.6.F2/F3 ✅ 18/09) + **callbacks bind on JVM AND the JS host runner, byte-for-byte parity (C2 ✅ + C3.2/C3.3 ✅ 18/09, `JvmFfiCallbackE2ETest` incl. `jvmAndJsCallbacksMatchByteForByte`)**; remaining: opaque handles (3.3), variadics (3.5, ⛔ surface decision), struct/array ABI (D6 ⛔), Native §61.
+R3 landed: JVM arbitrary scalar (arity/void/String-return, 18/09) + JS host parity (3.6.F2/F3 ✅ 18/09) + **callbacks bind on JVM AND the JS host runner, byte-for-byte parity (C2 ✅ + C3.2/C3.3/C3.4 ✅ 18/09 — primitive + `String`-arg callbacks; `JvmFfiCallbackE2ETest` incl. `jvmAndJsCallbacksMatchByteForByte` and `stringCallbackArgsBindAndMatchJvmJs`)**; remaining: opaque handles (3.3), variadics (3.5, ⛔ surface decision), struct/array ABI (D6 ⛔), Native §61.

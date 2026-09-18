@@ -62,20 +62,25 @@ final class FfiSignature {
     }
 
     // ---- callbacks / upcalls (R3, fatia 3.4): token C(<ret><params>) ----------------
-    // Só primitivos nos parâmetros do callback (String/void/pointer ficam fora do
-    // conjunto bindável → o gate mantém FFI001/FFI002 honestos, R6); retorno pode ser
-    // primitivo ou void. Ex.: "(Int, Int) -> Int" -> descritor "iii".
+    // Parâmetros bindáveis: os escalares {Int, Long, Float, Double, Boolean} E String
+    // (um `char*` que entra no callback: o runtime faz o bridge ADDRESS->String na
+    // fronteira do upcall, espelhando o downcall `getString`; 3.4-C3.4). O RETORNO do
+    // callback continua primitivo-ou-void: devolver `String` exigiria entregar ao C um
+    // `char*` cujo dono da memória não é observável no contrato síncrono → fica fora do
+    // conjunto bindável e o gate mantém FFI001/FFI002 honestos (R6). void/pointer/struct/
+    // função-aninhada como parâmetro continuam null (não-bindável).
+    // Ex.: "(String, Int) -> Int" -> descritor "iSi"; "(Int) -> String" -> null (retorno S).
 
     static Character cbParamChar(String t) {
-        Character c = paramChar(t);
-        if (c == null || c.charValue() == 'S' || c.charValue() == 'v') return null;
-        return c;
+        // 'S' é bindável como ARGUMENTO (char*->String no upcall); só o não-escalar
+        // (função/struct/pointer) — paramChar==null — cai fora do conjunto.
+        return paramChar(t);
     }
 
     static Character cbReturnChar(String t) {
         if (isVoidFFI(t)) return 'v';
         Character c = paramChar(t);
-        if (c == null || c.charValue() == 'S') return null;
+        if (c == null || c.charValue() == 'S') return null;   // String RETURN: não-bindável
         return c;
     }
 

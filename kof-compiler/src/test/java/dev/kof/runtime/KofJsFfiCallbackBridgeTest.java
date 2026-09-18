@@ -49,6 +49,8 @@ class KofJsFfiCallbackBridgeTest {
             }
             typedef long (*ll)(long,long);
             long kof_cb_addl(long a, long b, ll cb) { return cb(a,b); }
+            typedef int (*is)(const char*);
+            int kof_cb_slen(const char* s, is cb) { return cb(s); }
             """;
 
     /** Chamada de volta: o upcall roda o método `invoke` do objeto de função JS. */
@@ -58,6 +60,15 @@ class KofJsFfiCallbackBridgeTest {
 
     static long jsCbLong(Value fn, long x, long y) {
         return fn.getMember("invoke").execute(x, y).asLong();
+    }
+
+    // (3.4-C3.4) ponte do callback com ARGUMENTO String: o carrier ADDRESS chega como
+    // MemorySegment (o `char*` que C entrega); lido como UTF-8 (NULL->null) e entregue
+    // ao `invoke` JS como host String -> JS string. Espelha KofJsFfiMarshal.executeJs*.
+    static int jsCbStrLen(Value fn, MemorySegment seg) {
+        String s = (seg == null || seg.address() == 0L)
+                ? null : seg.reinterpret(Long.MAX_VALUE).getString(0L);
+        return fn.getMember("invoke").execute(s).asInt();
     }
 
     private static String compileHostLib(Path dir) throws IOException, InterruptedException {
@@ -122,6 +133,50 @@ class KofJsFfiCallbackBridgeTest {
                     "callback com carrier Long reentrante");
             assertEquals(46, ctx.eval("js", "probeLoop(4, 10, { invoke: (i, base) => i + base })").asInt(),
                     "C chama o stub 4x num loop (rooting durante a chamada): 10+11+12+13");
+        }
+    }
+
+    /**
+     * (3.4-C3.4) paridade no nível do host: downcall `int kof_cb_slen(const char*, cb)`
+     * dispara, reentrante na MESMA thread do `context.eval`, um upcall cujo PARÂMETRO é
+     * `char*` — o carrier ADDRESS vira MemorySegment, é lido como String e entregue ao
+     * `invoke` do objeto de função JS, que devolve `.length`. Prova a ponte ADDRESS->String
+     * do callback no JS ANTES de abrir o gate do compilador (mesma forma do E2E real).
+     */
+    @Test
+    void charPointerCallbackArgCrossesIntoGraalJs(@TempDir Path dir) throws Throwable {
+        String libPath = compileHostLib(dir);
+        Linker linker = Linker.nativeLinker();
+        SymbolLookup lib = SymbolLookup.libraryLookup(libPath, Arena.global());
+        try (Context ctx = Context.newBuilder("js").allowAllAccess(true)
+                .option("engine.WarnInterpreterOnly", "false").build()) {
+            ProxyExecutable probeStr = (Value[] args) -> {
+                Value fn = args[1];
+                try (Arena ar = Arena.ofConfined()) {
+                    MethodHandle bridge;
+                    try {
+                        bridge = MethodHandles.lookup()
+                                .findStatic(KofJsFfiCallbackBridgeTest.class, "jsCbStrLen",
+                                        MethodType.methodType(int.class, Value.class, MemorySegment.class))
+                                .bindTo(fn);
+                    } catch (ReflectiveOperationException e) {
+                        throw new RuntimeException(e);
+                    }
+                    MemorySegment stub = linker.upcallStub(bridge,
+                            FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS), ar);
+                    MethodHandle call = linker.downcallHandle(lib.find("kof_cb_slen").orElseThrow(),
+                            FunctionDescriptor.of(ValueLayout.JAVA_INT,
+                                    ValueLayout.ADDRESS, ValueLayout.ADDRESS));
+                    try (Arena sa = Arena.ofConfined()) {
+                        return (int) call.invoke(sa.allocateFrom("hello"), stub);
+                    } catch (Throwable t) {
+                        throw new RuntimeException(t);
+                    }
+                }
+            };
+            ctx.getBindings("js").putMember("probeStr", probeStr);
+            assertEquals(5, ctx.eval("js", "probeStr(\"hello\", { invoke: (x) => x.length })").asInt(),
+                    "char* -> String no callback reentrante do JS host (3.4-C3.4)");
         }
     }
 

@@ -164,14 +164,29 @@ final class JvmFfiRuntime {
                     int arity = inner.length() - 1;
                     java.lang.foreign.MemoryLayout[] il =
                             new java.lang.foreign.MemoryLayout[arity];
-                    Class<?>[] cs = new Class<?>[arity];
+                    // carrier NATIVO do stub (ADDRESS -> MemorySegment) e carrier do
+                    // invoke Kof (String -> java.lang.String). Só divergem nos 'S'.
+                    Class<?>[] up = new Class<?>[arity];
+                    Class<?>[] cb = new Class<?>[arity];
+                    int[] strPos = new int[arity];
+                    int ns = 0;
                     for (int k = 0; k < arity; k++) {
                         char c = inner.charAt(k + 1);
                         il[k] = kof_ffi_layout(c);
-                        cs[k] = kof_ffi_carrier(c);
+                        if (c == 'S') {
+                            up[k] = java.lang.foreign.MemorySegment.class;
+                            cb[k] = String.class;
+                            strPos[ns++] = k;
+                        } else {
+                            up[k] = kof_ffi_carrier(c);
+                            cb[k] = kof_ffi_carrier(c);
+                        }
                     }
-                    java.lang.invoke.MethodType mt =
-                            java.lang.invoke.MethodType.methodType(kof_ffi_carrier(rb), cs);
+                    Class<?> rret = kof_ffi_carrier(rb);
+                    java.lang.invoke.MethodType cbMt =
+                            java.lang.invoke.MethodType.methodType(rret, cb);
+                    java.lang.invoke.MethodType upMt =
+                            java.lang.invoke.MethodType.methodType(rret, up);
                     java.lang.reflect.Method m = null;
                     for (java.lang.reflect.Method cand : closure.getClass().getMethods()) {
                         if (cand.getName().equals("invoke")
@@ -185,12 +200,34 @@ final class JvmFfiRuntime {
                                 + closure.getClass().getName()
                                 + " has no arity-" + arity + " invoke()");
                     }
-                    java.lang.invoke.MethodHandle mh = java.lang.invoke.MethodHandles.lookup()
-                            .unreflect(m).bindTo(closure).asType(mt);
+                    java.lang.invoke.MethodHandles.Lookup lookup =
+                            java.lang.invoke.MethodHandles.lookup();
+                    java.lang.invoke.MethodHandle mh =
+                            lookup.unreflect(m).bindTo(closure).asType(cbMt);
+                    if (ns > 0) {
+                        // fronteira ADDRESS->String do upcall: o C entrega um `char*`;
+                        // o invoke Kof deve ver um String (reinterpret+getString, como
+                        // no downcall). Sem filtro p/ callback só-primitivo (no-op).
+                        java.lang.invoke.MethodHandle cstr = lookup.findStatic(
+                                lookup.lookupClass(), "kof_ffi_cstr",
+                                java.lang.invoke.MethodType.methodType(String.class,
+                                        java.lang.foreign.MemorySegment.class));
+                        for (int p = 0; p < ns; p++) {
+                            mh = java.lang.invoke.MethodHandles.filterArguments(mh, strPos[p], cstr);
+                        }
+                    }
+                    mh = mh.asType(upMt);
                     java.lang.foreign.FunctionDescriptor fd = (rb == 'v')
                             ? java.lang.foreign.FunctionDescriptor.ofVoid(il)
                             : java.lang.foreign.FunctionDescriptor.of(kof_ffi_layout(rb), il);
                     return linker.upcallStub(mh, fd, arena);
+                }
+
+                // char* (ADDRESS) entregue por C no callback -> String UTF-8; NULL vira
+                // null (nunca um segfault silencioso). Espelha a leitura do downcall.
+                public static String kof_ffi_cstr(java.lang.foreign.MemorySegment seg) {
+                    if (seg == null || seg.address() == 0L) return null;
+                    return seg.reinterpret(java.lang.Long.MAX_VALUE).getString(0L);
                 }
 
                 static Class<?> kof_ffi_carrier(char c) {
