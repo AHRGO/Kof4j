@@ -9158,6 +9158,7 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   the value correction must be ratified by them with the checksum oracle).
 - **Repro:** `mvn -o -pl kof-compiler -am test -Dtest=ConformanceMatrixTest#conformanceCoreArithmetic`
   on clean `target/classes` (no local changes).
+- **Status:** ✅ FIXED 15/09 by the owning lane development `.18` (`713031a7`) — golden re-recorded with the independent-checksum oracle; re-measured 18/09 on tip (`ConformanceMatrixTest` 11/11 green, no local changes).
 
 ### §255 — `KofDbE2ETest.crossNativeSqliteNowCompiles` HARD-FAILS on hosts without cross `libsqlite3` (missing `assumeTrue`)
 
