@@ -80,12 +80,15 @@ class NullablePrimitiveContractE2ETest {
                     }
                 }
                 """);
-            Process pCompile = new ProcessBuilder("javac", "-d", runnerDir.toString(), runnerSrc.toString())
+            java.nio.file.Path javaHome = java.nio.file.Path.of(System.getProperty("java.home"));
+            Process pCompile = new ProcessBuilder(javaHome.resolve("bin").resolve("javac").toString(),
+                    "-d", runnerDir.toString(), runnerSrc.toString())
                     .redirectErrorStream(true).start();
             String compileOut = new String(pCompile.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             assertEquals(0, pCompile.waitFor(), "runner javac: " + compileOut);
-            Process p = new ProcessBuilder(System.getProperty("java.home") + "/bin/java", "-cp",
-                    outDir.toString() + java.io.File.pathSeparator + runnerDir.toString(), "Run", "Default.Main")
+            String classpath = String.join(java.io.File.pathSeparator, outDir.toString(), runnerDir.toString());
+            Process p = new ProcessBuilder(javaHome.resolve("bin").resolve("java").toString(),
+                    "-cp", classpath, "Run", "Default.Main")
                     .redirectErrorStream(true).start();
             String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
                     .replace("\r\n", "\n").trim();
