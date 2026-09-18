@@ -185,6 +185,7 @@ public final class KofWeb {
         return switch (function) {
             case "kof_web_sse_route" -> "WEB003";
             case "kof_web_ws_route" -> "WEB004";
+            case "kof_web_serve_dir" -> "WEB005";
             case "kof_web_security", "kof_web_security_opts" -> "WEB006";
             case "kof_web_listen_secure", "kof_web_listen_secure_pem" -> "WEB002";
             default -> "WEB001";

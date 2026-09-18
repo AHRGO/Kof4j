@@ -145,17 +145,15 @@ public final class KofMedia {
         return null;
     }
 
-    /** {@code app.serveDir(prefix, dir)} — serve arquivos de um diretório
-     *  sob um prefixo de URL com content-type correto. */
-    static MediaCall appServeDir(List<Type> argTypes) {
-        return argTypes.size() == 2
-                ? new MediaCall("kof_web_serve_dir", VOID, List.of(STR, STR, STR)) : null;
-    }
-
     static String gapCode(String function) {
+        // `app.serveDir` NÃO passa por aqui — é método de instância do app
+        // (KofWeb.instanceMethod → kof_web_serve_dir) e o gap WEB005 é
+        // emitido por KofWeb.gapCode. O `appServeDir` estático que existia
+        // aqui era código morto e mantinha um SEGUNDO mapeamento (a origem
+        // da divergência doc×código: as docs prometiam WEB005, o gate web
+        // emitia WEB001 — corrigido 17/09).
         return switch (function) {
             case "kof_media_mic_record" -> "MEDIA003";
-            case "kof_web_serve_dir" -> "WEB005";
             default -> "MEDIA001";
         };
     }

@@ -9804,3 +9804,13 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 **Fix (Native):** `KofScheduler.supportedOn(function, target)` agora recusa `kof_scheduler_at` em `Target.isNative()` em **compile-time** com `CRON001` (gap honesto, R6/R7) — os aliases asm mortos ficam anotados e só para o link não quebrar. Precedente: `security.cookieSet` (`SECN006`, só JVM/JS).
 
 **Prova:** `KofTimeE2ETest` +4 (`cronNextDelayJvmMatchesTable`, `cronNextDelayJsMatchesJvmTable` — a mesma tabela de 11 linhas em UTC ancorada em `2024-01-01T00:00:00Z`, mais 5 crons inválidos assertados como lançamento nos dois alvos; `schedulerAtNativeIsHonestGapCron001` — x86 + riscv64 + aarch64 reportam `CRON001`; `schedulerAtInvalidCronFailsLoudlyJvm` — o processo morre com mensagem `cron` e nunca alcança o statement seguinte). `KofTimeE2ETest` 39 run / 0 fail / 7 skip.
+
+### §275 — `app.serveDir` no Native/JS emitia `WEB001` enquanto as docs prometiam `WEB005` (código fantasma; o gap documentado NUNCA era produzido) — ✅ CORRIGIDO 17/09 (lane bugs-and-gaps `.15`, Stage 1 SYSTEMS / 1.1 gaps de paridade)
+
+O corpus (`backend-parity.md` linha de mídia + `stdlib-web.md` ×3 + mensagem APP001 do `KofCliSupport.java`, EN+PT) documenta que `app.serveDir` em alvos não-JVM é gap em compile-time com o código **`WEB005`**. Medido 17/09 pela CLI: `--target js` e `--target native` reportavam **`WEB001`** (`web: not available on the … driver.target yet (WEB001)`) — o código documentado nunca era emitido por nenhum módulo.
+
+**Raiz:** `serveDir` é método de instância do app (`KofWeb.instanceMethod` → `kof_web_serve_dir`) e é barrado no catch-all web de `ExpressionBuiltinInstanceCalls.lowerWeb`, cujo ramo `default` crava `WEB001`; `KofWeb.gapCode` não tinha case para `kof_web_serve_dir`. O único mapeamento `WEB005` vivia em `KofMedia.gapCode`, alcançável só pelo estático morto `KofMedia.appServeDir` (zero chamadores) — o código pretendido ficou órfão numa segunda tabela não usada (a mesma classe de drift dos fantasmas `HTTP003`/`UUID002` da varredura de 16/09).
+
+**Fix:** `kof_web_serve_dir` → `WEB005` em `KofWeb.gapCode` + case de mensagem `WEB005` em `ExpressionBuiltinInstanceCalls.lowerWeb`; o `KofMedia.appServeDir` morto e seu mapeamento duplicado foram removidos (fonte única de verdade). `serveDir` segue JVM-only (R6/R7 honesto) — só o código emitido mudou para honrar o contrato documentado.
+
+**Prova:** `KofMediaE2ETest.serveDirOnNonJvmEmitsWeb005NotWeb001` — JS + `NATIVE` + `NATIVE_RISCV64` + `NATIVE_AARCH64` reportam `WEB005` e NÃO `WEB001`, mais o controle JVM compilando (nenhum gap vaza). CLI re-medida pós-fix: `web serveDir: not available on the JS driver.target yet (WEB005)`. O RED antes do fix foi medido na CLI (`WEB001`).
