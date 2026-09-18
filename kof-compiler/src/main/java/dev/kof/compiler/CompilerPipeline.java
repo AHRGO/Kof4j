@@ -445,24 +445,15 @@ public final class CompilerPipeline {
 
     // ── FFI (TIER 2.1.4) — binding suportado por target ──
     static boolean isExternBound(CompilerDriver driver, ExternalFunctionNode ext) {
-        // JVM e JS (runner) compartilham a MESMA ABI escalar: o KofJS roda no
-        // host GraalJS/node, que É uma JVM com java.lang.foreign (fatia 3.6 —
-        // bridge `KofJsFfiBridge` idêntico ao `kof_ffi` do target JVM; o browser
-        // não tem host e degrada em runtime como o resto do kof_platform, R7).
-        // Callbacks/upcalls (3.4): a JVM já binda; o JS ainda NÃO (paridade de
-        // callback é a fatia C3) — no JS um parâmetro de tipo-função fica FFI002.
-        if (driver.target == Target.JVM) {
+        // JVM e JS (runner) compartilham a MESMA ABI escalar + callbacks (3.4-C3): o
+        // KofJS roda no host GraalJS/node, que É uma JVM com java.lang.foreign (bridge
+        // `KofJsFfiBridge` idêntico ao `kof_ffi` do target JVM; o browser não tem host e
+        // degrada em runtime como o resto do kof_platform, R7). Android intocado (§278).
+        if (driver.target == Target.JVM || driver.target == Target.JS) {
             if (FfiSignature.returnChar(ext.returnType()) == null) return false;
             for (var param : ext.parameters()) {
                 if (FfiSignature.paramChar(param.type()) != null) continue;
                 if (FfiSignature.callbackDescriptor(param.type()) == null) return false;
-            }
-            return true;
-        }
-        if (driver.target == Target.JS) {
-            if (FfiSignature.returnChar(ext.returnType()) == null) return false;
-            for (var param : ext.parameters()) {
-                if (FfiSignature.paramChar(param.type()) == null) return false;
             }
             return true;
         }

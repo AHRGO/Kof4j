@@ -30,12 +30,12 @@ import org.junit.jupiter.api.io.TempDir;
  * de forma REENTRANTE na MESMA thread — sem crash, sem deadlock. É o cenário exato do
  * runner KofJS real, onde todo o programa roda dentro de {@code context.eval(...)}.
  *
- * <p>Isto espelha o pin da JVM ({@code JvmFfiCallbackTest}, C1) do lado JS. O gate do
- * compilador para callback no JS segue FECHADO ({@code isExternBound} do JS aceita só
- * escalar → {@code FFI002}); nada aqui é alcançável pelo compilador ainda — é só a
- * prova do mecanismo que a fatia C3.2 (abrir o gate + {@code KofJsFfiBridge.upcall} +
- * marshalling do {@code Value} no {@code KofJsRunner}) e C3.3 (E2E de paridade byte-a-
- * byte + degrade honesto no browser) vão ligar. Zero mudança de produção, zero risco.
+ * <p>IMPORTANTE (descoberto na C3.2): um valor de função Kof NÃO é uma função JS nativa
+ * — o backend compila lambdas em objetos da classe {@code Lambda…} com um método
+ * {@code invoke}. Por isso a ponte chama {@code fn.getMember("invoke").execute(...)} e o
+ * programa JS passa um objeto {@code { invoke: (x, y) => ... }} (não um arrow solto). O
+ * downcall/upcall FFM reentrante (mesma thread, dentro de {@code context.eval}) é o ponto
+ * que este pin garante. O gate do compilador para callback no JS foi ABERTO na C3.2.
  */
 class KofJsFfiCallbackBridgeTest {
 
@@ -51,13 +51,13 @@ class KofJsFfiCallbackBridgeTest {
             long kof_cb_addl(long a, long b, ll cb) { return cb(a,b); }
             """;
 
-    /** Chamada de volta: o upcall roda o JS `fn` (reentrante na thread do eval). */
+    /** Chamada de volta: o upcall roda o método `invoke` do objeto de função JS. */
     static int jsCbInt(Value fn, int x, int y) {
-        return fn.execute(x, y).asInt();
+        return fn.getMember("invoke").execute(x, y).asInt();
     }
 
     static long jsCbLong(Value fn, long x, long y) {
-        return fn.execute(x, y).asLong();
+        return fn.getMember("invoke").execute(x, y).asLong();
     }
 
     private static String compileHostLib(Path dir) throws IOException, InterruptedException {
@@ -114,21 +114,22 @@ class KofJsFfiCallbackBridgeTest {
             ctx.getBindings("js").putMember("probeJj", probeJj);
             ctx.getBindings("js").putMember("probeLoop", probeLoop);
 
-            // args[2]/[1] são a função JS; o stub chama de volta REENTRANTMENTE
-            assertEquals(42, ctx.eval("js", "probeIi(20, 22, (x, y) => x + y)").asInt(),
-                    "FFM upcall -> GraalJS execute reentrante, mesma thread");
-            assertEquals(42L, ctx.eval("js", "probeJj(20, 22, (x, y) => x + y)").asLong(),
+            // args[2] é o OBJETO de função Kof `{ invoke: (x,y)=>... }`; o stub chama
+            // `invoke` de volta REENTRANTMENTE (igual ao valor real emitido pelo backend JS).
+            assertEquals(42, ctx.eval("js", "probeIi(20, 22, { invoke: (x, y) => x + y })").asInt(),
+                    "FFM upcall -> Value.invoke reentrante, mesma thread");
+            assertEquals(42L, ctx.eval("js", "probeJj(20, 22, { invoke: (x, y) => x + y })").asLong(),
                     "callback com carrier Long reentrante");
-            assertEquals(46, ctx.eval("js", "probeLoop(4, 10, (i, base) => i + base)").asInt(),
+            assertEquals(46, ctx.eval("js", "probeLoop(4, 10, { invoke: (i, base) => i + base })").asInt(),
                     "C chama o stub 4x num loop (rooting durante a chamada): 10+11+12+13");
         }
     }
 
     /**
-     * O mecanismo exato que C3.2 vai embutir no {@code KofJsFfiBridge}: monta um
-     * {@code upcallStub} sobre o {@code Value} de função JS (via um MethodHandle estático
-     * que chama {@code fn.execute(...)}), então faz o downcall C passando o stub como
-     * {@code ADDRESS}. Args: [0]=a [1]=b [2]=fn.
+     * O mecanismo exato que a C3.2 embute no {@code KofJsRunner}: monta um
+     * {@code upcallStub} sobre o objeto de função JS (via um MethodHandle estático que
+     * chama {@code fn.getMember("invoke").execute(...)}), então faz o downcall C passando
+     * o stub como {@code ADDRESS}. Args: [0]=a [1]=b [2]=fn (objeto com `invoke`).
      */
     private static Object ffiProbe(Value[] args, SymbolLookup lib, Linker linker, String name,
             FunctionDescriptor cbParams, MethodType jsBridgeType, ValueLayout carrier) {

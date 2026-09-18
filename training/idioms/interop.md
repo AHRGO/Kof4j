@@ -2,7 +2,7 @@
 
 # Idioms — Interop (JVM types and C FFI)
 
-**Status:** partial (whitelist) · **Introduced:** 0.3.x (TIER 2.1) · **Updated:** 18/09 (R3 JVM generalized — scalar ABI + void + String return; see `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` 3.6) · **Updated:** 17/09
+**Status:** partial (whitelist) · **Introduced:** 0.3.x (TIER 2.1) · **Updated:** 18/09 (R3 JVM generalized — scalar ABI + void + String return; **callbacks C2 — JVM gate OPEN**; see `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` 3.6/3.4) · **Updated:** 17/09
 
 ## What it is
 
@@ -27,6 +27,17 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — Stri
 // Non-scalar types (objects, generics) -> FFI001 compile-time diagnostic.
 // JS runner  -> SAME scalar ABI via KofJsFfiBridge (F2/F3 ✅ 18/09; FfiE2ETest 16/16); browser -> honest runtime error (R7, no host); non-scalar -> FFI002
 // Native     -> FFI001 until §61 (libc not initialized)
+
+// (c) CALLBACKS (C2 ✅ + JS parity C3.2/C3.3 ✅, 18/09): a Kof function handed to C as a
+// function pointer. Function-typed parameter + lambda at the call site;
+// PRIMITIVE callback ABI only (synchronous, non-escaping):
+extern "libcallback.so" kof_cb_add(Int a, Int b, (Int, Int) -> Int cb): Int
+// call site — the lambda becomes the C function pointer (Linker.upcallStub):
+kof_cb_add(20, 22, (x: Int, y: Int) -> x + y)   // 42 measured
+kof_cb_mixed(3, 2.5, (i: Int, d: Double) -> i * d)  // mixed scalar ABI ok
+// JS (host runner) binds callbacks too (C3.2 ✅ 18/09, byte-for-byte JVM~JS;
+// browser = honest runtime degrade R7); String/struct/pointer-in-callback
+// and callback-as-return -> FFI001 (JVM) — never a silent stub.
 ```
 
 ## BAD → GOOD
@@ -35,10 +46,11 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — Stri
 |---|---|---|
 | binding a symbol under a different Kof name (`kof_fmod`) | the NAME is the C symbol (no alias syntax, measured 18/09) — bind `fmod`, wrap in a Kof fn for friendly names | multi-arg/`void`/`String`-return already bind since R3 18/09 — do NOT hand-emit bytecode to bypass the compiler |
 | assuming the lib path is checked at compile time | treat missing lib/symbol as a **runtime** `kof_ffi_*` failure | the path resolves at runtime (`SymbolLookup`), not compile time |
+| storing the callback pointer to call LATER (atexit/signal/async) | keep callbacks synchronous and non-escaping | escapantes exigem política de vida/GC-rooting (R12) — ficam `FFI001`, nunca stub pendurado |
 | reimplementing sin/cos/strcmp in Kof | bind the system lib (any scalar shape since 18/09) | complexity belongs to the platform (iron rule 2) |
 
 ## See also
 
 `docs/language-reference/syntax.md` (§FFI to C), `grammar.md`
 (`extern-declaration`), `modules.md` §6; gaps `FFI001`/`FFI002`;
-R3 landed: JVM arbitrary scalar (arity/void/String-return, 18/09) + JS host parity (3.6.F2/F3 ✅ 18/09) + callbacks design with host-level mechanism PROVEN (3.4-C1, `JvmFfiCallbackTest`, gate still CLOSED); remaining: opaque handles (3.3), callbacks C2→surface (3.4), variadics (3.5, ⛔ surface decision), struct/array ABI (D6 ⛔), Native §61.
+R3 landed: JVM arbitrary scalar (arity/void/String-return, 18/09) + JS host parity (3.6.F2/F3 ✅ 18/09) + **callbacks bind on JVM AND the JS host runner, byte-for-byte parity (C2 ✅ + C3.2/C3.3 ✅ 18/09, `JvmFfiCallbackE2ETest` incl. `jvmAndJsCallbacksMatchByteForByte`)**; remaining: opaque handles (3.3), variadics (3.5, ⛔ surface decision), struct/array ABI (D6 ⛔), Native §61.

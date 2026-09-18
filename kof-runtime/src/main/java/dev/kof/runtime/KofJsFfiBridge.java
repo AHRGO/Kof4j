@@ -45,10 +45,28 @@ public final class KofJsFfiBridge {
             char ret = sig.charAt(0);
             MemoryLayout[] pl = new MemoryLayout[args.length];
             Object[] real = new Object[args.length];
+            int cur = 1;
             for (int i = 0; i < args.length; i++) {
-                char c = sig.charAt(i + 1);
-                pl[i] = layout(c);
-                real[i] = (c == 'S') ? arena.allocateFrom((String) args[i]) : args[i];
+                char c = sig.charAt(cur);
+                if (c == '(') {
+                    // callback (R3, 3.4-C3): token "(<ret><params>)" aninhado; o stub
+                    // MemorySegment já vem pronto em args[i] (montado pelo KofJsRunner).
+                    int j = cur + 1;
+                    int depth = 1;
+                    while (depth > 0) {
+                        char x = sig.charAt(j);
+                        if (x == '(') depth++;
+                        else if (x == ')') depth--;
+                        j++;
+                    }
+                    cur = j;
+                    pl[i] = ValueLayout.ADDRESS;
+                    real[i] = args[i];
+                } else {
+                    cur++;
+                    pl[i] = layout(c);
+                    real[i] = (c == 'S') ? arena.allocateFrom((String) args[i]) : args[i];
+                }
             }
             FunctionDescriptor fd = (ret == 'v')
                     ? FunctionDescriptor.ofVoid(pl)

@@ -505,18 +505,20 @@ public final class JsRuntimeCore {
                 kofUiSerializeHtml();
             }
 
-            export function kofUiWindowSetSize(window, width, height) {
+            export function kofUiWindowSetSize(win, width, height) {
                 if (typeof document === "undefined") {
                     return;
                 }
-                const winEl = window.__kofWindows && window.__kofWindows[window];
+                const winEl = globalThis.window && globalThis.window.__kofWindows
+                        && globalThis.window.__kofWindows[win];
                 if (winEl) {
                     winEl.style.width = width + "px";
                     winEl.style.height = height + "px";
                 }
                 try {
-                    if (typeof window.resizeTo === "function") {
-                        window.resizeTo(width, height);
+                    if (typeof globalThis.window !== "undefined"
+                            && typeof globalThis.window.resizeTo === "function") {
+                        globalThis.window.resizeTo(width, height);
                     }
                 } catch (e) {
                     // resizeTo is blocked on some hosts; the CSS sizing above
@@ -524,16 +526,17 @@ public final class JsRuntimeCore {
                 }
             }
 
-            export function kofUiWindowClose(window) {
+            export function kofUiWindowClose(win) {
                 if (typeof document === "undefined") {
                     return;
                 }
-                const winEl = window.__kofWindows && window.__kofWindows[window];
+                const winEl = globalThis.window && globalThis.window.__kofWindows
+                        && globalThis.window.__kofWindows[win];
                 if (winEl) {
                     if (winEl.parentNode) {
                         winEl.parentNode.removeChild(winEl);
                     }
-                    delete window.__kofWindows[window];
+                    delete globalThis.window.__kofWindows[win];
                 }
             }
 

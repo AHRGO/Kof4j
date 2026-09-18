@@ -10605,3 +10605,39 @@ The corpus (`backend-parity.md` media row + `stdlib-web.md` ×3 + `KofCliSupport
 **Proof:** contract pinned by `KofObservabilityTest` (ID lengths 32/32/16 + handle 48 + JSON substrings matching the handle) on JVM + x86 native + riscv64 + aarch64 — 12/12; full suite green (see §272 face (c) tally). Honest limitation (Q3): the corruption window is not observable deterministically from pure Kof source on the bump path (that is what "latent" means); the fix is proven by the write-range arithmetic and the allocator's rounding rules, and the regression tests now prevent any size-formula change from shipping silently.
 
 
+
+---
+
+## §293 — JS `kofUiWindowSetSize`/`kofUiWindowClose` declared the handle parameter as `window`, shadowing the global that holds `__kofWindows` — every `w.size(...)`/`w.close()` was a silent no-op (issue #440) — ✅ FIXED 18/09 (docs/bugs lane)
+
+**Found:** 18/09 ~14:25 UTC via issue #440 (`run --target js`: `w.size(400,400)` "does not persist"). The issue is a REAL bug by the rule-8 cross-check: `learn/35-kof-ui` documents `w.size(largura, altura)` ("sizes the window content") and `w.close()` — the runtime disobeyed its own docs.
+
+**Root cause (static + measured).** In `JsRuntimeCore.java` the two functions took `function kofUiWindowSetSize(window, width, height)` / `(window)` — the handle is a NUMBER (id returned by `kofUiWindowNew`), so inside the body `window.__kofWindows` read a property off a number = `undefined` → `winEl` never found → the CSS assignment never ran; `window.resizeTo` threw `TypeError` caught and swallowed by the existing `try/catch`. `kofUiWindowClose` deleted nothing (`delete number.__kofWindows[id]` = no-op). The sibling `kofUiWindowBind` got it right with `globalThis.window.__kofWindows[win]` — the fix mirrors that pattern (no contract change: handles stay numeric ids; browser path unchanged where it already worked: `document.title` via `SetTitle` was fine, which matches the reporter's "title is not a problem").
+
+**Reproduction before → after.** Before: headless node probe on the emitted `kof-runtime.mjs` printed `MISSING` / `after-close:still`; the regression test fails on the old code (`Tests run: 1, Failures: 1`). After: `400pxx300px` / `after-close:gone`; `WindowE2ETest` 4/4 green (3 pre-existing + `windowSizeAndClosePersistOnHeadlessDom`). Lowering was verified correct first (`Default.mjs` contains `kofUiWindowSetSize(w, 400, 300)`), so the fix is purely runtime-body.
+
+**Scope of edit.** `kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeCore.java` (two function bodies, parameter renamed `win` + registry via `globalThis.window`) + `WindowE2ETest` (+1 headless-DOM regression test with the node-probe technique — note for future UI JS tests: `kofUiWindowClose` is tree-pruned from the bundle unless the program calls it; the test program does). No other `window.` misuse found: `kofUiWindowNew/SetTitle/SetTheme` are clean; `JsRuntimeUiWidgets` never names a parameter `window`.
+
+**Related:** issue #440 (closed with this SHA — browser-visual confirmation welcome from the reporter). JVM/Script/Native faces keep the documented no-op handle semantics (`WindowE2ETest` class doc) — untouched.
+
+---
+
+## §294 — null-check on a primitive-valued `Map.get` compiles and dies at runtime with `NoSuchMethodError: 'java.lang.Object java.lang.Object.valueOf(int)'` (measured, tip 18/09) — 🟡 OPEN (fix = D-NULL-INTENT family, rule 6)
+
+**Found:** 18/09 ~14:35 UTC, this lane, chasing the mel finding in issue #386 ("the getOrDefault idiom crashes"). Measured on the tip reactor with fresh jars, JVM.
+
+**Repro (minimal).**
+```kof
+main() {
+    var m: Map<String, Int> = mapOf("a", 1)
+    var z = m.get("z")          // ABSENT key, primitive value
+    println(if (z != null) z else 9)
+}
+```
+Compiles clean. Runs: `Exception in thread "main" java.lang.NoSuchMethodError: 'java.lang.Object java.lang.Object.valueOf(int)'` — even with the PRESENT key (`m.get("a")`) the same program dies. Annotated form `Int? z = m.get("z")` does not crash but prints `0` for the absent key (that face is #376/§278, already parked); `m.getOrDefault("z", 9)` prints `9` correctly (landed `62bd455e`, §293-adjacent).
+
+**What the docs promise today.** `training/idioms/collections` ("Map.get returns V? for reference values… For primitive values the type stays V"): so `z` is `Int` and `z != null` is comparing a non-nullable primitive against `null` — it should be a compile diagnostic (SEM048/§289 neighborhood) or `get` should return `Int?` (that is exactly the D-NULL-INTENT decision, #278/#438). Today it compiles, the typer narrows the branch to the `int` overload and the unbox site emits `valueOf(int)` against a receiver erased to `Object` → runtime death. §39 (FIXED 10/09) closed the `println(m.get("zz"))` overload-selection instance; the null-check consumer is a NEW instance of the same root.
+
+**Why NOT fixed here (rule 6).** Both honest resolutions change frozen semantics: (a) reject `z != null` on a primitive → breaks any program that today survives (weak but real compat); (b) make primitive `Map.get` return `V?` → the reverted 07/09 experiment (§39 analysis) shows it explodes `==`/unboxing until Nullable-primitives land atomically — which is exactly PR #438 (JVM/Script/JS atomic N1, CI green at `eaa22b57`, pending maintainer review). The correct fix is #438 landing + this repro as one of its acceptance tests; a lone `if` in the typer would mask (Q0 forbidden).
+
+**Status.** 🟡 OPEN 18/09 — catalogued with measurements; owner = whoever lands #438/D-NULL-INTENT. Related: #386 (finding origin), #376/#278 (annotated-face), §39 (sibling consumer, fixed), §293 (JS window shadowing, fixed in this same session).
