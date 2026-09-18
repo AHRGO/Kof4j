@@ -208,6 +208,23 @@ public final class CompilerComparisons {
         boolean leftMaybeNull = isMaybeNullType(leftT);
         boolean rightMaybeNull = isMaybeNullType(rightT);
         localIdx = ExpressionLowerer.emitExpression(driver, bin.left(), ops, owner, localIdx, locals);
+        // D-NULL-INTENT (buraco da face relacional do #278/#438, achado ao fechar o
+        // §279): um Nullable(primitivo) GENUINO chega FISICAMENTE boxed no JVM (o
+        // return/local do Commit B do #278). Nas comparacoes RELACIONAIS (>,<,>=,<=)
+        // o shortcut emite `if_icmp*`/`DCMP*` DIRETO sobre a pilha — entao o operando
+        // precisa ser DESEMBACOTADO antes do compare. O caminho de VALOR
+        // (ExpressionBinaryLowerer, `isNumericComparison`) ja desempacota (linhas
+        // 288/318); so o atalho de CONDICA0 (if/while/print-if) nao fazia → na JVM
+        // `Int? v > 0` caia em `if_icmpgt` sobre `java/lang/Integer` → VerifyError no
+        // LOAD da classe (compila limpo, morre ao carregar). No-op em JS/Script/
+        // Native (needsErasureBoxing e so JVM, onde o nulavel nao e boxed). `==`/`!=`
+        // nao passam por aqui com um lado nulavel (o shortcut e desativado la em
+        // cima), entao so relacionais alcancam este desempacote.
+        if (isNullablePrim(leftT)) {
+            Type leftInner = ((Type.NullableType) leftT).inner();
+            driver.emitErasureUnbox(ops, leftInner);
+            leftT = leftInner;
+        }
         // rightMaybeNull: o left (na pilha) é primitivo → boxa ele AGORA
         // (antes do emit do right, que empilha por cima)
         if (rightMaybeNull && TypeMetrics.isPrimitiveType(leftT)) {
@@ -215,6 +232,11 @@ public final class CompilerComparisons {
         }
         driver.emitWideningIfNeeded(ops, leftT, common);
         localIdx = ExpressionLowerer.emitExpression(driver, bin.right(), ops, owner, localIdx, locals);
+        if (isNullablePrim(rightT)) {
+            Type rightInner = ((Type.NullableType) rightT).inner();
+            driver.emitErasureUnbox(ops, rightInner);
+            rightT = rightInner;
+        }
         // leftMaybeNull: o right (acabou de emitir, topo da pilha) é primitivo
         // → boxa ele DEPOIS do emit
         if (leftMaybeNull && TypeMetrics.isPrimitiveType(rightT)) {
