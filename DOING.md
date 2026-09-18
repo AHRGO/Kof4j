@@ -37,6 +37,7 @@
 
 Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
+> **✅ FEITO (17/09 ~23:15, dono = 192.168.100.15, lane bugs-and-gaps/docs): contagens stale cruzadas — `KofWebTlsTest` 5/5→7/7 e `KofWebE2ETest` 22/22→25/25, EN+PT.** A varredura de honestidade pegou o corpus contradizendo a si mesmo: `ecosystem-coverage` G12 dizia `KofWebTlsTest` 5/5 enquanto `backend-parity:71` já dizia 7/7; `backend-parity:69/:71` dizia `KofWebE2ETest` 22/22 (arquivo tem 25). **Prova:** contagem `@Test` medida em `kof-compiler/src/test` (`KofWebTlsTest` 7, `KofWebE2ETest` 25, `KofObservabilityTest` 10); `docs-lang.sh check` 0/0/0. Docs-only EN+PT. **PRÓXIMO PASSO (re-dispatch lê isto):** fechar a varredura de contagens (`KofOrmE2ETest` 22→32 em `DATABASE_VISION:8/:286` + `status.md:590` 31→32; `KofMediaE2ETest` 12→16 em `status.md:804`) e então declarar a varredura limpa → recusar re-trigger (estabilidade; Stage 1 aberta = lanes alheias).
 > **✅ FEITO (17/09 ~23:05, dono = 192.168.100.15, lane bugs-and-gaps/docs): varredura de honestidade — 2 drifts de contagem/contrato (kof.script `let` + G5 observability), EN+PT.** Continuando a varredura pós-§259/OTel:
 - **`stdlib.md` linha do `kof.script`** dizia "top-level `let` → `KofScriptGlobals`" — o sugar `let` foi REMOVIDO em `183cb048` (KofScript usa `var`/`val`, `KofScript.java:77/129`); corrigido + contagem real da suíte (`kof-script` 38/0) + ponteiro §263.
 - **`ecosystem-coverage` G5** dizia `KofObservabilityTest` 7/7 (contradizendo a própria linha 290 do mesmo doc, já 10/10 pós-OBS003) → 10/10 nas 4 ocorrências EN+PT.

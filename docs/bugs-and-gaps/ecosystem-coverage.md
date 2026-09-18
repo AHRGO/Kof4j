@@ -368,7 +368,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | G9 | ~~**Rate limiting / sessions / API keys** nonexistent~~ — ✅ **implemented**: `security.rateLimit`/`sessionCreate`/`sessionGet`/`sessionDestroy`/`apiKeyGenerate`/`apiKeyValid` — JVM/Native/JS (`KofSecurityG9Test` 3/3) | — | `KofSecurityG9Test` |
 | G10 | ~~kof.security on Native~~ — ✅ **closed**: PBKDF2, SHA-512, JWT HS256 and AES-GCM in asm (SECN001-004) | — | keep the test vectors (FIPS 197, NIST SP 800-38D, RFC 7519) |
 | G11 | ~~**Lambdas with capture**~~ — ✅ **capture implemented** (mutable via synthetic box `BoxN` + capture by value; `Lambda0`/`Box0` generated); **Map/Set** (COL001) and **await/join** (with unboxing) both closed in 0.1.0 — no open face | expressiveness | compiler (documented in backend-parity.md) |
-| G12 | ~~**TLS/HTTPS** on the web server~~ — ✅ **implemented**: `web.listenSecure(port)` (JVM, `SSLServerSocket` + `keytool` self-signed, `SAN=IP:127.0.0.1,DNS:localhost`; `kof.http` trust-all) — Native/JS report `WEB002` | — | `KofWebTlsTest` (5) |
+| G12 | ~~**TLS/HTTPS** on the web server~~ — ✅ **implemented**: `web.listenSecure(port)` (JVM, `SSLServerSocket` + `keytool` self-signed, `SAN=IP:127.0.0.1,DNS:localhost`; `kof.http` trust-all) — Native/JS report `WEB002` | — | `KofWebTlsTest` 7/7 (incl. own PKCS#8 PEM cert) |
 
 ---
 
@@ -463,7 +463,7 @@ Principles maintained:
 8. ~~G8~~ — ✅ `kof.time.sleep` + `interval`/`cancel` 3 targets (JS: cooperative queue — TIME001 closed 09/02) + **cron 17/09** (JVM/JS real, Native `CRON001`; §274).
 9. ~~G10~~ — ✅ security on Native (PBKDF2, SHA-512, JWT HS256, AES-GCM in asm — native E2E `KofSecurityTest`) + config/log (asm).
 10. ~~G9~~ — ✅ rate limiting, sessions, API keys (`security.rateLimit`, `sessionCreate`/`sessionGet`/`sessionDestroy`, `apiKeyGenerate`/`apiKeyValid` — JVM/Native/JS; `KofSecurityG9Test` 3/3).
-11. ~~G12~~ — ✅ TLS/HTTPS (`web.listenSecure(port)` — JVM, `SSLServerSocket` + self-signed; `kof.http` HTTPS trust-all; `KofWebTlsTest` 5/5; Native/JS `WEB002`).
+11. ~~G12~~ — ✅ TLS/HTTPS (`web.listenSecure(port)` — JVM, `SSLServerSocket` + self-signed; `kof.http` HTTPS trust-all; `KofWebTlsTest` 7/7; Native/JS `WEB002`).
 
 ## P1
 
