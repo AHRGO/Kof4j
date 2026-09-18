@@ -140,7 +140,7 @@ Bash+Python+YAML+jq+sed+awk **numa única linguagem tipada**).
 | # | Item | Status | Dono | Depende de |
 |---|------|--------|------|------------|
 | 2.1 | `kof.workflow` / `kof.batch` — jobs, pipelines, retry, checkpoints, dead-letter | 🔵 | — | Estágio 1 |
-| 2.2 | `kof.shell` — shell idiomático sobre `kof.process` | 🔵 | — | Estágio 1 |
+| 2.2 | `kof.shell` — shell idiomático sobre `kof.process` | 🔵 | — | Estágio 1; **proposta de design em `future/shell-plan.md`** (PROPOSTO 18/09, barrado por Q1–Q3 — regra 6) |
 | 2.3 | `kof.ssh` — via FFI/interop | 🔵 | — | R3 (FFI) |
 | 2.4 | Cron/scheduler maduro | 🟡 | lane concurrency | `at(cron)` cron real de 5 campos UTC no JVM/JS desde 17/09 (§274); Native `CRON001` gap honesto |
 | 2.5 | Pipelines de CI/CD como **código Kof** | 🔵 | — | 2.1 |
