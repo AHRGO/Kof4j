@@ -10580,3 +10580,19 @@ The corpus (`backend-parity.md` media row + `stdlib-web.md` ×3 + `KofCliSupport
 **Fix (additive, shared analyzer, STRICT — land form after the §289 faces were measured):** `checkMemberSignatureDupes` walks fields with key `"F:" + name` — ONE field per NAME per class, ANY type (javac's own rule, and the §289 measurements proved no target ever executed a same-name pair: JVM VerifyError, JS ICE, script/native literal garbage) — reporting **SEM076** at the second declaration, POSITIONAL (`Main.kf:3:12`, not `:0:0`). Hierarchy shadowing (`Base.v`/`Child.v`) stays legal (different member lists, measured `shadow`/`1` runs). The strict form absorbed §289 (closed at root) and made the planned `wantStatic` resolver overload unnecessary.
 
 **Proof:** `DuplicateFieldGuardTest` 5/5 — verbatim #294 rejected with SEM076 + line>0; static×2 rejected; the Int/Long "JVM-legal" pair REJECTED (control flipped to execution of the error, §289); hierarchy shadowing untouched; the SAME diagnostic fires on JVM/NATIVE/JS (shared pass, rule 5). Q0 twice: no-guard → 3/5 RED; descriptor-only guard → the C face compiles (RED). Full `kof-compiler` battery after the strict change: **2185/0F/0E/199-skip** (zero users of same-name fields).
+
+---
+
+## §291 — `spawnWorkerThrowPropagatesThroughSelectAnyNative` reopens under full-suite load after `8b05e01b` (CI Build+Tests red 4/4 SHAs since; 0/5 before) — 🟡 OPEN (lane nat)
+
+**Found:** 18/09 ~13:30 UTC, docs/bugs lane (.15), while auditing CI reds on tip.
+
+**Symptom.** `KofConcurrency2Test.spawnWorkerThrowPropagatesThroughSelectAnyNative` (x86-64 Native ELF run on host, no qemu): asserts output `sel=boom\nok=true`, gets `ok=false` — the `selectAny` branch did not surface the worker's thrown-string result. **Reproduction rates (all measured 18/09, host with as/ld, no qemu, no cross):** full-suite run **1/1 red**; same test isolated **3/3 green**; whole class isolated **2/2 green**. CI `Build + Tests`: **red on `8b05e01b`, `cb5ebd18`, `687a3b17`, `773629dd` (4/4)**; **green on the 3 immediately preceding SHAs** incl. `1f544a9b` (0/5 in that window). Load-sensitive, not deterministic.
+
+**First suspect (NOT proven).** `8b05e01b` (§272-face-b fix) added ~264 lines to `RuntimeObservability2` — the same x86 native runtime blob that carries the `spawn`/`await`/`selectAny` paths. Blob size/layout shift changing inter-function timing under parallel test load is consistent with all numbers. The §252 root cause (`usleep-retaddr` clobbering the cached size slot, fixed `20495e48`) is a DIFFERENT mechanism — §252 stays closed; this is its **neighbor**, not its ghost: same test name, different signature (old §252 died with `20495e48` and was 0-red in ~7 subsequent full runs; nothing re-touched the usleep path since).
+
+**Evidence gaps (honest).** CI logs are not downloadable via API from this session (`--log`/`--log-failed` return empty) — CI-red TEST NAMES are inferred from the local reproduction matching the failure window, not read from the runner. On a hot runner the red may also be the sibling §286 (`cancelDoesNotLeakAcrossWorkersNative`); rerun CI logs by whoever has web access to confirm which test is red there.
+
+**Ask to nat lane (.17/temmcode).** Bisect `1f544a9b..8b05e01b` under full-suite load (`mvn -o -pl kof-compiler -am test -Dmaven.test.failure.ignore=true` looped 2× each side); if the blob layout is confirmed, a timing-neutral placement of the observability text (own section) is the candidate fix — semantics of §272(b) untouched.
+
+**Status.** 🟡 OPEN 18/09 — catalogued with measurements; fix and proof belong to the nat lane. Related: §252 (closed, neighbor), §256(b) (closed, same test family), §286 (load flake, sibling).
