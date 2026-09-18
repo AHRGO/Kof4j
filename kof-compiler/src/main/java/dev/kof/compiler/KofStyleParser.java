@@ -13,8 +13,8 @@ import java.util.Set;
  * <p>{@code Style("background: #ff0000; padding: 8")} is parsed in the
  * compiler (Q4), validated against a typed whitelist (Q3) and normalized to
  * canonical CSS text carried by the lowering. Unknown properties are
- * {@code SEM075}, malformed declarations {@code SEM076}, invalid values for a
- * known property {@code SEM077} — never a silent forward to {@code node.style}
+ * {@code SEM076}, malformed declarations {@code SEM077}, invalid values for a
+ * known property {@code SEM078} — never a silent forward to {@code node.style}
  * (R6).
  *
  * <p>Colors accept hex CSS ({@code #rgb}/{@code #rrggbb}/{@code #rrggbbaa}),
@@ -137,7 +137,7 @@ public final class KofStyleParser {
                         pos != null ? pos.length() : 0,
                         "style: the declaration string must be a literal — the 4-Int "
                                 + "Style(background, foreground, padding, radius) form takes a computed Color",
-                        "SEM076");
+                        "SEM077");
             }
             return false;
         }
@@ -171,7 +171,7 @@ public final class KofStyleParser {
         LinkedHashSet<String> out = new LinkedHashSet<>();
         if (source == null) {
             return new Result(null, List.of(new Issue(
-                    "style: the declaration string must be a literal", "SEM076")));
+                    "style: the declaration string must be a literal", "SEM077")));
         }
         for (String raw : source.split(";", -1)) {
             String decl = raw.trim();
@@ -179,7 +179,7 @@ public final class KofStyleParser {
             int colon = decl.indexOf(':');
             if (colon <= 0 || colon == decl.length() - 1) {
                 issues.add(new Issue("style: malformed declaration '" + decl
-                        + "' — expected 'property: value'", "SEM076"));
+                        + "' — expected 'property: value'", "SEM077"));
                 continue;
             }
             String name = decl.substring(0, colon).trim().toLowerCase(Locale.ROOT);
@@ -187,18 +187,18 @@ public final class KofStyleParser {
             Prop prop = PROPS.get(name);
             if (prop == null) {
                 issues.add(new Issue("style: unknown property '" + name
-                        + "' — not in the kof.ui style whitelist", "SEM075"));
+                        + "' — not in the kof.ui style whitelist", "SEM076"));
                 continue;
             }
             if (value.isEmpty()) {
                 issues.add(new Issue("style: property '" + name
-                        + "' has an empty value", "SEM077"));
+                        + "' has an empty value", "SEM078"));
                 continue;
             }
             String bad = validate(prop, value);
             if (bad != null) {
                 issues.add(new Issue("style: invalid value for '" + name + "': "
-                        + bad, "SEM077"));
+                        + bad, "SEM078"));
                 continue;
             }
             out.add(prop.canonical() + ": " + normalizeValue(prop, value));

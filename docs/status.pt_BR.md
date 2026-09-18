@@ -275,8 +275,8 @@ main() {
   reflexão compatível (`Bson`/`Class`, sem ClientSession); teste E2E com
   container real (skip condicional; serviço Mongo no CI).
 - Migrations versionadas: tabela `kof_migrations`, cada migração roda uma vez.
-- Native/JS reportam `ORM001`.
- - Testes: `KofDbE2ETest` (9), `KofOrmE2ETest` (22; MariaDB/PostgreSQL/MongoDB
+- Native reporta `ORM001`; JS FECHADO 18/09 (`KofJsOrmBridge`, mesmo SQL do JVM, E2E byte-paridade).
+ - Testes: `KofDbE2ETest` (9), `KofOrmE2ETest` (31; MariaDB/PostgreSQL/MongoDB
    com skip condicional quando o container não está no ar).
  - Docs: `docs/stdlib/DATABASE_VISION.md` (níveis 0-4 implementados, incluindo
    o nível 3 = query DSL tipada `User.query(db){ where; orderBy; limit }` — 01/09).
@@ -366,7 +366,7 @@ Bool positivo(Int x) = x > 0         // expression body
 | kof.log (`log.info/warn/error/debug`) | ✅ | ✅ (asm; UTC, sem JSON) | ✅ (LOG001 fechado 01/09) |
 | kof.security (passwords, crypto, JWT, secrets) | ✅ | ✅ | ✅ |
 | kof.db (JDBC, query<T>, transaction) + SQLite nativo | ✅ | ✅ (SQLite + transaction; MySQL WIP; **riscv64/aarch64 ✅ 15/09** link-by-use libsqlite3) | ✅ 16/09 (nao-tipado `connect/execute/query/close/transaction` na ponte GraalJS) + ✅ 18/09 tipado `query<T>` (`DB002` fechado — bind no guest via `__kof_decode_<T>`) |
-| kof.orm (entity, CRUD, where, migrate, MongoDB) | ✅ | ORM001 | ORM001 |
+| kof.orm (entity, CRUD, where, migrate, MongoDB) | ✅ | ORM001 | ✅ FECHADO 18/09 |
 | String.toInt/toLong/toDouble/toFloat | ✅ | ✅ | ✅ |
 | kof.ui (Color, Palette, Theme, Window) | ✅ | ✅ (JS render) | ✅ |
 | default parameters em funções | ✅ | ✅ | ✅ |
@@ -505,7 +505,7 @@ main() {
   externa), câmera (MEDIA002), mic sem hardware (MEDIA003), paridade
   Native/JS (MEDIA001 — ART sem javax.imageio; app Android roda no WebView
   KofJS).
-- Ver: `KofMediaE2ETest` (12 testes: serving binário byte-a-byte,
+- Ver: `KofMediaE2ETest` (16 testes: serving binário byte-a-byte,
   content-type, traversal bloqueado, 404, dimensões reais, conversão
   PNG→JPEG, WAV info/copy, mic sem hardware, metadados de MP4, Range
   206/416/200).
@@ -586,7 +586,7 @@ main() { /* ignorado pelo kof test */ }
 | JvmE2ETest | 31 | execução real de bytecode JVM |
 | KofSecurityTest | 28 | kof.security: senhas, crypto, JWT, secrets, adversariais |
 | OptimizerTest | 22 | passes de otimização da IR |
-| KofOrmE2ETest | 22 | kof.orm: entity, CRUD, where (+ORM003 validação de coluna tipada, P3-10), **Query DSL `User.query(db){ where; orderBy; limit }` (nível 3, ORM001)**, migrate, unique, MongoDB (3 skips condicional) |
+| KofOrmE2ETest | 32 | kof.orm: entity, CRUD, where (+ORM003 validação de coluna tipada, P3-10), **Query DSL `User.query(db){ where; orderBy; limit }` (nível 3, ORM001)**, migrate, unique, MongoDB (3 skips condicional) |
 | KofConcurrency2Test | 33 | spawn stmt/expr, selectAny, cancel/cancelled, done/poll, awaitTimeout, channel (+`Channel<T>` como parâmetro de função, 3 targets) |
 | IoE2ETest | 16 | kof.io multiplatform (+ `readText`/`size` contratos honestos 02/09) |
 
@@ -605,7 +605,7 @@ main() { /* ignorado pelo kof test */ }
 | ExceptionsE2ETest | 9 | try/catch/finally JVM + Native |
 | KofDbE2ETest | 24 | kof.db: JDBC, query<T>, transaction, rollback, SQLite nativo, transaction Native (commit+rollback), **DB001 no JS (bridge GraalJS 16/09: roundtrip js + transaction commit/rollback/aninhado byte-parity c/ JVM)**, **DB002 fechado no JS (18/09: `query<T>` tipado bind no guest via `__kof_decode_<T>`, byte-parity c/ JVM)**, **roundtrip SQLite cross riscv64+aarch64 (qemu) 15/09** |
 | KofHttpServerTest | 8 | serve engine (sockets reais) |
-| KofMediaE2ETest | 15 | kof.media + serveDir: Image/Audio/WAV/Video(MP4), Range 206/416, conteúdo binário (não base64) |
+| KofMediaE2ETest | 16 | kof.media + serveDir: Image/Audio/WAV/Video(MP4), Range 206/416, conteúdo binário (não base64) |
 | NativeConfigE2ETest | 8 | kof.config Native (asm): precedência, typed, comentários |
 | SpawnE2ETest | 10 | spawn (JVM/Native pthread/JS seq) + join implícito + **lambda c/ captura** + **println antes de spawn** + **`spawn→await→spawn`** (alinhamento de stack no `pthread_create`) |
 | IdiomaticE2ETest | 7 | idiomas consolidados (chaining, primary ctor) |
@@ -768,7 +768,7 @@ Docs: `debugger-architecture.md`, `debugging.md`, `debug-adapter.md`,
 5. ✅ Resposta rica `status(201, body)`/`headerSet("X","y")` `JVM` `201 Created 202 Accepted` `X-Custom/X-Test` `KofWebE2ETest 9/9` (27/08) **`Native parcial` (03/09 — server base devolve 200+body; context-fns `status()`/`headerSet()` são gaps `WEB001`)** `JS ✅ 03/09` (GraalJS HttpServer real — context-fns `status`/`headerSet` 16/09)
 6. ✅ `kof.cache` `get/set/set(key,v,ttl)/ttl/delete/clear` — ✅ JVM/Native/JS (30/08; fix nativo: clobber de `%rax/%rdi` em `set_ttl/get/ttl` + `println(null)` segfault; `KofCacheE2ETest 5/5 x3 targets`)
 7. ✅ `WebSocket` `app.ws("/chat") { }` + `SSE` `sse.send/event/close` — ✅ JVM (30/08; PRs 14-17: persistent-conn/route-kinds, SSE, handshake RFC 6455, frame codec+máscara; `KofWebSseE2ETest 7/7` `KofWebWsE2ETest 11/11` `KofWsFrameTest 7/7`; hardening/limites/contadores 04/09 — `KofWebHardeningTest 6/6`)
-8. ✅ `Scheduler` `every(ms) { }`/`cancel(id)` (`at(cron)` = stub 60s em todo alvo, CRON001) — ✅ JVM (`ScheduledExecutor`, 27/08) + JS (`setInterval`) + **Native SCHED001** (31/08: thread por job — trampoline `usleep` ms→us + `active` flag com futex — `cancel(id)` cooperativo; `KofConcurrency2Test` `schedulerEveryNative/Jvm`)
+8. ✅ `Scheduler` `every(ms) { }`/`cancel(id)` (`at(cron)` = cron real de 5 campos UTC no JVM/JS, gap em compile-time no Native `CRON001` — §274, 17/09) — ✅ JVM (`ScheduledExecutor`, 27/08) + JS (`setInterval`) + **Native SCHED001** (31/08: thread por job — trampoline `usleep` ms→us + `active` flag com futex — `cancel(id)` cooperativo; `KofConcurrency2Test` `schedulerEveryNative/Jvm`)
 9. ✅ `kof.http` `timeout`/`retry`/`circuit breaker` — ✅ JVM+JS (30/08; retry repete em exceção+HTTP 5xx, circuito abre após N falhas por 30s com fail-fast, `circuit(0)` recupera; `KofHttpResilienceE2ETest 3/3` JVM+JS) — falta `HTTP/2`
 
 **P3 — Data produção:**
@@ -799,8 +799,8 @@ Docs: `debugger-architecture.md`, `debugging.md`, `debug-adapter.md`,
 - `kof.security` v1 (JVM/Native/JS); web security G9 — rateLimit, sessões, API keys (3 targets)
 - `kof.validation` (13 predicados, 3 targets); `kof.observability` (health/métricas/request IDs, 3 targets); `kof.ui` widgets com render KofJS
 - `kof.process` execução de processos externos; `process.spawn` stdin/stdout vivos (F10, JVM/JS)
-- **Concorrência**: `spawn`/`await` JVM (virtual threads) + **Native (pthread — CONC001 fechado 31/08)** + **Android (platform threads — AND001 fechado 31/08, ART sem virtual threads → fallback)** + JS event-loop (CONC003 fechado 03/09); `done`/`poll` não-bloqueantes; `cancel`/`cancelled` cooperativo (JVM + Native por TID); `selectAny` (JVM + Native + JS); `awaitTimeout(r, ms)` — valor no prazo, exceção capturável no estouro (JVM + Native + JS, deadline-poll `kofAwaitTimeout`); `channel<T>()` com `send`/`receive` (JVM LinkedBlockingQueue + Native FIFO futex + JS array); `scheduler.every/cancel` (JVM `ScheduledExecutor` + JS `setInterval` + **Native SCHED001**: thread por job com trampoline `usleep` ms→us + flag `active` futex); `at(cron)` é stub 60s em todo alvo (CRON001) — `KofConcurrency2Test` 15/15, `SpawnE2ETest` 5/5
-- **`kof.media` (31/08)** — gestão de arquivos multimídia sem base64 literal: `Image.open/save/saveAs/dataUri` (javax.imageio, PNG/JPEG/GIF/BMP), `Audio.openWav/saveWav` (WAV RIFF PCM 16-bit), `Mic.record` (javax.sound.sampled), `Video.open` (metadados do container MP4/MOV + streaming); `web` `app.serveDir(prefix, dir)` serve ARQUIVO do disco com content-type correto + **Range requests (206/416)** p/ vídeo navegável + proteção de path-traversal; raiz do app via `-Dkof.root` (CLI `run`/`serve`). Gaps: frames de vídeo (sem lib externa), câmera (MEDIA002), sem hardware de mic (MEDIA003), paridade Native/JS (MEDIA001) — `KofMediaE2ETest` 12/12
+- **Concorrência**: `spawn`/`await` JVM (virtual threads) + **Native (pthread — CONC001 fechado 31/08)** + **Android (platform threads — AND001 fechado 31/08, ART sem virtual threads → fallback)** + JS event-loop (CONC003 fechado 03/09); `done`/`poll` não-bloqueantes; `cancel`/`cancelled` cooperativo (JVM + Native por TID); `selectAny` (JVM + Native + JS); `awaitTimeout(r, ms)` — valor no prazo, exceção capturável no estouro (JVM + Native + JS, deadline-poll `kofAwaitTimeout`); `channel<T>()` com `send`/`receive` (JVM LinkedBlockingQueue + Native FIFO futex + JS array); `scheduler.every/cancel` (JVM `ScheduledExecutor` + JS `setInterval` + **Native SCHED001**: thread por job com trampoline `usleep` ms→us + flag `active` futex); `at(cron)` é cron real de 5 campos UTC no JVM/JS (Native `CRON001`; §274) — `KofConcurrency2Test` 15/15, `SpawnE2ETest` 5/5
+- **`kof.media` (31/08)** — gestão de arquivos multimídia sem base64 literal: `Image.open/save/saveAs/dataUri` (javax.imageio, PNG/JPEG/GIF/BMP), `Audio.openWav/saveWav` (WAV RIFF PCM 16-bit), `Mic.record` (javax.sound.sampled), `Video.open` (metadados do container MP4/MOV + streaming); `web` `app.serveDir(prefix, dir)` serve ARQUIVO do disco com content-type correto + **Range requests (206/416)** p/ vídeo navegável + proteção de path-traversal; raiz do app via `-Dkof.root` (CLI `run`/`serve`). Gaps: frames de vídeo (sem lib externa), câmera (MEDIA002), sem hardware de mic (MEDIA003), paridade Native/JS (MEDIA001) — `KofMediaE2ETest` 16/16
 - **KofAndroid Fase 2 (31/08)** — `--apk` standalone (aapt2/d8/zipalign/apksigner direto do CLI) + release signing `--keystore/--storepass/--keypass/--alias` + label/permissões derivados do programa (`detectAppLabel`/`@Permissions`)
 - enum nos 3 targets + switch exaustivo (SEM031); Map/Set nos 3 targets (COL001 fechado)
 - otimizador de IR sempre ativo; pattern matching (switch com tipos + destructuring, 3 targets); null safety básica (`String?`, 3 targets); higher-order em coleções (map/filter/reduce, 3 targets); módulos multi-arquivo (`import a.b.C`)

@@ -121,6 +121,21 @@ define as assinaturas. **Experimental** como superfície (muda entre versões).
 - **JVM**: tipos Java são acessíveis por nome qualificado (`java.util.Date`)
   quando no classpath (`ExternalClasspath.resolveMethod`, `:1535-1549`).
   **Target-specific.**
+- **FFI com C (`extern "<lib>" f(T): R`)** — binding direto a bibliotecas
+  nativas (JVM, `java.lang.foreign`). **Superfície medida 17/09 (0.4.0-beta)**:
+  exatamente três assinaturas presas na JVM (whitelist em
+  `CompilerPipeline.isExternBound` + helpers `kof_ffi_i`/`kof_ffi_si`/`kof_ffi_dd`
+  de `JvmFfiRuntime`): `f(Int): Int`, `f(String): Int`, `f(Double): Double` —
+  um único argumento. Qualquer outra (aridade ≠ 1, retorno `String`, 0-arg)
+  falha em tempo de compilação com `FFI001` (whitelist da JVM) ou `FFI002`
+  (JS: "FFI not available on the JS target"); o Native emite `FFI001`
+  (`<target>` not supported yet) — nunca stub silencioso (R6). Lib/símbolo
+  ausente falha em **runtime** com exceção `kof_ffi_*` nomeando `lib::symbol`
+  (stack trace, não mensagem cirúrgica). O alargamento (multi-arg, void,
+  retorno String, `char*`) é a primeira fatia R3 em
+  `docs/development/PLAN-UNIVERSAL-PLATFORM.md` (use-case #431); `extern "c"`
+  no Native depende do §61.
+
 - **Native/JS**: não há interop com tipos do host da mesma forma. **Unspecified.**
 - **Annotations** (`@Name`, `@JsonFormat`) são metadados de interop emitidos no
   bytecode JVM. **Target-specific** (só JVM preserva).

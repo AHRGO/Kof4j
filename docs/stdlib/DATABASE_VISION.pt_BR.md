@@ -7,7 +7,7 @@
 > provados: Nível 3 (Query DSL tipada `User.query(db){...}` → `db.query<T>`) ✅
 > 01/09 (`KofOrmE2ETest` 22); MySQL prepared binário ✅ 03/09
 > (`KofDbE2ETest.nativeMysqlPreparedBinary`). Connection pooling é PLANNED (nenhuma pool hoje — cada `connect` abre sua própria conexão, §Limitações abaixo). DB001/ORM001 em
-> (DB001 fechado: riscv/aarch 15/09 + JS 16/09); só `ORM001` permanece um gap honesto R6 tracked em `docs/backend-parity.md`,
+> (DB001 fechado: riscv/aarch 15/09 + JS 16/09; ORM001 fechado no JS 18/09); só `ORM001` no **Native** permanece um gap honesto R6 tracked em `docs/backend-parity.md`,
 > não pendência desta visão.
 
 **Última atualização:** 12 de setembro de 2026
@@ -274,13 +274,16 @@ main() {
 - **MongoDB:** `save/find/all/where/delete/count` sobre o driver oficial via
   reflexão compatível (`Bson`/`Class`, sem `ClientSession`); teste E2E com
   container real (skip condicional; serviço Mongo no CI).
-- **Native/JS:** reportam `ORM001` (gap documentado em compile-time).
+- **Native:** reporta `ORM001` (gap documentado em compile-time). **JS:** FECHADO
+  18/09 — `kof.orm` roda no host GraalJS via `KofJsOrmBridge` (mesmo SQL de
+  `JvmOrmRuntime`), records tipados bindados no guest (`__kof_decode_<T>`);
+  E2E byte-paridade em `KofOrmE2ETest` (casos `js*`).
 - Testes: `KofOrmE2ETest` (16; entity, CRUD, `where` operadores, `migrate`,
   `unique`, PK não-numérica, MongoDB E2E, `ORM001`/`ORM002`).
 
 O **nível 3 (Query DSL tipada)** `User.query(db) { where age > 18; orderBy
 name; limit 10 }` foi implementado em 01/09: o compilador baixa o bloco para
-`db.query<T>` (SQL preparada em compile-time, valores como binds) — `KofOrmE2ETest` 22.
+`db.query<T>` (SQL preparada em compile-time, valores como binds) — `KofOrmE2ETest` 32.
 
 ---
 

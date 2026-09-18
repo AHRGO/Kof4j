@@ -10,7 +10,7 @@ public final class JsRuntimeUiWeb {
     // `static final` literal embute a string no .class do Slices, e o rebuild
     // incremental não recompila dependentes quando só a fonte-mestre muda —
     // o slice quebrado antigo sobrevive no gerador. getstatic lê o valor vivo.
-    static final String UI_WEB_RUNTIME = uiWebRuntime();
+    static final String UI_WEB_RUNTIME = uiWebRuntime() + JsRuntimeCron.cronRuntime();
 
     private static String uiWebRuntime() {
         return """
@@ -569,11 +569,12 @@ public final class JsRuntimeUiWeb {
                 const now = Date.now();
                 for (const [id, job] of kofTimeJobs) {
                     if (now >= job.next) {
-                        job.next = now + job.ms;
+                        job.next = now + (job.cron ? kofCronNextDelayMs(job.cron, now) : job.ms);
                         job.run();
                     }
                 }
             }
+
             export function kofTimeCancel(id) {
                 const key = String(id);
                 if (key.charAt(0) === "n") {

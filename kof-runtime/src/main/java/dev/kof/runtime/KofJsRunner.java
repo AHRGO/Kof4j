@@ -363,6 +363,9 @@ public final class KofJsRunner {
             }
             return 0;
         });
+        // kof.orm platform bridge (ORM001, 18/09) — sobre as MESMAS conexoes do
+        // kof.db; registrado em irmao dedicado p/ manter esta classe <=500.
+        KofJsOrmRuntime.install(platform);
         // kof.security platform primitives (docs/stdlib/security.md §5)
         platform.put("getenv", (ProxyExecutable) args ->
                 System.getenv(args[0].asString()));

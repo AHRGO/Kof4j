@@ -46,7 +46,7 @@ l.setFontSize(Typography.lg)
 ```
 
 Membro inexistente (`Spacing.huge`) ou chamada de método (`Spacing.of(4)`)
-é `SEM078` — os tokens guardam constantes, nunca um 0 silencioso.
+é `SEM079` — os tokens guardam constantes, nunca um 0 silencioso.
 
 ## Estado compartilhado e da aplicação (Fase 8)
 
@@ -61,7 +61,7 @@ main() {
     store.set(1)                     // imprime s=0 (atual no subscribe), s=1
     var h = (v: Int) -> { println("t=" + v) }
     store.subscribe(h)
-    store.unsubscribe(h)             // real desde o §274 — para a entrega
+    store.unsubscribe(h)             // real desde o §279 — para a entrega
     AppState(0).set(7)               // raiz da app: qualquer component lê...
     println(AppState(0).get())       // ...o mesmo valor, 7
 }
@@ -166,7 +166,7 @@ w.bind(view)
 
 `Style("<declarações>")` recebe CSS idiomático. O compilador faz o parse e
 valida (D-UI-STYLE/UI007): propriedade desconhecida é erro de compile-time
-(`SEM075`), declaração malformada `SEM076` e valor inválido `SEM077` — nunca
+(`SEM076`), declaração malformada `SEM077` e valor inválido `SEM078` — nunca
 fallback silencioso.
 
 ```kof

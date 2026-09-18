@@ -46,7 +46,7 @@ l.setFontSize(Typography.lg)
 ```
 
 An unknown member (`Spacing.huge`) or a method call (`Spacing.of(4)`) is
-`SEM078` — the tokens hold constants, never a silent 0.
+`SEM079` — the tokens hold constants, never a silent 0.
 
 ## Shared and application state (Fase 8)
 
@@ -61,7 +61,7 @@ main() {
     store.set(1)                     // prints s=0 (current on subscribe), s=1
     var h = (v: Int) -> { println("t=" + v) }
     store.subscribe(h)
-    store.unsubscribe(h)             // real since §274 — stops delivery
+    store.unsubscribe(h)             // real since §279 — stops delivery
     AppState(0).set(7)               // app root: any component reads it...
     println(AppState(0).get())       // ...the same value, 7
 }
@@ -166,8 +166,8 @@ w.bind(view)
 
 `Style("<declarations>")` takes idiomatic CSS. The compiler parses and
 validates it (D-UI-STYLE/UI007): an unknown property is a compile-time
-error (`SEM075`), a malformed declaration `SEM076` and an invalid value
-`SEM077` — never a silent fallback.
+error (`SEM076`), a malformed declaration `SEM077` and an invalid value
+`SEM078` — never a silent fallback.
 
 ```kof
 var style = Style("background: #ff0000; padding: 8; border-radius: 4")

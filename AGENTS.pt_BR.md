@@ -816,7 +816,7 @@ target por domínio; sem motor SQL/Arrow/ML próprio.
 ## Antes de escrever código (obrigatório)
 
 1. Leia `training/idioms/<area>.md` da área do problema
-   (collections, functions, strings, errors, records, classes, concurrency, control-flow).
+   (collections, functions, strings, errors, records, classes, concurrency, control-flow, interop).
 2. Leia `training/anti-patterns/` — em especial `java-like-code.md`,
    `chained-or-membership.md`, `fake-idioms.md`.
 3. Se a dúvida persistir: **escreva um snippet e compile** (loop abaixo).

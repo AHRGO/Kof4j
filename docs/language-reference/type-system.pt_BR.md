@@ -366,10 +366,11 @@ retorno do lambda (*probe*: map/filter/reduce corretos).
 | `SEM072` | `add`/`push`/`append` de List com aridade errada — ex. `l.add(i, v)` (não existe inserção posicional; use `set(i, v)`) | `MemberCallTyper` (#336, 4 alvos) |
 | `SEM073` | `reduce` de List com aridade errada — `reduce((a,b)->…)` sem seed (o reduce do Kof sempre recebe a lambda E uma seed, em qualquer ordem; a forma sem seed morria no `Frame.merge` da ASM) | `MemberCallTyper` (#361, 4 alvos) |
 | `SEM074` | método de instância em primitivo — ex. `n.abs()`, `n.equals(o)`, `n.toChar()` (primitivos só têm `toString()` e as conversões `toInt()`/`toLong()`/`toFloat()`/`toDouble()`; comparação é `a == b`, matemática é função top-level como `math.abs(x)`; a chamada fora da lista compilava e morria no load da classe) | `SemMethodCallTyper` (#362, 4 alvos) |
-| `SEM075` | `Style("<declarações>")` com propriedade fora da whitelist do kof.ui | `KofStyleParser` (D-UI-STYLE/UI007) |
-| `SEM076` | `Style("<declarações>")` com declaração malformada, ou argumento não-literal | `KofStyleParser` (D-UI-STYLE/UI007) |
-| `SEM077` | `Style("<declarações>")` com valor inválido para propriedade conhecida | `KofStyleParser` (D-UI-STYLE/UI007) |
-| `SEM078` | uso errado de token do design system: membro inexistente de `Spacing`/`Radius`/`Border`/`Elevation`/`Typography`, ou chamada de método num namespace de token | `KofUiTokens` (Fase 10) |
+| `SEM075` | campo de instância referido nu dentro de método `static` (não existe `this` implícito; o backend JVM emitia `aload_0` → `VerifyError` no load) — use uma instância, ou declare o campo `static` | `SemExpressionTyper` (#345, 4 alvos) |
+| `SEM076` | `Style("<declarações>")` com propriedade fora da whitelist do kof.ui | `KofStyleParser` (D-UI-STYLE/UI007) |
+| `SEM077` | `Style("<declarações>")` com declaração malformada, ou argumento não-literal | `KofStyleParser` (D-UI-STYLE/UI007) |
+| `SEM078` | `Style("<declarações>")` com valor inválido para propriedade conhecida | `KofStyleParser` (D-UI-STYLE/UI007) |
+| `SEM079` | uso errado de token do design system: membro inexistente de `Spacing`/`Radius`/`Border`/`Elevation`/`Typography`, ou chamada de método num namespace de token | `KofUiTokens` (Fase 10) |
 | `ARITH001` | divisão/resto por zero **constante** | `ExpressionBinaryLowerer` (guarda de zero constante) |
 
 Divisão por zero **não-constante** (`7 / z` com `z=0`) → erro de **runtime**

@@ -222,8 +222,8 @@ public final class BuiltinCallTyper {
         }
         if (mc.receiver() == null && "Style".equals(mc.methodName()) && mc.arguments().size() == 1) {
             // D-UI-STYLE (UI007): declarative form — parse/validate in the
-            // compiler (Q4) with a typed whitelist (Q3). SEM075 (unknown
-            // property) / SEM076 (malformed) / SEM077 (invalid value); the
+            // compiler (Q4) with a typed whitelist (Q3). SEM076 (unknown
+            // property) / SEM077 (malformed) / SEM078 (invalid value); the
             // lowering re-parses only for the normalized text.
             ExpressionNode arg = mc.arguments().get(0);
             SemExpressionTyper.inferType(sa, arg, scope);

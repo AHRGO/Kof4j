@@ -160,7 +160,7 @@ tool, it does not consume the Kof IR — see
 | kof.web (`web.app()`, ws, sse, TLS) | ✅ | base ✅ 03/09; TLS `WEB002`, ws `WEB004`, sse `WEB003` | ✅ base 16/09 + SSE handler-scoped 16/09 (ws `WEB004`, SSE push pós-return `WEB003` compile-time) |
 | kof.http client + retry/circuit | ✅ | HTTP002 | ✅ |
 | kof.security (passwords, crypto, jwt, secrets, auth) | ✅ | ✅ | ✅ |
-| kof.db / kof.orm (native SQLite, MySQL WIP, MongoDB) | ✅ | ✅ | ✅ 16/09 untyped (GraalJS-host bridge); typed `query<T>` = `DB002`; ORM `ORM001` |
+| kof.db / kof.orm (native SQLite, MySQL WIP, MongoDB) | ✅ | ✅ | ✅ 16/09 untyped (GraalJS-host bridge); typed `query<T>` ✅ 18/09 (`DB002` closed); `kof.orm` ✅ 18/09 (`ORM001` closed) |
 | kof.config / kof.log | ✅ | ✅ | CONF001/LOG001 |
 | kof.ui (Color, Palette, Theme, widgets) | no-op | no-op | ✅ render |
 

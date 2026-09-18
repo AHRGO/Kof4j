@@ -987,7 +987,7 @@ TAREFA segue as frentes abaixo.
    `connect/execute/query/close/transaction` na ponte do host GraalJS —
    `3e55df51`+`eb9140cb`); residual `db.query<T>` tipado = `DB002` FECHADO 18/09: bind no guest via `__kof_decode_<T>`
    (arquitetural: JS não emite bytecode JVM no classpath do host) +
-   `kof.orm` = `ORM001` (mesma parede; WASM planejado).
+   `kof.orm` = `ORM001` FECHADO 18/09: `KofJsOrmBridge` roda o mesmo SQL de `JvmOrmRuntime` no host GraalJS, records tipados bindados no guest via `__kof_decode_<T>` (E2E byte-paridade; WASM planejado).
 
 **Relação com as outras regras:** esta decisão decide a **ordem**, não o que
 é **aceitável** — Q0–Q7, o freeze, a regra 6 e a regra dos três estados
@@ -1174,9 +1174,9 @@ padding, radius — `kof_ui_style_new`) já está entregue nos quatro alvos
 4. **Unidades (Q2).** Inteiro nu significa `px`; os sufixos `px`, `%`, `em`
    e `rem` são aceitos.
 5. **Propriedades (Q3).** Uma **whitelist tipada**. Propriedade fora da
-   whitelist é diagnóstico em compile-time (`SEM075`) — nunca repassada em
-   silêncio para `node.style` (R6). Declaração malformada é `SEM076`; valor
-   inválido para propriedade conhecida é `SEM077`.
+   whitelist é diagnóstico em compile-time (`SEM076`) — nunca repassada em
+   silêncio para `node.style` (R6). Declaração malformada é `SEM077`; valor
+   inválido para propriedade conhecida é `SEM078`.
 6. **Escopo (Q5).** `setStyle(style)` — recebendo o valor `Style`, exatamente
    como `View(style)` — fica disponível em **todo widget DOM**
    (`KofUi.isDomWidget`), não só `View`, pela família compartilhada
@@ -1212,7 +1212,7 @@ testes; fatia B = `setStyle` em todo widget DOM.
 ### Evidências
 
 `UiStyleCssE2ETest` 10/10 (JVM + Native + Script + JS: happy path, nomes CSS,
-unidades, `setStyle` num Label, `SEM075`/`SEM076`/`SEM077`, não-literal,
+unidades, `setStyle` num Label, `SEM076`/`SEM077`/`SEM078`, não-literal,
 não-regressão da forma de 4 Ints) + `KofJsBrowserE2ETest` (Chrome headless,
 DOM real: `declarativeStyleRendersInRealBrowserDom`,
 `setStyleRendersOnAnyDomWidgetInRealBrowser`); suíte completa dos 4 módulos
@@ -1342,7 +1342,7 @@ de design.
 
 3. **R6 — sem 0 silencioso.** Um membro inexistente (`Spacing.huge`) e uma
    chamada de método num namespace (`Spacing.of(4)`) são um diagnóstico de
-   compile-time **`SEM078`** (mensagem em inglês, lista os membros válidos).
+   compile-time **`SEM079`** (mensagem em inglês, lista os membros válidos).
    O buraco silencioso pré-existente `Palette.nope` é um gap separado e
    catalogado (é superfície da lane compiler; os tokens não o replicam).
 
@@ -1362,7 +1362,7 @@ de design.
   códigos desta decisão e da D-UI-STYLE foram re-numerados — a lane compiler
   já havia publicado `SEM073` (aridade do `reduce`, `MemberCallTyper`) e `SEM074`
   (método em primitivo, `SemMethodCallTyper`) no `beta-0.4.0`. Style:
-  `SEM073/074/075` → **`SEM075/076/077`**; tokens: `SEM076` → **`SEM078`**.
+  Style: `SEM073/74/75` → **`SEM076/77/78`**; tokens: `SEM076` → **`SEM079`** (renúmero final 18/09: o `beta-0.4.0` tomou `SEM073/74` para reduce-arity/primitive-method e `SEM075` para o diagnóstico static-field — esta lane deslocou de novo para manter unicidade).
   Só os rótulos mudaram; nenhuma semântica mudou (as decisões valem como decididas).
 - Sem superfície de runtime: o fold é em compile-time, então não há no-op
   por target a documentar (diferente do UI001) — o valor está na IR.
@@ -1387,7 +1387,7 @@ Reivindicado no `DOING.md` (Fases 8–11, lane UI/style). `KofUiTokens.java`
 
 `UiTokensE2ETest` 7/7 — tabela golden em JVM + Native + Script (mesmo fold
 compartilhado → saída idêntica), DOM JS (o valor chega no texto renderizado),
-`SEM078` membro inexistente, `SEM078` chamada de método, composição com
+`SEM079` membro inexistente, `SEM079` chamada de método, composição com
 `Style`/widget; suíte 4-módulos verde fora do flake pré-existente §252 e dos
 reds cross §181/§256; `docs-lang.sh check` 0/0/0.
 
@@ -1408,10 +1408,10 @@ reds cross §181/§256; `docs-lang.sh check` 0/0/0.
 **Contexto:** a `docs/ui/architecture.md` §2.6 define três escopos de
 estado. O local (`state`/`text`/`flag` no `Component`) e o `Store`
 compartilhado (get/set/subscribe/unsubscribe) já funcionavam; faltava o
-escopo **raiz da aplicação** (Fase 8). Ao ligá-lo, o §274 foi medido e
+escopo **raiz da aplicação** (Fase 8). Ao ligá-lo, o §279 foi medido e
 corrigido primeiro: o `Store.unsubscribe` do JS era no-op silencioso
 (identidade wrapper-vs-raw), então a perna "cleanup" do §2.6 não tinha
-primitivo funcional — ver `known-bugs.md` §274.
+primitivo funcional — ver `known-bugs.md` §279.
 
 **Decisão (contrato mínimo):**
 - `AppState(initial)` — um argumento, devolve o store do **escopo da
@@ -1426,7 +1426,7 @@ primitivo funcional — ver `known-bugs.md` §274.
   lugar em vez de prop-drilling de handle.
 - `storesLive()` conta o slot do app-state (probe de leak inalterado).
 - O cleanup de inscrições no unmount segue **manual** (`unsubscribe(h)` —
-  agora real pelo §274): atribuir inscrições automaticamente a components é
+  agora real pelo §279): atribuir inscrições automaticamente a components é
   contrato maior (qual component é o "current" durante um subscribe?) —
   regra 6, não decidido aqui.
 - JVM/Native mantêm os no-ops documentados do Store (UI é KofJS —
@@ -1443,7 +1443,7 @@ target (JS `10,10,x=10,x=42,,1`; JVM `0,0,"",1`; Native `0,0,"",0`);
 ComponentCore 24/24 + UiE2E 29 + browser 28 + Router 4 + style/tokens 17 +
 CoreRegression 102 + CompilerDriver 256 verdes.
 
-- Relacionado: D-UI-STYLE, D-UI-TOKENS, §274, D-BACKEND-SEMANTICS (no-op stores).
+- Relacionado: D-UI-STYLE, D-UI-TOKENS, §279, D-BACKEND-SEMANTICS (no-op stores).
 
 ---
 
@@ -1455,7 +1455,7 @@ CoreRegression 102 + CompilerDriver 256 verdes.
 
 **Contexto:** a Fase 9 de `architecture.md` quer "atualização parcial":
 reusar o nó DOM quando o view re-renderiza o mesmo widget na mesma posição.
-Hoje o re-render é rebuild+prune: o §273 tirou o vazamento, mas a identidade
+Hoje o re-render é rebuild+prune: o §278 tirou o vazamento, mas a identidade
 ainda é recriada — **medido 18/09 (host embarcado, probe scratch):** o
 handle do label-raiz de um `view (s) -> Label("v="+s)` é `3` após 1 state
 write e `7` após 5 (um handle novo por render; subárvore antiga podada,
@@ -1482,7 +1482,7 @@ menor unidade coesa que conserta a dor visível (perda de focus no caso
 comum de widget único na raiz) sem camada VDOM. A decisão (qual opção + o
 contrato de continuidade de handle) é da mantenedora.
 
-**Relacionado:** §273 (prune), §274 (unsubscribe), linhas da Fase 9 na
+**Relacionado:** §278 (prune), §279 (unsubscribe), linhas da Fase 9 na
 audit, D-UI-APPSTATE (postura do unsub manual).
 
 ---

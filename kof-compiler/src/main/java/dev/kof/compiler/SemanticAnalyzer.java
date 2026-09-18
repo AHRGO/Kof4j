@@ -47,6 +47,10 @@ public class SemanticAnalyzer {
     private final Map<NewExpr, SymbolTable.ConstructorSymbol> resolvedConstructors = new IdentityHashMap<>();
     private final Map<String, SymbolTable> classMemberScopes = new HashMap<>();
     private String currentClassName;
+    private boolean currentMethodStatic;
+
+    /** #345: corpo sendo analisado é de método `static`? */
+    boolean isCurrentMethodStatic() { return currentMethodStatic; }
     /** DD-02/#42: dentro de corpo de construtor? `this.campo =` em record só
      *  é legal no construtor (JVMS: final field init); métodos → SEM038. */
     boolean inConstructor;
@@ -356,10 +360,17 @@ public class SemanticAnalyzer {
         if (method.body() == null || method.body().isEmpty()) return;
         SymbolTable prevScope = currentScope;
         currentScope = methodScope;
+        // #345: contexto static — campo de instância referido nu dentro de
+        // método static (implícito `this`) não tem slot: o emit gerava
+        // aload_0 → VerifyError "Bad local variable type" no load. A SEM
+        // rejeita com SEM075 (R6; a referência só existe via instância).
+        boolean prevStatic = currentMethodStatic;
+        currentMethodStatic = method.modifiers().contains("static");
         // §130: ver analyzeConstructorBody — o laço de 4 passes re-executa o
         // corpo (quando um `return <expr>` void reinfer o tipo via bug 26) e o
         // MESMO escopo reclamava SEM024 de cada var do pass anterior.
         StatementAnalyzer.analyzeBody(this, method.body(), methodScope.enterScope(), returnType);
+        currentMethodStatic = prevStatic;
         currentScope = prevScope;
         if (Type.isVoid(returnType) && method.body().getLast() instanceof ReturnStmt ret
                 && ret.value() != null) {

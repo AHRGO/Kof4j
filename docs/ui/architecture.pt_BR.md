@@ -172,7 +172,7 @@ Regras que o core garante:
   agenda re-render (scheduling), sem tocar a aplicação inteira.
 - **Re-render por reconstrução + poda (atual); reconciliação (Fase 9,
   pendente).** hoje o builder da view reexecuta e a subárvore nova substitui a
-  anterior, podando a antiga do DOM e do registro (§273). O **alvo** é
+  anterior, podando a antiga do DOM e do registro (§278). O **alvo** é
   reconciliação por **posição + kind** — nós estáveis (mesma posição + kind)
   reaproveitam o DOM existente e só o diff (texto, props, handlers) é
   atualizado, sem recriar a árvore; o diffing por chave vem junto.
@@ -212,7 +212,7 @@ Window (raiz/host)
    (agendado, não síncrono) reconcilia só os componentes dirty.
 5. **Updates aplicados:** o builder da view reexecuta e a subárvore nova
    substitui a anterior — a subárvore antiga é podada do DOM **e** do registro
-   de nós (`kofUiRemoveSubtree`, §273), então nenhum handle vaza entre
+   de nós (`kofUiRemoveSubtree`, §278), então nenhum handle vaza entre
    renders. O reaproveitamento de nó por **posição + kind** (atualizando só o
    diff) e o diffing por chave são a metade **pendente** da Fase 9.
 
@@ -225,11 +225,11 @@ registra handlers por nó (base da propagação) e os **limpa no unmount**.
 
 ### 2.6 Estado
 
-Três escopos (Fase 8 — entregue 18/09: `D-UI-APPSTATE` + §274):
+Três escopos (Fase 8 — entregue 18/09: `D-UI-APPSTATE` + §279):
 
 - **Local de componente:** `state`/`text`/`flag` no `Component` (entregue).
 - **Compartilhado:** um `Store` observável entre componentes (entregue;
-  `unsubscribe` do JS corrigido §274).
+  `unsubscribe` do JS corrigido §279).
 - **Aplicação:** `AppState(initial)` — singleton create-or-get sobre a
   máquina do Store, alcançável de qualquer lugar (entregue, `D-UI-APPSTATE`).
 

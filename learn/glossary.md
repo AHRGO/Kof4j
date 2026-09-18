@@ -80,7 +80,7 @@ documented (e.g.: AES-GCM on JS).
 **kof.db / kof.orm** — persistence (JVM: JDBC H2/MySQL/PostgreSQL + SQLite;
 Native: SQLite via `.so` + MySQL WIP; JS: untyped (16/09), `query<T>` typed = `DB002`): `db.connect/execute/query`
 + `transaction {}`; ORM with declarative `entity` (CRUD, `where`, `page`,
-`migrate`, MongoDB; native/JS `ORM001`).
+`migrate`, MongoDB; native `ORM001`, JS CLOSED 18/09).
 
 **KofC** — `kof c <file.c>` : compiler of a C subset (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`) → native-only x86-64 ELF (0.4.0-beta, Target separation).
 

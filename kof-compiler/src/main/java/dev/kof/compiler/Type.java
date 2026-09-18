@@ -45,12 +45,37 @@ public sealed interface Type {
     record NullableType(Type inner) implements Type {
     }
 
+    /**
+     * #389: índice do ` -> ` que separa a lista de parâmetros do retorno num
+     * tipo de função canônico `(params) -> ret`, achado por BALANCEAMENTO de
+     * parênteses a partir do `(` inicial. O `indexOf(')')` legado parava no
+     * PRIMEIRO `)` — num tipo com parâmetro de função
+     * (`((Int) -> Int, (Int) -> Int) -> Int`) isso picotava a lista em
+     * `(Int` e o tipo saía com aridade 1 (SEM013 falso em chamada correta).
+     * -1 quando a string não tem a forma canônica (chamador usa o caminho
+     * legado — comportamento hoje aceito não muda).
+     */
+    static int fnTypeArrow(String s) {
+        if (s == null || !s.startsWith("(")) return -1;
+        int depth = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '(') depth++;
+            else if (c == ')') {
+                depth--;
+                if (depth == 0) return s.startsWith(" -> ", i + 1) ? i + 1 : -1;
+            }
+        }
+        return -1;
+    }
+
     static Type of(String name) {
         if (name == null) return UnknownType.UNKNOWN;
         // tipo de função: "(Int) -> Int" (bug 8)
         if (name.startsWith("(") && name.contains(" -> ")) {
-            int rp = name.indexOf(')');
-            int arrow = name.indexOf(" -> ");
+            int canonArrow = fnTypeArrow(name);
+            int rp = canonArrow >= 0 ? canonArrow - 1 : name.indexOf(')');
+            int arrow = canonArrow >= 0 ? canonArrow : name.indexOf(" -> ");
             String paramsStr = rp > 1 ? name.substring(1, rp) : "";
             String retStr = name.substring(arrow + 4);
             List<Type> params = paramsStr.isEmpty() ? List.of()

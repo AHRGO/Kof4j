@@ -4,7 +4,7 @@
 
 **Last updated:** September 18, 2026
 **Version:** 0.4.0-beta
-**Status:** implemented (Phase 5 of the Spring independence plan) — JVM (JDBC) + Native (SQLite via direct `.so` + MySQL wire protocol WIP) + `kof.orm` (JVM + MongoDB); JS untyped ✅ (16/09), typed `query<T>` ✅ (18/09, `DB002` closed), ORM `ORM001`
+**Status:** implemented (Phase 5 of the Spring independence plan) — JVM (JDBC) + Native (SQLite via direct `.so` + MySQL wire protocol WIP) + `kof.orm` (JVM + MongoDB); JS untyped ✅ (16/09), typed `query<T>` ✅ (18/09, `DB002` closed), `kof.orm` ✅ on JS (18/09, `ORM001` closed; Native still `ORM001`)
 
 ---
 
@@ -104,7 +104,7 @@ Native:
 | JVM | ✅ complete (JDBC) | `db.connect`/`execute`/`query<T>`/`transaction` (H2/MySQL/MariaDB/PostgreSQL/SQLite) + `orm.*` (entity, `saveAll`, `where` operators, `page`, filtered `count`, `deleteAll`, `migrate`, MongoDB) |
 | Native x86_64 | ✅ SQLite; MySQL WIP | `sqlite:` DSN complete; MySQL wire protocol (SHA-1 scramble + lenenc + `user:pass@`) — handshake/query/prepared pending |
 | Native riscv64 | ✅ SQLite (riscv64) | `li a7` syscalls |
-| JS | ✅ untyped (16/09); typed `query<T>` = `DB002` CLOSED 18/09 | `connect/execute/query/close/transaction` via `kof_platform.db*` on the GraalJS host; typed `orm.*` = `ORM001` at compile-time |
+| JS | ✅ untyped (16/09); typed `query<T>` = `DB002` CLOSED 18/09 | `connect/execute/query/close/transaction` via `kof_platform.db*` on the GraalJS host; typed `orm.*` CLOSED 18/09 (`ORM001` — `KofJsOrmBridge`, same SQL as JVM, byte-parity E2E) |
 
 ## 7. Tests (0.4.0-beta)
 
@@ -159,4 +159,5 @@ main() {
 | `orm.migrate(db, name, sql)` | versioned migration (runs once) |
 
 Backends: SQL via JDBC (JVM) + **MongoDB** (official driver, E2E with a real
-container, conditional skip). Native/JS report `ORM001`.
+container, conditional skip). Native reports `ORM001`; **JS CLOSED 18/09**
+(`KofJsOrmBridge`, same SQL as the JVM runtime, byte-parity E2E).

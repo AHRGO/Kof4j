@@ -15,9 +15,9 @@ package dev.kof.compiler;
  *   Elevation.none=0 sm=1 md=2 lg=3 xl=4
  *   Typography.xs=12 sm=14 md=16 lg=20 xl=24 hero=32
  *
- * Unknown members are a compile-time diagnostic (SEM078) — R6, no silent
+ * Unknown members are a compile-time diagnostic (SEM079) — R6, no silent
  * 0 (unlike the existing `Palette.nope` hole, catalogued separately).
- * Method calls on a token namespace are SEM078 too: tokens are constants.
+ * Method calls on a token namespace are SEM079 too: tokens are constants.
  */
 public final class KofUiTokens {
 

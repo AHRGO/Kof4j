@@ -5,7 +5,7 @@
 **Data:** 2 de setembro de 2026
 **Re-synced:** 17 de setembro de 2026 (0.4.0-beta)
 
-> **Atualizado (0.2.6-beta):** `kof serve` com handlers top-level + stack web nativa `web.app()` (Fase 1 Spring independence) — rotas com lambda trailing, path params, query, headers, body, middleware, JSON tipado, status/headers customizados e servidor HTTP gerado no runtime; `kof.http` client `http.get/post/put/delete/patch/options/status` + `timeout/retry/circuit` funciona em **JVM + JS** (JS via `Java HttpClient` interop no `KofJsRunner`; retry/circuit em paridade JVM+JS, 30/08) — Native `HTTP002`; TLS `listenSecure` JVM. Ver [docs/stdlib/stdlib-web.md](stdlib-web.md) e `docs/status.md` (contagem corrente da suíte).
+> **Atualizado (0.2.6-beta):** `kof serve` com handlers top-level + stack web nativa `web.app()` (Fase 1 Spring independence) — rotas com lambda trailing, path params, query, headers, body, middleware, JSON tipado, status/headers customizados e servidor HTTP gerado no runtime; `kof.http` client `http.get/post/put/delete/patch/options/status` + `timeout/retry/circuit` funciona em **JVM + JS + Native** (JS via `Java HttpClient` interop no `KofJsRunner`; Native = asm HTTP/1.1, https + DNS real ainda gaps; retry/circuit em paridade 3 alvos, knobs nativos reais nos 4 alvos desde 17/09 — §259); TLS `listenSecure` JVM. Ver [docs/stdlib/stdlib-web.md](stdlib-web.md) e `docs/status.md` (contagem corrente da suíte).
 
 **Status:** Implementado (Fase H) — `VERSION` 0.4.0-beta
 **Versão:** 0.4.0-beta
@@ -351,7 +351,7 @@ http.circuit(0)       // desliga o circuito e zera o estado de falhas
 
 A paridade JVM+JS é exercida por `KofHttpResilienceE2ETest` (3/3): retry
 recupera num endpoint flaky (2×500 → 200), circuito abre após falha e
-fail-fast, e `circuit(0)` recupera. O Native aceita `timeout`/`retry`/`circuit` como **no-ops silenciosos** — o ramo do diagnóstico `HTTP002` está morto hoje (`KofHttp.supportedOn` sempre devolve `true`; §259).
+fail-fast, e `circuit(0)` recupera. O Native implementa os três knobs de verdade desde 17/09 (§259 FECHADO, os 4 alvos nativos): connect não-bloqueante + deadline `poll` + `SO_RCVTIMEO`/`SO_SNDTIMEO` (`throw "kof.http: timeout"`), retry em exceção/`>=500`, circuito fail-fast 30s half-open — mensagens idênticas ao JVM (`KofHttpNativeResilienceCrossTest` 4/4 sob qemu). `HTTP002` segue o único código HTTP emitido (o ramo continua morto porque `KofHttp.supportedOn` sempre devolve `true`).
 
 ---
 

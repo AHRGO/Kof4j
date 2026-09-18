@@ -454,24 +454,26 @@ public final class RuntimeConcurrency {
 
             # selectAny(list): valor do primeiro handle pronto; senão
             # aguarda (polling 1ms) até um terminar -- paridade JVM anyOf.
-            # frame: 2 push + subq 16 -> rsp≡8 nos calls.
+            # frame: 3 push -> mesmos offsets de callee-saved do frame
+            # antigo. §252: size em r14
+            # (callee-saved); na slot -8(%rsp) o `call usleep` gravava o
+            # próprio endereço de retorno e o re-scan lia lixo como size.
             .globl kof_select_any
             .type kof_select_any, @function
             kof_select_any:
                 pushq %rbx                      # list
                 pushq %r12                      # index
-                subq $16, %rsp                  # -8(%rsp)=size
+                pushq %r14                      # size (mesma prof. do frame)
                 movq %rdi, %rbx
                 testq %rbx, %rbx
                 jz .Lkof_sel_no
                 call kof_list_size              # rsp≡8
                 testq %rax, %rax
                 jz .Lkof_sel_no
-                movq %rax, -8(%rsp)            # size
+                movq %rax, %r14                 # size
                 xorl %r12d, %r12d
             .Lkof_sel_scan:
-                movq -8(%rsp), %rax             # rax = size
-                cmpq %rax, %r12                 # r12 - rax = index - size
+                cmpq %r14, %r12                 # r12 - r14 = index - size
                 jge .Lkof_sel_wait              # index >= size -> aguarda e re-escaneia
                 movq %rbx, %rdi
                 movl %r12d, %esi
@@ -487,7 +489,7 @@ public final class RuntimeConcurrency {
                 testq %rcx, %rcx
                 jnz .Lkof_sel_rethrow
                 movq 16(%rax), %rax             # pronto: devolve resultado
-                addq $16, %rsp
+                popq %r14
                 popq %r12
                 popq %rbx
                 ret
@@ -504,7 +506,7 @@ public final class RuntimeConcurrency {
                 jmp .Lkof_sel_scan
             .Lkof_sel_no:
                 xorl %eax, %eax
-                addq $16, %rsp
+                popq %r14
                 popq %r12
                 popq %rbx
                 ret

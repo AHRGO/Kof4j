@@ -62,7 +62,20 @@ JsIr.JsStatement parse(MethodCtx ctx, int[] pos) {
         List<JsIr.JsCatchClause> catches = new ArrayList<>();
         boolean hasFinally = false;
         while (pos[0] < ctx.ops.size() && ctx.ops.get(pos[0]) instanceof KofCatchStart cs) {
-            if ("Throwable".equals(cs.exceptionType())) {
+            // A catch-all SINTÉTICA que emula `finally` (StatementLowerer:546)
+            // também chega aqui com exceptionType "Throwable". Distinguir do
+            // `catch (Throwable e)` ESCRITO PELO USUÁRIO pelo local vinculado:
+            // o synth usa o slot temporário "#excTmp" (rawLocalNames com
+            // prefixo "#" — nunca um identificador Kof válido); o catch do
+            // usuário vincula um nome real ("e"). Sem isto, um
+            // `catch(Throwable e)` do usuário caía no ramo de finally e o corpo
+            // sobrava -> ICE "try expected KofTryEnd" (pegadinha medida 18/09;
+            // `catch(Exception/RuntimeException)` escapava só por ter outra
+            // string, não por ser tratado).
+            String excLocal = ctx.rawLocalNames.get(cs.localIndex());
+            boolean syntheticFinallyCatch = "Throwable".equals(cs.exceptionType())
+                    && excLocal != null && excLocal.startsWith("#");
+            if (syntheticFinallyCatch) {
                 // catch-all + rethrow emulates finally; JS finally is native.
                 hasFinally = true;
                 pos[0]++;

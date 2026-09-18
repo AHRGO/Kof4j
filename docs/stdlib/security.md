@@ -58,7 +58,7 @@ NOT APPLICABLE   → does not apply to the Kof architecture
 | SSE | (Spring via `SseEmitter`) | `kof.web` (`app.sse`) | **EXISTS (JVM)** | `sse.send/event/close` (JVM + JS handler-scoped ✅ 16/09, `7cd69a7b`; Native `WEB003`, JS post-return push `WEB003` residual) |
 | Messaging | spring-messaging | `kof.mq` (publish/subscribe/queue) | **EXISTS** | JVM+Native+JS (MQ001 closed 01/09) |
 | Transactions | spring-tx | `kof.db` (`transaction {}`) | **EXISTS** | JVM (JDBC commit/rollback) + Native (SQLite) + JS (untyped 16/09) |
-| Scheduling | spring-context | `kof.scheduler` (`every`/`cancel` + `spawn`) | PARTIAL | JVM (ScheduledExecutor) + JS (setInterval) + Native (`SCHED001` closed 31/08); `at(cron)` = 60s stub (`CRON001`); true cron needs CRON001 |
+| Scheduling | spring-context | `kof.scheduler` (`every`/`cancel` + `spawn`) | PARTIAL | JVM (ScheduledExecutor) + JS (setInterval) + Native (`SCHED001` closed 31/08); `at(cron)` = real 5-field UTC cron (JVM + JS, 17/09); Native refuses at compile time (`CRON001`) |
 | Events | ApplicationEvent | `kof.mq` pub/sub | PARTIAL | pub/sub queues in the stdlib |
 | Resources | Resource | `kof.io` | EXISTS | |
 | Cache | spring-cache | `kof.cache` (`get/set/set-ttl/ttl/delete/clear`) | **EXISTS** | 3 targets (native fix 30/08) |
@@ -78,7 +78,7 @@ NOT APPLICABLE   → does not apply to the Kof architecture
 | Actuator | actuator | `kof.observability` | **EXISTS** | health/metrics/request IDs JVM/Native/JS |
 | Health checks | health | `kof.observability.health` | **EXISTS** | JVM/Native/JS |
 | Metrics | micrometer | `kof.observability` | **EXISTS** | counter/increment/gauge JVM/Native/JS |
-| Observability | tracing | `kof.observability` | **EXISTS** | health/metrics/histograms/request IDs + W3C `traceId`/`spanId` and timed `spanStart`/`spanEnd` (3 targets, `OBS002`); OTel export planned |
+| Observability | tracing | `kof.observability` | **EXISTS** | health/metrics/histograms/request IDs + W3C `traceId`/`spanId` and timed `spanStart`/`spanEnd` (3 targets, `OBS002`); OTel export `exportSpans()` OTLP/JSON on JVM/JS (`OBS003`, Native honest gap) |
 | Logging | logback | `kof.log` + `println` | **EXISTS** | `log.debug/info/warn/error` JVM/Native |
 | Graceful shutdown | shutdown | `web.close()` + spawn join | PARTIAL | |
 | CLI/tooling | spring CLI | `kof` CLI (build/run/serve/test/bench/profile/inspect) | EXISTS | |

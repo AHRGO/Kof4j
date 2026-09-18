@@ -273,7 +273,7 @@ handle — a SIGSEGV in `__pthread_clockjoin_ex` once the TCB was recycled
 | ~~`done`/`poll`~~ | ✅ 31/08 — non-blocking over the handle (JVM + Native) | — |
 | ~~Native Port~~ | ✅ 31/08 — `pthread_create` + trampoline + `pthread_join` + thread-safe allocator (futex); implicit join (CONC001 closed) | — |
 | ~~JS Port~~ | ✅ 03/09 — spawn over Promise, native await via microtask (CONC003 closed) | — |
-| ~~Scheduler~~ | ✅ 31/08 — `every`/`cancel` JVM (`ScheduledExecutor`) + JS (`setInterval`) + **Native SCHED001** (thread per job, `usleep` ms→us + `active` flag, cooperative `cancel(id)`) | `at(cron)` = 60s stub on every target → **CRON001** (real cron parser pending) |
+| ~~Scheduler~~ | ✅ 31/08 — `every`/`cancel` JVM (`ScheduledExecutor`) + JS (`setInterval`) + **Native SCHED001** (thread per job, `usleep` ms→us + `active` flag, cooperative `cancel(id)`); `at(cron)` real 17/09 (5-field UTC parser, JVM + JS) | `at(cron)` on Native → **CRON001** (compile-time refusal — no asm parser) |
 | ~~Typed channels~~ | ✅ 31/08, real blocking in JS 03/09 — `channel<Int>()` with `send`/`receive` (JVM blocking `LinkedBlockingQueue` + Native FIFO futex + JS queue of pending resolvers) | — |
 
 Criterion for "100%": the three targets running the same concurrent programs
@@ -384,7 +384,7 @@ statements, transactions, declarative `entity` at compile-time, CRUD
 (`create/save/find/all/where/delete/count`), `orm.where` by field + operators, `saveAll` batch, `page`/`count`/`deleteAll`,
 versioned migrations (`kof_migrations`) and MongoDB (official driver).
 Missing: typed query DSL (`User.query { where age > 18 }`), connection
-pooling, complete MySQL (query/prepared), `kof.db`/`kof.orm` outside the JVM (**JS `DB001` CLOSED 16/09** — untyped on the GraalJS host; typed `query<T>` = `DB002` CLOSED 18/09; residual `ORM001`), NoSQL beyond MongoDB.
+pooling, complete MySQL (query/prepared), `kof.db`/`kof.orm` outside the JVM (**JS `DB001` CLOSED 16/09** — untyped on the GraalJS host; typed `query<T>` = `DB002` CLOSED 18/09; `kof.orm` = `ORM001` CLOSED 18/09 on JS, residual Native `ORM001`), NoSQL beyond MongoDB.
 
 ---
 

@@ -161,8 +161,8 @@ class UiStyleCssE2ETest {
         CompilationResult r = compile(tempDir.resolve("bad-prop.kf"), tempDir.resolve("out"), Target.JVM);
         assertFalse(r.success(), "unknown property must fail the build");
         assertTrue(r.diagnostics().getDiagnostics().stream()
-                        .anyMatch(d -> "SEM075".equals(d.code())),
-                "expected SEM075: " + r.diagnostics().getDiagnostics());
+                        .anyMatch(d -> "SEM076".equals(d.code())),
+                "expected SEM076: " + r.diagnostics().getDiagnostics());
     }
 
     @Test
@@ -176,8 +176,8 @@ class UiStyleCssE2ETest {
         CompilationResult r = compile(tempDir.resolve("bad-decl.kf"), tempDir.resolve("out"), Target.JVM);
         assertFalse(r.success(), "malformed declaration must fail the build");
         assertTrue(r.diagnostics().getDiagnostics().stream()
-                        .anyMatch(d -> "SEM076".equals(d.code())),
-                "expected SEM076: " + r.diagnostics().getDiagnostics());
+                        .anyMatch(d -> "SEM077".equals(d.code())),
+                "expected SEM077: " + r.diagnostics().getDiagnostics());
     }
 
     @Test
@@ -191,8 +191,8 @@ class UiStyleCssE2ETest {
         CompilationResult r = compile(tempDir.resolve("bad-value.kf"), tempDir.resolve("out"), Target.JVM);
         assertFalse(r.success(), "invalid value must fail the build");
         assertTrue(r.diagnostics().getDiagnostics().stream()
-                        .anyMatch(d -> "SEM077".equals(d.code())),
-                "expected SEM077: " + r.diagnostics().getDiagnostics());
+                        .anyMatch(d -> "SEM078".equals(d.code())),
+                "expected SEM078: " + r.diagnostics().getDiagnostics());
     }
 
     @Test
@@ -209,8 +209,8 @@ class UiStyleCssE2ETest {
         CompilationResult r = compile(tempDir.resolve("non-literal.kf"), tempDir.resolve("out"), Target.JVM);
         assertFalse(r.success(), "non-literal argument must fail the build");
         assertTrue(r.diagnostics().getDiagnostics().stream()
-                        .anyMatch(d -> "SEM076".equals(d.code())),
-                "expected SEM076: " + r.diagnostics().getDiagnostics());
+                        .anyMatch(d -> "SEM077".equals(d.code())),
+                "expected SEM077: " + r.diagnostics().getDiagnostics());
     }
 
     @Test

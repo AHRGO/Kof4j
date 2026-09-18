@@ -39,7 +39,8 @@ class KofTimeE2ETest {
         CompilationResult result = driver.compile(source, outDir, Target.JVM);
         assertTrue(result.success(), "Compilation should succeed: " + result.diagnostics().getDiagnostics());
         try {
-            ProcessBuilder pb = new ProcessBuilder("java", "-Dfile.encoding=UTF-8",
+            String javaCmd = System.getProperty("java.home") + "/bin/java";
+            ProcessBuilder pb = new ProcessBuilder(javaCmd, "-Dfile.encoding=UTF-8",
                     "-Dstdout.encoding=UTF-8", "-cp", outDir.toString(), "Default.Main");
             pb.redirectErrorStream(true);
             Process p = pb.start();
@@ -1104,6 +1105,148 @@ class KofTimeE2ETest {
         assertTrue(r.diagnostics().getDiagnostics().stream()
                         .anyMatch(d -> d.message().contains("TIME003")),
                 "diagnóstico deve citar TIME003: " + r.diagnostics().getDiagnostics());
+    }
+
+    // ── CRON001 (17/09): `scheduler.at(cron)` deixa de ignorar a expressão.
+    // Parser cron real de 5 campos em UTC no JVM e no JS; Native recusa em
+    // compile-time (R6/R7). A tabela abaixo é o oracle determinístico (âncora
+    // 2024-01-01T00:00:00Z = segunda-feira), compartilhada pelos 2 alvos.
+    private static final long CRON_ANCHOR = 1704067200000L;
+
+    private static final String[][] CRON_TABLE = {
+        {"* * * * *", "60000"},
+        {"*/5 * * * *", "300000"},
+        {"0 3 * * *", "10800000"},
+        {"0 0 1 * *", "2678400000"},
+        {"30 14 * * 1", "52200000"},
+        {"0 0 29 2 *", "5097600000"},
+        {"0 12 * * 7", "561600000"},
+        {"0 12 31 * 1", "43200000"},
+        {"0 12 * * 1,3", "43200000"},
+        {"0 0-6/2 * * *", "7200000"},
+        {"0 0 * * 0", "518400000"},
+    };
+
+    @Test
+    void cronNextDelayJvmMatchesTable(@TempDir Path tempDir) throws Exception {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+                main() {
+                    var id = scheduler.at("0 0 1 1 *", () -> {})
+                    scheduler.cancel(id)
+                }
+                """);
+        Path outDir = tempDir.resolve("cron-jvm");
+        CompilationResult result = driver.compile(source, outDir, Target.JVM);
+        assertTrue(result.success(), "JVM compile: " + result.diagnostics().getDiagnostics());
+        try (java.net.URLClassLoader cl = new java.net.URLClassLoader(
+                new java.net.URL[]{outDir.toUri().toURL()}, getClass().getClassLoader())) {
+            Class<?> rt = cl.loadClass("dev.kof.runtime.KofRuntime");
+            java.lang.reflect.Method m = rt.getMethod("kof_cron_next_delay_ms", String.class, long.class);
+            for (String[] row : CRON_TABLE) {
+                Object got = m.invoke(null, row[0], CRON_ANCHOR);
+                assertEquals(Long.parseLong(row[1]), ((Number) got).longValue(),
+                        "JVM cron delay para '" + row[0] + "'");
+            }
+            for (String bad : new String[]{"bogus", "* * * *", "60 * * * *", "* 24 * * *", ""}) {
+                try {
+                    m.invoke(null, bad, CRON_ANCHOR);
+                    fail("JVM cron inválido deveria lançar: '" + bad + "'");
+                } catch (java.lang.reflect.InvocationTargetException e) {
+                    assertTrue(e.getCause() instanceof IllegalArgumentException,
+                            "esperava IllegalArgumentException para '" + bad + "': " + e.getCause());
+                }
+            }
+        }
+    }
+
+    @Test
+    void cronNextDelayJsMatchesJvmTable(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+                main() {
+                    var id = scheduler.at("0 0 1 1 *", () -> {})
+                    scheduler.cancel(id)
+                }
+                """);
+        Path outDir = tempDir.resolve("cron-js");
+        CompilationResult result = driver.compile(source, outDir, Target.JS);
+        assertTrue(result.success(), "JS compile: " + result.diagnostics().getDiagnostics());
+        StringBuilder probe = new StringBuilder(
+                "import { kofCronNextDelayMs } from './kof-runtime.mjs';\n");
+        for (String[] row : CRON_TABLE) {
+            probe.append("console.log(String(kofCronNextDelayMs(\"")
+                    .append(row[0]).append("\", ").append(CRON_ANCHOR).append(")));\n");
+        }
+        for (String bad : new String[]{"bogus", "* * * *", "60 * * * *", "* 24 * * *", ""}) {
+            probe.append("try { kofCronNextDelayMs(\"").append(bad)
+                    .append("\", ").append(CRON_ANCHOR)
+                    .append("); console.log(\"NO-THROW\"); } catch (e) { console.log(\"THREW\"); }\n");
+        }
+        Path entry = outDir.resolve("CronProbe.mjs");
+        Files.writeString(entry, probe.toString());
+        StringBuilder expected = new StringBuilder();
+        for (String[] row : CRON_TABLE) expected.append(row[1]).append('\n');
+        for (int i = 0; i < 5; i++) expected.append("THREW\n");
+        try (java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+                java.io.ByteArrayOutputStream errBuf = new java.io.ByteArrayOutputStream()) {
+            int ec = dev.kof.runtime.KofJsRunner.run(entry, buf,
+                    java.io.InputStream.nullInputStream(), errBuf);
+            String output = buf.toString(StandardCharsets.UTF_8).trim();
+            assertEquals(0, ec, "JS exit, out: " + output
+                    + " err: " + errBuf.toString(StandardCharsets.UTF_8));
+            assertEquals(expected.toString().trim(), output, "JS cron delay deve espelhar o JVM");
+        }
+    }
+
+    @Test
+    void schedulerAtNativeIsHonestGapCron001(@TempDir Path tempDir) throws IOException {
+        // R6/R7: Native não tem o parser cron em asm — recusa em compile-time
+        // com CRON001, nunca o stub silencioso de 60s que ignorava a expressão.
+        Path source = tempDir.resolve("CronNat.kf");
+        Files.writeString(source, """
+                main() {
+                    scheduler.at("*/5 * * * *", () -> println("tick"))
+                }
+                """);
+        for (Target t : new Target[]{Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            CompilationResult r = driver.compile(source, tempDir.resolve("cron-nat-" + t), t);
+            assertFalse(r.success(), t + " deve RECUSAR scheduler.at (CRON001)");
+            assertTrue(r.diagnostics().getDiagnostics().stream()
+                            .anyMatch(d -> d.message().contains("CRON001")),
+                    t + " deve citar CRON001: " + r.diagnostics().getDiagnostics());
+        }
+    }
+
+    @Test
+    void schedulerAtInvalidCronFailsLoudlyJvm(@TempDir Path tempDir) throws IOException {
+        // Cron inválido não pode ser silencioso: o processo morre com a
+        // mensagem (Q0/R6), nunca agenda em 60s como o stub antigo.
+        Path source = tempDir.resolve("CronBad.kf");
+        Files.writeString(source, """
+                main() {
+                    scheduler.at("bogus", () -> println("tick"))
+                    time.sleep(50)
+                    println("unreachable")
+                }
+                """);
+        Path outDir = tempDir.resolve("cron-bad");
+        CompilationResult result = driver.compile(source, outDir, Target.JVM);
+        assertTrue(result.success(), "compile: " + result.diagnostics().getDiagnostics());
+        try {
+            String javaCmd = System.getProperty("java.home") + "/bin/java";
+            ProcessBuilder pb = new ProcessBuilder(javaCmd, "-Dfile.encoding=UTF-8",
+                    "-Dstdout.encoding=UTF-8", "-cp", outDir.toString(), "Default.Main");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            int ec = p.waitFor();
+            assertNotEquals(0, ec, "cron inválido deve falhar alto, saída: " + output);
+            assertTrue(output.contains("cron"), "mensagem deve citar cron: " + output);
+            assertFalse(output.contains("unreachable"), "não deve seguir silencioso: " + output);
+        } catch (InterruptedException e) {
+            throw new IOException("interrupted", e);
+        }
     }
 
     private void assumeToolchain(String... tools) {

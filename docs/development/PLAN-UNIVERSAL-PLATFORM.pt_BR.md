@@ -1582,6 +1582,7 @@ arquiteturais futuras e guardrails.)
 - **Por quê:** impede o "tudo-faz opaco" — o que falta é sempre visível.
 - **Custo:** zero (padrão existente: `SECN00x`/`DB001`/`WEB002`...).
 - **Não fazer:** nunca stub silencioso; nunca paridade parcial sem diagnóstico.
+- **Gate de máquina (17/09):** `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` deriva os códigos que a guarda PROVA que o compilador EMITE (das próprias chamadas `assertGap`) e falha se algum não tiver linha em `docs/backend-parity.md` — o padrão do ledger do R1 aplicado ao R6, para a classe de drift do `WEB005` (§275) não poder voltar em silêncio.
 
 ## R7 — Escopo honesto por target (JVM-first interop / Native sistemas / JS web)
 - **O quê:** adotar explicitamente: capacidades pesadas chegam **JVM-first**

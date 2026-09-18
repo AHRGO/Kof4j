@@ -4,7 +4,7 @@
 
 **Última atualização:** 18 de setembro de 2026
 **Versão:** 0.4.0-beta
-**Status:** implementado (Fase 5 do plano de independência do Spring) — JVM (JDBC) + Native (SQLite via `.so` direto + MySQL wire protocol WIP) + `kof.orm` (JVM + MongoDB); JS nao-tipado ✅ (16/09), tipado `query<T>` ✅ (18/09, `DB002` fechado), ORM `ORM001`
+**Status:** implementado (Fase 5 do plano de independência do Spring) — JVM (JDBC) + Native (SQLite via `.so` direto + MySQL wire protocol WIP) + `kof.orm` (JVM + MongoDB); JS nao-tipado ✅ (16/09), tipado `query<T>` ✅ (18/09, `DB002` fechado), `kof.orm` ✅ no JS (18/09, `ORM001` fechado; Native segue `ORM001`)
 
 ---
 
@@ -104,7 +104,7 @@ Native:
 | JVM | ✅ completo (JDBC) | `db.connect`/`execute`/`query<T>`/`transaction` (H2/MySQL/MariaDB/PostgreSQL/SQLite) + `orm.*` (entity, `saveAll`, `where` operadores, `page`, `count` filtrado, `deleteAll`, `migrate`, MongoDB) |
 | Native x86_64 | ✅ SQLite; MySQL WIP | `sqlite:` DSN completo; MySQL wire protocol (scramble SHA-1 + lenenc + `user:pass@`) — handshake/query/prepared pendentes |
 | Native riscv64 | ✅ SQLite (riscv64) | `li a7` syscalls |
-| JS | ✅ nao-tipado (16/09); `query<T>` tipado = `DB002` FECHADO 18/09 | `connect/execute/query/close/transaction` via `kof_platform.db*` no host GraalJS; query tipado: FECHADO 18/09; `orm.*` = `ORM001` em compile-time |
+| JS | ✅ nao-tipado (16/09); `query<T>` tipado = `DB002` FECHADO 18/09 | `connect/execute/query/close/transaction` via `kof_platform.db*` no host GraalJS; query tipado: FECHADO 18/09; `orm.*` FECHADO 18/09 (`ORM001` — `KofJsOrmBridge`, mesmo SQL do JVM, E2E byte-parity) |
 
 ## 7. Testes (0.4.0-beta)
 
@@ -159,4 +159,5 @@ main() {
 | `orm.migrate(db, name, sql)` | migration versionada (roda uma vez) |
 
 Backends: SQL via JDBC (JVM) + **MongoDB** (driver oficial, E2E com
-container real, skip condicional). Native/JS reportam `ORM001`.
+container real, skip condicional). Native reporta `ORM001`; **JS FECHADO 18/09**
+(`KofJsOrmBridge`, mesmo SQL do runtime JVM, E2E byte-paridade).

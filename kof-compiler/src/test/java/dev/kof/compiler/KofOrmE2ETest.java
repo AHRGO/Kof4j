@@ -535,7 +535,7 @@ class KofOrmE2ETest {
     }
 
     @Test
-    void nativeAndJsReportOrm001(@TempDir Path tempDir) throws IOException {
+    void nativeReportsOrm001JsSupported(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, ENTITY_SRC + """
                 main() {
@@ -548,10 +548,10 @@ class KofOrmE2ETest {
         assertTrue(nativeResult.diagnostics().getDiagnostics().toString().contains("ORM001"),
                 "Native should report ORM001: " + nativeResult.diagnostics().getDiagnostics());
 
+        // ORM001 (18/09): JS agora suportado via KofJsOrmBridge — compila limpo.
         CompilationResult jsResult = driver.compile(source, tempDir.resolve("js-out"), Target.JS);
-        assertFalse(jsResult.success());
-        assertTrue(jsResult.diagnostics().getDiagnostics().toString().contains("ORM001"),
-                "JS should report ORM001: " + jsResult.diagnostics().getDiagnostics());
+        assertTrue(jsResult.success(),
+                "JS should now compile orm.* (ORM001 closed): " + jsResult.diagnostics().getDiagnostics());
     }
 
     @Test
@@ -567,5 +567,242 @@ class KofOrmE2ETest {
         assertFalse(result.success());
         assertTrue(result.diagnostics().getDiagnostics().toString().contains("ORM002"),
                 "Should report ORM002: " + result.diagnostics().getDiagnostics());
+    }
+
+    // ── ORM001 (18/09): kof.orm no JS ── paridade byte-a-byte com o caminho
+    // JVM acima, agora via KofJsOrmBridge (mesmo SQL) + bind de record no guest
+    // (JsRuntimeOps __kof_decode_<T>). Cobrem as 3 formas de retorno: record
+    // único (save/find), List<record> (all/where/where_op/page) e primitivo
+    // (count/count_where/delete/delete_all/create/migrate/saveAll).
+
+    private String runJs(Path source, Path outDir, String expected) throws IOException {
+        CompilationResult result = driver.compile(source, outDir, Target.JS);
+        assertTrue(result.success(), "JS compilation should succeed: "
+                + result.diagnostics().getDiagnostics());
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int ec = dev.kof.runtime.KofJsRunner.run(outDir.resolve("Default.mjs"), out,
+                new java.io.ByteArrayInputStream(new byte[0]), out);
+        String output = out.toString(java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, ec, "JS exit code should be 0, output: '" + output + "'");
+        assertEquals(expected, output, "Unexpected JS output");
+        return output;
+    }
+
+    @Test
+    void jsCreateSaveFindAllDelete(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, ENTITY_SRC + """
+                main() {
+                    var db = db.connect("jdbc:h2:mem:jsorm1;DB_CLOSE_DELAY=-1")
+                    orm.create<User>(db)
+                    var mel = orm.save(db, User(0, "Mel", "mel@kof.dev", 30))
+                    println(mel.id)
+                    var u = orm.find<User>(db, mel.id)
+                    println(u.name)
+                    var all = orm.all<User>(db)
+                    println(all.size)
+                    println(orm.count<User>(db))
+                    orm.delete<User>(db, mel.id)
+                    println(orm.count<User>(db))
+                    db.close(db)
+                }
+                """);
+        runJs(source, tempDir.resolve("out"), "1\nMel\n1\n1\n0");
+    }
+
+    @Test
+    void jsSaveUpdatesExistingRow(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, ENTITY_SRC + """
+                main() {
+                    var db = db.connect("jdbc:h2:mem:jsorm2;DB_CLOSE_DELAY=-1")
+                    orm.create<User>(db)
+                    var mel = orm.save(db, User(0, "Mel", "mel@kof.dev", 30))
+                    mel = orm.save(db, User(mel.id, "Melissa", "mel@kof.dev", 31))
+                    var u = orm.find<User>(db, mel.id)
+                    println(u.name + " " + u.age)
+                    db.close(db)
+                }
+                """);
+        runJs(source, tempDir.resolve("out"), "Melissa 31");
+    }
+
+    @Test
+    void jsUniqueConstraintRejected(@TempDir Path tempDir) throws IOException {
+        // R6: a violacao de `unique` nao pode ser silenciosa. Na sessao anterior
+        // este E2E estava BARRADO pelo ICE `catch(Throwable)` no JS (compilar
+        // quebrava); com o fix do JsTryParser ele passa a ser cobertura real da
+        // propagacao de erro da ponte KofJsOrmBridge -> catch no guest.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, ENTITY_SRC + """
+                main() {
+                    var db = db.connect("jdbc:h2:mem:jsorm3;DB_CLOSE_DELAY=-1")
+                    orm.create<User>(db)
+                    orm.save(db, User(0, "Mel", "same@kof.dev", 30))
+                    try {
+                        orm.save(db, User(0, "Kof", "same@kof.dev", 1))
+                        println("no-error")
+                    } catch (Throwable e) {
+                        println("rejected")
+                    }
+                    db.close(db)
+                }
+                """);
+        runJs(source, tempDir.resolve("out"), "rejected");
+    }
+
+    @Test
+    void jsEntityWithoutGeneratedUsesFirstFieldAsPk(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+                entity Product {
+                    code: String unique
+                    price: Double
+                }
+                main() {
+                    var db = db.connect("jdbc:h2:mem:jsorm4;DB_CLOSE_DELAY=-1")
+                    orm.create<Product>(db)
+                    orm.save(db, Product("P1", 19.99))
+                    var p = orm.find<Product>(db, "P1")
+                    println(p.price)
+                    db.close(db)
+                }
+                """);
+        runJs(source, tempDir.resolve("out"), "19.99");
+    }
+
+    @Test
+    void jsWhereFiltersByField(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, ENTITY_SRC + """
+                main() {
+                    var db = db.connect("jdbc:h2:mem:jsorm6;DB_CLOSE_DELAY=-1")
+                    orm.create<User>(db)
+                    orm.save(db, User(0, "Mel", "mel@kof.dev", 30))
+                    orm.save(db, User(0, "Ana", "ana@kof.dev", 25))
+                    var adultos = orm.where<User>(db, "age", 30)
+                    println(adultos.size)
+                    println(adultos.get(0).name)
+                    db.close(db)
+                }
+                """);
+        runJs(source, tempDir.resolve("out"), "1\nMel");
+    }
+
+    @Test
+    void jsWhereWithOperator(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, ENTITY_SRC + """
+                main() {
+                    var db = db.connect("jdbc:h2:mem:jsorm8;DB_CLOSE_DELAY=-1")
+                    orm.create<User>(db)
+                    orm.save(db, User(0, "Mel", "mel@kof.dev", 30))
+                    orm.save(db, User(0, "Ana", "ana@kof.dev", 25))
+                    orm.save(db, User(0, "Leo", "leo@kof.dev", 40))
+                    var adultos = orm.where<User>(db, "age", ">", 25)
+                    println(adultos.size)
+                    var jovens = orm.where<User>(db, "age", "<=", 25)
+                    println(jovens.size)
+                    var ana = orm.where<User>(db, "name", "LIKE", "A%")
+                    println(ana.size)
+                    println(ana.get(0).name)
+                    db.close(db)
+                }
+                """);
+        runJs(source, tempDir.resolve("out"), "2\n1\n1\nAna");
+    }
+
+    @Test
+    void jsSaveAllBatch(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, ENTITY_SRC + """
+                main() {
+                    var db = db.connect("jdbc:h2:mem:jsorm9;DB_CLOSE_DELAY=-1")
+                    orm.create<User>(db)
+                    var l = new List<User>()
+                    l.add(User(0, "Mel", "mel@kof.dev", 30))
+                    l.add(User(0, "Ana", "ana@kof.dev", 25))
+                    orm.saveAll<User>(db, l)
+                    println(orm.count<User>(db))
+                    var mel = orm.where<User>(db, "email", "mel@kof.dev")
+                    println(mel.size)
+                    db.close(db)
+                }
+                """);
+        runJs(source, tempDir.resolve("out"), "2\n1");
+    }
+
+    @Test
+    void jsPagePagination(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, ENTITY_SRC + """
+                main() {
+                    var db = db.connect("jdbc:h2:mem:jsorm10;DB_CLOSE_DELAY=-1")
+                    orm.create<User>(db)
+                    var l = new List<User>()
+                    l.add(User(0, "A", "a@kof.dev", 20))
+                    l.add(User(0, "B", "b@kof.dev", 21))
+                    l.add(User(0, "C", "c@kof.dev", 22))
+                    orm.saveAll<User>(db, l)
+                    var p1 = orm.page<User>(db, 2, 0)
+                    println(p1.size)
+                    var p2 = orm.page<User>(db, 2, 2)
+                    println(p2.size)
+                    println(p2.get(0).name)
+                    db.close(db)
+                }
+                """);
+        runJs(source, tempDir.resolve("out"), "2\n1\nC");
+    }
+
+    @Test
+    void jsCountWhereAndDeleteAll(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, ENTITY_SRC + """
+                main() {
+                    var db = db.connect("jdbc:h2:mem:jsorm11;DB_CLOSE_DELAY=-1")
+                    orm.create<User>(db)
+                    orm.save(db, User(0, "Mel", "mel@kof.dev", 30))
+                    orm.save(db, User(0, "Ana", "ana@kof.dev", 25))
+                    println(orm.count<User>(db, "age", 30))
+                    println(orm.count<User>(db))
+                    orm.deleteAll<User>(db)
+                    println(orm.count<User>(db))
+                    db.close(db)
+                }
+                """);
+        runJs(source, tempDir.resolve("out"), "1\n2\n0");
+    }
+
+    @Test
+    void jsQueryDslFiltersOrdersAndLimits(@TempDir Path tempDir) throws IOException {
+        // Query DSL tipada (nível 3) baixa para kof_db_queryN (mesmo caminho de
+        // db.query<T>, DB002) — a supportedOn JS da ORM001 habilita o front-end
+        // `User.query(db){ ... }` no mesmo passo. Byte-paridade com o JVM.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, ENTITY_SRC + """
+                main() {
+                    var db = db.connect("jdbc:h2:mem:jsorm12;DB_CLOSE_DELAY=-1")
+                    orm.create<User>(db)
+                    orm.save(db, User(0, "Mel", "mel@kof.dev", 30))
+                    orm.save(db, User(0, "Ana", "ana@kof.dev", 25))
+                    orm.save(db, User(0, "Leo", "leo@kof.dev", 40))
+                    var adultos = User.query(db) {
+                        where age > 25
+                        orderBy name asc
+                    }
+                    println(adultos.size)
+                    println(adultos.get(0).name)
+                    println(adultos.get(1).name)
+                    var limitado = User.query(db) {
+                        where age >= 25
+                        limit 1
+                    }
+                    println(limitado.size)
+                    db.close(db)
+                }
+                """);
+        runJs(source, tempDir.resolve("out"), "2\nLeo\nMel\n1");
     }
 }

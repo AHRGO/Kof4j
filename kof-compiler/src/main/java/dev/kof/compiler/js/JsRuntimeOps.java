@@ -39,7 +39,8 @@ boolean isRuntimeOp(KofCall kc) {
                 || name.startsWith("kof_enum_")
                 || name.startsWith("kof_config_")
                 || name.startsWith("kof_cache_")
-                || name.startsWith("kof_web_") || name.startsWith("kof_db_") || name.startsWith("kof_http_")
+                || name.startsWith("kof_web_") || name.startsWith("kof_db_")
+                || name.startsWith("kof_orm_") || name.startsWith("kof_http_")
                 || name.equals("kof_spawn") || name.equals("kof_spawn_result") || name.equals("kof_await")
                 || name.equals("kof_poll") || name.equals("kof_done")
                 || name.equals("kof_cancel") || name.equals("kof_cancelled")
@@ -426,7 +427,7 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             return;
         }
         String fn = JsTypeMapper.runtimeJsName(name);
-        if (name.startsWith("kof_io_") || name.startsWith("kof_db_")
+        if (name.startsWith("kof_io_") || name.startsWith("kof_db_") || name.startsWith("kof_orm_")
                 || name.equals("kof_read_line")
                 || name.equals("kof_read_file") || name.equals("kof_write_file")) {
             p.lc.registerIoRuntime(fn);
@@ -454,6 +455,35 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
                     List.of(new JsIr.JsArrow(List.of("o"), new JsIr.JsCall(
                             new JsIr.JsIdentifier("__kof_decode_" + jsName),
                             List.of(new JsIr.JsIdentifier("o"))))));
+        }
+        if (name.startsWith("kof_orm_")) {
+            // ORM001 (18/09): kof.orm no JS. A ponte host devolve rows/record
+            // como JSON strings (ou null p/ find ausente); o MESMO
+            // `__kof_decode_<T>` do json.decode/db.query faz o bind, dando
+            // paridade byte-a-byte com JvmOrmRuntime. List<T> (all/where/
+            // where_op/page) binda por linha; record único (find/save) passa por
+            // kofOrmSingle p/ preservar null de find sem re-executar a chamada.
+            if (kc.returnType() instanceof Type.ClassType ort) {
+                if (BuiltinTypes.isList(ort) && !ort.typeArguments().isEmpty()
+                        && ort.typeArguments().get(0) instanceof Type.ClassType elem
+                        && p.lc.classMethodNames.containsKey(elem.internalName())) {
+                    String jsName = JsTypeMapper.jsClassName(elem.internalName());
+                    p.lc.decodeHelpers.add(jsName);
+                    call = new JsIr.JsCall(new JsIr.JsMember(call, "map"),
+                            List.of(new JsIr.JsArrow(List.of("o"), new JsIr.JsCall(
+                                    new JsIr.JsIdentifier("__kof_decode_" + jsName),
+                                    List.of(new JsIr.JsIdentifier("o"))))));
+                } else if (!BuiltinTypes.isList(ort) && !BuiltinTypes.isString(ort)
+                        && p.lc.classMethodNames.containsKey(ort.internalName())) {
+                    String jsName = JsTypeMapper.jsClassName(ort.internalName());
+                    p.lc.decodeHelpers.add(jsName);
+                    p.lc.registerIoRuntime("kofOrmSingle");
+                    call = new JsIr.JsCall(new JsIr.JsIdentifier("kofOrmSingle"), List.of(call,
+                            new JsIr.JsArrow(List.of("o"), new JsIr.JsCall(
+                                    new JsIr.JsIdentifier("__kof_decode_" + jsName),
+                                    List.of(new JsIr.JsIdentifier("o"))))));
+                }
+            }
         }
         if (name.equals("kof_await") || name.equals("kof_await_timeout")
                 || name.equals("kof_select_any")) {

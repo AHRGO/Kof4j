@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * Int constants (px — the D-UI-STYLE Q2 convention), folded by the same
  * idiom as {@code Palette}. The fold is shared by all four targets →
  * cross-target parity by construction. Unknown members and method calls on
- * a namespace are SEM078 (R6 — never a silent 0).
+ * a namespace are SEM079 (R6 — never a silent 0).
  */
 class UiTokensE2ETest {
 
@@ -146,14 +146,14 @@ class UiTokensE2ETest {
                 tempDir.resolve("out"), Target.JVM);
         assertFalse(r.success(), "unknown token member must fail the build");
         assertTrue(r.diagnostics().getDiagnostics().stream()
-                        .anyMatch(d -> "SEM078".equals(d.code())),
-                "expected SEM078: " + r.diagnostics().getDiagnostics());
+                        .anyMatch(d -> "SEM079".equals(d.code())),
+                "expected SEM079: " + r.diagnostics().getDiagnostics());
     }
 
     @Test
     void methodCallOnTokenNamespaceIsSem076(@TempDir Path tempDir) throws IOException {
         // Tokens hold constants; a method on the namespace is a translated
-        // Java habit — SEM078 with the member list, never a silent no-op.
+        // Java habit — SEM079 with the member list, never a silent no-op.
         String program = """
             main() {
                 println(Spacing.of(4))
@@ -164,8 +164,8 @@ class UiTokensE2ETest {
                 tempDir.resolve("out"), Target.JVM);
         assertFalse(r.success(), "method call on a token namespace must fail the build");
         assertTrue(r.diagnostics().getDiagnostics().stream()
-                        .anyMatch(d -> "SEM078".equals(d.code())),
-                "expected SEM078: " + r.diagnostics().getDiagnostics());
+                        .anyMatch(d -> "SEM079".equals(d.code())),
+                "expected SEM079: " + r.diagnostics().getDiagnostics());
     }
 
     @Test

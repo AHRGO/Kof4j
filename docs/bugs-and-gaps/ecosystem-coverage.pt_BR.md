@@ -203,8 +203,8 @@ Legenda nas colunas de target: `y` = suportado, `~` = parcial, `–` = não.
 | `db.connect/query/transaction` | ✅ (+ `query<T>` tipado) | y | y | ✅ nao-tipado 16/09; tipado `query<T>` `DB002` FECHADO 18/09 | KofDbE2ETest | stdlib/DATABASE_VISION.md |
 | prepared statements | ✅ (binds `?`) | y | y | ✅ 16/09 (binds via ponte) | KofDbE2ETest | — |
 | connection pools | `PLANNED` | — | — | — | — | — |
-| migrations | ✅ `orm.migrate` versionado (`kof_migrations`) | y | – ORM001 | – ORM001 | KofOrmE2ETest | stdlib/DATABASE_VISION.md |
-| repositories/ORM | ✅ `kof.orm`: `entity` + create/save/find/all/where/delete/count | y | – ORM001 | – ORM001 | KofOrmE2ETest | stdlib/DATABASE_VISION.md |
+| migrations | ✅ `orm.migrate` versionado (`kof_migrations`) | y | – ORM001 | ✅ 18/09 | KofOrmE2ETest | stdlib/DATABASE_VISION.md |
+| repositories/ORM | ✅ `kof.orm`: `entity` + create/save/find/all/where/delete/count | y | – ORM001 | ✅ 18/09 | KofOrmE2ETest | stdlib/DATABASE_VISION.md |
 | NoSQL (MongoDB) | ✅ driver oficial via reflexão compatível | y | — | — | KofOrmE2ETest (E2E, skip condicional) | stdlib/DATABASE_VISION.md |
 | mapping | ✅ entity → linha/documento por schema de compile-time | y | – | y | JsonE2ETest, KofOrmE2ETest | — |
 | query DSL tipada (`User.query { where ... }`) | ✅ (nível 3, 01/09 — baixa p/ `db.query<T>`; E2E JVM H2) | ✅ | — | — | KofOrmE2ETest | stdlib/DATABASE_VISION.md |
@@ -357,18 +357,18 @@ Legenda nas colunas de target: `y` = suportado, `~` = parcial, `–` = não.
 
 | # | Gap | Impacto | Local proposto |
 |---|-----|---------|----------------|
-| G1 | ~~**Database/SQL** inexistente~~ — ✅ **nível 0 implementado**: `kof.db` (JDBC JVM, SQLite nativo, MySQL WIP) + `kof.orm` (entity, CRUD, where, migrate, MongoDB) | apps reais com persistência no JVM/Native-SQLite | ✅ query DSL tipada (01/09) + kof.db no JS (16/09); resta: pools, ORM no Native/JS (`ORM001`) |
+| G1 | ~~**Database/SQL** inexistente~~ — ✅ **nível 0 implementado**: `kof.db` (JDBC JVM, SQLite nativo, MySQL WIP) + `kof.orm` (entity, CRUD, where, migrate, MongoDB) | apps reais com persistência no JVM/Native-SQLite | ✅ query DSL tipada (01/09) + kof.db no JS (16/09) + `kof.orm` no JS (18/09, `ORM001` fechado); resta: pools, ORM no **Native** (`ORM001` — x86 é só MySQL; SQLite riscv64/aarch64 fechado 15/09) |
 | G2 | ~~**HTTP client** inexistente~~ — ✅ **implementado**: `kof.http` client (get/post/put/delete/patch/options/status/timeout + retry/circuit 30/08, headers; HTTP002 no Native) | integrações, testes, frontend | ✅ fechado — `KofHttpE2ETest` (4, JVM+JS) + `KofHttpResilienceE2ETest` (3) |
 | G3 | ~~Configuration~~ — ✅ `kof.config` implementado (arquivo > env > profile > default, typed `str/int/long/bool`); **CONF001 nativo fechado** (asm `/proc/self/environ`); JS: CONF001 fechado 16/09 | — | — |
 | G4 | ~~**Validation** inexistente~~ — ✅ **implementado**: `kof.validation` (13 predicados nos 3 targets) | — | `KofValidationTest` (3/3) |
-| G5 | ~~**Observabilidade runtime parcial**~~ — ✅ **implementado**: `kof.observability` (health/readiness/liveness, counter/increment/gauge, requestId/correlationId — JVM/Native/JS; `KofObservabilityTest` 7/7) | — | `KofObservabilityTest` |
+| G5 | ~~**Observabilidade runtime parcial**~~ — ✅ **implementado**: `kof.observability` (health/readiness/liveness, counter/increment/gauge, requestId/correlationId — JVM/Native/JS; `KofObservabilityTest` 10/10 incl. OBS003) | — | `KofObservabilityTest` |
 | G6 | ~~**kof.test estruturado** inexistente~~ — ✅ **implementado**: `test "nome" { }` nos 3 targets; runner sintetizado em compile-time; PASS/FAIL por nome + exit code (`StructuredTestE2ETest`) | testes como cidadãos de primeira classe | próximo: suites nomeadas por diretório, timeouts, fixtures |
 | G7 | ~~**Diagnósticos de target incompletos no security/web**~~ — ✅ **fechado**: `jwt.*` com entrada explícita (SECN004 no Native); `csrf/cors/auth/headers` já cobertos; WEB001 emitido para web.app() e métodos de app fora do JVM | viola "nunca silencioso" | manter: toda função nova entra em `supportedOn` no mesmo PR |
-| G8 | ~~**Scheduling** inexistente~~ — ✅ `kof.time.sleep` + `interval`/`cancel` 3 targets (`KofTimeE2ETest` 5/5; Native reusa scheduler, JS fila cooperativa — TIME001 fechado 02/09) | jobs periódicos | próximos: cron (P1) |
+| G8 | ~~**Scheduling** inexistente~~ — ✅ `kof.time.sleep` + `interval`/`cancel` 3 targets (`KofTimeE2ETest` 39/0/7skip; Native reusa scheduler, JS fila cooperativa — TIME001 fechado 02/09); **cron ✅ 17/09**: `scheduler.at(cron, fn)` = parser real de 5 campos UTC no JVM/JS (listas/faixas/passos, regra clássica DOM∨DOW; inválido → erro alto), gap honesto em compile-time no Native `CRON001` (§274) | jobs periódicos | próximos: nenhum item pendente (cron fechado) |
 | G9 | ~~**Rate limiting / sessions / API keys** inexistentes~~ — ✅ **implementado**: `security.rateLimit`/`sessionCreate`/`sessionGet`/`sessionDestroy`/`apiKeyGenerate`/`apiKeyValid` — JVM/Native/JS (`KofSecurityG9Test` 3/3) | — | `KofSecurityG9Test` |
 | G10 | ~~kof.security no Native~~ — ✅ **fechado**: PBKDF2, SHA-512, JWT HS256 e AES-GCM em asm (SECN001-004) | — | manter os vetores de teste (FIPS 197, NIST SP 800-38D, RFC 7519) |
-| G11 | ~~**Lambdas com captura**~~ — ✅ **captura implementada** (mutable via box sintético `BoxN` + captura por valor; `Lambda0`/`Box0` gerados); **Map/Set** e **await/join** seguem em aberto | expressividade | compilador (documentado em backend-parity.md) |
-| G12 | ~~**TLS/HTTPS** no servidor web~~ — ✅ **implementado**: `web.listenSecure(port)` (JVM, `SSLServerSocket` + `keytool` self-signed, `SAN=IP:127.0.0.1,DNS:localhost`; `kof.http` trust-all) — Native/JS reportam `WEB002` | — | `KofWebTlsTest` (5) |
+| G11 | ~~**Lambdas com captura**~~ — ✅ **captura implementada** (mutable via box sintético `BoxN` + captura por valor; `Lambda0`/`Box0` gerados); **Map/Set** (COL001) e **await/join** (com unboxing) ambos fechados em 0.1.0 — nenhuma face aberta | expressividade | compilador (documentado em backend-parity.md) |
+| G12 | ~~**TLS/HTTPS** no servidor web~~ — ✅ **implementado**: `web.listenSecure(port)` (JVM, `SSLServerSocket` + `keytool` self-signed, `SAN=IP:127.0.0.1,DNS:localhost`; `kof.http` trust-all) — Native/JS reportam `WEB002` | — | `KofWebTlsTest` 7/7 (incl. cert PKCS#8 PEM próprio) |
 
 ---
 
@@ -457,13 +457,13 @@ Princípios mantidos:
 5. ~~G1~~ — ✅ `kof.db` + `kof.orm` nível 0 completo (JDBC idiomático, SQLite
    nativo, transactions, entity, migrations, **where com operadores**,
    **saveAll batch**, **page/count/deleteAll**, **MariaDB/PostgreSQL reais**,
-   MongoDB); próximo: pools, ORM no Native/JS (`ORM001`). Query DSL tipada ✅ 01/09; `kof.db` no JS ✅ 16/09 (DB001 fechado).
+   MongoDB); próximo: pools, ORM no Native (`ORM001`). Query DSL tipada ✅ 01/09; `kof.db` no JS ✅ 16/09 (DB001 fechado), `kof.orm` no JS ✅ 18/09 (ORM001 fechado).
 6. ~~G4~~ — ✅ `kof.validation` (13 predicados nos 3 targets; `KofValidationTest` 3/3).
-7. ~~G5~~ — ✅ `kof.observability` (health/readiness/liveness, counter/increment/gauge, requestId/correlationId — JVM/Native/JS; `KofObservabilityTest` 7/7).
-8. ~~G8~~ — ✅ `kof.time.sleep` + `interval`/`cancel` 3 targets (JS: fila cooperativa — TIME001 fechado 02/09).
+7. ~~G5~~ — ✅ `kof.observability` (health/readiness/liveness, counter/increment/gauge, requestId/correlationId — JVM/Native/JS; `KofObservabilityTest` 10/10).
+8. ~~G8~~ — ✅ `kof.time.sleep` + `interval`/`cancel` 3 targets (JS: fila cooperativa — TIME001 fechado 02/09) + **cron 17/09** (JVM/JS real, Native `CRON001`; §274).
 9. ~~G10~~ — ✅ security no Native (PBKDF2, SHA-512, JWT HS256, AES-GCM em asm — `KofSecurityTest` E2E nativos) + config/log (asm).
 10. ~~G9~~ — ✅ rate limiting, sessions, API keys (`security.rateLimit`, `sessionCreate`/`sessionGet`/`sessionDestroy`, `apiKeyGenerate`/`apiKeyValid` — JVM/Native/JS; `KofSecurityG9Test` 3/3).
-11. ~~G12~~ — ✅ TLS/HTTPS (`web.listenSecure(port)` — JVM, `SSLServerSocket` + self-signed; `kof.http` HTTPS trust-all; `KofWebTlsTest` 5/5; Native/JS `WEB002`).
+11. ~~G12~~ — ✅ TLS/HTTPS (`web.listenSecure(port)` — JVM, `SSLServerSocket` + self-signed; `kof.http` HTTPS trust-all; `KofWebTlsTest` 7/7; Native/JS `WEB002`).
 
 ## P1
 

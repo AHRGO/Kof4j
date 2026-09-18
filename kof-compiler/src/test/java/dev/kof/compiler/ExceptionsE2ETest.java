@@ -278,4 +278,59 @@ class ExceptionsE2ETest {
             """);
         runJvm(source, tempDir.resolve("out"), "boom\ndeep");
     }
+
+    // ── ICE do JS (18/09): `catch (Throwable e)` derrubava o JsTryParser
+    // (colisão com a catch-all sintética que emula `finally`). Cobertura
+    // control-flow apenas — o valor de um Throwable é interop JVM (D-NOT-JAVA),
+    // não há representação byte-idêntica no JS. ──
+
+    private String runJs(Path source, Path outDir, String expected) throws IOException {
+        CompilationResult result = driver.compile(source, outDir, Target.JS);
+        assertTrue(result.success(), "JS compilation should succeed (no ICE): "
+                + result.diagnostics().getDiagnostics());
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int ec = dev.kof.runtime.KofJsRunner.run(outDir.resolve("Default.mjs"), out,
+                new java.io.ByteArrayInputStream(new byte[0]), out);
+        String output = out.toString(java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, ec, "JS exit code should be 0, output: '" + output + "'");
+        assertEquals(expected, output, "Unexpected JS output");
+        return output;
+    }
+
+    @Test
+    void jsCatchThrowableRunsBody(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                try {
+                    throw "boom"
+                } catch (Throwable e) {
+                    println("caught")
+                }
+                println("done")
+            }
+            """);
+        runJs(source, tempDir.resolve("out"), "caught\ndone");
+    }
+
+    @Test
+    void jsCatchThrowableWithFinally(@TempDir Path tempDir) throws IOException {
+        // O caso de maior risco: um catch(Throwable) do USUÁRIO e a catch-all
+        // sintética "#excTmp" do finally coexistem no mesmo try — o
+        // discriminador precisa separá-los.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                try {
+                    throw "boom"
+                } catch (Throwable e) {
+                    println("caught")
+                } finally {
+                    println("finally")
+                }
+            }
+            """);
+        runJs(source, tempDir.resolve("out"), "caught\nfinally");
+    }
 }

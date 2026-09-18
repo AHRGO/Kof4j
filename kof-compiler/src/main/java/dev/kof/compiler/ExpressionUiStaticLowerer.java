@@ -302,7 +302,7 @@ if (mc.receiver() == null && "Image".equals(mc.methodName()) && mc.arguments().s
     /**
      * D-UI-STYLE (UI007): lowers {@code Style("<declarations>")} to
      * {@code kof_ui_style_css(normalized)}. The parse/validation diagnostics
-     * (SEM075/076/077) are owned by the analyzer path ({@code BuiltinCallTyper})
+     * (SEM076/076/077) are owned by the analyzer path ({@code BuiltinCallTyper})
      * — here the text is only re-parsed for the normalized CSS. The String form
      * takes a literal only; the 4-Int form passes a computed Color.
      */
