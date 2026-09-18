@@ -12,11 +12,12 @@
 > `char*` nativo. Um único downcall FFM `kof_ffi(lib, name, sig, Object[])`
 > substitui os helpers `kof_ffi_i`/`_si`/`_dd`; o lowering empacota os args num
 > `Object[]` (`KofNewArray`, boxando primitivos) e o emissor JVM desboxa/confere
-> o retorno boxado (`emitKofRuntimeCall`). `FfiE2ETest` +2 (`pow` 2.0^10 →
-> `1024.0`, `strstr("hello world","wor")` → `world`). Paridade ainda não
-> alcançada: `void` e struct/pointer (D6) seguem `FFI001`; JS `FFI002` / Native
-> `FFI001` (§61) permanecem gaps honestos por target (R7). Próximas fatias R3
-> traçadas no plano universal.
+> o retorno boxado (`emitKofRuntimeCall`). `FfiE2ETest` +3 (`pow` 2.0^10 →
+> `1024.0`, `strstr("hello world","wor")` → `world`; `srand(Int)` default `void`
+> via `kof_ffi_void`). Paridade ainda não alcançada: struct/pointer (D6),
+> callbacks/upcalls, variadics e handles opacos seguem `FFI001`; JS `FFI002` /
+> Native `FFI001` (§61) permanecem gaps honestos por target (R7). Decomposição
+> completa em §R3-fatias do plano universal.
 >
 > **18/09 — §132 FECHADO (#83-JS) — o KofJS roda o supervisor OTP com paridade
 > (dono = 192.168.100.18, lane development).** O `time.sleep` agora é um **ponto de

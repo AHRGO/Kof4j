@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * FFI (R3): descrição compacta da assinatura `extern` e mapeamento tipo→layout
- * FFM. chars: i=Int j=Long f=Float d=Double b=Boolean S=String(char*).
+ * FFM. chars: i=Int j=Long f=Float d=Double b=Boolean S=String(char*) v=void(retorno).
  * Mantido fora de {@code CompilerPipeline} para a regra de ≤500 linhas/classe.
  */
 final class FfiSignature {
@@ -22,7 +22,12 @@ final class FfiSignature {
     }
 
     static Character returnChar(String t) {
+        if (isVoidFFI(t)) return 'v';
         return paramChar(t);
+    }
+
+    static boolean isVoidFFI(String t) {
+        return t == null || t.isEmpty() || "void".equals(t) || "Void".equals(t);
     }
 
     static String signature(ExternalFunctionNode ext) {
@@ -33,6 +38,7 @@ final class FfiSignature {
     }
 
     static Type returnType(String r) {
+        if (isVoidFFI(r)) return Type.PrimitiveType.VOID;
         if (CompilerPipeline.isDoubleType(r)) return Type.PrimitiveType.DOUBLE;
         if (isLongFFI(r)) return Type.PrimitiveType.LONG;
         if (isFloatFFI(r)) return Type.PrimitiveType.FLOAT;

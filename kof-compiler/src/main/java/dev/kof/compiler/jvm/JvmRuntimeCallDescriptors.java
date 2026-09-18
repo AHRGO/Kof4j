@@ -39,6 +39,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_ffi_si" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I";
             case "kof_ffi_dd" -> "(Ljava/lang/String;Ljava/lang/String;D)D";
             case "kof_ffi" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/Object;";
+            case "kof_ffi_void" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V";
             case "kof_now" -> "()J";
             case "kof_read_line" -> "()Ljava/lang/String;";
             case "kof_read_file" -> "(Ljava/lang/String;)Ljava/lang/String;";

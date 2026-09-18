@@ -272,7 +272,7 @@ the same development experience.
 |---|-----------|--------|--------------|
 | R1 | Lock the core/platform boundary (§3.4 order as an invariant rule) | ✅ 17/09 | `5f1422c6` — `scripts/check_stdlib_boundary.sh` + ledger (31 namespaces) + CI + `--selftest`; AGENTS invariant 1 |
 | R2 | Generalize "capability/link by use" to all packages/domains | 🔵 | seed: SQLite/MySQL `.so` linked only when the literal DSN appears; extension pending |
-| R3 | Formalize FFI as first-class | 🟡 | **JVM scalar ABI generalized 18/09 (`.18`)**: `kof_ffi` now binds arbitrary arity + full scalar set {Int,Long,Float,Double,Boolean,String} in and out (`String` reads back `char*`); `FfiE2ETest` `pow`/`strstr` prove multi-arg + String return. Still open: `void` returns; struct/pointer ABI (design D6 ⛔); and **parity on the other targets** — JS (`FFI002`) and Native (`FFI001`, waits on §61) remain honest per-target gaps (R7). |
+| R3 | Formalize FFI as first-class | 🟡 | **JVM scalar ABI + `void` 18/09 (`.18`)**: `kof_ffi`/`kof_ffi_void` bind arbitrary arity over {Int,Long,Float,Double,Boolean,String} in/out, `String` reads `char*`, `void` returns discarded as statement. `FfiE2ETest` covers `pow`/`strstr`/`srand`. See §R3-slices for the full decomposition — remaining: opaque handles/out-buffers (3.3 ⛔), callbacks/upcalls (3.4), variadics (3.5 ⛔), JS parity via host bridge (3.6), Native parity (§61, 3.7), struct/array D6 (3.8 ⛔). Parity on JS (`FFI002`) / Native (`FFI001`) still honest per-target gaps (R7). |
 | R4 | Formalize compile-time codegen (`CodegenStep`) | 🔵 | does NOT exist at HEAD (2.2.2); blocks `infra "prod" {}` (3.2) and DDL/runner migration |
 | R5 | Stability tiers + official packages | 🟡 | tiers defined in `backend-parity.md` §Stability tiers; **per-namespace tier marking not yet applied** — decision ⛔ |
 | R6 | Keep "never silent" for new domains | ✅ 17/09 | machine gate `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` (`19a740f2`) + full ledger sweep (`c5897cd5`, found §278) |
@@ -282,6 +282,28 @@ the same development experience.
 | R10 | Correct and deterministic by default (science) | 🔵 | applies from Stage 4/6 (property-based + golden) |
 | R11 | Security: defense first | 🟡 | adopted (never homemade crypto; FFI to audited libs); PQC pending Stage 5 |
 | R12 | Do not interrupt the present (meta-rule) | ✅ overridden 17/09 | `DECISIONS.md` §D-UNIVERSAL — overrides the *scheduling* gate, never the freeze/quality; still the default for the other `future/` plans |
+
+
+## R3 slices — FFI decomposition to full parity
+
+Incremental R3 slices toward "total FFI parity" (maintainer directive 18/09).
+⛔ = maintainer design decision (rule 6); 🔵 = still open; ✅ = landed.
+
+| # | Slice | Status | Owner | Prerequisite |
+|---|-------|--------|-------|--------------|
+| 3.1 | JVM: general scalar ABI — arbitrary arity, {Int,Long,Float,Double,Boolean,String} in and out, String reads back char* | ✅ 18/09 (.18) | dev .18 | — |
+| 3.2 | JVM: void return (kof_ffi_void, V descriptor; result discarded as statement) | ✅ 18/09 (.18) | .18 | — |
+| 3.3 | JVM: opaque handles / out-buffers (void*, T*, Array<Byte> as buffer) — pointer-to-opaque / byte-buffer type, NOT the full D6 struct ABI | ⛔ surface decision | maintainer | design |
+| 3.4 | JVM: callbacks / upcalls (Linker.upcallStub) — a Kof function handed to C as a function pointer | 🔵 design | .18 + maintainer | closure semantics + GC rooting (R12/1.2) |
+| 3.5 | JVM: variadics (printf, execlp) — how to represent `...` in a Kof signature | ⛔ surface decision | maintainer | design |
+| 3.6 | JS: parity via host bridge (the GraalJS/node runner IS a JVM with java.lang.foreign on the host) — browser stays an honest FFI002 (R7: cannot dlopen) | 🔵 | .18 (fronte-5) | — |
+| 3.7 | Native: dlopen/dlsym in asm — depends on §61 (init glibc/TLS in _start) | 🔵 | native lane | §61 |
+| 3.8 | Struct/array ABI (full D6) | ⛔ | maintainer | D6 |
+| 3.9 | Meta-parity: same extern source with the same behavior on every CAPABLE target (R7 honest-scope on the incapable ones) | meta | — | 3.1–3.8 |
+
+3.1+3.2 landed 18/09 → the JVM has the full scalar ABI + void. Next executable
+slice for this lane: 3.6 (JS bridge). Beyond that R3 needs maintainer decisions
+(3.3/3.5/3.8) or the native §61 (3.7).
 
 ---
 

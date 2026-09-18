@@ -273,7 +273,7 @@ mesma experiência de desenvolvimento.
 |---|-----------|--------|--------------|
 | R1 | Travar a fronteira core/plataforma (ordem §3.4 como regra invariante) | ✅ 17/09 | `5f1422c6` — `scripts/check_stdlib_boundary.sh` + ledger (31 namespaces) + CI + `--selftest`; invariante 1 do AGENTS |
 | R2 | Generalizar "capability/link by use" para todos os pacotes/domínios | 🔵 | semente: `.so` de SQLite/MySQL linkado só quando o DSN literal aparece; extensão pendente |
-| R3 | Formalizar FFI como first-class | 🟡 | **ABI escalar da JVM generalizado 18/09 (`.18`)**: `kof_ffi` agora casa aridade arbitrária + o conjunto escalar completo {Int,Long,Float,Double,Boolean,String} na entrada e na saída (`String` lê de volta o `char*`); `FfiE2ETest` `pow`/`strstr` provam multi-arg + retorno String. Ainda em aberto: retornos `void`; ABI de struct/pointer (design D6 ⛔); e **paridade nos outros targets** — JS (`FFI002`) e Native (`FFI001`, espera §61) seguem gaps honestos por target (R7). |
+| R3 | Formalizar FFI como first-class | 🟡 | **ABI escalar da JVM + `void` 18/09 (`.18`)**: `kof_ffi`/`kof_ffi_void` casam aridade arbitrária sobre {Int,Long,Float,Double,Boolean,String} entrada/saída, `String` lê `char*`, `void` é descartado como statement. `FfiE2ETest` cobre `pow`/`strstr`/`srand`. Ver §R3-fatias para a decomposição completa — restam: handles opacos/out-buffers (3.3 ⛔), callbacks/upcalls (3.4), variadics (3.5 ⛔), paridade JS via bridge no host (3.6), paridade Native (§61, 3.7), ABI struct/array D6 (3.8 ⛔). Paridade em JS (`FFI002`) / Native (`FFI001`) segue gap honesto por target (R7). |
 | R4 | Formalizar o codegen em compile-time (`CodegenStep`) | 🔵 | NÃO existe no HEAD (2.2.2); bloqueia `infra "prod" {}` (3.2) e a migração DDL/runner |
 | R5 | Tiers de estabilidade + pacotes oficiais | 🟡 | tiers definidos em `backend-parity.md` §Stability tiers; **marcação por-namespace ainda não aplicada** — decisão ⛔ |
 | R6 | Manter o "nunca silencioso" para domínios novos | ✅ 17/09 | gate de máquina `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` (`19a740f2`) + varredura completa do ledger (`c5897cd5`, achou §278) |
@@ -283,6 +283,29 @@ mesma experiência de desenvolvimento.
 | R10 | Correto e determinístico por padrão (ciência) | 🔵 | aplica-se a partir dos Estágios 4/6 (property-based + golden) |
 | R11 | Segurança: defesa primeiro | 🟡 | adotado (nunca cripto caseira; FFI para libs auditadas); PQC pendente no Estágio 5 |
 | R12 | Não interromper o presente (meta-regra) | ✅ sobreposto 17/09 | `DECISIONS.md` §D-UNIVERSAL — sobrepõe o portão de *agendamento*, nunca o freeze/qualidade; segue default para os outros planos de `future/` |
+
+
+## R3 fatias — decomposição do FFI até paridade total
+
+Fatias incrementais da R3 rumo à "paridade total no FFI" (diretriz da
+mantenedora 18/09). ⛔ = decisão de design da mantenedora (regra 6); 🔵 = ainda
+em aberto; ✅ = landado.
+
+| # | Fatia | Estado | Dono | Pré-requisito |
+|---|-------|--------|------|---------------|
+| 3.1 | JVM: ABI escalar geral — aridade arbitrária, {Int,Long,Float,Double,Boolean,String} entrada/saída, String lê de volta char* | ✅ 18/09 (.18) | dev .18 | — |
+| 3.2 | JVM: retorno void (kof_ffi_void, descritor V; resultado descartado como statement) | ✅ 18/09 (.18) | .18 | — |
+| 3.3 | JVM: handles opacos / out-buffers (void*, T*, Array<Byte> como buffer) — ponteiro opaco / buffer de bytes, NÃO o ABI struct completo do D6 | ⛔ decisão de surface | mantenedora | design |
+| 3.4 | JVM: callbacks / upcalls (Linker.upcallStub) — função Kof entregue a C como ponteiro de função | 🔵 design | .18 + mantenedora | semântica de closure + GC rooting (R12/1.2) |
+| 3.5 | JVM: variadics (printf, execlp) — como representar `...` numa assinatura Kof | ⛔ decisão de surface | mantenedora | design |
+| 3.6 | JS: paridade via bridge no host (o runner GraalJS/node É uma JVM com java.lang.foreign no host) — browser segue FFI002 honesto (R7: não faz dlopen) | 🔵 | .18 (fronte-5) | — |
+| 3.7 | Native: dlopen/dlsym em asm — depende do §61 (init glibc/TLS no _start) | 🔵 | lane nat | §61 |
+| 3.8 | ABI struct/array completo (D6) | ⛔ | mantenedora | D6 |
+| 3.9 | Meta-paridade: mesma fonte extern com o mesmo comportamento em todo alvo CAPAZ (R7 honest-scope nos incapazes) | meta | — | 3.1–3.8 |
+
+3.1+3.2 landados 18/09 → a JVM tem a ABI escalar completa + void. Próxima
+fatia executável desta lane: 3.6 (bridge JS). Além disso a R3 exige decisão da
+mantenedora (3.3/3.5/3.8) ou o §61 nativo (3.7).
 
 ---
 

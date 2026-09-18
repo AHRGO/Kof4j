@@ -125,12 +125,14 @@ Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
   (JVM, `java.lang.foreign`). **Measured surface 18/09 (0.4.0-beta)**: the JVM
   binds **any signature composed of the scalar set** `{Int, Long, Float, Double,
   Boolean, String}` in **every parameter position (arbitrary arity, ≥0)** and any
-  of those as the **return**; a `String` return reads back the native `char*`
+  of those as the **return**, plus **`void` return** (via `kof_ffi_void`, result
+  discarded as a statement); a `String` return reads back the native `char*`
   (`MemorySegment.getString`). One runtime helper `kof_ffi(lib, name, sig,
   Object[])` (FFM downcall; `sig` encodes the layout) replaced the old
   `kof_ffi_i`/`_si`/`_dd` trio; gate `CompilerPipeline.isExternBound`. Still NOT
-  bound — honest `FFI001` at compile time, never a silent stub (R6): `void`
-  return, and struct/array/pointer ABI (design D6, ⛔ maintainer). JS emits
+  bound — honest `FFI001` at compile time, never a silent stub (R6): struct/array/pointer
+  ABI (design D6, ⛔ maintainer), callbacks/upcalls (3.4), variadics (3.5, ⛔) and
+  opaque handles/out-buffers (3.3, ⛔). JS emits
   `FFI002` ("FFI not available on the JS target"); Native emits `FFI001`
   (`<target>` not supported yet). A missing lib/symbol fails at **runtime** with
   a `kof_ffi` exception naming `lib::symbol` (stack trace, not a surgical

@@ -77,7 +77,9 @@ if (mc.receiver() == null && driver.externSignatures.containsKey(mc.methodName()
             }
             ops.add(new KofArrayStore(object));
         }
-        ops.add(new KofCall(new Type.ClassType("kof", "ffi", List.of()), "kof_ffi",
+        String ffiHelper = FfiSignature.isVoidFFI(ext.returnType())
+                ? "kof_ffi_void" : "kof_ffi";
+        ops.add(new KofCall(new Type.ClassType("kof", "ffi", List.of()), ffiHelper,
                 List.of(BuiltinTypes.STRING, BuiltinTypes.STRING, BuiltinTypes.STRING, objectArray),
                 FfiSignature.returnType(ext.returnType()), KofCallKind.FUNCTION));
         return localIdx;

@@ -12,10 +12,12 @@
 > `char*`. One FFM downcall `kof_ffi(lib, name, sig, Object[])` replaces the old
 > `kof_ffi_i`/`_si`/`_dd` helpers; the lowering packs args into an `Object[]`
 > (`KofNewArray`, boxing primitives) and the JVM emitter unboxes/checks the boxed
-> return (`emitKofRuntimeCall`). `FfiE2ETest` +2 (`pow` 2.0^10 → `1024.0`,
-> `strstr("hello world","wor")` → `world`). Parity not yet reached: `void` and
-> struct/pointer (D6) stay `FFI001`; JS `FFI002` / Native `FFI001` (§61) remain
-> honest per-target gaps (R7). Next R3 slices traced in the universal plan.
+> return (`emitKofRuntimeCall`). `FfiE2ETest` +3 (`pow` 2.0^10 → `1024.0`,
+> `strstr("hello world","wor")` → `world`; `srand(Int)` default `void` via
+> `kof_ffi_void`). Parity not yet reached: struct/pointer (D6), callbacks/upcalls,
+> variadics and opaque handles stay `FFI001`; JS `FFI002` / Native `FFI001` (§61)
+> remain honest per-target gaps (R7). Full decomposition in §R3-slices of the
+> universal plan.
 >
 > **18/09 — §132 CLOSED (#83-JS) — KofJS runs the OTP supervisor to parity
 > (owner = 192.168.100.18, development lane).** `time.sleep` is now an **await-point**

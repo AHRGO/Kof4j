@@ -93,12 +93,14 @@ final class JvmFfiRuntime {
                             pl[i] = kof_ffi_layout(c);
                             real[i] = (c == 'S') ? arena.%1$s((String) args[i]) : args[i];
                         }
-                        java.lang.foreign.FunctionDescriptor fd =
-                                java.lang.foreign.FunctionDescriptor.of(kof_ffi_layout(ret), pl);
+                        java.lang.foreign.FunctionDescriptor fd = (ret == 'v')
+                                ? java.lang.foreign.FunctionDescriptor.ofVoid(pl)
+                                : java.lang.foreign.FunctionDescriptor.of(kof_ffi_layout(ret), pl);
                         java.lang.invoke.MethodHandle handle = linker.downcallHandle(
                                 lookup.find(name).orElseThrow(), fd);
                         handle = handle.asSpreader(Object[].class, args.length);
                         Object r = handle.invoke(real);
+                        if (ret == 'v') return null;
                         if (ret == 'S') {
                             java.lang.foreign.MemorySegment seg = (java.lang.foreign.MemorySegment) r;
                             if (seg == null || seg.address() == 0L) {
@@ -113,6 +115,10 @@ final class JvmFfiRuntime {
                     } finally {
                         arena.close();
                     }
+                }
+
+                public static void kof_ffi_void(String lib, String name, String sig, Object[] args) {
+                    kof_ffi(lib, name, sig, args);
                 }
 
                 static java.lang.foreign.ValueLayout kof_ffi_layout(char c) {

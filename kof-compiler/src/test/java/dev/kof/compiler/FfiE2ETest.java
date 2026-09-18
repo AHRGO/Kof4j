@@ -122,6 +122,24 @@ class FfiE2ETest {
     }
 
     @Test
+    void libcSrandDefaultVoidBindsJVM(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("ffi.kf");
+        Files.writeString(src, """
+                extern "libc.so.6" srand(Int x)
+
+                main() {
+                    srand(42)
+                    println("ok")
+                }
+                """);
+        Path out = dir.resolve("out");
+        CompilationResult result = driver.compile(src, out, Target.JVM);
+        assertTrue(result.success(), "default-void extern must bind on JVM (R3 3.2): "
+                + result.diagnostics().getDiagnostics());
+        assertEquals("ok", runJvm(out), "srand(Int) returns void via kof_ffi_void");
+    }
+
+    @Test
     void ffiPowTwoDoubleArgsJVM(@TempDir Path dir) throws IOException {
         Path src = dir.resolve("ffi.kf");
         Files.writeString(src, """

@@ -133,7 +133,7 @@ define as assinaturas. **Experimental** como superfície (muda entre versões).
   compilação, nunca stub silencioso (R6): retorno `void`, e ABI de
   struct/array/pointer (design D6, ⛔ mantenedora). JS emite `FFI002` ("FFI not
   available on the JS target"); o Native emite `FFI001` (`<target>` not supported
-  yet). Lib/símbolo ausente falha em **runtime** com exceção `kof_ffi` nomeando
+  yet). Retornos `void` usam `kof_ffi_void`. Lib/símbolo ausente falha em **runtime** com exceção `kof_ffi` nomeando
   `lib::symbol` (stack trace, não mensagem cirúrgica). Fatias R3 restantes
   (void, structs/D6, paridade JS/Native) em
   `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431);
