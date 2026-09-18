@@ -356,43 +356,6 @@ public final class NativeRiscvAsmRtB1 {
                 addi sp, sp, 64
                 ret
 
-            .globl kof_observability_request_id
-            kof_observability_request_id:
-                la   a0, .Lstr_trace
-                li   a1, 16
-                # tail-call (j): preserva o ra do chamador — call+ret dava loop
-                j    kof_string_from_literal
-            .globl kof_observability_correlation_id
-            kof_observability_correlation_id:
-                la   a0, .Lstr_span
-                li   a1, 16
-                # tail-call (j): preserva o ra do chamador — call+ret dava loop
-                j    kof_string_from_literal
-            .globl kof_observability_trace_id
-            kof_observability_trace_id:
-                la   a0, .Lstr_trace
-                li   a1, 32
-                # tail-call (j): preserva o ra do chamador — call+ret dava loop
-                j    kof_string_from_literal
-            .globl kof_observability_span_id
-            kof_observability_span_id:
-                la   a0, .Lstr_span
-                li   a1, 16
-                # tail-call (j): preserva o ra do chamador — call+ret dava loop
-                j    kof_string_from_literal
-            .globl kof_observability_span_start
-            kof_observability_span_start:
-                la   a0, .Lstr_span_handle
-                li   a1, 48
-                # tail-call (j): preserva o ra do chamador — call+ret dava loop
-                j    kof_string_from_literal
-            .globl kof_observability_span_end
-            kof_observability_span_end:
-                la   a0, .Lstr_empty_json
-                li   a1, 2
-                # tail-call (j): preserva o ra do chamador — call+ret dava loop
-                j    kof_string_from_literal
-
             # ---- kof.cache riscv64/aarch64: 64 slots de 24B em .bss ([key*][val*][expira_ms]) ----
             # set(key, val): grava; get(key): lê; set_ttl(key,val,ttl): guarda com expiração real
             .globl kof_cache_set
