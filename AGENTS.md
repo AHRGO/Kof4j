@@ -771,7 +771,7 @@ ready.
 
 ---
 
-## Platform invariants (universal plan — `docs/development/PLAN-UNIVERSAL-PLATFORM.md`)
+## Platform invariants (universal plan — `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`)
 
 These rules **always** apply, even when there's no new domain code
 at stake. They are the anti-"god language" mechanism:
@@ -1179,7 +1179,7 @@ use the project harness or create a minimal E2E test in the area's package.
 | `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Spec gaps (SG-00x — maintainer queue complete, became a reference) + open bugs |
 | `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realized → stdlib) + audit ≤500 (snapshot → architecture) |
 | `docs/development/DECISIONS.md` | **Maintainer's decisions** (time/security/app-model/Spring — `decision-pending/` folder extinct 09/13) |
-| `docs/development/roadmap.md` §23 | **Consolidated implementation plan** (Tiers 0–12) — the only ordered plan; migration A–H ✅, universal **UNDER DEVELOPMENT** 17/09 (`PLAN-UNIVERSAL-PLATFORM.md`, R12 overridden — §D-UNIVERSAL) |
+| `docs/development/roadmap.md` §23 | **Consolidated implementation plan** (Tiers 0–12) — the only ordered plan; migration A–H ✅, universal **UNDER DEVELOPMENT** 17/09 (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, R12 overridden — §D-UNIVERSAL) |
 
 ---
 

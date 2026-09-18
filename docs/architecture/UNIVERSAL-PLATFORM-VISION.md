@@ -1,6 +1,6 @@
-[English](PLAN-UNIVERSAL-PLATFORM.md) | [Português](PLAN-UNIVERSAL-PLATFORM.pt_BR.md)
+[English](UNIVERSAL-PLATFORM-VISION.md) | [Português](UNIVERSAL-PLATFORM-VISION.pt_BR.md)
 
-# Strategic Plan — Kof as a Universal Platform
+# Universal Platform — Vision & Architecture
 
 **Type:** long-term architecture — **UNDER DEVELOPMENT** since 17/09/2026
 (promoted from `future/` by maintainer decision; the R12 gate is **overridden**
@@ -14,14 +14,17 @@ dispatch tables** with diagnosed gaps, real FFI (SQLite `.so`
 direct, FFM Vulkan compute, Java + GraalJS interop), `mvn test` 2411
 (17/09/2026 — see `AGENTS.md` §"Verification loop" for the live count).
 
-> **Rule of this document:** this is a strategic architecture for the
-> platform. Promoted from `future/` to `development/` on 17/09/2026 **by
-> maintainer decision** (see `DECISIONS.md` §D-UNIVERSAL), which **overrides
-> the R12 gate** ("SYSTEMS closes before any Tier 6+"). It is now **current
-> work**: the entry point is Stage 1 (SYSTEMS consolidation, §10 Estágio 1) and
-> the executable recommendations R1–R12 (§15), with each unit gated like any
-> other change (Q0–Q7). The frozen core semantics and the currently-stable
-> behavior remain 100% intact; every change lands additive and per target.
+> **Rule of this document:** this is the **vision/architecture companion**
+> of [`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`](../development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md).
+> Promoted from `future/` to `development/` on 17/09/2026 **by maintainer
+> decision** (see `DECISIONS.md` §D-UNIVERSAL), which **overrides the R12 gate**
+> ("SYSTEMS closes before any Tier 6+"). It is now **current work**: the
+> executable steps (Stages 1–8) and the invariants R1–R12 — each with status,
+> owner lane and proof — live in the implementation doc. This companion holds
+> the philosophy, the domain map, the architectural model, the stdlib/interop
+> strategy, the risks and the non-goals that justify those steps. The frozen
+> core semantics and the currently-stable behavior remain 100% intact; every
+> change lands additive and per target.
 
 References (unchanged): `docs/development/roadmap.md` (vision), `docs/philosophy.md`
 (intent), `docs/architecture/architecture.md` (multi-target ADR),
@@ -1142,170 +1145,12 @@ platform. Since it reuses the frontend, every new domain (infra, data, sci) gets
 
 ---
 
-# 10. Long-Term Roadmap
-
-No dates. Evolution by **capabilities and maturity**. Each stage: objective,
-required capabilities, dependencies, risks, impact (language / compiler /
-runtime / stdlib / tooling), and **what NOT to do**.
-
-> Positioning of the current state: Kof **has already passed FOUNDATION** (core
-> ready) and is **in the middle of SYSTEMS** (web, data, security, concurrency,
-> observability ready; the level of *systems/infrastructure/automation*
-> as a unified domain **does not yet** exist). The roadmap below starts
-> *here* — without rewriting anything.
-
-```text
-FOUNDATION (✅ surpassed)
-    ↓
-SYSTEMS (in progress — web/data/security/concurrency ready)
-    ↓
-AUTOMATION (next: unified layers)
-    ↓
-INFRASTRUCTURE (IaC + cloud)
-    ↓
-DATA (data engineering / science / ML)
-    ↓
-SECURITY (expansion: forensics, network, defensive)
-    ↓
-SCIENTIFIC COMPUTING (numeric / HPC / SIMD-GPU)
-    ↓
-BIOINFORMATICS (formats + genomic pipelines)
-    ↓
-UNIVERSAL PLATFORM (integrated platform)
-```
-
-### Stage 1 — SYSTEMS (consolidation of what is already "systems")
-- **Objective:** close the *systems* parity gaps that already exist (do not
-  open a new domain): web/HTTP on Native/JS, GC mark-sweep, event-loop,
-  tracing/OTel, typed query DSL, *basic* package manager.
-- **Capabilities:** HTTP002/WEB001/002, GC mark-sweep, CONC003 (real JS async),
-  `User.query { where ... }`, `kofdeps`/registry MVP, tracing.
-- **Dependencies:** nothing from the core (they are gaps + tooling).
-- **Risks:** spreading parity without closing it (doubles the "almost
-  works" surface).
-- **Impact:** language ~0; compiler: gaps + light codegen; runtime: GC +
-  event-loop (Native); stdlib: close existing namespaces; tooling:
-  package manager MVP.
-- **NOT to do:** do not open `infra`/`data`/`sci` *before* closing systems;
-  do not promise JS parity for heavy domains.
-
-### Stage 2 — AUTOMATION (unified layer)
-- **Objective:** Kof as a *unified* automation layer (replace
-  Bash+Python+YAML+jq+sed+awk **in a single typed language**).
-- **Capabilities:** `kof.workflow`/`kof.batch` (jobs, pipelines, retry,
-  checkpoints, dead-letter), `kof.shell` (idiomatic shell over
-  `kof.process`), `kof.ssh` (via FFI/interop), mature cron/scheduler,
-  CI/CD pipelines as **Kof code**.
-- **Dependencies:** stages 1 (concurrency, scheduler, mq ready).
-- **Risks:** becoming "shell in Kof" (leaking mechanism).
-- **Impact:** language 0; stdlib: new small namespaces; runtime:
-  workers/jobs (over spawn/channel); tooling: `kof workflow run`.
-- **NOT to do:** do not reimplement bash; jobs are **Kof code**, not YAML.
-
-### Stage 3 — INFRASTRUCTURE (IaC + cloud) — the **Kof Makealive** domain
-- **Objective:** **Kof Makealive** (§4.2): infrastructure as
-  **typed Kof code** with
-  plan/apply/state/reconciliation.
-- **Capabilities:** `kof.infra` (resource records + graph + diff),
-  `infra "prod" { ... }` (desugar over records — **compile-time codegen**),
-  reconciliation loop (spawn/await + channel), state in `kof.db`,
-  providers via **FFI/REST/CLI** (AWS/Azure/GCP — interop), secrets via
-  `kof.security`.
-- **Dependencies:** stages 1-2; **formalized FFI** (architectural
-  dependency); package capabilities.
-- **Risks:** copying Terraform/provider-plugins; promising parity with all
-  clouds.
-- **Impact:** language: *desugar* (codegen, not new semantics); compiler:
-  dependency graph + cycle detection (compile-time); runtime: reconciliation
-  loop; stdlib: `infra` + official packages `kof-infra-<provider>`;
-  tooling: `kof infra plan/apply/destroy`.
-- **NOT to do:** HCL inside Kof; a provider repository for *everything*;
-  coupling the core to a provider.
-
-### Stage 4 — DATA (data engineering / science / ML)
-- **Objective:** an **orchestrated** scientific layer (not reimplemented).
-- **Capabilities:** typed `dataframe` (lazy, columnar), **Arrow/Parquet via
-  FFI** (typed wrapper), statistics/probability (wrapper + FFI),
-  `kof.ml` (inference via FFI to ONNX/libtorch; orchestrated training),
-  light visualization (SVG/`kof.ui` + FFI), **experiment tracking** (light,
-  over `kof.db`/`kof.io`).
-- **Dependencies:** stages 1-3; FFI; Arrow as the exchange standard.
-- **Risks:** reimplementing Arrow/NumPy/ML frameworks (the #1 risk of the
-  god-language).
-- **Impact:** language 0 (records/functions/`List` suffice); stdlib: `data` +
-  packages `kof-ml`/`kf-dataframe-parquet`; runtime: FFI/Arrow; tooling:
-  pipeline profiling.
-- **NOT to do:** **do not build an ML/NumPy framework in Kof** — Kof provides the
-  *typed wrapper + pipeline*, the *engine* stays outside.
-
-### Stage 5 — SECURITY (expansion)
-- **Objective:** from "application security" (already strong) to **platform
-  security** (network, forensics, defensive) — and a **modern cryptographic
-  layer + post-quantum** (full detail in **§4.8.1**).
-- **Capabilities:** advanced crypto (RSA/ECC/X.509/TLS — B/FFI), **hybrid
-  PQC (ML-KEM-768 + ML-DSA-65 + HKDF + AES-256-GCM — D/FFI `liboqs`)**, `keys.*`
-  (generate/derive/rotate/store), `Secret` type + forced redaction,
-  `secure.channel` (KEM+KDF+AEAD+auth+replay — D), `kof.net` / packet
-  parsing (FFI to `libpcap`), forensics (FFI to parse libs + Kof pipelines),
-  security automation / threat-intel (`kof.http` + `spawn`/`channel` +
-  `kof.log`), defensive (monitoring/detection/audit over
-  `kof.observability` + `kof.log` + `kof.db`).
-- **Absolute rule (§4.8.1):** **never** homemade crypto — every new primitive
-  (incl. PQC) is FFI to an audited lib; identical API across targets; gap = diagnosis
-  (`SECN00x`/`SECPQ`), never a weak stub.
-- **Dependencies:** stages 1-3; FFI.
-- **Risks:** "Kali in Kof"; exposing offensive primitives without context.
-- **Impact:** language 0; stdlib: expand `security` + `net`/`forensics`
-  (packages); runtime: FFI to libs; tooling: audit (already exists).
-- **NOT to do:** reimplement audited crypto stacks; offensive work without
-  legitimate/controlled context; defend *first*.
-
-### Stage 6 — SCIENTIFIC COMPUTING (numeric / HPC)
-- **Objective:** Kof as a **typed scientific orchestration language** +
-  numeric zone via FFI.
-- **Capabilities:** linear algebra via **FFI to BLAS/LAPACK** (wrapper),
-  SIMD/vectorization (Native — research), GPU (Vulkan via FFI already exists;
-  CUDA/OpenCL via FFI), data-parallel (research), **formalized FFI**
-  (the backbone), **scoped resources** (GPU/files/connections),
-  distributed (FFI to MPI + Kof orchestration).
-- **Dependencies:** stages 1-4; formalized FFI; GC mark-sweep (stage 1).
-- **Risks:** promising native HPC; ownership in the core (rejected).
-- **Impact:** language: light *scoped resources*; compiler: FFI +
-  (research) SIMD codegen; runtime: GC + event-loop + FFI; stdlib: `sci`/
-  `math` (packages); tooling: HPC profiling.
-- **NOT to do:** reimplement BLAS/LAPACK/NumPy; ownership/borrowing in the core
-  (the non-GC zone is via FFI to C/Rust).
-
-### Stage 7 — BIOINFORMATICS
-- **Objective:** a typed platform for **scientific/genomic pipelines**.
-- **Capabilities:** `kof-bio` (official package): FASTA/FASTQ/VCF/BAM formats
-  (typed records), reading/writing; alignment/variants via **FFI/CLI**
-  (BLAST/htslib — do not reimplement); **genomic pipelines** (stage 2's
-  `workflow` model + checkpointing); HPC (stage 6); lab automation
-  (`kof.http` REST + `kof.process` via FFI).
-- **Dependencies:** stages 2, 4, 6.
-- **Risks:** "biology language"; reimplementing aligners.
-- **Impact:** language 0; stdlib: `kof-bio` package (official); runtime: FFI;
-  tooling: `kof workflow run` (pipelines).
-- **NOT to do:** turn Kof into an exclusive biology language;
-  reimplement aligners/variant callers.
-
-### Stage 8 — UNIVERSAL PLATFORM (integration)
-- **Objective:** an application **+** its infra **+** its deploy **+** its
-  data pipeline **+** its security **+** its research — **in the same
-  language**, with the same development experience.
-- **Capabilities:** total integration of stages 1-7; mature package manager;
-  LSP/debug/profiler by domain; multi-target deploy (same source →
-  JVM/Native/JS); documentation/corpus (`training/`) of the domains.
-- **Dependencies:** all the previous ones; package manager; FFI.
-- **Risks:** ecosystem fragmentation; maintenance (the greatest long-term
-  risk — see §11).
-- **Impact:** language **stays small** (the final proof that the
-  god-language was avoided); enormous and **modular** platform; unified tooling.
-- **NOT to do:** let the core grow to "support" the platform — the core
-  must **not change** (or change almost nothing) up to here.
-
----
+> **Moved to the implementation doc.** The stage-by-stage breakdown
+> (objective, capabilities, dependencies, risks, impact, what NOT to do)
+> now lives in [`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`](../development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md)
+> as executable items with status/owner/proof. The staged capability order
+> (FOUNDATION → SYSTEMS → AUTOMATION → INFRASTRUCTURE → DATA → SECURITY →
+> SCIENTIFIC COMPUTING → BIOINFORMATICS → UNIVERSAL PLATFORM) is preserved there.
 
 # 11. Risks
 
@@ -1500,144 +1345,9 @@ not by implementation in the core.
 
 ---
 
-# 15. Concrete Architectural Recommendations
-
-Keep the current architecture **prepared** for the universal vision **without
-interrupting** present development. Each item: what, why, cost, and
-what **not** to do. (No item below is an action — they are future architectural
-dependencies and guardrails.)
-
-> **Note 17/09 (D-UNIVERSAL — this line is superseded for the CURRENT queue):**
-> the promotion in `DECISIONS.md` §D-UNIVERSAL made R1–R12 the entry point of
-> current work. Each R now tracks its real state below; the original text is
-> kept as history (dated-record convention).
-
-## R1 — Lock the core/platform boundary (the first and most important) — ✅ DONE 17/09 (`5f1422c6`)
-
-> **State 17/09:** the §3.4 order is now an invariant rule AND mechanically
-> enforced: `scripts/check_stdlib_boundary.sh` + ledger `scripts/stdlib_boundary.txt`
-> (31 namespaces; unknown namespace or heavy domain fails the build; `--selftest`
-> proves the gate bites) wired in CI after `check_500.sh`, and cited in
-> `AGENTS.md`/`.pt_BR.md` platform invariant 1. Proof: scan rc=0 at tip,
-> CI run `5f1422c6` "Build + Tests" SUCCESS with the Gate R1 step.
-- **What:** adopt the §3.4 decision order as an **invariant rule**
-  (core → base stdlib → platform → official packages → interop).
-- **Why:** it is the anti-god-language mechanism; without it, every domain "wants"
-  to be base stdlib.
-- **Cost:** zero (it is process/decision, not code).
-- **Not to do:** do not allow a heavy domain (ml/bio/hpc) to enter the
-  base stdlib.
-
-## R2 — Generalize "capability/link by use" (already has a seed)
-- **What:** extend the SQLite/MySQL mechanism (`.so` linked only when the literal
-  DSN appears at compile-time) to **all** packages/domains.
-- **Why:** the final binary carries only what it uses → enormous platform,
-  small artifact; and "link only what is used" *is* the capability-based API.
-- **Cost:** low (existing pattern in the lowering).
-- **Not to do:** do not link all domains by default.
-
-## R3 — Formalize FFI as first-class (highest value/cost of the roadmap)
-- **What:** signature declaration of `.so`/external function at compile-time
-  (types, ABI, arrays/pointers), reducing today's "manual asm".
-- **Why:** FFI is the backbone of interop/science/HPC; today it is ad-hoc
-  (SQLite `.so`, FFM Vulkan, MySQL scramble).
-- **Cost:** **low in the core** (it is lowering + runtime, not semantics).
-- **Not to do:** do not turn FFI into "pointers in the core" — the boundary is
-  safe; the non-GC zone stays outside.
-- **First slice (opened by #431, 17/09 — raylib is the motivating case; tracked
-  on the issue):** the current surface is fixed-shape JVM helpers
-  (`JvmFfiRuntime`: `i`/`si`/`dd`) gated by `CompilerPipeline.isExternBound`.
-  Concrete increments, in order, each with `FfiE2ETest`-pattern proof and
-  additive (previously `FFI001`-rejected signatures, never a change to what
-  compiles today): (1) **arity** — `ii`/`iii`/`id`-style helpers + lowering
-  dispatch; (2) **`void` returns**; (3) **String return** (`allocateUtf8String`
-  copy — same JDK 21/22 branch the `si` helper uses); (4) `const char*` params
-  **mixed with numerics** (the `InitWindow(Int,Int,String):void` case);
-  (5) native side waits on §61 (raw `_start` without libc TLS init — proven
-  direct-link path recorded there). Structs stay R3-proper (signature-level
-  ABI design), not a slice of this increment.
-
-## R4 — Formalize compile-time codegen (already exists implicitly)
-- **What:** make explicit the layer that today generates `KofRuntime`, synthesizes the
-  test runner, and generates the `entity` DDL.
-- **Why:** it is what allows `infra "prod" { }` (desugar over records), gRPC
-  stubs, and pipeline codegen **without** open macros.
-- **Cost:** low-medium (consolidates an existing pattern).
-- **Not to do:** **reject** open macros (they break static analysis + LSP).
-
-## R5 — Introduce stability tiers + official packages (growth guardrail)
-- **What:** mark each namespace/package as *stable* or *experimental*;
-  layer 4 (official packages) is born experimental.
-- **Why:** it allows domains to evolve fast **without** compromising the core.
-- **Cost:** low (metadata + versioning).
-- **Not to do:** do not promote to *stable* without a complete DoD (E2E + golden per
-  target — current rule).
-
-## R6 — Keep "never silent" for new domains
-- **What:** every domain gap has a code (`INFRA00x`, `DATA00x`, `SCI00x`,
-  `BIO00x`) + an entry in the parity matrix.
-- **Why:** it prevents the opaque "does-everything" — what is missing is always visible.
-- **Cost:** zero (existing pattern: `SECN00x`/`DB001`/`WEB002`...).
-- **Not to do:** never a silent stub; never partial parity without diagnosis.
-- **Machine gate (17/09):** `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` derives the codes the guard proves the compiler EMITS (from its own `assertGap` calls) and fails if any lacks a row in `docs/backend-parity.md` — the R1-ledger pattern applied to R6, so the §275 `WEB005` drift class (a code the docs promised but nothing emitted, or the inverse) cannot recur silently. The first ledger pass also surfaced **Android** as an undocumented gated target (§278): `--target android` reuses `JvmBackend` yet emits `DB001`/`SECN001`/`SECN002`/`SECN003`/`SECN004`/`GPU001` (measured 17/09), so the matrix now declares those codes and the guard pins them (`androidRefusesDbAndCryptoWithTheDocumentedCodes`).
-
-## R7 — Honest scope per target (JVM-first interop / Native systems / JS web)
-- **What:** explicitly adopt: heavy capabilities arrive **JVM-first**
-  (interop), **Native** for systems/deploy, **JS** only web/edge.
-- **Why:** avoids promising full parity (the biggest maintenance risk).
-- **Cost:** zero (strategy decision).
-- **Do not:** do not accelerate JS for ML/HPC/forensics.
-
-## R8 — Keep the tooling on the SAME frontend
-- **What:** all new tooling (per-domain LSP, `kof infra`, `kof workflow`,
-  pipeline debugger, package manager) **consumes the compiler frontend**.
-- **Why:** diagnostics/LSP/test for each domain come for free; no parallel
-  parser.
-- **Cost:** low (current rule).
-- **Do not:** never build a parallel parser/tooling.
-
-## R9 — Interop-first as the domain default
-- **What:** for each domain, the **first** question is "does it exist outside and is it
-  better?" → FFI/interop. Only if it does not exist, build it.
-- **Why:** it is the rule that prevents reimplementing the world (§11 of the statement).
-- **Cost:** zero (principle).
-- **Do not:** do not reimplement Arrow/BLAS/CUDA/ML frameworks/aligners.
-
-## R10 — Correct and deterministic by default (science)
-- **What:** for scientific/ML capabilities, numerical correctness and
-  determinism are an **acceptance requirement** (property-based testing + golden
-  diff).
-- **Why:** a silent numerical bug is unacceptable.
-- **Cost:** low (tests, not code).
-- **Do not:** do not deliver numerical "best effort" as *stable*.
-
-## R11 — Security: defense first
-- **What:** security domains enter with secure defaults, constant time,
-  versioned formats (current `kof.security` standard); offensive only
-  in a legitimate/controlled context.
-- **Why:** security is critical infrastructure; a design error has high impact.
-- **Cost:** zero (existing standard).
-- **Do not:** do not expose offensive primitives without context; no "Kali in
-  Kof".
-
-## R12 — Do not interrupt the present (meta-rule) — **OVERRIDDEN 17/09/2026**
-- **What (original):** no item of this plan is an **action** on the current
-  state. The **C/D** items above are **future architectural dependencies**, to be
-  resumed by the current roadmap (`roadmap.md` §23 — single consolidated plan)
-  **after** the current consolidation (P0-P5) — never as a parallel front now.
-- **Why:** the statement is explicit: preserve the work in progress.
-- **Cost:** zero.
-- **Do not:** do not open `infra`/`data`/`sci` before the SYSTEMS stage
-  (parity gap, GC, package manager) is closed.
-- **⚠️ Overridden (maintainer decision 17/09/2026, `DECISIONS.md`
-  §D-UNIVERSAL):** this plan was **promoted to current work** with the R12 gate
-  **overridden** — the front opens with SYSTEMS still in progress. The
-  entry point is Stage 1 (SYSTEMS consolidation) + R1–R12; Tier 6+ keeps its
-  order. The **core semantics stay frozen** and every change is additive —
-  "overridden" relaxes the scheduling gate, never the quality/freeze rules.
-  For every **other** `future/` plan, R12 remains the default.
-
----
+> **Moved to the implementation doc.** R1–R12 (each with status, owner lane
+> and proof) are tracked in [`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`](../development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md)
+> §Invariants R1–R12.
 
 # 16. Final mental model
 

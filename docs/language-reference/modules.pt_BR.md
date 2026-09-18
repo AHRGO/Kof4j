@@ -133,7 +133,7 @@ define as assinaturas. **Experimental** como superfície (muda entre versões).
   ausente falha em **runtime** com exceção `kof_ffi_*` nomeando `lib::symbol`
   (stack trace, não mensagem cirúrgica). O alargamento (multi-arg, void,
   retorno String, `char*`) é a primeira fatia R3 em
-  `docs/development/PLAN-UNIVERSAL-PLATFORM.md` (use-case #431); `extern "c"`
+  `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431); `extern "c"`
   no Native depende do §61.
 
 - **Native/JS**: não há interop com tipos do host da mesma forma. **Unspecified.**

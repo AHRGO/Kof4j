@@ -1142,7 +1142,7 @@ errado devem ser ignoradas e fechadas. adiciona isso como regra absoluta."
 
 ---
 
-## D-UNIVERSAL — promoção do `PLAN-UNIVERSAL-PLATFORM` a trabalho corrente (R12 sobreposto)
+## D-UNIVERSAL — promoção do `IMPLEMENTATION-UNIVERSAL-PLATFORM` a trabalho corrente (R12 sobreposto)
 
 **Data:** 2026-09-17
 
@@ -1150,12 +1150,13 @@ errado devem ser ignoradas e fechadas. adiciona isso como regra absoluta."
 
 **Origem:** diretriz da mantenedora no chat, 17/09/2026: "se acabaram os docs
 preciso que voce assuma a frente
-docs/development/future/PLAN-UNIVERSAL-PLATFORM.pt_BR.md" → respondido
-"Promover p/ development/ e implementar".
+docs/development/future/PLAN-UNIVERSAL-PLATFORM.pt_BR.md" (nome original;
+renomeado para `IMPLEMENTATION-UNIVERSAL-PLATFORM` na mesma promoção) →
+respondido "Promover p/ development/ e implementar".
 
 ### Contrato
 
-1. `PLAN-UNIVERSAL-PLATFORM.md` + `.pt_BR.md` **saem de `future/`** e passam a
+1. `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` + `.pt_BR.md` **saem de `future/`** e passam a
    ser trabalho corrente em `docs/development/`, estado **EM
    DESENVOLVIMENTO**.
 2. O portão de promoção de `docs/development/README.md` §4.3 ("decisão +
@@ -1192,7 +1193,11 @@ docs/development/future/PLAN-UNIVERSAL-PLATFORM.pt_BR.md" → respondido
 ### Implementação
 
 - Arquivos movidos: `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` →
-  `docs/development/PLAN-UNIVERSAL-PLATFORM.md` (e o par `.pt_BR.md`).
+  `docs/development/PLAN-UNIVERSAL-PLATFORM.md` (e o par `.pt_BR.md`; promoção de
+  17/09), depois **renomeados** para
+  `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` ao dividir em rastreador executável +
+  companion de visão
+  `docs/architecture/UNIVERSAL-PLATFORM-VISION.md`.
 - Fila: `roadmap.md` §23 TIER 6–12 agora aponta para o novo caminho e registra
   a sobreposição do R12; a primeira unidade executável sai do Estágio 1 /
   R1–R12.

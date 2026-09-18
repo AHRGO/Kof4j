@@ -1186,7 +1186,7 @@ ignoradas e fechadas. adiciona isso como regra absoluta."
 
 ---
 
-## D-UNIVERSAL — promotion of `PLAN-UNIVERSAL-PLATFORM` to current work (R12 overridden)
+## D-UNIVERSAL — promotion of `IMPLEMENTATION-UNIVERSAL-PLATFORM` to current work (R12 overridden)
 
 **Date:** 2026-09-17
 
@@ -1194,12 +1194,13 @@ ignoradas e fechadas. adiciona isso como regra absoluta."
 
 **Origin:** maintainer directive in chat, 17/09/2026: "se acabaram os docs
 preciso que voce assuma a frente
-docs/development/future/PLAN-UNIVERSAL-PLATFORM.pt_BR.md" → answered "Promover
-p/ development/ e implementar".
+docs/development/future/PLAN-UNIVERSAL-PLATFORM.pt_BR.md" (original name;
+renamed to `IMPLEMENTATION-UNIVERSAL-PLATFORM` in the same promotion) → answered
+"Promover p/ development/ e implementar".
 
 ### Contract
 
-1. `PLAN-UNIVERSAL-PLATFORM.md` + `.pt_BR.md` **leave `future/`** and become
+1. `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` + `.pt_BR.md` **leave `future/`** and become
    current work in `docs/development/`, status **UNDER DEVELOPMENT**.
 2. The promotion gate of `docs/development/README.md` §4.3 ("decision +
    SYSTEMS closed (R12)") is **overridden by this decision**: the maintainer
@@ -1234,7 +1235,11 @@ p/ development/ e implementar".
 ### Implementation
 
 - Files moved: `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` →
-  `docs/development/PLAN-UNIVERSAL-PLATFORM.md` (and the `.pt_BR.md` pair).
+  `docs/development/PLAN-UNIVERSAL-PLATFORM.md` (and the `.pt_BR.md` pair;
+  promotion of 17/09), then **renamed** to
+  `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` when split into the executable
+  tracker + the vision companion
+  `docs/architecture/UNIVERSAL-PLATFORM-VISION.md`.
 - Queue: `roadmap.md` §23 TIER 6–12 now points at the new path and records the
   R12 override; the first executable unit is chosen from Stage 1 / R1–R12.
 - Tracking: `DOING.md` + `DOING.pt_BR.md`.

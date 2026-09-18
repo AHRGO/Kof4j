@@ -28,8 +28,8 @@ documento de arquitetura/visão **sem código implementado** (ou com código que
 | `DECOMPILER.md` + `TRANSLATOR.md` + `LEGACY_MIGRATION.md` | plataforma de migração legado (decompiler/translator/IR/diff-testing) | **DESPRIORIZADO pela mantenedora 15/09 — de volta desde `docs/development/`.** O código fica em kof-cli (`DecompileTest` 67/67, `TranslateTest` 61/61); a FILA está pausada: promoção exige decisão explícita dela |
 | ~~`planning-stdlib-array-returns.md`~~ → `docs/stdlib/DD-STDLIB-01-array-returns.md` | DD-STDLIB-01 | **FECHADO 13/09** — decisão 6a + implementação (`randomBytesHex`->String; choice=idiom), movido p/ docs/ |
 
-> **`PLAN-UNIVERSAL-PLATFORM.md` saiu de `future/` em 17/09/2026** — promovido
-> para `docs/development/PLAN-UNIVERSAL-PLATFORM.md` como **trabalho corrente**
+> **`IMPLEMENTATION-UNIVERSAL-PLATFORM.md` saiu de `future/` em 17/09/2026** — promovido
+> para `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` como **trabalho corrente**
 > por decisão da mantenedora, que **sobrepõe o portão R12** (ver `DECISIONS.md`
 > §D-UNIVERSAL). A visão/design não muda; o ponto de entrada é o Estágio 1
 > (consolidação SYSTEMS) e as recomendações executáveis R1–R12.

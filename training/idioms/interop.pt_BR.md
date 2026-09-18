@@ -31,7 +31,7 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" strcmp2(String a, String b): Int
 
 | ❌ RUIM | ✅ BOM | Por quê |
 |---|---|---|
-| `extern ... drawText(String t, Int x, Int y): void` | hoje: uma bridge C 1-arg compilada por você (`int kof_draw(char*...)` atrás de um símbolo preso), ou interop JVM para binding existente | multi-arg = `FFI001`; o alargamento é a fatia R3 (`PLAN-UNIVERSAL-PLATFORM.md`, issue #431) — NÃO emita bytecode na mão para furar o compilador |
+| `extern ... drawText(String t, Int x, Int y): void` | hoje: uma bridge C 1-arg compilada por você (`int kof_draw(char*...)` atrás de um símbolo preso), ou interop JVM para binding existente | multi-arg = `FFI001`; o alargamento é a fatia R3 (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, issue #431) — NÃO emita bytecode na mão para furar o compilador |
 | assumir que o caminho da lib é checado em compile | trate lib/símbolo ausente como falha `kof_ffi_*` de **runtime** | o caminho resolve em runtime (`SymbolLookup`), não em compile |
 | reimplementar sin/cos/strcmp em Kof | prenda a lib do sistema (formas 1-arg) | complexidade é da plataforma (regra de ferro 2) |
 

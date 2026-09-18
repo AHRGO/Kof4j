@@ -102,7 +102,7 @@ Target-specific · Unspecified · Planned**.
 | Import ambíguo (não chuta) | Stable | `CompilerTypes:102` |
 | PKG002 (1 main) | Stable | probe |
 | Interop JVM (tipos Java) | **Target-specific** | `AndroidInteropE2ETest` |
-| FFI C (`extern "<lib>"`) | **Parcial** — whitelist JVM 1-arg: `Int→Int`, `String→Int`, `Double→Double`; multi-arg/retorno `String` = `FFI001`; JS = `FFI002`; Native = `FFI001` (R6, nunca silent) | medido 17/09 (`modules.md` §6); alargamento = fatia R3 (`PLAN-UNIVERSAL-PLATFORM.md`, #431) |
+| FFI C (`extern "<lib>"`) | **Parcial** — whitelist JVM 1-arg: `Int→Int`, `String→Int`, `Double→Double`; multi-arg/retorno `String` = `FFI001`; JS = `FFI002`; Native = `FFI001` (R6, nunca silent) | medido 17/09 (`modules.md` §6); alargamento = fatia R3 (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, #431) |
 
 ### Concorrência
 | Feature | Status | Teste-evidência |

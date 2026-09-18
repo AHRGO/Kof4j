@@ -190,7 +190,7 @@ The grammar accepts any signature, but the JVM **whitelist** binds 1-arg only:
 `f(Int): Int`, `f(String): Int`, `f(Double): Double`. Anything else → `FFI001`
 at compile time; the JS target → `FFI002`; Native → `FFI001` until §61.
 The lib path is resolved at **runtime** (missing symbol = `kof_ffi_*` exception).
-Widening is the R3 slice (`docs/development/PLAN-UNIVERSAL-PLATFORM.md`, #431).
+Widening is the R3 slice (`docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, #431).
 
 ## Tests and lifecycle
 

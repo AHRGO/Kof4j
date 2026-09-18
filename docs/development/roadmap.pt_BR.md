@@ -847,7 +847,7 @@ Visão de longo prazo — Kof como plataforma universal (uma linguagem para
 aplicações **e** sistemas, infraestrutura, automação, dados, segurança e
 ciência) **sem** destruir a simplicidade da linguagem.
 
-- Documento central: `docs/development/PLAN-UNIVERSAL-PLATFORM.md`
+- Documento central: `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`
   (arquitetura — **EM DESENVOLVIMENTO** desde 17/09/2026; promovido de
   `future/` por decisão da mantenedora, `DECISIONS.md` §D-UNIVERSAL)
 - Estágios por capacidade/maturidade: `FOUNDATION ✅` → `SYSTEMS` (em
@@ -973,7 +973,7 @@ histórico técnico detalhado vive em `future/LEGACY_MIGRATION.md` +
 `future/DECOMPILER.md` (§7) — **não duplicar aqui**; esta tabela só dá a
 ordem. **DESPRIORIZADO 15/09 (mantenedora): TIER 3–5 não é trabalho atual.**
 
-### TIER 6–12 — Plataforma universal (arquitetura **EM DESENVOLVIMENTO** 17/09 — R12 sobreposto; regidos por `docs/development/PLAN-UNIVERSAL-PLATFORM.md`)
+### TIER 6–12 — Plataforma universal (arquitetura **EM DESENVOLVIMENTO** 17/09 — R12 sobreposto; regidos por `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`)
 
 | Tier | Estágio | Escopo (uma linha) |
 |------|---------|--------------------|

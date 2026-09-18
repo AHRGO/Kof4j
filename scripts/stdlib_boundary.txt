@@ -1,6 +1,6 @@
 # R1 boundary ledger — one line per namespace registered in the compiler
 # surfaces (dev/kof/compiler/*.java + runtime). Layer values follow
-# docs/development/PLAN-UNIVERSAL-PLATFORM.md §3.4 (core -> base stdlib ->
+# docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md §3.4 (core -> base stdlib ->
 # platform -> official packages -> interop). Gate: scripts/check_stdlib_boundary.sh
 # HARD-DENY (heavy domain, never stdlib/platform): ml bio hpc data sci cloud infra game
 # `excluded` = the string "kof.<x>" is not a namespace (tooling keys, parser

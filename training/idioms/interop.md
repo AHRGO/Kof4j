@@ -31,7 +31,7 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" strcmp2(String a, String b): Int
 
 | ❌ BAD | ✅ GOOD | Why |
 |---|---|---|
-| `extern ... drawText(String t, Int x, Int y): void` | today: a 1-arg C bridge you compile (`int kof_draw(char*...)` behind one bound symbol), or JVM interop to an existing binding | multi-arg = `FFI001`; the widening is the R3 slice (`PLAN-UNIVERSAL-PLATFORM.md`, issue #431) — do NOT hand-emit bytecode to bypass the compiler |
+| `extern ... drawText(String t, Int x, Int y): void` | today: a 1-arg C bridge you compile (`int kof_draw(char*...)` behind one bound symbol), or JVM interop to an existing binding | multi-arg = `FFI001`; the widening is the R3 slice (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, issue #431) — do NOT hand-emit bytecode to bypass the compiler |
 | assuming the lib path is checked at compile time | treat missing lib/symbol as a **runtime** `kof_ffi_*` failure | the path resolves at runtime (`SymbolLookup`), not compile time |
 | reimplementing sin/cos/strcmp in Kof | bind the system lib (1-arg shapes) | complexity belongs to the platform (iron rule 2) |
 

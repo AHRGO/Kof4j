@@ -132,7 +132,7 @@ Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
   A missing lib/symbol fails at **runtime** with a `kof_ffi_*` exception naming
   `lib::symbol` (stack trace, not a surgical message). Widening (multi-arg,
   void, String return, `char*`) is the R3 first slice in
-  `docs/development/PLAN-UNIVERSAL-PLATFORM.md` (use-case #431); `extern "c"`
+  `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431); `extern "c"`
   on Native depends on §61.
 
 - **Native/JS**: there is no interop with host types the same way. **Unspecified.**

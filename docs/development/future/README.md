@@ -28,8 +28,8 @@ is explicitly non-deliverable and outside the current scope).
 | `DECOMPILER.md` + `TRANSLATOR.md` + `LEGACY_MIGRATION.md` | legacy migration platform (decompiler/translator/IR/diff-testing) | **DEPRIORITIZED by the maintainer 15/09 — back from `docs/development/`.** Code stays in kof-cli (`DecompileTest` 67/67, `TranslateTest` 61/61); the QUEUE is paused: promotion needs her explicit decision |
 | ~~`planning-stdlib-array-returns.md`~~ → `docs/stdlib/DD-STDLIB-01-array-returns.md` | DD-STDLIB-01 | **CLOSED 13/09** — decision 6a + implementation (`randomBytesHex`->String; choice=idiom), moved to docs/ |
 
-> **`PLAN-UNIVERSAL-PLATFORM.md` left `future/` on 17/09/2026** — promoted to
-> `docs/development/PLAN-UNIVERSAL-PLATFORM.md` as **current work** by maintainer
+> **`IMPLEMENTATION-UNIVERSAL-PLATFORM.md` left `future/` on 17/09/2026** — promoted to
+> `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` as **current work** by maintainer
 > decision, which **overrides the R12 gate** (see `DECISIONS.md` §D-UNIVERSAL).
 > The vision/design is unchanged; the entry point is Stage 1 (SYSTEMS
 > consolidation) and the executable recommendations R1–R12.

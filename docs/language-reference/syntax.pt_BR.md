@@ -191,7 +191,7 @@ A gramática aceita qualquer assinatura, mas a **whitelist** da JVM prende
 `FFI001` em tempo de compilação; o target JS → `FFI002`; Native → `FFI001`
 até o §61. O caminho da lib é resolvido em **runtime** (símbolo ausente =
 exceção `kof_ffi_*`). O alargamento é a fatia R3
-(`docs/development/PLAN-UNIVERSAL-PLATFORM.md`, #431).
+(`docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, #431).
 
 ## Testes e lifecycle
 

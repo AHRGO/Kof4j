@@ -846,7 +846,7 @@ Long-term vision — Kof as a universal platform (one language for
 applications **and** systems, infrastructure, automation, data, security and
 science) **without** destroying the language's simplicity.
 
-- Central document: `docs/development/PLAN-UNIVERSAL-PLATFORM.md`
+- Central document: `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`
   (architecture — **UNDER DEVELOPMENT** since 17/09/2026; promoted from
   `future/` by maintainer decision, `DECISIONS.md` §D-UNIVERSAL)
 - Stages by capability/maturity: `FOUNDATION ✅` → `SYSTEMS` (in
@@ -971,7 +971,7 @@ detailed technical history lives in `future/LEGACY_MIGRATION.md` +
 `future/DECOMPILER.md` (§7) — **do not duplicate here**; this table only gives
 the order. **DEPRIORITIZED 15/09 (maintainer): TIER 3–5 is not current work.**
 
-### TIER 6–12 — Universal platform (architecture **UNDER DEVELOPMENT** 17/09 — R12 overridden; governed by `docs/development/PLAN-UNIVERSAL-PLATFORM.md`)
+### TIER 6–12 — Universal platform (architecture **UNDER DEVELOPMENT** 17/09 — R12 overridden; governed by `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`)
 
 | Tier | Stage | Scope (one line) |
 |------|---------|--------------------|

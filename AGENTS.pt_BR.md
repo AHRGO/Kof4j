@@ -770,7 +770,7 @@ pronta.
 
 ---
 
-## Invariantes da plataforma (plano universal — `docs/development/PLAN-UNIVERSAL-PLATFORM.md`)
+## Invariantes da plataforma (plano universal — `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`)
 
 Estas regras **sempre** se aplicam, mesmo quando não há código de domínio novo
 em jogo. São o mecanismo anti-"god language":
@@ -1176,7 +1176,7 @@ use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
 | `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Gaps de spec (SG-00x — fila do maintainer completa, virou referência) + bugs abertos |
 | `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
 | `docs/development/DECISIONS.md` | **Decisões da mantenedora** (time/segurança/app-model/Spring — pasta `decision-pending/` extinta 13/09) |
-| `docs/development/roadmap.md` §23 | **Plano de implementação consolidado** (Tiers 0–12) — único plano ordenado; migração A–H ✅, universal **EM DESENVOLVIMENTO** 17/09 (`PLAN-UNIVERSAL-PLATFORM.md`, R12 sobreposto — §D-UNIVERSAL) |
+| `docs/development/roadmap.md` §23 | **Plano de implementação consolidado** (Tiers 0–12) — único plano ordenado; migração A–H ✅, universal **EM DESENVOLVIMENTO** 17/09 (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, R12 sobreposto — §D-UNIVERSAL) |
 
 ---
 
