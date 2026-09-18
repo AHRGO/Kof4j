@@ -185,17 +185,19 @@ public final class SymbolTableBuilder {
             String shown;
             SourcePosition pos;
             if (member instanceof FieldDeclarationNode fd) {
-                // #294: o NAMESPACE DE CAMPO da JVMS §4.5 e (nome, descritor)
-                // — static e instance NAO colidem la, mas dois campos com
-                // mesmo nome+descritor SIM: `static Int n` + `Int n` saia do
-                // backend com dois campos "n":"I" e a classe morria no load
-                // (ClassFormatError silencioso, R6). Mesma escola do #264
-                // (SEM061 p/ metodos): chave = descritor APAGADO do tipo.
+                // #294 (forma ESTRETA, 18/09): um campo por NOME por classe,
+                // qualquer tipo — regra do javac. O guard original usava
+                // (nome, descritor) porque a JVMS 4.5 so proibe entradas
+                // duplicadas, mas as 4 faces do par "legal-JVM" `static Int a`
+                // + `Long a` foram medidas e NENHUM target jamais o executou
+                // (VerifyError / ICE JS / toString da classe no script /
+                // ponteiro-lixo silencioso no native, 289) — logo a chave por
+                // nome e aditiva sobre o que funciona e fecha a ferida na raiz.
                 key = "F:" + fd.name();
                 shown = "field '" + fd.name() + "' of type '" + fd.type() + "'";
                 pos = fd.position();
                 SourcePosition prevF = seen.putIfAbsent(key, pos);
-                if (prevF != null && dc != null) {
+                if (prevF != null) {
                     dc.error(pos != null ? pos.file() : "", pos != null ? pos.line() : 0,
                             pos != null ? pos.column() : 0, 0,
                             "'" + shown + "' is already defined in class '" + className
