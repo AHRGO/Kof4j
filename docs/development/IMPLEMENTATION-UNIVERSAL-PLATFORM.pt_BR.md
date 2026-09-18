@@ -296,7 +296,7 @@ em aberto; ✅ = landado.
 | 3.1 | JVM: ABI escalar geral — aridade arbitrária, {Int,Long,Float,Double,Boolean,String} entrada/saída, String lê de volta char* | ✅ 18/09 (.18) | dev .18 | — |
 | 3.2 | JVM: retorno void (kof_ffi_void, descritor V; resultado descartado como statement) | ✅ 18/09 (.18) | .18 | — |
 | 3.3 | JVM: handles opacos / out-buffers (void*, T*, Array<Byte> como buffer) — ponteiro opaco / buffer de bytes, NÃO o ABI struct completo do D6 | ⛔ decisão de surface | mantenedora | design |
-| 3.4 | JVM: callbacks / upcalls (Linker.upcallStub) — função Kof entregue a C como ponteiro de função | 🔵 design | .18 + mantenedora | semântica de closure + GC rooting (R12/1.2) |
+| 3.4 | JVM: callbacks / upcalls (Linker.upcallStub) — função Kof entregue a C como ponteiro de função | 🟡 design medido · **C1 ✅** | .18 | semântica de closure + GC rooting (R12/1.2); só síncrono/não-escapante, ABI de callback escalar; ver §R3-3.4 |
 | 3.5 | JVM: variadics (printf, execlp) — como representar `...` numa assinatura Kof | ⛔ decisão de surface | mantenedora | design |
 | 3.6 | JS: paridade via bridge no host (o runner GraalJS/node É uma JVM com java.lang.foreign no host) — browser segue degrade honesto em runtime (R7: sem host `kof_platform.ffi`) | ✅ 18/09 (.18) | .18 | ABI 3.1/3.2 |
 | 3.6.F1 | Bridge FFI no host `KofJsFfiBridge` + `KofJsFfiBridgeTest` (8/8) — mesmo downcall do `kof_ffi`, provado no host; gate do compilador FECHADO (zero risco ao backend) | ✅ 18/09 (.18) | .18 | — |
@@ -315,8 +315,57 @@ JVM↔JS, +7). No target JS a **ABI escalar agora binda no host runner GraalJS/n
 (FFM no host, sem bytecode no guest); o browser não tem host `kof_platform.ffi` e
 lança erro honesto em runtime (R7, mesmo degrade do `kof.io`); assinaturas não-
 escalares (array/struct/pointer) seguem `FFI002` em compilação (3.3/3.5/3.8 ⛔).
-Próximo trabalho da R3 é o §61 nativo (3.7, lane nat) ou decisões da mantenedora
+**O design de callback/upcall (3.4) está medido, não presumido (probe verde 18/09);
+C1 host-pin landado** — design completo em §R3-3.4 abaixo. De resto, o próximo
+trabalho da R3 é o §61 nativo (3.7, lane nat) ou decisões da mantenedora
 (3.3/3.5/3.8).
+
+### §R3-3.4 — callbacks / upcalls (função Kof entregue a C)
+
+**Objetivo.** `extern` aceita um valor de função Kof como parâmetro *callback*: C
+recebe um ponteiro de função real que, ao ser invocado, roda o closure Kof e devolve
+seu resultado — o espelho de **upcall** FFM do downcall da 3.1.
+
+**Superfície.** Um parâmetro `extern` de tipo-função, ex.
+`extern "lib.so" each(Int n, (Int, Int) -> Int cb): Int`; o closure é baixado no
+`Object[]` de args como o valor de função Kof. **Parâmetros e retorno do callback
+ficam restritos ao conjunto escalar da 3.1** (a ABI do próprio callback é a mesma
+ABI escalar).
+
+**Codificação da assinatura.** `FfiSignature` ganha um token de callback `C` carregando
+um descritor *aninhado* `C(<retchar><paramchars>)`; layout nativo = `ADDRESS` (ponteiro
+de função). O `kof_ffi` parseia com cursor (um `C` consome seu descritor aninhado).
+
+**Runtime (`kof_ffi` gerado).** Num arg `C`, o objeto de função Kof recebido é
+adaptado ao MethodHandle de carrier unboxed e stubado:
+`Linker.upcallStub(findVirtual(closure,"invoke",Object...->Object).bindTo(closure)
+.asType(tipoCarrierUnboxed), innerFnDesc, arena)` → um `MemorySegment` usado como arg
+`ADDRESS` no spreader. O único `.asType(...)` insere automaticamente o boxing
+(carrier→Object) e o unboxing (Object→carrier) — **medido**: um closure estilo Kof
+`Object invoke(Object,Object)->Object` bridged desta forma devolveu `42` através de um
+upcall C real. Rooting: o stub é alocado no `Arena.ofConfined()` da chamada (≈ a arena
+confined que o `kof_ffi` já usa) e fica vivo exatamente enquanto o C o segura.
+
+**Restrição honesta (escopo da fatia, R6/R7).** **Somente callbacks síncronos, não-
+escapantes** — válidos enquanto o C chama de volta antes de retornar (`each`,
+`compare`, `foreach`). Callbacks *escapantes* (o C guarda o ponteiro após o retorno:
+`atexit`, `signal`, async) exigem política explícita de vida/raiz GC (R12) e são uma
+fatia à parte — continuam `FFI002` em compilação, nunca um stub pendurado silencioso.
+Callback-como-*retorno*, callbacks variádicos e parâmetros pointer/struct dentro de um
+callback são follow-ons (D6).
+
+**Postura por target.** **JVM**: binda (upcall FFM no host, igual ao downcall).
+**JS**: paridade *é* alcançável — o runner GraalJS/node é uma JVM, então o
+`KofJsFfiBridge` ganha o mesmo caminho de upcall; o browser não tem host → degrade
+honesto em runtime (R7). **Native**: §61 (3.7).
+
+**Fatias (espelham a disciplina F1→F3 da 3.6).** **C1** = pin do mecanismo no nível do
+host (`JvmFfiCallbackTest`: upcallStub + ponte de closure `.asType` + rooting por
+`Arena` + spreader `ADDRESS`, contra um `.so` temp compilado por gcc), gate do
+compilador **fechado**, zero risco ao backend. **C2** = roteamento `FfiSignature` +
+`JvmFfiRuntime.kof_ffi` + `isExternBound` → abre o gate de callback da JVM. **C3** =
+E2E de callback + paridade JS (upcall no `KofJsFfiBridge`) + degrade do browser.
+Status: **C1 landado 18/09**, C2/C3 abertos.
 
 ---
 
