@@ -244,6 +244,32 @@ class NullablePrimitiveContractE2ETest {
     // dispara no Native (fase 2); JVM/Script/JS reusam o boxing in-branch já
     // testado (ExpressionLowerer#IfExpr, boxesOwnBranches).
 
+    // I6 confirmado também na posição de CONDIÇÃO direta de `if` (não só
+    // como valor em `println`) — o shortcut `emitComparisonShortcut`/
+    // `KofConditionalJump` já é excluído p/ Nullable(primitivo) genuíno
+    // desde o Commit C (`CompilerComparisons.isComparisonShortcut`), que
+    // força o caminho de VALOR (`.equals()` do I6) mesmo em posição de
+    // condição — não era um gap residual, só não tinha teste dedicado.
+    @Test
+    void ifStatementConditionUsesEqualsNotIdentityShortcut(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                main() {
+                    var m = new Map<String, Int>()
+                    m.put("zero", 0)
+                    if (m.get("missing") == null) {
+                        println("miss-is-null")
+                    } else {
+                        println("miss-not-null")
+                    }
+                    if (m.get("zero") == null) {
+                        println("zero-is-null")
+                    } else {
+                        println("zero-not-null")
+                    }
+                }
+                """, "miss-is-null\nzero-not-null");
+    }
+
     @Test
     void ifExprNullBranchPreservesRealNull(@TempDir Path tempDir) throws IOException {
         runAll3(tempDir, """
