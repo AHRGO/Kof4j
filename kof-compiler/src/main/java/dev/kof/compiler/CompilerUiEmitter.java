@@ -54,7 +54,7 @@ public final class CompilerUiEmitter {
         ops.add(new KofNewObject(adapterType, captureTypes));
         ops.add(new KofDup());
         for (IRLocalVariable cap : captures) {
-            ops.add(new KofLoadLocal(cap.type(), cap.index()));
+            CompilerCaptures.pushCapture(driver, ops, cap);
         }
         ops.add(new KofCall(adapterType, "<init>", captureTypes,
                 Type.PrimitiveType.VOID, KofCallKind.CONSTRUCTOR));

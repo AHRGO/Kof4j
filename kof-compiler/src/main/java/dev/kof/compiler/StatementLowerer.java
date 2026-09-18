@@ -439,7 +439,7 @@ public final class StatementLowerer {
                     ops.add(new KofNewObject(taskTypeN, capTypesN));
                     ops.add(new KofDup());
                     for (IRLocalVariable cap : capN) {
-                        ops.add(new KofLoadLocal(cap.type(), cap.index()));
+                        CompilerCaptures.pushCapture(driver, ops, cap);
                     }
                     ops.add(new KofCall(taskTypeN, "<init>", capTypesN,
                             Type.PrimitiveType.VOID, KofCallKind.CONSTRUCTOR));
@@ -467,7 +467,7 @@ public final class StatementLowerer {
                 ops.add(new KofNewObject(taskType, captureTypes));
                 ops.add(new KofDup());
                 for (IRLocalVariable cap : captures) {
-                    ops.add(new KofLoadLocal(cap.type(), cap.index()));
+                    CompilerCaptures.pushCapture(driver, ops, cap);
                 }
                 ops.add(new KofCall(taskType, "<init>", captureTypes,
                         Type.PrimitiveType.VOID, KofCallKind.CONSTRUCTOR));
