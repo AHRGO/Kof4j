@@ -153,7 +153,9 @@ extern-declaration = "extern" , [ string-literal ] , identifier ,
                      [ type-parameters ] , "(" , [ parameter-list ] , ")" ,
                      [ ":" , type-ref ] , [ ";" ] ;                  (* `Parser.parseExternDeclaration` *)
 (* sem corpo: o binding é por target no runtime (JVM liga qualquer assinatura
-   escalar desde R3 18/09; FFI001 = não-escalar/native / FFI002 JS). A
+   escalar desde R3 18/09; o runner host JS tambem liga escalares (3.6.F2/F3,
+   18/09). FFI001 = não-escalar JVM/native; FFI002 = não-escalar JS; browser =
+   erro de runtime R7). A
    gramática ACEITA qualquer aridade; CompilerPipeline.isExternBound rejeita
    não-escalares em tempo de compilação. *)
 `

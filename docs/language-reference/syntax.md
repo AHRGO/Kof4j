@@ -191,8 +191,10 @@ scalars in any position, `void` and `String` returns. Measured on tip:
 `fmod(Double,Double):Double`→`1.5`; `ldexp(Double,Int):Double`→`12.0`;
 `strncmp(String,String,Int):Int`→`-1`; `puts(String):void`; `getenv(String):String`→`mel`.
 The Kof function name IS the C symbol (no alias). Non-scalar types (struct/array/
-pointer/callback) → `FFI001` at compile time; the JS target → `FFI002` (a host FFM
-bridge exists — `KofJsFfiBridge`, queue 3.6.F2/F3 routes the compiler to it); Native → `FFI001` until §61.
+pointer/callback) → `FFI001` at compile time; the JS **host runner** (GraalJS/node) binds the
+same scalar ABI through `KofJsFfiBridge` — JVM↔JS parity proven 18/09 (`FfiE2ETest` 16/16,
+slice 3.6.F2/F3 ✅) — with non-scalars → `FFI002` there and the browser an honest **runtime**
+error (R7, no host, same degrade as `kof.io`); Native → `FFI001` until §61.
 The lib path is resolved at **runtime** (missing symbol = `kof_ffi_*` exception).
 History: widening was the R3 slice (#431); the JVM face landed 18/09 (`.18`) — JS/Native remain honest gaps.
 

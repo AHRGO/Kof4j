@@ -153,7 +153,8 @@ extern-declaration = "extern" , [ string-literal ] , identifier ,
                      [ type-parameters ] , "(" , [ parameter-list ] , ")" ,
                      [ ":" , type-ref ] , [ ";" ] ;                  (* `Parser.parseExternDeclaration` *)
 (* no body: the binding is by target at runtime (JVM binds any scalar
-   signature since R3 18/09; FFI001 = non-scalar/native... FFI002 JS). Grammar
+   signature since R3 18/09; JS host runner binds scalars too (3.6.F2/F3, 18/09).
+   FFI001 = non-scalar JVM/native; FFI002 = non-scalar JS; browser = runtime R7). Grammar
    ACCEPTS any arity; CompilerPipeline.isExternBound rejects non-scalar at compile time. *)
 `
 

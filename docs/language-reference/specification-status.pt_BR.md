@@ -102,7 +102,7 @@ Target-specific · Unspecified · Planned**.
 | Import ambíguo (não chuta) | Stable | `CompilerTypes:102` |
 | PKG002 (1 main) | Stable | probe |
 | Interop JVM (tipos Java) | **Target-specific** | `AndroidInteropE2ETest` |
-| FFI C (`extern "<lib>"`) | **Parcial** — JVM qualquer assinatura escalar, aridade livre, retornos `void`/`String` (18/09, `.18`); não-escalar = `FFI001`; JS = `FFI002` (bridge host `KofJsFfiBridge`, fila 3.6.F2/F3); Native = `FFI001` §61 (R6, nunca silencioso) |
+| FFI C (`extern "<lib>"`) | **Parcial** — JVM qualquer assinatura escalar, aridade livre, retornos `void`/`String` (18/09, `.18`); não-escalar = `FFI001`; runner host JS = MESMA ABI escalar (3.6.F2/F3 ✅ 18/09, `FfiE2ETest` 16/16 byte-for-byte JVM↔JS), não-escalar = `FFI002`, browser = runtime R7; Native = `FFI001` §61 (R6, nunca silencioso) |
 
 ### Concorrência
 | Feature | Status | Teste-evidência |

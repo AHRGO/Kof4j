@@ -25,7 +25,7 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" puts(String s): void     // ok — void
 extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — String return, "mel" measured
 // The Kof function NAME is the C symbol (no alias syntax) — kof_fmod failed lookup, fmod works.
 // Non-scalar types (objects, generics) -> FFI001 compile-time diagnostic.
-// JS target  -> FFI002 (gate CLOSED; host bridge KofJsFfiBridge exists, F2/F3 queue routes it)
+// JS runner  -> SAME scalar ABI via KofJsFfiBridge (F2/F3 ✅ 18/09; FfiE2ETest 16/16); browser -> honest runtime error (R7, no host); non-scalar -> FFI002
 // Native     -> FFI001 until §61 (libc not initialized)
 ```
 
@@ -41,4 +41,4 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — Stri
 
 `docs/language-reference/syntax.md` (§FFI to C), `grammar.md`
 (`extern-declaration`), `modules.md` §6; gaps `FFI001`/`FFI002`;
-queue: R3 first slice (arity → void → String-return → `char*`).
+R3 landed: JVM arbitrary scalar (arity/void/String-return, 18/09) + JS host parity (3.6.F2/F3 ✅ 18/09); remaining: struct/D6, callbacks, variadics (⛔ maintainer), Native §61.
