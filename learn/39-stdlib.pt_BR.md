@@ -243,7 +243,7 @@ crypto) — sem PRNG caseiro. Para tokens de segurança use `security.*`
 sorteio/shuffle/teste. Não-determinístico: os testes travam **contrato**
 (faixa + bordas), não igualdade.
 
-## rng — PRNG determinístico semeável (X8 fatia 1, property-based testing)
+## rng — PRNG determinístico semeável (X8 fatias 1–2, property-based testing)
 
 ```kof
 rng.seed(42)                           // reset: mesma seed => mesma sequência, QUALQUER backend
@@ -268,7 +268,7 @@ Mesma seed => MESMA sequência na JVM e no JS (xorshift128 + splitmix32,
 aritmética 32-bit exata — paridade provada byte-a-byte pelo
 `KofRngTest.jvmJsParity`). NUNCA para chaves/tokens/segredo: isso é
 `random`/`security` (entropia do SO, R11). Fatia 1 = JVM + JS; NATIVE/ANDROID
-falham em compile com o gap honesto `RNG001` (asm nativo = fatia 2).
+falham em compile com o gap honesto `RNG001` (asm x86_64 caiu na fatia 2 — byte-idêntico ao JVM).
 int(bound) usa módulo (viés pequeno documentado) — o contrato é paridade
 determinística, não uniformidade criptográfica.
 

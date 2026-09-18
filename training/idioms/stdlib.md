@@ -133,7 +133,7 @@ var pick = colors[random.randomInt(colors.size)]   // choice = idiom
 an Object return in the dispatch layer (DD-STDLIB-01 — CLOSED 13/09, decision
 6a: `randomBytesHex` alias of `hex` + choice=idiom; `randomBytes` reserved).
 
-## rng — determinism you can TEST (X8 slice 1)
+## rng — determinism you can TEST (X8 slices 1–2)
 
 ```kof
 // ❌ BAD — unseeded draw inside a test (passes/fails at random, unreproducible CI)
@@ -162,7 +162,7 @@ test "sum commutes on random pairs" {
 `random.*` = OS entropy (R11). A failing property test prints its seed and the
 failure reproduces. Mixing the two is the anti-pattern: seeding for security
 material (R11 violation) or drawing entropy from rng (flaky tests). Slice 1 =
-JVM + JS; NATIVE/ANDROID = `RNG001` honest gap at compile time (slice 2 = asm).
+JVM + JS + NATIVE x86_64 (asm `RuntimeRng`, same bits by construction); cross riscv64/aarch64/ANDROID = `RNG001` honest gap at compile time.
 
 ## validation — formatting is NOT validating (S12/S12b)
 

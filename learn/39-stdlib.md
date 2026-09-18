@@ -243,7 +243,7 @@ crypto) — no homemade PRNG. For security tokens use `security.*`
 draw/shuffle/test face. Nondeterministic: the tests lock the **contract**
 (range + edges), not equality.
 
-## rng — seedable deterministic PRNG (X8 slice 1, property-based testing)
+## rng — seedable deterministic PRNG (X8 slices 1–2, property-based testing)
 
 ```kof
 rng.seed(42)                           // reset: same seed => same sequence, ANY backend
@@ -268,7 +268,7 @@ Same seed => SAME sequence on JVM and JS (xorshift128 + splitmix32,
 32-bit-exact math — parity proven byte-for-byte by `KofRngTest.jvmJsParity`).
 NEVER for keys/tokens/secret material: that is `random`/`security`
 (OS entropy, R11). Slice 1 = JVM + JS; NATIVE/ANDROID fail at compile time
-with the honest gap `RNG001` (native asm = slice 2). int(bound) uses modulo
+with the honest gap `RNG001` (x86_64 asm landed in slice 2 — byte-identical to JVM). int(bound) uses modulo
 (tiny documented bias) — the contract is deterministic parity, not
 cryptographic uniformity.
 

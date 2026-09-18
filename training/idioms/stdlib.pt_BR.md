@@ -134,7 +134,7 @@ var pick = colors[random.randomInt(colors.size)]   // choice = idiom
 retorno Object na camada de dispatch (DD-STDLIB-01 — FECHADO 13/09, decisão
 6a: `randomBytesHex` alias de `hex` + choice=idiom; `randomBytes` reservado).
 
-## rng — determinismo TESTÁVEL (X8 fatia 1)
+## rng — determinismo TESTÁVEL (X8 fatias 1–2)
 
 ```kof
 // ❌ BAD — sorteio sem seed dentro de teste (passa/falha ao acaso, CI irreproduzível)
@@ -164,7 +164,7 @@ test "soma comuta em pares aleatórios" {
 que falha imprime a seed e a falha se reproduz. Misturar os dois é o
 anti-padrão: semear material de segurança (violação da R11) ou sortear
 entropia do rng (testes flaky). Fatia 1 = JVM + JS; NATIVE/ANDROID = gap
-honesto `RNG001` em compile (fatia 2 = asm).
+honesto `RNG001` em compile (asm x86_64 — mesmos bits por construção — caiu na fatia 2).
 
 ## validation — formatar NÃO é validar (S12/S12b)
 
