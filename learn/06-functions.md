@@ -117,9 +117,11 @@ main() {
 }
 ```
 
-> **Note:** there is no **annotated** function type as a declared parameter
-> (`(Int) -> Int f` does not compile). The function arrives as an anonymous lambda at the
-> call site.
+> **Note:** a function type IS legal as a declared parameter in BOTH forms — type-first
+> (`Int aplica((Int) -> Int f, Int x)`) and annotated (`Int aplica(f: (Int) -> Int, x: Int)`) —
+> measured 42/42 on the 0.4.0 tip (parser fix §277/#389, `NestedFnTypeArityTest`). Pass an
+> anonymous **lambda** at the call site: a bare named-function reference does not bind
+> (`training/anti-patterns/fake-idioms.md`).
 
 ## Overloading (0.4.0-beta)
 
