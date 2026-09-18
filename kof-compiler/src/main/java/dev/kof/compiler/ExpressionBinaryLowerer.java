@@ -240,9 +240,16 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
     // (RecordEqualityLowerer/`.equals()`, I6), nunca num if_icmp* cru
     // sobre a referência boxed (VerifyError) — TypeMetrics.isNumeric
     // desempacota Nullable, então não serve de guarda aqui sozinho.
+    // Native é EXCEÇÃO (fase 2 da fila D-NULL-INTENT, DECISIONS.md — não
+    // tocado): a representação de Nullable(primitivo) lá continua CRUA
+    // (não boxed), então o desempacote antigo (TypeMetrics.isNumeric) é
+    // seguro e necessário — `.equals()`/`java_lang_Integer_equals` não
+    // existe no runtime nativo (achado na CI real, linker `undefined
+    // reference`, ausente no Windows local sem `as`/`ld`).
     boolean isNumericComparison = TypeMetrics.isComparisonOp(be.operator())
-            && accType instanceof Type.PrimitiveType && TypeMetrics.isNumeric(accType)
-            && rightType instanceof Type.PrimitiveType && TypeMetrics.isNumeric(rightType);
+            && ((accType instanceof Type.PrimitiveType && TypeMetrics.isNumeric(accType)
+                    && rightType instanceof Type.PrimitiveType && TypeMetrics.isNumeric(rightType))
+                || (driver.target.isNative() && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType)));
     if ((isArithmetic || isNumericComparison)
             && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType)) {
         // D-NULL-INTENT: aritmética exige o valor PRESENTE — um
@@ -385,7 +392,8 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
     } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
             && !driver.isNullLiteral(be.left()) && !driver.isNullLiteral(be.right())
             && (isRecordLike(accType, driver) || isRecordLike(rightType, driver)
-                || ((isNullablePrimLike(accType) || isNullablePrimLike(rightType))
+                || (!driver.target.isNative()
+                    && (isNullablePrimLike(accType) || isNullablePrimLike(rightType))
                     && isNullablePrimOrBarePrim(accType) && isNullablePrimOrBarePrim(rightType)))) {
         // §262 / bug 11: `record == record` é igualdade de CONTEÚDO, null-safe
         // (Objects.equals). Desugaring em RecordEqualityLowerer (JS = chamada
@@ -400,6 +408,12 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         // BOXED no RecordEqualityLowerer (ele guarda os DOIS em temporários
         // Object): a esquerda já emitida boxa AQUI (antes do dispatch); a
         // direita boxa dentro do lowerer, logo após ser emitida.
+        // EXCETO Native (fase 2 da fila D-NULL-INTENT, DECISIONS.md — não
+        // tocado): `.equals()` de wrapper JDK não existe no runtime nativo
+        // (`java_lang_Integer_equals`/`java_lang_Boolean_equals` —
+        // `undefined reference` no linker, achado na CI real; ausente no
+        // Windows local sem `as`/`ld`). Record continua passando por aqui
+        // no Native (equals de classe usuário, já suportado antes do #278).
         if (accType instanceof Type.PrimitiveType apt4 && !Type.isVoid(apt4)) {
             TypeEmitter.boxPrimitive(ops, accType);
         }

@@ -1311,6 +1311,11 @@ class ConformanceMatrixTest {
                     println(m.get(1))
                 }
                 """, "um\ndois\n2\num\nnull", Set.of(), tempDir);
+        // D-NULL-INTENT/I7 (#278): `n.get(5)` (chave errada, Map<String,Int>)
+        // agora preserva ausência de verdade (null) em JVM/Script/JS —
+        // supersede o fold null->default do primitivo (§125/SG-008 antigo).
+        // Native ainda não foi migrado para a representação boxed (fase 2
+        // da fila D-NULL-INTENT em DECISIONS.md) — continua no default "0".
         matrix("wrongkey", """
                 main() {
                     var m = mapOf(1, "a")
@@ -1322,7 +1327,7 @@ class ConformanceMatrixTest {
                     var n = mapOf("a", 1)
                     println(n.get(5))
                 }
-                """, "null\nfalse\nfalse\n0", Set.of(), tempDir);
+                """, "null\nfalse\nfalse\nnull", Set.of("native"), tempDir);
         matrix("emptylist", """
                 main() {
                     var l = listOf()
