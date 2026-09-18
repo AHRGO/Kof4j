@@ -5,6 +5,7 @@ import dev.kof.compiler.CompilerDriver;
 import dev.kof.compiler.KofVersion;
 import dev.kof.compiler.Target;
 import dev.kof.compiler.TargetMatrix;
+import dev.kof.compiler.backend.AndroidProjectWriter;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -31,6 +32,8 @@ import java.util.List;
  *
  * <p>Fatia 2 (18/09): faces NATIVE x86_64 (binário ELF, mode 0755 no tar) e
  * JS ({@code Default.mjs}) empacotadas com a MESMA estrutura de release.
+ * Fatia 3 (18/09): face ANDROID — APK assinado via pipeline --apk do build
+ * (ANDROID_HOME/build-tools obrigatórios; sem SDK, recusa honesta).
  *
  * <p>O que a fatia NÃO faz (honesto, R6/R7): {@code --publish} (registry
  * remoto) exige decisão D2/mantenedora — a flag recusa com {@code DEP001}.
@@ -115,14 +118,13 @@ final class CmdDeploy {
                 return;
             }
         }
-        // X9 fatia 2: JVM (fat jar), NATIVE x86_64 (binário ELF) e JS
-        // (Default.mjs) empacotam. ANDROID (APK) e cross riscv64/aarch64
-        // (sysroot) recusam honesto (R6) — faces seguintes do plano.
-        if (target == Target.ANDROID || target == Target.NATIVE_RISCV64
-                || target == Target.NATIVE_AARCH64) {
+        // X9 fatia 3: JVM (fat jar), NATIVE x86_64 (ELF), JS (Default.mjs) e
+        // ANDROID (APK assinado, reusa o pipeline --apk do build) empacotam.
+        // Cross riscv64/aarch64 (sysroot) recusa honesto (R6) — face seguinte.
+        if (target == Target.NATIVE_RISCV64 || target == Target.NATIVE_AARCH64) {
             System.err.println("deploy: target " + TargetMatrix.name(target)
                     + " is not packaged yet (DEP001) —"
-                    + " slices so far: --target jvm|native|js");
+                    + " slices so far: --target jvm|native|js|android");
             System.exit(1);
             return;
         }
@@ -160,7 +162,7 @@ final class CmdDeploy {
         // 1) compila o módulo (mesma convenção Go-like do build)
         KofCliSupport.Layout layout = KofCliSupport.detectLayout(src);
         Path backendDir = layout.backendDir();
-        String app001 = KofCliSupport.app001(Target.JVM, layout.fullStack());
+        String app001 = KofCliSupport.app001(target, layout.fullStack());
         if (app001 != null) { System.err.println("deploy: " + app001); System.exit(1); return; }
         List<Path> files = KofCliSupport.collect(backendDir);
         if (files.isEmpty()) {
@@ -200,6 +202,25 @@ final class CmdDeploy {
                 ext = ".mjs";
                 tarMode = 0644;
             }
+            case ANDROID -> {
+                // pipeline --apk do build (gera o projeto Android dentro de
+                // classes/ e assina com debug.keystore ou --keystore do build).
+                boolean ok = CmdBuild.runApkPipeline(classes,
+                        AndroidProjectWriter.DEFAULT_MIN_SDK,
+                        AndroidProjectWriter.DEFAULT_TARGET_SDK, null, null, null, null);
+                if (!ok) {
+                    System.err.println("deploy: android APK pipeline failed (DEP001"
+                            + " conditions: ANDROID_HOME/build-tools required)");
+                    System.exit(1);
+                    return;
+                }
+                built = classes.resolve("target").resolve("kof-app.apk");
+                if (!Files.isRegularFile(built)) {
+                    throw new IOException("apk not found: " + built);
+                }
+                ext = ".apk";
+                tarMode = 0644;
+            }
             default -> throw new IOException("unreachable: " + target);
         }
 
@@ -217,8 +238,10 @@ final class CmdDeploy {
             runCmd = "java -jar " + artifact;
         } else if (target == Target.NATIVE) {
             runCmd = "./" + artifact;
-        } else {
+        } else if (target == Target.JS) {
             runCmd = "node " + artifact;
+        } else {
+            runCmd = "adb install " + artifact;
         }
         String mainLine = target == Target.JVM
                 ? "- main class: " + KofCliSupport.findMainClass(classes) + "\n" : "";

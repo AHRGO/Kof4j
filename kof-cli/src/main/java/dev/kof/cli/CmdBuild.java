@@ -449,7 +449,7 @@ final class CmdBuild {
      * gera debug keystore local na primeira vez; com --keystore, assina
      * com o keystore do usuário (release signing parametrizável).
      */
-    private static boolean runApkPipeline(Path projDir, int minSdk, int targetSdk,
+    static boolean runApkPipeline(Path projDir, int minSdk, int targetSdk,
                                           String keystore, String storepass,
                                           String keypass, String keyalias) {
         String androidHome = System.getenv("ANDROID_HOME");

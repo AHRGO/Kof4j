@@ -1,6 +1,7 @@
 package dev.kof.cli;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
@@ -176,15 +177,55 @@ class CmdDeployTest {
         assertTrue(release.contains("js"), release);
     }
 
-    /** X9 fatia 2: ANDROID/cross continuam DEP001 honesto. */
+    /** X9 fatia 3: cross riscv/arm continuam DEP001 honesto. */
     @Test
-    void androidAndCrossStayHonestGaps(@TempDir Path dir) throws Exception {
+    void crossTargetsStayHonestGaps(@TempDir Path dir) throws Exception {
         Path src = writeApp(dir, "main() { println(\"x\") }\n");
-        for (String t : new String[]{"android", "native.risc", "native.arm"}) {
+        for (String t : new String[]{"native.risc", "native.arm"}) {
             CliResult r = run(dir, "deploy", src.toString(), "--target", t);
             assertEquals(1, r.exit(), t + " deve recusar (DEP001): " + r.out());
             assertTrue(r.out().contains("DEP001"), t + " esperava DEP001: " + r.out());
         }
+    }
+
+    /** X9 fatia 3: face ANDROID — sem SDK, recusa honesta (não fake-success). */
+    @Test
+    void androidWithoutSdkIsHonestFailure(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir, "main() { println(\"x\") }\n");
+        ProcessBuilder pb = new ProcessBuilder(
+                Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                "-cp", System.getProperty("java.class.path"), "dev.kof.cli.Main",
+                "deploy", src.toString(), "--target", "android",
+                "--output", "dist", "--name", "app", "--version", "1.0.0");
+        pb.environment().remove("ANDROID_HOME");
+        pb.directory(dir.toFile()).redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertNotEquals(0, p.waitFor(120, TimeUnit.SECONDS),
+                "sem ANDROID_HOME o deploy não pode fingir sucesso (R6):\n" + out);
+        assertTrue(out.contains("ANDROID_HOME") || out.contains("APK pipeline failed"),
+                "mensagem deve apontar a causa:\n" + out);
+    }
+
+    /** X9 fatia 3: COM SDK válido, o APK empacotado existe + checksum confere.
+     *  Guard honesto: sem build-tools 34.0.0 o bloco dá skip (ambiente). */
+    @Test
+    void androidWithSdkPackagesApk(@TempDir Path dir) throws Exception {
+        String androidHome = System.getenv("ANDROID_HOME");
+        Assumptions.assumeTrue(androidHome != null && !androidHome.isBlank(),
+                "ANDROID_HOME ausente — face android do deploy é validada no host com SDK");
+        Assumptions.assumeTrue(
+                Files.isExecutable(Path.of(androidHome, "build-tools", "34.0.0", "aapt2")),
+                "build-tools 34.0.0 ausente");
+        Path src = writeApp(dir, "main() { println(\"x\") }\n");
+        CliResult r = run(dir, "deploy", src.toString(), "--target", "android",
+                "--output", "dist", "--name", "app", "--version", "1.0.0");
+        assertEquals(0, r.exit(), "deploy android, saída:\n" + r.out());
+        Path apk = dir.resolve("dist/deploy/app-1.0.0/app-1.0.0.apk");
+        assertTrue(Files.isRegularFile(apk), "APK ausente:\n" + r.out());
+        String sums = Files.readString(dir.resolve("dist/deploy/app-1.0.0/SHA256SUMS"),
+                StandardCharsets.UTF_8);
+        assertEquals(CmdDeploy.sha256Hex(apk) + "  app-1.0.0.apk", sums.trim());
     }
 
     @Test
