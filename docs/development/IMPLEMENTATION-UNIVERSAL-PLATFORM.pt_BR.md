@@ -56,6 +56,12 @@ Reivindique um item no `DOING.md` **no mesmo commit** que inicia o trabalho.
 Invariantes: **R1 ✅ · R6 ✅ · R7 ✅ · R8 ✅ · R12 ✅ (sobreposto)** ·
 **R2 🔵 · R3 🟡 · R4 🔵 · R5 🟡 · R9 🟡 · R10 🔵 · R11 🟡**
 
+Fila transversal (não é estágio): **X1–X10** — gRPC, Python/R, WASM,
+avaliação em compile-time, variance/sealed, reflexão de interop, debugger
+DWARF/source map, testes de propriedade, `kof deploy`, LSP de domínio. Não-objetivos
+permanentes (VISION §12) no fim. A **auditoria de gaps 18/09** fechou o drift
+VISION×tracker (esses itens não tinham entrada executável).
+
 ---
 
 # Estágio 1 — SYSTEMS (consolidação do que já é "sistemas")
@@ -264,6 +270,43 @@ mesma experiência de desenvolvimento.
 | 8.4 | Deploy multi-target (mesma fonte → JVM/Native/JS) | 🟡 | — | 7 targets funcionam hoje; maturidade pendente |
 | 8.5 | Documentação/corpus (`training/`) dos domínios | 🔵 | lane docs | por domínio |
 | 8.6 | **Teste final:** o core da linguagem quase não cresceu | 🔵 | — | verificação no fim |
+
+---
+
+# Fila transversal (VISION §6.1 interop + §7 compilador + §9 tooling)
+
+> Auditoria de gaps 18/09: estas capacidades estavam descritas no companion VISION
+> (superfícies de interop, requisitos de compilador, tooling) mas **não tinham
+> item executável** nas tabelas de Estágios 1–8. São transversais, não um
+> estágio de domínio. Cada uma entra como unidade própria quando seu estágio abrir;
+> nenhuma muda o core congelado. `⛔` = exige decisão da mantenedora (regra 6)
+> antes de qualquer edição.
+
+| # | Item | Estado | Dono | Fonte / nota |
+|---|------|--------|------|--------------|
+| X1 | gRPC no `kof.web` (`app.grpc { }` + `.proto` → codegen IR + `grpc.call`) | 🔵 | lane web | VISION §6.1 "B/C"; `roadmap.md` §19 (31/08) — paridade JVM primeiro, Native/JS depois |
+| X2 | Interop Python/R (CLI/`kof.process` + protocolo JSON) | 🔵 | — | VISION §6.1 "B"; o ecossistema científico como *ferramenta*, não dependência (Estágio 4) |
+| X3 | Alvo/interop WebAssembly | 🔵 | — | VISION §6.1 "D" (futuro); portabilidade de componentes — pesquisa, não agendado |
+| X4 | Avaliação leve em compile-time (const-folding de domínio, validação de schema/ciclo) | 🔵 | lane compilador | VISION §7 "B" — estende o otimizador; NÃO é um TCC geral; distinto do R4 (codegen) |
+| X5 | Tipos variance / sealed | ⛔ | **mantenedora** | VISION §7 "B/C" — útil p/ coleções científicas; mudança do type-system do core (regra 6); type-classes seguem rejeitadas |
+| X6 | Reflexão de interop (restrita ao interop) | ⛔ | **mantenedora** | VISION §7 "C" — descoberta de schema em ML/ciência; mudança do core (regra 6); nunca fundação |
+| X7 | Debugger Native DWARF + source maps JS | 🟡 | lane tooling | VISION §9; `roadmap.md` §19.5 fases 4–7 — source map V3 do JS landado 01/09 (`KofJsSourceMapTest`); DWARF nativo pendente |
+| X8 | Teste baseado em propriedades | 🔵 | — | VISION §9 / R10 — invariantes numéricos (ciência); estende `kof.test` |
+| X9 | `kof deploy` (build + package + publish) | 🔵 | lane tooling | VISION §9 — sobre o packager existente |
+| X10 | LSP sensível a domínio (completion + go-to-definition em pacotes) | 🔵 | lane tooling | VISION §9 — mesmo frontend, sem parser paralelo |
+
+---
+
+# Não-objetivos permanentes (VISION §12)
+
+> Explícitos e permanentes: **não** são itens de trabalho e não devem ser abertos
+> como gaps. Protegem a identidade da linguagem (a cerca anti-god-language).
+
+Kof **não é**: uma god-language · um shell · o motor Arrow/Parquet/BLAS/CUDA ·
+um framework de ML · um DBMS · um repositório de provedores de nuvem · um aligner
+genômico · "Kali em Kof" · um notebook/IDE/kernel · ownership/borrowing ·
+anotações/macros abertas/type-classes como fundação · paridade JS para domínios
+pesados · um alvo por domínio · uma reimplementação do ecossistema científico.
 
 ---
 

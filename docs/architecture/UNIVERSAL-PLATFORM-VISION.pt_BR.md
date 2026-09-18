@@ -528,6 +528,11 @@ orquestrada*, não como "Kof é um framework de ataque". (Reflete a postura do
  Native, `SubtleCrypto` no JS), nunca algoritmo próprio.
  
  ### A. Estado na auditoria (0.2.6-beta, 02/09, `KofSecurity.java`)
+
+> **Correção 18/09:** a face AES-GCM do `SECN002` já estava fechada no JS
+> (e no Native x86) em 01/09 — as células/linhas abaixo diziam o contrário.
+> A face `SECN002` restante é **chacha20 no Native x86** (mais todo o `SECN002`
+> no riscv/aarch, que é `SECN000`).
  
  6 namespaces de intenção, compilados pelo mesmo padrão de dispatch de
  `kof.io`/`kof.web` (`KofSecurity.staticMethod` → `kof_sec_*` → 3 runtimes):
@@ -535,7 +540,7 @@ orquestrada*, não como "Kof é um framework de ataque". (Reflete a postura do
  | Namespace | APIs hoje | JVM | Native x86_64/riscv64 | JS |
  |-----------|-----------|-----|----------------------|-----|
  | `passwords` | `hash`/`verify`/`needsRehash` (PBKDF2-HMAC-SHA256, 600k) | ✅ javax.crypto | ✅ **asm puro** (getrandom, FIPS) | ✅ platform |
- | `crypto` | `sha256`/`sha512`/`hmacSha256`/`encryptAesGcm`/`decryptAesGcm`/`randomHex`/`randomInt` | ✅ JCA | ✅ **asm** (FIPS 180-4, GCM, getrandom) | ✅ sha/hmac JS puro; ❌ **AES-GCM = SECN002** |
+ | `crypto` | `sha256`/`sha512`/`hmacSha256`/`encryptAesGcm`/`decryptAesGcm`/`randomHex`/`randomInt` | ✅ JCA | ✅ **asm** (FIPS 180-4, GCM, getrandom) | ✅ sha/hmac JS puro + **AES-GCM** (face AES fechada 01/09); `SECN002` restante = chacha20 (Native x86) |
  | `jwt` | `create(claims,secret[,ttl])`/`verify(token,secret[,iss,aud])`/`secret()` — **HS256 fixo** | ✅ | ✅ asm (b64url+HMAC) | ✅ |
  | `secrets` | `get(name[,fallback])`/`redact` | ✅ env | ✅ `/proc/self/environ` | ✅ platform |
  | `security` | `constantTimeEquals`/`random*`/`redact`/`csrf*`/`corsAllowed`/`csp/hsts/nosniff/frame/referrerHeader`/`rateLimit`/`session*`/`apiKey*` | ✅ | ✅ ct/redact/random/rate/session/apiKey (asm); ❌ csrf/cors/headers | ✅ ct/redact/random/rate/session/apiKey; ❌ csrf/cors/headers |
@@ -547,7 +552,7 @@ orquestrada*, não como "Kof é um framework de ataque". (Reflete a postura do
  trava confusão de algoritmo, `KofSecurityTest.jwtRejectsAlgorithmConfusionJvm`).
  
  **Gaps reais** (nunca silencioso — `KofSecurity.supportedOn` + `gapCode`):
- `SECN002` (AES-GCM fora de JVM/Native), csrf/cors/headers + `auth.*` (JVM-only).
+ `SECN002` (chacha20 no Native x86; a face AES-GCM fechou no JS e no Native x86 01/09 — ver `docs/backend-parity.md`), csrf/cors/headers + `auth.*` (JVM-only).
  
  ### B. Arquitetura atual
  
@@ -729,7 +734,7 @@ orquestrada*, não como "Kof é um framework de ataque". (Reflete a postura do
  
  | Camada | JVM | Native | JS |
  |--------|-----|--------|-----|
- | simétrica (GCM) | JCA | asm (pronto) | `SubtleCrypto` (fechar **SECN002**) |
+ | simétrica (GCM) | JCA | asm (pronto) | AES-GCM JS puro (pronto 01/09) |
  | hash/HMAC | JCA | asm (pronto) | JS puro (pronto) |
  | assimétrica (ECC/RSA) | JCA/`KeyPair` | FFI `liboqs`/`openssl` | `SubtleCrypto` |
  | **PQC (ML-KEM/DSA)** | FFI `liboqs`/provider | FFI `liboqs` | **não há** → gap `SECPQ` (diagnóstico, nunca stub) |
@@ -771,7 +776,7 @@ orquestrada*, não como "Kof é um framework de ataque". (Reflete a postura do
  ```text
  S1 SECURITY FOUNDATION   (base — quase pronto)
     default seguro (GCM/PBKDF2/constant-time/HS256-fixo) + vetores + redact
-    → já A; concluir: fechar SECN002 (AES-GCM JS) + vetores adversariais
+    → já A (AES-GCM no JS fechado 01/09); concluir: vetores adversariais + a face chacha20 do SECN002 no Native x86
  S2 SAFE DEFAULTS / TIPOS
     tipo `Secret`/`KeyHandle` + redaction em kof.log + warnings SECD00x
     → depende S1; risco baixo; critério: API sem exposição de chave crua
@@ -801,7 +806,7 @@ orquestrada*, não como "Kof é um framework de ataque". (Reflete a postura do
  
  | Item | Classif. | Justificativa (estado real) |
  |------|----------|------------------------------|
- | AES-GCM no JS (SECN002) | **B** | `SubtleCrypto` no browser/Node; fecha gap, sem mudar core |
+ | ~~AES-GCM no JS (SECN002)~~ | ✅ FECHADO 01/09 | AES-GCM JS puro landado; o código `SECN002` agora cobre só a face chacha20 |
  | `keys.*` (gerar/derivar/rotacionar) | **B/C** | sobre JCA/openssl (FFI); `KeyHandle` opaco é extensão de tipo |
  | tipo `Secret`/redaction forçada | **B** | type-system + `kof.log`; impede vazamento |
  | assimétrica ECC/RSA (sign/verify) | **B** | FFI JCA/openssl; formato versionado já existe |
@@ -814,9 +819,8 @@ orquestrada*, não como "Kof é um framework de ataque". (Reflete a postura do
  | "Kali em Kof" / ofensiva sem contexto | **AVOID** | não expor primitivas ofensivas sem controle |
  | algoritmo próprio (qualquer) | **AVOID** | **regra absoluta** — só FFI a lib auditada |
  
- **NOW** (sem pesquisa profunda, estende o que já existe): fechar **SECN002**
- (AES-GCM JS) · tipo `Secret` + redaction forçada · `keys.derive` (HKDF) +
- `keys.rotate`.
+ **NOW** (sem pesquisa profunda, estende o que já existe): tipo `Secret` +
+ redaction forçada · `keys.derive` (HKDF) + `keys.rotate`.
  **NEXT**: `keys.*` completo · assimétrica (ECC/RSA) · ChaCha20-Poly1305 ·
  X.509/PEM.
  **LATER**: TLS completo multi-target · `secure.channel`.
@@ -1282,7 +1286,7 @@ vale a pena (ou non-goal).
 | JSON/IO/config/logging/observability | **A** | `kof.json`/`kof.io`/`kof.config`/`kof.log`/`kof.observability` prontos |
 | State de infra / experiment tracking | **A/B** | `kof.db`/`kof.io` prontos; o *formato* de state é extensão |
 | Crypto/JWT/secrets/auth (app) | **A** | `kof.security` v1+G9+G10 pronto nos 3 targets |
-| Crypto: AES-GCM no JS (fechar SECN002) | **B** | `SubtleCrypto` (browser/Node); sem mudar core — §4.8.1 |
+| Crypto: AES-GCM no JS | ✅ FECHADO 01/09 | AES-GCM JS puro landado; o código `SECN002` agora cobre só chacha20 (Native x86) — §4.8.1 |
 | Crypto: `keys.*` (gerar/derivar HKDF/rotacionar/store) + tipo `Secret` | **B/C** | FFI JCA/openssl + type-system; `KeyHandle` opaco — §4.8.1 |
 | Crypto: assimétrica (ECC/RSA sign/verify) + X.509/PEM | **B/C** | FFI JCA/openssl; formato versionado já existe — §4.8.1 |
 | Crypto: **PQC** (ML-KEM-768 KEM + ML-DSA-65 sig) | **D (FFI)** | **não há hoje**; FFI `liboqs` + vetores NIST; nunca caseiro — §4.8.1 |

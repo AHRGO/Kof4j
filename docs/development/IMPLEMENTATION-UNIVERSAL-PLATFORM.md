@@ -55,6 +55,12 @@ Claim an item in `DOING.md` **in the same commit** that starts the work.
 Invariants: **R1 ✅ · R6 ✅ · R7 ✅ · R8 ✅ · R12 ✅ (overridden)** ·
 **R2 🔵 · R3 🟡 · R4 🔵 · R5 🟡 · R9 🟡 · R10 🔵 · R11 🟡**
 
+Cross-cutting queue (not a stage): **X1–X10** — gRPC, Python/R, WASM,
+compile-time eval, variance/sealed, interop reflection, DWARF/source-map
+debugger, property-based tests, `kof deploy`, domain LSP. Permanent non-goals
+(VISION §12) listed at the end. **Gap audit 18/09** closed the VISION×tracker
+drift (these items had no executable entry).
+
 ---
 
 # Stage 1 — SYSTEMS (consolidation of what is already "systems")
@@ -263,6 +269,42 @@ the same development experience.
 | 8.4 | Multi-target deploy (same source → JVM/Native/JS) | 🟡 | — | 7 targets work today; maturity pending |
 | 8.5 | Documentation/corpus (`training/`) of the domains | 🔵 | docs lane | per domain |
 | 8.6 | **Final test:** the language core barely grew | 🔵 | — | verification at the end |
+
+---
+
+# Cross-cutting queue (VISION §6.1 interop + §7 compiler + §9 tooling)
+
+> Gap audit 18/09: these capabilities were described in the VISION companion
+> (interop surfaces, compiler requirements, tooling) but had **no executable
+> item** in the Stage 1–8 tables. They are cross-cutting, not a domain stage.
+> Each enters as its own unit when its stage opens; none changes the frozen
+> core. `⛔` = a maintainer decision (rule 6) is required before any edit.
+
+| # | Item | Status | Owner | Source / note |
+|---|------|--------|-------|---------------|
+| X1 | gRPC in `kof.web` (`app.grpc { }` + `.proto` → IR codegen + `grpc.call`) | 🔵 | web lane | VISION §6.1 "B/C"; `roadmap.md` §19 (31/08) — JVM parity first, Native/JS later |
+| X2 | Python/R interop (CLI/`kof.process` + JSON protocol) | 🔵 | — | VISION §6.1 "B"; the scientific ecosystem as a *tool*, not a dependency (Stage 4) |
+| X3 | WebAssembly target/interop | 🔵 | — | VISION §6.1 "D" (future); component portability — research, not scheduled |
+| X4 | Light compile-time evaluation (domain const-folding, schema/cycle validation) | 🔵 | compiler lane | VISION §7 "B" — extends the optimizer; NOT a general TCC; distinct from R4 (codegen) |
+| X5 | Variance / sealed types | ⛔ | **maintainer** | VISION §7 "B/C" — useful for scientific collections; a core type-system change (rule 6); type-classes stay rejected |
+| X6 | Interop reflection (restricted to interop) | ⛔ | **maintainer** | VISION §7 "C" — ML/science schema discovery; a core change (rule 6); never a foundation |
+| X7 | Debugger Native DWARF + JS source maps | 🟡 | tooling lane | VISION §9; `roadmap.md` §19.5 phases 4–7 — JS source map V3 landed 01/09 (`KofJsSourceMapTest`); Native DWARF pending |
+| X8 | Property-based testing | 🔵 | — | VISION §9 / R10 — numeric invariants (science); extends `kof.test` |
+| X9 | `kof deploy` (build + package + publish) | 🔵 | tooling lane | VISION §9 — on top of the existing packager |
+| X10 | Domain-sensitive LSP (completion + go-to-definition in packages) | 🔵 | tooling lane | VISION §9 — same frontend, no parallel parser |
+
+---
+
+# Permanent non-goals (VISION §12)
+
+> Explicit and permanent: these are **not** work items and must not be opened as
+> gaps. They protect the language's identity (the anti-god-language fence).
+
+Kof is **not**: a god-language · a shell · the Arrow/Parquet/BLAS/CUDA engine ·
+an ML framework · a DBMS · a cloud provider repository · a genomic aligner ·
+"Kali in Kof" · a notebook/IDE/kernel · ownership/borrowing · annotations/open
+macros/type-classes as a foundation · JS parity for heavy domains · a target per
+domain · a reimplementation of the scientific ecosystem.
 
 ---
 
