@@ -78,7 +78,7 @@ Navegação por troca de componente raiz: `Router` é namespace (não tipo).
 ## Idioma KofScript (0.4.0-beta)
 
 ```kof
-let x = 5
+var x = 5
 var app = Window("Hi", Label("Olá"))
 ```
 

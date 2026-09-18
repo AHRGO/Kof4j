@@ -84,7 +84,7 @@ Backend
 | **Navigation** | does not exist | no Route/Router; a single window |
 | **State** | ad-hoc | state in **static class fields** + lambda that updates the label by hand; there is no component state nor invalidation |
 | **Rendering/invalidation** | imperative | each click does `label.text = ...` by hand; there is no re-render, diffing, scheduling |
-| **Design system** | partial | only Theme light/dark; there are no Typography/Spacing/Border/Radius/Elevation tokens |
+| **Design system** | partial | Theme light/dark + `Color`/`Palette`; the tokens `Spacing`/`Radius`/`Border`/`Elevation`/`Typography` now exist (Fase 10, `D-UI-TOKENS` — compile-time px constants); the semantic theme-to-widget application remains manual |
 
 ### Problems found (diagnosis)
 
@@ -170,10 +170,13 @@ Rules the core guarantees:
   mutation path (no 5 ways to store state).
 - **Minimal invalidation.** `state(...)` marks **only the component** as dirty and
   schedules a re-render (scheduling), without touching the whole application.
-- **Re-render by reconciliation.** the view builder re-ran, but the stable
-  nodes (same position + kind) **reuse the existing DOM** — only what
-  changed is updated (text, props, handlers). Architecture prepared for
-  full diffing (Phase 9), without recreating the tree.
+- **Re-render by rebuild + prune (current); reconciliation (Phase 9, pending).**
+  today the view builder re-runs and the fresh subtree replaces the previous
+  one, pruning the old subtree from the DOM and the registry (§295). The
+  **target** is reconciliation by **position + kind** — stable nodes (same
+  position + kind) reuse the existing DOM and only the diff (text, props,
+  handlers) is updated, without recreating the tree; key-based diffing comes
+  with it.
 - **Deterministic lifecycle.** mount (view + `onMount`), update (reconcile),
   unmount (`onDispose` + **effects in reverse order** + DOM removal).
 - **Automatic cleanup.** listener/timer/subscription registered via `effect`
@@ -208,9 +211,11 @@ Window (root/host)
    `state(...)` itself is the invalidation point (no polling, no reflection).
 4. **Invalidation:** `state(...)` marks the component dirty in the queue; a flush
    (scheduled, not synchronous) reconciles only the dirty components.
-5. **Updates applied:** reconciliation by **position + kind**, reusing the
-   existing el and updating only the diff (text/props/handlers). Prepared for
-   key-based diffing (Phase 9).
+5. **Updates applied:** the view builder re-runs and the fresh subtree
+   replaces the previous one — the old subtree is pruned from the DOM **and**
+   from the node registry (`kofUiRemoveSubtree`, §295), so no handle leaks
+   across renders. Node reuse by **position + kind** (updating only the diff)
+   and key-based diffing are the **pending** half of Phase 9.
 
 ### 2.5 Events
 
@@ -221,11 +226,13 @@ registers handlers per node (basis of propagation) and **clears them on unmount*
 
 ### 2.6 State
 
-Three scopes (Phase 8 defines the official model; the core delivers the **local** one):
+Three scopes (Phase 8 — delivered 18/09: `D-UI-APPSTATE` + §296):
 
 - **Component local:** `state`/`text`/`flag` on the `Component` (delivered).
-- **Shared:** an observable `Store` between components (Phase 8).
-- **Application:** root/`AppState` (Phase 8).
+- **Shared:** an observable `Store` between components (delivered;
+  JS `unsubscribe` fixed §296).
+- **Application:** `AppState(initial)` — create-or-get singleton over the
+  Store machinery, reachable from anywhere (delivered, `D-UI-APPSTATE`).
 
 A state change invalidates **only the owning component** — not the application.
 
@@ -269,6 +276,23 @@ Implementation details (JS target):
 - Tests: `RouterE2ETest` (go with lifecycle, back/forward, unknown route).
 
 ### 2.10 Module structure (Phase 11)
+
+**AUDITED 18/09 — delivered as the conceptual structure it declares.** The
+engine lives in the compiler (not a standalone `kof-ui/` package), and the
+physical files already mirror the map by responsibility:
+
+| conceptual module | where it lives today |
+|---|---|
+| `core/` (component · state · lifecycle · render · events · input) | `js/JsRuntimeUiComponents.java`, `js/JsRuntimeUiEvents.java`, `js/JsRuntimeUiForms.java`, `js/JsRuntimeUiValidation.java` |
+| `layout/` (row · column · stack · box · grid · wrap · spacer) | `js/JsRuntimeUiLayout.java` |
+| `navigation/` (router · route) | `js/JsRuntimeUiEvents.java` (Router block, Fase 7) |
+| `theme/` (theme · color · typography · spacing · border · radius · elevation) | `KofStyleParser.java` + `KofUiTokens.java` + `Palette` (compiler-side, all four targets) |
+| `widgets/` (input · buttons · selection · feedback · data) | `js/JsRuntimeUiWidgets.java` |
+| honest no-ops (UI is KofJS) | `jvm/JvmRuntimeUi.java`, `runtime/RuntimeUi.java` (native asm) |
+
+A physical split into `kof-ui/*` packages would move files without changing
+behavior or the JS `CORE_RUNTIME` exports — no gain, all risk (rule: small
+and stable core); the table above is the module boundary.
 
 ```text
 kof-ui/  (conceptual — today it lives in the compiler; the engine is the JS CORE_RUNTIME)

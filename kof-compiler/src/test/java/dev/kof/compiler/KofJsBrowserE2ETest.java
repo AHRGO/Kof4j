@@ -473,6 +473,77 @@ class KofJsBrowserE2ETest {
     }
 
     @Test
+    void declarativeStyleRendersInRealBrowserDom(@TempDir Path tempDir) throws IOException {
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
+
+        // D-UI-STYLE (UI007): the compiler-parsed/normalized CSS must reach the
+        // real DOM node — background hex, bare Int normalized to px, radius.
+        String program = """
+            main() {
+                var s = Style("background: #ff0000; padding: 8; border-radius: 4")
+                var v = View(s)
+                var w = Window("StyleTest")
+                w.bind(v)
+                w.show()
+            }
+            """;
+        Path source = tempDir.resolve("App.kf");
+        Files.writeString(source, program);
+
+        Path outDir = tempDir.resolve("out");
+        CompilationResult result = driver.compile(source, outDir, Target.JS);
+        assertTrue(result.success(), "compilação JS deve passar: " + result.diagnostics().getDiagnostics());
+
+        HttpServer server = serve(outDir);
+        int port = server.getAddress().getPort();
+        try {
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
+            assertTrue(dom.contains("rgb(255, 0, 0)") || dom.contains("#ff0000"),
+                    "background declarativo ausente no DOM: " + excerpt(dom));
+            assertTrue(dom.contains("padding: 8px"), "Int nu não virou px: " + excerpt(dom));
+            assertTrue(dom.contains("border-radius: 4px"), "border-radius ausente no DOM: " + excerpt(dom));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void setStyleRendersOnAnyDomWidgetInRealBrowser(@TempDir Path tempDir) throws IOException {
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
+
+        // D-UI-STYLE (UI007) Q5: setStyle(style) on a Label — not only View.
+        String program = """
+            main() {
+                var l = Label("card")
+                l.setStyle(Style("background: #00ff00; padding: 4"))
+                var col = Column(listOf(l))
+                var w = Window("WidgetStyle")
+                w.bind(col)
+                w.show()
+            }
+            """;
+        Path source = tempDir.resolve("App.kf");
+        Files.writeString(source, program);
+
+        Path outDir = tempDir.resolve("out");
+        CompilationResult result = driver.compile(source, outDir, Target.JS);
+        assertTrue(result.success(), "compilação JS deve passar: " + result.diagnostics().getDiagnostics());
+
+        HttpServer server = serve(outDir);
+        int port = server.getAddress().getPort();
+        try {
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
+            assertTrue(dom.contains("rgb(0, 255, 0)") || dom.contains("#00ff00"),
+                    "setStyle no Label não aplicou background: " + excerpt(dom));
+            assertTrue(dom.contains("padding: 4px"), "setStyle no Label não aplicou padding: " + excerpt(dom));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     void formSubmitHandlerRunsInRealBrowser(@TempDir Path tempDir) throws IOException {
         Browser browser = findBrowser();
         assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");

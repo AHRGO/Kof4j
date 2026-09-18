@@ -175,7 +175,7 @@ kof build main.kf --target=native
 |---------|--------|-----------|
 | **JVM** | ✅ Funcional | Gera `.class` via ASM (bytecode V21, exception table, virtual threads) |
 | **Nativo** | ✅ Funcional | Gera ELF x86-64 via assembly (free-list GC, spawn/pthread, FP XMM, SQLite); riscv/arm placeholders |
-| **Script** | ✅ KofScript (let→Globals, repl, --watch) | Runtime interativo |
+| **Script** | ✅ KofScript (var/val→Globals, repl, --watch) | Runtime interativo |
 | **KofJS** | ✅ alpha | ES Modules via GraalJS embarcada; `kof.http` por interop Java HttpClient |
 | **KofC** | ✅ nativo-only | C subset → ELF x86-64 |
 

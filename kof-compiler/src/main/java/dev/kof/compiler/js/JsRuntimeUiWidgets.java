@@ -75,6 +75,15 @@ public final class JsRuntimeUiWidgets {
                 if (n) { n.style.maxWidth = px + "px"; n.style.width = "100%"; }
             }
 
+            // D-UI-STYLE (UI007) Q5: setStyle(style) on every DOM widget — the
+            // shared kof_ui_widget_* family (UI005 pattern), same shape as
+            // setFont(font). The Style value is the id stored by
+            // kofUiStyleNew/kofUiStyleCss; the compiler already normalized it.
+            export function kofUiWidgetSetStyle(widget, styleId) {
+                const n = window.__kofNodes && window.__kofNodes[widget];
+                if (n) kofUiApplyStyle(n, styleId);
+            }
+
             export function kofUiLabelNew(text) {
                 if (typeof document === "undefined") {
                     return -1;
@@ -313,28 +322,54 @@ public final class JsRuntimeUiWidgets {
                 return id;
             }
 
+            // D-UI-STYLE (UI007): declarative Style("<declarations>").
+            // The compiler parsed/validated/normalized the declarations; the
+            // runtime only stores the CSS text for the widget to apply.
+            export function kofUiStyleCss(css) {
+                if (typeof document === "undefined") {
+                    return -1;
+                }
+                window.__kofStyles = window.__kofStyles || {};
+                const id = Object.keys(window.__kofStyles).length + 1;
+                window.__kofStyles[id] = { css: css };
+                return id;
+            }
+
+            // Applies a stored style entry (4-Int form or declarative CSS) to
+            // a DOM node — shared by kofUiViewNew and kofUiWidgetSetStyle.
+            export function kofUiApplyStyle(node, styleId) {
+                if (!node || !window.__kofStyles) {
+                    return;
+                }
+                const s = window.__kofStyles[styleId];
+                if (!s) {
+                    return;
+                }
+                if (typeof s.css === "string") {
+                    if (s.css.length > 0) node.style.cssText = s.css;
+                    return;
+                }
+                const css = node.style;
+                if (s.background !== 0) {
+                    css.backgroundColor = kofUiColorToCss(s.background);
+                }
+                if (s.foreground !== 0) {
+                    css.color = kofUiColorToCss(s.foreground);
+                }
+                if (s.padding > 0) {
+                    css.padding = s.padding + "px";
+                }
+                if (s.radius > 0) {
+                    css.borderRadius = s.radius + "px";
+                }
+            }
+
             export function kofUiViewNew(style) {
                 const id = kofUiCreateNode("div", "kof-view");
                 if (id < 0) {
                     return -1;
                 }
-                const s = window.__kofStyles && window.__kofStyles[style];
-                const node = window.__kofNodes[id];
-                if (s) {
-                    const css = node.style;
-                    if (s.background !== 0) {
-                        css.backgroundColor = kofUiColorToCss(s.background);
-                    }
-                    if (s.foreground !== 0) {
-                        css.color = kofUiColorToCss(s.foreground);
-                    }
-                    if (s.padding > 0) {
-                        css.padding = s.padding + "px";
-                    }
-                    if (s.radius > 0) {
-                        css.borderRadius = s.radius + "px";
-                    }
-                }
+                kofUiApplyStyle(window.__kofNodes[id], style);
                 return id;
             }
 

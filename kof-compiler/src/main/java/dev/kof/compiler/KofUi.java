@@ -137,7 +137,7 @@ public final class KofUi {
                 || "Component".equals(name)
                 || "Box".equals(name) || "Stack".equals(name) || "Spacer".equals(name)
                 || "Wrap".equals(name) || "Grid".equals(name) || "Center".equals(name)
-                || "Align".equals(name) || "Store".equals(name)
+                || "Align".equals(name) || "Store".equals(name) || "AppState".equals(name)
                 || "Canvas".equals(name)
                 || "Fieldset".equals(name) || "Iframe".equals(name)
                 || "Video".equals(name) || "Audio".equals(name) || "Hr".equals(name);
@@ -185,6 +185,10 @@ public final class KofUi {
         if ("Center".equals(name)) return CENTER;
         if ("Align".equals(name)) return ALIGN;
         if ("Store".equals(name)) return STORE;
+        // Fase 8 (§2.6): AppState(initial) is the app-scoped root store —
+        // SAME handle type as Store (get/set/subscribe/unsubscribe); only the
+        // creation is singleton (runtime kof_ui_app_state).
+        if ("AppState".equals(name)) return STORE;
         if ("Canvas".equals(name)) return CANVAS;
         if ("Fieldset".equals(name)) return FIELDSET;
         if ("Iframe".equals(name)) return IFRAME;
@@ -267,6 +271,9 @@ public final class KofUi {
                 case "setGradient" -> argCount == 3 ? new UiCall("kof_ui_widget_set_gradient", Type.PrimitiveType.VOID, List.of(COLOR, COLOR, INT)) : null;
                 case "setFlexBasis" -> argCount == 1 ? new UiCall("kof_ui_widget_set_flex_basis", Type.PrimitiveType.VOID, List.of(INT)) : null;
                 case "setMaxWidth" -> argCount == 1 ? new UiCall("kof_ui_widget_set_max_width", Type.PrimitiveType.VOID, List.of(INT)) : null;
+                // D-UI-STYLE (UI007) Q5: declarative style on every DOM widget
+                // (Style value, same shape as setFont(font)).
+                case "setStyle" -> argCount == 1 ? new UiCall("kof_ui_widget_set_style", Type.PrimitiveType.VOID, List.of(STYLE)) : null;
                 default -> null;
             };
             if (shared != null) return shared;

@@ -1139,6 +1139,91 @@ errado devem ser ignoradas e fechadas. adiciona isso como regra absoluta."
 - NÃO cobre: bugs cujo reproducer é Kof válido (#403, #336, #313 — ficam e
   foram corrigidos), nem o cluster nullable-primitive (D-NULL-INTENT), nem a
   resolução de tipo JDK sem qualificar (§268).
+## D-UI-STYLE — `style` declarativo (UI007)
+
+**Data:** 17/09/2026
+
+**Estado:** `DECIDED`
+
+**Origem:** decisão da mantenedora no chat, respondendo às cinco perguntas
+abertas do `KOFUI-AUDIT.md` §UI007 ("UI007 — design proposal"). O item estava
+`BLOQUEADO` pela regra 6 (superfície de API); este registro o desbloqueia.
+
+### Contexto
+
+O UI007 pede "declarative `style` (idiomatic CSS), own parser". A superfície
+exata é congelamento de API, então não podia ser implementada por julgamento
+do agente. O `Style(Int, Int, Int, Int)` existente (background, foreground,
+padding, radius — `kof_ui_style_new`) já está entregue nos quatro alvos
+(real só no KofJS; no-op documentado nos demais).
+
+### Contrato
+
+1. **Superfície.** `Style("<declarações>")` — um argumento String literal,
+   pares `prop: value;` separados por `;`. Produz um valor `kof.ui.Style`,
+   consumido por `View(style)` exatamente como a forma de 4 Ints. O
+   `Style(4 Ints)` existente fica **intocado** (aditivo, retrocompatível).
+2. **Parse no compilador (Q4).** As declarações são parseadas e validadas em
+   compile-time; o lowering carrega o texto CSS **normalizado**. Argumento
+   não-literal é diagnóstico (nada de parse em runtime).
+3. **Cores (Q1).** Aceita hex CSS (`#rgb`, `#rrggbb`, `#rrggbbaa`), nomes de
+   cor CSS e os nomes de `Palette` (`red`, `cyan`, …) — a mesma tabela do
+   `Palette`. O compilador valida o valor e o mantém no CSS normalizado (o
+   browser resolve o nome). A forma de 4 Ints segue sendo o caminho para
+   passar um `Color` calculado (a forma String aceita só literal).
+4. **Unidades (Q2).** Inteiro nu significa `px`; os sufixos `px`, `%`, `em`
+   e `rem` são aceitos.
+5. **Propriedades (Q3).** Uma **whitelist tipada**. Propriedade fora da
+   whitelist é diagnóstico em compile-time (`SEM076`) — nunca repassada em
+   silêncio para `node.style` (R6). Declaração malformada é `SEM077`; valor
+   inválido para propriedade conhecida é `SEM078`.
+6. **Escopo (Q5).** `setStyle(style)` — recebendo o valor `Style`, exatamente
+   como `View(style)` — fica disponível em **todo widget DOM**
+   (`KofUi.isDomWidget`), não só `View`, pela família compartilhada
+   `kof_ui_widget_set_style` (padrão do UI005, mesma forma de
+   `setFont(font)`).
+
+### Invariantes
+
+- **Zero regressão na forma de 4 Ints**: `Style(Int, Int, Int, Int)` mantém
+  a semântica exata em todos os alvos.
+- **Paridade honesta por alvo**: o style declarativo é real no KofJS e
+  **no-op** no JVM/Native/Script, igual ao gap já existente do `Style`
+  (UI001). O no-op segue documentado; não vira fallback silencioso.
+- **Diagnósticos seguem D-DIAG-EN** (texto da mensagem em inglês; códigos
+  estáveis).
+- Os códigos novos são **aditivos** e não renumeram nada.
+
+### Alternativas rejeitadas
+
+- **Parse em runtime** (opção do Q4): rejeitada — "own parser" mais validação
+  em compile-time (Q3) exigem o compilador; um parse em runtime também
+  transformaria o erro de propriedade desconhecida em falha de execução, e
+  não em diagnóstico.
+- **`setStyle` só em `View`** (opção do Q5): rejeitada pela mantenedora em
+  favor da superfície mais ampla (todo widget DOM).
+
+### Implementação
+
+Reivindicado no `DOING.md` (UI007, lane UI/style); roadmap §8 Frontend.
+Fatia A = parser no compilador + `Style(String)` + lowering + runtime JS +
+testes; fatia B = `setStyle` em todo widget DOM.
+
+### Evidências
+
+`UiStyleCssE2ETest` 10/10 (JVM + Native + Script + JS: happy path, nomes CSS,
+unidades, `setStyle` num Label, `SEM076`/`SEM077`/`SEM078`, não-literal,
+não-regressão da forma de 4 Ints) + `KofJsBrowserE2ETest` (Chrome headless,
+DOM real: `declarativeStyleRendersInRealBrowserDom`,
+`setStyleRendersOnAnyDomWidgetInRealBrowser`); suíte completa dos 4 módulos
+verde fora do flake pré-existente §252 e dos reds cross §181/§256;
+`docs-lang.sh check` 0/0/0.
+
+### Relacionamentos
+
+- Fecha o bloqueio por regra 6 do UI007 (`KOFUI-AUDIT.md` §UI007).
+- Relacionado: UI001 (família do no-op silencioso), UI005 (família
+  compartilhada `kof_ui_widget_*`), D-DIAG-EN.
 
 ---
 
@@ -1213,6 +1298,261 @@ respondido "Promover p/ development/ e implementar".
 - `Overrides: R12` (a meta-regra "não interromper o presente").
 - `Related:` `roadmap.md` §23 (Tiers 0–12), §22 (Plataforma Universal),
   `AGENTS.md` §"Invariantes da plataforma".
+
+---
+
+
+## D-UI-TOKENS — tokens do design system (Fase 10, pilar 9)
+
+**Data:** 2026-09-18
+
+**Estado:** `DECIDIDO`
+
+**Origem:** autorização de escopo da mantenedora (chat, 18/09 — a resposta
+"todas" para as Fases 8–11 do Component Core). A superfície exata (nomes
+dos namespaces, nomes dos membros, valores em px) é um congelamento de API
+(regra 6); fica travada aqui, seguindo a convenção **D-UI-STYLE Q2** (Int nu
+é pixels) e a grade de 8px (consenso Material/Tailwind) para que os tokens
+sejam previsíveis e idiomáticos. A *forma* (cinco namespaces de constantes)
+é o contrato; os valores específicos da escala podem ser ajustados pela
+mantenedora sem mudar a forma da API.
+
+### Contexto
+
+`KOFUI-AUDIT.md`/`architecture.md` §2.1 pilar 9 ("Design system — Theme +
+tokens") lista os tokens `Color/Type/Spacing/Border/Radius/Elevation`. Hoje
+só existem `Color` (via `Palette`/`Color`) e `Theme`; não há tokens de
+Spacing/Border/Radius/Elevation/Typography, então os layouts usam literais
+hard-coded (`padding: 16`, `border-radius: 4`) em vez de nomear a intenção
+de design.
+
+### Contrato
+
+1. **Superfície.** Cinco namespaces de constantes, cada um um fold em
+   compile-time para um `Int` nu (px):
+
+   | Namespace | Membros (→ px) |
+   |-----------|----------------|
+   | `Spacing` | `xs`=4 `sm`=8 `md`=16 `lg`=24 `xl`=32 |
+   | `Radius` | `none`=0 `sm`=2 `md`=4 `lg`=8 `full`=9999 |
+   | `Border` | `hairline`=1 `thin`=2 `medium`=4 `thick`=8 |
+   | `Elevation` | `none`=0 `sm`=1 `md`=2 `lg`=3 `xl`=4 |
+   | `Typography` | `xs`=12 `sm`=14 `md`=16 `lg`=20 `xl`=24 `hero`=32 |
+
+2. **Fold no compilador (frontend compartilhado).** Um `FieldAccessExpr`
+   `Namespace.membro` é folding para `KofLoadLiteral(Int)` pelo mesmo
+   idiom que o `Palette`. Como o fold vive no frontend compartilhado, os
+   quatro targets (JVM/Native/Script/JS) carregam a mesma constante —
+   **paridade cross-target por construção**.
+
+3. **R6 — sem 0 silencioso.** Um membro inexistente (`Spacing.huge`) e uma
+   chamada de método num namespace (`Spacing.of(4)`) são um diagnóstico de
+   compile-time **`SEM079`** (mensagem em inglês, lista os membros válidos).
+   O buraco silencioso pré-existente `Palette.nope` é um gap separado e
+   catalogado (é superfície da lane compiler; os tokens não o replicam).
+
+4. **Aditivo e retrocompatível.** Nenhum identificador existente é
+   sombreado (`Spacing`/`Radius`/`Border`/`Elevation`/`Typography` eram
+   não usados). Os tokens compõem com os primitivos existentes
+   (`Label.setFontSize(Typography.lg)`, `Style("padding: " + Spacing.md + …)`
+   é a forma *literal* do style — os tokens carregam os mesmos valores px).
+
+### Invariantes
+
+- Os cinco namespaces são **apenas constantes** (sem métodos, sem forma
+  `var`).
+- Valores são `Int` px puros (D-UI-STYLE Q2); `full`=9999 é o idiom CSS de
+  "pílula" (totalmente arredondado).
+- Diagnósticos seguem D-DIAG-EN. **Emenda (18/09, colisão entre lanes):** os
+  códigos desta decisão e da D-UI-STYLE foram re-numerados — a lane compiler
+  já havia publicado `SEM073` (aridade do `reduce`, `MemberCallTyper`) e `SEM074`
+  (método em primitivo, `SemMethodCallTyper`) no `beta-0.4.0`. Style:
+  Style: `SEM073/74/75` → **`SEM076/77/78`**; tokens: `SEM076` → **`SEM079`** (renúmero final 18/09: o `beta-0.4.0` tomou `SEM073/74` para reduce-arity/primitive-method e `SEM075` para o diagnóstico static-field — esta lane deslocou de novo para manter unicidade).
+  Só os rótulos mudaram; nenhuma semântica mudou (as decisões valem como decididas).
+- Sem superfície de runtime: o fold é em compile-time, então não há no-op
+  por target a documentar (diferente do UI001) — o valor está na IR.
+
+### Alternativas rejeitadas
+
+- **Um namespace `Tokens` com membros aninhados** (`Tokens.Spacing.md`):
+  rejeitado — um nível extra de cerimônia sem ganho; o `Spacing.md` plano
+  casa com `Palette.red` e a tabela de idiom.
+- **Objetos de runtime / tokens `var`**: rejeitado — tokens são constantes
+  em compile-time; uma forma de runtime adicionaria um no-op por target
+  (família UI001) sem benefício.
+
+### Implementação
+
+Reivindicado no `DOING.md` (Fases 8–11, lane UI/style). `KofUiTokens.java`
+(tabela de fold + mensagens) + os seis pontos de toque do `Palette`
+(`SemExpressionTyper`×2, `ExpressionTyper`, `ExpressionLowerer`,
+`ExpressionMethodCallLowerer`, `MemberCallTyper`).
+
+### Evidência
+
+`UiTokensE2ETest` 7/7 — tabela golden em JVM + Native + Script (mesmo fold
+compartilhado → saída idêntica), DOM JS (o valor chega no texto renderizado),
+`SEM079` membro inexistente, `SEM079` chamada de método, composição com
+`Style`/widget; suíte 4-módulos verde fora do flake pré-existente §252 e dos
+reds cross §181/§256; `docs-lang.sh check` 0/0/0.
+
+### Relacionamentos
+
+- Entrega o pilar 9 de `architecture.md` §2.1 (Fase 10).
+- Relacionado: D-UI-STYLE (convenção px da Q2), `Palette` (idiom de fold),
+  UI001, D-DIAG-EN.
+
+---
+
+## D-UI-APPSTATE — Fase 8: `AppState(initial)` é o store-raiz da aplicação
+
+**Data:** 2026-09-18
+
+**Estado:** `DECIDIDA`
+
+**Contexto:** a `docs/ui/architecture.md` §2.6 define três escopos de
+estado. O local (`state`/`text`/`flag` no `Component`) e o `Store`
+compartilhado (get/set/subscribe/unsubscribe) já funcionavam; faltava o
+escopo **raiz da aplicação** (Fase 8). Ao ligá-lo, o §296 foi medido e
+corrigido primeiro: o `Store.unsubscribe` do JS era no-op silencioso
+(identidade wrapper-vs-raw), então a perna "cleanup" do §2.6 não tinha
+primitivo funcional — ver `known-bugs.md` §296.
+
+**Decisão (contrato mínimo):**
+- `AppState(initial)` — um argumento, devolve o store do **escopo da
+  aplicação**: um **singleton create-or-get** sobre a máquina do Store. A
+  primeira chamada cria com `initial`; as seguintes devolvem o MESMO handle
+  e **ignoram** o `initial` (documentado; o valor vive no runtime, um slot
+  por processo).
+- O handle devolvido é um `Store` — os métodos são exatamente
+  `get`/`set`/`subscribe`/`unsubscribe`; nenhuma superfície nova, nenhuma
+  máquina `State`/`Signal`.
+- O ponto é a alcançabilidade: components chamam `AppState(0)` em qualquer
+  lugar em vez de prop-drilling de handle.
+- `storesLive()` conta o slot do app-state (probe de leak inalterado).
+- O cleanup de inscrições no unmount segue **manual** (`unsubscribe(h)` —
+  agora real pelo §296): atribuir inscrições automaticamente a components é
+  contrato maior (qual component é o "current" durante um subscribe?) —
+  regra 6, não decidido aqui.
+- JVM/Native mantêm os no-ops documentados do Store (UI é KofJS —
+  backend-parity); o singleton JVM ainda conta uma vez em `storesLive()`.
+
+**Amendável sem quebrar código:** a semântica de ignorar o `initial`
+posterior e extensões futuras (p.ex. auto-unsub) são registradas aqui
+primeiro; a forma da chamada é congelada.
+
+**Evidência:** `ComponentCoreE2ETest.appStateIsCreateOrGetSingleton` +
+`appStateDrivesComponentsWithoutPropDrilling` (VERMELHO pré-feature — SEM015
+"Undefined function: 'AppState'"; verde pós-wiring); golden medido por
+target (JS `10,10,x=10,x=42,,1`; JVM `0,0,"",1`; Native `0,0,"",0`);
+ComponentCore 24/24 + UiE2E 29 + browser 28 + Router 4 + style/tokens 17 +
+CoreRegression 102 + CompilerDriver 256 verdes.
+
+- Relacionado: D-UI-STYLE, D-UI-TOKENS, §296, D-BACKEND-SEMANTICS (no-op stores).
+
+---
+
+## D-UI-DIFF — Fase 9 (atualização parcial / reuso de nó): **DECIDIDA (B) — reuso da raiz por tipo**
+
+**Data:** 2026-09-18 · **Data da decisão:** 2026-09-18 (mantenedora, enquete multi-escolha na sessão)
+
+**Estado:** `DECIDIDA` — opção **(B) reuso da raiz por tipo**. Fila aberta em `DOING.pt_BR.md` (dono .17, lane kof-ui).
+
+**Contexto:** a Fase 9 de `architecture.md` quer "atualização parcial":
+reusar o nó DOM quando o view re-renderiza o mesmo widget na mesma posição.
+Hoje o re-render é rebuild+prune: o §295 tirou o vazamento, mas a identidade
+ainda é recriada — **medido 18/09 (host embarcado, probe scratch):** o
+handle do label-raiz de um `view (s) -> Label("v="+s)` é `3` após 1 state
+write e `7` após 5 (um handle novo por render; subárvore antiga podada,
+correta mas nova). Consequências: toda referência que o usuário guardou a um
+widget de um render anterior fica obsoleta, e estado do DOM real (focus de
+input, cursor, scroll, transições CSS) se perde a cada state write.
+
+**Opções (não decididas aqui — regra 6, ciclo de vida/identidade do §2.7 é
+congelado):**
+- **(A) Reconcilador posicional completo** (VDOM-lite): builders emitem
+  descritores, um diff por (posição, tipo) conserta propriedades no lugar.
+  Maior ganho, maior risco: exige tabela de cópia de propriedades por família
+  de widget e faz handles antigos continuarem vivos — mudança de contrato de
+  identidade.
+- **(B) Reuso da raiz por tipo** (primeira fatia): quando raiz antiga e nova
+  são do mesmo tipo, copiar as propriedades de valor para o nó ANTIGO e
+  descartar o novo — um widget por vez, mensurável, mas ainda é mudança de
+  identidade de handle na raiz (decisão de aliasing obrigatória).
+- **(C) Manter rebuild; sem reuso.** Honestos e simples; a perda de
+  focus/cursor fica limitação documentada (estado atual).
+
+**Recomendação (lane UI/style):** (B) com nota explícita de identidade — a
+menor unidade coesa que conserta a dor visível (perda de focus no caso
+comum de widget único na raiz) sem camada VDOM. A decisão (qual opção + o
+contrato de continuidade de handle) é da mantenedora.
+
+**Decisão (mantenedora, 18/09) — o contrato de identidade de (B):** quando
+o render anterior e o próximo de um component `view` produzem o **mesmo
+tipo de raiz**, o nó DOM ANTIGO é mantido e as propriedades de valor são
+copiadas do nó fresco para ele; o handle raiz antigo **continua vivo**
+(continuidade de identidade — este é o chamada de aliasing que a opção B
+exige). Tipo de raiz diferente → rebuild + prune exatamente como hoje
+(§295). Sem camada VDOM, sem chaveamento, sem diff posicional de filhos
+nesta fatia. Prova esperada: o probe mostra o MESMO handle entre state
+writes quando o tipo é estável; elemento com focus sobrevive ao write;
+troca de tipo ainda poda (sem regressão do §295).
+
+**Relacionado:** §295 (prune), §296 (unsubscribe), linhas da Fase 9 na
+audit, D-UI-APPSTATE (postura do unsub manual — agora substituída por
+D-UI-AUTOUNSUB), D-UI-CANCELLED.
+
+---
+
+## D-UI-AUTOUNSUB — inscrições do Store têm escopo automático por component: **DECIDIDA (A)**
+
+**Data:** 2026-09-18 (mantenedora, enquete multi-escolha na sessão)
+
+**Estado:** `DECIDIDA` — opção **(A) escopo automático por component**.
+
+**Contexto:** desde o §296 `unsubscribe(h)` é primitivo real, mas a limpeza
+é manual — um component que `subscribe` no mount vaza o callback (e o
+closure capturado) depois que o component é podado (o registry do §295 sabe
+exatamente quando). O D-UI-APPSTATE registrava "limpeza continua manual"
+como postura ANTERIOR à decisão.
+
+**Decisão:** um `subscribe` feito **enquanto um component é o alvo de
+render corrente** fica vinculado àquele component; quando o component sai
+da árvore (poda de subárvore, §295), o runtime dá unsubscribe
+automaticamente. Inscrições fora de contexto de component (escopo de
+aplicação — ex.: um observador de `AppState` criado no `main`) mantêm
+semântica manual — o primitivo do §296 continua valendo para elas.
+Backward compatível: nada que compila hoje muda de comportamento, exceto
+inscrições vazadas que morrem com o component.
+
+**Relacionado:** §295 (registry de subárvore), §296 (unsubscribe),
+D-UI-APPSTATE (postura substituída), D-UI-DIFF (mesmo encanamento de
+ciclo de vida).
+
+---
+
+## D-UI-CANCELLED — `cancelled()` em ações async de UI: **DECIDIDA (A) — escopo do component de origem**
+
+**Data:** 2026-09-18 (mantenedora, enquete multi-escolha na sessão)
+
+**Estado:** `DECIDIDA` — opção **(A) true quando o component de origem saiu
+da árvore**.
+
+**Contexto:** `cancelled()` dentro de callbacks async de ação UI hoje é
+conservador (quase sempre `false`) — uma resposta `spawn`/`http` tardia pode
+escrever numa subárvore DOM que o §295 já podou. A opção B (por versão de
+estado) foi rejeitada por agressiva demais (mata updates legítimos, mudança
+de contrato pesada); a C (handles manuais) foi rejeitada por cerimônia.
+
+**Decisão:** a ação lembra a instância de component em que foi criada;
+`cancelled()` retorna `true` quando o nó daquele instância não está mais na
+árvore viva (o mesmo registry do §295). Callbacks async devem guardar o
+toque de DOM com `cancelled()` — quando true, a resposta é descartada.
+Efeitos colaterais não-DOM são responsabilidade do programador (inalterado).
+
+**Relacionado:** §295, D-UI-AUTOUNSUB (mesmo substrato de ciclo de vida),
+Fase 8 (`view`/ações), D-BACKEND-SEMANTICS (`spawn`/`await` congelados —
+isto é observabilidade de UI, não mudança de contrato de concorrência).
 
 ---
 

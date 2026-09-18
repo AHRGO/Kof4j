@@ -80,7 +80,7 @@ Grid, Center, Align, Store, Canvas + namespace `Router`.
 | **UI004** | Forms: `<form>` ✅ + submit handler ✅ DONE 07/09 (`Form(children)`, `onSubmit`, `submit()` — handler runs in the browser, proof by DOM mutation); fieldset ✅ DONE 08/09 (`Fieldset(children[, legend])`, `358ec80`). `Input` types ✅ (`setType`); checkbox/radio state ✅ (`setChecked`/`checked`); select ✅ (`Select`/`setOptions`/`selected`/`setSelected`) | KofJS | P1 **DONE** |
 | **UI005** | Attributes: id ✅ class ✅ disabled ✅ (DONE 07/09 — `setId`/`setClass`/`setDisabled` in DOM widgets, `kof_ui_widget_*` family); placeholder ✅ (`Input.setPlaceholder`); checked ✅; alt/width/height ✅ (`Image.*`); readonly/name ✅ DONE 07/09 (`Input`/`Textarea`.setReadonly(bool)/setName(String) — 6/6 complete points, browser proof: `name=`/`readonly` attributes in outerHTML) | KofJS | P1 **DONE** |
 | **UI006** | Events: `Event.type()`/`stopPropagation()` ✅; `key()`/`value()`/`x()`/`y()` ✅ DONE 08/09 (`f0907c2` — real DOM event: `key` from KeyboardEvent, `value` from the target input, `clientX/Y`; `widget.on(type, handler)` exposed for widgets outside the Component tree; `kofUiWidgetOn` now dispatches the kofEv, before it called `fn()` without an event); `target()`/`relatedTarget()` ✅ DONE 08/09 (`3c241ae`+ — id of the origin/related node with tagName fallback; browser proof: `t=campo-main` in the final DOM) | KofJS | P2 **DONE** |
-| **UI007** | declarative `style` (idiomatic CSS) — new, with its own parser (Phase 4 plan item) | KofJS | P1 |
+| **UI007** | declarative `style` (idiomatic CSS) — new, with its own parser (Phase 4 plan item). **DONE 17/09** (`D-UI-STYLE`, commit `f7a5ad89`): `Style("<declarations>")` parsed in the compiler, typed whitelist (`SEM076`/`SEM077`/`SEM078`), hex+CSS names+`Palette` names kept verbatim, px/`%`/`em`/`rem`, `setStyle(style)` on every DOM widget — proof: `UiStyleCssE2ETest` 10/10 + 2 real-Chrome tests | KofJS | P1 **DONE** |
 | **UI008** | Window: size/position only JVM no-op; KofJS only title (browser does not control window — ok per platform) | JVM/KofJS | P3 |
 | **UI009** | Canvas: fillText ✅ measureText ✅ save ✅ restore ✅ transform ✅ setGlobalAlpha ✅ (DONE 07/09 — `UiE2ETest.canvasUi009LinksOnAllTargets` + `KofJsBrowserE2ETest.canvasUi009RunsInRealBrowser`); drawImage ✅ (07/09 — Image→canvas via DOM element) | KofJS | P2 **DONE** |
 
@@ -130,15 +130,18 @@ UI005 `setId`/`setClass`/`setDisabled` (+ dead code fix `acceptsFont`).
    `Button(text, action)` in `ExpressionUiStaticLowerer`); browser test.
 2. `id`/`class`/`disabled` attributes (UI005) + `textarea`/`select`
    elements (UI003) — same 6-point pattern.
-3. UI007 declarative `style` (idiomatic CSS, own parser) — the larger item.
+3. ~~UI007 declarative `style` (idiomatic CSS, own parser)~~ **DONE 17/09**
+   (`f7a5ad89`): decision `D-UI-STYLE` + slices A/B, proof `UiStyleCssE2ETest`
+   10/10 + real-Chrome tests (see §UI007 below).
 4. ~~UI002 (Script silent no-op)~~ **DONE 08/09** (`7081551`): decision
    taken as additive without breaking backward compat — single **warning** on
    stderr (never error; rule 6 + freezing); test `KofScriptTest.ui002WarnsOnceOnUiCalls`.
 
-### UI007 — design proposal (awaits maintainer; rule 6)
+### UI007 — design decision + implementation (DECIDED and DONE 17/09; rule 6 closed)
 
-The plan asks for "declarative `style` (idiomatic CSS), own parser". The exact
-surface is a design decision (API freezing). Minimal additive proposal (does not
+The plan asks for "declarative `style` (idiomatic CSS), own parser". The
+surface was frozen by the maintainer and recorded as **`D-UI-STYLE`** in
+`docs/development/DECISIONS.md` (EN+PT). Minimal additive form (does not
 touch the existing `Style(4 Ints)` — backward compat):
 
 ```kof
@@ -147,19 +150,22 @@ var s = Style("background: #ff0000; padding: 8; border-radius: 4")
 var v = View(s)
 ```
 
-Open questions (not decidable without maintainer):
-- Q1: colors — accept `#rrggbb`/CSS names, or only the language's
-  `Color`/`Palette` (the `toCss` conversion already exists)?
-- Q2: units — `8` = px? accept `em`/`%`/`rem`?
-- Q3: properties — whitelist (background/padding/margin/radius/
-  border/font) or any `prop: value` passed to `node.style`?
-- Q4: parse in the compiler (style IR) or at runtime (string → CSSStyle
-  declaration)? "own parser" suggests compiler.
-- Q5: is `Style` only for `View` or does every DOM widget accept it (via
-  `setStyle`)?
+Closed questions:
+- Q1: colors — **hex CSS (`#rgb`/`#rrggbb`/`#rrggbbaa`) + the CSS color
+  names + the `Palette` names** (the same table `Palette` uses).
+- Q2: units — **a bare integer means `px`; `px`/`%`/`em`/`rem` accepted**.
+- Q3: properties — **typed whitelist**; an unknown property is a
+  compile-time diagnostic (`SEM076`), malformed declaration `SEM077`,
+  invalid value `SEM078` — never silently forwarded to `node.style` (R6).
+- Q4: **parse in the compiler** (style IR; normalized text in the lowering).
+- Q5: **every DOM widget accepts it** (`setStyle(style)` with the `Style`
+  value, via the shared `kof_ui_widget_set_style` family — the UI005
+  pattern), not only `View`.
 
-Implementation awaits decision; the parse itself (lexer of `prop: value;`) is
-mechanical once the surface is closed.
+Implementation: **DONE 17/09** (commit `f7a5ad89`) — slice A = parser +
+`Style(String)` + lowering + JS runtime + proof; slice B = `setStyle(style)`
+on every DOM widget. Proof: `UiStyleCssE2ETest` 10/10 (JVM/Native/Script/JS
++ `SEM076`/`SEM077`/`SEM078`) and `KofJsBrowserE2ETest` +2 on real Chrome DOM.
 
 **Phase 5 boundary (KofJS Web APIs — not kof.ui):** fetch/WS/storage.
 
@@ -174,3 +180,62 @@ mechanical once the surface is closed.
   — but R6 suggests a diagnostic in the log (low prio).
 - Native/Script silent no-op is **not** a documented decision — it is an
   omission (R6 requires a diagnostic): UI001/UI002.
+
+### Phase 9 (Rendering) — re-render prune (18/09)
+
+The survey for the Component Core phases 8–11 found that
+`kofUiRender` (`JsRuntimeUiComponents.java`) rebuilt the view on every
+state change but pruned only the previous **root** element from the DOM,
+leaving the whole discarded subtree in `window.__kofNodes` (and its Button
+actions in `window.__kofActions`) — unbounded silent growth. Fixed by
+calling the existing `kofUiRemoveSubtree` (DOM + registry) on root change
+plus the `__kofActions` cleanup; see `known-bugs.md` **§295**. Proof:
+`ComponentCoreE2ETest.rerenderPrunesPreviousSubtreeFromRegistry` +
+`rerenderReleasesDiscardedButtonActions` (both RED pre-fix). Phase 9 still
+lacks node reuse/diffing (the "partial update" half) — this unit closes
+the leak only. The reuse half is a rule-6 identity contract question —
+planned with options + measured evidence in `DECISIONS.md` **D-UI-DIFF**
+(`BLOCKED` on the maintainer); no agent edit without it.
+
+### Phase 10 (Design system tokens) — DONE (18/09)
+
+`D-UI-TOKENS` delivered pillar 9 of `architecture.md` §2.1: the
+`Spacing`/`Radius`/`Border`/`Elevation`/`Typography` namespaces are
+compile-time `Int` (px) constants, folded by the same idiom as `Palette`
+(shared frontend → cross-target parity by construction). Unknown members and
+method calls on a namespace are `SEM079` (R6 — never a silent 0). Proof:
+`UiTokensE2ETest` 7/7 (golden table on JVM/Native/Script + JS DOM + both
+`SEM079` edges + composition with `Style`/widget). The audit matrix
+"Design system" row now reads: Theme + `Color`/`Palette` + the five token
+namespaces (the semantic theme-to-widget application remains manual).
+
+### Phase 8 (Application state) — DONE (18/09)
+
+`architecture.md` §2.6 closed by two units. §296 (bug): KofJS
+`Store.unsubscribe` was a silent no-op — subscribe stored the
+`fn.invoke.bind(fn)` wrapper, unsubscribe searched the raw handle, so
+unsubscribed callbacks kept receiving every `set()` forever; subs are now
+`{raw,f}` pairs removed by raw identity (fail-first:
+`storeUnsubscribeStopsDelivery`, RED `n=1,n=2,n=3,` pre-fix). Feature:
+`AppState(initial)` — the application-scoped root store, a create-or-get
+singleton over the Store machinery reachable from anywhere without
+prop-drilling (`D-UI-APPSTATE`). Proof: `appStateIsCreateOrGetSingleton` +
+`appStateDrivesComponentsWithoutPropDrilling` (golden measured per target;
+JVM/Native keep the documented Store no-ops; JVM singleton still counts in
+`storesLive()`), `ComponentCoreE2ETest` 24/24. Auto-attributing subscriptions
+to component lifecycles remains a rule-6 open question (manual
+`unsubscribe` is the working primitive today).
+
+### Phase 11 (module structure) — AUDITED DONE (18/09, no code)
+
+The §2.10 module map declares itself **conceptual** ("today it lives in the
+compiler; the engine is the JS CORE_RUNTIME"). Measured against the tree:
+the physical files already mirror every conceptual module by responsibility
+(`Components`/`Events`/`Forms`/`Validation` = core; `Layout` = layout; the
+Router block of `Events` = navigation; `KofStyleParser`+`KofUiTokens`+
+`Palette` = theme; `Widgets` = widgets; `JvmRuntimeUi`/native `RuntimeUi` =
+the honest no-ops). A physical `kof-ui/*` packaging would move files without
+changing behavior or the `CORE_RUNTIME` exports — rejected by "small and
+stable core" (no gain, all risk); §2.10 now carries the mapping table (EN+PT)
+as the module boundary. Three-states rule: this is an audit closing a
+documented state, not invented work.

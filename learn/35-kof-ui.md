@@ -33,6 +33,46 @@ dark.background().toCss()           // rgb(18, 18, 18)
 dark.primary()                      // Color
 ```
 
+Design-system tokens (Fase 10) — compile-time `Int` (px) constants that name
+the design intent:
+
+```kof
+Spacing.md          // 16  (xs=4 sm=8 md=16 lg=24 xl=32)
+Radius.lg           // 8   (none=0 sm=2 md=4 lg=8 full=9999)
+Border.thin         // 2   (hairline=1 thin=2 medium=4 thick=8)
+Elevation.md        // 2   (none=0 sm=1 md=2 lg=3 xl=4)
+Typography.lg       // 20  (xs=12 sm=14 md=16 lg=20 xl=24 hero=32)
+l.setFontSize(Typography.lg)
+```
+
+An unknown member (`Spacing.huge`) or a method call (`Spacing.of(4)`) is
+`SEM079` — the tokens hold constants, never a silent 0.
+
+## Shared and application state (Fase 8)
+
+`Store(initial)` is shared observable state between components;
+`AppState(initial)` is the **same store, one per application** — reachable
+from anywhere, no handle passed around:
+
+```kof
+main() {
+    var store = Store(0)             // shared: give the handle to who needs it
+    store.subscribe((v: Int) -> { println("s=" + v) })
+    store.set(1)                     // prints s=0 (current on subscribe), s=1
+    var h = (v: Int) -> { println("t=" + v) }
+    store.subscribe(h)
+    store.unsubscribe(h)             // real since §279 — stops delivery
+    AppState(0).set(7)               // app root: any component reads it...
+    println(AppState(0).get())       // ...the same value, 7
+}
+```
+
+`AppState(initial)` is create-or-get: the first call creates with `initial`,
+later calls return the same handle (their `initial` is ignored). Methods are
+exactly the Store's (`get`/`set`/`subscribe`/`unsubscribe`) — decision
+`D-UI-APPSTATE`. The observable lives in KofJS; on JVM/Native the operations
+are documented no-ops (UI is KofJS).
+
 ## Windows and Widgets
 
 ```kof
@@ -121,6 +161,28 @@ w.bind(view)
 
 `Style(background, foreground, padding, radius)` — colors via `Color`,
 `padding`/`radius` in px.
+
+#### Declarative style (CSS-like string)
+
+`Style("<declarations>")` takes idiomatic CSS. The compiler parses and
+validates it (D-UI-STYLE/UI007): an unknown property is a compile-time
+error (`SEM076`), a malformed declaration `SEM077` and an invalid value
+`SEM078` — never a silent fallback.
+
+```kof
+var style = Style("background: #ff0000; padding: 8; border-radius: 4")
+var view = View(style)
+```
+
+- **Colors** accept hex CSS (`#rgb`/`#rrggbb`/`#rrggbbaa`), CSS color names
+  and the `Palette` names.
+- **Lengths**: a bare integer means `px`; `px`/`%`/`em`/`rem` are accepted.
+- The argument must be a **literal** (the parse is at compile time) — for a
+  computed color use the 4-Int form.
+- `setStyle(style)` applies a style to **any DOM widget**, not only `View`:
+  `label.setStyle(style)`.
+
+Real in KofJS; documented no-op on JVM/Native/Script (like the 4-Int form).
 
 ## Canvas 2D
 

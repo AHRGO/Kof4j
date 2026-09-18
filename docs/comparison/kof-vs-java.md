@@ -16,7 +16,7 @@
 | Inheritance | Single + interfaces | Single + interfaces (3 levels) |
 | GC | Automatic | JVM: automatic / Native: free-list `kof_free_head` (mark-sweep implemented 03/09, manual; auto-GC disabled — auto-collect on exhaustion pending §260) |
 | Compilation | javac → bytecode | Kof → IR → JVM/Native (x86_64 + riscv64 + aarch64) / JS (GraalJS) / KofC / KofScript / Android (Phase 1) |
-| Syntax | Verbose | Concise (`String?`, `map/filter/reduce`, `let` → `KofScriptGlobals`) |
+| Syntax | Verbose | Concise (`String?`, `map/filter/reduce`, `var`/`val` → `KofScriptGlobals`) |
 
 ---
 
@@ -332,5 +332,5 @@ file > env > profile > default; CONF001 closed).
 | Logging / Observability | Framework | ✅ `kof.log` JVM+Native + `kof.observability` 3 targets (health/metrics/histograms/spans) + **OTel export ✅ JVM/JS (`exportSpans()` → OTLP/JSON, `OBS003`)** | Native OTel export (`OBS003`) |
 | Database `kof.db`/`kof.orm` | Framework | ✅ JDBC + native SQLite + MySQL `kof_db_mysql_scramble` | query DSL |
 | DI | Framework | ❌ (planned `service`) | proposal |
-| KofScript / KofC | — | ✅ `KofScript` `let`→`KofScriptGlobals` + `KofCcompiler` `kof c` | — |
+| KofScript / KofC | — | ✅ `KofScript` `var`/`val`→`KofScriptGlobals` + `KofCcompiler` `kof c` | — |
 | Targets | — | JVM stable (ws/sse), native x86_64 stable + native.risc/native.arm full core (free-list + mark-sweep + pthread spawn, via qemu), js alpha, kofc, android Phase 1 | — |

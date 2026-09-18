@@ -217,8 +217,8 @@ import a.b.*
 
 ### Kof (0.4.0-beta)
 ```kof
-let x = 5            // top-level let → KofScriptGlobals
-const y: Int = 10
+var x = 5            // top-level var → KofScriptGlobals (.ks)
+val y: Int = 10
 var name = "Mel"
 println(x + y)
 ```

@@ -91,11 +91,11 @@ if (s != null) {
 String t2 = s           // erro SEM021 — não atribuível fora do check
 ```
 
-### KofScript top-level let (0.4.0-beta)
+### KofScript no topo: `var`/`val` (0.4.0-beta; açúcar JS `let`/`const` REMOVIDO 06/09)
 ```kof
-let x = 5
-const y: Int = 10
-// → KofScriptGlobals static fields + rewriting
+var x = 5
+val y: Int = 10
+// → KofScriptGlobals static fields (.ks / kof repl only)
 ```
 
 ### Pattern matching (0.4.0-beta)

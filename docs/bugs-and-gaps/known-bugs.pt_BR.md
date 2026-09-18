@@ -19,6 +19,9 @@
 > | **§268 🟡 PARCIAL 18/09 (face throwables ✅ FECHADA pela lane compiler `.22`, commit do #313; face extends mais ampla ABERTA, fila da mesma lane)** | `throw new Exception(...)`/`extends <throwable-JDK>` emitiam nome CRU (`new Exception` / super `RuntimeException`) → `NoClassDefFoundError` no load enquanto a tabela de exceções qualificava (dois caminhos de resolução). Corrigido na raiz: `CompilerTypes.toType` + `SymbolTableBuilder` agora mapeiam o conjunto `JAVA_LANG_THROWABLES` para `java.lang.*` (homônimo do módulo vence; prova `ThrowQualifiedTest` 4/4). Escopo amplo RE-MEDIDO e ainda cru: `extends Thread`/`Object` (java.lang não-throwable), `extends IOException` (java.io, sem import), `extends Zebra` (indefinido — silencioso) — correção geral na fila (um SEM0xx livre no momento da implementação — SEM072 já é do arity do List.add do #336; `Object`→`java/lang/Object`). |
 > | **§269 🟡 PARCIAL 18/09 (lane compiler `.22`; faces (a)+(b)+(c)+(d) ✅ CORRIGIDAS no mesmo dia)** | Violações de R6 no caminho parse/lower (um construto não-Kof deve falhar com diagnóstico, nunca em silêncio): (a) **"""três aspas""" (#364) ✅ CORRIGIDA 18/09** — ela dobrava para string VAZIA e o programa compilava+rodava sem imprimir nada (descarte silencioso de conteúdo; também fechou o meu fechamento D-NOT-JAVA errado — reaberta como bug real primeiro). Conserto na raiz: `Lexer.skipTripleQuoted` emite **LEX008** e pula o bloco (um diagnóstico, sem cascata); a língua não tem literal raw/multilinha (`lexical-structure.md` §4.1 — a doc dizia `PARSE043`, que TAMBÉM estava ERRADA vs o comportamento medido; doc corrigida EN+PT + tabela de códigos). Prova: `TripleQuotedStringLexTest` 4/4 no mesmo commit (rejeição + diagnóstico único + controle strings normais intactas + bloco não terminado) + CLI verbatim `rc=1` com a mensagem, controle concat ainda `Hello World`. (b) #361 `nums.reduce((acc: Int, n: Int) -> acc + n)` (sem seed) **TRAVA o compilador** com `NegativeArraySizeException: -1` em `org.objectweb.asm.Frame.merge` (re-medido no jar do tip 12:26: o "hang" da rodada com jar velho era na verdade este crash de frame ASM — existe caminho fail-fast `frame crash in Default/Main.main`, mas a RAIZ é a chamada `kof_list_reduce` de 2-arg emitida com o slot Int de 2 palavras mal modelado no frame — últimos IR ops: `KofStoreLocal[int idx=2]` após `ASTORE 1`, o `reduce` recebeu lista de args `(List,Object,Object)` com o slot da seed faltando). **✅ CORRIGIDA 18/09**: `reduce` com aridade != 2 rejeitado com **SEM073** no `MemberCallTyper` compartilhado (mesma face do SEM072/#336 — um gate, 4 alvos; a seed é SEMPRE obrigatória, duas ordens válidas pela collections.md). Prova `ReduceSeedArityTest` 4/4 (verbatim da issue + 3-arg rejeitado + gate universal + as duas ordens válidas imprimem golden 15/15); #361 fechada com CLI rc=1+SEM073. linha SEM073 adicionada ao type-system EN+PT. (d) **#362** `n.abs()` em primitivo: compilava SEM diagnóstico (o `check` dizia "no errors") e morria no LOAD da classe — `ClassFormatError` (owner "" no Methodref) aparecia como "main não encontrado" no JVM/Script, `TypeError: n.abs is not a function` no JS. **✅ CORRIGIDA 18/09**: método de instância em primitivo rejeitado com **SEM074** no `SemMethodCallTyper` compartilhado (mesma família de gates do SEM028/array, SEM050/campo); whitelist = exatamente o que o emissor suporta (toString §216, toInt/toLong/toFloat/toDouble §89, toHexString/toBinaryString §218 — cada um MEDIDO RODANDO no jar do tip antes da guarda). Prova `PrimitiveMethodCallGuardTest` 5/5 (verbatim `n.abs()` + equals/hashCode + `toChar` fora do §89 + gate universal em 3 backends + controle whitelist rodando os goldens 42/3/ff); CLI verbatim `run`+`check` agora imprimem `M.kf:3:18: error: ... [SEM074]`. linha SEM074 adicionada ao type-system EN+PT. (c) #397 local `var args = 5` em `main()`: compila, NÃO IMPRIME nada, rc=1 — re-medido isolado (o "rc=1 silencioso" anterior era artefato do launcher JavaFX ao rodar o .class via `java`; pelo Run.java de reflexão a falha real aparece). A regra slot-0-vs-1 do parâmetro `String[]` está quebrada no alocador de locais. **(c) ✅ CORRIGIDA 18/09**: guarda declared-local-wins nas duas faces do EMIT (`ExpressionLowerer`/`ExpressionTyper` interceptavam `args` POR NOME antes do scan de locais, enquanto `SemExpressionTyper` resolvia locais primeiro — as duas metades divergiam e as leituras carregavam o slot 0 `String[]`). Prova: `MainArgsShadowTest` 4/4 (Q0: stash das guardas reproduz os sintomas do dossiê 0+AIOOBE e o print [Ljava.lang.String;; com o fix os 4 verdes incl. controles — `main(args: List<String>)` implícito imprime 0, local não-main intacto); guarda no caminho compartilhado = 4 alvos por construção; #397 fechada. Faces restantes: nenhuma no §269 — (a)(b)(c)(d) todas CORRIGIDAS. IRMÃOS AINDA SEM TRIAGEM com reprodutores Kof válido mantidos abertos da varredura: #310 (lambda SAM tipado `var m: Mapper = (n: Int) -> n + 1` → IncompatibleClassChangeError em runtime; a forma SEM anotação imprime 11), #318 (delegação de construtor `this()`/`driver()` rejeitada SEM015 no jar do tip; o ramo de lowering existe em `ExpressionBareCallLowerer` mas não há promessa no corpus — precisa decisão de design/gap, regra 6). | Três **violações de R6 medidas no caminho parse/lower** (um construto não-Kof deve falhar com diagnóstico, nunca em silêncio): (a) `"""três aspas"""` (#364, REABERTA depois que eu a fechei errado primeiro): o lexer dobra `"""..."""` para string VAZIA e o programa compila+roda sem imprimir nada — descarte silencioso de conteúdo, medido no jar do tip 12:26 (`println` vazio, rc=0); a correção é uma rejeição PARSE0xx (o recurso não tem promessa — `lexical-structure.md` §4.1), NÃO suporte a templates. (b) #361 `nums.reduce((acc: Int, n: Int) -> acc + n)` (sem seed) **TRAVA o compilador para sempre** (rc=124 timeout, jar do tip) — nenhum diagnóstico chega; mesma família: o repro brace-lambda/`it` da #423 agora também trava. (c) #397 local `var args = 5` em `main()`: compila, NÃO IMPRIME nada, rc=1 (errado silencioso, provável colisão de slot 0 do parâmetro `String[]`) — a regra slot-0-vs-1 está quebrada no alocador de locais. Cada um precisa de repro mínimo + diagnóstico fail-fast/teste de regressão (ordem Q0: reproduzir → corrigir a raiz → provar). IRMÃOS AINDA SEM TRIAGEM com reprodutores Kof válido mantidos abertos da varredura: #310 (lambda SAM tipado `var m: Mapper = (n: Int) -> n + 1` → IncompatibleClassChangeError em runtime; a forma SEM anotação imprime 11), #318 (delegação de construtor `this()`/`driver()` rejeitada SEM015 no jar do tip; o ramo de lowering existe em `ExpressionBareCallLowerer` mas não há promessa no corpus — precisa decisão de design/gap, regra 6). |
 > | **§270 🟡 ABERTO 17/09 (lane docs; conserto = fork regra-6 p/ mantenedora, faces aditivas #400/#390 p/ lane compiler)** | Atribuicao generica nao verificada: `List<Int>` → `List<String>` passa no `check` (so o tipo RAW comparado) e morre com CCE no runtime (#401 verbatim medido no tip). Uma raiz de substituicao, duas faces — ver §270. |
+> | **§295 ✅ CORRIGIDO 18/09 (lane UI/style, dono = 192.168.100.17)** | O re-render do KofJS vazava a subárvore anterior inteira para `window.__kofNodes` a cada escrita de `state`: `kofUiRender` soltava do DOM só o elemento RAIZ antigo, enquanto os construtores de widget seguem alocando handles novos — crescimento silencioso e ilimitado do registro (invisível na página). Segunda face: ações de `Button` descartados ficavam para sempre em `window.__kofActions`. Fix = chamar o `kofUiRemoveSubtree` existente (poda de DOM + registro) na troca de raiz + apagar a entrada correspondente de `__kofActions`. Medido pré-fix 1 nó após mount / 6 após 5 re-renders; pós-fix fica 1. Prova: `ComponentCoreE2ETest.rerenderPrunesPreviousSubtreeFromRegistry` + `rerenderReleasesDiscardedButtonActions` (ambos VERMELHOS pré-fix), suíte 21/21. |
+> | **§296 ✅ CORRIGIDO 18/09 (lane UI/style, dono = 192.168.100.17)** | `Store.unsubscribe` do KofJS era no-op silencioso: `kofUiStoreSubscribe` guardava o WRAPPER (`fn.invoke.bind(fn)`, objeto novo por chamada) mas o `unsubscribe` buscava o handle RAW com `indexOf` → nunca casava → inscritos desinscritos seguiam recebendo todo `set()` para sempre. Conserto: subs guardadas como pares `{raw,f}`; unsubscribe casa `raw` por identidade e remove uma ocorrência. Prova: `ComponentCoreE2ETest.storeUnsubscribeStopsDelivery` (VERMELHO pré-fix `n=1,n=2,n=3,`, medido), suíte 22/22. |
+> | **§297 🟡 ABERTO 18/09 (achado pela lane kofscript, dono = 192.168.100.17)** | `List`/`Set`/`Map` crus como tipo declarado de CAMPO viram `ClassType("",nome)` (pin pulado pelo registro builtin na `sa.getClass`) → `.kf` compilado morre `NoSuchFieldError`, `.ks` morre vazamento reflection `InaccessibleObjectException` — quebra silenciosa em runtime, R6. Workaround: `List<T>` element-typed (idioma do corpus; `ScriptGlobalTypes` agora o infere p/ globais sem anotação no script). Fix de causa = unidade compiler-core (semântica do guard de pin, todos os backends). |
 > | **§263 ✅ CORRIGIDO 17/09 — face var-decl (PARSE095), pela lane compiler/nat `.17`; 🔴 face de posição de função ABERTA (re-medida 17/09; regra 6 — mantenedora)** | O parser aceitava QUALQUER identificador antes de uma declaração *anotada* e o descartava em silêncio (R6): `let x: Int = 5` / `Klaxon x: Int = 5` / `Banana q: String = "z"` imprimiam o valor — o `: Tipo` no `parseVarDecl` sobrescrevia o prefixo consumido sem diagnóstico. Consertado pela direção catalogada: no caminho type-first, prefixo divergente → **PARSE095** (identidade `Int x: Int` tolerada — nada descartado); nível parser, os 4 alvos herdam; prova `ParserGarbageTypePrefixE2ETest` 9/9 (JVM+JS). Sem anotação já falhava honesto (SEM011 — `let x = 5`/`const y = 10` sugar morto, `183cb048`). Face restante: `async foo(): Int` (posição de função) AINDA compila — fall-through diferente, rio compartilhado com o cluster nullable/generics; deixada honesta por regra 6. Relacionado: as alegações do corpus em `training/reference/{targets,compiler}` (“let/const são rejeitados”) eram só metade verdade.
 > | **§262 ✅ FEITO 17-18/09 (face (a) `== null`/`!= null` `07a51565` pela lane bugs-and-gaps `.15`; face (b) `nullableRecord == nullableRecord` FEITA EM DOIS PASSOS: guarda-do-receptor landou primeiro `ab284b91` (lane `.17`) — medida INCOMPLETA (3 furos); completada 18/09 pela lane development `.18` (arg null-safe + gate Nullable-record + `!=` numérico no JS) — 4 alvos, 21/21)**| Record `T?` vs `null`: `== null`/`!= null` dá **NPE no JVM** (`Cannot invoke Point.equals(Object) because maybe is null`) — o `==` de record baixa para `.equals()` SEM guarda de null no receptor (`CompilerComparisons:28,337-342`, bug 188); nullable de class/String faz narrowing bem (`if_acmp`/`Objects.equals`). Face (a) consertada excluindo o literal `null` do ramo de igualdade de conteúdo de record (agora `if_acmp`); face (b) passo 1 (`ab284b91`, `.17`) guardava SÓ o RECEPTOR (`L==null ? (R==null) : L.equals(R)`) — medida INCOMPLETA: o ARG nulo ainda quebrava JS/Native, um `Point?` vindo de função caía no caminho de referência, e o `!=` no JS na null-path era sempre-false; passo 2 (`.18`) tornou a guarda `Objects.equals` COMPLETO nos DOIS operandos + desembrulhou `Nullable(record)` no gate + roteou o JS p/ helper numérico `kofRecordEq` (paridade regra 5 construída, 4 alvos; native x86_64 provado por `gcc`). Prova: `RecordNullableEqContentE2ETest` 10/10 + `RecordNullableNullEqE2ETest` 11/11 = 21/21. |
 > | **§260 🟡 PARCIAL 16/09 (lane native/compiler `.17`; causa-1 G-6b FECHADA por `92d11a03`, causa-2/G-6(a) + gatilho AINDA ABERTOS)** | O auto-collect x86 era insound por DUAS razões (apurado a gdb no mesmo dia): (1) o mark varria só o frame corrente → Strings vivas do main invisíveis → liberadas (SIGSEGV) — **CORRIGIDO 16/09 (G-6b: o `_start` grava `kof_main_stack_bottom`, o mark varre a pilha inteira da thread; `NativeX86GcMarkScopeTest` 3/3)**; (2) temporários vivos em registradores caller-saved no call-site do `kof_alloc` (`%rdi`) — invisíveis a qualquer varredura de pilha → exige G-6(a) (spill-per-live-ref / stack-map), o gatilho está OFF de novo. riscv nunca sofreu (1) (value-stack = pilha de máquina). |
@@ -10124,6 +10127,111 @@ Compila limpo. Roda: `NoSuchMethodError: 'java.lang.Object java.lang.Object.valu
 
 **Por que NAO corrigido aqui (regra 6).** As duas resolucoes honestas mudam semantica congelada: (a) rejeitar `z != null` em primitivo → quebra compatibilidade (fraca mas real) de todo programa que hoje sobrevive; (b) fazer `Map.get` primitivo retornar `V?` → a experiencia revertida de 07/09 (analise do §39) mostra que explode `==`/unboxing ate Nullable-de-primitivos landar atomicamente — que e exatamente o PR #438 (N1 atomico JVM/Script/JS, CI verde em `eaa22b57`, aguardando revisao da mantenedora). O fix correto e o #438 landar + este repro como um dos testes de aceitacao dele; um `if` solto no typer mascararia (Q0 proibido).
 
+**Status.** 🟡 ABERTO 18/09 — catalogado com medicoes; dono = quem landar #438/D-NULL-INTENT. Relacionados: #386 (origem do achado), #376/#278 (face anotada), §39 (irmao consumidor, corrigido), §293 (shadowing de window JS, corrigido nesta sessao).
+## §295 — Re-render do KofJS vazava a subárvore anterior inteira para `__kofNodes` (e as ações de Button para `__kofActions`): `kofUiRender` soltava do DOM só o elemento raiz antigo — crescimento silencioso e ilimitado a cada mudança de estado — ✅ CORRIGIDO 18/09 (lane UI/style, dono = 192.168.100.17)
+
+- **Sintoma (medido 18/09, achado na varredura da Fase 9 de
+  `docs/ui/architecture.md`):** cada `stateSet`/`state` num `Component`
+  montado deixava a subárvore anterior registrada em `window.__kofNodes` para
+  sempre. O DOM parecia correto (só a view atual anexada), então o vazamento
+  era invisível na página — só o registro crescia. Um component cuja view cria
+  widget novo a cada render (o caso normal) vaza uma subárvore por mudança de
+  estado: memória ilimitada e um registro que toda varredura de
+  `kofUiSubtreeIds`/`window.bind` paga.
+- **Causa raiz:** `kofUiRender` (`JsRuntimeUiComponents.java`) removia do DOM
+  apenas o elemento RAIZ anterior: `c.el.removeChild(oldEl)` quando
+  `c.root !== rootId`. Os construtores de widget (`kofUiLabelNew`,
+  `kofUiButtonNew`, …) alocam um handle NOVO por chamada e registram em
+  `__kofNodes`; nada podava os handles descartados. O runtime já tinha a poda
+  correta (`kofUiRemoveSubtree` — DOM + registro, usada por
+  `Component.remove`/unmount do Router), mas o caminho de re-render não a chamava.
+- **Segunda face (mesma raiz):** `window.__kofActions` é um SEGUNDO global
+  chaveado pelo mesmo handle. Um `Button` descartado mantinha sua closure de
+  ação alcançável para sempre; `kofUiButtonRemove` já apagava a entrada no
+  caminho de widget único, `kofUiRemoveSubtree` não.
+- **Repro (host embutido, pré-fix):** montar um `Component` com
+  `view { Label("v=" + s) }` e 5 `stateSet`s → `__kofNodes` fica com **6**
+  entradas (1 atual + 5 vazadas); com o fix fica **1**. Medido dos dois jeitos
+  no mesmo harness (stash/restore do fix de uma linha).
+- **Fix:** `kofUiRender` passa a chamar `kofUiRemoveSubtree(c.root)` quando o
+  handle da raiz muda (a poda existente de DOM + registro, incluindo
+  `_kofGone`), e `kofUiRemoveSubtree` apaga a entrada correspondente em
+  `window.__kofActions` para cada nó podado.
+- **Prova:** `ComponentCoreE2ETest.rerenderPrunesPreviousSubtreeFromRegistry`
+  (afere `nodes=1` após 5 re-renders) e
+  `ComponentCoreE2ETest.rerenderReleasesDiscardedButtonActions` (afere
+  `actions=1`); ambos VERMELHOS pré-fix (medidos 6/2) e verdes pós-fix.
+  Vizinhança verde: `ComponentCoreE2ETest` 21/21, `UiE2ETest` 29/29,
+  `KofJsBrowserE2ETest` 28/28 (Chrome real), `RouterE2ETest` 4/4,
+  `UiStyleCssE2ETest` 10/10.
+- **Escopo:** JS-only por natureza (o registro é o motor DOM do KofJS; JVM e
+  Native são no-ops documentados). Sem mudança de API nem de contrato — fix
+  puro de vazamento, aditivo e retrocompatível.
+
+## §296 — `Store.unsubscribe` do KofJS era no-op silencioso: inscritos ficavam presos para sempre e continuavam recebendo notificações do `set()` — ✅ CORRIGIDO 18/09 (lane UI/style, dono = 192.168.100.17)
+
+- **Sintoma (medido pré-fix, host embarcado):** assinar um lambda num `Store`,
+  `unsubscribe` com o MESMO handle, depois `set()` → o callback ainda era
+  chamado (`log = "n=1,n=2,n=3,"` em vez de `"n=1,n=2,"`). Vazamento silencioso
+  de inscritos a cada unsubscribe — e o contrato documentado da Fase 8 §2.6
+  ("cleanup no unmount") não tinha primitivo funcional.
+- **Causa raiz:** `kofUiStoreSubscribe` (`JsRuntimeUiEvents.java`) guardava o
+  WRAPPER (`kofUiRunFn(fn)` = `fn.invoke.bind(fn)` — objeto NOVO a cada chamada)
+  em `st.subs`, enquanto `kofUiStoreUnsubscribe` buscava o handle Kof RAW:
+  `st.subs.indexOf(fn)` nunca casava, o guard `i >= 0` engolia o fracasso em
+  silêncio e a inscrição continuava viva.
+- **Conserto:** inscrições passam a ser pares `{ raw: fn, f: wrapper }`; o
+  `set()` notifica `sub.f`, o `unsubscribe()` casa por identidade
+  `sub.raw === fn` e remove exatamente uma ocorrência (a primeira). Unsubscribe
+  de handle nunca inscrito segue no-op (semântica de listener-list). Mesmo
+  contrato de identidade do `mq.unsubscribe` (provado p/ JVM/Native por
+  `KofMqE2ETest.unsubscribeStopsDelivery`).
+- **Prova:** `ComponentCoreE2ETest.storeUnsubscribeStopsDelivery` — VERMELHO
+  pré-fix (`expected <n=1,n=2,> but was <n=1,n=2,n=3,>`, medido com o fix em
+  stash) e verde pós-fix; `ComponentCoreE2ETest` 22/22. JVM/Native mantêm os
+  no-ops de Store documentados (o teste também asser `""` neles).
+- **Escopo:** só JS (o observable do Store vive no runtime KofJS; JVM no-op
+  documentado, Native no-op). Nenhuma mudança de API nem de contrato — o fix só
+  faz o `unsubscribe` existente cumprir o que sempre prometeu.
+
+## §297 — `List`/`Set`/`Map` crus no tipo declarado de um CAMPO viram `ClassType("", nome)` — a quebra silenciosa da classe em runtime (R6): 🟡 ABERTO 18/09 (achado pela lane kofscript, dono = 192.168.100.17)
+
+- **Sintoma (medido 18/09, dois caminhos; o primeiro não envolve script):**
+  (1) `.kf` compilado: `class Box { static List items = listOf(1, 2, 3) }` +
+  `main() { println(Box.items.size) }` → runtime
+  `java.lang.NoSuchFieldError: Class Box does not have member field
+  'List items'` — o class file emite o campo com descritor diferente do
+  acesso (`CompilerTypes.toType` só pinna `List`→`BuiltinTypes.LIST` com
+  `allowBuiltinPins`, e o caminho de campo cai no ramo
+  `new Type.ClassType("", typeName, List.of())`); (2) KofScript
+  `var items: List = listOf(1,2,3)` + `println(items.size)` → o
+  interpretador cai no reflection de `KofInterpreterMembers.loadField` →
+  `InaccessibleObjectException: Unable to make field private int
+  java.util.ArrayList.size accessible`. Nos dois casos um programa que
+  PARECE legal (o tipo de coleção cru também parseia bem para LOCAIS — o
+  probe `R-local-bare-List` foi verde) morre só em runtime, sem
+  diagnóstico: violação R6.
+- **Causa-raiz (estreitada, não consertada):** o guard do pin
+  `allowBuiltinPins` é calculado por `unitDeclaresType || sa.getClass(name)`;
+  para os nomes simples `List`/`Set`/`Map` a symbol table já registra os
+  BUILTINS, então `userDeclares` dá true e o pin é pulado no caminho de
+  campo (`resolveWithTypeParams` → `toType(nome, unit, sa)`), enquanto o
+  caminho de variável local chega no pin. `List<Int>` (com argumentos de
+  tipo) não é afetado (o nome nunca é igual à string do pin — passa por
+  `Type.of` e sai `ClassType("kof","List",...)` correto, provado por
+  `W-top-size`/`Y-top-forin`).
+- **Workaround (documentado, idiomático):** escreva sempre o tipo de
+  elemento — `List<T>`/`Set<T>`/`Map<K,V>` — que já é a forma do corpus
+  (`training/idioms/collections.md`). O wrapper kofscript agora infere
+  globais element-typed para `var` sem anotação (`ScriptGlobalTypes`,
+  18/09), então quem bater aqui num `.ks` escreveu o tipo cru
+  explicitamente.
+- **Não consertado aqui porque:** a correção de causa-raiz correta toca a
+  semântica do guard de pin compartilhada pelos 4 backends (contrato de
+  typer — território rule 6 que precisa da suíte completa do compiler para
+  pousar com segurança). As reproduções acima são determinísticas; fix =
+  unidade compiler-core com matriz de paridade `Type.of`/`toType` (locais ×
+  campos × parâmetros × records) + este teste.
 **Re-procedimento (2a, 18/09 ~13:20 — pós-merge do `#438` `250f6207`, jars frescos no tip):** o crash MUDOU DE LUGAR, não morreu. Caso 1 (chave ausente, repro original) agora roda limpo: `9` ✅ — o caminho D-NULL-INTENT de `T?` via API segura. Caso 2 (chave PRESENTE):
 
 ```kof

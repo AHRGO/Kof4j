@@ -57,6 +57,12 @@ public final class JsRuntimeUiComponents {
                     for (const key in window.__kofNodes) {
                         if (window.__kofNodes[key] === n) {
                             delete window.__kofNodes[key];
+                            // §295: the action table is a SECOND global keyed by
+                            // the same handle — without this the discarded
+                            // Button action (and its closure) stays reachable
+                            // forever. kofUiButtonRemove already deletes it on
+                            // the single-widget path.
+                            if (window.__kofActions) delete window.__kofActions[key];
                             break;
                         }
                     }
@@ -124,10 +130,15 @@ public final class JsRuntimeUiComponents {
                     rootId = 0;
                 }
                 if (c.el) {
-                    const oldEl = window.__kofNodes && window.__kofNodes[c.root];
-                    if (c.root !== rootId && oldEl
-                            && oldEl.parentNode === c.el && oldEl.parentNode.removeChild) {
-                        c.el.removeChild(oldEl);
+                    if (c.root !== rootId) {
+                        // §295: the previous render's subtree must be pruned from
+                        // BOTH the DOM and __kofNodes. Detaching only the root
+                        // element left every old node registered — the view
+                        // builder creates fresh handles on every render, so each
+                        // state change leaked a whole subtree into the registry
+                        // (unbounded growth, silent). kofUiRemoveSubtree is the
+                        // existing prune (DOM + registry).
+                        kofUiRemoveSubtree(c.root);
                     }
                     const rootEl = window.__kofNodes && window.__kofNodes[rootId];
                     if (rootEl && rootEl.parentNode !== c.el) {

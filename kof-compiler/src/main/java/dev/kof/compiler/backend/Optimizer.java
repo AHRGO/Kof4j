@@ -61,7 +61,7 @@ public final class Optimizer {
                     cls.accessFlags(), cls.fields(), methods,
                     cls.innerClasses(), cls.signature(), cls.typeId(), cls.annotations()));
         }
-        return new IRModule(module.name(), classes, module.imports(), module.sourceName());
+        return new IRModule(module.name(), classes, module.imports(), module.sourceName(), module.sourceContent());
     }
 
     private static IRMethod optimizeMethod(IRMethod method) {

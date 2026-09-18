@@ -206,7 +206,7 @@ O compilador entende os tipos automaticamente.
 
 1. Crie `ponto.kf` com `record Ponto(Int x, Int y)` e um `switch` com `case Ponto(x, y):`
 2. Rode com `kof run --target=jvm` e `--target=js`
-3. Crie `demo.ks` com `let n = 10` no topo e use `n` dentro de `main()` via `kof script demo.ks`
+3. Crie `demo.ks` com `var n = 10` no topo e use `n` dentro de `main()` via `kof script demo.ks`
 
 ## Próximo passo
 

@@ -249,7 +249,8 @@ public final class CompilerPipeline {
                     AccessFlags.PUBLIC | AccessFlags.SUPER, List.of(), topLevelFunctions, List.of(), null, 0));
         }
         classes.addAll(driver.syntheticClasses);
-        return new IRModule(moduleName, classes, imports, driver.currentSourceName);
+        return new IRModule(moduleName, classes, imports, driver.currentSourceName,
+                driver.currentSourceContent);
     }
 
 
@@ -383,9 +384,10 @@ public final class CompilerPipeline {
             throws IOException {
         driver.currentSourceName = sources.get(0).getFileName() != null
                 ? sources.get(0).getFileName().toString() : null;
+        driver.currentSourceContent = Files.readString(sources.get(0));
         java.util.List<CompilationUnitNode> parsedUnits = new ArrayList<>();
         for (Path src : sources) {
-            String code = Files.readString(src);
+            String code = src == sources.get(0) ? driver.currentSourceContent : Files.readString(src);
             String fileName = src.getFileName().toString();
             Lexer lexer = new Lexer(code, fileName, diagnostics);
             List<Token> tokens = lexer.tokenize();

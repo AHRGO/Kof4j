@@ -144,7 +144,7 @@ kof info             → PASS
 kof lsp              → PASS (hover/completion/references/rename + real diagnostics)
 kof install          → PASS
 kof c                → PASS (KofCcompiler native-only C subset → ELF x86_64 via kof_c)
-kof script           → PASS (KofScript top-level let → KofScriptGlobals, repl, --watch)
+kof script           → PASS (KofScript top-level `var`/`val` → KofScriptGlobals, repl, --watch)
 tests/run-golden.sh  → 16/16 (8 cases × jvm+native)
 tests/run-integration.sh → 9/9 (CLI + serve + kof test)
 scripts/package.sh   → PASS (dist layout + tar.gz/zip + SHA256SUMS + jars)
@@ -853,7 +853,7 @@ Docs: `debugger-architecture.md`, `debugging.md`, `debug-adapter.md`,
 - **KofAndroid Phase 2 (31/08)** — standalone `--apk` (aapt2/d8/zipalign/apksigner straight from the CLI) + release signing `--keystore/--storepass/--keypass/--alias` + label/permissions derived from the program (`detectAppLabel`/`@Permissions`)
 - enum on the 3 targets + exhaustive switch (SEM031); Map/Set on the 3 targets (COL001 closed)
 - IR optimizer always active; pattern matching (switch with types + destructuring, 3 targets); basic null safety (`String?`, 3 targets); higher-order on collections (map/filter/reduce, 3 targets); multi-file modules (`import a.b.C`)
-- KofScript — top-level let/const (`KofScriptGlobals`, repl, `--watch`); KofC compiler — C subset → ELF x86_64 (`kof c`)
+- KofScript — top-level `var`/`val` (`KofScriptGlobals`, repl, `--watch`); KofC compiler — C subset → ELF x86_64 (`kof c`)
 - LSP with hover/completion + real diagnostics; return widening
 - Native GC — mark-sweep 03/09 ✅: `kof_gc_mark` (conservative stack+bss) + `kof_gc_sweep` (clears dead entries to the free-list; flag bit1 @24) + `kof_gc_collect_now` (external call, explicit); **auto-collect off** in `kof_alloc` (needs safe-points/per-frame root maps — otherwise a double-free is detected). `KofGcE2ETest` 3/3
 - Real floating point on Native (FLT001 closed 31/08 — XMM); JSON objects/records on Native (JSN002 closed) + FP arrays (JSN001/003)

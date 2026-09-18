@@ -290,6 +290,67 @@ class ComponentCoreE2ETest {
     }
 
     @Test
+    void rerenderPrunesPreviousSubtreeFromRegistry(@TempDir Path tempDir) throws IOException {
+        // §295 (found during the Phase 9 survey, docs/ui/architecture.md):
+        // kofUiRender detached only the previous ROOT element from the DOM.
+        // The view builder creates a fresh widget (and handle) on every
+        // render, so every state change leaked the whole previous subtree
+        // into __kofNodes (unbounded growth, silent — R6). Measured pre-fix
+        // in the embedded host: 1 node after mount, 6 after 5 re-renders.
+        String program = """
+            main() {
+                var app = Component(0)
+                var win = Window("App")
+                app.view((s: Int) -> { return Label("v=" + s) })
+                win.bind(app)
+                app.stateSet(1)
+                app.stateSet(2)
+                app.stateSet(3)
+                app.stateSet(4)
+                app.stateSet(5)
+                win.show()
+                println("done")
+            }
+            """;
+        String probe = """
+            console.log("nodes=" + Object.keys(window.__kofNodes).length);
+            """;
+        assertEquals("done\nnodes=1",
+                runJsProbe(tempDir, "rerenderprune", program, probe),
+                "re-render must prune the previous subtree from __kofNodes "
+                + "(only the current view root may remain)");
+    }
+
+    @Test
+    void rerenderReleasesDiscardedButtonActions(@TempDir Path tempDir) throws IOException {
+        // §295 second face: the action table (window.__kofActions) is keyed by
+        // the same handle; a discarded Button with an action kept its closure
+        // reachable forever. kofUiRemoveSubtree now deletes the entry for
+        // every pruned node (kofUiButtonRemove already did it on the
+        // single-widget path).
+        String program = """
+            main() {
+                var app = Component(0)
+                var win = Window("App")
+                app.view((s: Int) -> {
+                    return Button("b" + s, () -> println("clicked"))
+                })
+                win.bind(app)
+                app.stateSet(1)
+                app.stateSet(2)
+                win.show()
+                println("done")
+            }
+            """;
+        String probe = """
+            console.log("actions=" + Object.keys(window.__kofActions || {}).length);
+            """;
+        assertEquals("done\nactions=1",
+                runJsProbe(tempDir, "rerenderactions", program, probe),
+                "actions of discarded widgets must be released with the subtree");
+    }
+
+    @Test
     void unmountCascadesToChildren(@TempDir Path tempDir) throws IOException {
         String program = """
             main() {
@@ -486,6 +547,96 @@ class ComponentCoreE2ETest {
         // set (5 and 10); the getters read the final local states.
         assertEquals("5\n10\n1", runJs(tempDir, "store2", program),
                 "both components must be driven by the store");
+    }
+
+    @Test
+    void storeUnsubscribeStopsDelivery(@TempDir Path tempDir) throws IOException {
+        // §296: JS unsubscribe was a SILENT NO-OP — subscribe stored the
+        // wrapper (fn.invoke.bind) but unsubscribe searched the RAW handle,
+        // so indexOf never matched and the subscriber kept being notified.
+        // Same identity contract as mq's unsubscribeStopsDelivery (JS now;
+        // JVM/Native keep their documented Store no-ops).
+        String program = """
+            main() {
+                var store = Store(1)
+                var log = ""
+                var h = (v: Int) -> { log = log + "n=" + v + "," }
+                store.subscribe(h)
+                store.set(2)
+                store.unsubscribe(h)
+                store.set(3)
+                store.unsubscribe(h)
+                println(log)
+            }
+            """;
+        Path src = tempDir.resolve("store-unsub.kf");
+        Files.writeString(src, program);
+        // JVM/Native: subscribe/set are no-ops — log stays empty.
+        runJvm(src, tempDir.resolve("jvm-store-unsub"), "");
+        runNative(src, tempDir.resolve("native-store-unsub"), "");
+        // JS: current value on subscribe (n=1) + set(2); after unsubscribe
+        // set(3) must NOT fire; the second unsubscribe is a no-op.
+        assertEquals("n=1,n=2,", runJs(tempDir, "store-unsub", program),
+                "unsubscribe must stop delivery (§296)");
+    }
+
+    @Test
+    void appStateIsCreateOrGetSingleton(@TempDir Path tempDir) throws IOException {
+        // Fase 8 (docs/ui/architecture.md §2.6): AppState(initial) is the
+        // application-scoped root store — create-or-get singleton over the
+        // Store machinery; the second `initial` is ignored. Methods are
+        // exactly the Store's (get/set/subscribe/unsubscribe).
+        String program = """
+            main() {
+                var a1 = AppState(10)
+                var a2 = AppState(999)
+                println(a1.get())
+                println(a2.get())
+                var log = ""
+                a1.subscribe((v: Int) -> { log = log + "x=" + v + "," })
+                a2.set(42)
+                println(log)
+                println(storesLive())
+            }
+            """;
+        Path src = tempDir.resolve("appstate.kf");
+        Files.writeString(src, program);
+        // JVM: Store no-ops (get()=0, no notify) but the slot counts once.
+        runJvm(src, tempDir.resolve("jvm-appstate"), "0\n0\n\n1");
+        // Native: pure no-op — storesLive()=0.
+        runNative(src, tempDir.resolve("native-appstate"), "0\n0\n\n0");
+        // JS: ONE shared store — second call returns the same handle (10,
+        // not 999); subscriber sees 10 on subscribe and 42 via the other handle.
+        assertEquals("10\n10\nx=10,x=42,\n1", runJs(tempDir, "appstate", program),
+                "AppState must be ONE shared store regardless of the call site");
+    }
+
+    @Test
+    void appStateDrivesComponentsWithoutPropDrilling(@TempDir Path tempDir) throws IOException {
+        // The app-state idiom: each component reads AppState itself — the
+        // store handle is never passed around.
+        String program = """
+            main() {
+                AppState(0)
+                var win = Window("App")
+                var a = Component(0)
+                var b = Component(0)
+                AppState(0).subscribe((v: Int) -> { a.state = v })
+                AppState(0).subscribe((v: Int) -> { b.state = v * 2 })
+                win.bind(a)
+                a.bind(b)
+                AppState(0).set(7)
+                println(a.state)
+                println(b.state)
+                println(storesLive())
+            }
+            """;
+        Path src = tempDir.resolve("appstate-shared.kf");
+        Files.writeString(src, program);
+        runJvm(src, tempDir.resolve("jvm-appstate-shared"), "0\n0\n1");
+        runNative(src, tempDir.resolve("native-appstate-shared"), "0\n0\n0");
+        assertEquals("7\n14\n1", runJs(tempDir, "appstate-shared", program),
+                "each component reaches the same app state");
     }
 
     @Test
