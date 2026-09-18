@@ -449,7 +449,17 @@ public final class CompilerPipeline {
         // host GraalJS/node, que É uma JVM com java.lang.foreign (fatia 3.6 —
         // bridge `KofJsFfiBridge` idêntico ao `kof_ffi` do target JVM; o browser
         // não tem host e degrada em runtime como o resto do kof_platform, R7).
-        if (driver.target == Target.JVM || driver.target == Target.JS) {
+        // Callbacks/upcalls (3.4): a JVM já binda; o JS ainda NÃO (paridade de
+        // callback é a fatia C3) — no JS um parâmetro de tipo-função fica FFI002.
+        if (driver.target == Target.JVM) {
+            if (FfiSignature.returnChar(ext.returnType()) == null) return false;
+            for (var param : ext.parameters()) {
+                if (FfiSignature.paramChar(param.type()) != null) continue;
+                if (FfiSignature.callbackDescriptor(param.type()) == null) return false;
+            }
+            return true;
+        }
+        if (driver.target == Target.JS) {
             if (FfiSignature.returnChar(ext.returnType()) == null) return false;
             for (var param : ext.parameters()) {
                 if (FfiSignature.paramChar(param.type()) == null) return false;
