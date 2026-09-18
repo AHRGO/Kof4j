@@ -953,6 +953,8 @@ origem issue #275). Aditivo, retrocompatível. **Apenas planejado — não é
 trabalho atual** (R12: frentes novas não abrem antes de o estágio SYSTEMS
 fechar; lanes não devem atacar sem nova autorização).
 
+**Plano de design:** [`future/value-records-plan.pt_BR.md`](future/value-records-plan.pt_BR.md) (zero código).
+
 | # | Etapa | Escopo (uma linha) | Depende de |
 |---|-------|--------------------|------------|
 | 2.7.1 | **keyword `value` no front-end** | `value record Name(campos)` faz parse e tipagem como `record` + modificador `value`; sem semântica de identidade ainda | — |

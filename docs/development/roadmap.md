@@ -952,6 +952,8 @@ origin issue #275). Additive, backward compatible. **Planned only — not
 current work** (R12: new fronts do not open before the SYSTEMS stage closes;
 lanes must not attack without new authorization).
 
+**Design plan:** [`future/value-records-plan.md`](future/value-records-plan.md) (zero code).
+
 | # | Step | Scope (one line) | Depends on |
 |---|------|------------------|------------|
 | 2.7.1 | **front-end `value` keyword** | `value record Name(fields)` parses and types like `record` + `value` modifier; no identity semantics yet | — |

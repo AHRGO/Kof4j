@@ -5,12 +5,12 @@
 **Status:** Plano (arquitetura futura) — **zero código**, sem passo agendado
 **Tipo:** arquitetura futura / registo de dependência (NÃO ordem de implementação)
 **Data:** 15 de setembro de 2026
-**Fonte:** `../IMPLEMENTATION-UNIVERSAL-PLATFORM.md` §8.2 (Native: "deploy/edge/sistemas") ·
+**Fonte:** `../../architecture/UNIVERSAL-PLATFORM-VISION.md` §8.2 (Native: "deploy/edge/sistemas") ·
 `PLAN-TREE-SHAKING.md` §T3 (rota embedded/MCU) · `docs/development/native-multiarch.md`
 · diretiva da mantenedora (15/09): *"todo código nativo deve se comunicar direto
 com barebones também — código bootável para microcontroladores, legado e UEFI com Kof"*.
 
-> **Regra deste documento** (mesma do `../IMPLEMENTATION-UNIVERSAL-PLATFORM.md`): é um registo
+> **Regra deste documento** (mesma do `../../architecture/UNIVERSAL-PLATFORM-VISION.md`): é um registo
 > estratégico/de arquitetura. Não implementa nada, não abre frente, não muda
 > roadmap, não move arquivo, não adiciona dependência. O estado atual do Kof fica
 > 100% intacto. Qualquer coisa que exija mudança profunda no core é gravada como
@@ -65,7 +65,7 @@ Fatos do código, não estimativas:
 5. **O codegen existe só para 64 bits.** `Target.NATIVE` (x86_64),
    `NATIVE_RISCV64`, `NATIVE_AARCH64` (`Target.java`). MCUs são majoritariamente
    **32 bits** (ARM Cortex-M Thumb-2, riscv32) — lacuna de codegen, classificada
-   **C** por `../IMPLEMENTATION-UNIVERSAL-PLATFORM.md` §8.2(e) ("RISC/ARM codegen").
+   **C** por `../../architecture/UNIVERSAL-PLATFORM-VISION.md` §8.2(e) ("RISC/ARM codegen").
 6. **O mecanismo de GC está congelado (regra 6).** `PLAN-TREE-SHAKING.md` §7 diz
    que T1b tocando o root-scan do GC "toca o mecanismo de GC (congelado)". A
    costura HAL abaixo, portanto, **não** deve passar pelo GC.
@@ -104,7 +104,7 @@ Esse é o critério de aceitação que torna isto um refactor habilitante seguro
 não uma reescrita.
 
 **Decisão/nomeação necessária (mantenedor, regra 6):** a diretiva "sem alvo por
-domínio" (`../IMPLEMENTATION-UNIVERSAL-PLATFORM.md` §16) **não** é violada se isto for um
+domínio" (`../../architecture/UNIVERSAL-PLATFORM-VISION.md` §16) **não** é violada se isto for um
 **perfil de Native** (`native --profile freestanding|uefi|bios|mcu`) em vez de
 quatro valores novos no enum `Target` — análogo a como `native.risc`/`native.arm`
 são variantes de arch, não novas línguas. Este documento **não** toma posição;
