@@ -2,7 +2,7 @@
 
 # Idiomas — Interop (tipos JVM e FFI C)
 
-**Status:** parcial (whitelist) · **Introduzido:** 0.3.x (TIER 2.1) · **Atualizado:** 17/09
+**Status:** parcial (whitelist) · **Introduzido:** 0.3.x (TIER 2.1) · **Atualizado:** 18/09 (R3 JVM generalizado — ABI escalar + void + retorno String; ver `IMPLEMENTATION-UNIVERSAL-PLATFORM.pt_BR.md` 3.6) · **Atualizado:** 17/09
 
 ## O que é
 
@@ -17,13 +17,16 @@ Duas superfícies, uma regra: a plataforma já existe — não a reconstrua.
 var now = java.time.Instant.now()
 println(now.toString())
 
-// (b) FFI C — a whitelist prende 1-arg SOMENTE (JvmFfiRuntime):
+// (b) FFI C — o JVM liga QUALQUER assinatura ESCALAR (R3 generalizado 18/09):
 extern "/lib/x86_64-linux-gnu/libm.so.6" cos(Double x): Double   // ok
 extern "/lib/x86_64-linux-gnu/libc.so.6" atoi(String s): Int    // ok (String->Int)
-// f(Int): Int ok. Todo o resto é diagnóstico em tempo de compilação:
-extern "/lib/x86_64-linux-gnu/libc.so.6" strcmp2(String a, String b): Int
-//  -> FFI001 (multi-arg; a gramática parseia, a whitelist rejeita)
-// target JS  -> FFI002 (FFI não disponível no target JS)
+extern "/lib/x86_64-linux-gnu/libm.so.6" fmod(Double a, Double b): Double  // ok — 1.5 medido
+extern "/lib/x86_64-linux-gnu/libm.so.6" ldexp(Double x, Int e): Double    // ok — 12.0 medido (misto)
+extern "/lib/x86_64-linux-gnu/libc.so.6" puts(String s): void     // ok — void liga
+extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — "mel" medido
+// O NOME da funcao Kof e o simbolo C (sem alias) — kof_fmod falhou no lookup, fmod funciona.
+// Tipos nao-escalares (objetos, genericos) -> FFI001 em tempo de compilacao:
+// target JS  -> FFI002 (gate CLOSED; bridge host KofJsFfiBridge existe, filas F2/F3 roteiam)
 // Native     -> FFI001 até o §61 (libc não inicializada)
 ```
 
@@ -31,9 +34,9 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" strcmp2(String a, String b): Int
 
 | ❌ RUIM | ✅ BOM | Por quê |
 |---|---|---|
-| `extern ... drawText(String t, Int x, Int y): void` | hoje: uma bridge C 1-arg compilada por você (`int kof_draw(char*...)` atrás de um símbolo preso), ou interop JVM para binding existente | multi-arg = `FFI001`; o alargamento é a fatia R3 (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, issue #431) — NÃO emita bytecode na mão para furar o compilador |
+| ligar um simbolo sob outro nome Kof (`kof_fmod`) | o NOME e o simbolo C (sem alias, medido 18/09) — ligar `fmod`, envolver numa fn Kof para nome amigavel | multi-arg/`void`/retorno `String` ja ligam desde R3 18/09 — NAO emita bytecode na mao para furar o compilador |
 | assumir que o caminho da lib é checado em compile | trate lib/símbolo ausente como falha `kof_ffi_*` de **runtime** | o caminho resolve em runtime (`SymbolLookup`), não em compile |
-| reimplementar sin/cos/strcmp em Kof | prenda a lib do sistema (formas 1-arg) | complexidade é da plataforma (regra de ferro 2) |
+| reimplementar sin/cos/strcmp em Kof | prenda a lib do sistema (qualquer forma escalar desde 18/09) | complexidade é da plataforma (regra de ferro 2) |
 
 ## Veja também
 

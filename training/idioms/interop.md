@@ -2,7 +2,7 @@
 
 # Idioms — Interop (JVM types and C FFI)
 
-**Status:** partial (whitelist) · **Introduced:** 0.3.x (TIER 2.1) · **Updated:** 17/09
+**Status:** partial (whitelist) · **Introduced:** 0.3.x (TIER 2.1) · **Updated:** 18/09 (R3 JVM generalized — scalar ABI + void + String return; see `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` 3.6) · **Updated:** 17/09
 
 ## What it is
 
@@ -17,13 +17,15 @@ Two surfaces, one rule: the platform already exists — do not rebuild it.
 var now = java.time.Instant.now()
 println(now.toString())
 
-// (b) C FFI — the whitelist binds 1-arg ONLY (JvmFfiRuntime):
-extern "/lib/x86_64-linux-gnu/libm.so.6" cos(Double x): Double   // ok
-extern "/lib/x86_64-linux-gnu/libc.so.6" atoi(String s): Int    // ok (String->Int)
-// f(Int): Int ok. Everything else is a compile-time diagnostic:
-extern "/lib/x86_64-linux-gnu/libc.so.6" strcmp2(String a, String b): Int
-//  -> FFI001 (multi-arg; the grammar parses it, the whitelist rejects it)
-// JS target  -> FFI002 (FFI not available on the JS target)
+// (b) C FFI — the JVM binds any SCALAR signature (R3 generalized 18/09):
+extern "/lib/x86_64-linux-gnu/libm.so.6" cos(Double x): Double    // ok (1-arg)
+extern "/lib/x86_64-linux-gnu/libc.so.6" atoi(String s): Int      // ok
+extern "/lib/x86_64-linux-gnu/libm.so.6" fmod(Double a, Double b): Double  // ok — 1.5 measured
+extern "/lib/x86_64-linux-gnu/libc.so.6" puts(String s): void     // ok — void binds
+extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — String return, "mel" measured
+// The Kof function NAME is the C symbol (no alias syntax) — kof_fmod failed lookup, fmod works.
+// Non-scalar types (objects, generics) -> FFI001 compile-time diagnostic.
+// JS target  -> FFI002 (gate CLOSED; host bridge KofJsFfiBridge exists, F2/F3 queue routes it)
 // Native     -> FFI001 until §61 (libc not initialized)
 ```
 
@@ -31,9 +33,9 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" strcmp2(String a, String b): Int
 
 | ❌ BAD | ✅ GOOD | Why |
 |---|---|---|
-| `extern ... drawText(String t, Int x, Int y): void` | today: a 1-arg C bridge you compile (`int kof_draw(char*...)` behind one bound symbol), or JVM interop to an existing binding | multi-arg = `FFI001`; the widening is the R3 slice (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, issue #431) — do NOT hand-emit bytecode to bypass the compiler |
+| binding a symbol under a different Kof name (`kof_fmod`) | the NAME is the C symbol (no alias syntax, measured 18/09) — bind `fmod`, wrap in a Kof fn for friendly names | multi-arg/`void`/`String`-return already bind since R3 18/09 — do NOT hand-emit bytecode to bypass the compiler |
 | assuming the lib path is checked at compile time | treat missing lib/symbol as a **runtime** `kof_ffi_*` failure | the path resolves at runtime (`SymbolLookup`), not compile time |
-| reimplementing sin/cos/strcmp in Kof | bind the system lib (1-arg shapes) | complexity belongs to the platform (iron rule 2) |
+| reimplementing sin/cos/strcmp in Kof | bind the system lib (any scalar shape since 18/09) | complexity belongs to the platform (iron rule 2) |
 
 ## See also
 

@@ -152,9 +152,9 @@ type-parameters = "<" , identifier , { "," , identifier } , ">" ;    (* `TypePar
 extern-declaration = "extern" , [ string-literal ] , identifier ,
                      [ type-parameters ] , "(" , [ parameter-list ] , ")" ,
                      [ ":" , type-ref ] , [ ";" ] ;                  (* `Parser.parseExternDeclaration` *)
-(* no body: the binding is by target at runtime (JVM whitelist 1-arg;
-   FFI001 JVM-arity/JS-absence... FFI002 JS). Grammar ACCEPTS any arity;
-   CompilerPipeline.isExternBound rejects beyond the whitelist at compile time. *)
+(* no body: the binding is by target at runtime (JVM binds any scalar
+   signature since R3 18/09; FFI001 = non-scalar/native... FFI002 JS). Grammar
+   ACCEPTS any arity; CompilerPipeline.isExternBound rejects non-scalar at compile time. *)
 `
 
 The **three return forms** are valid and equivalent:
