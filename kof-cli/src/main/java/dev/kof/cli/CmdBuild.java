@@ -449,9 +449,13 @@ final class CmdBuild {
      * gera debug keystore local na primeira vez; com --keystore, assina
      * com o keystore do usuário (release signing parametrizável).
      */
-    static boolean runApkPipeline(Path projDir, int minSdk, int targetSdk,
+    static boolean runApkPipeline(Path projDirRaw, int minSdk, int targetSdk,
                                           String keystore, String storepass,
                                           String keypass, String keyalias) {
+        // CI fix (18/09): run() roda com CWD=projDir; caminhos RELATIVOS
+        // duplicavam (projDir/<rel>) e o keytool morria em FileNotFoundException
+        // no ubuntu (SDK presente, guard passava). Normalizar na entrada.
+        final Path projDir = projDirRaw.toAbsolutePath().normalize();
         String androidHome = System.getenv("ANDROID_HOME");
         if (androidHome == null || androidHome.isBlank()) {
             System.err.println("--apk: ANDROID_HOME not set; generate the project and use 'mvn verify'");
@@ -463,7 +467,7 @@ final class CmdBuild {
             System.err.println("--apk: build-tools 34.0.0 not found in " + bt);
             return false;
         }
-        Path build = projDir.resolve("target");
+        Path build = projDir.toAbsolutePath().normalize().resolve("target");
         Path apkDir = build.resolve("apk");
         boolean userKs = keystore != null && !keystore.isBlank();
         try {
