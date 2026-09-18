@@ -60,24 +60,27 @@ class JvmFfiCallbackE2ETest {
         return so.toString();
     }
 
+    // Fonte compartilhada: 4 callbacks escalares (Int/Long/Double/mixto) via .so temp.
+    private static final String CALLBACK_KOF = """
+            extern "%1$s" kof_cb_add(Int a, Int b, (Int, Int) -> Int cb): Int
+            extern "%1$s" kof_cb_addl(Long a, Long b, (Long, Long) -> Long cb): Long
+            extern "%1$s" kof_cb_addd(Double a, Double b, (Double, Double) -> Double cb): Double
+            extern "%1$s" kof_cb_mixed(Int a, Double b, (Int, Double) -> Double cb): Double
+            extern "libc.so.6" atol(String s): Long
+
+            main() {
+                println(kof_cb_add(20, 22, (x: Int, y: Int) -> x + y))
+                println(kof_cb_addl(atol("20"), atol("22"), (a: Long, b: Long) -> a + b))
+                println(kof_cb_addd(2.0, 3.0, (x: Double, y: Double) -> x * y))
+                println(kof_cb_mixed(3, 2.5, (i: Int, d: Double) -> i * d))
+            }
+            """;
+
     @Test
     void jvmCallbacksComputeAcrossScalarAbis(@TempDir Path dir) throws Exception {
         String lib = buildHostLib(dir);
         Path src = dir.resolve("Main.kf");
-        Files.writeString(src, """
-                extern "%1$s" kof_cb_add(Int a, Int b, (Int, Int) -> Int cb): Int
-                extern "%1$s" kof_cb_addl(Long a, Long b, (Long, Long) -> Long cb): Long
-                extern "%1$s" kof_cb_addd(Double a, Double b, (Double, Double) -> Double cb): Double
-                extern "%1$s" kof_cb_mixed(Int a, Double b, (Int, Double) -> Double cb): Double
-                extern "libc.so.6" atol(String s): Long
-
-                main() {
-                    println(kof_cb_add(20, 22, (x: Int, y: Int) -> x + y))
-                    println(kof_cb_addl(atol("20"), atol("22"), (a: Long, b: Long) -> a + b))
-                    println(kof_cb_addd(2.0, 3.0, (x: Double, y: Double) -> x * y))
-                    println(kof_cb_mixed(3, 2.5, (i: Int, d: Double) -> i * d))
-                }
-                """.formatted(lib));
+        Files.writeString(src, CALLBACK_KOF.formatted(lib));
         Path out = dir.resolve("out");
         CompilationResult r = driver.compile(src, out, Target.JVM);
         assertTrue(r.success(), () -> "JVM callbacks must bind (3.4-C2): "
@@ -87,14 +90,40 @@ class JvmFfiCallbackE2ETest {
     }
 
     @Test
-    void jsCallbackStaysHonestFfi002(@TempDir Path dir) throws Exception {
+    void jvmAndJsCallbacksMatchByteForByte(@TempDir Path dir) throws Exception {
+        String lib = buildHostLib(dir);
+        String kof = CALLBACK_KOF.formatted(lib);
+
+        Path jvmSrc = dir.resolve("cb-jvm.kf");
+        Files.writeString(jvmSrc, kof);
+        Path jvmOut = dir.resolve("out-jvm");
+        CompilationResult rj = driver.compile(jvmSrc, jvmOut, Target.JVM);
+        assertTrue(rj.success(), () -> "JVM compile callbacks: " + rj.diagnostics().getDiagnostics());
+        String jvm = runJvm(jvmOut);
+
+        Path jsSrc = dir.resolve("cb-js.kf");
+        Files.writeString(jsSrc, kof);
+        Path jsOut = dir.resolve("out-js");
+        CompilationResult rjs = driver.compile(jsSrc, jsOut, Target.JS);
+        assertTrue(rjs.success(), () -> "JS callbacks must bind (3.4-C3.2): "
+                + rjs.diagnostics().getDiagnostics());
+        String js = runJs(jsOut);
+
+        assertEquals("42\n42\n6.0\n7.5", js, "JS golden callbacks (3.4-C3.3)");
+        assertEquals(jvm, js, "JVM==JS callback parity byte-for-byte (3.4-C3.3)");
+    }
+
+    @Test
+    void jsNonBindableCallbackStaysFfi002(@TempDir Path dir) throws Exception {
         Path src = dir.resolve("Main.kf");
         Files.writeString(src, """
-                extern "libc.so.6" foo(Int a, Int b, (Int, Int) -> Int cb): Int
-                main() { println(foo(1, 2, (x: Int, y: Int) -> x + y)) }
+                extern "libc.so.6" foo(Int a, (String) -> Int cb): Int
+                main() { println(foo(1, (s: String) -> 0)) }
                 """);
+        // Callback bindável escalar já funciona no JS (C3.2); só o NÃO-bindável
+        // (parâmetro String dentro do callback) continua FFI002 no JS.
         CompilationResult r = driver.compile(src, dir.resolve("out"), Target.JS);
-        assertFalse(r.success(), "JS callback deve permanecer gap honesto (paridade = C3)");
+        assertFalse(r.success(), "JS callback não-bindável deve permanecer gap honesto");
         assertTrue(r.diagnostics().getDiagnostics().stream().anyMatch(d -> "FFI002".equals(d.code())),
                 () -> "esperava FFI002 no JS, veio " + r.diagnostics().getDiagnostics());
     }
@@ -131,5 +160,13 @@ class JvmFfiCallbackE2ETest {
             Thread.currentThread().interrupt();
             throw new IOException("interrupted", e);
         }
+    }
+
+    private String runJs(Path outDir) throws IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int ec = dev.kof.runtime.KofJsRunner.run(outDir.resolve("Default.mjs"), out,
+                new java.io.ByteArrayInputStream(new byte[0]), out);
+        assertEquals(0, ec, "JS exit code, output: " + out);
+        return out.toString(java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
     }
 }

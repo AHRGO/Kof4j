@@ -316,7 +316,7 @@ pesados · um alvo por domínio · uma reimplementação do ecossistema científ
 |---|-----------|--------|--------------|
 | R1 | Travar a fronteira core/plataforma (ordem §3.4 como regra invariante) | ✅ 17/09 | `5f1422c6` — `scripts/check_stdlib_boundary.sh` + ledger (31 namespaces) + CI + `--selftest`; invariante 1 do AGENTS |
 | R2 | Generalizar "capability/link by use" para todos os pacotes/domínios | 🔵 | semente: `.so` de SQLite/MySQL linkado só quando o DSN literal aparece; extensão pendente |
-| R3 | Formalizar FFI como first-class | 🟡 | **ABI escalar da JVM + `void` 18/09 (`.18`)**: `kof_ffi`/`kof_ffi_void` casam aridade arbitrária sobre {Int,Long,Float,Double,Boolean,String} entrada/saída, `String` lê `char*`, `void` é descartado como statement. `FfiE2ETest` cobre `pow`/`strstr`/`srand`/`atol→labs` (Long) + `FfiSignatureTest` trava o mapeamento escalar→layout completo. **Paridade JS FECHADA 18/09 (3.6 F1+F2+F3, `.18`)**: a mesma ABI escalar agora binda no target JS via bridge FFM no host `KofJsFfiBridge` (`extern`→`kofFfi`→`ProxyExecutable` `kof_platform.ffi`), provada byte-a-byte JVM↔JS (`FfiE2ETest` +7 `assertJvmJsParity`); o browser não tem host → degrade honesto em runtime (R7, como `kof.io`). Ver §R3-fatias para a decomposição completa — restam: handles opacos/out-buffers (3.3 ⛔), **paridade JS de** callbacks/upcalls (3.4-C3; a JVM já binda callbacks ✅ 18/09), variadics (3.5 ⛔), ABI struct/array D6 (3.8 ⛔), paridade Native (§61, 3.7). Só Native (`FFI001`) + assinaturas não-escalares no JS (`FFI002`) seguem gaps honestos por target (R7). |
+| R3 | Formalizar FFI como first-class | 🟡 | **ABI escalar da JVM + `void` 18/09 (`.18`)**: `kof_ffi`/`kof_ffi_void` casam aridade arbitrária sobre {Int,Long,Float,Double,Boolean,String} entrada/saída, `String` lê `char*`, `void` é descartado como statement. `FfiE2ETest` cobre `pow`/`strstr`/`srand`/`atol→labs` (Long) + `FfiSignatureTest` trava o mapeamento escalar→layout completo. **Paridade JS FECHADA 18/09 (3.6 F1+F2+F3, `.18`)**: a mesma ABI escalar agora binda no target JS via bridge FFM no host `KofJsFfiBridge` (`extern`→`kofFfi`→`ProxyExecutable` `kof_platform.ffi`), provada byte-a-byte JVM↔JS (`FfiE2ETest` +7 `assertJvmJsParity`); o browser não tem host → degrade honesto em runtime (R7, como `kof.io`). Ver §R3-fatias para a decomposição completa. **Callbacks/upcalls (3.4) paridade JVM+JS FECHADA 18/09 (C1→C3)**: `extern` com parâmetro de tipo-função binda tanto na JVM quanto no host runner JS — um valor de função Kof entregue a C como ponteiro de função real (`Linker.upcallStub`), provado byte-a-byte JVM↔JS (`42/42/6.0/7.5` em ABIs Int/Long/Double/mistas); a ponte JS chama o método `invoke` do objeto `Lambda` compilado (um valor de função Kof é um objeto, não uma arrow nativa — descoberto na C3.2); síncrono/não-escapante, ABI só primitiva; o browser degrada honesto (R7); `String` dentro do callback segue não-bindável (`FFI001`/`FFI002`). Restam: handles opacos/out-buffers (3.3 ⛔), variadics (3.5 ⛔), ABI struct/array D6 (3.8 ⛔), paridade Native (§61, 3.7). Só Native (`FFI001`) + assinaturas não-escalares no JS (`FFI002`) seguem gaps honestos por target (R7). |
 | R4 | Formalizar o codegen em compile-time (`CodegenStep`) | 🔵 | NÃO existe no HEAD (2.2.2); bloqueia `infra "prod" {}` (3.2) e a migração DDL/runner |
 | R5 | Tiers de estabilidade + pacotes oficiais | 🟡 | tiers definidos em `backend-parity.md` §Stability tiers; **marcação por-namespace ainda não aplicada** — decisão ⛔ |
 | R6 | Manter o "nunca silencioso" para domínios novos | ✅ 17/09 | gate de máquina `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` (`19a740f2`) + varredura completa do ledger (`c5897cd5`, achou §278) |
@@ -339,7 +339,7 @@ em aberto; ✅ = landado.
 | 3.1 | JVM: ABI escalar geral — aridade arbitrária, {Int,Long,Float,Double,Boolean,String} entrada/saída, String lê de volta char* | ✅ 18/09 (.18) | dev .18 | — |
 | 3.2 | JVM: retorno void (kof_ffi_void, descritor V; resultado descartado como statement) | ✅ 18/09 (.18) | .18 | — |
 | 3.3 | JVM: handles opacos / out-buffers (void*, T*, Array<Byte> como buffer) — ponteiro opaco / buffer de bytes, NÃO o ABI struct completo do D6 | ⛔ decisão de surface | mantenedora | design |
-| 3.4 | JVM: callbacks / upcalls (Linker.upcallStub) — função Kof entregue a C como ponteiro de função | 🟡 **C1+C2 ✅ (JVM binda) · C3.1 ✅ (pin JS)** · C3.2/3.3 aberto | .18 | semântica de closure + GC rooting (R12/1.2); só síncrono/não-escapante, ABI de callback primitiva; ver §R3-3.4 |
+| 3.4 | JVM+JS: callbacks / upcalls (Linker.upcallStub) — função Kof entregue a C como ponteiro de função | ✅ **C1→C3 landados 18/09 (JVM+JS bindam callbacks primitivos, paridade byte-a-byte)** | .18 | semântica de closure + GC rooting (R12/1.2); só síncrono/não-escapante, ABI de callback primitiva; a ponte JS chama o `invoke` do objeto `Lambda`; ver §R3-3.4 |
 | 3.5 | JVM: variadics (printf, execlp) — como representar `...` numa assinatura Kof | ⛔ decisão de surface | mantenedora | design |
 | 3.6 | JS: paridade via bridge no host (o runner GraalJS/node É uma JVM com java.lang.foreign no host) — browser segue degrade honesto em runtime (R7: sem host `kof_platform.ffi`) | ✅ 18/09 (.18) | .18 | ABI 3.1/3.2 |
 | 3.6.F1 | Bridge FFI no host `KofJsFfiBridge` + `KofJsFfiBridgeTest` (8/8) — mesmo downcall do `kof_ffi`, provado no host; gate do compilador FECHADO (zero risco ao backend) | ✅ 18/09 (.18) | .18 | — |
@@ -358,11 +358,13 @@ JVM↔JS, +7). No target JS a **ABI escalar agora binda no host runner GraalJS/n
 (FFM no host, sem bytecode no guest); o browser não tem host `kof_platform.ffi` e
 lança erro honesto em runtime (R7, mesmo degrade do `kof.io`); assinaturas não-
 escalares (array/struct/pointer) seguem `FFI002` em compilação (3.3/3.5/3.8 ⛔).
-**Callback/upcall (3.4): design medido (probe verde) e C1+C2 landados 18/09 — a JVM
-agora binda callbacks primitivos** (`extern` com parâmetro de tipo-função →
-`Linker.upcallStub` sobre o valor de função Kof; `JvmFfiCallbackE2ETest` computa
-`42/42/6.0/7.5` em ABIs Int/Long/Double/mistas); a paridade JS de callback (C3) segue
-`FFI002` — design completo em §R3-3.4 abaixo. De resto, o próximo trabalho da R3 é o
+**Callback/upcall (3.4): TOTALMENTE LANDADO
+18/09 (C1→C3) — a JVM *e* o host runner JS agora bindam callbacks primitivos**
+(`extern` com parâmetro de tipo-função → `Linker.upcallStub` sobre o valor de função
+Kof; um `.kf` real computa `42/42/6.0/7.5` em ABIs Int/Long/Double/mistas, byte-a-byte
+JVM↔JS em `JvmFfiCallbackE2ETest`; a ponte JS chama o método `invoke` do objeto `Lambda`
+compilado — design completo + a descoberta objeto-vs-arrow da C3.2 em §R3-3.4 abaixo).
+De resto, o próximo trabalho da R3 é o
 §61 nativo (3.7, lane nat) ou decisões da mantenedora (3.3/3.5/3.8).
 
 ### §R3-3.4 — callbacks / upcalls (função Kof entregue a C)
@@ -399,6 +401,13 @@ de boxing/unboxing (**medido** na C1, onde um closure apagado
 `Object invoke(Object,Object)->Object` bridged do mesmo jeito devolveu `42` através de
 um upcall C real). Rooting: o stub é alocado no `Arena.ofConfined()` da chamada (≈ a
 arena confined que o `kof_ffi` já usa) e fica vivo exatamente enquanto o C o segura.
+**Espelho JS (`KofJsRunner`)**: o parse por cursor mora no `KofJsFfiBridge.call` (um slot
+`(` → `ADDRESS`, o stub pré-montado passa direto), e `jsCallbackStub` monta o `upcallStub`
+cuja ponte é um static de aridade fixa `executeJsX` alcançado via
+`MethodHandles.asVarargsCollector` (NÃO `asSpreader`, que o JDK rejeita num handle varargs)
+chamando `fn.getMember("invoke").execute(...)` — porque no JS o valor de função é um objeto
+`Lambda`, não chamável; a arena confined do stub é aberta pelo `ProxyExecutable` e fechada
+após o downcall síncrono retornar.
 
 **Restrição honesta (escopo da fatia, R6/R7).** **O contrato do callback `extern` é
 síncrono, não-escapante** — o stub vive exatamente pela duração da chamada (arena
@@ -413,11 +422,18 @@ R12) é uma fatia futura separada. O que o gate PEGA em **compilação** (R6,
 um callback, ou callback-como-retorno.
 
 **Postura por target.** **JVM**: binda (upcall FFM no host, igual ao downcall).
-**JS**: paridade *é* alcançável e **medida** — o runner GraalJS/node é uma JVM, então o
-`KofJsFfiBridge` ganha o mesmo caminho de upcall; o cenário reentrante (JS →
-`ProxyExecutable` no host → downcall nativo → `Linker.upcallStub` → de volta ao
-`Value.execute`) funciona na mesma thread (pin C3.1: `42`/`42L`/loop `46`); o browser não tem host → degrade
-honesto em runtime (R7). **Native**: §61 (3.7).
+**JS**: **binda (C3.2/C3.3 landados 18/09)** — o runner GraalJS/node é uma JVM, então o
+`ProxyExecutable` do `KofJsRunner` ganha o mesmo caminho de upcall; um arg de callback é
+marshalled montando um `Linker.upcallStub` sobre o valor de função Kof. **Descoberta
+(C3.2)**: um valor de função Kof compilado NÃO é uma arrow JS nativa — é um **objeto**
+`Lambda…` com um método `invoke`, então a ponte do stub chama `fn.getMember("invoke").execute(...)`
+(o pin C3.1 exercitava um `Value.execute` numa arrow nativa e foi corrigido para o enquadramento
+objeto-`invoke`); os carriers primitivos passam por `asInt`/`asLong`/`asFloat`/`asDouble`/
+`asBoolean` do Graal. O cenário reentrante (JS → `ProxyExecutable` no host → downcall nativo →
+`Linker.upcallStub` → de volta ao `Value.invoke`) roda na mesma thread; provado byte-a-byte
+JVM↔JS (`jvmAndJsCallbacksMatchByteForByte`: `42/42/6.0/7.5`). O browser não tem host → degrade
+honesto em runtime (R7); um callback não-bindável (ex. parâmetro `String`) ainda falha em
+compilação no JS (`FFI002`). **Native**: §61 (3.7).
 
 **Fatias (espelham a disciplina F1→F3 da 3.6).** **C1** = pin do mecanismo no nível do
 host (`JvmFfiCallbackTest`: upcallStub + ponte de closure `.asType` + rooting por
@@ -429,13 +445,15 @@ da JVM, provado por `JvmFfiCallbackE2ETest` (um `.kf` real computa `42/42/6.0/7.
 ABIs Int/Long/Double/mistas; callback no JS segue `FFI002`; um callback não-bindável
 com `String` segue `FFI001`). **C3** = paridade JS de callback, dividida como F1→F3:
 **C3.1** = pin de reentrância no host (`KofJsFfiCallbackBridgeTest` — JS→nat→upcall→
-`Value.execute` reentrante, Int `42`/Long `42L`/loop `46`; gate ainda fechado) ✅;
+callback reentrante, Int `42`/Long `42L`/loop `46`; gate ainda fechado) ✅;
 **C3.2** = caminho de upcall no `KofJsFfiBridge` + marshalling do `Value` de callback no
 `ProxyExecutable` do `KofJsRunner` + abrir o ramo JS do `isExternBound` para callbacks
-bindáveis; **C3.3** = E2E de paridade byte-a-byte JVM↔JS de callback + degrade honesto
-do browser (R7).
-Status: **C1+C2 landados 18/09 (a JVM binda callbacks primitivos)** e
-**C3.1 medido/landado** (reentrância JS provada); **C3.2/C3.3 abertos**.
+bindáveis ✅; **C3.3** = E2E de paridade byte-a-byte JVM↔JS de callback + degrade honesto
+do browser (R7) ✅.
+Status: **C1→C3 todos landados 18/09** — a JVM e o host runner JS bindam callbacks
+primitivos (paridade byte-a-byte); o enquadramento arrow/`Value.execute` do pin C3.1 foi
+corrigido para a convenção real de objeto-`invoke` do `Lambda` na C3.2. Um callback
+não-bindável (`String`-in-callback) segue `FFI001`/`FFI002` honesto.
 
 ---
 

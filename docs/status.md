@@ -25,14 +25,17 @@
 > adds 7 `assertJvmJsParity` cases proving byte-for-byte JVM↔JS equality (doubles
 > `3.0`/`1024.0`, `Long` via `atol`→`labs`, `char*`→String, `void`); a browser has no
 > host → honest runtime degrade (R7), and non-scalar signatures still `FFI002`. **Callbacks
-> bind on the JVM (slice 3.4-C2, same day):** an `extern` with a function-typed parameter
+> bind on the JVM *and* the JS host runner (slice 3.4, C1→C3, same day):** an `extern` with a
+> function-typed parameter
 > lowers to `kof_ffi` (nested `(<ret><params>)` token) and the runtime builds a C function
 > pointer via `Linker.upcallStub` over the Kof function value — `JvmFfiCallbackE2ETest`
-> computes `42/42/6.0/7.5` across Int/Long/Double/mixed callback ABIs; synchronous/non-
-> escaping contract, primitive-only ABI; JS callback parity = slice 3.4-C3 (`FFI002`).
+> computes `42/42/6.0/7.5` across Int/Long/Double/mixed callback ABIs, byte-for-byte JVM↔JS
+> (`jvmAndJsCallbacksMatchByteForByte`); on JS the function value is a `Lambda…` **object**, so
+> the runner bridge calls `fn.getMember("invoke").execute(...)`; synchronous/non-
+> escaping contract, primitive-only ABI.
 > Parity not yet reached: struct/pointer (D6),
-> variadics and opaque handles stay `FFI001`; Native `FFI001` (§61) and JS callback parity
-> remain honest per-target gaps (R7). Full decomposition in §R3-slices / §R3-3.4 of the
+> variadics and opaque handles stay `FFI001`; Native `FFI001` (§61) remains an honest
+> per-target gap (R7). Full decomposition in §R3-slices / §R3-3.4 of the
 > universal plan.
 >
 > **18/09 — §132 CLOSED (#83-JS) — KofJS runs the OTP supervisor to parity

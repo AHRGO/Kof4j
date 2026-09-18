@@ -144,20 +144,22 @@ define as assinaturas. **Experimental** como superfície (muda entre versões).
    então uma chamada `extern` lança erro honesto em **runtime** (R7, o mesmo degrade do
     `kof.io`); e uma assinatura **não-escalar** (array/struct/pointer) ainda emite
     `FFI002` em compilação. **Callbacks/upcalls (fatia 3.4, 18/09)**: um `extern` com
-    **parâmetro de tipo-função** binda na **JVM** — o valor de função Kof vira um
+    **parâmetro de tipo-função** binda na **JVM e no host runner JS** — o valor de função
+    Kof vira um
     ponteiro de função C real via `Linker.upcallStub` (`JvmFfiCallbackE2ETest` roda
-    `(x,y)->x+y` através de callbacks C em ABIs Int/Long/Double/mistas → `42/42/6.0/7.5`);
+    `(x,y)->x+y` através de callbacks C em ABIs Int/Long/Double/mistas → `42/42/6.0/7.5`,
+    byte-a-byte JVM↔JS em `jvmAndJsCallbacksMatchByteForByte`);
     o contrato é **síncrono/não-escapante** (o stub vive na arena da chamada) e a ABI do
     callback é **só primitiva** — um `String`/struct/pointer dentro do callback, ou
-    callback-como-retorno, segue `FFI001` honesto. O target **JS** ainda emite `FFI002`
-    para callback (paridade = fatia 3.4-C3). Ainda NÃO bound — `FFI001` honesto em
+    callback-como-retorno, segue `FFI001`/`FFI002` honesto. No JS o valor de função compilado
+    é um **objeto** `Lambda…` (não uma arrow nativa), então a ponte do runner chama
+    `fn.getMember("invoke").execute(...)`. Browser sem host → degrade honesto (R7). Ainda NÃO bound — `FFI001` honesto em
     compilação (JVM/Native), nunca stub silencioso (R6): ABI de struct/array/pointer (design D6,
     ⛔ mantenedora), variadics (3.5, ⛔) e handles
     opacos/out-buffers (3.3, ⛔). O Native emite `FFI001` (`<target>` not supported
     yet, §61). Lib/símbolo ausente falha em **runtime** com exceção `kof_ffi` nomeando
     `lib::symbol` (stack trace, não mensagem cirúrgica). Fatias R3 restantes
-    (structs/D6, variadics, handles, paridade Native, **paridade JS de callback
-    3.4-C3**; **JVM escalar+callback e JS escalar fechados**)
+    (structs/D6, variadics, handles, paridade Native; **JVM e JS escalar+callback fechados**)
     em
   `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431);
   `extern "c"` no Native depende do §61.

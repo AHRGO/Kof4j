@@ -396,44 +396,19 @@ public final class KofJsRunner {
                 return null;
             }
         });
-        // R3 fatia 3.6 (JS FFI parity): extern no target JS baixa para
-        // kofFfi/kofFfiVoid -> kof_platform.ffi/ffi_void -> este bridge host ->
-        // KofJsFfiBridge (java.lang.foreign, mesmo downcall do target JVM). Os
-        // args chegam como array JS; são marshalled p/ os wrappers Java que o
-        // asSpreader+invoke espera por char de layout. Browser: sem host, o
-        // kof_platform Proxy lança erro honesto (R7) — nunca stub silencioso.
-        platform.put("ffi", (ProxyExecutable) args ->
-                KofJsFfiBridge.call(args[0].asString(), args[1].asString(),
-                        args[2].asString(), kofFfiArgs(args[2].asString(), args[3])));
+        // R3 fatia 3.6 (JS FFI parity) + 3.4-C3 (callbacks): extern no target JS baixa
+        // para kofFfi/kofFfiVoid -> kof_platform.ffi/ffi_void -> este bridge host, que
+        // delega o marshalling (args escalares + stubs de callback via Linker.upcallStub)
+        // para KofJsFfiMarshal -> KofJsFfiBridge (java.lang.foreign, mesmo downcall do
+        // target JVM). Browser: sem host, o kof_platform Proxy lança erro honesto (R7).
+        platform.put("ffi", (ProxyExecutable) args -> KofJsFfiMarshal.ffi(
+                args[0].asString(), args[1].asString(), args[2].asString(), args[3]));
         platform.put("ffi_void", (ProxyExecutable) args -> {
-            KofJsFfiBridge.callVoid(args[0].asString(), args[1].asString(),
-                    args[2].asString(), kofFfiArgs(args[2].asString(), args[3]));
+            KofJsFfiMarshal.ffiVoid(
+                    args[0].asString(), args[1].asString(), args[2].asString(), args[3]);
             return null;
         });
         bindings.putMember("kof_platform", ProxyObject.fromMap(platform));
-    }
-
-    private static Object[] kofFfiArgs(String sig, Value jsArgs) {
-        int n = sig.length() - 1;   // o 1º char é o retorno; o resto são os params
-        Object[] real = new Object[n];
-        for (int i = 0; i < n; i++) {
-            char c = sig.charAt(i + 1);
-            Value v = (jsArgs != null && jsArgs.hasArrayElements() && i < jsArgs.getArraySize())
-                    ? jsArgs.getArrayElement(i) : null;
-            if (v == null || v.isNull()) {
-                real[i] = null;
-                continue;
-            }
-            real[i] = switch (c) {
-                case 'i' -> v.asInt();
-                case 'j' -> v.asLong();
-                case 'f' -> v.asFloat();
-                case 'd' -> v.asDouble();
-                case 'b' -> v.asBoolean();
-                default -> v.asString();   // 'S'
-            };
-        }
-        return real;
     }
 
     /**
