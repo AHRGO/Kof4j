@@ -172,7 +172,7 @@ Rules the core guarantees:
   schedules a re-render (scheduling), without touching the whole application.
 - **Re-render by rebuild + prune (current); reconciliation (Phase 9, pending).**
   today the view builder re-runs and the fresh subtree replaces the previous
-  one, pruning the old subtree from the DOM and the registry (§295). The
+  one, pruning the old subtree from the DOM and the registry (§300). The
   **target** is reconciliation by **position + kind** — stable nodes (same
   position + kind) reuse the existing DOM and only the diff (text, props,
   handlers) is updated, without recreating the tree; key-based diffing comes
@@ -213,7 +213,7 @@ Window (root/host)
    (scheduled, not synchronous) reconciles only the dirty components.
 5. **Updates applied:** the view builder re-runs and the fresh subtree
    replaces the previous one — the old subtree is pruned from the DOM **and**
-   from the node registry (`kofUiRemoveSubtree`, §295), so no handle leaks
+   from the node registry (`kofUiRemoveSubtree`, §300), so no handle leaks
    across renders. Node reuse by **position + kind** (updating only the diff)
    and key-based diffing are the **pending** half of Phase 9.
 
@@ -226,11 +226,11 @@ registers handlers per node (basis of propagation) and **clears them on unmount*
 
 ### 2.6 State
 
-Three scopes (Phase 8 — delivered 18/09: `D-UI-APPSTATE` + §296):
+Three scopes (Phase 8 — delivered 18/09: `D-UI-APPSTATE` + §301):
 
 - **Component local:** `state`/`text`/`flag` on the `Component` (delivered).
 - **Shared:** an observable `Store` between components (delivered;
-  JS `unsubscribe` fixed §296).
+  JS `unsubscribe` fixed §301).
 - **Application:** `AppState(initial)` — create-or-get singleton over the
   Store machinery, reachable from anywhere (delivered, `D-UI-APPSTATE`).
 

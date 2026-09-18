@@ -1381,10 +1381,10 @@ flake and §181/§256 cross reds; `docs-lang.sh check` 0/0/0.
 **Context:** `docs/ui/architecture.md` §2.6 defines three state scopes. The
 local one (`state`/`text`/`flag` on `Component`) and the shared `Store`
 (get/set/subscribe/unsubscribe) already worked; the **application root** was
-the missing scope (Fase 8). While wiring it, §296 was measured and fixed
+the missing scope (Fase 8). While wiring it, §301 was measured and fixed
 first: JS `Store.unsubscribe` was a silent no-op (wrapper-vs-raw identity),
 so the "cleanup" leg of §2.6 had no working primitive — see `known-bugs.md`
-§296.
+§301.
 
 **Decision (minimal contract):**
 - `AppState(initial)` — one argument, returns the **app-scoped store**: a
@@ -1398,7 +1398,7 @@ so the "cleanup" leg of §2.6 had no working primitive — see `known-bugs.md`
   of prop-drilling a handle.
 - `storesLive()` counts the app-state slot (leak probe unchanged).
 - Subscription cleanup on unmount stays **manual** (`unsubscribe(h)` — now
-  real per §296): auto-attributing subscriptions to components is a bigger
+  real per §301): auto-attributing subscriptions to components is a bigger
   contract (which component is "current" during a subscribe?) — rule 6, not
   decided here.
 - JVM/Native keep the documented Store no-ops (UI is KofJS — backend-parity);
@@ -1415,7 +1415,7 @@ target (JS `10,10,x=10,x=42,,1`; JVM `0,0,"",1`; Native `0,0,"",0`);
 ComponentCore 24/24 + UiE2E 29 + browser 28 + Router 4 + style/tokens 17 +
 CoreRegression 102 + CompilerDriver 256 green.
 
-- Related: D-UI-STYLE, D-UI-TOKENS, §296, D-BACKEND-SEMANTICS (no-op stores).
+- Related: D-UI-STYLE, D-UI-TOKENS, §301, D-BACKEND-SEMANTICS (no-op stores).
 
 ---
 
@@ -1427,7 +1427,7 @@ CoreRegression 102 + CompilerDriver 256 green.
 
 **Context:** `architecture.md` Phase 9 wants "partial update": reuse the DOM
 node when the view re-renders the same widget at the same position. Today
-re-render is rebuild+prune: §295 removed the leak, but identity is still
+re-render is rebuild+prune: §300 removed the leak, but identity is still
 re-created — **measured 18/09 (embedded host, scratch probe):** a
 `view (s) -> Label("v="+s)` component's root label handle is `3` after 1
 state write and `7` after 5 (one fresh handle per render; old subtree
@@ -1457,13 +1457,13 @@ previous and next render of a `view`-component produce the **same root
 kind**, the OLD DOM node is kept and the value-bearing properties are copied
 from the fresh node onto it; the old root handle **stays live** (identity
 continuity — this is the aliasing call option B requires). Different root
-kind → rebuild + prune exactly as today (§295). No VDOM layer, no keying,
+kind → rebuild + prune exactly as today (§300). No VDOM layer, no keying,
 no positional diff of children in this slice. Proof expected: probe shows
 the same handle across state writes when kind is stable; focus-bearing
 element survives the write; kind change still prunes (no regression of
-§295).
+§300).
 
-**Related:** §295 (prune), §296 (unsubscribe), Fase 9 audit lines,
+**Related:** §300 (prune), §301 (unsubscribe), Fase 9 audit lines,
 D-UI-APPSTATE (manual-unsub stance — now superseded by D-UI-AUTOUNSUB),
 D-UI-CANCELLED.
 
@@ -1475,22 +1475,22 @@ D-UI-CANCELLED.
 
 **State:** `DECIDED` — option **(A) automatic per-component scope**.
 
-**Context:** since §296 `unsubscribe(h)` is a real primitive, but cleanup
+**Context:** since §301 `unsubscribe(h)` is a real primitive, but cleanup
 is manual — a component that `subscribe`s on mount leaks the callback (and
-its captured closure) after the component is pruned (§295's registry knows
+its captured closure) after the component is pruned (§300's registry knows
 exactly when). D-UI-APPSTATE recorded "cleanup stays manual" as the
 *pre-decision* stance.
 
 **Decision:** a `subscribe` performed **while a component is the current
 render target** is bound to that component; when the component leaves the
-tree (subtree prune, §295), the runtime unsubscribes it automatically.
+tree (subtree prune, §300), the runtime unsubscribes it automatically.
 Subscribes **outside** a component context (application-scoped, e.g. an
 `AppState` observer created in `main`) keep manual semantics — the primitive
-from §296 continues to work for them. Backward compatible: nothing that
+from §301 continues to work for them. Backward compatible: nothing that
 compiles today changes behavior except leaked subscriptions dying with
 their component.
 
-**Related:** §295 (subtree registry), §296 (unsubscribe), D-UI-APPSTATE
+**Related:** §300 (subtree registry), §301 (unsubscribe), D-UI-APPSTATE
 (stance superseded), D-UI-DIFF (same lifecycle plumbing).
 
 ---
@@ -1504,18 +1504,18 @@ left the tree**.
 
 **Context:** `cancelled()` inside an async action callback currently is
 conservative (almost always `false`) — a late `spawn`/`http` response can
-still write into a DOM subtree that §295 already pruned. Option B
+still write into a DOM subtree that §300 already pruned. Option B
 (state-version based) was rejected as over-aggressive (kills legitimate
 updates, heavy contract change); option C (manual handles) rejected as
 ceremony.
 
 **Decision:** the action remembers the component instance it was created
 in; `cancelled()` returns `true` once that instance's node is no longer in
-the live tree (same registry as §295). Async callbacks should guard the DOM
+the live tree (same registry as §300). Async callbacks should guard the DOM
 touch with `cancelled()` — when true, the response is dropped. Non-DOM side
 effects are the programmer's business (unchanged).
 
-**Related:** §295, D-UI-AUTOUNSUB (same lifecycle substrate), Fase 8
+**Related:** §300, D-UI-AUTOUNSUB (same lifecycle substrate), Fase 8
 (`view`/actions), D-BACKEND-SEMANTICS (`spawn`/`await` frozen — this is UI
 observability, not a concurrency contract change).
 

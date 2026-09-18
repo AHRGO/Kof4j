@@ -53,7 +53,7 @@ public final class JsRuntimeUiComponents {
                 }
             }
             function kofUiPruneNode(n) {
-                // §295 prune applied to a DOM node (used by root-kind reuse where
+                // §300 prune applied to a DOM node (used by root-kind reuse where
                 // the root handle must survive). Every registry key that maps to
                 // the node dies with it — D-UI-DIFF (B) aliases the fresh root
                 // handle onto the old node, so a node can have TWO keys and the
@@ -69,7 +69,7 @@ public final class JsRuntimeUiComponents {
                     for (const key in window.__kofNodes) {
                         if (window.__kofNodes[key] === x) {
                             delete window.__kofNodes[key];
-                            // §295: the action table is a SECOND global keyed by
+                            // §300: the action table is a SECOND global keyed by
                             // the same handle — without this the discarded
                             // Button action (and its closure) stays reachable
                             // forever. __kofFormSubmits is a third (Form).
@@ -149,7 +149,7 @@ public final class JsRuntimeUiComponents {
                 // (and its focus/caret/scroll) survives; the fresh node's
                 // properties and children migrate onto it and it is discarded.
                 // The OLD handle keeps its identity and stays the ONLY
-                // __kofNodes key for the node (alias-free: the §295 registry
+                // __kofNodes key for the node (alias-free: the §300 registry
                 // bound holds), so the per-handle dispatch tables are re-homed
                 // from newId to oldId.
                 for (const kid of Array.from(oldEl.children || [])) kofUiPruneNode(kid);
@@ -250,12 +250,12 @@ public final class JsRuntimeUiComponents {
                         // D-UI-DIFF (B): stable root kind → the old DOM node
                         // survives (focus/caret/scroll preserved); the old root
                         // handle keeps its identity. Different kind (or error
-                        // render) → rebuild + prune exactly as §295.
+                        // render) → rebuild + prune exactly as §300.
                         kofUiReuseRoot(oldEl, rootEl, c.root, rootId);
                         rootId = c.root;
                     } else {
                         if (c.root !== rootId) {
-                            // §295: the previous render's subtree must be pruned from
+                            // §300: the previous render's subtree must be pruned from
                             // BOTH the DOM and __kofNodes (detaching only the root
                             // leaked every old node — unbounded, silent).
                             kofUiRemoveSubtree(c.root);

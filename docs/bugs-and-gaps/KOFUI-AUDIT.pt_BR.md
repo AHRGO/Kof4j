@@ -191,7 +191,7 @@ mas podava do DOM só o elemento **raiz** anterior, deixando a subárvore
 descartada inteira em `window.__kofNodes` (e as ações de Button em
 `window.__kofActions`) — crescimento silencioso e ilimitado. Corrigido
 chamando o `kofUiRemoveSubtree` existente (DOM + registro) na troca de
-raiz mais a limpeza de `__kofActions`; ver `known-bugs.md` **§295**. Prova:
+raiz mais a limpeza de `__kofActions`; ver `known-bugs.md` **§300**. Prova:
 `ComponentCoreE2ETest.rerenderPrunesPreviousSubtreeFromRegistry` +
 `rerenderReleasesDiscardedButtonActions` (ambos VERMELHOS pré-fix). A Fase
 9 continua sem reuso de nó/diffing (a metade "partial update") — esta
@@ -214,7 +214,7 @@ namespaces de token (a aplicação semântica theme→widget continua manual).
 
 ### Fase 8 (Estado da aplicação) — CONCLUÍDA (18/09)
 
-A `architecture.md` §2.6 foi fechada por duas unidades. §296 (bug): o
+A `architecture.md` §2.6 foi fechada por duas unidades. §301 (bug): o
 `Store.unsubscribe` do KofJS era no-op silencioso — o subscribe guardava o
 wrapper `fn.invoke.bind(fn)`, o unsubscribe buscava o handle raw, e callbacks
 desinscritos seguiam recebendo todo `set()` para sempre; as inscrições agora
