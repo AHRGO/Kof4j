@@ -134,6 +134,38 @@ var pick = colors[random.randomInt(colors.size)]   // choice = idiom
 retorno Object na camada de dispatch (DD-STDLIB-01 — FECHADO 13/09, decisão
 6a: `randomBytesHex` alias de `hex` + choice=idiom; `randomBytes` reservado).
 
+## rng — determinismo TESTÁVEL (X8 fatia 1)
+
+```kof
+// ❌ BAD — sorteio sem seed dentro de teste (passa/falha ao acaso, CI irreproduzível)
+test "soma no intervalo" {
+    var a = random.randomInt(100)
+    var b = rng.int(50)
+}
+```
+
+```kof
+// ✅ GOOD — PRNG semeado: mesma seed => mesma sequência, qualquer backend
+test "soma comuta em pares aleatórios" {
+    rng.seed(42)
+    var i = 0
+    while (i < 500) {
+        var a = rng.int(10000) - 5000
+        var c = rng.int(10000) - 5000
+        assert(a + c == c + a)
+        i = i + 1
+    }
+}
+```
+
+**WHY:** `rng.*` = determinismo REPRODUZÍVEL (xorshift128 + splitmix32,
+32-bit exato — mesma seed, mesmos bits na JVM e no JS,
+`KofRngTest.jvmJsParity`); `random.*` = entropia do SO (R11). Um property test
+que falha imprime a seed e a falha se reproduz. Misturar os dois é o
+anti-padrão: semear material de segurança (violação da R11) ou sortear
+entropia do rng (testes flaky). Fatia 1 = JVM + JS; NATIVE/ANDROID = gap
+honesto `RNG001` em compile (fatia 2 = asm).
+
 ## validation — formatar NÃO é validar (S12/S12b)
 
 ```kof

@@ -133,6 +133,37 @@ var pick = colors[random.randomInt(colors.size)]   // choice = idiom
 an Object return in the dispatch layer (DD-STDLIB-01 — CLOSED 13/09, decision
 6a: `randomBytesHex` alias of `hex` + choice=idiom; `randomBytes` reserved).
 
+## rng — determinism you can TEST (X8 slice 1)
+
+```kof
+// ❌ BAD — unseeded draw inside a test (passes/fails at random, unreproducible CI)
+test "sum in range" {
+    var a = random.randomInt(100)
+    var b = rng.int(50)
+}
+```
+
+```kof
+// ✅ GOOD — seeded PRNG: same seed => same sequence, any backend
+test "sum commutes on random pairs" {
+    rng.seed(42)
+    var i = 0
+    while (i < 500) {
+        var a = rng.int(10000) - 5000
+        var c = rng.int(10000) - 5000
+        assert(a + c == c + a)
+        i = i + 1
+    }
+}
+```
+
+**WHY:** `rng.*` = REPRODUCIBLE determinism (xorshift128 + splitmix32,
+32-bit-exact — same seed, same bits on JVM and JS, `KofRngTest.jvmJsParity`);
+`random.*` = OS entropy (R11). A failing property test prints its seed and the
+failure reproduces. Mixing the two is the anti-pattern: seeding for security
+material (R11 violation) or drawing entropy from rng (flaky tests). Slice 1 =
+JVM + JS; NATIVE/ANDROID = `RNG001` honest gap at compile time (slice 2 = asm).
+
 ## validation — formatting is NOT validating (S12/S12b)
 
 ```kof

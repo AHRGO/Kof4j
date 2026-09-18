@@ -289,7 +289,7 @@ the same development experience.
 | X5 | Variance / sealed types | ⛔ | **maintainer** | VISION §7 "B/C" — useful for scientific collections; a core type-system change (rule 6); type-classes stay rejected |
 | X6 | Interop reflection (restricted to interop) | ⛔ | **maintainer** | VISION §7 "C" — ML/science schema discovery; a core change (rule 6); never a foundation |
 | X7 | Debugger Native DWARF + JS source maps | 🟡 | tooling lane | VISION §9; `roadmap.md` §19.5 phases 4–7 — JS source map V3 landed 01/09 (`KofJsSourceMapTest`); Native DWARF pending |
-| X8 | Property-based testing | 🔵 | — | VISION §9 / R10 — numeric invariants (science); extends `kof.test` |
+| X8 | Property-based testing | 🟡 | docs→platform lane (192.168.100.15) | slice 1 ✅ 18/09: `rng` namespace (seedable xorshift128+splitmix32) on JVM+JS — `KofRngTest` 8/8 incl. JVM==JS byte parity + honest `RNG001` on NATIVE/ANDROID (`a71f761c`,`1ff54c6e`); slice 2 = native asm; slice 3 = `kof.test` property runner |
 | X9 | `kof deploy` (build + package + publish) | 🔵 | tooling lane | VISION §9 — on top of the existing packager |
 | X10 | Domain-sensitive LSP (completion + go-to-definition in packages) | 🔵 | tooling lane | VISION §9 — same frontend, no parallel parser |
 
