@@ -272,7 +272,7 @@ the same development experience.
 |---|-----------|--------|--------------|
 | R1 | Lock the core/platform boundary (§3.4 order as an invariant rule) | ✅ 17/09 | `5f1422c6` — `scripts/check_stdlib_boundary.sh` + ledger (31 namespaces) + CI + `--selftest`; AGENTS invariant 1 |
 | R2 | Generalize "capability/link by use" to all packages/domains | 🔵 | seed: SQLite/MySQL `.so` linked only when the literal DSN appears; extension pending |
-| R3 | Formalize FFI as first-class | 🟡 | first slice opened by #431 (raylib): increments (1) arity, (2) `void` returns, (3) String return, (4) `const char*` mixed with numerics — all additive on the JVM (`FfiE2ETest` pattern); structs stay R3-proper (design decision ⛔); native side waits on §61 |
+| R3 | Formalize FFI as first-class | 🟡 | **JVM scalar ABI generalized 18/09 (`.18`)**: `kof_ffi` now binds arbitrary arity + full scalar set {Int,Long,Float,Double,Boolean,String} in and out (`String` reads back `char*`); `FfiE2ETest` `pow`/`strstr` prove multi-arg + String return. Still open: `void` returns; struct/pointer ABI (design D6 ⛔); and **parity on the other targets** — JS (`FFI002`) and Native (`FFI001`, waits on §61) remain honest per-target gaps (R7). |
 | R4 | Formalize compile-time codegen (`CodegenStep`) | 🔵 | does NOT exist at HEAD (2.2.2); blocks `infra "prod" {}` (3.2) and DDL/runner migration |
 | R5 | Stability tiers + official packages | 🟡 | tiers defined in `backend-parity.md` §Stability tiers; **per-namespace tier marking not yet applied** — decision ⛔ |
 | R6 | Keep "never silent" for new domains | ✅ 17/09 | machine gate `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` (`19a740f2`) + full ledger sweep (`c5897cd5`, found §278) |

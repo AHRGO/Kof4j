@@ -5,6 +5,18 @@
 **Last updated:** September 18, 2026
 **Version:** 0.4.0-beta (pom `revision`)
 
+> **18/09 — R3 FFI (JVM) generalized — `extern` binds the full scalar ABI
+> (owner = 192.168.100.18, development lane).** `CompilerPipeline.isExternBound`
+> now accepts **any arity** over {Int, Long, Float, Double, Boolean, String} in
+> every position and return, with a `String` result read back from the native
+> `char*`. One FFM downcall `kof_ffi(lib, name, sig, Object[])` replaces the old
+> `kof_ffi_i`/`_si`/`_dd` helpers; the lowering packs args into an `Object[]`
+> (`KofNewArray`, boxing primitives) and the JVM emitter unboxes/checks the boxed
+> return (`emitKofRuntimeCall`). `FfiE2ETest` +2 (`pow` 2.0^10 → `1024.0`,
+> `strstr("hello world","wor")` → `world`). Parity not yet reached: `void` and
+> struct/pointer (D6) stay `FFI001`; JS `FFI002` / Native `FFI001` (§61) remain
+> honest per-target gaps (R7). Next R3 slices traced in the universal plan.
+>
 > **18/09 — §132 CLOSED (#83-JS) — KofJS runs the OTP supervisor to parity
 > (owner = 192.168.100.18, development lane).** `time.sleep` is now an **await-point**
 > on the JS backend: the compiler colors a method that reaches `kof_time_sleep` async

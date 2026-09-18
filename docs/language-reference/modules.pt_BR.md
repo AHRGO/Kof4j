@@ -122,19 +122,22 @@ define as assinaturas. **Experimental** como superfície (muda entre versões).
   quando no classpath (`ExternalClasspath.resolveMethod`, `:1535-1549`).
   **Target-specific.**
 - **FFI com C (`extern "<lib>" f(T): R`)** — binding direto a bibliotecas
-  nativas (JVM, `java.lang.foreign`). **Superfície medida 17/09 (0.4.0-beta)**:
-  exatamente três assinaturas presas na JVM (whitelist em
-  `CompilerPipeline.isExternBound` + helpers `kof_ffi_i`/`kof_ffi_si`/`kof_ffi_dd`
-  de `JvmFfiRuntime`): `f(Int): Int`, `f(String): Int`, `f(Double): Double` —
-  um único argumento. Qualquer outra (aridade ≠ 1, retorno `String`, 0-arg)
-  falha em tempo de compilação com `FFI001` (whitelist da JVM) ou `FFI002`
-  (JS: "FFI not available on the JS target"); o Native emite `FFI001`
-  (`<target>` not supported yet) — nunca stub silencioso (R6). Lib/símbolo
-  ausente falha em **runtime** com exceção `kof_ffi_*` nomeando `lib::symbol`
-  (stack trace, não mensagem cirúrgica). O alargamento (multi-arg, void,
-  retorno String, `char*`) é a primeira fatia R3 em
-  `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431); `extern "c"`
-  no Native depende do §61.
+  nativas (JVM, `java.lang.foreign`). **Superfície medida 18/09 (0.4.0-beta)**: a
+  JVM casa **qualquer assinatura composta pelo conjunto escalar** `{Int, Long,
+  Float, Double, Boolean, String}` em **todas as posições de parâmetro (aridade
+  arbitrária, ≥0)** e qualquer um deles como **retorno**; um retorno `String` lê
+  de volta o `char*` nativo (`MemorySegment.getString`). Um único helper de
+  runtime `kof_ffi(lib, name, sig, Object[])` (downcall FFM; `sig` codifica o
+  layout) substituiu o trio `kof_ffi_i`/`_si`/`_dd`; gate
+  `CompilerPipeline.isExternBound`. Ainda NÃO bound — `FFI001` honesto em
+  compilação, nunca stub silencioso (R6): retorno `void`, e ABI de
+  struct/array/pointer (design D6, ⛔ mantenedora). JS emite `FFI002` ("FFI not
+  available on the JS target"); o Native emite `FFI001` (`<target>` not supported
+  yet). Lib/símbolo ausente falha em **runtime** com exceção `kof_ffi` nomeando
+  `lib::symbol` (stack trace, não mensagem cirúrgica). Fatias R3 restantes
+  (void, structs/D6, paridade JS/Native) em
+  `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431);
+  `extern "c"` no Native depende do §61.
 
 - **Native/JS**: não há interop com tipos do host da mesma forma. **Unspecified.**
 - **Annotations** (`@Name`, `@JsonFormat`) são metadados de interop emitidos no

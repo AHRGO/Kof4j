@@ -62,7 +62,7 @@ if (mc.receiver() == null && driver.externSignatures.containsKey(mc.methodName()
                 ext.library() != null ? ext.library() : ""));
         ops.add(new KofLoadLiteral(BuiltinTypes.STRING, ext.name()));
         ops.add(new KofLoadLiteral(BuiltinTypes.STRING,
-                CompilerPipeline.ffiSignature(ext)));
+                FfiSignature.signature(ext)));
         int n = mc.arguments().size();
         ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, n));
         ops.add(new KofNewArray(object));
@@ -79,7 +79,7 @@ if (mc.receiver() == null && driver.externSignatures.containsKey(mc.methodName()
         }
         ops.add(new KofCall(new Type.ClassType("kof", "ffi", List.of()), "kof_ffi",
                 List.of(BuiltinTypes.STRING, BuiltinTypes.STRING, BuiltinTypes.STRING, objectArray),
-                CompilerPipeline.ffiReturnType(ext.returnType()), KofCallKind.FUNCTION));
+                FfiSignature.returnType(ext.returnType()), KofCallKind.FUNCTION));
         return localIdx;
     }
 }
