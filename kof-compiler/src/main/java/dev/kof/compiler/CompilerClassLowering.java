@@ -27,23 +27,7 @@ public final class CompilerClassLowering {
             superName = rawSuper != null ? driver.toInternalName("", rawSuper)
                     : "java/lang/Object";
         }
-        // #302: `class Dog extends Animal` onde Animal é interface emite Animal
-        // como super_class_index — o JVM rejeita (IncompatibleClassChangeError:
-        // class Dog has interface Animal as super class). Se o superName
-        // declarado for uma interface, move-o para ifaces e usa Object como
-        // super_class_index real.
-        List<String> extraIfaces = new ArrayList<>();
-        if (driver.semanticAnalyzer != null && !"java/lang/Object".equals(superName)) {
-            String simpleName = superName.contains("/")
-                    ? superName.substring(superName.lastIndexOf('/') + 1) : superName;
-            if (driver.semanticAnalyzer.isInterfaceType(simpleName)) {
-                extraIfaces.add(superName);
-                superName = "java/lang/Object";
-            }
-        }
-        List<String> baseIfaces = cls.interfaces().stream().map(n -> CompilerAnnotations.externalOrLocalInternalName(driver, eraseTypeArgs(n))).toList();
-        List<String> ifaces = extraIfaces.isEmpty() ? baseIfaces
-                : java.util.stream.Stream.concat(extraIfaces.stream(), baseIfaces.stream()).toList();
+        var sup = ClassSuperResolution.resolve(driver, superName, cls.interfaces().stream().map(n -> CompilerAnnotations.externalOrLocalInternalName(driver, eraseTypeArgs(n))).toList()); superName = sup.superName(); List<String> ifaces = sup.interfaces();
         int access = driver.computeAccess(cls.modifiers());
         List<IRField> fields = new ArrayList<>();
         List<IRMethod> methods = new ArrayList<>();
