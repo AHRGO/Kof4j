@@ -137,4 +137,49 @@ class WindowE2ETest {
         assertEquals("done", out, "JVM should run the program");
         assertJsRuns(tempDir, "win2", program);
     }
+
+    @Test
+    void windowSizeAndClosePersistOnHeadlessDom(@TempDir Path tempDir) throws Exception {
+        // #440: w.size(400,400) was a silent no-op — kofUiWindowSetSize/Close declared
+        // the handle parameter as `window`, shadowing the global that holds __kofWindows.
+        Path source = tempDir.resolve("win440.kf");
+        Files.writeString(source, """
+                main() {
+                    var w = Window("My Window")
+                    var label = Label("Hi, Kof!")
+                    w.title = "Kof Window Test"
+                    w.size(400, 300)
+                    w.bind(label)
+                    w.show()
+                    w.close()
+                }
+                """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("js"), Target.JS);
+        assertTrue(result.success(), "JS compile: " + result.diagnostics().getDiagnostics());
+        Path runtime = tempDir.resolve("js/kof-runtime.mjs");
+        assertTrue(Files.exists(runtime), "runtime bundle should exist");
+        String emitted = Files.readString(tempDir.resolve("js/Default.mjs"));
+        assertTrue(emitted.contains("kofUiWindowSetSize(w, 400, 300)"),
+                "lowering must forward size() to the runtime with the handle");
+        Path probe = tempDir.resolve("probe.mjs");
+        Files.writeString(probe, """
+                const m = await import('file://' + process.argv[2]);
+                const id = m.kofUiWindowNew('T');
+                m.kofUiWindowSetSize(id, 400, 300);
+                const el = globalThis.window.__kofWindows[id];
+                console.log(el ? el.style.width + 'x' + el.style.height : 'MISSING');
+                m.kofUiWindowClose(id);
+                console.log('after-close:' + (globalThis.window.__kofWindows[id] === undefined ? 'gone' : 'still'));
+                """);
+        ProcessBuilder pb = new ProcessBuilder("node", probe.toString(), runtime.toAbsolutePath().toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).trim();
+        int ec = p.waitFor();
+        assertEquals(0, ec, "node probe exit, output:\n" + out);
+        assertEquals("400pxx300px", out.lines().findFirst().orElse("<empty>"),
+                "size() must persist on the window element (was silent no-op — #440)");
+        assertEquals("after-close:gone", out.lines().skip(1).findFirst().orElse("<empty>"),
+                "close() must remove the window from the registry");
+    }
 }
