@@ -158,9 +158,24 @@ class KofObservabilityTest {
                 val json = observability.spanEnd(h)
                 assert(json.contains("\\"traceId\\":"))
                 assert(json.contains("\\"spanId\\":"))
+                assert(json.contains("\\"name\\":\\"op\\""))
+                assert(json.contains("\\"startMicros\\":"))
+                assert(json.contains("\\"durationMicros\\":"))
+                assert(json.contains("\\"parentSpanId\\":\\"\\""))
                 println("ok")
             }
             """, "ok");
+        // face (b) do registro de bugs 272: o nome precisa sobreviver ao
+        // escape JSON (aspas e barra invertida no nome viram sequencias
+        // escapadas no JSON), como no golden JVM.
+        runNative(tmp, """
+            main() {
+                val h = observability.spanStart("a\\"b")
+                val json = observability.spanEnd(h)
+                assert(json.contains("\\"name\\":\\"a\\\\\\"b\\""))
+                println("esc-ok")
+            }
+            """, "esc-ok");
     }
 
 @Test

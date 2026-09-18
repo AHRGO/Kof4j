@@ -25,6 +25,14 @@ public final class RuntimeObservability3 {
             .Lstr_obs_span_2: .asciz "\\",\\"spanId\\":\\""
             .Lstr_obs_span_3: .asciz "\\",\\"durationMs\\":"
             .Lstr_obs_span_4: .asciz "}"
+            .Lstr_obs_pe_1: .asciz "\\",\\"parentSpanId\\":\\""
+            .Lstr_obs_pe_2: .asciz "\\",\\"name\\":\\""
+            .Lstr_obs_pe_3: .asciz "\\",\\"startMicros\\":"
+            .Lstr_obs_pe_4: .asciz ",\\"endMicros\\":"
+            .Lstr_obs_pe_5: .asciz ",\\"durationMicros\\":"
+            .Lstr_obs_esc_q: .asciz "\\\\\\""
+            .Lstr_obs_esc_b: .asciz "\\\\\\\\"
+            .Lstr_obs_esc_e: .asciz ""
             .section .text
 
             # kof_observability_metrics() -> String (Prometheus text exposition)
