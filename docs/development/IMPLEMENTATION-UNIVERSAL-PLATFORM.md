@@ -75,6 +75,7 @@ a new domain. **This stage closes before any Tier 6+ (R12).**
 | 1.1.7 | `HTTP002` — https + real DNS on Native | 🔵 | native lane | HTTP/1.1 asm landed 03/09; `timeout`/`retry`/`circuit` REAL on the 4 native targets since 17/09 (§259 CLOSED). `HTTP002` is a **reserved** code (branch dead — `KofHttp.supportedOn` always true) |
 | 1.1.8 | `MEDIA001`/`MEDIA003` — media handles / mic on non-JVM | 🔵 | queued behind the HTTP facades (`.22`) | JVM-only; honest compile-time gap; documented in the matrix |
 | 1.1.9 | `ORM001` — `kof.orm` on Native | 🔵 | native lane | JVM + JS closed (JS 18/09, `KofJsOrmBridge`); Native still `ORM001` |
+| 1.1.10 | §278 — Android reuses `JvmBackend` but refuses `kof.db`/`kof.security`/`kof.gpu` (`DB001`/`SECN00x`/`GPU001`) | 🔵 | compiler lane (rule 6) | measured with `CompilerDriver(Target.ANDROID)`; catalogued `known-bugs.md` §278; pin `DomainGapCodesTest.androidRefusesDbAndCryptoWithTheDocumentedCodes` |
 
 ### 1.2 GC mark-sweep in Native
 
@@ -305,7 +306,7 @@ Stage 8.
 
 Cross-cutting: **R3 (formalized FFI)** is the backbone of Stages 3–7 and
 **R4 (codegen hook)** gates Stage 3 (`infra`). Within Stage 1, the remaining
-non-decision items are parity gaps on the web/native lanes (1.1.3–1.1.9) and
+non-decision items are parity gaps on the web/native lanes (1.1.3–1.1.10) and
 the §132 JS scheduling redesign (1.3.2, `.18`).
 
 See the companion [`UNIVERSAL-PLATFORM-VISION.md`](../architecture/UNIVERSAL-PLATFORM-VISION.md)

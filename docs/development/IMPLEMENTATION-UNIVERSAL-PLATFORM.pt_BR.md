@@ -76,6 +76,7 @@ domínio novo. **Este estágio fecha antes de qualquer Tier 6+ (R12).**
 | 1.1.7 | `HTTP002` — https + DNS real no Native | 🔵 | lane native | HTTP/1.1 asm landado 03/09; `timeout`/`retry`/`circuit` REAIS nos 4 alvos nativos desde 17/09 (§259 FECHADO). `HTTP002` é código **reservado** (ramo morto — `KofHttp.supportedOn` sempre true) |
 | 1.1.8 | `MEDIA001`/`MEDIA003` — handles de mídia / mic em não-JVM | 🔵 | na fila atrás das facades HTTP (`.22`) | JVM-only; gap honesto em compile-time; documentado na matriz |
 | 1.1.9 | `ORM001` — `kof.orm` no Native | 🔵 | lane native | JVM + JS fechados (JS 18/09, `KofJsOrmBridge`); Native ainda `ORM001` |
+| 1.1.10 | §278 — Android reusa `JvmBackend` mas recusa `kof.db`/`kof.security`/`kof.gpu` (`DB001`/`SECN00x`/`GPU001`) | 🔵 | lane compiler (regra 6) | medido com `CompilerDriver(Target.ANDROID)`; catalogado `known-bugs.md` §278; pin `DomainGapCodesTest.androidRefusesDbAndCryptoWithTheDocumentedCodes` |
 
 ### 1.2 GC mark-sweep no Native
 
@@ -307,7 +308,7 @@ Estágio 7 → Estágio 8.
 Transversal: **R3 (FFI formalizada)** é a espinha dorsal dos Estágios 3–7 e
 **R4 (hook de codegen)** barra o Estágio 3 (`infra`). Dentro do Estágio 1, os
 itens restantes sem decisão são os gaps de paridade das lanes web/native
-(1.1.3–1.1.9) e o redesign de escalonamento JS do §132 (1.3.2, `.18`).
+(1.1.3–1.1.10) e o redesign de escalonamento JS do §132 (1.3.2, `.18`).
 
 Veja o companion [`UNIVERSAL-PLATFORM-VISION.pt_BR.md`](../architecture/UNIVERSAL-PLATFORM-VISION.pt_BR.md)
 para o *porquê* por trás de cada item acima.
