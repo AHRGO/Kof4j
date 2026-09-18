@@ -120,7 +120,8 @@ public final class SemMethodCallTyper {
                     // ausência é null comparável, nunca NPE por unbox
                     return new Type.NullableType(valueType);
                 }
-                if ("put".equals(mc.methodName()) || "remove".equals(mc.methodName())) return valueType;
+                if ("put".equals(mc.methodName()) || "remove".equals(mc.methodName())
+                        || "getOrDefault".equals(mc.methodName())) return valueType;
                 if ("size".equals(mc.methodName()) || "length".equals(mc.methodName())
                         || "count".equals(mc.methodName())) return Type.PrimitiveType.INT;
                 if ("contains".equals(mc.methodName()) || "containsKey".equals(mc.methodName())

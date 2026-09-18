@@ -186,6 +186,34 @@ public final class NativeRiscvAsmMapset0 {
                 addi sp, sp, 48
                 ret
 
+            # kof_map_get_or_default(map, key, def) -> val | def
+            .globl kof_map_get_or_default
+            kof_map_get_or_default:
+                addi sp, sp, -40
+                sd   ra, 32(sp)
+                sd   s0, 24(sp)
+                sd   s1, 16(sp)
+                sd   s2, 8(sp)
+                mv   s0, a0
+                mv   s1, a2                 # def
+                call kof_map_find
+                li   t0, -1
+                beq  a0, t0, .LKMGD_miss
+                ld   t1, 32(s0)
+                slli t2, a0, 3
+                add  t1, t1, t2
+                ld   a0, 0(t1)
+                j    .LKMGD_ret
+            .LKMGD_miss:
+                mv   a0, s1
+            .LKMGD_ret:
+                ld   s2, 8(sp)
+                ld   s1, 16(sp)
+                ld   s0, 24(sp)
+                ld   ra, 32(sp)
+                addi sp, sp, 40
+                ret
+
             # kof_map_get(map, key) -> val | 0
             .globl kof_map_get
             kof_map_get:

@@ -290,7 +290,7 @@ public final class CompilerComparisons {
             if (mc.receiver() != null && BuiltinTypes.isMap(ExpressionTyper.inferExprType(driver, mc.receiver(), locals))) {
                 return switch (mc.methodName()) {
                     case "get", "remove", "put", "size", "length", "count",
-                            "contains", "containsKey", "isEmpty", "keys", "values" -> true;
+                            "contains", "containsKey", "isEmpty", "keys", "values", "getOrDefault" -> true;
                     default -> false;
                 };
             }

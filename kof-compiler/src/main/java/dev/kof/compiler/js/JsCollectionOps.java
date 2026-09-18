@@ -120,6 +120,7 @@ void handleMapOp(MethodCtx ctx, List<Object> stack,
             case "kof_map_new" -> "kofMapNew";
             case "kof_map_put" -> "kofMapPut";
             case "kof_map_get" -> "kofMapGet";
+            case "kof_map_get_or_default" -> "kofMapGetOrDefault";
             case "kof_map_remove" -> "kofMapRemove";
             case "kof_map_contains" -> "kofMapContains";
             case "kof_map_size" -> "kofMapSize";

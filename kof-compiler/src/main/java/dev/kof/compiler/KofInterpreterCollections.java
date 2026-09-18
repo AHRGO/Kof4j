@@ -156,6 +156,7 @@ public final class KofInterpreterCollections {
                 yield unbox(vT, v);
             }
             case "kof_map_remove" -> prevOrDefault(unbox(vT, m.remove(box(kT, args[0]))), kc.returnType());
+            case "kof_map_get_or_default" -> unbox(vT, m.getOrDefault(box(kT, args[0]), box(vT, args[1])));
             case "kof_map_contains" -> m.containsKey(box(kT, args[0])) ? 1 : 0;
             case "kof_map_size" -> m.size();
             case "kof_map_is_empty" -> m.isEmpty() ? 1 : 0;

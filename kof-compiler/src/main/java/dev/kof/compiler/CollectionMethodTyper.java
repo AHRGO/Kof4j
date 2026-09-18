@@ -54,6 +54,7 @@ public final class CollectionMethodTyper {
         }
         if ("remove".equals(mn)) return valueType;
         if ("put".equals(mn)) return valueType;
+        if ("getOrDefault".equals(mn)) return valueType;
         if ("size".equals(mn) || "length".equals(mn) || "count".equals(mn)) return Type.PrimitiveType.INT;
         if ("containsKey".equals(mn) || "contains".equals(mn) || "isEmpty".equals(mn)) return Type.PrimitiveType.BOOL;
         if ("clear".equals(mn)) return Type.PrimitiveType.VOID;

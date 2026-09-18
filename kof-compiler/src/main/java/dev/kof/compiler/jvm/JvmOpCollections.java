@@ -279,6 +279,17 @@ public final class JvmOpCollections {
                     emitPrevValueUnbox(mv, valueType);
                 }
             }
+            case "kof_map_get_or_default" -> {
+                emitBoxIfPrimitive(mv, keyType);
+                emitBoxIfPrimitive(mv, valueType);
+                mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "getOrDefault",
+                        "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true);
+                if (!isPrimitiveType(valueType) && !KofUi.isUiType(valueType) && !KofMedia.isHandleType(valueType) && !(valueType instanceof Type.UnknownType)) {
+                    String internal = JvmTypeMapper.toInternalName(valueType instanceof Type.ClassType ct ? ct.packageName() : "", valueType instanceof Type.ClassType ct ? ct.name() : "java/lang/Object");
+                    mv.visitTypeInsn(CHECKCAST, internal);
+                }
+                emitUnboxIfPrimitive(mv, valueType);
+            }
             case "kof_map_contains" -> {
                 emitBoxIfPrimitive(mv, keyType);
                 mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "containsKey", "(Ljava/lang/Object;)Z", true);
