@@ -232,7 +232,10 @@ supervisor("net")                       // new object per system
   ignore the cancel are reported.
 - **Parity (rule 6):** JVM ✅ · KofScript ✅ · Native x86 ✅ (since §129 closed,
   15/09: the handler chain is TLS per-thread and a `throw` in a task publishes the
-  cause on the handle; `await`/`selectAny` rethrow it in the consumer) · Native
+  cause on the handle; `await`/`selectAny` rethrow it in the consumer —
+  `selectAny` resolves the handle that completes first **in time** (wall-clock,
+  `anyOf` oracle); there is no argument-order tie-break, so programs must not
+  rely on which of two instant handles wins (§291)) · Native
   riscv/aarch = `OTP001` (raw `clone`, no TLS) · JS ✅ since 18/09 (§132 resolved:
   `time.sleep` is an await-point — cooperative async sleep driven by the `KofJsRunner`
   host pump — so the supervisor worker fires and `OTP002` was lifted; only riscv/aarch

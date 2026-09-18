@@ -821,12 +821,37 @@ class KofConcurrency2Test {
     @Test
     void spawnWorkerThrowPropagatesThroughSelectAnyNative(@TempDir Path tmp) throws Exception {
         // selectAny também relança a causa do handle excepcional.
+        // §291: a forma antiga (`rapida(){return 7}` sem delay) NÃO fixava
+        // qual handle concluía primeiro — dependia da sorte de agendamento
+        // do pthread_create (~6.5% de miss medido no host ocioso, invertia
+        // sob carga da suíte/CI). O contrato (oráculo JVM = anyOf) é
+        // "primeiro a concluir no TEMPO"; a propagação do throw exige um
+        // vencedor determinístico — aqui o worker que falha conclui pelo
+        // menos 20ms antes. O ramo oposto (valor vence) já é coberto por
+        // selectAnyJvm/selectAnyNative/selectAnyWaitPathReturnsValueAfterUsleep.
         runNative(tmp, """
                 Object falha() { throw "boom" }
-                Int rapida() { return 7 }
+                Int devagar() { time.sleep(20); return 7 }
                 main() {
                     val a = spawn falha()
-                    val b = spawn rapida()
+                    val b = spawn devagar()
+                    var ok = true
+                    try { selectAny(a, b); ok = false } catch (String e) { println("sel=" + e) }
+                    println("ok=" + ok)
+                }
+                """, "sel=boom\nok=true");
+    }
+
+    @Test
+    void spawnWorkerThrowPropagatesThroughSelectAnyJvm(@TempDir Path tmp) throws Exception {
+        // §291/paridade: o MESMO contrato no oráculo — handle excepcional
+        // concluído primeiro é relançado pelo selectAny no consumidor (JVM).
+        runJvm(tmp, """
+                Object falha() { throw "boom" }
+                Int devagar() { time.sleep(20); return 7 }
+                main() {
+                    val a = spawn falha()
+                    val b = spawn devagar()
                     var ok = true
                     try { selectAny(a, b); ok = false } catch (String e) { println("sel=" + e) }
                     println("ok=" + ok)
