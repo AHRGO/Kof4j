@@ -273,7 +273,7 @@ mesma experiência de desenvolvimento.
 |---|-----------|--------|--------------|
 | R1 | Travar a fronteira core/plataforma (ordem §3.4 como regra invariante) | ✅ 17/09 | `5f1422c6` — `scripts/check_stdlib_boundary.sh` + ledger (31 namespaces) + CI + `--selftest`; invariante 1 do AGENTS |
 | R2 | Generalizar "capability/link by use" para todos os pacotes/domínios | 🔵 | semente: `.so` de SQLite/MySQL linkado só quando o DSN literal aparece; extensão pendente |
-| R3 | Formalizar FFI como first-class | 🟡 | **ABI escalar da JVM + `void` 18/09 (`.18`)**: `kof_ffi`/`kof_ffi_void` casam aridade arbitrária sobre {Int,Long,Float,Double,Boolean,String} entrada/saída, `String` lê `char*`, `void` é descartado como statement. `FfiE2ETest` cobre `pow`/`strstr`/`srand`. Ver §R3-fatias para a decomposição completa — restam: handles opacos/out-buffers (3.3 ⛔), callbacks/upcalls (3.4), variadics (3.5 ⛔), paridade JS via bridge no host (3.6), paridade Native (§61, 3.7), ABI struct/array D6 (3.8 ⛔). Paridade em JS (`FFI002`) / Native (`FFI001`) segue gap honesto por target (R7). |
+| R3 | Formalizar FFI como first-class | 🟡 | **ABI escalar da JVM + `void` 18/09 (`.18`)**: `kof_ffi`/`kof_ffi_void` casam aridade arbitrária sobre {Int,Long,Float,Double,Boolean,String} entrada/saída, `String` lê `char*`, `void` é descartado como statement. `FfiE2ETest` cobre `pow`/`strstr`/`srand`/`atol→labs` (Long) + `FfiSignatureTest` trava o mapeamento escalar→layout completo. Ver §R3-fatias para a decomposição completa — **F1 do bridge JS landado 18/09** (bridge no host `KofJsFfiBridge` + `KofJsFfiBridgeTest` 8/8, gate JS ainda `FFI002` — zero risco ao backend); restam: handles opacos/out-buffers (3.3 ⛔), callbacks/upcalls (3.4), variadics (3.5 ⛔), paridade JS F2/F3 (roteamento no compilador + paridade E2E byte-a-byte), paridade Native (§61, 3.7), ABI struct/array D6 (3.8 ⛔). Paridade em JS (`FFI002`) / Native (`FFI001`) segue gap honesto por target (R7). |
 | R4 | Formalizar o codegen em compile-time (`CodegenStep`) | 🔵 | NÃO existe no HEAD (2.2.2); bloqueia `infra "prod" {}` (3.2) e a migração DDL/runner |
 | R5 | Tiers de estabilidade + pacotes oficiais | 🟡 | tiers definidos em `backend-parity.md` §Stability tiers; **marcação por-namespace ainda não aplicada** — decisão ⛔ |
 | R6 | Manter o "nunca silencioso" para domínios novos | ✅ 17/09 | gate de máquina `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` (`19a740f2`) + varredura completa do ledger (`c5897cd5`, achou §278) |
@@ -298,14 +298,22 @@ em aberto; ✅ = landado.
 | 3.3 | JVM: handles opacos / out-buffers (void*, T*, Array<Byte> como buffer) — ponteiro opaco / buffer de bytes, NÃO o ABI struct completo do D6 | ⛔ decisão de surface | mantenedora | design |
 | 3.4 | JVM: callbacks / upcalls (Linker.upcallStub) — função Kof entregue a C como ponteiro de função | 🔵 design | .18 + mantenedora | semântica de closure + GC rooting (R12/1.2) |
 | 3.5 | JVM: variadics (printf, execlp) — como representar `...` numa assinatura Kof | ⛔ decisão de surface | mantenedora | design |
-| 3.6 | JS: paridade via bridge no host (o runner GraalJS/node É uma JVM com java.lang.foreign no host) — browser segue FFI002 honesto (R7: não faz dlopen) | 🔵 | .18 (fronte-5) | — |
+| 3.6 | JS: paridade via bridge no host (o runner GraalJS/node É uma JVM com java.lang.foreign no host) — browser segue FFI002 honesto (R7: não faz dlopen) | 🟡 | .18 (fronte-5) | F1 feito; F2/F3 abaixo |
+| 3.6.F1 | Bridge FFI no host `KofJsFfiBridge` + `KofJsFfiBridgeTest` (8/8) — mesmo downcall do `kof_ffi`, provado no host; gate do compilador FECHADO (extern no JS segue FFI002, zero risco ao backend) | ✅ 18/09 (.18) | .18 | — |
+| 3.6.F2 | Roteamento JS no compilador: ramo JS no `isExternBound` + baixar `extern`→`kof_platform.ffi(lib,name,sig,args)` + rotear `kof_ffi_`→bridge em `JsRuntimeOps` + `ProxyExecutable` no `KofJsRunner`; abre `KofFfi.supportedOn = JVM\|JS` | 🔵 | .18 | F1; o runner precisa lançar com `--enable-native-access` (JDKs futuros BLOQUEIAM o downcall sem isso) |
+| 3.6.F3 | Paridade E2E byte-a-byte JVM↔JS (mesma fonte `.kf`, mesma saída nos dois) + browser mantém `FFI002` honesto | 🔵 | .18 | F2 |
 | 3.7 | Native: dlopen/dlsym em asm — depende do §61 (init glibc/TLS no _start) | 🔵 | lane nat | §61 |
 | 3.8 | ABI struct/array completo (D6) | ⛔ | mantenedora | D6 |
 | 3.9 | Meta-paridade: mesma fonte extern com o mesmo comportamento em todo alvo CAPAZ (R7 honest-scope nos incapazes) | meta | — | 3.1–3.8 |
 
-3.1+3.2 landados 18/09 → a JVM tem a ABI escalar completa + void. Próxima
-fatia executável desta lane: 3.6 (bridge JS). Além disso a R3 exige decisão da
-mantenedora (3.3/3.5/3.8) ou o §61 nativo (3.7).
+3.1+3.2 landados 18/09 → a JVM tem a ABI escalar completa + void, agora **prova
+reforçada**: `Int`/`Long`/`Double`/`String`/`void` são provados e2e contra libc/libm
+(`FfiE2ETest`, incl. `Long` via `atol`→`labs`) e o conjunto escalar inteiro (incl.
+`Float`/`Boolean`) está travado por mapeamento em `FfiSignatureTest`. A próxima fatia
+3.6 (bridge JS) está decomposta em F1/F2/F3 acima; **F1 landed 18/09** (bridge no host
++ 8/8 teste no host, gate JS ainda `FFI002` — zero risco ao backend). F2 é o passo
+multi-arquivo de roteamento no compilador (abre o gate); F3 é a prova de paridade. Além
+disso a R3 exige decisão da mantenedora (3.3/3.5/3.8) ou o §61 nativo (3.7).
 
 ---
 
