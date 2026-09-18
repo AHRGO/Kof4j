@@ -231,14 +231,14 @@ final class CmdBuild {
             driver.setAndroidSdk(androidMin, androidTarget);
         }
         // dependências externas (android.jar etc.) geridas pelo Kof via
-        // ExternalClasspath — separadas por ':' ou ';'
+        // ExternalClasspath — separadas pelo separador de classpath da plataforma
+        // (#441: no Windows o ':' faz parte da unidade `C:\`, splitar por ':'
+        // quebrava entradas em fragmentos como "C" → CP002 falso).
         List<Path> externalEntries = new ArrayList<>();
-        if (classpath != null && !classpath.isBlank()) {
-            for (String part : classpath.split("[:;]")) {
-                if (!part.isBlank()) externalEntries.add(Path.of(part));
-            }
-            driver.setExternalClasspath(externalEntries);
+        for (String part : splitClasspathEntries(classpath)) {
+            externalEntries.add(Path.of(part));
         }
+        if (!externalEntries.isEmpty()) driver.setExternalClasspath(externalEntries);
         // kofdeps: dependências Maven resolvidas no cache ~/.kof/deps
         if (useDeps) {
             try {
@@ -449,21 +449,39 @@ final class CmdBuild {
      * gera debug keystore local na primeira vez; com --keystore, assina
      * com o keystore do usuário (release signing parametrizável).
      */
-    private static boolean runApkPipeline(Path projDir, int minSdk, int targetSdk,
+    static boolean runApkPipeline(Path projDirRaw, int minSdk, int targetSdk,
                                           String keystore, String storepass,
                                           String keypass, String keyalias) {
+        // CI fix (18/09): run() roda com CWD=projDir; caminhos RELATIVOS
+        // duplicavam (projDir/<rel>) e o keytool morria em FileNotFoundException
+        // no ubuntu (SDK presente, guard passava). Normalizar na entrada.
+        final Path projDir = projDirRaw.toAbsolutePath().normalize();
         String androidHome = System.getenv("ANDROID_HOME");
         if (androidHome == null || androidHome.isBlank()) {
             System.err.println("--apk: ANDROID_HOME not set; generate the project and use 'mvn verify'");
             return false;
         }
-        Path bt = Path.of(androidHome, "build-tools", "34.0.0");
-        Path platformJar = Path.of(androidHome, "platforms", "android-" + targetSdk, "android.jar");
-        if (!Files.isExecutable(bt.resolve("aapt2"))) {
-            System.err.println("--apk: build-tools 34.0.0 not found in " + bt);
+        Path bt = pickBuildTools(Path.of(androidHome));
+        if (bt == null) {
+            System.err.println("--apk: no usable build-tools (need aapt2+d8+zipalign+apksigner) under "
+                    + Path.of(androidHome, "build-tools"));
             return false;
         }
-        Path build = projDir.resolve("target");
+        Path platformJar = Path.of(androidHome, "platforms", "android-" + targetSdk, "android.jar");
+        if (!Files.isRegularFile(platformJar)) {
+            System.err.println("--apk: platform android-" + targetSdk + " missing in "
+                    + Path.of(androidHome, "platforms") + " (DEP001: install 'platforms;android-"
+                    + targetSdk + "')");
+            return false;
+        }
+        if (classMajorOf(projDir.resolve("libs").resolve("kof-app.jar")) > 61
+                && !buildToolsSupportsJava21(bt)) {
+            System.err.println("--apk: d8 in " + bt.getFileName() + " cannot read Java-21 bytecode"
+                    + " (class major 65); install build-tools >= 35.0.0 (DEP001 environment"
+                    + " condition, never a silent dex failure)");
+            return false;
+        }
+        Path build = projDir.toAbsolutePath().normalize().resolve("target");
         Path apkDir = build.resolve("apk");
         boolean userKs = keystore != null && !keystore.isBlank();
         try {
@@ -516,10 +534,114 @@ final class CmdBuild {
         }
     }
 
+    /**
+     * CI fix 18/09 (red em ubuntu): o pin hardcoded "34.0.0" escolhia um d8
+     * (R8 8.2.x) que NAO le class file major 65 (Java 21) — o pipeline android
+     * morria no dex em todo SDK com imagens mais novas. Versoes de build-tools
+     * sao pastas semver; escolher a MAIOR com as ferramentas obrigatorias.
+     */
+    static Path pickBuildTools(Path androidHome) {
+        Path root = androidHome.resolve("build-tools");
+        if (!Files.isDirectory(root)) return null;
+        java.util.List<Path> cands = new java.util.ArrayList<>();
+        try (var s = Files.list(root)) {
+            for (Path p : s.toList()) {
+                if (!Files.isDirectory(p)) continue;
+                if (Files.isExecutable(p.resolve("aapt2")) && Files.isExecutable(p.resolve("d8"))
+                        && Files.isExecutable(p.resolve("zipalign"))
+                        && Files.isExecutable(p.resolve("apksigner"))) {
+                    cands.add(p);
+                }
+            }
+        } catch (IOException e) {
+            return null;
+        }
+        cands.sort((a, b) -> compareToolVersions(a.getFileName().toString(),
+                b.getFileName().toString()));
+        return cands.isEmpty() ? null : cands.get(cands.size() - 1);
+    }
+
+    /** Comparacao semver numerica de nomes de pasta de build-tools ("35.0.0" > "34.0.2" > "9.0.0"). */
+    static int compareToolVersions(String a, String b) {
+        String[] pa = a.split("[.\\-]"), pb = b.split("[.\\-]");
+        for (int i = 0; i < Math.max(pa.length, pb.length); i++) {
+            int ia = i < pa.length ? parseIntOr0(pa[i]) : 0;
+            int ib = i < pb.length ? parseIntOr0(pb[i]) : 0;
+            if (ia != ib) return Integer.compare(ia, ib);
+            int c = (i < pa.length ? pa[i] : "").compareTo(i < pb.length ? pb[i] : "");
+            if (c != 0) return c;
+        }
+        return 0;
+    }
+
+    private static int parseIntOr0(String s) {
+        int v = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char ch = s.charAt(i);
+            if (ch < '0' || ch > '9') return -1;
+            v = v * 10 + (ch - '0');
+        }
+        return v;
+    }
+
+    /** Maior "class file major version" dentro do jar (bytes 6-7 do header de cada .class). */
+    static int classMajorOf(Path jar) {
+        int max = 0;
+        try (var z = new java.util.zip.ZipFile(jar.toFile())) {
+            var entries = z.entries();
+            while (entries.hasMoreElements()) {
+                var e = entries.nextElement();
+                if (!e.getName().endsWith(".class")) continue;
+                try (var in = z.getInputStream(e)) {
+                    byte[] b = new byte[8];
+                    int n = 0, r;
+                    while (n < 8 && (r = in.read(b, n, 8 - n)) > 0) n += r;
+                    if (n == 8 && (b[0] & 0xFF) == 0xCA && (b[1] & 0xFF) == 0xFE
+                            && (b[2] & 0xFF) == 0xBA && (b[3] & 0xFF) == 0xBE) {
+                        max = Math.max(max, ((b[6] & 0xFF) << 8) | (b[7] & 0xFF));
+                    }
+                }
+            }
+        } catch (IOException ignored) {
+            return 0;
+        }
+        return max;
+    }
+
+    /** build-tools >= 35 ship um d8 (R8 >= 8.3) que le major 65 (Java 21). */
+    static boolean buildToolsSupportsJava21(Path btDir) {
+        String v = btDir.getFileName().toString();
+        int dot = v.indexOf('.');
+        int major = dot < 0 ? parseIntOr0(v) : parseIntOr0(v.substring(0, dot));
+        return major >= 35;
+    }
+
     private static void run(List<String> cmd, Path cwd) throws IOException, InterruptedException {
         ProcessBuilder pb = new ProcessBuilder(cmd).directory(cwd.toFile()).inheritIO();
         Process proc = pb.start();
         int code = proc.waitFor();
         if (code != 0) throw new IOException("exit " + code + ": " + cmd.get(0));
     }
+
+    /**
+     * #441: divide um {@code --classpath} em entradas. Usa o separador real da
+     * plataforma ({@link java.io.File#pathSeparatorChar}): {@code ';'} no
+     * Windows (nunca parte um {@code C:\...} no dois-pontos), {@code ':'} fora
+     * dele. No Unix mantém a tolerância histórica a {@code ';'} também (zero
+     * regressão para quem já passava os dois). Visível p/ teste com separador
+     * injetado (o host do teste é Linux; a semântica Windows é a que se prova).
+     */
+    static java.util.List<String> splitClasspathEntries(String classpath) {
+        return splitClasspathEntries(classpath, java.io.File.pathSeparatorChar);
+    }
+
+    static java.util.List<String> splitClasspathEntries(String classpath, char separator) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        if (classpath == null || classpath.isBlank()) return out;
+        for (String part : classpath.split(separator == ':' ? "[:;]" : String.valueOf(separator))) {
+            if (!part.isBlank()) out.add(part);
+        }
+        return out;
+    }
+
 }

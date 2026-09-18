@@ -37,6 +37,10 @@ public final class KofTime {
         return "time".equals(name);
     }
 
+/** X10 fatia 2: nomes aceitos pelo dispatch real (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case-literals da fonte abaixo. */
+    static List<String> functions() { return List.of("sleep", "now", "interval", "cancel", "isLeapYear", "daysInMonth", "dayOfWeek", "daysBetween", "isWeekend", "addDays", "diffDays", "todayIso", "formatDateIso", "isToday", "hoursBetween", "parseDateIso", "tzOffsetSeconds"); }
+
     static boolean isTimeMethod(String name) {
         return switch (name) {
             case "sleep", "now", "interval", "cancel",

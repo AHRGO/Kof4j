@@ -264,6 +264,13 @@ conceptual engineering nor decide architecture/direction. Practical consequences
    or the suite red (outside the documented environmental errors) is violating
    the gate: fix it in the same unit or revert. `git bisect`-hostile is the
    worst legacy an agent can leave.
+9. **Work in the real repo tree on the active branch — NEVER a `/tmp` clone/worktree.**
+   This host loses power frequently ("cai a luz"); everything under `/tmp` evaporates and
+   in-flight work/commits get lost. Edit directly in the working tree of `/home/mel/Kof4j`
+   on the active branch (`beta-0.4.0` unless the maintainer says otherwise), **commit locally**
+   so the work persists on disk immediately, and only then fetch/rebase/push. Do not create
+   `/tmp` scratch worktrees to do the actual work. (Made an explicit rule by the maintainer
+   09/18 after a `/tmp` worktree holding a verified fix was wiped by a power loss.)
 7. **Git identity & agent worker (09/12, updated 09/16 maintainer directive).**
    The GitHub App `kof-agent-worker` (App ID `4960796`, configured via `scripts/gh-as-agent.sh`
    and `~/.config/kof/agent-app.env`) is the dedicated identity for issues, PRs, and commits
@@ -751,7 +758,7 @@ ready.
 > suite) prove. **No agent may break behavior that already works.**
 
 1. **Zero regression.** No commit may make an existing test start to
-   fail. The full suite (`mvn test`, today **2507** across the 4 modules — see
+   fail. The full suite (`mvn test`, today **2598** across the 4 modules — see
    §"Verification loop" for the command with the failure.ignore flag) is a **merge gate** —
    a change that doesn't keep everything green doesn't get in. Single exception: a **deliberate**
    contract change, with a version bump + updated docs + migration.
@@ -1128,8 +1135,8 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > it, Maven is fail-fast per module: any failure in **kof-compiler aborts
 > the reactor** and **kof-script, kof-c-compiler and kof-cli never run** — you
 > think you validated everything but only saw the first module. The real total with the flag
-> is **2507 tests** (compiler 2154 + script 38 + kof-c 7 + cli 308, measurement
-> 18/09 ~05:20 on tip `c56c74a7` — grows with each commit): **0 regressions / 0 errors**
+> is **2598 tests** (compiler 2230 + script 39 + kof-c 7 + cli 322, measurement
+> 18/09 ~15:20 on CI Build+Tests job of tip `d14275f0` — grows with each commit): **0 regressions / 0 errors**
 > (UPDATE 18/09: the historical trio of natives red is CLOSED at code — §252
 > fixed `20495e48` (usleep-retaddr clobbered the cached list-size slot; size now
 > in callee-saved `%r14`), §181 cross residual fixed `c56c74a7` (cross `NEG` ran
@@ -1158,8 +1165,9 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > (`4408eb6`) + the other toolchain/external-DB guards + the §255 sysroot guard (`06e77e94`) → `2411/0/196-skip` (the flake §252 fired 16/09 09:44, then went silent at 11:38, 15:09, 15:54 and 17/09 15:49 — ~1/4 of full-suite runs)
 > (MEASURED 17/09 ~15:49, clean run on tip `f276e966`). With qemu, **everything executes** — the 84 cross run
 > green and the total stays the same with the skip count dropping to the
-> external-DB/`node`-env residual. Correct state TODAY (18/09 ~05:20, run on tip `c56c74a7`,
-> qemu riscv64+aarch64 PRESENT): **2507 = 2154+38+7+308, 0F / 0E / 11 skip** — the
+> external-DB/`node`-env residual. Correct state TODAY (18/09 ~15:20, CI Build+Tests job of tip
+> `90ea7c34`): **2598 = 2230+39+7+322, 0F / 0E / 178 skip (CI ubuntu executa o android APK; hosts sem SDK = 1 skip honest a mais)** (no-qemu guards; cli 308→313 by `CmdBuildClasspathTest` of #441 in `d14275f0`, 313→322 by `CmdDeployTest` of X9 slices 1–3 (`154ea1a4`/`bfdd452a`/`84c82139`); compiler 2216→2230 by rng (`KofRngTest` 8) + §286 race tests; CI Build+Tests of `0f3c42d6` measured; cross e2e green
+> in the dedicated `Native cross` job; `.17` measured 11-skip with qemu on `952acbc8`) — the
 > §252 flake, the §181 cross residual and the §256(b) poll flake are ALL closed
 > at code; the remaining skips are the optional asm-gate and toolchain guards.
 > **0 regressions / 0 errors** (2411 at the time = 2058+38+7+308, 196 skip) — the full run at 16/09 09:44 had the

@@ -139,8 +139,19 @@ public final class JvmRuntimeCore {
                                     return cf;
                                 })
                                .toArray(java.util.concurrent.CompletableFuture[]::new);
-                    return java.util.concurrent.CompletableFuture.anyOf(arr).get();
-                }
+                     try {
+                         return java.util.concurrent.CompletableFuture.anyOf(arr).get();
+                     } catch (java.util.concurrent.ExecutionException e) {
+                         // §291: re-lança a causa original (mesma semântica do
+                         // kof_await) — senão o wrapper ExecutionException vaza
+                         // e o catch (String e) do Kof não casa com a exceção
+                         // lançada dentro do worker.
+                         Throwable cause = e.getCause() != null ? e.getCause() : e;
+                         if (cause instanceof RuntimeException re) throw re;
+                         if (cause instanceof Error err) throw err;
+                         throw new RuntimeException(cause);
+                     }
+                 }
 
                 public static Object kof_await(Object handle) throws Exception {
                     if (handle instanceof java.util.concurrent.Future<?> f) {

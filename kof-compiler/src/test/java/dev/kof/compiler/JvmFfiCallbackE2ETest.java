@@ -18,8 +18,10 @@ import org.junit.jupiter.api.io.TempDir;
  * C(<desc>)} e o runtime chama {@code Linker.upcallStub} sobre o valor de função Kof
  * (medido: interface sintética especializada {@code int invoke(int,int)}). Este teste
  * roda o mesmo fonte .kf na JVM e afirma o resultado computado ponta-a-ponta, e trava
- * os gaps honestos: JS callback continua {@code FFI002} (paridade = fatia C3) e um
- * callback com parâmetro não-escalar ({@code String}) continua {@code FFI001} na JVM.
+ * os gaps honestos: JS callback já tem paridade (fatia C3); o que continua não-bindável
+ * é um callback que DEVOLVE String (`char*` com ownership não observável no contrato
+ * síncrono) → FFI001 na JVM / FFI002 no JS. PARÂMETRO String do callback (char*->String
+ * na fronteira do upcall) foi aberto na fatia 3.4-C3.4 e tem paridade byte-a-byte.
  */
 class JvmFfiCallbackE2ETest {
 
@@ -32,6 +34,12 @@ class JvmFfiCallbackE2ETest {
             double kof_cb_addd(double a, double b, ddd cb) { return cb(a,b); }
             typedef double (*id_d)(int,double);
             double kof_cb_mixed(int a, double b, id_d cb) { return cb(a,b); }
+            typedef int (*is)(const char*);
+            int kof_cb_slen(const char* s, is cb) { return cb(s); }
+            typedef int (*isi)(const char*,int);
+            int kof_cb_slen_seed(const char* s, int seed, isi cb) { return cb(s, seed); }
+            typedef long (*isl)(const char*);
+            long kof_cb_sl(const char* s, isl cb) { return cb(s); }
             """;
 
     private final CompilerDriver driver = new CompilerDriver();
@@ -117,13 +125,13 @@ class JvmFfiCallbackE2ETest {
     void jsNonBindableCallbackStaysFfi002(@TempDir Path dir) throws Exception {
         Path src = dir.resolve("Main.kf");
         Files.writeString(src, """
-                extern "libc.so.6" foo(Int a, (String) -> Int cb): Int
-                main() { println(foo(1, (s: String) -> 0)) }
+                extern "libc.so.6" foo(Int a, (Int) -> String cb): Int
+                main() { println(foo(1, (i: Int) -> "x")) }
                 """);
-        // Callback bindável escalar já funciona no JS (C3.2); só o NÃO-bindável
-        // (parâmetro String dentro do callback) continua FFI002 no JS.
+        // Callback com ARGUMENTO String já é bindável no JS (3.4-C3.4); o NÃO-bindável
+        // que sobra é a String no RETORNO do callback (char* ownership não observável).
         CompilationResult r = driver.compile(src, dir.resolve("out"), Target.JS);
-        assertFalse(r.success(), "JS callback não-bindável deve permanecer gap honesto");
+        assertFalse(r.success(), "JS callback não-bindável (String de retorno) deve permanecer gap honesto");
         assertTrue(r.diagnostics().getDiagnostics().stream().anyMatch(d -> "FFI002".equals(d.code())),
                 () -> "esperava FFI002 no JS, veio " + r.diagnostics().getDiagnostics());
     }
@@ -132,14 +140,53 @@ class JvmFfiCallbackE2ETest {
     void nonBindableCallbackParamStaysFfi001(@TempDir Path dir) throws Exception {
         Path src = dir.resolve("Main.kf");
         Files.writeString(src, """
-                extern "libc.so.6" foo(Int a, (String) -> Int cb): Int
-                main() { println(foo(1, (s: String) -> 0)) }
+                extern "libc.so.6" foo(Int a, (Int) -> String cb): Int
+                main() { println(foo(1, (i: Int) -> "x")) }
                 """);
         CompilationResult r = driver.compile(src, dir.resolve("out"), Target.JVM);
-        assertFalse(r.success(), "callback com parâmetro String não é bindável na C2");
+        assertFalse(r.success(), "callback com RETORNO String não é bindável na JVM");
         assertTrue(r.diagnostics().getDiagnostics().stream().anyMatch(d -> "FFI001".equals(d.code())),
-                () -> "esperava FFI001 (ABI não-bindável do callback), veio "
+                () -> "esperava FFI001 (retorno String do callback é não-bindável), veio "
                         + r.diagnostics().getDiagnostics());
+    }
+
+    // R3 3.4-C3.4: um callback cujo PARÂMETRO é String (char*->String na fronteira do
+    // upcall) é bindável na JVM e no JS host, com paridade byte-a-byte. C entrega o
+    // `char*`; o closure Kof vê um String (lê `.length()` ou chama `atol` — prova que o
+    // CONTEÚDO, não só o tamanho, atravessa a ponte). String de RETORNO continua gated.
+    @Test
+    void stringCallbackArgsBindAndMatchJvmJs(@TempDir Path dir) throws Exception {
+        String lib = buildHostLib(dir);
+        String kof = """
+                extern "%1$s" kof_cb_slen(String s, (String) -> Int cb): Int
+                extern "%1$s" kof_cb_slen_seed(String s, Int seed, (String, Int) -> Int cb): Int
+                extern "%1$s" kof_cb_sl(String s, (String) -> Long cb): Long
+                extern "libc.so.6" atol(String s): Long
+                main() {
+                    println(kof_cb_slen("hello", (x: String) -> x.length()))
+                    println(kof_cb_slen_seed("hell", 100, (x: String, seed: Int) -> seed + x.length()))
+                    println(kof_cb_sl("2026", (x: String) -> atol(x)))
+                }
+                """.formatted(lib);
+
+        Path jvmSrc = dir.resolve("scb-jvm.kf");
+        Files.writeString(jvmSrc, kof);
+        Path jvmOut = dir.resolve("out-scb-jvm");
+        CompilationResult rj = driver.compile(jvmSrc, jvmOut, Target.JVM);
+        assertTrue(rj.success(), () -> "JVM String-callback args must bind (3.4-C3.4): "
+                + rj.diagnostics().getDiagnostics());
+        String jvm = runJvm(jvmOut);
+
+        Path jsSrc = dir.resolve("scb-js.kf");
+        Files.writeString(jsSrc, kof);
+        Path jsOut = dir.resolve("out-scb-js");
+        CompilationResult rjs = driver.compile(jsSrc, jsOut, Target.JS);
+        assertTrue(rjs.success(), () -> "JS String-callback args must bind (3.4-C3.4): "
+                + rjs.diagnostics().getDiagnostics());
+        String js = runJs(jsOut);
+
+        assertEquals("5\n104\n2026", jvm, "JVM golden String-callback: len=5, 100+len=104, atol=2026");
+        assertEquals(jvm, js, "JVM==JS String-callback parity byte-for-byte (3.4-C3.4)");
     }
 
     private String runJvm(Path outDir) throws IOException {

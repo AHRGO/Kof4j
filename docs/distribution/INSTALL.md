@@ -213,6 +213,7 @@ Main commands already available (details in
 | `kof build <dir|file.kf> [--target ...]` | compiles to jvm / native / native.risc / native.arm / js / android |
 | `kof serve app.kf` | starts a `web.app()` app |
 | `kof test <dir>` | runs the test suite |
+| `kof deploy <dir|file.kf> [--target jvm|native|js|android]` | packages a self-contained release: artifact + `RELEASE.md` + `SHA256SUMS` + `.tar.gz` (JS ships its runtime closure, §298); cross riscv64/aarch64 and `--publish` refuse with `DEP001` |
 | `kof check <dir>` | type-check without emitting code |
 | `kof script <f.kf>` / `kof repl` | direct execution / REPL |
 | `kof fmt <f.kf>` | formats the code |

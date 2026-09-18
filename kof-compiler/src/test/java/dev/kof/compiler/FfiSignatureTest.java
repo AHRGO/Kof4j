@@ -58,4 +58,21 @@ class FfiSignatureTest {
         assertEquals(Type.PrimitiveType.VOID, FfiSignature.returnType("void"));
         assertSame(BuiltinTypes.STRING, FfiSignature.returnType("String"));
     }
+
+    // R3 3.4-C3.4: callback ARGUMENTS accept String (char*->String at the upcall
+    // boundary); a String RETURN stays non-bindable (cbReturnChar rejects 'S').
+    @Test
+    void callbackDescriptorBindsScalarAndStringArgsButNotStringReturn() {
+        assertEquals("iii", FfiSignature.callbackDescriptor("(Int, Int) -> Int"));
+        assertEquals("iS", FfiSignature.callbackDescriptor("(String) -> Int"));
+        assertEquals("iSi", FfiSignature.callbackDescriptor("(String, Int) -> Int"));
+        assertEquals("jS", FfiSignature.callbackDescriptor("(String) -> Long"));
+        assertEquals("vd", FfiSignature.callbackDescriptor("(Double) -> void"));
+        assertNull(FfiSignature.callbackDescriptor("(Int) -> String"),
+                "String RETURN from a callback is not bindable (char* ownership)");
+        assertNull(FfiSignature.callbackDescriptor("(MyStruct) -> Int"),
+                "non-scalar callback arg stays non-bindable");
+        assertNull(FfiSignature.callbackDescriptor("(Int[]) -> Int"),
+                "array callback arg is R3 3.8, not bindable");
+    }
 }

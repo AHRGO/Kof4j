@@ -108,7 +108,15 @@ reconhecidos pelo analisador (`SemExpressionTyper`/`MemberResolver`, lista de na
 json  process  KofWeb  KofConfig  KofCache  KofGpu  KofDb  KofOrm
 KofLog  KofSecurity  KofValidation  KofObservability  KofHttp  KofMq
 KofTime  KofScheduler  KofTetris  KofMedia  KofUi  Theme
+rng
 `
+
+Além do **namespace embutido** `rng` — PRNG determinístico com seed para
+testes property-based (`rng.seed(Int)`, `rng.int(Int)`, `rng.boolean()`,
+`rng.double()`, `rng.string(Int, String)`; `KofRng`/`KofStd`, sem classe
+`kof.*`, sem import). Mesma seed ⇒ mesma sequência em qualquer backend;
+JVM+JS+NATIVE x86_64 hoje (fatia 2 do X8, paridade bit-a-bit provada); ANDROID e cross riscv64/aarch64 rejeitados com `RNG001` (R6). Ver
+`learn/39-stdlib.pt_BR.md` §rng e `training/idioms/stdlib.pt_BR.md` §rng.
 
 Cada área tem documento próprio em `docs/stdlib*.md` (não duplicados aqui). A
 **linguagem** define que esses nomes existem e como resolvem; a **biblioteca**
@@ -150,8 +158,8 @@ define as assinaturas. **Experimental** como superfície (muda entre versões).
     `(x,y)->x+y` através de callbacks C em ABIs Int/Long/Double/mistas → `42/42/6.0/7.5`,
     byte-a-byte JVM↔JS em `jvmAndJsCallbacksMatchByteForByte`);
     o contrato é **síncrono/não-escapante** (o stub vive na arena da chamada) e a ABI do
-    callback é **só primitiva** — um `String`/struct/pointer dentro do callback, ou
-    callback-como-retorno, segue `FFI001`/`FFI002` honesto. No JS o valor de função compilado
+    callback cobre **primitivos + argumentos `String`** (3.4-C3.4, `b120945c`: um `char*` entregue pelo C e lido como `String` Kof na fronteira do upcall, JVM↔JS byte-for-byte) — um argumento struct/ponteiro dentro do callback, ou
+    retorno `String`/callback-como-retorno, segue `FFI001`/`FFI002` honesto. No JS o valor de função compilado
     é um **objeto** `Lambda…` (não uma arrow nativa), então a ponte do runner chama
     `fn.getMember("invoke").execute(...)`. Browser sem host → degrade honesto (R7). Ainda NÃO bound — `FFI001` honesto em
     compilação (JVM/Native), nunca stub silencioso (R6): ABI de struct/array/pointer (design D6,

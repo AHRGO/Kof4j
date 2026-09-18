@@ -28,6 +28,10 @@ public final class KofStrings {
 
     record StringsCall(String function, Type returnType, List<Type> parameterTypes) {}
 
+
+    /** X10 fatia 1: nomes aceitos pelo staticMethod (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case literals do switch(name) abaixo. */
+    static List<String> functions() { return List.of("isAlpha", "count", "capitalize", "escapeHtml", "repeat", "indent", "padLeft"); }
     static StringsCall staticMethod(String namespace, String name, List<Type> argTypes) {
         if (!"strings".equals(namespace)) return null;
         int argc = argTypes.size();

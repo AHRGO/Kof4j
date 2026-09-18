@@ -108,7 +108,16 @@ recognized by the analyzer (`SemExpressionTyper`/`MemberResolver`, builtin names
 json  process  KofWeb  KofConfig  KofCache  KofGpu  KofDb  KofOrm
 KofLog  KofSecurity  KofValidation  KofObservability  KofHttp  KofMq
 KofTime  KofScheduler  KofTetris  KofMedia  KofUi  Theme
+rng
 `
+
+Plus the **builtin namespace** `rng` — a seedable deterministic PRNG for
+property-based testing (`rng.seed(Int)`, `rng.int(Int)`, `rng.boolean()`,
+`rng.double()`, `rng.string(Int, String)`; `KofRng`/`KofStd`, no `kof.*` class,
+no import). Same seed ⇒ same sequence on every backend; JVM+JS+NATIVE
+(x86_64) today — cross riscv64/aarch64 and ANDROID rejected with `RNG001`
+(R6, X8 slice 3 pending). See `learn/39-stdlib.md` §rng and
+`training/idioms/stdlib.md` §rng.
 
 Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
 **language** defines that these names exist and how they resolve; the
@@ -148,8 +157,8 @@ Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
      runs `(x,y)->x+y` through C callbacks across Int/Long/Double/mixed ABIs →
      `42/42/6.0/7.5`, byte-for-byte JVM↔JS via `jvmAndJsCallbacksMatchByteForByte`); the
      contract is **synchronous/non-escaping** (the stub is scoped to the call's arena) and
-     the callback ABI is **primitive-only** — a `String`/struct/pointer inside a callback, or
-     callback-as-return, stays an honest `FFI001`/`FFI002`. On JS the compiled function value
+     the callback ABI covers **primitives + `String` arguments** (3.4-C3.4, `b120945c`: a `char*` handed by C is read into a Kof `String` at the upcall boundary, JVM↔JS byte-for-byte) — a struct/pointer argument inside a callback, or
+     a `String`/callback return, stays an honest `FFI001`/`FFI002`. On JS the compiled function value
      is a `Lambda…` **object** (not a native arrow), so the runner bridge calls
      `fn.getMember("invoke").execute(...)`. A browser has no host → honest runtime degrade
      (R7). Still NOT

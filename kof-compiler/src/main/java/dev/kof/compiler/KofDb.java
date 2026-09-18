@@ -69,6 +69,10 @@ public final class KofDb {
         return "execute".equals(name);
     }
 
+/** X10 fatia 2: nomes aceitos pelo dispatch real (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case-literals da fonte abaixo. */
+    static List<String> functions() { return List.of("connect", "close", "transaction"); }
+
     /** {@code db.<method>(...) } — resolve aridade e o runtime function. */
     static DbCall staticCall(String name, List<Type> argTypes, boolean typed) {
         int bind = argTypes.size() - 2;

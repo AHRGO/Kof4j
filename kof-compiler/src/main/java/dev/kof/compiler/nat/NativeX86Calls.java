@@ -105,8 +105,9 @@ public final class NativeX86Calls {
         // STDLIB S10: random.double retorna bits em xmm0 (mesma convenção de
         // kof_string_to_double); int/hex/boolean seguem rax via o caminho
         // genérico FUNCTION abaixo (tail-jmp no runtime).
-        if ("kof_random_double".equals(kc.methodName())) {
-            sb.append("    call kof_random_double\n");
+        if ("kof_random_double".equals(kc.methodName())
+                || "kof_rng_double".equals(kc.methodName())) {
+            sb.append("    call ").append(kc.methodName()).append("\n");
             sb.append("    movq %xmm0, %rax\n");
             sb.append("    pushq %rax\n");
             return;

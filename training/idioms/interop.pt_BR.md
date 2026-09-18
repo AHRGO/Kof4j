@@ -31,14 +31,15 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — "mel
 
 // (c) CALLBACKS (C2 ✅ JVM + paridade JS C3 ✅, 18/09): uma função Kof entregue
 // ao C como ponteiro de função. Parâmetro tipo-função + lambda no call site;
-// só ABI de callback PRIMITIVA (síncrono, não-escapante):
+// só ABI de callback PRIMITIVA + arg `String` (síncrono, não-escapante):
 extern "libcallback.so" kof_cb_add(Int a, Int b, (Int, Int) -> Int cb): Int
 // call site — a lambda vira o ponteiro de função C (Linker.upcallStub):
 kof_cb_add(20, 22, (x: Int, y: Int) -> x + y)   // 42 medido
 kof_cb_mixed(3, 2.5, (i: Int, d: Double) -> i * d)  // ABI escalar mista ok
-// callback JS no host runner -> MESMA ABI primitiva (C3 ✅ 18/09,
-// jvmAndJsCallbacksMatchByteForByte 42/42/6.0/7.5); browser -> degrade honesto
-// em runtime (R7, sem host); String/struct/ponteiro-no-callback e
+kof_cb_slen("hello", (x: String) -> x.length())  // char* -> arg String (C3.4)
+// callback JS no host runner -> MESMA ABI (C3.2/C3.4 ✅ 18/09,
+// jvmAndJsCallbacksMatchByteForByte 42/42/6.0/7.5; stringCallbackArgsBindAndMatchJvmJs 5/104/2026); browser -> degrade honesto
+// em runtime (R7, sem host); struct/ponteiro-no-callback, retorno `String` e
 // callback-como-retorno -> FFI001/FFI002 — nunca um stub silencioso.
 ```
 
@@ -55,4 +56,4 @@ kof_cb_mixed(3, 2.5, (i: Int, d: Double) -> i * d)  // ABI escalar mista ok
 
 `docs/language-reference/syntax.md` (§FFI com C), `grammar.md`
 (`extern-declaration`), `modules.md` §6; gaps `FFI001`/`FFI002`;
-R3 landado: JVM escalar arbitrario (aridade/void/retorno String, 18/09) + paridade JS host (3.6.F2/F3 ✅ 18/09) + **callbacks ligam na JVM E no host runner JS, paridade byte-for-byte (C2 ✅ + C3.2/C3.3 ✅ 18/09, `JvmFfiCallbackE2ETest` incl. `jvmAndJsCallbacksMatchByteForByte`)**; restantes: opaque handles (3.3), variadics (3.5, ⛔ decisao de surface), ABI struct/array (D6 ⛔), Native §61.
+R3 landado: JVM escalar arbitrario (aridade/void/retorno String, 18/09) + paridade JS host (3.6.F2/F3 ✅ 18/09) + **callbacks ligam na JVM E no host runner JS, paridade byte-for-byte (C2 ✅ + C3.2/C3.3/C3.4 ✅ 18/09 — callbacks primitivos + com argumento `String`; `JvmFfiCallbackE2ETest` incl. `jvmAndJsCallbacksMatchByteForByte` e `stringCallbackArgsBindAndMatchJvmJs`)**; restantes: opaque handles (3.3), variadics (3.5, ⛔ decisao de surface), ABI struct/array (D6 ⛔), Native §61.

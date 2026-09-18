@@ -44,6 +44,40 @@ class DomainGapCodesTest {
     }
 
     @Test
+    void processSpawnOnNativeIsProc001(@TempDir Path tmp) throws Exception {
+        assertGap(tmp, Target.NATIVE, "PROC001", """
+            main() {
+                val h = process.spawn("echo", "hi")
+                println(if (h.alive()) "alive" else "dead")
+            }
+            """);
+    }
+
+    @Test
+    void processSpawnOnJsIsProc001(@TempDir Path tmp) throws Exception {
+        assertGap(tmp, Target.JS, "PROC001", """
+            main() {
+                val h = process.spawn("echo", "hi")
+                println(if (h.alive()) "alive" else "dead")
+            }
+            """);
+    }
+
+    @Test
+    void processSpawnOnJvmHasNoGap(@TempDir Path tmp) throws Exception {
+        Path file = tmp.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, """
+            main() {
+                val h = process.spawn("echo", "hi")
+                println(if (h.alive()) "alive" else "dead")
+            }
+            """);
+        CompilationResult result = driver.compile(file, tmp.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "JVM process.spawn must compile: "
+                + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
     void chacha20OnNativeIsSecn002(@TempDir Path tmp) throws Exception {
         assertGap(tmp, Target.NATIVE, "SECN002", """
             main() {

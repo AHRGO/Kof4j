@@ -23,6 +23,7 @@ A CLI é a ferramenta central da plataforma Kof.
 | `kof serve <file.kf>` | Web server HTTP (`web.app()` nativo + API legada `handle()`) |
 | `kof check <file.kf\|dir> [--target <t>] [--json]` | Type-check sem emitir código (gaps por alvo, ex.: `AND002` no android) |
 | `kof test <file.kf\|dir> [--target jvm|native|js]` | Suíte estruturada `test "nome" { assert(...) }` nos 3 targets + programas inteiros por exit code |
+| `kof deploy <dir|file.kf> [--target jvm|native|js|android] [--output <dir>] [--name <n>] [--version <v>]` | Empacota uma release autocontida: artefato (fat jar / ELF 0755 / `Default.mjs` + fecho do runtime / APK assinado) + `RELEASE.md` + `SHA256SUMS` + `.tar.gz`; cross riscv64/aarch64 e `--publish` recusam honesto com `DEP001` |
 | `kof bench [paths...] [--target ...] [--iterations N] [--baseline <file>] [--threshold <ratio>] [--json] [--fail-on-regression]` | Benchmark harness (compile, run, validate, métricas, baseline) |
 | `kof profile <file.kf> [--target ...]` | Execução + métricas (CPU, RSS, GC) |
 | `kof inspect <file.kf> [--json]` | Estatísticas da IR: ops antes/depois da otimização |
@@ -116,6 +117,30 @@ kof config gen src/           # gera template kof.config a partir das chaves con
 - `kof profile <file.kf>` — execução + métricas (CPU, RSS, GC).
 - `kof inspect <file.kf> [--json]` — estatísticas da IR: ops antes/depois
   da otimização.
+
+## `kof deploy` (X9, 18/09)
+
+Empacota um **artefato publicável** a partir do pipeline do build — a unidade
+que você distribui é o `.tar.gz` ao lado do diretório `deploy/`, e ele nunca é
+fingido:
+
+```bash
+kof deploy ./app --target jvm             # fat jar + RELEASE.md + SHA256SUMS
+kof deploy ./app --target native          # ELF x86-64 (mode 0755 no tar)
+kof deploy ./app --target js --name api   # Default.mjs + fecho de runtime (roda com `node` puro)
+kof deploy ./app --target android         # APK assinado (reusa o pipeline --apk do build)
+# -> deploy/api-<version>.tar.gz          # + sha256 impresso no stdout
+```
+
+Toda release é **autocontida**: a face JS embarca o entry junto com os módulos
+`./kof-runtime*.mjs` que ele importa (§298), então o `node <name>.mjs` impresso
+no `RELEASE.md` funciona num diretório limpo. `--publish <registry>` é
+**recusado honesto com `DEP001`** até a mantenedora decidir o registry de
+release (decisão **D2** do plano); o mesmo vale para os cross riscv64/aarch64 —
+fatias seguintes em `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`
+(X9). Android recusa `DEP001` apenas quando ANDROID_HOME/build-tools faltam
+(guarda honesta de ambiente, nunca um APK fake). Nunca exit 0 sem artefato
+real, nunca fake-publish (R6).
 
 ## `kof lsp`
 

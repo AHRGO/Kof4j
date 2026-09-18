@@ -303,10 +303,32 @@ final class LspServer {
                 if (!name.isEmpty() && seen.add(name)) add.accept(name, "Variable");
             }
         }
+        // X10 fatia 1: completion domain-aware — membros reais do typer
+        // (StdCatalog) quando o prefixo antes do '.' é um namespace stdlib.
+        if (member) {
+            String ns = namespaceBefore(text, off - 1);
+            if (ns != null) {
+                for (String fn : dev.kof.compiler.StdCatalog.membersOf(ns)) {
+                    Map<String, Object> it = new LinkedHashMap<>();
+                    it.put("label", fn);
+                    it.put("kind", "Function");
+                    it.put("detail", "kof." + ns);
+                    items.add(it);
+                }
+            }
+        }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("isIncomplete", false);
         result.put("items", items);
         respond(id, result);
+    }
+
+    /** Identificador antes da posição do '.', se for namespace stdlib (X10). */
+    private static String namespaceBefore(String text, int dotIndex) {
+        int i = dotIndex;
+        while (i > 0 && isIdentChar(text.charAt(i - 1))) i--;
+        String w = text.substring(i, dotIndex);
+        return dev.kof.compiler.StdCatalog.isNamespace(w) ? w : null;
     }
 
     /** Todas as ocorrências (start, end) do identificador em fronteiras de palavra. */

@@ -264,6 +264,13 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
    ou a suíte vermelha (fora dos erros ambientais documentados) está violando
    o portão: conserta na mesma unidade ou reverte. `git bisect`-hostil é o
    pior legado que um agente pode deixar.
+9. **Trabalhe na árvore real do repo, na branch ativa — NUNCA num clone/worktree em `/tmp`.**
+   Esta máquina perde energia com frequência ("cai a luz"); tudo em `/tmp` evapora e o
+   trabalho/commits em andamento se perdem. Edite direto no working tree de `/home/mel/Kof4j`
+   na branch ativa (`beta-0.4.0`, salvo ordem contrária da mantenedora), **faça commit local**
+   pra o trabalho persistir em disco na hora, e só então fetch/rebase/push. Não crie worktree
+   de scratch em `/tmp` pro trabalho real. (Regra explícita da mantenedora em 18/09 depois que
+   um worktree em `/tmp` com um fix já verificado foi apagado por queda de energia.)
 7. **Identidade do git e worker de agente (12/09, atualizado 16/09 diretriz da mantenedora).**
    O GitHub App `kof-agent-worker` (App ID `4960796`, configurado via `scripts/gh-as-agent.sh`
    e `~/.config/kof/agent-app.env`) é a identidade dedicada para issues, PRs e commits
@@ -750,7 +757,7 @@ pronta.
 > completa) provam. **Nenhum agente pode quebrar comportamento que já funciona.**
 
 1. **Zero regressão.** Nenhum commit pode fazer um teste existente passar a
-   falhar. A suíte completa (`mvn test`, hoje **2507** nos 4 módulos — ver
+   falhar. A suíte completa (`mvn test`, hoje **2598** nos 4 módulos — ver
    §"Loop de verificação" para o comando com o flag de failure.ignore) é **gate de merge** —
    mudança que não mantém tudo verde não entra. Exceção única: mudança de
    contrato **deliberada**, com bump de versão + docs atualizados + migração.
@@ -1127,8 +1134,8 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > ele, o Maven é fail-fast por módulo: qualquer falha em **kof-compiler aborta
 > o reactor** e **kof-script, kof-c-compiler e kof-cli nunca rodam** — você
 > acha que validou tudo mas só viu o primeiro módulo. O total real com o flag
-> é **2507 testes** (compiler 2154 + script 38 + kof-c 7 + cli 308, medição
-> 18/09 ~05:20 no tip `c56c74a7` — cresce com cada commit): **0 regressões / 0 erros**
+> é **2598 testes** (compiler 2230 + script 39 + kof-c 7 + cli 322, medição
+> 18/09 ~15:20 no job CI Build+Tests do tip `d14275f0` — cresce com cada commit): **0 regressões / 0 erros**
 > (ATUALIZAÇÃO 18/09: o trio histórico de nativos vermelhos está FECHADO no código — §252
 > corrigido `20495e48` (o ret-addr do usleep clobberava a slot de tamanho cacheada; size
 > agora em `%r14` callee-saved), resíduo §181 cross corrigido `c56c74a7` (o `NEG` cross
@@ -1158,7 +1165,7 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > (MEDIDO 17/09 ~15:49, run limpo no tip `f276e966`). Com qemu, **tudo executa** — os 84 cross rodam
 > verdes e o total fica igual com a contagem de skip caindo para o
 > resíduo externo de BD/ambiente `node`. Estado correto HOJE (18/09 ~05:20, run no tip `c56c74a7`,
-> qemu riscv64+aarch64 PRESENTE): **2507 = 2154+38+7+308, 0F / 0E / 11 skip** — o flake
+ > job CI Build+Tests do tip `90ea7c34`): **2598 = 2230+39+7+322, 0F / 0E / 178 skip (CI ubuntu executa o android APK; hosts sem SDK = 1 skip honest a mais)** (cli 308→313 por `CmdBuildClasspathTest` da #441 em `d14275f0`, 313→322 por `CmdDeployTest` das fatias 1–3 do X9 (`154ea1a4`/`bfdd452a`/`84c82139`); compiler 2216→2230 por rng (`KofRngTest` 8) + testes de corrida do §286; CI Build+Tests de `0f3c42d6` medido) — o flake
 > §252, o resíduo cross §181 e o flake de poll §256(b) estão TODOS fechados no
 > código; os skips restantes são o gate opcional de asm e as guardas de toolchain.
 > **0 regressões / 0 erros** (2411 na época = 2058+38+7+308, 196 skip) — a corrida completa das 09:44 teve o flake INTERMITENTE

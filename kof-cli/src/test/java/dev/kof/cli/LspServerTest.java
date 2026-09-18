@@ -370,4 +370,71 @@ class LspServerTest {
         assertInstanceOf(Map.class, provider, "codeActionProvider com opções");
         assertEquals(List.of("source"), ((Map<String, Object>) provider).get("codeActionKinds"));
     }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> completionAt(String text, long line, long ch) throws Exception {
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + URI + "\",\"text\":\"" + Json.escape(text) + "\"}}}";
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/completion\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + URI + "\"},"
+                + "\"position\":{\"line\":" + line + ",\"character\":" + ch + "}}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> res = (Map<String, Object>) byId(messages(out.toString(StandardCharsets.UTF_8)), 1)
+                .get("result");
+        return (List<Map<String, Object>>) res.get("items");
+    }
+
+    /** X10 fatia 1: depois de `rng.` o LSP oferece os membros REAIS do typer. */
+    @Test
+    void completionRngDotOffersStdlibMembers() throws Exception {
+        List<Map<String, Object>> items = completionAt("main() {\n    rng.\n}", 1, 8);
+        List<String> labels = items.stream().map(i -> (String) i.get("label")).toList();
+        assertTrue(labels.containsAll(List.of("seed", "int", "boolean", "double", "string")),
+                "esperava os 5 membros de kof.rng, veio " + labels);
+        assertTrue(items.stream().allMatch(i -> "Function".equals(i.get("kind"))),
+                "membros stdlib sao kind Function: " + items);
+        assertEquals("kof.rng", items.get(0).get("detail"));
+    }
+
+    @Test
+    void completionMathDotOffersFunctions() throws Exception {
+        List<String> labels = completionAt("math.", 0, 5).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertTrue(labels.contains("sqrt"), "math.sqrt ausente: " + labels);
+        assertTrue(labels.contains("clamp"), "math.clamp ausente: " + labels);
+    }
+
+    /** Prefixo que NAO e namespace stdlib: nenhuma oferta de membros (no-op honesto). */
+    @Test
+    void completionNonNamespaceDotStaysQuiet() throws Exception {
+        List<Map<String, Object>> items = completionAt("foo.", 0, 4);
+        assertTrue(items.stream().noneMatch(i -> "Function".equals(i.get("kind"))),
+                "nao-inventar membros p/ prefixo estranho: " + items);
+    }
+
+    /** X10 fatia 2: dispatch próprio também completado (time/db/security). */
+    @Test
+    void completionSlice2Namespaces() throws Exception {
+        List<String> t = completionAt("time.", 0, 5).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertTrue(t.containsAll(List.of("sleep", "now", "interval", "daysBetween")),
+                "time.* faltando: " + t);
+        List<String> d = completionAt("db.", 0, 3).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertEquals(List.of("connect", "close", "transaction"), d);
+        List<String> c = completionAt("crypto.", 0, 7).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertTrue(c.contains("sha256") && c.contains("hmacSha256"), "crypto: " + c);
+    }
+
+    /** Fora do ponto, o completion de palavras/chaves existente nao regride. */
+    @Test
+    void completionStillOffersKeywordsAndVars() throws Exception {
+        List<String> labels = completionAt("var total = 0\n    ", 1, 4).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertTrue(labels.contains("total"), "variable sumiu: " + labels);
+        assertTrue(labels.contains("var"), "keywords sumiram: " + labels);
+    }
+
 }

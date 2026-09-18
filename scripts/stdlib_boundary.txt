@@ -53,3 +53,4 @@ o excluded — NativeArchEmitter.java (register-name artifact, not a namespace)
 root excluded — JvmMediaCoreRuntime.java (filesystem path string, not a namespace)
 super excluded — keyword receiver (MemberCallTyper.java "super".equals(rid.name())), not a module
 this excluded — keyword receiver (same pattern), not a module
+rng base-stdlib — KofRng.java

@@ -28,6 +28,10 @@ public final class KofEncoding {
 
     record EncodingCall(String function, Type returnType, List<Type> parameterTypes) {}
 
+
+    /** X10 fatia 1: nomes aceitos pelo staticMethod (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case literals do switch(name) abaixo. */
+    static List<String> functions() { return List.of("hexEncode", "hexDecode"); }
     static EncodingCall staticMethod(String namespace, String name, List<Type> argTypes) {
         int argc = argTypes.size();
         return switch (name) {

@@ -78,6 +78,16 @@ class IoE2ETest {
         return dir.replace("\\", "\\\\");
     }
 
+    // G-ORG-002 (copyTo/moveTo/modifiedTime/isSymlink) só tem implementação
+    // JVM nesta PR (ver docs/stdlib/IO.md e KofIo.java) — Native fica de fora
+    // deliberadamente, então estes casos não passam por both().
+    private void jvmOnly(Path tempDir, String name, String body, String expected) throws IOException {
+        String base = q(tempDir.toString());
+        Path source = tempDir.resolve(name + ".kf");
+        Files.writeString(source, "main() {\n" + body.replace("%s", base) + "\n}");
+        runJvm(source, tempDir.resolve(name + "-out"), expected);
+    }
+
     @Test
     void fileTextRoundTrip(@TempDir Path tempDir) throws IOException {
         both(tempDir, "fileText", """
@@ -282,5 +292,117 @@ class IoE2ETest {
             println(File("%s/data/users.txt").readText())
             println(p.size())
             """, "Mel\n3");
+    }
+
+    // ---- G-ORG-002: File.copyTo / File.moveTo / File.modifiedTime / File.isSymlink (JVM) ----
+
+    @Test
+    void fileCopyToRoundTrip(@TempDir Path tempDir) throws IOException {
+        jvmOnly(tempDir, "copyRoundTrip", """
+            var src = File("%s/origem.bin")
+            var b = new Int[4]
+            b[0] = 0
+            b[1] = 255
+            b[2] = 65
+            b[3] = 195
+            println(src.writeBytes(b))
+            println(src.copyTo("%s/destino.bin"))
+            var dst = File("%s/destino.bin")
+            println(dst.readBytes()[0])
+            println(dst.readBytes()[1])
+            println(dst.readBytes()[2])
+            println(dst.readBytes()[3])
+            println(src.exists())
+            """, "true\ntrue\n0\n255\n65\n195\ntrue");
+    }
+
+    @Test
+    void fileCopyToDoesNotOverwriteExistingDestination(@TempDir Path tempDir) throws IOException {
+        jvmOnly(tempDir, "copyNoOverwrite", """
+            var src = File("%s/origem.txt")
+            src.writeText("novo conteudo")
+            var dst = File("%s/destino.txt")
+            dst.writeText("conteudo original")
+            println(src.copyTo("%s/destino.txt"))
+            println(dst.readText())
+            println(src.readText())
+            """, "false\nconteudo original\nnovo conteudo");
+    }
+
+    @Test
+    void fileMoveToBasic(@TempDir Path tempDir) throws IOException {
+        jvmOnly(tempDir, "moveBasic", """
+            var src = File("%s/origem.txt")
+            src.writeText("mover-me")
+            println(src.moveTo("%s/destino.txt"))
+            println(src.exists())
+            println(File("%s/destino.txt").readText())
+            """, "true\nfalse\nmover-me");
+    }
+
+    @Test
+    void fileMoveToDoesNotOverwriteExistingDestination(@TempDir Path tempDir) throws IOException {
+        jvmOnly(tempDir, "moveNoOverwrite", """
+            var src = File("%s/origem.txt")
+            src.writeText("conteudo da origem")
+            var dst = File("%s/destino.txt")
+            dst.writeText("conteudo do destino")
+            println(src.moveTo("%s/destino.txt"))
+            println(src.exists())
+            println(dst.readText())
+            """, "false\ntrue\nconteudo do destino");
+    }
+
+    @Test
+    void fileModifiedTimeIsMonotonicAcrossWrites(@TempDir Path tempDir) throws IOException {
+        jvmOnly(tempDir, "modifiedTime", """
+            var f = File("%s/arquivo.txt")
+            f.writeText("primeira versao")
+            var primeiro = f.modifiedTime()
+            f.writeText("segunda versao, mais longa que a primeira")
+            var segundo = f.modifiedTime()
+            println(primeiro > 0)
+            println(segundo >= primeiro)
+            """, "true\ntrue");
+    }
+
+    @Test
+    void fileModifiedTimeMissingFileThrows(@TempDir Path tempDir) throws IOException {
+        jvmOnly(tempDir, "modifiedTimeMissing", """
+            var f = File("%s/nope.txt")
+            try {
+                println(f.modifiedTime())
+            } catch (String e) {
+                println("modified-time-error")
+            }
+            """, "modified-time-error");
+    }
+
+    @Test
+    void fileIsSymlinkDistinguishesRegularFileFromSymlink(@TempDir Path tempDir) throws IOException {
+        Path real = tempDir.resolve("real.txt");
+        Files.writeString(real, "conteudo");
+        Path link = tempDir.resolve("link.txt");
+        try {
+            Files.createSymbolicLink(link, real);
+        } catch (java.io.IOException | UnsupportedOperationException e) {
+            assumeTrue(false, "Symlinks not creatable without privilege in this environment: " + e);
+            return;
+        }
+        jvmOnly(tempDir, "isSymlink", """
+            println(File("%s/real.txt").isSymlink())
+            println(File("%s/link.txt").isSymlink())
+            println(File("%s/link.txt").readText())
+            """, "false\ntrue\nconteudo");
+    }
+
+    @Test
+    void fileCopyToHandlesAccentedNameAndSpaces(@TempDir Path tempDir) throws IOException {
+        jvmOnly(tempDir, "copyAccented", """
+            var src = File("%s/relatório final ção.txt")
+            src.writeText("dados fiscais")
+            println(src.copyTo("%s/cópia relatório.txt"))
+            println(File("%s/cópia relatório.txt").readText())
+            """, "true\ndados fiscais");
     }
 }

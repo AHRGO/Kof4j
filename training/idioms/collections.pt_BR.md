@@ -81,9 +81,14 @@ superclasses E interfaces (familia do §156). Medido 18/09 no tip:
 `m.get(chave)` retorna `V?` quando o valor é um tipo de referência
 (`Map<String, String>`, `Map<String, User>`): ausência = `null`, use
 `if (v != null)` para estreitar. Para valores **primitivos** (`Map<String, Int>`)
-o tipo fica `V` — o modelo atual armazena primitivos desembrulhados e não
-representa ausência (limitação documentada; usar `contains`/`containsKey`
-para checar antes).
+o tipo agora TAMBÉM é `V?` (desde o merge N1 do D-NULL-INTENT, #438 `250f6207`,
+18/09: `Int z = m.get("a")` falha com type-mismatch em `NullableType[int]` —
+ausência é representável). **Cuidado enquanto o §294 estiver aberto:** no JVM,
+o `if (v != null)` com chave PRESENTE em mapa de valor primitivo ainda morre em
+runtime (`NoSuchMethodError Object.valueOf(boxed)`); até o §294 fechar, prefira
+`m.getOrDefault(chave, fallback)` (landado `62bd455e`, medido funcionando) ou
+checagens `contains`/`containsKey` em mapas de valor primitivo. Valores de
+referência não são afetados.
 
 Fix 27/08: `listOf(...).get(n)` e `size` em projetos grandes com `import a.b.C` agora resolvem corretamente (CompilerDriver file-specific imports). Não é necessário workaround manual de índice.
 

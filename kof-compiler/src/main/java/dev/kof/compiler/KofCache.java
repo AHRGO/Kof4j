@@ -11,6 +11,10 @@ public final class KofCache {
     private static final Type VOID = Type.PrimitiveType.VOID;
 
     static boolean isCacheNamespace(String name) { return "cache".equals(name); }
+/** X10 fatia 2: nomes aceitos pelo dispatch real (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case-literals da fonte abaixo. */
+    static List<String> functions() { return List.of("get", "set", "ttl", "delete", "clear"); }
+
     static boolean isCacheMethod(String name) {
         return switch (name) {
             case "get", "set", "ttl", "delete", "clear" -> true;

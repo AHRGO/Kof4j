@@ -70,6 +70,13 @@ public final class KofIo {
                     : null;
             case "size" -> argCount == 0 ? new IoCall("kof_io_file_size", LONG, List.of()) : null;
             case "name" -> argCount == 0 ? new IoCall("kof_io_file_name", STR, List.of()) : null;
+            // G-ORG-002: copy/move seguros (no-overwrite por padrão — a chamada
+            // Java correspondente falha se o destino já existir e é capturada
+            // como falso, sem sobrescrever) + metadados básicos de arquivo.
+            case "copyTo" -> argCount == 1 ? new IoCall("kof_io_file_copy_to", BOOL, List.of(STR)) : null;
+            case "moveTo" -> argCount == 1 ? new IoCall("kof_io_file_move_to", BOOL, List.of(STR)) : null;
+            case "modifiedTime" -> argCount == 0 ? new IoCall("kof_io_file_modified_time", LONG, List.of()) : null;
+            case "isSymlink" -> argCount == 0 ? new IoCall("kof_io_file_is_symlink", BOOL, List.of()) : null;
             case "resolve" -> argCount == 1 ? new IoCall("kof_io_path_resolve", PATH, List.of(STR)) : null;
             case "parent" -> argCount == 0 ? new IoCall("kof_io_path_parent", PATH, List.of()) : null;
             case "fileName" -> argCount == 0 ? new IoCall("kof_io_path_file_name", STR, List.of()) : null;
