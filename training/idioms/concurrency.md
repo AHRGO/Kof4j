@@ -43,7 +43,7 @@ main() {
 - `val r = spawn f()` returns a typed `Handle<T>`; `await r` with unboxing;
 - `var h = spawn { return expr }` (lambda literal with `return` + Handle) works on JVM/JS/interpreter — **gap: Native x86_64 → SIGSEGV (bug 46, known-bugs.md)**; use `spawn fn(arg)` (named function) as a workaround on Native until the fix;
 - an exception in the task does not bring down the program;
-- **KofScript** top-level `let` also supports spawn/await via KofScriptGlobals.
+- **KofScript** top-level `var`/`val` also supports spawn/await via KofScriptGlobals.
 
 ## When to use
 

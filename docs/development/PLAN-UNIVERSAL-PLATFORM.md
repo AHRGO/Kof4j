@@ -293,7 +293,7 @@ idempotency, state, plan/diff, reconciliation.
 Kof **supports both** with the same semantics, and the recommendation is:
 
 - **The canonical model is imperative-turned-data** (the form the prompt
-  shows as an alternative): `let production = Infrastructure("production")`,
+  shows as an alternative): `var production = Infrastructure("production")`,
   then `production.network(...)`, `production.database(...)`. This is Kof
   **pure today** (classes, records, functions, loops, conditions, tests) —
   **A/B** — and it is where the language shines (types, abstractions, LSP, static
@@ -626,29 +626,29 @@ tool*, not as "Kof is an attack framework". (Reflects the stance of
  
  ```kof
  // symmetric secure by default (hides IV/alg/provider — already exists)
- let ct = crypto.encryptAesGcm(data, key)
- let pt = crypto.decryptAesGcm(ct, key)
+ var ct = crypto.encryptAesGcm(data, key)
+ var pt = crypto.decryptAesGcm(ct, key)
 
  // asymmetric (NEW — FFI)
- let kp   = keys.generatePair("P-256")
- let sig  = kp.sign(data)
+ var kp   = keys.generatePair("P-256")
+ var sig  = kp.sign(data)
  if (kp.verify(data, sig)) { ... }
 
  // post-quantum (NEW — FFI liboqs)
- let ct2 = crypto.encryptHybrid(data, key)     // ML-KEM-768 + AES-256-GCM (HKDF)
- let pt2 = crypto.decryptHybrid(ct2, key)
- let sig = crypto.signPq(data, kp)             // ML-DSA-65
+ var ct2 = crypto.encryptHybrid(data, key)     // ML-KEM-768 + AES-256-GCM (HKDF)
+ var pt2 = crypto.decryptHybrid(ct2, key)
+ var sig = crypto.signPq(data, kp)             // ML-DSA-65
 
  // key management (NEW)
- let k   = keys.derive(masterKey, "app/2026/db")   // HKDF — never use a password as a key
+ var k   = keys.derive(masterKey, "app/2026/db")   // HKDF — never use a password as a key
  k.rotate()
 
  // secure channel (NEW — hides KEM/KDF/AEAD/auth/replay)
- let ch  = secure.channel(peer, profile)
+ var ch  = secure.channel(peer, profile)
  ch.send(payload)
 
  // passwords (ready — keep)
- let h   = passwords.hash(pw)
+ var h   = passwords.hash(pw)
  if (passwords.verify(pw, h)) { ... }
  ```
  

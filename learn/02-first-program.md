@@ -206,7 +206,7 @@ The compiler understands the types automatically.
 
 1. Create `ponto.kf` with `record Ponto(Int x, Int y)` and a `switch` with `case Ponto(x, y):`
 2. Run it with `kof run --target=jvm` and `--target=js`
-3. Create `demo.ks` with top-level `let n = 10` and use `n` inside `main()` via `kof script demo.ks`
+3. Create `demo.ks` with top-level `var n = 10` and use `n` inside `main()` via `kof script demo.ks`
 
 ## Next step
 

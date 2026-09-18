@@ -322,7 +322,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | Capability | Kof | JVM | Native | JS | Tests | Docs |
 |-----------|-----|-----|--------|----|-------|------|
 | full `kof` CLI | `DONE` (26 commands: build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/decompile/translate/compare/migrate/debug/info/lsp/install/deps/editor/init/new/version — `fmt` + `config gen` 08/31) | y (native.risc/native.arm) | y (free-list + pthread) | y (GraalJS) | — | tooling/ |
-| `kof script` / `kof repl` | `DONE` (top-level `let` → `KofScriptGlobals`, `--watch`, SIGPIPE fix) | y | y | y | KofScript | stdlib/stdlib.md |
+| `kof script` / `kof repl` | `DONE` (top-level `var`/`val` → `KofScriptGlobals`, `--watch`, SIGPIPE fix) | y | y | y | KofScript | stdlib/stdlib.md |
 | `kof c` (KofCcompiler) | `DONE` (C subset `while/if/deref &/*` → ELF x86_64) | — | y x86_64 native-only | — | KofCCompilerTest | architecture/architecture.md |
 | command parsing (in Kof) | `PLANNED` (`kof.cli` as lib) | — | — | — | — | development/roadmap.md |
 | interactive CLI / prompts / progress | `PLANNED` | — | — | — | — | — |

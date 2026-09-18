@@ -97,7 +97,7 @@ kof info             → PASS
 kof lsp              → PASS (hover/completion/references/rename + diagnostics reais)
 kof install          → PASS
 kof c                → PASS (KofCcompiler nativo-only C subset → ELF x86_64 via kof_c)
-kof script           → PASS (KofScript top-level let → KofScriptGlobals, repl, --watch)
+kof script           → PASS (KofScript top-level `var`/`val` → KofScriptGlobals, repl, --watch)
 tests/run-golden.sh  → 16/16 (8 casos × jvm+native)
 tests/run-integration.sh → 9/9 (CLI + serve + kof test)
 scripts/package.sh   → PASS (layout dist + tar.gz/zip + SHA256SUMS + jars)
@@ -804,7 +804,7 @@ Docs: `debugger-architecture.md`, `debugging.md`, `debug-adapter.md`,
 - **KofAndroid Fase 2 (31/08)** — `--apk` standalone (aapt2/d8/zipalign/apksigner direto do CLI) + release signing `--keystore/--storepass/--keypass/--alias` + label/permissões derivados do programa (`detectAppLabel`/`@Permissions`)
 - enum nos 3 targets + switch exaustivo (SEM031); Map/Set nos 3 targets (COL001 fechado)
 - otimizador de IR sempre ativo; pattern matching (switch com tipos + destructuring, 3 targets); null safety básica (`String?`, 3 targets); higher-order em coleções (map/filter/reduce, 3 targets); módulos multi-arquivo (`import a.b.C`)
-- KofScript — top-level let/const (`KofScriptGlobals`, repl, `--watch`); KofC compiler — C subset → ELF x86_64 (`kof c`)
+- KofScript — top-level `var`/`val` (`KofScriptGlobals`, repl, `--watch`); KofC compiler — C subset → ELF x86_64 (`kof c`)
 - LSP com hover/completion + diagnostics reais; widening de return
 - Native GC — mark-sweep 03/09 ✅: `kof_gc_mark` (stack+bss conservador) + `kof_gc_sweep` (limpa morto para free-list; flag bit1 @24) + `kof_gc_collect_now` (chamada externa, explicit); **auto-collect desligado** em `kof_alloc` (necessita safe-points/mapas de raízes por frame — senão double-free detectado). `KofGcE2ETest` 3/3
 - Ponto flutuante real no Native (FLT001 fechado 31/08 — XMM); JSON objetos/records no Native (JSN002 fechado) + arrays FP (JSN001/003)

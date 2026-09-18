@@ -3,7 +3,7 @@ package dev.kof.script;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Globals for KofScript top-level let/const — persistent across eval/repl
+ * Globals for KofScript top-level var/val — persistent across eval/repl
  * and across files in the same KofScript invocation. Backed by a
  * ConcurrentHashMap so it works for both JVM in-memory and forked runs
  * (forked runs serialize via generated Kof code, not via this map).

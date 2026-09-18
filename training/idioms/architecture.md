@@ -37,7 +37,7 @@ class Http {
 var j = json.encode(user)
 var dados = readFile("config.json")
 var html = http.get("https://example.com")   // kof.http JVM+JS (Java HttpClient)
-let x = 5                                    // KofScript top-level let → KofScriptGlobals
+var x = 5                                    // KofScript (.ks): top-level var → KofScriptGlobals
 // kof serve: handle(method, path, body) + web.app() + ws/sse + cache
 // kof c: native-only C subset for hot paths
 ```

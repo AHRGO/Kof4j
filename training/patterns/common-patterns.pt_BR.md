@@ -164,9 +164,9 @@ class Entity implements Serializable {
 ## KofScript global (0.4.0-beta)
 
 ```kof
-let x = 5
-const prefix: String = "ola"
-println(prefix + " " + x)   // KofScript → KofScriptGlobals
+var x = 5
+val prefix: String = "ola"
+println(prefix + " " + x)   // KofScript (.ks) → KofScriptGlobals
 ```
 
 ## KofC — C subset nativo-only

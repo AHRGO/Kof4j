@@ -131,7 +131,7 @@ var x = 10          // Int
 var s = "Hello"     // String
 var p = Point(1, 2) // Point
 var b = Box(5)      // Box<Int> inferred
-let y = 10          // KofScript → var y: Int = 10 (KofScriptGlobals)
+val y = 10          // KofScript (.ks): top-level var/val → KofScriptGlobals
 ```
 
 ## Explicit Types
