@@ -30,7 +30,16 @@ final class ReturnValueLowerer {
         if (CompilerComparisons.isNullablePrimNullReturn(ret, returnType)) {
             return ExpressionLowerer.emitExpression(driver, ret.value(), ops, owner, localIdx, locals);
         }
-        ExpressionNode rv = CompilerComparisons.foldNullablePrimBranches(ret.value(), returnType);
+        // D-NULL-INTENT (#278): o fold §125-ext (ramo null -> default) só
+        // continua vivo no Native (fase 2 do rollout, DECISIONS.md — Native
+        // mantém a representação antiga de Nullable(primitivo)). JVM/Script/
+        // JS deixam o ramo null real e reusam a maquinaria genérica de join
+        // heterogêneo (#57/§70, ifBranchTypes/boxesOwnBranches) — ela já
+        // boxa o ramo primitivo p/ o SEU boxed e mantém aconst_null no outro,
+        // exatamente a representação Absent|Present(T) que o contrato exige.
+        ExpressionNode rv = driver.target.isNative()
+                ? CompilerComparisons.foldNullablePrimBranches(ret.value(), returnType)
+                : ret.value();
         localIdx = ExpressionLowerer.emitExpression(driver, rv, ops, owner, localIdx, locals);
         Type rvType = ExpressionTyper.inferExprType(driver, rv, locals);
         driver.emitWideningIfNeeded(ops, rvType, returnType);
@@ -43,9 +52,13 @@ final class ReturnValueLowerer {
         // D-NULL-INTENT: destino Nullable(primitivo) recebendo um primitivo
         // CRU (rvType é PrimitiveType, não já Nullable) — box segue o tipo
         // ALVO. Um rvType já Nullable(mesmo inner) (ex.: `return outraOpt`,
-        // `return m.get(k)`) já chega boxed/null — não reboxa.
+        // `return m.get(k)`) já chega boxed/null — não reboxa. `rv` que já
+        // se auto-boxou por dentro (if/switch heterogêneo, boxesOwnBranches)
+        // também não reboxa — o "then" primitivo já virou Integer/Boolean
+        // reais lá dentro; um segundo valueOf(referência) é VerifyError.
         if (returnType instanceof Type.NullableType nt && nt.inner() instanceof Type.PrimitiveType
-                && rvType instanceof Type.PrimitiveType pt && !Type.isVoid(pt)) {
+                && rvType instanceof Type.PrimitiveType pt && !Type.isVoid(pt)
+                && !ExpressionTyper.boxesOwnBranches(driver, rv, locals)) {
             TypeEmitter.boxPrimitive(ops, returnType);
         }
         return localIdx;

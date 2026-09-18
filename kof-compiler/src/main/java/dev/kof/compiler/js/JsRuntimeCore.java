@@ -230,6 +230,16 @@ public final class JsRuntimeCore {
                 console.log(x);
             }
 
+            // D-NULL-INTENT (#278): Boolean.valueOf(Z) no JS — normaliza
+            // truthy/falsy num true/false estrito, mas PRESERVA null (Bool?
+            // genuino de Map.get/put/remove agora carrega ausência real; o
+            // ternário cru `x ? true : false` colapsava null -> false,
+            // apagando a ausência no println/String.valueOf).
+            export function kofBoolValueOf(x) {
+                if (x === null || x === undefined) return null;
+                return x ? true : false;
+            }
+
             // §107-JS: formato de coleção idêntico ao contêiner JVM
             // (ArrayList/HashMap/HashSet.toString): elementos separados por
             // ", " dentro de [ ], Map como "{k=v}". Elementos passam por

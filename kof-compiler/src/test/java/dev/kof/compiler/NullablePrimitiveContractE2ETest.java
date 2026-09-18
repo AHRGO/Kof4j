@@ -236,4 +236,64 @@ class NullablePrimitiveContractE2ETest {
                 """, "true\n7");
     }
 
+    // ---- I2/I5 estendido: ramo null de if/switch/var explícito não é default ----
+    // §125-ext (opção A) foldava CADA ramo null de if/switch p/ o default do
+    // primitivo antes do fix — sobrevivia mesmo depois do Commit A/B tratarem
+    // o `return null` DIRETO, porque o fold interceptava ANTES do join
+    // heterogêneo (#57/§70) rodar. `foldNullablePrimBranches` agora só
+    // dispara no Native (fase 2); JVM/Script/JS reusam o boxing in-branch já
+    // testado (ExpressionLowerer#IfExpr, boxesOwnBranches).
+
+    @Test
+    void ifExprNullBranchPreservesRealNull(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                Int? en(Int x) = if (x > 0) x else null
+                main() {
+                    println(en(7))
+                    println(en(-7))
+                }
+                """, "7\nnull");
+    }
+
+    @Test
+    void switchExprNullBranchPreservesRealNull(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                Int? sw(Int x) = switch (x) { case 1 -> 10 default -> null }
+                main() {
+                    println(sw(1))
+                    println(sw(2))
+                }
+                """, "10\nnull");
+    }
+
+    @Test
+    void explicitTypedLocalNullBranchPreservesRealNull(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                main() {
+                    Int? v = if (false) 9 else null
+                    println(v)
+                    Bool? bn = if (false) true else null
+                    println(bn)
+                }
+                """, "null\nnull");
+    }
+
+    // ---- I2/I5 estendido: concatenação de String com Nullable(primitivo) null ----
+    // `emitOperandToString` usava `TypeMetrics.isPrimitiveType` (desembrulha
+    // Nullable) p/ decidir se precisa boxPrimitive — um `Int?` GENUÍNO
+    // (Commit B: já chega boxed/aconst_null) caía no mesmo ramo que um
+    // primitivo CRU e levava um segundo `Integer.valueOf(int)` sobre uma
+    // REFERÊNCIA (VerifyError JVM; NPE silenciosa no interpretador).
+
+    @Test
+    void stringConcatWithNullNullablePrimitive(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                Int? ni() { return null }
+                main() {
+                    println("a" + ni())
+                    println(ni() + "b")
+                }
+                """, "anull\nnullb");
+    }
+
 }

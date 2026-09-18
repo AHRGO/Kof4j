@@ -360,6 +360,10 @@ class ConformanceMatrixTest {
         // JS: `d*2`→`5` vs `5.0` (String(5.0)="5") é o floatprint §44; a
         // célula usa predicado (`d > 1.0`) p/ exercitar o storage Double sem
         // colidir com ele.
+        // D-NULL-INTENT (#278, supersede §125 opção A): a última célula
+        // (`miss`, Bool? de chave ausente) imprimia "false" — o fold
+        // null→default. Agora JVM/Script/JS preservam o null genuíno
+        // (Absent|Present(T)); Native fica de fora (fase 2, DECISIONS.md).
         matrix("mapgetprim", """
                 main() {
                     val b = mapOf("t", true).get("t")
@@ -376,17 +380,19 @@ class ConformanceMatrixTest {
                     val miss = mapOf("x", true).get("nope")
                     println(miss)
                 }
-                """, "true\ntrue\n8\n9000000001\ntrue\na\nfalse", Set.of(), tempDir);
+                """, "true\ntrue\n8\n9000000001\ntrue\na\nnull", Set.of("native"), tempDir);
 
-        // §125 (decisão da mantenedora 12/09, opção A): println de função
-        // Nullable(primitivo) que RETORNA null imprime o DEFAULT do primitivo
-        // (0/false) — precedente congelado do map-miss (SG-008/bug-87), não
-        // "null" (§124 é Nullable(REF)). Antes: JVM VerifyError em QUALQUER
-        // `Int? f(){...}` (descritor `I` + ARETURN + aconst_null.intValue),
-        // Script NoSuchMethodError `Integer.valueOf/1`; Native imprimia 0
-        // (só ele acertava). Célula sem exclusão = os 4 targets travados.
-        // A forma-DIRETA `f() == null` (fold KofCall;KofPop;false) era o
-        // COMP002 "stack underflow" do JS (§139, corrigido na mesma unidade).
+        // D-NULL-INTENT (#278, 18/09): supersede a §125 (decisão da
+        // mantenedora 12/09, opção A). A opção A congelava println de função
+        // Nullable(primitivo) que RETORNA null como o DEFAULT do primitivo
+        // (0/false) — precedente do map-miss (SG-008/bug-87) — porque ainda
+        // não havia representação boxed real p/ Nullable(primitivo): era só
+        // um primitivo cru na pilha, sem wrapper p/ carregar ausência. Agora
+        // (Commits A-D do #278) o contrato é Absent|Present(T) de verdade
+        // nos 3 alvos JVM/Script/JS — `return null`, ramo null de if/switch
+        // (`en`/`bn`/`v`), `== null` e concatenação de String todos
+        // preservam null genuíno em vez do fold. Native fica de fora (fase
+        // 2 do rollout, DECISIONS.md — representação antiga preservada lá).
         matrix("nullableprint", """
                 Int? ni() { return null }
                 Bool? nb() { return null }
@@ -414,7 +420,8 @@ class ConformanceMatrixTest {
                     println("a" + ni())
                     println(ni() + "b")
                 }
-                 """, "0\nfalse\n0\n6\nfalse\nfalse\nfalse\nfalse\nfalse\n7\n0\n0\nfalse\na0\n0b", Set.of(), tempDir);
+                 """, "null\nnull\nnull\n6\ntrue\ntrue\ntrue\ntrue\ntrue\n7\nnull\nnull\nnull\nanull\nnullb",
+                Set.of("native"), tempDir);
 
         // §143 (B1, 12/09): widening numérico ABENÇOADO pelo §126 ("Int em
         // Long passa") em escrita de coleção PINADA dava VerifyError/CCE no

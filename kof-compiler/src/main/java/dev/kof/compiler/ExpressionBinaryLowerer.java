@@ -79,7 +79,17 @@ public final class ExpressionBinaryLowerer {
                     List.of(Type.PrimitiveType.CHAR), BuiltinTypes.STRING, KofCallKind.STATIC));
             return;
         }
-        boolean stringified = !Type.isString(type) && TypeMetrics.isPrimitiveType(type);
+        // D-NULL-INTENT (#278): `TypeMetrics.isPrimitiveType` desembrulha
+        // Nullable — casava tanto o primitivo CRU (precisa de boxPrimitive
+        // antes do valueOf) quanto um `Int?`/`Bool?` GENUÍNO (Commit B: já
+        // chega boxed/aconst_null da chamada/local/map). Reboxar este
+        // segundo caso chama Integer.valueOf(int) sobre uma REFERÊNCIA
+        // (VerifyError JVM; NPE silenciosa no interpretador — achado em
+        // `"a" + ni()` com `Int? ni() { return null }`). Native mantém o
+        // desembrulho antigo (fase 2 do rollout, representação inalterada).
+        boolean stringified = !Type.isString(type) && (driver.target.isNative()
+                ? TypeMetrics.isPrimitiveType(type)
+                : type instanceof Type.PrimitiveType pt3 && !Type.isVoid(pt3));
         if (driver.target == Target.JS
                 && TypeMetrics.isFloatingPoint(
                         type instanceof Type.NullableType ntp ? ntp.inner() : type)) {
@@ -246,10 +256,26 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
     // seguro e necessário — `.equals()`/`java_lang_Integer_equals` não
     // existe no runtime nativo (achado na CI real, linker `undefined
     // reference`, ausente no Windows local sem `as`/`ld`).
+    // D-NULL-INTENT: relacionais (<,<=,>,>=) sobre Nullable(primitivo) NÃO
+    // têm caminho `.equals()` (Comparable não faz parte do I6) — precisam
+    // desempacotar e comparar por VALOR primitivo cru, então SÃO elegíveis
+    // aqui mesmo com um lado Nullable (o bloco abaixo já desempacota
+    // accType/rightType antes do DCMPG/etc. — achado ao medir
+    // ConformanceMatrixTest.conformanceCoreArithmetic, `d > 1.0` com `d`
+    // vindo de Map.get: sem isto, caía no isRefOperand → if_acmp* contra um
+    // double CRU não-boxado do lado direito → VerifyError). `==`/`!=`
+    // continuam EXCLUÍDOS daqui mesmo com Nullable — ficam com o caminho
+    // `.equals()` do I6 abaixo (nunca identidade de wrapper).
+    boolean isRelationalOp = switch (be.operator()) {
+        case "<", "<=", ">", ">=" -> true;
+        default -> false;
+    };
     boolean isNumericComparison = TypeMetrics.isComparisonOp(be.operator())
             && ((accType instanceof Type.PrimitiveType && TypeMetrics.isNumeric(accType)
                     && rightType instanceof Type.PrimitiveType && TypeMetrics.isNumeric(rightType))
-                || (driver.target.isNative() && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType)));
+                || (driver.target.isNative() && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType))
+                || (isRelationalOp && isNullablePrimOrBarePrim(accType) && isNullablePrimOrBarePrim(rightType)
+                    && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType)));
     if ((isArithmetic || isNumericComparison)
             && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType)) {
         // D-NULL-INTENT: aritmética exige o valor PRESENTE — um
