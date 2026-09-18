@@ -2697,6 +2697,44 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
   - bump version to 0.4.3-beta [skip ci]
 
+## [0.4.4-beta] - 2026-09-18
+
+### Features
+
+  - scheduler.at(cron) parses the expression for real (CRON001)
+
+### Bugfixes
+
+  - app.serveDir on Native/JS emits the documented WEB005 (was WEB001)
+  - #302 — class extending interface emits interface as super_class → IncompatibleClassChangeError
+
+### Documentation
+
+  - sync KofOrmE2ETest 32 / KofMediaE2ETest 16 (EN+PT)
+  - (17) reescrita honesta — CI do #433 consertado (599 baseline exato via extracao ClassSuperResolution) + #435/#436 autocorrigidas e FECHADAS como falsos-positivos (medicao em worktree velho sem o fix; re-medicao na arvore 433: native ELF woof + js woof = lowering compartilhado, uma raiz); docs-lang 0/0/0
+  - sync stale test counts (KofWebTlsTest 7/7, KofWebE2ETest 25/25)
+  - kof.script uses var/val (not the removed `let`) + G5 count 10/10
+  - sync §259 (native http knobs REAL) + OTel export (EN+PT)
+  - sync CRON001 -- at(cron) is no longer a 60s stub (EN+PT)
+  - sync ORM001-JS closure across the living records (EN+PT)
+  - sync 3 stale overclaims in ecosystem-coverage (G8/G11/G1), EN+PT
+  - #83-JS design redirect — validated low-risk path (cooperative async-sleep via existing computeAsyncColoring + host real-wait pump), supersedes generator-CPS. ZzXTest proves await resumes across GraalJS host-eval boundaries (done=true/polls=1). Cleared sleep-in-callback risk (none in corpus); time.now() stays Date.now (host Thread.sleeps between microtask drains — no clock-model change).
+  - tick (16) — PR #358 finalizada por comando direto: merge sem conflito, itens1-4 do review (teste Q0-provado dos 2 lados), bloqueio de workflows-perm do app documentado, finished form como draft PR #433 com authorship preservada; proximo passo = decisao da mantenedora #358x#433; docs-lang 0/0/0
+  - #83-JS progress — green-thread+logical-clock scheduler validated on GraalJS (KofJsRunner engine), done=true/val=42 no native promises; S2 reuses computeAsyncColoring fixpoint (async->function*, await->yield); open design fork = hybrid pump bridging real promises (http/SSE §133).
+  - claim #83-JS/§132 — cooperative generator-scheduler for KofJS (front-5). Measured: §132 await-premise stale (nested await works); OTP002 correct for current sync-poll host (APP→fabrica=0 on JS vs 2/3 on JVM); feasibility spike (generators+logical clock) reproduces restarts=2/fabrica=3 parity. Staged S1-S4, suite-green oracle, rule-6 all-or-nothing.
+  - register 8th bug-hunt round — 90 real JVM bugs filed upstream
+  - 7ª rodada bug-hunt JVM — 80 bugs reportados (#369–#379)
+  - 6ª rodada bug-hunt — 10 bugs JVM 0.4.2-beta (#359–#368), total 70
+  - register 5th batch of 10 JVM bugs (#347–#357) in DOING.md
+  - registro da 4ª rodada de bug-hunt externo (issues #337–#346)
+  - register bug-hunt session 192.168.0.131 — issues #328–#336 filed
+  - register bug-hunt session 192.168.0.131 — issues #318–#327 filed
+  - register bug-hunt session 192.168.0.131 — issues #308–#317 filed
+
+### Tests
+
+  - lock the web-gate gap codes (WEB002/003/004/006) against the §275 drift class
+
 <!-- NEXT-RELEASE -->
 
 ## [0.2.7-beta] - 2026-09-04
