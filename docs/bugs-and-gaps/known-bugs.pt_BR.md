@@ -6567,6 +6567,8 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 
 ### §188 — `String as Int` compila e faz `VerifyError` no runtime JVM (R6: código errado emitido)
 
+- **Estado:** 🟡 ABERTO — false-accept `String as Int` (VerifyError no runtime); conserto honesto = fork regra-6 do contrato do `as`, dono = lane compiler (caminho canonico hoje: `math.parseInt`).
+
 - **Sintoma (medido 14/09, dono = 192.168.100.17):** `var p = "2026".split("-");
   var y = p.get(0) as Int` → a compilação JVM **SUCDEDE** e o `.class` faz
   `checkcast java/lang/Integer` sem parse: `VerifyError: Bad type on operand
@@ -6721,6 +6723,8 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   não prova a paridade — as bordas de case/`"0"`/boolean precisam entrar.
 
 ### §192 — `math.parse*OrDefault` no cross riscv/aarch: programa TRAVA na 1ª chamada `parseDoubleOrDefault` (era §189; colisão tripla de numeração renomeada 14/09)
+
+- **Estado:** 🟡 ABERTO — HANG riscv64/aarch64 no cross de `math.parse*OrDefault` (seed lido dentro de `kof_exc_chain+0x26`); dono = lane nat; prova esperada pos-fix pendente.
 
 - **Sintoma (medido 14/09 no run limpo da suíte de release + isolado, dono =
   192.168.100.17 — só catalogado, é lane stdlib/nat):**
@@ -7406,6 +7410,8 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   documental), sem tocar código.
 
 ### §219 — batch (triagem 14/09): 5 issues abertas cujo código é REJEITADO por falsos positivos de diagnóstico em compile-time (formas legítimas do corpus bloqueadas — diagnóstico honesto, veredito errado, logo não R6-silencioso; cada uma precisa de fix no compiler, não de fix de crash)
+
+- **Estado:** ✅ FECHADO 15/09 — lote de triagem completo (rejeicoes corretas mantidas; #160 ✅ `fb5d0edd`, #159 ✅ `9e270e56`, #155/#141 ja fechadas).
 
 Medido 14/09 ~13:05–13:20 no `d2d025f4` com classes FRESCAS (`mvn -o compile`
 antes — lição da obsolescência do §206/§207), corpos-exatos das issues
@@ -8581,6 +8587,8 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 
 ### §235 — backend JS: chamadas estáticas de wrapper (`Double.isNaN`, `Int.parseInt`, …) emitem um identificador `java_lang_*` indefinido → `ReferenceError`
 
+- **Estado:** 🟡 ABERTO — face JS ✅ CORRIGIDA 16/09 (lane development `.18`); face NATIVE continua aberta (lane nat — nao consertada silenciosamente). Espelho das linhas de face da secao EN.
+
 - **Sintoma (medido 14/09 ~19:20 em classes FRESCAS `cd010bf1`, dono =
   192.168.100.15 — catalogado, lane JS; PRÉ-EXISTENTE, reproduzido
   identicamente em `59359935`, antes da regressão `1e88309b`):**
@@ -8617,6 +8625,8 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   numa posição de chamada.
 
 ### §239 — backend JS: `String.format(...)` aborta a compilação com `Internal compiler error: unknown JS expression: null` (COMP002)
+
+- **Estado:** 🟡 ABERTO — `String.format` no JS aborta com Diagnostic crua; dono = lane JS; ponteiro `JsCallEmitter` (ramo format antes da emissao STATIC generica).
 
 - **Sintoma (medido 14/09 ~21:00 em classes frescas, dono =
   192.168.100.15 — catalogado, lane JS; PRÉ-EXISTENTE, reproduzido
@@ -9295,6 +9305,8 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 - **Estado:** ✅ FECHADO 17/09 — lane native/compiler `.17`, fatias 1-4: timeout x86 `021cefad` / retry x86 `3f6814ec` / circuit x86 `d11eceac`+`6abd3341` / porta riscv+aarch `f7b096c5`; espelho da linha de Status EN da seção (o corpo PT estava congelado no estado de nascer, 16/09). Prova EN citada: `KofHttpNative{Timeout,Retry,Circuit}E2ETest` + `KofHttpNativeResilienceCrossTest` byte-identical sob qemu.
 
 ### §260 — Native x86: auto-collect `kof_gc_collect_now` no gatilho de free-list exausta é INSOUND por temporário em registrador (medição 16/09 — a frente 2 real exige stack-map, não o trigger)
+
+- **Estado:** 🟡 PARCIAL — causa-1/G-6b ✅ FECHADA por `92d11a03`; causa-2 + sign-off G-6(a) = decisao da mantenedora (regra 6); nao fechado silenciosamente.
 
 - **Contexto:** frente 2 da fila D-DEV-PRIORITY ("GC auto-collect:
   safe-points + root map por frame"). A tentativa de 16/09 (lane `.17`)

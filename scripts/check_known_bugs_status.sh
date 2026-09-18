@@ -45,7 +45,7 @@ classify() { # $1=file -> "NNN status" lines
     }
     sid != "" {
       # status-bearing lines only (chronological append wins)
-      if ($0 ~ /\*\*[Ss]tatus\*\*/ || $0 ~ /^[>\- ]*\*\*(Status|Estado|Resolu|Fechamento|Resolution|Fix|✅|🟡|🔴|CORRIGIDO|FECHADO|FIXED|RESOLVIDO)/ || $0 ~ /— *(✅|🟡|🔴)/ || $0 ~ /\*\*(✅|🟡|🔴) /) {
+      if ($0 ~ /\*\*[Ss]tatus\*\*|Estat/ || $0 ~ /^[>\- ]*\*\*(Status|Estado|Resolu|Fechamento|Resolution|Fix|✅|🟡|🔴|⚠️|CORRIGIDO|FECHADO|FIXED|RESOLVIDO)/ || $0 ~ /— *(✅|🟡|🔴)/ || $0 ~ /\*\*(✅|🟡|🔴|⚠️) /) {
         if (($0 ~ /✅/ || $0 ~ /🟢/) && $0 !~ /🟡|🔴/) last = "closed"
         else if ($0 ~ /🟡|🔴|OPEN|ABERTO|PARTIAL|PARCIAL/) last = "live"
       }

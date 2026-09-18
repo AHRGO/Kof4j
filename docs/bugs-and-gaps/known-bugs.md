@@ -6578,6 +6578,8 @@ to the label) is the correct predicate and **was already used** in `parseStateme
 
 ### §188 — `String as Int` compiles and throws `VerifyError` at JVM runtime (R6: wrong code emitted)
 
+- **Status:** 🟡 OPEN — false-accept `String as Int` (VerifyError at runtime); honest fix = rule-6 fork of the `as` contract, owner = compiler lane (canonical path today: `math.parseInt`).
+
 - **Symptom (measured 14/09, owner = 192.168.100.17):** `var p = "2026".split("-");
   var y = p.get(0) as Int` → JVM compilation **SUCCEEDS** and the `.class` does
   `checkcast java/lang/Integer` without parsing: `VerifyError: Bad type on operand
@@ -6731,6 +6733,8 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   does not prove parity — the case/`"0"`/boolean edges must be included.
 
 ### §192 — `math.parse*OrDefault` on riscv/aarch cross: program HANGS on the 1st `parseDoubleOrDefault` call (was §189; triple numbering collision renamed 14/09)
+
+- **Status:** 🟡 OPEN — riscv64/aarch64 HANG in `math.parse*OrDefault` cross (seed read inside `kof_exc_chain+0x26`); owner = lane nat; expected proof post-fix still pending.
 
 - **Symptom (measured 14/09 in the clean release-suite run + isolated, owner =
   192.168.100.17 — only catalogued, it is the stdlib/nat lane):**
@@ -7414,6 +7418,8 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   pinar `78b733fa`. Correção de registro pura (R6 documental), sem tocar código.
 
 ### §219 — batch (triage 14/09): 5 open issues whose code is REJECTED by false-positive compile diagnostics (legitimate corpus forms blocked — honest diagnostic, wrong verdict, so not R6-silent; each needs a compiler fix, not a crash-fix)
+
+- **Status:** ✅ CLOSED 15/09 — triage batch complete (correct rejections kept; #160 ✅ `fb5d0edd`, #159 ✅ `9e270e56`, #155/#141 already closed).
 
 Measured 14/09 ~13:05–13:20 on `d2d025f4` with FRESH classes (`mvn -o
 compile` first — lesson of the obsolescence of §206/§207), case-exact bodies
@@ -8671,6 +8677,8 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
 
 ### §239 — JS backend: `String.format(...)` aborts compilation with `Internal compiler error: unknown JS expression: null` (COMP002)
 
+- **Status:** 🟡 OPEN — JS `String.format` aborts with raw Diagnostic; owner = JS lane; pointer `JsCallEmitter` (format branch before generic STATIC emission).
+
 - **Symptom (measured 14/09 ~21:00 on fresh classes, owner =
   192.168.100.15 — catalogued, JS lane; PRE-EXISTING, reproduced identically
   on origin `aa78eba0` and at `59359935`):**
@@ -9512,6 +9520,8 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   follow).
 
 ### §260 — Native x86: auto-collect `kof_gc_collect_now` no gatilho de free-list exausta é INSOUND por temporário em registrador (medição 16/09 — a frente 2 real exige stack-map, não o trigger)
+
+- **Status:** 🟡 PARTIAL — cause-1/G-6b ✅ CLOSED by `92d11a03`; cause-2 + G-6(a) re-baseline sign-off = MAINTAINER decision (rule 6); not silently closed.
 
 - **Contexto:** frente 2 da fila D-DEV-PRIORITY ("GC auto-collect:
   safe-points + root map por frame"). A tentativa de 16/09 (lane `.17`)
