@@ -139,21 +139,14 @@ void handleMapOp(MethodCtx ctx, List<Object> stack,
         callArgs.add(receiver);
         callArgs.addAll(args);
         JsIr.JsExpression call = new JsIr.JsCall(new JsIr.JsIdentifier(fn), callArgs);
-        // §112-JS: put/remove devolvem o valor ANTERIOR, que pode ser null
-        // (primeiro put / remove de chave ausente). O typer declara o retorno
-        // como V (não V? — só get é nullable), então sem coerção o null vazava
-        // p/ uso primitivo (JS imprimia "null" onde JVM dá 0/false). Mesmo
-        // padrão do kof_poll (?? default do primitivo). O KofPop do statement
-        // parser foi estendido p/ preservar o side-effect embrulhado.
-        // §127: o get-de-miss também. kof_map_get declara Nullable(V); o
-        // runtime devolve `null` no miss (marcador), e o uso primitivo
-        // (println/aritmética) precisa do default do primitivo — o MESMO
-        // guard dos §112/§122 no outro lado do `??` (defaultForType desempacota
-        // o Nullable; String/não-primitivo fica JsNull, o oracle do JVM miss).
-        boolean primitiveReturn = kc.returnType() instanceof Type.PrimitiveType
-                || (kc.returnType() instanceof Type.NullableType nt
-                    && nt.inner() instanceof Type.PrimitiveType);
-        if (primitiveReturn && ("kof_map_put".equals(kc.methodName())
+        // D-NULL-INTENT/I7 (#278, supersede §112-JS/§127): get/put/remove
+        // agora declaram Nullable(V) de verdade (CollectionCallLowerer) —
+        // ausência é null observável, nunca substituída pelo default do
+        // primitivo. O `?? default` só faz sentido se o retorno ainda fosse
+        // primitivo CRU (bare, não-nullable), o que não acontece mais para
+        // estes 3 métodos; mantido defensivo para qualquer chamador futuro.
+        boolean barePrimitiveReturn = kc.returnType() instanceof Type.PrimitiveType;
+        if (barePrimitiveReturn && ("kof_map_put".equals(kc.methodName())
                 || "kof_map_remove".equals(kc.methodName())
                 || "kof_map_get".equals(kc.methodName()))) {
             call = new JsIr.JsBinary(call, "??", JsTypeMapper.defaultForType(kc.returnType()));

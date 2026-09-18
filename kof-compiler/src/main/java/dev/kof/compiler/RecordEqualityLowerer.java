@@ -18,6 +18,14 @@ import java.util.List;
  * {@code java.util.Objects.equals}: ambos nulos → true; um nulo → false; senão
  * {@code a.equals(b)}. Só entra aqui quando NENHUM lado é o literal {@code null}
  * (esse caso é comparação de referência, tratado no chamador).
+ *
+ * <p>#278 (D-NULL-INTENT, I6): o MESMO mecanismo cobre dois
+ * {@code Nullable(primitivo)} GENUÍNOS (ex. {@code Int? a(); Int? b(); a() ==
+ * b()}) — agora que a representação física é boxed de verdade, comparar por
+ * referência (if_acmp) colidiria com o cache do {@code Integer} (dois
+ * {@code 10000} são objetos DIFERENTES). {@code Integer.equals}/
+ * {@code Long.equals}/etc. já fazem igualdade por VALOR null-safe — o
+ * "recordType" vira o wrapper boxed em vez de uma classe record.
  */
 final class RecordEqualityLowerer {
 
@@ -42,6 +50,13 @@ final class RecordEqualityLowerer {
         // SEMANTICA de Objects.equals (JsRuntimeCore.kofRecordEq).
         if (driver.target == Target.JS) {
             localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
+            // D-NULL-INTENT (I6, caso misto): lado direito primitivo CRU
+            // (`m.get("a") == 1`) — no JS não há física de boxing real, mas
+            // o box IR é no-op lá (número continua número); mantém o par
+            // simétrico com o box do lado esquerdo (ExpressionBinaryLowerer).
+            if (rightType instanceof Type.PrimitiveType rpt0 && !Type.isVoid(rpt0)) {
+                TypeEmitter.boxPrimitive(ops, rightType);
+            }
             ops.add(new KofCall(BuiltinTypes.STRING, "kofRecordEq", List.of(objT, objT),
                     Type.PrimitiveType.INT, KofCallKind.FUNCTION));
             return localIdx;
@@ -52,9 +67,30 @@ final class RecordEqualityLowerer {
         // batem igual nos 3 targets. O equals() do record NÃO guarda o ARG,
         // então o ramo de conteúdo só roda com os DOIS não-nulos.
         localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
-        Type recordType = ExpressionBinaryLowerer.isRecordLike(accType, driver)
-                ? (accType instanceof Type.NullableType nta ? nta.inner() : accType)
-                : (rightType instanceof Type.NullableType ntr ? ntr.inner() : rightType);
+        // D-NULL-INTENT (I6, caso misto): lado direito primitivo CRU
+        // precisa boxear antes de entrar no par de temporários Object
+        // abaixo (KofStoreLocal ASTORE exige referência na pilha).
+        if (rightType instanceof Type.PrimitiveType rpt1 && !Type.isVoid(rpt1)) {
+            TypeEmitter.boxPrimitive(ops, rightType);
+        }
+        // D-NULL-INTENT (I6): quando NENHUM lado é record, o chamador só
+        // despacha aqui com os DOIS lados Nullable(primitivo) — resolve o
+        // WRAPPER boxed (Integer/Long/...) como "recordType": seu `.equals`
+        // real já faz igualdade por VALOR null-safe (mesma mecânica).
+        Type recordType;
+        if (ExpressionBinaryLowerer.isRecordLike(accType, driver)) {
+            recordType = accType instanceof Type.NullableType nta ? nta.inner() : accType;
+        } else if (ExpressionBinaryLowerer.isRecordLike(rightType, driver)) {
+            recordType = rightType instanceof Type.NullableType ntr ? ntr.inner() : rightType;
+        } else if (accType instanceof Type.NullableType ntp && ntp.inner() instanceof Type.PrimitiveType apt
+                && TypeMetrics.boxedTypeFor(apt) instanceof Type.ClassType aboxed) {
+            recordType = aboxed;
+        } else if (rightType instanceof Type.NullableType ntq && ntq.inner() instanceof Type.PrimitiveType rpt
+                && TypeMetrics.boxedTypeFor(rpt) instanceof Type.ClassType rboxed) {
+            recordType = rboxed;
+        } else {
+            recordType = objT;
+        }
         // Pilha ao entrar: [L, R]. Guarda os DOIS em temporários (cada lado
         // avaliado UMA vez) — o get de map / chamada de função não pode rodar
         // duas vezes.

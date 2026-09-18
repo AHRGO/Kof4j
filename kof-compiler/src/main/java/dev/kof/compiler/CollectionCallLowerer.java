@@ -312,7 +312,15 @@ public final class CollectionCallLowerer {
                 }
             }
             Type retType = switch (mapFn) {
-                case "kof_map_put", "kof_map_remove", "kof_map_get_or_default" -> valueType;
+                // D-NULL-INTENT/I7 (#278): put/remove devolvem V? de
+                // verdade — mesma razão do get logo abaixo (Java Map
+                // contract: valor anterior/removido OU null quando
+                // ausente). Sem isto, o KofCall ficava com o tipo ERRADO
+                // embutido mesmo com os typers (SemMethodCallTyper etc.)
+                // já corrigidos — o backend JS (`?? default`) e o JVM
+                // (Type.isVoid guard) consultam ESTE campo, não o typer.
+                case "kof_map_put", "kof_map_remove" -> new Type.NullableType(valueType);
+                case "kof_map_get_or_default" -> valueType;
                 // get() devolve V? (SG-008/bug 87): ausência é null comparável
                 // (`x == null`), nunca NPE por unbox. O unbox acontece no
                 // USE (aritmética), guiado pelo tipo do slot.

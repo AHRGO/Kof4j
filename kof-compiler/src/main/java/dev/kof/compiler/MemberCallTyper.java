@@ -229,8 +229,10 @@ public final class MemberCallTyper {
                 // é null comparável, nunca NPE por unbox
                 return new Type.NullableType(valueType);
             }
-            if ("remove".equals(mn)) return valueType;
-            if ("put".equals(mn)) return valueType;
+            // D-NULL-INTENT/I7: mesma razão do `get` acima — Java Map
+            // contract (valor anterior/removido OU null quando ausente).
+            if ("remove".equals(mn)) return new Type.NullableType(valueType);
+            if ("put".equals(mn)) return new Type.NullableType(valueType);
             if ("getOrDefault".equals(mn)) return valueType;
             if ("size".equals(mn) || "length".equals(mn) || "count".equals(mn))
                 return Type.PrimitiveType.INT;

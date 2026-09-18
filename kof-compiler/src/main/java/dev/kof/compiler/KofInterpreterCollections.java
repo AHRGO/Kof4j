@@ -139,23 +139,23 @@ public final class KofInterpreterCollections {
                 Object key = recv == null ? args[1] : args[0];
                 Object val = recv == null ? args[0] : args[1];
                 Object prev = m.put(box(kT, key), box(vT, val));
-                yield Type.isVoid(kc.returnType()) ? null
-                        : prevOrDefault(unbox(vT, prev), kc.returnType());
+                // D-NULL-INTENT/I7: get/put/remove devolvem V? de verdade —
+                // NÃO chama unbox() aqui (Boolean->Integer 1/0): o valor
+                // sai como referência de verdade (Boolean/Integer/etc.),
+                // espelhando o JVM (JvmOpCollections.emitNullablyBoxedMapResult,
+                // só CHECKCAST, nunca unbox). unbox() continua usado em
+                // List/Set, que NÃO viraram Nullable — só Map (#278).
+                yield Type.isVoid(kc.returnType()) ? null : prev;
             }
             case "kof_map_get" -> {
-                // SG-008 (bug 87): get() devolve V? — o miss é null comparável
-                // (`x == null` → true). Mas se o USO espera primitivo
-                // (Nullable(primitivo) desembrulhado no typer), o valor null
-                // vira o default do primitivo (espelha o guard-unbox do emit
-                // JVM, JvmOpCollections.kof_map_get): 0/0.0/false.
-                Object v = m.get(box(kT, args[0]));
-                if (v == null && kc.returnType() instanceof Type.NullableType nt
-                        && nt.inner() instanceof Type.PrimitiveType) {
-                    yield KofInterpreterMembers.defaultValue(nt.inner());
-                }
-                yield unbox(vT, v);
+                // D-NULL-INTENT/I7 (supersede SG-008 default-guard): get()
+                // devolve V? de verdade — ausência é null observável, nunca
+                // substituído pelo default do primitivo (espelha o fix do
+                // emit JVM, JvmOpCollections.kof_map_get/#278). Sem unbox():
+                // o valor sai como referência de verdade.
+                yield m.get(box(kT, args[0]));
             }
-            case "kof_map_remove" -> prevOrDefault(unbox(vT, m.remove(box(kT, args[0]))), kc.returnType());
+            case "kof_map_remove" -> m.remove(box(kT, args[0]));
             case "kof_map_get_or_default" -> unbox(vT, m.getOrDefault(box(kT, args[0]), box(vT, args[1])));
             case "kof_map_contains" -> m.containsKey(box(kT, args[0])) ? 1 : 0;
             case "kof_map_size" -> m.size();
@@ -170,21 +170,6 @@ public final class KofInterpreterCollections {
         };
     }
 
-    /**
-     * §112: `put`/`remove` devolvem o valor ANTERIOR, que pode ser null
-     * (put novo / remove de chave ausente). Quando o uso espera o primitivo
-     * (typer devolve V, não V?), o null estourava NullPointerException no
-     * unbox (exit=1). Guard com default do primitivo, espelhando o
-     * kof_map_get (SG-008) e o emitPrevValueUnbox do JvmOpCollections.
-     */
-    private static Object prevOrDefault(Object prev, Type declared) {
-        Type inner = declared instanceof Type.NullableType nt ? nt.inner() : declared;
-        if (prev == null && inner instanceof Type.PrimitiveType
-                && KofInterpreterMembers.defaultValue(inner) != null) {
-            return KofInterpreterMembers.defaultValue(inner);
-        }
-        return prev;
-    }
 
     private Object setOps(KofCall kc, Object recv, Object[] args) {
         @SuppressWarnings("unchecked")

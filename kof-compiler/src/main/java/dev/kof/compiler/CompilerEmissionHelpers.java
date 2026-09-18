@@ -31,6 +31,21 @@ public final class CompilerEmissionHelpers {
                     || from instanceof Type.TypeVariable
                     || (from instanceof Type.ClassType ct && "java.lang".equals(ct.packageName())
                         && "Object".equals(ct.name())))) {
+            // D-NULL-INTENT (#278): destino Nullable(primitivo) — o "Object"
+            // aqui é só a imprecisão do join heterogêneo (#57/§70 do
+            // if/switch, boxesOwnBranches), o valor JÁ chega fisicamente
+            // boxed (Integer/Boolean/... ou aconst_null). `emitErasureUnbox`
+            // faz um kof_unbox completo (Object->primitivo cru) — sem tipo
+            // real p/ despachar, isso é `Object.intValue()Integer;`
+            // (NoSuchMethodError, achado em `Int? sw(x) = switch{...default
+            // -> null}`). O correto é só um CHECKCAST p/ o wrapper real —
+            // upcast/downcast de referência, nunca unbox.
+            if (to instanceof Type.NullableType nt2 && nt2.inner() instanceof Type.PrimitiveType) {
+                if (needsErasureBoxing(driver)) {
+                    ops.add(new KofCheckCast(TypeMetrics.boxedTypeFor(nt2.inner())));
+                }
+                return;
+            }
             emitErasureUnbox(driver, ops, to);
             return;
         }
