@@ -81,9 +81,14 @@ tip: `woof`/`meow`.
 `m.get(chave)` returns `V?` when the value is a reference type
 (`Map<String, String>`, `Map<String, User>`): absence = `null`, use
 `if (v != null)` to narrow. For **primitive** values (`Map<String, Int>`)
-the type stays `V` — the current model stores primitives unboxed and does not
-represent absence (documented limitation; use `contains`/`containsKey`
-to check beforehand).
+the type is now `V?` as well (since the D-NULL-INTENT N1 merge, #438 `250f6207`,
+18/09: `Int z = m.get("a")` fails with a type-mismatch on `NullableType[int]` —
+absence is representable). **Caution while §294 is open:** on the JVM a
+present-key `if (v != null)` check over a primitive-valued map still dies at
+runtime (`NoSuchMethodError Object.valueOf(boxed)`); until §294 closes, prefer
+`m.getOrDefault(key, fallback)` (landed `62bd455e`, measured working) or
+`contains`/`containsKey` checks for primitive-valued maps. Reference values are
+unaffected.
 
 Fix 27/08: `listOf(...).get(n)` and `size` in large projects with `import a.b.C` now resolve correctly (CompilerDriver file-specific imports). A manual index workaround is not necessary.
 
