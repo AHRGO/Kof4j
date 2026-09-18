@@ -66,8 +66,27 @@ class NullablePrimitiveContractE2ETest {
         CompilationResult result = driver.compile(file, outDir, Target.JVM);
         assertTrue(result.success(), "JVM compile failed: " + result.diagnostics().getDiagnostics());
         try {
-            Process p = new ProcessBuilder(System.getProperty("java.home") + "/bin/java",
-                    "-cp", outDir.toString(), "Default.Main").redirectErrorStream(true).start();
+            // Runner por reflexão: evita o launcher `java` mascarar
+            // VerifyError como "JavaFX runtime ausente" (mesmo padrão de
+            // NullablePrimitiveE2ETest/GenericOperandConcatE2ETest).
+            Path runnerDir = outDir.resolveSibling(outDir.getFileName() + "-runner");
+            Files.createDirectories(runnerDir);
+            Path runnerSrc = runnerDir.resolve("Run.java");
+            Files.writeString(runnerSrc, """
+                public class Run {
+                    public static void main(String[] args) throws Exception {
+                        Class.forName(args[0]).getMethod("main", String[].class)
+                            .invoke(null, (Object) new String[0]);
+                    }
+                }
+                """);
+            Process pCompile = new ProcessBuilder("javac", "-d", runnerDir.toString(), runnerSrc.toString())
+                    .redirectErrorStream(true).start();
+            String compileOut = new String(pCompile.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            assertEquals(0, pCompile.waitFor(), "runner javac: " + compileOut);
+            Process p = new ProcessBuilder(System.getProperty("java.home") + "/bin/java", "-cp",
+                    outDir.toString() + java.io.File.pathSeparator + runnerDir.toString(), "Run", "Default.Main")
+                    .redirectErrorStream(true).start();
             String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
                     .replace("\r\n", "\n").trim();
             int ec = p.waitFor();
@@ -216,4 +235,5 @@ class NullablePrimitiveContractE2ETest {
                 }
                 """, "true\n7");
     }
+
 }

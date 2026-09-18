@@ -3,6 +3,7 @@ import dev.kof.compiler.BuiltinTypes;
 import dev.kof.compiler.KofMedia;
 import dev.kof.compiler.KofUi;
 import dev.kof.compiler.Type;
+import dev.kof.compiler.TypeMetrics;
 
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,16 @@ public final class JvmTypeMapper {
             case Type.FunctionType ft -> ft.className() != null
                     ? "L" + ft.className() + ";" : "Ljava/lang/Object;";
             case Type.UnknownType _ -> "Ljava/lang/Object;";
-            case Type.NullableType n -> toDescriptor(n.inner());
+            // D-NULL-INTENT (supersede §125 opção A, DECISIONS.md 15/09):
+            // Nullable(primitivo) precisa de representação de REFERÊNCIA de
+            // verdade — um descriptor primitivo (`I`/`J`/...) não tem onde
+            // guardar `null`. O inner NÃO-primitivo (String?/record?/etc.)
+            // já é referência por natureza; segue apagando para o próprio
+            // inner (comportamento anterior, intocado).
+            case Type.NullableType n -> n.inner() instanceof Type.PrimitiveType pt
+                    && !Type.isVoid(pt) && TypeMetrics.boxedTypeFor(pt) instanceof Type.ClassType boxed
+                    ? classDescriptor(boxed)
+                    : toDescriptor(n.inner());
             default -> "Ljava/lang/Object;";
         };
     }

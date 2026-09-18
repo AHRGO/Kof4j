@@ -71,6 +71,18 @@ public final class CompilerEmission2 {
                     && !ExpressionTyper.boxesOwnBranches(driver, args.get(i), locals)) {
                 driver.emitErasureBox(ops, argType);
             }
+            // D-NULL-INTENT (#278): formal Nullable(primitivo) — o
+            // parâmetro/campo do record/construtor é referência de verdade
+            // agora (JvmTypeMapper.toDescriptor); um arg primitivo CRU (ex.
+            // `Pair(1, 2)` com `Pair(Int? x, Int? y)`) precisa boxear para
+            // casar o descritor do `<init>` (invokespecial esperava
+            // Integer, achava int — VerifyError). `argType` já
+            // Nullable(mesmo inner) (ex. repassando outro `Int?`) já chega
+            // boxed — não reboxa.
+            if (formal instanceof Type.NullableType formalNt && formalNt.inner() instanceof Type.PrimitiveType
+                    && argType instanceof Type.PrimitiveType) {
+                TypeEmitter.boxPrimitive(ops, formal);
+            }
             if (formal != null && BuiltinTypes.isString(formal)
                     && argType instanceof Type.PrimitiveType pt
                     && "char".equals(Type.canonicalPrimitiveName(pt.name()))) {

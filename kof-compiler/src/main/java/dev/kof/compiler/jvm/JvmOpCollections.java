@@ -218,66 +218,30 @@ public final class JvmOpCollections {
                 if (Type.isVoid(kc.returnType())) {
                     mv.visitInsn(POP);
                 } else {
-                    // §112: HashMap.put devolve Object (prev, possivelmente
-                    // null). O typer declara o retorno como V — quando V é
-                    // primitivo o stack ficava Object entrando em uso
-                    // primitivo → VerifyError (println(m.put(...)) emitia
-                    // valueOf(int) sobre Object). Unbox com guard, espelhando
-                    // o kof_map_get (null → default do primitivo).
-                    emitPrevValueUnbox(mv, kc.returnType());
+                    // D-NULL-INTENT/I7 (supersede §112): HashMap.put devolve
+                    // Object (prev, possivelmente null) — o typer agora
+                    // declara V? de verdade (não V), então só falta fixar o
+                    // tipo estático. Nunca substitui ausência por default.
+                    emitNullablyBoxedMapResult(mv, valueType);
                 }
             }
             case "kof_map_get" -> {
                 emitBoxIfPrimitive(mv, keyType);
                 mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", true);
-                // SG-008 (bug 87): get() devolve V? — ausência é null comparável
-                // (`x == null` dá true, nunca NPE). Quando o USE espera o
-                // primitivo (slot `Int a` / aritmética), o unbox é com GUARD
-                // (null → default), espelhando o kof_poll.
-                Type valueNullable = kc.returnType() instanceof Type.NullableType nt
-                        ? nt.inner() : null;
-                Type unboxGuardType = valueNullable;
-                if (unboxGuardType != null && boxedClassNameFor(unboxGuardType) != null) {
-                    String boxed = boxedClassNameFor(unboxGuardType);
-                    Label notNull = new Label();
-                    Label end = new Label();
-                    mv.visitInsn(DUP);
-                    mv.visitJumpInsn(IFNONNULL, notNull);
-                    mv.visitInsn(POP);
-                    emitDefaultValue(mv, unboxGuardType);
-                    mv.visitJumpInsn(GOTO, end);
-                    mv.visitLabel(notNull);
-                    mv.visitTypeInsn(CHECKCAST, boxed);
-                    mv.visitMethodInsn(INVOKEVIRTUAL, boxed, unboxMethodName(unboxGuardType),
-                            unboxDescriptor(unboxGuardType), false);
-                    mv.visitLabel(end);
-                } else if (valueNullable != null) {
-                    // valor de referência (String? etc.): só o cast
-                    if (!KofUi.isUiType(valueType) && !KofMedia.isHandleType(valueType) && !(valueType instanceof Type.UnknownType)) {
-                        String internal = JvmTypeMapper.toInternalName(valueType instanceof Type.ClassType ct ? ct.packageName() : "", valueType instanceof Type.ClassType ct ? ct.name() : "java/lang/Object");
-                        mv.visitTypeInsn(CHECKCAST, internal);
-                    }
-                } else {
-                    if (!isPrimitiveType(valueType) && !KofUi.isUiType(valueType) && !KofMedia.isHandleType(valueType) && !(valueType instanceof Type.UnknownType)) {
-                        String internal = JvmTypeMapper.toInternalName(valueType instanceof Type.ClassType ct ? ct.packageName() : "", valueType instanceof Type.ClassType ct ? ct.name() : "java/lang/Object");
-                        mv.visitTypeInsn(CHECKCAST, internal);
-                    }
-                    emitUnboxIfPrimitive(mv, valueType);
-                }
+                // D-NULL-INTENT/I7 (supersede SG-008/bug-87 default-guard):
+                // get() devolve V? de verdade — ausência é null observável,
+                // NUNCA substituído pelo default do primitivo. O unbox, para
+                // quando o consumidor pede o valor cru, é responsabilidade
+                // de quem CONSOME (guiado pelo tipo do slot/expressão), não
+                // deste ponto de chamada.
+                emitNullablyBoxedMapResult(mv, valueType);
             }
             case "kof_map_remove" -> {
                 emitBoxIfPrimitive(mv, keyType);
                 mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", true);
-                if (!isPrimitiveType(valueType) && !(valueType instanceof Type.UnknownType)) {
-                    String internal = JvmTypeMapper.toInternalName(valueType instanceof Type.ClassType ct ? ct.packageName() : "", valueType instanceof Type.ClassType ct ? ct.name() : "java/lang/Object");
-                    mv.visitTypeInsn(CHECKCAST, internal);
-                }
-                // §112: remove de chave AUSENTE devolve null — o unbox cru de
-                // primitivo dava NullPointerException (NPE não é exceção-as-
-                // String do contrato Kof). Guard com default, como get/put.
-                if (isPrimitiveType(valueType) && !KofUi.isUiType(valueType) && !KofMedia.isHandleType(valueType)) {
-                    emitPrevValueUnbox(mv, valueType);
-                }
+                // D-NULL-INTENT/I7 (supersede §112): mesma razão do get/put
+                // acima — remove de chave ausente devolve null de verdade.
+                emitNullablyBoxedMapResult(mv, valueType);
             }
             case "kof_map_contains" -> {
                 emitBoxIfPrimitive(mv, keyType);
@@ -436,6 +400,30 @@ public final class JvmOpCollections {
         return null;
     }
 
+    /**
+     * D-NULL-INTENT/I7 (#278, supersede §112): resultado de
+     * get/put/remove de Map — o valor já chega BOXED (ou null) de
+     * {@code java.util.Map}; aqui só se fixa o tipo ESTÁTICO via
+     * CHECKCAST, nunca se desempacota nem se substitui ausência por
+     * default. Ausência (null) e {@code Present(0)}/{@code Present(false)}
+     * ficam observáveis e distintos — o unbox primitivo, quando o
+     * consumidor pede o valor cru, é responsabilidade de quem CONSOME
+     * (guiado pelo tipo do slot), não deste ponto de chamada.
+     */
+    static void emitNullablyBoxedMapResult(MethodVisitor mv, Type valueType) {
+        String boxed = boxedClassNameFor(valueType);
+        if (boxed != null) {
+            mv.visitTypeInsn(CHECKCAST, boxed);
+            return;
+        }
+        if (!KofUi.isUiType(valueType) && !KofMedia.isHandleType(valueType) && !(valueType instanceof Type.UnknownType)) {
+            String internal = JvmTypeMapper.toInternalName(
+                    valueType instanceof Type.ClassType ct ? ct.packageName() : "",
+                    valueType instanceof Type.ClassType ct ? ct.name() : "java/lang/Object");
+            mv.visitTypeInsn(CHECKCAST, internal);
+        }
+    }
+
     static void emitBoxIfPrimitive(MethodVisitor mv, Type type) {
         String boxed = boxedClassNameFor(type);
         if (boxed != null) {
@@ -449,44 +437,6 @@ public final class JvmOpCollections {
     static public boolean isPrimitiveType(Type type) {
         if (type instanceof Type.NullableType nt) return isPrimitiveType(nt.inner());
         return type instanceof Type.PrimitiveType pt && !"void".equals(pt.name());
-    }
-
-    /**
-     * §112: unbox com guard para o VALOR ANTERIOR devolvido por
-     * `HashMap.put`/`HashMap.remove` quando o tipo declarado do retorno é
-     * primitivo. Esses métodos devolvem `Object` (o prev), que pode ser
-     * **null** (primeiro put / remove de chave ausente). O unbox cru de
-     * primitivo (`checkcast Integer; intValue`) estourava NullPointerException
-     * (não é exceção-as-String do contrato Kof) e, no put, o Object entrando em
-     * uso primitivo dava VerifyError. Espelha o guard do `kof_map_get`:
-     * null → default do primitivo (0/false/0.0). Recebe o Object no topo.
-     */
-    static void emitPrevValueUnbox(MethodVisitor mv, Type declared) {
-        Type prim = declared instanceof Type.NullableType nt ? nt.inner() : declared;
-        String boxed = boxedClassNameFor(prim);
-        if (boxed == null) {
-            // valor de referência: só o cast (null-safe); Unknown/UI/Media
-            // não cast (null é comparável, sem NPE).
-            if (!(prim instanceof Type.UnknownType)
-                    && !KofUi.isUiType(prim) && !KofMedia.isHandleType(prim)
-                    && prim instanceof Type.ClassType ct) {
-                mv.visitTypeInsn(CHECKCAST,
-                        JvmTypeMapper.toInternalName(ct.packageName(), ct.name()));
-            }
-            return;
-        }
-        Label notNull = new Label();
-        Label end = new Label();
-        mv.visitInsn(DUP);
-        mv.visitJumpInsn(IFNONNULL, notNull);
-        mv.visitInsn(POP);
-        emitDefaultValue(mv, prim);
-        mv.visitJumpInsn(GOTO, end);
-        mv.visitLabel(notNull);
-        mv.visitTypeInsn(CHECKCAST, boxed);
-        mv.visitMethodInsn(INVOKEVIRTUAL, boxed, unboxMethodName(prim),
-                unboxDescriptor(prim), false);
-        mv.visitLabel(end);
     }
 
     static void emitUnboxIfPrimitive(MethodVisitor mv, Type type) {

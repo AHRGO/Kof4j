@@ -21,7 +21,14 @@ public final class StatementLowerer {
                 // "finally roda no caminho normal, no capturado e na propagação").
                 if (!driver.finallyFrames.isEmpty()) {
                     CompilerDriverState.FinallyFrame f = driver.finallyFrames.peek();
-                    if (ret.value() != null && !CompilerComparisons.isNullablePrimNullReturn(ret, returnType)) {
+                    if (ret.value() != null && CompilerComparisons.isNullablePrimNullReturn(ret, returnType)) {
+                        // D-NULL-INTENT (supersede §125 opção A): `return null`
+                        // carrega null REAL — pula a maquinaria de widening/box
+                        // numérico (ela pressupõe um valor primitivo concreto;
+                        // aplicada a um null tentaria "desempacotar" null).
+                        localIdx = ExpressionLowerer.emitExpression(driver, ret.value(), ops, owner, localIdx, locals);
+                        ops.add(new KofStoreLocal(returnType, f.slotValor()));
+                    } else if (ret.value() != null) {
                         ExpressionNode rv = CompilerComparisons.foldNullablePrimBranches(ret.value(), returnType);
                         localIdx = ExpressionLowerer.emitExpression(driver, rv, ops, owner, localIdx, locals);
                         Type rvType = ExpressionTyper.inferExprType(driver, rv, locals);
@@ -32,6 +39,14 @@ public final class StatementLowerer {
                                 && !ExpressionTyper.boxesOwnBranches(driver, rv, locals)) {
                             driver.emitErasureBox(ops, rvType);
                         }
+                        // D-NULL-INTENT: destino Nullable(primitivo) recebendo
+                        // um primitivo CRU (rvType é PrimitiveType, não já
+                        // Nullable) — box segue o tipo ALVO, nunca a expressão
+                        // de origem (bug atômico do boxer, ver histórico N1).
+                        if (returnType instanceof Type.NullableType nt2 && nt2.inner() instanceof Type.PrimitiveType
+                                && rvType instanceof Type.PrimitiveType pt2 && !Type.isVoid(pt2)) {
+                            TypeEmitter.boxPrimitive(ops, returnType);
+                        }
                         ops.add(new KofStoreLocal(returnType, f.slotValor()));
                     } else if (!Type.isVoid(returnType)) {
                         ops.add(CompilerTypes.defaultValueOp(returnType));
@@ -40,10 +55,19 @@ public final class StatementLowerer {
                     ops.add(new KofJump(f.returnFinallyLabel()));
                     yield localIdx;
                 }
-                if (ret.value() != null && !CompilerComparisons.isNullablePrimNullReturn(ret, returnType)) {
-                    // §125(A) extensão: ramo null de if/switch em retorno
-                    // Nullable(primitivo) colapsa p/ o default (evita o join
-                    // heterogêneo que boxia e quebra o ireturn).
+                if (ret.value() != null && CompilerComparisons.isNullablePrimNullReturn(ret, returnType)) {
+                    // D-NULL-INTENT (supersede §125 opção A, DECISIONS.md
+                    // 15/09): `return null` para Nullable(primitivo) agora
+                    // carrega null de verdade — pula toda a maquinaria de
+                    // widening/box numérico (ela é para valores primitivos
+                    // concretos; usá-la aqui tentaria "unboxar" um null e
+                    // crasharia/faria NPE via emitErasureUnbox).
+                    localIdx = ExpressionLowerer.emitExpression(driver, ret.value(), ops, owner, localIdx, locals);
+                    ops.add(new KofReturn(returnType));
+                } else if (ret.value() != null) {
+                    // ramo null de if/switch em retorno Nullable(primitivo)
+                    // ainda colapsa p/ o default (join heterogêneo — fila
+                    // separada do #278; não regride o que já funcionava).
                     ExpressionNode rv = CompilerComparisons.foldNullablePrimBranches(ret.value(), returnType);
                     localIdx = ExpressionLowerer.emitExpression(driver, rv, ops, owner, localIdx, locals);
                     Type rvType = ExpressionTyper.inferExprType(driver, rv, locals);
@@ -53,6 +77,15 @@ public final class StatementLowerer {
                             && TypeMetrics.isPrimitiveType(rvType)
                             && !ExpressionTyper.boxesOwnBranches(driver, rv, locals)) {
                         driver.emitErasureBox(ops, rvType);
+                    }
+                    // D-NULL-INTENT: destino Nullable(primitivo) recebendo um
+                    // primitivo CRU — box segue o tipo ALVO, nunca a expressão
+                    // de origem (bug atômico do boxer, ver histórico N1). Um
+                    // rvType já Nullable(mesmo inner) (ex.: `return outraOpt`,
+                    // `return m.get(k)`) já chega boxed/null — não reboxa.
+                    if (returnType instanceof Type.NullableType nt2 && nt2.inner() instanceof Type.PrimitiveType
+                            && rvType instanceof Type.PrimitiveType pt2 && !Type.isVoid(pt2)) {
+                        TypeEmitter.boxPrimitive(ops, returnType);
                     }
                     ops.add(new KofReturn(returnType));
                 } else if (Type.isVoid(returnType)) {

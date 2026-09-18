@@ -128,10 +128,16 @@ public final class JvmLiteralEmitter {
     }
 
     static int returnOpcode(Type type) {
-        // §125 (decisão da mantenedora 12/09, opção A): Nullable(primitivo)
-        // apaga para o primitivo na SIGNATURA — exatamente como
-        // JvmTypeMapper.toDescriptor (que já desempacota Nullable). A
-        // assimetria (descritor `I` + opcode ARETURN) era o VerifyError.
+        // D-NULL-INTENT (supersede §125 opção A, DECISIONS.md 15/09):
+        // Nullable(primitivo) agora tem representação de REFERÊNCIA de
+        // verdade (JvmTypeMapper.toDescriptor devolve o wrapper, não o
+        // primitivo apagado) — o opcode tem de casar: ARETURN, nunca
+        // IRETURN/LRETURN/etc. A assimetria contrária (descritor `I` +
+        // opcode ARETURN) era o VerifyError original do §125.
+        if (type instanceof Type.NullableType nt && nt.inner() instanceof Type.PrimitiveType pt0
+                && !Type.isVoid(pt0)) {
+            return ARETURN;
+        }
         if (type instanceof Type.NullableType nt) type = nt.inner();
         // §176: handles kof.ui/kof.media são Int em runtime — o descriptor
         // apaga para "I" (JvmTypeMapper). Sem isto, `return label` emitia
@@ -266,6 +272,12 @@ public final class JvmLiteralEmitter {
     }
 
     static int loadVarOpcode(Type type) {
+        // D-NULL-INTENT: Nullable(primitivo) é referência de verdade agora —
+        // ALOAD, nunca ILOAD/LLOAD/etc (mesma simetria de returnOpcode).
+        if (type instanceof Type.NullableType nt && nt.inner() instanceof Type.PrimitiveType pt0
+                && !Type.isVoid(pt0)) {
+            return ALOAD;
+        }
         if (type instanceof Type.NullableType nt) return loadVarOpcode(nt.inner());
         if (KofUi.isUiType(type) || KofMedia.isHandleType(type)) return ILOAD;
         if (type instanceof Type.PrimitiveType pt) {
@@ -281,6 +293,11 @@ public final class JvmLiteralEmitter {
     }
 
     static int storeVarOpcode(Type type) {
+        // D-NULL-INTENT: mesma simetria de loadVarOpcode/returnOpcode.
+        if (type instanceof Type.NullableType nt && nt.inner() instanceof Type.PrimitiveType pt0
+                && !Type.isVoid(pt0)) {
+            return ASTORE;
+        }
         if (type instanceof Type.NullableType nt) return storeVarOpcode(nt.inner());
         if (KofUi.isUiType(type) || KofMedia.isHandleType(type)) return ISTORE;
         if (type instanceof Type.PrimitiveType pt) {
@@ -296,6 +313,12 @@ public final class JvmLiteralEmitter {
     }
 
     static boolean isDoubleWidth(Type type) {
+        // D-NULL-INTENT: mesma simetria de TypeMetrics.isDoubleWidth —
+        // Nullable(primitivo) é referência (1 slot), nunca categoria-2.
+        if (type instanceof Type.NullableType nt && nt.inner() instanceof Type.PrimitiveType pt0
+                && !Type.isVoid(pt0)) {
+            return false;
+        }
         if (type instanceof Type.NullableType nt) return isDoubleWidth(nt.inner());
         if (type instanceof Type.PrimitiveType pt) {
             return "long".equals(pt.name()) || "Long".equals(pt.name()) ||
