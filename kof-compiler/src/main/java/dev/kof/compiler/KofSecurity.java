@@ -51,6 +51,18 @@ public final class KofSecurity {
 
     record SecCall(String function, Type returnType, List<Type> parameterTypes) {}
 
+    /** X10 fatia 2: membros por namespace de segurança (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case-literals do staticMethod abaixo. */
+    static java.util.Map<String, List<String>> functions() {
+        return java.util.Map.of(
+                "passwords", List.of("hash", "verify", "needsRehash"),
+                "crypto", List.of("sha256", "sha512", "hmacSha256", "encryptAesGcm", "decryptAesGcm", "encryptChacha20", "decryptChacha20", "randomHex", "randomInt"),
+                "jwt", List.of("create", "verify", "secret"),
+                "secrets", List.of("get", "redact"),
+                "security", List.of("constantTimeEquals", "randomHex", "redact", "randomInt", "csrfToken", "csrfValid", "corsAllowed", "cspHeader", "hstsHeader", "contentTypeOptionsHeader", "frameHeader", "referrerHeader", "rateLimit", "sessionCreate", "sessionGet", "sessionDestroy", "apiKeyGenerate", "apiKeyValid", "cookieSet", "cookieGet"),
+                "auth", List.of("secret", "token", "authenticated", "claims", "user", "hasRole", "hasPermission", "resourceServer", "resourceServerVerify"));
+    }
+
     /**
      * Resolves a call in a security namespace. Returns null when the call is
      * not part of the API (the analyzer reports an unknown method).

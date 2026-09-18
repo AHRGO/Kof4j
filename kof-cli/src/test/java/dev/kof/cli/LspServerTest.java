@@ -413,6 +413,21 @@ class LspServerTest {
                 "nao-inventar membros p/ prefixo estranho: " + items);
     }
 
+    /** X10 fatia 2: dispatch próprio também completado (time/db/security). */
+    @Test
+    void completionSlice2Namespaces() throws Exception {
+        List<String> t = completionAt("time.", 0, 5).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertTrue(t.containsAll(List.of("sleep", "now", "interval", "daysBetween")),
+                "time.* faltando: " + t);
+        List<String> d = completionAt("db.", 0, 3).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertEquals(List.of("connect", "close", "transaction"), d);
+        List<String> c = completionAt("crypto.", 0, 7).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertTrue(c.contains("sha256") && c.contains("hmacSha256"), "crypto: " + c);
+    }
+
     /** Fora do ponto, o completion de palavras/chaves existente nao regride. */
     @Test
     void completionStillOffersKeywordsAndVars() throws Exception {

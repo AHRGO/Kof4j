@@ -84,8 +84,10 @@ class StdCatalogTest {
                 "KofUuid", "KofRandom", "KofRng"));
         assertEquals(dispatched, catalogClasses,
                 "dispatch do KofStd mudou sem atualizar o catálogo");
-        assertEquals(7, StdCatalog.namespaces().size(), StdCatalog.namespaces().toString());
-        for (String ns : List.of("math", "strings", "encoding", "net", "uuid", "random", "rng")) {
+        assertEquals(18, StdCatalog.namespaces().size(), StdCatalog.namespaces().toString());
+        for (String ns : List.of("math", "strings", "encoding", "net", "uuid", "random",
+                "rng", "time", "http", "db", "cache", "process", "passwords", "crypto",
+                "jwt", "secrets", "security", "auth")) {
             assertTrue(StdCatalog.isNamespace(ns), ns);
         }
     }
@@ -106,13 +108,165 @@ class StdCatalogTest {
                 }
             }
         }
-        for (String ns : StdCatalog.namespaces()) {
+                for (String ns : List.of("math", "strings", "encoding", "net",
+                "uuid", "random", "rng")) {
             for (String fn : StdCatalog.membersOf(ns)) {
                 boolean ok = false;
                 for (List<Type> sh : shapes) {
                     if (KofStd.staticMethod(ns, fn, sh) != null) { ok = true; break; }
                 }
-                assertTrue(ok, ns + "." + fn + " não resolve no typer — catálogo inventado?");
+                assertTrue(ok, ns + "." + fn + " não resolve no KofStd \u2014 catálogo inventado?");
+            }
+        }
+    }
+    // ── X10 fatia 2: dispatch próprio (time/http/db/cache/process/security) ──
+
+    /** switch-block do anchor dado dentro de um corpo de método (brace-match). */
+    private static String switchBlock(String body, String anchor) {
+        int i = body.indexOf(anchor);
+        assertTrue(i >= 0, "sem " + anchor);
+        int j = body.indexOf('{', i);
+        int depth = 0, k = j;
+        while (true) {
+            char c = body.charAt(k);
+            if (c == '{') depth++;
+            else if (c == '}') {
+                depth--;
+                if (depth == 0) break;
+            }
+            k++;
+        }
+        return body.substring(j, k + 1);
+    }
+
+    /**
+     * Nomes de label de `case` NO TOPO do switch (profundidade 1): varre
+     * `case "a", "b",` multi-linha (remove comentários) sem colher `case`
+     * de switches internos (ex.: checagens de tipo aninhadas no db/seg).
+     */
+    private static List<String> topCaseNames(String blk) {
+        blk = blk.replaceAll("//[^\n]*", "");
+        List<String> out = new ArrayList<>();
+        int d = 0, i = 0, n = blk.length();
+        while (i < n) {
+            char c = blk.charAt(i);
+            if (c == '{') d++;
+            else if (c == '}') d--;
+            else if (d == 1 && blk.startsWith("case ", i)) {
+                int j = i + 5;
+                while (true) {
+                    java.util.regex.Matcher m =
+                            Pattern.compile("\\s*\"(\\w+)\"").matcher(blk.substring(j));
+                    if (!m.find()) break;
+                    out.add(m.group(1));
+                    j += m.end();
+                    java.util.regex.Matcher c2 = Pattern.compile("\\s*,").matcher(blk.substring(j));
+                    if (c2.find() && c2.start() == 0) { j += c2.end(); continue; }
+                    break;
+                }
+                int arrow = blk.indexOf("->", j);
+                i = arrow >= 0 ? arrow + 2 : j;
+                continue;
+            }
+            i++;
+        }
+        return new ArrayList<>(new LinkedHashSet<>(out));
+    }
+
+    @Test
+    void slice2ListsMatchTyperSources() throws Exception {
+        assertEquals(topCaseNames(switchBlock(
+                methodBody(source("KofTime"), "isTimeMethod(String name)"), "switch (name)")),
+                KofTime.functions(), "time");
+        assertEquals(topCaseNames(switchBlock(
+                methodBody(source("KofHttp"), "isHttpMethod(String name)"), "switch (name)")),
+                KofHttp.functions(), "http");
+        assertEquals(topCaseNames(switchBlock(
+                methodBody(source("KofCache"), "isCacheMethod(String name)"), "switch (name)")),
+                KofCache.functions(), "cache");
+        assertEquals(topCaseNames(switchBlock(
+                methodBody(source("KofDb"),
+                        "staticCall(String name, List<Type> argTypes, boolean typed)"),
+                "switch (name)")),
+                KofDb.functions(), "db");
+        assertEquals(List.of("run"), KofProcess.functions(), "process");
+    }
+
+    @Test
+    void securityCatalogMatchesNestedSwitches() throws Exception {
+        String body = methodBody(source("KofSecurity"),
+                "staticMethod(String namespace, String name, List<Type> argTypes)");
+        Matcher outer = Pattern.compile("case \"(\\w+)\" -> switch \\(name\\)")
+                .matcher(body);
+        Set<String> seen = new LinkedHashSet<>();
+        while (outer.find()) {
+            String ns = outer.group(1);
+            seen.add(ns);
+            int at = body.indexOf("case \"" + ns + "\" -> switch (name)");
+            List<String> inSource = topCaseNames(switchBlock(body.substring(at), "switch (name)"));
+            assertEquals(inSource, KofSecurity.functions().get(ns),
+                    "security ns " + ns);
+        }
+        // o catálogo de segurança e o NAMESPACES do typer cobrem o mesmo conjunto
+        assertEquals(new LinkedHashSet<>(KofSecurity.NAMESPACES), seen,
+                "NAMESPACES != chaves dos switches");
+        for (String ns : seen) {
+            assertTrue(StdCatalog.isNamespace(ns), "no catálogo: " + ns);
+            assertEquals(KofSecurity.functions().get(ns), StdCatalog.membersOf(ns));
+        }
+    }
+
+    @Test
+    void slice2MembersResolveInRealDispatch() {
+        List<Type> ts = List.of(Type.PrimitiveType.INT, BuiltinTypes.STRING,
+                Type.PrimitiveType.BOOL, Type.PrimitiveType.DOUBLE,
+                Type.PrimitiveType.LONG, Type.PrimitiveType.CHAR,
+                Type.UnknownType.UNKNOWN);
+        List<List<Type>> shapes = new ArrayList<>();
+        shapes.add(List.of());
+        for (Type a : ts) {
+            shapes.add(List.of(a));
+            for (Type b : ts) {
+                shapes.add(List.of(a, b));
+                for (Type c : ts) {
+                    shapes.add(List.of(a, b, c));
+                    for (Type e : ts) shapes.add(List.of(a, b, c, e));
+                }
+            }
+        }
+        // aridades 5/6 alvo (time.daysBetween = INTx6; calendário/hex shapes):
+        for (int n = 5; n <= 8; n++) {
+            for (Type fill : ts) {
+                List<Type> sh = new ArrayList<>();
+                for (int k = 0; k < n; k++) sh.add(fill);
+                shapes.add(sh);
+            }
+        }
+        for (String fn : KofTime.functions()) {
+            assertTrue(shapes.stream().anyMatch(sh -> KofTime.staticCall(fn, sh) != null),
+                    "time." + fn);
+        }
+        for (String fn : KofHttp.functions()) {
+            assertTrue(shapes.stream().anyMatch(sh -> KofHttp.staticCall(fn, sh) != null),
+                    "http." + fn);
+        }
+        for (String fn : KofCache.functions()) {
+            assertTrue(shapes.stream().anyMatch(sh -> KofCache.staticCall(fn, sh) != null),
+                    "cache." + fn);
+        }
+        for (String fn : KofDb.functions()) {
+            assertTrue(shapes.stream().anyMatch(sh ->
+                            KofDb.staticCall(fn, sh, true) != null
+                                    || KofDb.staticCall(fn, sh, false) != null),
+                    "db." + fn);
+        }
+        assertTrue(shapes.stream().anyMatch(sh -> KofProcess.runCall(sh) != null),
+                "process.run");
+        for (String ns : KofSecurity.functions().keySet()) {
+            for (String fn : KofSecurity.functions().get(ns)) {
+                assertTrue(shapes.stream().anyMatch(sh ->
+                                KofSecurity.staticMethod(ns, fn, sh) != null),
+                        ns + "." + fn);
             }
         }
     }
