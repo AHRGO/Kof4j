@@ -42,4 +42,59 @@ final class LspProject {
             return null;
         }
     }
+
+    /**
+     * workspace/symbol (X10 fatia 6): símbolos dos buffers abertos + arquivos
+     * .kf não-abertos da árvore (mesmo walker das fatias 4–5). Filtro
+     * case-insensitive por substring; prefixo antes de substring (convenção
+     * LSP); desempate por nome e uri.
+     */
+    @SuppressWarnings("unchecked")
+    static java.util.List<Object> workspaceSymbols(
+            java.util.Map<String, String> buffers, String query) {
+        String q = query == null ? "" : query.toLowerCase(java.util.Locale.ROOT);
+        java.util.List<Object> out = new java.util.ArrayList<>();
+        java.util.Set<Path> seen = new java.util.HashSet<>();
+        for (java.util.Map.Entry<String, String> e : buffers.entrySet()) {
+            Path openPath = toPath(e.getKey());
+            if (openPath != null) seen.add(openPath.toAbsolutePath());
+            collect(out, e.getKey(), e.getValue(), q);
+        }
+        for (Path open : new java.util.ArrayList<>(seen)) {
+            for (Path f : siblings(open)) {
+                if (!seen.add(f.toAbsolutePath())) continue;
+                String txt = readOrNull(f);
+                if (txt == null) continue;
+                collect(out, f.toAbsolutePath().toUri().toString(), txt, q);
+            }
+        }
+        out.sort(java.util.Comparator
+                .comparingInt((Object o) -> rank((java.util.Map<String, Object>) o, q))
+                .thenComparing(o -> String.valueOf(((java.util.Map<String, Object>) o).get("name")))
+                .thenComparing(o -> {
+                    java.util.Map<String, Object> loc =
+                            (java.util.Map<String, Object>) ((java.util.Map<String, Object>) o).get("location");
+                    return String.valueOf(loc.get("uri"));
+                }));
+        return out;
+    }
+
+    private static int rank(java.util.Map<String, Object> sym, String q) {
+        String name = String.valueOf(sym.get("name")).toLowerCase(java.util.Locale.ROOT);
+        return name.startsWith(q) ? 0 : 1;
+    }
+
+    private static void collect(java.util.List<Object> out, String uri, String text, String q) {
+        for (LspSymbols.DocSymbol s : LspSymbols.documentSymbols(text)) {
+            if (!s.name().toLowerCase(java.util.Locale.ROOT).contains(q)) continue;
+            java.util.Map<String, Object> sym = new java.util.LinkedHashMap<>();
+            sym.put("name", s.name());
+            sym.put("kind", (long) s.kind());
+            java.util.Map<String, Object> loc = new java.util.LinkedHashMap<>();
+            loc.put("uri", uri);
+            loc.put("range", LspServer.rangeOf(text, s.start(), s.end()));
+            sym.put("location", loc);
+            out.add(sym);
+        }
+    }
 }

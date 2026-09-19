@@ -99,6 +99,7 @@ final class LspServer {
                 capabilities.put("renameProvider", Boolean.TRUE);
                 capabilities.put("documentFormattingProvider", Boolean.TRUE);
                 capabilities.put("documentSymbolProvider", Boolean.TRUE);
+                capabilities.put("workspaceSymbolProvider", Boolean.TRUE);
                 capabilities.put("codeActionProvider",
                         Map.of("codeActionKinds", List.of("source")));
                 Map<String, Object> result = new LinkedHashMap<>();
@@ -119,6 +120,7 @@ final class LspServer {
             case "textDocument/rename" -> rename(id, params);
             case "textDocument/formatting" -> formatting(id, params);
             case "textDocument/documentSymbol" -> documentSymbol(id, params);
+                case "workspace/symbol" -> workspaceSymbol(id, params);
             case "textDocument/codeAction" -> codeAction(id, params);
             default -> {  }
         }
@@ -437,6 +439,10 @@ final class LspServer {
     }
 
     @SuppressWarnings("unchecked")
+    private void workspaceSymbol(Object id, Map<String, Object> params) {
+        respond(id, LspProject.workspaceSymbols(openText, str(params.get("query"))));
+    }
+
     private void documentSymbol(Object id, Map<String, Object> params) {
         Map<String, Object> td = params.get("textDocument") instanceof Map<?, ?> p
                 ? (Map<String, Object>) p : Map.of();
@@ -529,7 +535,7 @@ final class LspServer {
         respond(id, result);
     }
 
-    private static Map<String, Object> rangeOf(String text, int start, int end) {
+    static Map<String, Object> rangeOf(String text, int start, int end) {
         Map<String, Object> s = positionPoint(text, start);
         Map<String, Object> e = positionPoint(text, end);
         Map<String, Object> range = new LinkedHashMap<>();

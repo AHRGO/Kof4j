@@ -456,6 +456,44 @@ class LspServerTest {
         assertTrue(uris.contains(dir.resolve("lib.kf").toAbsolutePath().toUri().toString()));
     }
 
+
+    /** X10 fatia 6: workspace/symbol une buffers + .kf irmãos não-abertos. */
+    @Test
+    void workspaceSymbolSpansProject(@TempDir Path dir) throws Exception {
+        String lib = "Int helper(Int x) { return x * 2 }\n";
+        String app = "record Box(Int w)\nmain() { println(helper(21)) }\n";
+        Files.writeString(dir.resolve("lib.kf"), lib);
+        Path appFile = dir.resolve("app.kf");
+        Files.writeString(appFile, app);
+        String appUri = appFile.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"workspace/symbol\",\"params\":{\"query\":\"\"}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> resp = byId(messages(out.toString(StandardCharsets.UTF_8)), 1);
+        @SuppressWarnings("unchecked")
+        List<Object> syms = (List<Object>) resp.get("result");
+        assertEquals(3, syms.size(), "Box+main (buffer) e helper (irmão no disco)");
+        java.util.Set<String> names = new java.util.HashSet<>();
+        for (Object o : syms) names.add(String.valueOf(((Map<?, ?>) o).get("name")));
+        assertEquals(java.util.Set.of("Box", "main", "helper"), names);
+        String libUri = dir.resolve("lib.kf").toAbsolutePath().toUri().toString();
+        for (Object o : syms) {
+            Map<?, ?> m = (Map<?, ?>) o;
+            Map<?, ?> loc = (Map<?, ?>) m.get("location");
+            if ("helper".equals(m.get("name"))) assertEquals(libUri, loc.get("uri"));
+        }
+        // filtro substring case-insensitive: "BOx" acha Box (prefixo) e nada mais
+        String reqF = req.replace("\"query\":\"\"", "\"query\":\"BOx\"");
+        ByteArrayOutputStream out2 = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(reqF))), out2).run();
+        @SuppressWarnings("unchecked")
+        List<Object> filt = (List<Object>) byId(messages(out2.toString(StandardCharsets.UTF_8)), 1).get("result");
+        assertEquals(1, filt.size());
+        assertEquals("Box", ((Map<?, ?>) filt.get(0)).get("name"));
+    }
+
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> completionAt(String text, long line, long ch) throws Exception {
         String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
