@@ -49,8 +49,23 @@ public final class CompilerTypes {
          }
          Type viaImports = qualifyViaImports(typeName, currentUnit, external);
          if (viaImports != null) return viaImports;
-         int lastDot = typeName.lastIndexOf('.');
-         if (lastDot > 0 && !typeName.contains("<") && !typeName.contains("/")) {
+        // §336: type-ref COM args (`x as List<Int>` em `as`/`instanceof`) chega
+        // inteiro aqui desde o fix do parser. `Type.of` ja parseia "Base<Args>"
+        // (usado nas decls); a qualificacao de imports so se aplica quando o
+        // base saiu cru (classe do usuario, nao alias builtin).
+        if (typeName.contains("<")) {
+            Type parsed = Type.of(typeName);
+            if (parsed instanceof Type.ClassType pc && pc.packageName().isEmpty()
+                    && !pc.typeArguments().isEmpty()) {
+                Type qualified = toType(pc.name(), currentUnit, external, allowBuiltinPins);
+                if (qualified instanceof Type.ClassType qc && !qc.packageName().isEmpty()) {
+                    return new Type.ClassType(qc.packageName(), qc.name(), pc.typeArguments());
+                }
+            }
+            return parsed;
+        }
+        int lastDot = typeName.lastIndexOf('.');
+        if (lastDot > 0 && !typeName.contains("<") && !typeName.contains("/")) {
              return new Type.ClassType(typeName.substring(0, lastDot),
                      typeName.substring(lastDot + 1), List.of());
          }

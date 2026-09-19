@@ -110,10 +110,12 @@ public final class SemExpressionTyper {
                         && !KofUi.isRouterNamespace(ie.name())
                         && !"Theme".equals(ie.name())
                         && !MemberResolver.isBuiltinTypeName(ie.name())
-                        // bug 127: operando de TIPO do cast `as` — `x as
-                        // () -> Int` vira IdentifierExpr com o type-ref
-                        // completo (não é variável/tipo declarado).
-                        && !(ie.name().startsWith("(") && ie.name().contains(" -> "))
+                        // bug 127/#336: operando de TIPO de `as`/`instanceof`
+                        // vira IdentifierExpr com o type-ref completo —
+                        // funcão (`() -> Int`), genericos (`List<Int>`),
+                        // array (`Int[]`), nullable (`Int?`). Nunca e
+                        // variavel/tipo declarado; toType cuida da resolucao.
+                        && !looksLikeTypeRefName(ie.name())
                         && !sa.allClasses().containsKey(ie.name())
                         // §134: nome de classe EXTERNA (Button.inflate,
                         // Greeter.hello) — o lowering (ExpressionMethodCall
@@ -553,6 +555,21 @@ public final class SemExpressionTyper {
         Type t = MemberResolver.qualifyViaImports(sa.unit(), name, sa.externalTypes());
         return t instanceof Type.ClassType ct && !ct.packageName().isEmpty()
                 && sa.externalTypes().knows(ct.internalName());
+    }
+
+    /**
+     * §336 (#459): um "identificador" com `&lt;...&gt;`, `[]` ou `?` so pode ter
+     * nascido do type-ref de `as`/`instanceof` (o lexer nao mistura esses
+     * caracteres em nomes) — Type.of/toType cuidam da resolucao. Espelha a
+     * isencao do tipo-funcao (bug 127) e o conservadorismo de
+     * MemberResolver.isUnresolvedSimpleType.
+     */
+    static boolean looksLikeTypeRefName(String name) {
+        if (name == null || name.isEmpty()) return false;
+        // bug 127: tipo-funcao `() -> Int` / `(Int) -> Bool`
+        if (name.startsWith("(") && name.contains(" -> ")) return true;
+        return (name.indexOf('<') >= 0 && name.endsWith(">"))
+                || name.endsWith("[]") || name.endsWith("?");
     }
 
     private static boolean isKofCollectionType(Type t) {

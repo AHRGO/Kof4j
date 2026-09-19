@@ -258,16 +258,10 @@ public final class JvmOpEmitter {
                 c.mv().visitVarInsn(ASTORE, kcs.localIndex());
             }
             case KofCheckCast cc -> {
-                Type castT = cc.type() instanceof Type.PrimitiveType pt ? TypeMetrics.boxedTypeFor(pt) : cc.type();
-                String type = castT instanceof Type.ClassType ct
-                        ? JvmTypeMapper.toInternalName(ct.packageName(), ct.name()) : "?";
-                c.mv().visitTypeInsn(CHECKCAST, type);
+                c.mv().visitTypeInsn(CHECKCAST, castTargetName(cc.type()));
             }
             case KofInstanceOf io -> {
-                Type checkT = io.type() instanceof Type.PrimitiveType pt ? TypeMetrics.boxedTypeFor(pt) : io.type();
-                String type = checkT instanceof Type.ClassType ct
-                        ? JvmTypeMapper.toInternalName(ct.packageName(), ct.name()) : "?";
-                c.mv().visitTypeInsn(INSTANCEOF, type);
+                c.mv().visitTypeInsn(INSTANCEOF, castTargetName(io.type()));
             }
             case KofNewArray na -> {
                 if (na.elementType() instanceof Type.ClassType ct) {
@@ -298,6 +292,25 @@ public final class JvmOpEmitter {
         Type t = base;
         for (int i = 0; i < n; i++) t = new Type.ArrayType(t);
         return t;
+    }
+
+    /**
+     * §336 (#459): alvo de CHECKCAST/INSTANCEOF em nome interno válido.
+     * Array (`x as Int[]`, `xs instanceof Int[]`) chegava aqui cru desde o
+     * type-ref do parser e caía no fallback "?" → NoClassDefFoundError em
+     * runtime. Descriptor de array ja e nome-interno ([I, [Ljava/lang/X;);
+     * Nullable olha o inner (primitivo boxa, referencia segue).
+     */
+    private static String castTargetName(Type t) {
+        Type x = t instanceof Type.NullableType nt ? nt.inner() : t;
+        if (x instanceof Type.PrimitiveType pt) x = TypeMetrics.boxedTypeFor(pt);
+        if (x instanceof Type.ClassType ct) {
+            return JvmTypeMapper.toInternalName(ct.packageName(), ct.name());
+        }
+        if (x instanceof Type.ArrayType) {
+            return JvmTypeMapper.toDescriptor(x);
+        }
+        return "?";
     }
 
     private static void emitBinary(MethodVisitor mv, KofBinary kb) {
