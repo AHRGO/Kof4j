@@ -22,6 +22,8 @@
 > | **§304 🟡 ABERTO 18/09 (catalogado pela lane `.22`, dono = lane nativa/mapset)** | `Map.get` do nativo p/ chave ausente retorna `0` silencioso vs `null` dos outros 3 alvos — divergência do contrato `V?` do #438 |
 > | **§295 ✅ FECHADO 18/09 (face (a) `.18` atalho de condição; face (b) `.22` cluster escritor — `TypeMetrics.isNullablePrimitive` + `StatementLowerer`/`ExpressionAssignmentLowerer`/`CompilerEmission2`, `NullablePrimitiveContractE2ETest` 26/26 + CLI 4/4)** | O cluster de ESCRITA do slot boxed `Nullable(primitivo)` (Commit B): init literal / default / atribuição / composta / incremento guardavam primitivo cru em slot ASTORE → `VerifyError` no LOAD da classe (só-JVM; o launcher mascara de "JavaFX"). Faces leitoras → §306 |
 > | **§306 🟡 ABERTO 18/09 (catalogado pela lane compilador `.22` ao fechar o cluster escritor §295(b), dono `.22`)** | Faces LEITORAS de `Nullable(Bool)` deixadas pelo Commit B: truthiness JVM `if (b)` → `if_icmpne` sobre `java/lang/Boolean` = `VerifyError`; e o **Script** imprime local `Bool?` como `1/0` (JVM/JS imprimem `true/false`; medido no jar pré-fix — pré-existente, não regressão) |
+> | **§307 🟡 OPEN 18/09 (catalogado pela lane tooling/cli `.15`, dono = compilador `.22`)** | gate CRÍTICO `check_500`: `StatementLowerer.java` 605 ≥ 600 (baseline 585 cresceu +20 pelo §295(b) em `7e35f177`); split estrutural = decisão da lane dona; após `82a09c35` o CI fica vermelho SÓ neste passo (compilação restaurada) |
+> | **§307 🟡 ABERTA 18/09 (catalogada pela lane tooling/cli `.15`, dona = compilador `.22`)** | gate CRÍTICO `check_500` quebrado: `StatementLowerer.java` **605** ≥ 600 (baseline 585 cresceu +20 no `7e35f177`/cluster escritor §295(b)); split = refactor estrutural da lane dona do arquivo; desde `82a09c35` o CI pisa vermelho SÓ no step Gate≤500 (compilação restaurada) |
 > | **§300 ✅ CORRIGIDO 18/09 (lane UI/style, dono = 192.168.100.17)** | O re-render do KofJS vazava a subárvore anterior inteira para `window.__kofNodes` a cada escrita de `state`: `kofUiRender` soltava do DOM só o elemento RAIZ antigo, enquanto os construtores de widget seguem alocando handles novos — crescimento silencioso e ilimitado do registro (invisível na página). Segunda face: ações de `Button` descartados ficavam para sempre em `window.__kofActions`. Fix = chamar o `kofUiRemoveSubtree` existente (poda de DOM + registro) na troca de raiz + apagar a entrada correspondente de `__kofActions`. Medido pré-fix 1 nó após mount / 6 após 5 re-renders; pós-fix fica 1. Prova: `ComponentCoreE2ETest.rerenderPrunesPreviousSubtreeFromRegistry` + `rerenderReleasesDiscardedButtonActions` (ambos VERMELHOS pré-fix), suíte 21/21. |
 > | **§301 ✅ CORRIGIDO 18/09 (lane UI/style, dono = 192.168.100.17)** | `Store.unsubscribe` do KofJS era no-op silencioso: `kofUiStoreSubscribe` guardava o WRAPPER (`fn.invoke.bind(fn)`, objeto novo por chamada) mas o `unsubscribe` buscava o handle RAW com `indexOf` → nunca casava → inscritos desinscritos seguiam recebendo todo `set()` para sempre. Conserto: subs guardadas como pares `{raw,f}`; unsubscribe casa `raw` por identidade e remove uma ocorrência. Prova: `ComponentCoreE2ETest.storeUnsubscribeStopsDelivery` (VERMELHO pré-fix `n=1,n=2,n=3,`, medido), suíte 22/22. |
 > | **§302 🟡 ABERTO 18/09 (achado pela lane kofscript, dono = 192.168.100.17)** | `List`/`Set`/`Map` crus como tipo declarado de CAMPO viram `ClassType("",nome)` (pin pulado pelo registro builtin na `sa.getClass`) → `.kf` compilado morre `NoSuchFieldError`, `.ks` morre vazamento reflection `InaccessibleObjectException` — quebra silenciosa em runtime, R6. Workaround: `List<T>` element-typed (idioma do corpus; `ScriptGlobalTypes` agora o infere p/ globais sem anotação no script). Fix de causa = unidade compiler-core (semântica do guard de pin, todos os backends). |
@@ -10371,3 +10373,42 @@ Compila limpo no JVM; ao rodar morre no LOAD da classe com `java.lang.VerifyErro
 **Face (b) — representação no Script.** `Bool? b = true; println(b)` → o Script imprime `1` (o JVM imprime `true`, o JS/node imprime `true`); `Bool b = true` puro imprime `true` nos três (medido: runner reflexivo). Os caminhos `normalizeReturn`/coleção do interpretador canonizam `Boolean ↔ Integer 0/1` (`KofInterpreterValues:25-42`, §108), mas um **slot local `Nullable(Bool)`** mantém a forma int → `println` imprime o `1/0` cru; o segundo println (`b = false`) imprime `0`. Divergência cross-target num simples local `Bool?` (regra 5 da Freeze). Área da raiz: a representação `Nullable(Bool)` do Script vs o Bool puro — decidir junto com a face (a) (unbox/box nos mesmos chokepoints).
 **Por que NÃO consertada aqui.** A face (a) é mudança de LEITURA no caminho de condição compartilhado (tocar a semântica do `emitConditionalJump` = adjacente a contrato, regra 6: precisa do mesmo gate de unbox cuidadoso que as faces do §295 ganharam — unidade própria com pins Q0); a face (b) é a representação do interpretador, não o cluster JVM. Ambas têm reproduções mínimas acima; o arquivo de testes do §295(b) carrega os pins JVM (`nullablePrimBoolWriterFacesStoreBoxed` só-escrita, pinado no JVM com o ponteiro §306 no comentário). Relacionado: §295, §294, #278, #438, §108.
 
+## §307 — gate CRÍTICO `check_500` quebrado: `StatementLowerer.java` em 605 linhas (baseline 585 cresceu +20 no `7e35f177`, cluster §295(b))
+
+**Descoberto:** 18/09 ~23:40 UTC (lane tooling/cli `.15`, triagem do CI do tip após restaurar a compilação em `82a09c35`) — o job Build+Tests falha no step "Gate ≤500 linhas/classe": `scripts/check_500.sh` aponta `FALHOU — kof-compiler/src/main/java/dev/kof/compiler/StatementLowerer.java` (605 ≥ 600 = CRÍTICO pela regra do gate de 13/09). O baseline trava o arquivo em **585**; o cluster escritor §295(b) (`vdBoxT`/`nullablePrimSlot` no `emitStatementInner`) somou +20 sem split.
+
+**Repro:** `bash scripts/check_500.sh` → linha `FALHOU .../StatementLowerer.java (605)`; CI: job Build+Tests, step "Gate ≤500" (vermelho desde `7e35f177`, mesmo com o fix de compilação `82a09c35`).
+
+**O que falta:** split de `emitStatementInner` (~590 linhas estáticas) por responsabilidade — costura natural: o bloco de declaração/inicialização de locais com erasure-boxing `Int`/`Long` + slot primitivo `Nullable(primitivo)` (§295(b)) → ex.-`StatementLowererLocalBoxing.java` (nome = o que contém, regra 7), arquivo ≤500, linha removida do baseline com `./scripts/check_500.sh --update-baseline`.
+
+**Por que NÃO foi consertado aqui:** o arquivo é da lane compilador (`.22`), recém-tocado por ela mesma no §295(b) (regra de ouro: nunca dois agentes no mesmo arquivo gigante; "coordene antes"). O split é refactor estrutural (regra 3 do freeze) — a prova é a suíte + golden, e a costura correta pertence a quem entende os lowering. Este commit restaurou a **compilação** (removi meu `escapeLiteral` duplicado que a resolução de conflito da mantenedora em `7e35f177` deixou para trás — o build estava NÃO-COMPILÁVEL e o Gate≤500 + IoE2E×3OS + Native cross×2 eram cascata de compilação); o **gate** fica para a dona.
+
+**Status:** 🟡 ABERTA — dona = lane compilador `.22` (ou decisão da mantenedora de tolerar 600–605 no baseline — decisão dela, não da agent).
+
+
+## §307 — gate CRÍTICO `check_500` quebrado: `StatementLowerer.java` com 605 linhas (baseline 585 cresceu +20 pelo cluster §295(b) de `7e35f177`)
+
+**Descoberto:** 18/09 ~23:40 UTC (lane tooling/cli `.15`) — o CI dos tips `7e35f177`/`82a09c35`
+falha no passo "Gate ≤500 linhas/classe": `check_500.sh` aponta
+`kof-compiler/src/main/java/dev/kof/compiler/StatementLowerer.java` = **605 ≥ 600 = CRÍTICO**.
+O baseline trava o arquivo em **585**; o cluster escritor §295(b) (bloco
+`nullablePrimSlot`/`vdBoxT` dentro de `emitStatementInner`) somou +20 linhas sem split.
+
+**Repro:** `bash scripts/check_500.sh` → `FALHOU .../StatementLowerer.java`. CI: job
+Build+Tests, passo "Gate ≤500" (vermelho desde `7e35f177`; os outros vermelhos do run eram
+cascata de compilação — a minha duplicata `escapeLiteral` no KofFormatter foi removida em
+`82a09c35`).
+
+**O que falta:** split de `emitStatementInner` (método estático único, ~590 linhas) por
+responsabilidade — costura natural: declaração/inicialização de locais com erasure-boxing
+`Int`/`Long` e o ramo primitivo `Nullable(primitivo)` do §295(b) →
+`StatementLowererLocalBoxing.java` (nome = o que contém, regra 7), ficando ≤500 e sem
+entrada nova no baseline.
+
+**Por que NÃO conserto aqui:** o arquivo pertence à lane compilador (`.22`), recém-mexido
+por ela no §295(b) — golden rule: nunca dois agentes no mesmo arquivo gigante; o split é
+refactor estrutural (regra 3 da freeze) e a costura é decisão de quem conhece o lowerer.
+Isto restaura a COMPILAÇÃO (duplicata removida) mas não toca o gate: o CI fica vermelho
+SÓ no passo Gate≤500 até a dona fazer o split.
+
+**Status:** 🟡 OPEN — owner = lane compilador `.22`.
