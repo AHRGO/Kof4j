@@ -467,7 +467,13 @@ public final class SemExpressionTyper {
                     lambdaScope.define(new SymbolTable.ParameterSymbol(p.name(), paramType, idx));
                     idx++;
                 }
+                // #333: o corpo de LAMBDA inferiu o tipo pelo contexto (o `-> expr`
+                // vira ReturnStmt sintetico no LambdaParser:142) — nunca herda a
+                // rejeicao de valor da funcao envolvente.
+                boolean prevEv = sa.currentExplicitVoid;
+                sa.currentExplicitVoid = false;
                 StatementAnalyzer.analyzeBody(sa, le.body(), lambdaScope, Type.UnknownType.UNKNOWN);
+                sa.currentExplicitVoid = prevEv;
                 Type returnType = Type.UnknownType.UNKNOWN;
                 boolean hasReturn = false;
                 for (StatementNode s : le.body()) {

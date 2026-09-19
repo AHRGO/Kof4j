@@ -54,6 +54,10 @@ public class SemanticAnalyzer {
     /** DD-02/#42: dentro de corpo de construtor? `this.campo =` em record só
      *  é legal no construtor (JVMS: final field init); métodos → SEM038. */
     boolean inConstructor;
+    // #333: true durante corpo cujo `return <valor>` e SEMPRE erro (void
+    // explicito ou funcao top-level sem tipo; a inferencia bug-26 so vale p/ METODOS,
+    // onde SA e codegen mudam de tipo juntos — §130).
+    boolean currentExplicitVoid;
     /** Pacote efetivo por declaração (multi-pacote num módulo), vindo do driver. */
     private java.util.function.Function<AstNode, String> declarationPackageLookup;
 
@@ -339,7 +343,10 @@ public class SemanticAnalyzer {
         // continuam visíveis via resolve() pai-acima; locals não vazam entre
         // passes (só o pinning de tipo SG-008 é por-pass, e o codegen lê
         // expressionTypes, não estes escopos).
+        boolean prevEvCtor = currentExplicitVoid;
+        currentExplicitVoid = true; // #333: constructor nunca devolve valor
         StatementAnalyzer.analyzeBody(this, ctor.body(), ctorScope.enterScope(), Type.PrimitiveType.VOID);
+        currentExplicitVoid = prevEvCtor;
         inConstructor = prevCtor;
         currentScope = prevScope;
     }
@@ -525,6 +532,12 @@ public class SemanticAnalyzer {
             funcScope.define(new SymbolTable.TypeParameterSymbol(tp));
         }
         Type returnType = resolveType(func.returnType(), funcScope);
+        // #333 (medido no tip): funcao top-level declarada VOID ou SEM TIPO com
+        // `return <valor>` = FunctionLowering emite descriptor inferido (()I)
+        // enquanto o symbol/call-site esta ()V → NoSuchMethodError silencioso em
+        // runtime (R6). `main() { return 5 }` idem (JVM exige main()V). Metodos
+        // ficam de fora: la a reinferencia bug-26 atualiza os DOIS lados (§130).
+        boolean funcValueReturnRejected = Type.isVoid(returnType) || Type.isUnknown(returnType);
         int idx = 0;
         for (FormalParameterNode param : func.parameters()) {
             Type paramType = Type.of(param.type());
@@ -536,7 +549,10 @@ public class SemanticAnalyzer {
         // bug 26: função top-level com tipo não-void pode terminar sem return
         ReturnPathAnalyzer.check(this, func.body(), returnType, func.position(),
                 "function '" + func.name() + "'");
+        boolean prevExplicitVoid = currentExplicitVoid;
+        currentExplicitVoid = funcValueReturnRejected;
         StatementAnalyzer.analyzeBody(this, func.body(), funcScope, returnType);
+        currentExplicitVoid = prevExplicitVoid;
         currentScope = prevScope;
         currentFunctionName = prevFunction;
     }
