@@ -71,6 +71,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `Map<String, List<Int>>` faces rejected; same-args/inference/raw/`Object`/#400 controls
     accepted).
 
+  - **`kof test` gains `--timeout <sec>` (0.4.0 line, X8-A / §G6 "timeouts")** — a hanging
+    test program used to hang the whole runner (the harness waited forever on the child
+    process; CI froze). With `--timeout 3` the JVM/Native child is killed at the deadline
+    and reported as an honest `FAIL <file>` (`timeout after 3s — process killed`) with
+    `0 passed, 1 failed` and exit 1. The JS face runs in-process, so there the timeout is
+    best-effort (the CLI says so instead of lying). Without the flag the historical
+    behavior is untouched (additive, zero regression). Proof: `CmdTestTimeoutTest` (3 cases:
+    infinite loop killed in seconds, fast suite passes under the limit, garbage/zero/missing
+    values rejected with R6 strictness).
+
   - **`return <value>` in a `void`/untyped/constructor is now `SEM093` (0.4.0 line,
     D-DECL-RETURN, #333)** — a top-level function that declares `void` — **or declares no
     type at all** — can no longer `return <value>`, and neither can a constructor. Before,

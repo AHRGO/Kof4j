@@ -72,6 +72,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     aninhada `Map<String, List<Int>>` rejeitadas; controles mesmos-args/inferencia/raw/`Object`/#400
     aceitos).
 
+  - **`kof test` ganha `--timeout <seg>` (linha 0.4.0, X8-A / §G6 "timeouts")** — um programa
+    de teste que travava travava o runner inteiro (o harness esperava o filho para sempre;
+    CI congelava). Com `--timeout 3` o filho JVM/Native é morto no prazo e reportado como
+    `FAIL <arquivo>` honesto (`timeout after 3s — process killed`), com `0 passed, 1 failed`
+    e exit 1. A face JS roda in-process, então lá o timeout é best-effort (o CLI diz isso
+    em vez de mentir). Sem a flag o comportamento histórico fica intacto (aditivo, zero
+    regressão). Prova: `CmdTestTimeoutTest` (3 casos: loop infinito morto em segundos, suíte
+    rápida passa sob o limite, valores lixo/zero/sem valor recusados com estriteza R6).
+
   - **`return <valor>` em `void`/sem-tipo/construtor agora é `SEM093` (linha 0.4.0,
     D-DECL-RETURN, #333)** — uma função top-level que declara `void` — **ou não declara
     tipo algum** — não pode mais `return <valor>`, e construtor também não. Antes, o
