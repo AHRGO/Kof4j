@@ -71,18 +71,17 @@ if [ "$#" -eq 0 ]; then
   set -- -o test -Dmaven.test.failure.ignore=true
 fi
 echo "safe-suite: mvn $*  ->  $LOG"
-# clean de reator INTEIRO antes de qualquer coisa: a corrida de stub ECJ nao e
-# so do kof-compiler — em 19/09 19:1x a suíte limpa pegou KofJsRunner (runtime)
-# contaminado no meio da corrida ("Unresolved compilation problems: Arena.
-# allocateFrom" = API que o JRE 21 do JDT nao tem). rm pontual nao basta.
-CLEAN_ARGS=()
-for a in "$@"; do
-  case "$a" in
-    -o|--offline) CLEAN_ARGS+=("-o") ;;
-  esac
-done
-mvn "${CLEAN_ARGS[@]+"${CLEAN_ARGS[@]}"}" clean -q >"$LOG.clean" 2>&1
+# Limpeza SEM o maven-clean-plugin: em 19/09 19:3x o `mvn -o clean` FALHOU
+# silenciosamente (maven-shared-utils ausente no .m2 + offline) e a suíte rodou
+# sobre os STUBS ECJ que o JDT LS escreveu às 17:45 (JRE 21 da extensão não tem
+# Arena.allocateFrom -> classe-fantoche "Unresolved compilation problems"); o
+# build incremental do javac pulou os .class "mais novos que o fonte" e o
+# surefire executou o stub. rm -rf no filesystem não depende de plugin nenhum.
+STUBS=$(grep -rl "Unresolved compilation problem" */target/classes 2>/dev/null | wc -l)
+[ "$STUBS" -gt 0 ] && echo "safe-suite: $STUBS .class contaminado(s) por stub ECJ — removendo targets" >&2
+rm -rf */target/classes */target/test-classes
 mvn "$@" >"$LOG" 2>&1
+RC=$?
 RC=$?
 
 # watchdog pós-execução: se a extensão congelou pings durante a corrida, limpa

@@ -49,7 +49,9 @@ var flow   = dag(listOf(build, image))  // dag(...) takes listOf — Kof has no 
 var report = flow.run()                 // Report: succeeded/failed/skipped/errors,
                                         // allOk(), summary()
 
-// 2.1.3 bundle (NOT shipped — the chain that will exist):
+// 2.1.3 bundle (SHIPPED 19/09 — the chain sketched here landed; see §5. Historical
+// sketch kept per rule 8 — the design shifted at landing: `schedule` delegates to
+// `scheduler.at`; checkpoint/supervision became separate slices 3a/3b):
 //   flow.retry(...).checkpoint(...).deadLetter(...); flow.schedule("0 3 * * *")
 ```
 
@@ -186,7 +188,9 @@ Owner: **lane `.18`** (assigned by the 19/09 maintainer greenlight).
 - **2.1.4 [docs]** ✅ DONE 19/09 (same session as 2.1.2) — idiom doc
   `docs/stdlib/workflow.md` (+PT), `backend-parity` matrix row + 19/09(2) delta (EN+PT),
   tracker 2.1 `🔵→🟡` and 2.5/2.6 `🔵→⏳` (EN+PT), this file promoted out of `future/`
-  (`a71a4f51`). Residual queue: **2.1.3 only** (the add-on bundle).
+  (`a71a4f51`). Plan queue **CLOSED 19/09**: 2.1.3 landed in full (all five faces,
+`WorkflowE2ETest` 20/20) — what remains are only the catalogued honest gaps (Native
+`CRON001`/`ORM001`) and the `kof workflow run` surface decision (§2.6, maintainer).
 
 ## 6. Open questions (maintainer decisions — do NOT resolve in code)
 **All four ANSWERED 19/09 by the maintainer poll** (re-create via the same multi-choice

@@ -49,7 +49,9 @@ var flow   = dag(listOf(build, image))  // dag(...) recebe listOf — Kof não t
 var report = flow.run()                 // Report: succeeded/failed/skipped/errors,
                                         // allOk(), summary()
 
-// Bundle 2.1.3 (NÃO entregue — a cadeia que vai existir):
+// Bundle 2.1.3 (ENTREGUE 19/09 — a cadeia desenhada aqui landou; ver §5. Esboço
+// histórico mantido por regra 8 — o desenho mudou no landing: `schedule` delega a
+// `scheduler.at`, checkpoint/supervisão viraram faces separadas 3a/3b):
 //   flow.retry(...).checkpoint(...).deadLetter(...); flow.schedule("0 3 * * *")
 ```
 
@@ -167,7 +169,9 @@ Dono: **lane `.18`** (atribuído pelo greenlight da mantenedora em 19/09).
 - **2.1.4 [docs]** ✅ FEITO 19/09 (mesma sessão do 2.1.2) — doc de idiomática
   `docs/stdlib/workflow.pt_BR.md` (+EN), linha na matriz `backend-parity` + delta 19/09(2)
   (EN+PT), tracker 2.1 `🔵→🟡` e 2.5/2.6 `🔵→⏳` (EN+PT), este arquivo promovido para fora
-  de `future/` (`a71a4f51`). Fila residual: **só 2.1.3** (o bundle de add-ons).
+  de `future/` (`a71a4f51`). Fila do plano **ENCERRADA 19/09**: 2.1.3 landou por completo (as cinco
+faces, `WorkflowE2ETest` 20/20) — sobram só os gaps honestos catalogados (Native `CRON001`/`ORM001`)
+e a decisão de superfície do `kof workflow run` (§2.6, mantenedora).
 
 ## 6. Questões abertas (decisões da mantenedora — NÃO resolver em código)
 **As quatro RESPONDIDAS em 19/09 pela enquete da mantenedora** (recriar via a mesma decisão
