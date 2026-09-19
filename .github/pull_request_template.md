@@ -28,6 +28,23 @@ Fixes #
 
 ---
 
+## 📐 KOF-First Contract (`D-KOF-FIRST`)
+<!-- Every change answers the four gates below. "Language X does it this way" is never a contract source. -->
+**Valid Kof reproducer** (the snippet that exercises the change):
+
+```kof
+
+```
+
+- **Contract source** (DECISIONS.md entry, normative doc, conformance/golden test, or parity matrix) that defines the expected behavior:
+- **RED before the production change** — target(s), expected by the Kof contract, actual:
+- **Root cause** (not the symptom):
+- **Classification** (`Real bug` / `Target divergence` / `Real gap` / `Design request` / `Not-valid` / `Contract ambiguity`):
+- **Does this change the Kof surface?** If yes, the maintainer's decision authorizing it (rule 6) — a new accepted grammar form is a language feature, not a parser fix:
+- **External references used** (implementation/theory only; none of them defines the Kof surface):
+
+---
+
 ## 🧪 How It Was Tested (Quality Gate)
 <!-- The test PROVES that the code works. List the commands run and the tests added. -->
 - [ ] `mvn -o -pl kof-compiler -am compile -q` ran without errors

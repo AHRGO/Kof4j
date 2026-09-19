@@ -28,6 +28,23 @@ Fixes #
 
 ---
 
+## 📐 Contrato KOF-primeiro (`D-KOF-FIRST`)
+<!-- Toda mudança responde aos quatro portões abaixo. "A linguagem X faz assim" nunca é fonte de contrato. -->
+**Reproducer Kof válido** (o trecho que exercita a mudança):
+
+```kof
+
+```
+
+- **Fonte do contrato** (entrada do DECISIONS.md, doc normativo, teste de conformidade/golden, ou matriz de paridade) que define o comportamento esperado:
+- **RED antes da mudança de produção** — alvo(s), esperado pelo contrato Kof, obtido:
+- **Causa raiz** (não o sintoma):
+- **Classificação** (`Bug real` / `Divergência de alvo` / `Gap real` / `Design request` / `Not-valid` / `Ambiguidade de contrato`):
+- **Isto altera a superfície do Kof?** Se sim, a decisão da mantenedora que autoriza (regra 6) — uma forma nova aceita pela gramática é feature de linguagem, não conserto de parser:
+- **Referências externas usadas** (só de implementação/teoria; nenhuma delas define a superfície do Kof):
+
+---
+
 ## 🧪 Como Foi Testado (Portão de Qualidade)
 <!-- O teste PROVA que o código funciona. Liste os comandos rodados e os testes adicionados. -->
 - [ ] `mvn -o -pl kof-compiler -am compile -q` rodou sem erros

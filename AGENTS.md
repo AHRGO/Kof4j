@@ -5,7 +5,7 @@
 This is the **mandatory** guide for any AI agent (or human) who
 writes Kof code in this repository. Read it before generating any `.kf`.
 
-**Version:** 0.4.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + rule 9 **docs-first gate** for philosophy-violating issues (#449) (18/09) + **mechanical push via `scripts/sync-push.sh` + conflict policy "preserve both sides, redo yours on top" (19/09)** + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09); active branch = `beta-0.4.0`)
+**Version:** 0.4.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + rule 9 **docs-first gate** for philosophy-violating issues (#449) (18/09) + **mechanical push via `scripts/sync-push.sh` + conflict policy "preserve both sides, redo yours on top" (19/09)** + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09) + rule 10 **KOF-first, external-second** (`D-KOF-FIRST`, PROPOSED 19/09); active branch = `beta-0.4.0`)
 
 > **PRIORITY No. 1: QUALITY.** Before any feature, read the
 > **Quality gate — "no bug ships"** (§ below), **universal for
@@ -630,6 +630,29 @@ Bool isQuery(String op) {
    decided by the maintainer (rule 6), never the imported syntax. Template
    checkboxes make the human sign the same gate (`feature_request.yml`,
    `bug_report.yml`).
+10. **KOF-first, external-second — no external behavior is an oracle
+    (ABSOLUTE — `D-KOF-FIRST`).** No behavior of Java, Kotlin, C#, Rust,
+    Swift, JavaScript, Python, SQL, or of any other language, framework,
+    runtime, specification, forum, paper or benchmark is, **by itself**, an
+    expectation of Kof's behavior. Before opening an issue or suggesting a
+    fix: **(1)** prove the reproducer is **valid Kof** (grammar/syntax docs,
+    `training/`, `learn/` — `training/anti-patterns/fake-idioms.md` names the
+    usual foreign suspects); **(2)** identify the **governing Kof contract**
+    (`DECISIONS.md` → normative docs → conformance/golden tests → parity
+    matrix → implementation; never another language); **(3)** search for the
+    **Kof idiom or abstraction** that already expresses the intent; **(4)**
+    **measure** the real behavior on the relevant targets. There is a **bug**
+    only when Kof diverges from **its own contract**; there is a **gap** only
+    when a legitimate need remains with no adequate Kof solution. **External
+    research starts only after that internal proof** — and it contributes
+    principles, invariants, trade-offs and known bugs, never syntax, API or
+    semantics to copy automatically; every borrowing is re-expressed through
+    Kof's philosophy first. Any proposal that changes grammar, semantics,
+    operators, the type model or a frozen API is a **design decision of the
+    maintainer** (rule 6), not an agent bugfix — a small parser diff that
+    accepts a new form is a **new language feature**, not a parser fix. Full
+    pipeline (Gates 0–9) and the evidence block: `DECISIONS.md`
+    §`D-KOF-FIRST`.
 
 ---
 

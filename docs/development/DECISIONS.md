@@ -1943,3 +1943,122 @@ built (`.22` shipped §295/§306 18–19/09); coordination claimed in `DOING.md`
 same commit (the `SemExpressionTyper`/`ExpressionLowerer` files are the same
 `.22` touched today — they hold NO other unclaimed `Bool?`-face work after
 #462/#486 are closed here).
+
+---
+
+## D-KOF-FIRST — internal contract before external comparison (`KOF-first, external-second`)
+
+**Date:** 2026-09-19 · **State:** `PROPOSED` (awaiting maintainer ratification; until ratified it governs agent triage as a working rule, never as a ratified contract) · **Scope:** issue/PR triage, bug hunting, gap classification, use of external references · **Related:** `D-NOT-JAVA` (rule 8), `D-TRIAGE` (rule 9), the precedence rule of §5
+
+### Context
+
+The risk is not a wrong issue; it is the language evolving by accident. A
+foreign expectation enters as a "bug", gets a plausible patch, a test freezes
+the new behavior, the documentation starts teaching it — and the Kof surface
+has grown without a decision. The repository already carries the pieces of the
+answer (rule 8 "Kof is not Java", rule 9 "philosophy check precedes the
+issue", `D-NOT-JAVA`, `D-TRIAGE`, and the precedence rule that puts
+`DECISIONS.md` above implementation) and, at the same time, the measured cases
+that motivated this rule: #410 (`0..n` as a range), #416 (`!!`), #407
+(top-level `val`/`var`), #424 (`StringBuilder`), #415 (`String[i]`), #449
+(`RawView`), #483 (`name() -> Type`), #492/PR #496 (`(Int x) -> x * x`).
+
+### Contract
+
+1. **No external result is an oracle.** A language, specification, forum,
+   benchmark, paper or runtime does not, by itself, define Kof's expected
+   behavior.
+2. **The reproducer must be valid Kof.** Before opening or validating an
+   issue, prove the snippet uses grammar and syntax Kof recognizes.
+3. **Kof's contract comes before the implementation.** Identify the decision,
+   normative documentation, conformance test or applicable rule *before*
+   classifying the observed behavior.
+4. **The Kof idiom is searched before the foreign feature.** If the need is
+   already met by an existing Kof abstraction, rejecting foreign syntax is not
+   a bug.
+5. **Internal divergence precedes external comparison.** A bug is demonstrated
+   as a divergence between Kof and its own contract, or between targets
+   governed by the same contract.
+6. **A gap must be proved.** There is a gap only when the legitimate need
+   remains with no satisfactory solution inside current Kof.
+7. **External research begins only after the gap.** Once the internal problem
+   is proved, other languages and the literature may be studied.
+8. **External references supply principles, not surface.** Extract
+   invariants, techniques, formal models, known failures, trade-offs.
+9. **Every external solution is translated back into Kof.** Name, syntax, API,
+   semantics and ergonomics are evaluated against Kof's philosophy, decisions,
+   targets and abstractions.
+10. **A contract change is a decision, not a bugfix.** A proposal that changes
+    grammar, semantics, operators, the type model or a frozen API requires an
+    explicit maintainer decision (rule 6).
+
+### Classification (Gate 4 — nothing gets a production patch without one)
+
+| Category | Exists when |
+|---|---|
+| `BUG REAL` | valid Kof program + Kof contract defines the behavior + implementation differs |
+| `TARGET DIVERGENCE` | the same valid Kof construct behaves differently across targets with no honest documented gap |
+| `GAP REAL` | legitimate need + no adequate Kof syntax/idiom/stdlib/composition + no decision rejecting it |
+| `DESIGN REQUEST` | intent is to change, extend or replace a surface/semantics decision |
+| `NOT-VALID` | the reproducer depends on a construct that is not Kof and a Kof idiom covers the intent |
+| `CONTRACT AMBIGUITY` | docs, decisions, tests and implementation do not settle which behavior is normative → evidence + alternatives + maintainer decision, never an automatic fix |
+
+### Gates (the pipeline, in order)
+
+- **Gate 0 — is the reproducer Kof?** Check `docs/language-reference/`
+  (grammar, syntax, types), the feature's own doc, `training/`, `learn/`,
+  `training/anti-patterns/fake-idioms.md`, this file. Not Kof → no bug is
+  demonstrated; go to Gate 1.
+- **Gate 1 — intent and idiom.** Never stop at "this syntax does not exist":
+  name the real intent and the Kof idiom that expresses it. Idiom resolves →
+  `NOT-VALID`.
+- **Gate 2 — governing contract.** `DECISIONS.md` → normative docs →
+  conformance/golden → parity matrix → implementation; chat history only as
+  auxiliary evidence. Record `contract source` / `contract statement` /
+  `expected Kof behavior`.
+- **Gate 3 — internal measurement.** Run the **valid Kof** reproducer on the
+  relevant targets (JVM / Script / JS / Native x86 / Native riscv64-aarch64
+  when applicable).
+- **Gate 4 — classification.** One of the six categories above.
+- **Gate 5 — proof of the gap.** For `GAP REAL`, answer *no* to all: valid
+  Kof syntax exists? documented idiom exists? stdlib/API exists? composition
+  of Kof resources solves it reasonably? a decision consciously rejects that
+  surface? already catalogued gap?
+- **Gate 6 — external research.** Now, and only now.
+- **Gate 7 — translation back to Kof** (what internal problem it solves,
+  which principle is reusable, what is specific to the source language,
+  conflict with any Kof decision, new syntax/API, accidental complexity,
+  parity, honest gap on some target, expressible with existing mechanisms).
+- **Gate 8 — decision.** Contract change → comparative proposal, trade-offs,
+  migration and per-target impact, technical recommendation **without
+  self-ratification**, maintainer's decision.
+- **Gate 9 — implementation and proof.** RED reproducing the contract → root
+  cause fix → GREEN → cross-target conformance → golden/migration → docs and
+  CHANGELOG.
+
+### Blocked without a decision
+
+An automatic production PR is appropriate **only** for a confirmed `BUG REAL`,
+a confirmed `TARGET DIVERGENCE`, or the implementation of an already ratified
+decision. It is blocked while the issue is `CONTRACT AMBIGUITY`,
+`DESIGN REQUEST` or an unratified `GAP`. Any parser/lexer diff that introduces
+a newly accepted form must answer *which decision authorizes this new
+surface* — with no decision, `STOP`.
+
+### Evidence block (issues and PRs)
+
+Issues and bug-hunter reports carry `KOF VALIDITY` (grammar source,
+syntax/documentation source, reproducer validated as Kof), `CONTRACT`
+(decision/source, expected behavior), `MEASUREMENT` (targets, actual
+behavior), `CLASSIFICATION` and `DUPLICATE CHECK`. If `KOF VALIDITY` cannot be
+proved, no issue is opened automatically. PRs carry the contract source, the
+valid Kof reproducer, the RED before the production change, the root cause,
+the fix, why it does or does not change the Kof contract, the regression
+proof and the cross-target impact.
+
+### Evidence
+
+Maintainer-facing proposal `KOF_FIRST_CONTRACT_RULE.md` (19/09); rules 8 and 9
+of `AGENTS.md`/`AGENTS.pt_BR.md`; `D-NOT-JAVA`, `D-TRIAGE`, precedence rule of
+§5; measured cases #407, #410, #415, #416, #424, #449, #483, #492/#496.
+Governance-only change: no code, no semantics, no surface touched.

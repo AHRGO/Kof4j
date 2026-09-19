@@ -1911,3 +1911,123 @@ VerifyError) e **#486** (`&&`/`||` sobre `Bool?` vazam `null` no JS /
 VerifyError no JVM) — os relatos são reais, mas a correção deixou de ser
 "far o `Bool?` funcionar em posição de valor": `Bool?` está sendo REMOVIDO; as
 faces viram testes de `Troolean` na fatia 1.
+
+---
+
+## D-KOF-FIRST — contrato interno antes da comparação externa (`KOF-primeiro, externo-depois`)
+
+**Data:** 2026-09-19 · **Estado:** `PROPOSTO` (aguardando ratificação da mantenedora; até a ratificação vale como regra de trabalho dos agentes, nunca como contrato ratificado) · **Escopo:** triagem de issues/PRs, bug hunting, classificação de gaps, uso de referências externas · **Relacionadas:** `D-NOT-JAVA` (regra 8), `D-TRIAGE` (regra 9), a regra de precedência do §5
+
+### Contexto
+
+O risco não é uma issue errada; é a linguagem evoluir por acidente. Uma
+expectativa estrangeira entra como "bug", recebe um patch plausível, um teste
+congela o novo comportamento, a documentação passa a ensiná-lo — e a
+superfície do Kof cresceu sem decisão. O repositório já carrega as peças da
+resposta (regra 8 "Kof não é Java", regra 9 "a checagem de filosofia precede a
+issue", `D-NOT-JAVA`, `D-TRIAGE`, e a precedência que põe o `DECISIONS.md`
+acima da implementação) e, ao mesmo tempo, os casos medidos que motivaram esta
+regra: #410 (`0..n` como range), #416 (`!!`), #407 (`val`/`var` top-level),
+#424 (`StringBuilder`), #415 (`String[i]`), #449 (`RawView`), #483
+(`name() -> Type`), #492/PR #496 (`(Int x) -> x * x`).
+
+### Contrato
+
+1. **Nenhum resultado externo é oráculo.** Uma língua, especificação, fórum,
+   benchmark, paper ou runtime não define, por si só, o comportamento esperado
+   do Kof.
+2. **O reproducer deve ser Kof válido.** Antes de abrir ou validar uma issue,
+   provar que o trecho usa gramática e sintaxe reconhecidas pelo Kof.
+3. **O contrato do Kof vem antes da implementação.** Identificar a decisão, a
+   documentação normativa, o teste de conformidade ou a regra aplicável
+   *antes* de classificar o comportamento observado.
+4. **O idiom Kof é procurado antes da feature estrangeira.** Se a necessidade
+   já é resolvida por abstração Kof existente, rejeitar a sintaxe estrangeira
+   não é bug.
+5. **Divergência interna precede comparação externa.** Um bug é demonstrado
+   como divergência entre o Kof e o próprio contrato, ou entre alvos regidos
+   pelo mesmo contrato.
+6. **Gap precisa ser provado.** Só existe gap quando a necessidade legítima
+   permanece sem solução satisfatória dentro do Kof atual.
+7. **A pesquisa externa só começa depois do gap.** Provado o problema interno,
+   outras línguas e a literatura podem ser estudadas.
+8. **Referências externas fornecem princípios, não superfície.** Extrair
+   invariantes, técnicas, modelos formais, falhas conhecidas, trade-offs.
+9. **Toda solução externa é traduzida de volta para Kof.** Nome, sintaxe, API,
+   semântica e ergonomia são avaliados contra a filosofia, as decisões, os
+   alvos e as abstrações do Kof.
+10. **Mudança de contrato é decisão, não bugfix.** Proposta que muda
+    gramática, semântica, operadores, modelo de tipos ou API congelada exige
+    decisão explícita da mantenedora (regra 6).
+
+### Classificação (Gate 4 — sem ela não há patch de produção)
+
+| Categoria | Existe quando |
+|---|---|
+| `BUG REAL` | programa Kof válido + contrato Kof define o comportamento + implementação diverge |
+| `DIVERGÊNCIA DE ALVO` | a mesma construção Kof válida se comporta diferente entre alvos sem gap honesto documentado |
+| `GAP REAL` | necessidade legítima + sem sintaxe/idiom/stdlib/composição Kof adequada + sem decisão que a rejeite |
+| `DESIGN REQUEST` | a intenção é alterar, ampliar ou substituir uma decisão de superfície/semântica |
+| `NOT-VALID` | o reproducer depende de construção que não é Kof e há idiom Kof para a intenção |
+| `AMBIGUIDADE DE CONTRATO` | docs, decisões, testes e implementação não determinam o comportamento normativo → evidências + alternativas + decisão da mantenedora, nunca fix automático |
+
+### Gates (o pipeline, em ordem)
+
+- **Gate 0 — o reproducer é Kof?** Conferir `docs/language-reference/`
+  (grammar, syntax, types), o doc da própria feature, `training/`, `learn/`,
+  `training/anti-patterns/fake-idioms.md`, este arquivo. Não é Kof → não há
+  bug demonstrado; ir ao Gate 1.
+- **Gate 1 — intenção e idiom.** Nunca parar em "essa sintaxe não existe":
+  nomear a intenção real e o idiom Kof que a expressa. Idiom resolve →
+  `NOT-VALID`.
+- **Gate 2 — contrato que governa.** `DECISIONS.md` → docs normativos →
+  conformidade/golden → matriz de paridade → implementação; histórico de chat
+  só como evidência auxiliar. Registrar `fonte do contrato` / `enunciado do
+  contrato` / `comportamento esperado do Kof`.
+- **Gate 3 — medição interna.** Rodar o reproducer **Kof válido** nos alvos
+  relevantes (JVM / Script / JS / Native x86 / Native riscv64-aarch64 quando
+  aplicável).
+- **Gate 4 — classificação.** Uma das seis categorias acima.
+- **Gate 5 — prova do gap.** Para `GAP REAL`, responder *não* a todas: existe
+  sintaxe Kof válida? existe idiom documentado? existe stdlib/API? existe
+  composição de recursos Kof que resolve razoavelmente? existe decisão que
+  rejeita conscientemente essa superfície? existe gap já catalogado?
+- **Gate 6 — pesquisa externa.** Agora, e só agora.
+- **Gate 7 — tradução de volta para Kof** (que problema interno resolve, que
+  princípio é reaproveitável, o que é específico da língua de origem, conflito
+  com alguma decisão Kof, nova sintaxe/API, complexidade acidental, paridade,
+  gap honesto em algum alvo, se é expressável com mecanismos existentes).
+- **Gate 8 — decisão.** Mudança de contrato → proposta comparativa,
+  trade-offs, impacto de migração e por alvo, recomendação técnica **sem
+  auto-ratificação**, decisão da mantenedora.
+- **Gate 9 — implementação e prova.** RED reproduzindo o contrato → fix da
+  causa raiz → GREEN → conformidade cross-target → golden/migração → docs e
+  CHANGELOG.
+
+### Bloqueado sem decisão
+
+PR automática de produção é apropriada **só** para `BUG REAL` confirmado,
+`DIVERGÊNCIA DE ALVO` confirmada, ou implementação de decisão já ratificada.
+Fica bloqueada enquanto a issue for `AMBIGUIDADE DE CONTRATO`,
+`DESIGN REQUEST` ou `GAP` não ratificado. Qualquer diff de parser/lexer que
+introduza forma nova aceita deve responder *qual decisão autoriza esta nova
+superfície* — sem decisão, `STOP`.
+
+### Bloco de evidência (issues e PRs)
+
+Issues e relatórios do bug hunter carregam `KOF VALIDITY` (fonte da gramática,
+fonte da sintaxe/documentação, reproducer validado como Kof), `CONTRACT`
+(decisão/fonte, comportamento esperado), `MEASUREMENT` (alvos, comportamento
+real), `CLASSIFICATION` e `DUPLICATE CHECK`. Se `KOF VALIDITY` não puder ser
+provado, nenhuma issue é aberta automaticamente. PRs carregam a fonte do
+contrato, o reproducer Kof válido, o RED antes da mudança de produção, a causa
+raiz, o fix, por que a mudança altera (ou não) o contrato do Kof, a prova de
+regressão e o impacto cross-target.
+
+### Evidência
+
+Proposta para a mantenedora `KOF_FIRST_CONTRACT_RULE.md` (19/09); regras 8 e 9
+do `AGENTS.md`/`AGENTS.pt_BR.md`; `D-NOT-JAVA`, `D-TRIAGE`, regra de
+precedência do §5; casos medidos #407, #410, #415, #416, #424, #449, #483,
+#492/#496. Mudança só de governança: nenhum código, semântica ou superfície
+tocada.

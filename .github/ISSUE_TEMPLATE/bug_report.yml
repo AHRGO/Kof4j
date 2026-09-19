@@ -82,6 +82,48 @@ body:
     validations:
       required: true
 
+  - type: textarea
+    id: kof_intent
+    attributes:
+      label: Kof intent and existing idiom
+      description: |
+        What is the program trying to express, in Kof's own terms? Which existing
+        Kof idiom, syntax or stdlib API covers that intent, and why is it not
+        enough? (D-KOF-FIRST Gate 1 / Gate 5 — if an existing Kof abstraction
+        solves the need, this is not a bug.)
+    validations:
+      required: true
+
+  - type: input
+    id: contract
+    attributes:
+      label: Kof contract source
+      description: |
+        Where does Kof define the expected behavior? A `DECISIONS.md` entry, a
+        page under `docs/`, a conformance/golden test, or the parity matrix.
+        "Other languages do it this way" is not a contract source.
+      placeholder: "docs/language-reference/closures.md §1 (lambda-param)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: classification
+    attributes:
+      label: Classification (D-KOF-FIRST Gate 4)
+      description: |
+        How would you classify this? A maintainer agent confirms or corrects it
+        during triage; no production patch is generated from `Design request`,
+        `Not-valid` or `Contract ambiguity`.
+      options:
+        - Real bug — valid Kof diverges from Kof's own contract
+        - Target divergence — same valid Kof, different behavior across targets
+        - Real gap — legitimate need with no adequate Kof solution
+        - Design request — proposes changing a surface/semantics decision
+        - Not-valid — the construct is not Kof and an idiom covers the intent
+        - Contract ambiguity — docs/decisions/tests do not settle the behavior
+    validations:
+      required: true
+
   - type: checkboxes
     id: checks
     attributes:
@@ -90,6 +132,8 @@ body:
         - label: I searched existing issues and this is not a duplicate.
           required: true
         - label: I reproduced this against the latest build.
+          required: true
+        - label: The reproducer is valid Kof — I checked `docs/language-reference/` and `training/anti-patterns/fake-idioms.md`, and this is not syntax imported from another language (KOF-first, external-second).
           required: true
         - label: I read `docs/philosophy.md` ("What Kof Is NOT"). This is a deviation from Kof's documented behavior — not a request to import another language/stack's syntax (Java/Kotlin idioms, HTML/CSS into `kof.ui`, framework layers); those are closed with a pointer to the docs, not fixed.
           required: true

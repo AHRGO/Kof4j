@@ -5,7 +5,7 @@
 Este é o guia **obrigatório** para qualquer agente de IA (ou humano) que
 escreva código Kof neste repositório. Leia antes de gerar qualquer `.kf`.
 
-**Versão:** 0.4.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + regra 9 **portão docs-first** para issues fora da filosofia (#449) (18/09) + **push mecânico via `scripts/sync-push.sh` + política de conflito "preserve os dois lados, refaça o seu em cima" (19/09)** + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09); branch ativa = `beta-0.4.0`)
+**Versão:** 0.4.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + regra 9 **portão docs-first** para issues fora da filosofia (#449) (18/09) + **push mecânico via `scripts/sync-push.sh` + política de conflito "preserve os dois lados, refaça o seu em cima" (19/09)** + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09) + regra 10 **KOF-primeiro, externo-depois** (`D-KOF-FIRST`, PROPOSTO 19/09); branch ativa = `beta-0.4.0`)
 
 > **PRIORIDADE Nº 1: QUALIDADE.** Antes de qualquer feature, leia o
 > **Portão de qualidade — "nenhum bug sobe"** (§ abaixo), **universal para
@@ -629,6 +629,30 @@ Bool isQuery(String op) {
    abstração Kof decidida pela mantenedora (regra 6), nunca a sintaxe
    importada. Os checkboxes dos templates fazem o humano assinar o mesmo
    portão (`feature_request.yml`, `bug_report.yml`).
+10. **KOF-primeiro, externo-depois — nenhum comportamento externo é oráculo
+    (ABSOLUTA — `D-KOF-FIRST`).** Nenhum comportamento de Java, Kotlin, C#,
+    Rust, Swift, JavaScript, Python, SQL, nem de qualquer outra língua,
+    framework, runtime, especificação, fórum, paper ou benchmark é, **por si
+    só**, expectativa de comportamento do Kof. Antes de abrir issue ou sugerir
+    fix: **(1)** prove que o reproducer é **Kof válido** (docs de
+    gramática/sintaxe, `training/`, `learn/` — o
+    `training/anti-patterns/fake-idioms.md` nomeia os suspeitos estrangeiros
+    de sempre); **(2)** identifique o **contrato Kof que governa**
+    (`DECISIONS.md` → docs normativos → testes de conformidade/golden → matriz
+    de paridade → implementação; nunca outra língua); **(3)** procure o
+    **idiom ou abstração Kof** que já expressa a intenção; **(4)** **meça** o
+    comportamento real nos alvos relevantes. Só existe **bug** quando o Kof
+    diverge do **próprio contrato**; só existe **gap** quando uma necessidade
+    legítima permanece sem solução Kof adequada. **A pesquisa externa começa
+    só depois dessa prova interna** — e contribui com princípios, invariantes,
+    trade-offs e bugs conhecidos, nunca com sintaxe, API ou semântica para
+    copiar automaticamente; toda importação é reexpressa pela filosofia do Kof
+    primeiro. Qualquer proposta que mude gramática, semântica, operadores,
+    modelo de tipos ou API congelada é **decisão de projeto da mantenedora**
+    (regra 6), não bugfix de agente — um diff pequeno no parser que aceita uma
+    forma nova é **feature nova de linguagem**, não conserto de parser.
+    Pipeline completo (Gates 0–9) e o bloco de evidência: `DECISIONS.md`
+    §`D-KOF-FIRST`.
 
 ---
 
