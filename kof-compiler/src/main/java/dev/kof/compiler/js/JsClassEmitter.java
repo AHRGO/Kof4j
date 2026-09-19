@@ -252,7 +252,7 @@ public final class JsClassEmitter {
         for (IRField field : clazz.fields()) {
             if ((field.accessFlags() & AccessFlags.STATIC) != 0) continue;
             JsIr.JsExpression value = field.initialValue() != null
-                    ? p.calls.literalExpr(new KofLoadLiteral(field.type(), field.initialValue()))
+                    ? p.ops.literalExpr(new KofLoadLiteral(field.type(), field.initialValue()))
                     : JsTypeMapper.defaultForType(field.type());
             defaults.add(new JsIr.JsExprStmt(new JsIr.JsBinary(
                     new JsIr.JsMember(new JsIr.JsThis(), jsFieldName(clazz, field.name())), "=", value)));
