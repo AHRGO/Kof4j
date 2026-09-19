@@ -396,6 +396,56 @@ class WorkflowE2ETest {
         assertTrue(nativeRes.success(), () -> "Native must compile the host: " + diags(nativeRes));
     }
 
+    /** D-WORKFLOW-RUN slice 1: introspection — `order()` gives the
+     *  topological order without running a body, `runJob(name)` runs only the
+     *  named job plus its transitive deps, and both surfaces are byte-parity
+     *  JVM/JS. The acc list proves which bodies actually ran. */
+    @Test
+    void orderAndRunJobIntrospectWithoutRunningEverything() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var acc = listOf()
+                var a = job("a", () -> { acc.add("a"); return true })
+                var b = job("b", () -> { acc.add("b"); return true }).after(a)
+                var c = job("c", () -> { acc.add("c"); return true }).after(b)
+                var d = dag(listOf(c, b, a))
+                println(kofWfJoin(d.order(), ","))
+                println(acc.size)
+                var rep = d.runJob("b")
+                println(rep.summary())
+                println(kofWfJoin(acc, ","))
+            }
+            """, "a,b,c", "0", "ok=a,b failed= skipped=", "a,b");
+    }
+
+    /** `runJob` on an unknown name is loud (R6), never a silent empty run. */
+    @Test
+    void runJobUnknownNameIsLoud() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var d = dag(listOf(job("a", () -> true)))
+                try { d.runJob("ghost") } catch (String e) { println(e) }
+                try { d.depsOf("ghost") } catch (String e) { println(e) }
+            }
+            """, "workflow: job 'ghost' não existe na dag");
+    }
+
+    /** `order()` rejects a cycle with the same actionable message as `run()`. */
+    @Test
+    void orderRejectsCycleWithSameMessage() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var a = job("a", () -> true)
+                var b = job("b", () -> true).after(a)
+                a.after(b)
+                try { dag(listOf(a, b)).order() } catch (String e) { println(e) }
+            }
+            """, "ciclo detectado entre: a,b");
+    }
+
     /** 2.1.3 face 5 (supervision — plano §3/§5: o workflow DELEGA o restart
      *  ao kof.supervisor): happy path chain+independente roda sob o one_for_one
      *  e o Report sai na ordem de declaração — SEM o usuário importar
