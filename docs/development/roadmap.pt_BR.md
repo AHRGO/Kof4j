@@ -254,9 +254,10 @@ Estado 13/09: concorrência real **JVM** (virtual threads) + **Native**
 1ms) + **JS** ✅ 03/09 (CONC003 fechado — stmt/expr/cancel/selectAny com
 async/await/Promise reais) + **supervisão OTP** (`kof.supervisor`: 1ª fatia
 11/09 núcleo JVM+Script, **S2-JVM 13/09** `startAll`/`lacoUnico` — ver
-`planning-otp-supervision.md`; **Native x86 ✅ 15/09** — §129 fechado via
-DECISIONS §2 opção B, então `kof.supervisor` roda no Native x86; riscv/aarch=OTP001
-(gate honesto da era §132). **JS ✅ 18/09 — §132 resolvido:** `time.sleep` virou um
+`docs/planning-otp-supervision.md`; **Native x86 ✅ 15/09** — §129 fechado via
+DECISIONS §2 opção B; **riscv64/aarch64 ✅ 19/09** — §129 port cross (tabela de
+cadeia por-TID `kof_exc_slots`, gate `OTP001` removido), então `kof.supervisor`
+roda em todos os targets nativos. **JS ✅ 18/09 — §132 resolvido:** `time.sleep` virou um
 ponto de await async cooperativo (o compilador colore async o método que o alcança,
 `kofTimeSleep` devolve Promise, a bomba do host `KofJsRunner` a drena), então um worker
 spawnado de dentro de outra task dispara e `OTP002` foi levantado — `kof.supervisor`

@@ -117,7 +117,7 @@ any backend. Read from the source files (not memory), each column cites its own 
 | channels + `spawn` + `selectAny` | `KofInterpreterConcurrency.java`, JS/`native` conc (`CONC003` closed 03/09, §132 resolved 18/09) | ✅ | ✅ | ✅ | ✅ (workers = clone 220 + spinlock) |
 | `Result` type (already reused by `shell-plan`) | `KofProcess.RESULT` | ✅ | ✅ | ✅ | ✅ (as type) |
 | `retry(times, backoff)` | today only inside `kof.http` (`NativeHttpCore.java`, `RuntimeConcurrency.java`, `JsRuntimeUiLayout.java`) | ⚠️ not general | ⚠️ | ⚠️ | ⚠️ |
-| `supervisor.one_for_one` (OTP) | `planning-otp-supervision.md` §Decision status (ratified 13/09, DD-OTP-01 option A pure-Kof) | ✅ | ✅ | ✅ | ⚠️ PARTIAL (riscv64/aarch64, 1 worker/supervisor — DD-OTP-03) |
+| `supervisor.one_for_one` (OTP) | `docs/planning-otp-supervision.md` §Decision status (ratified 13/09, DD-OTP-01 option A pure-Kof) | ✅ | ✅ | ✅ | ✅ (×3 ✓ 19/09 — §129 cross port) |
 
 **Consequences for `kof.workflow`:** on JVM + ANDROID + JS (with Graal host), a full
 workflow (jobs + DAG + retry + checkpoint + cron-schedule + dead-letter) is available from

@@ -1,8 +1,8 @@
 [English](planning-otp-supervision.md) | [Português](planning-otp-supervision.pt_BR.md)
 
-# planning-otp-supervision.md — OTP-style worker supervision (`one_for_one`) — IN DEVELOPMENT
+# planning-otp-supervision.md — OTP-style worker supervision (`one_for_one`) — CONCLUDED (ported to the 4 targets 19/09)
 
-**Owner:** CONC lane · **Status:** 1st slice implemented 11/09 (core on JVM+Script; **S2-JVM ✅ 13/09** and **S2-Native x86 ✅ 15/09** — §129 closed via DECISIONS §2 option B; riscv/aarch=OTP001; **JS ✅ 18/09** (§132 resolved, `OTP002` lifted) — honest gates). Maintainer's authorization (issue #83, 11/09): implement the smallest functional core with tests.
+**Owner:** CONC lane · **Status:** core implemented and green on all targets — JVM+Script (11/09), **S2-JVM ✅ 13/09**, **S2-Native x86 ✅ 15/09** (§129 closed, DECISIONS §2 option B, TLS local-exec), **JS ✅ 18/09** (§132 resolved, `OTP002` lifted), **riscv64/aarch64 ✅ 19/09** (§129 cross port — per-TID chain table `kof_exc_slots`, `OTP001` gate removed). Concluded: promoted from `docs/development/`.
 **Created:** 10/09 · **Amended:** 11/09 · **Issue:** #83 (ViniciusKoiti)
 
 > **11/09 amendments** (verified in the `beta-0.4.0` code, marked
@@ -18,19 +18,25 @@
 > What still blocks supervisor on cross is `OTP001` alone: raw `clone` without
 > TLS for the §129 per-thread handler chain.
 >
-> **19/09 — mechanism decided (maintainer, in chat):** the cross port uses
-> **real TLS via `clone`** (not a per-TID table), recorded in
-> `DECISIONS.md` §129. Concretely: per-thread chain head — main set in `_start`
-> (our entry, `tp` is ours), workers via `CLONE_SETTLS` + a per-worker TLS
-> block (the flags already carry `CLONE_SETTLS`; `a3`/tls is passed as `0`
-> today), plus the x86 option-B trampoline (per-worker handler frame →
-> publish `handle->exc`, rethrown by `await`/`await_timeout`/`select_any`).
-> **Implementation blocker found (must be solved in the port):** the aarch64
-> translator maps riscv `tp` → `x4` (`NativeAarch64Helpers:74`) which collides
-> with `a4` → `x4` (`:98`, used by `mmap`/`clone`) and does not read
-> `TPIDR_EL0` (the real aarch64 thread pointer, via `mrs`). RED baseline
-> measured: two cross tests mirroring the x86 §129 hang under qemu (worker
-> `throw` longjmps the global `kof_exc_chain` of `main`).
+> **19/09 — port CONCLUDED (mechanism corrected after measurement):** the
+> maintainer's chat decision was **real TLS via `clone`** (recorded in
+> `DECISIONS.md` §129), but implementing it **proved ABI-unsafe**: overwriting
+> the thread pointer (riscv `tp`=x4 / aarch64 `TPIDR_EL0`) desynchronizes the
+> C library's own TLS — SIGSEGV (exit 139) in aarch64 tests calling
+> `snprintf`/`strtod` through `RuntimeDtoa`, and a riscv regression in
+> `crossNativeConcurrencyHelpersRun`. Root cause: our `_start` is our own, but
+> a Kof program can still call libc. **Resolution (mechanism deviation,
+> contract unchanged):** per-TID chain table `kof_exc_slots` (256 × 16 B
+> `[tid, chain]`, key `gettid`=a7 178, linear probe, same pattern as
+> `kof_cancel_slots`/CONC001) + `kof_exc_slot()` helper; the 8 chain-access
+> sites now call it; the trampoline installs the per-worker handler node and
+> publishes the cause on `handle->exc` (offset 48), rethrown by `await`/
+> `await_timeout`/`select_any`; `kof_spawn_join_all` does not rethrow. The
+> aarch64 `tp`→x4 collision becomes irrelevant (we no longer touch `tp`).
+> **`OTP001` gate removed** — the supervisor core is delivered on
+> riscv64/aarch64. RED baseline measured: two cross tests mirroring the x86
+> §129 hang under qemu (worker `throw` longjmps the global `kof_exc_chain` of
+> `main`) — now green (see the addendum below).
 
 ## Decision status (11/09)
 
@@ -38,19 +44,19 @@
 |---|---|---|
 | 01 | Shape (pure-Kof stdlib) | ⚠️ closable **with amendment** — missing the specification of stdlib packaging in `.kf` |
 | 02 | Surface (API) | ⚠️ closable **with amendment** — the signature must declare the layer |
-| 03 | N workers without blocking | ❌ **OPEN** — premise changed 15/09: `selectAny` now EXISTS on riscv/aarch (CONC001 closed, `e8364c97`); the remaining blocker is `OTP001` (no TLS) — the fallback decision stays on the maintainer's queue (rule 6) |
+| 03 | N workers without blocking | ✅ CLOSED 19/09 — `selectAny` EXISTS on riscv/aarch (CONC001, `e8364c97`) and `OTP001` is gone (§129 cross port, per-TID chain table); the supervisor loop observes failure via `try { await } catch` on every target |
 | 04 | What counts as a failure | ✅ closed |
 | 05 | Plan or tree | ✅ closed |
 | 06 | State on restart | ✅ closed |
 | 07 | Escalation | ✅ closed (text contradiction resolved) |
 | 08 | Shutdown | ✅ IMPLEMENTED 15/09 — cooperative flag live in the host (`KofSupWrap.parar` + `kofSupShouldStop`), `stop()` writes the flag before `cancel`; S4 E2E JVM+interpreter 13/13 |
-| 09 | Targets | ❌ **OPEN** — depends on 03 |
+| 09 | Targets | ✅ CLOSED 19/09 — the core is delivered on JVM, Script, Native x86, riscv64, aarch64 and JS |
 | 10 | Injectable clock | ✅ closed |
 | 11 | Success metric | ✅ closed (four gates) |
 | 12 | Where the tests live | ✅ closed |
 | 13 | `cancelled()` collision | ✅ closed (conditional on 08) |
 
-**8 closed · 2 closable with amendment · 2 open · 1 blocked.**
+**11 closed · 2 closable with amendment · 0 open · 0 blocked.**
 
 > **✅ RATIFIED 13/09 (maintainer's decision):** DD-OTP-01/02/03/04/08/09/10/11/12/13 ratified in the form of the doc's proposal + 11/09 amendments. **DD-OTP-03 decided: option 1a** — S2 opens on the JVM with an identity wrapper `(id, result)` per child; riscv64/aarch64 = **declared PARTIAL** (1 worker/supervisor) until the nat lane ports the helpers (gate R6).
 The 8 are independent of each other — they can be ratified without waiting for the others.
@@ -437,16 +443,17 @@ lane; small and isolated. It does not block OTP (which uses its own flag).
 - **Impediments that had to be resolved/workaround:** §130 fixed
   (false SEM024 in a re-analyzed method body — it blocked the fluent builder);
   §131 worked around (overload by arity broken → single 3-arg `child`).
-- **Honest parity:** JVM + Script + **Native x86** + **JS** run the core; riscv/aarch
-  block at compile-time (`OTP001`) — NEVER a binary
-  that hangs (rule 6). **S2-JVM of the plan IMPLEMENTED 13/09** (`020be966`,
-  option 1a): `Supervisor.startAll()` + single selectAny loop with an identity
-  wrapper (id/reason); S2 JVM+interpreter gates; `KofSupervisorE2ETest` 8/8, gate
-  1620/0. **S2-Native x86 ✅ IMPLEMENTED 15/09** (§129 closed, DECISIONS §2
-  option B; `supervisorNativeParityX86`/`supervisorNativeS2ParityX86`). **S2-JS ✅
-  IMPLEMENTED 18/09** (§132 closed — cooperative async `time.sleep`; `OTP002` lifted;
-  `supervisorJsParity`/`supervisorJsS2Parity`). riscv/aarch remain. The document stays
-  in `docs/development/` until that last face closes.
+- **Honest parity:** JVM + Script + **Native x86** + **JS** run the core
+  (riscv/aarch were blocked at compile-time with `OTP001` until 19/09 — see the
+  conclusion; NEVER a binary that hangs, rule 6). **S2-JVM of the plan
+  IMPLEMENTED 13/09** (`020be966`, option 1a): `Supervisor.startAll()` + single
+  selectAny loop with an identity wrapper (id/reason); S2 JVM+interpreter gates;
+  `KofSupervisorE2ETest` 8/8, gate 1620/0. **S2-Native x86 ✅ IMPLEMENTED 15/09**
+  (§129 closed, DECISIONS §2 option B;
+  `supervisorNativeParityX86`/`supervisorNativeS2ParityX86`). **S2-JS ✅
+  IMPLEMENTED 18/09** (§132 closed — cooperative async `time.sleep`; `OTP002`
+  lifted; `supervisorJsParity`/`supervisorJsS2Parity`). **riscv64/aarch64 ✅
+  19/09** (§129 cross port — per-TID chain table).
 
 ## Update 12/09 — REAL state of the S2 impediments (doc-vs-reality)
 
@@ -477,4 +484,19 @@ lane; small and isolated. It does not block OTP (which uses its own flag).
   `(id, result)`) — **DECIDED 13/09 (option 1a)** + **IMPLEMENTED**
   (`020be966`: `Supervisor.startAll()` + single selectAny loop; 1 supervisor
   thread; `KofSupervisorE2ETest` 8/8).
-- **Ratification:** ~~awaiting~~ **✅ RATIFIED 13/09** (see top of the doc). **S2-JVM IMPLEMENTED 13/09** (option 1a): `Supervisor.startAll()` + `lacoUnico()` in `supervisor-host.kf` — 1 supervisor thread, `selectAny(handles)` over the live children; **identity wrapper** `kofSupRun` returns the id (normal termination) or throws `"id: reason"` (failure → parse of the pair `(id, reason)` in the loop). New gates: `KofSupervisorE2ETest.supervisorS2TresFilhosUmLacoSelectAny` + `supervisorS2NoInterpretador` (8/8 green). riscv/aarch = PARTIAL (OTP001 gate already blocks the package — honest R6). **S2-Native x86 ✅ IMPLEMENTED 15/09** (§129-TLS closed — DECISIONS §2 option B).
+- **Ratification:** ~~awaiting~~ **✅ RATIFIED 13/09** (see top of the doc). **S2-JVM IMPLEMENTED 13/09** (option 1a): `Supervisor.startAll()` + `lacoUnico()` in `supervisor-host.kf` — 1 supervisor thread, `selectAny(handles)` over the live children; **identity wrapper** `kofSupRun` returns the id (normal termination) or throws `"id: reason"` (failure → parse of the pair `(id, reason)` in the loop). New gates: `KofSupervisorE2ETest.supervisorS2TresFilhosUmLacoSelectAny` + `supervisorS2NoInterpretador` (8/8 green). **S2-Native x86 ✅ IMPLEMENTED 15/09** (§129-TLS closed — DECISIONS §2 option B).
+
+## Conclusion — CONCLUDED 19/09 (ported to the 4 targets)
+
+- **§129 cross port ✅ (riscv64/aarch64):** the per-TID chain-table mechanism
+  `kof_exc_slots` + `kof_exc_slot()` replaced the unsafe TLS-via-`tp` approach
+  (see the 19/09 note at the top and known-bugs §129 addendum). The
+  `CompilerSupervisor` injected raise (`OTP001`) is **gone** — `kof.supervisor`
+  now compiles and runs on the 4 native/`node` targets.
+- **Gates (19/09, qemu on riscv64/aarch64):** `KofSupervisorE2ETest.crossGateOtp001`
+  runs the APP on both arches and asserts `restarts=2`, `escaladas=2`,
+  `fabrica=3`, `parou vivos=0` — 16/16 together with the parallel gates; the
+  §129 pair `KofConcurrency2Test.spawnWorkerThrow{IsolatedFromSiblings,
+  UnhandledPropagates}CrossArch` green on both arches. Suite: `KofSupervisorE2ETest`
+  16/0, `KofConcurrency2Test` 48/0, riscv/aarch E2E 45/0 each (138/0 run).
+- **Promotion:** this document moved to `docs/` 19/09 (planning concluded).

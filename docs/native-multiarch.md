@@ -17,9 +17,8 @@
 > `docs/backend-parity.md`(+PT), 16 domains × 3 arches; (5) cross CI CLOSED
 > 12/09 — job `cross-native` runs both E2E suites under qemu. **The remaining
 > per-domain refusals are HONEST gap codes, not pending work of this doc:**
-> SECN000 (crypto asm — R11 non-goal), OTP001 (supervisor cross — §129 real-TLS
-> decision registered 19/09 in `DECISIONS.md`, execution owned by the nat
-> lane), JSN004 (`json.decode<Record>` in pure asm), RNG001 (cross rng),
+> SECN000 (crypto asm — R11 non-goal), JSN004 (`json.decode<Record>` in pure asm),
+> RNG001 (cross rng),
 > `kof.ui` (no cross port) — each diagnosed at compile time, never silent
 > (R6), tracked in `docs/bugs-and-gaps/known-bugs.md` + the per-arch section
 > of `docs/backend-parity.md`. The build-out history below is kept verbatim
@@ -46,8 +45,8 @@
 > `kof.db` → **DB001 CLOSED 15/09 on riscv64/aarch64** (link-by-use `libsqlite3` +
 > runtime `kof_db_*` in slices `RtB46/RtB47`; `KofDbE2ETest.crossNativeSqliteRoundtrip`
 > proves the full path under qemu on both arches; JS keeps `DB001`), `kof.security` crypto-heavy → **SECN000**, the
-> higher-order concurrency `supervisor` → **OTP001** (EH chain is global not
-> TLS on the cross — per-worker catch §129 stays x86-only; `selectAny`/`done`/
+> higher-order concurrency `supervisor` → **CLOSED 19/09** (§129 cross port:
+> EH chain is per-TID via `kof_exc_slots`, `OTP001` removed; `selectAny`/`done`/
 > `poll`/`cancel`/`cancelled`/`awaitTimeout` themselves **CLOSED 15/09**: slice
 > `RtB48` + spawn trampoline registering the cancel slot, TID real via
 > gettid(178) recorded by the kernel on the clone ctid,
@@ -66,7 +65,7 @@
 > the collector (G-4) is what actually reclaims; (2) the
 > DB001 cross face CLOSED 15/09 (SQLite; JS keeps DB001) and the CONC001
 > helpers (selectAny/done/poll/cancel/cancelled/awaitTimeout) CLOSED 15/09
-> — remaining refusals: SECN000/OTP001/JSN004; (3) FP-collection on cross
+> — remaining refusals: SECN000/JSN004 (OTP001 removed 19/09); (3) FP-collection on cross
 > (FLT001 CLOSED 15/09 — slice `RtB45`; §107 record/nested **CLOSED 19/09 ON
 > ALL 3 ARCHES** — x86 `.rodata` recursive descriptor (face (3) x86) + cross
 > port (face (4)): slice `B39` now interprets the SAME descriptor grammar

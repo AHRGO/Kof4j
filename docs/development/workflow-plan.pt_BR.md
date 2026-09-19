@@ -118,7 +118,7 @@ nenhum. Lido dos arquivos-fonte (não de memória), cada coluna cita o seu arqui
 | canais + `spawn` + `selectAny` | `KofInterpreterConcurrency.java`, conc. JS/`native` (`CONC003` fechado 03/09, §132 resolvido 18/09) | ✅ | ✅ | ✅ | ✅ (workers = clone 220 + spinlock) |
 | tipo `Result` (já reusado pelo `shell-plan`) | `KofProcess.RESULT` | ✅ | ✅ | ✅ | ✅ (como tipo) |
 | `retry(times, backoff)` | hoje só dentro de `kof.http` (`NativeHttpCore.java`, `RuntimeConcurrency.java`, `JsRuntimeUiLayout.java`) | ⚠️ não geral | ⚠️ | ⚠️ | ⚠️ |
-| `supervisor.one_for_one` (OTP) | `planning-otp-supervision.md` §Decision status (ratificado 13/09, DD-OTP-01 opção A pure-Kof) | ✅ | ✅ | ✅ | ⚠️ PARCIAL (riscv64/aarch64, 1 worker/supervisor — DD-OTP-03) |
+| `supervisor.one_for_one` (OTP) | `docs/planning-otp-supervision.md` §Decision status (ratificado 13/09, DD-OTP-01 opção A pure-Kof) | ✅ | ✅ | ✅ | ✅ (×3 ✓ 19/09 — §129 port cross) |
 
 **Consequências para `kof.workflow`:** em JVM + ANDROID + JS (com host Graal), um workflow
 completo (jobs + DAG + retry + checkpoint + cron-schedule + dead-letter) está disponível desde o

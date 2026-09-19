@@ -378,11 +378,63 @@ public final class NativeRiscvAsmRtB4 {
                 addi sp, sp, 48
                 ret
 
+            # §129 (port riscv/aarch 19/09, por-TID): kof_exc_slot() -> a0 =
+            # &chain da thread ATUAL (gettid 178). Sem `tp`/TLS (quebraria a
+            # libc → SIGSEGV aarch64). Nesta peça (piso do hello) para não
+            # puxar B48/CONC001 ao link.
+            .globl kof_exc_slot
+            kof_exc_slot:
+                addi sp, sp, -32
+                sd   ra, 24(sp)
+                sd   s0, 16(sp)
+                sd   s1, 8(sp)
+                sd   s2, 0(sp)
+                li   a7, 178                # gettid
+                ecall
+                mv   s0, a0
+                li   t0, 0x9E3779B97F4A7C15
+                mul  s1, s0, t0
+                srli s1, s1, 56             # slot base
+                li   s2, 0                  # i = 0
+            .Lxes_loop:
+                li   t0, 256
+                bge  s2, t0, .Lxes_full
+                add  t0, s2, s1
+                andi t0, t0, 255
+                slli t0, t0, 4
+                la   t1, kof_exc_slots
+                add  t1, t1, t0             # entry
+                ld   t2, 0(t1)
+                beqz t2, .Lxes_claim
+                beq  t2, s0, .Lxes_hit
+                addi s2, s2, 1
+                j    .Lxes_loop
+            .Lxes_claim:
+                sd   s0, 0(t1)              # tid = atual
+                sd   zero, 8(t1)            # chain = 0
+            .Lxes_hit:
+                addi a0, t1, 8
+                j    .Lxes_out
+            .Lxes_full:
+                li   a0, 0
+            .Lxes_out:
+                ld   s2, 0(sp)
+                ld   s1, 8(sp)
+                ld   s0, 16(sp)
+                ld   ra, 24(sp)
+                addi sp, sp, 32
+                ret
+
             .section .data
             kof_alloc_ptr: .quad _kof_heap
             .align 16
-            kof_exc_chain: .quad 0
             .section .bss
+            .align 3
+            # §129: cadeia de handlers por TID — 256 entries 16B [tid, chain],
+            # gettid(178) + probe linear (padrão kof_cancel_slots/CONC001).
+            # .bss (zero init = tid 0 vazio): em .data os 4KB contavam no
+            # binário (ArtifactSizeTest) sem necessidade.
+            kof_exc_slots: .space 4096
             _kof_heap: .space 262144
             _kof_heap_end:                 # label do fim (não consome byte) — guard OOM do kof_alloc
             .Lmq_subs:    .space 1024

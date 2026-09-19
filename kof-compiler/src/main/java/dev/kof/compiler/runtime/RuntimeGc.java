@@ -349,8 +349,10 @@ public final class RuntimeGc {
         // era um `.data` global compartilhado: um `throw` sem handler dentro de
         // um worker fazia longjmp no frame da MAIN (corrompia a pilha dela).
         // O x86 é dinamicamente ligado (-lc), então o ld.so já inicializa o
-        // TLS da main thread e o pthread_create o das novas. riscv/aarch
-        // seguem OTP001 (clone cru sem TLS).
+        // TLS da main thread e o pthread_create o das novas. riscv/aarch usam
+        // a tabela por-TID `kof_exc_slots` (port 19/09) — o TLS-via-`tp` foi
+        // provado ABI-inseguro (quebra a TLS da libc; ver known-bugs §129
+        // adendo 19/09).
         sb.append("""
             .section .tbss,"awT",@nobits
             .balign 8

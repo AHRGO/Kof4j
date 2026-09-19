@@ -81,6 +81,8 @@ public final class NativeRiscvSpawn {
                 # clone(flags, stack_top, ptid=&tid, tls=0, ctid=0) — filho
                 # herda s0,s1; o KERNEL grava o TID do filho em &handle->tid
                 # (ctid), que kof_cancel (B48) usa p/ achar a entry de flag.
+                # §129: a cadeia é por-TID (kof_exc_slot), então não precisa de
+                # TLS no clone.
                 li   a0, 0x3D0F00
                 mv   a1, s2
                 addi a2, s1, 32
@@ -131,17 +133,17 @@ public final class NativeRiscvSpawn {
             # trampoline: s0=task, s1=handle -> registra cancel slot (CONC001),
             # roda task.invoke(), marca done, wake, remove o slot
             kof_spawn_trampoline:
-                addi sp, sp, -48
-                sd   ra, 40(sp)
-                sd   s0, 32(sp)
-                sd   s1, 24(sp)
+                addi sp, sp, -96
+                sd   ra, 48(sp)
+                sd   s0, 56(sp)
+                sd   s1, 64(sp)
                 # CONC001: registra (TID real, flag=0) e guarda a entry no
                 # handle->cancelEntry — kof_cancel/cancelled (B48) usam.
                 li   a7, 178                 # gettid
                 ecall
                 call kof_cancel_slot_insert
                 sd   a0, 40(s1)             # handle->cancelEntry
-                sd   a0, 16(sp)             # §286: cópia da entry NO FRAME (o delete
+                sd   a0, 40(sp)             # §286: cópia da entry NO FRAME (o delete
                                             # lê daqui; o handle pode ser reciclado
                                             # entre done=1 e o nosso delete)
                 fence rw, rw                # §286: Dekker — store(entry) → load(pending)
@@ -151,32 +153,71 @@ public final class NativeRiscvSpawn {
                 li   t0, 1
                 sd   t0, 8(a0)              # flag = 1 (pedido antigo vale agora)
             .Lst_no_pend:
+                # §129 (port 19/09): frame de handler POR WORKER no nó de 32B em
+                # 0..31 do frame. A cadeia é por-TID (kof_exc_slot), então um
+                # throw sem try no worker longjmpa AQUI, não no try da main; o
+                # catch publica a causa em handle->exc@48 e o consumidor
+                # (await/await_timeout/select_any) relança.
+                sd   s1, 32(sp)             # frame->handle (o catch lê daqui)
+                la   t0, .Lst_catch
+                sd   t0, 0(sp)              # [0]=handler
+                sd   sp, 8(sp)              # [8]=sp a restaurar
+                sd   s11, 16(sp)            # [16]=s11 a restaurar
+                call kof_exc_slot
+                sd   a0, 72(sp)             # §129: &chain do worker (limpar no fim)
+                ld   t1, 0(a0)
+                sd   t1, 24(sp)             # [24]=chain antigo
+                sd   sp, 0(a0)              # chain = este nó
                 ld   t0, 8(s0)              # task vtable
                 ld   t0, 0(t0)              # vtable[0] = invoke
                 mv   a0, s0
                 jalr t0                     # a0 = resultado
-                ld   s0, 32(sp)             # invoke pode clobberar s-regs? não
-                ld   s1, 24(sp)             # (callee-saved), mas protege s0/s1
+                sd   a0, 80(sp)             # §129: preserva o resultado (o
+                                            # kof_exc_slot abaixo clobbera a0)
+                # término normal: desinstala o handler e publica o resultado
+                call kof_exc_slot
+                ld   t2, 24(sp)
+                sd   t2, 0(a0)
+                ld   s0, 56(sp)
+                ld   s1, 64(sp)
+                ld   a0, 80(sp)
                 sd   a0, 8(s1)              # handle->result
                 fence rw, rw                # ordena result antes de done (RVO)
                 li   t0, 1
                 sw   t0, 4(s1)              # handle->done = 1
+                j    .Lst_wake
+            .Lst_catch:
+                # kof_throw_string desempilhou a chain e restaurou sp/s11; a0 =
+                # mensagem. O handle vem do FRAME (32(sp)), NÃO de s1 (o task
+                # pode clobberar callee-saved).
+                ld   s1, 32(sp)
+                sd   a0, 48(s1)             # handle->exc = causa
+                fence rw, rw
+                li   t0, 1
+                sw   t0, 4(s1)              # handle->done = 1
+            .Lst_wake:
                 addi a0, s1, 4              # &done (futex word)
                 li   a1, 129                # FUTEX_WAKE_PRIVATE
                 li   a2, 1
                 li   a7, 98
                 ecall
                 # CONC001/§286: slot volta a vazio (tid=0) sem tocar worker
-                # alheio — a entry vem do FRAME (16(sp)), não do handle
+                # alheio — a entry vem do FRAME (40(sp)), não do handle
                 # (reciclável entre done=1 e este delete).
-                ld   t0, 16(sp)
+                ld   t0, 40(sp)
+                beqz t0, .Lst_noexc
+                sd   zero, 0(t0)
+            .Lst_noexc:
+                # §129: libera a entry da cadeia deste TID (a tabela não cresce
+                # com workers que já terminaram).
+                ld   t0, 72(sp)
                 beqz t0, .Lst_nocl
                 sd   zero, 0(t0)
             .Lst_nocl:
-                ld   ra, 40(sp)
-                ld   s0, 32(sp)
-                ld   s1, 24(sp)
-                addi sp, sp, 48
+                ld   ra, 48(sp)
+                ld   s0, 56(sp)
+                ld   s1, 64(sp)
+                addi sp, sp, 96
                 ret
             # kof_await(handle@a0) -> result@a0 (futex wait em done)
             .globl kof_await
@@ -205,6 +246,11 @@ public final class NativeRiscvSpawn {
                 ld   ra, 0(sp)
                 addi sp, sp, 16
             .Lkw_val:
+                ld   t0, 48(a0)             # §129: handle excepcional?
+                beqz t0, .Lkw_ret
+                mv   a0, t0
+                j    kof_throw_string       # relança no consumidor (não retorna)
+            .Lkw_ret:
                 ld   a0, 8(a0)
                 ret
             .Lkw_null:
@@ -213,11 +259,12 @@ public final class NativeRiscvSpawn {
             # join implícito: aguarda todos os handles registrados (lista .bss).
             .globl kof_spawn_join_all
             kof_spawn_join_all:
-                addi sp, sp, -32
-                sd   ra, 24(sp)
-                sd   s0, 16(sp)
-                sd   s1, 8(sp)
-                sd   s2, 0(sp)
+                addi sp, sp, -48
+                sd   ra, 40(sp)
+                sd   s0, 32(sp)
+                sd   s1, 24(sp)
+                sd   s2, 16(sp)
+                sd   s3, 8(sp)
                 la   s0, kof_spawn_handles
                 la   s1, kof_spawn_count
                 ld   s1, 0(s1)
@@ -226,18 +273,30 @@ public final class NativeRiscvSpawn {
                 bge  s2, s1, .Lkj_done
                 slli t0, s2, 3
                 add  t0, s0, t0
-                ld   a0, 0(t0)
-                beqz a0, .Lkj_next
-                call kof_await
+                ld   s3, 0(t0)
+                beqz s3, .Lkj_next
+                # §129: join implícito espera done SEM relançar (paridade x86
+                # pthread_join) — só o await explícito do usuário relança a causa.
+            .Lkj_wait:
+                lw   t0, 4(s3)
+                bnez t0, .Lkj_next
+                addi a0, s3, 4
+                li   a1, 128                # FUTEX_WAIT_PRIVATE
+                li   a2, 0
+                li   a3, 0
+                li   a7, 98
+                ecall
+                j    .Lkj_wait
             .Lkj_next:
                 addi s2, s2, 1
                 j    .Lkj_loop
             .Lkj_done:
-                ld   ra, 24(sp)
-                ld   s0, 16(sp)
-                ld   s1, 8(sp)
-                ld   s2, 0(sp)
-                addi sp, sp, 32
+                ld   ra, 40(sp)
+                ld   s0, 32(sp)
+                ld   s1, 24(sp)
+                ld   s2, 16(sp)
+                ld   s3, 8(sp)
+                addi sp, sp, 48
                 ret
 
             .section .data

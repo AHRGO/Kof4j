@@ -185,9 +185,9 @@ entre 11/09 e 15/09 a ausência era um gate R6 honesto —
 **link**, como símbolo indefinido, o mesmo padrão do bug 59); o gate foi
 removido com o port. Prova:
 `KofConcurrency2Test.crossNativeConcurrencyHelpersRun` e
-`crossNativeCancelDuringRunningWorker` (qemu, duas arches). O que segue
-aberto no cross é o supervisor OTP (`OTP001` — `clone` cru sem TLS para a
-cadeia de handlers do §129), não os helpers (lane Native).
+`crossNativeCancelDuringRunningWorker` (qemu, duas arches). O supervisor OTP
+também roda no cross desde 19/09 (port do §129 — cadeia de handlers por-TID
+`kof_exc_slots`; `OTP001` removido), não só os helpers (lane Native).
 
 No JS especificamente: só lambdas criadas direto num site de `spawn`
 ("task-lambdas") podem virar `async function`; ver restrição
@@ -236,10 +236,11 @@ supervisor("net")                       // objeto novo por sistema
   `selectAny` resolve o handle que conclui primeiro **no tempo** (wall-clock,
   oráculo `anyOf`); não há tie-break por ordem de argumento, então programas não
   devem depender de qual de dois handles instantâneos vence (§291)) · Native
-  riscv/aarch = `OTP001` (clone cru, sem TLS) · JS ✅ desde 18/09 (§132 resolvido:
+  riscv64/aarch64 ✅ desde 19/09 (port do §129 — cadeia de handlers por-TID
+  `kof_exc_slots`; `OTP001` removido) · JS ✅ desde 18/09 (§132 resolvido:
   `time.sleep` é ponto de await — sleep cooperativo async dirigido pela bomba do host
-  `KofJsRunner` — então o worker do supervisor dispara e `OTP002` foi levantado; só
-  riscv/aarch ainda bloqueiam no compile-time com diagnóstico).
+  `KofJsRunner` — então o worker do supervisor dispara e `OTP002` foi levantado;
+  nenhum target bloqueia mais no compile-time).
 
 ## 5. I/O Concorrente
 

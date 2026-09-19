@@ -273,10 +273,10 @@ public final class NativeRiscvCrossEmit {
                 sb.append("    sd t0, 0(sp)\n");
                 sb.append("    sd sp, 8(sp)\n");
                 sb.append("    sd s11, 16(sp)\n");
-                sb.append("    la t1, kof_exc_chain\n");
-                sb.append("    ld t2, 0(t1)\n");
+                sb.append("    call kof_exc_slot\n");
+                sb.append("    ld t2, 0(a0)\n");
                 sb.append("    sd t2, 24(sp)\n");
-                sb.append("    sd sp, 0(t1)\n");
+                sb.append("    sd sp, 0(a0)\n");
             }
             case KofStatementIf _ -> {
                 // §267: marcador de if de statement (uso exclusivo do dispatcher JS) — no-op
@@ -285,9 +285,9 @@ public final class NativeRiscvCrossEmit {
                 // §266: marcador estrutural (fronteira corpo/update do for) — no-op
             }
             case KofTryEnd _ -> {
-                sb.append("    la t1, kof_exc_chain\n");
+                sb.append("    call kof_exc_slot\n");
                 sb.append("    ld t2, 24(sp)\n");
-                sb.append("    sd t2, 0(t1)\n");
+                sb.append("    sd t2, 0(a0)\n");
                 sb.append("    addi sp, sp, 32\n");
             }
             case KofCatchStart kcs -> {

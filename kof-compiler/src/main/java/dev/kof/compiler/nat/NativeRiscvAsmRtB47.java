@@ -16,8 +16,9 @@ package dev.kof.compiler.nat;
 //   VAZIA — make_string len=0 — o que produz JSON inválido; face nunca
 //   exercida pelos E2E, que só consultam colunas não-nulas).
 // - .Ldb_slots/.Ldb_tx_handle são globais (não TLS como o x86 pós-§129):
-//   transaction dentro de spawn cross segue a paridade do EH global do
-//   cross (mesma classe do gate OTP001).
+//   transação concorrente em workers diferentes compartilha o mesmo slot de
+//   tx — residual conhecido do runtime db cross (não é o §129; a cadeia de
+//   handlers já é por-TID desde o port de 19/09).
 //
 // O className literal (último arg de kof_db_queryN, empilhado pelo frontend
 // — ExpressionDbCallLowerer) chega em a(2+N) e é DESCARTADO por não-uso —
@@ -488,19 +489,19 @@ public final class NativeRiscvAsmRtB47 {
                     sd   t0, 0(sp)
                     sd   sp, 8(sp)
                     sd   s11, 16(sp)
-                    la   t1, kof_exc_chain
-                    ld   t2, 0(t1)
+                    call kof_exc_slot           # §129: chain da thread atual
+                    ld   t2, 0(a0)
                     sd   t2, 24(sp)
-                    sd   sp, 0(t1)
+                    sd   sp, 0(a0)
                     # invoca a lambda (vtable[0]); a0 = task
                     mv   a0, s0
                     ld   t0, 8(a0)
                     ld   t0, 0(t0)
                     jalr t0
                     # try end / commit (nested NÃO comita — o externo decide)
-                    la   t1, kof_exc_chain
+                    call kof_exc_slot
                     ld   t2, 24(sp)
-                    sd   t2, 0(t1)
+                    sd   t2, 0(a0)
                     lw   t3, 32(sp)
                     bnez t3, .Ltx_done
                     la   t0, .Ldb_default_handle

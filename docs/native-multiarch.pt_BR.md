@@ -17,9 +17,8 @@
 > `docs/backend-parity.md`(+PT), 16 domínios × 3 arcos; (5) CI cross FECHADO
 > 12/09 — job `cross-native` roda as duas suítes E2E sob qemu. **As recusas
 > restantes por domínio são códigos de gap HONESTOS, não trabalho pendente
-> deste doc:** SECN000 (crypto asm — non-goal R11), OTP001 (supervisor cross —
-> decisão §129 TLS real registrada 19/09 no `DECISIONS.md`, execução dono =
-> lane nat), JSN004 (`json.decode<Record>` em asm puro), RNG001 (rng cross),
+> deste doc:** SECN000 (crypto asm — non-goal R11),
+> JSN004 (`json.decode<Record>` em asm puro), RNG001 (rng cross),
 > `kof.ui` (sem port cross) — cada uma diagnosticada em compile time, nunca
 > silenciosa (R6), rastreadas no `docs/bugs-and-gaps/known-bugs.md` + seção
 > por-arch do `docs/backend-parity.md`. O histórico de construção abaixo fica
@@ -48,8 +47,8 @@
 > `kof.db` → **DB001 FECHADO 15/09 no riscv64/aarch64** (link-by-use `libsqlite3` +
 > runtime `kof_db_*` nas fatias `RtB46/RtB47`; `KofDbE2ETest.crossNativeSqliteRoundtrip`
 > prova o caminho completo sob qemu nas duas arches; JS mantém `DB001`), `kof.security` crypto-heavy → **SECN000**, o
-> `supervisor` de concorrência → **OTP001** (a EH chain é global, não TLS, no
-> cross — o catch per-worker do §129 segue só-x86; os próprios
+> `supervisor` de concorrência → **FECHADO 19/09** (port do §129: a EH chain é
+> por-TID via `kof_exc_slots`, `OTP001` removido; os próprios
 > `selectAny`/`done`/`poll`/`cancel`/`cancelled`/`awaitTimeout` **FECHADOS
 > 15/09**: fatia `RtB48` + trampolim do spawn registrando o cancel slot, TID
 > real via gettid(178) gravado pelo KERNEL no ctid do clone,
@@ -68,7 +67,7 @@
 > o coletor (G-4) é quem de fato recupera; (2) a face cross do DB001
 > FECHADA 15/09 (SQLite; JS mantém DB001) e os helpers do CONC001
 > (selectAny/done/poll/cancel/cancelled/awaitTimeout) FECHADOS 15/09
-> — restam as recusas SECN000/OTP001/JSN004; (3) FP-coleção no cross
+> — restam as recusas SECN000/JSN004 (OTP001 removido 19/09); (3) FP-coleção no cross
 > (FLT001 FECHADO 15/09 — fatia `RtB45`; §107 record/aninhado **FECHADO 19/09
 > NAS 3 ARCOS** — x86 descritor recursivo `.rodata` (face (3) x86) + port
 > cross (face (4)): a fatia `B39` interpreta a MESMA gramática de descritor

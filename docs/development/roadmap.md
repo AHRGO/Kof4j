@@ -254,9 +254,10 @@ State 13/09: real concurrency **JVM** (virtual threads) + **Native**
 + **JS** ✅ 03/09 (CONC003 closed — stmt/expr/cancel/selectAny with real
 async/await/Promise) + **OTP supervision** (`kof.supervisor`: 1st slice
 11/09 JVM+Script core, **S2-JVM 13/09** `startAll`/`lacoUnico` — see
-`planning-otp-supervision.md`; **Native x86 ✅ 15/09** — §129 closed via DECISIONS
-§2 option B, so `kof.supervisor` runs on Native x86; riscv/aarch=OTP001 (honest
-§132-era gate). **JS ✅ 18/09 — §132 resolved:** `time.sleep` became a cooperative
+`docs/planning-otp-supervision.md`; **Native x86 ✅ 15/09** — §129 closed via DECISIONS
+§2 option B; **riscv64/aarch64 ✅ 19/09** — §129 cross port (per-TID chain table
+`kof_exc_slots`, `OTP001` gate removed), so `kof.supervisor` runs on all Native
+targets. **JS ✅ 18/09 — §132 resolved:** `time.sleep` became a cooperative
 async await-point (compiler colors the reaching method async, `kofTimeSleep` returns a
 Promise, `KofJsRunner` host pump drives it), so a spawned worker fires from inside
 another task and `OTP002` was lifted — `kof.supervisor` now runs on JS to parity. The

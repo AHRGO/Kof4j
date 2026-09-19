@@ -681,6 +681,27 @@ compartilhados precisam funcionar nas duas arches antes do port entrar.
 Evidência do baseline RED: dois testes cross espelhando o §129 x86 penduram sob
 qemu (o `throw` do worker faz longjmp na `kof_exc_chain` global da `main`).
 
+**Correção 19/09 — TLS-via-`tp` é ABI-inseguro; mecanismo trocado por tabela
+por-TID (medido, agente).** O mecanismo "TLS real via `clone`" acima foi
+implementado e **quebra a libc de forma provada**: sobrescrever o thread pointer
+(riscv `tp`=x4 / aarch64 `TPIDR_EL0`) dessincroniza a TLS da própria biblioteca
+C. Sob qemu isso produziu `SIGSEGV` (exit 139) em testes aarch64 que chamam
+`snprintf`/`strtod` via `RuntimeDtoa` (B45): `nativeValueOfDoubleFloatMatchesJvmGolden`,
+`aarch64NegativeFloatDoubleRuns`, `nativeCollectionPrintMatchesJvmGolden`. No
+riscv a mesma mudança também regrediu `crossNativeConcurrencyHelpersRun`
+(`done(a)` true→false). Causa raiz: nosso `_start` é nosso, mas qualquer
+programa Kof ainda pode chamar a libc (dtoa/format), então a `tp` **não** é
+nossa para reaproveitar. **Resolução (desvio de mecanismo, contrato intacto):**
+o *contrato* §129 (cadeia thread-scoped, worker publica em `handle->exc`,
+consumidor relança em `await`/`await_timeout`/`select_any`) é mantido exatamente;
+só o *mecanismo* muda para uma **tabela por-TID** `kof_exc_slots` (256 entries ×
+16 B `[tid, chain]`, chave `gettid`=a7 178, probe linear, mesmo padrão do
+`kof_cancel_slots`/CONC001), com um helper `kof_exc_slot()` retornando `&chain`
+da thread atual. É a segunda opção, mais segura, e não toca o thread pointer.
+Prova: os dois testes cross agora passam verdes em riscv64/aarch64 sob qemu
+(`KofConcurrency2Test` `spawnWorkerThrowIsolatedFromSiblingsCrossArch` +
+`spawnWorkerThrowUnhandledPropagatesCrossArch`, 138/0 na rodada de 19/09).
+
 ### `roundTo`
 
 **Decisão:** arredondamento decimal aritmético.

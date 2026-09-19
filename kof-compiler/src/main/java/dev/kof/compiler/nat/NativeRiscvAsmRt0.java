@@ -326,19 +326,25 @@ public final class NativeRiscvAsmRt0 {
                 la   a0, .Lstr_bounds_err
                 call kof_panic
 
-            # kof_throw_string(str) — desempilha a chain; sem handler → panic.
-            # a0=str é preservado (só usa t-regs) até o handler.
+            # kof_throw_string(str) — desempilha a chain da thread; sem handler
+            # → panic. a0=str é preservado até o handler.
             .globl kof_throw_string
             kof_throw_string:
-                la   t0, kof_exc_chain
-                ld   t0, 0(t0)
+                addi sp, sp, -32
+                sd   ra, 24(sp)
+                sd   s0, 16(sp)
+                sd   a0, 8(sp)              # mensagem
+                call kof_exc_slot
+                mv   s0, a0
+                ld   a0, 8(sp)              # restaura a mensagem
+                beqz s0, .Lthrow_panic
+                ld   t0, 0(s0)              # chain head
                 beqz t0, .Lthrow_panic
-                ld   t1, 8(t0)
-                ld   t2, 16(t0)
-                ld   t3, 24(t0)
-                la   t4, kof_exc_chain
-                sd   t3, 0(t4)
-                ld   t4, 0(t0)
+                ld   t1, 8(t0)              # sp a restaurar
+                ld   t2, 16(t0)             # s11 a restaurar
+                ld   t3, 24(t0)             # chain antigo
+                sd   t3, 0(s0)              # chain = antigo
+                ld   t4, 0(t0)              # handler
                 beqz t4, .Lthrow_panic
                 mv   sp, t1
                 mv   s11, t2

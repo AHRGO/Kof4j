@@ -66,6 +66,7 @@
 > 40/0 incl. 4 casos novos de throw em worker no native, `ExceptionsE2ETest` 11/0,
 > `NativeE2ETest` 65/0. Suíte 1777/1 (o 1 = SIGSEGV Native pré-existente
 > `[ifexpr-heterogeneous-direct]`, §205, outra lane). **Atualização 15/09: esse vermelho foi FECHADO no mesmo dia pela §205 fatia 1** (`97d08e54`, rebaixamento ramo-a-ramo no print direto — `conformanceCoreControl` 1/1 medido no tip; o residual `via-var`/`as Object` fica como PARCIAL, catalogado no §205).
+> **19/09 — §129 FECHADO também em riscv64/aarch64; `OTP001` REMOVIDO (lane nat/compilador `.17`).** O port cross usa **tabela de cadeia por-TID** `kof_exc_slots` (256 × 16 B `[tid, chain]`, chave `gettid`=a7 178, probe linear) + helper `kof_exc_slot()` — o mecanismo "TLS real via `clone`" da mantenedora foi implementado e provado **ABI-inseguro** (sobrescrever `tp`/`TPIDR_EL0` quebra a TLS da libc → SIGSEGV em `snprintf`/`strtod`; regressão riscv `crossNativeConcurrencyHelpersRun`), então foi abandonado pela segunda opção, segura. O `CompilerSupervisor` não emite mais `OTP001`; `kof.supervisor` roda em todos os targets nativos. `planning-otp-supervision.md`(+PT) promovido p/ `docs/` (planejamento concluído). Prova: `KofConcurrency2Test` 48/0 (`spawnWorkerThrowIsolatedFromSiblingsCrossArch` + `spawnWorkerThrowUnhandledPropagatesCrossArch` verdes nas 2 arches), `KofSupervisorE2ETest` 16/0 (`crossGateOtp001` agora roda o `APP` sob qemu em riscv/aarch), E2E riscv/aarch 45/0 cada.
 >
 > **14/09 — LINHA DE BASE DA ESTABILIZAÇÃO DE RELEASE (dono = 192.168.100.17,
 > lane docs/estabilização).** Run limpo 4-módulos (`rm -rf */target`): **1819
@@ -280,7 +281,7 @@ main() {
     + EOF) + binds `?` (substituição de literal client-side, `nativeMysqlWireProtocol`
     — 31/08)**. Prepared statements via COM_STMT_PREPARE (binário) pendente.
 - **JS** (16/09, DB001 fechado): `connect`/`connect2`/`close`/`execute`/`query`/`transaction` delegam a `kof_platform.db*` no host GraalJS (`KofJsRunner`+`KofJsDbBridge`) — mesma JVM/classpath do caminho JDBC, entao o `DriverManager` ve h2/sqlite-jdbc exatamente como o target JVM faz; saida byte-parity (`KofDbE2ETest.js*` 4 casos). **`db.query<T>` tipado = `DB002` FECHADO 18/09** (a wire e nao-tipada — a ponte host nao tem `Class.forName` p/ classes JS — mas o guest binda cada linha JSON com o mesmo helper `__kof_decode_<T>` que o `json.decode<List<T>>` usa; `KofDbE2ETest.jsTypedQuery*` byte-parity c/ a JVM).
-- **riscv64/aarch64**: SQLite fechado 15/09 — link-by-use `libsqlite3` + fatias de runtime `kof_db_*` `RtB46/RtB47` (`KofDbE2ETest.crossNativeSqliteRoundtrip` sob qemu); DSN só `sqlite:`, transaction via EH chain (dentro de `spawn` não suportado no cross, mesma classe do OTP001).
+- **riscv64/aarch64**: SQLite fechado 15/09 — link-by-use `libsqlite3` + fatias de runtime `kof_db_*` `RtB46/RtB47` (`KofDbE2ETest.crossNativeSqliteRoundtrip` sob qemu); DSN só `sqlite:`, transaction via EH chain (a cadeia §129 é por-TID desde 19/09; transações concorrentes em workers diferentes ainda compartilham o slot global `.Ldb_tx_handle` — residual catalogado no `NativeRiscvAsmRtB47`).
 - DSNs: `jdbc:*` (JVM), `sqlite:` (JVM/Native), `mongodb://` (ORM).
 
 ### kof.orm — o ORM da própria linguagem
