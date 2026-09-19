@@ -10508,6 +10508,8 @@ Prova — o repro da própria seção (`var cm = mapOf(); cm.put("c", 97 as Char
 
 Também coberto pelo corpus novo `NativeNullablePrimitiveContractE2ETest` (linhas de `Char?` null/presente, incluindo a face de concatenação `"c=" + c(true)`) — verde em JVM, Script, JS, x86-64, riscv64 e aarch64.
 
+**Achado lateral — 3 testes de cross fixavam o comportamento PRÉ-D-PRINT (goldens velhos, atualizados na mesma frente).** Ligar este fix deixou-os vermelhos, e foi assim que os goldens velhos apareceram: `NativeStringUtf16CrossTest` e os métodos `nativeStringLengthAndCharAtUtf16` / `*StringMethods` do `NativeRiscv64E2ETest` e do `NativeAarch64E2ETest` esperavam o **codepoint** (`233`, `55357`, `98`) para um `println(s.charAt(i))` cru. Os goldens são de 11/09 — antes do §216/D-PRINT (15/09), que decidiu que `Char` imprime o CARÁTER, e o **x86 já tinha migrado** (`NativeE2ETest.nativeStringCharAtUtf16` espera `é` para `println(s.charAt(3))` e faz cast dos surrogates soltos com `as Int`, que é a asserção melhor — surrogate solto não é caractere exibível). As faces cross só continuavam passando porque o cross ainda não tinha adotado o D-PRINT. Agora estão alinhadas ao formato do x86 (commit `ef5dbeaa`). Medido antes/depois no mesmo conjunto de 8 classes: 13 falhas → 7 (= a base). Lição para quem for fechar um gap em forma de D-PRINT nos alvos cross: os goldens cross de `println(char)` são pré-D-PRINT, e o JVM **não** é oráculo utilizável para o rendering de surrogate solto num host Windows (o charset do console degrada a saída — o `é` saiu como o byte único Latin-1 `E9` e o emoji como `?`); a referência é o teste do x86.
+
 ## §334 — `kof_box_equals` (introzido no §284-map) compara caixas por `(tag, bits do payload)` — a unica divergencia honesta de `Double.equals` e o caso NaN (JVM: `NaN.equals(NaN)` = true; caixa nativa: false) — 🟡 ABERTO 18/09 (micro-borda; catalogado pela unidade §284-map; sem repro visivel conhecida)
 
 **Achado:** 18/09, ao escrever o `kof_box_equals` (x86 `RuntimeErasureBox` + `NativeRiscvAsmRtB49`): igualdade `(tag, bits)` casa `Integer/Long/Boolean.equals` e `Double.equals` para TODO valor exceto NaN (e o par de zeros com sinal: `Double.equals` de 0.0 vs −0.0 tambem e FALSE — bits diferem → nativo concorda ✓; so NaN diverge). Alcancavel so por slots `Object`/erasure segurando caixas NaN.
@@ -10516,6 +10518,41 @@ Também coberto pelo corpus novo `NativeNullablePrimitiveContractE2ETest` (linha
 
 **Repro atual:** na verdade o NaN NAO e construtivel em fonte Kof hoje — literal de divisao por zero e diagnostico OBS-009 e nao ha `Double.NaN` na stdlib → a face esta DESLIGADA ate existir um produtor de NaN (biblioteca matematica, pacote oficial). Rebaixar a informativo se um produtor nascer. Relacionado: §333, §284-map, OBS-009.
 
+
+## §336 — 7 testes de cross falham com **SIGSEGV (exit 139) sob `qemu-aarch64`** — `NativeRiscvDtoaTest.dtoaMatchesJvmOracleOnAarch64` mais as 5 classes de GC (`GcFreeList`, `GcList`×2, `GcMark`, `GcSweep`×2) — 🟡 ABERTO 19/09 (pré-existente; só aarch64 — riscv64 passa no mesmo código) — dono = lane nativa
+
+**Achado:** 19/09, medindo a frente #259/N2 (retorno/local nullable nativo) com a suíte completa em WSL2 + QEMU. Sem relação com aquele trabalho: reproduz **igual na base** `77eaa168`.
+
+**Medição** — o mesmo conjunto de 8 classes, mesmo host, mesma receita (ver a receita abaixo), então a comparação é maçã-com-maçã:
+
+| | testes | falhas |
+|---|---|---|
+| base `77eaa168` | 110 | **7** ← todas SIGSEGV do `qemu-aarch64` |
+| branch `fix/259-nullable-primitive-native` (antes do refresh dos goldens de Char) | 110 | 13 ← as 7 + 6 goldens velhos de Char |
+| branch (depois do refresh, commit `ef5dbeaa`) | 110 | **7** ← idêntico à base |
+
+Suíte completa na branch sob WSL2: `Tests run: 2404, Failures: 8, Errors: 0, Skipped: 36` — as 7 acima mais uma linha do corpus novo de nullable (`branchesLocalsAndForwardedReturn` no `NATIVE_AARCH64`), que é o defeito pré-existente de `Float +=` → `NaN` registrado como #464. Ou seja, o vermelho restante da suíte neste host é inteiramente pré-existente.
+
+**Repro (cada um):** rodar a classe com `mvn -o -pl kof-compiler -am test -Dtest=<classe>` num host Linux com binutils cross + QEMU; o binário aarch64 morre com `139`:
+
+```
+NativeRiscvDtoaTest.dtoaMatchesJvmOracleOnAarch64      qemu aarch64 falhou (139)
+NativeRiscvGcFreeListTest.freeListReusesSlotAndMemstatsCountsAarch64   (139)
+NativeRiscvGcListTest.gcListLinksNewBlocksWithFlagsAarch64             (139)
+NativeRiscvGcListTest.gcListReuseDoesNotDuplicateAarch64               (139)
+NativeRiscvGcMarkTest.conservativeMarkMarksReachableAarch64            (139)
+NativeRiscvGcSweepTest.longAllocLoopSurvivesArenaExhaustionViaCollectAarch64 (139)
+NativeRiscvGcSweepTest.sweepRecoversDeadAndMarksLiveAarch64            (139)
+```
+
+**Pista de escopo (não é causa raiz — não investigado):** é só aarch64 e atravessa runtimes *diferentes* (formatação dtoa/libc e o mark/sweep/free-list do GC). O que eles têm em comum é o caminho aarch64 **sob `qemu-aarch64`**, enquanto o riscv64 roda código análogo sem problema — então o suspeito principal é o tradutor/runtime cross do aarch64, não uma função de runtime isolada. O §283 (scheduler aarch64 que nunca termina sob qemu) está catalogado à parte, na mesma família.
+
+**Receita de medição (custa tempo redescobrir):**
+1. Host Windows **sem GNU `as`** não mede alvo nativo: todo teste nativo falha com `as not available ... COMP001` (~1000 diagnósticos numa execução). Evidência nativa exige WSL2/Linux com binutils (`as`, `ld`, mais `riscv64-linux-gnu-as`/`aarch64-linux-gnu-as` para os cross) e QEMU.
+2. `Unresolved compilation problem: dev.kof.runtime.KofJsRunner cannot be resolved to a type` (e o mesmo para `org.graalvm.polyglot.Context` / `[LValue;`) aparece como erro de **execução** do teste, não de build, e contamina a contagem de falhas — na árvore da base chegou a abortar o discovery (`Tests run: 0`). `rm -rf kof-runtime/target kof-compiler/target` **antes** de rodar resolve; a mesma receita limpa compila a branch sem nenhum desses.
+3. `-pl` **sem** `-am` falha na resolução offline de dependência — a suíte só roda com `-am` (já registrado no DOING; o modo de falha é fácil de ler errado como problema de código).
+
+---
 
 ## §309 — `CmdDeployTest.publishIsHonestGapD2` VERMELHO no tip: o D2-A trocou a recusa e não atualizou o próprio teste — ✅ FECHADO 19/09 (medição `.22` pegou tip pré-rebase; sem repro no tip atual)
 
