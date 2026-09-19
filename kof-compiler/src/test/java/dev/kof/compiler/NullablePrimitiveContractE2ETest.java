@@ -497,7 +497,10 @@ class NullablePrimitiveContractE2ETest {
     // e o println lê a referência (JVM). Faces LEITORAS pré-existentes ficam
     // no §306: JVM truthiness `if (b)` (if_icmpne sobre Boolean) e o Script
     // que imprime `Bool?` local como 1/0 (bool canônico do interpretador é
-    // Int; medido no jar pré-fix — não é regressão deste pino).
+    // Int; medido no jar pré-fix — não é regressão deste pino). §306 FECHADO
+    // 19/09 (`.22`): truthiness `if (b)` → açucar `b == true` (null-seguro,
+    // JVM/JS/Script) + `kof_box`/`kof_unbox` canonizam Boolean no
+    // interpretador; faces pinadas por `NullableBoolTruthinessE2ETest` 8/8 runAll3.
     @Test
     void nullablePrimBoolWriterFacesStoreBoxed(@TempDir Path tempDir) throws IOException {
         runJvm(tempDir, """

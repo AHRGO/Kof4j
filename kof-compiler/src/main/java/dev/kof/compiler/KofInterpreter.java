@@ -400,8 +400,27 @@ public final class KofInterpreter {
     Object dispatch(KofCall kc, Object recv, Object[] args) throws Throwable {
         String name = kc.methodName();
         // box/unbox: identidade — a pilha do interpretador já é boxed (JVM)
-        if ("kof_box".equals(name) || "kof_unbox".equals(name)) {
-            return args.length > 0 ? args[0] : recv;
+        // — EXCETO bool (Kof): o literal chega Integer 0/1 (ofBool/§108) mas o
+        // slot Nullable(Bool) e o caminho de valor do == comparam o wrapper
+        // java.lang.Boolean (alinhado com o bytecode JVM, §306(a)); sem esta
+        // coerção {@code Bool? b = true} guardava Integer e {@code if (b ==
+        // true)} media false (medido — v1 do fix). Number→Boolean só no box;
+        // unbox (primitivo destino) normaliza Boolean→0/1 (§108).
+        if ("kof_box".equals(name)) {
+            Object v = args.length > 0 ? args[0] : recv;
+            if (KofInterpreterValues.isBoolWrapperType(kc.returnType())
+                    && v instanceof Number n) {
+                return n.intValue() != 0 ? Boolean.TRUE : Boolean.FALSE;
+            }
+            return v;
+        }
+        if ("kof_unbox".equals(name)) {
+            Object v = args.length > 0 ? args[0] : recv;
+            if (KofInterpreterValues.isBoolPrimitiveType(kc.returnType())
+                    && v instanceof Boolean b) {
+                return b ? 1 : 0;
+            }
+            return v;
         }
         // receiver Kof → dispatch VIRTUAL pela classe real (polimorfismo).
         // EXCETO construtores: <init> NÃO é virtual no JVM — o IR já traz o
@@ -499,6 +518,11 @@ public final class KofInterpreter {
     static int unboxInt(Object v) {
         if (v instanceof Number num) return num.intValue();
         if (v instanceof Character ch) return ch;
+        // §306(b): Boolean é a representação de verdade do slot Nullable(Bool)
+        // no JVM (referência boxed) e o interpretador passou a aceitar os dois
+        // canones (Integer 0/1 de ofBool e Boolean de coerceFor/get) — unroll
+        // do Boolean aqui é o equivalente do CHECKCAST+booleanValue do bytecode.
+        if (v instanceof Boolean b) return b ? 1 : 0;
         throw new ClassCastException("not an int: " + v);
     }
 

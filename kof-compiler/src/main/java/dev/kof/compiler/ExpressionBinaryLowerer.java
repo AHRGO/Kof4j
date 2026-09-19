@@ -157,18 +157,25 @@ if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
 // Short-circuit evaluation for || and &&:
 // a || b → eval a; if true, jump to true_label; eval b; result = b
 // a && b → eval a; if false, jump to false_label; eval b; result = b
-if (("||".equals(bin.operator()) || "&&".equals(bin.operator()))
-        && driver.target != Target.JS) {
-    LabelId trueLabel = LabelId.create();
-    LabelId falseLabel = LabelId.create();
-    LabelId endLabel = LabelId.create();
-    localIdx = ExpressionLowerer.emitExpression(driver, bin.left(), ops, owner, localIdx, locals);
-    ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
-    if ("||".equals(bin.operator())) {
-        ops.add(new KofConditionalJump(KofComparison.NE, trueLabel, falseLabel));
-    } else {
-        ops.add(new KofConditionalJump(KofComparison.NE, falseLabel, trueLabel));
-    }
+        if (("||".equals(bin.operator()) || "&&".equals(bin.operator()))
+                && driver.target != Target.JS) {
+            LabelId trueLabel = LabelId.create();
+            LabelId falseLabel = LabelId.create();
+            LabelId endLabel = LabelId.create();
+            // §306(a): `b || x` / `b && x` com `b: Bool?` — a truthiness do lado
+            // esquerdo passa pelo MESMO rewrite do emitTruthinessJump: {@code b ==
+            // true} cai no caminho de VALOR null-safe (D-NULL-INTENT) que já vale
+            // nos 4 alvos; o IF_ICMPNE cru sobre o slot boxed (JVM) dava
+            // VerifyError. Sem rewrite, comportamento byte-idêntico ao atual.
+            ExpressionNode leftC = CompilerComparisons.nullableBoolTruthinessRewrite(
+                    driver, bin.left(), locals);
+            localIdx = ExpressionLowerer.emitExpression(driver, leftC, ops, owner, localIdx, locals);
+            ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
+            if ("||".equals(bin.operator())) {
+                ops.add(new KofConditionalJump(KofComparison.NE, trueLabel, falseLabel));
+            } else {
+                ops.add(new KofConditionalJump(KofComparison.NE, falseLabel, trueLabel));
+            }
     ops.add(new KofLabel(falseLabel));
     localIdx = ExpressionLowerer.emitExpression(driver, bin.right(), ops, owner, localIdx, locals);
     ops.add(new KofJump(endLabel));

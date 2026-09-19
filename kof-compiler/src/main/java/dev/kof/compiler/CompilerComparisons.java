@@ -61,6 +61,58 @@ public final class CompilerComparisons {
                 && !Type.isVoid(pt);
     }
 
+    /** §306(a): {@code Nullable(Bool)} genuíno — slot fisicamente boxed (Commit B). */
+    static boolean isNullableBool(Type t) {
+        return t instanceof Type.NullableType nt
+                && nt.inner() instanceof Type.PrimitiveType pt
+                && "bool".equals(Type.canonicalPrimitiveName(pt.name()));
+    }
+
+    /**
+     * §306(a)+(b) — salto de TRUTHINESS em posição de condição ({@code if}/
+     * {@code while}/if-expr com {@code cond} não-comparação). O slot
+     * {@code Nullable(Bool)} é boxing desde o Commit B (#278), mas a caixa era
+     * inconsistente: JVM guarda a referência {@code java/lang/Boolean} (o
+     * {@code if_icmp*} cru do caminho antigo morria no LOAD da classe —
+     * {@code VerifyError} mascarado de "JavaFX", §149) e o interpretador, com
+     * {@code kof_box} de identidade, misturava {@code Integer} 0/1 (ofBool)
+     * com {@code Boolean} (coerceFor do get) → {@code ==}/{@code println}
+     * divergiam por fonte do valor (face (b): "1/0" no Script vs "true/false").
+     * O fix é em duas pontas: (1) o box do interpretador agora CANONIZA
+     * Number↔Boolean no kof_box/kof_unbox (alinha com a referência da JVM);
+     * (2) AÇÚCAR {@code if (b)} → {@code if (b == true)} cai no caminho de
+     * VALOR do {@code ==} (D-NULL-INTENT: {@code .equals} null-safe —
+     * {@code null == true} é {@code false}, o falsy honesto). No Native o
+     * slot é o primitivo cru (varType desembrulhado) e o caminho antigo já
+     * é correto — não reescrever (medição local impossível sem qemu; CI
+     * cross é o gate). Sem reescrita quando o tipo não é {@code Nullable(Bool)}
+     * (byte-idêntico ao comportamento atual).
+     */
+    static ExpressionNode nullableBoolTruthinessRewrite(CompilerDriver driver, ExpressionNode cond,
+                                                        List<IRLocalVariable> locals) {
+        if (cond instanceof BinaryExpr) {
+            return cond;
+        }
+        if (driver.target.isNative()) {
+            return cond;
+        }
+        if (!isNullableBool(ExpressionTyper.inferExprType(driver, cond, locals))) {
+            return cond;
+        }
+        return new BinaryExpr(cond.position(), "==", cond,
+                new LiteralExpr(cond.position(), ConcreteLiteralKind.BOOLEAN, "true"));
+    }
+
+    static int emitTruthinessJump(CompilerDriver driver, ExpressionNode cond,
+                                  List<KofOperation> ops, String owner, int localIdx,
+                                  List<IRLocalVariable> locals, LabelId trueLabel, LabelId falseLabel) {
+        localIdx = ExpressionLowerer.emitExpression(driver,
+                nullableBoolTruthinessRewrite(driver, cond, locals), ops, owner, localIdx, locals);
+        ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
+        ops.add(new KofConditionalJump(KofComparison.NE, trueLabel, falseLabel));
+        return localIdx;
+    }
+
     /**
      * Operand type of a comparison shortcut: the common numeric type of the
      * two operands (int, long, float or double). The IR carries it so the

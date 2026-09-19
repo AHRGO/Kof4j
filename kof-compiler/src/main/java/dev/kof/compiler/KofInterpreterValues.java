@@ -62,6 +62,17 @@ public final class KofInterpreterValues {
                 || t instanceof Type.TypeVariable;
     }
 
+    /** Wrapper {@code java.lang.Boolean} do slot Nullable(Bool) (box do §306). */
+    static boolean isBoolWrapperType(Type t) {
+        return t instanceof Type.ClassType ct && "java.lang".equals(ct.packageName())
+                && "Boolean".equals(ct.name());
+    }
+
+    /** Primitivo bool (destino do unbox do §306). */
+    static boolean isBoolPrimitiveType(Type t) {
+        return t instanceof Type.PrimitiveType pt && "bool".equals(Type.canonicalPrimitiveName(pt.name()));
+    }
+
     /**
      * ==/!= tolerante a null: Nullable(primitivo) (get de Map sem hit) compara
      * via Objects.equals (espelha o JVM: primitivo boxado vs null → acmp),
