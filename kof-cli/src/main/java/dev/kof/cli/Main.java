@@ -37,6 +37,7 @@ public final class Main {
             case "new" -> System.exit(CmdNew.run(args));
             case "deps" -> System.exit(Deps.run(args));
             case "deploy" -> CmdDeploy.run(args);
+            case "workflow" -> System.exit(CmdWorkflow.run(args));
             case "c" -> c(args);
             case "fmt" -> System.exit(Fmt.run(args));
             case "editor" -> System.exit(CmdEditor.run(args));
@@ -79,6 +80,7 @@ public final class Main {
         System.out.println("  install <dir>                install this build as a distribution");
         System.out.println("  deps <init|add|remove|list|resolve>   package manager (kofdeps)");
         System.out.println("  deploy <dir> --target jvm [--output <d>] [--name <n>] [--version <v>]  package a release (fat jar + manifest + checksums + tar.gz)");
+        System.out.println("  workflow <list|run> <file.kf> [--json] [--job <name>] [--dry-run]   run a pipeline (pipeline(): KofWfDag)");
         System.out.println("  editor <list|detect|status|setup|install|uninstall|update>   editor integration (EDI001)");
         System.out.println("  version");
         System.out.println();
