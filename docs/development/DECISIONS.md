@@ -1521,6 +1521,67 @@ observability, not a concurrency contract change).
 
 ---
 
+## D-UI-SCOPE — `kof.ui` rule updates: **DECIDED — the sole named exception to rule 5**
+
+**Date:** 2026-09-18 (maintainer, multi-choice poll in session)
+
+**State:** `DECIDED` — exception ratified; this record converts the verbal directive into a contract.
+
+**Origin:** maintainer directive in chat, 18/09/2026: "regra do ui so vale pra js e
+webasm" — kof.ui rule updates only apply to KofJS and Kof WebASM, not JVM/Native.
+The statement arrived without a decision id (rule 6: contracts change only by
+recorded decision). This record ratifies it as the maintainer's chosen form
+(single named rule, recommended wording for the WASM condition).
+
+### Context
+
+AGENTS rule 5 makes absolute parity law ("same output on every target"). kof.ui
+rule work has always been JS-only in practice: `kof_dom_patch` (§257/§300), diff
+caching (D-UI-DIFF), `cancelled()` (D-UI-CANCELLED), the Router (Phase 7) — the
+JVM/Native sides are no-op or degrade by design. Filing those as "parity gaps"
+was miscoding intent as debt. The maintainer's statement turns practice into
+law; this decision makes it a **named** exception so ledgers, the parity matrix,
+and CI queries stop treating it as a bug.
+
+### Contract
+
+1. **`kof.ui` rule updates** — changes to the UI-language semantics (rendering
+   rules, state-driven re-render, signal propagation, `when`/`each`, diffing,
+   cancellation/`cancelled()`, the §300 lifecycle substrate) — are the **sole
+   named exception** to rule 5. The parity duty binds **KofJS** (today) and
+   **Kof WebASM** *the moment `Target.WASM` exists* (the enum is
+   `JVM/NATIVE/ANDROID/JS` — measured 18/09; there is no WASM surface to break
+   yet). It does **not** bind JVM/Native, ever: absence of UI rules there is the
+   design, not a gap.
+2. **Not** inside the exception: the rest of `kof.ui` (API signatures and what
+   the parity matrix already measures row-by-row — unchanged), everything
+   outside `kof.ui`, and rule 5 for core semantics and stdlib outputs. The
+   exception is **prospective**: it prevents *new* parity obligations on
+   JVM/Native for rule updates; it does not rewrite existing matrix rows.
+3. The exception is **named and enumerable** (exactly this surface, exactly
+   this target set). It is not a template: any future exception needs a new
+   `D-` section ratified by the maintainer (rule 6).
+
+### Consequences
+
+- `docs/backend-parity.md` gets the carve-out under the Principle section, EN+PT,
+  same commit as this decision.
+- A UI-rule change is landed with JS (+ WebASM when it exists) tests only; do
+  **not** add JVM/Native parity assertions for rule behavior, and do not open
+  `known-bugs` items for their absence.
+- Existing records D-UI-STYLE / D-UI-TOKENS / D-UI-DIFF / D-UI-AUTOUNSUB /
+  D-UI-CANCELLED are all consistent with this carve-out (they shipped on KofJS
+  only, by fact).
+
+### Related
+
+- AGENTS rules 5, 6, 10; `docs/backend-parity.md` §Principle.
+- D-UI-DIFF, D-UI-AUTOUNSUB, D-UI-CANCELLED (the substrate this governs).
+- `IMPLEMENTATION-UNIVERSAL-PLATFORM` R7 (browser honest degrade) — related but
+  distinct: R7 is a runtime degrade with a diagnostic, this is a scope exclusion.
+
+---
+
 ## D-UNIVERSAL — promotion of `IMPLEMENTATION-UNIVERSAL-PLATFORM` to current work (R12 overridden)
 
 **Date:** 2026-09-17

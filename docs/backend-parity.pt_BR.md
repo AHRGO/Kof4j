@@ -161,6 +161,15 @@ A semântica Kof é a mesma em todos os targets. Onde um target não suporta
 uma feature ainda, o compilador emite um diagnostic explícito — nunca código
 que funciona de forma diferente ou quebra silenciosamente.
 
+**Única exceção nomeada (D-UI-SCOPE, 18/09).** A paridade absoluta vincula toda
+superfície exceto as **atualizações de regra do `kof.ui`** — as regras de
+renderização/estado da linguagem de UI (sinais, `when`/`each`, diff,
+semântica de cancelamento). Estas são de autoria e efeito no **KofJS hoje** e
+no **Kof WebASM quando `Target.WASM` existir** — **nunca** no JVM/Native.
+Esta é a única exceção nomeada à regra 5; todo o resto, incl. o restante de
+`kof.ui` e todo outro domínio, segue sob a lei de paridade. Ver
+`docs/development/DECISIONS.pt_BR.md` §D-UI-SCOPE.
+
 ---
 
 ## Convenção de gaps por domínio (visão universal)

@@ -159,6 +159,15 @@ Kof semantics are the same on all targets. Where a target does not yet support
 a feature, the compiler emits an explicit diagnostic — never code that works
 differently or breaks silently.
 
+**Sole named exception (D-UI-SCOPE, 18/09).** Absolute parity binds every
+surface except **`kof.ui` rule updates** — the UI language's rendering/state
+rules (signals, `when`/`each`, diff, cancellation semantics). Those are authored
+and effective on **KofJS today** and on **Kof WebASM when `Target.WASM`
+exists** — **never** on JVM/Native. This is the single named exception to
+rule 5; everything else, including the rest of `kof.ui` and every other
+domain, stays under the parity law. See `docs/development/DECISIONS.md`
+§D-UI-SCOPE.
+
 ---
 
 ## Gap convention per domain (universal view)

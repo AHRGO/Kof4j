@@ -1556,6 +1556,71 @@ isto é observabilidade de UI, não mudança de contrato de concorrência).
 
 ---
 
+## D-UI-SCOPE — atualizações de regra do `kof.ui`: **DECIDIDA — a única exceção nomeada à regra 5**
+
+**Data:** 2026-09-18 (mantenedora, enquete multi-escolha na sessão)
+
+**Estado:** `DECIDIDA` — exceção ratificada; este registro converte a diretiva
+verbal em contrato.
+
+**Origem:** diretiva da mantenedora no chat, 18/09/2026: "regra do ui so vale
+pra js e webasm" — atualizações de regra do kof.ui valem apenas para KofJS e
+Kof WebASM, não para JVM/Native. A fala chegou sem id de decisão (regra 6:
+contratos mudam só por decisão registrada). Este registro a ratifica na forma
+escolhida pela mantenedora (regra única nomeada, redação recomendada para a
+condição de WASM).
+
+### Contexto
+
+A regra 5 do AGENTS torna a paridade absoluta lei ("mesmo output em todo
+target"). O trabalho de regras do kof.ui sempre foi só-JS na prática:
+`kof_dom_patch` (§257/§300), cache de diff (D-UI-DIFF), `cancelled()`
+(D-UI-CANCELLED), o Router (Fase 7) — os lados JVM/Native são no-op ou degrade
+por design. Registrar isso como "gap de paridade" era codificar intenção como
+dívida. A fala da mantenedora transforma a prática em lei; esta decisão a torna
+exceção **nomeada**, para que ledger, matriz de paridade e consultas de CI
+parem de tratá-la como bug.
+
+### Contrato
+
+1. **Atualizações de regra do `kof.ui`** — mudanças na semântica da linguagem
+   de UI (regras de renderização, re-render dirigido por estado, propagação de
+   sinais, `when`/`each`, diffing, cancelamento/`cancelled()`, o substrato de
+   ciclo de vida do §300) — são a **única exceção nomeada** à regra 5. O dever
+   de paridade vincula **KofJS** (hoje) e **Kof WebASM** *no instante em que
+   `Target.WASM` existir* (o enum é `JVM/NATIVE/ANDROID/JS` — medido 18/09; não
+   há superfície WASM a quebrar ainda). **Não** vincula JVM/Native, nunca: a
+   ausência de regras de UI lá é o design, não um gap.
+2. **Não** está dentro da exceção: o restante de `kof.ui` (assinaturas de API e
+   o que a matriz de paridade já mede linha a linha — inalterado), tudo fora de
+   `kof.ui`, e a regra 5 para semântica de core e outputs de stdlib. A exceção
+   é **prospectiva**: impede *novas* obrigações de paridade em JVM/Native para
+   atualizações de regra; não reescreve linhas existentes da matriz.
+3. A exceção é **nomeada e enumerável** (exatamente esta superfície, exatamente
+   este conjunto de targets). Não é template: qualquer exceção futura exige um
+   novo `D-` ratificado pela mantenedora (regra 6).
+
+### Consequências
+
+- `docs/backend-parity.md` ganha a cláusula de exceção sob a seção Princípio,
+  EN+PT, no mesmo commit desta decisão.
+- Uma mudança de regra de UI é entregue com testes só em JS (+ WebASM quando
+  existir); **não** adicionar asserções de paridade JVM/Native para o
+  comportamento de regra, e não abrir item em `known-bugs` pela ausência.
+- Os registros existentes D-UI-STYLE / D-UI-TOKENS / D-UI-DIFF / D-UI-AUTOUNSUB /
+  D-UI-CANCELLED são todos consistentes com esta exceção (embarcaram só no
+  KofJS, de fato).
+
+### Relacionado
+
+- Regras 5, 6, 10 do AGENTS; `docs/backend-parity.md` §Princípio.
+- D-UI-DIFF, D-UI-AUTOUNSUB, D-UI-CANCELLED (o substrato que isto rege).
+- `IMPLEMENTATION-UNIVERSAL-PLATFORM` R7 (degrade honesto no browser) —
+  relacionado mas distinto: R7 é degrade de runtime com diagnóstico, isto é
+  exclusão de escopo.
+
+---
+
 
 # 4. Decisões rejeitadas ou substituídas
 
