@@ -140,7 +140,7 @@ Bash+Python+YAML+jq+sed+awk **numa única linguagem tipada**).
 | # | Item | Status | Dono | Depende de |
 |---|------|--------|------|------------|
 | 2.1 | `kof.workflow` / `kof.batch` — jobs, pipelines, retry, checkpoints, dead-letter | 🔵 | — | Estágio 1; **proposta de design em `future/workflow-plan.md`** (PROPOSTO 18/09, barrado por Q1–Q4 — regra 6) |
-| 2.2 | `kof.shell` — shell idiomático sobre `kof.process` | 🟡 | `.18` | Estágio 1; **`future/shell-plan.md`** APROVADO 18/09 (Q1–Q3 pela enquete da mantenedora); MVP 18/09: `cmd`/`run`/`ok` em JVM+JS com paridade byte, `pipeline` só-JVM (`PROC001` em JS/Native, herdado de `process.spawn`); glob/`~`/redir fora do v1; `ShellE2ETest` 11/11; 2.2.3 (`runWith` cwd/env, pipes JS) + 2.2.4 (doc stdlib) abertos |
+| 2.2 | `kof.shell` — shell idiomático sobre `kof.process` | 🟡 | `.18` | Estágio 1; **`development/shell-plan.md`** APROVADO 18/09 (Q1–Q3 pela enquete da mantenedora); MVP 18/09: `cmd`/`run`/`ok` em JVM+JS com paridade byte, `pipeline` só-JVM (`PROC001` em JS/Native, herdado de `process.spawn`); glob/`~`/redir fora do v1; `ShellE2ETest` 11/11; 2.2.3 (`runWith` cwd/env, pipes JS) + 2.2.4 (doc stdlib) abertos |
 | 2.3 | `kof.ssh` — via FFI/interop | 🔵 | — | R3 (FFI) |
 | 2.4 | Cron/scheduler maduro | 🟡 | lane concurrency | `at(cron)` cron real de 5 campos UTC no JVM/JS desde 17/09 (§274); Native `CRON001` gap honesto |
 | 2.5 | Pipelines de CI/CD como **código Kof** | 🔵 | — | 2.1 |

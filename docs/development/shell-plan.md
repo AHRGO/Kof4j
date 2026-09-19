@@ -2,15 +2,16 @@
 
 # `kof.shell` — idiomatic shell over `kof.process` (design plan · Stage 2 · TIER 2.2)
 
-> **Status: SIGNED-OFF (18/09, maintainer poll) — front opened, owner lane `.18`; MVP in
-> progress.** The Q1–Q3 gate below was answered: **function-form ✓ / builtin `KofShell.java`
-> ✓ / glob, `~`, redirection FORA do v1 ✓**. The concrete §2 surface was rewritten to match
-> what the compiler can actually parse today (no named arguments exist in Kof — an earlier
-> draft used `cwd:` syntax that does not exist). Zero code in this file; it stays design.
-> It **proposes** turning the `IMPLEMENTATION-UNIVERSAL-PLATFORM` **2.2** line into an
-> executable todo — and as of this sign-off the front IS open. It still does **not**
-> implement anything: `kof.shell` is not in the lexer, the parser, any backend, or the
-> stdlib today (measured 18/09). Grounded in the **real, measured** `kof.process` surface (§4).
+> **Status: v1 LANDED (18/09 `34e4344f`, `.18` lane)** — `cmd`/`run`/`ok` reais em JVM+JS
+> (byte-parity nos 5 casos do `ShellE2ETest`), `pipeline` real no JVM; pipeline em JS/Native =
+> `PROC001` honesto em compile-time (nunca `ReferenceError` cru — disciplina §235). Q1–Q3 da
+> enquete da mantenedora respondidos: forma-função ✓, builtin `KofShell.java` ✓, glob/`~`/
+> redireção **FORA do v1** (faces futuras, não dívida). A superfície do §2 foi reescrita para o
+> que o parser realmente aceita hoje (não existem argumentos nomeados em Kof — o rascunho antigo
+> usava `cwd:`). O MVP v1 landou; restam como desenvolvimento declarado: pipeline JS/Native
+> (libera `PROC001`) e as faces v2 (glob/`~`/redireção). Por isso este plano saiu de `future/`
+> (a regra "zero código" não vale mais) e vive em `docs/development/` até as faces residuais
+> fecharem.
 
 ## 1. Objective
 One typed, composable idiom for driving OS commands — run, capture, pipeline, gate on

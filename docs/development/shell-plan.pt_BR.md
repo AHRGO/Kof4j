@@ -2,16 +2,14 @@
 
 # `kof.shell` — shell idiomático sobre `kof.process` (plano de design · Estágio 2 · TIER 2.2)
 
-> **Status: APROVADO (18/09, enquete da mantenedora) — frente aberta, dono lane `.18`; MVP em
-> progresso.** O portão Q1–Q3 abaixo foi respondido: **forma de função ✓ / builtin
-> `KofShell.java` ✓ / glob, `~`, redirecionamento FORA do v1 ✓**. A superfície concreta do §2
-> foi reescrita para casar o que o compilador de fato analisa hoje (não existem argumentos
-> nomeados em Kof — um rascunho anterior usava sintaxe `cwd:` que não existe). Zero código
-> neste arquivo; ele segue sendo design. Ele **propunha** transformar a linha **2.2** de
-> `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` num todo executável — e desde esta aprovação a frente
-> ESTÁ aberta. Ainda **não** implementa nada: `kof.shell` não está no lexer, no parser, em
-> backend algum nem na stdlib hoje (medido 18/09). Baseado na superfície **real e medida** de
-> `kof.process` (§4).
+> **Status: v1 LANDED (18/09, `34e4344f`, lane `.18`)** — `cmd`/`run`/`ok` reais em JVM+JS
+> (5 casos byte-parity no `ShellE2ETest` 11/11); `pipeline` real no JVM (helper `kof_shell_pipeline`),
+> JS/Native = `PROC001` honesto em tempo de compilação (nunca `ReferenceError` cru — disciplina §235);
+> `KofShell.java` dispatch + lowerer + `StdCatalog` + ledger R1 registrados. Q1–Q3 da pesquisa da
+> mantenedora respondidos: forma-função ✓, builtin `KofShell.java` ✓, glob/`~`/redirecionamento **FORA do v1**
+> (faces futuras por decisão, não dívida). Este arquivo morava em `future/` sob a regra "zero código";
+> o MVP landou — a regra dos três estados obriga a movê-lo para `docs/development/` (19/09).
+> Restam como desenvolvimento: pipeline JS/Native (libera `PROC001`) e as faces v2 (glob/`~`/redirecionamento).
 
 ## 1. Objetivo
 Um único idiomato tipado e componível para conduzir comandos do SO — rodar, capturar,
