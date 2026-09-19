@@ -69,7 +69,21 @@ final class JsRuntimeTime {
                 const now = Date.now();
                 for (const [id, job] of kofTimeJobs) {
                     if (now >= job.next) {
-                        job.next = now + (job.cron ? kofCronNextDelayMs(job.cron, now) : job.ms);
+                        if (job.dur) {
+                            // Duração (D-SCHED-DURATION): âncora avança do
+                            // disparo anterior — sem drift; atraso do host
+                            // salta em passos inteiros (sem rajada).
+                            let anchor = job.next;
+                            let next = kofDurationNextFrom(job.dur, anchor);
+                            while (next <= now) {
+                                anchor = next;
+                                next = kofDurationNextFrom(job.dur, anchor);
+                            }
+                            job.anchor = anchor;
+                            job.next = next;
+                        } else {
+                            job.next = now + (job.cron ? kofCronNextDelayMs(job.cron, now) : job.ms);
+                        }
                         job.run();
                     }
                 }

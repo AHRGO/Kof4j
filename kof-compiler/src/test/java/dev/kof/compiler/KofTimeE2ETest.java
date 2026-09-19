@@ -1202,6 +1202,147 @@ class KofTimeE2ETest {
         }
     }
 
+    // ── D-SCHED-DURATION (19/09): durações idiomáticas no `scheduler.at`.
+    // Tabela oracle compartilhada JVM×JS com a MESMA âncora do cron. Sem
+    // limite de termos na composição '&'; 7 termos = caso de borda.
+    private static final long DUR_MONTH_END_ANCHOR = 1706659200000L; // 2024-01-31T00:00:00Z
+
+    private static final String[][] DUR_TABLE = {
+        {"30m", "1800000"},
+        {"90s", "90000"},
+        {"300ms", "300"},
+        {"1d", "86400000"},
+        {"1d&30m", "88200000"},
+        {"1M", "2678400000"},
+        {"1M&15m", "2679300000"},
+        {"1a", "31622400000"},
+        {"3a&6M&3d&4h&12m&12s&300ms", "110607132300"},
+    };
+
+    private static final String[] DUR_BAD = {
+        "0m", "5x", "1d&", "m", "1d&30x", "30", "1d&&30m", "-5m",
+    };
+
+    @Test
+    void durationNextDelayJvmMatchesTable(@TempDir Path tempDir) throws Exception {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+                main() {
+                    var id = scheduler.at("30m", () -> {})
+                    scheduler.cancel(id)
+                }
+                """);
+        Path outDir = tempDir.resolve("dur-jvm");
+        CompilationResult result = driver.compile(source, outDir, Target.JVM);
+        assertTrue(result.success(), "JVM compile: " + result.diagnostics().getDiagnostics());
+        try (java.net.URLClassLoader cl = new java.net.URLClassLoader(
+                new java.net.URL[]{outDir.toUri().toURL()}, getClass().getClassLoader())) {
+            Class<?> rt = cl.loadClass("dev.kof.runtime.KofRuntime");
+            java.lang.reflect.Method m = rt.getMethod("kof_duration_next_delay_ms", String.class, long.class);
+            for (String[] row : DUR_TABLE) {
+                Object got = m.invoke(null, row[0], CRON_ANCHOR);
+                assertEquals(Long.parseLong(row[1]), ((Number) got).longValue(),
+                        "JVM duration delay para '" + row[0] + "'");
+            }
+            // clamp civil: 2024-01-31 + 1M = 2024-02-29 (não 02-31→03-02)
+            Object clamp = m.invoke(null, "1M", DUR_MONTH_END_ANCHOR);
+            assertEquals(2505600000L, ((Number) clamp).longValue(), "clamp 1M em 31/jan");
+            for (String bad : DUR_BAD) {
+                try {
+                    m.invoke(null, bad, CRON_ANCHOR);
+                    fail("JVM duração inválida deveria lançar: '" + bad + "'");
+                } catch (java.lang.reflect.InvocationTargetException e) {
+                    assertTrue(e.getCause() instanceof IllegalArgumentException,
+                            "esperava IllegalArgumentException para '" + bad + "': " + e.getCause());
+                }
+            }
+        }
+    }
+
+    @Test
+    void durationSchedulerAtFiresJvm(@TempDir Path tempDir) throws Exception {
+        // Comportamento real do at("20ms"): repete no intervalo, cancel para.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+                main() {
+                    var id = scheduler.at("20ms", () -> {})
+                    scheduler.cancel(id)
+                }
+                """);
+        Path outDir = tempDir.resolve("dur-fire-jvm");
+        CompilationResult result = driver.compile(source, outDir, Target.JVM);
+        assertTrue(result.success(), "JVM compile: " + result.diagnostics().getDiagnostics());
+        try (java.net.URLClassLoader cl = new java.net.URLClassLoader(
+                new java.net.URL[]{outDir.toUri().toURL()}, getClass().getClassLoader())) {
+            Class<?> rt = cl.loadClass("dev.kof.runtime.KofRuntime");
+            java.lang.reflect.Method at = rt.getMethod("kof_scheduler_at", String.class, Object.class);
+            java.lang.reflect.Method cancel = rt.getMethod("kof_scheduler_cancel", String.class);
+            int[] n = {0};
+            TickCounter fn = new TickCounter();
+            Object id = at.invoke(null, "20ms", fn);
+            Thread.sleep(150);
+            cancel.invoke(null, id);
+            int afterCancel = fn.n;
+            assertTrue(fn.n >= 3, "esperava >= 3 disparos em 150ms de 20ms, tivemos " + fn.n);
+            Thread.sleep(80);
+            assertEquals(afterCancel, fn.n, "cancel deve parar os disparos");
+        }
+    }
+
+    public interface Tick {
+        void invoke();
+    }
+
+    /** PUBLICA e nomeada: KofRuntime (outro pacote/classloader) só acessa
+     *  via getMethod("invoke") membros de classe pública — classes anônimas
+     *  e lambdas Java são package-private/hidden (IllegalAccessException). */
+    public static class TickCounter implements Tick {
+        public int n = 0;
+        public void invoke() { n++; }
+    }
+
+    @Test
+    void durationNextDelayJsMatchesJvmTable(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+                main() {
+                    var id = scheduler.at("30m", () -> {})
+                    scheduler.cancel(id)
+                }
+                """);
+        Path outDir = tempDir.resolve("dur-js");
+        CompilationResult result = driver.compile(source, outDir, Target.JS);
+        assertTrue(result.success(), "JS compile: " + result.diagnostics().getDiagnostics());
+        StringBuilder probe = new StringBuilder(
+                "import { kofDurationNextDelayMs } from './kof-runtime.mjs';\n");
+        for (String[] row : DUR_TABLE) {
+            probe.append("console.log(String(kofDurationNextDelayMs(\"")
+                    .append(row[0]).append("\", ").append(CRON_ANCHOR).append(")));\n");
+        }
+        probe.append("console.log(String(kofDurationNextDelayMs(\"1M\", ")
+                .append(DUR_MONTH_END_ANCHOR).append(")));\n");
+        for (String bad : DUR_BAD) {
+            probe.append("try { kofDurationNextDelayMs(\"").append(bad)
+                    .append("\", ").append(CRON_ANCHOR)
+                    .append("); console.log(\"NO-THROW\"); } catch (e) { console.log(\"THREW\"); }\n");
+        }
+        Path entry = outDir.resolve("DurProbe.mjs");
+        Files.writeString(entry, probe.toString());
+        StringBuilder expected = new StringBuilder();
+        for (String[] row : DUR_TABLE) expected.append(row[1]).append('\n');
+        expected.append("2505600000\n");
+        for (int i = 0; i < DUR_BAD.length; i++) expected.append("THREW\n");
+        try (java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+                java.io.ByteArrayOutputStream errBuf = new java.io.ByteArrayOutputStream()) {
+            int ec = dev.kof.runtime.KofJsRunner.run(entry, buf,
+                    java.io.InputStream.nullInputStream(), errBuf);
+            String output = buf.toString(StandardCharsets.UTF_8).trim();
+            assertEquals(0, ec, "JS exit, out: " + output
+                    + " err: " + errBuf.toString(StandardCharsets.UTF_8));
+            assertEquals(expected.toString().trim(), output, "JS duration delay deve espelhar o JVM");
+        }
+    }
+
     @Test
     void schedulerAtNativeIsHonestGapCron001(@TempDir Path tempDir) throws IOException {
         // R6/R7: Native não tem o parser cron em asm — recusa em compile-time

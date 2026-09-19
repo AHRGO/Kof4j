@@ -2084,3 +2084,33 @@ Maintainer-facing proposal `KOF_FIRST_CONTRACT_RULE.md` (19/09); rules 8 and 9
 of `AGENTS.md`/`AGENTS.pt_BR.md`; `D-NOT-JAVA`, `D-TRIAGE`, precedence rule of
 §5; measured cases #407, #410, #415, #416, #424, #449, #483, #492/#496.
 Governance-only change: no code, no semantics, no surface touched.
+## D-SCHED-DURATION — idiomatic duration expressions in `scheduler.at`
+
+**Date:** 2026-09-19 · **State:** `DECIDED` (maintainer directive in chat:
+"coloca pra aceitar expressões idiomáticas também. scheduler.at(30m) por
+exemplo, pode ter s, m, h, d, M, a" + "e aceitar expressões compostas
+(1d&30m) por exemplo")
+
+**Decision (additive, freeze rule 2):** the first argument of
+`scheduler.at(expr, fn)` accepts, BESIDES the 5-field UTC cron (unchanged),
+an **idiomatic duration expression**:
+
+* `term := digits unit`, `unit ∈ { s, ms, m, h, d, M, a }` — `s` seconds, `ms` milliseconds,
+  `m` minutes, `h` hours, `d` days (fixed, in ms); `M` months and `a` years
+  advance the UTC CALENDAR (month/year boundary, clamped to the target
+  month's last day — `2024-01-31` + `1M` = `2024-02-29`);
+* composition with **`&`** (e.g. `1d&30m`, `1M&15m`): the fixed terms (s/m/h/d)
+  sum in ms and are applied as an OFFSET after the calendar advance;
+* semantics: first fire after the interval counted from now, then repeatedly
+  (fixed interval, or the calendar-advanced next instant for M/a — anchor
+  advances from the previous fire, never from `now`, no drift);
+* a string that is NOT a duration keeps the cron path (same 5-field parser,
+  same errors); a MALFORMED duration (unknown unit, zero/negative term,
+  empty term) throws with a clear message — never silent (R6);
+* targets: JVM + JS (same algorithm, byte-parity golden via probe); Native
+  keeps the existing honest compile-time `CRON001` refusal (the gap already
+  covers the whole `at` surface).
+
+**Evidence:** maintainer's messages 19/09 (this session, lane .18). First
+consumer: `flow.schedule(cron)` of the `kof.workflow` 2.1.3 bundle (same
+honest gap on Native).

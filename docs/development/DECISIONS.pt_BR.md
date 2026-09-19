@@ -2052,3 +2052,34 @@ do `AGENTS.md`/`AGENTS.pt_BR.md`; `D-NOT-JAVA`, `D-TRIAGE`, regra de
 precedência do §5; casos medidos #407, #410, #415, #416, #424, #449, #483,
 #492/#496. Mudança só de governança: nenhum código, semântica ou superfície
 tocada.
+## D-SCHED-DURATION — expressões de duração idiomáticas no `scheduler.at`
+
+**Data:** 19/09/2026 · **Estado:** `DECIDIDO` (diretriz da mantenedora no
+chat: "coloca pra aceitar expressões idiomáticas também. scheduler.at(30m)
+por exemplo, pode ter s, m, h, d, M, a" + "e aceitar expressões compostas
+(1d&30m) por exemplo")
+
+**Decisão (aditiva, regra 2 do freeze):** o 1º argumento de
+`scheduler.at(expr, fn)` aceita, ALÉM do cron de 5 campos UTC (inalterado),
+uma **expressão de duração idiomática**:
+
+* `termo := dígitos unidade`, `unidade ∈ { s, ms, m, h, d, M, a }` — `s` segundos, `ms` milissegundos,
+  `m` minutos, `h` horas, `d` dias (fixos, em ms); `M` meses e `a` anos
+  avançam o CALENDÁRIO UTC (virada de mês/ano, com clamp no último dia do
+  mês alvo — `2024-01-31` + `1M` = `2024-02-29`);
+* composição com **`&`** (ex. `1d&30m`, `1M&15m`): os termos fixos
+  (s/m/h/d) somam em ms e entram como OFFSET após o avanço de calendário;
+* semântica: 1º disparo após o intervalo contado de agora, depois
+  repetidamente (intervalo fixo, ou o próximo instante avançado no
+  calendário para M/a — a âncora avança do disparo anterior, nunca de
+  `now`, sem drift);
+* string que NÃO é duração mantém o caminho cron (mesmo parser de 5
+  campos, mesmos erros); duração MALFORMADA (unidade desconhecida, termo
+  zero/vazio) lança com mensagem clara — nunca silencioso (R6);
+* alvos: JVM + JS (mesmo algoritmo, golden de paridade via probe); Native
+  mantém a recusa honesta `CRON001` em compile-time (o gap já cobre toda a
+  superfície do `at`).
+
+**Evidência:** mensagens da mantenedora 19/09 (esta sessão, lane .18).
+1º consumidor: `flow.schedule(cron)` do bundle 2.1.3 do `kof.workflow`
+(mesmo gap honesto no Native).

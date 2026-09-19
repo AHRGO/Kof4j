@@ -240,6 +240,103 @@ public final class JvmTimeRuntime {
                     return kof_time_interval(ms, fn);
                 }
 
+                // ── kof.scheduler.at — duração idiomática (D-SCHED-DURATION)
+                // Além do cron de 5 campos, `at` aceita expressões como
+                // "30m", "90s", "1d&30m": termo = dígitos + unidade, unidade
+                // ∈ { s, m, h, d, M, a }; composição com '&'. s/m/h/d são
+                // fixos em ms; M/a avançam o calendário UTC com clamp no
+                // último dia do mês alvo (2024-01-31 + 1M = 2024-02-29).
+                // Malformada lança IllegalArgumentException (R6 — nunca
+                // silencioso). Native mantém o gap honesto CRON001.
+                /** { fixedMs, months, years }; null se a expressão NÃO é
+                 *  duração (cai no caminho cron). */
+                static long[] kof_duration_parse(String expr) {
+                    if (expr == null) return null;
+                    String e = expr.trim();
+                    if (e.isEmpty()) return null;
+                    String[] terms = e.split("&", -1);
+                    if (terms.length == 0) return null;
+                    long fixed = 0;
+                    long months = 0;
+                    long years = 0;
+                    for (String raw : terms) {
+                        String t = raw.trim();
+                        if (t.isEmpty() || !Character.isDigit(t.charAt(0))) return null;
+                        int i = 0;
+                        while (i < t.length() && Character.isDigit(t.charAt(i))) i++;
+                        if (i == t.length() || i > 18) return null;
+                        long n;
+                        try { n = Long.parseLong(t.substring(0, i)); }
+                        catch (NumberFormatException nfe) { return null; }
+                        if (n <= 0) return null;
+                        // unidade: 'ms' (2 chars) antes da forma de 1 char
+                        String unit;
+                        if (t.charAt(i) == 'm' && i + 1 < t.length() && t.charAt(i + 1) == 's') {
+                            unit = "ms";
+                            if (t.length() - i != 2) return null;
+                        } else {
+                            if (t.length() - i != 1) return null;
+                            unit = t.substring(i);
+                        }
+                        long add;
+                        switch (unit) {
+                            case "ms" -> add = n;
+                            case "s" -> {
+                                if (n > Long.MAX_VALUE / 1000L) return null;
+                                add = n * 1000L;
+                            }
+                            case "m" -> {
+                                if (n > Long.MAX_VALUE / 60000L) return null;
+                                add = n * 60000L;
+                            }
+                            case "h" -> {
+                                if (n > Long.MAX_VALUE / 3600000L) return null;
+                                add = n * 3600000L;
+                            }
+                            case "d" -> {
+                                if (n > Long.MAX_VALUE / 86400000L) return null;
+                                add = n * 86400000L;
+                            }
+                            case "M" -> {
+                                if (n > 999_999_999L) return null;
+                                months += n;
+                                add = 0;
+                            }
+                            case "a" -> {
+                                if (n > 999_999_999L) return null;
+                                years += n;
+                                add = 0;
+                            }
+                            default -> { return null; }
+                        }
+                        fixed += add;
+                        if (fixed < 0) return null;   // overflow da soma
+                    }
+                    return new long[]{fixed, months, years};
+                }
+
+                /** Próximo instante (epoch ms) para a duração a partir da
+                 *  âncora: fixo = âncora + fixedMs; calendário = âncora
+                 *  avançada (years, months) + fixedMs. UTC, clamp java.time. */
+                static long kof_duration_next_from(long[] dur, long anchorMillis) {
+                    long next = anchorMillis + dur[0];
+                    if (dur[1] != 0 || dur[2] != 0) {
+                        java.time.ZonedDateTime z = java.time.Instant.ofEpochMilli(anchorMillis)
+                                .atZone(java.time.ZoneOffset.UTC);
+                        if (dur[2] != 0) z = z.plusYears(dur[2]);
+                        if (dur[1] != 0) z = z.plusMonths(dur[1]);
+                        next = z.toInstant().toEpochMilli() + dur[0];
+                    }
+                    return next;
+                }
+
+                /** Delay (ms) do primeiro disparo a partir de nowMillis. */
+                public static long kof_duration_next_delay_ms(String expr, long nowMillis) {
+                    long[] dur = kof_duration_parse(expr);
+                    if (dur == null) throw new IllegalArgumentException("duration: not a duration expression: " + expr);
+                    return kof_duration_next_from(dur, nowMillis) - nowMillis;
+                }
+
                 // ── kof.scheduler.at — cron real (CRON001) ──────────────
                 // 5 campos: minuto hora dia-do-mês mês dia-da-semana,
                 // avaliados em UTC (convenção do stdlib: determinismo e
@@ -340,6 +437,8 @@ public final class JvmTimeRuntime {
                 }
 
                 public static String kof_scheduler_at(String cron, Object fn) {
+                    long[] dur = kof_duration_parse(cron);
+                    if (dur != null) return kof_scheduler_duration(dur, fn);
                     long[] fields = kof_cron_parse(cron);
                     String id = "job-" + KOF_TIME_SEQ.incrementAndGet();
                     Thread t = new Thread(() -> {
@@ -365,6 +464,51 @@ public final class JvmTimeRuntime {
                             throw new RuntimeException(e);
                         }
                     }, "kof-cron-" + id);
+                    t.setDaemon(true);
+                    KOF_TIME_JOBS.put(id, t);
+                    t.start();
+                    return id;
+                }
+
+                /** Agendador por duração (D-SCHED-DURATION): 1º disparo após
+                 *  o intervalo, depois repetido; a âncora dos termos M/a
+                 *  avança do disparo anterior (nunca de `now` — sem drift).
+                 *  Se o host atrasar além do alvo, a âncora salta em passos
+                 *  inteiros até o futuro (sem rajada de disparos). */
+                static String kof_scheduler_duration(long[] dur, Object fn) {
+                    String id = "job-" + KOF_TIME_SEQ.incrementAndGet();
+                    Thread t = new Thread(() -> {
+                        try {
+                            java.lang.reflect.Method invoke = fn.getClass().getMethod("invoke");
+                            long anchor = System.currentTimeMillis();
+                            while (KOF_TIME_JOBS.containsKey(id)) {
+                                long target = kof_duration_next_from(dur, anchor);
+                                long now = System.currentTimeMillis();
+                                while (target <= now && KOF_TIME_JOBS.containsKey(id)) {
+                                    anchor = target;
+                                    target = kof_duration_next_from(dur, anchor);
+                                }
+                                if (!KOF_TIME_JOBS.containsKey(id)) break;
+                                long delay = target - now;
+                                long slept = 0;
+                                while (slept < delay && KOF_TIME_JOBS.containsKey(id)) {
+                                    long chunk = Math.min(1000L, delay - slept);
+                                    Thread.sleep(chunk);
+                                    slept += chunk;
+                                }
+                                if (!KOF_TIME_JOBS.containsKey(id)) break;
+                                anchor = target;
+                                invoke.invoke(fn);
+                            }
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        } catch (java.lang.reflect.InvocationTargetException e) {
+                            if (e.getCause() instanceof RuntimeException re) throw re;
+                            throw new RuntimeException(e.getCause());
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }, "kof-duration-" + id);
                     t.setDaemon(true);
                     KOF_TIME_JOBS.put(id, t);
                     t.start();
