@@ -343,7 +343,7 @@ Incremental R3 slices toward "total FFI parity" (maintainer directive 18/09).
 | 3.6.F2 | Compiler JS routing: `isExternBound` JS branch + lower `extern`→`kofFfi`/`kofFfiVoid`→`kof_platform.ffi` (`JsRuntimeOps` route + `JsRuntimeIo` helper + `KofJsRunner` `ProxyExecutable`) — opens the JS scalar gate | ✅ 18/09 (.18) | .18 | F1 |
 | 3.6.F3 | Byte-for-byte JVM↔JS parity E2E — `FfiE2ETest` +7 `assertJvmJsParity` (abs/atoi/sqrt/pow/atol→labs Long/strstr/srand void): same `.kf`, identical output on both targets | ✅ 18/09 (.18) | .18 | F2 |
 | 3.7 | Native: dlopen/dlsym in asm — depends on §61 (init glibc/TLS in _start) | 🔵 | native lane | §61 |
-| 3.8 | Struct/array ABI (full D6) | 🟡 | compiler lane (pós-spec) | **D6-A ✅ 19/09**: spec escrita primeiro (`docs/development/ffi-abi-structs.md`), revisão da mantenedora, depois código |
+| 3.8 | Struct/array ABI (full D6) | 🟡 | compiler lane (pós-spec) | **D6-A ✅ 19/09**: spec **rascunho escrita 19/09** (`ffi-abi-structs.md`+PT: ABIs medidas, 3 exemplos-resolução como golden, D6-1..D6-5 = decisões da mantenedora antes de 3.8, verruga `Arena.global` §1 catalogada); revisão da mantenedora, depois código |
 | 3.9 | Meta-parity: same extern source with the same behavior on every CAPABLE target (R7 honest-scope on the incapable ones) | meta | — | 3.1–3.8 |
 
 3.1+3.2 landed 18/09 → the JVM has the full scalar ABI + void, **proof-hardened**

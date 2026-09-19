@@ -346,7 +346,7 @@ em aberto; ✅ = landado.
 | 3.6.F2 | Roteamento JS no compilador: ramo JS no `isExternBound` + baixar `extern`→`kofFfi`/`kofFfiVoid`→`kof_platform.ffi` (rotear em `JsRuntimeOps` + helper em `JsRuntimeIo` + `ProxyExecutable` no `KofJsRunner`) — abre o gate escalar do JS | ✅ 18/09 (.18) | .18 | F1 |
 | 3.6.F3 | Paridade E2E byte-a-byte JVM↔JS — `FfiE2ETest` +7 `assertJvmJsParity` (abs/atoi/sqrt/pow/atol→labs Long/strstr/srand void): mesmo `.kf`, saída idêntica nos dois alvos | ✅ 18/09 (.18) | .18 | F2 |
 | 3.7 | Native: dlopen/dlsym em asm — depende do §61 (init glibc/TLS no _start) | 🔵 | lane nat | §61 |
-| 3.8 | ABI struct/array completo (D6) | 🟡 | lane compilador (pós-spec) | **D6-A ✅ 19/09**: spec escrita primeiro (`docs/development/ffi-abi-structs.md`), revisão da mantenedora, depois código |
+| 3.8 | ABI struct/array completo (D6) | 🟡 | lane compilador (pós-spec) | **D6-A ✅ 19/09**: spec **rascunho escrita 19/09** (`ffi-abi-structs.md`+PT: ABIs medidas, 3 exemplos-resolução como golden, D6-1..D6-5 = decisões da mantenedora antes de 3.8, verruga `Arena.global` §1 catalogada); revisão da mantenedora, depois código |
 | 3.9 | Meta-paridade: mesma fonte extern com o mesmo comportamento em todo alvo CAPAZ (R7 honest-scope nos incapazes) | meta | — | 3.1–3.8 |
 
 3.1+3.2 landados 18/09 → a JVM tem a ABI escalar completa + void, **prova
