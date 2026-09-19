@@ -10,7 +10,7 @@ final class JsRuntimeEquality {
     // (null-safe 1/0 p/ == de record) e kofFpEq (contrato do wrapper JVM em
     // float/double boxed). Consumidos por equals de record (JsClassEmitter),
     // contains/indexOf de coleção e busca de chave de mapa (JsRuntimeUiLayout).
-    static final String EQUALITY_RUNTIME = """
+    static  String EQUALITY_RUNTIME = """
             // §104c: igualdade de conteúdo em coleções JS. Primitivos/String
             // resolvem no caminho nativo (SameValueZero) — o fallback pega
             // objeto Kof (record) com .equals(other) sintético → 1/0, ou
