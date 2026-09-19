@@ -267,5 +267,21 @@ Cada namespace/pacote carrega um tier:
   `experimental`; a promoção a `stable` é por-namespace, só com o DoD completo do R5
   (nunca em lote, nunca por idade).
 
+**Registro (D4-A; medido 19/09; camadas = `scripts/stdlib_boundary.txt`).
+Todo namespace é `experimental` — **zero promoções**: o DoD do R5 fecha por
+namespace, nunca em lote, nunca por idade, e uma promoção ganha uma linha AQUI
+(com o teste + matriz de targets que a prova) antes da palavra do tier mudar em
+qualquer outro lugar:
+
+| camada R1 | namespaces |
+|---|---|
+| base-stdlib | `math` `strings` `encoding` `net` `uuid` `random` `rng` `io` `concurrent` |
+| platform | `time` `http` `db` `cache` `process` `shell` `json` `log` `orm` `config` `gpu` `mq` `validation` `observability` `tetris` `auth` `crypto` `jwt` `passwords` `secrets` `security` `Audio` `Image` `Mic` `Video` `supervisor` `workflow` `version` `ui` |
+
+(Escopo: os 32 namespaces de membros callable de `StdCatalog.namespaces()` — fonte
+única, lock `StdCatalogTest` — mais as 6 superfícies registradas no ledger R1
+(`io`, `concurrent`, `supervisor`, `workflow`, `version`, `ui`) que não são
+catalogadas por membro. Total: 38, todos `experimental`.)
+
 Domínios pesados (`ml`, `bio`, `hpc`, `infra-<cloud>`) são **pacotes
 oficiais** (camada 4), **nunca** stdlib base (R1).

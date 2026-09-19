@@ -263,5 +263,20 @@ Each namespace/package carries a tier:
   `experimental`; promotion to `stable` is per-namespace, only with the full R5 DoD
   (never in bulk, never by age).
 
+**Registry (D4-A; medido 19/09; camadas = `scripts/stdlib_boundary.txt`).
+Every namespace is `experimental` — **zero promotions**: the R5 DoD closes per
+namespace, never in bulk, never by age, and a promotion gets a row HERE (with the
+test + target matrix that proves it) before the tier word changes anywhere:
+
+| R1 layer | namespaces |
+|---|---|
+| base-stdlib | `math` `strings` `encoding` `net` `uuid` `random` `rng` `io` `concurrent` |
+| platform | `time` `http` `db` `cache` `process` `shell` `json` `log` `orm` `config` `gpu` `mq` `validation` `observability` `tetris` `auth` `crypto` `jwt` `passwords` `secrets` `security` `Audio` `Image` `Mic` `Video` `supervisor` `workflow` `version` `ui` |
+
+(Scope: the 32 callable member namespaces of `StdCatalog.namespaces()` — single
+source, lock `StdCatalogTest` — plus the 6 surfaces registered in the R1 ledger
+(`io`, `concurrent`, `supervisor`, `workflow`, `version`, `ui`) that are not
+member-cataloged. Total: 38, all `experimental`.)
+
 Heavy domains (`ml`, `bio`, `hpc`, `infra-<cloud>`) are **official packages**
 (layer 4), **never** base stdlib (R1).
