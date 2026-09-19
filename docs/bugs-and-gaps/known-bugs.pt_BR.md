@@ -10373,42 +10373,15 @@ Compila limpo no JVM; ao rodar morre no LOAD da classe com `java.lang.VerifyErro
 **Face (b) — representação no Script.** `Bool? b = true; println(b)` → o Script imprime `1` (o JVM imprime `true`, o JS/node imprime `true`); `Bool b = true` puro imprime `true` nos três (medido: runner reflexivo). Os caminhos `normalizeReturn`/coleção do interpretador canonizam `Boolean ↔ Integer 0/1` (`KofInterpreterValues:25-42`, §108), mas um **slot local `Nullable(Bool)`** mantém a forma int → `println` imprime o `1/0` cru; o segundo println (`b = false`) imprime `0`. Divergência cross-target num simples local `Bool?` (regra 5 da Freeze). Área da raiz: a representação `Nullable(Bool)` do Script vs o Bool puro — decidir junto com a face (a) (unbox/box nos mesmos chokepoints).
 **Por que NÃO consertada aqui.** A face (a) é mudança de LEITURA no caminho de condição compartilhado (tocar a semântica do `emitConditionalJump` = adjacente a contrato, regra 6: precisa do mesmo gate de unbox cuidadoso que as faces do §295 ganharam — unidade própria com pins Q0); a face (b) é a representação do interpretador, não o cluster JVM. Ambas têm reproduções mínimas acima; o arquivo de testes do §295(b) carrega os pins JVM (`nullablePrimBoolWriterFacesStoreBoxed` só-escrita, pinado no JVM com o ponteiro §306 no comentário). Relacionado: §295, §294, #278, #438, §108.
 
-## §307 — gate CRÍTICO `check_500` quebrado: `StatementLowerer.java` em 605 linhas (baseline 585 cresceu +20 no `7e35f177`, cluster §295(b))
-
-**Descoberto:** 18/09 ~23:40 UTC (lane tooling/cli `.15`, triagem do CI do tip após restaurar a compilação em `82a09c35`) — o job Build+Tests falha no step "Gate ≤500 linhas/classe": `scripts/check_500.sh` aponta `FALHOU — kof-compiler/src/main/java/dev/kof/compiler/StatementLowerer.java` (605 ≥ 600 = CRÍTICO pela regra do gate de 13/09). O baseline trava o arquivo em **585**; o cluster escritor §295(b) (`vdBoxT`/`nullablePrimSlot` no `emitStatementInner`) somou +20 sem split.
-
-**Repro:** `bash scripts/check_500.sh` → linha `FALHOU .../StatementLowerer.java (605)`; CI: job Build+Tests, step "Gate ≤500" (vermelho desde `7e35f177`, mesmo com o fix de compilação `82a09c35`).
-
-**O que falta:** split de `emitStatementInner` (~590 linhas estáticas) por responsabilidade — costura natural: o bloco de declaração/inicialização de locais com erasure-boxing `Int`/`Long` + slot primitivo `Nullable(primitivo)` (§295(b)) → ex.-`StatementLowererLocalBoxing.java` (nome = o que contém, regra 7), arquivo ≤500, linha removida do baseline com `./scripts/check_500.sh --update-baseline`.
-
-**Por que NÃO foi consertado aqui:** o arquivo é da lane compilador (`.22`), recém-tocado por ela mesma no §295(b) (regra de ouro: nunca dois agentes no mesmo arquivo gigante; "coordene antes"). O split é refactor estrutural (regra 3 do freeze) — a prova é a suíte + golden, e a costura correta pertence a quem entende os lowering. Este commit restaurou a **compilação** (removi meu `escapeLiteral` duplicado que a resolução de conflito da mantenedora em `7e35f177` deixou para trás — o build estava NÃO-COMPILÁVEL e o Gate≤500 + IoE2E×3OS + Native cross×2 eram cascata de compilação); o **gate** fica para a dona.
-
-**Status:** 🟡 ABERTA — dona = lane compilador `.22` (ou decisão da mantenedora de tolerar 600–605 no baseline — decisão dela, não da agent).
-
 
 ## §307 — gate CRÍTICO `check_500` quebrado: `StatementLowerer.java` com 605 linhas (baseline 585 cresceu +20 pelo cluster §295(b) de `7e35f177`)
 
-**Descoberto:** 18/09 ~23:40 UTC (lane tooling/cli `.15`) — o CI dos tips `7e35f177`/`82a09c35`
-falha no passo "Gate ≤500 linhas/classe": `check_500.sh` aponta
-`kof-compiler/src/main/java/dev/kof/compiler/StatementLowerer.java` = **605 ≥ 600 = CRÍTICO**.
-O baseline trava o arquivo em **585**; o cluster escritor §295(b) (bloco
-`nullablePrimSlot`/`vdBoxT` dentro de `emitStatementInner`) somou +20 linhas sem split.
+**Descoberto:** 18/09 ~23:40 UTC (lane tooling/cli `.15`) — o CI dos tips `7e35f177`/`82a09c35` falha no passo "Gate ≤500 linhas/classe": `check_500.sh` aponta `kof-compiler/src/main/java/dev/kof/compiler/StatementLowerer.java` = **605 ≥ 600 = CRÍTICO**. O baseline trava o arquivo em **585**; o cluster escritor §295(b) (bloco `nullablePrimSlot`/`vdBoxT` dentro de `emitStatementInner`) somou +20 linhas sem split.
 
-**Repro:** `bash scripts/check_500.sh` → `FALHOU .../StatementLowerer.java`. CI: job
-Build+Tests, passo "Gate ≤500" (vermelho desde `7e35f177`; os outros vermelhos do run eram
-cascata de compilação — a minha duplicata `escapeLiteral` no KofFormatter foi removida em
-`82a09c35`).
+**Repro:** `bash scripts/check_500.sh` → `FALHOU .../StatementLowerer.java`. CI: job Build+Tests, passo "Gate ≤500" (vermelho desde `7e35f177`; os outros vermelhos do run eram cascata de compilação — a minha duplicata `escapeLiteral` no KofFormatter foi removida em `82a09c35`).
 
-**O que falta:** split de `emitStatementInner` (método estático único, ~590 linhas) por
-responsabilidade — costura natural: declaração/inicialização de locais com erasure-boxing
-`Int`/`Long` e o ramo primitivo `Nullable(primitivo)` do §295(b) →
-`StatementLowererLocalBoxing.java` (nome = o que contém, regra 7), ficando ≤500 e sem
-entrada nova no baseline.
+**O que falta:** split de `emitStatementInner` (método estático único, ~590 linhas) por responsabilidade — costura natural: declaração/inicialização de locais com erasure-boxing `Int`/`Long` e o ramo primitivo `Nullable(primitivo)` do §295(b) → `StatementLowererLocalBoxing.java` (nome = o que contém, regra 7), ficando ≤500 e sem entrada nova no baseline.
 
-**Por que NÃO conserto aqui:** o arquivo pertence à lane compilador (`.22`), recém-mexido
-por ela no §295(b) — golden rule: nunca dois agentes no mesmo arquivo gigante; o split é
-refactor estrutural (regra 3 da freeze) e a costura é decisão de quem conhece o lowerer.
-Isto restaura a COMPILAÇÃO (duplicata removida) mas não toca o gate: o CI fica vermelho
-SÓ no passo Gate≤500 até a dona fazer o split.
+**Por que NÃO conserto aqui:** o arquivo pertence à lane compilador (`.22`), recém-mexido por ela no §295(b) — golden rule: nunca dois agentes no mesmo arquivo gigante; o split é refactor estrutural (regra 3 da freeze) e a costura é decisão de quem conhece o lowerer. Isto restaura a COMPILAÇÃO (duplicata removida) mas não toca o gate: o CI fica vermelho SÓ no passo Gate≤500 até a dona fazer o split.
 
-**Status:** 🟡 OPEN — owner = lane compilador `.22`.
+**Status:** 🟡 ABERTA — dona = lane compilador `.22`.
