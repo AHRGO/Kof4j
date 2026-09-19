@@ -758,7 +758,7 @@ ready.
 > suite) prove. **No agent may break behavior that already works.**
 
 1. **Zero regression.** No commit may make an existing test start to
-   fail. The full suite (`mvn test`, today **2598** across the 4 modules — see
+   fail. The full suite (`mvn test`, today **2671** across the 4 modules — see
    §"Verification loop" for the command with the failure.ignore flag) is a **merge gate** —
    a change that doesn't keep everything green doesn't get in. Single exception: a **deliberate**
    contract change, with a version bump + updated docs + migration.
@@ -1135,7 +1135,7 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > it, Maven is fail-fast per module: any failure in **kof-compiler aborts
 > the reactor** and **kof-script, kof-c-compiler and kof-cli never run** — you
 > think you validated everything but only saw the first module. The real total with the flag
-> is **2598 tests** (compiler 2230 + script 39 + kof-c 7 + cli 322, measurement
+> is **2671 tests** (compiler 2292 + script 39 + kof-c 7 + cli 333, measurement
 > 18/09 ~15:20 on CI Build+Tests job of tip `d14275f0` — grows with each commit): **0 regressions / 0 errors**
 > (UPDATE 18/09: the historical trio of natives red is CLOSED at code — §252
 > fixed `20495e48` (usleep-retaddr clobbered the cached list-size slot; size now
@@ -1166,7 +1166,7 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > (MEASURED 17/09 ~15:49, clean run on tip `f276e966`). With qemu, **everything executes** — the 84 cross run
 > green and the total stays the same with the skip count dropping to the
 > external-DB/`node`-env residual. Correct state TODAY (18/09 ~15:20, CI Build+Tests job of tip
-> `90ea7c34`): **2598 = 2230+39+7+322, 0F / 0E / 178 skip (CI ubuntu executa o android APK; hosts sem SDK = 1 skip honest a mais)** (no-qemu guards; cli 308→313 by `CmdBuildClasspathTest` of #441 in `d14275f0`, 313→322 by `CmdDeployTest` of X9 slices 1–3 (`154ea1a4`/`bfdd452a`/`84c82139`); compiler 2216→2230 by rng (`KofRngTest` 8) + §286 race tests; CI Build+Tests of `0f3c42d6` measured; cross e2e green
+> `90ea7c34`): **2671 = 2292+39+7+333, 0F / 0E / 178 skip (CI ubuntu executa o android APK; hosts sem SDK = 1 skip honest a mais)** (no-qemu guards; cli 308→313 by `CmdBuildClasspathTest` of #441 in `d14275f0`, 313→322 by `CmdDeployTest` of X9 slices 1–3 (`154ea1a4`/`bfdd452a`/`84c82139`); compiler 2216→2230 by rng (`KofRngTest` 8) + §286 race tests; CI Build+Tests of `0f3c42d6` measured; cross e2e green
 > in the dedicated `Native cross` job; `.17` measured 11-skip with qemu on `952acbc8`) — the
 > §252 flake, the §181 cross residual and the §256(b) poll flake are ALL closed
 > at code; the remaining skips are the optional asm-gate and toolchain guards.
