@@ -97,9 +97,15 @@ jobs:
           icon=":white_check_mark:"; [ "$gate_rc" = "1" ] && icon=":x:"; [ "$gate_rc" = "2" ] && icon=":warning:"
           body="$icon **CodeQL gate** (\`scripts/codeql-gate.sh\`) — rc=$gate_rc\n\n\`\`\`text\n$(cat gate.log)\n\`\`\`"
           existing=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --paginate \
-            --jq '.[] | select(.body | startswith("'"$icon"' **CodeQL gate**")) | .id' | head -1)
+            --jq '.[] | select(.body | startswith("'"$icon"' **CodeQL gate**")) | .id' | head -1) || existing=""
+          # PR de FORK: o GITHUB_TOKEN e read-only NESSA execucao (qualquer
+          # bloco permissions e ilusorio p/ pull_request de fork) — o POST/PATCH
+          # responde 403 e nao pode tornar o gate vermelho: o veredito ja vive
+          # no step-summary e no rc do passo anterior. O comment e best-effort.
           if [ -n "$existing" ]; then
-            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" -f body="$(printf '%b' "$body")"
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" -f body="$(printf '%b' "$body")" \
+              || echo "::notice::gate comment skipped (403: fork PRs have read-only token; see job summary)"
           else
-            gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" -f body="$(printf '%b' "$body")"
+            gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" -f body="$(printf '%b' "$body")" \
+              || echo "::notice::gate comment skipped (403: fork PRs have read-only token; see job summary)"
           fi
