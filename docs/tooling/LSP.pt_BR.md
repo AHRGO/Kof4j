@@ -45,11 +45,14 @@ diagnósticos produzidos são publicados ao editor via
 | `initialized` | no-op |
 | `textDocument/didOpen` | compila e publica diagnostics |
 | `textDocument/didChange` | recompila e publica diagnostics |
-| `textDocument/hover` | info de hover do símbolo na posição |
-| `textDocument/definition` | go-to-definition (arquivo único) |
-| `textDocument/completion` | completion (trigger `.`) |
-| `textDocument/references` | referências (word-boundary, arquivo único) |
-| `textDocument/rename` | rename (word-boundary, arquivo único) |
+| `textDocument/hover` | palavras-chave, tipos nativos e var/val do buffer (`LspHover`); **fallback = a linha de declaração do símbolo no projeto** — buffer primeiro, depois `.kf` irmãos (X10 fatia 7, `LspProject.declarationLine`) |
+| `textDocument/definition` | ir-para-definição no buffer **e pelo projeto** — nome desconhecido cai nos `.kf` irmãos (walk ≤6, primeiro hit; mesma convenção `LspSymbols`; X10 fatia 4) |
+| `textDocument/completion` | gatilho `.`: **membros de stdlib por domínio** via `StdCatalog` — os 31 namespaces reais do typer (math, strings, rng, json, log, db, http, Image/Audio/Video/Mic, ...), travados contra as fontes do typer (X10 fatias 1–3); prefixo fora da stdlib = zero invenção |
+| `textDocument/references` | por palavra, no buffer **e nos `.kf` irmãos do projeto** (somente-leitura; X10 fatia 5) |
+| `textDocument/rename` | renomeação (por palavra, buffer único — renomear cross-file segue pergunta de superfície, rule 6) |
+| `textDocument/formatting` | formata pelo formatador `kof fmt` (mesmo motor, sem escritor paralelo) |
+| `textDocument/documentSymbol` | sumário do buffer (tipos + funções, varredura textual) |
+| `workspace/symbol` | símbolos do **projeto inteiro**: buffers abertos (fonte da verdade) + `.kf` irmãos não-abertos; filtro substring, ordem prefixo→substring→nome→uri (X10 fatia 6) |
 | `shutdown` | responde `null` |
 | `exit` | encerra o processo |
 
@@ -77,11 +80,9 @@ cliente LSP (`cmd: ["kof", "lsp"]`).
 
 ## Limitações atuais
 
-- Análise de arquivo único: `definition`/`references`/`rename` são por
-  word-boundary no documento aberto (sem índice de projeto cross-file);
-- sync completa de documentos (incremental planejado);
-- sem formatação via LSP (o formatter `kof fmt` é um comando separado, já
-  implementado).
+- A varredura cross-file do projeto (`definition`/`references`/`hover`/`workspace.symbol`) é **convenção textual** (`LspSymbols` — a mesma da navegação de arquivo único), não índice tipado/semântico: nunca mente sobre uma posição que não leu, mas não desambigua nomes iguais entre arquivos (primeiro hit, ordem determinística);
+- `rename` segue de buffer único: `WorkspaceEdit` cross-file sobre arquivos que o cliente não abriu é decisão de superfície (rule 6), não edição de agente;
+- sincronização completa do documento (incremental planejada).
 
 O caminho de evolução é sempre o mesmo: **novas capacidades do LSP
 alimentam-se do frontend oficial**, nunca de um parser paralelo.
