@@ -1,0 +1,240 @@
+// dev/kof/workflow-sup-host.kf — fatia 2.1.3b (supervisão) do `kof.workflow`.
+// Plano §3: workflow NÃO re-implementa restart — a face `runSupervised(dag,
+// nome, maxReinicios)` DELEGA ao `kof.supervisor` (DD-OTP-01): cada job vira
+// um child "transient" de um `Supervisor`, cujo laço `vigiar` por filho É o
+// one_for_one (só o filho que falha reinicia; os vizinhos não são tocados).
+// O corpo roda UMA vez por visita do watcher; a falha LANÇA e o supervisor
+// aplica o `restartLimit`. O fim do worker bem-sucedido encerra o child
+// (transient não reinicia em término normal) — job one-shot como worker é o
+// idioma, não uma gambiarra: o próprio núcleo OTP trata `!falhou && politica
+// != permanent` como parada limpa.
+//
+// Dependências: espera cooperativa nos status compartilhados — campo Bool
+// MUTÁVEL por slot (emitido ACC_VOLATILE, SG-020 — o mecanismo do flag de
+// stop do DD-OTP-08, um escritor por slot). Falla final (limite excedido)
+// chega via `KofEscalate` e marca o slot podre; dependentes pulam (skip
+// transitivo, mesmo Report da caminhada sequencial: succeeded/failed/
+// skipped/dead/errors/retries na ORDEM de declaração — determinístico).
+//
+// R6 explícito nesta face:
+//   • maxReinicios < 1 é RECUSADO — restart ilimitado silencioso é a porta
+//     do storm de threads que derruba um host (lição medida 19/09);
+//   • job com `retry()` na mesma dag é RECUSADO — duas políticas de reinício
+//     na mesma face = uma só manda; quem quer retry do workflow usa run();
+//   • orçamento de espera (30s por laço): estourou, falha ALTO com o nome,
+//     nunca hang silencioso;
+//   • `checkpoint` e `deadLetter` registrados são HONRADOS (load restaura
+//     sem re-executar; save pós-sucesso; sink na falha final — recusar
+//     falha ALTO), porque ignorá-los aqui seria a divergência silenciosa.
+//
+// Injetada por CompilerWorkflow no `import kof.workflow` em TODOS os alvos
+// (o núcleo supervisor roda nos 4 — §129/OTP001 removido 19/09; JS desde
+// §132). Se o usuário tem um `Supervisor` próprio sem o host, a fatia NÃO
+// entra (colisão de nome é sinal, não quebra-programa — regra 8).
+
+class KofWfSupStatus {
+    String nome = ""
+    Int idx = 0
+    Int tentativas = 0
+    Bool pronto = false
+    Bool podre = false
+    Bool pulado = false
+    String motivo = ""
+}
+
+class KofWfSupWorker implements KofWorker {
+    KofWfDag d
+    Int idx
+    KofWfSupStatus st
+    List<KofWfSupStatus> todas
+
+    constructor(KofWfDag d, Int idx, KofWfSupStatus st, List<KofWfSupStatus> todas) {
+        this.d = d
+        this.idx = idx
+        this.st = st
+        this.todas = todas
+    }
+
+    Object run() {
+        var job = d.jobs.get(idx)
+        st.tentativas = st.tentativas + 1
+        var guard = 0
+        while (true) {
+            var prontoTudo = true
+            var podreAlguem = false
+            var i = 0
+            while (i < job.deps.size) {
+                var dn = job.deps.get(i).nome
+                var k = 0
+                var paiPronto = false
+                var paiPodre = false
+                while (k < todas.size) {
+                    var p = todas.get(k)
+                    if (p.nome == dn) { paiPronto = p.pronto; paiPodre = p.podre }
+                    k = k + 1
+                }
+                if (paiPodre) { podreAlguem = true }
+                if (!paiPronto) { prontoTudo = false }
+                i = i + 1
+            }
+            if (podreAlguem) {
+                st.pulado = true
+                st.podre = true
+                return "skip"
+            }
+            if (prontoTudo) { break }
+            guard = guard + 1
+            if (guard > 30000) {
+                throw "workflow: supervisedRun estourou a espera de dependências de '" + st.nome + "'"
+            }
+            time.sleep(1)
+        }
+        if (d.ckLoad != null) {
+            var lFn: (String, String) -> Bool = d.ckLoad
+            var ja = false
+            try {
+                ja = lFn(d.dagNome, job.nome)
+            } catch (String ce) {
+                throw "workflow: checkpoint load falhou para '" + job.nome + "': " + ce
+            }
+            if (ja) {
+                st.pronto = true
+                return ""
+            }
+        }
+        var corpoFn: () -> Bool = job.corpo
+        var ok = false
+        var erro = ""
+        try {
+            ok = corpoFn()
+        } catch (String e) {
+            erro = e
+        }
+        if (!ok && erro == "") { erro = "false" }
+        if (ok) {
+            if (d.ckSave != null) {
+                var sFn: (String, String) -> Bool = d.ckSave
+                var okS = false
+                try {
+                    okS = sFn(d.dagNome, job.nome)
+                } catch (String se) {
+                    throw "workflow: checkpoint save falhou para '" + job.nome + "': " + se
+                }
+                if (!okS) { throw "workflow: checkpoint save recusou '" + job.nome + "'" }
+            }
+            st.pronto = true
+            st.motivo = ""
+            return ""
+        }
+        st.motivo = erro
+        throw job.nome + ": " + erro
+    }
+}
+
+class KofWfSupFab implements KofWorkerFactory {
+    KofWfDag d
+    Int idx
+    KofWfSupStatus st
+    List<KofWfSupStatus> todas
+
+    constructor(KofWfDag d, Int idx, KofWfSupStatus st, List<KofWfSupStatus> todas) {
+        this.d = d
+        this.idx = idx
+        this.st = st
+        this.todas = todas
+    }
+
+    KofWorker novo() {
+        return KofWfSupWorker(d, this.idx, this.st, this.todas)
+    }
+}
+
+class KofWfSupEsc implements KofEscalate {
+    List<KofWfSupStatus> todas
+    Int maxReinicios
+
+    constructor(List<KofWfSupStatus> todas, Int maxReinicios) {
+        this.todas = todas
+        this.maxReinicios = maxReinicios
+    }
+
+    Void disparou(String id, String motivo, Int reinicios) {
+        var raw = motivo
+        if (raw.startsWith(id + ": ")) { raw = raw.substring(id.length + 2) }
+        var i = 0
+        while (i < todas.size) {
+            var st = todas.get(i)
+            if (st.nome == id) {
+                st.motivo = raw
+                if (reinicios >= maxReinicios) { st.podre = true }
+            }
+            i = i + 1
+        }
+    }
+}
+
+KofWfReport runSupervised(KofWfDag d, String supNome, Int maxReinicios) {
+    if (d == null) { throw "workflow: runSupervised() com dag nula" }
+    if (supNome == null || supNome == "") { throw "workflow: runSupervised() sem nome de supervisor" }
+    if (maxReinicios < 1) { throw "workflow: runSupervised() com maxReinicios < 1 — restart ilimitado é R6" }
+    var jobs = d.jobs
+    var i = 0
+    while (i < jobs.size) {
+        if (jobs.get(i).retryCfg != null) {
+            throw "workflow: '" + jobs.get(i).nome + "' tem retry() — nesta face o reinício é política do supervisor"
+        }
+        i = i + 1
+    }
+    var s = supervisor(supNome)
+    var todas = listOf()
+    i = 0
+    while (i < jobs.size) {
+        var st = KofWfSupStatus()
+        st.nome = jobs.get(i).nome
+        st.idx = i
+        todas.add(st)
+        s.child(jobs.get(i).nome, KofWfSupFab(d, i, st, todas), "transient")
+        i = i + 1
+    }
+    s.restartLimit(maxReinicios)
+    s.escalate(KofWfSupEsc(todas, maxReinicios))
+    s.start()
+    var t = 0
+    while (s.stats().vivos > 0 && t < 30000) { time.sleep(1); t = t + 1 }
+    s.stop(500)
+    if (s.stats().vivos > 0) {
+        throw "workflow: supervisedRun não fechou no prazo (vivos=" + s.stats().vivos + ")"
+    }
+    var rep = KofWfReport()
+    i = 0
+    while (i < jobs.size) {
+        var nome = jobs.get(i).nome
+        var slot = todas.get(i)
+        if (slot.pronto) {
+            rep.succeeded.add(nome)
+            if (slot.tentativas > 1) { rep.retries.add(nome + ": tentativas=" + slot.tentativas) }
+        } else if (slot.pulado) {
+            rep.skipped.add(nome)
+        } else {
+            rep.failed.add(nome)
+            if (slot.tentativas > 1) { rep.retries.add(nome + ": tentativas=" + slot.tentativas) }
+            var motivo = slot.motivo
+            if (motivo == "") { motivo = "false" }
+            rep.errors.add(nome + ": " + motivo)
+            rep.dead.add(nome + ": " + motivo)
+            var job = jobs.get(i)
+            if (job.deadSink != null) {
+                var sFn: (String, String) -> Bool = job.deadSink
+                var okD = false
+                try {
+                    okD = sFn(nome, motivo)
+                } catch (String de) {
+                    throw "workflow: deadLetter sink falhou para '" + nome + "': " + de
+                }
+                if (!okD) { throw "workflow: deadLetter sink recusou '" + nome + "'" }
+            }
+        }
+        i = i + 1
+    }
+    return rep
+}

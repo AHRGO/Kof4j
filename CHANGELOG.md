@@ -3148,6 +3148,7 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
   - shell idiom docs landed — docs/stdlib/shell.md+PT, training per-target+BAD/GOOD, universal-plan 2.2 note; samples compile-proved on tip jar (run+pipeline executed); conflict resolution preserved .18 row 2.1; Q5 self-corrected fake [list] literal and run(cmd) overload in first draft
   - .18 - hash corrigido apos rebase do sync-push (f5ce4579->f23e1b6a no tip)
   - .18 - workflow MVP 2.1.2 landed (f5ce4579) + 2.1.4 docs; check_500 green (.22 split); drift corrigido: entradas ~02:4x agora PT nos dois arquivos; next 2.1.3
+  - .18 - workflow 2.1.3 bundle COMPLETO 19/09: retry + deadLetter (duas faces) + schedule + checkpoint (3a) + **supervision (3b)** — `runSupervised(dag, nome, maxReinicios)` roda a DAG como workers one_for_one DELEGANDO ao `kof.supervisor` (job = child `transient`; laço por filho reinicia só o que falhou; deps = espera cooperativa em flags voláteis; drop por limite + skip transitivo); guardas R6 ALTAS: `maxReinicios < 1` recusado (restart ilimitado = thread storm — lição do host que caiu 19/09), `retry()` na mesma dag recusado (uma política por face); o host do supervisor vem injetado flat com dedup pela marca (import duplo seguro); face REAL nos 4 alvos (sem stub — §129); `WorkflowE2ETest` 20/20 (JVM==JS byte-parity, Native pin, import-duplo pin) — dono = 192.168.100.18
   - workflow 2.1.4 slice - stdlib/workflow.md EN+PT, parity row+delta, tracker flips, plan §2 shipped surface + §5 2.1.2/2.1.4 DONE
 
 ## [0.4.7-beta] - 2026-09-19

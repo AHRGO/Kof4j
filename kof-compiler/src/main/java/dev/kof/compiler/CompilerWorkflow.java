@@ -88,6 +88,32 @@ final class CompilerWorkflow {
             } else {
                 mergeHostSlice(driver, unit, decls, diagnostics, "/dev/kof/workflow-ckpt-host.native.kf");
             }
+            // fatia supervisão (bundle 2.1.3, plano §3: o workflow DELEGA o
+            // restart ao kof.supervisor — nunca re-implementa). O
+            // CompilerSupervisor roda ANTES no pipeline: se o usuário
+            // importou kof.supervisor, o host já está nas decls (KofSupWrap é
+            // a marca dele — Supervisor/supervisor() então NÃO são colisão,
+            // são o próprio host) e só injeta a fatia. Sem o import, o host é
+            // injetado flat aqui (mesmo mecanismo DD-OTP-01). Supervisor
+            // PRÓPRIO do usuário sem o host, ou um runSupervised/KofWfSupStatus
+            // dele = colisão — a peça correspondente não entra (regra 8:
+            // jamais quebrar um programa que compila hoje).
+            boolean hostSupJa = decls.stream().anyMatch(d -> d instanceof TypeDeclarationNode t
+                    && "KofSupWrap".equals(t.name()));
+            boolean colideHostSup = !hostSupJa && decls.stream().anyMatch(d ->
+                    (d instanceof TypeDeclarationNode t
+                            && ("Supervisor".equals(t.name()) || "KofWorker".equals(t.name())
+                                    || "KofWorkerFactory".equals(t.name())))
+                            || (d instanceof FunctionDeclarationNode f && "supervisor".equals(f.name())));
+            boolean colideFace = decls.stream().anyMatch(d ->
+                    (d instanceof TypeDeclarationNode t && "KofWfSupStatus".equals(t.name()))
+                            || (d instanceof FunctionDeclarationNode f && "runSupervised".equals(f.name())));
+            if (!hostSupJa && !colideHostSup) {
+                mergeHostSlice(driver, unit, decls, diagnostics, "/dev/kof/supervisor-host.kf");
+            }
+            if (!colideHostSup && !colideFace) {
+                mergeHostSlice(driver, unit, decls, diagnostics, "/dev/kof/workflow-sup-host.kf");
+            }
             return new CompilationUnitNode(unit.position(), unit.packageName(), imports, decls);
         } catch (IOException e) {
             diagnostics.error("", 0, 0, 0,
@@ -108,9 +134,10 @@ final class CompilerWorkflow {
                 return;
             }
             String schedSource = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            String sliceName = resource.substring(resource.lastIndexOf('/') + 1);
             DiagnosticCollector silent = new DiagnosticCollector();
-            Lexer lexer = new Lexer(schedSource, "workflow-sched-host.kf", silent);
-            Parser parser = new Parser(lexer.tokenize(), silent, "workflow-sched-host.kf");
+            Lexer lexer = new Lexer(schedSource, sliceName, silent);
+            Parser parser = new Parser(lexer.tokenize(), silent, sliceName);
             CompilationUnitNode schedUnit = parser.parse();
             if (silent.hasErrors() || schedUnit == null) {
                 for (Diagnostic d : silent.getDiagnostics()) diagnostics.report(d);

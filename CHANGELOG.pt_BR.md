@@ -13,7 +13,21 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
- ### Em desenvolvimento
+### Em desenvolvimento
+
+  - **Bundle 2.1.3 do `kof.workflow` COMPLETO (19/09, lane `.18`)** — retry +
+    deadLetter (duas faces) + schedule + checkpoint (3a) + **supervisão (3b)**:
+    `runSupervised(dag, nome, maxReinicios)` roda a DAG como workers one_for_one
+    DELEGANDO ao `kof.supervisor` (cada job = child `transient`; o laço por filho
+    reinicia só o que falhou; dependências = espera cooperativa em flags voláteis;
+    limite estourado = drop + skip transitivo). Guardas R6 ALTAS: `maxReinicios < 1`
+    recusado (restart ilimitado silencioso = storm de threads — a lição medida
+    quando o host caiu 19/09) e `retry()` na mesma dag recusado (uma política de
+    reinício por face). O host do supervisor vem injetado flat com dedup pela marca
+    (import duplo seguro); a face é REAL nos 4 alvos (sem stub — núcleo OTP desde
+    §129). **Prova:** `WorkflowE2ETest` 20/20 (paridade byte JVM==JS, pin Native,
+    pin import-duplo) — dono = 192.168.100.18
+
 
   - **Igualdade de colecoes JS agora e por conteudo (`#518`)** — uma `List` ou `Set`
     Kof usada como elemento de outro `Set`/`Map`/`List` comparava por identidade no

@@ -12,7 +12,14 @@
 > in-memory `Report.dead` always + opt-in durable sink per job) and `schedule`
 > (delegates to `scheduler.at` — D-SCHED-DURATION durations or cron; Native gets
 > a loud runtime `CRON001` stub, the scheduler gate itself stays compile-time).
-> `checkpoint` ships with the rest of the 2.1.3 bundle.
+> **2.1.3 face 4 LANDED 19/09 (3a):** `checkpoint` (store over `kof.db`/`kof.orm`;
+> Native gets a loud runtime `ORM001` stub).
+> **2.1.3 face 5 LANDED 19/09 (3b):** `runSupervised(dag, nome, maxReinicios)` —
+> the DAG runs as supervised workers: each job is a `transient` child of a
+> `kof.supervisor` (the per-child watcher IS the one_for_one — only the child that
+> failed restarts). Restart policy = the supervisor's (plan §3 — the workflow never
+> re-implements it); `import kof.supervisor` is NOT required (the host ships with
+> the face, deduped by marker when the user also imports it).
 
 ---
 
@@ -46,6 +53,7 @@ KofWfDag.deadLetter(KofWfJob j, (String, String) -> Bool sink) -> KofWfDag  // o
 exponential(Int baseMs, Int factor) -> (Int) -> Int       // 19/09: backoff(1)=base, *factor each try
 schedule(KofWfDag d, String expr) -> String               // 19/09: delegates to scheduler.at, returns job id
 checkpoint(KofWfDag d, String dbConn, String dagName) -> KofWfDag  // 19/09: store = kof.db/kof.orm (entity KofWfCk)
+runSupervised(KofWfDag d, String supNome, Int maxReinicios) -> KofWfReport  // 19/09 (3b): DAG as one_for_one supervised workers (kof.supervisor)
 
 Report fields: succeeded failed skipped errors retries dead  // List<String> each
 Report.allOk() -> Bool                          // no failures, no skips
@@ -95,6 +103,26 @@ Rules:
   `List<...>` field does not parse (`PARSE023` "Expected parameter name") —
   the ck hooks follow a plain `String dagNome = null` field and take
   `(dagName, jobName)`; grammar change is rule-6 territory.
+- `runSupervised(d, supNome, maxReinicios)` (2.1.3b — supervision delegates to
+  `kof.supervisor`, plan §3): every job becomes a `transient` child of one
+  `Supervisor`; the per-child watcher IS the one_for_one (only the failed child
+  restarts, neighbors are untouched). The body runs ONCE per watcher visit — a
+  `false`/throw makes the worker THROW so the supervisor applies `restartLimit`;
+  after `maxReinicios` restarts the job is dropped (final failure) and its
+  dependents `skip` transitively. Dependencies are a cooperative wait on
+  per-job status flags (mutable `Bool` field = `ACC_VOLATILE`, the DD-OTP-08
+  mechanism). The `Report` is assembled in DECLARATION order — deterministic on
+  every target (the 4 targets run this face; no stub: the supervisor core ships
+  everywhere, §129/OTP001 gone, JS since §132). Guards, all LOUD (R6):
+  `maxReinicios < 1` is refused (silent unbounded restart = thread storm — the
+  lesson measured when a host fell 19/09); a job carrying `retry()` on the same
+  dag is refused (ONE restart policy per face — workflow `retry` lives in
+  `run()`); empty supervisor name refused; wait and settle budgets (30 s) fail
+  with the job name, never hang. `checkpoint` and `deadLetter` registered on
+  the dag are HONORED here (restored job = succeeded without re-running; sink
+  receives the final failure). `kof.supervisor` does NOT need its own import —
+  `CompilerWorkflow` injects the supervisor host flat with the face and dedups
+  by its marker when the user also imports `kof.supervisor`.
   static — referencing `scheduler.at` in the host would reject the whole host
   at compile time; your DIRECT `scheduler.at` calls keep the compile-time
   refusal).
@@ -152,9 +180,12 @@ null dependency, self-dependency, duplicate names in one dag, empty dag.
 
 ## 6. Proof
 
-`WorkflowE2ETest` 8/8 (exact stdout goldens, JVM==JS byte-parity): linear order,
+`WorkflowE2ETest` 20/20 (exact stdout goldens, JVM==JS byte-parity): linear order,
 failure cascade, throw-with-reason, cycle message, guard set, real bodies through a
-captured list, retry (recover-on-3rd + exhaust-with-reason + exponential), Native
-compile. The shape layer is pinned by
+captured list, retry (recover-on-3rd + exhaust-with-reason + exponential), schedule
+fire-count, checkpoint restore across runs, supervised happy path, one_for_one
+restart (flaky child restarts, neighbor untouched — counters prove both sides of
+"one"), limit-exceeded drop + transitive skip, the face's R6 guards, and the
+double-import dedup; Native compile-pinned. The shape layer is pinned by
 `WorkflowPrimitivesE2ETest` (6/6, incl. the negative syntax pins). Plan:
 `docs/development/workflow-plan.md` §5.

@@ -395,4 +395,120 @@ class WorkflowE2ETest {
         CompilationResult nativeRes = driver.compile(tmp.resolve("P.kf"), tmp.resolve("p-native"), Target.NATIVE);
         assertTrue(nativeRes.success(), () -> "Native must compile the host: " + diags(nativeRes));
     }
+
+    /** 2.1.3 face 5 (supervision — plano §3/§5: o workflow DELEGA o restart
+     *  ao kof.supervisor): happy path chain+independente roda sob o one_for_one
+     *  e o Report sai na ordem de declaração — SEM o usuário importar
+     *  kof.supervisor (o CompilerWorkflow injeta o host flat, dedup por marca
+     *  KofSupWrap). */
+    @Test
+    void supervisedHappyPathRunsDagUnderOneForOne() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var a = job("a", () -> true)
+                var b = job("b", () -> true).after(a)
+                var c = job("c", () -> true)
+                var rep = runSupervised(dag(listOf(b, a, c)), "s1", 2)
+                println(rep.summary())
+                println(rep.allOk())
+            }
+            """, "ok=b,a,c failed= skipped=", "true");
+    }
+
+    /** one_for_one de verdade: SÓ o filho que falha reinicia (laço vigiar por
+     *  filho do núcleo OTP). `flaky` tropeça 2x e vence na 3ª visita; `vizinho`
+     *  roda UMA vez e nunca é tocado — os dois contadores provam os dois lados
+     *  da palavra "one". Report.retries expõe o custo em tentativas. */
+    @Test
+    void supervisedOneForOneRestartsOnlyTheFailedChild() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var f = 0
+                var v = 0
+                var flaky = job("flaky", () -> { f = f + 1; if (f <= 2) { throw "tropeco-" + f } return true })
+                var vizinho = job("vizinho", () -> { v = v + 1; return true })
+                var rep = runSupervised(dag(listOf(flaky, vizinho)), "s2", 3)
+                println(rep.summary())
+                println(rep.retries.get(0))
+                println("f=" + f + " v=" + v)
+            }
+            """, "ok=flaky,vizinho failed= skipped=", "flaky: tentativas=3", "f=3 v=1");
+    }
+
+    /** A política de reinício é do supervisor: com max=1 o job que sempre
+     *  falha encerra na 2ª visita (limite excedido → drop via escalate),
+     *  vira failed/dead com o motivo cru, o dependente pula (skip transitivo
+     *  no status podre) e o independente fecha — nada trava nem reinicia
+     *  para sempre (R6). */
+    @Test
+    void supervisedLimitExceededDropsAndSkipsDependents() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var boom = job("boom", () -> { if (true) { throw "sempre" } return false })
+                var depois = job("depois", () -> true).after(boom)
+                var okjob = job("okjob", () -> true)
+                var rep = runSupervised(dag(listOf(boom, depois, okjob)), "s3", 1)
+                println(rep.summary())
+                println(rep.errors.get(0))
+                println(rep.dead.get(0))
+                println(rep.retries.get(0))
+                println(rep.allOk())
+            }
+            """, "ok=okjob failed=boom skipped=depois", "boom: sempre", "boom: sempre",
+                "boom: tentativas=2", "false");
+    }
+
+    /** R6 da face, três recusas ALTAS: retry() na mesma dag (duas políticas
+     *  de reinício = uma só manda), maxReinicios < 1 (restart ilimitado
+     *  silencioso = storm de threads — a lição medida do host que caiu hoje)
+     *  e supervisor sem nome. */
+    @Test
+    void supervisedGuardsFailLoud() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var x = job("x", () -> true)
+                var flow = dag(listOf(x))
+                flow.retry(x, 2, (n: Int) -> 0)
+                try { runSupervised(flow, "s", 1) } catch (String e) { println(e) }
+                try { runSupervised(dag(listOf(x)), "s", 0) } catch (String e) { println(e) }
+                try { runSupervised(dag(listOf(x)), "", 1) } catch (String e) { println(e) }
+            }
+            """, "é política do supervisor", "maxReinicios < 1", "sem nome de supervisor");
+    }
+
+    /** Native: o núcleo supervisor roda nos 4 alvos (§129 portado, OTP001
+     *  removido 19/09) — a face NÃO precisa de stub; prova: o host + o
+     *  supervisor + a fatia compilam no Native. */
+    @Test
+    void supervisedCompilesOnNative() throws Exception {
+        Files.writeString(tmp.resolve("U.kf"), """
+            import kof.workflow
+            main() {
+                var a = job("a", () -> true)
+                var rep = runSupervised(dag(listOf(a)), "s", 2)
+                println(rep.summary())
+            }
+            """);
+        CompilationResult nativeRes = driver.compile(tmp.resolve("U.kf"), tmp.resolve("u-native"), Target.NATIVE);
+        assertTrue(nativeRes.success(), () -> "Native deve compilar host + supervisor + fatia: " + diags(nativeRes));
+    }
+
+    /** Import duplo: `kof.supervisor` injeta o host ANTES (pipeline 438→440);
+     *  o `import kof.workflow` não pode DUBLAR Supervisor/KofWorker — a dedup
+     *  pela marca KofSupWrap decide e o programa roda igual. */
+    @Test
+    void importedSupervisorDoesNotDoubleHost() throws Exception {
+        assertJvmJsParity("""
+            import kof.supervisor
+            import kof.workflow
+            main() {
+                var rep = runSupervised(dag(listOf(job("a", () -> true))), "s", 2)
+                println(rep.summary())
+            }
+            """, "ok=a failed= skipped=");
+    }
 }

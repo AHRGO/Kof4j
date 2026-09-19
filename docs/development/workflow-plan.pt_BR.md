@@ -150,14 +150,20 @@ Dono: **lane `.18`** (atribuído pelo greenlight da mantenedora em 19/09).
   sequencial, sem fronteira de runtime). Golden `WorkflowE2ETest` 7/7 stdout exato JVM==JS +
   pin de compilação Native. Três bordas de parser/typer achadas e contornadas (documentadas
   em `docs/stdlib/workflow.pt_BR.md` §5).
-- **2.1.3 [add-ons — um bundle]** — **face retry ✅ ENTREGUE 19/09** (Q3 honrada: o helper é
-  PRÓPRIO do workflow — `dag.retry(job, times, exponential(base, factor))` + `retryFixed` +
-  `Report.retries`, `WorkflowE2ETest` 8/8; `kof.http` intocado, a migração dele segue fatia
-  assinada à parte). Faces restantes: `checkpoint` via `kof.orm` (honesto `ORM001` no
-  native), `deadLetter` com AMBAS as faces (in-memory `List` + durável em tabela `kof.orm` — Q4),
-  `schedule(cron)` via `kof.scheduler.at` (honesto `CRON001` no native), e integração de
-  supervisão delegando ao `kof.supervisor.one_for_one` quando o run do DAG é expresso como
-  workers (em vez de uma caminhada síncrona simples).
+- **2.1.3 [add-ons — um bundle]** — **LANÇADO 19/09, as cinco faces.** retry ✅ (Q3
+  honrada: o helper é PRÓPRIO do workflow — `dag.retry(job, times, exponential(base,
+  factor))` + `retryFixed` + `Report.retries`; `kof.http` intocado, a migração dele
+  segue fatia assinada à parte); deadLetter ✅ AMBAS as faces (in-memory `Report.dead`
+  sempre + sink durável opt-in por job — Q4); schedule ✅ (delega a `scheduler.at`,
+  stub `CRON001` alto no Native); checkpoint ✅ 3a (store sobre `kof.db`/`kof.orm`,
+  stub `ORM001` alto no Native); supervisão ✅ 3b — `runSupervised(dag, nome,
+  maxReinicios)`: todo job vira um child `transient` de um `kof.supervisor` cujo laço
+  por filho É o one_for_one (só o filho que falha reinicia); a política de reinício
+  segue sendo do supervisor (§3), e a pergunta rule-6 que sobrou ("como expressar um
+  job one-shot como worker?") foi RESPONDIDA pela mantenedora 19/09 ("pode ir pra
+  fatia 3") — a resposta é exatamente o idioma de parada limpa do núcleo (`!falhou &&
+  politica != permanent`), sem superfície nova além da função de composição. Prova:
+  `WorkflowE2ETest` 20/20 (paridade byte JVM==JS + pin Native).
 - **2.1.4 [docs]** ✅ FEITO 19/09 (mesma sessão do 2.1.2) — doc de idiomática
   `docs/stdlib/workflow.pt_BR.md` (+EN), linha na matriz `backend-parity` + delta 19/09(2)
   (EN+PT), tracker 2.1 `🔵→🟡` e 2.5/2.6 `🔵→⏳` (EN+PT), este arquivo promovido para fora

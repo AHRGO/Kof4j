@@ -170,14 +170,19 @@ Owner: **lane `.18`** (assigned by the 19/09 maintainer greenlight).
   skipped/errors, `allOk()`, `summary()`). No target gate (sequential fixpoint, no runtime
   boundary). Golden `WorkflowE2ETest` 7/7 exact-stdout JVM==JS + Native compile pin. Found
   and worked around three parser/typer edges (documented in `docs/stdlib/workflow.md` §5).
-- **2.1.3 [add-ons — one bundle]** — **retry face ✅ LANDED 19/09** (Q3 honored: the
-  helper is the workflow's OWN — `dag.retry(job, times, exponential(base, factor))` +
-  `retryFixed` + `Report.retries`, `WorkflowE2ETest` 8/8; `kof.http` untouched, its
-  migration stays a separate signed slice). Remaining faces: `checkpoint` via `kof.orm`
-  (honest `ORM001` on native), `deadLetter` with BOTH faces (in-memory `List` + durable
-  `kof.orm` table — Q4), `schedule(cron)` via `kof.scheduler.at` (honest `CRON001`), and
-  supervision integration by delegating to `kof.supervisor.one_for_one` when the DAG run
-  is expressed as workers (rather than a plain synchronous walk).
+- **2.1.3 [add-ons — one bundle]** — **LANDED 19/09, all five faces.** retry ✅ (Q3 honored:
+  the helper is the workflow's OWN — `dag.retry(job, times, exponential(base, factor))` +
+  `retryFixed` + `Report.retries`; `kof.http` untouched, its migration stays a separate
+  signed slice); deadLetter ✅ BOTH faces (in-memory `Report.dead` always + opt-in durable
+  sink per job — Q4); schedule ✅ (delegates to `scheduler.at`, loud `CRON001` stub on
+  Native); checkpoint ✅ 3a (store over `kof.db`/`kof.orm`, loud `ORM001` stub on Native);
+  supervision ✅ 3b — `runSupervised(dag, nome, maxReinicios)`: every job becomes a
+  `transient` child of a `kof.supervisor` whose per-child watcher IS the one_for_one
+  (only the failed child restarts); restart policy stays the supervisor's (§3), and the
+  former rule-6 question ("how is a one-shot job expressed as a worker?") was ANSWERED by
+  the maintainer 19/09 ("pode ir pra fatia 3") — the answer is exactly the core's
+  `!falhou && politica != permanent` clean-stop idiom, so no new surface beyond the
+  composing function. Proof: `WorkflowE2ETest` 20/20 (JVM==JS byte-parity + Native pin).
 - **2.1.4 [docs]** ✅ DONE 19/09 (same session as 2.1.2) — idiom doc
   `docs/stdlib/workflow.md` (+PT), `backend-parity` matrix row + 19/09(2) delta (EN+PT),
   tracker 2.1 `🔵→🟡` and 2.5/2.6 `🔵→⏳` (EN+PT), this file promoted out of `future/`

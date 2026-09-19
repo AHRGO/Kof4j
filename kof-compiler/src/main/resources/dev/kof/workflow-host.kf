@@ -5,7 +5,9 @@
 // Q4: `Report.dead` in-memory SEMPRE + sink durável opt-in por job) e
 // schedule(expr, dag) que DELEGA a scheduler.at (contrato §3: workflow não
 // re-implementa cron — no Native a recusa CRON001 sobe honesta no call-site).
-// checkpoint e supervisor one_for_one são fatias seguintes.
+// checkpoint: face 2.1.3a (workflow-ckpt-host.kf); supervisor one_for_one:
+// face 2.1.3b runSupervised (workflow-sup-host.kf — delega ao kof.supervisor,
+// nunca restart próprio).
 // Injetado flat por CompilerWorkflow no `import kof.workflow`
 // explícito (mesmo mecanismo do kof.supervisor, DD-OTP-01 opção A).
 //
