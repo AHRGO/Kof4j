@@ -341,36 +341,51 @@ public final class KofFormatter {
         return formatExpr(expr, 0);
     }
 
-     // #447/§305: LiteralExpr.value() chega ja DECODIFICADO pelo lexer
-     // (readEscape resolve n t r \\ ' " 0 uXXXX). Reimprimir cru quebra o
-     // round-trip ('\\' vira '\' = LEX004; '\t' vira TAB mentido). Re-emite
-     // exatamente o vocabulario do Lexer; nao-ASCII fica cru (nao-lossy).
-     static String escapeLiteral(String v) {
-         if (v == null) return "";
-         StringBuilder sb = new StringBuilder(v.length() + 8);
-         for (int i = 0; i < v.length(); i++) {
-             char c = v.charAt(i);
-             switch (c) {
-                 case '\\' -> sb.append("\\\\");
-                 case '\n' -> sb.append("\\n");
-                 case '\t' -> sb.append("\\t");
-                 case '\r' -> sb.append("\\r");
-                 case '\'' -> sb.append("\\'");
-                 case '"' -> sb.append("\\\"");
-                 case '\0' -> sb.append("\\0");
-                 default -> {
-                     if (c < 0x20) {
-                         sb.append(String.format("\\u%04x", (int) c));
-                     } else {
-                         sb.append(c);
-                     }
-                 }
-             }
-         }
-         return sb.toString();
-     }
+    // #447/§305: LiteralExpr.value() chega ja DECODIFICADO pelo lexer
+    // (readEscape resolve n t r \\ ' " 0 uXXXX). Reimprimir cru quebra o
+    // round-trip ('\\' vira '\' = LEX004; '\t' vira TAB mentido). Re-emite
+    // exatamente o vocabulario do Lexer; nao-ASCII fica cru (nao-lossy).
+    static String escapeLiteral(String v) {
+        if (v == null) return "";
+        StringBuilder sb = new StringBuilder(v.length() + 8);
+        for (int i = 0; i < v.length(); i++) {
+            char c = v.charAt(i);
+            switch (c) {
+                case '\\' -> sb.append("\\\\");
+                case '\n' -> sb.append("\\n");
+                case '\t' -> sb.append("\\t");
+                case '\r' -> sb.append("\\r");
+                case '\'' -> sb.append("\\'");
+                case '"' -> sb.append("\\\"");
+                case '\0' -> sb.append("\\0");
+                default -> {
+                    if (c < 0x20) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+                }
+            }
+        }
+        return sb.toString();
+    }
 
-     static String formatExpr(ExpressionNode expr, int minPrec) {
+    /**
+     * #52 — impressão com reconstrução de agrupamento: parênteses são
+     * re-inseridos onde a árvore os exige. A regra espelha EXATAMENTE o
+     * parser (ExpressionParser.parseBinary: left = parseUnary, right =
+     * parseBinary(prec+1) → operadores ESQUERDA-associativos): um filho
+     * binário só é re-parseado sem parênteses quando sua precedência
+     * respeita o contexto (left: prec >= prec do pai; right: prec > prec
+     * do pai). Operadores unary/calls/if-expr/lambda são atômicos no
+     * nível de parseUnary/parsePostfix (precedência 9) — o parser os
+     * consome inteiros nesse nível, então nunca precisam de parênteses
+     * em si, mas seus operandos/branches são expressões completas.
+     *
+     * @param minPrec precedência mínima p/ imprimir sem parênteses
+     */
+
+    static String formatExpr(ExpressionNode expr, int minPrec) {
         if (expr == null) return "";
         if (expr instanceof IdentifierExpr ie) return ie.name();
         if (expr instanceof LiteralExpr le) {
@@ -466,20 +481,6 @@ public final class KofFormatter {
         return expr.toString();
     }
 
-    /**
-     * #52 — impressão com reconstrução de agrupamento: parênteses são
-     * re-inseridos onde a árvore os exige. A regra espelha EXATAMENTE o
-     * parser (ExpressionParser.parseBinary: left = parseUnary, right =
-     * parseBinary(prec+1) → operadores ESQUERDA-associativos): um filho
-     * binário só é re-parseado sem parênteses quando sua precedência
-     * respeita o contexto (left: prec >= prec do pai; right: prec > prec
-     * do pai). Operadores unary/calls/if-expr/lambda são atômicos no
-     * nível de parseUnary/parsePostfix (precedência 9) — o parser os
-     * consome inteiros nesse nível, então nunca precisam de parênteses
-     * em si, mas seus operandos/branches são expressões completas.
-     *
-     * @param minPrec precedência mínima p/ imprimir sem parênteses
-     */
 
     /** Espelho de ExpressionParser.precedence (fonte: o parser, não a memória). */
     static int precOf(String op) {
