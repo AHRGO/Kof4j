@@ -3037,6 +3037,25 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
   - selftest do check_known_bugs_status ganha caso §904 (✅-face + ⚠️ REMAINS OPEN = live) — cumpre a promessa do commit anterior com fixture plantado, nao so dado real
   - R6 machine gate — every emitted domain gap must have a parity row
 
+## [0.4.6-beta] - 2026-09-19
+
+### Features
+
+  - hover domain-aware — linha 8.3 do plano universal (LSP por domínio)
+  - kof.workflow MVP stdlib (2.1.2) - job/dag/after/run/Report, pure-Kof host
+  - kof deploy MULTI-TARGET da mesma fonte — linha 8.4 do plano universal (X9 fatia 4)
+
+### Bugfixes
+
+  - CodeQL src/main onda pos-scan da main - remove dead-clause equals de tipos incomutiveis (JvmOpCollections), remove params mortos cn/driver (JvmRecordEmitter/ExpressionUiStaticLowerer + callers), reformat do while de parser de assinatura (KofJsFfiMarshal), move escapeLiteral fora do javadoc orfao (KofFormatter #52) e docs(doing): tick 39 (35 novos na main: 19 used-in-tests + 2 FP scanner + 9 contract + 5 fix)
+
+### Documentation
+
+  - shell idiom docs landed — docs/stdlib/shell.md+PT, training per-target+BAD/GOOD, universal-plan 2.2 note; samples compile-proved on tip jar (run+pipeline executed); conflict resolution preserved .18 row 2.1; Q5 self-corrected fake [list] literal and run(cmd) overload in first draft
+  - .18 - hash corrigido apos rebase do sync-push (f5ce4579->f23e1b6a no tip)
+  - .18 - workflow MVP 2.1.2 landed (f5ce4579) + 2.1.4 docs; check_500 green (.22 split); drift corrigido: entradas ~02:4x agora PT nos dois arquivos; next 2.1.3
+  - workflow 2.1.4 slice - stdlib/workflow.md EN+PT, parity row+delta, tracker flips, plan §2 shipped surface + §5 2.1.2/2.1.4 DONE
+
 <!-- NEXT-RELEASE -->
 
 ## [0.2.7-beta] - 2026-09-04
