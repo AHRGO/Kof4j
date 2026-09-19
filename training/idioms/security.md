@@ -1,3 +1,5 @@
+[English](security.md) | [Português](security.pt_BR.md)
+
 # Idioms — SECURITY (passwords / crypto / jwt / secrets / session / auth)
 
 > 8.5 (plano universal, fatia 2, 19/09). Every shape below was compiled
