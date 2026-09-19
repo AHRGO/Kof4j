@@ -138,7 +138,7 @@ Bash+Python+YAML+jq+sed+awk **in a single typed language**).
 
 | # | Item | Status | Owner | Depends on |
 |---|------|--------|-------|------------|
-| 2.1 | `kof.workflow` / `kof.batch` — jobs, pipelines, retry, checkpoints, dead-letter | 🔵 | `.18` | Stage 1; **`future/workflow-plan.md`** SIGNED-OFF 19/09 (Q1–Q4 by maintainer poll: stdlib form, minimal MVP, additive retry, both dead-letter faces); 2.1.0 recon next; flips `🟡` when the stdlib lands (plan §5 2.1.4) |
+| 2.1 | `kof.workflow` / `kof.batch` — jobs, pipelines, retry, checkpoints, dead-letter | 🔵 | `.18` | Stage 1; **`workflow-plan.md`** SIGNED-OFF 19/09 (Q1–Q4 by maintainer poll: stdlib form, minimal MVP, additive retry, both dead-letter faces); 2.1.0 recon next; flips `🟡` when the stdlib lands (plan §5 2.1.4) |
 | 2.2 | `kof.shell` — idiomatic shell over `kof.process` | 🟡 | `.18` | Stage 1; **`development/shell-plan.md`** SIGNED-OFF 18/09 (Q1–Q3 by maintainer poll); MVP 18/09: `cmd`/`run`/`ok` on JVM+JS byte-parity, `pipeline` JVM-only (`PROC001` on JS/Native, inherited from `process.spawn`); glob/`~`/redir out of v1; `ShellE2ETest` 11/11; 2.2.3 (`runWith` cwd/env, JS pipes) + 2.2.4 (stdlib doc) open |
 | 2.3 | `kof.ssh` — via FFI/interop | 🔵 | — | R3 (FFI) |
 | 2.4 | Mature cron/scheduler | 🟡 | concurrency lane | `at(cron)` real 5-field UTC on JVM/JS since 17/09 (§274); Native `CRON001` honest gap |
