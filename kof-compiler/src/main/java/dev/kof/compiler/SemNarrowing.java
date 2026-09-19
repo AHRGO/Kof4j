@@ -17,7 +17,7 @@ final class SemNarrowing {
      * collectNarrowing do StatementAnalyzer, nível expressão — só `x != null`
      * e conjunção; `||` não narrow.
      */
-    static SymbolTable narrowedScope(SemanticAnalyzer sa, ExpressionNode cond, SymbolTable scope) {
+    static SymbolTable narrowedScope(ExpressionNode cond, SymbolTable scope) {
         if (scope == null) return scope;
         java.util.List<SymbolTable.LocalVariableSymbol> narrow = new java.util.ArrayList<>();
         collectCondNarrowing(cond, scope, narrow);

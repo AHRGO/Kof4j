@@ -189,7 +189,7 @@ public final class SemExpressionTyper {
                 // (o lado só é avaliado se o esquerdo passou; short-circuit).
                 if ("&&".equals(bin.operator())) {
                     Type leftT = inferType(sa, bin.left(), scope);
-                    SymbolTable rightScope = SemNarrowing.narrowedScope(sa, bin.left(), scope);
+                    SymbolTable rightScope = SemNarrowing.narrowedScope(bin.left(), scope);
                     Type rightT = inferType(sa, bin.right(), rightScope);
                     yield TypeChecker.inferBinaryResultType(sa.diagnostics(), "&&", leftT, rightT);
                 }
@@ -394,7 +394,7 @@ public final class SemExpressionTyper {
                         // silencio (R6/Q7). so com `this.x`/x nu (owner ==
                         // caller) e dentro da declarante/subclasse passa.
                         if (field instanceof SymbolTable.FieldSymbol fs) {
-                            MemberCallTyper.checkFieldAccess(sa, fs, ct.name());
+                            MemberCallTyper.checkFieldAccess(sa, fs);
                         }
                         yield CompilerTypes.substituteTypeVariableIn(field.type(), recvType, sa.unit());
                     }

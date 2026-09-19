@@ -103,7 +103,7 @@ public final class StatementAnalyzer {
             if (ownerName != null) {
                 SymbolTable.Symbol wf = MemberResolver.resolveFieldInHierarchy(sa, ownerName, fa.fieldName());
                 if (wf instanceof SymbolTable.FieldSymbol wfs) {
-                    MemberCallTyper.checkFieldAccess(sa, wfs, ownerName);
+                    MemberCallTyper.checkFieldAccess(sa, wfs);
                     MemberCallTyper.checkFinalFieldWrite(sa, wfs);
                 }
             }

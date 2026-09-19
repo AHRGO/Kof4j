@@ -298,7 +298,7 @@ public final class MemberCallTyper {
                 for (ExpressionNode arg : mc.arguments()) argTypes0.add(SemExpressionTyper.inferType(sa, arg, scope));
                 SymbolTable.MethodSymbol ms = set.select(mc.arguments().size(), argTypes0);
                 if (ms != null) {
-                    checkMemberAccess(sa, ms.accessFlags(), ms.ownerClass(), ct.name(),
+                    checkMemberAccess(sa, ms.accessFlags(), ms.ownerClass(),
                             "'" + ct.name() + "." + mc.methodName() + "'");
                     sa.putResolvedMethod(mc, ms);
                     TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes0, ms.parameterTypes());
@@ -309,7 +309,7 @@ public final class MemberCallTyper {
                 // SG-013 (SEM046): private/protected checados em compile-time
                 // (antes viravam flags JVM e acesso indevido só explodia em
                 // runtime com IllegalAccessError).
-                checkMemberAccess(sa, ms.accessFlags(), ms.ownerClass(), ct.name(),
+                checkMemberAccess(sa, ms.accessFlags(), ms.ownerClass(),
                         "'" + ct.name() + "." + mc.methodName() + "'");
                 sa.putResolvedMethod(mc, ms);
                 List<Type> argTypes = new ArrayList<>();
@@ -406,7 +406,7 @@ public final class MemberCallTyper {
      * subclasses. Chamada fora → erro SEM046 (antes: IllegalAccessError runtime).
      */
     static void checkMemberAccess(SemanticAnalyzer sa, int accessFlags,
-                                  String ownerClass, String receiverClass,
+                                  String ownerClass,
                                   String memberDesc) {
         if (sa.diagnostics() == null) return;
         boolean isPriv = (accessFlags & AccessFlags.PRIVATE) != 0;
@@ -451,9 +451,8 @@ public final class MemberCallTyper {
      * modificadores no SymbolTableBuilder. `this.x`/`x` nu na própria classe
      * passa (owner == caller).
      */
-    static void checkFieldAccess(SemanticAnalyzer sa, SymbolTable.FieldSymbol fs,
-                                 String receiverClass) {
-        checkMemberAccess(sa, fs.accessFlags(), fs.ownerClass(), receiverClass,
+    static void checkFieldAccess(SemanticAnalyzer sa, SymbolTable.FieldSymbol fs) {
+        checkMemberAccess(sa, fs.accessFlags(), fs.ownerClass(),
                 "field '" + fs.name() + "'");
     }
 
