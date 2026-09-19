@@ -216,6 +216,9 @@ public final class KofJsRunner {
         // elemento p/ o Formatter do JDK. Limitaçao herdada do identity-boxing
         // JS: double integral (30.0) vira Integer -> "30" (nao "30.0"); nao é
         // testado e nao regressa face anterior (antes era ICE COMP002).
+        // #466: Locale.ROOT na ponte tambem — sem ele o runner (host pt_BR)
+        // divergia do lowering JVM (ROOT) e do browser (toFixed), quebrando
+        // a paridade byte-a-byte que a ponte promete (§239).
         platform.put("stringFormat", (ProxyExecutable) args -> {
             String fmt = args[0].asString();
             java.util.List<Object> list = new java.util.ArrayList<>();
@@ -228,7 +231,7 @@ public final class KofJsRunner {
                     list.add(toFormatArg(args[1].getArrayElement(i)));
                 }
             }
-            return String.format(fmt, list.toArray());
+            return String.format(java.util.Locale.ROOT, fmt, list.toArray());
         });
         platform.put("args", (ProxyExecutable) args -> java.util.Arrays.asList(programArgs));
         platform.put("readLine", (ProxyExecutable) args -> readLine(in));

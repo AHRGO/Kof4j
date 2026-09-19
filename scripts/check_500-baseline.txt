@@ -8,10 +8,10 @@
 536	kof-compiler/src/main/java/dev/kof/compiler/CompilerTypes.java
 548	kof-compiler/src/main/java/dev/kof/compiler/ExpressionBinaryLowerer.java
 568	kof-compiler/src/main/java/dev/kof/compiler/ExpressionLowerer.java
-525	kof-compiler/src/main/java/dev/kof/compiler/ExpressionTyper.java
-599	kof-compiler/src/main/java/dev/kof/compiler/js/JsCallEmitter.java
-559	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeCore.java
-536	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeOps.java
+534	kof-compiler/src/main/java/dev/kof/compiler/ExpressionTyper.java
+589	kof-compiler/src/main/java/dev/kof/compiler/js/JsCallEmitter.java
+579	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeCore.java
+549	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeOps.java
 530	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiComponents.java
 527	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiCrypto.java
 531	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiLayout.java
@@ -27,13 +27,13 @@
 573	kof-compiler/src/main/java/dev/kof/compiler/KofUi.java
 510	kof-compiler/src/main/java/dev/kof/compiler/MemberCallTyper.java
 504	kof-compiler/src/main/java/dev/kof/compiler/MethodCallTyper.java
-505	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeBackend.java
+509	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeBackend.java
 553	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmMapset0.java
 581	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmRtB33.java
 569	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmRtB47.java
 505	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvCrossEmit.java
-520	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvCrossOps.java
-561	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeX86Calls.java
+555	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvCrossOps.java
+567	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeX86Calls.java
 554	kof-compiler/src/main/java/dev/kof/compiler/parser/ExpressionParser.java
 509	kof-compiler/src/main/java/dev/kof/compiler/parser/Lexer.java
 549	kof-compiler/src/main/java/dev/kof/compiler/parser/StatementParser.java
@@ -42,4 +42,4 @@
 566	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeUi.java
 589	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
 538	kof-compiler/src/main/java/dev/kof/compiler/StatementAnalyzer.java
-589	kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java
+592	kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java

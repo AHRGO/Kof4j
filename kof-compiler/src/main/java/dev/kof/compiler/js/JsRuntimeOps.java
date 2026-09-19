@@ -522,15 +522,28 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
     // no runner GraalJS). Browser (sem kof_platform): o Proxy do kof_platform da
     // erro honesto em runtime, mesmo degrade de kof.io/FFI/process (R6/R7), nunca
     // um valor errado em silencio. args[0]=fmt, args[1]=Object[] (array JS).
+    // #466: o lowering compartilhado agora passa Locale.ROOT como 1º arg
+    // (String.format(String,...) e locale-sensitive; ROOT trava o decimal
+    // pont em qualquer host — paridade JVM/Script/browser). O gate aceita a
+    // forma antiga de 2 params (bytecode de cache/arte preexistente) e a nova
+    // de 3; no JS a Locale e ignorada — kofStringFormat ja e deterministico
+    // por construcao (toFixed/raiz) e o host Graal formata com ROOT.
     boolean isStaticFormat(KofCall kc) {
-        return BuiltinTypes.isString(kc.ownerType()) && "format".equals(kc.methodName())
-                && kc.kind() == KofCallKind.STATIC && kc.parameterTypes().size() == 2
-                && kc.parameterTypes().get(1) instanceof Type.ArrayType;
+        int n = kc.parameterTypes().size();
+        if (kc.kind() != KofCallKind.STATIC || !"format".equals(kc.methodName())
+                || !BuiltinTypes.isString(kc.ownerType())) {
+            return false;
+        }
+        if (!(kc.parameterTypes().get(n - 1) instanceof Type.ArrayType)) {
+            return false;
+        }
+        return n == 2 || (n == 3 && "Locale".equals(JsTypeMapper.className(kc.parameterTypes().get(0))));
     }
 
     void emitStaticFormat(List<Object> stack, List<JsIr.JsExpression> args) {
         p.lc.registerIoRuntime("kofStringFormat");
+        int off = args.size() == 3 ? 1 : 0;
         stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofStringFormat"),
-                List.of(args.get(0), args.get(1))));
+                List.of(args.get(off), args.get(off + 1))));
     }
 }

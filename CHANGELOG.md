@@ -32,6 +32,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### In development
 
+  - **`String.format` float output no longer depends on the host locale (#466, §339)** —
+    `String.format("%.2f", 3.14)` printed `3,14` on a `pt_BR` JVM (the lowering emitted the
+    2-arg `String.format(String, Object[])` overload, locale-sensitive by contract) and the
+    GraalJS host bridge inherited the machine default too — the §239 "byte-a-byte parity"
+    silently depended on the OS locale. The lowering now always emits the real 3-arg form
+    `String.format(Locale.ROOT, fmt, args)` and the JS bridge pins `Locale.ROOT`: deterministic
+    output on every JVM-like target (R10). **Proof:** `StringFormatLocaleE2ETest` 3/3 (JVM child
+    under `-Duser.language=pt -Duser.country=BR`, Script, JS-via-Graal) against a JDK oracle
+    golden; RED 3/3 pre-fix. `String.format` on Native remains an honest pre-existing link gap
+    (no JDK formatter; catalogued in §339 for the native lane).
+
   - **`X as T <op> Y` no longer silently drops the operator (#459, §336)** — the type operand
     of `as`/`instanceof` was parsed by the value precedence-climber and swallowed whatever
     came next (`a as Double / 2.0` became a malformed type rendered as `"?"` in the constant

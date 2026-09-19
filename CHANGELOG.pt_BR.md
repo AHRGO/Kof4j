@@ -32,6 +32,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
+  - **O output de ponto flutuante de `String.format` nao depende mais do locale do host (#466, §339)** —
+    `String.format("%.2f", 3.14)` imprimia `3,14` num JVM `pt_BR` (o lowering emitia o overload de
+    2 argumentos `String.format(String, Object[])`, locale-sensive por contrato) e a ponte do host
+    GraalJS herdava o padrao da maquina tambem — a "paridade byte-a-byte" do §239 dependia
+    silenciosamente do locale do SO. O lowering agora SEMPRE emite a forma real de 3 argumentos
+    `String.format(Locale.ROOT, fmt, args)` e a ponte JS trava `Locale.ROOT`: output deterministico
+    em todo alvo JVM-like (R10). **Prova:** `StringFormatLocaleE2ETest` 3/3 (JVM filho sob
+    `-Duser.language=pt -Duser.country=BR`, Script, JS-via-Graal) contra golden de oraculo JDK;
+    VERMELHO 3/3 pre-fix. `String.format` no Nativo continua um gap de link honesto preexistente
+    (sem formatador JDK; catalogado no §339 para a lane nativa).
+
   - **`X as T <op> Y` nao descarta mais o operador em silencio (#459, §336)** — o operando de
     tipo de `as`/`instanceof` era parseado pelo climb de precedencia de VALOR e engolia o que
     viesse depois (`a as Double / 2.0` virava um tipo malformado renderizado como `"?"` na

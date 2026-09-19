@@ -12,6 +12,14 @@ import java.util.List;
  * empacotados num {@code Object[]} (primitivos boxados) e o descritor REAL
  * {@code (Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;} é emitido.
  * Cobre 0 args extras (`format("Hello World")`).
+ *
+ * <p>#466 (R10/paridade cross-target): o descritor de 2 args é
+ * locale-sensitive — `%.2f` imprime `3,14` em hosts pt_BR e `3.14` em
+ * en. O backend sempre emite a forma de 3 args
+ * `String.format(Locale.ROOT, String, Object[])`, travando o output
+ * determinístico nos alvos que falam com o JDK (JVM/Script). JS já é
+ * determinístico (`toFixed`/raiz) e o Native não tem JDK — o oracle é
+ * JVM+Locale.ROOT nos dois alvos JVM-like.
  */
 final class StringFormatCallLowerer {
 
@@ -28,7 +36,12 @@ final class StringFormatCallLowerer {
             String owner, int localIdx, List<IRLocalVariable> locals) {
         Type object = new Type.ClassType("java.lang", "Object", List.of());
         Type objectArray = new Type.ArrayType(object);
+        Type locale = new Type.ClassType("java.util", "Locale", List.of());
         List<ExpressionNode> args = mc.arguments();
+        // #466: Locale.ROOT primeiro — String.format(String,...) é
+        // locale-sensitive (pt_BR → `3,14`); ROOT trava em `3.14` em
+        // qualquer host (determinismo R10 + paridade JVM↔Script↔JS).
+        ops.add(new KofGetStatic(locale, "ROOT", locale));
         localIdx = ExpressionLowerer.emitExpression(driver, args.get(0), ops, owner, localIdx, locals);
         int extra = args.size() - 1;
         ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, extra));
@@ -45,7 +58,7 @@ final class StringFormatCallLowerer {
             ops.add(new KofArrayStore(object));
         }
         ops.add(new KofCall(BuiltinTypes.STRING, "format",
-                List.of(BuiltinTypes.STRING, objectArray), BuiltinTypes.STRING, KofCallKind.STATIC));
+                List.of(locale, BuiltinTypes.STRING, objectArray), BuiltinTypes.STRING, KofCallKind.STATIC));
         return localIdx;
     }
 }
