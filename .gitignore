@@ -18,3 +18,4 @@ dependency-reduced-pom.xml
 # kof deps: lock/declaração gerados no cwd por `kof deps add/resolve`
 kofdeps
 kofdeps.lock
+lib/kof.jar.bak
