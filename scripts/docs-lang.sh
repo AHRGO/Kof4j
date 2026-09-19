@@ -56,8 +56,20 @@ pairs() {
 }
 
 # todos os canonicos rastreados, com ou sem par
+#
+# Excecao: arquivos que abrem com frontmatter YAML (`---` na linha 1) — perfis
+# de agente (`.github/agents/*.agent.md`) e skills (`.github/skills/**/SKILL.md`).
+# Sao configuracao consumida por maquina: o formato exige o frontmatter na
+# LINHA 1, entao nao comportam o switcher bilingue das 3 primeiras linhas.
+# Ficam fora do gate pelas mesmas razoes que os `.yml` de ISSUE_TEMPLATE ja
+# ficam (nao sao documentacao humana). O par pt_BR continua sendo o padrao
+# para todo `.md` que NAO abra com frontmatter.
 all_canon() {
-    git ls-files '*.md' | grep -v -- "$PT_SUFFIX"'$' || true
+    local canon
+    while IFS= read -r canon; do
+        [ "$(head -1 "$canon" 2>/dev/null)" = "---" ] && continue
+        printf '%s\n' "$canon"
+    done < <(git ls-files '*.md' | grep -v -- "$PT_SUFFIX"'$' || true)
 }
 
 all_pt() {
