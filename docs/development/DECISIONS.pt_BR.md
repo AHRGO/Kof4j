@@ -2083,3 +2083,36 @@ uma **expressão de duração idiomática**:
 **Evidência:** mensagens da mantenedora 19/09 (esta sessão, lane .18).
 1º consumidor: `flow.schedule(cron)` do bundle 2.1.3 do `kof.workflow`
 (mesmo gap honesto no Native).
+
+## D-WORKFLOW-RUN — `kof workflow run` é um runner completo de introspecção sobre `pipeline()`
+
+**Data:** 19/09/2026 · **Estado:** `DECIDIDO` (enquete da mantenedora no
+chat desta sessão: escolheu **runner completo (introspecção)** para a linha
+2.6 e **exemplo de pipeline real + prova E2E** para a linha 2.5)
+
+**Decisão (aditiva, regra 2 do freeze):** a linha 2.6 de
+`IMPLEMENTATION-UNIVERSAL-PLATFORM.md` entrega um **runner completo**, não
+um alias do `kof run`:
+
+* um **arquivo de pipeline** é um módulo `.kf` que importa `kof.workflow` e
+  define uma função top-level `pipeline(): KofWfDag`; não tem `main()` (o
+  runner sintetiza a entrada). É a única convenção nova; nada do que existe
+  hoje muda (`kof run` continua rodando qualquer `.kf` inalterado);
+* `kof workflow list <file.kf>` — lista os jobs e suas dependências (a DAG);
+  `--json` para a forma legível por máquina;
+* `kof workflow run <file.kf>` — roda a dag; `--job <name>` restringe ao job
+  nomeado **e suas dependências transitivas**; `--dry-run` imprime a ordem
+  topológica sem executar nenhum corpo; `--json` emite o `Report`
+  estruturado;
+* código de saída: `0` se `Report.allOk()`, senão `1` (mesma honestidade do
+  `kof test`);
+* alvos: JVM primeiro (R7); JS e os demais alvos são fatias seguintes com o
+  mesmo gap honesto quando um corpo de job precisa de uma primitiva que o
+  alvo não tem;
+* o runner é **tooling**, o pipeline é **código Kof** (VISION §4.3);
+  `kof workflow run` consome o mesmo frontend — sem parser paralelo.
+
+**Evidência:** enquete da mantenedora nesta sessão (opções: alias fino /
+convenção mínima `pipeline()` / **introspecção completa** / só plano).
+VISION `UNIVERSAL-PLATFORM-VISION.md:1137`; `workflow-plan.md` (2.1
+assinado 19/09); precedente X9 `kof deploy` para fatias de tooling.

@@ -2114,3 +2114,36 @@ an **idiomatic duration expression**:
 **Evidence:** maintainer's messages 19/09 (this session, lane .18). First
 consumer: `flow.schedule(cron)` of the `kof.workflow` 2.1.3 bundle (same
 honest gap on Native).
+
+## D-WORKFLOW-RUN — `kof workflow run` is a full introspection runner over `pipeline()`
+
+**Date:** 2026-09-19 · **State:** `DECIDED` (maintainer, chat poll this
+session: chose **full runner (introspection)** for row 2.6 and **real
+pipeline example + E2E proof** for row 2.5)
+
+**Decision (additive, freeze rule 2):** row 2.6 of
+`IMPLEMENTATION-UNIVERSAL-PLATFORM.md` ships as a **full runner**, not an
+alias over `kof run`:
+
+* a **pipeline file** is a `.kf` module that imports `kof.workflow` and
+  defines a top-level `pipeline(): KofWfDag`; it carries no `main()` (the
+  runner synthesizes the entry). This is the only new convention; nothing
+  that exists today changes (`kof run` keeps running any `.kf` unchanged).
+* `kof workflow list <file.kf>` — lists jobs and their dependencies (the
+  DAG); `--json` for a machine-readable form;
+* `kof workflow run <file.kf>` — runs the dag; `--job <name>` restricts to
+  the named job **and its transitive dependencies**; `--dry-run` prints the
+  topological order without executing any body; `--json` emits the
+  structured `Report`;
+* exit code: `0` iff `Report.allOk()`, else `1` (same honesty as
+  `kof test`);
+* targets: JVM first (R7); JS and the remaining targets are follow-up
+  slices with the same honest gap when a job body needs a primitive the
+  target lacks;
+* the runner is **tooling**, the pipeline is **Kof code** (VISION §4.3);
+  `kof workflow run` consumes the same frontend — no parallel parser.
+
+**Evidence:** maintainer poll this session (options: thin alias / minimal
+`pipeline()` convention / **full introspection** / plan-only). VISION
+`UNIVERSAL-PLATFORM-VISION.md:1137`; `workflow-plan.md` (2.1 signed 19/09);
+X9 `kof deploy` precedent for tooling slices.
