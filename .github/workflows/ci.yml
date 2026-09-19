@@ -43,6 +43,9 @@ jobs:
       - name: Gate R1 fronteira stdlib (D-UNIVERSAL; ledger nao cresce em silencio)
         run: scripts/check_stdlib_boundary.sh --selftest && scripts/check_stdlib_boundary.sh
 
+      - name: Gate instalador (harness offline do scripts/install.sh — PR #457)
+        run: bash scripts/tests/install-test.sh
+
       - name: Install native webview deps (Linux)
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev
 
