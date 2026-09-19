@@ -15,6 +15,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
+  - **`return <valor>` em `void`/sem-tipo/construtor agora é `SEM093` (linha 0.4.0,
+    D-DECL-RETURN, #333)** — uma função top-level que declara `void` — **ou não declara
+    tipo algum** — não pode mais `return <valor>`, e construtor também não. Antes, o
+    `FunctionLowering` emitia o descritor *inferido* (`()I`) enquanto o symbol e cada
+    call-site ficavam em `()V`: o `kof check` passava e o programa morria em runtime com
+    `NoSuchMethodError` (o repro da #333). Agora a própria definição é rejeitada em tempo
+    de compilação: `void function cannot return a value - drop the value (bare \`return\`
+    exits) or declare a return type [SEM093]`. `return` pelado em void continua legal
+    (saída antecipada). Métodos de classe ficaram fora da regra por decisão: lá a
+    reinferência bug-26 retipa symbol e descritor juntos (§130), então não produzem o
+    crash de link. **Migração:** tire o valor (`return`) ou declare o tipo real
+    (`Int f() { ... }`). Prova: `VoidReturnValueE2ETest` (7 casos: void/sem-tipo/ctor
+    rejeitados; `return` pelado, mismatch `SEM010` não-void e inferência de método preservados).
+
   - **KofScript virou target de execução direta com interpretador da IR
     (06/09)** — `KofInterpreter` executa a MESMA IR otimizada que o backend
     JVM consome (mesmo frontend: parse → merge → imports → desugar → análise

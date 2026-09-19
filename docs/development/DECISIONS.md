@@ -1091,7 +1091,8 @@ doc unit per package translated.
 
 **Date:** 2026-09-16
 
-**State:** `DECIDED`
+**State:** `IMPLEMENTED` (top-level/ctor) — `b1ea1718`, 19/09. See note below
+for the method scope
 
 **Origin:** issue #333 (maintainer decision in the chat, 16/09: "classe
 definida como int deve obrigatoriamente retornar int"; "função definida como
@@ -1122,6 +1123,26 @@ função de um tipo declarado deve retornar aquele tipo").
 
 Owner: compiler lane (issue sweep claimed in DOING, 17/09). Diagnostic
 wording must follow D-DIAG-EN (English).
+
+**As landed (`b1ea1718`, 19/09, `SEM093`) — measured on the 0.4.6 tip jar:**
+
+- **Item 1 (void declared):** enforced for **top-level functions and
+  constructors**; a **class method** declared `void` with `return <value>`
+  still compiles via the §130/bug-26 both-sides re-inference (the maintainer's
+  commit states it deliberately: "Metodos ficam de fora"). Face b of the #333
+  thread (`b.m()` printing through the re-typed slot) therefore stays
+  accepted-by-design unless the maintainer later narrows §130.
+- **Item 2 (silent re-typing):** the `FunctionLowering` descriptor-only
+  re-typing (the NoSuchMethodError half) is **gone for top-level**; the
+  `analyzeMethodBody` symbol re-typing survives for methods with the call-sites
+  resolving against the retyped symbol (consistent pair — no link crash).
+- **Item 3 (no declared type):** for **top-level** the "as today" behavior was
+  deliberately tightened — `f() { return 5 }` (unannotated) is now `SEM093`
+  (proof: `VoidReturnValueE2ETest#untypedTopLevelWithReturnRejected`),
+  because the untyped top-level was exactly the silent-NSME face. Untyped
+  **methods** keep inferring (§130). The record here governs; a future
+  relaxation is the maintainer's call (rule 6).
+- **Item 4:** CHANGELOG entry lands in this same commit (EN+PT).
 
 ### Relationships
 

@@ -1054,7 +1054,8 @@ sincronizam como unidade-doc de acompanhamento por pacote traduzido.
 
 **Data:** 16/09/2026
 
-**Estado:** `DECIDIDO`
+**Estado:** `IMPLEMENTADO` (top-level/ctor) — `b1ea1718`, 19/09. Ver nota abaixo
+sobre o escopo de métodos
 
 **Origem:** issue #333 (decisão da mantenedora no chat, 16/09: "classe
 definida como int deve obrigatoriamente retornar int"; "função definida como
@@ -1085,6 +1086,30 @@ função de um tipo declarado deve retornar aquele tipo").
 Dono: lane compiler (issue sweep reivindicado no DOING, 17/09). O texto do
 diagnóstico segue D-DIAG-EN (inglês).
 
+**Como chegou no código (`b1ea1718`, 19/09, `SEM093`) — medido no jar do tip
+0.4.6:**
+
+- **Item 1 (void declarado):** vale para **funções top-level e construtores**;
+  um **método de classe** declarado `void` com `return <valor>` ainda compila
+  pela reinferência bug-26 dos dois lados (§130) — o commit da mantenedora diz
+  isso de propósito: "Metodos ficam de fora". A face b do thread #333
+  (`b.m()` imprimindo através do slot retipado) continua aceita por decisão,
+  a menos que a mantenedora estreite o §130 depois.
+- **Item 2 (re-tipo silencioso):** o re-tipo só-do-descritor do
+  `FunctionLowering` (a metade NoSuchMethodError) **sumiu no top-level**; o
+  re-tipo do symbol em `analyzeMethodBody` sobrevive em métodos, com os
+  call-sites resolvendo contra o symbol retipado (par consistente — sem crash
+  de link).
+- **Item 3 (sem tipo declarado):** no **top-level** o "as hoje" foi apertado de
+  propósito — `f() { return 5 }` (sem anotação) agora é `SEM093` (prova:
+  `VoidReturnValueE2ETest#untypedTopLevelWithReturnRejected`), porque o
+  top-level sem anotação era exatamente a face do NSME silencioso. Métodos sem
+  anotação continuam inferindo (§130). Este registro preside; afrouxar depois
+  é decisão da mantenedora (regra 6).
+- **Item 4:** a entrada do CHANGELOG vem neste mesmo commit (EN+PT).
+
+
+
 ### Relacionamentos
 
 - Fecha o bloqueio por regra 6 do #333 (o fix estava catalogado, esperando
@@ -1097,7 +1122,7 @@ diagnóstico segue D-DIAG-EN (inglês).
 
 **Data:** 2026-09-18
 
-**Estado:** `DECIDIDO`
+
 
 **Origem:** diretriz da mantenedora, 18/09 (varredura de issues): "ele ta
 abrindo issue de java no kof. kof não é java. não tem string builder no kof.
