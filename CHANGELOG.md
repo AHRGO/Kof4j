@@ -3056,6 +3056,24 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
   - .18 - workflow MVP 2.1.2 landed (f5ce4579) + 2.1.4 docs; check_500 green (.22 split); drift corrigido: entradas ~02:4x agora PT nos dois arquivos; next 2.1.3
   - workflow 2.1.4 slice - stdlib/workflow.md EN+PT, parity row+delta, tracker flips, plan §2 shipped surface + §5 2.1.2/2.1.4 DONE
 
+## [0.4.7-beta] - 2026-09-19
+
+### Features
+
+  - kof deploy --publish = GitHub Releases (D-POLL-19/D2-A) — X9 fatia 5
+  - 8.3-B rootUri do initialize entra na busca do projeto — workspace/symbol/hover/definition/references cobrem deps fora do pai (multi-modulo); LspProject.siblings(self,root) dedup+sorted, delegadores preservam comportamento antigo sem rootUri; teste novo red->green + LspServerTest 33/33 cli ok; tracker 8.3 EN+PT atualizado (resta signatureHelp = precisa metadado de assinatura no StdCatalog, decide com .18)
+  - 2.1.3 face retry - additive dag.retry/retryFixed/exponential + Report.retries in the pure-Kof host
+
+### Bugfixes
+
+  - sync-push.sh com retry mecânico (3x) p/ corrida de push na árvore compartilhada + DOING tick (41)
+  - #445 §308 — enum em arquivo importado ponta a ponta (4 targets) + forma identidade no switch-enum JS
+  - reencaixa javadoc #52 no seu dono formatExpr(2-arg) — regressao doc propria do 70c59da3 (alerta main 865); normaliza indentacao 5->4 da regiao do landing §305
+
+### Documentation
+
+  - ratifica D-POLL-19 — as 11 decisões pendentes RESOLVIDAS pela mantenedora (multipla escolha 19/09)
+
 <!-- NEXT-RELEASE -->
 
 ## [0.2.7-beta] - 2026-09-04
