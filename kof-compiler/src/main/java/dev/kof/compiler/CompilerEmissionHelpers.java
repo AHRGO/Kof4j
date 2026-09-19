@@ -177,6 +177,23 @@ public final class CompilerEmissionHelpers {
     }
 
     /**
+     * §284-map (18/09): unbox para CONSUMIDORES de {@code Int?} no native —
+     * variantes do contrato de slot de Map (fisicamente boxed) cruzado com o
+     * caminho de funcao local (cru). Soft = caixa abre, cru passa, null da o
+     * mesmo diagnostico do estrito. Em JVM/Script o helper e identico ao
+     * estrito (la o Nullable(primitivo) e sempre a referencia do wrapper).
+     */
+    static void emitErasureUnboxSoft(CompilerDriver driver, List<KofOperation> ops, Type primitive) {
+        if (!driver.needsErasureBoxing()) return;
+        Type boxed = TypeMetrics.boxedTypeFor(primitive);
+        if (driver.target.isNative()) {
+            ops.add(new KofCall(primitive, "kof_unbox_soft", List.of(boxed), primitive, KofCallKind.FUNCTION));
+            return;
+        }
+        ops.add(new KofCall(primitive, "kof_unbox", List.of(boxed), primitive, KofCallKind.FUNCTION));
+    }
+
+    /**
      * §168: literal `1` no TIPO do operando — usado por `++`/`--`. Antes o
      * incremento empurrava sempre `INT 1` e o binário era emitido com o tipo
      * do alvo: `long x; x++` virava `LADD` sobre (long, int) → VerifyError no

@@ -278,7 +278,13 @@ public final class ExpressionTyper {
                 Type elseType = ie.elseExpr() != null ? inferExprType(driver, ie.elseExpr(), locals) : Type.UnknownType.UNKNOWN;
                 if (thenType.equals(elseType)) yield thenType;
                 if (driver.semanticAnalyzer != null) {
-                    yield HierarchyResolver.commonSupertype(driver.semanticAnalyzer, thenType, elseType);
+                    // §284-map (18/09): ramo `null` literal obriga o join a
+                    // ser NULLABLE do outro lado — o commonSupertype antigo
+                    // colapsava `Int`+`null` p/ `Int` (a caixa do join ficava
+                    // mentindo o static type: println imprimia o ponteiro da
+                    // caixa, `==` derefava inteiro — medido ifexpr-intnull).
+                    var joined = HierarchyResolver.commonSupertype(driver.semanticAnalyzer, thenType, elseType);
+                    yield nullableIfNullBranch(joined, ie.thenExpr(), ie.elseExpr());
                 }
                 List<Type> bts = ifBranchTypes(driver, ie, locals);
                 if (branchTypesDiffer(bts)) {
@@ -292,7 +298,11 @@ public final class ExpressionTyper {
                     if (branchTypesDiffer(bts)) {
                         yield new Type.ClassType("java.lang", "Object", List.of());
                     }
-                    yield inferExprType(driver, se.cases().get(0).body(), locals);
+                    // §284-map: mesmo contrato nullable do if-expr.
+                    var sbody = inferExprType(driver, se.cases().get(0).body(), locals);
+                    var sdflt = se.defaultValue() != null ? inferExprType(driver, se.defaultValue(), locals) : null;
+                    yield nullableIfNullBranch(sbody, se.cases().get(0).body(),
+                            se.defaultValue() != null ? se.defaultValue() : se.cases().get(0).body());
                 }
                 yield se.defaultValue() != null ? inferExprType(driver, se.defaultValue(), locals)
                         : Type.UnknownType.UNKNOWN;
@@ -325,6 +335,17 @@ public final class ExpressionTyper {
     }
 
     /** Tipos dos ramos do if (then, else) p/ `branchTypesDiffer`. */
+    /** §284-map: `T` + ramo literal `null` → `T?` (nunca toca nullable/objeto). */
+    static Type nullableIfNullBranch(Type joined, ExpressionNode... branches) {
+        if (!(joined instanceof Type.PrimitiveType pt) || Type.isVoid(pt)) return joined;
+        for (ExpressionNode b : branches) {
+            if (b instanceof LiteralExpr lit && lit.kind() == ConcreteLiteralKind.NULL) {
+                return new Type.NullableType(pt);
+            }
+        }
+        return joined;
+    }
+
     static List<Type> ifBranchTypes(CompilerDriver driver, IfExpr ie,
                                     List<IRLocalVariable> locals) {
         return List.of(branchTypeOrNullAsRef(driver, ie.thenExpr(), locals),
@@ -381,6 +402,14 @@ public final class ExpressionTyper {
         // isPrimitiveType olha DENTRO do Nullable, então o guard precisa
         // do teste cru: só primitivo NÃO-nullable boxa aqui.
         if (branchT instanceof Type.PrimitiveType) {
+            // §284-map (18/09): no NATIVE o join também boxea — o contrato de
+            // `Int?` no native passa a ser FISICAMENTE boxed (caixa MAGIC,
+            // null = 0), igual ao JVM pós-#438. Os consumidores (println/==/
+            // aritmética) leram via soft-unbox/kof_box_equals, que aceitam
+            // caixa e null; o cru residual (funções locais, caminho antigo)
+            // passa no soft. Medido: sem o box do join, `if (c) 1 else null`
+            // imprimia o ponteiro da caixa (`1551450144`) e o `==` derefava
+            // inteiro cru — contrato misto.
             driver.emitErasureBox(ops, branchT);
         }
     }

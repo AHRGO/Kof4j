@@ -222,7 +222,8 @@ public final class CompilerComparisons {
         // cima), entao so relacionais alcancam este desempacote.
         if (isNullablePrim(leftT)) {
             Type leftInner = ((Type.NullableType) leftT).inner();
-            driver.emitErasureUnbox(ops, leftInner);
+            // §284-map: soft no native (slot de Map = caixa; funcao local = cru)
+            CompilerEmissionHelpers.emitErasureUnboxSoft(driver, ops, leftInner);
             leftT = leftInner;
         }
         // rightMaybeNull: o left (na pilha) é primitivo → boxa ele AGORA
@@ -234,7 +235,8 @@ public final class CompilerComparisons {
         localIdx = ExpressionLowerer.emitExpression(driver, bin.right(), ops, owner, localIdx, locals);
         if (isNullablePrim(rightT)) {
             Type rightInner = ((Type.NullableType) rightT).inner();
-            driver.emitErasureUnbox(ops, rightInner);
+            // §284-map: soft no native (slot de Map = caixa; funcao local = cru)
+            CompilerEmissionHelpers.emitErasureUnboxSoft(driver, ops, rightInner);
             rightT = rightInner;
         }
         // leftMaybeNull: o right (acabou de emitir, topo da pilha) é primitivo

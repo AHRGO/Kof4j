@@ -364,14 +364,42 @@ public final class RuntimeJsonEncode {
                 movq %rax, %rsi
                 movq %rbx, %rdi
                 call kof_map_get
-                # encode pelo tag: 1=string, 2=bool, senao int
+                # encode pelo tag: 1=string, 2=bool, 7=caixa numerica
+                # (§284-map: slot boxado MAGIC — abre via box_to_string; miss
+                # null → "null" cru, mesmo output do oraculo JVM), senao int cru
                 cmpl $1, 0(%rsp)
                 je .Lkjm_valstr
                 cmpl $2, 0(%rsp)
                 je .Lkjm_valbool
+                cmpl $7, 0(%rsp)
+                je .Lkjm_valbox
                 movq %rax, %rdi
                 call kof_json_encode_int
                 jmp .Lkjm_vapp
+            .Lkjm_valbox:
+                testq %rax, %rax
+                jz .Lkjm_valnull
+                movq 8(%rax), %rdx          # tag interno da caixa
+                cmpq $2, %rdx
+                je .Lkjm_valblong           # long: numero cru (nunca quote)
+                movq %rax, %rdi
+                call kof_box_to_string      # resto da familia: decimal cru
+                jmp .Lkjm_vapp              #   via builder (int/bool/double/float)
+            .Lkjm_valblong:
+                movq 16(%rax), %rdi
+                call kof_json_encode_long
+                jmp .Lkjm_vapp
+            .Lkjm_valnull:
+                leaq .Lkjm_nullstr(%rip), %rax
+                jmp .Lkjm_vapp
+            .Lkjm_nullstr:
+                .int 1
+                .int 0
+                .int 0
+                .int 0
+                .int 4
+                .int 0
+                .ascii "null"
             .Lkjm_valstr:
                 movq %rax, %rdi
                 call kof_json_encode_string

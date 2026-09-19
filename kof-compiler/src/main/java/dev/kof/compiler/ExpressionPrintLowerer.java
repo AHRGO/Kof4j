@@ -79,7 +79,7 @@ if (("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc
             // `Char` CRU (não-nullable) já está int-width na pilha —
             // nenhum unbox extra.
             if (argType instanceof Type.NullableType) {
-                driver.emitErasureUnbox(ops, Type.PrimitiveType.INT);
+                CompilerEmissionHelpers.emitErasureUnboxSoft(driver, ops, Type.PrimitiveType.INT);
             }
             ops.add(new KofCall(
                     BuiltinTypes.STRING,

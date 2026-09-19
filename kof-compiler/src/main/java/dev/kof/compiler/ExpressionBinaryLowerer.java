@@ -52,6 +52,15 @@ public final class ExpressionBinaryLowerer {
         return isNullablePrimLike(t) || (t instanceof Type.PrimitiveType pt && !Type.isVoid(pt));
     }
 
+    /** §284-map: familia com caixa fisica no slot de Map (unboxFn do backend). */
+    private static boolean isBoxedPrimConsumer(Type t) {
+        return t instanceof Type.NullableType nt && nt.inner() instanceof Type.PrimitiveType pt
+                && switch (pt.name()) {
+                    case "int", "char", "short", "byte", "long" -> true;
+                    default -> false;
+                };
+    }
+
     /** §167: bitwise inteiro `& | ^` (o `&&`/`||` lógico já saiu antes). */
     private static boolean isBitwiseOp(String op) {
         return "&".equals(op) || "|".equals(op) || "^".equals(op);
@@ -273,7 +282,13 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
     boolean isNumericComparison = TypeMetrics.isComparisonOp(be.operator())
             && ((accType instanceof Type.PrimitiveType && TypeMetrics.isNumeric(accType)
                     && rightType instanceof Type.PrimitiveType && TypeMetrics.isNumeric(rightType))
-                || (driver.target.isNative() && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType))
+                // §284-map (18/09): a familia de slot boxed SÓ vale p/ os
+                // relacionais aqui — `==`/`!=` com Nullable(primitivo) ficam
+                // o caminho I6 (RecordEqualityLowerer + kof_box_equals), que
+                // e null-seguro (null==null -> true; sem isto o soft-unbox
+                // do `nulleq` arrombava em vez de dar true/false).
+                || (driver.target.isNative() && isRelationalOp
+                    && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType))
                 || (isRelationalOp && isNullablePrimOrBarePrim(accType) && isNullablePrimOrBarePrim(rightType)
                     && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType)));
     if ((isArithmetic || isNumericComparison)
@@ -286,7 +301,11 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         // `ni() + 1`). `null + 1` continua indefinido (NPE em runtime,
         // como Java) — narrowing explícito é responsabilidade do programa.
         if (accType instanceof Type.NullableType accNt) {
-            driver.emitErasureUnbox(ops, accNt.inner());
+            // §284-map (18/09): SOFT no native — a caixa do slot abre, o cru
+            // de variável/função passa cru, null dá o mesmo CCE honesto do
+            // estrito. Era o SIGSEGV `nulleq`: unbox ESTRITO cego sobre o
+            // null de get ausente.
+            CompilerEmissionHelpers.emitErasureUnboxSoft(driver, ops, accNt.inner());
             accType = accNt.inner();
         }
         // OBS-009: divisão (ou resto) por zero constante é
@@ -315,7 +334,8 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         driver.emitWideningIfNeeded(ops, accType, commonType);
         localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
         if (rightType instanceof Type.NullableType rightNt) {
-            driver.emitErasureUnbox(ops, rightNt.inner());
+            // §284-map: mesmo soft do lado esquerdo.
+            CompilerEmissionHelpers.emitErasureUnboxSoft(driver, ops, rightNt.inner());
             rightType = rightNt.inner();
         }
         driver.emitWideningIfNeeded(ops, rightType, commonType);
@@ -420,6 +440,16 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
             && (isRecordLike(accType, driver) || isRecordLike(rightType, driver)
                 || (!driver.target.isNative()
                     && (isNullablePrimLike(accType) || isNullablePrimLike(rightType))
+                    && isNullablePrimOrBarePrim(accType) && isNullablePrimOrBarePrim(rightType))
+                // §284-map: fase 2 D-NULL-INTENT no native SÓ para a familia
+                // com caixa fisica de slot (int/char/short/byte/long): o
+                // RecordEqualityLowerer guarda os dois lados e chama
+                // `.equals` — o backend roteia p/ kof_box_equals (magic).
+                // Double/Bool/Float crus ficam no caminho de sempre (identidade
+                // == igualdade de numero), senão o .equals deles quebraria o
+                // que hoje funciona.
+                || (driver.target.isNative()
+                    && (isBoxedPrimConsumer(accType) || isBoxedPrimConsumer(rightType))
                     && isNullablePrimOrBarePrim(accType) && isNullablePrimOrBarePrim(rightType)))) {
         // §262 / bug 11: `record == record` é igualdade de CONTEÚDO, null-safe
         // (Objects.equals). Desugaring em RecordEqualityLowerer (JS = chamada
@@ -441,7 +471,14 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         // Windows local sem `as`/`ld`). Record continua passando por aqui
         // no Native (equals de classe usuário, já suportado antes do #278).
         if (accType instanceof Type.PrimitiveType apt4 && !Type.isVoid(apt4)) {
-            TypeEmitter.boxPrimitive(ops, accType);
+            // §284-map: no native o box do lado cru entra no par Object do
+            // RecordEqualityLowerer via kof_box_* (TypeEmitter e bytecode
+            // JVM-only).
+            if (driver.target.isNative()) {
+                CompilerEmissionHelpers.emitErasureBox(driver, ops, accType);
+            } else {
+                TypeEmitter.boxPrimitive(ops, accType);
+            }
         }
         localIdx = RecordEqualityLowerer.emit(driver, be, ops, owner, localIdx, locals,
                 accType, rightType);

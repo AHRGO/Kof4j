@@ -55,7 +55,12 @@ final class RecordEqualityLowerer {
             // o box IR é no-op lá (número continua número); mantém o par
             // simétrico com o box do lado esquerdo (ExpressionBinaryLowerer).
             if (rightType instanceof Type.PrimitiveType rpt0 && !Type.isVoid(rpt0)) {
-                TypeEmitter.boxPrimitive(ops, rightType);
+                // §284-map: native = kof_box_* (TypeEmitter e JVM-only).
+                if (driver.target.isNative()) {
+                    CompilerEmissionHelpers.emitErasureBox(driver, ops, rightType);
+                } else {
+                    TypeEmitter.boxPrimitive(ops, rightType);
+                }
             }
             ops.add(new KofCall(BuiltinTypes.STRING, "kofRecordEq", List.of(objT, objT),
                     Type.PrimitiveType.INT, KofCallKind.FUNCTION));
@@ -71,7 +76,13 @@ final class RecordEqualityLowerer {
         // precisa boxear antes de entrar no par de temporários Object
         // abaixo (KofStoreLocal ASTORE exige referência na pilha).
         if (rightType instanceof Type.PrimitiveType rpt1 && !Type.isVoid(rpt1)) {
-            TypeEmitter.boxPrimitive(ops, rightType);
+            // §284-map: native = kof_box_* (o literal `1` de `m.get("a") == 1`
+            // precisa chegar CAIXA p/ o kof_box_equals comparar por valor).
+            if (driver.target.isNative()) {
+                CompilerEmissionHelpers.emitErasureBox(driver, ops, rightType);
+            } else {
+                TypeEmitter.boxPrimitive(ops, rightType);
+            }
         }
         // D-NULL-INTENT (I6): quando NENHUM lado é record, o chamador só
         // despacha aqui com os DOIS lados Nullable(primitivo) — resolve o

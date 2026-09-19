@@ -142,12 +142,28 @@ public final class NativeRiscvCrossOps {
             other.pushRiscv(sb, "a0");
             return;
         }
-        if ("kof_unbox".equals(mn)) {
+        if ("kof_unbox".equals(mn) || "kof_unbox_soft".equals(mn)) {
             Type ur = kc.returnType();
-            String ufn = ur instanceof Type.PrimitiveType pt ? NativeX86Calls.unboxFn(pt.name()) : null;
+            // §284-map: kof_unbox_soft = consumidores de `Int?` (caixa abre,
+            // cru passa, null -> CCE). O estrito fica para `as`/slots erasure.
+            boolean soft = "kof_unbox_soft".equals(mn);
+            String ufn = ur instanceof Type.PrimitiveType pt
+                    ? (soft ? NativeX86Calls.unboxSoftFn(pt.name()) : NativeX86Calls.unboxFn(pt.name()))
+                    : null;
             if (ufn == null) return;               // nao-primitivo: ponteiro ja e o valor
             sb.append("    pop a0\n");
             sb.append("    call ").append(ufn).append("\n");
+            other.pushRiscv(sb, "a0");
+            return;
+        }
+        if (kc.kind() == KofCallKind.INSTANCE && "equals".equals(mn)
+                && NativeX86Calls.isBoxedNumericReceiver(kc.ownerType())) {
+            // §284-map: `.equals` de wrapper numerico = kof_box_equals
+            // (magic-aware; null==null true; cru nao e sonchado — entrada
+            // do RecordEqualityLowerer so aceita caixa/null no native).
+            sb.append("    pop a1\n");
+            sb.append("    pop a0\n");
+            sb.append("    call kof_box_equals\n");
             other.pushRiscv(sb, "a0");
             return;
         }
@@ -245,6 +261,11 @@ public final class NativeRiscvCrossOps {
                     return;
                 }
                 if ("int".equals(cn) || "char".equals(cn) || "short".equals(cn) || "byte".equals(cn) || "long".equals(cn)) {
+                    // §284-map: probe de MAGIC aqui SEGUERIA lixo de endereco
+                    // pequeno (crash B.kf medido 42/97 crus) — a caixa do
+                    // join agora chega TIPO Nullable (ExpressionTyper
+                    // nullableIfNullBranch) e cai no ramo box_to_string
+                    // acima; o cru e cru de verdade.
                     sb.append("    pop a0\n    call kof_int_to_string\n");
                     other.pushRiscv(sb, "a0");
                 } else if ("bool".equals(cn) || "boolean".equals(cn)) {
@@ -427,7 +448,7 @@ public final class NativeRiscvCrossOps {
                 // Nullable(V) NAO desempacota: null tem que sobreviver).
                 if (("kof_map_get".equals(mn) || "kof_map_get_or_default".equals(mn))
                         && kc.returnType() instanceof Type.PrimitiveType rpt2) {
-                    String ufm2 = NativeX86Calls.unboxFn(rpt2.name());
+                    String ufm2 = NativeX86Calls.unboxSoftFn(rpt2.name());
                     if (ufm2 != null) sb.append("    call ").append(ufm2).append("\n");
                 }
                 other.pushRiscv(sb, "a0");

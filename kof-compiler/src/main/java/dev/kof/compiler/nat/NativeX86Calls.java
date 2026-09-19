@@ -65,6 +65,28 @@ public final class NativeX86Calls {
         }
     }
 
+    /** §284-map: variante soft (consumidor de `Int?`) — cru passa cru. */
+    static String unboxSoftFn(String primName) {
+        switch (primName) {
+            case "int", "char", "short", "byte": return "kof_unbox_int_soft";
+            case "long": return "kof_unbox_long_soft";
+            default: return null;
+        }
+    }
+
+    /** §284-map: receiver de `.equals` que no native e a caixa do slot. */
+    static boolean isBoxedNumericReceiver(Type t) {
+        Type u = t instanceof Type.NullableType nt ? nt.inner() : t;
+        if (!(u instanceof Type.ClassType ct)) return false;
+        String n = ct.name();
+        return switch (n) {
+            case "Integer", "java/lang/Integer", "Long", "java/lang/Long",
+                 "Character", "java/lang/Character", "Short", "java/lang/Short",
+                 "Byte", "java/lang/Byte" -> true;
+            default -> false;
+        };
+    }
+
     private final NativeBackend nb;
 
     NativeX86Calls(NativeBackend nb) { this.nb = nb; }
@@ -85,15 +107,33 @@ public final class NativeX86Calls {
             sb.append("    pushq %rax\n");
             return;
         }
-        if ("kof_unbox".equals(kc.methodName())) {
+        if ("kof_unbox".equals(kc.methodName()) || "kof_unbox_soft".equals(kc.methodName())) {
             // §284: le o value do box (invariante: so chega aqui box valido —
             // os emissores pareiam box/unbox pelo tipo do KofCall). Retorno
             // nao-primitivo = nao era box → passa cru.
+            // §284-map: a variante SOFT (consumidores de `Int?` no native)
+            // passa cru o que nao e box e nao-truca o valor — o slot de Map
+            // hoje e fisicamente boxed e a variavel local, crua.
             Type ret = kc.returnType();
-            String fn = ret instanceof Type.PrimitiveType pt ? unboxFn(pt.name()) : null;
+            String fn = ret instanceof Type.PrimitiveType pt
+                    ? ("kof_unbox_soft".equals(kc.methodName())
+                            ? unboxSoftFn(pt.name()) : unboxFn(pt.name()))
+                    : null;
             if (fn == null) return;               // nao-primitivo: ponteiro ja e o valor
             sb.append("    popq %rdi\n");
             sb.append("    call ").append(fn).append("\n");
+            sb.append("    pushq %rax\n");
+            return;
+        }
+        if (kc.kind() == KofCallKind.INSTANCE && "equals".equals(kc.methodName())
+                && isBoxedNumericReceiver(kc.ownerType())) {
+            // §284-map: `tL.equals(tR)` do RecordEqualityLowerer (I6) sobre
+            // wrapper numerico — no native o wrapper nao existe; o slot de
+            // Map e a caixa MAGIC, entao a igualdade e kof_box_equals
+            // (caixa=valor, cru=identidade, null=CCE/nullo-null=true).
+            sb.append("    popq %rsi\n");
+            sb.append("    popq %rdi\n");
+            sb.append("    call kof_box_equals\n");
             sb.append("    pushq %rax\n");
             return;
         }
@@ -426,7 +466,8 @@ public final class NativeX86Calls {
                     // (comparacao/print) desempacota guiado pelo tipo.
                     if (("kof_map_get".equals(collFn) || "kof_map_get_or_default".equals(collFn))
                             && kc.returnType() instanceof Type.PrimitiveType rpt) {
-                        String ufm = unboxFn(rpt.name());
+                        // §284-map SOFT: caixa abre, cru passa, null -> CCE.
+                        String ufm = unboxSoftFn(rpt.name());
                         if (ufm != null) {
                             sb.append("    popq %rdi\n");
                             sb.append("    call ").append(ufm).append("\n");

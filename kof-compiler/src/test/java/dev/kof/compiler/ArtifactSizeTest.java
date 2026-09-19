@@ -34,8 +34,12 @@ class ArtifactSizeTest {
     // o hello carregava o runtime INTEIRO. Pós-S-3 (poda x86, esta sessão):
     // o gate trava o número NOVO (encolher foi a meta; o gate unilateral
     // volta a proteger de regressão a partir daqui).
-    private static final long HELLO_X86_BYTES = 32_520L;
-    private static final int HELLO_X86_SYMS = 37;
+    // §284/§284-map (18/09, lane nat): o box de erasure REAL (RuntimeErasureBox
+    // — box/unbox/box_to_string/box_equals + soft-unbox) e o walker de Map no
+    // kof_map_to_string/kof_json_encode_map entraram no conjunto alcançável do
+    // hello via println(Object)/collections: 32.520→37.320B, 37→44 syms.
+    private static final long HELLO_X86_BYTES = 37_320L;
+    private static final int HELLO_X86_SYMS = 44;
     // Pós-#104 (13/09): o shim globalThis.kof_platform do core JS (erro claro
     // em vez de ReferenceError fora do GraalJS) entrou no préâmbulo always —
     // o hello carrega ~827B a mais. Re-medido neste host: 6.873 → 7.700.
@@ -62,12 +66,20 @@ class ArtifactSizeTest {
     // tick — 18→24 símbolos. O G-4 é o que fecha o vazamento do .bss; o custo
     // (+6 syms no hello) é o preço do coletor alcançável. Bytes estáveis
     // (dentro da tolerância).
-    private static final long HELLO_RV_BYTES = 133_288L;
-    private static final int HELLO_RV_SYMS = 24;
+    // §284/§284-map (18/09, lane nat): RuntimeErasureBox riscv (B49: caixa real
+    // + box_to_string + soft-unbox + box_equals) e o port do
+    // kof_json_encode_map (B46) entraram no alcançável do hello:
+    // 133.288→136.048B, 24→41 syms. (O hello agora carrega o par
+    // put/println-boxed que o contrato Map nativo exige.)
+    private static final long HELLO_RV_BYTES = 136_048L;
+    private static final int HELLO_RV_SYMS = 41;
     // Hello aarch64 (medido 12/09, mesmo caminho: poda S-4 + gc-sections S-5
     // no asm riscv ANTES do tradutor). G-4 (15/09): também 18→24 syms.
-    private static final long HELLO_AA_BYTES = 133_112L;
-    private static final int HELLO_AA_SYMS = 24;
+    // §284/§284-map (18/09): 133.112→201.408B, 24→41 syms — o TRADUTOR
+    // aarch64 expande as fatias novas do riscv (movi/adrp-loops) muito acima
+    // da média do binário; mesmo caminho de poda (regra 5), medido pós-port.
+    private static final long HELLO_AA_BYTES = 201_408L;
+    private static final int HELLO_AA_SYMS = 41;
 
     private static final double TOL = 0.05; // gate de inchaço >5%
 

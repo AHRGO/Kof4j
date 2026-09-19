@@ -265,7 +265,7 @@ class NativeAarch64E2ETest {
                 println(n.get("k"))
             }
             """);
-        assertEquals("a\nnull\ntrue\nnull\nfalse\ntrue\n0\n7", out);
+        assertEquals("a\nnull\ntrue\nnull\nfalse\ntrue\nnull\n7", out);
     }
 
     // NATIVE002-stdlib: higher-order herdado do riscv64 (closure ABI igual mq).
