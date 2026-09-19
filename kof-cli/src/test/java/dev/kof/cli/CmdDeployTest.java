@@ -110,14 +110,186 @@ class CmdDeployTest {
     // no CI ubuntu), sem SDK recusa honesto (androidWithoutSdkIsHonestFailure).
     // Assertar DEP001 com ANDROID_HOME do runner = conflito com o e2e.
 
+    /**
+     * D2-A (D-POLL-19 19/09): --publish ganhou face real (GitHub Releases) —
+     * sem token continua FALHA honesta R6, agora com a razão certa no lugar
+     * da antiga recusa DEP001/D2.
+     */
     @Test
-    void publishIsHonestGapD2(@TempDir Path dir) throws Exception {
+    void publishWithoutTokenFailsHonestly(@TempDir Path dir) throws Exception {
         Path src = writeApp(dir, "main() { println(\"x\") }\n");
-        CliResult r = run(dir, "deploy", src.toString(), "--target", "jvm",
-                "--publish", "example.registry");
-        assertEquals(1, r.exit(), "publish falso proibido (R6): " + r.out());
-        assertTrue(r.out().contains("DEP001"), "--publish deve recusar com DEP001: " + r.out());
-        assertTrue(r.out().contains("D2"), "mensagem deve citar a decisão D2: " + r.out());
+        ProcessBuilder pb = new ProcessBuilder(
+                Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                "-cp", System.getProperty("java.class.path"), "dev.kof.cli.Main",
+                "deploy", src.toString(), "--target", "jvm", "--output", "dist",
+                "--name", "app", "--version", "1.0.0", "--publish", "o/r");
+        pb.environment().remove("GH_TOKEN");
+        pb.environment().remove("GITHUB_TOKEN");
+        pb.directory(dir.toFile()).redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        p.waitFor(120, java.util.concurrent.TimeUnit.SECONDS);
+        assertEquals(1, p.exitValue(), "sem token nao pode haver publish falso: " + out);
+        assertTrue(out.contains("GH_TOKEN"), "razao honesta citando o token: " + out);
+        // o pacote local continua a unidade entregue (deploy rodou ANTES da recusa)
+        java.nio.file.Files.walk(dir.resolve("dist")).map(java.nio.file.Path::toString)
+                .filter(x -> x.endsWith(".tar.gz")).findFirst().orElseThrow(
+                        () -> new AssertionError("tar.gz local deve existir mesmo com publish recusado"));
+    }
+
+    /** D2-A: release criada + tar.gz subido no endpoint (fake server, zero rede). */
+    @Test
+    void publishCreatesReleaseAndUploadsArtifact(@TempDir Path dir) throws Exception {
+        var server = com.sun.net.httpserver.HttpServer.create(
+                new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        StringBuilder seen = new StringBuilder();
+        java.util.concurrent.atomic.AtomicReference<byte[]> uploaded = new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.atomic.AtomicReference<String> uploadQ = new java.util.concurrent.atomic.AtomicReference<>();
+        server.createContext("/", ex -> {
+            String path = ex.getRequestURI().getPath();
+            String auth = String.valueOf(ex.getRequestHeaders().getFirst("Authorization"));
+            if (path.equals("/repos/o/r/releases")) {
+                String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                seen.append(body);
+                seen.append(" AUTH=").append(auth);
+                byte[] resp = releaseJson(serverAddr(server), 7, "/up/7", "/repos/o/r/releases/7/assets").getBytes(StandardCharsets.UTF_8);
+                ex.getResponseHeaders().add("Content-Type", "application/json");
+                ex.sendResponseHeaders(201, resp.length);
+                ex.getResponseBody().write(resp);
+                ex.close();
+            } else if (path.equals("/up/7")) {
+                uploadQ.set(ex.getRequestURI().getRawQuery());
+                uploaded.set(ex.getRequestBody().readAllBytes());
+                ex.sendResponseHeaders(201, -1);
+                ex.close();
+            } else {
+                ex.sendResponseHeaders(404, -1);
+                ex.close();
+            }
+        });
+        server.start();
+        try {
+            Path src = writeApp(dir, "main() { println(\"pub ok\") }\n");
+            CliResult r = runWithEnv(dir, java.util.Map.of(
+                    "GH_TOKEN", "sekret", "KOF_PUBLISH_API", serverAddr(server)),
+                    "deploy", src.toString(), "--target", "jvm", "--output", "dist",
+                    "--name", "servo", "--version", "9.9.9", "--publish", "o/r");
+            assertEquals(0, r.exit(), "publish feliz:\n" + r.out());
+            assertTrue(r.out().contains("published jvm"), "linha de publish: " + r.out());
+            assertTrue(seen.toString().contains("\"tag_name\":\"servo-9.9.9\""),
+                    "release com a tag do nome-versao: " + seen);
+            assertTrue(seen.toString().contains("Bearer sekret"), "token levado: " + seen);
+            assertTrue(uploadQ.get().contains("name=servo-9.9.9.tar.gz"),
+                    "asset = o tar.gz empacotado: " + uploadQ);
+            Path tgz = dir.resolve("dist").resolve("deploy").resolve("servo-9.9.9.tar.gz");
+            assertArrayEquals(java.nio.file.Files.readAllBytes(tgz), uploaded.get(),
+                    "bytes do asset = bytes do tar.gz local");
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    /** D2-A: tag ja existe (422) = reusa a release da tag, nunca duplicata. */
+    @Test
+    void publishReusesExistingTagOn422(@TempDir Path dir) throws Exception {
+        var server = com.sun.net.httpserver.HttpServer.create(
+                new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        StringBuilder paths = new StringBuilder();
+        server.createContext("/", ex -> {
+            String path = ex.getRequestURI().getPath();
+            paths.append(path).append(' ');
+            byte[] resp;
+            int code;
+            if (path.equals("/repos/o/r/releases")) {
+                resp = "{\"message\":\"Validation Failed\"}".getBytes(StandardCharsets.UTF_8);
+                code = 422;
+            } else if (path.equals("/repos/o/r/releases/tags/servo-1.0")) {
+                resp = releaseJson(serverAddr(server), 8, "/up/8", null).getBytes(StandardCharsets.UTF_8);
+                code = 200;
+            } else {
+                ex.sendResponseHeaders(201, -1);
+                ex.close();
+                return;
+            }
+            ex.sendResponseHeaders(code, resp.length);
+            ex.getResponseBody().write(resp);
+            ex.close();
+        });
+        server.start();
+        try {
+            Path src = writeApp(dir, "main() { println(\"x\") }\n");
+            CliResult r = runWithEnv(dir, java.util.Map.of(
+                    "GH_TOKEN", "t", "KOF_PUBLISH_API", serverAddr(server)),
+                    "deploy", src.toString(), "--target", "jvm", "--output", "d",
+                    "--name", "servo", "--version", "1.0", "--publish", "o/r");
+            assertEquals(0, r.exit(), "422 deve reusar, nao falhar:\n" + r.out());
+            assertTrue(paths.toString().contains("/repos/o/r/releases/tags/servo-1.0"),
+                    "GET da tag apos 422: " + paths);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    /** D2-A: endpoint inacessivel = falha honesta DEPOIS do pacote local (R6). */
+    @Test
+    void publishUnreachableEndpointFailsHonestly(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir, "main() { println(\"x\") }\n");
+        CliResult r = runWithEnv(dir, java.util.Map.of(
+                "GH_TOKEN", "t", "KOF_PUBLISH_API", "http://127.0.0.1:9"),
+                "deploy", src.toString(), "--target", "jvm", "--output", "d",
+                "--name", "app", "--version", "1.0", "--publish", "o/r");
+        assertEquals(1, r.exit(), "sem endpoint nao ha publish feliz: " + r.out());
+        assertTrue(r.out().contains("deploy:"), "razao prefixada: " + r.out());
+        assertTrue(java.nio.file.Files.exists(dir.resolve("d").resolve("deploy")
+                .resolve("app-1.0")), "pacote local permanece: " + r.out());
+    }
+
+    /** D2-A: parser do --publish (owner/repo, URL, URL .git, git@, lixo). */
+    @Test
+    void publishRepoSpecParsing() throws Exception {
+        assertEquals("o/r", dev.kof.cli.DeployPublish.parseRepo("o/r"));
+        assertEquals("o/r", dev.kof.cli.DeployPublish.parseRepo("https://github.com/o/r"));
+        assertEquals("o/r", dev.kof.cli.DeployPublish.parseRepo("https://github.com/o/r.git"));
+        assertEquals("o/r", dev.kof.cli.DeployPublish.parseRepo("git@github.com:o/r.git"));
+        assertNull(dev.kof.cli.DeployPublish.parseRepo(""), "vazio = inferir do git");
+        assertThrows(java.io.IOException.class,
+                () -> dev.kof.cli.DeployPublish.parseRepo("http:// x"), "lixo recusa");
+    }
+
+    /** JSON de release no formato do GitHub (upload_url com template {?name,label}). */
+    private static String releaseJson(String base, long id, String upPath, String assetsPath) {
+        String Q = "\"";
+        StringBuilder b = new StringBuilder();
+        b.append('{').append(Q).append("id").append(Q).append(':').append(id)
+         .append(',').append(Q).append("upload_url").append(Q).append(':')
+         .append(Q).append(base).append(upPath).append("{?name,label}").append(Q);
+        if (assetsPath != null) {
+            b.append(',').append(Q).append("assets_url").append(Q).append(':')
+             .append(Q).append(base).append(assetsPath).append(Q);
+        }
+        b.append('}');
+        return b.toString();
+    }
+
+    private static String serverAddr(com.sun.net.httpserver.HttpServer s) {
+        return "http://127.0.0.1:" + s.getAddress().getPort();
+    }
+
+    private static CliResult runWithEnv(Path workDir, java.util.Map<String, String> env,
+                                        String... cliArgs) throws Exception {
+        java.util.List<String> cmd = new java.util.ArrayList<>();
+        cmd.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
+        cmd.add("-cp");
+        cmd.add(System.getProperty("java.class.path"));
+        cmd.add("dev.kof.cli.Main");
+        cmd.addAll(java.util.List.of(cliArgs));
+        ProcessBuilder pb = new ProcessBuilder(cmd);
+        pb.directory(workDir.toFile()).redirectErrorStream(true);
+        env.forEach(pb.environment()::put);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        p.waitFor(180, java.util.concurrent.TimeUnit.SECONDS);
+        return new CliResult(p.exitValue(), out);
     }
 
     /** X9 fatia 2: face NATIVE — o ELF empacotado RODA e sai mode 0755 no tar. */
