@@ -39,16 +39,18 @@ the `Q`s answered in §6):
 ```
 import kof.workflow
 
-var build = workflow.job("build", (ctx: JobCtx) -> process.run("make", listOf("-j")))
-var image = workflow.job("image", (ctx: JobCtx) -> process.run("docker", listOf("build", "."))).after(build)
+// MVP 2.1.2 SHIPPED surface — flat, no `workflow.` prefix (the supervisor
+// idiom; the prefix was sketch-level, corrected at landing):
+var build = job("build", () -> process.run("make", listOf("-j")).exitCode == 0)
+var image = job("image", () -> process.run("docker", listOf("build", "."))
+                                     .exitCode == 0).after(build)
 
-var flow  = workflow.dag(build, image)
-              .retry(image, 3, workflow.exponential(1000, 2.0))  // positional: Kof has no named args
-              .checkpoint(kof.db)        // resume completed jobs after a crash
-              .deadLetter(workflow.inMemory())  // terminal failures park here, don't crash the run
+var flow   = dag(listOf(build, image))  // dag(...) takes listOf — Kof has no variadics
+var report = flow.run()                 // Report: succeeded/failed/skipped/errors,
+                                        // allOk(), summary()
 
-var report = flow.run()                 // now
-var handle = flow.schedule("0 3 * * *") // cron, on top of kof.scheduler.at
+// 2.1.3 bundle (NOT shipped — the chain that will exist):
+//   flow.retry(...).checkpoint(...).deadLetter(...); flow.schedule("0 3 * * *")
 ```
 
 > **Sign-off note (19/09):** the §2 surface is the full idiom, but per Q2 the **v1/MVP
@@ -140,18 +142,23 @@ Owner: **lane `.18`** (assigned by the 19/09 maintainer greenlight).
   mapped like `Handle` #31). No shipped surface.
 - **2.1.1 [design sign-off — ⛔ rule 6]** ✅ DONE 19/09 — maintainer poll: Q1 stdlib ✓,
   Q2 minimal MVP ✓, Q3 additive retry ✓, Q4 both dead-letter faces ✓. Front opened.
-- **2.1.2 [MVP — pure-Kof stdlib, minimal, JVM+JS]** — `job` + `dag` + `after` + `run` +
-  `Report` only (Q2). Golden `WorkflowE2ETest` against the existing primitives.
+- **2.1.2 [MVP — pure-Kof stdlib, minimal, JVM+JS]** ✅ DONE 19/09 — pure-Kof host
+  `dev/kof/workflow-host.kf` injected FLAT by `CompilerWorkflow` on `import kof.workflow`
+  (supervisor mechanism, DD-OTP-01 option A — hence no `workflow.` prefix; §2 corrected at
+  landing). Surface exactly Q2: `job`/`dag`/`after`/`run`/`Report` (succeeded/failed/
+  skipped/errors, `allOk()`, `summary()`). No target gate (sequential fixpoint, no runtime
+  boundary). Golden `WorkflowE2ETest` 7/7 exact-stdout JVM==JS + Native compile pin. Found
+  and worked around three parser/typer edges (documented in `docs/stdlib/workflow.md` §5).
 - **2.1.3 [add-ons — one bundle]** — `retry`/`backoff` additive helper (workflow's own;
   http migrates later in a separate signed slice), `checkpoint` via `kof.orm` (honest
   `ORM001` on native), `deadLetter` with BOTH faces (in-memory `List` + durable `kof.orm`
   table — Q4), `schedule(cron)` via `kof.scheduler.at` (honest `CRON001`), and supervision
   integration by delegating to `kof.supervisor.one_for_one` when the DAG run is expressed
   as workers (rather than a plain synchronous walk).
-- **2.1.4 [docs]** — idiom doc `docs/stdlib/workflow.md` (+PT), `backend-parity` row,
-  flip `IMPLEMENTATION-UNIVERSAL-PLATFORM` 2.1 `🔵 → 🟡` and cascade 2.5/2.6 (which
-  depend on 2.1) from `🔵` to `⏳` with a real prerequisite, and only when shipped
-  promote this file out of `future/` per the folder rule.
+- **2.1.4 [docs]** ✅ DONE 19/09 (same session as 2.1.2) — idiom doc
+  `docs/stdlib/workflow.md` (+PT), `backend-parity` matrix row + 19/09(2) delta (EN+PT),
+  tracker 2.1 `🔵→🟡` and 2.5/2.6 `🔵→⏳` (EN+PT), this file promoted out of `future/`
+  (`a71a4f51`). Residual queue: **2.1.3 only** (the add-on bundle).
 
 ## 6. Open questions (maintainer decisions — do NOT resolve in code)
 **All four ANSWERED 19/09 by the maintainer poll** (re-create via the same multi-choice
