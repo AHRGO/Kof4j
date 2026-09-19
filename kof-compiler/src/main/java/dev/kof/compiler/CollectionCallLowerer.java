@@ -338,6 +338,22 @@ public final class CollectionCallLowerer {
             localIdx = CompilerEmissionHelpers.emitArgsCoercingValue(driver, mc, ops, owner,
                     localIdx, locals, argTypes, valueType,
                     "kof_map_put".equals(mapFn) ? 1 : -1);
+            // §284-map (18/09): o slot de VALOR do Map e fisicamente caixa
+            // para a familia Int/Long no nativo — mesmo contrato do JVM
+            // (HashMap guarda Integer/Long; JvmOpCollections unboxa no leitor;
+            // os consumidores de Nullable(V) emitem kof_unbox nos dois
+            // targets). Pre-§284 o par raw-write × unbox-read so fechava
+            // porque o unbox era no-op; com a caixa real virou SIGSEGV
+            // (rdi=1). Double/Float/Bool ficam crus: nao existe kof_unbox
+            // para eles (unboxFn null) — cru × no-op continua casado.
+            // List/Set nativos nao sao tocados (storage raw tipado, §253).
+            if (("kof_map_put".equals(mapFn) || "kof_map_get_or_default".equals(mapFn))
+                    && argTypes.size() > 1 && driver.target.isNative()
+                    && driver.needsErasureBoxing() && mapSlotAcceptsBox(valueType)
+                    && mapBoxablePrim(argTypes.get(1))
+                    && !ExpressionTyper.boxesOwnBranches(driver, mc.arguments().get(1), locals)) {
+                CompilerEmissionHelpers.emitErasureBox(driver, ops, argTypes.get(1));
+            }
             ops.add(new KofCall(recvType, mapFn, argTypes, retType, KofCallKind.INSTANCE));
             return localIdx;
         }
@@ -440,6 +456,25 @@ public final class CollectionCallLowerer {
         ExpressionTyper.inferExprType(driver, arg, locals);
     }
         return -1;
+    }
+
+    // §284-map (18/09): slot que comporta caixa — concreto na familia
+    // Int/Long OU apagado (Unknown/Object — mapOf() sem pin, Map<_,Object>).
+    private static boolean mapSlotAcceptsBox(Type t) {
+        Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
+        if (inner instanceof Type.UnknownType || BuiltinTypes.isObject(inner)) return true;
+        return mapBoxablePrim(inner);
+    }
+
+    // ...e o dominio exato de unboxFn no nativo (int/char/short/byte/long).
+    // Double/Float/Bool ficam crus la e ca: sem kof_unbox para eles, o par
+    // cru × no-op que existia antes do §284 permanece casado (zero regressao).
+    static boolean mapBoxablePrim(Type t) {
+        if (!(t instanceof Type.PrimitiveType pt)) return false;
+        return switch (pt.name()) {
+            case "int", "char", "short", "byte", "long" -> true;
+            default -> false;
+        };
     }
 
     /** §122: tipos que NUNCA são um índice válido p/ get/set/remove de List. */

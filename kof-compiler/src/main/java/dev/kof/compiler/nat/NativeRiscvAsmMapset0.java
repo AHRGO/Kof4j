@@ -375,6 +375,19 @@ public final class NativeRiscvAsmMapset0 {
                 slli t2, s3, 3
                 add  t1, t1, t2
                 ld   a1, 0(t1)
+                # §284-map (18/09): slot de valor pode ser a CAIXA Int/Long
+                # (contrato do Map no nativo, igual HashMap<Integer> no JVM).
+                # A visao List<V> nativa e de qwords CRUS — abre a caixa na
+                # fonte. Nao-box/null passa cru. Constante local: esta fatia
+                # pode ser poda-da sem B49 (o valor e o MAGIC de
+                # RuntimeErasureBox — manter em sincronia).
+                beqz a1, .LKMV_add
+                la   t3, .Lkmsv_magic
+                ld   t3, 0(t3)
+                ld   t4, 0(a1)
+                bne  t3, t4, .LKMV_add
+                ld   a1, 16(a1)
+            .LKMV_add:
                 mv   a0, s1
                 call kof_list_add
                 addi s3, s3, 1
@@ -531,5 +544,10 @@ public final class NativeRiscvAsmMapset0 {
                 j    kof_list_clear
 
             # kof_json_decode_long = alias de int (paridade x86_64: jmp)
+
+            .section .rodata
+            .p2align 3
+            .Lkmsv_magic: .8byte 0x4B4F46425F425801   # MAGIC §284 (RuntimeErasureBox)
+            .text
             """;
 }

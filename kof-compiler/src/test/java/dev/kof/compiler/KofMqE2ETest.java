@@ -220,7 +220,7 @@ class KofMqE2ETest {
         assertTrue(r.success(), t + ": " + r.diagnostics().getDiagnostics());
         String bin = out.resolve("Default/Main").toString();
         String arch = t == Target.NATIVE_RISCV64 ? "qemu-riscv64" : "qemu-aarch64";
-        Process p = new ProcessBuilder(arch, bin).redirectErrorStream(true).start();
+        Process p = NativeRiscv64E2ETest.qemu(arch.substring(5), out.resolve("Default/Main")).redirectErrorStream(true).start();
         String outStr = new String(p.getInputStream().readAllBytes()).trim();
         int ec = p.waitFor();
         assertEquals(0, ec, t + ": " + outStr);

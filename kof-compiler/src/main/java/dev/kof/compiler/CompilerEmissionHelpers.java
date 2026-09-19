@@ -10,7 +10,13 @@ public final class CompilerEmissionHelpers {
     private CompilerEmissionHelpers() {}
 
     static boolean needsErasureBoxing(CompilerDriver driver) {
-        return driver.target == Target.JVM;
+        // §284: Native tambem precisa do box — o runtime nativo ganhou
+        // kof_box_*/kof_unbox_* reais; sem eles o primitivo cru caia na
+        // pilha onde o consumer esperava ponteiro (SIGSEGV 139).
+        return switch (driver.target) {
+            case JVM, NATIVE, NATIVE_RISCV64, NATIVE_AARCH64 -> true;
+            default -> false;
+        };
     }
 
     static boolean isJvmTarget(CompilerDriver driver) {
@@ -110,6 +116,13 @@ public final class CompilerEmissionHelpers {
             if (ai == valIdx && coerceStoreWiden(driver, ops, argTypes.get(ai), slotType)) {
                 argTypes.set(valIdx, slotType instanceof Type.NullableType nt ? nt.inner() : slotType);
             }
+            // §284 follow-up (18/09): escrita de primitivo em slot de MAP
+            // — o slot físico do Map é sempre objeto (contrato JVM, medido:
+            // JvmOpCollections faz emitUnboxIfPrimitive no leitor e o HashMap
+            // guarda Integer). Com o box real do §284 o par write-raw ×
+            // read-unbox (`mapOf(); m.put("a",1); m.get("a") == 1`) SIGSEGVava
+            // no rdi=1 do unbox. O box é aplicado pelo CALLER do helper (só
+            // Map; List/Set nativos permanecem raw — contrato próprio §253).
         }
         return localIdx;
     }

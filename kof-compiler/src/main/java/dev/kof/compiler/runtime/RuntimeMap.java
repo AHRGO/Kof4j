@@ -285,6 +285,19 @@ public final class RuntimeMap {
                 cmpl 16(%rbx), %r13d
                 jge .LKMV_done
                 movq (%r14,%r13,8), %rsi
+                # §284-map (18/09): o slot de valor pode ser a CAIXA (contrato
+                # Int/Long do Map). A visao List<V> nativa e de qwords CRUS
+                # (get/consumidores nao desempacotam), entao a caixa e aberta
+                # AQUI — espelha o ArrayList<Integer>+intValue do JVM
+                # (JvmOpCollections.emitUnboxIfPrimitive). Nao-box (String,
+                # Double/Bool crus, null) passa cru; so MAGIC alcanca o valor.
+                testq %rsi, %rsi
+                jz .LKMV_add
+                movabsq $@@MAGIC@@, %rax
+                cmpq %rax, (%rsi)
+                jne .LKMV_add
+                movq 16(%rsi), %rsi
+            .LKMV_add:
                 movq %r12, %rdi
                 call kof_list_add
                 incq %r13
@@ -300,6 +313,6 @@ public final class RuntimeMap {
             # ── kof.collections: Set<T> nativo (P1) ─────────────────────
             # Set = List com checagem de contido no add (busca linear)
             # kof_set_new -> usa kof_list_new
-            """);
+            """.replace("@@MAGIC@@", RuntimeErasureBox.MAGIC));
     }
 }

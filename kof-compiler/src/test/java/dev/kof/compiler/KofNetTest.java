@@ -135,7 +135,7 @@ class KofNetTest {
         Path out = tempDir.resolve("out-" + System.nanoTime());
         CompilationResult r = driver.compile(file, out, target);
         assertTrue(r.success(), target + " compile: " + r.diagnostics().getDiagnostics());
-        Process p = new ProcessBuilder(qemu, out.resolve("Default/Main").toString())
+        Process p = NativeRiscv64E2ETest.qemu(qemu.substring(5), out.resolve("Default/Main"))
                 .redirectErrorStream(true).start();
         String o = new String(p.getInputStream().readAllBytes(),
                 java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();

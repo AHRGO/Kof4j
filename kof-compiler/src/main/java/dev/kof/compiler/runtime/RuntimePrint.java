@@ -38,6 +38,67 @@ public final class RuntimePrint {
             .globl kof_println
             .type kof_println, @function
             kof_println:
+                # §284: dispatch de box de erasure — MAGIC em [0] e o valor e
+                # um BOX [magic][tag][value] (RuntimeErasureBox); o print segue
+                # o golden JVM por tag. Sem MAGIC (ponteiro de objeto real ou
+                # string) o caminho antigo roda INALTERADO (zero regressao).
+                movabsq $0x4B4F46425F425801, %rax
+                cmpq %rax, (%rdi)
+                jne .Lkof_println_gen
+                pushq %rbx
+                movq %rdi, %rbx
+                movq 8(%rbx), %rax
+                cmpl $0, %eax
+                je .Lkp_box_int
+                cmpl $2, %eax
+                je .Lkp_box_long              # long: kof_int_to_string trunca em 32-bit
+                cmpl $3, %eax
+                je .Lkp_box_bool
+                cmpl $4, %eax
+                je .Lkp_box_dbl
+                cmpl $5, %eax
+                je .Lkp_box_flt
+                jmp .Lkp_box_gen              # tag desconhecido -> caminho antigo
+            .Lkp_box_int:
+                movq 16(%rbx), %rdi
+                call kof_int_to_string
+                movq %rax, %rdi
+                call kof_println_string
+                jmp .Lkp_box_end
+            .Lkp_box_long:
+                movq 16(%rbx), %rdi
+                call kof_long_to_string
+                movq %rax, %rdi
+                call kof_println_string
+                jmp .Lkp_box_end
+            .Lkp_box_bool:
+                movq 16(%rbx), %rdi
+                call kof_bool_to_string
+                movq %rax, %rdi
+                call kof_println_string
+                jmp .Lkp_box_end
+            .Lkp_box_dbl:
+                movq 16(%rbx), %rdi
+                movq %rdi, %xmm0
+                call kof_print_double
+                jmp .Lkp_box_nl
+            .Lkp_box_flt:
+                movq 16(%rbx), %rdi
+                movd %edi, %xmm0
+                cvtss2sd %xmm0, %xmm0
+                call kof_print_double
+                jmp .Lkp_box_nl
+            .Lkp_box_gen:
+                movq %rbx, %rdi
+                call kof_print
+                jmp .Lkp_box_nl
+            .Lkp_box_nl:
+                leaq .Lnewline(%rip), %rdi
+                call kof_print
+            .Lkp_box_end:
+                popq %rbx
+                ret
+            .Lkof_println_gen:
                 call kof_print
                 pushq %rbx
                 leaq .Lnewline(%rip), %rdi

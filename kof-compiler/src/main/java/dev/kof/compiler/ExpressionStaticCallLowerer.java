@@ -415,6 +415,14 @@ if ("mapOf".equals(mc.methodName()) && mc.receiver() == null) {
         if (CompilerEmissionHelpers.coerceStoreWiden(driver, ops, vType, valueType)) {
             vType = valueType instanceof Type.NullableType nt2 ? nt2.inner() : valueType;
         }
+        // §284-map (18/09): UMA convenção física para o valor do Map — o
+        // literal boxea igual ao m.put() (CollectionCallLowerer), senão o
+        // tag-7 do formatador leria cru × caixa mistos no mesmo mapa.
+        if (driver.target.isNative() && driver.needsErasureBoxing()
+                && CollectionCallLowerer.mapBoxablePrim(vType)
+                && !ExpressionTyper.boxesOwnBranches(driver, mc.arguments().get(ai + 1), locals)) {
+            CompilerEmissionHelpers.emitErasureBox(driver, ops, vType);
+        }
         // VOID no put: o map duplicado continua na pilha para o próximo par
         ops.add(new KofCall(mapType, "kof_map_put", List.of(kType, vType),
                 Type.PrimitiveType.VOID, KofCallKind.INSTANCE));

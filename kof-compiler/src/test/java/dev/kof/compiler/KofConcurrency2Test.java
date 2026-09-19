@@ -787,8 +787,9 @@ class KofConcurrency2Test {
             CompilationResult r = driver.compile(f, tmp.resolve("out-" + i), ts[i]);
             assertTrue(r.success(), ts[i] + " deve compilar: " + r.diagnostics().getDiagnostics());
             Path bin = tmp.resolve("out-" + i).resolve("Default/Main");
-            var pb = new ProcessBuilder(bin.toString()).redirectErrorStream(true);
-            if (q[i] != null) pb.command().add(0, q[i]);
+            var pb = q[i] != null ? NativeRiscv64E2ETest.qemu(q[i].substring(5), bin)
+                    : new ProcessBuilder(bin.toString());
+            pb.redirectErrorStream(true);
             Process p = pb.start();
             String output = new String(p.getInputStream().readAllBytes()).trim();
             assertEquals(0, p.waitFor(), ts[i] + " exit, output: " + output);

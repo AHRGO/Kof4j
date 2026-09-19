@@ -128,9 +128,29 @@ public final class NativeRiscvCrossOps {
     void emitCrossCallRiscv(StringBuilder sb, KofCall kc) {
         String mn = kc.methodName();
         Type argType = kc.parameterTypes().isEmpty() ? Type.UnknownType.UNKNOWN : kc.parameterTypes().get(0);
-        // §284 (GAP, stub catalogado — Q7): mesmo no-op do x86 — primitivo cru
-        // fica no lugar do ponteiro box (ver NativeX86Calls.emitCall). Dono: lane nat.
-        if ("kof_box".equals(mn) || "kof_unbox".equals(mn)) return;
+        // §284 (FIXADO 18/09): box/unbox de erasure reais — port do x86
+        // (RuntimeErasureBox; fatia B49). Mesma pareamento por tipo do
+        // KofCall: referencia NAO primitiva passa cru (fn null → no-op, o
+        // ponteiro ja e o valor — paridade JVM).
+        if ("kof_box".equals(mn)) {
+            Type bp = kc.parameterTypes().isEmpty() ? Type.UnknownType.UNKNOWN
+                    : kc.parameterTypes().get(0);
+            String bfn = bp instanceof Type.PrimitiveType pt ? NativeX86Calls.boxFn(pt.name()) : null;
+            if (bfn == null) return;
+            sb.append("    pop a0\n");
+            sb.append("    call ").append(bfn).append("\n");
+            other.pushRiscv(sb, "a0");
+            return;
+        }
+        if ("kof_unbox".equals(mn)) {
+            Type ur = kc.returnType();
+            String ufn = ur instanceof Type.PrimitiveType pt ? NativeX86Calls.unboxFn(pt.name()) : null;
+            if (ufn == null) return;               // nao-primitivo: ponteiro ja e o valor
+            sb.append("    pop a0\n");
+            sb.append("    call ").append(ufn).append("\n");
+            other.pushRiscv(sb, "a0");
+            return;
+        }
 
         // println / print (PrintStream)
         if (kc.kind() == KofCallKind.INSTANCE && ("println".equals(mn) || "print".equals(mn))) {
@@ -139,7 +159,16 @@ public final class NativeRiscvCrossOps {
             // T? (get de Map, SG-008/bug 87): despacho pelo INNER — sem isso
             // Nullable(primitivo) caía no println_string sobre raw int (segv)
             Type dispatchType = argType instanceof Type.NullableType nt ? nt.inner() : argType;
-            if (dispatchType instanceof Type.PrimitiveType pt) {
+            if (argType instanceof Type.NullableType nnt2
+                    && nnt2.inner() instanceof Type.PrimitiveType ipt2
+                    && NativeX86Calls.unboxFn(ipt2.name()) != null) {
+                // §284-map: Nullable(Int/Short/Byte/Long) = caixa fisica do
+                // slot de Map (escrita no lowerer). Despacha pela caixa; o
+                // Nullable(Char) ja chega DESEMBALADO do lowerer (ramo char,
+                // valueOf(CHAR)) e nunca passa por aqui.
+                sb.append("    call kof_box_to_string\n");
+                sb.append(nl ? "    call kof_println_string\n" : "    call kof_print_string\n");
+            } else if (dispatchType instanceof Type.PrimitiveType pt) {
                 String cn = Type.canonicalPrimitiveName(pt.name());
                 switch (cn) {
                     case "int", "char", "short", "byte" -> {
@@ -163,6 +192,11 @@ public final class NativeRiscvCrossOps {
                     default -> sb.append(nl ? "    call kof_println_string\n" : "    call kof_print_string\n");
                 }
             } else {
+                // §284: pode chegar um BOX de erasure aqui (println de um
+                // Object direto, sem sugar) — kof_box_to_string normaliza
+                // box→string e passa nao-box cru (o caminho antigo roda
+                // inalterado p/ String/objeto real).
+                sb.append("    call kof_box_to_string\n");
                 sb.append(nl ? "    call kof_println_string\n" : "    call kof_print_string\n");
             }
             // o receiver (System.out via KofGetStatic) é descartado — o
@@ -183,6 +217,17 @@ public final class NativeRiscvCrossOps {
             // valueOf no NativeX86Calls (9436da12 corrigiu x86 mas esqueceu o
             // cross aqui — mesma familia, lane paridade R5).
             Type vArgType = argType instanceof Type.NullableType nt ? nt.inner() : argType;
+            if (argType instanceof Type.NullableType nnt3
+                    && nnt3.inner() instanceof Type.PrimitiveType ipt3
+                    && NativeX86Calls.unboxFn(ipt3.name()) != null) {
+                // §284-map: valueOf(Nullable(Int/Long/...)) — a caixa do slot
+                // de Map; box_to_string imprime pelo tag (golden JVM do
+                // contexto de erasure) e passa nao-box cru.
+                sb.append("    pop a0\n");
+                sb.append("    call kof_box_to_string\n");
+                other.pushRiscv(sb, "a0");
+                return;
+            }
             if (vArgType instanceof Type.PrimitiveType pt) {
                 String cn = Type.canonicalPrimitiveName(pt.name());
                 if ("float".equals(cn) || "double".equals(cn)) {
@@ -206,6 +251,15 @@ public final class NativeRiscvCrossOps {
                     sb.append("    pop a0\n    call kof_bool_to_string\n");
                     other.pushRiscv(sb, "a0");
                 }
+            } else if (BuiltinTypes.isObject(vArgType)) {
+                // §284: Object (erasure) — valor e um box; kof_box_to_string
+                // despacha por MAGIC+tag e passa nao-box cru (paridade com o
+                // ramo equivalente do x86; sem isto o box cru caia em
+                // println_string — SIGSEGV medido no espelho do B.kf).
+                sb.append("    pop a0\n");
+                sb.append("    call kof_box_to_string\n");
+                other.pushRiscv(sb, "a0");
+                return;
             } else if (vArgType instanceof Type.ClassType ct && (BuiltinTypes.isList(ct)
                     || BuiltinTypes.isSet(ct) || BuiltinTypes.isMap(ct))) {
                 // §107-cross: List/Map/Set são tipos de runtime (sem vtable
@@ -220,7 +274,7 @@ public final class NativeRiscvCrossOps {
                         : BuiltinTypes.isList(ct) ? BuiltinTypes.listElement(ct)
                         : BuiltinTypes.setElement(ct);
                 int ktag = NativeX86Calls.collectionTag(BuiltinTypes.isMap(ct) ? BuiltinTypes.mapKey(ct) : elem);
-                int vtag = BuiltinTypes.isMap(ct) ? NativeX86Calls.collectionTag(BuiltinTypes.mapValue(ct)) : -1;
+                int vtag = BuiltinTypes.isMap(ct) ? NativeX86Calls.mapValueTag(BuiltinTypes.mapValue(ct)) : -1;
                 sb.append("    pop a0\n");
                 if (BuiltinTypes.isList(ct)) {
                     sb.append("    li a1, ").append(ktag).append("\n");
@@ -366,7 +420,18 @@ public final class NativeRiscvCrossOps {
                 }
             }
             sb.append("    call ").append(mn).append("\n");
-            if (!Type.isVoid(kc.returnType())) other.pushRiscv(sb, "a0");
+            if (!Type.isVoid(kc.returnType())) {
+                // §284-map (18/09): leitura de Map com retorno PRIMITIVO
+                // declarado (get/getOrDefault com V pinado) recebe a caixa do
+                // slot e desemboxa no call-site — espelho exato do x86 (o ret
+                // Nullable(V) NAO desempacota: null tem que sobreviver).
+                if (("kof_map_get".equals(mn) || "kof_map_get_or_default".equals(mn))
+                        && kc.returnType() instanceof Type.PrimitiveType rpt2) {
+                    String ufm2 = NativeX86Calls.unboxFn(rpt2.name());
+                    if (ufm2 != null) sb.append("    call ").append(ufm2).append("\n");
+                }
+                other.pushRiscv(sb, "a0");
+            }
             return;
         }
 

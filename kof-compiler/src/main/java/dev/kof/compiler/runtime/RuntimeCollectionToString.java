@@ -73,6 +73,8 @@ public final class RuntimeCollectionToString {
                 je .Lce_float
                 cmpb $6, %sil
                 je .Lce_q
+                cmpb $7, %sil
+                je .Lce_boxed
             .Lce_int:
                 movl (%rdi), %edi
                 call kof_int_to_string
@@ -106,6 +108,13 @@ public final class RuntimeCollectionToString {
                 leaq .Lc2s_qstr(%rip), %rdi
                 movl $1, %esi
                 call kof_string_from_literal
+                popq %rbx
+                ret
+            # tag 7 (§284-map): caixa numerica de slot de Map — box_to_string
+            # despacha por MAGIC+tag; nao-box passa cru (value já era ptr).
+            .Lce_boxed:
+                movq (%rdi), %rdi
+                call kof_box_to_string
                 popq %rbx
                 ret
             """);

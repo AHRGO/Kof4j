@@ -41,6 +41,7 @@ import dev.kof.compiler.runtime.RuntimeObservability1;
 import dev.kof.compiler.runtime.RuntimeObservability2;
 import dev.kof.compiler.runtime.RuntimeObservabilitySpans;
 import dev.kof.compiler.runtime.RuntimeObservability3;
+import dev.kof.compiler.runtime.RuntimeErasureBox;
 import dev.kof.compiler.runtime.RuntimePrint;
 import dev.kof.compiler.runtime.RuntimePrintNum;
 import dev.kof.compiler.runtime.RuntimeScheduler;
@@ -96,6 +97,7 @@ public final class NativeRuntime {
         sb.append("            .section .text\n");
         RuntimePrint.emitPrint(sb);
         RuntimePrint.emitPrintln(sb);
+        RuntimeErasureBox.emitBox(sb);   // §284
         RuntimePrintNum.emitPrintInt(sb);
         RuntimePrintNum.emitPrintFloat(sb);
         RuntimePrintNum.emitPrintDouble(sb);

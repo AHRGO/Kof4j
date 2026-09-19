@@ -62,6 +62,8 @@ final class NativeRiscvAsmRtB39 {
                 beq  a1, t0, .Lce_double
                 li   t0, 5
                 beq  a1, t0, .Lce_float
+                li   t0, 7
+                beq  a1, t0, .Lce_boxed
                 li   t0, 0
                 beq  a1, t0, .Lce_int
                 j    .Lce_q
@@ -87,6 +89,10 @@ final class NativeRiscvAsmRtB39 {
             .Lce_float:
                 lw   a0, 0(a0)
                 call kof_float_to_string
+                j    .Lce_ret
+            .Lce_boxed:                     # tag 7 (§284-map): caixa de slot de Map
+                ld   a0, 0(a0)
+                call kof_box_to_string      # nao-box passa cru — espelha x86
                 j    .Lce_ret
             .Lce_q:
                 la   a0, .Lc2s_q

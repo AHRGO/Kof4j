@@ -32,20 +32,69 @@ public final class NativeX86Calls {
         return 6;
     }
 
+    // §284-map (18/09): VALOR de Map da familia Int/Long e caixa fisica
+    // (contrato de escrita no CollectionCallLowerer, igual ao HashMap do
+    // JVM) — tag 7 = "caixa numerica" no kof_elem_to_string: despacha por
+    // MAGIC+tag via kof_box_to_string; nao-box passa cru (mapas antigos
+    // emitidos raw por outras rotas continuam imprimindo certo).
+    static int mapValueTag(Type t) {
+        Type e = t instanceof Type.NullableType nt ? nt.inner() : t;
+        if (e instanceof Type.PrimitiveType pt && unboxFn(pt.name()) != null) return 7;
+        return collectionTag(t);
+    }
+
+    /** §284: funcao de box por tipo primitivo (tags da tabela de colecao). */
+    static String boxFn(String primName) {
+        switch (primName) {
+            case "int", "char", "short", "byte": return "kof_box_int";
+            case "long": return "kof_box_long";
+            case "bool", "boolean": return "kof_box_bool";
+            case "double": return "kof_box_double";
+            case "float": return "kof_box_float";
+            default: return null;
+        }
+    }
+
+    /** §284: funcao de unbox por tipo esperado (v1: inteiros; demais = passthrough). */
+    static String unboxFn(String primName) {
+        switch (primName) {
+            case "int", "char", "short", "byte": return "kof_unbox_int";
+            // §284-map: Long aceita caixa Int OU Long (Number.longValue)
+            case "long": return "kof_unbox_long";
+            default: return null;
+        }
+    }
+
     private final NativeBackend nb;
 
     NativeX86Calls(NativeBackend nb) { this.nb = nb; }
 
     void emitCall(StringBuilder sb, KofCall kc) {
-        if ("kof_box".equals(kc.methodName()) || "kof_unbox".equals(kc.methodName())) {
-            // §284 (GAP, stub catalogado — Q7): no-op silencioso. `emitErasureBox`
-            // (JVM-only por design) emite kof_box ANTES deste caminho nos targets
-            // nativos, mas a chamada chega aqui como KofCall e nao faz NADA →
-            // primitivo cru fica na pilha onde o consumer espera um ponteiro
-            // (medido: `var o: Object = 99` + println → SIGSEGV 139 no native,
-            // pre-existente, nao-regressao do §253 face B). O fix e alancar um
-            // box real (kof_alloc + store) no lugar do no-op, e kof_unbox ler o
-            // campo `value` — dono: lane nat (ver docs §284).
+        if ("kof_box".equals(kc.methodName())) {
+            // §284 (FIXADO): box real 24B [magic][tag][value] (RuntimeErasureBox).
+            // Valor ja esta no topo da pilha de maquina (conv dos calls kof_*:
+            // pop arg → call → push result). Referencia NAO primitiva passa
+            // cru — ponteiro ja e o valor de objeto (paridade com o JVM, que
+            // nao embrulha referencias).
+            Type p0 = kc.parameterTypes().isEmpty() ? Type.UnknownType.UNKNOWN
+                    : kc.parameterTypes().get(0);
+            String fn = p0 instanceof Type.PrimitiveType pt ? boxFn(pt.name()) : null;
+            if (fn == null) return;
+            sb.append("    popq %rdi\n");
+            sb.append("    call ").append(fn).append("\n");
+            sb.append("    pushq %rax\n");
+            return;
+        }
+        if ("kof_unbox".equals(kc.methodName())) {
+            // §284: le o value do box (invariante: so chega aqui box valido —
+            // os emissores pareiam box/unbox pelo tipo do KofCall). Retorno
+            // nao-primitivo = nao era box → passa cru.
+            Type ret = kc.returnType();
+            String fn = ret instanceof Type.PrimitiveType pt ? unboxFn(pt.name()) : null;
+            if (fn == null) return;               // nao-primitivo: ponteiro ja e o valor
+            sb.append("    popq %rdi\n");
+            sb.append("    call ").append(fn).append("\n");
+            sb.append("    pushq %rax\n");
             return;
         }
         if (kc.kind() == KofCallKind.INSTANCE && "println".equals(kc.methodName())) {
@@ -180,7 +229,19 @@ public final class NativeX86Calls {
             // Nullable(primitivo) não casava nenhum branch e o raw int
             // seguia para println_string (SIGSEGV, bug 87)
             Type dispatchType = argType instanceof Type.NullableType nt ? nt.inner() : argType;
-            if (dispatchType instanceof Type.PrimitiveType pt && "char".equals(pt.name())) {
+            // §284-map (18/09): Nullable(Int/Short/Byte/Long) = caixa fisica do
+            // slot de Map (escrita no lowerer; leitura Nullable(V) preserva o
+            // null). O INNER cru NAO vale aqui — despacha pela caixa
+            // (box_to_string imprime Int/Long como numero = golden JVM do
+            // contexto de erasure; o Char nulavel ja chega DESEMBALADO do
+            // lowerer, ramo acima, e nao passa por aqui).
+            if (argType instanceof Type.NullableType nnt
+                    && nnt.inner() instanceof Type.PrimitiveType ipt
+                    && unboxFn(ipt.name()) != null) {
+                sb.append("    popq %rdi\n");
+                sb.append("    call kof_box_to_string\n");
+                sb.append("    pushq %rax\n");
+            } else if (dispatchType instanceof Type.PrimitiveType pt && "char".equals(pt.name())) {
                 // char → string UTF-8 (kof_int_to_string imprimia o
                 // número do codepoint: String.valueOf(0xE9 as Char)
                 // devolvia "233" em vez de "é")
@@ -230,9 +291,20 @@ public final class NativeX86Calls {
                 sb.append("    popq %rdi\n");
                 sb.append("    movl $").append(collectionTag(BuiltinTypes.mapKey(ct)))
                   .append(", %esi\n");
-                sb.append("    movl $").append(collectionTag(BuiltinTypes.mapValue(ct)))
+                sb.append("    movl $").append(mapValueTag(BuiltinTypes.mapValue(ct)))
                   .append(", %edx\n");
                 sb.append("    call kof_map_to_string\n");
+                sb.append("    pushq %rax\n");
+            } else if (BuiltinTypes.isObject(dispatchType)) {
+                // §284: `Object` tem vtable base registrada (typeId 0) — o
+                // ramo genérico abaixo LERIA o campo tag do box como ponteiro
+                // de vtable (SIGSEGV). O static type Object na erasure SEMPRE
+                // carrega um box de primitivo ou referencia real:
+                // kof_box_to_string despacha por MAGIC+tag e passa nao-box
+                // cru (referencia real com toString = caso raro, vira
+                // passthrough — paridade de impressao mantida p/ o corpus).
+                sb.append("    popq %rdi\n");
+                sb.append("    call kof_box_to_string\n");
                 sb.append("    pushq %rax\n");
             } else if (dispatchType instanceof Type.ClassType ct && !BuiltinTypes.isString(dispatchType)) {
                 // valueOf(objeto) → obj.toString() via vtable (records têm
@@ -246,6 +318,15 @@ public final class NativeX86Calls {
                     sb.append("    movq (%rbx), %rbx\n");
                     sb.append("    popq %rdi\n");
                     sb.append("    call *%rbx\n");
+                    sb.append("    pushq %rax\n");
+                } else {
+                    // §284: static type sem vtable (Object/Nullable(Object))
+                    // — o valor na pilha pode ser um BOX de erasure; sem este
+                    // ramo o box cru caia em println_string (SIGSEGV).
+                    // kof_box_to_string despacha por MAGIC+tag e passa
+                    // nao-box cru (invariante preservado).
+                    sb.append("    popq %rdi\n");
+                    sb.append("    call kof_box_to_string\n");
                     sb.append("    pushq %rax\n");
                 }
             }
@@ -336,6 +417,22 @@ public final class NativeX86Calls {
                 sb.append("    call ").append(collFn).append("\n");
                 if (!Type.isVoid(kc.returnType())) {
                     sb.append("    pushq %rax\n");
+                    // §284-map (18/09): leitura de Map com retorno PRIMITIVO
+                    // declarado (get/getOrDefault com V pinado Int/Long)
+                    // recebe a caixa do slot e desemboxa no call-site —
+                    // espelha JvmOpCollections (emitBoxIfPrimitive nas escritas
+                    // + unbox/checkcast no ret). Ret Nullable(V) NAO
+                    // desempacota aqui: null precisa sobreviver; o consumidor
+                    // (comparacao/print) desempacota guiado pelo tipo.
+                    if (("kof_map_get".equals(collFn) || "kof_map_get_or_default".equals(collFn))
+                            && kc.returnType() instanceof Type.PrimitiveType rpt) {
+                        String ufm = unboxFn(rpt.name());
+                        if (ufm != null) {
+                            sb.append("    popq %rdi\n");
+                            sb.append("    call ").append(ufm).append("\n");
+                            sb.append("    pushq %rax\n");
+                        }
+                    }
                 }
                 return;
             }
