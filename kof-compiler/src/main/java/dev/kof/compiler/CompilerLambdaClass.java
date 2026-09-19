@@ -76,8 +76,11 @@ public final class CompilerLambdaClass {
         // descriptor do invoke sairia "LLabel;" com um int na pilha (o valor
         // real do handle) → VerifyError. JvmTypeMapper apaga o handle p/ "I"
         // e JvmLiteralEmitter.returnOpcode emite IRETURN de forma consistente.
+        // kof.process.Result segue a mesma doença: `() -> process.run(...)`
+        // round-tripava p/ ClassType("", "Result") → descriptor "LResult;".
         Type returnType = (ft.returnType() instanceof Type.FunctionType
-                || KofUi.isUiType(ft.returnType()) || KofMedia.isHandleType(ft.returnType()))
+                || KofUi.isUiType(ft.returnType()) || KofMedia.isHandleType(ft.returnType())
+                || KofProcess.isResult(ft.returnType()))
                 ? ft.returnType()
                 : CompilerTypes.toType(CompilerTypes.typeToString(ft.returnType()), driver.currentUnit);
         List<FormalParameterNode> params = le.parameters();

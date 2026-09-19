@@ -77,6 +77,13 @@ public final class JvmTypeMapper {
         if ("kof.concurrent".equals(c.packageName()) && "Handle".equals(c.name())) {
             return "Ljava/util/concurrent/CompletableFuture;";
         }
+        // process.Result apaga para KofRuntime$ProcessResult (o binding host de
+        // kof_process_run é exatamente um) — sem isto, `Result` vindo de uma
+        // lambda (checkcast/invoke descriptor) gerava classe inexistente →
+        // ClassNotFoundException / NoClassDefFoundError (mesma forma do #31).
+        if ("kof.process".equals(c.packageName()) && "Result".equals(c.name())) {
+            return "Ldev/kof/runtime/KofRuntime$ProcessResult;";
+        }
         // enum: D-ENUM207 — o valor é uma INSTÂNCIA de enum (classe real
         // emitida por CompilerEnumLowering), não a String do nome. Descriptor
         // próprio L<Dir>; (antes era apagado p/ Ljava/lang/String;).
@@ -172,6 +179,7 @@ public final class JvmTypeMapper {
         if ("kof".equals(packageName) && "Map".equals(simpleName)) return "java/util/HashMap";
         if ("kof.concurrent".equals(packageName) && "Channel".equals(simpleName)) return "java/util/concurrent/LinkedBlockingQueue";
         if ("kof.concurrent".equals(packageName) && "Handle".equals(simpleName)) return "java/util/concurrent/CompletableFuture";
+        if ("kof.process".equals(packageName) && "Result".equals(simpleName)) return "dev/kof/runtime/KofRuntime$ProcessResult";
         if (packageName.isEmpty()) return simpleName;
         return packageName.replace('.', '/') + "/" + simpleName;
     }
