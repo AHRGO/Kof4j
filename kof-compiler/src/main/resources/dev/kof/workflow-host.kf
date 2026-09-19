@@ -1,0 +1,175 @@
+// dev/kof/workflow-host.kf — host escrito EM KOF do pacote virtual
+// `kof.workflow` (tracker 2.1, plano §5 2.1.2). Superfície MVP (Q2 da enquete
+// 19/09): SOMENTE job/dag/after/run/Report — retry/checkpoint/deadLetter são
+// do bundle 2.1.3. Injetado flat por CompilerWorkflow no `import kof.workflow`
+// explícito (mesmo mecanismo do kof.supervisor, DD-OTP-01 opção A).
+//
+// Execução sequencial e determinística (sem threads, sem await): funciona em
+// TODO target (JVM/ANDROID/Script/JS/Native) — nada aqui cruza fronteira de
+// runtime. A falha de um job pula transitivamente seus dependentes; ciclo é
+// rejeitado em run() com mensagem acionável (invariante do plano §2).
+
+Bool kofWfTem(List<String> nomes, String x) {
+    var i = 0
+    while (i < nomes.size) {
+        if (nomes.get(i) == x) { return true }
+        i = i + 1
+    }
+    return false
+}
+
+String kofWfJoin(List<String> xs, String sep) {
+    var out = ""
+    var i = 0
+    while (i < xs.size) {
+        if (i > 0) { out = out + sep }
+        out = out + xs.get(i)
+        i = i + 1
+    }
+    return out
+}
+
+class KofWfJob {
+    // NUNCA tirar os inicializadores daqui: `String nome` sem `= null` na
+    // linha de cima de um campo-lambda confunde o lookahead do parser
+    // ("Unexpected token in class body", medido 19/09 — gramática é regra 6).
+    String nome = null
+    () -> Bool corpo = null
+    List<KofWfJob> deps
+
+    public constructor(String nome, () -> Bool corpo) {
+        if (nome == "") { throw "workflow: job com nome vazio" }
+        if (corpo == null) { throw "workflow '" + nome + "': corpo nulo" }
+        this.nome = nome
+        this.corpo = corpo
+        this.deps = listOf()
+    }
+
+    KofWfJob after(KofWfJob dep) {
+        if (dep == null) { throw "workflow '" + nome + "': after() com dependência nula" }
+        if (dep.nome == nome) { throw "workflow '" + nome + "': dependência de si mesmo" }
+        deps.add(dep)
+        return this
+    }
+}
+
+class KofWfReport {
+    List<String> succeeded
+    List<String> failed
+    List<String> skipped
+    List<String> errors
+
+    public constructor() {
+        succeeded = listOf()
+        failed = listOf()
+        skipped = listOf()
+        errors = listOf()
+    }
+
+    Bool allOk() {
+        return failed.size == 0 && skipped.size == 0
+    }
+
+    String summary() {
+        return "ok=" + kofWfJoin(succeeded, ",") +
+               " failed=" + kofWfJoin(failed, ",") +
+               " skipped=" + kofWfJoin(skipped, ",")
+    }
+}
+
+class KofWfDag {
+    List<KofWfJob> jobs
+
+    public constructor(List<KofWfJob> jobs) {
+        if (jobs == null) { throw "workflow: dag() sem jobs" }
+        if (jobs.size == 0) { throw "workflow: dag() vazia" }
+        this.jobs = listOf()
+        var i = 0
+        while (i < jobs.size) {
+            var j = jobs.get(i)
+            if (j == null) { throw "workflow: dag() com job nulo" }
+            var k = 0
+            while (k < this.jobs.size) {
+                if (this.jobs.get(k).nome == j.nome) {
+                    throw "workflow: nome de job duplicado '" + j.nome + "'"
+                }
+                k = k + 1
+            }
+            this.jobs.add(j)
+            i = i + 1
+        }
+    }
+
+    // fixpoint sequencial: roda o que está pronto, pula dependentes de
+    // falha/skip, e para com erro acionável se uma ronda não progride
+    // (ciclo). `done` = nomes concluídos; `bad` = falhou OU foi pulado.
+    KofWfReport run() {
+        var rep = KofWfReport()
+        var rest = listOf()
+        var i = 0
+        while (i < jobs.size) { rest.add(jobs.get(i)); i = i + 1 }
+        var done = listOf()
+        var bad = listOf()
+        while (rest.size > 0) {
+            var progressed = false
+            var keep = listOf()
+            var j = 0
+            while (j < rest.size) {
+                var job = rest.get(j)
+                var depsOk = true
+                var depsBad = false
+                var d = 0
+                while (d < job.deps.size) {
+                    var dn = job.deps.get(d).nome
+                    if (kofWfTem(bad, dn)) { depsBad = true }
+                    else if (!kofWfTem(done, dn)) { depsOk = false }
+                    d = d + 1
+                }
+                if (depsBad) {
+                    rep.skipped.add(job.nome)
+                    bad.add(job.nome)
+                    progressed = true
+                } else if (depsOk) {
+                    var corpoFn: () -> Bool = job.corpo
+                    var ok = false
+                    var erro = ""
+                    try {
+                        ok = corpoFn()
+                    } catch (String e) {
+                        ok = false
+                        erro = e
+                    }
+                    if (erro != "") { rep.errors.add(job.nome + ": " + erro) }
+                    if (ok) {
+                        done.add(job.nome)
+                        rep.succeeded.add(job.nome)
+                    } else {
+                        if (erro == "") { rep.errors.add(job.nome + ": false") }
+                        bad.add(job.nome)
+                        rep.failed.add(job.nome)
+                    }
+                    progressed = true
+                } else {
+                    keep.add(job)
+                }
+                j = j + 1
+            }
+            if (!progressed) {
+                var nomes = listOf()
+                var c = 0
+                while (c < rest.size) { nomes.add(rest.get(c).nome); c = c + 1 }
+                throw "workflow: ciclo detectado entre: " + kofWfJoin(nomes, ",")
+            }
+            rest = keep
+        }
+        return rep
+    }
+}
+
+KofWfJob job(String nome, () -> Bool corpo) {
+    return KofWfJob(nome, corpo)
+}
+
+KofWfDag dag(List<KofWfJob> jobs) {
+    return KofWfDag(jobs)
+}

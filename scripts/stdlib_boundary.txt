@@ -34,6 +34,7 @@ shell platform — KofShell.java (sugar over kof.process; universal plan Stage 2
 scheduler platform — KofScheduler.java
 security platform — ExpressionMethodCallLowerer.java (auth/JWT/rate-limit; stdlib-documented)
 supervisor platform — CompilerSupervisor.java (otp-style supervision, systems layer)
+workflow platform — CompilerWorkflow.java (pure-Kof workflow host, composition layer)
 validation platform — ExpressionMethodCallLowerer.java
 version platform — KofVersion.java
 ui platform — ExpressionStaticCallLowerer.java (declared platform capability, not core)
