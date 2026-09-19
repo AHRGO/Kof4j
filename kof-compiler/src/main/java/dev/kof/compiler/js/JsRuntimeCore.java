@@ -252,45 +252,6 @@ public final class JsRuntimeCore {
             // ", " dentro de [ ], Map como "{k=v}". Elementos passam por
             // valueOf de novo (String → toString/record). Não toca no
             // path de valor primitivo escalar (bug 44 / String(x)).
-            // §104c: igualdade de conteúdo em coleções JS. Primitivos/String
-            // resolvem no caminho nativo (SameValueZero) — o fallback só pega
-            // objeto Kof (record) que traz .equals(other) sintético → 1/0.
-            // Assim `listOf(p1).contains(p2)`, `setOf/mapOf` por conteúdo batem
-            // com o oracle JVM sem alterar o armazenamento nem o kofFormat.
-            export function kofValEq(a, b) {
-                if (a === b) return true;
-                if (Number.isNaN(a) && Number.isNaN(b)) return true;
-                if (a === null || b === null || a === undefined || b === undefined) return false;
-                if (typeof a === "object" && typeof a.equals === "function") {
-                    return a.equals(b) ? true : false;
-                }
-                return false;
-            }
-
-            // §262(b): igualdade de record null-safe p/ `==`/`!=` no JS (Objects.equals).
-            // Devolve NÚMERO 1/0 (a dobra JS do `!=` é `(x === 0)`, que só funciona
-            // com número). Guarda os DOIS lados: o `equals` sintético do record NÃO
-            // guarda o ARG (this._x === other._x → TypeError se other null).
-            export function kofRecordEq(a, b) {
-                if (a === b) return 1;
-                if (a === null || a === undefined || b === null || b === undefined) return 0;
-                if (typeof a.equals === "function") return a.equals(b) ? 1 : 0;
-                return 0;
-            }
-
-            // #259: igualdade de `Float?`/`Double?`. O `===` diverge do wrapper
-            // JVM (oráculo) em 2 casos: `NaN === NaN` false (JVM true) e
-            // `0.0 === -0.0` true (JVM false). `Object.is` casa com o wrapper
-            // nesses 2 e é idêntico ao `===` no resto. Só entra com tipo
-            // ESTÁTICO float/double; Int/Long seguem kofRecordEq (o `-0` de
-            // `0 * -1` seria falso-negativo espúrio em aritmética inteira).
-            export function kofFpEq(a, b) {
-                if (a === null || a === undefined || b === null || b === undefined) return a === b ? 1 : 0;
-                if (typeof a === "number" && typeof b === "number") return Object.is(a, b) ? 1 : 0;
-                if (typeof a.equals === "function") return a.equals(b) ? 1 : 0;
-                return 0;
-            }
-
             // §111: split com a regra Java (não JS): remove vazios TRAILING,
             // exceto input "" → [""]. JS nativo preserva trailing ("a,"→["a",""]).
             export function kofSplit(s, sep) {

@@ -15,6 +15,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
  ### In development
 
+  - **JS collection equality is now by content (`#518`)** — a Kof `List` or `Set`
+    used as an element of another `Set`/`Map`/`List` compared by identity on the JS
+    target (`add` said `true`, `contains` said `false`, `setOf(setOf(1)).size()` was
+    2), while the JVM compares contents (`AbstractList`/`AbstractSet.equals`). The
+    shared JS helper `kofValEq` now recurses: arrays element-by-element (order
+    sensitive) and sets by membership — never via `Set.has`, whose SameValueZero
+    reference check is exactly the bug. The three equality helpers (`kofValEq`,
+    `kofRecordEq`, `kofFpEq`) moved to a dedicated runtime slice. Proved by
+    `KofSetEqualityTest.collectionsAsElementsCompareByContentOnJs` (was disabled)
+    and the JVM twin, 21/21 green.
+
   - **`kof deps` now pulls from the registry (`owner/repo[@version]`, 0.4.0 line,
     1.5.3-S2 / D-POLL-19)** — a line like `acme/hello@1.2.3` (or bare `acme/hello`
     for *latest*) in `kofdeps` resolves against the GitHub Releases published by

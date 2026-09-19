@@ -15,6 +15,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
  ### Em desenvolvimento
 
+  - **Igualdade de colecoes JS agora e por conteudo (`#518`)** — uma `List` ou `Set`
+    Kof usada como elemento de outro `Set`/`Map`/`List` comparava por identidade no
+    alvo JS (`add` dizia `true`, `contains` dizia `false`, `setOf(setOf(1)).size()`
+    dava 2), enquanto a JVM compara por conteudo (`AbstractList`/`AbstractSet.equals`).
+    O helper compartilhado `kofValEq` agora recorrre: arrays elemento a elemento (ordem
+    importa) e sets por membresia — nunca via `Set.has`, cujo SameValueZero por
+    referencia e exatamente o bug. Os tres helpers de igualdade (`kofValEq`,
+    `kofRecordEq`, `kofFpEq`) sairam para um slice proprio do runtime. Prova:
+    `KofSetEqualityTest.collectionsAsElementsCompareByContentOnJs` (antes desabilitado)
+    e o gumeo JVM, 21/21 verde.
+
   - **`kof deps` agora consome o registry (`owner/repo[@versao]`, linha 0.4.0,
     1.5.3-S2 / D-POLL-19)** — uma linha como `acme/hello@1.2.3` (ou `acme/hello`
     puro = *latest*) no `kofdeps` resolve contra os GitHub Releases publicados por

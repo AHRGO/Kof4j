@@ -1,6 +1,5 @@
 package dev.kof.compiler;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.*;
@@ -494,9 +493,6 @@ class KofSetEqualityTest {
             """, "false\ntrue\nfalse\nfalse\n1");
     }
 
-    @Disabled("BUG JS: kofSetHas/kofValEq comparam List/Set por identidade; o HashSet "
-            + "da JVM compara por conteúdo (AbstractList/AbstractSet.equals). "
-            + "Hoje no JS add(listOf(1,2)) devolve true, contains(listOf(1,2)) devolve false e setOf(setOf(1)) fica com size 2.")
     @Test
     void collectionsAsElementsCompareByContentOnJs(@TempDir Path tmp) throws Exception {
         runJs(tmp, """
