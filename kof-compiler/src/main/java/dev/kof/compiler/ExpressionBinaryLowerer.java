@@ -119,6 +119,23 @@ public final class ExpressionBinaryLowerer {
     static int lower(CompilerDriver driver, BinaryExpr bin, List<KofOperation> ops,
                         String owner, int localIdx, List<IRLocalVariable> locals) {
 if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
+    Type targetType = Type.UnknownType.UNKNOWN;
+    if (bin.right() instanceof IdentifierExpr ie) {
+        // toType resolve imports ("View" + import → android.view.View)
+        targetType = CompilerTypes.toType(ie.name(), driver.currentUnit);
+    }
+    Type fromCastType = ExpressionTyper.inferExprType(driver, bin.left(), locals);
+    // #293: primitivo → STRING (`42 as String`) caia no ramo §213 de box +
+    // CHECKCAST java/lang/String — o boxed (Integer/Boolean/...) NAO e String
+    // -> ClassCastException em runtime no JVM (JS/Script stringificam = oracle
+    // da issue). stringify = descer pela MESMA rota do `x + ""` (valueOf nos 4
+    // alvos). ANTES de emitir left (a recursao emite a sua propria vez).
+    if ("as".equals(bin.operator()) && BuiltinTypes.isString(targetType)
+            && TypeMetrics.isPrimitiveType(fromCastType)) {
+        return lower(driver, new BinaryExpr(bin.position(), "+",
+                bin.left(), new LiteralExpr(bin.position(), ConcreteLiteralKind.STRING, "")),
+                ops, owner, localIdx, locals);
+    }
     localIdx = ExpressionLowerer.emitExpression(driver, bin.left(), ops, owner, localIdx, locals);
     Type targetType = Type.UnknownType.UNKNOWN;
     if (bin.right() instanceof IdentifierExpr ie) {
