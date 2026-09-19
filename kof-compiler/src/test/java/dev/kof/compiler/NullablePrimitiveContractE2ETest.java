@@ -402,4 +402,112 @@ class NullablePrimitiveContractE2ETest {
                 """, "anull\nnullb");
     }
 
+    // ---- §295(b): o LADO ESCRITOR do slot Nullable(primitivo) boxado -------
+    // O Commit B (#278) virou o local `Int?` em slot de referência
+    // (storeVarOpcode/loadVarOpcode → ASTORE/ALOAD) e o #438 consertou o
+    // READ (checkcast+intValue no comparando, face (a)), mas os ESCRITORES
+    // boxavam primitivo cru só via `erasesToReference` — false p/
+    // NullableType. Resultado: `iconst_5; astore_1` → VerifyError no LOAD da
+    // classe (rosto "JavaFX ausente", regra AGENTS: nunca benigno). Faces:
+    // literal-init (verbatim do ledger), default sem-init, `=`, `+=`, `++`.
+    // O gate novo espelha o do return (D-NULL-INTENT já no ReturnValue-
+    // Lowerer): boxa só primitivo CRÚ — init já Nullable (`m.get`) chega
+    // fisicamente boxed; re-box = NoSuchMethodError (lesson §294-2a).
+
+    @Test
+    void nullablePrimLocalLiteralInitLedgerVerbatim(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                main() {
+                    Int? v = 5
+                    Bool big = v > 100
+                    Bool small = v > 0
+                    println(if (big) "T" else "F")
+                    println(if (small) "T" else "F")
+                }
+                """, "F\nT");
+    }
+
+    @Test
+    void nullablePrimLocalNoInitDefaultsToNull(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                main() {
+                    Int? w
+                    println(if (w == null) "N" else "V")
+                    w = 3
+                    println(if (w == null) "N" else w)
+                }
+                """, "N\n3");
+    }
+
+    @Test
+    void nullablePrimSimpleAssignBoxesLiteral(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                main() {
+                    var m: Map<String, Int> = mapOf("z", 7)
+                    Int? g = m.get("z")
+                    g = 9
+                    println(g)
+                    Int? h = g
+                    println(h)
+                }
+                """, "9\n9");
+    }
+
+    @Test
+    void nullablePrimCompoundAssignUnboxRebox(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                main() {
+                    var m: Map<String, Int> = mapOf("z", 7)
+                    Int? g = m.get("z")
+                    g += 1
+                    println(g)
+                    g -= 2
+                    println(g)
+                }
+                """, "8\n6");
+    }
+
+    @Test
+    void nullablePrimIncrementPostfixAndPrefix(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                main() {
+                    Int? v = 5
+                    v++
+                    println(v)
+                    ++v
+                    println(v)
+                }
+                """, "6\n7");
+    }
+
+    @Test
+    void nullablePrimLongLiteralCompoundAndPass(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                Int? id(Int? x) { return x }
+                main() {
+                    Long? x = 5000000000
+                    x += 1
+                    println(x)
+                    println(if (x > 100) "T" else "F")
+                }
+                """, "5000000001\nT");
+    }
+
+    // §295(b): slot Nullable(Bool) — o ESCRITOR (init literal + assign) boxa
+    // e o println lê a referência (JVM). Faces LEITORAS pré-existentes ficam
+    // no §306: JVM truthiness `if (b)` (if_icmpne sobre Boolean) e o Script
+    // que imprime `Bool?` local como 1/0 (bool canônico do interpretador é
+    // Int; medido no jar pré-fix — não é regressão deste pino).
+    @Test
+    void nullablePrimBoolWriterFacesStoreBoxed(@TempDir Path tempDir) throws IOException {
+        runJvm(tempDir, """
+                main() {
+                    Bool? b = true
+                    println(b)
+                    b = false
+                    println(b)
+                }
+                """, "true\nfalse");
+    }
+
 }

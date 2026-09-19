@@ -146,16 +146,36 @@ public final class StatementLowerer {
                 // boxa no JVM (JS/Native já são untyped). Sem isso o store de
                 // int num slot Object invalidava o bytecode.
                 // (#57: IfExpr/switch heterogêneo já boxeou in-branch → pular)
+                // §295(b): o slot de um Nullable(primitivo) local é boxed desde
+                // o Commit B (storeVarOpcode→ASTORE, 1 slot) mas o gate de box
+                // só conhecia erasesToReference — FALSE p/ NullableType — e
+                // `Int? v = 5` saía `iconst_5; astore_1` (VerifyError no LOAD
+                // da classe, rosto "JavaFX ausente"). Espelha o gate cru do
+                // return (D-NULL-INTENT, ReturnValueLowerer): boxa só
+                // primitivo CRÚ — init já Nullable (`Int? g = m.get(...)`)
+                // chega fisicamente boxed; re-box = §294-2a, nunca. No Native
+                // o varType já foi desembrulhado acima (representação antiga).
+                boolean nullablePrimSlot = TypeMetrics.isNullablePrimitive(varType);
+                Type vdBoxT = vdInit != null
+                        ? ExpressionTyper.inferExprType(driver, vdInit, locals) : null;
                 if (driver.erasesToReference(varType)
                         && vdInit != null
-                        && TypeMetrics.isPrimitiveType(ExpressionTyper.inferExprType(driver, vdInit, locals))
+                        && TypeMetrics.isPrimitiveType(vdBoxT)
                         && !ExpressionTyper.boxesOwnBranches(driver, vdInit, locals)) {
-                    driver.emitErasureBox(ops, ExpressionTyper.inferExprType(driver, vdInit, locals));
+                    driver.emitErasureBox(ops, vdBoxT);
+                } else if (nullablePrimSlot
+                        && vdBoxT instanceof Type.PrimitiveType ipt
+                        && !Type.isVoid(ipt)
+                        && !ExpressionTyper.boxesOwnBranches(driver, vdInit, locals)) {
+                    driver.emitErasureBox(ops, ipt);
                 }
                 // declaração sem inicializador: default (0 primitivo / null
-                // referência) — antes o store saía de pilha vazia (frame crash)
+                // referência) — antes o store saía de pilha vazia (frame crash).
+                // §295(b): slot boxed de Nullable(primitivo) é referência de
+                // verdade (Commit B) → default null, espelhando `String? s;`
+                // (unassigned ≠ 0). Native não chega aqui com o wrapper.
                 if (vdInit == null) {
-                    ops.add(driver.erasesToReference(varType)
+                    ops.add(driver.erasesToReference(varType) || nullablePrimSlot
                             ? new KofLoadLiteral(varType, null)
                             : new KofLoadLiteral(varType, 0));
                 }
