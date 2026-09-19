@@ -379,46 +379,6 @@ final class LspServer {
         respond(id, List.of(loc));
     }
 
-    /** Definição do nome em outro arquivo .kf da árvore do projeto (X10 f4). */
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> crossFileDefinition(String fromUri, String word) {
-        if (word.isEmpty()) return null;
-        java.nio.file.Path self = toPath(fromUri);
-        if (self == null || self.getParent() == null) return null;
-        try (var stream = java.nio.file.Files.walk(self.getParent(), 6)) {
-            var files = stream.filter(p -> p.getFileName().toString().endsWith(".kf"))
-                    .filter(p -> !p.toAbsolutePath().equals(self.toAbsolutePath()))
-                    .sorted().toList();
-            for (java.nio.file.Path f : files) {
-                String txt;
-                try {
-                    txt = java.nio.file.Files.readString(f, StandardCharsets.UTF_8);
-                } catch (Exception e) {
-                    continue;
-                }
-                int[] decl = LspSymbols.declarationRange(txt, word);
-                if (decl != null) {
-                    Map<String, Object> loc = new LinkedHashMap<>();
-                    loc.put("uri", f.toAbsolutePath().toUri().toString());
-                    loc.put("range", rangeOf(txt, decl[0], decl[1]));
-                    return loc;
-                }
-            }
-        } catch (Exception e) {
-            return null;
-        }
-        return null;
-    }
-
-    private static java.nio.file.Path toPath(String uri) {
-        try {
-            if (uri == null || !uri.startsWith("file:")) return null;
-            return java.nio.file.Path.of(java.net.URI.create(uri));
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
     @SuppressWarnings("unchecked")
     private void formatting(Object id, Map<String, Object> params) {
         Map<String, Object> td = params.get("textDocument") instanceof Map<?, ?> p
@@ -485,6 +445,24 @@ final class LspServer {
     }
 
     @SuppressWarnings("unchecked")
+    private Map<String, Object> crossFileDefinition(String fromUri, String word) {
+        if (word.isEmpty()) return null;
+        java.nio.file.Path self = LspProject.toPath(fromUri);
+        if (self == null) return null;
+        for (java.nio.file.Path f : LspProject.siblings(self)) {
+            String txt = LspProject.readOrNull(f);
+            if (txt == null) continue;
+            int[] decl = LspSymbols.declarationRange(txt, word);
+            if (decl != null) {
+                Map<String, Object> loc = new LinkedHashMap<>();
+                loc.put("uri", f.toAbsolutePath().toUri().toString());
+                loc.put("range", rangeOf(txt, decl[0], decl[1]));
+                return loc;
+            }
+        }
+        return null;
+    }
+
     private void references(Object id, Map<String, Object> params) {
         Map<String, Object> td = params.get("textDocument") instanceof Map<?, ?> p
                 ? (Map<String, Object>) p : Map.of();
@@ -502,6 +480,20 @@ final class LspServer {
             loc.put("uri", uri);
             loc.put("range", rangeOf(text, r[0], r[1]));
             locations.add(loc);
+        }
+        // X10 fatia 5: referências também nos .kf irmãos do projeto (read-only).
+        java.nio.file.Path self = LspProject.toPath(uri);
+        if (self != null && !word.isEmpty()) {
+            for (java.nio.file.Path f : LspProject.siblings(self)) {
+                String txt = LspProject.readOrNull(f);
+                if (txt == null) continue;
+                for (int[] r : wordOccurrences(txt, word)) {
+                    Map<String, Object> loc = new LinkedHashMap<>();
+                    loc.put("uri", f.toAbsolutePath().toUri().toString());
+                    loc.put("range", rangeOf(txt, r[0], r[1]));
+                    locations.add(loc);
+                }
+            }
         }
         respond(id, locations);
     }

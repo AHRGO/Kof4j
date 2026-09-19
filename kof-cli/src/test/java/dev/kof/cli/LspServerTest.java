@@ -428,6 +428,34 @@ class LspServerTest {
         assertNull(resp.get("result"));
     }
 
+
+    /** X10 fatia 5: referências também nos .kf irmãos (read-only). */
+    @Test
+    void referencesSpanProjectFiles(@TempDir Path dir) throws Exception {
+        String lib = "Int helper(Int x) { return x * 2 }\n";
+        String app = "main() { println(helper(21)) }\n";
+        Files.writeString(dir.resolve("lib.kf"), lib);
+        Path appFile = dir.resolve("app.kf");
+        Files.writeString(appFile, app);
+        String appUri = appFile.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        int col = app.indexOf("helper") + 2;
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/references\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\"},"
+                + "\"position\":{\"line\":0,\"character\":" + col + "}}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> resp = byId(messages(out.toString(StandardCharsets.UTF_8)), 1);
+        @SuppressWarnings("unchecked")
+        List<Object> locs = (List<Object>) resp.get("result");
+        assertEquals(2, locs.size(), "1 no buffer + 1 no irmão lib.kf");
+        java.util.Set<String> uris = new java.util.HashSet<>();
+        for (Object o : locs) uris.add(String.valueOf(((Map<?, ?>) o).get("uri")));
+        assertTrue(uris.contains(appUri));
+        assertTrue(uris.contains(dir.resolve("lib.kf").toAbsolutePath().toUri().toString()));
+    }
+
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> completionAt(String text, long line, long ch) throws Exception {
         String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
