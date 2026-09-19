@@ -93,13 +93,29 @@ answered; a ledger line cannot override a hard-deny (measured).
 | `kof.io` file round-trip (state) | matrix row `kof.io` ✅✅✅ (lines 72/74) | recon JVM+JS parity; Native compile |
 | JVM==JS byte parity of plan output | Q-parity rule | golden at 3.1 |
 
+**§4 status 19/09 — MEDIDA by `MakealivePrimitivesE2ETest` (recon 3.0.1), 5/5 GREEN**
+(JVM==JS byte-parity runs + Native compile pins; the throw/catch form also runs on
+SCRIPT): every row above is locked today. Corrections measured: (i) `kof.io` is **not**
+a static facade — the contract is `File("path")` constructor + instance methods
+(`f.writeText/readText/delete/exists`; `IoE2ETest.fileTextRoundTrip` is the golden —
+the "Static forms" line in `docs/stdlib/IO.md` is drift, flag to the docs lane, do not
+rewrite it here); (ii) `mapOf().keys()` iteration order is target-dependent — the
+design must drive iteration from an explicit `List` (locked); (iii) no ternary `?:` and
+no `for (i in 0..n)` range in `.kf` — if/else and while-with-index or element `for`
+(locked); (iv) `record` with `String` fields and `mapOf(k, v, ...)` class-field
+initializers compile and run identical (locked).
+
 ## 5. Step queue
 
 - **3.0.0 [plan + claim — 0 surface]** — this file (EN+PT), tracker Stage 3
   flip to 🟡, `DOING.md` claim. ✅ 19/09.
 - **3.0.1 [recon — 0 code]** — `MakealivePrimitivesE2ETest` locks the §2/§4
   shapes on the 4 targets; outcome feeds back into this file (workflow 2.1.0
-  discipline). 🔵 next in lane.
+  discipline). ✅ 19/09 — 5/5 (JVM==JS parity, Native compile, SCRIPT throw/catch);
+  achados devolvidos na nota "§4 status" acima — including the measured kof.io
+  constructor+instance face (the sibling head's coordination line `c122d266` carried
+  the same finding; my run clobbered their in-flight untracked file before I read it —
+  the fix came from their DOING note, credited here). 🔵 next: 3.0.2 (⛔ Q1–Q4).
 - **3.0.2 [design sign-off — ⛔ rule 6]** — maintainer poll Q1–Q4 (§6). No
   host, no compiler class, no ledger line before Q1 is answered.
 - **3.1 [core]** — virtual-namespace injector (`CompilerMakealive`) +

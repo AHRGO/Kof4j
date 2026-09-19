@@ -97,13 +97,31 @@ ledger NÃO sobrepõe hard-deny (medido).
 | round-trip de arquivo `kof.io` (estado) | linha `kof.io` da matriz ✅✅✅ (72/74) | recon paridade JVM+JS; Native compila |
 | paridade byte JVM==JS da saída do plan | regra de paridade | golden no 3.1 |
 
+**Status do §4 19/09 — MEDIDA por `MakealivePrimitivesE2ETest` (recon 3.0.1), 5/5 VERDE**
+(paridade byte JVM==JS nas execuções + pins de compilação Native; a forma throw/catch
+roda também no SCRIPT): todas as linhas acima estão travadas hoje. Correções medidas:
+(i) `kof.io` **não** é fachada estática — o contrato é construtor `File("path")` +
+métodos de instância (`f.writeText/readText/delete/exists`; o golden é
+`IoE2ETest.fileTextRoundTrip` — a linha "Static forms" de `docs/stdlib/IO.md` é drift,
+sinalizar à lane de docs, não reescrever aqui); (ii) a ordem de iteração de
+`mapOf().keys()` depende do target — o design dirige iteração por `List` explícito
+(travado); (iii) não há ternário `?:` nem `for (i in 0..n)` de range em `.kf` — usar
+if/else e while-com-índice ou `for` de elemento (travado); (iv) `record` com campos
+`String` e inicializador de campo de classe `mapOf(k, v, ...)` compilam e rodam
+idênticos (travado).
+
 ## 5. Fila de passos
 
 - **3.0.0 [plano + claim — 0 superfície]** — este arquivo (EN+PT), flip da
   linha Stage 3 do tracker para 🟡, claim no `DOING.md`. ✅ 19/09.
 - **3.0.1 [recon — 0 código]** — `MakealivePrimitivesE2ETest` trava as formas
   do §2/§4 nos 4 targets; o resultado volta para este arquivo (disciplina da
-  recon 2.1.0 do workflow). 🔵 próximo na lane.
+  recon 2.1.0 do workflow). ✅ 19/09 — 5/5 (paridade JVM==JS, compila Native,
+  throw/catch no SCRIPT); achados devolvidos na nota "Status do §4" acima — inclusive
+  a face medida do kof.io (construtor+instância), que chegou pela linha de coordenação
+  do head irmão `c122d266`; minha escrita sobrescreveu o arquivo untracked deles em
+  voo antes de eu ler a coordenação — o crédito do achado é da nota DOING deles.
+  🔵 próximo: 3.0.2 (⛔ Q1–Q4).
 - **3.0.2 [assinatura de design — ⛔ regra 6]** — enquete da mantenedora
   Q1–Q4 (§6). Sem host, sem classe de compilador, sem linha no ledger antes de
   Q1 respondida.
