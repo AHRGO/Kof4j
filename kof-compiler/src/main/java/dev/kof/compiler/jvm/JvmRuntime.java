@@ -69,6 +69,8 @@ public static boolean hasRuntimeFn(String methodName) {
                 || methodName.equals("kof_process_spawn")
                 || methodName.equals("kof_process_run")
                 || methodName.equals("kof_process_exit")
+                || methodName.equals("kof_shell_argv")
+                || methodName.equals("kof_shell_pipeline")
                 || methodName.equals("kof_args_list");
     }
 

@@ -30,6 +30,7 @@ mq platform — KofMq.java
 observability platform — ExpressionMethodCallLowerer.java (metrics/health)
 trace platform — ExpressionMethodCallLowerer.java (tracing/OTel seed)
 process platform — KofProcess.java
+shell platform — KofShell.java (sugar over kof.process; universal plan Stage 2 / 2.2)
 scheduler platform — KofScheduler.java
 security platform — ExpressionMethodCallLowerer.java (auth/JWT/rate-limit; stdlib-documented)
 supervisor platform — CompilerSupervisor.java (otp-style supervision, systems layer)

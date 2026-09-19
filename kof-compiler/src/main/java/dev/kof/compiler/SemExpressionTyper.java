@@ -87,7 +87,7 @@ public final class SemExpressionTyper {
                     }
                 }
                 if (sa.diagnostics() != null && !"this".equals(ie.name()) && !"super".equals(ie.name())
-                        && !"json".equals(ie.name()) && !"process".equals(ie.name())
+                        && !"json".equals(ie.name()) && !"process".equals(ie.name()) && !"shell".equals(ie.name())
                         && !KofWeb.isWebNamespace(ie.name())
                         && !KofConfig.isConfigNamespace(ie.name())
                         && !KofCache.isCacheNamespace(ie.name())
@@ -149,7 +149,7 @@ public final class SemExpressionTyper {
                             hasField = MemberResolver.resolveInHierarchy(sa, sa.currentClassName(), ie.name()) != null;
                         }
                         if (!hasField
-                                && !"json".equals(ie.name()) && !"process".equals(ie.name())
+                                && !"json".equals(ie.name()) && !"process".equals(ie.name()) && !"shell".equals(ie.name())
                                 && !KofWeb.isWebNamespace(ie.name())
                                 && !KofConfig.isConfigNamespace(ie.name())
                                 && !KofCache.isCacheNamespace(ie.name())

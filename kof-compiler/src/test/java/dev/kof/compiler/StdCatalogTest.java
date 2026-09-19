@@ -84,9 +84,9 @@ class StdCatalogTest {
                 "KofUuid", "KofRandom", "KofRng"));
         assertEquals(dispatched, catalogClasses,
                 "dispatch do KofStd mudou sem atualizar o catálogo");
-        assertEquals(31, StdCatalog.namespaces().size(), StdCatalog.namespaces().toString());
+        assertEquals(32, StdCatalog.namespaces().size(), StdCatalog.namespaces().toString());
         for (String ns : List.of("math", "strings", "encoding", "net", "uuid", "random",
-                "rng", "time", "http", "db", "cache", "process", "passwords", "crypto",
+                "rng", "time", "http", "db", "cache", "process", "shell", "passwords", "crypto",
                 "jwt", "secrets", "security", "auth", "json", "log", "orm", "config",
                 "gpu", "mq", "validation", "observability", "tetris", "Image", "Audio",
                 "Mic", "Video")) {
@@ -192,6 +192,23 @@ class StdCatalogTest {
                 "switch (name)")),
                 KofDb.functions(), "db");
         assertEquals(List.of("run"), KofProcess.functions(), "process");
+    }
+
+    @Test
+    void shellCatalogMatchesDispatchAndSignatures() {
+        assertEquals(List.of("cmd", "run", "pipeline", "ok"), KofShell.functions(), "shell");
+        assertNotNull(KofShell.staticCall("cmd",
+                List.of(BuiltinTypes.STRING, KofShell.STRING_LIST)), "shell.cmd");
+        assertNotNull(KofShell.staticCall("run", List.of(BuiltinTypes.STRING)), "shell.run/1");
+        assertNotNull(KofShell.staticCall("run",
+                List.of(BuiltinTypes.STRING, KofShell.STRING_LIST)), "shell.run/2");
+        assertNotNull(KofShell.staticCall("pipeline",
+                List.of(KofShell.STRING_LIST_LIST)), "shell.pipeline");
+        assertNotNull(KofShell.staticCall("ok", List.of(KofProcess.RESULT)), "shell.ok");
+        assertNull(KofShell.staticCall("ok", List.of(BuiltinTypes.STRING)), "shell.ok(String)");
+        assertNull(KofShell.staticCall("cmd", List.of(BuiltinTypes.STRING)), "shell.cmd/1");
+        assertNull(KofShell.staticCall("nope", List.of()), "shell.?");
+        assertEquals(KofShell.functions(), StdCatalog.membersOf("shell"), "catálogo shell");
     }
 
     @Test

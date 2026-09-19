@@ -43,6 +43,7 @@ public final class StdCatalog {
         m.put("db", KofDb.functions());
         m.put("cache", KofCache.functions());
         m.put("process", KofProcess.functions());
+        m.put("shell", KofShell.functions());
         m.putAll(KofSecurity.functions());
         // fatia 3: receiver-typed com dispatch próprio (MemberCallNamespaces)
         m.put("json", List.of("encode", "decode"));

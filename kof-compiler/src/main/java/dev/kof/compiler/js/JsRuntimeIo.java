@@ -65,6 +65,12 @@ public final class JsRuntimeIo {
                 };
             }
 
+            // kof.shell (Stage 2 / 2.2): argv builder — [program] + args, sempre
+            // lista, nunca string concatenada (classe de segurança do sh -c).
+            export function kofShellArgv(program, args) {
+                return [program, ...args];
+            }
+
             // §239 (JS): String.format delega ao host (java.lang.String.format ->
             // paridade byte-a-byte). Sem kof_platform (browser) o Proxy acima da
             // tabela lança erro honesto — nunca um resultado errado em silêncio (R6/R7).

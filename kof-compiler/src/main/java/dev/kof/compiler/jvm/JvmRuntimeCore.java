@@ -349,6 +349,65 @@ public final class JvmRuntimeCore {
                     return p != null && p.isAlive();
                 }
 
+                // ── kof.shell (Stage 2 / 2.2) — sugar over the above ──────
+
+                public static java.util.ArrayList<String> kof_shell_argv(String program, List<String> args) {
+                    java.util.ArrayList<String> argv = new java.util.ArrayList<>();
+                    argv.add(program);
+                    if (args != null) argv.addAll(args);
+                    return argv;
+                }
+
+                public static ProcessResult kof_shell_pipeline(List<List<String>> stages) {
+                    try {
+                        if (stages == null || stages.isEmpty()) {
+                            return new ProcessResult("", "kof_shell_pipeline: no stages", -1);
+                        }
+                        java.util.List<Process> procs = new java.util.ArrayList<>();
+                        for (List<String> argv : stages) {
+                            if (argv == null || argv.isEmpty()) {
+                                return new ProcessResult("", "kof_shell_pipeline: empty stage", -1);
+                            }
+                            ProcessBuilder pb = new ProcessBuilder(argv).redirectErrorStream(false);
+                            pb.redirectInput(procs.isEmpty()
+                                    ? java.lang.ProcessBuilder.Redirect.from(new java.io.File("/dev/null"))
+                                    : java.lang.ProcessBuilder.Redirect.PIPE);
+                            procs.add(pb.start());
+                        }
+                        java.util.List<Thread> pumps = new java.util.ArrayList<>();
+                        for (int i = 1; i < procs.size(); i++) {
+                            final Process prev = procs.get(i - 1);
+                            final Process next = procs.get(i);
+                            Thread pump = new Thread(() -> {
+                                try (java.io.InputStream in = prev.getInputStream();
+                                     java.io.OutputStream out = next.getOutputStream()) {
+                                    in.transferTo(out);
+                                } catch (Exception ignored) {
+                                }
+                            });
+                            pump.setDaemon(true);
+                            pumps.add(pump);
+                            pump.start();
+                        }
+                        final Process last = procs.get(procs.size() - 1);
+                        java.util.concurrent.FutureTask<String> outTask = new java.util.concurrent.FutureTask<>(
+                                () -> new String(last.getInputStream().readAllBytes(),
+                                        java.nio.charset.StandardCharsets.UTF_8));
+                        java.util.concurrent.FutureTask<String> errTask = new java.util.concurrent.FutureTask<>(
+                                () -> new String(last.getErrorStream().readAllBytes(),
+                                        java.nio.charset.StandardCharsets.UTF_8));
+                        kofStartTask(outTask);
+                        kofStartTask(errTask);
+                        int code = last.waitFor();
+                        for (Thread pump : pumps) pump.join(5000);
+                        for (Process p : procs) if (p.isAlive()) p.destroy();
+                        return new ProcessResult(outTask.get(), errTask.get(), code);
+                    } catch (Exception e) {
+                        return new ProcessResult("", e.getMessage() == null
+                                ? e.getClass().getSimpleName() : e.getMessage(), -1);
+                    }
+                }
+
 """;
     }
 }
