@@ -95,7 +95,15 @@ final class KofJsFfiMarshal {
             if (c == '(') {
                 n++;
                 int j = cur + 1, depth = 1;
-                while (depth > 0) { char x = sig.charAt(j); if (x == '(') depth++; else if (x == ')') depth--; j++; }
+                while (depth > 0) {
+                    char x = sig.charAt(j);
+                    if (x == '(') {
+                        depth++;
+                    } else if (x == ')') {
+                        depth--;
+                    }
+                    j++;
+                }
                 cur = j;
             } else {
                 n++;

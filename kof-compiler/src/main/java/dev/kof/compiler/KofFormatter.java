@@ -341,20 +341,6 @@ public final class KofFormatter {
         return formatExpr(expr, 0);
     }
 
-    /**
-     * #52 — impressão com reconstrução de agrupamento: parênteses são
-     * re-inseridos onde a árvore os exige. A regra espelha EXATAMENTE o
-     * parser (ExpressionParser.parseBinary: left = parseUnary, right =
-     * parseBinary(prec+1) → operadores ESQUERDA-associativos): um filho
-     * binário só é re-parseado sem parênteses quando sua precedência
-     * respeita o contexto (left: prec >= prec do pai; right: prec > prec
-     * do pai). Operadores unary/calls/if-expr/lambda são atômicos no
-     * nível de parseUnary/parsePostfix (precedência 9) — o parser os
-     * consome inteiros nesse nível, então nunca precisam de parênteses
-     * em si, mas seus operandos/branches são expressões completas.
-     *
-     * @param minPrec precedência mínima p/ imprimir sem parênteses
-     */
      // #447/§305: LiteralExpr.value() chega ja DECODIFICADO pelo lexer
      // (readEscape resolve n t r \\ ' " 0 uXXXX). Reimprimir cru quebra o
      // round-trip ('\\' vira '\' = LEX004; '\t' vira TAB mentido). Re-emite
@@ -479,6 +465,21 @@ public final class KofFormatter {
         }
         return expr.toString();
     }
+
+    /**
+     * #52 — impressão com reconstrução de agrupamento: parênteses são
+     * re-inseridos onde a árvore os exige. A regra espelha EXATAMENTE o
+     * parser (ExpressionParser.parseBinary: left = parseUnary, right =
+     * parseBinary(prec+1) → operadores ESQUERDA-associativos): um filho
+     * binário só é re-parseado sem parênteses quando sua precedência
+     * respeita o contexto (left: prec >= prec do pai; right: prec > prec
+     * do pai). Operadores unary/calls/if-expr/lambda são atômicos no
+     * nível de parseUnary/parsePostfix (precedência 9) — o parser os
+     * consome inteiros nesse nível, então nunca precisam de parênteses
+     * em si, mas seus operandos/branches são expressões completas.
+     *
+     * @param minPrec precedência mínima p/ imprimir sem parênteses
+     */
 
     /** Espelho de ExpressionParser.precedence (fonte: o parser, não a memória). */
     static int precOf(String op) {

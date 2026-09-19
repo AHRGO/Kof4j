@@ -63,7 +63,7 @@ public final class JvmOpCollections {
             } else if ("kof_list_reduce".equals(kc.methodName()) && isPrimitiveType(kc.returnType())) {
                 emitUnboxIfPrimitive(mv, kc.returnType());
             } else if ("kof_list_reduce".equals(kc.methodName())
-                    && kc.returnType() instanceof Type.ClassType rt && !Type.UnknownType.UNKNOWN.equals(rt)) {
+                    && kc.returnType() instanceof Type.ClassType rt) {
                 // #394: reduce de String (ou qualquer classe) num método de
                 // retorno declarado — o generic :35 exclui String (outros
                 // hoists dependem disso), e o `areturn` recebia o Object cru
