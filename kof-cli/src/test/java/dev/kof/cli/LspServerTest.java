@@ -15,6 +15,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -25,7 +26,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class LspServerTest {
 
-    private static final String URI = "file:///tmp/main.kf";
+    private static final String URI = "file:///kof-lsp-selftest/a.kf";
+    // (antes /tmp/main.kf: o walk-6 do irmao pegava os scraps .kf alheios
+    // de /tmp — determinismo de teste = URI num caminho que nunca exists)
 
     private static byte[] frame(String json) {
         byte[] body = json.getBytes(StandardCharsets.UTF_8);
@@ -137,6 +140,111 @@ class LspServerTest {
         for (Object e : edits) {
             assertEquals("total", ((Map<?, ?>) e).get("newText"));
         }
+    }
+
+    /** LSP-A (D-POLL-19): rename cruza os arquivos do projeto (mesma convenção dos references). */
+    @Test
+    void renameCrossesProjectFiles(@TempDir Path dir) throws Exception {
+        String lib = "Int helper(Int x) { return x * 2 }\n";
+        String app = "main() { println(helper(21) + helper(1)) }\n";
+        Files.writeString(dir.resolve("lib.kf"), lib);
+        Path appFile = dir.resolve("app.kf");
+        Files.writeString(appFile, app);
+        String appUri = appFile.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        int col = app.indexOf("helper") + 2;
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"textDocument/rename\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\"},"
+                + "\"position\":{\"line\":0,\"character\":" + col + "},\"newName\":\"calc\"}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> res = (Map<String, Object>) byId(
+                messages(out.toString(StandardCharsets.UTF_8)), 2).get("result");
+        assertNotNull(res, "rename cross-file nao pode ser null");
+        java.util.List<Map<String, Object>> dc =
+                (java.util.List<Map<String, Object>>) res.get("documentChanges");
+        assertEquals(2, dc.size(), "app (2 usos) + lib (1 declaracao)");
+        java.util.Map<String, Integer> perDoc = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> de : dc) {
+            String u = String.valueOf(((Map<?, ?>) de.get("textDocument")).get("uri"));
+            int n = ((java.util.List<?>) de.get("edits")).size();
+            perDoc.put(u.endsWith("lib.kf") ? "lib" : "app", n);
+            for (Object e : (java.util.List<Object>) de.get("edits")) {
+                assertEquals("calc", ((Map<?, ?>) e).get("newText"));
+            }
+        }
+        assertEquals(2, perDoc.get("app"), "dois usos no buffer");
+        assertEquals(1, perDoc.get("lib"), "uma ocorrencia no irmao em disco");
+        // aplicando os edits manualmente: nenhum "helper" sobrevive nos dois arquivos
+        String appliedApp = applyEdits(app, dc, appUri);
+        String appliedLib = applyEdits(lib, dc, dir.resolve("lib.kf").toAbsolutePath().toUri().toString());
+        assertFalse(appliedApp.contains("helper"), appliedApp);
+        assertFalse(appliedLib.contains("helper"), appliedLib);
+        assertTrue(appliedLib.contains("Int calc(Int x)"), "declaracao renomeada: " + appliedLib);
+    }
+
+    /** LSP-A: keyword e namespace da stdlib nunca sao renomeaveis (guarda honesta). */
+    @Test
+    void renameRefusesKeywordsAndStdlibNamespaces(@TempDir Path dir) throws Exception {
+        String app = "main() { spawn go() }\nString db = \"x\"\n";
+        String reqTpl = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"textDocument/rename\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + URI + "\"},"
+                + "\"position\":{\"line\":0,\"character\":%d},\"newName\":\"z\"}}";
+        for (int col : new int[]{app.indexOf("spawn") + 2}) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            new LspServer(new ByteArrayInputStream(all(
+                    frame("{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                            + "\"textDocument\":{\"uri\":\"" + URI + "\",\"text\":\""
+                            + Json.escape(app) + "\"}}}"),
+                    frame(String.format(reqTpl, col)))), out).run();
+            Map<String, Object> resp = byId(messages(out.toString(StandardCharsets.UTF_8)), 2);
+            assertNull(resp.get("result"), "rename de keyword deve ser null honesto (col " + col + ")");
+        }
+        // 'go' e um nome comum: renomeia (2 ocorrencias no proprio buffer)
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(
+                frame("{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                        + "\"textDocument\":{\"uri\":\"" + URI + "\",\"text\":\"" + Json.escape(app) + "\"}}}"),
+                frame(String.format(reqTpl, app.indexOf("go") + 1)))), out).run();
+        Map<String, Object> res = (Map<String, Object>) byId(
+                messages(out.toString(StandardCharsets.UTF_8)), 2).get("result");
+        assertNotNull(res, "nome comum renomeia");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static String applyEdits(String text, java.util.List<Map<String, Object>> dc, String wantUri) {
+        StringBuilder sb = new StringBuilder(text);
+        for (Map<String, Object> de : dc) {
+            String u = String.valueOf(((Map<?, ?>) de.get("textDocument")).get("uri"));
+            if (!u.equals(wantUri)) continue;
+            java.util.List<Map<String, Object>> edits = (java.util.List<Map<String, Object>>) de.get("edits");
+            edits.sort((a, b) -> Integer.compare(start(a, text), start(b, text)));
+            for (int k = edits.size() - 1; k >= 0; k--) {
+                Map<String, Object> e = edits.get(k);
+                int st = start(e, text);
+                int en = end(e, text);
+                sb.replace(st, en, String.valueOf(e.get("newText")));
+            }
+        }
+        return sb.toString();
+    }
+
+    private static int start(Map<String, Object> edit, String text) {
+        return offsetIn(text, (Map<?, ?>) edit.get("range"), true);
+    }
+
+    private static int end(Map<String, Object> edit, String text) {
+        return offsetIn(text, (Map<?, ?>) edit.get("range"), false);
+    }
+
+    private static int offsetIn(String text, Map<?, ?> range, boolean start) {
+        Map<?, ?> pt = (Map<?, ?>) range.get(start ? "start" : "end");
+        int line = ((Number) pt.get("line")).intValue();
+        int ch = ((Number) pt.get("character")).intValue();
+        int off = 0;
+        for (int i = 0; i < line; i++) off = text.indexOf('\n', off) + 1;
+        return off + ch;
     }
 
     @Test

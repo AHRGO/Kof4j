@@ -44,10 +44,25 @@ final class LspProject {
     private static void walkInto(java.util.Set<Path> out, Path base) {
         Path dir = base.getParent();
         if (dir == null) return;
-        try (var stream = Files.walk(dir, 6)) {
+        // Arvore de projeto NUNCA e o diretorio temporario nem a raiz do FS:
+        // sob /tmp vivem scraps de outros jobs (medido 19/09: 485 .kf de
+        // playgrounds alheios em /tmp) e um arquivo .kf solto la nao define
+        // projeto. Nesses casos só o nivel imediato conta (profundidade 1).
+        int depth = isScratchDir(dir) ? 1 : 6;
+        try (var stream = Files.walk(dir, depth)) {
             stream.filter(p -> p.getFileName().toString().endsWith(".kf")).forEach(out::add);
         } catch (Exception e) {
             // arvore ilegivel = nao contribui (nunca chute - R6)
+        }
+    }
+
+    private static boolean isScratchDir(Path dir) {
+        Path tmp = Path.of(System.getProperty("java.io.tmpdir"));
+        if (dir.equals(tmp)) return true;
+        try {
+            return dir.toRealPath().equals(tmp.toRealPath());
+        } catch (Exception e) {
+            return false;
         }
     }
 
