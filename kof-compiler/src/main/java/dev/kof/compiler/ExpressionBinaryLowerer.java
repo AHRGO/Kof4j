@@ -137,12 +137,6 @@ if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
                 ops, owner, localIdx, locals);
     }
     localIdx = ExpressionLowerer.emitExpression(driver, bin.left(), ops, owner, localIdx, locals);
-    Type targetType = Type.UnknownType.UNKNOWN;
-    if (bin.right() instanceof IdentifierExpr ie) {
-        // toType resolve imports ("View" + import → android.view.View)
-        targetType = CompilerTypes.toType(ie.name(), driver.currentUnit);
-    }
-    Type fromCastType = ExpressionTyper.inferExprType(driver, bin.left(), locals);
     // UIW050: handle de UI/mídia APAGA para int no runtime (JvmTypeMapper
     // .toDescriptor → "I"). `label as Int` é IDENTITY, não checkcast — um
     // CHECKCAST sobre um valor int é inválido e derrubava o verifier
