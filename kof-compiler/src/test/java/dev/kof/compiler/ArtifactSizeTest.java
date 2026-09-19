@@ -38,8 +38,17 @@ class ArtifactSizeTest {
     // — box/unbox/box_to_string/box_equals + soft-unbox) e o walker de Map no
     // kof_map_to_string/kof_json_encode_map entraram no conjunto alcançável do
     // hello via println(Object)/collections: 32.520→37.320B, 37→44 syms.
+    // G-6(a)/§260(3) (19/09, lane .18 por ordem da mantenedora "assume
+    // native-multiarch e termina"): o gatilho de free-list-exausta virou
+    // call kof_gc_collect_now DENTRO de kof_alloc — a máquina mark/sweep
+    // inteira passa a ser alcançável de TODO binário que aloca: 44→84 syms
+    // (+40: mark/try_mark/transitive/sweep/collect/collect_now + aux).
+    // Bytes permanecem DENTRO do gate +5% (medido). O §260(3) previa +19.7%
+    // à época do trigger bruto; com o blanket spill no collect_now o salto
+    // de símbolos é o link inevitável do coletor — "não é impeditivo", é a
+    // decisão tamanho/valor documentada (matriz de aceite G-6 item 4).
     private static final long HELLO_X86_BYTES = 37_320L;
-    private static final int HELLO_X86_SYMS = 44;
+    private static final int HELLO_X86_SYMS = 84;
     // Pós-#104 (13/09): o shim globalThis.kof_platform do core JS (erro claro
     // em vez de ReferenceError fora do GraalJS) entrou no préâmbulo always —
     // o hello carrega ~827B a mais. Re-medido neste host: 6.873 → 7.700.

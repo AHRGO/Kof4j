@@ -263,9 +263,28 @@ public final class RuntimeGc {
             # enxergue ponteiros vivos em %rbx/%r12-%r15/%rbp do caller
             # (o mark so varre a stack -- registrador puro era coletado:
             # ex.: 2.º alloc do kof_spawn_handle_new perdia o handle em %rbx).
+            # G-6(a) (2.1.x native-multiarch, §260 causa-2): o DERRAME passa a
+            # ser GERAL — os 9 caller-saved (rax,rcx,rdx,rsi,rdi,r8-r11) tambem
+            # viram raizes visiveis na pilha durante o mark. Era exatamente o
+            # buraco medido: temporarios vivos do backend no call-site do
+            # kof_alloc (parse/toFloat, bloco do handle no spawn path) em
+            # registrador -> mark nao via -> sweep liberava bloco VIVO -> 139.
+            # Custo: 9 push/pop por coletar (nao por alloc). Um inteiro que
+            # por acaso imita endereco de bloco so SUPERRETEN (try_mark confere
+            # alinhamento, faixa do heap e pertencimento a gc-list) — nunca
+            # corrompe.
             .globl kof_gc_collect_now
             .type kof_gc_collect_now, @function
             kof_gc_collect_now:
+                pushq %rax
+                pushq %rcx
+                pushq %rdx
+                pushq %rsi
+                pushq %rdi
+                pushq %r8
+                pushq %r9
+                pushq %r10
+                pushq %r11
                 pushq %rbx
                 pushq %r12
                 pushq %r13
@@ -280,6 +299,15 @@ public final class RuntimeGc {
                 popq %r13
                 popq %r12
                 popq %rbx
+                popq %r11
+                popq %r10
+                popq %r9
+                popq %r8
+                popq %rdi
+                popq %rsi
+                popq %rdx
+                popq %rcx
+                popq %rax
                 ret
 
             .globl kof_gc_collect

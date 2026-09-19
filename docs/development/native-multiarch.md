@@ -178,16 +178,23 @@
 > effectively satisfied for the collector too; a dedicated G-5 aarch step is no
 > longer a separate face.
 > 
-> **G-6 x86 (OPEN 16/09 — frente 2 D-DEV-PRIORITY, §260; causa (1) CLOSED 16/09 by G-6b below):** the x86 collector
+> **G-6 x86 (CLOSED 19/09 — frente 2 D-DEV-PRIORITY, §260; gatilho LIGADO — option (A) do §260, mantenedora autorizou e ordenou "assume native-multiarch e termina"; causas (1)+(2) CLOSED 16/09 por G-6b/parser):** the x86 collector
 > exists and is correct (`kof_gc_mark`+`kof_gc_sweep`+`kof_gc_collect_now`), but
 > the auto-collect **trigger** inside `kof_alloc` was measured UNSOUND for the
 > x86 calling convention: the backend keeps temporaries in **caller-saved
 > registers** at call sites (proved: `KofStringParseTest` red /
 > `KofSupervisorE2ETest` exit 139 SIGSEGV with the trigger, green without; full
 > measurements in `known-bugs.md §260`). riscv needed no stack map because its
-> value-stack IS the machine stack (RtB44:15-20); x86 requires the real "root
-> map per frame" of the D-DEV-PRIORITY text. Two honest options (scope: the
-> compiler lane):
+> value-stack IS the machine stack (RtB44:15-20); x86 was BELIEVED to require
+> the real "root map per frame" of the D-DEV-PRIORITY text. Two honest options
+> (scope: the compiler lane):
+> **19/09 correction — the root-map premise did NOT survive the §260 audit:**
+> the reds were the ad-hoc trigger block (it clobbered r10-r15 across the
+> collect+restart and the spawn-path register leak) plus a latent parser bug
+> (r8/r9 leak, `e667791f`), not the calling convention per se. The shipped
+> landing preserves every caller register at the collect depth, so no
+> per-site spill and no stack-map table were needed. See the LANDED note
+> below (acceptance matrix 1-5 all measured green).
 > **G-6b (the root-cause-(1) half) DONE 16/09, trigger still OFF:** gdb-proved
 > that with only the frame-current scan, live Strings in EXTERNAL frames (main's
 > stack while a helper allocates) were invisible → sweep freed live memory
@@ -200,26 +207,42 @@
 > register at the `kof_alloc` call-site) → the trigger stays OFF (FP parity is
 > freeze rule 5) until (a) lands.
 >
-> Remaining face — **(a) minimal, chosen path — spill-per-live-ref at alloc sites:** the x86
->   backend, for every `call kof_alloc`, first pushes (or already holds in the
->   frame) every live heap reference so the conservative mark sees them on the
->   stack; then the `.Lkof_alloc_maybe_gc` trigger can call `collect_now`
->   gated on `kof_spawn_count==0` (workers' stacks stay un-scanned — same
->   sound boundary as today). Cost audit mandatory: `ArtifactSizeTest` grew
->   32520→38928B just from linking the GC machinery (+19.7% > baseline+5%) —
->   the link cost is unavoidable once the collector is live (it is the POINT
->   of the feature); the per-site spill cost must stay within the 5% gate or
->   the baseline is re-baselined with the maintainer's sign-off, never
->   silently.
-> - **(b) full stack-map:** per-call-site register/spill map emitted into a
->   `.rodata` table consumed by `kof_gc_mark`; heavier, compiler-side IR work;
->   only if (a) proves too coarse.
-> Acceptance (Q3 matrix, not only happy path): (1) cap test green
-> (`gcAutoCollectFitsUnderMemoryCap` pattern, main-only); (2) the two §260
-> repros green (spawn/supervisor + parse native); (3) cross parity riscv/aarch
-> unchanged; (4) `ArtifactSizeTest` decision documented (rebaseline-with-cause
-> or gate held); (5) multi-thread: gate = exact old behavior, face catalogued
-> (worker-stack scan is the NEXT step, never silent).
+> **LANDED 19/09 — shipped design (NOT (a) spill-per-live-ref, and (b) never
+> needed):** the §260 audit proved cause-(2) was an ARTIFACT of the 16/09
+> ad-hoc trigger block (incomplete register preservation around
+> `collect_now`+search restart) plus a latent parser bug (r8/r9 leak, fixed
+> `e667791f`). The landing therefore does the sound minimal thing at the
+> COLLECTOR side, no per-site backend changes: `.Lkof_alloc_maybe_gc`
+> (RuntimeMemory) fires `call kof_gc_collect_now` exactly ONCE per program
+> (flag slot `8(%rsp)`), gated on `kof_spawn_count==0`, and restarts the
+> free-list search from a NULL cursor (the "temporario solto" hazard that
+> killed the 16/09 attempt is structurally gone); `kof_gc_collect_now`
+> (RuntimeGc) blanket-spills ALL 15 GPRs around mark+sweep, so every
+> call-site live reference IS on the stack the conservative mark scans
+> (false-positive ints only over-retain — try_mark validates alignment +
+> heap range + gc-list). `incq kof_spawn_count` moved to the ENTRY of
+> `kof_spawn_handle_new` (it sat after `pthread_create`, leaving a window
+> where a worker's first alloc could fire the trigger while only the
+> un-scanned worker stack held its live result-box — measured:
+> `spawnWorkerThrowIsolated*` lost `s1=42`→`0` before the hoist). Counter is
+> CUMULATIVE (no decq): after any spawn begins, auto-collect stays off
+> forever and the program behaves EXACTLY as before (mmap growth) — the
+> worker-stack scan is the catalogued NEXT face, never silent.
+> Acceptance matrix — all 5 measured green: (1) `KofGcE2ETest.gcAutoCollect
+> FitsUnderMemoryCap` green (200k×`"s"+i` under `ulimit -v 256M`: exit 0 —
+> §260(1) as an IN-REPO guard, was a one-off script); (2) the two §260 repros
+> green (`KofStringParseTest` 6/8+2skip clean, `KofSupervisorE2ETest` 16/16 —
+> no 139); (3) full suite **2343/0F/0E** incl. cross riscv/aarch under qemu —
+> trigger is x86-only, cross untouched; (4) `ArtifactSizeTest.helloX86`
+> re-baselined 44→**84 syms WITH CAUSE documented in the constant's comment**
+> (collector link is the point of the feature; precedent riscv G-4 18→24) —
+> BYTES stayed inside the +5% gate (37.320B baseline held, the feared +19.7%
+> did not reproduce with the shipped form); (5) MT = old behavior + this
+> face catalogued.
+> - **(b) full stack-map / spill-per-live-ref:** NOT executed — measured
+>   unnecessary for the main-only contract; they return as the required
+>   machinery ONLY if the worker-stack-scan face (auto-collect with live
+>   threads) is ever scheduled.
 Each step: commit with the complete cross suite green + DOING.md on the line.
 > Do NOT mix with S-5-x86/root_end (bugfix queue). G-0/G-1/G-2 move ahead
 > without root_end; **G-3 also advanced** (emits its own riscv `.L`-local

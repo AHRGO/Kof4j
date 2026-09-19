@@ -21,12 +21,15 @@ import static org.junit.jupiter.api.Assertions.*;
  *      objetos transitórios — o comportamento é indistinguível (não vemos
  *      OOM; o alloc com free-list já absorve muito).
  *
- * NOTA: o collect automático no alloc (achegar antes de mmap quando a free
- * list esgota) fica pendente — requer safe-points (mapa de raízes por frame)
- * porque chamado de dentro do alloc a stack nao o ponteiro do bloco livre
- * AINDA nao foi colocado no retorno — mark conservador nao ve, sweep
- * enfileira duas vezes (corrupcao). kof_gc_collect_now existe para o
- * programador chamamo-lo de codigo explicito (runtime.emulated/gg).
+ * NOTA (G-6(a) 19/09): o collect automatico no alloc esta LIGADO — o gatilho
+ * de free-list exausta chama {@code kof_gc_collect_now} exatamente 1x por
+ * programa (flag no frame), com gate {@code kof_spawn_count==0} (contador
+ * cumulativo, incq na entrada de handle_new) e blanket-spill dos 15 GPRs no
+ * collect, de modo que o mark conservador ve todo temporario vivo em
+ * registrador no call-site. Multithread permanece no comportamento antigo
+ * (sem auto-collect; face worker-stack-scan catalogada em
+ * docs/development/native-multiarch.md §G-6 e known-bugs §260).
+ * {@code kof_gc_collect_now} continua exposto para chamada explicita.
  */
 class KofGcE2ETest {
 
@@ -46,6 +49,46 @@ class KofGcE2ETest {
             int ec = p.waitFor();
             assertEquals(0, ec, "exit, output: " + out);
             assertEquals(expected, out, "output");
+        } catch (InterruptedException e) {
+            throw new IOException(e);
+        }
+    }
+
+    @Test
+    void gcAutoCollectFitsUnderMemoryCap(@TempDir Path tempDir) throws IOException {
+        // G-6(a) §260(1) — the free-list-exhaustion trigger (gate
+        // kof_spawn_count==0, collect_now with the 15-GPR blanket spill)
+        // must RECYCLE dead strings instead of mmapping until the cap.
+        // Measured history (doc §260, 16/09): without the trigger this loop
+        // peaks ~1.2GB and exits 1 under `ulimit -v 256M`; with it, ~1.5MB
+        // and exit 0. The cap is applied through bash so the guard is the
+        // memory limit itself, not an output heuristic.
+        Path src = tempDir.resolve("Main.kf");
+        Files.writeString(src, """
+            main() {
+                var acc = 0
+                var i = 0
+                while (i < 200000) {
+                    var s = "s" + i
+                    acc = acc + s.length()
+                    i = i + 1
+                }
+                println(acc)
+            }
+            """);
+        Path outDir = tempDir.resolve("out");
+        CompilationResult result = driver.compile(src, outDir, Target.NATIVE);
+        assertTrue(result.success(), "compile: " + result.diagnostics().getDiagnostics());
+        Path bin = outDir.resolve("Default/Main");
+        try {
+            Process p = new ProcessBuilder("bash", "-c",
+                    "ulimit -v 262144; exec '" + bin + "'")
+                    .redirectErrorStream(true).start();
+            String out = new String(p.getInputStream().readAllBytes(),
+                    java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+            int ec = p.waitFor();
+            assertEquals(0, ec, "auto-collect must fit 256MB cap, output: " + out);
+            assertEquals("1288890", out, "output");
         } catch (InterruptedException e) {
             throw new IOException(e);
         }

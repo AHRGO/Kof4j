@@ -119,17 +119,29 @@ public final class RuntimeMemory {
                 movq 8(%r13), %r13
                 jmp .Lkof_alloc_search
             .Lkof_alloc_maybe_gc:
-                jmp .Lkof_alloc_mmap
-                # GC auto-collect: mark+sweep real existe (kof_gc_collect_now),
-                # mas auto-invogar DENTRO de kof_alloc é inseguro:
-                # kof_alloc tem um ponteiro NAO ainda na stack (o ponteiro do
-                # bloco livre) -- a mark conservadora nao o ve, o sweep o
-                # enfileira na free list e o alloc o reusa DUPLO. O hang
-                # documentado em status.md era exatamente isso. Fechar GC
-                # completamente exige safe-points: (a) inserção de collect
-                # antes de toda kof_alloc em loop, ou (b) geração de mapa de
-                # raízes por frame. Fora do escopo aqui: o comportamento
-                # correto atual é mmap (mais memória, sem corrupção).
+                # G-6(a) (native-multiarch, §260): free-list exausta -> UMA
+                # passada de collect_now antes do mmap (flag 8(%rsp), ja
+                # zerada no prologo). Antes o trigger era INSOND (temporario
+                # vivo em caller-saved invisivel ao mark -> sweep liberava
+                # bloco vivo -> SIGSEGV 139 medido em KofStringParse/
+                # supervisor). Agora kof_gc_collect_now derrama os 15 GPRs
+                # (blanket spill) e o cursor de busca aqui e NULL (falhou) —
+                # nada vivo em registrador nosso alem dos salvos. Gate
+                # kof_spawn_count==0 (contador CUMULATIVO — apos qualquer
+                # spawn o auto-collect fica desligado: pilhas de worker nao
+                # sao varridas; face "scan de stack de worker" catalogada,
+                # nunca silenciosa). Sem gate/flag o hang antigo (status.md)
+                # voltava: collect reentrante com cursor vivo.
+                cmpq $0, 8(%rsp)
+                jne .Lkof_alloc_mmap
+                cmpq $0, kof_spawn_count(%rip)
+                jne .Lkof_alloc_mmap
+                movq $1, 8(%rsp)
+                call kof_gc_collect_now
+                movq kof_free_head(%rip), %r13
+                xorq %r14, %r14
+                movq $1048576, %r11
+                jmp .Lkof_alloc_search
             .Lkof_alloc_maybe_gc_skip:
                 jmp .Lkof_alloc_mmap
             .Lkof_alloc_mmap:

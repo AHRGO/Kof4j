@@ -199,6 +199,17 @@ public final class RuntimeConcurrency {
                 subq $24, %rsp
                 movq %rdi, %r13
                 movl %esi, %r14d
+                # G-6(a)/§260: fecha o gate do auto-collect ANTES de qualquer
+                # alloc do caminho de spawn. O contador e CUMULATIVO e o unico
+                # leitor e o gatilho em .Lkof_alloc_maybe_gc (RuntimeMemory).
+                # Se o incq ficar so no .Lkof_spawn_ok (pos-pthread_create),
+                # o worker pode chamar kof_alloc nesse intervalo com count
+                # ainda 0: o collect-dispara varre sem a stack do worker (face
+                # catalogada NUNCA-silencioso) e libera o result-box vivo do
+                # proprio worker -- medido: spawnWorkerThrowIsolated* nativo
+                # perdia s1=42 -> s1=0 (19/09). Com o incq na entrada, spawn
+                # em andamento ou passado nunca ve auto-collect.
+                incq kof_spawn_count(%rip)
                 movl $56, %edi                  # §117: 32=cancelEntry, 40=exc; §286: 48=pending
                 call kof_alloc
                 movq %rax, %rbx                 # handle
@@ -256,7 +267,8 @@ public final class RuntimeConcurrency {
                 movq %rbx, 8(%rax)              # no->handle
                 movq %rdx, 0(%rax)              # no->next
                 movq %rax, (%rcx)
-                incq kof_spawn_count(%rip)
+                # G-6(a): incq movido p/ entrada de kof_spawn_handle_new —
+                # aqui era tarde (janela de alloc do worker com gate aberto).
             .Lkof_spawn_next:
                 addq $24, %rsp
                 movq %rbx, %rax                 # retorna handle

@@ -89,8 +89,8 @@ domínio novo. **Este estágio fecha antes de qualquer Tier 6+ (R12).**
 | # | Item | Status | Dono | Prova / nota |
 |---|------|--------|------|--------------|
 | 1.2.1 | GC no riscv64 | ✅ | lane native | `356f33b9` |
-| 1.2.2 | GC no x86_64 — decomposto G-1..G-5 | 🟡 | lane native | `docs/development/native-multiarch.md`; **auto-collect desabilitado** por exigir safe-points (`status.md` #1); `KofGcE2ETest` 3/3 — **D1-A ✅ 19/09**: re-baseline auto-collect APROVADO (exec = lane nativa) |
-| 1.2.3 | Sign-off de re-baseline do auto-collect x86 | ⛔ | **mantenedora** | §260 G-6(a) re-medido — o gate morde; precisa de decisão de re-baseline da mantenedora |
+| 1.2.2 | GC no x86_64 — decomposto G-1..G-5 + G-6 | ✅ | lane native; exec pousado por `.18` sob ordem da mantenedora | `docs/development/native-multiarch.md`; **auto-collect LIGADO (G-6(a) 19/09, opção D1-A)**: o gatilho de free-list exausta chama `collect_now` 1x por programa (blanket-spill 15 GPRs; gate `spawn_count==0` com `incq` movido p/ a entrada de `kof_spawn_handle_new`); §260 FECHADO; cap-test no repo `gcAutoCollectFitsUnderMemoryCap`; `KofGcE2ETest` 4/4; face MT worker-stack catalogada; hello 44→84 syms re-baselined com causa (bytes dentro do gate +5%) |
+| 1.2.3 | Sign-off de re-baseline do auto-collect x86 | ✅ | mantenedora | D1-A DECIDIDO 19/09; EXECUTADO 19/09 (`.18`, ordem da mantenedora): hello 44→84 syms re-baselined COM causa no comentário, bytes dentro do gate +5%; §260 FECHADO; gatilho ligado (G-6(a)) com MT = comportamento antigo |
 
 ### 1.3 Event-loop / async real no JS
 

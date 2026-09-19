@@ -174,16 +174,23 @@
 > sweep+collect** (`NativeRiscvGcSweepTest` roda as 2 arches), então o G-5 está
 > efetivamente satisfeito para o coletor também.
 
-> **G-6 x86 (ABERTA 16/09 — frente 2 D-DEV-PRIORITY, §260; causa (1) FECHADA 16/09 pela G-6b abaixo):** o coletor x86
+> **G-6 x86 (FECHADA 19/09 — frente 2 D-DEV-PRIORITY, §260; gatilho LIGADO — opção (A) do §260, a mantenedora autorizou e ordenou "assume native-multiarch e termina"):** o coletor x86
 > existe e está correto (`kof_gc_mark`+`kof_gc_sweep`+`kof_gc_collect_now`),
 > mas o **gatilho** de auto-collect dentro do `kof_alloc` foi MEDIDO INSANO
 > para a convenção x86: o backend mantém temporários em **registradores
 > caller-saved** nos call-sites (provado: `KofStringParseTest` vermelho /
 > `KofSupervisorE2ETest` exit 139 SIGSEGV com o gatilho, verdes sem; medições
 > completas em `known-bugs.md §260`). O riscv não precisou de stack-map porque
-> lá a value-stack É a pilha de máquina (RtB44:15-20); o x86 exige o real
-> "mapa de raízes por frame" do texto da D-DEV-PRIORITY. Duas opções honestas
-> (escopo: a lane compiler):
+> lá a value-stack É a pilha de máquina (RtB44:15-20); acreditava-se que o x86
+> exigia o real "mapa de raízes por frame" do texto da D-DEV-PRIORITY. Duas
+> opções honestas (escopo: a lane compiler):
+> **Correção 19/09 — a premissa do root-map NÃO sobreviveu à auditoria do
+> §260:** os reds eram o bloco ad-hoc do gatilho (clobberava r10-r15 no
+> collect+restart) mais um bug latente do parser (vazamento de r8/r9,
+> corrigido em `e667791f`) — não a convenção de chamada em si. O landing
+> preserva TODOS os registradores de chamada na profundidade do collect, então
+> nem spill-per-site nem tabela de stack-map foram necessários. Ver a nota
+> LANDED abaixo (matriz de aceite 1-5 toda verde, medida).
 > **G-6b (a metade da causa-1) FEITA 16/09, gatilho ainda OFF:** provado a gdb
 > que com a varredura restrita ao frame corrente, Strings vivas nos frames
 > EXTERNOS (a pilha de main enquanto um helper aloca) ficavam invisíveis →
@@ -197,27 +204,42 @@
 > caller-saved no call-site do `kof_alloc`) → o gatilho fica OFF (paridade FP
 > é freeze rule 5) até a (a) fechar.
 >
-> Face restante — **(a) mínima, caminho escolhido — spill-per-live-ref nos call-sites de
->   alloc:** o backend x86, para cada `call kof_alloc`, empilha (ou já mantém
->   no frame) toda referência viva ao heap para que o mark conservador as veja
->   na pilha; então o gatilho `.Lkof_alloc_maybe_gc` pode chamar
->   `collect_now` com gate `kof_spawn_count==0` (as pilhas dos workers seguem
->   fora do escaneamento — mesma fronteira sã da hoje). Auditoria de custo
->   obrigatória: o `ArtifactSizeTest` inchou 32520→38928B só de linkar a
->   máquina do GC (+19,7% > baseline+5%) — o custo de link é inevitável quando
->   o coletor fica vivo (é o PONTO da feature); o custo do spill por site deve
->   ficar nos 5% do gate, senão a baseline é re-baselineada com o aval da
->   mantenedora, nunca em silêncio.
-> - **(b) stack-map completo:** mapa registrador/spill por call-site emitido
->   numa tabela `.rodata` consumida pelo `kof_gc_mark`; mais pesado, trabalho
->   de IR no compilador; só se (a) se provar grosseiro demais.
-> Aceitação (matriz Q3, não só happy path): (1) teste de cap verde (padrão
-> `gcAutoCollectFitsUnderMemoryCap`, main-only); (2) os dois repros do §260
-> verdes (spawn/supervisor + parse native); (3) paridade cross riscv/aarch
-> inalterada; (4) decisão do `ArtifactSizeTest` documentada (rebaseline com
-> causa ou gate segurado); (5) multi-thread: gate = comportamento exato de
-> antes, face catalogada (varredura da pilha do worker é o PRÓXIMO degrau,
-> nunca silencioso).
+> **LANDED 19/09 — desenho entregue (NÃO é (a) spill-per-live-ref, e (b) nunca
+> foi preciso):** a auditoria do §260 provou que a causa-(2) era ARTEFATO do
+> bloco ad-hoc de 16/09 (preservação incompleta de registradores em volta do
+> `collect_now`+restart da busca) mais um bug latente do parser (r8/r9,
+> `e667791f`). O landing faz o mínimo são no lado do COLETOR, sem tocar site a
+> site do backend: `.Lkof_alloc_maybe_gc` (RuntimeMemory) chama
+> `kof_gc_collect_now` exatamente UMA vez por programa (flag `8(%rsp)`), com
+> gate `kof_spawn_count==0`, e REINICIA a busca da free-list com cursor NULL
+> (o perigo de "temporario solto" que matou a tentativa de 16/09 desaparece
+> estruturalmente); `kof_gc_collect_now` (RuntimeGc) derrama os 15 GPRs antes
+> de mark+sweep, então toda referência viva de call-site ESTÁ na pilha que o
+> mark conservador varre (inteiros falso-positivos apenas SOBRE-retêm —
+> try_mark valida alinhamento + range do heap + pertença à gc-list). O
+> `incq kof_spawn_count` foi MOVIDO para a ENTRADA de `kof_spawn_handle_new`
+> (ficava pós-`pthread_create`, abrindo janela onde o primeiro alloc do worker
+> disparava o trigger com o result-box vivo só na pilha não-varrida do worker
+> — medido: `spawnWorkerThrowIsolated*` perdia `s1=42`→`0` antes do hoist).
+> O contador é CUMULATIVO (sem decq): depois que qualquer spawn começa, o
+> auto-collect fica OFF para sempre e o programa se comporta EXATAMENTE como
+> antes (crescimento por mmap) — a varredura da pilha do worker é o próximo
+> degrau CATALOGADO, nunca silencioso.
+> Matriz de aceite — 5/5 medida verde: (1) `KofGcE2ETest.gcAutoCollectFitsUnderMemoryCap`
+> verde (200k×`"s"+i` sob `ulimit -v 256M`: exit 0 — §260(1) agora como GUARD
+> no repo, era script one-off); (2) os dois repros §260 verdes
+> (`KofStringParseTest` limpo, `KofSupervisorE2ETest` 16/16 — sem 139);
+> (3) suíte completa **2343/0F/0E** incl. riscv/aarch sob qemu — o trigger é
+> x86-only, cross intocado; (4) `ArtifactSizeTest.helloX86` re-baselined
+> 44→**84 syms COM causa documentada no comentário da constante** (linkar o
+> coletor é o ponto da feature; precedente riscv G-4 18→24) — os BYTES
+> ficaram DENTRO do gate +5% (baseline 37.320B segurada; o +19,7% temido não
+> se reproduziu na forma entregue); (5) MT = comportamento antigo + face
+> catalogada.
+> - **(b) stack-map completo / spill-per-live-ref:** NÃO executado — medido
+>   desnecessário para o contrato main-only; só voltam a ser exigidos
+>   apenas se a face worker-stack-scan (auto-collect com threads vivas) for
+>   agendada.
 > Cada degrau: commit com suíte cross completa verde + DOING.md na linha.
 > G-0/G-1/G-2 adiantam sem root_end; **o G-3 também adiantou** (emite os
 > próprios marcadores `.L`-locais riscv — NÃO precisou do `kof_heap_root_end`
