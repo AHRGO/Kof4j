@@ -50,10 +50,23 @@ class LspSignatureHoverTest {
     }
 
     @Test
+    void fatiaFourSixNamespacesShowSignaturesToo() {
+        String t = "main() { val p = math.pow(2.0, 8.0)\n    log.info(\"go\")\n    val h = crypto.hmacSha256(\"a\", \"b\")\n    val img = Image.open(\"x\") }\n";
+        String v = LspHover.hoverFor("pow", t, t.indexOf("pow") + 2);
+        assertTrue(v.contains("pow(Double base, Double exp) -> Double"), "math.pow: " + v);
+        String v2 = LspHover.hoverFor("info", t, t.indexOf("log.info") + 5);
+        assertTrue(v2.contains("info(String msg) -> void"), "log.info: " + v2);
+        String v3 = LspHover.hoverFor("hmacSha256", t, t.indexOf("hmacSha256") + 5);
+        assertTrue(v3.contains("hmacSha256(String key, String msg) -> String"), "crypto: " + v3);
+        String v4 = LspHover.hoverFor("open", t, t.indexOf("Image.open") + 7);
+        assertTrue(v4.contains("open(String path) -> ImageData"), "Image.open: " + v4);
+    }
+
+    @Test
     void memberWithoutTableKeepsSimpleHoverNoInvention() {
-        String t = "main() { val v = log.info(\"x\") }\n";
-        String v = LspHover.hoverFor("info", t, t.indexOf("info") + 1);
-        assertTrue(v.contains("member of `kof.log`"), v);
+        String t = "main() { val j = json.encode(\"x\") }\n";
+        String v = LspHover.hoverFor("encode", t, t.indexOf("encode") + 3);
+        assertTrue(v.contains("member of `kof.json`"), v);
         assertFalse(v.contains("```"), "sem tabela = sem assinatura inventada: " + v);
     }
 }

@@ -13,6 +13,168 @@ import sys
 CAT = "kof-compiler/src/main/java/dev/kof/compiler/StdCatalog.java"
 
 # Blocos por fatia LSP-A (1-4 vivem EXTRAIDOS do arquivo; 5+ declarados aqui)
+BASE = {
+    "db": [
+        ("connect", ['connect(String url) -> String', 'connect(String url, String user, String pass) -> String']),
+        ("query", ['query(String url, String sql) -> List<String>', 'query(String url, String sql, Object... binds[1..4]) -> List<String>']),
+        ("execute", ['execute(String url, String sql) -> Int', 'execute(String url, String sql, Object... binds[1..4]) -> Int']),
+        ("close", ['close(String url) -> void']),
+        ("transaction", ['transaction(callback) -> void']),
+    ],
+    "http": [
+        ("get", ['get(String url) -> String', 'get(String url, String headers...) -> String']),
+        ("delete", ['delete(String url) -> String', 'delete(String url, String headers...) -> String']),
+        ("options", ['options(String url) -> String', 'options(String url, String headers...) -> String']),
+        ("post", ['post(String url, String body) -> String', 'post(String url, String body, String headers...) -> String']),
+        ("put", ['put(String url, String body) -> String', 'put(String url, String body, String headers...) -> String']),
+        ("patch", ['patch(String url, String body) -> String', 'patch(String url, String body, String headers...) -> String']),
+        ("status", ['status(String url) -> Int']),
+        ("timeout", ['timeout(Int ms) -> void']),
+        ("retry", ['retry(Int count) -> void']),
+        ("circuit", ['circuit(Int threshold) -> void']),
+    ],
+    "time": [
+        ("sleep", ['sleep(Int ms) -> void']),
+        ("now", ['now() -> Long']),
+        ("collect", ['collect() -> void']),
+        ("interval", ['interval(Int ms, callback) -> String']),
+        ("cancel", ['cancel(String id) -> void']),
+        ("isLeapYear", ['isLeapYear(Int year) -> Bool']),
+        ("daysInMonth", ['daysInMonth(Int year, Int month) -> Int']),
+        ("dayOfWeek", ['dayOfWeek(Int y, Int m, Int d) -> Int']),
+        ("isWeekend", ['isWeekend(Int y, Int m, Int d) -> Bool']),
+        ("daysBetween", ['daysBetween(Int y1, Int m1, Int d1, Int y2, Int m2, Int d2) -> Int']),
+        ("isToday", ['isToday(Int y, Int m, Int d) -> Bool']),
+        ("addDays", ['addDays(String iso, Int days) -> String']),
+        ("diffDays", ['diffDays(String isoA, String isoB) -> Int']),
+        ("todayIso", ['todayIso() -> String']),
+        ("formatDateIso", ['formatDateIso(Int y, Int m, Int d) -> String']),
+        ("parseDateIso", ['parseDateIso(String iso) -> Int']),
+        ("tzOffsetSeconds", ['tzOffsetSeconds() -> Int']),
+        ("hoursBetween", ['hoursBetween(Int y1, Int m1, Int d1, Int h1, Int y2, Int m2, Int d2, Int h2) -> Int']),
+    ],
+    "cache": [
+        ("get", ['get(String key) -> String']),
+        ("set", ['set(String key, String value) -> void', 'set(String key, String value, Int ttlSeconds) -> void']),
+        ("ttl", ['ttl(String key) -> Int']),
+        ("delete", ['delete(String key) -> void']),
+        ("clear", ['clear() -> void']),
+    ],
+    "process": [
+        ("run", ['run(String program, String... args) -> Result']),
+        ("spawn", ['spawn(String program, String... args) -> Handle']),
+        ("exit", ['exit(Int code) -> void']),
+    ],
+    "shell": [
+        ("cmd", ['cmd(String program, List<String> args) -> List<String>']),
+        ("run", ['run(String program) -> Result', 'run(String program, List<String> args) -> Result']),
+        ("pipeline", ['pipeline(List<List<String>> stages) -> Result']),
+        ("ok", ['ok(result) -> Bool']),
+    ],
+    "net": [
+        ("scheme", ['scheme(String url) -> String']),
+        ("host", ['host(String url) -> String']),
+        ("port", ['port(String url) -> String']),
+        ("path", ['path(String url) -> String']),
+        ("query", ['query(String url) -> String']),
+        ("fragment", ['fragment(String url) -> String']),
+        ("queryEncode", ['queryEncode(String s) -> String']),
+        ("queryDecode", ['queryDecode(String s) -> String']),
+    ],
+    "uuid": [
+        ("isUuid", ['isUuid(String s) -> Bool']),
+        ("v4", ['v4() -> String']),
+        ("v7", ['v7() -> String']),
+    ],
+    "random": [
+        ("double", ['double() -> Double']),
+        ("boolean", ['boolean() -> Bool']),
+        ("int", ['int(Int n) -> Int']),
+        ("hex", ['hex(Int n) -> String']),
+        ("randomBytesHex", ['randomBytesHex(Int n) -> String']),
+        ("randomInt", ['randomInt(Int n) -> Int']),
+        ("randomBoolean", ['randomBoolean() -> Bool']),
+        ("randomString", ['randomString(Int n, String s) -> String']),
+    ],
+    "rng": [
+        ("seed", ['seed(Int n) -> void']),
+        ("int", ['int(Int n) -> Int']),
+        ("boolean", ['boolean() -> Bool']),
+        ("double", ['double() -> Double']),
+        ("string", ['string(Int n, String s) -> String']),
+    ],
+    "encoding": [
+        ("hexEncode", ['hexEncode(String s) -> String']),
+        ("hexDecode", ['hexDecode(String s) -> String']),
+        ("base64Encode", ['base64Encode(String s) -> String']),
+        ("base64Decode", ['base64Decode(String s) -> String']),
+        ("urlEncode", ['urlEncode(String s) -> String']),
+        ("urlDecode", ['urlDecode(String s) -> String']),
+        ("base64UrlEncode", ['base64UrlEncode(String s) -> String']),
+        ("base64UrlDecode", ['base64UrlDecode(String s) -> String']),
+    ],
+    "strings": [
+        ("isAlpha", ['isAlpha(String s) -> Bool']),
+        ("isNumeric", ['isNumeric(String s) -> Bool']),
+        ("isAlphaNumeric", ['isAlphaNumeric(String s) -> Bool']),
+        ("isAscii", ['isAscii(String s) -> Bool']),
+        ("isUpperCase", ['isUpperCase(String s) -> Bool']),
+        ("isLowerCase", ['isLowerCase(String s) -> Bool']),
+        ("count", ['count(String s, String needle) -> Int']),
+        ("capitalize", ['capitalize(String s) -> String']),
+        ("uncapitalize", ['uncapitalize(String s) -> String']),
+        ("reverse", ['reverse(String s) -> String']),
+        ("toCamelCase", ['toCamelCase(String s) -> String']),
+        ("toPascalCase", ['toPascalCase(String s) -> String']),
+        ("toSnakeCase", ['toSnakeCase(String s) -> String']),
+        ("toKebabCase", ['toKebabCase(String s) -> String']),
+        ("slugify", ['slugify(String s) -> String']),
+        ("escapeHtml", ['escapeHtml(String s) -> String']),
+        ("unescapeHtml", ['unescapeHtml(String s) -> String']),
+        ("escapeJson", ['escapeJson(String s) -> String']),
+        ("removeWhitespace", ['removeWhitespace(String s) -> String']),
+        ("normalizeWhitespace", ['normalizeWhitespace(String s) -> String']),
+        ("dedent", ['dedent(String s) -> String']),
+        ("repeat", ['repeat(String s, Int n) -> String']),
+        ("truncate", ['truncate(String s, Int n) -> String']),
+        ("indent", ['indent(String s, Int n) -> String']),
+        ("padLeft", ['padLeft(String s, Int n, String pad) -> String']),
+        ("padRight", ['padRight(String s, Int n, String pad) -> String']),
+    ],
+    # fatia 4
+    "math": [
+        ("abs", ['abs(Int n) -> Int']),
+        ("sign", ['sign(Int n) -> Int']),
+        ("clamp", ['clamp(Int v, Int lo, Int hi) -> Int']),
+        ("min", ['min(Int a, Int b) -> Int']),
+        ("max", ['max(Int a, Int b) -> Int']),
+        ("isEven", ['isEven(Int n) -> Bool']),
+        ("isOdd", ['isOdd(Int n) -> Bool']),
+        ("isPositive", ['isPositive(Int n) -> Bool']),
+        ("isNegative", ['isNegative(Int n) -> Bool']),
+        ("isZero", ['isZero(Int n) -> Bool']),
+        ("sqrt", ['sqrt(Double x) -> Double']),
+        ("lerp", ['lerp(Double a, Double b, Double t) -> Double']),
+        ("percentage", ['percentage(Double part, Double whole) -> Double']),
+        ("isInteger", ['isInteger(Double x) -> Bool']),
+        ("isDecimal", ['isDecimal(Double x) -> Bool']),
+        ("roundTo", ['roundTo(Double v, Int decimals) -> Double']),
+        ("pow", ['pow(Double base, Double exp) -> Double']),
+        ("parseInt", ['parseInt(String s) -> Int']),
+        ("parseLong", ['parseLong(String s) -> Long']),
+        ("parseDouble", ['parseDouble(String s) -> Double']),
+        ("parseIntOrDefault", ['parseIntOrDefault(String s, Int d) -> Int']),
+        ("parseLongOrDefault", ['parseLongOrDefault(String s, Long d) -> Long']),
+        ("parseDoubleOrDefault", ['parseDoubleOrDefault(String s, Double d) -> Double']),
+    ],
+    "log": [
+        ("debug", ['debug(String msg) -> void']),
+        ("info", ['info(String msg) -> void']),
+        ("warn", ['warn(String msg) -> void']),
+        ("error", ['error(String msg) -> void']),
+    ],
+}
+
 EXTRA_FATIAS = {
     "orm": [
         ("create", ["create(String entity) -> Bool"]),
@@ -110,11 +272,78 @@ EXTRA_FATIAS = {
         ("exportSpans", ["exportSpans() -> String"]),
     ],
     "tetris": [("run", ["run() -> void"])],
+    # fatia 6: seguranca (dispatcher aninhado KofSecurity.staticMethod) + media
+    "passwords": [
+        ("hash", ["hash(String plain) -> String"]),
+        ("verify", ["verify(String plain, String hash) -> Bool"]),
+        ("needsRehash", ["needsRehash(String hash) -> Bool"]),
+    ],
+    "crypto": [
+        ("sha256", ["sha256(String s) -> String"]),
+        ("sha512", ["sha512(String s) -> String"]),
+        ("hmacSha256", ["hmacSha256(String key, String msg) -> String"]),
+        ("encryptAesGcm", ["encryptAesGcm(String key, String data) -> String"]),
+        ("decryptAesGcm", ["decryptAesGcm(String key, String data) -> String"]),
+        ("encryptChacha20", ["encryptChacha20(String key, String data) -> String"]),
+        ("decryptChacha20", ["decryptChacha20(String key, String data) -> String"]),
+        ("randomHex", ["randomHex(Int n) -> String"]),
+        ("randomInt", ["randomInt(Int max) -> Int"]),
+    ],
+    "jwt": [
+        ("create", ["create(String claims, String secret) -> String",
+                    "create(String claims, String secret, Int ttlSeconds) -> String"]),
+        ("verify", ["verify(String token, String secret) -> String",
+                    "verify(String token, String secret, String iss, String aud) -> String"]),
+        ("secret", ["secret() -> String"]),
+    ],
+    "secrets": [
+        ("get", ["get(String key) -> String", "get(String key, String d) -> String"]),
+        ("redact", ["redact(String s) -> String"]),
+    ],
+    "security": [
+        ("constantTimeEquals", ["constantTimeEquals(String a, String b) -> Bool"]),
+        ("randomHex", ["randomHex(Int n) -> String"]),
+        ("redact", ["redact(String s) -> String"]),
+        ("randomInt", ["randomInt(Int max) -> Int"]),
+        ("csrfToken", ["csrfToken() -> String"]),
+        ("csrfValid", ["csrfValid(String token) -> Bool"]),
+        ("corsAllowed", ["corsAllowed(String origin, String allowed) -> Bool"]),
+        ("cspHeader", ["cspHeader() -> String"]),
+        ("hstsHeader", ["hstsHeader() -> String"]),
+        ("contentTypeOptionsHeader", ["contentTypeOptionsHeader() -> String"]),
+        ("frameHeader", ["frameHeader() -> String"]),
+        ("referrerHeader", ["referrerHeader() -> String"]),
+        ("rateLimit", ["rateLimit(String key, Int limit, Int windowSeconds) -> Bool"]),
+        ("sessionCreate", ["sessionCreate(String user) -> String"]),
+        ("sessionGet", ["sessionGet(String id) -> String"]),
+        ("sessionDestroy", ["sessionDestroy(String id) -> Bool"]),
+        ("apiKeyGenerate", ["apiKeyGenerate() -> String"]),
+        ("apiKeyValid", ["apiKeyValid(String key) -> Bool"]),
+        ("cookieSet", ["cookieSet(String name, String value) -> String",
+                       "cookieSet(String name, String value, Map opts) -> String"]),
+        ("cookieGet", ["cookieGet(String name, String value) -> String"]),
+    ],
+    "auth": [
+        ("secret", ["secret(String s) -> Bool"]),
+        ("token", ["token() -> String"]),
+        ("authenticated", ["authenticated() -> Bool"]),
+        ("claims", ["claims() -> String"]),
+        ("user", ["user() -> String"]),
+        ("hasRole", ["hasRole(String role) -> Bool"]),
+        ("hasPermission", ["hasPermission(String perm) -> Bool"]),
+        ("resourceServer", ["resourceServer(String a, String b, String c) -> Bool"]),
+        ("resourceServerVerify", ["resourceServerVerify(String token) -> String"]),
+    ],
+    "Image": [("open", ["open(String path) -> ImageData"])],
+    "Audio": [("openWav", ["openWav(String path) -> Audio"])],
+    "Video": [("open", ["open(String path) -> Video"])],
+    "Mic": [("record", ["record(Int seconds) -> Audio"]),
+            ("list", ["list() -> List"])],
 }
 
 HEADER = (
     "    private static final Map<String, Map<String, List<String>>> SIGNATURES =\n"
-    "            // 19/09 LSP-A fatias 1-5: forma MEDIDA no dispatcher real de cada\n"
+    "            // 19/09 LSP-A fatias 1-6: forma MEDIDA no dispatcher real de cada\n"
     "            // ns e travada comportamento-a-`staticCall` (StdCatalogSignaturesTest).\n"
     "            // Membro sem tabela mantem hover simples (R6: nunca chute).\n"
     "            // ARTEFATO DO GERADOR scripts/gen_signatures.py \u2014 nao editar a m\u00e3o.\n"
@@ -184,11 +413,10 @@ def render(groups):
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else "check"
     s = io.open(CAT, encoding="utf-8").read()
-    groups = extract(s)
+    mem = io.open("kof-compiler/src/main/java/dev/kof/compiler/StdCatalog.java", encoding="utf-8").read()
+    groups = [(ns, items) for ns, items in list(BASE.items()) + list(EXTRA_FATIAS.items())]
     have = {ns for ns, _ in groups}
-    for ns in ["orm", "config", "gpu", "mq", "validation", "observability", "tetris"]:
-        if ns not in have:
-            groups.append((ns, EXTRA_FATIAS[ns]))
+    tabled = sum(len(g) for _, g in groups)
     out = render(groups)
     i0 = s.index("    private static final Map<String, Map<String, List<String>>> SIGNATURES")
     i1 = s.index("    /** Overloads gravados", i0)
@@ -208,9 +436,8 @@ def main():
             elif ch == ")":
                 d -= 1
     assert d == 0, "profundidade %d — gerador abortado" % d
-    nm = sum(len(g) for _, g in groups)
     ns_ = sum(len(x) for _, g in groups for _, x in g)
-    print("%d ns, %d membros, %d formas" % (len(groups), nm, ns_))
+    print("%d ns, %d membros, %d formas" % (len(groups), tabled, ns_))
     if mode == "write" and s2 != s:
         io.open(CAT, "w", encoding="utf-8").write(s2)
         print("gravado")

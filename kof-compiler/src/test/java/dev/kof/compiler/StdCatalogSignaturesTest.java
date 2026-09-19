@@ -175,12 +175,88 @@ class StdCatalogSignaturesTest {
     }
 
     @Test
+    void fatiaFourMathAndLogBindAgainstRealDispatchers() {
+        assertNotNull(KofMath.staticMethod("math", "abs", List.of(I)), "math.abs(Int)");
+        assertNull(KofMath.staticMethod("math", "abs", List.of(D)), "abs(Double) NAO binda (familia Int)");
+        assertNotNull(KofMath.staticMethod("math", "sqrt", List.of(D)), "sqrt(Double)");
+        assertNull(KofMath.staticMethod("math", "sqrt", List.of(I)), "sqrt(Int) NAO binda");
+        assertNotNull(KofMath.staticMethod("math", "clamp", List.of(I, I, I)), "clamp/3");
+        assertNull(KofMath.staticMethod("math", "clamp", List.of(I, I)), "clamp/2");
+        assertNotNull(KofMath.staticMethod("math", "parseLongOrDefault", List.of(S, I)), "parseLongOrDefault aceita Int");
+        assertNotNull(KofMath.staticMethod("math", "roundTo", List.of(D, I)), "roundTo(Double,Int)");
+        assertNull(KofMath.staticMethod("math", "roundTo", List.of(I, D)), "roundTo(Int,Double) NAO (ordem)");
+        assertNotNull(KofLog.staticCall("info", List.of(S)), "log.info(String)");
+        assertNull(KofLog.staticCall("info", List.of(S, S)), "info/2 NAO binda");
+        assertNull(KofLog.staticCall("nope", List.of(S)), "log.?");
+        for (String m : KofMath.functions())
+            assertFalse(StdCatalog.signaturesOf("math", m).isEmpty(), "tabela sem math." + m);
+        for (String m : KofLog.functions())
+            assertFalse(StdCatalog.signaturesOf("log", m).isEmpty(), "tabela sem log." + m);
+    }
+
+    @Test
+    void fatiaFiveTablesBindAgainstRealDispatchers() {
+        Type L = Type.UnknownType.UNKNOWN; // gates de orm/mq sao de ARGC
+        assertNotNull(KofOrm.staticCall("save", List.of(S, L), false, "User"), "orm.save");
+        assertNotNull(KofOrm.staticCall("find", List.of(S, L), true, "User"), "orm.find(typed)");
+        assertNull(KofOrm.staticCall("find", List.of(S, L), false, "User"), "find sem typed NAO binda");
+        assertNull(KofOrm.staticCall("count", List.of(S, S), true, "User"), "count/2 NAO binda");
+        assertNotNull(KofOrm.staticCall("count", List.of(S, S, L), true, "User"), "count/3 (where)");
+        assertNotNull(KofOrm.staticCall("where", List.of(S, S, S, L), true, "User"), "where/4 (op)");
+        assertNotNull(KofConfig.staticCall("int", List.of(S, I)), "config.int/2");
+        assertNull(KofConfig.staticCall("int", List.of(S)), "config.int/1");
+        assertNotNull(KofGpu.staticCall("mvPutSp", List.of(I, L, L, I, I)), "gpu.mvPutSp/5");
+        assertNull(KofGpu.staticCall("mvPutSp", List.of(I, L, L, I)), "mvPutSp/4 NAO binda");
+        assertNotNull(KofGpu.staticCall("available", List.of()), "gpu.available");
+        assertNotNull(KofMq.staticCall("subscribe", List.of(S, L)), "mq.subscribe");
+        assertNotNull(KofMq.staticCall("queue", List.of()), "mq.queue/0");
+        assertNull(KofMq.staticCall("queue", List.of(S)), "queue/1 NAO binda");
+        assertNotNull(KofValidation.staticMethod("validation", "lengthBetween", List.of(S, I, I)), "lengthBetween/3");
+        assertNull(KofValidation.staticMethod("validation", "lengthBetween", List.of(S, I)), "lengthBetween/2");
+        assertNotNull(KofValidation.staticMethod("validation", "isPort", List.of(I)), "isPort(Int)");
+        assertNull(KofObservability.staticMethod("observability", "counter", List.of(I)), "counter(Int) NAO passa o gate isString");
+        assertNotNull(KofObservability.staticMethod("observability", "increment", List.of(S, I)), "obs.increment");
+        assertNotNull(KofObservability.staticMethod("observability", "metrics", List.of()), "obs.metrics/0");
+        assertNotNull(KofTetris.staticMethod("tetris", "run", 0), "tetris.run/0");
+        assertNull(KofTetris.staticMethod("tetris", "run", 1), "run/1 NAO binda");
+        for (String ns : List.of("orm", "config", "gpu", "mq", "validation", "observability", "tetris"))
+            for (String m : StdCatalog.membersOf(ns))
+                assertFalse(StdCatalog.signaturesOf(ns, m).isEmpty(), "tabela sem " + ns + "." + m);
+    }
+
+    @Test
+    void fatiaSixSecurityAndMediaBindAgainstRealDispatchers() {
+        assertNotNull(KofSecurity.staticMethod("crypto", "hmacSha256", List.of(S, S)), "crypto.hmacSha256");
+        assertNull(KofSecurity.staticMethod("crypto", "hmacSha256", List.of(S)), "hmac/1");
+        assertNotNull(KofSecurity.staticMethod("crypto", "randomHex", List.of(I)), "crypto.randomHex(Int)");
+        assertNotNull(KofSecurity.staticMethod("jwt", "create", List.of(S, S)), "jwt.create/2");
+        assertNotNull(KofSecurity.staticMethod("jwt", "create", List.of(S, S, I)), "jwt.create/3 (ttl)");
+        assertNull(KofSecurity.staticMethod("jwt", "create", List.of(S)), "create/1 NAO binda");
+        assertNotNull(KofSecurity.staticMethod("jwt", "verify", List.of(S, S, S, S)), "jwt.verify/4 (iss+aud)");
+        assertNotNull(KofSecurity.staticMethod("secrets", "get", List.of(S, S)), "secrets.get/2 (default)");
+        assertNotNull(KofSecurity.staticMethod("security", "csrfToken", List.of()), "csrfToken/0");
+        assertNull(KofSecurity.staticMethod("security", "csrfToken", List.of(S)), "csrfToken/1 NAO");
+        assertNotNull(KofSecurity.staticMethod("security", "cookieSet", List.of(S, S)), "cookieSet/2");
+        assertNull(KofSecurity.staticMethod("security", "rateLimit", List.of(S, I)), "rateLimit/2 NAO");
+        assertNotNull(KofSecurity.staticMethod("auth", "hasRole", List.of(S)), "auth.hasRole");
+        assertNull(KofSecurity.staticMethod("auth", "hasRole", List.of()), "hasRole/0 NAO");
+        assertNotNull(KofSecurity.staticMethod("passwords", "needsRehash", List.of(S)), "needsRehash");
+        assertNotNull(KofMedia.staticCall("Image", "open", 1), "Image.open/1");
+        assertNull(KofMedia.staticCall("Image", "open", 0), "Image.open/0 NAO");
+        assertNotNull(KofMedia.staticCall("Mic", "record", 1), "Mic.record(Int)");
+        assertNotNull(KofMedia.staticCall("Mic", "list", 0), "Mic.list/0");
+        for (String ns : List.of("passwords", "crypto", "jwt", "secrets", "security", "auth"))
+            for (String m : StdCatalog.membersOf(ns))
+                assertFalse(StdCatalog.signaturesOf(ns, m).isEmpty(), "tabela sem " + ns + "." + m);
+    }
+
+    @Test
     void untabledNamespacesStayHonestEmpty() {
-        // fatias 1-3 = db/http/time/cache/process/shell/net/uuid/random/rng/
-        // encoding; inventar forma p/ os demais e proibido (R6)
-        assertTrue(StdCatalog.signaturesOf("log", "info").isEmpty());
+        // fatias 1-6 cobrem 31/32 ns; so `json` fica sem tabela por
+        // honestidade (dispatch por tipo no lowerer, nao por aridade
+        // travavel no typer). Inventar forma e proibido (R6).
         assertTrue(StdCatalog.signaturesOf("json", "encode").isEmpty());
-        assertTrue(StdCatalog.signaturesOf("math", "isEven").isEmpty());
+        assertTrue(StdCatalog.signaturesOf("json", "decode").isEmpty());
         assertTrue(StdCatalog.signaturesOf("nope", "get").isEmpty());
     }
 }
