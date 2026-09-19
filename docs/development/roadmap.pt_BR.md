@@ -800,8 +800,7 @@ independentemente do target. Fases 1-3 implementadas: DebugInfo na IR com
 source location por op, JVM LineNumberTable/SourceFile/LocalVariableTable
 gerados e **`kof debug` MVP funcional** (DAP over stdio + JDWP cru: launch,
 breakpoints por linha Kof, `stopped`, stack trace com funções/linhas Kof,
-continue, disconnect). Fases 4-7 (Kof Editor, Native DWARF, JS source
-maps, avançado) planejadas. Ver: `docs/debugging/debugger-architecture.md`,
+continue, disconnect). Fase 4 (Kof Editor) planejada; Fase 5 (Native DWARF) x86-64 POUSOU — `.debug_line`+`.debug_info`+`.debug_abbrev` ligadas por default, `--release` remove, travadas por `NativeDwarfLineInfoTest`/`NativeDwarfSubprogramTest`; o residual real é o DWARF nos tradutores riscv64/aarch64 (nenhum `.debug_*` emitido — medido 19/09) e os front-ends de debug cross-alvo; Fase 6 (source maps JS) V3 pousada 01/09 (`KofJsSourceMapTest`); Fase 7 (avançado) planejada. Ver: `docs/debugging/debugger-architecture.md`,
 `docs/debugging/debugging.md`, `docs/debugging/debug-adapter.md`.
 
 ## 20. Princípios de Design
