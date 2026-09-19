@@ -229,6 +229,10 @@ public final class NativeRiscvCrossOps {
             return;
         }
 
+        // §235 native face: wrapper statics (parse*/is*) — before the generic
+        // call so `java_lang_Integer_parseInt` never reaches the linker.
+        if (NativeRiscvWrapperStatics.emit(sb, kc)) return;
+
         // String.valueOf (STATIC)
         if (kc.kind() == KofCallKind.STATIC && "valueOf".equals(mn)) {
             // T? (Map.get→V? desde SG-008/bug 87): despacho pelo INNER. Sem

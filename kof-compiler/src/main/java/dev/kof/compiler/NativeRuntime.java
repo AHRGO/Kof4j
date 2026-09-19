@@ -133,6 +133,7 @@ public final class NativeRuntime {
         RuntimeStringBase.emitStringEquals(sb);
         RuntimeStringParse.emitStringToInt(sb);
         RuntimeStringParse.emitStringToLong(sb);
+        RuntimeStringParse.emitStringToBool(sb);
         RuntimeStringParseFp.emitStringToDouble(sb);
         // S13b (plan-stdlib-expansion): parse com default (briefing §43) —
         // wrappers com handler local no exc_chain; nunca lançam.

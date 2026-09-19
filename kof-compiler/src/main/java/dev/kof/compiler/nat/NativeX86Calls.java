@@ -190,6 +190,9 @@ public final class NativeX86Calls {
             sb.append("    call kof_spawn_join_all\n");
             return;
         }
+        // §235 native face: wrapper statics (parse*/is*) — before the generic
+        // call so `java_lang_Integer_parseInt` never reaches the linker.
+        if (NativeX86WrapperStatics.emit(sb, kc)) return;
         if (kc.kind() == KofCallKind.STATIC && "valueOf".equals(kc.methodName())) {
             Type argType = kc.parameterTypes().isEmpty() ? Type.UnknownType.UNKNOWN : kc.parameterTypes().get(0);
             // T? (get de Map, SG-008): o despacho usa o INNER — sem isso o

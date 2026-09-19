@@ -1193,4 +1193,13 @@ main() {
             """);
         assertEquals("4.0\n1.0\n3.75\n1.6666666\n7.0\n3.5\n9.007199E15\n6.0\n3.5", out);
     }
+
+    // §235 native face (aarch64, via translator): wrapper statics (parse*/is*).
+    // Golden = JVM oracle of the same program (WrapperStaticCallsE2ETest).
+    @Test
+    void aarch64WrapperStaticsParseAndPredicates(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String out = runAarch64(tempDir, WrapperStaticCallsE2ETest.WRAPPER_STATICS_SRC);
+        assertEquals(WrapperStaticCallsE2ETest.WRAPPER_STATICS_GOLDEN, out);
+    }
 }

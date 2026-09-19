@@ -1252,4 +1252,14 @@ main() {
             """);
         assertEquals("4.0\n1.0\n3.75\n1.6666666\n7.0\n3.5\n9.007199E15\n6.0\n3.5", out);
     }
+
+    // §235 native face (riscv64): wrapper statics (parse*/is*) — before the fix
+    // the link failed with `undefined reference to java_lang_Integer_parseInt`.
+    // Golden = JVM oracle of the same program (WrapperStaticCallsE2ETest).
+    @Test
+    void riscv64WrapperStaticsParseAndPredicates(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String out = runRiscv64(tempDir, WrapperStaticCallsE2ETest.WRAPPER_STATICS_SRC);
+        assertEquals(WrapperStaticCallsE2ETest.WRAPPER_STATICS_GOLDEN, out);
+    }
 }

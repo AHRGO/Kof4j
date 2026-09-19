@@ -111,6 +111,50 @@ kof_string_to_int:
             """);
     }
 
+    /**
+     * §235 native face: {@code Boolean.parseBoolean} — contract of the JVM
+     * ({@code s != null && s.equalsIgnoreCase("true")}, NO trim). Leaf function,
+     * caller-saved registers only, no labels shared across functions.
+     */
+    public static void emitStringToBool(StringBuilder sb) {
+        sb.append("""
+            .section .data
+            .Lkof_string_to_bool_true: .asciz "true"
+            .section .text
+            .globl kof_string_to_bool
+            .type kof_string_to_bool, @function
+kof_string_to_bool:
+                testq %rdi, %rdi
+                jz .Lkof_string_to_bool_no
+                movl 16(%rdi), %ecx
+                cmpl $4, %ecx
+                jne .Lkof_string_to_bool_no
+                leaq .Lkof_string_to_bool_true(%rip), %rsi
+                xorl %edx, %edx
+            .Lkof_string_to_bool_loop:
+                cmpl $4, %edx
+                jge .Lkof_string_to_bool_yes
+                movzbl 24(%rdi,%rdx), %eax
+                movzbl (%rsi,%rdx), %r8d
+                cmpb $65, %al
+                jb .Lkof_string_to_bool_cmp
+                cmpb $90, %al
+                ja .Lkof_string_to_bool_cmp
+                addl $32, %eax
+            .Lkof_string_to_bool_cmp:
+                cmpl %r8d, %eax
+                jne .Lkof_string_to_bool_no
+                incl %edx
+                jmp .Lkof_string_to_bool_loop
+            .Lkof_string_to_bool_yes:
+                movl $1, %eax
+                ret
+            .Lkof_string_to_bool_no:
+                xorl %eax, %eax
+                ret
+            """);
+    }
+
     public static void emitStringToLong(StringBuilder sb) {
         sb.append("""
             .section .data
