@@ -11028,3 +11028,11 @@ Full suite: see this commit's log tail (`/tmp/opencode/suite445.log`).
 
 **Repro (current behavior, if anyone ever needs it):** `class C { Object o }` … `c.o = 0.0/0.0`?? — division-by-zero literal is a compile-time diagnostic (OBS-009), so the NaN box is NOT constructible from Kof source today (no `Double.NaN` in stdlib either) → the face is UNREACHABLE until a NaN producer exists. Downgrade to informational if a NaN producer ever lands (math library official-package plans). Related: §333, §284-map, OBS-009, DECISIONS.md (NaN policy, if ever needed).
 
+
+## §309 — `CmdDeployTest.publishIsHonestGapD2` RED at tip: D2-A trocou a recusa e não atualizou o próprio teste (OPEN — deploy lane `.18`)
+
+Registrado 19/09 ~06:5x pela ISSUE-LANE `.22` (condição de parada 3: vermelho alheio não é "consertado" por quem chegou depois). **Medido no tip limpo `17cc54cf`** (clone isolado `~/tipbuild`, sem patch local, sem `GH_TOKEN`/`GITHUB_TOKEN` no ambiente): `mvn -o -pl kof-cli -am -Dtest=CmdDeployTest` → `Tests run: 8, Failures: 1, Errors: 0, Skipped: 1`.
+
+**Repro mínima:** rodar `CmdDeployTest#publishIsHonestGapD2` em ambiente sem token. **Fato:** o teste afirma que a saída de `--publish` sem token contém `DEP001`; desde o **D2-A (D-POLL-19, 19/09)** a recusa é `"--publish needs GH_TOKEN or GITHUB_TOKEN (D-POLL-19/D2-A: GitHub Releases is the official host)..."` (`CmdDeploy.java:51,140`) — sem `DEP001`. A classe também encolheu de 13 testes (tick da linha 8.4, `2717/0F` medido pela própria lane) para 8+1-skip: o commit do D2-A reescreveu a cobertura sem a suíte verde — Q1 violado no push da lane.
+
+**Causa raiz:** desalinhamento teste↔comportamento intencional. D2-A é decisão da mantenedora (publicar no GitHub Releases), NÃO é bug de runtime. O ajuste é da lane deploy: alinhar a asserção à recusa documentada do D2-A (e manter `DEP001` apenas para as faces cross-target que continuam honestamente pendentes — riscv/aarch, `CmdDeploy.java:39,42`). **NÃO TOCAR pela ISSUE-LANE:** teste alheio com decisão de design no meio (Q5 — nunca baixar asserção alheia p/ ficar verde; regra 6).

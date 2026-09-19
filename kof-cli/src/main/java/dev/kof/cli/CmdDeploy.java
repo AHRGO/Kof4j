@@ -222,7 +222,7 @@ final class CmdDeploy {
         Path manifest = out.resolve("deploy").resolve(name + "-" + version + ".deploy-manifest.json");
         try {
             Files.createDirectories(manifest.getParent());
-            Files.writeString(manifest, m.toString(), StandardCharsets.UTF_8);
+            Files.writeString(manifest, m, StandardCharsets.UTF_8);
         } catch (IOException e) {
             System.err.println("deploy: failed to write manifest: " + e.getMessage());
             System.exit(1);

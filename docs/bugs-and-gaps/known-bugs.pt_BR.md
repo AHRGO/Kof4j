@@ -10462,3 +10462,12 @@ Suíte completa: ver o fim do log deste commit (`/tmp/opencode/suite445.log`).
 **Opcoes (NAO decidido — territ6rio regra 6):** (a) deixar (documentado aqui, divergencia honesta); (b) guardar o caso JVM `tag==4 && bits==0x7FF8… → igual` (4 instrucoes × 3 backends + 1 golden). Nao atacado aqui porque inventar teste para borda inalcanzavel nao agrega prova (Q3).
 
 **Repro atual:** na verdade o NaN NAO e construtivel em fonte Kof hoje — literal de divisao por zero e diagnostico OBS-009 e nao ha `Double.NaN` na stdlib → a face esta DESLIGADA ate existir um produtor de NaN (biblioteca matematica, pacote oficial). Rebaixar a informativo se um produtor nascer. Relacionado: §333, §284-map, OBS-009.
+
+
+## §309 — `CmdDeployTest.publishIsHonestGapD2` VERMELHO no tip: o D2-A trocou a recusa e não atualizou o próprio teste (ABERTO — lane deploy `.18`)
+
+Registrado 19/09 ~06:5x pela ISSUE-LANE `.22` (condição de parada 3: vermelho alheio não é "consertado" por quem chegou depois). **Medido no tip limpo `17cc54cf`** (clone isolado `~/tipbuild`, sem patch local, sem `GH_TOKEN`/`GITHUB_TOKEN` no ambiente): `mvn -o -pl kof-cli -am -Dtest=CmdDeployTest` → `Tests run: 8, Failures: 1, Errors: 0, Skipped: 1`.
+
+**Repro mínima:** rodar `CmdDeployTest#publishIsHonestGapD2` em ambiente sem token. **Fato:** o teste afirma que a saída de `--publish` sem token contém `DEP001`; desde o **D2-A (D-POLL-19, 19/09)** a recusa é `"--publish needs GH_TOKEN or GITHUB_TOKEN (D-POLL-19/D2-A: GitHub Releases is the official host)..."` (`CmdDeploy.java:51,140`) — sem `DEP001`. A classe também encolheu de 13 testes (tick da linha 8.4, `2717/0F` medido pela própria lane) para 8+1-skip: o commit do D2-A reescreveu a cobertura sem a suíte verde — Q1 violado no push da lane.
+
+**Causa raiz:** desalinhamento teste↔comportamento intencional. D2-A é decisão da mantenedora (publicar no GitHub Releases), NÃO é bug de runtime. O ajuste é da lane deploy: alinhar a asserção à recusa documentada do D2-A (e manter `DEP001` apenas para as faces cross-target que continuam honestamente pendentes — riscv/aarch, `CmdDeploy.java:39,42`). **NÃO TOCAR pela ISSUE-LANE:** teste alheio com decisão de design no meio (Q5 — nunca baixar asserção alheia p/ ficar verde; regra 6).
