@@ -11048,7 +11048,7 @@ CLI 4-target probe on the issue's exact two-file shape: **`cop\nmovido` rc=0 on 
 Full suite: see this commit's log tail (`/tmp/opencode/suite445.log`).
 **Closed 18/09 (native lane, §284-map):** the Map-slot contract added with the real erasure box makes the native `get` return the boxed slot (or `null` for a miss — `kof_map_get` already returns 0 on miss; the typed path no longer folds it to `0` because the ret type is `V?` and call-site unwrapping only runs for concrete primitive rets). Measured on the §304 verbatim with the §284-map jar: x86 `42/0/null`, riscv64 `42/0/null`, aarch64 `42/0/null`, JVM `42/0/null` — four-way identical, and `m.get("zero") == m.get("z")` is `false` (0 ≠ null through `kof_box_equals`/cru-fold). Distinct-from-present-zero is now the native behavior, no diagnostic needed (the contract IS representable). Proven by `NativeErasureBoxE2ETest.mapBoxedSlot*` (`g.get("zz")` line, 11-line golden byte-identical across the 4 targets) and `KofMapSetTest` 14/14.
 
-## §333 — cross backends (riscv64 + aarch64) print `Char` values as NUMERIC codepoints — `println(c: Char)` / `println(map.get(k))` of a `Char` map print `97`/`66` where JVM and x86 print `a`/`B` — 🟡 OPEN 18/09 (pre-existing; surfaced while measuring §284-map; D-PRINT/§216 face on cross) — owner = native lane
+## §333 — cross backends (riscv64 + aarch64) print `Char` values as NUMERIC codepoints — `println(c: Char)` / `println(map.get(k))` of a `Char` map print `97`/`66` where JVM and x86 print `a`/`B` — ✅ FIXED 19/09 (branch `fix/259-nullable-primitive-native`, #259/N2 — proof measured, PR pending maintainer review; see the closure block at the end of this section) — owner = native lane
 
 **Found:** 18/09, native lane `.17`, measuring the §284-map golden battery. Minimal repro (`/tmp`-style, 6 lines): `var cm = mapOf(); cm.put("c", 97 as Char); val k = cm.get("c"); println(k); var c: Char = 66 as Char; println(c)` → JVM `a`/`B`, x86 `a`/`B`, riscv64 `97`/`66`, aarch64 `97`/`66`.
 
@@ -11058,6 +11058,20 @@ Full suite: see this commit's log tail (`/tmp/opencode/suite445.log`).
 
 **Fix sketch (next native-lane unit):** port `kof_char_to_string` to a riscv asm slice (single code unit ≤ 0xFFFF → UTF-8 encode, same shape as the x86 one — surrogate-pair caution: astral `Char` = one UTF-16 unit, encode the WTF-8 lone surrogate exactly as x86 does today); wire `valueOf(char)` + the cross println primitive branch to it; golden = JVM oracle (`a`, `B`, `é`=233→`é`), tests: extend `NativeErasureBoxE2ETest` map program or a new `KofCharCrossE2ETest`. Related: §216 (closed, x86/JVM/JS faces), §104b (D-PRINT), §334, NATIVE002.
 
+**✅ FIXED 19/09 (branch `fix/259-nullable-primitive-native`, #259/N2 — PR pending maintainer review).** Implemented exactly along the sketch above: `kof_char_to_string(a0=codepoint)` added to `NativeRiscvAsmRtB49` (1/2/3-byte UTF-8 encode, same string layout as `kof_int_to_string` — len at +16, bytes at +24, NUL-terminated), and both dispatch sites wired in `NativeRiscvCrossOps`: the `valueOf(char)` branch and the println primitive branch now emit `kof_char_to_string` instead of falling through to `kof_int_to_string`. aarch64 inherits through the translator (no per-arch code).
+
+Proof — this section's own repro (`var cm = mapOf(); cm.put("c", 97 as Char); val k = cm.get("c"); println(k); var c: Char = 66 as Char; println(c)`), run on the three native targets under QEMU plus the JVM oracle:
+
+| program | JVM/x86 oracle | riscv64 | aarch64 |
+|---|---|---|---|
+| §333 map repro | `a` / `B` | `a` ✅ | `a` ✅ |
+| `println('K')` | `K` | `K` ✅ | `K` ✅ |
+| `println('é')` (2-byte UTF-8) | `é` | `é` ✅ | `é` ✅ |
+
+Also covered by the new corpus `NativeNullablePrimitiveContractE2ETest` (`Char?` null/present rows, including the `"c=" + c(true)` concatenation face) — green on JVM, Script, JS, x86-64, riscv64 and aarch64.
+
+**Side finding — 3 cross tests were pinning the PRE-D-PRINT behavior (stale goldens, refreshed in the same front).** Enabling this fix turned them red, which is how the stale goldens surfaced: `NativeStringUtf16CrossTest` and the `nativeStringLengthAndCharAtUtf16` / `*StringMethods` methods of `NativeRiscv64E2ETest` and `NativeAarch64E2ETest` expected the **codepoint** (`233`, `55357`, `98`) for a bare `println(s.charAt(i))`. Their goldens are dated 11/09 — before §216/D-PRINT (15/09), which decided `Char` prints the CHARACTER, and **x86 had already migrated** (`NativeE2ETest.nativeStringCharAtUtf16` expects `é` for `println(s.charAt(3))` and casts the lone surrogates `as Int`, which is the better assertion — a lone surrogate is not a displayable character). The cross faces kept passing only because cross had not yet adopted D-PRINT. They are now aligned with the x86 format (commit `ef5dbeaa`). Measured before/after on the same 8-class set: 13 failures → 7 (= the base). Lesson for anyone closing a D-PRINT-shaped gap on the cross targets: the cross goldens for `println(char)` are pre-D-PRINT, and the JVM is **not** a usable oracle for the lone-surrogate rendering on a Windows host (the console charset degrades the output — `é` came out as the single Latin-1 byte `E9` and the emoji as `?`); the x86 test is the reference.
+
 ## §334 — `kof_box_equals` (introduced §284-map) treats two boxes as unequal when their raw payload words differ — the one honest divergence from `Double.equals` is the NaN case (JVM: `NaN.equals(NaN)` = true; native boxed-erasure: false) — 🟡 OPEN 18/09 (micro-edge, catalogued by the §284-map unit; no known user-visible repro besides erasure-slot NaN)
 
 **Found:** 18/09, while writing `kof_box_equals` (x86 `RuntimeErasureBox` + `NativeRiscvAsmRtB49`): the comparison is `(tag, payload-bits)` equality, which matches `Integer/Long/Boolean.equals` and `Double.equals` for every value EXCEPT NaN (and the signed-zero pair: JVM `Double.compare` treats −0.0≠0.0 but `Double.equals` also returns FALSE for 0.0 vs −0.0 — payload bits differ → native agrees ✓; only NaN diverges). Reachable only through `Object`/erasure slots holding `1.0/0.0`-style NaN boxes (`c.o = 0.0/0.0; c.o == c.o2`), which no test/corpus program does today.
@@ -11066,6 +11080,43 @@ Full suite: see this commit's log tail (`/tmp/opencode/suite445.log`).
 
 **Repro (current behavior, if anyone ever needs it):** `class C { Object o }` … `c.o = 0.0/0.0`?? — division-by-zero literal is a compile-time diagnostic (OBS-009), so the NaN box is NOT constructible from Kof source today (no `Double.NaN` in stdlib either) → the face is UNREACHABLE until a NaN producer exists. Downgrade to informational if a NaN producer ever lands (math library official-package plans). Related: §333, §284-map, OBS-009, DECISIONS.md (NaN policy, if ever needed).
 
+
+## §337 — 7 cross tests fail with **SIGSEGV (exit 139) under `qemu-aarch64`** — `NativeRiscvDtoaTest.dtoaMatchesJvmOracleOnAarch64` plus the 5 GC classes (`GcFreeList`, `GcList`×2, `GcMark`, `GcSweep`×2) — 🟡 OPEN 19/09 (pre-existing; aarch64-only — riscv64 passes on the same code) — owner = native lane
+
+> **Renumbered §336 → §337 on 19/09** when this branch rebased onto `f7a45651`: the compile lane independently landed its own **§336** (`as`/`instanceof` precedence, #459) in the same window. Two sections cannot share a number.
+
+**Found:** 19/09, while measuring the #259/N2 front (native nullable return/local) with the full suite under WSL2 + QEMU. Unrelated to that work: it reproduces **identically on the base** `77eaa168`.
+
+**Measurement** — the same 8-class set, same host, same recipe (see the recipe below), so the comparison is apples-to-apples:
+
+| | tests | failures |
+|---|---|---|
+| base `77eaa168` | 110 | **7** ← all `qemu-aarch64` SIGSEGV |
+| branch `fix/259-nullable-primitive-native` (before the Char golden refresh) | 110 | 13 ← the 7 + 6 stale Char goldens |
+| branch (after the refresh, commit `ef5dbeaa`) | 110 | **7** ← identical to the base |
+
+Full suite on the branch under WSL2: `Tests run: 2404, Failures: 8, Errors: 0, Skipped: 36` — the 7 above plus one row of the new nullable corpus (`branchesLocalsAndForwardedReturn` on `NATIVE_AARCH64`), which is the pre-existing `Float +=` → `NaN` defect filed as #464. So the suite's remaining redness on this host is entirely pre-existing.
+
+**Repro (each one):** run the class under `mvn -o -pl kof-compiler -am test -Dtest=<class>` on a Linux host with cross binutils + QEMU; the aarch64 binary dies with `139`:
+
+```
+NativeRiscvDtoaTest.dtoaMatchesJvmOracleOnAarch64      qemu aarch64 falhou (139)
+NativeRiscvGcFreeListTest.freeListReusesSlotAndMemstatsCountsAarch64   (139)
+NativeRiscvGcListTest.gcListLinksNewBlocksWithFlagsAarch64             (139)
+NativeRiscvGcListTest.gcListReuseDoesNotDuplicateAarch64               (139)
+NativeRiscvGcMarkTest.conservativeMarkMarksReachableAarch64            (139)
+NativeRiscvGcSweepTest.longAllocLoopSurvivesArenaExhaustionViaCollectAarch64 (139)
+NativeRiscvGcSweepTest.sweepRecoversDeadAndMarksLiveAarch64            (139)
+```
+
+**Scope hint (not a root cause — not investigated):** aarch64-only, and it spans *different* runtimes (dtoa/libc formatting and the GC mark/sweep/free-list). What they share is the aarch64 code path **under `qemu-aarch64`**, while riscv64 runs the analogous code fine — so the prime suspect is the cross-translator/runtime for aarch64 rather than a single runtime function. §283 (aarch64 scheduler never terminating under qemu) is catalogued separately in the same family.
+
+**Measurement recipe (costs time to rediscover):**
+1. A Windows host **without GNU `as`** cannot measure the native targets at all: every native-target test fails with `as not available ... COMP001` (~1000 diagnostics in one suite run). Native evidence needs WSL2/Linux with binutils (`as`, `ld`, plus `riscv64-linux-gnu-as`/`aarch64-linux-gnu-as` for the cross targets) and QEMU.
+2. `Unresolved compilation problem: dev.kof.runtime.KofJsRunner cannot be resolved to a type` (and the same for `org.graalvm.polyglot.Context` / `[LValue;`) surfaces as a **test-execution** error, not a build error, and poisons the failure count — on the base tree it aborted discovery outright (`Tests run: 0`). `rm -rf kof-runtime/target kof-compiler/target` **before** running clears it; the same clean recipe then compiles the branch with zero such errors.
+3. `-pl` **without** `-am` fails on offline dependency resolution — the suite only runs with `-am` (already recorded in DOING; the failure mode is easy to misread as a code problem).
+
+---
 
 ## §309 — `CmdDeployTest.publishIsHonestGapD2` RED at tip: D2-A trocou a recusa e não atualizou o próprio teste — ✅ CLOSED 19/09 (medição `.22` pegou tip pré-rebase; sem repro no tip atual)
 

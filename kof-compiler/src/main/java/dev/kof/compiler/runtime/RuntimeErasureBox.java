@@ -187,29 +187,126 @@ public final class RuntimeErasureBox {
             .Lkuls_bad:
                 leaq .Lkui_msgint(%rip), %rdi
                 call kof_throw_string
+            .globl kof_unbox_bool
+            .type kof_unbox_bool, @function
+            kof_unbox_bool:
+                testq %rdi, %rdi
+                jz .Lkub_bad
+                movabsq $@@MAGIC@@, %rax
+                cmpq %rax, (%rdi)
+                jne .Lkub_bad
+                cmpq $3, 8(%rdi)
+                jne .Lkub_bad
+                movq 16(%rdi), %rax
+                ret
+            .Lkub_bad:
+                leaq .Lkui_msgint(%rip), %rdi
+                call kof_throw_string
+            .globl kof_unbox_bool_soft
+            .type kof_unbox_bool_soft, @function
+            kof_unbox_bool_soft:
+                testq %rdi, %rdi
+                jz .Lkubs_bad
+                movabsq $@@MAGIC@@, %rax
+                cmpq %rax, (%rdi)
+                jne .Lkubs_raw
+                cmpq $3, 8(%rdi)
+                jne .Lkubs_bad
+                movq 16(%rdi), %rax
+                ret
+            .Lkubs_raw:
+                movq %rdi, %rax
+                ret
+            .Lkubs_bad:
+                leaq .Lkui_msgint(%rip), %rdi
+                call kof_throw_string
+            .globl kof_unbox_double
+            .type kof_unbox_double, @function
+            kof_unbox_double:
+                testq %rdi, %rdi
+                jz .Lkud_bad
+                movabsq $@@MAGIC@@, %rax
+                cmpq %rax, (%rdi)
+                jne .Lkud_bad
+                cmpq $4, 8(%rdi)
+                jne .Lkud_bad
+                movq 16(%rdi), %rax
+                ret
+            .Lkud_bad:
+                leaq .Lkui_msgint(%rip), %rdi
+                call kof_throw_string
+            .globl kof_unbox_double_soft
+            .type kof_unbox_double_soft, @function
+            kof_unbox_double_soft:
+                testq %rdi, %rdi
+                jz .Lkuds_bad
+                movabsq $@@MAGIC@@, %rax
+                cmpq %rax, (%rdi)
+                jne .Lkuds_raw
+                cmpq $4, 8(%rdi)
+                jne .Lkuds_bad
+                movq 16(%rdi), %rax
+                ret
+            .Lkuds_raw:
+                movq %rdi, %rax
+                ret
+            .Lkuds_bad:
+                leaq .Lkui_msgint(%rip), %rdi
+                call kof_throw_string
+            .globl kof_unbox_float
+            .type kof_unbox_float, @function
+            kof_unbox_float:
+                testq %rdi, %rdi
+                jz .Lkuf_bad
+                movabsq $@@MAGIC@@, %rax
+                cmpq %rax, (%rdi)
+                jne .Lkuf_bad
+                cmpq $5, 8(%rdi)
+                jne .Lkuf_bad
+                movq 16(%rdi), %rax
+                ret
+            .Lkuf_bad:
+                leaq .Lkui_msgint(%rip), %rdi
+                call kof_throw_string
+            .globl kof_unbox_float_soft
+            .type kof_unbox_float_soft, @function
+            kof_unbox_float_soft:
+                testq %rdi, %rdi
+                jz .Lkufs_bad
+                movabsq $@@MAGIC@@, %rax
+                cmpq %rax, (%rdi)
+                jne .Lkufs_raw
+                cmpq $5, 8(%rdi)
+                jne .Lkufs_bad
+                movq 16(%rdi), %rax
+                ret
+            .Lkufs_raw:
+                movq %rdi, %rax
+                ret
+            .Lkufs_bad:
+                leaq .Lkui_msgint(%rip), %rdi
+                call kof_throw_string
             # §284-map (18/09): kof_box_equals(rdi=L, rsi=R) -> rax 0/1.
-            # Igualdade de `Int?` no native com slot FISICAMENTE boxed
-            # (get/mapOf): caixa vs caixa = VALOR (mista Int/Long = igual,
-            # como Objects.equals no JVM); caixa vs CRU de slot != MAGIC =
-            # identidade do ponteiro (box nunca e numero pequeno); cru vs
-            # cru = identidade == igualdade de numero; null segue o contrato
-            # atual (CCE honesto no primeiro deref — mesma forma que a
-            # aritmetica `null + 1` ja diagnostica).
+            # Igualdade de `T?` no native com slot FISICAMENTE boxed.
+            # Caixa vs caixa = VALOR; null vs null = 1; null vs presente = 0.
             .globl kof_box_equals
             .type kof_box_equals, @function
             kof_box_equals:
                 testq %rdi, %rdi
                 jz .Lke_lnull
-                movq %rsi, %rax
-                testq %rax, %rax
-                jz .Lke_bad                    # L!=null, R=null -> CCE (sonda
-                jmp .Lke_go                     #  so leria *(null))
+                testq %rsi, %rsi
+                jz .Lke_false                   # L!=null, R=null -> 0 (false)
+                jmp .Lke_go
             .Lke_lnull:
                 testq %rsi, %rsi
-                jz .Lke_tnull                   # null == null -> true (a
-                jmp .Lke_bad                    #  sonda leria *(null))
+                jz .Lke_tnull                   # null == null -> 1 (true)
+                xorl %eax, %eax                 # L=null, R!=null -> 0 (false)
+                ret
             .Lke_tnull:
                 movl $1, %eax
+                ret
+            .Lke_false:
+                xorl %eax, %eax
                 ret
             .Lke_go:
                 pushq %rbx

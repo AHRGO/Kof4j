@@ -24,8 +24,7 @@ public final class ExpressionBinaryLowerer {
         boolean isChar = check instanceof Type.PrimitiveType p
                 && "char".equals(Type.canonicalPrimitiveName(p.name()));
         if (isChar) {
-            ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
-                    List.of(Type.PrimitiveType.CHAR), BuiltinTypes.STRING, KofCallKind.STATIC));
+            PrimitiveStringLowering.emitChar(driver, ops, type);
             return;
         }
         // D-NULL-INTENT (#278): `TypeMetrics.isPrimitiveType` desembrulha
@@ -35,10 +34,7 @@ public final class ExpressionBinaryLowerer {
         // segundo caso chama Integer.valueOf(int) sobre uma REFERÊNCIA
         // (VerifyError JVM; NPE silenciosa no interpretador — achado em
         // `"a" + ni()` com `Int? ni() { return null }`). Native mantém o
-        // desembrulho antigo (fase 2 do rollout, representação inalterada).
-        boolean stringified = !Type.isString(type) && (driver.target.isNative()
-                ? TypeMetrics.isPrimitiveType(type)
-                : type instanceof Type.PrimitiveType pt3 && !Type.isVoid(pt3));
+        boolean stringified = !Type.isString(type) && (type instanceof Type.PrimitiveType pt3 && !Type.isVoid(pt3));
         if (driver.target == Target.JS
                 && TypeMetrics.isFloatingPoint(
                         type instanceof Type.NullableType ntp ? ntp.inner() : type)) {

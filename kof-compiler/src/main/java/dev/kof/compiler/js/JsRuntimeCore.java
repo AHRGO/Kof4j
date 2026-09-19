@@ -240,6 +240,13 @@ public final class JsRuntimeCore {
                 return x ? true : false;
             }
 
+            // #259: String.valueOf(Char?) — preserva "null" na ausência,
+            // formata codepoint como caractere UTF-16 na presença.
+            export function kofCharValueOf(x) {
+                if (x === null || x === undefined) return "null";
+                return typeof x === "number" ? String.fromCharCode(x) : String(x);
+            }
+
             // §107-JS: formato de coleção idêntico ao contêiner JVM
             // (ArrayList/HashMap/HashSet.toString): elementos separados por
             // ", " dentro de [ ], Map como "{k=v}". Elementos passam por
@@ -267,6 +274,19 @@ public final class JsRuntimeCore {
             export function kofRecordEq(a, b) {
                 if (a === b) return 1;
                 if (a === null || a === undefined || b === null || b === undefined) return 0;
+                if (typeof a.equals === "function") return a.equals(b) ? 1 : 0;
+                return 0;
+            }
+
+            // #259: igualdade de `Float?`/`Double?`. O `===` diverge do wrapper
+            // JVM (oráculo) em 2 casos: `NaN === NaN` false (JVM true) e
+            // `0.0 === -0.0` true (JVM false). `Object.is` casa com o wrapper
+            // nesses 2 e é idêntico ao `===` no resto. Só entra com tipo
+            // ESTÁTICO float/double; Int/Long seguem kofRecordEq (o `-0` de
+            // `0 * -1` seria falso-negativo espúrio em aritmética inteira).
+            export function kofFpEq(a, b) {
+                if (a === null || a === undefined || b === null || b === undefined) return a === b ? 1 : 0;
+                if (typeof a === "number" && typeof b === "number") return Object.is(a, b) ? 1 : 0;
                 if (typeof a.equals === "function") return a.equals(b) ? 1 : 0;
                 return 0;
             }

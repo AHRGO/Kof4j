@@ -54,21 +54,27 @@ public final class NativeBoxTags {
         }
     }
 
-    /** §284: funcao de unbox por tipo esperado (v1: inteiros; demais = passthrough). */
+    /** §284: funcao de unbox por tipo esperado. */
     static String unboxFn(String primName) {
         switch (primName) {
             case "int", "char", "short", "byte": return "kof_unbox_int";
             // §284-map: Long aceita caixa Int OU Long (Number.longValue)
             case "long": return "kof_unbox_long";
+            case "bool", "boolean": return "kof_unbox_bool";
+            case "double": return "kof_unbox_double";
+            case "float": return "kof_unbox_float";
             default: return null;
         }
     }
 
-    /** §284-map: variante soft (consumidor de `Int?`) — cru passa cru. */
+    /** §284-map: variante soft (consumidor de `T?`) — cru passa cru. */
     static String unboxSoftFn(String primName) {
         switch (primName) {
             case "int", "char", "short", "byte": return "kof_unbox_int_soft";
             case "long": return "kof_unbox_long_soft";
+            case "bool", "boolean": return "kof_unbox_bool_soft";
+            case "double": return "kof_unbox_double_soft";
+            case "float": return "kof_unbox_float_soft";
             default: return null;
         }
     }
@@ -81,7 +87,8 @@ public final class NativeBoxTags {
         return switch (n) {
             case "Integer", "java/lang/Integer", "Long", "java/lang/Long",
                  "Character", "java/lang/Character", "Short", "java/lang/Short",
-                 "Byte", "java/lang/Byte" -> true;
+                 "Byte", "java/lang/Byte", "Boolean", "java/lang/Boolean",
+                 "Double", "java/lang/Double", "Float", "java/lang/Float" -> true;
             default -> false;
         };
     }

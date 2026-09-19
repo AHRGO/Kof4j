@@ -387,7 +387,9 @@ class NativeRiscv64E2ETest {
                 println(s.charAt(0))
             }
             """);
-        assertEquals("10\nKof\ntrue\ntrue\n72", out);
+        // 19/09 (#259/N2, §333): `72` -> `H` — `Char` imprime o CARÁTER
+        // (§216/D-PRINT); o cross ainda imprimia codepoint.
+        assertEquals("10\nKof\ntrue\ntrue\nH", out);
     }
 
     @Test
@@ -807,12 +809,15 @@ main() {
                     println("a\\u20ac".length)
                     println("a\\u20ac".charAt(1))
                     println("a\\uD83D\\uDE00b".length)
-                    println("a\\uD83D\\uDE00b".charAt(1))
-                    println("a\\uD83D\\uDE00b".charAt(2))
+                    println("a\\uD83D\\uDE00b".charAt(1) as Int)
+                    println("a\\uD83D\\uDE00b".charAt(2) as Int)
                     println("a\\uD83D\\uDE00b".charAt(3))
                 }
                 """);
-        assertEquals("4\n233\n3\n233\n232\n2\n8364\n4\n55357\n56832\n98", out);
+        // Golden atualizado 19/09 (#259/N2, §333): idem NativeAarch64E2ETest —
+        // o de 11/09 é PRÉ-D-PRINT (§216: `Char` imprime o CARÁTER) e o x86 já
+        // usa o formato novo com `as Int` nos surrogates soltos.
+        assertEquals("4\né\n3\né\nè\n2\n€\n4\n55357\n56832\nb", out);
     }
 
     @Test

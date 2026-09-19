@@ -51,11 +51,11 @@ final class ExpressionBinaryPredicates {
         return isNullablePrimLike(t) || (t instanceof Type.PrimitiveType pt && !Type.isVoid(pt));
     }
 
-    /** §284-map: familia com caixa fisica no slot de Map (unboxFn do backend). */
+    /** §284-map: familia com caixa fisica no slot de Map/local (unboxFn do backend). */
     static boolean isBoxedPrimConsumer(Type t) {
         return t instanceof Type.NullableType nt && nt.inner() instanceof Type.PrimitiveType pt
                 && switch (pt.name()) {
-                    case "int", "char", "short", "byte", "long" -> true;
+                    case "int", "char", "short", "byte", "long", "bool", "boolean", "double", "float" -> true;
                     default -> false;
                 };
     }

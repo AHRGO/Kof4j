@@ -93,9 +93,13 @@ public final class CompilerComparisons {
         if (cond instanceof BinaryExpr) {
             return cond;
         }
-        if (driver.target.isNative()) {
-            return cond;
-        }
+        // #259/N2: o Native NÃO é mais excluído aqui. O §306 o deixou de fora
+        // porque o slot nativo de `Bool?` era o primitivo cru (NE 0 bastava);
+        // com a representação atômica o slot é CAIXA (ponteiro), e `NE 0`
+        // passaria a testar o PONTEIRO — `Present(false)` é ponteiro não-nulo
+        // e viraria "verdadeiro" (medido: `while (fb())` gira para sempre no
+        // x86; riscv/aarch davam `true` para `false`). A igualdade de
+        // `Nullable(Bool)` já roteia p/ `kof_box_equals` (valor) nos 3 nativos.
         if (!isNullableBool(ExpressionTyper.inferExprType(driver, cond, locals))) {
             return cond;
         }

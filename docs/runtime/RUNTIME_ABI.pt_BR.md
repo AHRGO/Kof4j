@@ -200,6 +200,62 @@ ArrayObject:
 
 ---
 
+### 3.9 ABI de Erasure de Primitivo / Caixa de Nullable
+
+`Nullable(primitivo)` é um domínio de valor real em todos os targets —
+`Absent | Present(T)`. A ausência **não** é sentinela roubada: `Absent` é um
+valor distinto de `Present(0)`, `Present(false)` e `Present(0.0)`.
+
+| Target | Representação física de `T?` |
+|---|---|
+| JVM | referência de wrapper (`Integer`/`Boolean`/…) ou `null` |
+| Script | valor do host ou `null` |
+| JS | valor dinâmico ou `null` |
+| Native | `RuntimeErasureBox*` ou ponteiro `0` |
+
+A fronteira `T → T?` é a chamada compartilhada `kof_box`
+(`CompilerEmissionHelpers.emitErasureBox`), nunca `Wrapper.valueOf` direto.
+`Script`/`JS` baixam `kof_box` para a identidade, então o valor continua
+primitivo do host lá.
+
+**Layout da caixa (Native):** 24 bytes, preenchidos pelo runtime x86-64
+(`RuntimeErasureBox.java`); o RISC-V espelha em `NativeRiscvAsmRtB49.java`, e
+o AArch64 herda pelo tradutor cross.
+
+```text
++0   MAGIC   0x4B4F46425F425801
++8   tag
++16  value
+```
+
+| tag | payload |
+|---|---|
+| 0 | Int / Char / Short / Byte |
+| 2 | Long |
+| 3 | Bool |
+| 4 | Double |
+| 5 | Float |
+
+**Operações**
+
+| Função | Contrato |
+|---|---|
+| `kof_box_int` / `_long` / `_bool` / `_float` / `_double` | constrói a caixa a partir do primitivo cru |
+| `kof_unbox_<t>` (strict) | aceita só caixa válida da tag esperada. Caixa malformada ou tag trocada é **erro de runtime honesto** — nunca `tipo errado → default` |
+| `kof_unbox_<t>_soft` | caixa → abre; cru → passa cru; `null` → erro de uso |
+| `kof_box_equals(l, r)` | igualdade **por valor** lifted: `null == null` → `1`; `null` vs presente → `0`; caixa vs caixa → payload (Int/Long cross-tag comparam igual) |
+| `kof_box_to_string` | entende as tags 0, 2, 3, 4, 5 |
+
+`Char?` não tem tag própria — a tag 0 é compartilhada com Int/Short/Byte, então
+`kof_box_to_string` sozinho não distingue `Int(65)` de `Char('A')`. Isso não
+exige um segundo ABI: o lowering ainda conhece o tipo estático, e a face `Char`
+desempacota em largura int e formata como caractere.
+
+**JVM:** `kof_box`/`kof_unbox` são o par `valueOf`/`xxxValue` do wrapper e a
+caixa é o próprio wrapper do JDK — o layout acima é só do Native.
+
+---
+
 ## 4. Calling Convention (Native)
 
 O NativeBackend usa System V AMD64 ABI:

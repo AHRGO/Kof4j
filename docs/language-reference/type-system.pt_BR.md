@@ -134,8 +134,15 @@ Para `+ - * / %` com dois numéricos: `double` domina, senão `float`, senão
 ## 5. Nullability
 
 - Representação: wrapper `NullableType(inner)`. `T?` = "T ou null".
-- **Storage é o inner** — nullable é constraint de compile-time apenas
-  (`StatementLowerer.java:47-51`).
+- **`NullableType` é semântico, não apenas constraint de compile-time** — o
+  storage é a representação interna do target, e a ausência é um valor real
+  distinto de todo valor presente: `Absent != Present(0)`,
+  `Absent != Present(false)`, `Absent != Present(0.0)`. Por target:
+  `JVM` referência de wrapper | `null`; `Script` valor do host | `null`;
+  `JS` valor dinâmico | `null`; `Native` `RuntimeErasureBox*` | ponteiro `0`.
+  A fronteira `T → T?` é a chamada compartilhada `kof_box` (`emitErasureBox`),
+  nunca `Wrapper.valueOf` direto — ver
+  [RUNTIME_ABI.md §3.9](../runtime/RUNTIME_ABI.md).
 - **Narrowing**: a **única** forma reconhecida é `if (x != null)` (ou `null !=
   x`) com `x` identificador de tipo `T?` → no **then-branch**, `x` passa a ter
   tipo `T` (`StatementAnalyzer`, narrowing de `IfStmt`). **Não há** narrowing por `&&`,
@@ -153,14 +160,15 @@ Para `+ - * / %` com dois numéricos: `double` domina, senão `float`, senão
   `§262` (face (a) `07a51565` literal `null` → comparação de referência;
   face (b) igualdade de conteúdo null-safe via desugar `Objects.equals` /
   helper JS `kofRecordEq`).
-  `Int? == Int?` compara valor (*probe*: `5 == 5` → true). **`Int? == null`
-  NÃO lança — dobra silencioso**: um `Int?` null (map miss) compara
-  `== null` como **false** (`if (n == null)` imprimiu `not-null`, *medido
-  16/09, jar do tip*) porque o storage de nullable-primitivo é o interno
-  (`null`→`0` na fronteira). Esse silêncio é o bug aberto **D-NULL-INTENT /
-  #259** (§125 mede a dobra) — NÃO é regra de linguagem; o contrato boxed
-  segue devendo as outras faces (§241 revertido para o gap honesto).
-  `String? == null` → `true` corretamente (*medido 16/09*).
+- **`Nullable(primitivo)` compara por valor, lifted** (*medido 19/09*,
+  `NativeNullablePrimitiveContractE2ETest`, nos 6 targets): um `Int?` null
+  testa `== null` como **true** e imprime `null`; `Int? == Int?` é igualdade
+  de valor, nunca identidade de wrapper (dois `10000` de chamadas distintas →
+  `true`); `Float?`/`Double?` seguem o contrato do wrapper JVM, então
+  `NaN == NaN` → `true` e `+0.0 == -0.0` → `false`. A dobra silenciosa antiga
+  — um `Int?` null comparando `== null` como `false`, com `null`→`0` na
+  fronteira — era o bug **D-NULL-INTENT / #259**, e acabou: o storage não é
+  mais o interno cru. `String? == null` → `true`.
 - **Fontes de `T?`**: `Map.get(k)` para valor de referência, `readLine()`,
   `readFile()`, função declarada `T?` que faz `return null`. **Não existe
   literal `T? = null`** — o null-literal é rejeitado desde 10/09 (SG-008 →
