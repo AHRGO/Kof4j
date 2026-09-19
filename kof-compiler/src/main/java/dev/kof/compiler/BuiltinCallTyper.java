@@ -124,6 +124,18 @@ public final class BuiltinCallTyper {
             return new Type.ClassType(ctorClass.packageName(), ctorClass.name(), List.of());
         }
         if (mc.receiver() == null && ("println".equals(mc.methodName()) || "print".equals(mc.methodName()))) {
+            // #495 (maintainer 19/09: "empty println should not compile"): o
+            // builtin aceita exatamente UM valor. Zero argumentos passava pelo
+            // typer e caía no emissor genérico de método → NoSuchMethodError no
+            // runtime (R6 — diagnóstico no compile, nunca falha muda).
+            if (mc.arguments().isEmpty() && sa.diagnostics() != null) {
+                sa.diagnostics().error(mc.position() != null ? mc.position().file() : "",
+                        mc.position() != null ? mc.position().line() : 0,
+                        mc.position() != null ? mc.position().column() : 0, 0,
+                        mc.methodName() + "() needs an argument — println and print take the"
+                                + " value to print (println(x)); for a blank line use println(\"\")",
+                        "SEM096");
+            }
             for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
             return Type.PrimitiveType.VOID;
         }
