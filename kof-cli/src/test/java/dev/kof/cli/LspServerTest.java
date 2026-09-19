@@ -186,7 +186,7 @@ class LspServerTest {
 
     /** LSP-A: keyword e namespace da stdlib nunca sao renomeaveis (guarda honesta). */
     @Test
-    void renameRefusesKeywordsAndStdlibNamespaces(@TempDir Path dir) throws Exception {
+    void renameRefusesKeywordsAndStdlibNamespaces() throws Exception {
         String app = "main() { spawn go() }\nString db = \"x\"\n";
         String reqTpl = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"textDocument/rename\",\"params\":{"
                 + "\"textDocument\":{\"uri\":\"" + URI + "\"},"
