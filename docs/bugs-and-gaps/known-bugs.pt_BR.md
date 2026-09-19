@@ -10519,7 +10519,9 @@ Também coberto pelo corpus novo `NativeNullablePrimitiveContractE2ETest` (linha
 **Repro atual:** na verdade o NaN NAO e construtivel em fonte Kof hoje — literal de divisao por zero e diagnostico OBS-009 e nao ha `Double.NaN` na stdlib → a face esta DESLIGADA ate existir um produtor de NaN (biblioteca matematica, pacote oficial). Rebaixar a informativo se um produtor nascer. Relacionado: §333, §284-map, OBS-009.
 
 
-## §336 — 7 testes de cross falham com **SIGSEGV (exit 139) sob `qemu-aarch64`** — `NativeRiscvDtoaTest.dtoaMatchesJvmOracleOnAarch64` mais as 5 classes de GC (`GcFreeList`, `GcList`×2, `GcMark`, `GcSweep`×2) — 🟡 ABERTO 19/09 (pré-existente; só aarch64 — riscv64 passa no mesmo código) — dono = lane nativa
+## §337 — 7 testes de cross falham com **SIGSEGV (exit 139) sob `qemu-aarch64`** — `NativeRiscvDtoaTest.dtoaMatchesJvmOracleOnAarch64` mais as 5 classes de GC (`GcFreeList`, `GcList`×2, `GcMark`, `GcSweep`×2) — 🟡 ABERTO 19/09 (pré-existente; só aarch64 — riscv64 passa no mesmo código) — dono = lane nativa
+
+> **Renumerado §336 → §337 em 19/09** quando esta branch rebaseou em `f7a45651`: a lane do compilador landou o **§336** dela (`as`/`instanceof` precedência, #459) na mesma janela. Duas seções não podem dividir o mesmo número.
 
 **Achado:** 19/09, medindo a frente #259/N2 (retorno/local nullable nativo) com a suíte completa em WSL2 + QEMU. Sem relação com aquele trabalho: reproduz **igual na base** `77eaa168`.
 

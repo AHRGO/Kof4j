@@ -11081,7 +11081,9 @@ Also covered by the new corpus `NativeNullablePrimitiveContractE2ETest` (`Char?`
 **Repro (current behavior, if anyone ever needs it):** `class C { Object o }` … `c.o = 0.0/0.0`?? — division-by-zero literal is a compile-time diagnostic (OBS-009), so the NaN box is NOT constructible from Kof source today (no `Double.NaN` in stdlib either) → the face is UNREACHABLE until a NaN producer exists. Downgrade to informational if a NaN producer ever lands (math library official-package plans). Related: §333, §284-map, OBS-009, DECISIONS.md (NaN policy, if ever needed).
 
 
-## §336 — 7 cross tests fail with **SIGSEGV (exit 139) under `qemu-aarch64`** — `NativeRiscvDtoaTest.dtoaMatchesJvmOracleOnAarch64` plus the 5 GC classes (`GcFreeList`, `GcList`×2, `GcMark`, `GcSweep`×2) — 🟡 OPEN 19/09 (pre-existing; aarch64-only — riscv64 passes on the same code) — owner = native lane
+## §337 — 7 cross tests fail with **SIGSEGV (exit 139) under `qemu-aarch64`** — `NativeRiscvDtoaTest.dtoaMatchesJvmOracleOnAarch64` plus the 5 GC classes (`GcFreeList`, `GcList`×2, `GcMark`, `GcSweep`×2) — 🟡 OPEN 19/09 (pre-existing; aarch64-only — riscv64 passes on the same code) — owner = native lane
+
+> **Renumbered §336 → §337 on 19/09** when this branch rebased onto `f7a45651`: the compile lane independently landed its own **§336** (`as`/`instanceof` precedence, #459) in the same window. Two sections cannot share a number.
 
 **Found:** 19/09, while measuring the #259/N2 front (native nullable return/local) with the full suite under WSL2 + QEMU. Unrelated to that work: it reproduces **identically on the base** `77eaa168`.
 
