@@ -90,6 +90,19 @@ JsIr.JsStatement parseSwitchStatement(MethodCtx ctx, int[] pos) {
                 // (String - String gerava bytecode inválido no JVM). O call é
                 // pulado aqui: no JS o `switch` já compara strings por valor
                 // (===), então o caseValue coletado é o literal.
+                // #471-regression (face stmt do merge 499-505): switch sobre
+                // LONG/FLOAT/DOUBLE baixa KofBinary(EQ, tipo-largo) no stmt
+                // (o ramo SUB dava if_icmpeq sobre long_2nd = VerifyError no
+                // JVM). No JS o switch compara numeros com === (mesma
+                // semantica IEEE p/ NaN nunca-casar e -0.0==0.0), entao o EQ
+                // e pulado e o caseValue coletado e o literal — shape NE
+                // identico ao da identidade/string.
+                if (op instanceof KofBinary kb && kb.op() == KofBinaryOp.EQ
+                        && isWideOrFloatingPrimitive(kb.operandType()) && stack.size() == 2) {
+                    identityEq = true;
+                    pos[0]++;
+                    break;
+                }
                 if (op instanceof KofCall kc && "kof_string_equals".equals(kc.methodName())
                         && stack.size() == 2) {
                     stringEq = true;
@@ -343,5 +356,12 @@ JsIr.JsStatement parsePatternSwitch(MethodCtx ctx, int[] pos) {
             result = new JsIr.JsIf(cond, thenBranch, elseBranch);
         }
         return result != null ? result : new JsIr.JsBlock(List.of());
+    }
+
+    private static boolean isWideOrFloatingPrimitive(Type t) {
+        Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
+        if (!(inner instanceof Type.PrimitiveType p)) return false;
+        String n = Type.canonicalPrimitiveName(p.name());
+        return "long".equals(n) || "float".equals(n) || "double".equals(n);
     }
 }

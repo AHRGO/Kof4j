@@ -48,8 +48,11 @@ public final class StatementAnalyzer {
                             "cannot assign to immutable 'val' variable '" + ie.name() + "'",
                             "SEM037");
                 }
+                // String += <any> is always valid: the lowerer converts via valueOf+kof_string_concat
+                boolean stringConcat = "+=".equals(ae.operator()) && BuiltinTypes.isString(targetType);
                 if (sa.diagnostics() != null && !Type.isUnknown(targetType)
                         && !Type.isUnknown(valueType)
+                        && !stringConcat
                         && !TypeChecker.isAssignable(sa, valueType, targetType)) {
                     sa.diagnostics().error("", 0, 0, 0,
                             "Type mismatch: cannot assign " + valueType + " to " + targetType,
@@ -262,7 +265,12 @@ public final class StatementAnalyzer {
                     }
                     if (sa.diagnostics() != null && !Type.isUnknown(returnType) && !Type.isVoid(returnType)
                             && !Type.isUnknown(valueType) && !TypeChecker.isAssignable(sa, valueType, returnType)) {
-                        sa.diagnostics().error("", 0, 0, 0,
+                        // #502: use the return statement's own position so the error points at the
+                        // offending `return` line rather than emitting the useless 0:0 default.
+                        SourcePosition rp = ret.position();
+                        sa.diagnostics().error(rp != null ? rp.file() : "",
+                                rp != null ? rp.line() : 0,
+                                rp != null ? rp.column() : 0, 0,
                                 "Return type mismatch: expected '" + Type.display(returnType) + "' but got '" + Type.display(valueType) + "'", "SEM010");
                     }
                 }

@@ -330,17 +330,6 @@ public final class NativeX86Arith {
             sb.append("    pushq %rax\n");
             return;
         }
-        // #471: i2b/i2s — wrap signed de 8/16 bits (JVM oracle medido:
-        // 200 as Byte = -56; 70000 as Short = 4464).
-        if (ku.op() == KofUnaryOp.I2B || ku.op() == KofUnaryOp.I2S) {
-            sb.append("    popq %rax\n");
-            sb.append(ku.op() == KofUnaryOp.I2B
-                    ? "    movsbl %al, %eax\n"
-                    : "    movswl %ax, %eax\n");
-            sb.append("    movslq %eax, %rax\n");
-            sb.append("    pushq %rax\n");
-            return;
-        }
         sb.append("    popq %rax\n");
         boolean int32u = NativeTypeKinds.isInt32Type(ku.operandType());
         String suf = int32u ? "l" : "q";

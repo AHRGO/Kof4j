@@ -131,22 +131,6 @@ public final class CompilerEmissionHelpers {
         if (from.equals(to)) return;
         String fn = TypeMetrics.primitiveName(from);
         String tn = TypeMetrics.primitiveName(to);
-        // #471: `as Byte`/`as Short` nao emitiam nada — o int/long/float/double
-        // cru ia direto para `Byte.valueOf(B)`/`Short.valueOf(S)` (AIOOBE na
-        // cache do boxed com 200; long/double na pilha = VerifyError "bad type
-        // on operand stack"). Estreitamento JLS 5.1.3: converte p/ int primeiro
-        // e entao I2B/I2S (wrap signed de 8/16 bits, oracle JVM medido).
-        if ("byte".equals(tn) || "short".equals(tn)) {
-            switch (fn) {
-                case "long", "Long" -> ops.add(new KofUnary(KofUnaryOp.L2I, from));
-                case "float", "Float" -> ops.add(new KofUnary(KofUnaryOp.F2I, from));
-                case "double", "Double" -> ops.add(new KofUnary(KofUnaryOp.D2I, from));
-                default -> { }
-            }
-            ops.add(new KofUnary("byte".equals(tn) ? KofUnaryOp.I2B : KofUnaryOp.I2S,
-                    Type.PrimitiveType.INT));
-            return;
-        }
         KofUnaryOp conv = switch (tn) {
             case "int", "Int" -> switch (fn) {
                 case "long", "Long" -> KofUnaryOp.L2I;
@@ -159,6 +143,10 @@ public final class CompilerEmissionHelpers {
                 case "double", "Double" -> KofUnaryOp.D2L;
                 default -> null;
             };
+            // #471: as Byte / as Short must emit i2b / i2s before Byte/Short.valueOf
+            // so the value is truncated to the correct range before boxing
+            case "byte", "Byte" -> KofUnaryOp.I2B;
+            case "short", "Short" -> KofUnaryOp.I2S;
             default -> null;
         };
         if (conv != null) {

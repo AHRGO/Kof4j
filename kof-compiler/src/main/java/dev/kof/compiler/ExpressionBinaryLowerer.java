@@ -19,7 +19,7 @@ public final class ExpressionBinaryLowerer {
      * pilha, sem boxear; nos 4 alvos o dispatch `valueOf(C)` é o mesmo de
      * `String.valueOf(c)` (§27). Os demais primitivos mantêm o box.
      */
-    private static void emitOperandToString(CompilerDriver driver, List<KofOperation> ops, Type type) {
+    static void emitOperandToString(CompilerDriver driver, List<KofOperation> ops, Type type) {
         Type check = type instanceof Type.NullableType nt ? nt.inner() : type;
         boolean isChar = check instanceof Type.PrimitiveType p
                 && "char".equals(Type.canonicalPrimitiveName(p.name()));

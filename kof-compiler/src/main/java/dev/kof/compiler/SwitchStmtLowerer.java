@@ -91,15 +91,6 @@ if (hasPattern) {
         } else {
             ops.add(new KofLoadLocal(switchType, switchTmp));
             localIdx = ExpressionLowerer.emitExpression(driver, sc.value(), ops, owner, localIdx, locals);
-            // #473/#474: `KofBinary(EQ, LONG/FLOAT/DOUBLE)` no JVM empilha um
-            // BOOL de 32 bits (LCMP/FCMP/DCMP + IFEQ/IFNE no backend), mas o
-            // salto de teste aqui esperava o shape `SUB`-like com literal 0.
-            // Para categorias de 32 bits mantem-se EQ-vs-0; para LONG/FP o
-            // resultado do EQ ja e um Int 0/1 — salta direto sem `icmp 0`
-            // duplicado? NAO — o KofConditionalJump compara o topo com 0, e o
-            // topo e exatamente o bool do EQ: o `== literal 0` abaixo esta
-            // correto nos dois mundos. Nada a mudar neste ramo alem da forma
-            // canonica `NE bodyLabel` usada no outro caminho — preservado.
             ops.add(new KofBinary(KofBinaryOp.EQ, switchType));
             ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
             ops.add(new KofConditionalJump(KofComparison.EQ, nextTest, bodyLabels.get(i)));
@@ -203,19 +194,23 @@ for (int i = 0; i < ss.cases().size(); i++) {
         ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
         ops.add(new KofConditionalJump(KofComparison.NE, bodyLabels.get(i),
                 i + 1 < ss.cases().size() ? testLabels.get(i + 1) : defaultLabel));
-    } else {
-        // #473/#474: era `SUB` + compara com 0 — so o int de 32 bits sobrevive
-        // a essa forma: sobre LONG virou frame invalido (ASM AIOOBE no
-        // COMPUTE_FRAMES = COMP002; nunca existiu SUB de 64-bit com iconst_0
-        // legal) e sobre DOUBLE/FLOAT gerou `if_icmpeq` com operands FP =
-        // bytecode invalido (VerifyError mascarado pelo launcher JavaFX). A
-        // igualdade agora usa o MESMO KofBinary(EQ, switchType) da face
-        // pattern/enum — o backend JVM ja tem LCMP/FCMP/DCMP + IFNE (329-353)
-        // e o JS/Native casam o `==` nativo; NaN nunca casa (dcmpeq false),
-        // exatamente como Java faz com switch de double.
+    } else if (isWideOrFloating(switchType)) {
+        // #471-regression (lane 499-505): o ramo SUB do stmt sobreviveu ao
+        // "EQ não-SUB" de 2238bd0a só na face pattern/expression — sobre
+        // LONG/DOUBLE o lsub/dsub deixa categoria 2 na pilha e o jump
+        // int-if_icmpeq = VerifyError (medido: if_icmpeq @ long_2nd).
+        // Igualdade larga/FP usa o MESMO KofBinary(EQ, switchType) da face
+        // pattern (LCMP/FCMP/DCMP + IFEQ no backend; NaN nunca casa), e o
+        // bool 0/1 resultante compara com 0 como INT — shape válido nos
+        // 4 alvos (JVM/Script/JS/Native roteiam pelo mesmo IR).
         ops.add(new KofBinary(KofBinaryOp.EQ, switchType));
         ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
         ops.add(new KofConditionalJump(KofComparison.NE, bodyLabels.get(i),
+                i + 1 < ss.cases().size() ? testLabels.get(i + 1) : defaultLabel));
+    } else {
+        ops.add(new KofBinary(KofBinaryOp.SUB, switchType));
+        ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
+        ops.add(new KofConditionalJump(KofComparison.EQ, bodyLabels.get(i),
                 i + 1 < ss.cases().size() ? testLabels.get(i + 1) : defaultLabel));
     }
 }
@@ -254,5 +249,12 @@ ops.add(new KofLabel(endLabel));
             if (lv.index() == switchTmp) return lv.type();
         }
         return fallback;
+    }
+
+    private static boolean isWideOrFloating(Type t) {
+        Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
+        if (!(inner instanceof Type.PrimitiveType p)) return false;
+        String n = Type.canonicalPrimitiveName(p.name());
+        return "long".equals(n) || "float".equals(n) || "double".equals(n);
     }
 }
