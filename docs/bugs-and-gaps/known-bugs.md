@@ -11137,7 +11137,7 @@ Registrado 19/09 ~06:5x pela ISSUE-LANE `.22` (condição de parada 3: vermelho 
 - **✅ CLOSED 19/09 pela lane docs→plataforma (precedente §307: gate vermelho no tip = prioridade zero de TODAS as lanes, derruba o CI geral).** Split verbatim, uma costura limpa por arquivo: `nat/NativeBoxTags.java` (88 linhas novos: `collectionTag`/`mapValueTag`/`boxFn`/`unboxFn`/`unboxSoftFn`/`isBoxedNumericReceiver` — puros, compartilhados com o cross; `NativeX86Calls.java` 634→561; chamadores cross renomeados `NativeX86Calls.x(`→`NativeBoxTags.x(` em 8 sítios). Irmão achado no MESMO push-run: `ExpressionBinaryLowerer` tinha cruzado para **601 ≥ 600** (inflado pelo #293; escondido porque o tip NAO COMPILAVA — variáveis duplicadas do rebase do `988f8afd`, consertadas no commit anterior `7e7514eb` com a suíte inteira) — mesma receita: `ExpressionBinaryPredicates.java` (73 linhas, os 8 predicados puros) e o lowerer 601→541. **Prova (freeze rule 3):** MESMA suíte antes/depois — compiler 2348 run / 0 FAILURES / 18E (`Cannot run program node` — host sem node, documentado) / 209 skip; `check_500` rc=0 com baseline re-travado (`--update-baseline`); R1 boundary rc=0. Dívida remanescente (541/561 toleradas, ≤599) não cresce sem re-travar o baseline; o corte fino continua da nat lane / compiler lane quando quiserem — não é mais bloqueante.
 
 
-## §338 — JS backend: `&&`/`||` in **value position** leaks the operand — a nullable RHS (`Bool?` = `null`) prints `null` where the contract says `false` (#486) — 🟡 OPEN 19/09 (pre-existing; JS-only) — owner = JS lane
+## §338 — JS backend: `&&`/`||` in **value position** leaks the operand — a nullable RHS (`Bool?` = `null`) prints `null` where the contract says `false` (#486) — ✅ FIXED 19/09 (branch `fix/486-js-logical-bool`; PR pending maintainer review — proof measured, see the closure block at the end of this section) — owner = JS lane
 
 **Found:** 19/09, while fixing #462 (the canonical `Bool` result of `&&`/`||`). The value-position faces now hold on JVM/Script, but JS diverges when the **right** operand is a `Bool?` that is null.
 
@@ -11150,6 +11150,25 @@ Registrado 19/09 ~06:5x pela ISSUE-LANE `.22` (condição de parada 3: vermelho 
 **Fix sketch:** canonicalise the JS result while keeping JS's native short-circuit — wrapping in `!!` (`!!(a && b)` yields a real `Boolean`; `!!(true && null)` → `false`). Note the existing `kofBoolValueOf` is a *formatting* helper (string `true`/`false`), not a coercion. Careful: the `KofBinary` → JS IR mapping is shared with the **condition** path, where returning the operand is harmless — the coercion is correct in both, but short-circuit must stay intact.
 
 **Status:** **not fixed** (the #462 DoD asks only that JS not regress, and it does not). Behaviour is **pinned** in `NullableBoolTruthinessE2ETest#logicalValuePositionWithNullableRhsJsGap` with a pointer here, so it cannot change silently. Filed as **#486**.
+
+**✅ FIXED 19/09 (branch `fix/486-js-logical-bool`; PR pending maintainer review).** The fix is local to the JS backend: `JsCallEmitter.binaryExpr` wraps **only the boolean** `AND`/`OR` branches in `!!` — `!!(a && b)` / `!!(a || b)`. The native operator stays inside, so the short-circuit is untouched (`false && rhs()` never evaluates `rhs`); `!!` materialises a real `Boolean`. The bitwise paths (`&`/`|`) are unchanged, still behind the `JsTypeMapper.isBoolOperand` guard. `kofBoolValueOf` was deliberately **not** used — it preserves `null` (that is `Bool?` semantics, which is exactly what must not escape here).
+
+Proof — Q0 first, changing **only the test golden** (no production change), on base `7d47d30a`:
+
+```text
+expected: false / true / false / false
+actual JS: false / true / null  / null
+```
+
+Then the production patch:
+
+| | before | after |
+|---|---|---|
+| `NullableBoolTruthinessE2ETest` | 15 run / **1 failure** | **15/15** |
+| `KofJsE2ETest#logicalAndOrShortCircuit` + `#bitwiseAndOrStillWorks` (the mapping guards) | — | **2/2** |
+| `NullablePrimitiveContractE2ETest` | — | 26/26 |
+
+The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsMatchesKofContract` and asserts the contract (`false/true/false/false`) — it cannot go back to pinning the divergence. Also `KofJsE2ETest#execStdlibTimeAndIo` fails on this host, but it fails **identically without the patch** on the same clean tree and its program contains no `&&`/`||` (it is `writeFile` → `-1` / `readFile` → `null`), so it is pre-existing and unrelated.
 
 ---
 
