@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class CollectionMethodsStdlibE2ETest {
 
-    private static final String PROGRAM = """
+    static final String PROGRAM = """
             main() {
                 val m: Map<String, Int> = mapOf()
                 m.put("a", 1)
@@ -70,7 +70,7 @@ class CollectionMethodsStdlibE2ETest {
             """;
 
     // Golden MEDIDO no oráculo JVM (java.util), 19/09 — ver body do programa.
-    private static final String GOLDEN =
+    static final String GOLDEN =
             "true\nfalse\nfalse\n1\n1\ntrue\ntrue\ntrue\nv1\n1\n-1\n3\n-1\n"
                     + "2\n0\ntrue\ntrue\n4\nfalse\n1\n5\n3\napple\ntrue\n3";
 
@@ -112,6 +112,25 @@ class CollectionMethodsStdlibE2ETest {
         String txt = out.toString().replace("\r\n", "\n").trim();
         assertEquals(0, ec, "js run exit, output:\n" + txt);
         assertEquals(GOLDEN, txt, "js output must match the JVM oracle (parity rule 5)");
+    }
+
+    // Fatia 2 (#386/#382): o mesmo golden roda no NATIVO x86_64 (asm real —
+    // RuntimeMapLookups/RuntimeListLookups). Riscv64/aarch64: NativeRiscv64/
+    // Aarch64E2ETest (guardados por toolchain — sem qemu no host de medição,
+    // skip honesto, nunca falso-verde).
+    @Test
+    void sevenMethodsRunOnNativeX86(@TempDir Path tempDir) throws Exception {
+        Path src = tempDir.resolve("N.kf");
+        Files.writeString(src, PROGRAM);
+        Path outDir = tempDir.resolve("outN");
+        CompilationResult r = driver.compile(src, outDir, Target.NATIVE);
+        assertTrue(r.success(), "native compile: " + r.diagnostics().getDiagnostics());
+        Path bin = outDir.resolve("Default/Main");
+        assertTrue(Files.exists(bin), "binary should exist");
+        Process p = new ProcessBuilder(bin.toString()).redirectErrorStream(true).start();
+        String out = new String(p.getInputStream().readAllBytes()).replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "native run must exit 0, got:\n" + out);
+        assertEquals(GOLDEN, out, "native x86_64 output must match the JVM oracle (rule 5)");
     }
 
     @Test
@@ -255,6 +274,37 @@ class CollectionMethodsStdlibE2ETest {
         assertTrue(r.diagnostics().getDiagnostics().stream()
                 .anyMatch(d -> d.code().equals("SEM056")),
                 "SEM056 expected: " + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void containsValueOnObjectMapWorksOnJvmAndIsHonestOnNative(@TempDir Path tempDir) throws Exception {
+        // NAT002 (§349): no Map<_,Object> nativo o slot de Double cru é
+        // indistinguível de caixa MAGIC sem dereferência (medição JVM: put
+        // Int E Double no mesmo mapa é LEGÍTIMO — SEM056 não pinna tipo
+        // declarado) — rejeição honesta no native, nunca SIGSEGV. No JVM os
+        // dois lados do probe são objetos reais: hit e miss medidos.
+        String src = """
+                main() {
+                    val o: Map<String, Object> = mapOf()
+                    o.put("k1", 7)
+                    println(o.containsValue(7))
+                    println(o.containsValue("s"))
+                }
+                """;
+        CompilationResult rj = compile(tempDir, "ONJ", src, Target.JVM);
+        assertTrue(rj.success(), "Object containsValue works on JVM: " + rj.diagnostics().getDiagnostics());
+        String javaCmd = System.getProperty("java.home") + "/bin/java";
+        Process p = new ProcessBuilder(javaCmd, "-cp",
+                outDirFor(tempDir, "ONJ", Target.JVM).toString(), "Default.Main")
+                .redirectErrorStream(true).start();
+        String out = new String(p.getInputStream().readAllBytes()).replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run exit 0, got:\n" + out);
+        assertEquals("true\nfalse", out, "MEDIÇÃO JVM 19/09 (Probe2): hit 7, miss \"s\"");
+        CompilationResult rn = compile(tempDir, "ONN", src, Target.NATIVE);
+        assertFalse(rn.success(), "Object containsValue must be rejected on native");
+        assertTrue(rn.diagnostics().getDiagnostics().stream()
+                .anyMatch(d -> d.code().equals("NAT002")),
+                "NAT002 expected: " + rn.diagnostics().getDiagnostics());
     }
 
     @Test

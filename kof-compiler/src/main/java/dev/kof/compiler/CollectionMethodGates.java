@@ -78,4 +78,40 @@ public final class CollectionMethodGates {
                 && "double".equals(Type.canonicalPrimitiveName(pt.name()))) return 2;
         return 0;
     }
+
+    private static Type unwrap(Type t) {
+        return t instanceof Type.NullableType nt ? nt.inner() : t;
+    }
+
+    /**
+     * #386 — tag do scan de VALOR no containsValue nativo: 0 = cmpq raw
+     * (Double/Bool/Char-largo/classes — slot e arg crús; Double.equals é
+     * bit-a-bit, logo o mesmo cmpq; classe sem equals é identidade, como o
+     * {@code l.contains(rec)}) — 1 = kof_string_equals (String×String) —
+     * 2 = kof_box_equals (família Int/Long dos dois lados: slot fisicamente
+     * boxed, arg boxed pelo lowering; Int×Long já casa com o java.util — o
+     * tag interno da caixa distingue e o resultado é false, como equals) —
+     * 3 = false garantido (§126 safe miss: famílias ≠ — Int-arg num mapa de
+     * Double nunca é equals no JVM, e no native NÃO se derefença bits crus;
+     * Unknown-value = mapa vazio, false sempre) — -1 = mapa de valor Object
+     * no nativo: a sonda de caixa lê o primeiro qword do slot, mas um slot
+     * de Double CRU (legítimo num Map&lt;_,Object&gt; — medido no JVM: put Int
+     * E Double no mesmo mapa passa) é indistinguível sem dereferência →
+     * risco de SIGSEGV. Diagnóstico honesto NAT002 no compile (precedente
+     * NAT001/Float-sort); JVM/JS/Script usam a igualdade real e funcionam.
+     */
+    static int valueCmpTag(Type valueType, Type argType) {
+        Type vt = unwrap(valueType);
+        Type at = unwrap(argType);
+        boolean vStr = vt != null && BuiltinTypes.isString(vt);
+        boolean aStr = at != null && BuiltinTypes.isString(at);
+        if (vt == null || vt instanceof Type.UnknownType) return 3;
+        if (BuiltinTypes.isObject(vt)) return -1;
+        if (vStr) return aStr ? 1 : 3;
+        boolean vBox = CollectionCallLowerer.mapBoxablePrim(vt);
+        boolean aBox = at != null && CollectionCallLowerer.mapBoxablePrim(at);
+        if (vBox) return aBox ? 2 : 3;
+        if (aStr || aBox) return 3;
+        return 0;
+    }
 }

@@ -118,6 +118,7 @@ public final class NativeRiscvAsm {
                 .append(NativeRiscvAsmMapset0.RISCV_MAPSET_ASM_0)
                 .append(NativeRiscvAsmMapset1.RISCV_MAPSET_ASM_1)
                 .append(NativeRiscvAsmMapset2.RISCV_MAPSET_ASM_2)
+                .append(NativeRiscvAsmLookups0.RISCV_LOOKUPS_ASM_0)
                 .toString();
     }
 }

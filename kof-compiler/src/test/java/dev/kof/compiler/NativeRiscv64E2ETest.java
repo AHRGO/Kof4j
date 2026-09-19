@@ -118,6 +118,17 @@ class NativeRiscv64E2ETest {
         return output;
     }
 
+
+    @Test
+    void riscv64CollectionMethodsStdlibGolden(@TempDir Path tempDir) throws IOException {
+        // #386/#382 — os 7 métodos novos no riscv64 (NativeRiscvAsmLookups0).
+        // Golden = MESMA medição do oráculo JVM (CollectionMethodsStdlibE2ETest).
+        assumeToolchain();
+        String out = runRiscv64(tempDir, CollectionMethodsStdlibE2ETest.PROGRAM);
+        assertEquals(CollectionMethodsStdlibE2ETest.GOLDEN, out,
+                "riscv64 must match the JVM oracle (regra 5)");
+    }
+
     @Test
     void riscv64HelloWorld(@TempDir Path tempDir) throws IOException {
         assumeToolchain();

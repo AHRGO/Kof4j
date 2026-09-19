@@ -93,6 +93,17 @@ class NativeAarch64E2ETest {
     }
 
     // NATIVE002-stdlib: http herdado do riscv64 via translateRiscvToAarch64.
+
+    @Test
+    void aarch64CollectionMethodsStdlibGolden(@TempDir Path tempDir) throws IOException {
+        // #386/#382 — os 7 métodos novos no aarch64 (mesmo asm riscv traduzido).
+        // Golden = MESMA medição do oráculo JVM (CollectionMethodsStdlibE2ETest).
+        assumeToolchain();
+        String out = runAarch64(tempDir, CollectionMethodsStdlibE2ETest.PROGRAM);
+        assertEquals(CollectionMethodsStdlibE2ETest.GOLDEN, out,
+                "aarch64 must match the JVM oracle (regra 5)");
+    }
+
     @Test
     void aarch64HttpGetPostStatus(@TempDir Path tempDir) throws IOException {
         assumeToolchain();

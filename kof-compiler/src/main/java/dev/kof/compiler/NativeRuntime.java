@@ -25,6 +25,8 @@ import dev.kof.compiler.runtime.RuntimeJsonDecode;
 import dev.kof.compiler.runtime.RuntimeJsonEncode;
 import dev.kof.compiler.runtime.RuntimeJsonUtils;
 import dev.kof.compiler.runtime.RuntimeList;
+import dev.kof.compiler.runtime.RuntimeListLookups;
+import dev.kof.compiler.runtime.RuntimeMapLookups;
 import dev.kof.compiler.runtime.RuntimeCollectionToString;
 import dev.kof.compiler.runtime.RuntimeDtoa;
 import dev.kof.compiler.runtime.RuntimeLog1;
@@ -107,6 +109,7 @@ public final class NativeRuntime {
         RuntimeStringConv.emitLongToString(sb);
         RuntimeStringConv.emitBoolToString(sb);
         RuntimeList.emitListFunctions(sb);
+        RuntimeListLookups.emit(sb);
         RuntimeCollectionToString.emit(sb);
         RuntimeJsonBuilder.emitJsonBuilder(sb);
         RuntimeJsonEncode.emitJsonEncode(sb);
@@ -214,6 +217,7 @@ public final class NativeRuntime {
         RuntimeObservability3.emit(sb);
         RuntimeEnum.emit(sb);
         RuntimeMap.emit(sb);
+        RuntimeMapLookups.emit(sb);
         RuntimeSet.emit(sb);
         return sb.toString();
     }

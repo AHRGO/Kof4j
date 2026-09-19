@@ -439,12 +439,15 @@ public final class CollectionCallLowerer {
                     && !ExpressionTyper.boxesOwnBranches(driver, mc.arguments().get(1), locals)) {
                 CompilerEmissionHelpers.emitErasureBox(driver, ops, argTypes.get(1));
             }
-            // #386 — containsValue: tag de comparação do VALOR (conjunção
-            // valueType×arg, espelha kof_list_contains §126); o backend JVM
-            // faz POP do tag (java.util usa equals), nativo usa a tag no scan.
+            // #386 — containsValue: extras de valor (box do arg + tag por
+            // valueType×arg + NAT002 p/ mapa de valor Object no nativo) —
+            // responsabilidade em CollectionValueOps; o JVM faz POP do tag,
+            // o nativo usa no scan (valorCmpTag: String/box/miss-seguro).
             if ("kof_map_contains_value".equals(mapFn)) {
-                ops.add(new KofLoadLiteral(Type.PrimitiveType.INT,
-                        CollectionWrites.stringTag(valueType, argTypes, 0)));
+                if (CollectionValueOps.emitContainsValueExtras(driver, mc, ops, locals,
+                        argTypes, valueType)) {
+                    return localIdx;
+                }
                 argTypes = new ArrayList<>(argTypes);
                 argTypes.add(Type.PrimitiveType.INT);
             }
