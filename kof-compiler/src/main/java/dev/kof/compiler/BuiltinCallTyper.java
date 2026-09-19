@@ -128,7 +128,13 @@ public final class BuiltinCallTyper {
             // builtin aceita exatamente UM valor. Zero argumentos passava pelo
             // typer e caía no emissor genérico de método → NoSuchMethodError no
             // runtime (R6 — diagnóstico no compile, nunca falha muda).
-            if (mc.arguments().isEmpty() && sa.diagnostics() != null) {
+            // Não sombreia (espelha a checagem do `sleep` abaixo e a varredura
+            // de FunctionDeclarationNode do próprio typer): função ou método de
+            // CLASSE do usuário chamado `println`/`print` continua legal — foi
+            // o que o hunt Q4 pegou (função top-level 0-args homônima virava
+            // falso-positivo; backward compat, freeze regra 2).
+            if (mc.arguments().isEmpty() && !hasUserZeroArgDeclaration(sa, scope, mc.methodName())
+                    && sa.diagnostics() != null) {
                 sa.diagnostics().error(mc.position() != null ? mc.position().file() : "",
                         mc.position() != null ? mc.position().line() : 0,
                         mc.position() != null ? mc.position().column() : 0, 0,
@@ -301,6 +307,28 @@ public final class BuiltinCallTyper {
      * a API String — na ordem exata e com as guardas originais (alguns
      * branches só valem sem receiver).
      */
+
+    /** #495: o diagnostico de aridade so vale para o BUILTIN. Se uma
+     *  funcao/metodo do usuario com o MESMO nome existe (top-level com
+     *  qualquer aridade, ou membro da classe atual com 0 params), o call
+     *  site e dela — nao SEM096 (backward compat, freeze regra 2). Medido no
+     *  hunt Q4: `void println() { ... }` + `println()` virava falso-positivo. */
+    private static boolean hasUserZeroArgDeclaration(SemanticAnalyzer sa,
+            SymbolTable scope, String name) {
+        for (AstNode d : sa.unit().declarations()) {
+            if (d instanceof FunctionDeclarationNode fn && fn.name().equals(name)
+                    && TopLevelOverload.requiredArityOf(fn) == 0) {
+                return true;
+            }
+            if (d instanceof ExternalFunctionNode ext && ext.name().equals(name)) return true;
+        }
+        if (sa.currentClassName() != null && !sa.currentClassName().isEmpty()
+                && MemberResolver.resolveInHierarchy(sa, sa.currentClassName(), name) != null) {
+            return true;
+        }
+        return scope.resolve(name) != null;
+    }
+
     static Type inferTail(SemanticAnalyzer sa, MethodCallExpr mc, SymbolTable scope) {
         if (mc.receiver() == null) {
             SymbolTable.Symbol localSym = scope != null ? scope.resolve(mc.methodName()) : null;

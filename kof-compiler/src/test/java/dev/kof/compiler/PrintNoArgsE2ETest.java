@@ -102,4 +102,19 @@ class PrintNoArgsE2ETest {
         assertTrue(r.success(), "metodo do USUARIO com receiver/arity propria nao e o builtin: "
                 + r.diagnostics().getDiagnostics());
     }
+
+    @Test
+    void userZeroArgPrintlnFunctionStillWins(@TempDir Path tmp) throws IOException {
+        CompilationResult r = compile(tmp, "p6", """
+                void println() {
+                    println("user-println-called")
+                }
+                main() {
+                    println()
+                }
+                """);
+        assertTrue(r.success(), "funcao do usuario chamada `println` com 0 args NAO e o builtin "
+                + "nao-sombreado (mesma regra do `sleep`) — era legal antes do #495, tem que "
+                + "continuar legal (freeze regra 2): " + r.diagnostics().getDiagnostics());
+    }
 }
