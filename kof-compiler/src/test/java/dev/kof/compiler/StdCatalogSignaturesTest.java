@@ -169,6 +169,28 @@ class StdCatalogSignaturesTest {
     }
 
     @Test
+    void fatiaFourMathAndLogBindAgainstRealDispatchers() {
+        assertNotNull(KofMath.staticMethod("math", "abs", List.of(I)), "math.abs(Int)");
+        assertNull(KofMath.staticMethod("math", "abs", List.of(D)), "abs(Double) NAO binda (familia Int)");
+        assertNotNull(KofMath.staticMethod("math", "sqrt", List.of(D)), "sqrt(Double)");
+        assertNull(KofMath.staticMethod("math", "sqrt", List.of(I)), "sqrt(Int) NAO binda");
+        assertNull(KofMath.staticMethod("math", "sqrt", List.of()), "sqrt/0");
+        assertNotNull(KofMath.staticMethod("math", "clamp", List.of(I, I, I)), "clamp/3");
+        assertNull(KofMath.staticMethod("math", "clamp", List.of(I, I)), "clamp/2");
+        assertNotNull(KofMath.staticMethod("math", "parseLongOrDefault", List.of(S, I)), "parseLongOrDefault aceita Int");
+        assertNull(KofMath.staticMethod("math", "parseInt", List.of(I)), "parseInt(Int) NAO");
+        assertNotNull(KofMath.staticMethod("math", "roundTo", List.of(D, I)), "roundTo(Double,Int)");
+        assertNull(KofMath.staticMethod("math", "roundTo", List.of(I, D)), "roundTo(Int,Double) NAO (ordem)");
+        assertNotNull(KofLog.staticCall("info", List.of(S)), "log.info(String)");
+        assertNull(KofLog.staticCall("info", List.of(S, S)), "info/2 NAO binda");
+        assertNull(KofLog.staticCall("nope", List.of(S)), "log.?");
+        for (String m : KofMath.functions())
+            assertFalse(StdCatalog.signaturesOf("math", m).isEmpty(), "tabela sem math." + m);
+        for (String m : KofLog.functions())
+            assertFalse(StdCatalog.signaturesOf("log", m).isEmpty(), "tabela sem log." + m);
+    }
+
+    @Test
     void ghostSignaturesAndUnknownNamespaceAreEmpty() {
         assertTrue(StdCatalog.signaturesOf("db", "ghost").isEmpty());
         assertTrue(StdCatalog.signaturesOf("nope", "get").isEmpty());
@@ -176,11 +198,10 @@ class StdCatalogSignaturesTest {
 
     @Test
     void untabledNamespacesStayHonestEmpty() {
-        // fatias 1-3 = db/http/time/cache/process/shell/net/uuid/random/rng/
-        // encoding; inventar forma p/ os demais e proibido (R6)
-        assertTrue(StdCatalog.signaturesOf("log", "info").isEmpty());
+        // fatias 1-4 = db/http/time/cache/process/shell/net/uuid/random/rng/
+        // encoding/math/log; inventar forma p/ os demais e proibido (R6)
         assertTrue(StdCatalog.signaturesOf("json", "encode").isEmpty());
-        assertTrue(StdCatalog.signaturesOf("math", "isEven").isEmpty());
+        assertTrue(StdCatalog.signaturesOf("config", "get").isEmpty());
         assertTrue(StdCatalog.signaturesOf("nope", "get").isEmpty());
     }
 }

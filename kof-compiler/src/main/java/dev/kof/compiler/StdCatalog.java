@@ -66,28 +66,28 @@ public final class StdCatalog {
     // nao comentario: fatia 1 = db+http; demais namespaces entram fatia a fatia
     // SEM fingir cobertura (R6: member sem tabela mantem o hover simples).
     private static final Map<String, Map<String, List<String>>> SIGNATURES =
+            // 19/09 LSP-A fatias 1-4: forma MEDIDA no dispatcher real de cada ns e travada
+            // comportamento-a-`staticCall` (StdCatalogSignaturesTest). Membro sem tabela
+            // mantem hover simples (R6: nunca chute). Reescrito por gerador na fatia 4.
             java.util.Map.ofEntries(
-            Map.entry("db", Map.of(
-                    "connect", List.of("connect(String url) -> String",
-                            "connect(String url, String user, String pass) -> String"),
-                    "query", List.of("query(String url, String sql) -> List<String>",
-                            "query(String url, String sql, Object... binds[1..4]) -> List<String>"),
-                    "execute", List.of("execute(String url, String sql) -> Int",
-                            "execute(String url, String sql, Object... binds[1..4]) -> Int"),
-                    "close", List.of("close(String url) -> void"),
-                    "transaction", List.of("transaction(callback) -> void"))),
-            Map.entry("http", Map.of(
-                    "get", List.of("get(String url) -> String", "get(String url, String headers...) -> String"),
-                    "delete", List.of("delete(String url) -> String", "delete(String url, String headers...) -> String"),
-                    "options", List.of("options(String url) -> String", "options(String url, String headers...) -> String"),
-                    "post", List.of("post(String url, String body) -> String", "post(String url, String body, String headers...) -> String"),
-                    "put", List.of("put(String url, String body) -> String", "put(String url, String body, String headers...) -> String"),
-                    "patch", List.of("patch(String url, String body) -> String", "patch(String url, String body, String headers...) -> String"),
-                    "status", List.of("status(String url) -> Int"),
-                    "timeout", List.of("timeout(Int ms) -> void"),
-                    "retry", List.of("retry(Int count) -> void"),
-                    "circuit", List.of("circuit(Int threshold) -> void"))),
-            Map.entry("time", Map.ofEntries(
+            Map.entry("db", java.util.Map.ofEntries(
+                    Map.entry("connect", List.of("connect(String url) -> String", "connect(String url, String user, String pass) -> String")),
+                    Map.entry("query", List.of("query(String url, String sql) -> List<String>", "query(String url, String sql, Object... binds[1..4]) -> List<String>")),
+                    Map.entry("execute", List.of("execute(String url, String sql) -> Int", "execute(String url, String sql, Object... binds[1..4]) -> Int")),
+                    Map.entry("close", List.of("close(String url) -> void")),
+                    Map.entry("transaction", List.of("transaction(callback) -> void")))),
+            Map.entry("http", java.util.Map.ofEntries(
+                    Map.entry("get", List.of("get(String url) -> String", "get(String url, String headers...) -> String")),
+                    Map.entry("delete", List.of("delete(String url) -> String", "delete(String url, String headers...) -> String")),
+                    Map.entry("options", List.of("options(String url) -> String", "options(String url, String headers...) -> String")),
+                    Map.entry("post", List.of("post(String url, String body) -> String", "post(String url, String body, String headers...) -> String")),
+                    Map.entry("put", List.of("put(String url, String body) -> String", "put(String url, String body, String headers...) -> String")),
+                    Map.entry("patch", List.of("patch(String url, String body) -> String", "patch(String url, String body, String headers...) -> String")),
+                    Map.entry("status", List.of("status(String url) -> Int")),
+                    Map.entry("timeout", List.of("timeout(Int ms) -> void")),
+                    Map.entry("retry", List.of("retry(Int count) -> void")),
+                    Map.entry("circuit", List.of("circuit(Int threshold) -> void")))),
+            Map.entry("time", java.util.Map.ofEntries(
                     Map.entry("sleep", List.of("sleep(Int ms) -> void")),
                     Map.entry("now", List.of("now() -> Long")),
                     Map.entry("collect", List.of("collect() -> void")),
@@ -106,59 +106,58 @@ public final class StdCatalog {
                     Map.entry("parseDateIso", List.of("parseDateIso(String iso) -> Int")),
                     Map.entry("tzOffsetSeconds", List.of("tzOffsetSeconds() -> Int")),
                     Map.entry("hoursBetween", List.of("hoursBetween(Int y1, Int m1, Int d1, Int h1, Int y2, Int m2, Int d2, Int h2) -> Int")))),
-            Map.entry("cache", Map.of(
-                    "get", List.of("get(String key) -> String"),
-                    "set", List.of("set(String key, String value) -> void",
-                            "set(String key, String value, Int ttlSeconds) -> void"),
-                    "ttl", List.of("ttl(String key) -> Int"),
-                    "delete", List.of("delete(String key) -> void"),
-                    "clear", List.of("clear() -> void"))),
-            Map.entry("process", Map.of(
-                    "run", List.of("run(String program, String... args) -> Result"),
-                    "spawn", List.of("spawn(String program, String... args) -> Handle"),
-                    "exit", List.of("exit(Int code) -> void"))),
-            Map.entry("shell", Map.of(
-                    "cmd", List.of("cmd(String program, List<String> args) -> List<String>"),
-                    "run", List.of("run(String program) -> Result", "run(String program, List<String> args) -> Result"),
-                    "pipeline", List.of("pipeline(List<List<String>> stages) -> Result"),
-                    "ok", List.of("ok(result) -> Bool"))),
-            Map.entry("net", Map.of(
-                    "scheme", List.of("scheme(String url) -> String"),
-                    "host", List.of("host(String url) -> String"),
-                    "port", List.of("port(String url) -> String"),
-                    "path", List.of("path(String url) -> String"),
-                    "query", List.of("query(String url) -> String"),
-                    "fragment", List.of("fragment(String url) -> String"),
-                    "queryEncode", List.of("queryEncode(String s) -> String"),
-                    "queryDecode", List.of("queryDecode(String s) -> String"))),
-            Map.entry("uuid", Map.of(
-                    "isUuid", List.of("isUuid(String s) -> Bool"),
-                    "v4", List.of("v4() -> String"),
-                    "v7", List.of("v7() -> String"))),
-            Map.entry("random", Map.of(
-                    "double", List.of("double() -> Double"),
-                    "boolean", List.of("boolean() -> Bool"),
-                    "int", List.of("int(Int n) -> Int"),
-                    "hex", List.of("hex(Int n) -> String"),
-                    "randomBytesHex", List.of("randomBytesHex(Int n) -> String"),
-                    "randomInt", List.of("randomInt(Int n) -> Int"),
-                    "randomBoolean", List.of("randomBoolean() -> Bool"),
-                    "randomString", List.of("randomString(Int n, String s) -> String"))),
-            Map.entry("rng", Map.of(
-                    "seed", List.of("seed(Int n) -> void"),
-                    "int", List.of("int(Int n) -> Int"),
-                    "boolean", List.of("boolean() -> Bool"),
-                    "double", List.of("double() -> Double"),
-                    "string", List.of("string(Int n, String s) -> String"))),
-            Map.entry("encoding", Map.of(
-                    "hexEncode", List.of("hexEncode(String s) -> String"),
-                    "hexDecode", List.of("hexDecode(String s) -> String"),
-                    "base64Encode", List.of("base64Encode(String s) -> String"),
-                    "base64Decode", List.of("base64Decode(String s) -> String"),
-                    "urlEncode", List.of("urlEncode(String s) -> String"),
-                    "urlDecode", List.of("urlDecode(String s) -> String"),
-                    "base64UrlEncode", List.of("base64UrlEncode(String s) -> String"),
-                    "base64UrlDecode", List.of("base64UrlDecode(String s) -> String"))),
+            Map.entry("cache", java.util.Map.ofEntries(
+                    Map.entry("get", List.of("get(String key) -> String")),
+                    Map.entry("set", List.of("set(String key, String value) -> void", "set(String key, String value, Int ttlSeconds) -> void")),
+                    Map.entry("ttl", List.of("ttl(String key) -> Int")),
+                    Map.entry("delete", List.of("delete(String key) -> void")),
+                    Map.entry("clear", List.of("clear() -> void")))),
+            Map.entry("process", java.util.Map.ofEntries(
+                    Map.entry("run", List.of("run(String program, String... args) -> Result")),
+                    Map.entry("spawn", List.of("spawn(String program, String... args) -> Handle")),
+                    Map.entry("exit", List.of("exit(Int code) -> void")))),
+            Map.entry("shell", java.util.Map.ofEntries(
+                    Map.entry("cmd", List.of("cmd(String program, List<String> args) -> List<String>")),
+                    Map.entry("run", List.of("run(String program) -> Result", "run(String program, List<String> args) -> Result")),
+                    Map.entry("pipeline", List.of("pipeline(List<List<String>> stages) -> Result")),
+                    Map.entry("ok", List.of("ok(result) -> Bool")))),
+            Map.entry("net", java.util.Map.ofEntries(
+                    Map.entry("scheme", List.of("scheme(String url) -> String")),
+                    Map.entry("host", List.of("host(String url) -> String")),
+                    Map.entry("port", List.of("port(String url) -> String")),
+                    Map.entry("path", List.of("path(String url) -> String")),
+                    Map.entry("query", List.of("query(String url) -> String")),
+                    Map.entry("fragment", List.of("fragment(String url) -> String")),
+                    Map.entry("queryEncode", List.of("queryEncode(String s) -> String")),
+                    Map.entry("queryDecode", List.of("queryDecode(String s) -> String")))),
+            Map.entry("uuid", java.util.Map.ofEntries(
+                    Map.entry("isUuid", List.of("isUuid(String s) -> Bool")),
+                    Map.entry("v4", List.of("v4() -> String")),
+                    Map.entry("v7", List.of("v7() -> String")))),
+            Map.entry("random", java.util.Map.ofEntries(
+                    Map.entry("double", List.of("double() -> Double")),
+                    Map.entry("boolean", List.of("boolean() -> Bool")),
+                    Map.entry("int", List.of("int(Int n) -> Int")),
+                    Map.entry("hex", List.of("hex(Int n) -> String")),
+                    Map.entry("randomBytesHex", List.of("randomBytesHex(Int n) -> String")),
+                    Map.entry("randomInt", List.of("randomInt(Int n) -> Int")),
+                    Map.entry("randomBoolean", List.of("randomBoolean() -> Bool")),
+                    Map.entry("randomString", List.of("randomString(Int n, String s) -> String")))),
+            Map.entry("rng", java.util.Map.ofEntries(
+                    Map.entry("seed", List.of("seed(Int n) -> void")),
+                    Map.entry("int", List.of("int(Int n) -> Int")),
+                    Map.entry("boolean", List.of("boolean() -> Bool")),
+                    Map.entry("double", List.of("double() -> Double")),
+                    Map.entry("string", List.of("string(Int n, String s) -> String")))),
+            Map.entry("encoding", java.util.Map.ofEntries(
+                    Map.entry("hexEncode", List.of("hexEncode(String s) -> String")),
+                    Map.entry("hexDecode", List.of("hexDecode(String s) -> String")),
+                    Map.entry("base64Encode", List.of("base64Encode(String s) -> String")),
+                    Map.entry("base64Decode", List.of("base64Decode(String s) -> String")),
+                    Map.entry("urlEncode", List.of("urlEncode(String s) -> String")),
+                    Map.entry("urlDecode", List.of("urlDecode(String s) -> String")),
+                    Map.entry("base64UrlEncode", List.of("base64UrlEncode(String s) -> String")),
+                    Map.entry("base64UrlDecode", List.of("base64UrlDecode(String s) -> String")))),
             Map.entry("strings", java.util.Map.ofEntries(
                     Map.entry("isAlpha", List.of("isAlpha(String s) -> Bool")),
                     Map.entry("isNumeric", List.of("isNumeric(String s) -> Bool")),
@@ -185,7 +184,36 @@ public final class StdCatalog {
                     Map.entry("truncate", List.of("truncate(String s, Int n) -> String")),
                     Map.entry("indent", List.of("indent(String s, Int n) -> String")),
                     Map.entry("padLeft", List.of("padLeft(String s, Int n, String pad) -> String")),
-                    Map.entry("padRight", List.of("padRight(String s, Int n, String pad) -> String")))));;
+                    Map.entry("padRight", List.of("padRight(String s, Int n, String pad) -> String")))),
+            Map.entry("math", java.util.Map.ofEntries(
+                    Map.entry("abs", List.of("abs(Int n) -> Int")),
+                    Map.entry("sign", List.of("sign(Int n) -> Int")),
+                    Map.entry("clamp", List.of("clamp(Int v, Int lo, Int hi) -> Int")),
+                    Map.entry("min", List.of("min(Int a, Int b) -> Int")),
+                    Map.entry("max", List.of("max(Int a, Int b) -> Int")),
+                    Map.entry("isEven", List.of("isEven(Int n) -> Bool")),
+                    Map.entry("isOdd", List.of("isOdd(Int n) -> Bool")),
+                    Map.entry("isPositive", List.of("isPositive(Int n) -> Bool")),
+                    Map.entry("isNegative", List.of("isNegative(Int n) -> Bool")),
+                    Map.entry("isZero", List.of("isZero(Int n) -> Bool")),
+                    Map.entry("sqrt", List.of("sqrt(Double x) -> Double")),
+                    Map.entry("lerp", List.of("lerp(Double a, Double b, Double t) -> Double")),
+                    Map.entry("percentage", List.of("percentage(Double part, Double whole) -> Double")),
+                    Map.entry("isInteger", List.of("isInteger(Double x) -> Bool")),
+                    Map.entry("isDecimal", List.of("isDecimal(Double x) -> Bool")),
+                    Map.entry("roundTo", List.of("roundTo(Double v, Int decimals) -> Double")),
+                    Map.entry("pow", List.of("pow(Double base, Double exp) -> Double")),
+                    Map.entry("parseInt", List.of("parseInt(String s) -> Int")),
+                    Map.entry("parseLong", List.of("parseLong(String s) -> Long")),
+                    Map.entry("parseDouble", List.of("parseDouble(String s) -> Double")),
+                    Map.entry("parseIntOrDefault", List.of("parseIntOrDefault(String s, Int d) -> Int")),
+                    Map.entry("parseLongOrDefault", List.of("parseLongOrDefault(String s, Long d) -> Long")),
+                    Map.entry("parseDoubleOrDefault", List.of("parseDoubleOrDefault(String s, Double d) -> Double")))),
+            Map.entry("log", java.util.Map.ofEntries(
+                    Map.entry("debug", List.of("debug(String msg) -> void")),
+                    Map.entry("info", List.of("info(String msg) -> void")),
+                    Map.entry("warn", List.of("warn(String msg) -> void")),
+                    Map.entry("error", List.of("error(String msg) -> void")))));
 
     /** Overloads gravados do membro (vazio = sem tabela ainda; nunca chute, R6). */
     public static List<String> signaturesOf(String ns, String member) {
