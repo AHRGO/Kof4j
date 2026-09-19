@@ -868,7 +868,7 @@ Docs: `debugger-architecture.md`, `debugging.md`, `debug-adapter.md`,
 - `native.risc` (riscv64) + `native.arm` (aarch64) **core completo (02-03/09)** — plumbing + codegen/runtimes em asm puro + qemu, `NativeRiscv64E2ETest 26/26` + `NativeAarch64E2ETest 26/26` (core + stdlib 05/09: JSON/HTTP/spawn/cache/time/mq/Map/Set/higher-order/toInt/metrics; gates DB001/SECN000/SCHED001/TIME001) — **detalhe + como finalizar: `docs/development/native-multiarch.md`** (gap `NATIVE002`)
 - Debugger — MVP JVM (DAP sobre stdio) + **JS source maps V3 em nível de linha (01/09)**; Native DWARF pendente
 - KofJS — plataforma web no browser (ES Modules via GraalJS já em alpha)
-- Gerenciador de pacotes: **dependências transitivas do `kof deps` ✅ 16/09** — `kofdeps.lock` + delegação ao Maven (R9: nunca reimplementar o resolvedor de grafo do Maven); degradação honesta sem `mvn` no PATH; `DepsTransitiveTest` 10/10 incl. E2E com Maven real; **registry pendente** (decisão da mantenedora sobre formato/hospedagem)
+- Gerenciador de pacotes: **dependências transitivas do `kof deps` ✅ 16/09** — `kofdeps.lock` + delegação ao Maven (R9: nunca reimplementar o resolvedor de grafo do Maven); degradação honesta sem `mvn` no PATH; `DepsTransitiveTest` 10/10 incl. E2E com Maven real; **registry MVP ✅ 19/09 (D2-A)**: publish (`kof deploy --publish` = Release + tar.gz + SHA256SUMS) + pull (`owner/repo[@ver]` → asset da release, `SHA256SUMS` verificado antes de instalar, cache `~/.kof/deps/kof/`, `latest` pinna; REG001–004 honestos; `DepsRegistryTest` 6/6)
 
 ### Planejado
 

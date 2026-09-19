@@ -35,7 +35,7 @@ commands, tooling and editor support.
 | `kof compare <legacy.class\|jar> <file.kf> [--json]` | Differential test legacy vs Kof |
 | `kof migrate <file.class\|java> [--output <file.kf>] [--json]` | Migration + traceable report |
 | `kof new <name>` | Project skeletons by type |
-| `kof deps <init\|add\|remove\|list\|resolve>` | Package manager (`kofdeps`, Maven Central) |
+| `kof deps <init\|add\|remove\|list\|resolve>` | Package manager (`kofdeps`: Maven `g:a:v` + registry `owner/repo[@ver]` — GitHub Releases) |
 | `kof install <dir>` | Installs this build as a distribution (launcher + `kof.jar`) |
 
 `kof fmt` (real parser, idempotent) and `kof config gen` are implemented

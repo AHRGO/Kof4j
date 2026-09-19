@@ -13,7 +13,22 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
-### Em desenvolvimento
+ ### Em desenvolvimento
+
+  - **`kof deps` agora consome o registry (`owner/repo[@versao]`, linha 0.4.0,
+    1.5.3-S2 / D-POLL-19)** — uma linha como `acme/hello@1.2.3` (ou `acme/hello`
+    puro = *latest*) no `kofdeps` resolve contra os GitHub Releases publicados por
+    `kof deploy --publish`: o asset `<repo>-<ver>.tar.gz` é baixado, o `SHA256SUMS`
+    embutido é **verificado antes de instalar** (integridade não é opcional) e o jar
+    vai para o cache `~/.kof/deps/kof/<owner>/<repo>/<ver>/` — re-resolver é cache hit
+    sem rede. O `latest` pinna a versão concreta no `kofdeps` após o primeiro resolve
+    (lock-estável). `kof deps classpath` une os jars do registry ao fechamento Maven.
+    Diagnósticos honestos (R6): `REG001` release não encontrada, `REG002` soma não
+    confere / asset ilegível, `REG003` pacote sem jar, `REG004` pacote sem `SHA256SUMS`
+    (recusa instalar). Repositórios privados funcionam com `GH_TOKEN`/`GITHUB_TOKEN`;
+    os testes apontam o endpoint via `KOF_REGISTRY_API`.
+    Prova: `DepsRegistryTest` (6 casos: caminho feliz + idempotência, pin latest,
+    REG001/REG002/REG003/REG004 contra um registry fake).
 
   - **`return <valor>` em `void`/sem-tipo/construtor agora é `SEM093` (linha 0.4.0,
     D-DECL-RETURN, #333)** — uma função top-level que declara `void` — **ou não declara

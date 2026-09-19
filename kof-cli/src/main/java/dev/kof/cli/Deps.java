@@ -101,10 +101,12 @@ final class Deps {
 
     private static int add(String[] args) throws IOException {
         if (args.length < 3) {
-            System.err.println("usage: kof deps add <group:artifact:version> [dir]");
+            System.err.println("usage: kof deps add <group:artifact:version> | <owner/repo[@version]> [dir]");
             return 1;
         }
         String dep = normalize(args[2]);
+        String kof = dep == null ? DepsRegistry.normalize(args[2]) : null;
+        if (kof != null) dep = kof;
         if (dep == null) {
             System.err.println("deps: expected format group:artifact:version (e.g. com.h2database:h2:2.2.224)");
             return 1;
@@ -170,15 +172,27 @@ final class Deps {
         List<String> lines = Files.readAllLines(file);
         List<String> missing = new ArrayList<>();
         boolean declaredAny = false;
+        boolean pinned = false;
+        java.util.Map<String, String> pins = new java.util.LinkedHashMap<>();
         for (String l : lines) {
             if (l.isBlank()) continue;
             declaredAny = true;
-            String[] ga = l.split(":");
-            if (ga.length != 3) {
-                missing.add(l + " (invalid format)");
-                continue;
-            }
             try {
+                if (DepsRegistry.isRegistrySpec(l)) {
+                    String spec = DepsRegistry.normalize(l);
+                    java.nio.file.Path j = DepsRegistry.fetch(spec);
+                    if (DepsRegistry.versionOf(spec) == null) {
+                        // latest = pin de versão concreto no kofdeps (lock-estável)
+                        pinned = true;
+                        pins.put(l, spec + "@" + j.getParent().getFileName());
+                    }
+                    continue;
+                }
+                String[] ga = l.split(":");
+                if (ga.length != 3) {
+                    missing.add(l + " (invalid format)");
+                    continue;
+                }
                 download(ga[0], ga[1], ga[2]);
             } catch (Exception e) {
                 missing.add(l + " → " + e.getMessage());
@@ -188,6 +202,15 @@ final class Deps {
             System.err.println("deps: incomplete resolution:");
             for (String m : missing) System.err.println("  " + m);
             return 1;
+        }
+        if (pinned) {
+            List<String> rewritten = new ArrayList<>();
+            for (String l : lines) {
+                String pin = pins.get(l.trim());
+                rewritten.add(pin != null ? pin : l);
+            }
+            Files.write(file, rewritten);
+            lines = rewritten;
         }
         // TIER 1.4 — transitivos via Maven (roadmap §"package manager":
         // "generate a temporary pom.xml and use Maven"; regra da plataforma:
@@ -337,7 +360,9 @@ final class Deps {
         return g + ":" + artifact + ":" + version;
     }
 
-    private static Path cacheDir() {
+    static Path cacheDir() {
+        String seam = System.getProperty("kof.deps.home");
+        if (seam != null && !seam.isBlank()) return Path.of(seam);
         String home = System.getProperty("user.home", ".");
         return Path.of(home, ".kof", "deps");
     }
@@ -379,14 +404,34 @@ final class Deps {
         // fonte de GAVs: lock (fecho transitivo) se existir, senão o próprio
         // kofdeps (só diretas — comportamento MVP, com warning do resolve).
         Path lock = projectDir.resolve(LOCK_FILE);
-        List<String> sources = Files.exists(lock)
-                ? Files.readAllLines(lock) : Files.readAllLines(projectDir.resolve(DEPS_FILE));
         if (!Files.exists(projectDir.resolve(DEPS_FILE))) return "";
+        List<String> declared = Files.readAllLines(projectDir.resolve(DEPS_FILE));
+        List<String> sources = new ArrayList<>();
+        if (Files.exists(lock)) {
+            sources.addAll(Files.readAllLines(lock));
+            // linhas kof (owner/repo[@ver]) nunca vao p/ o lock Maven — sempre das diretas
+            for (String l : declared) {
+                String s = l == null ? "" : l.trim();
+                if (!s.isEmpty() && DepsRegistry.isRegistrySpec(s)) sources.add(s);
+            }
+        } else {
+            // MVP sem lock: diretas do kofdeps (maven GAVs + specs kof)
+            sources.addAll(declared);
+        }
         for (String l : sources) {
             if (l == null || l.isBlank()) continue;
-            String[] ga = l.trim().split(":");
-            if (ga.length != 3) continue;
-            Path jar = jarPath(ga[0], ga[1], ga[2]);
+            Path jar;
+            if (DepsRegistry.isRegistrySpec(l.trim())) {
+                String spec = DepsRegistry.normalize(l.trim());
+                String ver = DepsRegistry.versionOf(spec);
+                if (ver == null) continue;                  // latest sem resolve previo: honesto
+                jar = DepsRegistry.jarPath(DepsRegistry.ownerOf(spec),
+                        DepsRegistry.repoOf(spec), ver);
+            } else {
+                String[] ga = l.trim().split(":");
+                if (ga.length != 3) continue;
+                jar = jarPath(ga[0], ga[1], ga[2]);
+            }
             if (!Files.exists(jar)) continue;               // direto: sem baixa no classpath
             if (seen.add(jar.toString())) {
                 if (sb.length() > 0) sb.append(sep);

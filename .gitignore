@@ -15,3 +15,6 @@ dist/
 *.env
 dependency-reduced-pom.xml
 .issue*-reply-pending.md
+# kof deps: lock/declaração gerados no cwd por `kof deps add/resolve`
+kofdeps
+kofdeps.lock

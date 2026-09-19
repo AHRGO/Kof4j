@@ -44,7 +44,7 @@ Reivindique um item no `DOING.md` **no mesmo commit** que inicia o trabalho.
 
 | Estágio | Nome | Status | Bloqueio |
 |---------|------|--------|----------|
-| 1 | SYSTEMS (consolidação) | 🟡 em curso | sign-off GC x86 ⛔, registry ⛔ |
+| 1 | SYSTEMS (consolidação) | 🟡 em curso | sign-off GC x86 ⛔ (registry ✅ 19/09) |
 | 2 | AUTOMATION | 🔵 não iniciado | Estágio 1 |
 | 3 | INFRASTRUCTURE (Kof Makealive) | 🔵 não iniciado | Estágio 2, R3 (FFI), R4 (hook de codegen) |
 | 4 | DATA (engineering / science / ML) | 🔵 não iniciado | Estágio 3, R3 (FFI) |
@@ -111,7 +111,7 @@ domínio novo. **Este estágio fecha antes de qualquer Tier 6+ (R12).**
 |---|------|--------|------|--------------|
 | 1.5.1 | `kof deps` + resolução Maven Central | ✅ | lane tooling | — |
 | 1.5.2 | Resolução transitiva + `kofdeps.lock` | ✅ 16/09 | lane tooling | `DepsTransitiveTest` 10/10 (incl. E2E com Maven real) |
-| 1.5.3 | Registry MVP | 🔵 | lane docs→plataforma | **D2-A ✅ 19/09**: local + GitHub Releases como host oficial (publish = Release + SHA256SUMS) — `DECISIONS.md` §D-POLL-19 |
+| 1.5.3 | Registry MVP | ✅ 19/09 | lane docs→plataforma | D2-A: **publish ✅** (era `b1ea1718`) + **pull ✅ S2 19/09** — `DepsRegistry`: `owner/repo[@ver]` → asset `<repo>-<ver>.tar.gz` da API GitHub Releases, `SHA256SUMS` verificado ANTES de instalar, cache `~/.kof/deps/kof/`, `latest` pinna a versão no `kofdeps`; REG001–004 honestos (R6); `DepsRegistryTest` 6/6 + vizinhos `Deps*` 20/20; build/run consomem via `Deps.classpath()`; round-trip live no GitHub = smoke manual pendente |
 
 ### 1.6 Tracing / OpenTelemetry + ciclo de vida `application{}`
 
@@ -265,7 +265,7 @@ mesma experiência de desenvolvimento.
 | # | Item | Status | Dono | Depende de |
 |---|------|--------|------|------------|
 | 8.1 | Integração total dos Estágios 1–7 | 🔵 | — | todos |
-| 8.2 | Package manager maduro | 🔵 | — | 1.5.3 (registry ✅ D2-A 19/09) |
+| 8.2 | Package manager maduro | 🔵 | — | 1.5.3 ✅ (publish+pull 19/09) |
 | 8.3 | LSP/debug/profiler por domínio | 🟡 | lane tooling/docs (.15) p/ LSP | **LSP domain-aware ✅ 19/09**: completion + hover leem o `StdCatalog` (namespace lista membros; membro no contexto `ns.` nomeia a face; solto = null honesto). **rename cross-file ✅ 19/09 (LSP-A, `LspRename`)** + fix de higiene: o scan de irmãos nunca trata /tmp ou a raiz do FS como projeto (profundidade 1 lá; 485 `.kf` alheios medidos em /tmp). **8.3-B FEITO 19/09 (`.18`)**: `workspace/symbol`/hover/definition/references cobrem deps fora do pai do arquivo via `rootUri` do initialize (`LspProject.siblings(self,root)`, dedup+ordenado; sem rootUri = comportamento antigo exato). **Pendente:** debugger/profiler por domínio (= X7 + faces futuras; profiler ainda não existe); signatureHelp por domínio — BLOQUEADO na regra 6 com causa medida 19/09: as assinaturas vivem como checks imperativos por-case nos 24 `Kof*.staticMethod` (nenhuma tabela de dados existe; `FfiSignature` cobre só `extern`), e o LSP nunca parseia por conta própria. Desbloqueio fonte-única para a compiler lane: adicionar `static Map<String,String> signatures()` por classe `Kof*`, transcrita do MESMO case que ela valida, travada fonte-a-fonte como `StdCatalogTest` trava os nomes (padrão X10); `StdCatalog` faz o merge, hover/`signatureHelp` leem, zero parser no tooling. A fonte-única; a decisão LSP-A de 19/09 aprovou a forma) |
 | 8.4 | Deploy multi-target (mesma fonte → JVM/Native/JS) | 🟡 | lane tooling/docs (.15) | **núcleo ✅ 19/09 (X9 fatia 4)**: `--target jvm,native,js`/`all` = mesma fonte, uma release por face + `.deploy-manifest.json` (SUCCESS/FAIL honesto por alvo, R6/R7, exit 1 se alguma falhar); maturidade restante: faces cross (sysroot/DEP001) + publish (D2) — **D2-A ✅ 19/09**: `--publish` deixou de ser ⛔ (face GitHub Releases na fila) |
 | 8.5 | Documentação/corpus (`training/`) dos domínios | 🔵 | lane docs | por domínio |

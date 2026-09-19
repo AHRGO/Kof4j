@@ -43,7 +43,7 @@ Claim an item in `DOING.md` **in the same commit** that starts the work.
 
 | Stage | Name | Status | Blocker |
 |-------|------|--------|---------|
-| 1 | SYSTEMS (consolidation) | 🟡 in progress | GC x86 sign-off ⛔, registry ⛔ |
+| 1 | SYSTEMS (consolidation) | 🟡 in progress | GC x86 sign-off ⛔ (registry ✅ 19/09) |
 | 2 | AUTOMATION | 🔵 not started | Stage 1 |
 | 3 | INFRASTRUCTURE (Kof Makealive) | 🔵 not started | Stage 2, R3 (FFI), R4 (codegen hook) |
 | 4 | DATA (engineering / science / ML) | 🔵 not started | Stage 3, R3 (FFI) |
@@ -110,7 +110,7 @@ a new domain. **This stage closes before any Tier 6+ (R12).**
 |---|------|--------|-------|--------------|
 | 1.5.1 | `kof deps` + Maven Central resolution | ✅ | tooling lane | — |
 | 1.5.2 | Transitive resolution + `kofdeps.lock` | ✅ 16/09 | tooling lane | `DepsTransitiveTest` 10/10 (incl. real-Maven E2E) |
-| 1.5.3 | Registry MVP | 🔵 | docs→platform lane | **D2-A ✅ 19/09**: local + GitHub Releases as official host (publish = Release + SHA256SUMS) — `DECISIONS.md` §D-POLL-19 |
+| 1.5.3 | Registry MVP | ✅ 19/09 | docs→platform lane | D2-A: **publish ✅** (`b1ea1718`-era) + **pull ✅ S2 19/09** — `DepsRegistry`: `owner/repo[@ver]` → asset `<repo>-<ver>.tar.gz` da API GitHub Releases, `SHA256SUMS` verificado ANTES de instalar, cache `~/.kof/deps/kof/`, `latest` pinna a versão no `kofdeps`; REG001–004 honestos (R6); `DepsRegistryTest` 6/6 + vizinhos `Deps*` 20/20; build/run consomem via `Deps.classpath()`; live GitHub round-trip = smoke manual pendente |
 
 ### 1.6 Tracing / OpenTelemetry + `application{}` lifecycle
 
@@ -264,7 +264,7 @@ the same development experience.
 | # | Item | Status | Owner | Depends on |
 |---|------|--------|-------|------------|
 | 8.1 | Total integration of Stages 1–7 | 🔵 | — | all |
-| 8.2 | Mature package manager | 🔵 | — | 1.5.3 (registry ✅ D2-A 19/09) |
+| 8.2 | Mature package manager | 🔵 | — | 1.5.3 ✅ (publish+pull 19/09) |
 | 8.3 | LSP/debug/profiler by domain | 🟡 | tooling/docs lane (.15) for LSP | **LSP domain-aware ✅ 19/09**: completion + hover read `StdCatalog` (namespace lists members; member in the exact `ns.` context names its face; loose = honest null). **rename cross-file ✅ 19/09 (LSP-A, `LspRename`)** + hygiene fix: the sibling scan never treats /tmp or the FS root as a project (depth 1 there; 485 foreign `.kf` measured in /tmp). **8.3-B DONE 19/09 (`.18`)**: `workspace/symbol`/hover/definition/references cover deps outside the file's parent via `initialize`'s `rootUri` (`LspProject.siblings(self,root)`, dedup+sorted; no rootUri = exact old behavior). **Pending:** debugger/profiler by domain (= X7 + future faces; profiler does not exist yet); signatureHelp per domain — BLOCKED on rule 6 with the cause measured 19/09: signatures live as imperative per-case checks inside the 24 `Kof*.staticMethod` typers (no data table exists; `FfiSignature` covers only `extern`), and LSP never parses on its own. Single-source unblock for the compiler lane: add `static Map<String,String> signatures()` per `Kof*` class transcribed from the SAME case it validates, locked source-to-source the way `StdCatalogTest` locks names (X10 pattern); `StdCatalog` merges, hover/`signatureHelp` read it, zero tooling parser. The LSP-A decision of 19/09 approved the shape) |
 | 8.4 | Multi-target deploy (same source → JVM/Native/JS) | 🟡 | tooling/docs lane (.15) | **core ✅ 19/09 (X9 fatia 4)**: `--target jvm,native,js`/`all` = same source, one release per face + `.deploy-manifest.json` (SUCCESS/FAIL honesto por alvo, R6/R7, exit 1 se alguma falha); maturity restante: faces cross (sysroot/DEP001) + publish (D2) — **D2-A ✅ 19/09**: `--publish` deixou de ser ⛔ (face GitHub Releases na fila) |
 | 8.5 | Documentation/corpus (`training/`) of the domains | 🔵 | docs lane | per domain |

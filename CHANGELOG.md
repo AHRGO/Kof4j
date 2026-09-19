@@ -13,7 +13,22 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
-### In development
+ ### In development
+
+  - **`kof deps` now pulls from the registry (`owner/repo[@version]`, 0.4.0 line,
+    1.5.3-S2 / D-POLL-19)** — a line like `acme/hello@1.2.3` (or bare `acme/hello`
+    for *latest*) in `kofdeps` resolves against the GitHub Releases published by
+    `kof deploy --publish`: the `<repo>-<ver>.tar.gz` asset is downloaded, its
+    embedded `SHA256SUMS` is **verified before install** (integrity is not optional),
+    and the jar is cached at `~/.kof/deps/kof/<owner>/<repo>/<ver>/` — re-resolve is
+    a cache hit with zero network. A bare `latest` pins the concrete version into
+    `kofdeps` after the first resolve (lock-stable). `kof deps classpath` merges the
+    registry jars with the Maven closure. Honest diagnostics (R6): `REG001` release
+    not found, `REG002` checksum mismatch / no parsable asset, `REG003` package has
+    no jar, `REG004` package has no `SHA256SUMS` (refuses to install). Private repos
+    work with `GH_TOKEN`/`GITHUB_TOKEN`; tests pin the endpoint via `KOF_REGISTRY_API`.
+    Proof: `DepsRegistryTest` (6 cases: happy path + idempotency, latest pin,
+    REG001/REG002/REG003/REG004 against a fake registry).
 
   - **`return <value>` in a `void`/untyped/constructor is now `SEM093` (0.4.0 line,
     D-DECL-RETURN, #333)** — a top-level function that declares `void` — **or declares no
