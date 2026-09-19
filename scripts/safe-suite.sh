@@ -71,7 +71,17 @@ if [ "$#" -eq 0 ]; then
   set -- -o test -Dmaven.test.failure.ignore=true
 fi
 echo "safe-suite: mvn $*  ->  $LOG"
-rm -rf kof-compiler/target/classes kof-compiler/target/test-classes
+# clean de reator INTEIRO antes de qualquer coisa: a corrida de stub ECJ nao e
+# so do kof-compiler — em 19/09 19:1x a suíte limpa pegou KofJsRunner (runtime)
+# contaminado no meio da corrida ("Unresolved compilation problems: Arena.
+# allocateFrom" = API que o JRE 21 do JDT nao tem). rm pontual nao basta.
+CLEAN_ARGS=()
+for a in "$@"; do
+  case "$a" in
+    -o|--offline) CLEAN_ARGS+=("-o") ;;
+  esac
+done
+mvn "${CLEAN_ARGS[@]+"${CLEAN_ARGS[@]}"}" clean -q >"$LOG.clean" 2>&1
 mvn "$@" >"$LOG" 2>&1
 RC=$?
 
