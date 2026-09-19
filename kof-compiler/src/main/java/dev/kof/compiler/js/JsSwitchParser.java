@@ -67,6 +67,7 @@ JsIr.JsStatement parseSwitchStatement(MethodCtx ctx, int[] pos) {
             stack.add(new JsIr.JsIdentifier(subjectName));
             boolean stringEq = false;
             boolean identityEq = false;
+            boolean primitiveEq = false;
             while (true) {
                 KofOperation op = ctx.ops.get(pos[0]);
                 if (op instanceof KofBinary kb && kb.op() == KofBinaryOp.SUB && stack.size() == 2) {
@@ -95,6 +96,17 @@ JsIr.JsStatement parseSwitchStatement(MethodCtx ctx, int[] pos) {
                     pos[0]++;
                     break;
                 }
+                // #473/#474 (§343): os arms numericos canonicos baixam agora como
+                // KofBinary(EQ, primitivo) + teste do bool contra 0 (SUB sumiu do
+                // lowerer). No JS o `switch` ja compara por ===, entao o EQ e
+                // pulado aqui — virar expressao booleana na pilha faria o
+                // CJump(NE) seguinte cair no "unexpected op" abaixo.
+                if (op instanceof KofBinary kb2 && kb2.op() == KofBinaryOp.EQ
+                        && kb2.operandType() instanceof Type.PrimitiveType && stack.size() == 2) {
+                    primitiveEq = true;
+                    pos[0]++;
+                    break;
+                }
                 if (!p.expr.isExpressionOp(op)) {
                     throw new IllegalStateException("KofJS: unexpected op in switch case: " + op);
                 }
@@ -108,11 +120,11 @@ JsIr.JsStatement parseSwitchStatement(MethodCtx ctx, int[] pos) {
             }
             pos[0]++;
             if (!(ctx.ops.get(pos[0]) instanceof KofConditionalJump cj
-                    && ((stringEq || identityEq)
+                    && ((stringEq || identityEq || primitiveEq)
                         ? cj.comparison() == KofComparison.NE
                         : cj.comparison() == KofComparison.EQ))) {
                 throw new IllegalStateException("KofJS: switch case expected CJump("
-                        + ((stringEq || identityEq) ? "NE" : "EQ") + ")");
+                        + ((stringEq || identityEq || primitiveEq) ? "NE" : "EQ") + ")");
             }
             pos[0]++;
             caseValues.add(caseValue);
