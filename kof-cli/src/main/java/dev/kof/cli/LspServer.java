@@ -102,6 +102,9 @@ final class LspServer {
                 capabilities.put("workspaceSymbolProvider", Boolean.TRUE);
                 capabilities.put("codeActionProvider",
                         Map.of("codeActionKinds", List.of("source")));
+                java.nio.file.Path root = params.get("rootUri") instanceof String ru
+                        ? LspProject.toPath(ru) : null;
+                if (root != null) workspaceRoot = root;
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("capabilities", capabilities);
                 result.put("serverInfo", Map.of("name", "kof-lsp", "version", dev.kof.compiler.KofVersion.version()));
@@ -259,6 +262,9 @@ final class LspServer {
         return en > st ? text.substring(st, en) : "";
     }
 
+    /** raiz do workspace do `initialize` (8.3-B); null = so a arvore do arquivo. */
+    private java.nio.file.Path workspaceRoot;
+
     private void hover(Object id, Map<String, Object> params) {
         Map<String, Object> td = params.get("textDocument") instanceof Map<?, ?> p
                 ? (Map<String, Object>) p : Map.of();
@@ -271,7 +277,7 @@ final class LspServer {
         String contents = word.isEmpty() ? null : LspHover.hoverFor(word, text, offsetOf(text, line, ch));
         if (contents == null && !word.isEmpty()) {
             // X10 fatia 7: declaração do projeto (buffer ou .kf irmão) como fallback.
-            String[] d = LspProject.declarationLine(str(td.get("uri")), text, word);
+            String[] d = LspProject.declarationLine(str(td.get("uri")), text, word, workspaceRoot);
             if (d != null) {
                 contents = "**" + word + "** \u2014 declared in `" + d[1] + "`\n```kof\n" + d[0] + "\n```";
             }
@@ -447,7 +453,7 @@ final class LspServer {
 
     @SuppressWarnings("unchecked")
     private void workspaceSymbol(Object id, Map<String, Object> params) {
-        respond(id, LspProject.workspaceSymbols(openText, str(params.get("query"))));
+        respond(id, LspProject.workspaceSymbols(openText, str(params.get("query")), workspaceRoot));
     }
 
     private void documentSymbol(Object id, Map<String, Object> params) {
@@ -462,7 +468,7 @@ final class LspServer {
         if (word.isEmpty()) return null;
         java.nio.file.Path self = LspProject.toPath(fromUri);
         if (self == null) return null;
-        for (java.nio.file.Path f : LspProject.siblings(self)) {
+        for (java.nio.file.Path f : LspProject.siblings(self, workspaceRoot)) {
             String txt = LspProject.readOrNull(f);
             if (txt == null) continue;
             int[] decl = LspSymbols.declarationRange(txt, word);
@@ -497,7 +503,7 @@ final class LspServer {
         // X10 fatia 5: referências também nos .kf irmãos do projeto (read-only).
         java.nio.file.Path self = LspProject.toPath(uri);
         if (self != null && !word.isEmpty()) {
-            for (java.nio.file.Path f : LspProject.siblings(self)) {
+            for (java.nio.file.Path f : LspProject.siblings(self, workspaceRoot)) {
                 String txt = LspProject.readOrNull(f);
                 if (txt == null) continue;
                 for (int[] r : wordOccurrences(txt, word)) {

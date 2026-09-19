@@ -564,6 +564,30 @@ class LspServerTest {
         return String.valueOf(((Map<String, Object>) res.get("contents")).get("value"));
     }
 
+    /** 8.3-B: workspace/symbol cobra deps fora do pai do arquivo aberto (rootUri do initialize). */
+    @Test
+    void workspaceSymbolCoversProjectRootDependency(@TempDir Path dir) throws Exception {
+        Path src = Files.createDirectories(dir.resolve("proj/src"));
+        Path lib = Files.createDirectories(dir.resolve("proj/lib"));
+        String main = "main() { println(Helper(1).v()) }\n";
+        String helper = "record Helper(Int v)\n";
+        Files.writeString(src.resolve("main.kf"), main);
+        Files.writeString(lib.resolve("Helper.kf"), helper);
+        String srcUri = src.resolve("main.kf").toAbsolutePath().toUri().toString();
+        String rootUri = dir.resolve("proj").toAbsolutePath().toUri().toString();
+        String init = "{\"jsonrpc\":\"2.0\",\"id\":0,\"method\":\"initialize\",\"params\":{"
+                + "\"rootUri\":\"" + rootUri + "\"}}";
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + srcUri + "\",\"text\":\"" + Json.escape(main) + "\"}}}";
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"workspace/symbol\",\"params\":{\"query\":\"Helper\"}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(init), frame(didOpen), frame(req))), out).run();
+        @SuppressWarnings("unchecked")
+        List<Object> hits = (List<Object>) byId(messages(out.toString(StandardCharsets.UTF_8)), 1).get("result");
+        assertTrue(hits.stream().anyMatch(h -> String.valueOf(((Map<?, ?>) h).get("name")).equals("Helper")),
+                "8.3-B: simbolo de proj/lib/Helper.kf deve aparecer via rootUri; hits=" + hits);
+    }
+
     /** X10 fatia 7: hover mostra declara\u00e7\u00e3o cross-file do projeto. */
     @Test
     void hoverShowsCrossFileDeclaration(@TempDir Path dir) throws Exception {
