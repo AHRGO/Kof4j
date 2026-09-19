@@ -31,6 +31,10 @@ public final class JvmTimeRuntime {
                     return System.currentTimeMillis();
                 }
 
+                public static void kof_gc_collect_now() {
+                    System.gc();
+                }
+
                 // ── kof.time (STDLIB S7-wedge) — calendário civil ─────────
                 // isLeapYear: ano bissexto (Gregório: %4 && (!%100 || %400)).
                 // daysInMonth: 1..12; mês inválido => 0 (paridade nos 4).

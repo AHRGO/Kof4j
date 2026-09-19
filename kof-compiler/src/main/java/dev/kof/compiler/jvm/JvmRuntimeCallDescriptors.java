@@ -274,6 +274,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_time_parseDateIso" -> "(Ljava/lang/String;)I";
             case "kof_time_tzOffsetSeconds" -> "()I";
             case "kof_time_now" -> "()J";
+            case "kof_gc_collect_now" -> "()V";
             case "kof_time_interval" -> "(ILjava/lang/Object;)Ljava/lang/String;";
             case "kof_time_cancel" -> "(Ljava/lang/String;)V";
             case "kof_scheduler_every" -> "(ILjava/lang/Object;)Ljava/lang/String;";
