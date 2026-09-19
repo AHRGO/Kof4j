@@ -2,6 +2,41 @@
 
 # DOING.md — coordenação multi-agente (quem faz o quê)
 
+> **✅ FEITO (19/09, dono = 192.168.100.14, lane ISSUE-SWEEP, pedido direto da
+> mantenedora):** (1) portão global anti-cheia — `.github/workflows/issue-spam-guard.yml`
+> (>10 issues/24h por autor → fecha `not planned` c/ explicação bilíngue; isentas
+> melmonfre + kof-agent-worker; `8ed7b39a`). Prova da lógica: YAML ok + dry-run real
+> (publiosantos = 38 issues/24h → CLOSE correto; ramos isento/under-limit ok).
+> (2) **TRIAGEM das 16 issues novas de publiosantos (#507–#538)** com jar construído
+> do tip em worktree isolado (regra: nunca mvn na árvore compartilhada durante reator
+> alheio) — **12 FECHADAS como `kof-agent-worker[bot]`**: não-idiomáticas `not_planned`
+> (#538 pattern primitivo em switch=Kotlin `is`, #537 multi-label case→`setOf().contains`
+> medido verde, #536 for-in sem var, #535 `c.name`→`name()`/`ordinal()` (classes.md:158),
+> #530/#529/#513 inferência de lambda sem tipo→contract é tipo explícito (member-call
+> `l.map((x) -> x*2)` medido OK = superfície real da inferência), #528 `var/val` em
+> class body, #527/#510 colon-field fora da gramática (PR #503 CLOSED-unmerged =
+> decisão da mantenedora preserva grammar), #507 `= null` (D-NULL-INTENT/SG-008
+> documentado)); `completed` #508 (`class Box<T>` compila no tip — o PARSE016 real era
+> o colon-field `val: Int = 42` do repro) e #515 (default method = Stable + medido:
+> imprime `[LOG] hi`; o repro falhava por `class X: Iface`). **MANTIDAS ABERTAS
+> como VÁLIDAS: #514** (narrowing documentado vs flow-sensitivity ausente —SEM010
+> medido; face 0:0 = #502/#505) e **#512** (posição 0:0 do SEM028 — família #502).
+> **#511/#515 já estavam fechadas pelo autor** (comentário do worker postado).
+> **LOTE ANTIGO #284–#400: NÃO TOCADO** — já triado pela lane old-issue-sweep .15 +
+> decisões da mantenedora nos comentários (#382/#386 = capability requests mantidos
+> abertos POR DECISÃO DELA; #399/#363/#295/#284/#298 = bugs JVM reais reproduzidos
+> no tip também por mim; #400 face-compilação sumiu, resta crash = #385; #468 foi
+> fechada pela lane .22 em paralelo durante a sessão). **LICOES de identidade
+> (regra 7):** GH_TOKEN do app NÃO persiste entre chamadas do shell — o `eval
+> "$(scripts/gh-as-agent.sh token)"` DEVE estar na MESMA chamada que os `gh` de
+> write (1ª rodada postou 16 comentários + 12 closes como melmonfre → apagados via
+> API e re-postados/re-closeados pelo worker; sonda de identidade correta =
+> `gh api /installation/repositories`, NUNCA `/installation` (404) nem `gh api user`
+> (403 p/ integration); `state_reason` da API exige `not_planned` (underscore);
+> close exige reopen+re-close p/ reatribuir closed_by). **PROXIMO PASSO:** nada
+> nesta lane — fila aberta: #514/#512 pertencem à lane de typers/diagnósticos
+> (SEM010/SEM028 + posição 0:0, família #502/PR #505).
+
 > **🔄 EM CURSO (19/09, dono = 192.168.100.14, lane ISSUE-SWEEP, pedido direto da
 > mantenedora):** (1) **FEITO:** portão global anti-cheia de issues —
 > `.github/workflows/issue-spam-guard.yml`: qualquer autor com >**10 issues na
