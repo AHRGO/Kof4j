@@ -45,7 +45,7 @@ Claim an item in `DOING.md` **in the same commit** that starts the work.
 |-------|------|--------|---------|
 | 1 | SYSTEMS (consolidation) | 🟡 in progress | GC x86 sign-off ⛔ (registry ✅ 19/09) |
 | 2 | AUTOMATION | 🔵 not started | Stage 1 |
-| 3 | INFRASTRUCTURE (Kof Makealive) | 🔵 not started | Stage 2, R3 (FFI), R4 (codegen hook) |
+| 3 | INFRASTRUCTURE (Kof Makealive) | 🟡 planned 19/09 — `makealive-plan.md` (.18); 3.0.0 recon-pending, surface ⛔ Q1–Q4 | Stage 2, R3 (FFI), R4 (codegen hook); **name collision R1 measured → plan §2.1/Q1** |
 | 4 | DATA (engineering / science / ML) | 🔵 not started | Stage 3, R3 (FFI) |
 | 5 | SECURITY (expansion) | 🔵 not started | Stage 3, R3 (FFI) |
 | 6 | SCIENTIFIC COMPUTING | 🔵 not started | Stage 4, R3, GC (1.2) |
@@ -155,11 +155,17 @@ plan/apply/state/reconciliation.
 dependency); package capabilities (1.5).
 **NOT to do:** HCL inside Kof; a provider repository for *everything*;
 coupling the core to a provider.
+**Plan (19/09, maintainer directive, lane `.18`):** [`makealive-plan.md`](makealive-plan.md).
+**R1 collision MEASURED 19/09:** the tracker literal `kof.infra` is HARD-DENY
+in `scripts/check_stdlib_boundary.sh` (rc=1; plan §2.1) — the namespace is
+maintainer question **Q1** (plan §6); no surface lands before it. The
+imperative-turned-data form (VISION §4.2 "A/B — pure Kof today") needs **no
+R4**; R4 gates only the declarative rows (3.2, 3.7).
 
 | # | Item | Status | Owner | Depends on |
 |---|------|--------|-------|------------|
-| 3.1 | `kof.infra` — resource records + dependency graph + diff | 🔵 | — | R4 (codegen hook, 2.2.2) |
-| 3.2 | `infra "prod" { ... }` — desugar over records (compile-time codegen) | 🔵 | — | R4 |
+| 3.1 | `kof.infra` — resource records + dependency graph + diff | 🟡 | `.18` (plan + recon 3.0) | name ⛔ Q1 (plan §2.1, R1 hard-deny measured); imperative face needs no R4 (plan §5 3.1) |
+| 3.2 | `infra "prod" { ... }` — desugar over records (compile-time codegen) | 🔵 | — | R4 + new parse block ⛔ rule 6 (out of v1, plan §5) |
 | 3.3 | Reconciliation loop (spawn/await + channel) | 🔵 | — | Stage 1 (2.1) |
 | 3.4 | State in `kof.db` | 🔵 | — | 3.1 |
 | 3.5 | Providers via FFI/REST/CLI (AWS/Azure/GCP — interop) | 🔵 | — | R3 |

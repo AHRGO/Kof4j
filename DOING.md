@@ -2,6 +2,9 @@
 
 # DOING.md — coordenação multi-agente (quem faz o quê)
 
+> **🔄 EM CURSO (19/09 ~18:2x, dono = 192.168.100.18 (este host, IP atual 192.168.15.101), lane development, frente = KOF MAKEALIVE / Estágio 3 do plano universal, pedido direto da mantenedora "assume a frente do kof makealive no plano da plataforma universal"):** frente reivindicada sem dono anterior (linhas 3.1–3.8 do tracker sem dono; fila do workflow exausta na 2.1.3b — .18 voltou para a fila geral e esta é a nova frente). **Passo 3.0.0 (landa NESTE commit):** plano `docs/development/makealive-plan.md` (+PT) — modelo canônico imperativo-transformado-em-dados (VISÃO §4.2 "A/B", Kof puro HOJE, sem R4 no core), fila §5 e perguntas Q1–Q4 (enquete) §6; tracker Stage 3 flip 🔵→🟡 (EN+PT). **Colisão R1 MEDIDA (por que a Q1 existe):** o literal do tracker `kof.infra` é HARD-DENY em `check_stdlib_boundary.sh` (probe com fonte temporária → rc=1, "official package only"); linha no ledger NÃO sobrepõe hard-deny (medido) — nome é decisão rule 6, nenhuma superfície embarca antes. **PRÓXIMO PASSO (ordem):** (1) 3.0.1 recon — `MakealivePrimitivesE2ETest` (roda JVM/JS + compila Native/Script; record + campo Map + iteração + ciclo→throw + round-trip de estado via kof.io; disciplina da recon 2.1.0 do workflow: o resultado volta para o plano §4); (2) 3.0.2 ⛔ enquete Q1–Q4 (aguarda mantenedora — rule 6, não resolver em código); (3) 3.1 core/host só após Q1. **NÃO TOCAR:** `infra "prod" {}` (3.2/R4, rule 6); lista HARD-DENY do gate (codifica a invariant 1); typers/KofStd de outras lanes; 1.1.x (nat/web).
+
+
 > **✅ FEITO (19/09, dono = 192.168.100.14, lane ISSUE-SWEEP, pedido direto da
 > mantenedora):** (1) portão global anti-cheia — `.github/workflows/issue-spam-guard.yml`
 > (>10 issues/24h por autor → fecha `not planned` c/ explicação bilíngue; isentas

@@ -46,7 +46,7 @@ Reivindique um item no `DOING.md` **no mesmo commit** que inicia o trabalho.
 |---------|------|--------|----------|
 | 1 | SYSTEMS (consolidação) | 🟡 em curso | sign-off GC x86 ⛔ (registry ✅ 19/09) |
 | 2 | AUTOMATION | 🔵 não iniciado | Estágio 1 |
-| 3 | INFRASTRUCTURE (Kof Makealive) | 🔵 não iniciado | Estágio 2, R3 (FFI), R4 (hook de codegen) |
+| 3 | INFRASTRUCTURE (Kof Makealive) | 🟡 planejado 19/09 — `makealive-plan.md` (.18); 3.0.0 recon pendente, superfície ⛔ Q1–Q4 | Estágio 2, R3 (FFI), R4 (hook de codegen); **colisão de nome R1 medida → plano §2.1/Q1** |
 | 4 | DATA (engineering / science / ML) | 🔵 não iniciado | Estágio 3, R3 (FFI) |
 | 5 | SECURITY (expansão) | 🔵 não iniciado | Estágio 3, R3 (FFI) |
 | 6 | SCIENTIFIC COMPUTING | 🔵 não iniciado | Estágio 4, R3, GC (1.2) |
@@ -156,11 +156,17 @@ plan/apply/state/reconciliation.
 arquitetural); capacidades de pacote (1.5).
 **NÃO fazer:** HCL dentro do Kof; um repositório de provider para *tudo*;
 acoplar o core a um provider.
+**Plano (19/09, diretiva da mantenedora, lane `.18`):** [`makealive-plan.pt_BR.md`](makealive-plan.pt_BR.md).
+**Colisão R1 MEDIDA 19/09:** o literal do tracker `kof.infra` é HARD-DENY em
+`scripts/check_stdlib_boundary.sh` (rc=1; plano §2.1) — o namespace é a
+pergunta da mantenedora **Q1** (plano §6); nenhuma superfície embarca antes.
+A forma imperativa-transformada-em-dados (VISÃO §4.2 "A/B — Kof puro hoje")
+NÃO precisa de **R4**; R4 barra só as linhas declarativas (3.2, 3.7).
 
 | # | Item | Status | Dono | Depende de |
 |---|------|--------|------|------------|
-| 3.1 | `kof.infra` — records de recurso + grafo de dependência + diff | 🔵 | — | R4 (hook de codegen, 2.2.2) |
-| 3.2 | `infra "prod" { ... }` — desugar sobre records (codegen em compile-time) | 🔵 | — | R4 |
+| 3.1 | `kof.infra` — records de recurso + grafo de dependência + diff | 🟡 | `.18` (plano + recon 3.0) | nome ⛔ Q1 (plano §2.1, hard-deny R1 medido); face imperativa não precisa de R4 (plano §5 3.1) |
+| 3.2 | `infra "prod" { ... }` — desugar sobre records (codegen em compile-time) | 🔵 | — | R4 + bloco de parse novo ⛔ regra 6 (fora do v1, plano §5) |
 | 3.3 | Loop de reconciliação (spawn/await + channel) | 🔵 | — | Estágio 1 (2.1) |
 | 3.4 | Estado em `kof.db` | 🔵 | — | 3.1 |
 | 3.5 | Providers via FFI/REST/CLI (AWS/Azure/GCP — interop) | 🔵 | — | R3 |
