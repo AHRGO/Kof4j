@@ -818,7 +818,7 @@ class LspServerTest {
                 "time.* faltando: " + t);
         List<String> d = completionAt("db.", 0, 3).stream()
                 .map(i -> (String) i.get("label")).toList();
-        assertEquals(List.of("connect", "close", "transaction"), d);
+        assertEquals(List.of("connect", "query", "execute", "close", "transaction"), d);
         List<String> c = completionAt("crypto.", 0, 7).stream()
                 .map(i -> (String) i.get("label")).toList();
         assertTrue(c.contains("sha256") && c.contains("hmacSha256"), "crypto: " + c);

@@ -47,7 +47,11 @@ class ArtifactSizeTest {
     // à época do trigger bruto; com o blanket spill no collect_now o salto
     // de símbolos é o link inevitável do coletor — "não é impeditivo", é a
     // decisão tamanho/valor documentada (matriz de aceite G-6 item 4).
-    private static final long HELLO_X86_BYTES = 37_320L;
+    // adde9835 (19/09, lane nat): println de record aninhado por descritor
+    // recursivo na x86 = codigo novo legitimo; hello 37.320 -> 39.232 re-medido
+    // no host 19/09 (stash-test: byte-identico sem diff desta lane; culpa = codegen
+    // do landing, nao o gate). Baseline unilateral como os anteriores.
+    private static final long HELLO_X86_BYTES = 39_232L;
     private static final int HELLO_X86_SYMS = 84;
     // Pós-#104 (13/09): o shim globalThis.kof_platform do core JS (erro claro
     // em vez de ReferenceError fora do GraalJS) entrou no préâmbulo always —

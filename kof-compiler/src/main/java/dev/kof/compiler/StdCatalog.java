@@ -59,6 +59,41 @@ public final class StdCatalog {
         MEMBERS = java.util.Collections.unmodifiableMap(m);
     }
 
+    // LSP-A (D-POLL-19 19/09; linha 8.3): assinaturas transcritas do DISPATCHER
+    // REAL de cada namespace (KofDb.staticCall / KofHttp.staticCall) e travadas
+    // comportamento-a-comportamento em StdCatalogSignaturesTest (chamar com a
+    // aridade gravada => bind; um bind a mais no db => null). Fonte unica viva,
+    // nao comentario: fatia 1 = db+http; demais namespaces entram fatia a fatia
+    // SEM fingir cobertura (R6: member sem tabela mantem o hover simples).
+    private static final Map<String, Map<String, List<String>>> SIGNATURES =
+            Map.of(
+            "db", Map.of(
+                    "connect", List.of("connect(String url) -> String",
+                            "connect(String url, String user, String pass) -> String"),
+                    "query", List.of("query(String url, String sql) -> List<String>",
+                            "query(String url, String sql, Object... binds[1..4]) -> List<String>"),
+                    "execute", List.of("execute(String url, String sql) -> Int",
+                            "execute(String url, String sql, Object... binds[1..4]) -> Int"),
+                    "close", List.of("close(String url) -> void"),
+                    "transaction", List.of("transaction(callback) -> void")),
+            "http", Map.of(
+                    "get", List.of("get(String url) -> String", "get(String url, String headers...) -> String"),
+                    "delete", List.of("delete(String url) -> String", "delete(String url, String headers...) -> String"),
+                    "options", List.of("options(String url) -> String", "options(String url, String headers...) -> String"),
+                    "post", List.of("post(String url, String body) -> String", "post(String url, String body, String headers...) -> String"),
+                    "put", List.of("put(String url, String body) -> String", "put(String url, String body, String headers...) -> String"),
+                    "patch", List.of("patch(String url, String body) -> String", "patch(String url, String body, String headers...) -> String"),
+                    "status", List.of("status(String url) -> Int"),
+                    "timeout", List.of("timeout(Int ms) -> void"),
+                    "retry", List.of("retry(Int count) -> void"),
+                    "circuit", List.of("circuit(Int threshold) -> void")));
+
+    /** Overloads gravados do membro (vazio = sem tabela ainda; nunca chute, R6). */
+    public static List<String> signaturesOf(String ns, String member) {
+        var m = SIGNATURES.get(ns);
+        return m == null ? List.of() : m.getOrDefault(member, List.of());
+    }
+
     public static Set<String> namespaces() { return MEMBERS.keySet(); }
 
     public static boolean isNamespace(String ns) { return MEMBERS.containsKey(ns); }

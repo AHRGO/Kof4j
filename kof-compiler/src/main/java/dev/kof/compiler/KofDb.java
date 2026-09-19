@@ -70,8 +70,11 @@ public final class KofDb {
     }
 
 /** X10 fatia 2: nomes aceitos pelo dispatch real (catálogo p/ LSP).
-     *  GUARDA: StdCatalogTest exige == case-literals da fonte abaixo. */
-    static List<String> functions() { return List.of("connect", "close", "transaction"); }
+     *  GUARDA: StdCatalogTest exige == case-literals + literais das famílias
+     *  isQuery/isExecute da fonte abaixo (19/09: query/execute viviam NAS familias
+     *  e ficaram de fora do catálogo — bug de transcription achado na fatia de
+     *  assinaturas; o consumidor db.query(db.url,...) é documentado no corpus). */
+    static List<String> functions() { return List.of("connect", "query", "execute", "close", "transaction"); }
 
     /** {@code db.<method>(...) } — resolve aridade e o runtime function. */
     static DbCall staticCall(String name, List<Type> argTypes, boolean typed) {

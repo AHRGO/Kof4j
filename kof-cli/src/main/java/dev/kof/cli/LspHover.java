@@ -76,7 +76,13 @@ final class LspHover {
             String ns = text.substring(ns0, st - 1);
             if (dev.kof.compiler.StdCatalog.isNamespace(ns)
                     && dev.kof.compiler.StdCatalog.membersOf(ns).contains(word)) {
-                return "**" + word + "** \u2014 member of `kof." + ns + "`";
+                var sig = dev.kof.compiler.StdCatalog.signaturesOf(ns, word);
+                if (sig.isEmpty()) return "**" + word + "** \u2014 member of `kof." + ns + "`";
+                StringBuilder mb = new StringBuilder("**" + word + "** \u2014 member of `kof." + ns + "`");
+                mb.append("\n```\n");
+                for (String sg : sig) mb.append(sg).append("\n");
+                mb.append("```");
+                return mb.toString();
             }
         }
         return null;

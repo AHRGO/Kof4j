@@ -186,11 +186,17 @@ class StdCatalogTest {
         assertEquals(topCaseNames(switchBlock(
                 methodBody(source("KofCache"), "isCacheMethod(String name)"), "switch (name)")),
                 KofCache.functions(), "cache");
-        assertEquals(topCaseNames(switchBlock(
+        List<String> dbExpected = new ArrayList<>(topCaseNames(switchBlock(
                 methodBody(source("KofDb"),
                         "staticCall(String name, List<Type> argTypes, boolean typed)"),
-                "switch (name)")),
-                KofDb.functions(), "db");
+                "switch (name)")));
+        for (String fam : List.of("isQuery", "isExecute")) {
+            java.util.regex.Matcher fm = Pattern.compile("\"(\\w+)\"\\.equals\\(name\\)")
+                    .matcher(methodBody(source("KofDb"), fam + "(String name)"));
+            while (fm.find()) dbExpected.add(fm.group(1));
+        }
+        List<String> dbGot = new ArrayList<>(KofDb.functions());
+        assertEquals(dbExpected.stream().sorted().toList(), dbGot.stream().sorted().toList(), "db");
         assertEquals(List.of("run"), KofProcess.functions(), "process");
     }
 
