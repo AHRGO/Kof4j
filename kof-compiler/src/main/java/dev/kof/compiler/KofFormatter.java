@@ -359,8 +359,8 @@ public final class KofFormatter {
         if (expr == null) return "";
         if (expr instanceof IdentifierExpr ie) return ie.name();
         if (expr instanceof LiteralExpr le) {
-            if (le.kind() == ConcreteLiteralKind.STRING) return "\"" + le.value() + "\"";
-            if (le.kind() == ConcreteLiteralKind.CHAR) return "'" + le.value() + "'";
+            if (le.kind() == ConcreteLiteralKind.STRING) return "\"" + escapeLiteral(le.value()) + "\"";
+            if (le.kind() == ConcreteLiteralKind.CHAR) return "'" + escapeLiteral(le.value()) + "'";
             return le.value();
         }
         if (expr instanceof BinaryExpr be) {
@@ -452,6 +452,34 @@ public final class KofFormatter {
     }
 
     /** Espelho de ExpressionParser.precedence (fonte: o parser, não a memória). */
+    /**
+     * #447 — reimprime CHAR/STRING a partir do valor DECODIFICADO com os
+     * escapes que o Lexer reconhece (readEscape: n t r backslash ' " 0 u).
+     * Sem isto, o formatador corrompia código válido: '\\' virava '\' (unterminated,
+     * LEX004) e '\t' virava TAB cru entre aspas — round-trip não-idempotente.
+     */
+    static String escapeLiteral(String v) {
+        if (v == null || v.isEmpty()) return v;
+        StringBuilder sb = new StringBuilder(v.length() + 8);
+        for (int i = 0; i < v.length(); i++) {
+            char c = v.charAt(i);
+            switch (c) {
+                case '\\' -> sb.append("\\\\");
+                case '\'' -> sb.append("\\'");
+                case '\"' -> sb.append("\\\"");
+                case '\n' -> sb.append("\\n");
+                case '\t' -> sb.append("\\t");
+                case '\r' -> sb.append("\\r");
+                case '\0' -> sb.append("\\0");
+                default -> {
+                    if (c < 0x20) sb.append(String.format("\\u%04x", (int) c));
+                    else sb.append(c);
+                }
+            }
+        }
+        return sb.toString();
+    }
+
     static int precOf(String op) {
         return switch (op) {
             case "||" -> 1;
