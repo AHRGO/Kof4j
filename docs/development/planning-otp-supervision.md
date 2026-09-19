@@ -17,6 +17,20 @@
 > the SG-020 flag has proof (`ACC_VOLATILE` fix + DD-OTP-08 implemented 15/09).
 > What still blocks supervisor on cross is `OTP001` alone: raw `clone` without
 > TLS for the §129 per-thread handler chain.
+>
+> **19/09 — mechanism decided (maintainer, in chat):** the cross port uses
+> **real TLS via `clone`** (not a per-TID table), recorded in
+> `DECISIONS.md` §129. Concretely: per-thread chain head — main set in `_start`
+> (our entry, `tp` is ours), workers via `CLONE_SETTLS` + a per-worker TLS
+> block (the flags already carry `CLONE_SETTLS`; `a3`/tls is passed as `0`
+> today), plus the x86 option-B trampoline (per-worker handler frame →
+> publish `handle->exc`, rethrown by `await`/`await_timeout`/`select_any`).
+> **Implementation blocker found (must be solved in the port):** the aarch64
+> translator maps riscv `tp` → `x4` (`NativeAarch64Helpers:74`) which collides
+> with `a4` → `x4` (`:98`, used by `mmap`/`clone`) and does not read
+> `TPIDR_EL0` (the real aarch64 thread pointer, via `mrs`). RED baseline
+> measured: two cross tests mirroring the x86 §129 hang under qemu (worker
+> `throw` longjmps the global `kof_exc_chain` of `main`).
 
 ## Decision status (11/09)
 

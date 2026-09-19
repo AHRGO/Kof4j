@@ -17,6 +17,20 @@
 > flag do SG-020 tem prova (fix `ACC_VOLATILE` + DD-OTP-08 implementada 15/09).
 > O que ainda trava o supervisor no cross é só o `OTP001`: `clone` cru sem TLS
 > para a cadeia de handlers por-thread do §129.
+>
+> **19/09 — mecanismo decidido (mantenedora, no chat):** o port cross usa
+> **TLS real via `clone`** (não tabela por-TID), registrado no
+> `DECISIONS.md` §129. Concretamente: topo de cadeia por-thread — a main no
+> `_start` (nosso entry, a `tp` é nossa), workers via `CLONE_SETTLS` + bloco
+> TLS por worker (as flags já carregam `CLONE_SETTLS`; `a3`/tls vai como `0`
+> hoje), mais o trampoline do option B do x86 (frame de handler por worker →
+> publica `handle->exc`, relançado por `await`/`await_timeout`/`select_any`).
+> **Bloqueio de implementação encontrado (resolver no port):** o tradutor
+> aarch64 mapeia riscv `tp` → `x4` (`NativeAarch64Helpers:74`), colidindo com
+> `a4` → `x4` (`:98`, usado por `mmap`/`clone`) e não lê `TPIDR_EL0` (o thread
+> pointer real do aarch64, via `mrs`). Baseline RED medido: dois testes cross
+> espelhando o §129 x86 penduram sob qemu (o `throw` do worker faz longjmp na
+> `kof_exc_chain` global da `main`).
 
 ## Estado das decisões (11/09)
 

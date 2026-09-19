@@ -700,6 +700,22 @@ A worker without an internal handler publishes the exception to the handle.
 
 The consumer rethrows it in `await`, `await_timeout`, and `select_any`.
 
+**Extension 19/09 — riscv64/aarch64 mechanism (maintainer's decision in chat):**
+the same §129 contract is ported to the cross targets using **real TLS via
+`clone`** (not a per-TID table). Each thread gets its own chain head: the main
+thread in `_start` (our entry point — it does **not** go through
+`__libc_start_main`, so `tp` is ours to set) and each worker via
+`CLONE_SETTLS` + a per-worker TLS block (the clone flags already carry
+`CLONE_SETTLS`; today `a3`/tls is passed as `0`). `kof_spawn_trampoline`
+installs the per-worker handler frame and publishes the cause on `handle->exc`
+(offset 48 on riscv), as the x86_64 option B does. **Known blocker to solve in
+the implementation:** the aarch64 translator maps riscv `tp` → `x4`
+(`NativeAarch64Helpers:74`), which collides with `a4` → `x4` (`:98`) and does
+not read `TPIDR_EL0` (the real aarch64 thread pointer, via `mrs`) — the shared
+access sites must be made to work on both arches before the port lands.
+Evidence of the RED baseline: two cross tests mirroring the x86 §129 hang under
+qemu (worker `throw` longjmps the global `kof_exc_chain` of `main`).
+
 ### `roundTo`
 
 **Decision:** arithmetic decimal rounding.

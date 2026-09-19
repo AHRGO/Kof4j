@@ -665,6 +665,22 @@ Worker sem handler interno publica a exceção no handle.
 
 O consumidor relança em `await`, `await_timeout` e `select_any`.
 
+**Extensão 19/09 — mecanismo riscv64/aarch64 (decisão da mantenedora no chat):**
+o mesmo contrato §129 é portado para os targets cross usando **TLS real via
+`clone`** (não uma tabela por-TID). Cada thread ganha seu próprio topo de
+cadeia: a main no `_start` (nosso entry point — **não** passa por
+`__libc_start_main`, então a `tp` é nossa para definir) e cada worker via
+`CLONE_SETTLS` + bloco TLS por worker (as flags do clone já carregam
+`CLONE_SETTLS`; hoje `a3`/tls vai como `0`). O `kof_spawn_trampoline` instala
+o frame de handler por worker e publica a causa em `handle->exc` (offset 48 no
+riscv), como faz o option B do x86_64. **Bloqueio conhecido a resolver na
+implementação:** o tradutor aarch64 mapeia riscv `tp` → `x4`
+(`NativeAarch64Helpers:74`), o que colide com `a4` → `x4` (`:98`) e não lê
+`TPIDR_EL0` (o thread pointer real do aarch64, via `mrs`) — os sítios de acesso
+compartilhados precisam funcionar nas duas arches antes do port entrar.
+Evidência do baseline RED: dois testes cross espelhando o §129 x86 penduram sob
+qemu (o `throw` do worker faz longjmp na `kof_exc_chain` global da `main`).
+
 ### `roundTo`
 
 **Decisão:** arredondamento decimal aritmético.
