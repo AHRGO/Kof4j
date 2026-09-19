@@ -81,9 +81,21 @@ Design invariants (inherited from existing precedent, not invented here):
   backend.
 - **Dead-letter = an `Iterable` view of failures** — the in-memory implementation is a
   `List[Failed]`; the durable one is a `kof.orm` table. No new queue subsystem.
+  **LANDED 19/09 (refinement measured):** in-memory = `Report.dead` (`"nome: motivo"`,
+  always present); durable = an opt-in USER SINK `(nome, motivo) -> Bool` per job
+  (`dag.deadLetter(job, sink)`) — persistence is user code (e.g. `kof.orm` in their
+  body). A host-side `kof.orm` reference would reject the WHOLE host on Native
+  (ORM001 gate is static, like CRON001 — measured); the sink keeps the host
+  target-neutral. Sink refusal (`false`) or throw fails LOUD with the job name.
 - **Scheduling reuses `kof.scheduler.at(cron)`.** Workflow does **not** implement cron
   parsing. If `at` raises `CRON001` on a target (native), `flow.schedule` raises
   `CRON001` too — same honest gap, no papering over.
+  **LANDED 19/09:** `schedule(expr, dag)` delegates to `scheduler.at` (durations
+  D-SCHED-DURATION or cron) and fires the dag inside `spawn` per fire (CONC003-JS-01:
+  `run()` may `time.sleep` on backoff = async-marked; `spawn` is the blessed bridge).
+  Native slice = a stub that fails LOUD at runtime citing `CRON001` (a scheduler.at
+  reference in the injected host rejects the whole host at compile time — measured);
+  the user's DIRECT `scheduler.at` keeps the compile-time refusal.
 - **Supervision reuses `kof.supervisor` (OTP, DD-OTP-01 option A).** A workflow run is a
   supervised tree; restart policy = the supervisor's policy. `workflow` does **not**
   re-implement restart semantics.

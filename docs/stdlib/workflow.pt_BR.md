@@ -8,7 +8,11 @@
 > **Escopo do MVP (Q2, enquete da mantenedora 19/09):** `job` / `dag` / `after` /
 > `run` / `Report`. **Face 1 do 2.1.3 ENTREGUE 19/09:** `retry` (Q3 — helper aditivo
 > do próprio workflow; `kof.http` NÃO é tocado, a migração dele é fatia assinada à
-> parte). `checkpoint`, `deadLetter` e `schedule` ainda chegam com o resto do bundle 2.1.3.
+> parte). **Faces 2–3 do 2.1.3 ENTREGUES 19/09 (esta fatia):** `deadLetter` (Q4 — as
+> DUAS faces: `Report.dead` in-memory sempre + sink durável opt-in por job) e
+> `schedule` (delega a `scheduler.at` — durações D-SCHED-DURATION ou cron; Native
+> recebe stub que falha ALTO em runtime c/ `CRON001`, o gate do scheduler segue
+> em compile-time). `checkpoint` chega com o resto do bundle 2.1.3.
 
 ---
 
@@ -38,9 +42,11 @@ dag(List<KofWfJob> jobs) -> KofWfDag            // guarda dag vazia / nomes dupl
 KofWfDag.run() -> KofWfReport                   // fixpoint topológico sequencial
 KofWfDag.retry(KofWfJob j, Int times, (Int) -> Int backoffMs) -> KofWfDag
 KofWfDag.retryFixed(KofWfJob j, Int times) -> KofWfDag   // imediato, sem sleep
+KofWfDag.deadLetter(KofWfJob j, (String, String) -> Bool sink) -> KofWfDag  // face durável opt-in
+schedule(KofWfDag d, String expr) -> String               // 19/09: delega a scheduler.at, devolve o job id
 exponential(Int baseMs, Int factor) -> (Int) -> Int       // backoff(1)=base, *factor a cada try
 
-Campos do Report: succeeded failed skipped errors retries  // List<String> cada
+Campos do Report: succeeded failed skipped errors retries dead  // List<String> cada
 Report.allOk() -> Bool                          // sem falhas, sem skips
 Report.summary() -> String                      // "ok=... failed=... skipped=..."
 ```
@@ -59,6 +65,26 @@ Regras:
   até `times` tentativas extras (throw e `false` retryam ambos); `Report.retries`
   registra `"nome: tentativas=N"`, e `errors` guarda o ÚLTIMO motivo se ainda falhar.
   `retryFixed` é igual com espera zero. Só jobs membros da dag podem ser configurados
+- `Report.dead` (deadLetter, face in-memory — SEMPRE presente): todo job que
+  esgotou retry entra como `"nome: motivo"` (mesmo texto de `errors`); jobs
+  bem-sucedidos nunca entram.
+- `deadLetter(job, sink)`: a face durável é CÓDIGO DO USUÁRIO — o sink
+  `(nome, motivo) -> Bool` recebe cada falha final (persista onde quiser, ex.
+  `kof.orm` no SEU corpo; o workflow segue puro e neutro de alvo, nunca
+  dependendo do `kof.orm`). `false` ou throw do sink falha ALTO com o nome do
+  job (R6 — dead letter recusado não pode sumir). Um sink por job
+  (re-registrar lança).
+- `schedule(expr, dag)`: DELEGA ao `scheduler.at` (durações idiomáticas
+  `30m`/`1d&30m` ou cron de 5 campos — D-SCHED-DURATION) e devolve o job id do
+  scheduler. Cada disparo roda a dag INTEIRA dentro de `spawn` (JVM = uma
+  thread por disparo; JS = pump cooperativo — a forma que a CONC003 permite
+  dentro de callbacks de timer, já que `run()` pode `time.sleep` no backoff de
+  retry). Disparo que falha não derruba o scheduler (isolado no spawn);
+  persistência por disparo vai pelo `deadLetter`, que roda dentro de `run()`.
+  No NATIVE a fatia é um stub que falha ALTO em runtime citando `CRON001`
+  (o gate do scheduler é estático — referenciar `scheduler.at` no host
+  rejeitaria o host INTEIRO no compile; o `scheduler.at` DIRETO do usuário
+  mantém a recusa em compile-time).
   (a guarda diz isso).
 
 ## 3. Idiomática

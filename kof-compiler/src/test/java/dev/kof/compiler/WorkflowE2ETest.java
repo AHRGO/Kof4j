@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -221,6 +222,96 @@ class WorkflowE2ETest {
             }
             """, "ok=flaky failed=boom skipped=", "flaky: tentativas=3",
                 "boom: tentativas=2", "boom: sempre");
+    }
+
+    /** 2.1.3 face 2 (Q4): deadLetter IN-MEMORY — `Report.dead` coleta
+     *  "nome: motivo" para TODO job que esgotou retry (throw e false),
+     *  sem depender de sink; jobs bem-sucedidos nunca entram. */
+    @Test
+    void deadLetterInMemoryFaceCollectsDeadJobs() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var boom = job("boom", () -> { if (true) { throw "estourou" } return false })
+                var falsey = job("falsey", () -> false)
+                var ok = job("ok", () -> true)
+                var rep = dag(listOf(boom, falsey, ok)).run()
+                println(rep.summary())
+                println(rep.dead.get(0))
+                println(rep.dead.get(1))
+                println(rep.dead.size)
+            }
+            """, "ok=ok failed=boom,falsey skipped=", "boom: estourou", "falsey: false", "2");
+    }
+
+    /** 2.1.3 face 2 (Q4): deadLetter DURÁVEL — sink `(nome, motivo) -> Bool`
+     *  do USUÁRIO recebe cada falha final (persistência é código dele, ex.
+     *  kof.orm); recusa (false) falha ALTO com o nome do job (R6). */
+    @Test
+    void deadLetterDurableSinkReceivesFailuresAndRefusalIsLoud() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var log = listOf()
+                var boom = job("boom", () -> { if (true) { throw "persiste-me" } return false })
+                var flow = dag(listOf(boom))
+                flow.deadLetter(boom, (n: String, m: String) -> { log.add(n + "/" + m); return true })
+                var rep = flow.run()
+                println(rep.dead.get(0))
+                println(log.get(0))
+                println(log.size)
+            }
+            """, "boom: persiste-me", "boom/persiste-me", "1");
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var boom = job("boom", () -> { if (true) { throw "x" } return false })
+                var flow = dag(listOf(boom))
+                flow.deadLetter(boom, (n: String, m: String) -> false)
+                try {
+                    flow.run()
+                    println("no-throw")
+                } catch (String e) {
+                    println(e)
+                }
+            }
+            """, "workflow: deadLetter sink recusou 'boom'");
+    }
+
+    /** 2.1.3 face 3: `flow.schedule(expr, dag)` DELEGA ao scheduler.at
+     *  (duração idiomática ou cron — D-SCHED-DURATION); cada disparo roda a
+     *  dag e devolve allOk(). Fire-count real com "20ms" nos 2 alvos. */
+    @Test
+    void scheduleDelegatesToSchedulerAtAndFires() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var runs = 0
+                var a = job("a", () -> { runs = runs + 1; return true })
+                var id = schedule(dag(listOf(a)), "20ms")
+                time.sleep(100)
+                scheduler.cancel(id)
+                println(id != "")
+                println(runs >= 2)
+            }
+            """, "true", "true");
+    }
+
+    /** Native: o gate CRON001 do scheduler.at é estático — referenciá-lo no
+     *  host derrubaria a compilação INTEIRA. A fatia schedule entra no
+     *  Native como STUB que falha ALTO em runtime citando CRON001 (R6);
+     *  prova: o host + schedule compilam no Native (a delegação não está lá). */
+    @Test
+    void scheduleOnNativeCompilesViaStubHostStillPortable() throws Exception {
+        Files.writeString(tmp.resolve("S.kf"), """
+            import kof.workflow
+            main() {
+                var id = schedule(dag(listOf(job("a", () -> true))), "*/5 * * * *")
+                println(id)
+            }
+            """);
+        CompilationResult nativeRes = driver.compile(tmp.resolve("S.kf"), tmp.resolve("s-native"), Target.NATIVE);
+        assertTrue(nativeRes.success(), () -> "Native deve compilar o host + stub schedule: " + diags(nativeRes));
     }
 
     /** Rule-5 source portability: the same injected host compiles on Native

@@ -7,8 +7,12 @@
 
 > **MVP scope (Q2, maintainer poll 19/09):** `job` / `dag` / `after` / `run` / `Report`.
 > **2.1.3 face 1 LANDED 19/09:** `retry` (Q3 — the workflow's own additive helper;
-> `kof.http` is NOT touched, its migration is a separate signed slice). `checkpoint`,
-> `deadLetter` and `schedule` still ship with the rest of the 2.1.3 bundle.
+> `kof.http` is NOT touched, its migration is a separate signed slice).
+> **2.1.3 faces 2–3 LANDED 19/09 (this slice):** `deadLetter` (Q4 — the TWO faces:
+> in-memory `Report.dead` always + opt-in durable sink per job) and `schedule`
+> (delegates to `scheduler.at` — D-SCHED-DURATION durations or cron; Native gets
+> a loud runtime `CRON001` stub, the scheduler gate itself stays compile-time).
+> `checkpoint` ships with the rest of the 2.1.3 bundle.
 
 ---
 
@@ -38,9 +42,11 @@ dag(List<KofWfJob> jobs) -> KofWfDag            // guards empty dag / dup names 
 KofWfDag.run() -> KofWfReport                   // sequential topological fixpoint
 KofWfDag.retry(KofWfJob j, Int times, (Int) -> Int backoffMs) -> KofWfDag
 KofWfDag.retryFixed(KofWfJob j, Int times) -> KofWfDag   // immediate, no sleep
+KofWfDag.deadLetter(KofWfJob j, (String, String) -> Bool sink) -> KofWfDag  // opt-in durable face
 exponential(Int baseMs, Int factor) -> (Int) -> Int       // 19/09: backoff(1)=base, *factor each try
+schedule(KofWfDag d, String expr) -> String               // 19/09: delegates to scheduler.at, returns job id
 
-Report fields: succeeded failed skipped errors retries  // List<String> each
+Report fields: succeeded failed skipped errors retries dead  // List<String> each
 Report.allOk() -> Bool                          // no failures, no skips
 Report.summary() -> String                      // "ok=... failed=... skipped=..."
 ```
@@ -59,6 +65,26 @@ Rules:
   `"nome: tentativas=N"`, and `errors` keeps the LAST reason if it still fails.
   `retryFixed` is the same with zero wait. Only jobs that are members of the dag can
   be configured (guard message says so).
+- `Report.dead` (deadLetter, in-memory face — ALWAYS present): every job that
+  exhausted retries lands as `"nome: motivo"` (same reason text as `errors`);
+  successful jobs never enter.
+- `deadLetter(job, sink)`: the durable face is USER code — the sink
+  `(nome, motivo) -> Bool` receives every final failure (persist wherever you
+  want, e.g. `kof.orm` in YOUR body; the workflow stays pure and target-neutral,
+  never depending on `kof.orm` itself). `false` or a throw from the sink fails
+  LOUD with the job name (R6 — a refused dead letter must not vanish). One sink
+  per job (re-registering throws).
+- `schedule(expr, dag)`: DELEGATES to `scheduler.at` (idiomatic durations
+  `30m`/`1d&30m` or 5-field cron — D-SCHED-DURATION) and returns the scheduler
+  job id. Each fire runs the WHOLE dag inside `spawn` (JVM = one thread per
+  fire; JS = the cooperative pump — the form CONC003 allows inside timer
+  callbacks, since `run()` may `time.sleep` on retry backoff). A failing fire
+  never kills the scheduler (isolated in the spawn); per-fire persistence goes
+  through `deadLetter`, which runs inside `run()`. On NATIVE the slice is a
+  stub that fails LOUD at runtime citing `CRON001` (the scheduler gate is
+  static — referencing `scheduler.at` in the host would reject the whole host
+  at compile time; your DIRECT `scheduler.at` calls keep the compile-time
+  refusal).
 
 ## 3. Idiom
 

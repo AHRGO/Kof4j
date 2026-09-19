@@ -71,11 +71,51 @@ final class CompilerWorkflow {
                 driver.declarationPackages.put(d, "");
                 decls.add(d);
             }
+            // fatia schedule (bundle 2.1.3): separada do host principal
+            // porque o gate CRON001 do scheduler.at é estático — no NATIVE
+            // entra o STUB (throw CRON001 em runtime, R6), nunca a
+            // delegação (que derrubaria o host INTEIRO na recusa).
+            if (!driver.target.isNative()) {
+                mergeSchedHost(driver, unit, decls, diagnostics, "/dev/kof/workflow-sched-host.kf");
+            } else {
+                mergeSchedHost(driver, unit, decls, diagnostics, "/dev/kof/workflow-sched-host.native.kf");
+            }
             return new CompilationUnitNode(unit.position(), unit.packageName(), imports, decls);
         } catch (IOException e) {
             diagnostics.error("", 0, 0, 0,
                     "workflow host could not be loaded: " + e.getMessage(), "PKG003");
             return null;
+        }
+    }
+
+    private static void mergeSchedHost(CompilerDriver driver,
+                                       CompilationUnitNode unit,
+                                       List<AstNode> decls,
+                                       DiagnosticCollector diagnostics,
+                                       String resource) {
+        try (var in = CompilerDriver.class.getResourceAsStream(resource)) {
+            if (in == null) {
+                diagnostics.error("", 0, 0, 0,
+                        "workflow sched host resource " + resource + " missing", "PKG003");
+                return;
+            }
+            String schedSource = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            DiagnosticCollector silent = new DiagnosticCollector();
+            Lexer lexer = new Lexer(schedSource, "workflow-sched-host.kf", silent);
+            Parser parser = new Parser(lexer.tokenize(), silent, "workflow-sched-host.kf");
+            CompilationUnitNode schedUnit = parser.parse();
+            if (silent.hasErrors() || schedUnit == null) {
+                for (Diagnostic d : silent.getDiagnostics()) diagnostics.report(d);
+                diagnostics.error("", 0, 0, 0, "workflow sched host did not parse", "PKG003");
+                return;
+            }
+            for (AstNode d : schedUnit.declarations()) {
+                driver.declarationPackages.put(d, "");
+                decls.add(d);
+            }
+        } catch (IOException e) {
+            diagnostics.error("", 0, 0, 0,
+                    "workflow sched host could not be loaded: " + e.getMessage(), "PKG003");
         }
     }
 }
