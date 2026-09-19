@@ -31,14 +31,16 @@ Fato medido: o parser não tem produções `workflow`/`task`/`pipeline`, e o `ro
 §"KofJS — Web" é explícito ao dizer que JS não é superfície de segunda classe (regra 5). Então
 `kof.workflow` é proposto como **código Kof comum** na árvore `stdlib` (como `kof.supervisor`
 já é, por DD-OTP-01 opção A), **não** uma keyword ou forma gramatical nova. Esboço da idiomática
-(forma apenas — cada decisão abaixo é um `Q` para a mantenedora no §6, não uma afirmação deste
-documento):
+(forma apenas — toda *forma* abaixo é Kof parseável, verificado no 2.1.0 por
+`WorkflowPrimitivesE2ETest`: lambdas são argumento `(x: T) -> expr`, listas são `listOf(...)`,
+não existe literal `[]`, nem literal `{}` de mapa, nem sufixo de duração `1s` em Kof; as
+*decisões* são os `Q`s respondidos no §6):
 
 ```
 import kof.workflow
 
-var build = workflow.job("build") { ctx -> run("make", ["-j"]) }
-var image = workflow.job("image").after(build) { ctx -> run("docker", ["build", "."]) }
+var build = workflow.job("build", (ctx: JobCtx) -> process.run("make", listOf("-j")))
+var image = workflow.job("image", (ctx: JobCtx) -> process.run("docker", listOf("build", "."))).after(build)
 
 var flow  = workflow.dag(build, image)
               .retry(image, 3, workflow.exponential(1000, 2.0))  // posicional: Kof não tem args nomeados
@@ -53,9 +55,10 @@ var handle = flow.schedule("0 3 * * *") // cron, em cima do kof.scheduler.at
 > **v1/MVP entrega só `job`/`dag`/`after`/`run`/`Report`**; `retry` (Q3: helper **aditivo**),
 > `checkpoint` e `deadLetter` (Q4: **ambas** as faces, in-memory e durável) chegam juntos no
 > 2.1.3. A cadeia-builder do sketch, os argumentos posicionais e a unidade `1000`-ms do
-> backoff são nível de exibição: a assinatura stdlib concreta precisa analisar como Kof real
-> (sem argumentos nomeados, sem literais de duração daquela forma) — verificar no parser no
-> 2.1.0, não por suposição.
+> backoff são nível de exibição: **resolvido no 2.1.0** — a assinatura stdlib concreta
+> precisa analisar como Kof real (sem argumentos nomeados, sem literais de duração daquela
+> forma); `WorkflowPrimitivesE2ETest` trava as rejeições por negativo e o §2 foi reescrito
+> nas formas parseáveis.
 
 Inventárias de design (herdadas de precedente existente, não inventadas aqui):
 - **DAG, não lista linear.** Ciclos são rejeitados **em runtime** por padrão (mesma classe de
@@ -125,12 +128,16 @@ disfarça os gaps `PROC001`/`ORM001`/`CRON001` do native — ele os herda verbat
 ## 5. Fila de passos (o todo executável que este doc existe para produzir)
 Dono: **lane `.18`** (atribuído pelo greenlight da mantenedora em 19/09).
 
-- **2.1.0 [recon — 0 código]** — congelar a tabela do §4 numa nota travada por teste: um
-  `WorkflowPrimitivesE2ETest` que, para cada primitiva, afirma `supportedOn` em todo `Target` **e**
-  roda o idiomático mínimo `job`/`dag`/`after`/`run`/`Report` em JVM+JS + afirma os
-  `CRON001`/`ORM001`/`PROC001` honestos no Native via pins estilo `DomainGapCodesTest`. Também
-  resolve no parser (não por suposição) como a cadeia-builder, as formas posicionais e o handle
-  `db` do sketch §2 leem como Kof real. Nenhuma superfície entregue.
+- **2.1.0 [recon — 0 código]** ✅ FEITO 19/09 — `WorkflowPrimitivesE2ETest` (6/6): os pins
+  de honestidade por alvo já existem travados por teste (`DomainGapCodesTest` PROC001,
+  `KofTimeE2ETest` CRON001, `KofOrmE2ETest` ORM001, `CoreRegressionE2ETest` process JVM+JS)
+  — citados, não duplicados. Parser resolvido: listas colchete `["x"]`, mapas chave `{"k":v}`
+  e o sufixo `1s` **não** são sintaxe Kof (travados por negativo); listas são `listOf(...)`,
+  mapas `mapOf(...)`, lambdas são em posição de argumento `(x: T) -> expr`, encadeamento de
+  métodos funciona. O recon achou e consertou um bug real na própria unidade: lambda
+  retornando `process.run(...)` vazava um descriptor `LResult;` pelado (o round-trip por
+  string de `CompilerLambdaClass` perde o pacote; `JvmTypeMapper` não tinha entrada para
+  `kof.process/Result` — agora mapeado como `Handle` #31). Nenhuma superfície entregue.
 - **2.1.1 [aprovação de design — ⛔ regra 6]** ✅ FEITA 19/09 — enquete da mantenedora: Q1 stdlib
   ✓, Q2 MVP mínimo ✓, Q3 retry aditivo ✓, Q4 ambas as faces de dead-letter ✓. Frente aberta.
 - **2.1.2 [MVP — stdlib pure-Kof, mínimo, JVM+JS]** — só `job` + `dag` + `after` + `run` +
@@ -176,5 +183,5 @@ multi-escolha se revisitadas — regra 6):
   `workflow` o compõe, nunca o duplica.
 - Nenhum disfarce de `PROC001`/`CRON001`/`ORM001` no native — o gap honesto é o contrato.
 - Nenhum `.kf` de stdlib antes do recon **2.1.0** confirmar que as formas do §2 analisam como
-  Kof real (a aprovação 2.1.1 está FEITA 19/09); nenhum alvo declarado verde antes de sua primitiva
+  Kof real — FEITO 19/09 (a aprovação 2.1.1 também está FEITA 19/09); nenhum alvo declarado verde antes de sua primitiva
   de baixo ser verde lá (medido no §4, re-verificado por `WorkflowPrimitivesE2ETest` no 2.1.0).

@@ -27,16 +27,16 @@ redirecionamento `>`, e adicioná-los é **mudança de gramática (regra 6)**. E
 ```
 import kof.shell
 
-var r = shell.run("git", ["status", "--short"])   // Result reaproveitado de kof.process
+var r = shell.run("git", listOf("status", "--short"))   // Result reaproveitado de kof.process
 if (shell.ok(r)) println(r.stdout)                // ok() é função do namespace: o Result de process não tem métodos
 
-var n = shell.run(shell.cmd("wc", ["-l"])).stdout.trim()   // cmd() monta o argv; o overload run() recebe
+var n = shell.run(shell.cmd("wc", listOf("-l"))).stdout.trim()   // cmd() monta o argv; o overload run() recebe
 
 // stdout de A -> stdin de B; argv mantido como listas (nunca reanalisado por um shell)
-var out = shell.pipeline([shell.cmd("ls", ["-1"]), shell.cmd("wc", ["-l"])]).stdout
+var out = shell.pipeline(listOf(shell.cmd("ls", listOf("-1")), shell.cmd("wc", listOf("-l")))).stdout
 
 // cwd/env é overload do 2.2.3 (Kof não tem argumentos nomeados — sintaxe corrigida na aprovação 18/09):
-var x = shell.runWith(shell.cmd("make", ["-j4"]), "/src", {"CC": "clang"})
+var x = shell.runWith(shell.cmd("make", listOf("-j4")), "/src", mapOf("CC", "clang"))
 ```
 
 Tipos da superfície (v1): `cmd(String program, List<String> args) -> List<String>` (montador

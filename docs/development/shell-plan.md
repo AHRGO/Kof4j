@@ -29,16 +29,16 @@ is proposed as a **plain function/builder API** on the existing namespaces, e.g.
 ```
 import kof.shell
 
-var r = shell.run("git", ["status", "--short"])   // Result reused from kof.process
+var r = shell.run("git", listOf("status", "--short"))   // Result reused from kof.process
 if (shell.ok(r)) println(r.stdout)                // ok() is a namespace fn: process Result has no methods
 
-var n = shell.run(shell.cmd("wc", ["-l"])).stdout.trim()   // cmd() builds argv; run() overload takes it
+var n = shell.run(shell.cmd("wc", listOf("-l"))).stdout.trim()   // cmd() builds argv; run() overload takes it
 
 // stdout of A -> stdin of B; argv kept as lists (never re-parsed by a shell)
-var out = shell.pipeline([shell.cmd("ls", ["-1"]), shell.cmd("wc", ["-l"])]).stdout
+var out = shell.pipeline(listOf(shell.cmd("ls", listOf("-1")), shell.cmd("wc", listOf("-l")))).stdout
 
 // cwd/env is a 2.2.3 overload (Kof has no named arguments — syntax corrected at sign-off 18/09):
-var x = shell.runWith(shell.cmd("make", ["-j4"]), "/src", {"CC": "clang"})
+var x = shell.runWith(shell.cmd("make", listOf("-j4")), "/src", mapOf("CC", "clang"))
 ```
 
 Surface types (v1): `cmd(String program, List<String> args) -> List<String>` (argv builder,
