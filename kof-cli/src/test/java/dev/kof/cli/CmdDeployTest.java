@@ -200,6 +200,56 @@ class CmdDeployTest {
         }
     }
 
+    /** 8.4 fatia 4: multi-target da MESMA fonte — 3 releases + manifest SUCCESS. */
+    @Test
+    void multiTargetFromOneSource(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir, "main() { println(\"multi ok\") }\n");
+        CliResult r = run(dir, "deploy", src.toString(), "--target", "all",
+                "--output", "dist", "--name", "uni", "--version", "0.1.0");
+        assertEquals(0, r.exit(), "multi-deploy exit:\n" + r.out());
+        Path dep = dir.resolve("dist").resolve("deploy");
+        String manifest = Files.readString(dep.resolve("uni-0.1.0.deploy-manifest.json"));
+        for (String t : new String[]{"jvm", "native", "kofjs"}) {
+            assertTrue(Files.isDirectory(dep.resolve("uni-0.1.0-" + t)),
+                    "release por alvo faltando: " + t + " — out:\n" + r.out());
+            assertTrue(Files.isRegularFile(dep.resolve("uni-0.1.0-" + t + ".tar.gz")),
+                    "tar.gz por alvo faltando: " + t);
+            assertTrue(manifest.contains("\"target\": \"" + t + "\", \"status\": \"SUCCESS\""),
+                    t + " deve constar SUCCESS no manifest:\n" + manifest);
+        }
+        assertTrue(r.out().contains("multi-deploy"), "deve anunciar o manifest:\n" + r.out());
+    }
+
+    /** 8.4: alvo que falha não derruba os outros — exit 1 + FAIL com razão honesta. */
+    @Test
+    void multiTargetPartialFailureIsHonest(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir, "main() { println(\"x\") }\n");
+        CliResult r = run(dir, "deploy", src.toString(), "--target", "jvm,native.risc",
+                "--output", "dist", "--name", "par", "--version", "1.0");
+        assertEquals(1, r.exit(), "com falha o exit é 1:\n" + r.out());
+        assertTrue(Files.isDirectory(dir.resolve("dist").resolve("deploy").resolve("par-1.0-jvm")),
+                "jvm não pode ser contaminado pela falha do risc:\n" + r.out());
+        String manifest = Files.readString(dir.resolve("dist").resolve("deploy")
+                .resolve("par-1.0.deploy-manifest.json"));
+        assertTrue(manifest.contains("\"target\": \"jvm\", \"status\": \"SUCCESS\""), manifest);
+        assertTrue(manifest.contains("\"error\"") && manifest.contains("DEP001"),
+                "risc deve entrar FAIL com o gap DEP001:\n" + manifest);
+    }
+
+    /** 8.4: lista com repetição deduplica vira single — layout legado sem sufixo preservado. */
+    @Test
+    void duplicateListDedupesToLegacyLayout(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir, "main() { println(\"legado\") }\n");
+        CliResult r = run(dir, "deploy", src.toString(), "--target", "jvm,jvm",
+                "--output", "dist", "--name", "one", "--version", "2.0");
+        assertEquals(0, r.exit(), "jvm,jvm dedupeia para um deploy:\n" + r.out());
+        assertTrue(Files.isDirectory(dir.resolve("dist").resolve("deploy").resolve("one-2.0")),
+                "um alvo usa o nome histórico sem sufixo:\n" + r.out());
+        assertFalse(Files.exists(dir.resolve("dist").resolve("deploy")
+                .resolve("one-2.0.deploy-manifest.json")), "single não gera manifest de multi");
+        assertFalse(r.out().contains("multi-deploy"));
+    }
+
     /** X9 fatia 3: face ANDROID — sem SDK, recusa honesta (não fake-success). */
     @Test
     void androidWithoutSdkIsHonestFailure(@TempDir Path dir) throws Exception {
