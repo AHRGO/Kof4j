@@ -2,14 +2,16 @@
 
 # `kof.shell` — shell idiomático sobre `kof.process` (plano de design · Estágio 2 · TIER 2.2)
 
-> **Status: PROPOSTO (18/09) — aguardando decisão de escopo da mantenedora (regra 6). Zero código.**
-> Este arquivo existe porque a linha **2.2** de `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` é uma
-> linha `🔵` solta com dono `—`, enquanto toda outra frente verde da `future/`
-> (`value-records`, `scoped-resources`, `PLAN-BAREMETAL-BOOT`, …) tem um plano concreto.
-> Ele **propõe** transformar essa linha num todo executável; **não** autoriza abrir a
-> frente — essa decisão é da mantenedora. Também **não** implementa nada: `kof.shell` não
-> está no lexer, no parser, em backend algum nem na stdlib hoje (medido 18/09). Baseado na
-> superfície **real e medida** de `kof.process` (§4).
+> **Status: APROVADO (18/09, enquete da mantenedora) — frente aberta, dono lane `.18`; MVP em
+> progresso.** O portão Q1–Q3 abaixo foi respondido: **forma de função ✓ / builtin
+> `KofShell.java` ✓ / glob, `~`, redirecionamento FORA do v1 ✓**. A superfície concreta do §2
+> foi reescrita para casar o que o compilador de fato analisa hoje (não existem argumentos
+> nomeados em Kof — um rascunho anterior usava sintaxe `cwd:` que não existe). Zero código
+> neste arquivo; ele segue sendo design. Ele **propunha** transformar a linha **2.2** de
+> `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` num todo executável — e desde esta aprovação a frente
+> ESTÁ aberta. Ainda **não** implementa nada: `kof.shell` não está no lexer, no parser, em
+> backend algum nem na stdlib hoje (medido 18/09). Baseado na superfície **real e medida** de
+> `kof.process` (§4).
 
 ## 1. Objetivo
 Um único idiomato tipado e componível para conduzir comandos do SO — rodar, capturar,
@@ -27,14 +29,23 @@ redirecionamento `>`, e adicioná-los é **mudança de gramática (regra 6)**. E
 ```
 import kof.shell
 
-var r = shell.run("git", ["status", "--short"])      // Result reaproveitado de kof.process
-if (r.ok()) println(r.stdout)
+var r = shell.run("git", ["status", "--short"])   // Result reaproveitado de kof.process
+if (shell.ok(r)) println(r.stdout)                // ok() é função do namespace: o Result de process não tem métodos
 
-var n = shell.run("wc", ["-l"], cwd: "/src", env: {"CC": "clang"}).stdout.trim()
+var n = shell.run(shell.cmd("wc", ["-l"])).stdout.trim()   // cmd() monta o argv; o overload run() recebe
 
-// stdout de A -> stdin de B, argv mantido como listas (nunca reanalisado por um shell)
-var out = shell.pipeline(shell.cmd("ls", ["-1"]), shell.cmd("wc", ["-l"])).stdout
+// stdout de A -> stdin de B; argv mantido como listas (nunca reanalisado por um shell)
+var out = shell.pipeline([shell.cmd("ls", ["-1"]), shell.cmd("wc", ["-l"])]).stdout
+
+// cwd/env é overload do 2.2.3 (Kof não tem argumentos nomeados — sintaxe corrigida na aprovação 18/09):
+var x = shell.runWith(shell.cmd("make", ["-j4"]), "/src", {"CC": "clang"})
 ```
+
+Tipos da superfície (v1): `cmd(String program, List<String> args) -> List<String>` (montador
+de argv, `[program] + args`, parsing zero), `run(String, List<String>) -> Result`,
+`run(List<String>) -> Result` (overload argv), `pipeline(List<List<String>>) -> Result` (o
+`Result` do último estágio carrega o resultado da cadeia), `ok(Result) -> Bool`
+(`exitCode == 0`).
 
 Invariantes de design (emprestados de dívidas/precedentes do repo, não inventados):
 - **argv é sempre `List<String>`** — o comando **nunca** é concatenado numa string entregue a
@@ -42,9 +53,10 @@ Invariantes de design (emprestados de dívidas/precedentes do repo, não inventa
   tempo todo; `shell` deve ser o bom caminho que torna difícil se autossabotar).
 - `Result` **é** o `Result` de `kof.process` (`stdout`, `stderr`, `exitCode`) — um tipo só, sem
   segunda forma para manter em sincronia.
-- `ok()` == `exitCode == 0`; qualquer outro portão é explícito.
+- `shell.ok(r)` == `exitCode == 0`; qualquer outro portão é explícito.
 - Sem glob / expansão de `~` / redirecionamento implícitos a menos que um slice futuro,
-  separado e aprovado, os desenhe — v1 fica em `run` + `pipeline` + `cmd` + `cwd/env` + `ok()`.
+  separado e aprovado, os desenhe — v1 fica em `run` + `pipeline` + `cmd` + `ok()`, com
+  `cwd/env` no 2.2.3.
 
 ## 3. Contrato
 - Lowering puro sobre `kof.process` quando possível → mesma semântica, mesma ligação, nenhuma
@@ -71,31 +83,67 @@ comentário do `ExpressionProcessCallLowerer` "JVM/JS support it"; medir o backe
 emite uma chamada crua `kof_process_spawn(...)` sem ligação, e o fix porta o spawn do JS para um
 `PROC001` honesto — ver `DomainGapCodesTest.processSpawnOnJsIsProc001`.)*
 
-## 5. Fila de passos (o todo executável que este doc existe para produzir)
-Dono é `—` até a mantenedora atribuir; dono padrão proposto = **lane de desenvolvimento**.
+### 4.1 Mapa de fiação de um namespace builtin novo (medido 18/09)
+Toda célula da tabela acima já está travada por testes, então nenhum teste de recon foi
+adicionado (`DomainGapCodesTest` trava native-run, native-spawn e js-spawn em `PROC001` +
+spawn-JVM-sem-gap; `CoreRegressionE2ETest.processRun` (F4) roda `process.run` via `runBoth`
+no JVM **e** no JS). O que `KofShell.java` precisa registrar, medido de como `process` está
+ligado:
 
-- **2.2.0 [recon — 0 código]** *(a parte JS-`spawn` FEITA 18/09: estava sem ligação → agora em
-  gate `PROC001`)* — enumerar exatamente quais chamadas de `process` cada alvo alcança hoje e
-  produzir a tabela de paridade acima como nota ancorada em teste. *Prova:* pins
-  `processSpawn*` do `DomainGapCodesTest` + commit de recon; nenhuma superfície entregue.
-- **2.2.1 [aprovação de design — ⛔ regra 6]** — a mantenedora aprova a **forma de função** (§2)
-  ou redireciona. **Portão de toda a frente.** Nenhum slice adiante sem isso fechar.
-- **2.2.2 [MVP — JVM, um alvo]** — `run` + `pipeline` + `cmd` + `cwd`/`env` + `ok()`,
-  baixados sobre `kof.process` existente; `ShellE2ETest` golden contra um comando real e sem
-  dependências (ex. `tr`/`wc`), assertando **argv-como-lista** (sem `sh -c`). Só JVM, gap
-  honesto nos demais.
-- **2.2.3 [paridade]** — estende o golden ao JS conforme `process` for confirmado lá; Native fica
-  `PROC001` até o `process.run` da lane nativa fechar.
+| ponto de contato | arquivo:linha | o que entra |
+|------------|-----------|--------------|
+| typer de call de membro | `MemberCallNamespaces.java:90` | receiver `shell` → tipar a chamada (como `process`) |
+| typer de call de método (sem membro) | `MethodCallNamespaces.java:145` | mesmos tipos de resultado no caminho sem receiver |
+| whitelist de identificador solto | `SemExpressionTyper.java:90,152` | somar `"shell"` para `shell` não ser "identificador desconhecido" |
+| dispatch de lowering | `ExpressionMethodCallLowerer.java:242` | `shell.*` → novo `ExpressionShellCallLowerer` |
+| ligação de runtime JVM | `jvm/JvmRuntimeCallDescriptors.java`, `JvmRuntimeReturnDescriptors.java`, `JvmRuntime.java` (lista de nomes) | `kof_shell_pipeline` (a única ligação *nova*; `run`/`cmd`/`ok` baixam sobre `kof_process_run` + helpers de lista/bool já existentes) |
+| catálogo LSP | `StdCatalog.java:45` + `StdCatalogTest.java:89,194,276` | `m.put("shell", KofShell.functions())` + atualização da guarda |
+
+`pipeline` não pode reusar handles `kof_process_spawn` pela IR (precisaria de loops
+read/write/exit por estágio no IR); ele baixa para um helper JVM novo `kof_shell_pipeline
+(List<List<String>>) -> Result` (cadeia ProcessBuilder, stdout→stdin no runtime, o resultado
+do último estágio). JS/Native batem no gap herdado de spawn em **tempo de compilação** — o
+lowerer de shell deve portar `pipeline` para `PROC001` nesses alvos exatamente como o gate de
+`process.spawn` faz, sem jamais emitir chamada que daria `ReferenceError` (a lição do §235).
+
+## 5. Fila de passos (o todo executável que este doc existe para produzir)
+Dono: **lane `.18`** (atribuído pelo greenlight da mantenedora em 18/09; dono padrão
+proposto = lane de desenvolvimento, confirmado).
+
+- **2.2.0 [recon — 0 código]** ✅ FEITO 18/09 — tabela de paridade §4 medida do lowerer +
+  das ligações de runtime, e **cada célula já estava travada por testes existentes** (ver
+  §4.1), então nenhum pin duplicado foi escrito.
+- **2.2.1 [aprovação de design — ⛔ regra 6]** ✅ FEITA 18/09 — enquete da mantenedora: Q1
+  forma de função ✓, Q2 builtin `KofShell.java` ✓, Q3 glob/`~`/redir **fora** ✓. Superfície
+  concreta do §2 adotada (forma posicional/overload; `shell.ok(r)` como função do namespace
+  porque o `Result` de process não carrega métodos — os exemplos anteriores `r.ok()`/`cwd:`
+  foram reescritos, não analisam hoje).
+- **2.2.2 [MVP — JVM + JS no `run`, só JVM no `pipeline`]** — `cmd` + `run` (os dois
+  overloads, baixados pela `kof_process_run` existente) + `ok` + `pipeline` (helper novo
+  `kof_shell_pipeline`); `ShellE2ETest` golden contra comandos reais sem dependências
+  (`wc`/`tr`), assertando **argv-como-lista** (sem `sh -c`); pins js-pipeline/native-pipeline
+  `PROC001`; paridade JS do run via `runBoth`. `cwd/env` (`runWith`) mudou para o 2.2.3 —
+  precisa de ligações *novas* no runtime JVM e no host JS, o que alargaria o raio do MVP sem
+  ganho.
+- **2.2.3 [paridade + extras]** — `runWith(cwd, env)` no JVM + ligação no host JS; `pipeline`
+  no JS quando (e somente quando) uma ligação JS de pipes vivos (`process.spawn`) landar
+  (item de plataforma à parte); Native segue `PROC001` até o `process.run` da lane nativa
+  fechar.
 - **2.2.4 [docs]** — doc de idiomato `docs/stdlib/shell.md` (+PT), linha em `backend-parity`,
-  virar `IMPLEMENTATION-UNIVERSAL-PLATFORM` 2.2 de `🔵 → 🟡`, e só quando entregue promover este
-  arquivo para fora da `future/` conforme a regra da pasta.
+  virar `IMPLEMENTATION-UNIVERSAL-PLATFORM` 2.2 de `🟡 → ✅` (a linha anda com os testes do
+  2.2.2), e só quando entregue promover este arquivo para fora da `future/` conforme a regra
+  da pasta.
 
 ## 6. Questões abertas (decisões da mantenedora — NÃO resolver em código)
-- **Q1** — forma de função (esta proposta) vs gramática infixo de shell (backtick/`|`) — esta é
-  mudança de gramática regra 6; este doc recomenda a forma de função.
-- **Q2** — casa da superfície: namespace builtin do compilador (`KofShell.java`, como
-  `KofProcess`) vs pacote de stdlib em nível Kof. Afeta todo backend, não só o açúcar.
-- **Q3** — glob / `~` / redirecionamento entram no v1 ou ficam explicitamente fora (default deste doc)?
+**As três RESPONDIDAS em 18/09 pela enquete da mantenedora** (recriar via a mesma decisão
+multi-escolha se algum dia forem revisitadas — regra 6):
+
+- **Q1 — RESPONDIDA: forma de função** (esta proposta) — não gramática infixo de shell
+  (backtick/`|`), que seria mudança de gramática regra 6.
+- **Q2 — RESPONDIDA: namespace builtin do compilador `KofShell.java`**, como `KofProcess` —
+  não pacote de stdlib em nível Kof.
+- **Q3 — RESPONDIDA: glob / `~` / redirecionamento ficam FORA do v1** (o default deste doc);
+  um slice aprovado posterior pode revisitá-los.
 
 ## 7. O que NÃO fazer
 - Nenhuma execução de string `sh -c` nem concatenação de comando (classe de injeção).
