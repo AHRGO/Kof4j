@@ -103,6 +103,15 @@ public final class ExpressionTyper {
                         }
                         continue;
                     }
+                    // #462: `&&`/`||` materializam SEMPRE `Bool`, mesmo com
+                    // `Bool?` nos operandos — o `TypeChecker` semantico ja tem
+                    // esta regra. Sem ela o typer do lowering herdava o tipo do
+                    // operando ESQUERDO (`Bool?`) e o consumidor tratava um int
+                    // primitivo como se fosse referencia boxed (VerifyError).
+                    if ("&&".equals(be.operator()) || "||".equals(be.operator())) {
+                        leftType = Type.PrimitiveType.BOOL;
+                        continue;
+                    }
                     if (TypeMetrics.isComparisonOp(be.operator())) {
                         leftType = Type.PrimitiveType.BOOL;
                         continue;
