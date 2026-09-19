@@ -546,6 +546,17 @@ JsIr.JsExpression unaryExpr(KofUnary ku, JsIr.JsExpression operand) {
                     : new JsIr.JsUnary("-", operand);
             case NOT -> new JsIr.JsConditional(operand, new JsIr.JsNumber("0"), new JsIr.JsNumber("1"));
             case I2F, I2D, I2C, L2F, L2D, F2D, D2F -> operand;
+            // #471: i2b/i2s no JS = wrap signed 8/16 bits em Number 32-bit
+            // (mesmo truque de mask do kofArraySet §184; a pilha aqui ja e
+            // int de 32 bits — L2I/F2I/D2I rodam antes).
+            case I2B -> new JsIr.JsBinary(
+                    new JsIr.JsBinary(new JsIr.JsBinary(operand, "<<",
+                            new JsIr.JsNumber("24")), ">>", new JsIr.JsNumber("24")),
+                    "|", new JsIr.JsNumber("0"));
+            case I2S -> new JsIr.JsBinary(
+                    new JsIr.JsBinary(new JsIr.JsBinary(operand, "<<",
+                            new JsIr.JsNumber("16")), ">>", new JsIr.JsNumber("16")),
+                    "|", new JsIr.JsNumber("0"));
             case I2L -> new JsIr.JsCall(new JsIr.JsIdentifier("BigInt"), List.of(operand));   // §81
             // §81/§167: Long(BigInt)->Int — truncamento EXATO sobre BigInt
             // (BigInt.asIntN(32,...) faz o wrap signed do JVM; Number() direto
