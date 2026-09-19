@@ -22,7 +22,8 @@
 > | **§304 🟡 OPEN 18/09 (catalogued by `.22`, owner = nativa/mapset)** | `Map.get` nativo de chave ausente = `0` silencioso vs `null` dos outros 3 alvos — divergence do contrato V? do #438 |
 > | **§295 ✅ CLOSED 18/09 (face (a) `.18` condition-shortcut; face (b) `.22` writer cluster — `TypeMetrics.isNullablePrimitive` + `StatementLowerer`/`ExpressionAssignmentLowerer`/`CompilerEmission2`, `NullablePrimitiveContractE2ETest` 26/26 + CLI 4/4)** | The `Nullable(primitive)` boxed-slot WRITER cluster (Commit B): literal-init / default / assign / compound / increment stored raw primitives into ASTORE slots → `VerifyError` at class LOAD (JVM-only; the launcher masks it as "JavaFX"). Reader faces → §306 |
 > | **§306 🟡 OPEN 18/09 (catalogado pela lane compilador `.22` ao fechar o cluster escritor §295(b), dono `.22`)** | Faces LEITORAS de `Nullable(Bool)` deixadas pelo Commit B: JVM truthiness `if (b)` → `if_icmpne` sobre `java/lang/Boolean` = `VerifyError`; e o **Script** imprime local `Bool?` como `1/0` (JVM/JS imprimem `true/false`; medido no jar pré-fix — pré-existente, não regressão) |
-> | **§307 🟡 OPEN 18/09 (cataloged by lane tooling/cli `.15`, owner = compiler `.22`)** | CRITICAL `check_500` gate: `StatementLowerer.java` 605 ≥ 600 (baseline 585 grew +20 via §295(b) in `7e35f177`); structural split = owner lane call; after `82a09c35` CI is red ONLY on this step (compilation restored) |
+> | **§307 ✅ CLOSED 19/09 ~00:3x (split landed by the docs→platform lane, reclaimed by maintainer order; cataloged by lane tooling/cli `.15`)** | CRITICAL `check_500` gate: `StatementLowerer.java` 605 ≥ 600 — `VarDeclStmt` arm moved to `StatementLowererLocalBoxing.java` (605→490, new 134; baseline 43→42); proof kof-compiler 2305/0F |
+> | **§308 ✅ FIXED 19/09 (compiler lane `.22`, same commit — #445)** | enum declared in an imported package file: class emitted at the ROOT (`lowerEnum` hardcoded ""), ~8 resolution sites gated `packageName().isEmpty()` (field access fell to `aload_0`), switch took the numeric branch (`isub` on references → `VerifyError` disguised as "JavaFX" §149), Script `not an int`, and the JS switch parser never learned the D-ENUM207 identity form (broken for same-file enums too — measured clean-tip jar). Central `CompilerTypes.enumTypeOf` + package-aware declaration/typer/lowering + `SwitchStmtLowerer`/`MemberResolver` gates + `JsSwitchParser` `identityEq`. Proof: `EnumCrossFileE2ETest` 7/7 (5/7 RED on tip) × JVM/Script/JS; CLI 4 targets `cop\nmovido` rc=0; controls 59/59 |
 > | **§300 ✅ FIXED 18/09 (lane UI/style, owner = 192.168.100.17)** | KofJS re-render leaked the whole previous view subtree into `window.__kofNodes` on every `state` write: `kofUiRender` detached only the old ROOT element from the DOM while the widget constructors keep allocating new handles — unbounded silent registry growth (invisible in the page). Second face: discarded `Button` actions stayed in `window.__kofActions` forever. Fix = call the existing `kofUiRemoveSubtree` (DOM + registry prune) on root change + delete the matching `__kofActions` entry. Measured pre-fix 1 node after mount / 6 after 5 re-renders; post-fix stays 1. Proof: `ComponentCoreE2ETest.rerenderPrunesPreviousSubtreeFromRegistry` + `rerenderReleasesDiscardedButtonActions` (both RED pre-fix), 21/21 suite. |
 > | **§301 ✅ FIXED 18/09 (lane UI/style, owner = 192.168.100.17)** | KofJS `Store.unsubscribe` silent no-op: `kofUiStoreSubscribe` pushed the WRAPPER (`fn.invoke.bind(fn)`, a new object per call) but `unsubscribe` searched the RAW handle with `indexOf` → never matched → unsubscribed subscribers kept receiving every `set()` forever. Fix: subs stored as `{raw,f}` pairs; unsubscribe matches `raw` identity, removes one occurrence. Proof: `ComponentCoreE2ETest.storeUnsubscribeStopsDelivery` (RED pre-fix `n=1,n=2,n=3,`, measured), suite 22/22. |
 > | **§302 🟡 OPEN 18/09 (found by kofscript lane, owner = 192.168.100.17)** | Bare `List`/`Set`/`Map` as a FIELD declared type parses `ClassType("",name)` (pin bypassed by `sa.getClass` builtin registration) → compiled `.kf` dies `NoSuchFieldError`, `.ks` dies `InaccessibleObjectException` reflection leak — silent runtime break, R6. Workaround: element-typed `List<T>` (corpus idiom; `ScriptGlobalTypes` now infers it for un-annotated script globals). Root fix = compiler-core unit (pin-guard semantics, all backends). |
@@ -10958,3 +10959,50 @@ docs→platform lane and this split landed in the SAME turn: the `VarDeclStmt` a
 `NullablePrimitiveRelationalConditionTest` green, check_500 rc=0, stdlib-boundary rc=0.
 
 **Status:** ✅ CLOSED 19/09 ~00:3x (split landed by the docs→platform lane, reclaimed by maintainer order — see closure).
+
+## §308 — #445: enum declared in an imported package file — class emitted at the ROOT while callers reference `pkg/Name`, switch fell into the numeric branch, JS crashed on the identity form (measured on tip) — ✅ FIXED 19/09 (same commit)
+
+**Found:** #445 (report `jonasrochasilva-prog` with a full root-cause dossier; independent
+triage by the issue lane on `055a8f55`, routed to compiler lane `.22` — §308).
+
+**Symptoms (measured, pre-fix tip):** two-file shape `src/Main.kf` (`import pkg` +
+`println(ModoOperacao.SIMULAR)` / switch) + `src/pkg/Modo.kf` (`package pkg` + enum).
+`kof check src` clean; `kof run src/Main.kf` → the disguised "JavaFX runtime components"
+message (§149); the reflective launcher exposes the truth: **`NoClassDefFoundError:
+pkg/ModoOperacao`** — `outj/ModoOperacao.class` emitted at the ROOT while `Default/Main.class`
+references `Field pkg/ModoOperacao.SIMULAR` with `aload_0` (slot 0 = `args[]`);
+cross-file `switch` → `VerifyError: Bad type on operand stack @ isub` (two enum references
+subtracted — the switch took the numeric branch because `SwitchStmtLowerer` gated
+`enumSwitch` on `packageName().isEmpty()`); Script cross-file switch →
+`not an int: ModoOperacao@…`; JS: `KofJS: unexpected op in switch case:
+KofConditionalJump[NE]` — measured with a CLEAN tip jar on a **same-file** enum switch:
+JsSwitchParser never learned D-ENUM207's identity form (`KofBinary(EQ, ClassType)` +
+`CJump(NE)`), so enum-switch-on-JS was broken for ALL enums (no test covered it).
+
+**Root causes:** (1) `CompilerEnumLowering.lowerEnum` hardcoded the empty package (and
+`CompilerPipeline` never passed `declPkg` to it, unlike class/interface/record);
+(2) ~8 resolution sites assumed an enum's package is empty: `SymbolTableBuilder`
+self-type, `SemExpressionTyper` yields, `ExpressionTyper`/`ExpressionLowerer`
+field-access guards (`packageName().isEmpty()` → silent fallback to
+`KofLoadLocal(slot 0)`), `BuiltinTypes`/`CompilerTypes` enum recognition,
+static-call sites (`values()`/`valueOf()`), `SwitchStmtLowerer` detection,
+`MemberResolver` switch-expr exhaustiveness gate;
+(3) JS backend: switch parser only knew SUB/`kof_string_equals` forms.
+
+**Fix (package-aware end-to-end):** central `CompilerTypes.enumTypeOf(name, sa)` (source
+of truth = the registered `ClassSymbol.type()`, real `packageOf`); `lowerEnum` receives
+the declaration's package; all recognition sites use the symbol table / merged-module
+declarations (`currentUnit` at lowering IS the merged unit — simple-name lookup suffices);
+`ExpressionLowerer`'s `aload_0` fallback is gone for class-typed receivers (honest
+UNKNOWN diagnostic instead — R6); `SwitchStmtLowerer`/`MemberResolver` gates no longer
+require an empty package; `JsSwitchParser` recognizes the identity form (`identityEq`,
+JS `switch` already compares singletons by `===`).
+
+**Proof:** `EnumCrossFileE2ETest` 7/7 (verbatim cross-file; `.class` lands in `pkg/`;
+`==`/identity; `values()`/`valueOf()`; switch+param; same-file control; SEM062
+enum×String kept) × JVM/Script/JS. Q0 pins measured RED before the fix (5/7).
+Controls green: `KofEnumTest` 6/6, `KofEnumSwitchTest` 4/4, `EnumIdentityE2ETest` 6/6,
+`KofSwitchExprE2ETest` 32/32, `GuardedPatternSwitchExprE2ETest` 3/3 (59/59 total).
+CLI 4-target probe on the issue's exact two-file shape: **`cop\nmovido` rc=0 on JVM
+(via reflective launcher — no VerifyError), Script, JS (node) and Native (ELF)**.
+Full suite: see this commit's log tail (`/tmp/opencode/suite445.log`).

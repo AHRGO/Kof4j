@@ -23,7 +23,7 @@ final class MethodCallNamespaces {
         if (mc.receiver() instanceof IdentifierExpr rid && CompilerTypes.isEnumName(rid.name(), driver.currentUnit)
                 && driver.findLocalVar(rid.name(), locals) == null) {
             java.util.List<String> consts = CompilerTypes.enumConstantsOf(rid.name(), driver.currentUnit);
-            Type enumT = new Type.ClassType("", rid.name(), List.of());
+            Type enumT = CompilerTypes.enumTypeOf(rid.name(), driver.semanticAnalyzer); // #445
             // D-ENUM207: valores agora são INSTÂNCIAS de enum — values() é
             // List<Enum>, valueOf devolve Enum (não List<String>).
             if ("values".equals(mc.methodName()) && mc.arguments().isEmpty()) {

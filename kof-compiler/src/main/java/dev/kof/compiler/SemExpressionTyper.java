@@ -75,7 +75,7 @@ public final class SemExpressionTyper {
                     for (AstNode d0 : sa.unit().declarations()) {
                         if (d0 instanceof EnumDeclarationNode en0
                                 && en0.constants().contains(ie.name())) {
-                            yield new Type.ClassType("", en0.name(), List.of());
+                            yield new Type.ClassType(sa.packageOf(en0), en0.name(), List.of()); // #445
                         }
                     }
                 }
@@ -337,7 +337,7 @@ public final class SemExpressionTyper {
                     yield Type.PrimitiveType.INT;
                 }
                 String en = MemberResolver.enumNameOfConstant(sa.unit(), fa);
-                if (en != null) yield new Type.ClassType("", en, List.of());
+                if (en != null) yield CompilerTypes.enumTypeOf(en, sa); // #445: pkg real via ClassSymbol
                 Type recvType = inferType(sa, fa.receiver(), scope);
                 Type nf = Narrowing.narrowedField(scope, Narrowing.pathOf(fa));
                 if (nf != null) yield nf;

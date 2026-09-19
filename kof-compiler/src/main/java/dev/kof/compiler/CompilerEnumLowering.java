@@ -29,9 +29,11 @@ public final class CompilerEnumLowering {
     /** Campo de instância que guarda o ordinal da constante. */
     static final String ORDINAL_FIELD = "kofOrdinal";
 
-    static IRClass lowerEnum(CompilerDriver driver, EnumDeclarationNode en, int typeId) {
-        String internalName = driver.toInternalName("", en.name());
-        Type enumType = new Type.ClassType("", en.name(), List.of());
+    static IRClass lowerEnum(CompilerDriver driver, EnumDeclarationNode en, String packageName, int typeId) {
+        // #445: o pkg vem do pipeline (declPackage) — a classe é emitida ONDE
+        // o descriptor do caller aponta (antes: raiz fixa p/ enum importado).
+        String internalName = driver.toInternalName(packageName, en.name());
+        Type enumType = new Type.ClassType(packageName, en.name(), List.of());
         int access = driver.computeAccess(en.modifiers())
                 | AccessFlags.FINAL | AccessFlags.ENUM;
         List<String> constants = en.constants();

@@ -56,7 +56,7 @@ public final class ExpressionLowerer {
                     for (AstNode d0 : driver.currentUnit.declarations()) {
                         if (d0 instanceof EnumDeclarationNode en0
                                 && en0.constants().contains(ie.name())) {
-                            Type enumT = new Type.ClassType("", en0.name(), List.of());
+                            Type enumT = CompilerTypes.enumTypeOf(en0.name(), driver.semanticAnalyzer); // #445
                             ops.add(new KofGetStatic(enumT, ie.name(), enumT));
                             yield localIdx;
                         }
@@ -438,8 +438,8 @@ public final class ExpressionLowerer {
                     yield localIdx;
                 }
                 // enum constant access: Color.Red — instância de enum real
-                if (recvType instanceof Type.ClassType ct && ct.packageName().isEmpty()
-                        && CompilerTypes.isEnumName(ct.name(), driver.currentUnit)) {
+                if (recvType instanceof Type.ClassType ct
+                        && CompilerTypes.isEnumName(ct.name(), driver.currentUnit)) { // #445: pkg real aceito
                     if (!CompilerTypes.enumConstantsOf(ct.name(), driver.currentUnit).contains(fa.fieldName())) {
                         if (driver.currentDiagnostics != null) {
                             driver.currentDiagnostics.error(fa.position() != null ? fa.position().file() : "",
@@ -454,8 +454,8 @@ public final class ExpressionLowerer {
                     yield localIdx;
                 }
                 // static field access: Class.field — no receiver on the stack
-                if (recvType instanceof Type.ClassType ct && ct.packageName().isEmpty()
-                        && CompilerTypes.isEnumName(ct.name(), driver.currentUnit) && CompilerTypes.enumConstantsOf(ct.name(), driver.currentUnit).contains(fa.fieldName())) {
+                if (recvType instanceof Type.ClassType ct
+                        && CompilerTypes.isEnumName(ct.name(), driver.currentUnit) && CompilerTypes.enumConstantsOf(ct.name(), driver.currentUnit).contains(fa.fieldName())) { // #445
                     ops.add(new KofGetStatic(recvType, fa.fieldName(), recvType));
                     yield localIdx;
                 }

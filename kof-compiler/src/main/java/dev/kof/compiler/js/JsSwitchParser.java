@@ -66,9 +66,22 @@ JsIr.JsStatement parseSwitchStatement(MethodCtx ctx, int[] pos) {
             List<Object> stack = new ArrayList<>();
             stack.add(new JsIr.JsIdentifier(subjectName));
             boolean stringEq = false;
+            boolean identityEq = false;
             while (true) {
                 KofOperation op = ctx.ops.get(pos[0]);
                 if (op instanceof KofBinary kb && kb.op() == KofBinaryOp.SUB && stack.size() == 2) {
+                    pos[0]++;
+                    break;
+                }
+                // #445/D-ENUM207: switch sobre enum baixa como IDENTIDADE
+                // (KofBinary EQ sobre instâncias singleton). O `switch` JS já
+                // compara por === (singletons do <clinit> são o mesmo objeto),
+                // então o caseValue coletado é o acesso à constante — o op
+                // EQ é pulado aqui (não pode virar expressão booleana na
+                // pilha, senão o CJump(NE) seguinte é "unexpected op").
+                if (op instanceof KofBinary kb && kb.op() == KofBinaryOp.EQ
+                        && kb.operandType() instanceof Type.ClassType && stack.size() == 2) {
+                    identityEq = true;
                     pos[0]++;
                     break;
                 }
@@ -95,11 +108,11 @@ JsIr.JsStatement parseSwitchStatement(MethodCtx ctx, int[] pos) {
             }
             pos[0]++;
             if (!(ctx.ops.get(pos[0]) instanceof KofConditionalJump cj
-                    && (stringEq
+                    && ((stringEq || identityEq)
                         ? cj.comparison() == KofComparison.NE
                         : cj.comparison() == KofComparison.EQ))) {
                 throw new IllegalStateException("KofJS: switch case expected CJump("
-                        + (stringEq ? "NE" : "EQ") + ")");
+                        + ((stringEq || identityEq) ? "NE" : "EQ") + ")");
             }
             pos[0]++;
             caseValues.add(caseValue);

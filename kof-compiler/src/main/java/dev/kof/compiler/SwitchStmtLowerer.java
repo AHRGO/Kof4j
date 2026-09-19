@@ -19,7 +19,12 @@ Type switchType = ExpressionTyper.inferExprType(driver, ss.expression(), locals)
 // constantes ou ter default (nunca cair silenciosamente)
 boolean enumSwitch = false;
 java.util.List<String> missing = java.util.List.of();
-if (switchType instanceof Type.ClassType sct && sct.packageName().isEmpty()
+// #445: o driver.lower() roda sobre a unidade MESCLADA do módulo
+// (parseAndMerge), então enumConstantsOf resolve enum de arquivo
+// importado por nome simples; exigir pacote vazio aqui era o modelo
+// pré-D-ENUM207 e fazia switch cross-file cair no ramo numérico
+// (SUB → isub sobre referências = VerifyError mascarado por JavaFX).
+if (switchType instanceof Type.ClassType sct
         && !CompilerTypes.enumConstantsOf(sct.name(), driver.currentUnit).isEmpty()) {
     enumSwitch = true;
     java.util.Set<String> covered = new java.util.HashSet<>();
