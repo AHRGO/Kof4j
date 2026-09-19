@@ -110,6 +110,14 @@ class KofWfReport {
 
 class KofWfDag {
     List<KofWfJob> jobs
+    String dagNome = null
+    // ⚠️ PARSE023 medido 19/09: função-tipo em CAMPO logo após um campo
+    // `List<...>` não parseia ("Expected parameter name") — os campos-lambda
+    // seguem um campo tipado simples (mesmo padrão do deadSink em KofWfJob,
+    // que segue `KofWfRetry retryCfg = null`). Hooks levam (dagName,
+    // jobName): a forma de 1 param em campo é o próprio quirk (PARSE023).
+    (String, String) -> Bool ckLoad = null
+    (String, String) -> Bool ckSave = null
 
     public constructor(List<KofWfJob> jobs) {
         if (jobs == null) { throw "workflow: dag() sem jobs" }
@@ -175,6 +183,21 @@ class KofWfDag {
         throw "workflow: retry() em '" + j.nome + "' — job não está na dag"
     }
 
+    // checkpoint hooks (face 2.1.3, registrados pela fatia ck via
+    // `checkpoint(d, db, dagName)`): o host-core NUNCA referencia kof.orm
+    // (gate ORM001 é estático — derrubaria o host inteiro no Native, mesmo
+    // mecanismo do CRON001 do schedule). Restaurado = succeeded (não
+    // re-executa); save recusado/lançando falha ALTO (R6).
+    KofWfDag ckHooks(String dagName, (String, String) -> Bool load, (String, String) -> Bool save) {
+        if (dagName == null || dagName == "") { throw "workflow: checkpoint() sem nome de dag" }
+        if (load == null || save == null) { throw "workflow: checkpoint() com hook nulo" }
+        if (ckLoad != null || ckSave != null) { throw "workflow: checkpoint já registrado nesta dag" }
+        dagNome = dagName
+        ckLoad = load
+        ckSave = save
+        return this
+    }
+
     // fixpoint sequencial: roda o que está pronto, pula dependentes de
     // falha/skip, e para com erro acionável se uma ronda não progride
     // (ciclo). `done` = nomes concluídos; `bad` = falhou OU foi pulado.
@@ -205,52 +228,77 @@ class KofWfDag {
                     bad.add(job.nome)
                     progressed = true
                 } else if (depsOk) {
-                    var corpoFn: () -> Bool = job.corpo
-                    var ok = false
-                    var erro = ""
-                    var tentativa = 0
-                    var maxT = 0
-                    if (job.retryCfg != null) { maxT = job.retryCfg.times }
-                    while (tentativa <= maxT) {
+                    var jaFeito = false
+                    if (ckLoad != null) {
+                        var lFn: (String, String) -> Bool = ckLoad
                         try {
-                            ok = corpoFn()
-                        } catch (String e) {
-                            ok = false
-                            erro = e
-                        }
-                        if (ok || tentativa == maxT) { break }
-                        tentativa = tentativa + 1
-                        erro = ""
-                        if (job.retryCfg != null) {
-                            var bFn: (Int) -> Int = job.retryCfg.backoff
-                            time.sleep(bFn(tentativa))
+                            jaFeito = lFn(dagNome, job.nome)
+                        } catch (String ce) {
+                            throw "workflow: checkpoint load falhou para '" + job.nome + "': " + ce
                         }
                     }
-                    if (tentativa > 0) { rep.retries.add(job.nome + ": tentativas=" + (tentativa + 1)) }
-                    if (erro != "") { rep.errors.add(job.nome + ": " + erro) }
-                    if (ok) {
+                    if (jaFeito) {
                         done.add(job.nome)
                         rep.succeeded.add(job.nome)
+                        progressed = true
                     } else {
-                        if (erro == "") { rep.errors.add(job.nome + ": false") }
-                        bad.add(job.nome)
-                        rep.failed.add(job.nome)
-                        var motivo = if (erro == "") { "false" } else { erro }
-                        rep.dead.add(job.nome + ": " + motivo)
-                        if (job.deadSink != null) {
-                            var sFn: (String, String) -> Bool = job.deadSink
-                            var okD = false
+                        var corpoFn: () -> Bool = job.corpo
+                        var ok = false
+                        var erro = ""
+                        var tentativa = 0
+                        var maxT = 0
+                        if (job.retryCfg != null) { maxT = job.retryCfg.times }
+                        while (tentativa <= maxT) {
                             try {
-                                okD = sFn(job.nome, motivo)
-                            } catch (String de) {
-                                throw "workflow: deadLetter sink falhou para '" + job.nome + "': " + de
+                                ok = corpoFn()
+                            } catch (String e) {
+                                ok = false
+                                erro = e
                             }
-                            if (!okD) {
-                                throw "workflow: deadLetter sink recusou '" + job.nome + "'"
+                            if (ok || tentativa == maxT) { break }
+                            tentativa = tentativa + 1
+                            erro = ""
+                            if (job.retryCfg != null) {
+                                var bFn: (Int) -> Int = job.retryCfg.backoff
+                                time.sleep(bFn(tentativa))
                             }
                         }
+                        if (tentativa > 0) { rep.retries.add(job.nome + ": tentativas=" + (tentativa + 1)) }
+                        if (erro != "") { rep.errors.add(job.nome + ": " + erro) }
+                        if (ok) {
+                            done.add(job.nome)
+                            rep.succeeded.add(job.nome)
+                            if (ckSave != null) {
+                                var sCk: (String, String) -> Bool = ckSave
+                                var okS = false
+                                try {
+                                    okS = sCk(dagNome, job.nome)
+                                } catch (String se) {
+                                    throw "workflow: checkpoint save falhou para '" + job.nome + "': " + se
+                                }
+                                if (!okS) { throw "workflow: checkpoint save recusou '" + job.nome + "'" }
+                            }
+                        } else {
+                            if (erro == "") { rep.errors.add(job.nome + ": false") }
+                            bad.add(job.nome)
+                            rep.failed.add(job.nome)
+                            var motivo = if (erro == "") { "false" } else { erro }
+                            rep.dead.add(job.nome + ": " + motivo)
+                            if (job.deadSink != null) {
+                                var sFn: (String, String) -> Bool = job.deadSink
+                                var okD = false
+                                try {
+                                    okD = sFn(job.nome, motivo)
+                                } catch (String de) {
+                                    throw "workflow: deadLetter sink falhou para '" + job.nome + "': " + de
+                                }
+                                if (!okD) {
+                                    throw "workflow: deadLetter sink recusou '" + job.nome + "'"
+                                }
+                            }
+                        }
+                        progressed = true
                     }
-                    progressed = true
                 } else {
                     keep.add(job)
                 }

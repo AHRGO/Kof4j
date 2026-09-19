@@ -1,0 +1,19 @@
+// dev/kof/workflow-ckpt-host.native.kf — fatia checkpoint do `kof.workflow`
+// no NATIVE (bundle 2.1.3). O store do checkpoint reusa kof.db/kof.orm, cujo
+// gate ORM001 é estático: uma referência a orm no host injetado rejeitaria o
+// host INTEIRO no compile (mesmo mecanismo do CRON001, medido). Aqui vai um
+// STUB que falha ALTO em runtime citando ORM001 (R6 — nunca silencioso); o
+// kof.db/kof.orm DIRETO do usuário mantém o gap honesto dele.
+//
+// Injetada por CompilerWorkflow no lugar de workflow-ckpt-host.kf quando
+// driver.target.isNative() (DD-OTP-01 opção A).
+
+KofWfDag checkpoint(KofWfDag d, String dbConn, String dagName) {
+    if (d == null) { throw "workflow: checkpoint() com dag nula" }
+    if (dbConn == null || dbConn == "") { throw "workflow: checkpoint() sem conexão db" }
+    if (dagName == null || dagName == "") { throw "workflow: checkpoint() sem nome de dag" }
+    if (true) {
+        throw "workflow: checkpoint() não disponível no NATIVE — ORM001 (store = kof.db/kof.orm; persistência exige o runtime JVM/JS)"
+    }
+    return d
+}

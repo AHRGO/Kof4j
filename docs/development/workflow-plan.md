@@ -96,6 +96,15 @@ Design invariants (inherited from existing precedent, not invented here):
   Native slice = a stub that fails LOUD at runtime citing `CRON001` (a scheduler.at
   reference in the injected host rejects the whole host at compile time — measured);
   the user's DIRECT `scheduler.at` keeps the compile-time refusal.
+- **Checkpoint via `kof.db`/`kof.orm`.** **LANDED 19/09:** same conditional-slice
+  mechanism as schedule (host-core holds function-value hooks `ckLoad`/`ckSave` — no
+  `kof.orm` reference in the main host, Native stays compiling; the ck slice injects
+  `checkpoint(d, dbConn, dagName)` with entity `KofWfCk`/`orm.where`/`orm.save`; the
+  Native slice is a stub failing LOUD with `ORM001`). Restored = `succeeded` without
+  re-running bodies (WorkflowE2ETest proves the counter does not advance). PARSER EDGE
+  discovered (measured): a function-type field after a `List<...>` field fails with
+  `PARSE023`; workaround = plain `String` field in between + 2-arg hooks
+  `(dagName, jobName)` — grammar change is rule-6 territory.
 - **Supervision reuses `kof.supervisor` (OTP, DD-OTP-01 option A).** A workflow run is a
   supervised tree; restart policy = the supervisor's policy. `workflow` does **not**
   re-implement restart semantics.

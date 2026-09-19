@@ -44,6 +44,7 @@ KofWfDag.retry(KofWfJob j, Int times, (Int) -> Int backoffMs) -> KofWfDag
 KofWfDag.retryFixed(KofWfJob j, Int times) -> KofWfDag   // imediato, sem sleep
 KofWfDag.deadLetter(KofWfJob j, (String, String) -> Bool sink) -> KofWfDag  // face durável opt-in
 schedule(KofWfDag d, String expr) -> String               // 19/09: delega a scheduler.at, devolve o job id
+checkpoint(KofWfDag d, String dbConn, String dagName) -> KofWfDag  // 19/09: store = kof.db/kof.orm (entity KofWfCk)
 exponential(Int baseMs, Int factor) -> (Int) -> Int       // backoff(1)=base, *factor a cada try
 
 Campos do Report: succeeded failed skipped errors retries dead  // List<String> cada
@@ -85,6 +86,18 @@ Regras:
   (o gate do scheduler é estático — referenciar `scheduler.at` no host
   rejeitaria o host INTEIRO no compile; o `scheduler.at` DIRETO do usuário
   mantém a recusa em compile-time).
+- `checkpoint(d, dbConn, dagName)`: o store REUSA `kof.db`/`kof.orm`
+  (entity `KofWfCk`, chave `dagName/jobName`, `CREATE TABLE IF NOT EXISTS` —
+  idempotente). Job restaurado re-entra como `succeeded` SEM re-executar o
+  corpo; o save acontece 1x por job após o sucesso (a chave unique mantém 1
+  linha por job); save recusado/lançando falha ALTO com o nome do job (R6).
+  A conexão vive nos closures da dag (sem close automático; em H2 mem use
+  `DB_CLOSE_DELAY=-1`). No NATIVE a fatia é um stub que falha ALTO em
+  runtime citando `ORM001` — o `kof.db`/`kof.orm` DIRETO do usuário mantém o
+  gap honesto dele. BORDA DO PARSER (medida 19/09): campo de função-tipo
+  logo após um campo `List<...>` não parseia (`PARSE023` "Expected parameter
+  name") — os hooks do ck seguem um campo simples `String dagNome = null` e
+  levam `(dagName, jobName)`; mudar a gramática é regra 6.
   (a guarda diz isso).
 
 ## 3. Idiomática

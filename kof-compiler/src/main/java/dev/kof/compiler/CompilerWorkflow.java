@@ -42,7 +42,7 @@ final class CompilerWorkflow {
         boolean collision = unit.declarations().stream()
                 .anyMatch(d -> d instanceof TypeDeclarationNode t
                         && ("KofWfJob".equals(t.name()) || "KofWfDag".equals(t.name())
-                                || "KofWfReport".equals(t.name())));
+                                || "KofWfReport".equals(t.name()) || "KofWfCk".equals(t.name())));
         if (collision) return unit;
         try (var in = CompilerDriver.class.getResourceAsStream("/dev/kof/workflow-host.kf")) {
             if (in == null) {
@@ -76,9 +76,17 @@ final class CompilerWorkflow {
             // entra o STUB (throw CRON001 em runtime, R6), nunca a
             // delegação (que derrubaria o host INTEIRO na recusa).
             if (!driver.target.isNative()) {
-                mergeSchedHost(driver, unit, decls, diagnostics, "/dev/kof/workflow-sched-host.kf");
+                mergeHostSlice(driver, unit, decls, diagnostics, "/dev/kof/workflow-sched-host.kf");
             } else {
-                mergeSchedHost(driver, unit, decls, diagnostics, "/dev/kof/workflow-sched-host.native.kf");
+                mergeHostSlice(driver, unit, decls, diagnostics, "/dev/kof/workflow-sched-host.native.kf");
+            }
+            // fatia checkpoint (bundle 2.1.3): MESMO mecanismo — o gate
+            // ORM001 do kof.orm é estático; não-Native injeta a fatia orm
+            // (entity KofWfCk + hooks), Native injeta o stub ORM001.
+            if (!driver.target.isNative()) {
+                mergeHostSlice(driver, unit, decls, diagnostics, "/dev/kof/workflow-ckpt-host.kf");
+            } else {
+                mergeHostSlice(driver, unit, decls, diagnostics, "/dev/kof/workflow-ckpt-host.native.kf");
             }
             return new CompilationUnitNode(unit.position(), unit.packageName(), imports, decls);
         } catch (IOException e) {
@@ -88,7 +96,7 @@ final class CompilerWorkflow {
         }
     }
 
-    private static void mergeSchedHost(CompilerDriver driver,
+    private static void mergeHostSlice(CompilerDriver driver,
                                        CompilationUnitNode unit,
                                        List<AstNode> decls,
                                        DiagnosticCollector diagnostics,
@@ -96,7 +104,7 @@ final class CompilerWorkflow {
         try (var in = CompilerDriver.class.getResourceAsStream(resource)) {
             if (in == null) {
                 diagnostics.error("", 0, 0, 0,
-                        "workflow sched host resource " + resource + " missing", "PKG003");
+                        "workflow host slice resource " + resource + " missing", "PKG003");
                 return;
             }
             String schedSource = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
@@ -106,7 +114,7 @@ final class CompilerWorkflow {
             CompilationUnitNode schedUnit = parser.parse();
             if (silent.hasErrors() || schedUnit == null) {
                 for (Diagnostic d : silent.getDiagnostics()) diagnostics.report(d);
-                diagnostics.error("", 0, 0, 0, "workflow sched host did not parse", "PKG003");
+                diagnostics.error("", 0, 0, 0, "workflow host slice did not parse", "PKG003");
                 return;
             }
             for (AstNode d : schedUnit.declarations()) {
@@ -115,7 +123,7 @@ final class CompilerWorkflow {
             }
         } catch (IOException e) {
             diagnostics.error("", 0, 0, 0,
-                    "workflow sched host could not be loaded: " + e.getMessage(), "PKG003");
+                    "workflow host slice could not be loaded: " + e.getMessage(), "PKG003");
         }
     }
 }

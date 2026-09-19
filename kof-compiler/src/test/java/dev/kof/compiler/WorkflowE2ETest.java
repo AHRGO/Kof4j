@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -312,6 +313,70 @@ class WorkflowE2ETest {
             """);
         CompilationResult nativeRes = driver.compile(tmp.resolve("S.kf"), tmp.resolve("s-native"), Target.NATIVE);
         assertTrue(nativeRes.success(), () -> "Native deve compilar o host + stub schedule: " + diags(nativeRes));
+    }
+
+    /** 2.1.3 face 4: `checkpoint(d, dbConn, dagName)` — store REUSA kof.db
+     *  (H2 mem) via a fatia orm; restored jobs re-enter as succeeded WITHOUT
+     *  re-running their bodies (counter proves the skip). JVM-only golden:
+     *  the store is H2; JS orm bridge parity is that lane's surface. */
+    @Test
+    void checkpointRestoresCompletedJobsAcrossRuns() throws Exception {
+        Files.writeString(tmp.resolve("C.kf"), """
+            import kof.workflow
+            main() {
+                var runs = 0
+                var a = job("a", () -> { runs = runs + 1; return true })
+                var b = job("b", () -> { runs = runs + 1; return true }).after(a)
+                var d = dag(listOf(b, a))
+                checkpoint(d, "jdbc:h2:mem:wfck1;DB_CLOSE_DELAY=-1", "pipelinha")
+                var rep1 = d.run()
+                println(rep1.summary())
+                println(runs)
+                var rep2 = d.run()
+                println(rep2.summary())
+                println(runs)
+            }
+            """);
+        CompilationResult result = driver.compile(tmp.resolve("C.kf"), tmp.resolve("c-jvm"), Target.JVM);
+        assertTrue(result.success(), () -> "JVM compile: " + diags(result));
+        String h2 = null;
+        for (String entry : System.getProperty("java.class.path").split(java.io.File.pathSeparator)) {
+            if (entry.contains("h2") && entry.endsWith(".jar")) { h2 = entry; break; }
+        }
+        if (h2 == null) {
+            org.junit.jupiter.api.Assumptions.assumeTrue(false, "h2 jar ausente no classpath");
+        }
+        String javaCmd = System.getProperty("java.home") + "/bin/java";
+        ProcessBuilder pb = new ProcessBuilder(System.getProperty("java.home") + "/bin/java",
+                "-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8",
+                "-cp", tmp.resolve("c-jvm").toString() + java.io.File.pathSeparator + h2,
+                "Default.Main");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        int ec = p.waitFor();
+        assertEquals(0, ec, "exit: " + output);
+        assertEquals("""
+            ok=a,b failed= skipped=
+            2
+            ok=a,b failed= skipped=
+            2""".trim(), output.trim(), "checkpoint: 2a run executa, 2a restaura sem re-executar");
+    }
+
+    /** Native: a fatia checkpoint entra como STUB (ORM001 em runtime) — o
+     *  host + stub compilam (a referência a kof.orm não está lá). */
+    @Test
+    void checkpointOnNativeCompilesViaStub() throws Exception {
+        Files.writeString(tmp.resolve("CK.kf"), """
+            import kof.workflow
+            main() {
+                var d = dag(listOf(job("a", () -> true)))
+                checkpoint(d, "jdbc:h2:mem:x", "dag1")
+                d.run()
+            }
+            """);
+        CompilationResult nativeRes = driver.compile(tmp.resolve("CK.kf"), tmp.resolve("c-native"), Target.NATIVE);
+        assertTrue(nativeRes.success(), () -> "Native deve compilar o host + stub checkpoint: " + diags(nativeRes));
     }
 
     /** Rule-5 source portability: the same injected host compiles on Native

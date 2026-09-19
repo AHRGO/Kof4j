@@ -45,6 +45,7 @@ KofWfDag.retryFixed(KofWfJob j, Int times) -> KofWfDag   // immediate, no sleep
 KofWfDag.deadLetter(KofWfJob j, (String, String) -> Bool sink) -> KofWfDag  // opt-in durable face
 exponential(Int baseMs, Int factor) -> (Int) -> Int       // 19/09: backoff(1)=base, *factor each try
 schedule(KofWfDag d, String expr) -> String               // 19/09: delegates to scheduler.at, returns job id
+checkpoint(KofWfDag d, String dbConn, String dagName) -> KofWfDag  // 19/09: store = kof.db/kof.orm (entity KofWfCk)
 
 Report fields: succeeded failed skipped errors retries dead  // List<String> each
 Report.allOk() -> Bool                          // no failures, no skips
@@ -82,6 +83,18 @@ Rules:
   never kills the scheduler (isolated in the spawn); per-fire persistence goes
   through `deadLetter`, which runs inside `run()`. On NATIVE the slice is a
   stub that fails LOUD at runtime citing `CRON001` (the scheduler gate is
+- `checkpoint(d, dbConn, dagName)`: the store REUSES `kof.db`/`kof.orm`
+  (entity `KofWfCk`, key `dagName/jobName`, `CREATE TABLE IF NOT EXISTS` —
+  idempotent). Restored jobs re-enter as `succeeded` WITHOUT re-running their
+  bodies; a save happens once per job after success (the unique key keeps one
+  row per job); a refused/throwing save fails LOUD with the job name (R6).
+  The connection lives in the dag's closures (no auto-close; for H2 mem use
+  `DB_CLOSE_DELAY=-1`). On NATIVE the slice is a stub that fails LOUD at
+  runtime citing `ORM001` — your DIRECT `kof.db`/`kof.orm` calls keep their
+  own honest gap. PARSER EDGE (measured 19/09): a function-type FIELD after a
+  `List<...>` field does not parse (`PARSE023` "Expected parameter name") —
+  the ck hooks follow a plain `String dagNome = null` field and take
+  `(dagName, jobName)`; grammar change is rule-6 territory.
   static — referencing `scheduler.at` in the host would reject the whole host
   at compile time; your DIRECT `scheduler.at` calls keep the compile-time
   refusal).
