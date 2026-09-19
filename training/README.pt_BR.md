@@ -52,6 +52,7 @@ training/
 │   ├── concurrency.md
 │   ├── stdlib.md
 │   ├── ui.md
+│   ├── security.md
 │   └── interop.md
 ├── anti-patterns/         # Catálogo de o que NÃO fazer
 │   ├── common-mistakes.md

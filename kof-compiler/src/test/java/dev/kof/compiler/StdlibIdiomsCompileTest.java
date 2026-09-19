@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -187,5 +188,120 @@ main() {
             System.out.println("PROBE " + probeTarget("time-interval", "main() { val i = time.interval(1000, () -> println(\"t\")); time.cancel(i) }\n", t));
             System.out.println("PROBE " + probeTarget("net", "main() { println(net.host(\"https://x.io/a\")) }\n", t));
         }
+    }
+
+    private static final String SECURITY_SRC = """
+main() {
+    val h = passwords.hash("s3nh4")
+    val ok = passwords.verify("s3nh4", h)
+    val digest = crypto.sha256("data")
+    val mac = crypto.hmacSha256("key", "msg")
+    val key = crypto.randomHex(32)
+    val ct = crypto.encryptAesGcm("segredo", key)
+    val pt = crypto.decryptAesGcm(ct, key)
+    val nonce = crypto.randomHex(16)
+    val tok = jwt.create("{\\"sub\\":\\"mel\\"}", "secret")
+    val ttlTok = jwt.create("{\\"sub\\":\\"mel\\"}", "secret", 3600)
+    val sub = jwt.verify(tok, "secret")
+    val strict = jwt.verify(ttlTok, "secret", "iss-x", "aud-y")
+    val dbPass = secrets.get("DB_PASSWORD")
+    val withDef = secrets.get("PORT", "5432")
+    val eq = security.constantTimeEquals(mac, digest)
+    val red = security.redact("token=abc")
+    val csrf = security.csrfToken()
+    val good = security.csrfValid(csrf)
+    val allowed = security.rateLimit("ip:1.2.3.4", 10, 60)
+    val sid = security.sessionCreate("mel")
+    val who = security.sessionGet(sid)
+    val dead = security.sessionDestroy(sid)
+    val apiKey = security.apiKeyGenerate()
+    val validKey = security.apiKeyValid(apiKey)
+    val cookie = security.cookieSet("sid", sid, mapOf("HttpOnly", "true"))
+    val csp = security.cspHeader()
+    val rnd = security.randomInt(100)
+    println(h + ok + digest + mac + ct + pt + nonce + tok + ttlTok + sub + strict + dbPass + withDef + eq + red + csrf + good + allowed + who + dead + validKey + cookie + csp + rnd)
+}
+""";
+
+    @Test
+    void securityIdiomsCompileJvm() throws Exception {
+        probe(SECURITY_SRC);
+    }
+
+    @Test
+    void securityFacesPerTarget() throws Exception {
+        String hash = "main() { println(passwords.hash(\"x\") + crypto.sha256(\"a\") + crypto.hmacSha256(\"k\",\"m\") + crypto.randomHex(8)) }\n";
+        String aes = "main() { val k = crypto.randomHex(32); val c = crypto.encryptAesGcm(\"s\", k); println(crypto.decryptAesGcm(c, k)) }\n";
+        String chacha = "main() { val k = crypto.randomHex(32); val c = crypto.encryptChacha20(\"s\", k); println(crypto.decryptChacha20(c, k)) }\n";
+        String jwtSrc = "main() { val t = jwt.create(\"{}\", \"k\"); println(jwt.verify(t, \"k\")) }\n";
+        String sec = "main() { val s = security.sessionCreate(\"u\"); println(s + security.csrfToken() + security.constantTimeEquals(\"a\",\"b\") + security.rateLimit(\"k\",1,60) + secrets.get(\"X\",\"y\")) }\n";
+        String auth = "main() { println(auth.authenticated() + auth.hasRole(\"admin\")) }\n";
+        for (Target t : new Target[] { Target.JVM, Target.SCRIPT, Target.JS, Target.NATIVE }) {
+            System.out.println("PROBE " + probeTarget("sec-hash", hash, t));
+            System.out.println("PROBE " + probeTarget("sec-aesgcm", aes, t));
+            System.out.println("PROBE " + probeTarget("sec-chacha", chacha, t));
+            System.out.println("PROBE " + probeTarget("sec-jwt", jwtSrc, t));
+            System.out.println("PROBE " + probeTarget("sec-session", sec, t));
+            System.out.println("PROBE " + probeTarget("sec-only-session", "main() { println(security.sessionCreate(\"u\")) }\n", t));
+            System.out.println("PROBE " + probeTarget("sec-only-csrf", "main() { println(security.csrfToken()) }\n", t));
+            System.out.println("PROBE " + probeTarget("sec-only-ratelimit", "main() { println(security.rateLimit(\"k\",1,60)) }\n", t));
+            System.out.println("PROBE " + probeTarget("sec-only-secrets", "main() { println(secrets.get(\"X\",\"y\")) }\n", t));
+            System.out.println("PROBE " + probeTarget("sec-only-cte", "main() { println(security.constantTimeEquals(\"a\",\"b\")) }\n", t));
+            System.out.println("PROBE " + probeTarget("sec-only-headers", "main() { println(security.cspHeader() + security.hstsHeader() + security.frameHeader()) }\n", t));
+            System.out.println("PROBE " + probeTarget("sec-auth", auth, t));
+        }
+    }
+
+    @Test
+    void securityLabelOrderIsRuntimeTruth() {
+        String enc = dev.kof.compiler.StdCatalog.signaturesOf("crypto", "encryptAesGcm").get(0);
+        assertTrue(enc.startsWith("encryptAesGcm(String plain, String keyHex64)"),
+                "label AES-GCM invertida de novo (runtime = kof_sec_aesgcm_encrypt(plaintext, keyHex)): " + enc);
+        String cc = dev.kof.compiler.StdCatalog.signaturesOf("crypto", "encryptChacha20").get(0);
+        assertTrue(cc.startsWith("encryptChacha20(String plain, String keyHex)"), cc);
+        String cg = dev.kof.compiler.StdCatalog.signaturesOf("security", "cookieGet").get(0);
+        assertTrue(cg.startsWith("cookieGet(String cookieHeader, String name)"), cg);
+    }
+
+    @Test
+    void securityAesGcmRoundTripRuns() throws Exception {
+        Path source = Files.createTempFile("rt", ".kf");
+        Files.writeString(source, """
+main() {
+    var key = crypto.randomHex(32)
+    var ct = crypto.encryptAesGcm("segredo", key)
+    println(crypto.decryptAesGcm(ct, key) == "segredo")
+}
+""");
+        Path out = Files.createTempDirectory("rtout");
+        var r = driver.compile(source, out, Target.JVM);
+        assertTrue(r.success(), "" + r.diagnostics().getDiagnostics());
+        Process p = new ProcessBuilder(System.getProperty("java.home") + "/bin/java",
+                "-cp", out.toString(), "Default.Main").redirectErrorStream(true).start();
+        String o = new String(p.getInputStream().readAllBytes()).trim();
+        assertEquals(0, p.waitFor(), o);
+        assertEquals("true", o, "doc exemplo round-trip (golden do doc em security.md)");
+    }
+
+    @Test
+    void secretsRedactProbe() throws Exception {
+        probe("main() { println(secrets.redact(\"tok\") + security.redact(\"tok\")) }\n");
+    }
+
+    @Test
+    void authIdiomsCompileJvm() throws Exception {
+        probe("""
+main() {
+    val hasSecret = auth.secret("s3m")
+    val t = auth.token()
+    val in = auth.authenticated()
+    val c = auth.claims()
+    val u = auth.user()
+    val admin = auth.hasRole("admin")
+    val perm = auth.hasPermission("read:items")
+    val rs = auth.resourceServer("issuer", "aud", "jwks")
+    println(hasSecret + t + in + c + u + admin + perm + rs)
+}
+""");
     }
 }
