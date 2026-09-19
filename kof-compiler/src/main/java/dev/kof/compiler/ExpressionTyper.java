@@ -309,7 +309,6 @@ public final class ExpressionTyper {
                     }
                     // §284-map: mesmo contrato nullable do if-expr.
                     var sbody = inferExprType(driver, se.cases().get(0).body(), locals);
-                    var sdflt = se.defaultValue() != null ? inferExprType(driver, se.defaultValue(), locals) : null;
                     yield nullableIfNullBranch(sbody, se.cases().get(0).body(),
                             se.defaultValue() != null ? se.defaultValue() : se.cases().get(0).body());
                 }

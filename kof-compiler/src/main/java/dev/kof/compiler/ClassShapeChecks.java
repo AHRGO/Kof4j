@@ -42,6 +42,41 @@ public final class ClassShapeChecks {
         }
     }
 
+    /**
+     * #470: o extends de um record (inclusive o SINTÉTICO do parser —
+     * `class Dog(String name) extends Animal` vira RecordDeclarationNode com
+     * superClass) compilava limpo e morria no load com
+     * IncompatibleClassChangeError (o record sai ACC_FINAL no bytecode).
+     * A JVM nunca deixa herdar de record nem de classe final; o compilador
+     * deve dizer antes (R6).
+     */
+    static void checkRecordDeclaration(SemanticAnalyzer sa, RecordDeclarationNode rec) {
+        String superName = eraseGenerics(rec.superClass());
+        if (superName == null || "Record".equals(superName) || "Object".equals(superName)) return;
+        if (isRecordNamed(sa, simpleName(superName))) {
+            report(sa, rec.position(),
+                    "cannot extend record '" + superName + "'"
+                            + " — records are implicitly final; compose it (hold it in a field) or use a plain class",
+                    "SEM070");
+            return;
+        }
+        if (sa.finalClasses().contains(simpleName(superName))) {
+            report(sa, rec.position(),
+                    "cannot inherit from final class '" + superName + "'"
+                            + " (declared 'final' — remove 'final' or the inheritance)",
+                    "SEM070");
+        }
+    }
+
+    /** #470: nome é record? O ClassSymbol de um record tem super "Record"
+     *  (alias gravado pelo SymbolTableBuilder) ou java/lang/Record. */
+    private static boolean isRecordNamed(SemanticAnalyzer sa, String name) {
+        SymbolTable.ClassSymbol cs = sa.getClass(name);
+        if (cs == null) return false;
+        String sup = cs.superClass();
+        return sup != null && (sup.equals("Record") || sup.endsWith(".Record") || sup.endsWith("/Record"));
+    }
+
     /** Chamado nas 2 faces de construção (`new I()` em SemExpressionTyper,
      *  `I()` implícita em BuiltinCallTyper) — #340. */
     static void checkInstantiable(SemanticAnalyzer sa, String typeName) {

@@ -211,7 +211,10 @@ public class SemanticAnalyzer {
     private void analyzeDeclaration(AstNode decl) {
         switch (decl) {
             case ClassDeclarationNode cls -> analyzeClass(cls);
-            case RecordDeclarationNode rec -> SemDeclarationAnalyzer.analyzeRecord(this, rec);
+            case RecordDeclarationNode rec -> {
+                ClassShapeChecks.checkRecordDeclaration(this, rec);
+                SemDeclarationAnalyzer.analyzeRecord(this, rec);
+            }
             case EntityDeclarationNode ent -> SemDeclarationAnalyzer.analyzeEntity(this, ent);
             case InterfaceDeclarationNode iface -> SemDeclarationAnalyzer.analyzeInterface(this, iface);
             case EnumDeclarationNode _ -> { }

@@ -78,6 +78,77 @@ class ClassShapeChecksTest {
     }
 
     @Test
+    void extendingCompactConstructorClassIsRejectedSem070(@TempDir Path tempDir) throws IOException {
+        // #470: `class Animal(String name)` = record sintetico (ACC_FINAL no
+        // bytecode); `class Dog(String name) extends Animal` compilava limpo e
+        // morria no LOAD com IncompatibleClassChangeError.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+                class Animal(String name) {
+                    String speak() { return name + " says nothing" }
+                }
+                class Dog(String name) extends Animal {
+                    String speak() { return name + " says woof" }
+                }
+                main() { var d = Dog("Rex"); println(d.speak()) }
+                """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertFalse(result.success(), "extending a compact-constructor class (record) must be rejected (#470)");
+        String diags = result.diagnostics().getDiagnostics().toString();
+        assertTrue(diags.contains("SEM070"), "must be the extends-final code: " + diags);
+        assertTrue(diags.contains("Animal"), "must name the extended record: " + diags);
+    }
+
+    @Test
+    void extendingExplicitRecordIsRejectedSem070(@TempDir Path tempDir) throws IOException {
+        // face B: record + extends -> checkSuperclass pega (records registrados
+        // em finalClasses no pre-declare).
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+                record Point(Int x, Int y)
+                class Holder extends Point {}
+                main() { println("dead") }
+                """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertFalse(result.success(), "extending a record must be rejected (#470)");
+        String diags = result.diagnostics().getDiagnostics().toString();
+        assertTrue(diags.contains("SEM070"), "must be the extends-final code: " + diags);
+        assertTrue(diags.contains("Point"), "must name the extended record: " + diags);
+    }
+
+    @Test
+    void legalRecordAndMutableHierarchyStillCompiles(@TempDir Path tempDir) throws Exception {
+        // controle (Q3 face negativa): record sem extends e classe MUTAVEL
+        // (constructor explicito) estendendo classe simples continuam ok.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+                class Animal {
+                    String name
+                    public constructor(String name) { this.name = name }
+                    String speak() { return name + " says nothing" }
+                }
+                class Dog extends Animal {
+                    public constructor(String name) { super(name) }
+                    String speak() { return name + " says woof" }
+                }
+                record Tag(String label)
+                main() {
+                    var d = Dog("Rex")
+                    println(d.speak() + " " + Tag("v").label())
+                }
+                """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "legal record/class hierarchy must keep compiling: "
+                + result.diagnostics().getDiagnostics());
+        String javaCmd = System.getProperty("java.home") + "/bin/java";
+        Process p = new ProcessBuilder(javaCmd, "-cp", tempDir.resolve("out").toString(), "Default.Main")
+                .redirectErrorStream(true).start();
+        String out = new String(p.getInputStream().readAllBytes()).trim();
+        assertEquals(0, p.waitFor());
+        assertEquals("Rex says woof v", out, "#470 negative control");
+    }
+
+    @Test
     void legalShapesUnaffected(@TempDir Path tempDir) throws Exception {
         // controls (Q3 negative face): extends non-final, implements +
         // construction of CLASS, abstract-only, final-only — all keep compiling.

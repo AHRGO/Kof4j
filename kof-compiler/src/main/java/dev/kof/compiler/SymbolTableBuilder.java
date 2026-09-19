@@ -105,6 +105,14 @@ public final class SymbolTableBuilder {
                 && cls.modifiers().contains("final")) {
             sa.addFinalClass(cls.name());
         }
+        // #470 (SEM070): records — inclusive os SINTETICOS do parser
+        // (`class Animal(String name)` -> RecordDeclarationNode, TypeDeclarations
+        // :105-116) — sao gravados ACC_FINAL no bytecode. Sem registra-los
+        // aqui, `class Dog(...) extends Animal` passava limpo e morria no load
+        // com IncompatibleClassChangeError — R6 exige diagnostico no compile.
+        if (decl instanceof RecordDeclarationNode rec) {
+            sa.addFinalClass(rec.name());
+        }
     }
 
     static void defineMembers(SemanticAnalyzer sa, AstNode decl) {
