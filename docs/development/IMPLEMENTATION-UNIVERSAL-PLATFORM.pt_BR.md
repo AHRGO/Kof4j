@@ -139,12 +139,12 @@ Bash+Python+YAML+jq+sed+awk **numa única linguagem tipada**).
 
 | # | Item | Status | Dono | Depende de |
 |---|------|--------|------|------------|
-| 2.1 | `kof.workflow` / `kof.batch` — jobs, pipelines, retry, checkpoints, dead-letter | 🔵 | `.18` | Estágio 1; **`workflow-plan.md`** APROVADO 19/09 (Q1–Q4 pela enquete da mantenedora: forma stdlib, MVP mínimo, retry aditivo, ambas as faces de dead-letter); recon 2.1.0 FEITO 19/09 (`WorkflowPrimitivesE2ETest` 6/6 + conserto do descriptor `Result` de lambda, `8ec07214`); MVP 2.1.2 é o próximo; vira `🟡` quando a stdlib landar (plano §5 2.1.4) |
-| 2.2 | `kof.shell` — shell idiomático sobre `kof.process` | 🟡 | `.18` | Estágio 1; **`development/shell-plan.md`** APROVADO 18/09 (Q1–Q3 pela enquete da mantenedora); MVP 18/09: `cmd`/`run`/`ok` em JVM+JS com paridade byte, `pipeline` só-JVM (`PROC001` em JS/Native, herdado de `process.spawn`); glob/`~`/redir fora do v1; `ShellE2ETest` 11/11; 2.2.3 (`runWith` cwd/env, pipes JS) + 2.2.4 (doc stdlib) abertos |
+| 2.1 | `kof.workflow` / `kof.batch` — jobs, pipelines, retry, checkpoints, dead-letter | 🟡 | `.18` | Estágio 1; **`workflow-plan.md`** APROVADO 19/09 (Q1–Q4 pela enquete); 2.1.0 recon FEITO (`WorkflowPrimitivesE2ETest` 6/6 + conserto do descriptor `Result` de lambda `8ec07214`); **MVP 2.1.2 ATERRISSOU 19/09** — host pure-Kof `workflow-host.kf` injetado flat (`import kof.workflow` → `job`/`dag`/`after`/`run`/`Report`, sem gate de target, paridade byte JVM==JS, `WorkflowE2ETest` 7/7) + 2.1.4 docs (stdlib/workflow.md EN+PT, linha de paridade, este flip); resíduo = bundle de add-ons 2.1.3 (retry/checkpoint/deadLetter/schedule) |
+| 2.2 | `kof.shell` — shell idiomático sobre `kof.process` | 🟡 | `.18` | Estágio 1; **`development/shell-plan.md`** APROVADO 18/09 (Q1–Q3 pela enquete da mantenedora); MVP 18/09: `cmd`/`run`/`ok` em JVM+JS com paridade byte, `pipeline` só-JVM (`PROC001` em JS/Native, herdado de `process.spawn`); glob/`~`/redir fora do v1; `ShellE2ETest` 11/11; 2.2.4 doc stdlib FEITA 19/09 (`docs/stdlib/shell.md` +PT); 2.2.3 (`runWith` cwd/env, pipes JS vivos) aberto — a linha vira ✅ com ele |
 | 2.3 | `kof.ssh` — via FFI/interop | 🔵 | — | R3 (FFI) |
 | 2.4 | Cron/scheduler maduro | 🟡 | lane concurrency | `at(cron)` cron real de 5 campos UTC no JVM/JS desde 17/09 (§274); Native `CRON001` gap honesto |
-| 2.5 | Pipelines de CI/CD como **código Kof** | 🔵 | — | 2.1 |
-| 2.6 | Tooling: `kof workflow run` | 🔵 | — | 2.1 |
+| 2.5 | Pipelines de CI/CD como **código Kof** | ⏳ | — | 2.1 (MVP aterrissou 19/09 — `dag`/`job` rodam em JVM+JS; pré-requisito pleno pede 2.1.3 retry/checkpoint) |
+| 2.6 | Tooling: `kof workflow run` | ⏳ | — | 2.1 (MVP aterrissou 19/09 — `dag`/`job` rodam em JVM+JS; pré-requisito pleno pede 2.1.3 retry/checkpoint) |
 
 ---
 
@@ -266,8 +266,8 @@ mesma experiência de desenvolvimento.
 |---|------|--------|------|------------|
 | 8.1 | Integração total dos Estágios 1–7 | 🔵 | — | todos |
 | 8.2 | Package manager maduro | 🔵 | — | 1.5.3 (registry ⛔) |
-| 8.3 | LSP/debug/profiler por domínio | 🟡 | — | LSP existe; por-domínio pendente |
-| 8.4 | Deploy multi-target (mesma fonte → JVM/Native/JS) | 🟡 | — | 7 targets funcionam hoje; maturidade pendente |
+| 8.3 | LSP/debug/profiler por domínio | 🟡 | lane tooling/docs (.15) p/ LSP | **LSP domain-aware ✅ 19/09**: completion + hover lêem o `StdCatalog` (namespace lista membros; membro no contexto `ns.` nomeia a face; solto = null honesto). Restante: debugger/profiler por domínio (= X7 + faces futuras; profiler ainda não existe) |
+| 8.4 | Deploy multi-target (mesma fonte → JVM/Native/JS) | 🟡 | lane tooling/docs (.15) | **núcleo ✅ 19/09 (X9 fatia 4)**: `--target jvm,native,js`/`all` = mesma fonte, uma release por face + `.deploy-manifest.json` (SUCCESS/FAIL honesto por alvo, R6/R7, exit 1 se alguma falhar); maturidade restante: faces cross (sysroot/DEP001) + publish (D2) |
 | 8.5 | Documentação/corpus (`training/`) dos domínios | 🔵 | lane docs | por domínio |
 | 8.6 | **Teste final:** o core da linguagem quase não cresceu | 🔵 | — | verificação no fim |
 
@@ -292,7 +292,7 @@ mesma experiência de desenvolvimento.
 | X6 | Reflexão de interop (restrita ao interop) | ⛔ | **mantenedora** | VISION §7 "C" — descoberta de schema em ML/ciência; mudança do core (regra 6); nunca fundação |
 | X7 | Debugger Native DWARF + source maps JS | 🟡 | lane tooling | VISION §9; `roadmap.md` §19.5 fases 4–7 — source map V3 do JS landado 01/09 (`KofJsSourceMapTest`); DWARF nativo pendente |
 | X8 | Testes property-based | 🟡 | lane docs→plataforma (192.168.100.15) | fatias 1–2 ✅ 18/09: namespace `rng` (xorshift128+splitmix32 semeável) em JVM+JS+**NATIVE x86_64** — `KofRngTest` 11/11 incl. paridades byte JVM==JS e JVM==NATIVE (asm `RuntimeRng`, bits por construção) + `RNG001` honesto em cross/ANDROID (`a71f761c`,`1ff54c6e`,`367af29d`); fatia 3 = runner property no `kof.test`; port cross pede qemu (lane nat) |
-| X9 | `kof deploy` (build + pacote + publish) | 🟡 | lane tooling/docs (192.168.100.15) | fatias 1–3 ✅ 18/09: JVM (fat jar) + NATIVE (ELF 0755) + JS (.mjs) + ANDROID (APK via pipeline --apk do build) — release = artefato + RELEASE.md + SHA256SUMS + tar.gz (`CmdDeployTest` 9/9+1-skip, módulo 322/322; `154ea1a4`, `bfdd452a`, fatia 3); cross riscv/arm = `DEP001` honesto; `--publish`/registry = ⛔ D2 |
+| X9 | `kof deploy` (build + pacote + publish) | 🟡 | lane tooling/docs (192.168.100.15) | fatias 1–3 ✅ 18/09: JVM (fat jar) + NATIVE (ELF 0755) + JS (.mjs) + ANDROID (APK via pipeline --apk do build) — release = artefato + RELEASE.md + SHA256SUMS + tar.gz (`CmdDeployTest` 9/9+1-skip, módulo 322/322; `154ea1a4`, `bfdd452a`, fatia 3); cross riscv/arm = `DEP001` honesto; `--publish`/registry = ⛔ D2; **fatia 4 ✅ 19/09 (linha 8.4)**: multi-target da MESMA fonte — `--target jvm,native,js`/`all`, uma release por face (subdir `-jvm/-native/-kofjs`) + `DEPLOY-MANIFEST` (`.deploy-manifest.json`), FAIL por alvo não derruba os demais (R6), exit 1 com falha; `CmdDeployTest` 13 (11+2-skip), cli 339/0F |
 | X10 | LSP domain-aware (completion + ir-para-definição em pacotes) | ✅ | lane docs→plataforma (192.168.100.15) | fatias 1–3 ✅ 18/09: `StdCatalog` = **31 namespaces** completados por membros REAIS do typer (7 KofStd + time/http/db/cache/process + segurança×6 + json/log/orm/config/gpu/mq/validation/observability/tetris + Image/Audio/Video/Mic) — fonte-única travada contra a fonte (`StdCatalogTest` 10/10, `LspServerTest` 25/25; `48633d98`, `e79a3ea0`, `9e4d1728`); web/app-DSL + ui + ffi ficam de fora (R6 honesto); fatia 4 ✅ 18/09: ir-para-definição **cruza arquivos do projeto** (`crossFileDefinition`, walk ≤6 + primeiro hit, convenção única `LspSymbols`; `null` honesto) — `0a4497c7`, `LspServerTest` 27/27; fatia 5 ✅ 18/09: **referências também cruzam arquivos** (somente-leitura; varredura extraída p/ `LspProject` no split ≤600) — `f5df2362`, `LspServerTest` 28/28; fatia 6 ✅ 18/09: **`workspace/symbol`** indexa buffers + .kf irmãos (filtro/ordenação LSP) — `c04e16a4`, `LspServerTest` 29/29; fatia 7 ✅ 18/09: **hover de símbolos do projeto** (buffer+cross-file, linha completa; bug de framing byte-vs-char no teste-mate) — `848b7df1`, `LspServerTest` 30/30. **X10 CONCLUÍDA** (rename cross-file e assinaturas de membros = perguntas de superfície rule 6 no DOING) |
 
 ---

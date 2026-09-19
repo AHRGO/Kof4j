@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
@@ -42,8 +43,11 @@ import java.util.List;
  */
 final class CmdDeploy {
 
-    private static final String USAGE = "usage: kof deploy <source-dir|file.kf> --target jvm"
-            + " [--output <dir>] [--name <n>] [--version <v>] [--publish <registry>]";
+    private static final String USAGE = "usage: kof deploy <source-dir|file.kf> --target <t>[,<t>...|all]"
+            + " [--output <dir>] [--name <n>] [--version <v>] [--publish <registry>]\n"
+            + "  targets: jvm|native|js|android (all = jvm,native,js); lista separada por"
+            + " virgula faz o multi-target 8.4 (mesma fonte, uma release por alvo"
+            + " + .deploy-manifest.json)";
 
     private CmdDeploy() {
     }
@@ -74,7 +78,7 @@ final class CmdDeploy {
             }
             src = parent;
         }
-        Target target = Target.JVM;
+        java.util.LinkedHashSet<Target> targets = new java.util.LinkedHashSet<>();
         Path out = Path.of("build");
         String name = null;
         String version = "0.0.0";
@@ -82,9 +86,9 @@ final class CmdDeploy {
         for (int i = 2; i < args.length; i++) {
             String arg = args[i];
             if (arg.startsWith("--target=")) {
-                target = KofCliSupport.parseTarget(arg.substring("--target=".length()));
+                addTargets(targets, arg.substring("--target=".length()));
             } else if (arg.equals("--target") && i + 1 < args.length) {
-                target = KofCliSupport.parseTarget(args[++i]);
+                addTargets(targets, args[++i]);
             } else if (arg.startsWith("--output=")) {
                 out = Path.of(arg.substring("--output=".length()));
             } else if (arg.equals("--output") && i + 1 < args.length) {
@@ -118,15 +122,19 @@ final class CmdDeploy {
                 return;
             }
         }
+        if (targets.isEmpty()) targets.add(Target.JVM);
         // X9 fatia 3: JVM (fat jar), NATIVE x86_64 (ELF), JS (Default.mjs) e
         // ANDROID (APK assinado, reusa o pipeline --apk do build) empacotam.
         // Cross riscv64/aarch64 (sysroot) recusa honesto (R6) — face seguinte.
-        if (target == Target.NATIVE_RISCV64 || target == Target.NATIVE_AARCH64) {
-            System.err.println("deploy: target " + TargetMatrix.name(target)
-                    + " is not packaged yet (DEP001) —"
-                    + " slices so far: --target jvm|native|js|android");
-            System.exit(1);
-            return;
+        if (targets.size() == 1) {
+            Target only = targets.iterator().next();
+            if (only == Target.NATIVE_RISCV64 || only == Target.NATIVE_AARCH64) {
+                System.err.println("deploy: target " + TargetMatrix.name(only)
+                        + " is not packaged yet (DEP001) —"
+                        + " slices so far: --target jvm|native|js|android");
+                System.exit(1);
+                return;
+            }
         }
         // --publish: registry remoto é decisão D2 (mantenedora) — recusa
         // honesta, nunca um "publish" fingido (R6). DEP001 = gap do comando.
@@ -149,34 +157,121 @@ final class CmdDeploy {
             System.exit(1);
             return;
         }
+        if (targets.size() > 1) {
+            deployMulti(src, out, safeName, version, new ArrayList<>(targets));
+            return;
+        }
         try {
-            deploy(src, out, safeName, version, target);
+            Release r = deploy(src, out, safeName, version, targets.iterator().next(), "");
+            System.out.println("deploy → " + r.releaseDir());
+            System.out.println("artifact → " + r.tgz()
+                    + " (sha256 " + r.sha256().substring(0, 12) + "…)");
         } catch (IOException e) {
             System.err.println("deploy: failed: " + e.getMessage());
             System.exit(1);
         }
     }
 
-    private static void deploy(Path src, Path out, String name, String version,
-                               Target target) throws IOException {
+    private static void addTargets(java.util.LinkedHashSet<Target> targets, String spec) {
+        for (String tok : spec.split(",")) {
+            String t = tok.trim();
+            if (t.isEmpty()) continue;
+            if (t.equals("all")) { // 8.4: as três faces nucleares da plataforma
+                targets.add(Target.JVM);
+                targets.add(Target.NATIVE);
+                targets.add(Target.JS);
+                continue;
+            }
+            targets.add(KofCliSupport.parseTarget(t));
+        }
+    }
+
+    /** Resultado de uma face num multi-deploy (8.4). */
+    private record Release(String target, String status, Path releaseDir, Path tgz,
+                           String artifact, String sha256, String error) {
+    }
+
+    /**
+     * X9 fatia 4 / linha 8.4 (IMPLEMENTATION-UNIVERSAL-PLATFORM.md): multi-target
+     * da MESMA fonte (“same source → JVM/Native/JS”). Cada alvo roda o pipeline
+     * completo de release no seu subdiretório; alvo que falha (ferramenta ausente,
+     * compilação, DEP001) não derruba os demais — o resumo e o
+     * {@code .deploy-manifest.json} registram SUCCESS/FAIL com a razão honesta
+     * (R6/R7) e o exit é 1 se houve falha.
+     */
+    private static void deployMulti(Path src, Path out, String name, String version,
+                                    List<Target> targets) {
+        List<Release> results = new ArrayList<>();
+        boolean anyFail = false;
+        for (Target t : targets) {
+            String tn = TargetMatrix.name(t);
+            if (t == Target.NATIVE_RISCV64 || t == Target.NATIVE_AARCH64) {
+                results.add(new Release(tn, "FAIL", null, null, null, null,
+                        "not packaged yet (DEP001)"));
+                anyFail = true;
+                continue;
+            }
+            try {
+                Release r = deploy(src, out, name, version, t, "-" + tn);
+                results.add(r);
+                System.out.println("  " + tn + " → " + r.releaseDir());
+            } catch (IOException e) {
+                results.add(new Release(tn, "FAIL", null, null, null, null, e.getMessage()));
+                anyFail = true;
+            }
+        }
+        StringBuilder m = new StringBuilder("[\n");
+        for (int i = 0; i < results.size(); i++) {
+            Release r = results.get(i);
+            m.append("  {\"target\": \"").append(r.target())
+             .append("\", \"status\": \"").append(r.status()).append("\"");
+            if (r.artifact() != null) {
+                m.append(", \"artifact\": \"").append(r.artifact())
+                 .append("\", \"sha256\": \"").append(r.sha256()).append("\"");
+            }
+            if (r.error() != null) {
+                m.append(", \"error\": \"").append(escJson(r.error())).append('\"');
+            }
+            m.append("}").append(i + 1 < results.size() ? ",\n" : "\n");
+        }
+        m.append("]\n");
+        Path manifest = out.resolve("deploy").resolve(name + "-" + version + ".deploy-manifest.json");
+        try {
+            Files.createDirectories(manifest.getParent());
+            Files.writeString(manifest, m.toString(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            System.err.println("deploy: failed to write manifest: " + e.getMessage());
+            System.exit(1);
+            return;
+        }
+        for (Release r : results) {
+            System.out.println("  " + r.target() + " " + r.status()
+                    + (r.error() != null ? ": " + r.error() : ""));
+        }
+        System.out.println("multi-deploy → " + manifest);
+        if (anyFail) System.exit(1);
+    }
+
+    private static String escJson(String v) {
+        return v.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static Release deploy(Path src, Path out, String name, String version,
+                                  Target target, String dirSuffix) throws IOException {
         // 1) compila o módulo (mesma convenção Go-like do build)
         KofCliSupport.Layout layout = KofCliSupport.detectLayout(src);
         Path backendDir = layout.backendDir();
         String app001 = KofCliSupport.app001(target, layout.fullStack());
-        if (app001 != null) { System.err.println("deploy: " + app001); System.exit(1); return; }
+        if (app001 != null) throw new IOException(app001);
         List<Path> files = KofCliSupport.collect(backendDir);
-        if (files.isEmpty()) {
-            System.err.println("deploy: no .kf/.kof files found in " + backendDir);
-            System.exit(1);
-            return;
-        }
+        if (files.isEmpty()) throw new IOException("no .kf/.kof files found in " + backendDir);
         files.sort(java.util.Comparator.comparing(p -> p.getFileName().toString()));
-        Path classes = out.resolve("deploy-classes");
+        Path classes = out.resolve("deploy-classes" + dirSuffix);
         CompilerDriver driver = new CompilerDriver();
         CompilationResult module = driver.compileSources(files, classes, target,
                 backendDir.toAbsolutePath().normalize());
         for (var d : module.diagnostics().getDiagnostics()) System.out.println(d.format());
-        if (!module.success()) System.exit(1);
+        if (!module.success()) throw new IOException("compilation failed for target " + TargetMatrix.name(target));
 
         // 2) artefato único da face: fat jar (JVM, D-APP.5), ELF (native),
         // Default.mjs (JS)
@@ -209,10 +304,8 @@ final class CmdDeploy {
                         AndroidProjectWriter.DEFAULT_MIN_SDK,
                         AndroidProjectWriter.DEFAULT_TARGET_SDK, null, null, null, null);
                 if (!ok) {
-                    System.err.println("deploy: android APK pipeline failed (DEP001"
+                    throw new IOException("android APK pipeline failed (DEP001"
                             + " conditions: ANDROID_HOME/build-tools required)");
-                    System.exit(1);
-                    return;
                 }
                 built = classes.resolve("target").resolve("kof-app.apk");
                 if (!Files.isRegularFile(built)) {
@@ -225,7 +318,7 @@ final class CmdDeploy {
         }
 
         // 3) diretório da release
-        Path releaseDir = out.resolve("deploy").resolve(name + "-" + version);
+        Path releaseDir = out.resolve("deploy").resolve(name + "-" + version + dirSuffix);
         Files.createDirectories(releaseDir);
         String artifact = name + "-" + version + ext;
         Path jarDst = releaseDir.resolve(artifact);
@@ -280,12 +373,10 @@ final class CmdDeploy {
         releaseFiles.addAll(jsDeps);
         releaseFiles.add(Path.of("RELEASE.md"));
         releaseFiles.add(Path.of("SHA256SUMS"));
-        Path tgz = out.resolve("deploy").resolve(name + "-" + version + ".tar.gz");
+        Path tgz = out.resolve("deploy").resolve(name + "-" + version + dirSuffix + ".tar.gz");
         writeTarGz(tgz, releaseDir, releaseFiles, tarMode);
-
-        System.out.println("deploy → " + releaseDir);
-        System.out.println("artifact → " + tgz
-                + " (sha256 " + sha256.substring(0, 12) + "…)");
+        return new Release(TargetMatrix.name(target), "SUCCESS", releaseDir, tgz,
+                artifact, sha256, null);
     }
 
     /**

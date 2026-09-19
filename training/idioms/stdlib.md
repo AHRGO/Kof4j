@@ -188,6 +188,26 @@ presentation is one thing, checking legitimacy is another. The same applies to
 `time.isWeekend(y,m,d)` (calendar only, no clock — invalid date => `false`
 because `dayOfWeek` gives 0).
 
+## shell — commands without a string (2.2 v1, 18/09)
+
+BAD: `process.run("sh -c \"echo a | wc\"")` — a command string = injection class +
+broken cross-target parity.
+
+GOOD:
+
+```kof
+import kof.shell
+var r = shell.run("git", listOf("status", "--short"))
+if (shell.ok(r)) { println(r.stdout) }
+var n = shell.pipeline(listOf(listOf("echo", "one two"), listOf("wc", "-w"))).stdout
+```
+
+WHY: argv is a **list**, never a string — the golden
+`argvIsNeverConcatenatedIntoShellString` pins that `"a b|c && d"` survives as ONE
+element; `Result` is the SAME type as `kof.process`'s (one shape, never a fork);
+non-zero exit is data, not an exception. Honest faces: `pipeline` = JVM-real,
+JS/Native = `PROC001` at compile-time (R6); full doc in `docs/stdlib/shell.md`.
+
 ## Note per target (honest gates)
 
 | function | JVM/Script | Native x86_64 | Native riscv64/aarch64 | JS |
@@ -205,6 +225,8 @@ because `dayOfWeek` gives 0).
 | math.pow (S1b.2 — libm `pow@PLT` + `-lm` on x86) | ✅ | ✅ | ❌ `MATH001` (static cross without libc) | ✅ |
 | random.randomInt/randomBoolean/randomString (beta face S10a/b) | ✅ | ✅ | ✅ (B27/B28, getrandom/lemire) | ✅ |
 | random.double/boolean/int/hex (main face S10) | ✅ | ✅ | ✅ (B27) | ✅ |
+| shell.cmd/run/ok (v1) | ✅ | ❌ `PROC001` (compile-time) | ❌ `PROC001` | ✅ byte-parity |
+| shell.pipeline (v1 — JVM only) | ✅ | ❌ `PROC001` | ❌ `PROC001` | ❌ `PROC001` |
 
 `strings.reverse` on non-ASCII: byte-reverse on Native vs UTF-16 on JVM/JS —
 gap **NAT-STR01** (parity only locked on ASCII in the matrix).

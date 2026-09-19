@@ -274,11 +274,11 @@ if (mc.receiver() == null && "Style".equals(mc.methodName()) && mc.arguments().s
 // ── D-UI-STYLE (UI007): Style("<declarations>") — parse in the compiler
 // (Q4), typed whitelist (Q3), normalized CSS carried to the runtime.
 if (mc.receiver() == null && "Style".equals(mc.methodName()) && mc.arguments().size() == 1) {
-    return lowerStyleCss(driver, mc, ops, localIdx);
+    return lowerStyleCss(mc, ops, localIdx);
 }
 if (mc.receiver() == null && "Style".equals(mc.methodName()) && mc.arguments().size() == 1) {
     // D-UI-STYLE (UI007): declarative CSS parsed in the compiler (Q4).
-    return lowerStyleCss(driver, mc, ops, localIdx);
+    return lowerStyleCss(mc, ops, localIdx);
 }
 if (mc.receiver() == null && "Link".equals(mc.methodName()) && mc.arguments().size() == 2) {
     for (ExpressionNode arg : mc.arguments()) {
@@ -306,7 +306,7 @@ if (mc.receiver() == null && "Image".equals(mc.methodName()) && mc.arguments().s
      * — here the text is only re-parsed for the normalized CSS. The String form
      * takes a literal only; the 4-Int form passes a computed Color.
      */
-    private static int lowerStyleCss(CompilerDriver driver, MethodCallExpr mc,
+    private static int lowerStyleCss(MethodCallExpr mc,
                                      List<KofOperation> ops, int localIdx) {
         ExpressionNode arg = mc.arguments().get(0);
         String source = KofStyleParser.literalString(arg);

@@ -71,7 +71,7 @@ public final class JvmRecordEmitter {
             mv.visitFieldInsn(GETFIELD, cn, f.name(), JvmTypeMapper.toDescriptor(f.type()));
             mv.visitVarInsn(ALOAD, 2);
             mv.visitFieldInsn(GETFIELD, cn, f.name(), JvmTypeMapper.toDescriptor(f.type()));
-            emitEqualsComparison(mv, f.type(), cn);
+            emitEqualsComparison(mv, f.type());
         }
         mv.visitLabel(same);
         mv.visitInsn(ICONST_1);
@@ -103,7 +103,7 @@ public final class JvmRecordEmitter {
         mv.visitEnd();
     }
 
-    private static void emitEqualsComparison(MethodVisitor mv, Type type, String cn) {
+    private static void emitEqualsComparison(MethodVisitor mv, Type type) {
         // D-NULL-INTENT (#278, supersede #127): Nullable(primitivo) NÃO
         // apaga mais para o primitivo na STORE — o campo é `Integer`/etc.
         // de verdade (JvmTypeMapper.toDescriptor). `instanceof PrimitiveType`

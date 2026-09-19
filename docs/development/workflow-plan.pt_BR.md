@@ -39,16 +39,18 @@ não existe literal `[]`, nem literal `{}` de mapa, nem sufixo de duração `1s`
 ```
 import kof.workflow
 
-var build = workflow.job("build", (ctx: JobCtx) -> process.run("make", listOf("-j")))
-var image = workflow.job("image", (ctx: JobCtx) -> process.run("docker", listOf("build", "."))).after(build)
+// Superfície MVP 2.1.2 ENTREGUE — flat, sem prefixo `workflow.` (o idioma do
+// supervisor; o prefixo era nível-sketch, corrigido na entrega):
+var build = job("build", () -> process.run("make", listOf("-j")).exitCode == 0)
+var image = job("image", () -> process.run("docker", listOf("build", "."))
+                                     .exitCode == 0).after(build)
 
-var flow  = workflow.dag(build, image)
-              .retry(image, 3, workflow.exponential(1000, 2.0))  // posicional: Kof não tem args nomeados
-              .checkpoint(kof.db)        // retoma jobs concluídos após crash
-              .deadLetter(workflow.inMemory())  // falhas terminais estacionam aqui, não derrubam o run
+var flow   = dag(listOf(build, image))  // dag(...) recebe listOf — Kof não tem variádicos
+var report = flow.run()                 // Report: succeeded/failed/skipped/errors,
+                                        // allOk(), summary()
 
-var report = flow.run()                 // agora
-var handle = flow.schedule("0 3 * * *") // cron, em cima do kof.scheduler.at
+// Bundle 2.1.3 (NÃO entregue — a cadeia que vai existir):
+//   flow.retry(...).checkpoint(...).deadLetter(...); flow.schedule("0 3 * * *")
 ```
 
 > **Nota da aprovação (19/09):** a superfície do §2 é o idiomático completo, mas pela Q2 o
@@ -140,18 +142,24 @@ Dono: **lane `.18`** (atribuído pelo greenlight da mantenedora em 19/09).
   `kof.process/Result` — agora mapeado como `Handle` #31). Nenhuma superfície entregue.
 - **2.1.1 [aprovação de design — ⛔ regra 6]** ✅ FEITA 19/09 — enquete da mantenedora: Q1 stdlib
   ✓, Q2 MVP mínimo ✓, Q3 retry aditivo ✓, Q4 ambas as faces de dead-letter ✓. Frente aberta.
-- **2.1.2 [MVP — stdlib pure-Kof, mínimo, JVM+JS]** — só `job` + `dag` + `after` + `run` +
-  `Report` (Q2). Golden `WorkflowE2ETest` contra as primitivas existentes.
+- **2.1.2 [MVP — stdlib pure-Kof, mínimo, JVM+JS]** ✅ FEITO 19/09 — host pure-Kof
+  `dev/kof/workflow-host.kf` injetado FLAT pelo `CompilerWorkflow` no `import kof.workflow`
+  (mecanismo do supervisor, DD-OTP-01 opção A — por isso sem prefixo `workflow.`; §2
+  corrigido na entrega). Superfície exatamente Q2: `job`/`dag`/`after`/`run`/`Report`
+  (succeeded/failed/skipped/errors, `allOk()`, `summary()`). Sem gate de target (fixpoint
+  sequencial, sem fronteira de runtime). Golden `WorkflowE2ETest` 7/7 stdout exato JVM==JS +
+  pin de compilação Native. Três bordas de parser/typer achadas e contornadas (documentadas
+  em `docs/stdlib/workflow.pt_BR.md` §5).
 - **2.1.3 [add-ons — um bundle]** — helper `retry`/`backoff` aditivo (próprio do workflow;
   http migra depois em slice assinado à parte), `checkpoint` via `kof.orm` (honesto `ORM001` no
   native), `deadLetter` com AMBAS as faces (in-memory `List` + durável em tabela `kof.orm` — Q4),
   `schedule(cron)` via `kof.scheduler.at` (honesto `CRON001` no native), e integração de
   supervisão delegando ao `kof.supervisor.one_for_one` quando o run do DAG é expresso como
   workers (em vez de uma caminhada síncrona simples).
-- **2.1.4 [docs]** — doc de idiomática `docs/stdlib/workflow.md` (+PT), linha `backend-parity`,
-  virar `IMPLEMENTATION-UNIVERSAL-PLATFORM` 2.1 `🔵 → 🟡` e fazer cascata 2.5/2.6 (que dependem
-  de 2.1) de `🔵` para `⏳` com um pré-requisito real, e só quando shipado promover este arquivo
-  para fora de `future/` pela regra da pasta.
+- **2.1.4 [docs]** ✅ FEITO 19/09 (mesma sessão do 2.1.2) — doc de idiomática
+  `docs/stdlib/workflow.pt_BR.md` (+EN), linha na matriz `backend-parity` + delta 19/09(2)
+  (EN+PT), tracker 2.1 `🔵→🟡` e 2.5/2.6 `🔵→⏳` (EN+PT), este arquivo promovido para fora
+  de `future/` (`a71a4f51`). Fila residual: **só 2.1.3** (o bundle de add-ons).
 
 ## 6. Questões abertas (decisões da mantenedora — NÃO resolver em código)
 **As quatro RESPONDIDAS em 19/09 pela enquete da mantenedora** (recriar via a mesma decisão
