@@ -295,4 +295,13 @@ class KofScriptStdlibParityTest {
             });
         } catch (Exception ignore) {}
     }
+
+    /** 8.5 (corpus stdlib.md, 19/09): as faces cache/net/config interpretam
+     *  igual ao JVM compilado (mesma golden nos dois caminhos). */
+    @Test
+    void cacheNetConfigFacesParity() throws Exception {
+        parity("main() { cache.set(\"k\", \"v\"); println(cache.get(\"k\") + \"|\" + cache.ttl(\"k\")) }\n", "v|-1");
+        parity("main() { val u = \"https://x.io:8443/a/b?p=1\"; println(net.host(u) + \"|\" + net.port(u) + \"|\" + net.path(u) + \"|\" + net.query(u)) }\n", "x.io|8443|/a/b|p=1");
+        parity("main() { println(config.str(\"missing.key\", \"fallback\")) }\n", "fallback");
+    }
 }
