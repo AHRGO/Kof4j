@@ -97,4 +97,37 @@ final class LspProject {
             out.add(sym);
         }
     }
+
+    /**
+     * Linha de declaração do nome (X10 fatia 7 — hover): buffer primeiro
+     * (fonte da verdade), depois irmãos `.kf`. Retorna {linha, arquivo} ou
+     * null (nunca chute — R6).
+     */
+    static String[] declarationLine(String uri, String bufferText, String word) {
+        if (word == null || word.isEmpty()) return null;
+        if (bufferText != null) {
+            int[] r = LspSymbols.declarationRange(bufferText, word);
+            if (r != null) return new String[]{ lineAt(bufferText, r[0]), nameOf(uri) };
+        }
+        Path self = toPath(uri);
+        if (self == null) return null;
+        for (Path f : siblings(self)) {
+            String txt = readOrNull(f);
+            if (txt == null) continue;
+            int[] r = LspSymbols.declarationRange(txt, word);
+            if (r != null) return new String[]{ lineAt(txt, r[0]), f.getFileName().toString() };
+        }
+        return null;
+    }
+
+    private static String lineAt(String text, int offset) {
+        int ls = text.lastIndexOf('\n', Math.max(0, offset - 1)) + 1;
+        int e = text.indexOf('\n', offset);
+        return text.substring(ls, e < 0 ? text.length() : e).strip();
+    }
+
+    private static String nameOf(String uri) {
+        Path p = toPath(uri);
+        return p == null ? "?" : p.getFileName().toString();
+    }
 }

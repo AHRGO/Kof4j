@@ -48,15 +48,20 @@ class LspServerTest {
     /** Extrai todos os envelopes JSON de uma saída LSP (skip de headers). */
     @SuppressWarnings("unchecked")
     private static List<Map<String, Object>> messages(String raw) {
+        // byte-safe: Content-Length do protocolo é em BYTES UTF-8 (o servidor
+        // usa body.length de byte[]); fatiar por char quebraria em payloads
+        // não-ASCII (ex.: hover com em-dash) — bug exposto pela fatia 7.
+        byte[] all = raw.getBytes(StandardCharsets.UTF_8);
+        String ascii = new String(all, StandardCharsets.ISO_8859_1); // 1 char == 1 byte
         List<Map<String, Object>> out = new ArrayList<>();
         int pos = 0;
         while (true) {
-            int h = raw.indexOf("Content-Length:", pos);
+            int h = ascii.indexOf("Content-Length:", pos);
             if (h < 0) break;
-            int end = raw.indexOf("\r\n\r\n", h);
-            int len = Integer.parseInt(raw.substring(h + "Content-Length:".length(), end).trim());
+            int end = ascii.indexOf("\r\n\r\n", h);
+            int len = Integer.parseInt(ascii.substring(h + "Content-Length:".length(), end).trim());
             int body = end + 4;
-            Object parsed = Json.parse(raw.substring(body, body + len));
+            Object parsed = Json.parse(new String(all, body, len, StandardCharsets.UTF_8));
             if (parsed instanceof Map<?, ?> m) out.add((Map<String, Object>) m);
             pos = body + len;
         }
@@ -492,6 +497,43 @@ class LspServerTest {
         List<Object> filt = (List<Object>) byId(messages(out2.toString(StandardCharsets.UTF_8)), 1).get("result");
         assertEquals(1, filt.size());
         assertEquals("Box", ((Map<?, ?>) filt.get(0)).get("name"));
+    }
+
+
+    /** X10 fatia 7: hover mostra declara\u00e7\u00e3o cross-file do projeto. */
+    @Test
+    void hoverShowsCrossFileDeclaration(@TempDir Path dir) throws Exception {
+        String lib = "Int helper(Int x) { return x * 2 }\n";
+        String app = "main() { println(helper(21) + mystery(2)) }\n";
+        Files.writeString(dir.resolve("lib.kf"), lib);
+        Path appFile = dir.resolve("app.kf");
+        Files.writeString(appFile, app);
+        String appUri = appFile.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        int col = app.indexOf("helper") + 2;
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/hover\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\"},"
+                + "\"position\":{\"line\":0,\"character\":" + col + "}}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> resp = byId(messages(out.toString(StandardCharsets.UTF_8)), 1);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> res = (Map<String, Object>) resp.get("result");
+        assertNotNull(res, "esperava hover cross-file");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contents = (Map<String, Object>) res.get("contents");
+        String value = String.valueOf(contents.get("value"));
+        assertTrue(value.contains("lib.kf"), "deve apontar o arquivo de origem: " + value);
+        assertTrue(value.contains("Int helper(Int x)"), "linha de declara\u00e7\u00e3o real: " + value);
+        // nome sem declaração no projeto segue null honesto (R6, nunca chute)
+        int col2 = app.indexOf("mystery") + 3;
+        String req2 = req.replace("\"character\":" + col, "\"character\":" + col2);
+        ByteArrayOutputStream out2 = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req2))), out2).run();
+        Map<String, Object> resp2 = byId(messages(out2.toString(StandardCharsets.UTF_8)), 1);
+        assertTrue(resp2.containsKey("result"));
+        assertNull(resp2.get("result"), "mystery não é declarado no projeto: hover null honesto");
     }
 
     @SuppressWarnings("unchecked")

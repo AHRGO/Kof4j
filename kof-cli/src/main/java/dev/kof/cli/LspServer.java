@@ -269,6 +269,13 @@ final class LspServer {
         long ch = pos.get("character") instanceof Number n ? n.longValue() : 0;
         String word = wordAt(text, offsetOf(text, line, ch));
         String contents = word.isEmpty() ? null : LspHover.hoverFor(word, text);
+        if (contents == null && !word.isEmpty()) {
+            // X10 fatia 7: declaração do projeto (buffer ou .kf irmão) como fallback.
+            String[] d = LspProject.declarationLine(str(td.get("uri")), text, word);
+            if (d != null) {
+                contents = "**" + word + "** \u2014 declared in `" + d[1] + "`\n```kof\n" + d[0] + "\n```";
+            }
+        }
         if (contents == null) { respond(id, null); return; }
         respond(id, Map.of("contents", Map.of("kind", "markdown", "value", contents)));
     }
