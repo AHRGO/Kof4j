@@ -30,6 +30,37 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Prova: `DepsRegistryTest` (6 casos: caminho feliz + idempotência, pin latest,
     REG001/REG002/REG003/REG004 contra um registry fake).
 
+### Em desenvolvimento
+
+  - **`X as T <op> Y` nao descarta mais o operador em silencio (#459, §336)** — o operando de
+    tipo de `as`/`instanceof` era parseado pelo climb de precedencia de VALOR e engolia o que
+    viesse depois (`a as Double / 2.0` virava um tipo malformado renderizado como `"?"` na
+    constant pool, o no de aritmetica sumia, e o programa morria em runtime com
+    `NoClassDefFoundError: ?`). O `check` dizia "no errors" — miscompilacao silenciosa (R6).
+    O RHS agora passa pelo parser type-ref dedicado (primitivo, pontilhado, genericos, arrays,
+    nullable, tipos-funcao — incluido o caso do bug 127) e o controle volta ao loop de
+    operadores: o cast liga primeiro, exatamente como `grammar.md` §5.1 ja documentava. As
+    consequencias que o parser consertado tornou alcancaveis foram completadas na mesma
+    unidade: alvos parametrizados resolvem (`x as List<Int>` agora carrega os args de verdade)
+    e casts de array/nullable emitem descriptor valido de `CHECKCAST`/`INSTANCEOF` em vez do
+    fallback `"?"`. **Prova:** `AsCastPrecedenceE2ETest` 6/6 em JVM+Script+JS (repro verbatim
+    = `0.5`, a matriz `+ - * / % << >> >>>` inteira nos dois lados, `as List<Int>`/`as Int[]`
+    ponta-a-ponta, e o `SEM002` honesto quando `instanceof` e legitimamente seguido de `+`
+    sobre Bool).
+
+  - **Atribuicao cruzada de tipos genericos e rejeitada em compile time (#401, §270, D-POLL-19)** —
+    `List<Int>` atribuido a `List<String>` passava em todo check (a atribuicao comparava so o
+    tipo RAW) e morria depois com `ClassCastException` no primeiro `get`. Os type-args agora
+    sao INVARIANTES quando os dois lados carregam args concretos no mesmo raw nome — os
+    checkpoints SEM012/SEM021 existentes reportam `type mismatch: cannot assign ...`, antes de
+    qualquer backend (os 4 alvos compartilham o check semantico). A inferencia continua s6
+    permissiva: `listOf()` (args UNKNOWN), alvos raw (`List`), `Object` e atribuicao
+    classe→interface generica (#400) seguem intactos. **Migracao:** codigo que compilava e
+    quebrava em runtime agora falha em compile — mude o tipo declarado ou mapeie a colecao.
+    **Prova:** `GenericArgAssignmentE2ETest` 8/8 (verbatim #401, faces de atribuicao simples e
+    aninhada `Map<String, List<Int>>` rejeitadas; controles mesmos-args/inferencia/raw/`Object`/#400
+    aceitos).
+
   - **`return <valor>` em `void`/sem-tipo/construtor agora é `SEM093` (linha 0.4.0,
     D-DECL-RETURN, #333)** — uma função top-level que declara `void` — **ou não declara
     tipo algum** — não pode mais `return <valor>`, e construtor também não. Antes, o

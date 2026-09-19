@@ -5,7 +5,7 @@
 580	kof-compiler/src/main/java/dev/kof/compiler/BuiltinCallTyper.java
 568	kof-compiler/src/main/java/dev/kof/compiler/CompilerCaptureScanner.java
 599	kof-compiler/src/main/java/dev/kof/compiler/CompilerClassLowering.java
-521	kof-compiler/src/main/java/dev/kof/compiler/CompilerTypes.java
+536	kof-compiler/src/main/java/dev/kof/compiler/CompilerTypes.java
 548	kof-compiler/src/main/java/dev/kof/compiler/ExpressionBinaryLowerer.java
 568	kof-compiler/src/main/java/dev/kof/compiler/ExpressionLowerer.java
 525	kof-compiler/src/main/java/dev/kof/compiler/ExpressionTyper.java
@@ -18,6 +18,7 @@
 522	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiSecurity.java
 506	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiStdlib.java
 543	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiWeb.java
+506	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpEmitter.java
 541	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmRuntimeJson.java
 532	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmRuntimeUi.java
 519	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmRuntimeWebDispatch.java
@@ -33,12 +34,12 @@
 505	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvCrossEmit.java
 520	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvCrossOps.java
 561	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeX86Calls.java
-568	kof-compiler/src/main/java/dev/kof/compiler/parser/ExpressionParser.java
+554	kof-compiler/src/main/java/dev/kof/compiler/parser/ExpressionParser.java
 509	kof-compiler/src/main/java/dev/kof/compiler/parser/Lexer.java
 549	kof-compiler/src/main/java/dev/kof/compiler/parser/StatementParser.java
 565	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeConcurrency.java
 579	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeTimeIso.java
 566	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeUi.java
-572	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
+589	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
 538	kof-compiler/src/main/java/dev/kof/compiler/StatementAnalyzer.java
 589	kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java

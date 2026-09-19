@@ -30,6 +30,36 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Proof: `DepsRegistryTest` (6 cases: happy path + idempotency, latest pin,
     REG001/REG002/REG003/REG004 against a fake registry).
 
+### In development
+
+  - **`X as T <op> Y` no longer silently drops the operator (#459, §336)** — the type operand
+    of `as`/`instanceof` was parsed by the value precedence-climber and swallowed whatever
+    came next (`a as Double / 2.0` became a malformed type rendered as `"?"` in the constant
+    pool, the arithmetic node vanished, and the program died at runtime with
+    `NoClassDefFoundError: ?`). `check` said "no errors" — a silent miscompile (R6). The RHS
+    now goes through the dedicated type-ref parser (primitive, dotted, generics, arrays,
+    nullable, function types — the bug-127 case included) and control returns to the operator
+    loop: the cast binds first, exactly as `grammar.md` §5.1 already documented. Follow-on
+    consequences the fixed parser made reachable were completed in the same unit: parameterized
+    targets resolve (`x as List<Int>` now really carries the args), and array/nullable casts
+    emit a valid `CHECKCAST`/`INSTANCEOF` descriptor instead of the `"?"` fallback.
+    **Proof:** `AsCastPrecedenceE2ETest` 6/6 on JVM+Script+JS (verbatim repro = `0.5`, the full
+    `+ - * / % << >> >>>` matrix on both sides, `as List<Int>`/`as Int[]` end-to-end, and the
+    honest `SEM002` when `instanceof` is legitimately followed by `+` on a Bool).
+
+  - **Cross-assigning generic types is rejected at compile time (#401, §270, D-POLL-19)** —
+    `List<Int>` assigned to `List<String>` used to pass every check (assignment compared only
+    the RAW type) and died later with a `ClassCastException` at the first `get`. Type arguments
+    are now INVIARIANT when both sides carry concrete args on the same raw name — the existing
+    SEM012/SEM021 checkpoints report `type mismatch: cannot assign ...`, before any backend
+    (all 4 targets share the semantic check). Inference stays sound and permissive:
+    `listOf()` (UNKNOWN args), raw targets (`List`), `Object`, and class→generic-interface
+    assignments (#400) are unaffected. **Migration:** code that compiled and crashed at runtime
+    now fails at compile time — change the declared type or map the collection.
+    **Proof:** `GenericArgAssignmentE2ETest` 8/8 (verbatim #401, plain-assign and nested
+    `Map<String, List<Int>>` faces rejected; same-args/inference/raw/`Object`/#400 controls
+    accepted).
+
   - **`return <value>` in a `void`/untyped/constructor is now `SEM093` (0.4.0 line,
     D-DECL-RETURN, #333)** — a top-level function that declares `void` — **or declares no
     type at all** — can no longer `return <value>`, and neither can a constructor. Before,
