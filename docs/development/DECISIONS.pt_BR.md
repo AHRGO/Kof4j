@@ -489,14 +489,14 @@ O modelo não muda entre essas topologias.
 * `KofWebE2ETest`
 
 **Referência:** `docs/architecture/application-model.md`
-**Fila:** `CmdNew`, integração completa de manifesto/deps e gaps de target.
+**Fila:** `CmdNew` ✅ (`new` em `Main.java:37`); integração de manifesto/dependências ✅ (`kofdeps` + lock transitivo 1.5.2 + registry pull 1.5.3-S2, 19/09); gaps de target → rastreados em `docs/backend-parity.md` (ledger, não este registro).
 
 ---
 
 ## D-SPRING — independência de framework
 
-**Data:** 13/09/2026
-**Estado:** `IN_PROGRESS`
+**Data:** 13/09/2026 · **Concluída:** 19/09/2026 (auditoria vs código, este commit)
+**Estado:** `CONCLUÍDA`
 
 ### Contrato
 
@@ -511,9 +511,9 @@ O modelo não muda entre essas topologias.
 | Fase                | Estado        |
 | ------------------- | ------------- |
 | 1–9                 | `IMPLEMENTED` |
-| 10 — testing nativo | `DECIDED`     |
-| 11 — CLI completa   | `IN_PROGRESS` |
-| 12 — blog E2E       | `IN_PROGRESS` |
+| 10 — testing nativo | `IMPLEMENTADA 19/09` (`kof test` harness: `test "nome" { }` → runner sintetizado, `CmdTest.java:15,78`; CliFlagStrictness/CmdBuildAndroidAab cobrem a face; suíte 2772/0F) |
+| 11 — CLI completa   | `IMPLEMENTADA 19/09` (run/build/test/serve/fmt/deps/init/check ligados em `Main.java:18-41`; deps = Maven + registry 1.5.3-S2) |
+| 12 — blog E2E       | `IMPLEMENTADA 19/09` (`KofBlogE2ETest` verde na suíte reactor completa) |
 
 ### Fase 10
 

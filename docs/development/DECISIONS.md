@@ -512,15 +512,15 @@ The model does not change between these topologies.
 
 **Reference:** `docs/architecture/application-model.md`
 
-**Queue:** `CmdNew`, complete manifest/dependency integration, and target gaps.
+**Queue:** `CmdNew` ✅ (`new` in `Main.java:37`); manifest/dependency integration ✅ (`kofdeps` + transitive lock 1.5.2 + registry pull 1.5.3-S2, 19/09); target gaps → tracked in `docs/backend-parity.md` (ledger, not this record).
 
 ---
 
 ## D-SPRING — framework independence
 
-**Date:** 2026-09-13
+**Date:** 2026-09-13 · **Concluded:** 2026-09-19 (audit vs code, this commit)
 
-**State:** `IN_PROGRESS`
+**State:** `CONCLUDED`
 
 ### Contract
 
@@ -535,9 +535,9 @@ The model does not change between these topologies.
 | Phase               | State         |
 | ------------------- | ------------- |
 | 1–9                 | `IMPLEMENTED` |
-| 10 — native testing | `DECIDED`     |
-| 11 — complete CLI   | `IN_PROGRESS` |
-| 12 — blog E2E       | `IN_PROGRESS` |
+| 10 — native testing | `IMPLEMENTED 19/09` (`kof test` harness: `test "nome" { }` → runner sintetizado, `CmdTest.java:15,78`; CliFlagStrictness/CmdBuildAndroidAab cover the face; suite 2772/0F) |
+| 11 — complete CLI   | `IMPLEMENTED 19/09` (run/build/test/serve/fmt/deps/init/check all wired in `Main.java:18-41`; deps = Maven + registry 1.5.3-S2) |
+| 12 — blog E2E       | `IMPLEMENTED 19/09` (`KofBlogE2ETest` green in the full reactor suite) |
 
 ### Phase 10
 
