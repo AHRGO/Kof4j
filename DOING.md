@@ -2,6 +2,29 @@
 
 # DOING.md — coordenação multi-agente (quem faz o quê)
 
+> **✅ FEITO (19/09 ~19:4x, dono = 192.168.100.14, lane ISSUES-NAO-PUBLIO, pedido
+> direto da mantenedora "pega pra matar as que não são do PublioSantos"):**
+> **fixes próprios landed e fechados com prova:** **#518** (kofValEq profundo p/
+> List/Set por conteúdo; fatia `js/JsRuntimeEquality.java`; `KofSetEqualityTest`
+> 21/21 com o golden do issue habilitado; commits `8c3b7c9d`+`e06c15a1`+`c59fb7aa`,
+> ledger §346 EN+PT); **#463** (`6df7fe97`, CRLF normalizado, `PrimitiveToStringCastE2ETest`
+> 4/4); **#521/#461/#460** — já estavam FIXADOS no tip (`b5ca7aef`; `kofFpEq`+routing;
+> `slotBoxT`), fechados com comentário de prova medido (42/0/14skip etc.).
+> **#464/#278/#431/#275** — triagens já publicadas (validate+route / §306 / rule 6);
+> **NÃO TOQUEI** para não duplicar. **#443 = Nao TOCAR** (claim de outra lane).
+> **Licao de arvore compartilhada (3 incidentes na mesma hora):** o `836ba5c8` foi
+> destruido por um `pull --rebase --autostash` alheio e re-landado como `8c3b7c9d`;
+> o autostash DOBROU o `Block("equality")` no commit (`e06c15a1` dedupou); o `sed`
+> de dedup rodou 2x na janela entre meus proprios comandos e CORTOU o `ui-components`
+> (`c59fb7aa` restaurou + golden do registry com o slice novo: `JsRuntimeSliceRegistryTest`
+> 6/6, `UiE2ETest` 29/29). **Regra pratica desta lane: NUNCA sed numérico em arquivo
+> de lista — editar por contexto; NUNCA assumir HEAD entre dois comandos (re-check
+> `git log -1` antes de add/commit).** **Regra da lane (ordem da mantenedora 19/09):
+> suíte COMPLETA proibida nesta lane até a fila zerar — só `-Dtest=` dirigido;
+> suíte + pré-merge com a main = fase seguinte.** **PROXIMO PASSO:** fila NAO-Publio
+> zerada → aguardar ordem da mantenedora p/ pré-merge (D-TROOL `a99e8dc3` do tip6
+> + suíte completa + `TrooleanLawE2ETest`); issues novas que chegarem, triar como aqui.
+
 > **🔄 EM CURSO (19/09 ~18:2x, dono = 192.168.100.18 (este host, IP atual 192.168.15.101), lane development, frente = KOF MAKEALIVE / Estágio 3 do plano universal, pedido direto da mantenedora "assume a frente do kof makealive no plano da plataforma universal"):** frente reivindicada sem dono anterior (linhas 3.1–3.8 do tracker sem dono; fila do workflow exausta na 2.1.3b — .18 voltou para a fila geral e esta é a nova frente). **Passo 3.0.0 (landa NESTE commit):** plano `docs/development/makealive-plan.md` (+PT) — modelo canônico imperativo-transformado-em-dados (VISÃO §4.2 "A/B", Kof puro HOJE, sem R4 no core), fila §5 e perguntas Q1–Q4 (enquete) §6; tracker Stage 3 flip 🔵→🟡 (EN+PT). **Colisão R1 MEDIDA (por que a Q1 existe):** o literal do tracker `kof.infra` é HARD-DENY em `check_stdlib_boundary.sh` (probe com fonte temporária → rc=1, "official package only"); linha no ledger NÃO sobrepõe hard-deny (medido) — nome é decisão rule 6, nenhuma superfície embarca antes. **PRÓXIMO PASSO (ordem):** (1) 3.0.1 recon — `MakealivePrimitivesE2ETest` (roda JVM/JS + compila Native/Script; record + campo Map + iteração + ciclo→throw + round-trip de estado via kof.io; disciplina da recon 2.1.0 do workflow: o resultado volta para o plano §4); (2) 3.0.2 ⛔ enquete Q1–Q4 (aguarda mantenedora — rule 6, não resolver em código); (3) 3.1 core/host só após Q1. **NÃO TOCAR:** `infra "prod" {}` (3.2/R4, rule 6); lista HARD-DENY do gate (codifica a invariant 1); typers/KofStd de outras lanes; 1.1.x (nat/web).
 
 
