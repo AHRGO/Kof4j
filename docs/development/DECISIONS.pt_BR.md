@@ -1826,3 +1826,88 @@ diferente de `List<String>`" (= opção A, rejeição em compile-time) · X8-A �
 escolha em uma linha; o commit de ratificação atualiza a tabela D de
 `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (+PT), `roadmap.md` §23 (D7),
 `backend-parity.md` (D4) e `known-bugs.md` §270 (#401).
+
+---
+
+## D-TROOL — `Bool` nunca é nullable; os três estados vivem em `Troolean` (mantenedora 19/09)
+
+**Data:** 2026-09-19 · **Estado:** `DECIDIDO` · **Revisão de:** a face
+`Nullable(Bool)` do D-NULL-INTENT (família §295/§306) · **Evidência:** diretiva
+da mantenedora no chat 19/09 ~12:0x (-03): "se voce declara uma variavel
+nullable e nao instancia ela, ela ja tem valor null por padrao, a tentativa de
+atribuir null a um nullable via codigo precisa continuar sendo recusada. null
+so existe como valor se a variavel nao for instanciavel ou se o retorno de
+alguma funcao vier null. alem disso nao deve interferir nos valores de
+primitivos e boolean nao pode ser nullable. so existe 2 valores possiveis pra
+ele. se quiser true, false, null use troolean, que tem 3 estados. cria a logica
+do tipo trool."
+
+### Contrato (medido 19/09 no jar do tip — itens 1–3 JÁ são o comportamento atual, agora ratificados)
+
+1. **Nullable não-instanciado = `null`** — `String? s`, `Int? q`, `Bool? b` (até
+   o item 4 desta decisão) declarados sem inicializador já imprimem/comparam
+   `null` em JVM, Script e JS (medido). Ratificado como contrato.
+2. **Atribuição direta `= null` continua recusada** — `SEM048` (null só chega a
+   um `T?` via API — `map.get`, `readLine`, função que `return null` num `T?`) —
+   inalterado desde 10/09 (D-NULL-INTENT/SG-008).
+3. **Primitivos não são tocados** — `Int n` não-nullable mantém default `0`
+   (`println` → `0`, medido); primitivos nullable (`Int?`…) mantêm a
+   representação boxed e o default `null` do §295. Esta decisão não muda NADA
+   para eles.
+4. **NOVO — `Bool` tem exatamente dois valores.** `Bool?` vira diagnóstico de
+   compile-time **`SEM095`** (`"Bool tem exatamente dois valores (true/false) —
+   para true/false/desconhecido use Troolean"`). Vale para declarações,
+   parâmetros, retornos e argumentos de tipo (`Nullable(BOOL)` do usuário). O
+   corpus tem **0** ocorrências de `Bool?` (medido em `training/`, `learn/`,
+   `docs/language/`); só 4 arquivos de teste internos a carregam, e migram com
+   a mudança. SEM094 fica reservado ao gate de switch-return do PR #481 (bot,
+   fechado sem merge) — se ele reaparecer primeiro, os códigos trocam e esta
+   entrada é atualizada.
+5. **NOVO — `Troolean`**: tipo nominal de três estados `{true, false,
+   unknown}`.
+   - unknown chega exatamente como `null` nas regras 1–2: declaração
+     não-instanciada (`Troolean t`) ou API/função retornando `null` nele;
+     atribuição literal `= null`/`= unknown` NÃO é adicionada (mesmo espírito do
+     SEM048).
+   - **Lógica forte de Kleene** (o "trool" canônico): `!` troca T/F e mantém U;
+     `&&` = F-dominante (F∧qualquer=F; senão U se há U; senão T); `||` =
+     espelho (T-dominante). `!`, `&&`, `||` sobre Trooleans seguem essas tabelas.
+   - igualdade `==`/`!=` contra `true`/`false`; o teste do estado unknown é o
+     intent-check `== null` do D-NULL-INTENT (`t == null` significa "é
+     desconhecido" — nenhuma sintaxe nova); `println` mostra `true` / `false` /
+     `null` (mesmas faces de hoje).
+   - em **posição de condição** (`if`/`while`/if-expr): `if (t)` ≡
+     `if (t == true)` — idêntico ao açúcar §306(a) ratificado para `Bool?`
+     (UNKNOWN pega o ramo false; documentado, não silencioso).
+
+### Deliberação de implementação (decisão de lane dentro do contrato decidido)
+
+`Troolean` baixa para a **maquinaria boxed-Boolean nullable que já funciona**
+(§295/§306) em JVM/Script/JS — o front-end desaçúcar as tabelas de Kleene em
+comparações `== true` / `== false` / `== null` + árvores de if-expr que os
+backends já emitem corretamente; nenhuma classe de runtime nova por backend.
+Native: a face boxed-`T?` lá é a frente aberta do PR #465 (fila 2 do
+D-NULL-INTENT) — se `Nullable(Bool)` ainda não se comporta em Native,
+`Troolean` entra com diagnóstico honesto `NAT-TROOL001`, nunca fallback
+silencioso (regra 6 do freeze / R6).
+
+### Fila
+
+1. Front-end: registrar `Troolean`; `SEM095` em todo `Nullable(Bool)` escrito
+   pelo usuário; desaçúcar Kleene; faces de condição/println/`==` — provas
+   JVM+Script+JS via `runAll3`; os 4 arquivos de teste com `Bool?` migram para
+   `Troolean` (mesmas asserções — as faces de truthiness do §306 sempre foram
+   sobre a leitura de 3 estados).
+2. Face Native (medir; diagnóstico-ou-funciona — nada inventado).
+3. Corpus: `training/idioms/` (errors/control-flow) + `fake-idioms.md` (linha
+   `Bool?` → Troolean), `docs/language/types.md`, nota de revisão no
+   D-NULL-INTENT, entrada de migração no CHANGELOG (linha 0.4.0), célula da
+   matriz em `backend-parity.md`.
+
+### Relacionadas
+
+Fecha a família por decisão: **#462** (`Bool?` em contexto de valor →
+VerifyError) e **#486** (`&&`/`||` sobre `Bool?` vazam `null` no JS /
+VerifyError no JVM) — os relatos são reais, mas a correção deixou de ser
+"far o `Bool?` funcionar em posição de valor": `Bool?` está sendo REMOVIDO; as
+faces viram testes de `Troolean` na fatia 1.

@@ -828,6 +828,12 @@ The previous catalog that treated this as prohibited has been corrected.
 
 **State:** `DECIDED`
 
+> **Revision 19/09 (`D-TROOL`):** `Bool` left this family as a nullable
+> surface — `Nullable(Bool)` is now refused with `SEM095` and the three-state
+> type is `Troolean`. The rest of the contract (real boxed `T?` for
+> primitives/refs, `= null` refusal, null-default of uninstantiated
+> declarations) stands unchanged.
+
 **Revision of:** option A of §125
 
 ### Contract
@@ -1856,3 +1862,84 @@ different from `List<String>`" (= option A, compile-time rejection) · X8-A · L
 answers; ratification commit updates the D-table in
 `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (+PT), `roadmap.md` §23 (D7),
 `backend-parity.md` (D4) and `known-bugs.md` §270 (#401).
+
+---
+
+## D-TROOL — `Bool` is never nullable; the three-valued type is `Troolean` (maintainer 19/09)
+
+**Date:** 2026-09-19 · **State:** `DECIDED` · **Revision of:** the `Nullable(Bool)`
+face of D-NULL-INTENT (the boxed-nullable machinery stays; `Bool` stops using it
+as surface syntax) · **Queue:** new front under §23 Tier 2.6 (null-intent family).
+
+### Contract (maintainer's words, 19/09 ~12:0x -03)
+
+1. A nullable variable declared **without instantiation** already has `null` as
+   its value — by default, no ceremony. *(already the measured behavior of
+   `String? s`, `Int? q`, `Bool? b`: JVM/Script/JS print `null` / `== null` is
+   true — this clause CONFIRMS the current D-NULL-INTENT default and freezes it.)*
+2. Assigning `null` to a nullable through code (`x = null`) **remains refused**
+   (SEM048 unchanged). `null` reaches a variable only through (a) the default of
+   the non-instantiated declaration or (b) an API/function returning `null`.
+3. **Primitive values are not interfered with**: `Int n` keeps its `0` default —
+   only `T?` declarations carry null.
+4. **`Bool` cannot be nullable**: it has exactly two values. `Bool?` (and every
+   `Nullable(Bool)` written by the user) becomes a **compile-time refusal,
+   `SEM095`** with the message pointing at the replacement. (SEM094 is reserved
+   for the switch-return gate shipped by the bot's PR #481 — if that one ever
+   re-lands first, the codes swap and this entry updates.)
+5. For `true / false / null` the language gains **`Troolean`** — a 3-state type
+   with its logic (Kleene): `!`, `&&`, `||` follow the truth tables
+   (`NOT U=U`; `AND`: F dominates, U second; `OR`: T dominates, U second),
+   comparison against `true`/`false` and the intent-check `== null` work,
+   un-declared instance = `null`(unknown), functions may `return null` into a
+   `Troolean`. `println` shows `true`/`false`/`null` (no 0/1 — §306(b) canonical
+   already does this for the boxed Boolean).
+
+### Rationale and scope notes
+
+- The clause pair (1)(2) makes `Bool? b = null` illegal but `Bool? b` (uninstantiated)
+  legal — for `Bool` specifically, clause (4) removes the whole surface: there is
+  no way to hold the unknown state in a `Bool?` anymore, which is exactly the
+  confused family behind #462 (value-context VerifyError) and #486 (JVM
+  VerifyError + JS `null` leak on `&&`/`||` over `Bool?`). Both issues are
+  CLOSED by this decision: the reproducer becomes a `SEM095` diagnostic and the
+  idiom is `Troolean` (rule 8 close: the foreign construct's replacement is now
+  IN the language).
+- Internal representation decision (lane, no new runtime class needed on
+  JVM/Script/JS): `Troolean` is a **nominal type in the front end** (type name
+  registered; `Type.PrimitiveType` "troolean" sort) that lowers per backend using
+  the machinery the box already has — JVM/Script/JS reuse the boxed `Boolean`
+  slot of §295/§306 (the writer/reader cluster already fixed them), the
+  three-valued operators desugar in the front end into Kleene tables over the
+  existing comparison machinery; **Native** maps to a 3-state `byte` (0=F,1=T,2=U) —
+  if a Native path cannot honor a face, the honest R6 diagnostic `NAT-TROOL001`
+  replaces any silent fallback (freeze rule 5: parity or diagnosed gap).
+- Frozen-semantics audit (rule 1/6): this TIGHTENS (a construct that compiled
+  now gets a diagnostic — same class of change the maintainer approved for #401:
+  code that compiles today dies at runtime, so refusing it at compile time
+  matches the documented contract). `Bool` non-nullability is consistent with
+  §306's own truth (the JVM reader faces of `Bool?` were crash-faces; #462/#486).
+  Version note + migration entry go in CHANGELOG (0.4.0 line).
+
+### Queue (roadmap §23 Tier 2.6, D-TROOL)
+
+1. Front end: register `Troolean`; refuse `Bool?`/`Nullable(Bool)` written by
+   the user with `SEM095` (message: "`Bool` has two values; for
+   true/false/unknown use `Troolean`"); tests: `TrooleanLawE2ETest`
+   (SEM095 face + declaration default + `return null` narrowing).
+2. Operators: Kleene `!`, `&&`, `||`, `==` on `Troolean`, `runAll3` (JVM+Script+JS),
+   edges: all nine AND/OR combinations + NOT, nested chains, condition position.
+3. Native: 3-state byte + `NAT-TROOL001` honest gap where a face cannot land.
+4. Migration of the 4 test files that write `Bool?` (ConformanceMatrix,
+   NullablePrimitiveContract, NullableBoolTruthiness, KofInterpreterParity) +
+   corpus: `training/language/types.md`, nullability idiom docs,
+   `fake-idioms.md` (add the `Bool?` row → Troolean), DECISIONS D-NULL-INTENT
+   revision note, CHANGELOG migration entry, `backend-parity.md` matrix cell.
+
+**Evidence:** maintainer's message 19/09 ~12:0x (-03), two clauses (the
+definition + "implement and close the related issues"). Lane picks: the
+implementation is front-end-centric and the boxed-nullable machinery is already
+built (`.22` shipped §295/§306 18–19/09); coordination claimed in `DOING.md`
+same commit (the `SemExpressionTyper`/`ExpressionLowerer` files are the same
+`.22` touched today — they hold NO other unclaimed `Bool?`-face work after
+#462/#486 are closed here).

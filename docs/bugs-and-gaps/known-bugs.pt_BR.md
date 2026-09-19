@@ -10640,8 +10640,6 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Roteada, não medida aqui (1):** #464 (AArch64 `Float +=` → NaN) — a tabela de isolamento é decisiva (só o lowering de `+=` em `float32` no aarch64; add/store/plain e double todos verdes; base `77eaa168` idêntica) → lane native/cross `.17`/`.18` com host qemu; esta lane não tem toolchain cross.
 - **PRs-espelho de correção (kofbughunter) — estado de CI medido nos runs:** **#479** (desugar `+=`) Build+Tests verde; **#481** (gate SEM094 do switch) verde — apontado o follow-up de docs (rejeitar × suportar Long/Double, regra 6); **#478** (Locale.ROOT) **vermelho**: empurra `Locale.ROOT` pelo lowerer compartilhado e o backend **JS** ICE (`StringFormatVarargsE2ETest` 9/9, `unknown JS expression: null`) — JVM-only, faltou a face §239; **#480** (`i2b`) **vermelho no gate de máquina**: `JsCallEmitter` 599→**609** (≥600 quebra CI) — split antes. **#465** (face nativa de `T?` boxed do D-NULL-INTENT, `.18`) Build+Tests verde nos 6 alvos — **ativa** as faces dormentes do #460 (ponteiro no comentário do PR). O fail `CodeQL Gate` repetido em TODO PR = backlog de alerts do branch (#870–#876) + 403 do token de fork quando o gate comenta — **não** são os PRs.
 - **Intocável:** cada fix pertence às lanes compiler/native (golden rule). O entregável desta lane é a triagem em si: medição, classificação, rota e esta linha do ledger.
-<<<<<<< HEAD
-=======
 
 - **Follow-ups do mesmo dia (depois deste lote):** **#485** — encanamento de CI: o
   passo de comment do `CodeQL Gate` e o dispatch do `Orchestrate Bots` morriam com
@@ -10659,4 +10657,3 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
   a lane de postagem:** `gh ... --body "..."` com crase = o shell executa (meu
   primeiro comentário do #486 saiu mutilado) — arquivo heredoc + `-F body=@file`
   quando o corpo tem código.
->>>>>>> bca85268 (docs(ledger): anexo ao §337 — #485 (CI 403 de fork: consertado na lane, prova = proximo run) e #486 (&&/|| sobre Bool? morre no JVM por VerifyError E vaza null no JS — escopo maior que o relato, roteado a .22 com a medicao) + licao: corpo de comentario com crases via arquivo (-F body=@), nunca dupla-aspa no shell)
