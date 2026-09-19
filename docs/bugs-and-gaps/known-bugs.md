@@ -10937,4 +10937,6 @@ structural refactor (freeze rule 3) and the seam is the owner's call. This resto
 COMPILATION (duplicate removed) but does not touch the gate: CI stays red ONLY on the
 Gate≤500 step until the owner splits.
 
+**CI proof (tip `84e5c7b7`):** the ONLY red left is the "Gate ≤500" step of Build+Tests; kof.io multiplatform (ubuntu/macos/windows) and Native cross (riscv64+aarch64/qemu) are all **SUCCESS** — proving the earlier 4-job red was purely the compile-cascade from the duplicated `escapeLiteral`, fixed by `82a09c35`. Split remains the owner lane's call.
+
 **Status:** 🟡 OPEN — owner = compiler lane `.22`.

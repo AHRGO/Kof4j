@@ -10383,4 +10383,6 @@ Compila limpo no JVM; ao rodar morre no LOAD da classe com `java.lang.VerifyErro
 
 **Por que NÃO conserto aqui:** o arquivo pertence à lane compilador (`.22`), recém-mexido por ela no §295(b) — golden rule: nunca dois agentes no mesmo arquivo gigante; o split é refactor estrutural (regra 3 da freeze) e a costura é decisão de quem conhece o lowerer. Isto restaura a COMPILAÇÃO (duplicata removida) mas não toca o gate: o CI fica vermelho SÓ no passo Gate≤500 até a dona fazer o split.
 
+**Prova CI (tip `84e5c7b7`):** o UNICO vermelho restante e o passo "Gate ≤500" do Build+Tests; kof.io multiplatform (ubuntu/macos/windows) e Native cross (riscv64+aarch64/qemu) estao todos **SUCCESS** — provando que os 4 jobs vermelhos anteriores eram puramente a cascata de compilacao da `escapeLiteral` duplicada, resolvida em `82a09c35`. O split permanece decisao da lane dona.
+
 **Status:** 🟡 ABERTA — dona = lane compilador `.22`.
