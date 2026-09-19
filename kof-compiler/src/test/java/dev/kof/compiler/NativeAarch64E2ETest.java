@@ -1160,4 +1160,37 @@ main() {
                     "sem .s E sem binário linkado — nem prova mecânica nem de texto");
         }
     }
+
+    /** §129-addendum (19/09): FP de precisão SIMPLES no aarch64 — o tradutor
+     *  comparava `mn.substring(5)` ("s"/"d") com ".s", então TODO `fadd.s`/
+     *  `fsub.s`/`fmul.s`/`fdiv.s` virava a forma `d` (double) e o resultado
+     *  lido como float dava NaN; `fcvt.s.w`/`fcvt.s.l` (int→Float) nem era
+     *  traduzido (as abortava). Golden = oracle JVM. */
+    @Test
+    void aarch64SinglePrecisionFloatAndIntToFloatCast(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String out = runAarch64(tempDir, """
+            main() {
+                var a = 1.5 as Float
+                var b = 2.5 as Float
+                println(a + b)
+                println(b - a)
+                println(a * b)
+                println(b / a)
+                var i = 7
+                var fi = i as Float
+                println(fi)
+                println(fi / (2 as Float))
+                var l = 9007199254740993
+                println(l as Float)
+                var total = 0.0 as Float
+                for (var n in listOf(1, 2, 3)) { total += n as Float }
+                println(total)
+                Float? x = 2.5
+                x += 1.0
+                println(x)
+            }
+            """);
+        assertEquals("4.0\n1.0\n3.75\n1.6666666\n7.0\n3.5\n9.007199E15\n6.0\n3.5", out);
+    }
 }
