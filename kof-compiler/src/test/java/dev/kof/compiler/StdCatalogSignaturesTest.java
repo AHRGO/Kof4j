@@ -21,6 +21,7 @@ class StdCatalogSignaturesTest {
     private static final Type S = BuiltinTypes.STRING;
     private static final Type I = Type.PrimitiveType.INT;
     private static final Type O = Type.UnknownType.UNKNOWN;
+    private static final Type D = Type.PrimitiveType.DOUBLE;
 
     @Test
     void dbTableBindsAgainstRealDispatcher() {
@@ -120,6 +121,54 @@ class StdCatalogSignaturesTest {
     }
 
     @Test
+    void fatiaThreeTablesBindAgainstRealDispatchers() {
+        assertNotNull(KofNet.staticMethod("net", "host", List.of(S)), "net.host/1");
+        assertNull(KofNet.staticMethod("net", "host", List.of(S, S)), "net.host/2 NAO binda");
+        assertNotNull(KofNet.staticMethod("net", "queryEncode", List.of(S)), "net.queryEncode");
+        assertNull(KofNet.staticMethod("net", "nope", List.of(S)), "net.?");
+        assertNotNull(KofUuid.staticMethod("uuid", "isUuid", List.of(S)), "uuid.isUuid");
+        assertNull(KofUuid.staticMethod("uuid", "isUuid", List.of()), "isUuid/0");
+        assertNotNull(KofUuid.staticMethod("uuid", "v7", List.of()), "uuid.v7()");
+        assertNull(KofUuid.staticMethod("uuid", "v7", List.of(I)), "v7 nao aceita args");
+        assertNotNull(KofRandom.staticMethod("random", "int", List.of(I)), "random.int/1");
+        assertNull(KofRandom.staticMethod("random", "int", List.of()), "random.int/0");
+        assertNotNull(KofRandom.staticMethod("random", "double", List.of()), "random.double()");
+        assertNotNull(KofRandom.staticMethod("random", "randomBytesHex", List.of(I)), "randomBytesHex(Int)");
+        assertNull(KofRandom.staticMethod("random", "randomBytesHex", List.of(S)), "randomBytesHex(String) NAO");
+        assertNull(KofRandom.staticMethod("random", "randomString", List.of(I)), "randomString/1 NAO binda");
+        assertNotNull(KofRandom.staticMethod("random", "randomString", List.of(I, S)), "randomString(Int,String)");
+        assertNotNull(KofRng.staticMethod("rng", "seed", List.of(I)), "rng.seed");
+        assertNull(KofRng.staticMethod("rng", "boolean", List.of(I)), "rng.boolean/1 NAO binda");
+        assertNotNull(KofRng.staticMethod("rng", "string", List.of(I, S)), "rng.string(Int,String)");
+        assertNull(KofRng.staticMethod("rng", "string", List.of(S, I)), "rng.string(String,Int) NAO (ordem)");
+        assertNotNull(KofEncoding.staticMethod("encoding", "urlEncode", List.of(S)), "encoding.urlEncode");
+        assertNull(KofEncoding.staticMethod("encoding", "urlEncode", List.of()), "urlEncode/0 (gate e argc)");
+        assertNotNull(KofEncoding.staticMethod("encoding", "base64UrlEncode", List.of(S)), "base64UrlEncode");
+        assertNotNull(KofEncoding.staticMethod("encoding", "base64UrlDecode", List.of(S)), "base64UrlDecode");
+        assertNotNull(KofEncoding.staticMethod("encoding", "base64Decode", List.of(S)), "encoding.base64Decode");
+        assertNotNull(KofStrings.staticMethod("strings", "count", List.of(S, S)), "strings.count/2");
+        assertNull(KofStrings.staticMethod("strings", "count", List.of(S)), "count/1 NAO binda");
+        assertNotNull(KofStrings.staticMethod("strings", "padRight", List.of(S, I, S)), "padRight/3");
+        assertNull(KofStrings.staticMethod("strings", "padRight", List.of(S, I)), "padRight/2 NAO binda");
+        assertNotNull(KofStrings.staticMethod("strings", "isNumeric", List.of(S)), "isNumeric");
+        for (String ns : List.of("net", "uuid", "random", "rng", "encoding", "strings"))
+            for (String m : StdCatalog.membersOf(ns))
+                assertFalse(StdCatalog.signaturesOf(ns, m).isEmpty(), "tabela sem " + ns + "." + m);
+    }
+
+    @Test
+    void mathFamilyDriftIsCataloged() {
+        // o lock de virgulas expo6 a familia escondida; cada nome tem que bindar
+        // de verdade no dispatcher (prova de que nao e nome inventado)
+        for (String m : List.of("isEven", "isOdd", "isPositive", "isNegative", "isZero"))
+            assertNotNull(KofMath.staticMethod("math", m, List.of(I)), "math." + m + "(Int)");
+        for (String m : List.of("isInteger", "isDecimal")) {
+            assertNotNull(KofMath.staticMethod("math", m, List.of(D)), "math." + m + "(Double)");
+            assertNull(KofMath.staticMethod("math", m, List.of(I)), "math." + m + "(Int) NAO binda");
+        }
+    }
+
+    @Test
     void ghostSignaturesAndUnknownNamespaceAreEmpty() {
         assertTrue(StdCatalog.signaturesOf("db", "ghost").isEmpty());
         assertTrue(StdCatalog.signaturesOf("nope", "get").isEmpty());
@@ -127,10 +176,11 @@ class StdCatalogSignaturesTest {
 
     @Test
     void untabledNamespacesStayHonestEmpty() {
-        // fatias 1-2 = db/http/time/cache/process/shell; inventar forma p/ os
-        // demais e proibido (R6)
+        // fatias 1-3 = db/http/time/cache/process/shell/net/uuid/random/rng/
+        // encoding; inventar forma p/ os demais e proibido (R6)
         assertTrue(StdCatalog.signaturesOf("log", "info").isEmpty());
-        assertTrue(StdCatalog.signaturesOf("net", "lookup").isEmpty());
+        assertTrue(StdCatalog.signaturesOf("json", "encode").isEmpty());
+        assertTrue(StdCatalog.signaturesOf("math", "isEven").isEmpty());
         assertTrue(StdCatalog.signaturesOf("nope", "get").isEmpty());
     }
 }

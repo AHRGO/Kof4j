@@ -31,7 +31,13 @@ public final class KofEncoding {
 
     /** X10 fatia 1: nomes aceitos pelo staticMethod (catálogo p/ LSP).
      *  GUARDA: StdCatalogTest exige == case literals do switch(name) abaixo. */
-    static List<String> functions() { return List.of("hexEncode", "hexDecode"); }
+    // 19/09 LSP-A fatia 3: base64/url viviam no case de família do staticMethod
+    // (ligado por vírgula, invisível ao lock de 1º literal) — 2->6.
+    static List<String> functions() {
+        return List.of("hexEncode", "hexDecode", "base64Encode",
+                "base64Decode", "base64UrlEncode", "base64UrlDecode",
+                "urlEncode", "urlDecode");
+    }
     static EncodingCall staticMethod(String namespace, String name, List<Type> argTypes) {
         int argc = argTypes.size();
         return switch (name) {

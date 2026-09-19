@@ -31,7 +31,19 @@ public final class KofStrings {
 
     /** X10 fatia 1: nomes aceitos pelo staticMethod (catálogo p/ LSP).
      *  GUARDA: StdCatalogTest exige == case literals do switch(name) abaixo. */
-    static List<String> functions() { return List.of("isAlpha", "count", "capitalize", "escapeHtml", "repeat", "indent", "padLeft"); }
+    // 19/09 LSP-A fatia 3: DRIFT MAIOR achado — o dispatcher binda 26 nomes
+    // (familias de case ligadas por virgula), a lista so tinha o primeiro literal
+    // de cada case: 19 membros invisiveis no completion/hover (X10 mentia por
+    // omissao). Lista = fonte do staticMethod abaixo, travada pelo lock de
+    // virgulas no StdCatalogTest.
+    static List<String> functions() {
+        return List.of("isAlpha", "isNumeric", "isAlphaNumeric", "isAscii",
+                "isUpperCase", "isLowerCase", "count", "capitalize", "uncapitalize",
+                "reverse", "toCamelCase", "toPascalCase", "toSnakeCase", "toKebabCase",
+                "slugify", "escapeHtml", "unescapeHtml", "escapeJson", "removeWhitespace",
+                "normalizeWhitespace", "dedent", "repeat", "truncate", "indent",
+                "padLeft", "padRight");
+    }
     static StringsCall staticMethod(String namespace, String name, List<Type> argTypes) {
         if (!"strings".equals(namespace)) return null;
         int argc = argTypes.size();

@@ -65,9 +65,13 @@ class StdCatalogTest {
                 new Entry("random", "KofRandom", KofRandom.functions()),
                 new Entry("rng", "KofRng", KofRng.functions()));
         for (Entry e : entries) {
-            Set<String> inSource = caseLiterals(methodBody(source(e.cls()),
-                    "staticMethod(String namespace"));
-            assertEquals(inSource, new LinkedHashSet<>(e.fns()),
+            List<String> inSource = topCaseNames(switchBlock(
+                    methodBody(source(e.cls()), "staticMethod(String namespace"),
+                    "switch (name)"));
+            // 19/09 fatia 3: o lock antigo (regex `case "x"`) via so o 1o literal
+            // de um case de familia — foi exatamente como net/encoding esconderam
+            // membros. topCaseNames segue as virgulas (a garantia agora e maior).
+            assertEquals(new LinkedHashSet<>(inSource), new LinkedHashSet<>(e.fns()),
                     e.ns() + ": catalog != case-literals do " + e.cls());
             assertEquals(e.fns(), StdCatalog.membersOf(e.ns()), e.ns() + ": membros");
         }

@@ -41,6 +41,15 @@ class LspSignatureHoverTest {
     }
 
     @Test
+    void fatiaThreeNamespacesShowSignaturesToo() {
+        String t = "main() { val a = strings.slugify(\"x\")\n    val b = net.host(a) }\n";
+        String v = LspHover.hoverFor("slugify", t, t.indexOf("slugify") + 3);
+        assertTrue(v.contains("slugify(String s) -> String"), "strings.slugify: " + v);
+        String v2 = LspHover.hoverFor("host", t, t.indexOf("net.host") + 5);
+        assertTrue(v2.contains("host(String url) -> String"), "net.host: " + v2);
+    }
+
+    @Test
     void memberWithoutTableKeepsSimpleHoverNoInvention() {
         String t = "main() { val v = log.info(\"x\") }\n";
         String v = LspHover.hoverFor("info", t, t.indexOf("info") + 1);
