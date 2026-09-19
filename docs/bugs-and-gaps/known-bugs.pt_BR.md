@@ -10462,4 +10462,3 @@ Suíte completa: ver o fim do log deste commit (`/tmp/opencode/suite445.log`).
 **Opcoes (NAO decidido — territ6rio regra 6):** (a) deixar (documentado aqui, divergencia honesta); (b) guardar o caso JVM `tag==4 && bits==0x7FF8… → igual` (4 instrucoes × 3 backends + 1 golden). Nao atacado aqui porque inventar teste para borda inalcanzavel nao agrega prova (Q3).
 
 **Repro atual:** na verdade o NaN NAO e construtivel em fonte Kof hoje — literal de divisao por zero e diagnostico OBS-009 e nao ha `Double.NaN` na stdlib → a face esta DESLIGADA ate existir um produtor de NaN (biblioteca matematica, pacote oficial). Rebaixar a informativo se um produtor nascer. Relacionado: §333, §284-map, OBS-009.
->>>>>>> c2fdf5b5 (Implement native erasure boxing for RISC-V and AArch64 architectures)

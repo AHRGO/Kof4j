@@ -102,9 +102,20 @@ class TopLevelOverloadE2ETest {
         assertTrue(r.success(), t + " compile: " + r.diagnostics().getDiagnostics());
         Path bin = out.resolve("Default/Main");
         assertTrue(Files.exists(bin), t + " binary missing");
-        List<String> cmd = new java.util.ArrayList<>(java.util.Arrays.asList(prefix));
-        cmd.add(bin.toString());
-        return exec(cmd, true);
+        ProcessBuilder pb = prefix.length == 0
+                ? new ProcessBuilder(bin.toString())
+                : NativeRiscv64E2ETest.qemu(prefix[0].substring(5), bin);
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String outStr = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        try {
+            assertEquals(0, p.waitFor(), "exit code, output: " + outStr);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException(e);
+        }
+        return outStr;
     }
 
     private static String exec(List<String> cmd, boolean mergeErr) throws IOException {

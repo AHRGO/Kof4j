@@ -420,7 +420,7 @@ class KofTimeE2ETest {
         assertTrue(result.success(), target + " compile: " + result.diagnostics().getDiagnostics());
         Path bin = outDir.resolve("Default/Main");
         try {
-            Process p = new ProcessBuilder(qemu, bin.toString()).redirectErrorStream(true).start();
+            Process p = NativeRiscv64E2ETest.qemu(qemu.substring(5), bin).redirectErrorStream(true).start();
             String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
             assertEquals(0, p.waitFor(), target + " qemu exit, out: " + output);
         } catch (InterruptedException e) {
@@ -552,7 +552,10 @@ class KofTimeE2ETest {
             CompilationResult r = new CompilerDriver().compile(source, tempDir.resolve("cross-" + i), ts[i]);
             assertTrue(r.success(), ts[i] + " deve compilar: " + r.diagnostics().getDiagnostics());
             Path bin = tempDir.resolve("cross-" + i).resolve("Default/Main");
-            var p = new ProcessBuilder("timeout", "10", q[i], bin.toString()).redirectErrorStream(true).start();
+            var qpb = NativeRiscv64E2ETest.qemu(q[i].substring(5), bin);
+            qpb.command().add(0, "timeout");
+            qpb.command().add(1, "10");
+            var p = qpb.redirectErrorStream(true).start();
             String output = new String(p.getInputStream().readAllBytes()).trim();
             assertEquals(0, p.waitFor(), ts[i] + " exit, output: " + output);
             assertTrue(output.endsWith("END"), ts[i] + ": END por último: " + output);
@@ -615,7 +618,7 @@ class KofTimeE2ETest {
             Path outDir = tempDir.resolve("ad-" + t + "-" + System.nanoTime());
             CompilationResult r = new CompilerDriver().compile(file, outDir, t);
             assertTrue(r.success(), t + " compile: " + r.diagnostics().getDiagnostics());
-            Process p = new ProcessBuilder(qemu, outDir.resolve("Default/Main").toString())
+            Process p = NativeRiscv64E2ETest.qemu(qemu.substring(5), outDir.resolve("Default/Main"))
                     .redirectErrorStream(true).start();
             String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
                     .replace("\r\n", "\n").trim();
@@ -790,7 +793,7 @@ class KofTimeE2ETest {
             Path outDir = tempDir.resolve("t7e-" + t + "-" + System.nanoTime());
             CompilationResult r = new CompilerDriver().compile(file, outDir, t);
             assertTrue(r.success(), t + " compile: " + r.diagnostics().getDiagnostics());
-            Process p = new ProcessBuilder(qemu, outDir.resolve("Default/Main").toString())
+            Process p = NativeRiscv64E2ETest.qemu(qemu.substring(5), outDir.resolve("Default/Main"))
                     .redirectErrorStream(true).start();
             String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
                     .replace("\r\n", "\n").trim();
@@ -910,7 +913,7 @@ class KofTimeE2ETest {
             Path outDir = tempDir.resolve("t7f-" + t + "-" + System.nanoTime());
             CompilationResult r = new CompilerDriver().compile(file, outDir, t);
             assertTrue(r.success(), t + " compile: " + r.diagnostics().getDiagnostics());
-            Process p = new ProcessBuilder(qemu, outDir.resolve("Default/Main").toString())
+            Process p = NativeRiscv64E2ETest.qemu(qemu.substring(5), outDir.resolve("Default/Main"))
                     .redirectErrorStream(true).start();
             String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
                     .replace("\r\n", "\n").trim();
@@ -1032,7 +1035,7 @@ class KofTimeE2ETest {
             Path outDir = tempDir.resolve("t7g-" + t + "-" + System.nanoTime());
             CompilationResult r = new CompilerDriver().compile(file, outDir, t);
             assertTrue(r.success(), t + " compile: " + r.diagnostics().getDiagnostics());
-            Process p = new ProcessBuilder(qemu, outDir.resolve("Default/Main").toString())
+            Process p = NativeRiscv64E2ETest.qemu(qemu.substring(5), outDir.resolve("Default/Main"))
                     .redirectErrorStream(true).start();
             String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
                     .replace("\r\n", "\n").trim();

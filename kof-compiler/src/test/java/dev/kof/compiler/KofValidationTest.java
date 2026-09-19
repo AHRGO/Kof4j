@@ -632,7 +632,7 @@ class KofValidationTest {
         assertTrue(result.success(), target + " compile failed: "
                 + result.diagnostics().getDiagnostics());
         Path bin = outDir.resolve("Default/Main");
-        Process p = new ProcessBuilder(qemu, bin.toString()).redirectErrorStream(true).start();
+        Process p = NativeRiscv64E2ETest.qemu(qemu.substring(5), bin).redirectErrorStream(true).start();
         String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).trim();
         int ec = p.waitFor();
         assertEquals(0, ec, target + " runtime (qemu) exit " + ec + ", out: " + output);

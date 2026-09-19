@@ -11028,4 +11028,3 @@ Full suite: see this commit's log tail (`/tmp/opencode/suite445.log`).
 
 **Repro (current behavior, if anyone ever needs it):** `class C { Object o }` … `c.o = 0.0/0.0`?? — division-by-zero literal is a compile-time diagnostic (OBS-009), so the NaN box is NOT constructible from Kof source today (no `Double.NaN` in stdlib either) → the face is UNREACHABLE until a NaN producer exists. Downgrade to informational if a NaN producer ever lands (math library official-package plans). Related: §333, §284-map, OBS-009, DECISIONS.md (NaN policy, if ever needed).
 
->>>>>>> c2fdf5b5 (Implement native erasure boxing for RISC-V and AArch64 architectures)
