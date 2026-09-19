@@ -32,10 +32,19 @@ class LspSignatureHoverTest {
     }
 
     @Test
+    void fatiaTwoNamespacesShowSignaturesToo() {
+        String t = "main() { val x = time.sleep(10)\n    val p = process.run(\"ls\") }\n";
+        String v = LspHover.hoverFor("sleep", t, t.indexOf("sleep") + 2);
+        assertTrue(v.contains("sleep(Int ms) -> void"), "time.sleep: " + v);
+        String v2 = LspHover.hoverFor("run", t, t.indexOf("process.run") + 8);
+        assertTrue(v2.contains("run(String program, String... args) -> Result"), "process.run: " + v2);
+    }
+
+    @Test
     void memberWithoutTableKeepsSimpleHoverNoInvention() {
-        String t = "main() { val c = cache.get(\"k\") }\n";
-        String v = LspHover.hoverFor("get", t, t.indexOf("get") + 1);
-        assertTrue(v.contains("member of `kof.cache`"), v);
+        String t = "main() { val v = log.info(\"x\") }\n";
+        String v = LspHover.hoverFor("info", t, t.indexOf("info") + 1);
+        assertTrue(v.contains("member of `kof.log`"), v);
         assertFalse(v.contains("```"), "sem tabela = sem assinatura inventada: " + v);
     }
 }

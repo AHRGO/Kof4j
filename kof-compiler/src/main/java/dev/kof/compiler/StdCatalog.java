@@ -66,8 +66,8 @@ public final class StdCatalog {
     // nao comentario: fatia 1 = db+http; demais namespaces entram fatia a fatia
     // SEM fingir cobertura (R6: member sem tabela mantem o hover simples).
     private static final Map<String, Map<String, List<String>>> SIGNATURES =
-            Map.of(
-            "db", Map.of(
+            java.util.Map.ofEntries(
+            Map.entry("db", Map.of(
                     "connect", List.of("connect(String url) -> String",
                             "connect(String url, String user, String pass) -> String"),
                     "query", List.of("query(String url, String sql) -> List<String>",
@@ -75,8 +75,8 @@ public final class StdCatalog {
                     "execute", List.of("execute(String url, String sql) -> Int",
                             "execute(String url, String sql, Object... binds[1..4]) -> Int"),
                     "close", List.of("close(String url) -> void"),
-                    "transaction", List.of("transaction(callback) -> void")),
-            "http", Map.of(
+                    "transaction", List.of("transaction(callback) -> void"))),
+            Map.entry("http", Map.of(
                     "get", List.of("get(String url) -> String", "get(String url, String headers...) -> String"),
                     "delete", List.of("delete(String url) -> String", "delete(String url, String headers...) -> String"),
                     "options", List.of("options(String url) -> String", "options(String url, String headers...) -> String"),
@@ -86,7 +86,42 @@ public final class StdCatalog {
                     "status", List.of("status(String url) -> Int"),
                     "timeout", List.of("timeout(Int ms) -> void"),
                     "retry", List.of("retry(Int count) -> void"),
-                    "circuit", List.of("circuit(Int threshold) -> void")));
+                    "circuit", List.of("circuit(Int threshold) -> void"))),
+            Map.entry("time", Map.ofEntries(
+                    Map.entry("sleep", List.of("sleep(Int ms) -> void")),
+                    Map.entry("now", List.of("now() -> Long")),
+                    Map.entry("collect", List.of("collect() -> void")),
+                    Map.entry("interval", List.of("interval(Int ms, callback) -> String")),
+                    Map.entry("cancel", List.of("cancel(String id) -> void")),
+                    Map.entry("isLeapYear", List.of("isLeapYear(Int year) -> Bool")),
+                    Map.entry("daysInMonth", List.of("daysInMonth(Int year, Int month) -> Int")),
+                    Map.entry("dayOfWeek", List.of("dayOfWeek(Int y, Int m, Int d) -> Int")),
+                    Map.entry("isWeekend", List.of("isWeekend(Int y, Int m, Int d) -> Bool")),
+                    Map.entry("daysBetween", List.of("daysBetween(Int y1, Int m1, Int d1, Int y2, Int m2, Int d2) -> Int")),
+                    Map.entry("isToday", List.of("isToday(Int y, Int m, Int d) -> Bool")),
+                    Map.entry("addDays", List.of("addDays(String iso, Int days) -> String")),
+                    Map.entry("diffDays", List.of("diffDays(String isoA, String isoB) -> Int")),
+                    Map.entry("todayIso", List.of("todayIso() -> String")),
+                    Map.entry("formatDateIso", List.of("formatDateIso(Int y, Int m, Int d) -> String")),
+                    Map.entry("parseDateIso", List.of("parseDateIso(String iso) -> Int")),
+                    Map.entry("tzOffsetSeconds", List.of("tzOffsetSeconds() -> Int")),
+                    Map.entry("hoursBetween", List.of("hoursBetween(Int y1, Int m1, Int d1, Int h1, Int y2, Int m2, Int d2, Int h2) -> Int")))),
+            Map.entry("cache", Map.of(
+                    "get", List.of("get(String key) -> String"),
+                    "set", List.of("set(String key, String value) -> void",
+                            "set(String key, String value, Int ttlSeconds) -> void"),
+                    "ttl", List.of("ttl(String key) -> Int"),
+                    "delete", List.of("delete(String key) -> void"),
+                    "clear", List.of("clear() -> void"))),
+            Map.entry("process", Map.of(
+                    "run", List.of("run(String program, String... args) -> Result"),
+                    "spawn", List.of("spawn(String program, String... args) -> Handle"),
+                    "exit", List.of("exit(Int code) -> void"))),
+            Map.entry("shell", Map.of(
+                    "cmd", List.of("cmd(String program, List<String> args) -> List<String>"),
+                    "run", List.of("run(String program) -> Result", "run(String program, List<String> args) -> Result"),
+                    "pipeline", List.of("pipeline(List<List<String>> stages) -> Result"),
+                    "ok", List.of("ok(result) -> Bool"))));
 
     /** Overloads gravados do membro (vazio = sem tabela ainda; nunca chute, R6). */
     public static List<String> signaturesOf(String ns, String member) {

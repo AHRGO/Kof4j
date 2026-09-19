@@ -177,9 +177,10 @@ class StdCatalogTest {
 
     @Test
     void slice2ListsMatchTyperSources() throws Exception {
-        assertEquals(topCaseNames(switchBlock(
-                methodBody(source("KofTime"), "isTimeMethod(String name)"), "switch (name)")),
-                KofTime.functions(), "time");
+        List<String> timeExpected = new ArrayList<>(topCaseNames(switchBlock(
+                methodBody(source("KofTime"), "isTimeMethod(String name)"), "switch (name)")));
+        assertEquals(timeExpected.stream().sorted().toList(),
+                KofTime.functions().stream().sorted().toList(), "time");
         assertEquals(topCaseNames(switchBlock(
                 methodBody(source("KofHttp"), "isHttpMethod(String name)"), "switch (name)")),
                 KofHttp.functions(), "http");
@@ -197,7 +198,13 @@ class StdCatalogTest {
         }
         List<String> dbGot = new ArrayList<>(KofDb.functions());
         assertEquals(dbExpected.stream().sorted().toList(), dbGot.stream().sorted().toList(), "db");
-        assertEquals(List.of("run"), KofProcess.functions(), "process");
+        assertEquals(List.of("run", "spawn", "exit"), KofProcess.functions(), "process");
+        // 19/09 LSP-A fatia 2: spawn/exit vivem em entryCall/exitCall roteados por
+        // ExpressionProcessCallLowerer (case-literals la) — a lista acima tem que
+        // bater com os nomes aceitos pelo dispatcher real (behavioural, abaixo).
+        assertNotNull(KofProcess.entryCall("spawn", List.of(BuiltinTypes.STRING)), "spawn binda");
+        assertNull(KofProcess.entryCall("run", List.of()), "run sem programa NAO binda");
+        assertNotNull(KofProcess.exitCall(List.of(Type.PrimitiveType.INT)), "exit(Int)");
     }
 
     @Test

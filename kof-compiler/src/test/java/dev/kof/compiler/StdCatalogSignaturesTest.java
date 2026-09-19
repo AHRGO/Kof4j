@@ -68,10 +68,69 @@ class StdCatalogSignaturesTest {
     }
 
     @Test
+    void timeTableBindsAgainstRealDispatcher() {
+        assertNotNull(KofTime.staticCall("sleep", List.of(I)), "sleep(Int)");
+        assertNull(KofTime.staticCall("sleep", List.of()), "sleep sem argumento");
+        assertNotNull(KofTime.staticCall("now", List.of()), "now()");
+        assertNull(KofTime.staticCall("now", List.of(I)), "now nao aceita args");
+        assertNotNull(KofTime.staticCall("interval", List.of(I, O)), "interval(Int, cb)");
+        assertNull(KofTime.staticCall("interval", List.of(I)), "interval sem cb");
+        assertNotNull(KofTime.staticCall("daysBetween", List.of(I, I, I, I, I, I)), "daysBetween(6)");
+        assertNull(KofTime.staticCall("daysBetween", List.of(I, I, I, I, I)), "daysBetween(5)");
+        assertNotNull(KofTime.staticCall("hoursBetween", List.of(I, I, I, I, I, I, I, I)), "hoursBetween(8)");
+        assertNull(KofTime.staticCall("hoursBetween", List.of(I, I, I, I, I, I, I)), "hoursBetween(7)");
+        assertNull(KofTime.staticCall("isLeapYear", List.of(S)), "isLeapYear(String) NAO binda (gate de tipo)");
+        assertNull(KofTime.staticCall("addDays", List.of(S, S)), "addDays(String,String) NAO binda");
+        assertNotNull(KofTime.staticCall("addDays", List.of(S, I)), "addDays(String,Int)");
+        assertNotNull(KofTime.staticCall("tzOffsetSeconds", List.of()), "tzOffsetSeconds()");
+        for (String m : KofTime.functions())
+            assertFalse(StdCatalog.signaturesOf("time", m).isEmpty(), "tabela sem time." + m);
+    }
+
+    @Test
+    void cacheProcessShellTablesBindAgainstRealDispatchers() {
+        assertNotNull(KofCache.staticCall("get", List.of(S)), "cache.get");
+        assertNull(KofCache.staticCall("get", List.of()), "cache.get/0");
+        assertNotNull(KofCache.staticCall("set", List.of(S, S)), "cache.set/2");
+        assertNotNull(KofCache.staticCall("set", List.of(S, S, I)), "cache.set/3 (ttl)");
+        assertNull(KofCache.staticCall("set", List.of(S, S, I, I)), "cache.set/4 NAO binda");
+        assertNotNull(KofCache.staticCall("clear", List.of()), "cache.clear");
+        assertNull(KofCache.staticCall("clear", List.of(S)), "cache.clear/1 NAO binda");
+        for (String m : KofCache.functions())
+            assertFalse(StdCatalog.signaturesOf("cache", m).isEmpty(), "tabela sem cache." + m);
+
+        assertNotNull(KofProcess.entryCall("run", List.of(S)), "process.run/1");
+        assertNotNull(KofProcess.entryCall("run", List.of(S, S, S)), "process.run variadico");
+        assertNotNull(KofProcess.entryCall("spawn", List.of(S)), "process.spawn/1");
+        assertNull(KofProcess.runCall(List.of()), "run sem programa");
+        assertNotNull(KofProcess.exitCall(List.of(I)), "process.exit(Int)");
+        assertNull(KofProcess.exitCall(List.of(S)), "exit(String) NAO binda");
+        for (String m : KofProcess.functions())
+            assertFalse(StdCatalog.signaturesOf("process", m).isEmpty(), "tabela sem process." + m);
+
+        assertNotNull(KofShell.staticCall("cmd", List.of(S, KofProcess.STRING_LIST)), "shell.cmd");
+        assertNull(KofShell.staticCall("cmd", List.of(S)), "shell.cmd/1 NAO binda");
+        assertNotNull(KofShell.staticCall("run", List.of(S)), "shell.run/1");
+        assertNotNull(KofShell.staticCall("run", List.of(S, KofProcess.STRING_LIST)), "shell.run/2");
+        assertNull(KofShell.staticCall("run", List.of()), "shell.run/0");
+        assertNotNull(KofShell.staticCall("ok", List.of(KofProcess.RESULT)), "shell.ok(Result)");
+        assertNull(KofShell.staticCall("ok", List.of(S)), "ok(String) NAO binda");
+        for (String m : KofShell.functions())
+            assertFalse(StdCatalog.signaturesOf("shell", m).isEmpty(), "tabela sem shell." + m);
+    }
+
+    @Test
+    void ghostSignaturesAndUnknownNamespaceAreEmpty() {
+        assertTrue(StdCatalog.signaturesOf("db", "ghost").isEmpty());
+        assertTrue(StdCatalog.signaturesOf("nope", "get").isEmpty());
+    }
+
+    @Test
     void untabledNamespacesStayHonestEmpty() {
-        // fatia 1 = db+http; inventar forma p/ os demais e proibido (R6)
-        assertTrue(StdCatalog.signaturesOf("time", "sleep").isEmpty());
-        assertTrue(StdCatalog.signaturesOf("cache", "get").isEmpty());
+        // fatias 1-2 = db/http/time/cache/process/shell; inventar forma p/ os
+        // demais e proibido (R6)
+        assertTrue(StdCatalog.signaturesOf("log", "info").isEmpty());
+        assertTrue(StdCatalog.signaturesOf("net", "lookup").isEmpty());
         assertTrue(StdCatalog.signaturesOf("nope", "get").isEmpty());
     }
 }
