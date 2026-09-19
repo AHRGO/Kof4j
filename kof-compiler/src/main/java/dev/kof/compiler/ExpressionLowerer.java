@@ -130,6 +130,11 @@ public final class ExpressionLowerer {
                     localIdx = driver.emitIncrement(ue, operandType, ops, owner, localIdx, locals);
                     yield localIdx;
                 }
+                // D-TROOL: `!` de `Troolean` — Kleene (!U = U). O NOT cru do
+                // operando boxed era VerifyError (JVM) / "not an int" (Script).
+                if ("!".equals(ue.operator()) && CompilerComparisons.isNullableBool(operandType)) {
+                    yield CompilerComparisons.lowerTrooleanNot(driver, ue, ops, owner, localIdx, locals);
+                }
                 localIdx = ExpressionLowerer.emitExpression(driver, ue.operand(), ops, owner, localIdx, locals);
                 if ("-".equals(ue.operator())) {
                     ops.add(new KofUnary(KofUnaryOp.NEG, operandType));

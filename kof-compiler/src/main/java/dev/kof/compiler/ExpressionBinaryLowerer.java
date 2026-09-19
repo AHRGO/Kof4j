@@ -54,6 +54,14 @@ public final class ExpressionBinaryLowerer {
 
     static int lower(CompilerDriver driver, BinaryExpr bin, List<KofOperation> ops,
                         String owner, int localIdx, List<IRLocalVariable> locals) {
+        // D-TROOL (19/09): Kleene antes de qualquer caminho de `&&`/`||` — com
+        // um `Troolean` num dos lados o resultado e tres-estado (caixa do
+        // §295/§306) nos 4 alvos, incluindo o JS (a exclusao de alvo aqui nao
+        // se aplica ao desugar; ela protege o IF_ICMP cru do caminho antigo).
+        if ("&&".equals(bin.operator()) || "||".equals(bin.operator())) {
+            int kl = CompilerComparisons.lowerTrooleanAndOr(driver, bin, ops, owner, localIdx, locals);
+            if (kl >= 0) return kl;
+        }
 if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
     Type targetType = Type.UnknownType.UNKNOWN;
     if (bin.right() instanceof IdentifierExpr ie) {
@@ -197,7 +205,14 @@ java.util.List<BinaryExpr> chain = new ArrayList<>();
 ExpressionNode cursor = bin;
 while (cursor instanceof BinaryExpr be
         && !"as".equals(be.operator())
-        && !"instanceof".equals(be.operator())) {
+        && !"instanceof".equals(be.operator())
+        // D-TROOL: `&&`/`||` NAO achatam como filho-esquerdo — re-despachados
+        // via emitExpression caem no gancho Kleene (ou no #487 p/ Bool puro);
+        // no loop viravam KofBinaryOp.AND = iand sobre a caixa Boolean
+        // (VerifyError medido 19/09 em `if (a && b)` com Troolean). No TOPO
+        // (chain vazio) o flatten segue valendo: la o gancho/#487 ja
+        // interceptaram, e parar deixaria cursor==bin -> recursao infinita.
+        && (chain.isEmpty() || (!"&&".equals(be.operator()) && !"||".equals(be.operator())))) {
     chain.add(be);
     cursor = be.left();
 }

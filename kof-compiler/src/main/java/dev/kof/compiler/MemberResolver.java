@@ -72,10 +72,13 @@ public final class MemberResolver {
 
     static boolean isBuiltinTypeName(String name) {
         return switch (name) {
+            // D-TROOL (19/09): `Troolean` e o nome de superficie do bool de
+            // tres estados (Nullable(Bool) por baixo) — builtin, nao classe.
             case "String", "string", "Object", "Int", "int", "Long", "long",
                     "Bool", "bool", "boolean", "Boolean", "Char", "char",
                     "Byte", "byte", "Short", "short", "Float", "float",
-                    "Double", "double", "void", "Void" -> true;
+                    "Double", "double", "Troolean", "troolean",
+                    "void", "Void" -> true;
             default -> false;
         };
     }
