@@ -162,13 +162,16 @@ if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
             LabelId trueLabel = LabelId.create();
             LabelId falseLabel = LabelId.create();
             LabelId endLabel = LabelId.create();
-            // §306(a): `b || x` / `b && x` com `b: Bool?` — a truthiness do lado
-            // esquerdo passa pelo MESMO rewrite do emitTruthinessJump: {@code b ==
-            // true} cai no caminho de VALOR null-safe (D-NULL-INTENT) que já vale
-            // nos 4 alvos; o IF_ICMPNE cru sobre o slot boxed (JVM) dava
-            // VerifyError. Sem rewrite, comportamento byte-idêntico ao atual.
+            // §306(a): `b || x` / `b && x` com `b: Bool?` — a truthiness passa
+            // pelo rewrite do emitTruthinessJump (`b == true`, caminho de VALOR
+            // null-safe); o IF_ICMPNE cru sobre o slot boxed (JVM) dava
+            // VerifyError. #462: o RHS avaliado usa o MESMO rewrite — um RHS
+            // `Bool?` chegava ao join como referência enquanto o outro arco
+            // deixava int (VerifyError; `true && fb()`).
             ExpressionNode leftC = CompilerComparisons.nullableBoolTruthinessRewrite(
                     driver, bin.left(), locals);
+            ExpressionNode rightC = CompilerComparisons.nullableBoolTruthinessRewrite(
+                    driver, bin.right(), locals);
             localIdx = ExpressionLowerer.emitExpression(driver, leftC, ops, owner, localIdx, locals);
             ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
             if ("||".equals(bin.operator())) {
@@ -177,7 +180,7 @@ if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
                 ops.add(new KofConditionalJump(KofComparison.NE, falseLabel, trueLabel));
             }
     ops.add(new KofLabel(falseLabel));
-    localIdx = ExpressionLowerer.emitExpression(driver, bin.right(), ops, owner, localIdx, locals);
+    localIdx = ExpressionLowerer.emitExpression(driver, rightC, ops, owner, localIdx, locals);
     ops.add(new KofJump(endLabel));
     ops.add(new KofLabel(trueLabel));
     if ("||".equals(bin.operator())) {

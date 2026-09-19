@@ -2,6 +2,8 @@
 
 # DOING.md — coordenação multi-agente (quem faz o quê)
 
+> **EM CURSO (19/09, dono = 192.168.1.2, lane PR-EXTERNA, #462):** branch `fix/462-bool-logical-value`, base `f7a45651`. Escopo: `&&`/`||` em **posição de VALOR** (condição já funciona desde o §306). Duas causas medidas: (A) o `ExpressionTyper` do lowering não tinha regra para `&&`/`||` e herdava o tipo do operando ESQUERDO (`Bool?`) enquanto o `TypeChecker` semântico já diz `Bool` — o consumidor tratava um int primitivo como referência boxed; (B) só o LHS passava pelo `nullableBoolTruthinessRewrite`, então um RHS `Bool?` chegava ao join como referência enquanto o outro arco deixava int. Correção A (`ExpressionTyper`: `&&`/`||` → `Bool`) + B (RHS pelo mesmo rewrite). **Q0 RED → GREEN medidos:** `NullableBoolTruthinessE2ETest` 14 testes/**2 falhas** (VerifyError no JVM, T1/T2) → **15/15 verde** (8 originais + 7 do corpus T1–T6 do plano). Face **JS**: o JS nem passa por esse bloco de IR (`&& driver.target != Target.JS`), emite `&&` cru e devolve o OPERANDO — pré-existente, **não** causado por este fix, pinado em teste próprio e catalogado como **§338**/#486. Vizinhos verdes: `NullablePrimitiveContractE2ETest` 26/26, `VoidReturnValueE2ETest` 7/7; as falhas de `AsCastPrecedenceE2ETest`, `PrimitiveToStringCastE2ETest` e `CoreRegressionE2ETest` foram remedidas na base = pré-existentes. **PRÓXIMO PASSO:** PR em português. **NÃO TOCAR:** §338 (lane JS), §304, §334, §337 (SIGSEGV aarch64 — lane nativa), §302, #443, §270/§271/§288 (rule 6), 1.1.x (nat).
+
 > **Regra obrigatória para agentes (IA ou humano):**
 > 1. **Antes** de começar qualquer trabalho de feature/gap: leia este arquivo.
 > 2. Se o item que você quer atacar já tem **dono + estado `EM CURSO`**, não toque —

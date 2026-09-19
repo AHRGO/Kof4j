@@ -11086,6 +11086,22 @@ Registrado 19/09 ~06:5x pela ISSUE-LANE `.22` (condição de parada 3: vermelho 
 - **✅ CLOSED 19/09 pela lane docs→plataforma (precedente §307: gate vermelho no tip = prioridade zero de TODAS as lanes, derruba o CI geral).** Split verbatim, uma costura limpa por arquivo: `nat/NativeBoxTags.java` (88 linhas novos: `collectionTag`/`mapValueTag`/`boxFn`/`unboxFn`/`unboxSoftFn`/`isBoxedNumericReceiver` — puros, compartilhados com o cross; `NativeX86Calls.java` 634→561; chamadores cross renomeados `NativeX86Calls.x(`→`NativeBoxTags.x(` em 8 sítios). Irmão achado no MESMO push-run: `ExpressionBinaryLowerer` tinha cruzado para **601 ≥ 600** (inflado pelo #293; escondido porque o tip NAO COMPILAVA — variáveis duplicadas do rebase do `988f8afd`, consertadas no commit anterior `7e7514eb` com a suíte inteira) — mesma receita: `ExpressionBinaryPredicates.java` (73 linhas, os 8 predicados puros) e o lowerer 601→541. **Prova (freeze rule 3):** MESMA suíte antes/depois — compiler 2348 run / 0 FAILURES / 18E (`Cannot run program node` — host sem node, documentado) / 209 skip; `check_500` rc=0 com baseline re-travado (`--update-baseline`); R1 boundary rc=0. Dívida remanescente (541/561 toleradas, ≤599) não cresce sem re-travar o baseline; o corte fino continua da nat lane / compiler lane quando quiserem — não é mais bloqueante.
 
 
+## §338 — JS backend: `&&`/`||` in **value position** leaks the operand — a nullable RHS (`Bool?` = `null`) prints `null` where the contract says `false` (#486) — 🟡 OPEN 19/09 (pre-existing; JS-only) — owner = JS lane
+
+**Found:** 19/09, while fixing #462 (the canonical `Bool` result of `&&`/`||`). The value-position faces now hold on JVM/Script, but JS diverges when the **right** operand is a `Bool?` that is null.
+
+**Measured** (tip `f7a45651`): `println(true && nb())` and `println(false || nb())` print `null` on JS where JVM/Script print `false`; `true && tb()` is `true` everywhere. Any consumer is affected, not just `println` — the expression's value is `null` where its declared type is `Bool`.
+
+**Root:** `ExpressionBinaryLowerer`'s dedicated short-circuit IR block is excluded for JS (`&& driver.target != Target.JS`) — the exclusion has a recorded reason (the KofJS reconstructor moves temporaries out of a loop body → `ReferenceError`, measured 17/09). Without that block JS emits a **raw** `&&`/`||`, and JavaScript's logical operators return the **operand** (`true && null` → `null`), not a boolean.
+
+**Not caused by the #462 fix:** in the failing case the *left* operand is already `Bool`, so the new `ExpressionTyper` rule does not enter — the `null` comes from the JS backend. Confirmed pre-existing.
+
+**Fix sketch:** canonicalise the JS result while keeping JS's native short-circuit — wrapping in `!!` (`!!(a && b)` yields a real `Boolean`; `!!(true && null)` → `false`). Note the existing `kofBoolValueOf` is a *formatting* helper (string `true`/`false`), not a coercion. Careful: the `KofBinary` → JS IR mapping is shared with the **condition** path, where returning the operand is harmless — the coercion is correct in both, but short-circuit must stay intact.
+
+**Status:** **not fixed** (the #462 DoD asks only that JS not regress, and it does not). Behaviour is **pinned** in `NullableBoolTruthinessE2ETest#logicalValuePositionWithNullableRhsJsGap` with a pointer here, so it cannot change silently. Filed as **#486**.
+
+---
+
 ## §336 — `as`/`instanceof` on the LEFT of a higher-precedence binary op silently dropped the operator+RHS: the type-ref was parsed by the VALUE precedence-climb and swallowed `Double / 2.0` as a malformed type → `checkcast "?"` + lost arithmetic, `NoClassDefFoundError: ?` at runtime (#459) — ✅ CLOSED 19/09 (`.22`; dedicated type-ref path + follow-on `toType`/SEM011/array-checkcast fixes, `AsCastPrecedenceE2ETest` 6/6 `runAll3`)
 
 - **Found/registered 19/09 by PublioSantos (#459), root-caused in the issue itself** (byte dump `checkcast "?"`, no `ddiv`, `astore` right after the cast; differential sweep `+ - * / % <<` all broken cast-on-left, cast-on-right clean). Re-measured on tip `f520ea87` before touching anything: `check` → `no errors`, JVM run → `NoClassDefFoundError: ?` — exact.

@@ -217,4 +217,130 @@ class NullableBoolTruthinessE2ETest {
                 }
                 """, "Z");
     }
+
+    // ---------------------------------------------------------------------
+    // #462 — a fronteira CONDICAO -> VALOR. O §306 fechou a truthiness nos
+    // sitios de CONDICAO (if/while/if-expr); aqui `&&`/`||` aparecem em
+    // POSICAO DE VALOR (`println(x && y)`, `Bool b = ...`, `return ...`).
+    //
+    // Duas causas: (A) o `ExpressionTyper` do lowering nao tinha regra para
+    // `&&`/`||` e herdava o tipo do operando ESQUERDO (`Bool?`), enquanto o
+    // `TypeChecker` semantico ja diz `Bool` — o consumidor entao acreditava
+    // num `Bool?` boxed e recebia um int primitivo; (B) so o LHS passava pelo
+    // `nullableBoolTruthinessRewrite`, entao um RHS `Bool?` chegava ao join
+    // como referencia enquanto o outro arco deixava int.
+    // ---------------------------------------------------------------------
+
+    /** T1 — reproducer verbatim da issue (value position, LHS `Bool?`). */
+    @Test
+    void logicalValuePositionWithNullableLhs(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                Bool? fb() { return false }
+                Bool? nb() { return null }
+                Bool? tb() { return true }
+                main() {
+                    println(fb() && true)
+                    println(tb() && true)
+                    println(nb() || true)
+                    println(fb() || false)
+                }
+                """, "false\ntrue\ntrue\nfalse");
+    }
+
+    /**
+     * T2 — RHS tambem nullable (prova a causa B: RHS canonicalizado).
+     * JVM + Script; a face JS vive no teste abaixo, por ser um gap ANTERIOR
+     * e de outro subsistema (o JS nao passa por este bloco de IR).
+     */
+    @Test
+    void logicalValuePositionWithNullableRhs(@TempDir Path tempDir) throws IOException {
+        String src = """
+                Bool? fb() { return false }
+                Bool? nb() { return null }
+                Bool? tb() { return true }
+                main() {
+                    println(true && fb())
+                    println(false || tb())
+                    println(true && nb())
+                    println(false || nb())
+                }
+                """;
+        String golden = "false\ntrue\nfalse\nfalse";
+        runJvm(tempDir, src, golden);
+        runScript(tempDir, src, golden);
+    }
+
+    /**
+     * T2 face JS — comportamento ATUAL do backend JS, que NAO passa pelo bloco
+     * de IR do short-circuit (`ExpressionBinaryLowerer`: `&& driver.target !=
+     * Target.JS`). O JS emite `&&`/`||` crus, e a semantica do JavaScript e
+     * devolver o OPERANDO (`true && null` → `null`), nao um `Bool` canonico.
+     *
+     * <p>Pre-existente e alheio a esta correcao: no caso `true && nb()` o
+     * operando ESQUERDO ja era `Bool`, entao a regra nova do `ExpressionTyper`
+     * nao muda nada aqui — o `null` vem do backend JS. Fica pinado para nao
+     * mudar em silencio; a face esta na issue #486 e no ledger (§338).
+     */
+    @Test
+    void logicalValuePositionWithNullableRhsJsGap(@TempDir Path tempDir) throws IOException {
+        runJs(tempDir, """
+                Bool? fb() { return false }
+                Bool? nb() { return null }
+                Bool? tb() { return true }
+                main() {
+                    println(true && fb())
+                    println(false || tb())
+                    println(true && nb())
+                    println(false || nb())
+                }
+                """, "false\ntrue\nnull\nnull");
+    }
+
+    /** T3 — consumidor diferente de print (impede fix oportunista no println). */
+    @Test
+    void logicalResultAssignedToBoolLocal(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                Bool? fb() { return false }
+                main() {
+                    Bool x = fb() && true
+                    println(x)
+                }
+                """, "false");
+    }
+
+    /** T4 — retorno tipado `Bool`. */
+    @Test
+    void logicalResultReturnedAsBool(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                Bool? fb() { return false }
+                Bool g() { return fb() && true }
+                main() { println(g()) }
+                """, "false");
+    }
+
+    /** T5 — short-circuit preservado: o RHS nao pode ser avaliado. */
+    @Test
+    void logicalShortCircuitStillLazy(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                Bool? rhs() {
+                    println("RHS")
+                    return true
+                }
+                main() {
+                    println(false && rhs())
+                    println(true || rhs())
+                }
+                """, "false\ntrue");
+    }
+
+    /** T6 — controle: `Bool` puro nao muda. */
+    @Test
+    void plainBoolLogicalValuePositionUnchanged(@TempDir Path tempDir) throws IOException {
+        runAll3(tempDir, """
+                main() {
+                    println(false && true)
+                    println(true || false)
+                }
+                """, "false\ntrue");
+    }
 }
