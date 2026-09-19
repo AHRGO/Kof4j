@@ -942,7 +942,7 @@ REVOGADA). Lane: **compiler** (contrato nos 4 backends — não a lane docs).
 | # | Passo | Escopo (uma linha) | Depende de |
 |---|-------|--------------------|------------|
 | 2.6.1 | **N1** — JVM+Script+JS: `Nullable(primitivo)` carrega null REAL | `T?` boxed em retorno/campo/slot nos 3 targets com tipo boxed; virar a célula `nullableprint` + as 3 paridades null-branch de `KofInterpreterParityTest` no MESMO commit do comportamento (regra 1) | — |
-| 2.6.2 | **N2** — Native: null real via ABI de box tagged §104b-ii | box `typeId=3` + `object_to_string`/unbox com dispatch; x86 à mão + riscv à mão + aarch64 via tradutor | §104b-ii / §205 fatia 2 dividem este ABI |
+| 2.6.2 | **N2** — Native: null real via ABI de box tagged §104b-ii | **`RuntimeErasureBox`** (`[MAGIC][tag][value]`, 24 B) + dispatch `kof_box_*` / `kof_unbox_*` strict+soft; x86 à mão + riscv à mão + aarch64 via tradutor. O esboço antigo de box `typeId=3` está **superseded — não criar como segundo ABI**; ver `docs/runtime/RUNTIME_ABI.md` §3.9. | §104b-ii / §205 fatia 2 dividem este ABI |
 | 2.6.3 | **N3** — `== null` em NÃO-nullable: legal, constant-foldable, NUNCA diagnóstico | a intenção é a própria comparação; regra 2 (retrocompat): código existente que compara continua compilando | N1 |
 | 2.6.4 | **N4** — auditar as faces restantes de null silencioso | map-miss `0` (SG-008), campo não-inicializado `0`, unbox-de-null `0` — cada um ganha decisão ou diagnóstico honesto (R6) | N1–N3 |
 

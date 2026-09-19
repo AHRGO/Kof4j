@@ -187,7 +187,13 @@ public final class NativeRiscvCrossOps {
             } else if (dispatchType instanceof Type.PrimitiveType pt) {
                 String cn = Type.canonicalPrimitiveName(pt.name());
                 switch (cn) {
-                    case "int", "char", "short", "byte" -> {
+                    case "char" -> {
+                        // §333/#259: Char imprime o CARACTERE (D-PRINT/§216),
+                        // não o codepoint — paridade com JVM e x86.
+                        sb.append("    call kof_char_to_string\n");
+                        sb.append(nl ? "    call kof_println_string\n" : "    call kof_print_string\n");
+                    }
+                    case "int", "short", "byte" -> {
                         sb.append(nl ? "    call kof_println_int\n" : "    call kof_print_int\n");
                     }
                     case "long" -> sb.append(nl ? "    call kof_println_int\n" : "    call kof_print_int\n");
@@ -260,7 +266,15 @@ public final class NativeRiscvCrossOps {
                     other.pushRiscv(sb, "a0");
                     return;
                 }
-                if ("int".equals(cn) || "char".equals(cn) || "short".equals(cn) || "byte".equals(cn) || "long".equals(cn)) {
+                if ("char".equals(cn)) {
+                    // #259: Char vira CARACTERE, não codepoint — o cross não
+                    // tinha kof_char_to_string e caía no int_to_string (75 no
+                    // lugar de 'K'). Paridade com o ramo do NativeX86Calls.
+                    sb.append("    pop a0\n    call kof_char_to_string\n");
+                    other.pushRiscv(sb, "a0");
+                    return;
+                }
+                if ("int".equals(cn) || "short".equals(cn) || "byte".equals(cn) || "long".equals(cn)) {
                     // §284-map: probe de MAGIC aqui SEGUERIA lixo de endereco
                     // pequeno (crash B.kf medido 42/97 crus) — a caixa do
                     // join agora chega TIPO Nullable (ExpressionTyper

@@ -10486,7 +10486,7 @@ Probe CLI 4-target na forma exata da issue (dois arquivos): **`cop\nmovido` rc=0
 Suíte completa: ver o fim do log deste commit (`/tmp/opencode/suite445.log`).
 **Fechado 18/09 (lane nativa, §284-map):** o contrato de slot de Map criado com a caixa de erasure real faz o `get` nativo retornar a caixa do slot (ou `null` no ausencia — o `kof_map_get` ja retorna 0 no miss; o caminho tipado nao dobra mais em `0` porque o tipo de retorno e `V?` e o desembale no call-site so roda para retornos primitivos concretos). Medido no verbatim do §304 com o jar do §284-map: x86 `42/0/null`, riscv64 `42/0/null`, aarch64 `42/0/null`, JVM `42/0/null` — identico nos quatro, e `m.get("zero") == m.get("z")` e `false` (0 ≠ null via `kof_box_equals`/dobra crua). Distinto-de-zero-presente agora e o comportamento nativo, sem diagnostico (o contrato EH representavel). Prova: `NativeErasureBoxE2ETest.mapBoxedSlot*` (linha `g.get("zz")`, golden de 11 linhas byte-identico nos 4 alvos) e `KofMapSetTest` 14/14.
 
-## §333 — backends cross (riscv64 + aarch64) imprimem valores `Char` como CODEPOINTS NUMERICOS — `println(c: Char)` / `println(map.get(k))` de mapa `Char` imprimem `97`/`66` onde JVM e x86 imprimem `a`/`B` — 🟡 ABERTO 18/09 (pre-existente; surfaced ao medir o §284-map; face D-PRINT/§216 no cross) — dono = lane nativa
+## §333 — backends cross (riscv64 + aarch64) imprimem valores `Char` como CODEPOINTS NUMERICOS — `println(c: Char)` / `println(map.get(k))` de mapa `Char` imprimem `97`/`66` onde JVM e x86 imprimem `a`/`B` — ✅ CORRIGIDO 19/09 (branch `fix/259-nullable-primitive-native`, #259/N2 — prova medida, PR pendente de revisão da mantenedora; ver bloco de fechamento no fim da seção) — dono = lane nativa
 
 **Achado:** 18/09, lane nativa `.17`, medindo a bateria do golden §284-map. Repro minima (6 linhas): `var cm = mapOf(); cm.put("c", 97 as Char); val k = cm.get("c"); println(k); var c: Char = 66 as Char; println(c)` → JVM `a`/`B`, x86 `a`/`B`, riscv64 `97`/`66`, aarch64 `97`/`66`.
 
@@ -10495,6 +10495,18 @@ Suíte completa: ver o fim do log deste commit (`/tmp/opencode/suite445.log`).
 **Nao e regressao do §284:** o caminho de `Char` tipado e independente do trabalho de box (mesma saida numerica medida em `println(c)` puro, sem mapa nem box). A bateria §284-map apenas expo porque a linha char do `M2` entrou no diff md5 4-alvos.
 
 **Esboco do conserto (proxima unidade da lane nativa):** portar `kof_char_to_string` para uma fatia asm riscv (unidade ≤ 0xFFFF → UTF-8, mesmo formato do x86 — cuidado com surrogate: `Char` astral = uma unidade UTF-16, codificar o surrogate solitario WTF-8 igual ao x86 hoje); ligar `valueOf(char)` + o branch primitivo do println cross; golden = oraculo JVM (`a`, `B`, 233→`é`); testes: estender o programa do `NativeErasureBoxE2ETest` ou criar `KofCharCrossE2ETest`. Relacionado: §216 (fechado, faces JVM/x86/JS), §104b (D-PRINT), §334, NATIVE002.
+
+**✅ CORRIGIDO 19/09 (branch `fix/259-nullable-primitive-native`, #259/N2 — PR pendente de revisão da mantenedora).** Implementado exatamente pelo esboco acima: `kof_char_to_string(a0=codepoint)` adicionado ao `NativeRiscvAsmRtB49` (encode UTF-8 de 1/2/3 bytes, mesmo layout de string do `kof_int_to_string` — len em +16, bytes em +24, NUL no fim), e os DOIS sítios de dispatch ligados no `NativeRiscvCrossOps`: o branch de `valueOf(char)` e o branch primitivo do println agora emitem `kof_char_to_string` em vez de caírem em `kof_int_to_string`. O aarch64 herda pelo tradutor (zero código por arco).
+
+Prova — o repro da própria seção (`var cm = mapOf(); cm.put("c", 97 as Char); val k = cm.get("c"); println(k); var c: Char = 66 as Char; println(c)`), rodado nos 3 alvos nativos sob QEMU + o oráculo JVM:
+
+| programa | oráculo JVM/x86 | riscv64 | aarch64 |
+|---|---|---|---|
+| repro do §333 (mapa) | `a` / `B` | `a` ✅ | `a` ✅ |
+| `println('K')` | `K` | `K` ✅ | `K` ✅ |
+| `println('é')` (UTF-8 de 2 bytes) | `é` | `é` ✅ | `é` ✅ |
+
+Também coberto pelo corpus novo `NativeNullablePrimitiveContractE2ETest` (linhas de `Char?` null/presente, incluindo a face de concatenação `"c=" + c(true)`) — verde em JVM, Script, JS, x86-64, riscv64 e aarch64.
 
 ## §334 — `kof_box_equals` (introzido no §284-map) compara caixas por `(tag, bits do payload)` — a unica divergencia honesta de `Double.equals` e o caso NaN (JVM: `NaN.equals(NaN)` = true; caixa nativa: false) — 🟡 ABERTO 18/09 (micro-borda; catalogado pela unidade §284-map; sem repro visivel conhecida)
 

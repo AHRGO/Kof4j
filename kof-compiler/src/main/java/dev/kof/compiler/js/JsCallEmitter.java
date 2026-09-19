@@ -60,45 +60,28 @@ void handleCall(MethodCtx ctx, List<Object> stack,
         // colapsava para o argumento (`Color.valueOf("Blue")` virava "Blue").
         if ("valueOf".equals(kc.methodName()) && kc.kind() == KofCallKind.STATIC
                 && isJdkValueOfOwner(kc.ownerType())) {
-            if (!kc.parameterTypes().isEmpty()
-                    && kc.parameterTypes().get(0) instanceof Type.PrimitiveType cpt
-                    && "char".equals(Type.canonicalPrimitiveName(cpt.name()))) {
-                // String.valueOf(char) — caractere UTF-16 (paridade JVM/Native:
-                // "h", não o codepoint numérico). Ver known-bugs #27.
-                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("String.fromCharCode"),
-                        List.of(args.get(0))));
-            } else if (!kc.parameterTypes().isEmpty()
-                    && kc.parameterTypes().get(0) instanceof Type.ClassType ct
-                    && "kof".equals(ct.packageName())
+            Type p0 = kc.parameterTypes().isEmpty() ? null : kc.parameterTypes().get(0);
+            if (p0 != null && isCharUnwrapped(p0)) {
+                if (p0 instanceof Type.NullableType) {
+                    p.lc.registerRuntime("kofCharValueOf");
+                    stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofCharValueOf"), List.of(args.get(0))));
+                } else {
+                    stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("String.fromCharCode"), List.of(args.get(0))));
+                }
+            } else if (p0 instanceof Type.ClassType ct && "kof".equals(ct.packageName())
                     && (ct.name().equals("List") || ct.name().equals("Map") || ct.name().equals("Set"))) {
-                // §107-JS: String.valueOf(coleção) = toString do contêiner
-                // (JVM: ArrayList/HashMap/HashSet.toString → "[1, 2]", "{k=1}").
-                // String() do JS dava "1,2" (Array) / "[object Map]" — sem
-                // colchetes/ordem errada. kofFormat espelha o formato JVM.
                 p.lc.registerRuntime("kofFormat");
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofFormat"), List.of(args.get(0))));
-            } else if (BuiltinTypes.isString(kc.ownerType())
-                    && !kc.parameterTypes().isEmpty()
-                    && isDoubleOrFloatUnwrapped(kc.parameterTypes().get(0))) {
-                // §264: String.valueOf(Double/Float) — formato do JDK ("4.0",
-                // "1.0E7"), nao o String() cru do JS ("4", "10000000"). O
-                // lowerer compartilhado passou o tipo REAL no arg do valueOf
-                // (ExpressionPrintLowerer/ExpressionBinaryLowerer, faces JS).
+            } else if (BuiltinTypes.isString(kc.ownerType()) && p0 != null && isDoubleOrFloatUnwrapped(p0)) {
                 p.lc.registerRuntime("kofNumFmt");
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofNumFmt"),
-                        List.of(args.get(0), new JsIr.JsNumber(isFloatUnwrapped(
-                                kc.parameterTypes().get(0)) ? "1" : "0"))));
+                        List.of(args.get(0), new JsIr.JsNumber(isFloatUnwrapped(p0) ? "1" : "0"))));
             } else if (BuiltinTypes.isString(kc.ownerType())) {
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("String"), List.of(args.get(0))));
-            } else if (!kc.parameterTypes().isEmpty()
-                    && kc.parameterTypes().get(0) instanceof Type.PrimitiveType pt
-                    && "bool".equals(Type.canonicalPrimitiveName(pt.name()))) {
-                // Boolean.valueOf(Z) — format 0/1 as true/false, null-safe
-                // (#278/D-NULL-INTENT — ver kofBoolValueOf em JsRuntimeCore).
+            } else if (p0 instanceof Type.PrimitiveType pt && "bool".equals(Type.canonicalPrimitiveName(pt.name()))) {
                 p.lc.registerRuntime("kofBoolValueOf");
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofBoolValueOf"), List.of(args.get(0))));
             } else {
-                // boxed valueOf — JS values are already boxed; identity
                 stack.add(args.get(0));
             }
             return;
@@ -125,13 +108,15 @@ void handleCall(MethodCtx ctx, List<Object> stack,
             p.rt.handleRuntimeOp(ctx, stack, preambleExprs, kc, receiver, args);
             return;
         }
-        if ("kofRecordEq".equals(kc.methodName()) && kc.parameterTypes().size() == 2) {
+        if (("kofRecordEq".equals(kc.methodName()) || "kofFpEq".equals(kc.methodName()))
+                && kc.parameterTypes().size() == 2) {
             // §262(b): igualdade de record null-safe partilhada (Objects.equals
             // semantics) baixada p/ helper do runtime — o desugar com jumps da
             // lane não dobra em posição de condição no reconstructor JS (o
             // mesmo motivo do `&&`/`||` p/ target != JS, ExpressionBinaryLowerer:167).
-            ctx.lc.registerRuntime("kofRecordEq");
-            stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofRecordEq"), args));
+            String eqFn = kc.methodName();
+            ctx.lc.registerRuntime(eqFn);
+            stack.add(new JsIr.JsCall(new JsIr.JsIdentifier(eqFn), args));
             return;
         }
         // §239 (JS): String.format via host bridge — dispatch no p.rt (JsRuntimeOps)
@@ -357,6 +342,11 @@ boolean isPrintCall(KofCall kc) {
         Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
         return inner instanceof Type.PrimitiveType pt
                 && "float".equals(Type.canonicalPrimitiveName(pt.name()));
+    }
+
+    private static boolean isCharUnwrapped(Type t) {
+        Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
+        return inner instanceof Type.PrimitiveType pt && "char".equals(Type.canonicalPrimitiveName(pt.name()));
     }
 
     /** §264: wrapper-boxed Double/Float (o typer boxou o receiver de `toString`). */

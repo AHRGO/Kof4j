@@ -134,8 +134,15 @@ For `+ - * / %` with two numerics: `double` dominates, else `float`, else
 ## 5. Nullability
 
 - Representation: wrapper `NullableType(inner)`. `T?` = "T or null".
-- **Storage is the inner** — nullable is a compile-time constraint only
-  (`StatementLowerer.java:47-51`).
+- **`NullableType` is semantic, not merely a compile-time constraint** — the
+  storage is the target's inner representation, and absence is a real value
+  distinct from every present value: `Absent != Present(0)`,
+  `Absent != Present(false)`, `Absent != Present(0.0)`. Per target:
+  `JVM` wrapper reference | `null`; `Script` host value | `null`; `JS` dynamic
+  value | `null`; `Native` `RuntimeErasureBox*` | pointer `0`. The `T → T?`
+  boundary is the shared `kof_box` call (`emitErasureBox`), never
+  `Wrapper.valueOf` directly — see
+  [RUNTIME_ABI.md §3.9](../runtime/RUNTIME_ABI.md).
 - **Narrowing**: the **only** recognized form is `if (x != null)` (or `null !=
   x`) with `x` an identifier of type `T?` → in the **then-branch**, `x` now has
   type `T` (`StatementAnalyzer`, `IfStmt` narrowing). There is **no** narrowing by `&&`,
@@ -151,15 +158,16 @@ For `+ - * / %` with two numerics: `double` dominates, else `float`, else
   exception (`==`/`!=` lowered to `.equals()` with no null-guard → null
   `Point?` **NPEd**); fixed 17/09 — `§262` (face (a) `07a51565` literal
   `null` → reference compare; face (b) both-null-safe content equality via
-  the `Objects.equals` desugar / JS `kofRecordEq`). `Int? == Int?`
-  compares value (*probe*: `5 == 5` → true). **`Int? == null` does NOT throw
-  — it folds silently**: a null `Int?` (map miss) compares `== null` as
-  **false** (`if (n == null)` printed `not-null`, *measured 16/09, jar of tip*)
-  because the nullable-primitive storage is the inner (`null`→`0` at the
-  boundary). That silence is the open bug **D-NULL-INTENT / #259** (§125
-  measures the fold) — NOT a language rule; the boxed contract keeps failing
-  its other faces (§241 reverted to the honest gap). `String? == null` →
-  `true` correctly (*measured 16/09*).
+  the `Objects.equals` desugar / JS `kofRecordEq`).
+- **`Nullable(primitivo)` compares by value, lifted** (*measured 19/09*,
+  `NativeNullablePrimitiveContractE2ETest`, all 6 targets): a null `Int?`
+  tests `== null` as **true** and prints `null`; `Int? == Int?` is value
+  equality, never wrapper identity (two `10000`s from distinct calls →
+  `true`); `Float?`/`Double?` follow the JVM wrapper contract, so
+  `NaN == NaN` → `true` and `+0.0 == -0.0` → `false`. The old silent fold —
+  a null `Int?` comparing `== null` as `false`, with `null`→`0` at the
+  boundary — was the **D-NULL-INTENT / #259** bug, and is gone: the storage
+  is no longer the raw inner. `String? == null` → `true`.
 - **Sources of `T?`**: `Map.get(k)` for a reference value, `readLine()`,
   `readFile()`, a function declared `T?` that `return null`s. There is **no
   `T? = null` literal** — the null-literal is rejected since 10/09 (SG-008 →

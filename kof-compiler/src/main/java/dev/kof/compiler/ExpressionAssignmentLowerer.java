@@ -321,7 +321,15 @@ if (ae.target() instanceof IdentifierExpr sie) {
                 // §295(b): `Int? v = 5; v = 9` — slot boxed (Commit B) recebe
                 // primitivo CRU → boxa (gate espelha return/VarDecl; RHS já
                 // Nullable é referência física e passa sem re-box).
-                driver.emitErasureBox(ops, spt);
+                // #259: boxa com o inner DECLARADO do slot — o widening da
+                // linha acima já converteu a pilha p/ o destino, e boxar pelo
+                // tipo de ORIGEM empilhava um tipo e chamava o boxer de outro
+                // (`Float? x = 2.5; x = 3.5` empilhava float e chamava
+                // Double.valueOf → bits de float lidos como double:
+                // 5.3360734E-315 medido nos 3 targets nativos).
+                Type slotInner = locals.get(i).type() instanceof Type.NullableType ntl
+                        && ntl.inner() instanceof Type.PrimitiveType ? ntl.inner() : spt;
+                driver.emitErasureBox(ops, slotInner);
             }
             ops.add(new KofStoreLocal(locals.get(i).type(), locals.get(i).index()));
             return localIdx;

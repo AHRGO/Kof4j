@@ -200,6 +200,62 @@ ArrayObject:
 
 ---
 
+### 3.9 Primitive Erasure / Nullable Box ABI
+
+`Nullable(primitive)` is a real value domain on every target —
+`Absent | Present(T)`. Absence is **not** a stolen sentinel: `Absent` is a
+distinct value from `Present(0)`, `Present(false)` and `Present(0.0)`.
+
+| Target | Physical representation of `T?` |
+|---|---|
+| JVM | wrapper reference (`Integer`/`Boolean`/…) or `null` |
+| Script | host value or `null` |
+| JS | dynamic value or `null` |
+| Native | `RuntimeErasureBox*` or pointer `0` |
+
+The `T → T?` boundary is the shared `kof_box` call
+(`CompilerEmissionHelpers.emitErasureBox`), never `Wrapper.valueOf` directly.
+`Script`/`JS` lower `kof_box` to the identity, so the value stays a host
+primitive there.
+
+**Box layout (Native):** 24 bytes, filled by the x86-64 runtime
+(`RuntimeErasureBox.java`); RISC-V mirrors it in `NativeRiscvAsmRtB49.java`,
+AArch64 inherits through the cross translator.
+
+```text
++0   MAGIC   0x4B4F46425F425801
++8   tag
++16  value
+```
+
+| tag | payload |
+|---|---|
+| 0 | Int / Char / Short / Byte |
+| 2 | Long |
+| 3 | Bool |
+| 4 | Double |
+| 5 | Float |
+
+**Operations**
+
+| Function | Contract |
+|---|---|
+| `kof_box_int` / `_long` / `_bool` / `_float` / `_double` | build a box from the raw primitive |
+| `kof_unbox_<t>` (strict) | accepts only a valid box of the expected tag. A malformed box or tag mismatch is an **honest runtime error** — never `wrong type → default` |
+| `kof_unbox_<t>_soft` | box → opens it; raw → passes through; `null` → usage error |
+| `kof_box_equals(l, r)` | lifted **value** equality: `null == null` → `1`; `null` vs present → `0`; box vs box → payload (cross-tag Int/Long compare equal) |
+| `kof_box_to_string` | understands tags 0, 2, 3, 4, 5 |
+
+`Char?` carries no tag of its own — tag 0 is shared with Int/Short/Byte, so
+`kof_box_to_string` alone cannot tell `Int(65)` from `Char('A')`. This needs no
+second ABI: the lowering still knows the static type, and the `Char` face
+unboxes at int width and formats as a character.
+
+**JVM:** `kof_box`/`kof_unbox` are the wrapper `valueOf`/`xxxValue` pair and the
+box is the JDK wrapper itself — the layout above is Native-only.
+
+---
+
 ## 4. Calling Convention (Native)
 
 NativeBackend uses the System V AMD64 ABI:

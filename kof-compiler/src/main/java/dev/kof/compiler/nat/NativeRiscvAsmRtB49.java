@@ -187,17 +187,91 @@ public final class NativeRiscvAsmRtB49 {
             .Lk49_ulbad:
                 la   a0, .Lk49_msg
                 call kof_throw_string
+            .globl kof_unbox_bool
+            kof_unbox_bool:
+                beqz a0, .Lk49_ubad
+                la   t0, .Lk49_magic
+                ld   t0, 0(t0)
+                ld   t1, 0(a0)
+                bne  t0, t1, .Lk49_ubad
+                ld   t2, 8(a0)
+                li   t3, 3
+                bne  t2, t3, .Lk49_ubad
+                ld   a0, 16(a0)
+                ret
+            .globl kof_unbox_bool_soft
+            kof_unbox_bool_soft:
+                beqz a0, .Lk49_usbad
+                la   t0, .Lk49_magic
+                ld   t0, 0(t0)
+                ld   t1, 0(a0)
+                bne  t0, t1, .Lk49_usraw
+                ld   t2, 8(a0)
+                li   t3, 3
+                bne  t2, t3, .Lk49_usbad
+                ld   a0, 16(a0)
+                ret
+            .globl kof_unbox_double
+            kof_unbox_double:
+                beqz a0, .Lk49_ubad
+                la   t0, .Lk49_magic
+                ld   t0, 0(t0)
+                ld   t1, 0(a0)
+                bne  t0, t1, .Lk49_ubad
+                ld   t2, 8(a0)
+                li   t3, 4
+                bne  t2, t3, .Lk49_ubad
+                ld   a0, 16(a0)
+                ret
+            .globl kof_unbox_double_soft
+            kof_unbox_double_soft:
+                beqz a0, .Lk49_usbad
+                la   t0, .Lk49_magic
+                ld   t0, 0(t0)
+                ld   t1, 0(a0)
+                bne  t0, t1, .Lk49_usraw
+                ld   t2, 8(a0)
+                li   t3, 4
+                bne  t2, t3, .Lk49_usbad
+                ld   a0, 16(a0)
+                ret
+            .globl kof_unbox_float
+            kof_unbox_float:
+                beqz a0, .Lk49_ubad
+                la   t0, .Lk49_magic
+                ld   t0, 0(t0)
+                ld   t1, 0(a0)
+                bne  t0, t1, .Lk49_ubad
+                ld   t2, 8(a0)
+                li   t3, 5
+                bne  t2, t3, .Lk49_ubad
+                ld   a0, 16(a0)
+                ret
+            .globl kof_unbox_float_soft
+            kof_unbox_float_soft:
+                beqz a0, .Lk49_usbad
+                la   t0, .Lk49_magic
+                ld   t0, 0(t0)
+                ld   t1, 0(a0)
+                bne  t0, t1, .Lk49_usraw
+                ld   t2, 8(a0)
+                li   t3, 5
+                bne  t2, t3, .Lk49_usbad
+                ld   a0, 16(a0)
+                ret
             # §284-map: kof_box_equals(a0=L, a1=R) -> a0 0/1. Caixa=valor,
-            # box-não-numerica=identidade do ponteiro, null==null=1,
-            # null-vs-valor=CCE (mesmo contrato do x86 — ver lá).
+            # null vs null = 1, null vs presente = 0.
             .globl kof_box_equals
             kof_box_equals:
                 beqz a0, .Lk49_ke_lnull
-                beqz a1, .Lk49_ke_bad
+                beqz a1, .Lk49_ke_zero
                 j    .Lk49_ke_go
             .Lk49_ke_lnull:
-                bnez a1, .Lk49_ke_bad
+                bnez a1, .Lk49_ke_zero
                 li   a0, 1
+                ret
+            .Lk49_ke_zero:
+                li   a0, 0
                 ret
             .Lk49_ke_go:
                 addi sp, sp, -48
@@ -293,6 +367,80 @@ public final class NativeRiscvAsmRtB49 {
                 ret
             .Lk49_bts_null:
                 la   a0, .Lk49_nullstr
+                ret
+            # kof_char_to_string(a0=codepoint) -> a0=String UTF-8 (1-3 bytes).
+            # #259: o cross só tinha o kof_int_to_string — um `Char?` PRESENTE
+            # caía nele e imprimia o CODEPOINT (75 no lugar de 'K', medido sob
+            # qemu nos 2 arcos). Port da lógica do RuntimeStringConv x86
+            # (0..0x7F 1 byte, 0x80..0x7FF 2, 0x800..0xFFFF 3), no MESMO layout
+            # de string do kof_int_to_string: len em +16, bytes em +24, nul.
+            .globl kof_char_to_string
+            kof_char_to_string:
+                addi sp, sp, -48
+                sd   ra, 40(sp)
+                sd   s0, 32(sp)
+                sd   s1, 24(sp)
+                sd   s2, 16(sp)
+                sd   s3, 8(sp)
+                mv   s0, a0
+                li   s1, 1
+                li   t0, 128
+                blt  s0, t0, .Lk49_cts_size
+                li   s1, 2
+                li   t0, 2048
+                blt  s0, t0, .Lk49_cts_size
+                li   s1, 3
+            .Lk49_cts_size:
+                addi t0, s1, 25
+                addi t0, t0, 15
+                andi t0, t0, -16
+                mv   a0, t0
+                call kof_alloc
+                mv   s2, a0
+                li   t0, 1
+                sw   t0, 0(s2)
+                li   t0, 0
+                sw   t0, 4(s2)
+                sd   t0, 8(s2)
+                sw   s1, 16(s2)
+                sw   t0, 20(s2)
+                addi s3, s2, 24
+                li   t0, 128
+                blt  s0, t0, .Lk49_cts_e1
+                li   t0, 2048
+                blt  s0, t0, .Lk49_cts_e2
+                srli t0, s0, 12
+                ori  t0, t0, 0xE0
+                sb   t0, 0(s3)
+                srli t0, s0, 6
+                andi t0, t0, 0x3F
+                ori  t0, t0, 0x80
+                sb   t0, 1(s3)
+                andi t0, s0, 0x3F
+                ori  t0, t0, 0x80
+                sb   t0, 2(s3)
+                j    .Lk49_cts_end
+            .Lk49_cts_e2:
+                srli t0, s0, 6
+                ori  t0, t0, 0xC0
+                sb   t0, 0(s3)
+                andi t0, s0, 0x3F
+                ori  t0, t0, 0x80
+                sb   t0, 1(s3)
+                j    .Lk49_cts_end
+            .Lk49_cts_e1:
+                sb   s0, 0(s3)
+            .Lk49_cts_end:
+                li   t0, 0
+                add  t1, s3, s1
+                sb   t0, 0(t1)
+                mv   a0, s2
+                ld   s3, 8(sp)
+                ld   s2, 16(sp)
+                ld   s1, 24(sp)
+                ld   s0, 32(sp)
+                ld   ra, 40(sp)
+                addi sp, sp, 48
                 ret
             .section .rodata
             .p2align 3

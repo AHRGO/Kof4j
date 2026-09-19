@@ -32,6 +32,16 @@ final class RecordEqualityLowerer {
     private RecordEqualityLowerer() {}
 
     /**
+     * #259: o tipo ESTÁTICO do lado (já desembrulhado o {@code Nullable}) é
+     * {@code float}/{@code double}? Decide entre o helper de wrapper (NaN/±0.0)
+     * e o {@code ===} comum do JS.
+     */
+    private static boolean isFloatingOperand(Type t) {
+        Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
+        return inner instanceof Type.PrimitiveType && TypeMetrics.isFloatingPoint(inner);
+    }
+
+    /**
      * Emite a comparação de conteúdo null-safe. Deixa um número 0/1 (BOOL) no
      * topo representando {@code a == b} (NUNCA aplica o `!=` — o chamador faz
      * isso uma vez). O chamador define {@code accType = BOOL}. Pilha ao entrar:
@@ -62,7 +72,12 @@ final class RecordEqualityLowerer {
                     TypeEmitter.boxPrimitive(ops, rightType);
                 }
             }
-            ops.add(new KofCall(BuiltinTypes.STRING, "kofRecordEq", List.of(objT, objT),
+            // #259: `Float?`/`Double?` nullable baixa p/ o helper de semântica
+            // do wrapper JVM (NaN != NaN e +0.0 != -0.0 no `===` do JS); Int/
+            // Long/Char/Bool seguem no kofRecordEq, cujo `===` já coincide.
+            String eqFn = isFloatingOperand(accType) || isFloatingOperand(rightType)
+                    ? "kofFpEq" : "kofRecordEq";
+            ops.add(new KofCall(BuiltinTypes.STRING, eqFn, List.of(objT, objT),
                     Type.PrimitiveType.INT, KofCallKind.FUNCTION));
             return localIdx;
         }
