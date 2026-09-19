@@ -73,6 +73,8 @@ JSN00x, WEB001) — nunca divergência silenciosa.
 | `kof.concurrent` | `spawn expr` / `spawn { }` (join implícito) | JvmRuntime | SpawnE2ETest (3) |
 | `kof.test` | `assert(cond[, msg])`, `test "nome" { }` (runner sintetizado), `kof test` | CompilerDriver/CLI | AssertE2ETest (5), StructuredTestE2ETest (11) |
 | `kof.ui` | `Color/Theme/Palette`, `Window/Label/Button/Input`, `Column/Row/View/Style`, eventos por lambda com capturas, webview nativo | KofUi.java, JsBackend (runtime), kof-webview.c | UiE2ETest (14), WindowE2ETest (3) |
+| `kof.process` | `process.run(cmd)`/`run(cmd, args)`/`exit(code)`, `process.spawn` (stdin/stdout ao vivo) → `Result` | JvmRuntimeCore / KofProcess | ProcessE2ETest, KofProcess* — JVM/JS reais; Native `PROC001` |
+| `kof.shell` | `shell.cmd(program, args)`/`shell.run`/`shell.ok(r)`/`shell.pipeline(estágios)` — açucar sobre `kof.process`, argv-como-lista, nunca `sh -c` | KofShell.java (açúcar sobre `kof.process`; helper JVM `kof_shell_pipeline`) | ShellE2ETest (11) — JVM+JS reais (`run`/`ok`/`cmd`), pipeline JVM real, JS/Native `PROC001` honesto (18/09, `34e4344f`, plano `development/shell-plan.md`) |
 | `kof.config` | `config.get/env/has`, `config.str/int/long/bool(name, fallback)` — JVM/Native (arquivo+profiles+env) + JS (env) | KofConfig.java | KofConfigE2ETest (8) |
 | `kof.log` | `log.debug/info/warn/error`, níveis (default INFO), `off`, warn→stderr | KofLog.java | KofLogE2ETest (7), NativeLogE2ETest (17) |
 | `kof.cli` | 26 comandos: `kof build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/decompile/translate/compare/migrate/debug/info/lsp/install/deps/editor/init/new/version` (`fmt` + `config gen` 31/08) | kof-cli | Bench, KofDebug E2E |
@@ -322,7 +324,7 @@ Legenda nas colunas de target: `y` = suportado, `~` = parcial, `–` = não.
 | Capacidade | Kof | JVM | Native | JS | Tests | Docs |
 |-----------|-----|-----|--------|----|-------|------|
 | `kof` CLI completo | `DONE` (26 comandos: build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/decompile/translate/compare/migrate/debug/info/lsp/install/deps/editor/init/new/version — `fmt` + `config gen` 31/08) | y (native.risc/native.arm) | y (free-list + pthread) | y (GraalJS) | — | tooling/ |
-| `kof script` / `kof repl` | `DONE` (top-level `let` → `KofScriptGlobals`, `--watch`, SIGPIPE fix) | y | y | y | KofScript | stdlib/stdlib.md |
+| `kof script` / `kof repl` | `DONE` (top-level `var`/`val` → `KofScriptGlobals`, `--watch`, SIGPIPE fix) | y | y | y | KofScript | stdlib/stdlib.md |
 | `kof c` (KofCcompiler) | `DONE` (C subset `while/if/deref &/*` → ELF x86_64) | — | y x86_64 native-only | — | KofCCompilerTest | architecture/architecture.md |
 | command parsing (em Kof) | `PLANNED` (`kof.cli` como lib) | — | — | — | — | development/roadmap.md |
 | interactive CLI / prompts / progress | `PLANNED` | — | — | — | — | — |

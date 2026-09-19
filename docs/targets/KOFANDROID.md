@@ -172,7 +172,7 @@ Key points:
 kof build app.kf --target android --output app-android \
     --classpath $ANDROID_HOME/platforms/android-34/android.jar
 
-# or straight to the APK (standalone, no Maven; needs build-tools 34):
+# or straight to the APK (standalone, no Maven; needs build-tools >= 35 for Java-21 classes):
 kof build app.kf --target android --output app-android --apk \
     --classpath $ANDROID_HOME/platforms/android-34/android.jar
 ```
@@ -194,7 +194,7 @@ vectorial (`res/drawable/ic_launcher_kof.xml`) — no generated binary.
 - ✅ **declarative permissions**: `@Permissions([...])` on a Kof class becomes
   `<uses-permission>` in the manifest (`detectPermissions`);
 - ✅ **standalone mode without Maven**: `kof build --target android --apk` calls
-  `aapt2 → d8 → zip → zipalign → apksigner` straight from the CLI (build-tools 34 +
+  `aapt2 → d8 → zip → zipalign → apksigner` straight from the CLI (build-tools >= 35 +
   `ANDROID_HOME`). If the SDK is missing (`ANDROID_HOME` unset, no `aapt2`), the
   flag fails with **exit 1** and an honest message — never exit 0 without an APK
   (R6); the project is still generated, so `mvn verify` remains an option;
@@ -264,6 +264,7 @@ targets; the target that cannot realize it says so right away, with a code.**
 | `AND002` | `web.app()` / `kof.web` (embedded server) | ✅ **enforced at compile-time (17/09)** in both `kof build` and `kof check --target android` (18/09): a mobile app does not listen on a port — the target refuses with `AND002` and points to interop, never emits server code that cannot run (R6) |
 | `AND003` | reflection on Kof classes via interop | *caveat, not a compile-time gate*: desugaring/R8 may strip symbols; the language has no reflection surface of its own, so there is nothing for the compiler to detect |
 | `AND004` | android.jar missing from ExternalClasspath | host Activity not included (warning) |
+| `DB001` / `SECN00x` / `GPU001` | `kof.db` / `kof.security` / `kof.gpu` | 🟡 measured 17/09: although Android reuses `JvmBackend`, several `supportedOn` gates exclude `ANDROID` (unlike `KofScheduler`, which includes it) — `db.connect` → `DB001`, `passwords.hash` → `SECN001`, `crypto.sha512` → `SECN003`, `jwt.create` → `SECN004`, chacha → `SECN002`, `gpu.available()` → `GPU001`. Whether intended (ART without JDBC/JCA) or over-gating is a compiler-lane decision — `known-bugs.md` §278 |
 | `SAM001` | lambda arity ≠ SAM method | external interface requires N args |
 | `SUP001` | `super.method()` in Native | already covered; ANDROID reuses the JVM path |
 

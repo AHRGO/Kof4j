@@ -3,7 +3,7 @@
 # Scoped Resources — lightweight RAII (design plan · TIER 2.4)
 
 **Status:** Plan (design) — implementation gated by version bump (frozen semantics 0.2.6-beta)
-**Source:** `../PLAN-UNIVERSAL-PLATFORM.md` §7 · `roadmap.md` §23 TIER 2.4.1 (former `ACTION_PLAN.md`)
+**Source:** `../../architecture/UNIVERSAL-PLATFORM-VISION.md` §7 · `roadmap.md` §23 TIER 2.4.1 (former `ACTION_PLAN.md`)
 
 ## 1. Objective
 

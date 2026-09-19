@@ -346,7 +346,7 @@ if (mc.receiver() == null && "__kof_spawn_expr".equals(mc.methodName())) {
     for (IRLocalVariable c : caps) cts.add(c.type());
     ops.add(new KofNewObject(tt, cts));
     ops.add(new KofDup());
-    for (IRLocalVariable c : caps) ops.add(new KofLoadLocal(c.type(), c.index()));
+    for (IRLocalVariable c : caps) CompilerCaptures.pushCapture(driver, ops, c);
     ops.add(new KofCall(tt, "<init>", cts, Type.PrimitiveType.VOID, KofCallKind.CONSTRUCTOR));
     ops.add(new KofCall(new Type.ClassType("dev.kof.runtime", "KofRuntime", List.of()),
             "kof_spawn_result", List.of(tt), handleT, KofCallKind.FUNCTION));

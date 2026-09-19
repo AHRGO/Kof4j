@@ -5,7 +5,7 @@
 Este é o guia **obrigatório** para qualquer agente de IA (ou humano) que
 escreva código Kof neste repositório. Leia antes de gerar qualquer `.kf`.
 
-**Versão:** 0.4.0-beta · Última atualização: 13/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe**; branch ativa = `beta-0.4.0`)
+**Versão:** 0.4.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + regra 9 **portão docs-first** para issues fora da filosofia (#449) (18/09) + **push mecânico via `scripts/sync-push.sh` + política de conflito "preserve os dois lados, refaça o seu em cima" (19/09)** + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09); branch ativa = `beta-0.4.0`)
 
 > **PRIORIDADE Nº 1: QUALIDADE.** Antes de qualquer feature, leia o
 > **Portão de qualidade — "nenhum bug sobe"** (§ abaixo), **universal para
@@ -264,6 +264,13 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
    ou a suíte vermelha (fora dos erros ambientais documentados) está violando
    o portão: conserta na mesma unidade ou reverte. `git bisect`-hostil é o
    pior legado que um agente pode deixar.
+9. **Trabalhe na árvore real do repo, na branch ativa — NUNCA num clone/worktree em `/tmp`.**
+   Esta máquina perde energia com frequência ("cai a luz"); tudo em `/tmp` evapora e o
+   trabalho/commits em andamento se perdem. Edite direto no working tree de `/home/mel/Kof4j`
+   na branch ativa (`beta-0.4.0`, salvo ordem contrária da mantenedora), **faça commit local**
+   pra o trabalho persistir em disco na hora, e só então fetch/rebase/push. Não crie worktree
+   de scratch em `/tmp` pro trabalho real. (Regra explícita da mantenedora em 18/09 depois que
+   um worktree em `/tmp` com um fix já verificado foi apagado por queda de energia.)
 7. **Identidade do git e worker de agente (12/09, atualizado 16/09 diretriz da mantenedora).**
    O GitHub App `kof-agent-worker` (App ID `4960796`, configurado via `scripts/gh-as-agent.sh`
    e `~/.config/kof/agent-app.env`) é a identidade dedicada para issues, PRs e commits
@@ -311,6 +318,14 @@ Regra de ouro: **nunca dois agentes no mesmo gap ou no mesmo arquivo gigante**
 (`NativeRuntime.java`, `CompilerDriver.java`) ao mesmo tempo. Se for
 inevitável, combine no chat antes.
 
+**Números §NNN também são claims compartilhados.** Antes de criar uma seção nova
+em `known-bugs.md` (ou qualquer ledger que use `§NNN`), `git fetch` e pegue o
+próximo número livre a partir do **tip remoto**
+(`git show origin/<branch>:docs/bugs-and-gaps/known-bugs.md | grep -oE '^#{2,3} §[0-9]+' | tail -3`) —
+números escolhidos "em voo" (escrever local → push → rebase) já forçaram uma lane
+paralela a renumerar duas vezes (§281/§282, 18/09). Se alguém pegou primeiro,
+renumere do SEU lado ANTES do push: sempre barato, ao contrário da colisão.
+
 **Sincronização obrigatória (pull antes, push depois):** antes de **todo
 commit** — `git fetch` + `git pull --rebase` (com working tree sujo, use
 `git stash push` antes e `git stash pop` depois, ou `--autostash`) e
@@ -320,6 +335,21 @@ só coordena quem *vê* o remoto; commit local não reivindicado é tarefa fanta
 para os outros agentes. Depois do pull, **releia o DOING.md**: o que era seu
 "próximo passo" pode ter sido feito ou reivindicado por outro agente no
 intervalo.
+
+> **Push mecânico (mantenedora 19/09): todo push passa por
+> `scripts/sync-push.sh`** — fetch → `pull --rebase --autostash` → push →
+> verifica `ahead=0 behind=0` contra o remoto antes de retornar sucesso. Se a
+> checagem final não for 0/0, o push **não aconteceu** — nunca reporte o
+> trabalho como "pushado" sem essa linha.
+>
+> **Política de conflito — preserve os dois lados, refaça o seu em cima
+> (mantenedora 19/09).** Conflito de rebase/merge se resolve mantendo a
+> **intenção dos dois hunks**; nunca `checkout --ours`/`--theirs` para
+> "resolver" (a truncagem do `d7dba433` destruiu assim ~4.586 linhas do
+> DOING.md de outras lanes). Um trecho que *parece* velho mas chegou de
+> rebase/merge de outro agente é **conteúdo atualizado, não lixo**: **refaça o
+> seu edit em cima da versão nova** (re-aplique sua mudança contra ela), nunca
+> reverta o edit do outro "porque o meu foi escrito depois".
 
 ### Lição aprendida (04/09) — trabalhe SEMPRE em partes pequenas
 
@@ -579,6 +609,26 @@ Bool isQuery(String op) {
    motivo "Kof não é Java" e aponta `training/anti-patterns/fake-idioms.pt_BR.md`.
    Cruzamento: se o reproducer compilaria em **Kotlin/Java** por ser
    *traduzido*, é esta regra.
+9. **A checagem de filosofia precede a issue — mande o autor LER a
+   documentação PRIMEIRO (ABSOLUTA, mantenedora 18/09, caso #449/RawView).** A
+   regra 8 cobre *linguagens* traduzidas; esta generaliza para qualquer
+   **pilha estrangeira**: um pedido que importa tags HTML, seletores CSS,
+   estilo inline ou `innerHTML` para o `kof.ui` (ex.: uma via de escape
+   `RawView(tag, cssText, html)`), camadas de framework (`@Controller`,
+   Service/Repository), engines de template — seja qual for o nome dado a
+   ele. Tal pedido NÃO é feature faltante: é o autor contornando uma filosofia
+   que não leu. A PRIMEIRA resposta — antes de qualquer "gap confirmado",
+   antes de tocar no código — DEVE mandar o autor para a leitura
+   (`docs/philosophy.pt_BR.md` "O que Kof NÃO é", o doc de idiom da área, ex.
+   `training/idioms/ui.pt_BR.md`, e `training/anti-patterns/`), declarar em
+   uma linha POR QUE viola a filosofia (código Kof declara **intenção**; a
+   plataforma renderiza — complexidade pertence ao compilador/backends, nunca
+   a markup embutido no código do usuário), e apontar o idiom Kof que resolve
+   a necessidade real. A issue só fica aberta se, depois da leitura, a
+   necessidade for real E destampada por abstração Kof — e a resolução é uma
+   abstração Kof decidida pela mantenedora (regra 6), nunca a sintaxe
+   importada. Os checkboxes dos templates fazem o humano assinar o mesmo
+   portão (`feature_request.yml`, `bug_report.yml`).
 
 ---
 
@@ -742,7 +792,7 @@ pronta.
 > completa) provam. **Nenhum agente pode quebrar comportamento que já funciona.**
 
 1. **Zero regressão.** Nenhum commit pode fazer um teste existente passar a
-   falhar. A suíte completa (`mvn test`, hoje **2411** nos 4 módulos — ver
+   falhar. A suíte completa (`mvn test`, hoje **2687** nos 4 módulos — ver
    §"Loop de verificação" para o comando com o flag de failure.ignore) é **gate de merge** —
    mudança que não mantém tudo verde não entra. Exceção única: mudança de
    contrato **deliberada**, com bump de versão + docs atualizados + migração.
@@ -770,7 +820,7 @@ pronta.
 
 ---
 
-## Invariantes da plataforma (plano universal — `docs/development/PLAN-UNIVERSAL-PLATFORM.md`)
+## Invariantes da plataforma (plano universal — `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`)
 
 Estas regras **sempre** se aplicam, mesmo quando não há código de domínio novo
 em jogo. São o mecanismo anti-"god language":
@@ -1088,6 +1138,17 @@ mvn test -o -pl kof-compiler,kof-script,kof-c-compiler,kof-cli -am \
 grep -rl "FAILURE" */target/surefire-reports/*.txt
 ```
 
+> **Hosts Windows / validação Native:** o backend Native x86-64 invoca
+> ferramentas externas reais de assembler/linker (`as`/`ld`) e dependências de
+> runtime ELF do Linux. Um resultado `ToolchainMissing` / `as not available` /
+> `ld not available` é falha de pré-condição do ambiente, não por si prova de
+> regressão do Kof. Ao validar Native a partir do Windows, rode o gate
+> relevante em ambiente Linux/WSL com a toolchain disponível. Para scripts de
+> build aninhados que usam explicitamente `bash -lc`, prefira `wsl.exe -e`/
+> `--exec`; isto é orientação de scripting do Kof para interpretação previsível
+> de argumentos, não uma alegação de bug do WSL. Veja
+> `docs/debugging/debugging-native.pt_BR.md`.
+
 ### Checklist de pré-push (Q0–Q7 — responda antes de `git push`, em QUALQUER branch)
 
 0. O bug foi **consertado na causa raiz** (não mascarado) e o teste que prova
@@ -1108,9 +1169,15 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > ele, o Maven é fail-fast por módulo: qualquer falha em **kof-compiler aborta
 > o reactor** e **kof-script, kof-c-compiler e kof-cli nunca rodam** — você
 > acha que validou tudo mas só viu o primeiro módulo. O total real com o flag
-> é **2411 testes** (compiler 2058 + script 38 + kof-c 7 + cli 308, medição
-> 17/09 ~15:49 no tip `f276e966` — cresce com cada commit): **0 regressões / 0 erros** (a única falha que a
-> suíte já mostrou é o flake intermitente do §252 nativo — calado de novo (5ª corrida quieta seguida), último disparo 16/09 09:44)
+> é **2687 testes** (compiler 2296 + script 48 + kof-c 7 + cli 336, medição
+> 18/09 ~23:10 no job CI Build+Tests do tip `33363a3f` — cresce com cada commit): **0 regressões / 0 erros**
+> (ATUALIZAÇÃO 18/09: o trio histórico de nativos vermelhos está FECHADO no código — §252
+> corrigido `20495e48` (o ret-addr do usleep clobberava a slot de tamanho cacheada; size
+> agora em `%r14` callee-saved), resíduo §181 cross corrigido `c56c74a7` (o `NEG` cross
+> rodava `neg` inteiro no bit pattern de float — -inf virava NaN; XOR do bit de sinal),
+> face (b) do §256 corrigida `3a593734` (golden sem HB — `await b` + acquire
+> `fence r,rw`/`dmb ish` nos consumidores cross). Primeira suíte kof-compiler sem
+> vermelho desde que o resíduo foi aberto em 14/09.)
 > (node agora presente
 > no host da medição — o antigo "13 erros = node ausente" não se aplica mais). O §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
 > regressão do fix §147 no `JsIfThrowElse`) foi **CORRIGIDO 13/09** — a raiz era
@@ -1131,13 +1198,18 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > (2×42, `NativeRiscv64/Aarch64E2ETest`) são **skipados** pelo guard
 > (`4408eb6`) + os outros guards de toolchain/BD externo + o guard de sysroot do §255 (`06e77e94`) → `2411/0/196-skip` (o flake §252 disparou 16/09 09:44, depois calou às 11:38, 15:09, 15:54 e 17/09 15:49 — ~1/4 das corridas completas)
 > (MEDIDO 17/09 ~15:49, run limpo no tip `f276e966`). Com qemu, **tudo executa** — os 84 cross rodam
-> verdes e o total fica `2411` com a contagem de skip caindo para o
-> resíduo externo de BD/ambiente `node`. Estado correto HOJE (17/09 ~15:49, run limpo no tip `f276e966`):
-> **0 regressões / 0 erros** (2411 = 2058+38+7+308, 196 skip) — a corrida completa das 09:44 teve o flake INTERMITENTE
+> verdes e o total fica igual com a contagem de skip caindo para o
+> resíduo externo de BD/ambiente `node`. Estado correto HOJE (18/09 ~05:20, run no tip `c56c74a7`,
+ > job CI Build+Tests do tip `33363a3f`): **2687 = 2296+48+7+336, 0F / 0E / 178 skip (CI ubuntu executa o android APK; hosts sem SDK = 1 skip honest a mais)** (compiler 2292→2296 pelos testes fmt §305; cli 333→336 pelas fatias X10 5–7 `LspServerTest`; cli 308→313 por `CmdBuildClasspathTest` da #441 em `d14275f0`, 313→322 por `CmdDeployTest` das fatias 1–3 do X9 (`154ea1a4`/`bfdd452a`/`84c82139`); compiler 2216→2230 por rng (`KofRngTest` 8) + testes de corrida do §286; CI Build+Tests de `0f3c42d6` medido) — o flake
+> §252, o resíduo cross §181 e o flake de poll §256(b) estão TODOS fechados no
+> código; os skips restantes são o gate opcional de asm e as guardas de toolchain.
+> **0 regressões / 0 erros** (2411 na época = 2058+38+7+308, 196 skip) — a corrida completa das 09:44 teve o flake INTERMITENTE
 > conhecido do §252 nativo (`spawnWorkerThrowPropagatesThroughSelectAnyNative`, dona lane
 > nativa `.18`/nat; às 11:38, 15:09 e 15:54 ele ficou calado — frequência ~1/4, ver §252), que
-> deve ser lido como um vermelho de TESTE, não regressão. O que importa continua
-> sendo nenhum FAILURE fora do flake do §252 e das guardas documentadas.
+> deve ser lido como um vermelho de TESTE, não regressão. **HISTÓRICO (superado 18/09):**
+> o §252 foi depois provado NÃO ser race — ver `known-bugs.md §252` (raiz +
+> fix `20495e48`). O que importa continua sendo nenhum FAILURE fora das guardas
+> documentadas.
 
 Para validar um snippet isolado (ex.: confirmar se um idiom compila),
 use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
@@ -1176,7 +1248,7 @@ use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
 | `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Gaps de spec (SG-00x — fila do maintainer completa, virou referência) + bugs abertos |
 | `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
 | `docs/development/DECISIONS.md` | **Decisões da mantenedora** (time/segurança/app-model/Spring — pasta `decision-pending/` extinta 13/09) |
-| `docs/development/roadmap.md` §23 | **Plano de implementação consolidado** (Tiers 0–12) — único plano ordenado; migração A–H ✅, universal **EM DESENVOLVIMENTO** 17/09 (`PLAN-UNIVERSAL-PLATFORM.md`, R12 sobreposto — §D-UNIVERSAL) |
+| `docs/development/roadmap.md` §23 | **Plano de implementação consolidado** (Tiers 0–12) — único plano ordenado; migração A–H ✅, universal **EM DESENVOLVIMENTO** 17/09 (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, R12 sobreposto — §D-UNIVERSAL) |
 
 ---
 

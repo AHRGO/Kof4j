@@ -179,18 +179,24 @@ main() {
 record Dato(Int x)
 `
 
-## FFI to C — `extern` (JVM, single-arg)
+## FFI to C — `extern` (JVM, any scalar signature)
 
 `kof
 extern "/lib/x86_64-linux-gnu/libm.so.6" cos(Double x): Double
 main() { println(cos(0.0)) }            // JVM: 1.0
 `
 
-The grammar accepts any signature, but the JVM **whitelist** binds 1-arg only:
-`f(Int): Int`, `f(String): Int`, `f(Double): Double`. Anything else → `FFI001`
-at compile time; the JS target → `FFI002`; Native → `FFI001` until §61.
+The JVM binds **any scalar signature** (R3 generalized 18/09) — arbitrary arity,
+scalars in any position, `void` and `String` returns. Measured on tip:
+`fmod(Double,Double):Double`→`1.5`; `ldexp(Double,Int):Double`→`12.0`;
+`strncmp(String,String,Int):Int`→`-1`; `puts(String):void`; `getenv(String):String`→`mel`.
+The Kof function name IS the C symbol (no alias). Non-scalar types (struct/array/
+pointer/callback) → `FFI001` at compile time; the JS **host runner** (GraalJS/node) binds the
+same scalar ABI through `KofJsFfiBridge` — JVM↔JS parity proven 18/09 (`FfiE2ETest` 16/16,
+slice 3.6.F2/F3 ✅) — with non-scalars → `FFI002` there and the browser an honest **runtime**
+error (R7, no host, same degrade as `kof.io`); Native → `FFI001` until §61.
 The lib path is resolved at **runtime** (missing symbol = `kof_ffi_*` exception).
-Widening is the R3 slice (`docs/development/PLAN-UNIVERSAL-PLATFORM.md`, #431).
+History: widening was the R3 slice (#431); the JVM face landed 18/09 (`.18`) — JS/Native remain honest gaps.
 
 ## Tests and lifecycle
 

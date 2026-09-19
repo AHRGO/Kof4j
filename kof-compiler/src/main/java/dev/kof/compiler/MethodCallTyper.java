@@ -219,6 +219,15 @@ if (mc.receiver() == null && KofUi.isConstructor(mc.methodName())
 if (mc.receiver() == null && "Style".equals(mc.methodName()) && mc.arguments().size() == 4) {
     return KofUi.STYLE;
 }
+if (mc.receiver() == null && "Style".equals(mc.methodName()) && mc.arguments().size() == 1) {
+    // D-UI-STYLE (UI007): declarative form, parsed in the compiler (Q4).
+    return KofUi.STYLE;
+}
+// D-UI-STYLE (UI007): Style("<declarations>") — parse/validate in the
+// compiler (Q4/Q3); the lowering carries the normalized CSS.
+if (mc.receiver() == null && "Style".equals(mc.methodName()) && mc.arguments().size() == 1) {
+    return KofUi.STYLE;
+}
 if (mc.receiver() instanceof IdentifierExpr rid3 && KofUi.isConstructor(rid3.name())) {
     KofUi.UiCall uiCall = KofUi.staticMethod(rid3.name(), mc.methodName(), mc.arguments().size());
     if (uiCall != null) return uiCall.returnType();

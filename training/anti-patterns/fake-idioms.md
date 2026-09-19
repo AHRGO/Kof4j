@@ -42,6 +42,8 @@ because they exist in other languages. Code like that **does not compile** or
 | Array literals `{1, 2, 3}` / `[1,2,3]` | ❌ Unavailable — use `new Int[n]` + `listOf` |
 | `async`/`await` (JS-style), `let`/`const` | ❌ Unavailable — use `spawn`/`await` and `var`/`val` (KofScript **is not** JavaScript) |
 | `fn` / `fun` / `func` (any position) | ❌ Unavailable — **reserved** words (06/09, SG-001): they do not exist in Kof, neither as a keyword nor as an identifier (function name, variable, parameter, field). In declaration position: `PARSE085`; elsewhere: `PARSE037`/`PARSE023`/… Use `Tipo nome(...) { }` or `nome(...): Tipo { }`. **Not even in KofScript** — `.ks` is pure Kof, not JavaScript |
+| `extern` callback that is NOT scalar/synchronous/non-escaping | ❌ Unavailable — the R3 callback (C2 ✅ 18/09) binds a function-typed parameter with a **primitive** callback ABI, synchronous and non-escaping only. A `String`/struct/pointer in the callback signature or a callback **as return** → `FFI001` on the JVM (measured, `JvmFfiCallbackE2ETest`); any callback on JS → `FFI002` (parity = slice C3). Storing the pointer to call LATER (`atexit`/`signal`/async) is not bindable either — lifetime/GC-rooting would be R12. Keep the callback in the call: `f(20, 22, (x: Int, y: Int) -> x + y)` |
+| hand-rolled native binding (JNI glue / generated `.java`/`.h` wrappers around `extern`) | ❌ Not the idiom — `extern "lib" sym(T): R` IS the binding (JVM FFM, JS host bridge; measured 18/09). Writing JNI/FFI scaffolding around it duplicates the compiler's job and bypasses the gap codes (`FFI001`/`FFI002`) that make missing capabilities HONEST |
 | `x as Char` (primitive cast to char) | ✅ Implemented (real I2C, 01/09) |
 | `longVal as Int` (narrowing Long→Int) | ✅ Implemented (real L2I, 01/09) |
 | `new Long[n]` (64-bit array) | ✅ Implemented (01/09) |
@@ -175,8 +177,9 @@ this corpus/docs and the compiler *disagrees with its own docs*.
 | `class Foo: A, B` (Kotlin interface list via `:`) | `class Foo implements A, B { }` |
 | `val name: String` property in an `interface` | a method accessor: `interface I { String name() }` |
 | `n.abs()` / `n.equals(o)` / `n.toChar()` (methods on a **primitive**) | `math.abs(n)`, `a == b`, `n as Char` — primitives only have `toString()` and the `toInt()`/`toLong()`/`toFloat()`/`toDouble()` conversions. Rejected with `SEM074` (#362 ✅ FIXED 18/09: the unlisted call used to pass `check` and die at class load — `ClassFormatError`, empty Methodref owner) |
+| `::twice` / bare named-function reference (`val f = twice`, `listOf(twice)`) | lambda wrapper: `val f = (x: Int) -> twice(x)`; `listOf((x: Int) -> twice(x))` — measured 18/09: bare ref = SEM011, wrapper = `42` |
 | `l.sort()` / `l.indexOf(x)` on a `List` (Java API) | Kof `List` API is `add/get/set/remove/contains/size/isEmpty/clear/map/filter/reduce`; find position with a `for` + `get(i)`; order by sorting outside the list (interop) — no `sort`/`indexOf` promise |
-| `m.containsValue(v)` / `m.getOrDefault(k, d)` on a `Map` (Java API) | `m.values()` + `contains`, or `var v = m.get(k); if (v == null) …` — Kof `Map` API is `put/get/remove/containsKey/contains/size/clear/isEmpty/keys/values` |
+| `m.containsValue(v)` on a `Map` (Java API) | `m.values()` + `contains` — Kof `Map` API is `put/get/remove/containsKey/size/keys/values` (**`getOrDefault(k, d)` was fake until 0.4.0 and became REAL on 18/09 (`62bd455e`) — use it**)
 | `this(args)` constructor self-delegation (Java/C#) | Kof promises **`super(args)`** only (base class, first statement — `learn/07`); share init via a helper method both constructors call (measured working) |
 
 > Cross-check: if the reproducer would compile in **Kotlin/Java** because it is

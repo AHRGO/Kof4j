@@ -40,8 +40,25 @@ public final class CompilerComparisons {
             boolean leftNull = bin.left() instanceof LiteralExpr ll2 && ll2.kind() == ConcreteLiteralKind.NULL;
             boolean rightNull = bin.right() instanceof LiteralExpr rl2 && rl2.kind() == ConcreteLiteralKind.NULL;
             if ((leftNull && TypeMetrics.isPrimitiveType(right)) || (rightNull && TypeMetrics.isPrimitiveType(left))) return false;
+            // D-NULL-INTENT (I6): Nullable(primitivo) GENUÍNO (nenhum lado
+            // literal null) — mesma exclusão do record acima. O shortcut
+            // (if_icmp*/if_acmp* cru) faria unwrap incorreto (VerifyError,
+            // valor na pilha é a referência boxed) ou compararia por
+            // IDENTIDADE de wrapper (cache do Integer, I6). Desativa e deixa
+            // o caminho de VALOR (ExpressionBinaryLowerer/RecordEqualityLowerer,
+            // `.equals()` null-safe) assumir — o chamador (assert/if/while)
+            // então salta sobre o BOOL resultante.
+            boolean leftNullablePrim = isNullablePrim(left);
+            boolean rightNullablePrim = isNullablePrim(right);
+            if (!leftNull && !rightNull && (leftNullablePrim || rightNullablePrim)) return false;
         }
         return true;
+    }
+
+    /** D-NULL-INTENT: {@code Nullable(primitivo)} de verdade (física boxed). */
+    private static boolean isNullablePrim(Type t) {
+        return t instanceof Type.NullableType nt && nt.inner() instanceof Type.PrimitiveType pt
+                && !Type.isVoid(pt);
     }
 
     /**
@@ -191,6 +208,23 @@ public final class CompilerComparisons {
         boolean leftMaybeNull = isMaybeNullType(leftT);
         boolean rightMaybeNull = isMaybeNullType(rightT);
         localIdx = ExpressionLowerer.emitExpression(driver, bin.left(), ops, owner, localIdx, locals);
+        // D-NULL-INTENT (buraco da face relacional do #278/#438, achado ao fechar o
+        // §279): um Nullable(primitivo) GENUINO chega FISICAMENTE boxed no JVM (o
+        // return/local do Commit B do #278). Nas comparacoes RELACIONAIS (>,<,>=,<=)
+        // o shortcut emite `if_icmp*`/`DCMP*` DIRETO sobre a pilha — entao o operando
+        // precisa ser DESEMBACOTADO antes do compare. O caminho de VALOR
+        // (ExpressionBinaryLowerer, `isNumericComparison`) ja desempacota (linhas
+        // 288/318); so o atalho de CONDICA0 (if/while/print-if) nao fazia → na JVM
+        // `Int? v > 0` caia em `if_icmpgt` sobre `java/lang/Integer` → VerifyError no
+        // LOAD da classe (compila limpo, morre ao carregar). No-op em JS/Script/
+        // Native (needsErasureBoxing e so JVM, onde o nulavel nao e boxed). `==`/`!=`
+        // nao passam por aqui com um lado nulavel (o shortcut e desativado la em
+        // cima), entao so relacionais alcancam este desempacote.
+        if (isNullablePrim(leftT)) {
+            Type leftInner = ((Type.NullableType) leftT).inner();
+            driver.emitErasureUnbox(ops, leftInner);
+            leftT = leftInner;
+        }
         // rightMaybeNull: o left (na pilha) é primitivo → boxa ele AGORA
         // (antes do emit do right, que empilha por cima)
         if (rightMaybeNull && TypeMetrics.isPrimitiveType(leftT)) {
@@ -198,6 +232,11 @@ public final class CompilerComparisons {
         }
         driver.emitWideningIfNeeded(ops, leftT, common);
         localIdx = ExpressionLowerer.emitExpression(driver, bin.right(), ops, owner, localIdx, locals);
+        if (isNullablePrim(rightT)) {
+            Type rightInner = ((Type.NullableType) rightT).inner();
+            driver.emitErasureUnbox(ops, rightInner);
+            rightT = rightInner;
+        }
         // leftMaybeNull: o right (acabou de emitir, topo da pilha) é primitivo
         // → boxa ele DEPOIS do emit
         if (leftMaybeNull && TypeMetrics.isPrimitiveType(rightT)) {
@@ -290,7 +329,7 @@ public final class CompilerComparisons {
             if (mc.receiver() != null && BuiltinTypes.isMap(ExpressionTyper.inferExprType(driver, mc.receiver(), locals))) {
                 return switch (mc.methodName()) {
                     case "get", "remove", "put", "size", "length", "count",
-                            "contains", "containsKey", "isEmpty", "keys", "values" -> true;
+                            "contains", "containsKey", "isEmpty", "keys", "values", "getOrDefault" -> true;
                     default -> false;
                 };
             }

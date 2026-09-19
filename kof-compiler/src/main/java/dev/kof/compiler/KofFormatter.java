@@ -355,12 +355,41 @@ public final class KofFormatter {
      *
      * @param minPrec precedência mínima p/ imprimir sem parênteses
      */
-    static String formatExpr(ExpressionNode expr, int minPrec) {
+     // #447/§305: LiteralExpr.value() chega ja DECODIFICADO pelo lexer
+     // (readEscape resolve n t r \\ ' " 0 uXXXX). Reimprimir cru quebra o
+     // round-trip ('\\' vira '\' = LEX004; '\t' vira TAB mentido). Re-emite
+     // exatamente o vocabulario do Lexer; nao-ASCII fica cru (nao-lossy).
+     static String escapeLiteral(String v) {
+         if (v == null) return "";
+         StringBuilder sb = new StringBuilder(v.length() + 8);
+         for (int i = 0; i < v.length(); i++) {
+             char c = v.charAt(i);
+             switch (c) {
+                 case '\\' -> sb.append("\\\\");
+                 case '\n' -> sb.append("\\n");
+                 case '\t' -> sb.append("\\t");
+                 case '\r' -> sb.append("\\r");
+                 case '\'' -> sb.append("\\'");
+                 case '"' -> sb.append("\\\"");
+                 case '\0' -> sb.append("\\0");
+                 default -> {
+                     if (c < 0x20) {
+                         sb.append(String.format("\\u%04x", (int) c));
+                     } else {
+                         sb.append(c);
+                     }
+                 }
+             }
+         }
+         return sb.toString();
+     }
+
+     static String formatExpr(ExpressionNode expr, int minPrec) {
         if (expr == null) return "";
         if (expr instanceof IdentifierExpr ie) return ie.name();
         if (expr instanceof LiteralExpr le) {
-            if (le.kind() == ConcreteLiteralKind.STRING) return "\"" + le.value() + "\"";
-            if (le.kind() == ConcreteLiteralKind.CHAR) return "'" + le.value() + "'";
+            if (le.kind() == ConcreteLiteralKind.STRING) return "\"" + escapeLiteral(le.value()) + "\"";
+            if (le.kind() == ConcreteLiteralKind.CHAR) return "'" + escapeLiteral(le.value()) + "'";
             return le.value();
         }
         if (expr instanceof BinaryExpr be) {

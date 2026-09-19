@@ -29,7 +29,7 @@ public final class CompilerOrmSupport {
                     clazz.annotations()));
         }
         driver.pendingSuperBridges.clear();
-        return new IRModule(module.name(), classes, module.imports(), module.sourceName());
+        return new IRModule(module.name(), classes, module.imports(), module.sourceName(), module.sourceContent());
     }
 
     /** Pacote derivado do DIRETÓRIO do arquivo relativo à raiz do módulo. */

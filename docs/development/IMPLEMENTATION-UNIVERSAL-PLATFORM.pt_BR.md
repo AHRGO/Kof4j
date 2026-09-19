@@ -1,0 +1,502 @@
+[English](IMPLEMENTATION-UNIVERSAL-PLATFORM.md) | [Português](IMPLEMENTATION-UNIVERSAL-PLATFORM.pt_BR.md)
+
+# Implementação — Kof como Plataforma Universal
+
+**Tipo:** rastreamento de implementação — **EM DESENVOLVIMENTO** desde 17/09/2026
+(promovido de `future/` por decisão da mantenedora; o portão R12 está
+**sobreposto** — ver `DECISIONS.md` §D-UNIVERSAL)
+**Companion (visão/arquitetura):** [`docs/architecture/UNIVERSAL-PLATFORM-VISION.pt_BR.md`](../architecture/UNIVERSAL-PLATFORM-VISION.pt_BR.md)
+— filosofia, mapa de domínios, modelo arquitetural, estratégia de
+stdlib/interop, riscos e não-objetivos que justificam estes passos.
+**Base:** estado real 0.4.0-beta — 7 targets (jvm estável, native x86_64 estável,
+native.risc/native.arm toolchain+qemu, js alpha GraalJS, kofc native-only,
+android Fases 1–4), stdlib como **tabelas de dispatch em compile-time** com
+gaps diagnosticados, FFI real (SQLite `.so`, FFM Vulkan compute, interop Java +
+GraalJS).
+
+> **Regra deste documento:** esta é a face **executável** da plataforma
+> universal. Todo item abaixo é uma unidade de trabalho com status, lane dona e
+> (quando landado) uma prova. A ordem de capacidades é fixa
+> (FOUNDATION → SYSTEMS → AUTOMATION → INFRASTRUCTURE → DATA → SECURITY →
+> SCIENTIFIC COMPUTING → BIOINFORMATICS → UNIVERSAL PLATFORM) e **o Estágio 1
+> fecha antes de qualquer estágio posterior abrir** (R12, sobreposto apenas para
+> o *agendamento* deste plano — nunca para as regras de freeze/qualidade). Cada
+> unidade landa como qualquer outra mudança: Q0–Q7, aditiva, zero regressão,
+> prova no mesmo commit. A semântica congelada do core fica 100% intacta.
+
+---
+
+## Legenda de status
+
+| Marca | Significado |
+|-------|-------------|
+| ✅ | **FEITO** — landado com prova (data + commit + teste) |
+| 🟡 | **PARCIAL / EM CURSO** — parcialmente landado ou com dono trabalhando |
+| 🔵 | **FALTA** — executável, sem bloqueio, sem dono ainda |
+| ⛔ | **DEPENDE DE DECISÃO** — decisão da mantenedora (regra 6), nunca edição de agente |
+| 🔒 | **BLOQUEADO** — depende de outro item landar antes |
+
+As lanes donas seguem a convenção de IP local do `DOING.md`
+(`.15` = bugs-and-gaps/docs, `.17`/`.18` = native/development, `.22` = compiler).
+Reivindique um item no `DOING.md` **no mesmo commit** que inicia o trabalho.
+
+## Resumo
+
+| Estágio | Nome | Status | Bloqueio |
+|---------|------|--------|----------|
+| 1 | SYSTEMS (consolidação) | 🟡 em curso | sign-off GC x86 ⛔, registry ⛔ |
+| 2 | AUTOMATION | 🔵 não iniciado | Estágio 1 |
+| 3 | INFRASTRUCTURE (Kof Makealive) | 🔵 não iniciado | Estágio 2, R3 (FFI), R4 (hook de codegen) |
+| 4 | DATA (engineering / science / ML) | 🔵 não iniciado | Estágio 3, R3 (FFI) |
+| 5 | SECURITY (expansão) | 🔵 não iniciado | Estágio 3, R3 (FFI) |
+| 6 | SCIENTIFIC COMPUTING | 🔵 não iniciado | Estágio 4, R3, GC (1.2) |
+| 7 | BIOINFORMATICS | 🔵 não iniciado | Estágios 2/4/6 |
+| 8 | UNIVERSAL PLATFORM | 🔵 não iniciado | todos os anteriores |
+
+Invariantes: **R1 ✅ · R6 ✅ · R7 ✅ · R8 ✅ · R12 ✅ (sobreposto)** ·
+**R2 🔵 · R3 🟡 · R4 🔵 · R5 🟡 · R9 🟡 · R10 🔵 · R11 🟡**
+
+Fila transversal (não é estágio): **X1–X10** — gRPC, Python/R, WASM,
+avaliação em compile-time, variance/sealed, reflexão de interop, debugger
+DWARF/source map, testes de propriedade, `kof deploy`, LSP de domínio. Não-objetivos
+permanentes (VISION §12) no fim. A **auditoria de gaps 18/09** fechou o drift
+VISION×tracker (esses itens não tinham entrada executável).
+
+---
+
+# Estágio 1 — SYSTEMS (consolidação do que já é "sistemas")
+
+**Objetivo:** fechar os gaps de paridade de *systems* que já existem — não abrir
+domínio novo. **Este estágio fecha antes de qualquer Tier 6+ (R12).**
+
+### 1.1 Gaps de paridade (web / HTTP / mídia)
+
+| # | Item | Status | Dono | Prova / nota |
+|---|------|--------|------|--------------|
+| 1.1.1 | `WEB001` — base do servidor web no JS | ✅ 16/09 | lane web | `WEB001` fechado; JS GraalJS HttpServer |
+| 1.1.2 | `WEB005` — código de gap de `app.serveDir` em não-JVM | ✅ 17/09 | `.15` | `b4957c06`; `KofMediaE2ETest.serveDirOnNonJvmEmitsWeb005NotWeb001` (JS + 3 alvos nativos); emitia o fantasma `WEB001` (§275) |
+| 1.1.3 | `WEB002` — TLS no JS/Native | 🔵 | lane web | gap honesto em compile-time; pinado por `DomainGapCodesTest` |
+| 1.1.4 | `WEB003` — SSE no Native (JS handler-scoped ✅ 16/09) | 🔵 | lane web | gap honesto; pinado |
+| 1.1.5 | `WEB004` — WebSocket no Native | 🔵 | lane web | gap honesto; pinado |
+| 1.1.6 | `WEB006` — middleware de segurança no JS/Native | 🔵 | lane web | gap honesto; pinado |
+| 1.1.7 | `HTTP002` — https + DNS real no Native | 🔵 | lane native | HTTP/1.1 asm landado 03/09; `timeout`/`retry`/`circuit` REAIS nos 4 alvos nativos desde 17/09 (§259 FECHADO). `HTTP002` é código **reservado** (ramo morto — `KofHttp.supportedOn` sempre true) |
+| 1.1.8 | `MEDIA001`/`MEDIA003` — handles de mídia / mic em não-JVM | 🔵 | na fila atrás das facades HTTP (`.22`) | JVM-only; gap honesto em compile-time; documentado na matriz |
+| 1.1.9 | `ORM001` — `kof.orm` no Native | 🔵 | lane native | JVM + JS fechados (JS 18/09, `KofJsOrmBridge`); Native ainda `ORM001` |
+| 1.1.10 | §278 — Android reusa `JvmBackend` mas recusa `kof.db`/`kof.security`/`kof.gpu` (`DB001`/`SECN00x`/`GPU001`) | 🔵 | lane compiler (regra 6) | medido com `CompilerDriver(Target.ANDROID)`; catalogado `known-bugs.md` §278; pin `DomainGapCodesTest.androidRefusesDbAndCryptoWithTheDocumentedCodes` |
+
+### 1.2 GC mark-sweep no Native
+
+| # | Item | Status | Dono | Prova / nota |
+|---|------|--------|------|--------------|
+| 1.2.1 | GC no riscv64 | ✅ | lane native | `356f33b9` |
+| 1.2.2 | GC no x86_64 — decomposto G-1..G-5 | 🟡 | lane native | `docs/development/native-multiarch.md`; **auto-collect desabilitado** por exigir safe-points (`status.md` #1); `KofGcE2ETest` 3/3 |
+| 1.2.3 | Sign-off de re-baseline do auto-collect x86 | ⛔ | **mantenedora** | §260 G-6(a) re-medido — o gate morde; precisa de decisão de re-baseline da mantenedora |
+
+### 1.3 Event-loop / async real no JS
+
+| # | Item | Status | Dono | Prova / nota |
+|---|------|--------|------|--------------|
+| 1.3.1 | `CONC003` — async/await/Promise reais no JS | ✅ 03/09 | lane JS | residual `CONC003-JS-01` (só task-lambdas podem ser async) |
+| 1.3.2 | §132 — escalonamento cooperativo no KofJS (supervisor) | ✅ 18/09 | `.18` | entregue como **`time.sleep` async cooperativo** (`06d8b322`) — NÃO o rascunho generators+relógio lógico: ponto de await via `computeAsyncColoring` + Promise `kofTimeSleep` + bomba do host `KofJsRunner`; `OTP002` levantado. Prova: `AsyncSleepJsE2ETest` + `KofSupervisorE2ETest#supervisorJsParity`/`#supervisorJsS2Parity` (JS -> `restarts=2 fabrica=3`) |
+
+### 1.4 DSL de query tipada
+
+| # | Item | Status | Dono | Prova / nota |
+|---|------|--------|------|--------------|
+| 1.4.1 | `User.query { where ... }` | ✅ 01/09 | `.18` | `KofOrmE2ETest`; `0112bf32` (§193) |
+
+### 1.5 Package manager MVP (`kofdeps`)
+
+| # | Item | Status | Dono | Prova / nota |
+|---|------|--------|------|--------------|
+| 1.5.1 | `kof deps` + resolução Maven Central | ✅ | lane tooling | — |
+| 1.5.2 | Resolução transitiva + `kofdeps.lock` | ✅ 16/09 | lane tooling | `DepsTransitiveTest` 10/10 (incl. E2E com Maven real) |
+| 1.5.3 | Registry MVP | ⛔ | **mantenedora** | precisa de decisão da mantenedora (escopo/hospedagem) |
+
+### 1.6 Tracing / OpenTelemetry + ciclo de vida `application{}`
+
+| # | Item | Status | Dono | Prova / nota |
+|---|------|--------|------|--------------|
+| 1.6.1 | Spans W3C + ciclo de vida `application{}` (3 alvos) | ✅ | lane platform | `KofObservabilityTest` 10/10 |
+| 1.6.2 | Export OTel `exportSpans()` → OTLP/JSON (JVM/JS) | ✅ 17/09 | lane platform | `435b7013` |
+| 1.6.3 | `OBS003` — export OTel no Native | 🔵 | lane native | gap honesto em compile-time (R7 JVM-first); pinado por `DomainGapCodesTest` |
+
+### 1.7 Native → bare-metal / bootável
+
+| # | Item | Status | Dono | Prova / nota |
+|---|------|--------|------|--------------|
+| 1.7.1 | Seam HAL `kof_plat_*` + perfil freestanding (faces B-0…B-5) | 🔵 | lane native | `docs/development/future/PLAN-BAREMETAL-BOOT.md`; **não agendado** — MCU depende de 1.2 |
+| 1.7.2 | Agendamento das faces bare-metal | ⛔ | **mantenedora** | diretriz 15/09; só plano, sem dono atribuído |
+
+---
+
+# Estágio 2 — AUTOMATION (camada unificada)
+
+**Objetivo:** Kof como camada de automação *unificada* (substituir
+Bash+Python+YAML+jq+sed+awk **numa única linguagem tipada**).
+**Dependências:** Estágio 1 (concorrência, scheduler, mq prontos).
+**NÃO fazer:** não reimplementar bash; jobs são **código Kof**, não YAML.
+
+| # | Item | Status | Dono | Depende de |
+|---|------|--------|------|------------|
+| 2.1 | `kof.workflow` / `kof.batch` — jobs, pipelines, retry, checkpoints, dead-letter | 🔵 | `.18` | Estágio 1; **`workflow-plan.md`** APROVADO 19/09 (Q1–Q4 pela enquete da mantenedora: forma stdlib, MVP mínimo, retry aditivo, ambas as faces de dead-letter); recon 2.1.0 FEITO 19/09 (`WorkflowPrimitivesE2ETest` 6/6 + conserto do descriptor `Result` de lambda, `8ec07214`); MVP 2.1.2 é o próximo; vira `🟡` quando a stdlib landar (plano §5 2.1.4) |
+| 2.2 | `kof.shell` — shell idiomático sobre `kof.process` | 🟡 | `.18` | Estágio 1; **`development/shell-plan.md`** APROVADO 18/09 (Q1–Q3 pela enquete da mantenedora); MVP 18/09: `cmd`/`run`/`ok` em JVM+JS com paridade byte, `pipeline` só-JVM (`PROC001` em JS/Native, herdado de `process.spawn`); glob/`~`/redir fora do v1; `ShellE2ETest` 11/11; 2.2.3 (`runWith` cwd/env, pipes JS) + 2.2.4 (doc stdlib) abertos |
+| 2.3 | `kof.ssh` — via FFI/interop | 🔵 | — | R3 (FFI) |
+| 2.4 | Cron/scheduler maduro | 🟡 | lane concurrency | `at(cron)` cron real de 5 campos UTC no JVM/JS desde 17/09 (§274); Native `CRON001` gap honesto |
+| 2.5 | Pipelines de CI/CD como **código Kof** | 🔵 | — | 2.1 |
+| 2.6 | Tooling: `kof workflow run` | 🔵 | — | 2.1 |
+
+---
+
+# Estágio 3 — INFRASTRUCTURE (IaC + cloud) — **Kof Makealive**
+
+**Objetivo:** infraestrutura como **código Kof tipado** com
+plan/apply/state/reconciliation.
+**Dependências:** Estágios 1–2; **FFI formalizada** (R3, dependência
+arquitetural); capacidades de pacote (1.5).
+**NÃO fazer:** HCL dentro do Kof; um repositório de provider para *tudo*;
+acoplar o core a um provider.
+
+| # | Item | Status | Dono | Depende de |
+|---|------|--------|------|------------|
+| 3.1 | `kof.infra` — records de recurso + grafo de dependência + diff | 🔵 | — | R4 (hook de codegen, 2.2.2) |
+| 3.2 | `infra "prod" { ... }` — desugar sobre records (codegen em compile-time) | 🔵 | — | R4 |
+| 3.3 | Loop de reconciliação (spawn/await + channel) | 🔵 | — | Estágio 1 (2.1) |
+| 3.4 | Estado em `kof.db` | 🔵 | — | 3.1 |
+| 3.5 | Providers via FFI/REST/CLI (AWS/Azure/GCP — interop) | 🔵 | — | R3 |
+| 3.6 | Segredos via `kof.security` | 🟡 | lane security | `kof.security` existe; `Secret`/`KeyHandle` pendentes (Estágio 5) |
+| 3.7 | Detecção de ciclo no grafo `infra` em compile-time | 🔵 | — | 3.1 |
+| 3.8 | Tooling: `kof infra plan/apply/destroy` | 🔵 | — | 3.1 |
+
+---
+
+# Estágio 4 — DATA (data engineering / science / ML)
+
+**Objetivo:** uma camada científica **orquestrada** (não reimplementada).
+**Dependências:** Estágios 1–3; R3 (FFI); Arrow como padrão de troca.
+**NÃO fazer:** **não construir um framework de ML/NumPy em Kof** — Kof fornece
+o *wrapper tipado + pipeline*, o *motor* fica fora.
+
+| # | Item | Status | Dono | Depende de |
+|---|------|--------|------|------------|
+| 4.1 | `dataframe` tipado (lazy, colunar) | 🔵 | — | R3 |
+| 4.2 | **Arrow/Parquet via FFI** (wrapper tipado) | 🔵 | — | R3 |
+| 4.3 | Estatística/probabilidade (wrapper + FFI) | 🔵 | — | R3 |
+| 4.4 | `kof.ml` — inferência via FFI (ONNX/libtorch); treino orquestrado | 🔵 | — | R3 |
+| 4.5 | Visualização leve (SVG/`kof.ui` + FFI) | 🟡 | — | `kof.ui` existe; bindings de data-viz pendentes |
+| 4.6 | Rastreamento de experimentos (leve, sobre `kof.db`/`kof.io`) | 🔵 | — | 3.4 |
+| 4.7 | Tooling: profiling de pipeline | 🔵 | — | 4.1 |
+
+---
+
+# Estágio 5 — SECURITY (expansão)
+
+**Objetivo:** de "segurança de aplicação" (já forte) para **segurança de
+plataforma** (rede, forense, defensiva) — mais uma **camada criptográfica
+moderna + pós-quântica** (visão §4.8.1).
+**Regra absoluta:** **nunca** cripto caseira — toda primitiva nova (incl. PQC) é
+FFI para lib auditada; API idêntica entre alvos; gap = diagnóstico
+(`SECN00x`/`SECPQ`), nunca stub fraco.
+**Dependências:** Estágios 1–3; R3 (FFI).
+**NÃO fazer:** reimplementar stacks de cripto auditadas; trabalho ofensivo sem
+contexto legítimo/controlado; defender *primeiro*.
+
+| # | Item | Status | Dono | Depende de |
+|---|------|--------|------|------------|
+| 5.1 | S2 — tipo `Secret` + `KeyHandle` (redação forçada) | 🔵 | lane security | R3 |
+| 5.2 | S3 — `keys.*` (generate/derive/rotate/store) | 🔵 | lane security | 5.1 |
+| 5.3 | S4 — cripto assimétrica (RSA/ECC/X.509/TLS) via FFI | 🟡 | lane security | JWT RS/ES já no JVM; X.509/TLS pendentes |
+| 5.4 | S5 — **PQC** híbrido (ML-KEM-768 + ML-DSA-65 + HKDF + AES-256-GCM) via `liboqs` | 🔵 | lane security | R3; código de gap `SECPQ` |
+| 5.5 | S6 — KEM+KDF+AEAD híbrido | 🔵 | lane security | 5.4 |
+| 5.6 | S7 — `secure.channel` (KEM+KDF+AEAD+auth+replay) | 🔵 | lane security | 5.5 |
+| 5.7 | `kof.net` / parsing de pacotes (FFI para `libpcap`) | 🔵 | — | R3 |
+| 5.8 | Forense (FFI para libs de parsing + pipelines Kof) | 🔵 | — | 5.7, Estágio 2 |
+| 5.9 | Automação de segurança / threat-intel (`kof.http` + `spawn`/`channel` + `kof.log`) | 🔵 | — | Estágio 2 |
+| 5.10 | Defensiva (monitoramento/detecção/auditoria sobre `kof.observability` + `kof.log` + `kof.db`) | 🟡 | — | peças existem (1.6) |
+
+---
+
+# Estágio 6 — SCIENTIFIC COMPUTING (numérico / HPC)
+
+**Objetivo:** Kof como **linguagem de orquestração científica tipada** + zona
+numérica via FFI.
+**Dependências:** Estágios 1–4; R3 (FFI); GC mark-sweep (1.2).
+**NÃO fazer:** reimplementar BLAS/LAPACK/NumPy; ownership/borrowing no core
+(a zona não-GC é via FFI para C/Rust).
+
+| # | Item | Status | Dono | Depende de |
+|---|------|--------|------|------------|
+| 6.1 | Álgebra linear via **FFI para BLAS/LAPACK** (wrapper) | 🔵 | — | R3 |
+| 6.2 | SIMD/vectorização (Native — pesquisa) | 🔵 | lane native | 1.2 |
+| 6.3 | GPU — Vulkan via FFI (existe); CUDA/OpenCL via FFI | 🟡 | — | Vulkan compute existe; CUDA/OpenCL pendentes |
+| 6.4 | Data-parallel (pesquisa) | 🔵 | — | 6.2 |
+| 6.5 | Scoped resources (GPU/arquivos/conexões) | 🟡 | lane compiler | `future/scoped-resources-plan.md`; sintaxe `using` barrada por bump ⛔ |
+| 6.6 | Distribuído (FFI para MPI + orquestração Kof) | 🔵 | — | R3, 2.1 |
+| 6.7 | Tooling: profiling HPC | 🔵 | — | 6.1 |
+
+---
+
+# Estágio 7 — BIOINFORMATICS
+
+**Objetivo:** uma plataforma tipada para **pipelines científicos/genômicos**.
+**Dependências:** Estágios 2, 4, 6.
+**NÃO fazer:** transformar o Kof numa linguagem exclusiva de biologia;
+reimplementar aligners/variant callers.
+
+| # | Item | Status | Dono | Depende de |
+|---|------|--------|------|------------|
+| 7.1 | `kof-bio` (pacote oficial): formatos FASTA/FASTQ/VCF/BAM como records tipados | 🔵 | — | R3, R5 |
+| 7.2 | Alinhamento/variantes via **FFI/CLI** (BLAST/htslib — não reimplementar) | 🔵 | — | 7.1, R3 |
+| 7.3 | Pipelines genômicos (modelo `workflow` do Estágio 2 + checkpointing) | 🔵 | — | 2.1 |
+| 7.4 | HPC (Estágio 6) | 🔵 | — | 6.1 |
+| 7.5 | Automação de laboratório (`kof.http` REST + `kof.process` via FFI) | 🟡 | — | peças existem |
+
+---
+
+# Estágio 8 — UNIVERSAL PLATFORM (integração)
+
+**Objetivo:** uma aplicação **+** sua infra **+** seu deploy **+** seu pipeline
+de dados **+** sua segurança **+** sua pesquisa — **na mesma linguagem**, com a
+mesma experiência de desenvolvimento.
+**Dependências:** todas as anteriores; package manager; FFI.
+**NÃO fazer:** deixar o core crescer para "suportar" a plataforma — o core
+**não deve mudar** (ou mudar quase nada) até aqui.
+
+| # | Item | Status | Dono | Depende de |
+|---|------|--------|------|------------|
+| 8.1 | Integração total dos Estágios 1–7 | 🔵 | — | todos |
+| 8.2 | Package manager maduro | 🔵 | — | 1.5.3 (registry ⛔) |
+| 8.3 | LSP/debug/profiler por domínio | 🟡 | — | LSP existe; por-domínio pendente |
+| 8.4 | Deploy multi-target (mesma fonte → JVM/Native/JS) | 🟡 | — | 7 targets funcionam hoje; maturidade pendente |
+| 8.5 | Documentação/corpus (`training/`) dos domínios | 🔵 | lane docs | por domínio |
+| 8.6 | **Teste final:** o core da linguagem quase não cresceu | 🔵 | — | verificação no fim |
+
+---
+
+# Fila transversal (VISION §6.1 interop + §7 compilador + §9 tooling)
+
+> Auditoria de gaps 18/09: estas capacidades estavam descritas no companion VISION
+> (superfícies de interop, requisitos de compilador, tooling) mas **não tinham
+> item executável** nas tabelas de Estágios 1–8. São transversais, não um
+> estágio de domínio. Cada uma entra como unidade própria quando seu estágio abrir;
+> nenhuma muda o core congelado. `⛔` = exige decisão da mantenedora (regra 6)
+> antes de qualquer edição.
+
+| # | Item | Estado | Dono | Fonte / nota |
+|---|------|--------|------|--------------|
+| X1 | gRPC no `kof.web` (`app.grpc { }` + `.proto` → codegen IR + `grpc.call`) | 🔵 | lane web | VISION §6.1 "B/C"; `roadmap.md` §19 (31/08) — paridade JVM primeiro, Native/JS depois |
+| X2 | Interop Python/R (CLI/`kof.process` + protocolo JSON) | 🔵 | — | VISION §6.1 "B"; o ecossistema científico como *ferramenta*, não dependência (Estágio 4) |
+| X3 | Alvo/interop WebAssembly | 🔵 | — | VISION §6.1 "D" (futuro); portabilidade de componentes — pesquisa, não agendado |
+| X4 | Avaliação leve em compile-time (const-folding de domínio, validação de schema/ciclo) | 🔵 | lane compilador | VISION §7 "B" — estende o otimizador; NÃO é um TCC geral; distinto do R4 (codegen) |
+| X5 | Tipos variance / sealed | ⛔ | **mantenedora** | VISION §7 "B/C" — útil p/ coleções científicas; mudança do type-system do core (regra 6); type-classes seguem rejeitadas |
+| X6 | Reflexão de interop (restrita ao interop) | ⛔ | **mantenedora** | VISION §7 "C" — descoberta de schema em ML/ciência; mudança do core (regra 6); nunca fundação |
+| X7 | Debugger Native DWARF + source maps JS | 🟡 | lane tooling | VISION §9; `roadmap.md` §19.5 fases 4–7 — source map V3 do JS landado 01/09 (`KofJsSourceMapTest`); DWARF nativo pendente |
+| X8 | Testes property-based | 🟡 | lane docs→plataforma (192.168.100.15) | fatias 1–2 ✅ 18/09: namespace `rng` (xorshift128+splitmix32 semeável) em JVM+JS+**NATIVE x86_64** — `KofRngTest` 11/11 incl. paridades byte JVM==JS e JVM==NATIVE (asm `RuntimeRng`, bits por construção) + `RNG001` honesto em cross/ANDROID (`a71f761c`,`1ff54c6e`,`367af29d`); fatia 3 = runner property no `kof.test`; port cross pede qemu (lane nat) |
+| X9 | `kof deploy` (build + pacote + publish) | 🟡 | lane tooling/docs (192.168.100.15) | fatias 1–3 ✅ 18/09: JVM (fat jar) + NATIVE (ELF 0755) + JS (.mjs) + ANDROID (APK via pipeline --apk do build) — release = artefato + RELEASE.md + SHA256SUMS + tar.gz (`CmdDeployTest` 9/9+1-skip, módulo 322/322; `154ea1a4`, `bfdd452a`, fatia 3); cross riscv/arm = `DEP001` honesto; `--publish`/registry = ⛔ D2 |
+| X10 | LSP domain-aware (completion + ir-para-definição em pacotes) | ✅ | lane docs→plataforma (192.168.100.15) | fatias 1–3 ✅ 18/09: `StdCatalog` = **31 namespaces** completados por membros REAIS do typer (7 KofStd + time/http/db/cache/process + segurança×6 + json/log/orm/config/gpu/mq/validation/observability/tetris + Image/Audio/Video/Mic) — fonte-única travada contra a fonte (`StdCatalogTest` 10/10, `LspServerTest` 25/25; `48633d98`, `e79a3ea0`, `9e4d1728`); web/app-DSL + ui + ffi ficam de fora (R6 honesto); fatia 4 ✅ 18/09: ir-para-definição **cruza arquivos do projeto** (`crossFileDefinition`, walk ≤6 + primeiro hit, convenção única `LspSymbols`; `null` honesto) — `0a4497c7`, `LspServerTest` 27/27; fatia 5 ✅ 18/09: **referências também cruzam arquivos** (somente-leitura; varredura extraída p/ `LspProject` no split ≤600) — `f5df2362`, `LspServerTest` 28/28; fatia 6 ✅ 18/09: **`workspace/symbol`** indexa buffers + .kf irmãos (filtro/ordenação LSP) — `c04e16a4`, `LspServerTest` 29/29; fatia 7 ✅ 18/09: **hover de símbolos do projeto** (buffer+cross-file, linha completa; bug de framing byte-vs-char no teste-mate) — `848b7df1`, `LspServerTest` 30/30. **X10 CONCLUÍDA** (rename cross-file e assinaturas de membros = perguntas de superfície rule 6 no DOING) |
+
+---
+
+# Não-objetivos permanentes (VISION §12)
+
+> Explícitos e permanentes: **não** são itens de trabalho e não devem ser abertos
+> como gaps. Protegem a identidade da linguagem (a cerca anti-god-language).
+
+Kof **não é**: uma god-language · um shell · o motor Arrow/Parquet/BLAS/CUDA ·
+um framework de ML · um DBMS · um repositório de provedores de nuvem · um aligner
+genômico · "Kali em Kof" · um notebook/IDE/kernel · ownership/borrowing ·
+anotações/macros abertas/type-classes como fundação · paridade JS para domínios
+pesados · um alvo por domínio · uma reimplementação do ecossistema científico.
+
+---
+
+# Invariantes R1–R12
+
+| # | Invariante | Status | Prova / nota |
+|---|-----------|--------|--------------|
+| R1 | Travar a fronteira core/plataforma (ordem §3.4 como regra invariante) | ✅ 17/09 | `5f1422c6` — `scripts/check_stdlib_boundary.sh` + ledger (31 namespaces) + CI + `--selftest`; invariante 1 do AGENTS |
+| R2 | Generalizar "capability/link by use" para todos os pacotes/domínios | 🔵 | semente: `.so` de SQLite/MySQL linkado só quando o DSN literal aparece; extensão pendente |
+| R3 | Formalizar FFI como first-class | 🟡 | **ABI escalar da JVM + `void` 18/09 (`.18`)**: `kof_ffi`/`kof_ffi_void` casam aridade arbitrária sobre {Int,Long,Float,Double,Boolean,String} entrada/saída, `String` lê `char*`, `void` é descartado como statement. `FfiE2ETest` cobre `pow`/`strstr`/`srand`/`atol→labs` (Long) + `FfiSignatureTest` trava o mapeamento escalar→layout completo. **Paridade JS FECHADA 18/09 (3.6 F1+F2+F3, `.18`)**: a mesma ABI escalar agora binda no target JS via bridge FFM no host `KofJsFfiBridge` (`extern`→`kofFfi`→`ProxyExecutable` `kof_platform.ffi`), provada byte-a-byte JVM↔JS (`FfiE2ETest` +7 `assertJvmJsParity`); o browser não tem host → degrade honesto em runtime (R7, como `kof.io`). Ver §R3-fatias para a decomposição completa. **Callbacks/upcalls (3.4) paridade JVM+JS FECHADA 18/09 (C1→C3.4)**: `extern` com parâmetro de tipo-função binda tanto na JVM quanto no host runner JS — um valor de função Kof entregue a C como ponteiro de função real (`Linker.upcallStub`), provado byte-a-byte JVM↔JS (`42/42/6.0/7.5` em ABIs Int/Long/Double/mistas; `5/104/2026` em ABIs com `String` como argumento — `char*`->`String` na fronteira do upcall); a ponte JS chama o método `invoke` do objeto `Lambda` compilado (um valor de função Kof é um objeto, não uma arrow nativa — descoberto na C3.2); síncrono/não-escapante; ABI do callback = primitivos + `String` como arg; **retorno** `String` segue não-bindável (`FFI001`/`FFI002`); o browser degrada honesto (R7). Restam: handles opacos/out-buffers (3.3 ⛔), variadics (3.5 ⛔), ABI struct/array D6 (3.8 ⛔), paridade Native (§61, 3.7). Só Native (`FFI001`) + assinaturas não-escalares no JS (`FFI002`) seguem gaps honestos por target (R7). |
+| R4 | Formalizar o codegen em compile-time (`CodegenStep`) | 🔵 | NÃO existe no HEAD (2.2.2); bloqueia `infra "prod" {}` (3.2) e a migração DDL/runner |
+| R5 | Tiers de estabilidade + pacotes oficiais | 🟡 | tiers definidos em `backend-parity.md` §Stability tiers; **marcação por-namespace ainda não aplicada** — decisão ⛔ |
+| R6 | Manter o "nunca silencioso" para domínios novos | ✅ 17/09 | gate de máquina `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` (`19a740f2`) + varredura completa do ledger (`c5897cd5`, achou §278) |
+| R7 | Escopo honesto por alvo (JVM-first / Native systems / JS web) | ✅ | estratégia adotada; imposta pelos gaps documentados (`OBS003`, `GPU001`, `PROC001`, `SECN00x`, `MEDIA00x`) |
+| R8 | Manter o tooling no MESMO frontend | ✅ | regra atual (LSP, `kof deps`, CLI consomem o frontend do compilador; sem parser paralelo) |
+| R9 | Interop-first como padrão dos domínios | 🟡 | adotado; formalização de FFI pendente (R3) |
+| R10 | Correto e determinístico por padrão (ciência) | 🔵 | aplica-se a partir dos Estágios 4/6 (property-based + golden) |
+| R11 | Segurança: defesa primeiro | 🟡 | adotado (nunca cripto caseira; FFI para libs auditadas); PQC pendente no Estágio 5 |
+| R12 | Não interromper o presente (meta-regra) | ✅ sobreposto 17/09 | `DECISIONS.md` §D-UNIVERSAL — sobrepõe o portão de *agendamento*, nunca o freeze/qualidade; segue default para os outros planos de `future/` |
+
+
+## R3 fatias — decomposição do FFI até paridade total
+
+Fatias incrementais da R3 rumo à "paridade total no FFI" (diretriz da
+mantenedora 18/09). ⛔ = decisão de design da mantenedora (regra 6); 🔵 = ainda
+em aberto; ✅ = landado.
+
+| # | Fatia | Estado | Dono | Pré-requisito |
+|---|-------|--------|------|---------------|
+| 3.1 | JVM: ABI escalar geral — aridade arbitrária, {Int,Long,Float,Double,Boolean,String} entrada/saída, String lê de volta char* | ✅ 18/09 (.18) | dev .18 | — |
+| 3.2 | JVM: retorno void (kof_ffi_void, descritor V; resultado descartado como statement) | ✅ 18/09 (.18) | .18 | — |
+| 3.3 | JVM: handles opacos / out-buffers (void*, T*, Array<Byte> como buffer) — ponteiro opaco / buffer de bytes, NÃO o ABI struct completo do D6 | ⛔ decisão de surface | mantenedora | design |
+| 3.4 | JVM+JS: callbacks / upcalls (Linker.upcallStub) — função Kof entregue a C como ponteiro de função | ✅ **C1→C3.4 landados 18/09 (JVM+JS bindam callbacks primitivos E com argumento `String`, paridade byte-a-byte)** | .18 | semântica de closure + GC rooting (R12/1.2); só síncrono/não-escapante; ABI do callback = primitivos + `String` como arg (char*->String); **retorno** `String`/struct/pointer segue gated; a ponte JS chama o `invoke` do objeto `Lambda`; ver §R3-3.4 |
+| 3.5 | JVM: variadics (printf, execlp) — como representar `...` numa assinatura Kof | ⛔ decisão de surface | mantenedora | design |
+| 3.6 | JS: paridade via bridge no host (o runner GraalJS/node É uma JVM com java.lang.foreign no host) — browser segue degrade honesto em runtime (R7: sem host `kof_platform.ffi`) | ✅ 18/09 (.18) | .18 | ABI 3.1/3.2 |
+| 3.6.F1 | Bridge FFI no host `KofJsFfiBridge` + `KofJsFfiBridgeTest` (8/8) — mesmo downcall do `kof_ffi`, provado no host; gate do compilador FECHADO (zero risco ao backend) | ✅ 18/09 (.18) | .18 | — |
+| 3.6.F2 | Roteamento JS no compilador: ramo JS no `isExternBound` + baixar `extern`→`kofFfi`/`kofFfiVoid`→`kof_platform.ffi` (rotear em `JsRuntimeOps` + helper em `JsRuntimeIo` + `ProxyExecutable` no `KofJsRunner`) — abre o gate escalar do JS | ✅ 18/09 (.18) | .18 | F1 |
+| 3.6.F3 | Paridade E2E byte-a-byte JVM↔JS — `FfiE2ETest` +7 `assertJvmJsParity` (abs/atoi/sqrt/pow/atol→labs Long/strstr/srand void): mesmo `.kf`, saída idêntica nos dois alvos | ✅ 18/09 (.18) | .18 | F2 |
+| 3.7 | Native: dlopen/dlsym em asm — depende do §61 (init glibc/TLS no _start) | 🔵 | lane nat | §61 |
+| 3.8 | ABI struct/array completo (D6) | ⛔ | mantenedora | D6 |
+| 3.9 | Meta-paridade: mesma fonte extern com o mesmo comportamento em todo alvo CAPAZ (R7 honest-scope nos incapazes) | meta | — | 3.1–3.8 |
+
+3.1+3.2 landados 18/09 → a JVM tem a ABI escalar completa + void, **prova
+reforçada** (`Int`/`Long`/`Double`/`String`/`void` e2e contra libc/libm incl. `Long`
+via `atol`→`labs`; conjunto inteiro travado por mapeamento em `FfiSignatureTest`).
+**3.6 (paridade JS) FECHADA 18/09** em F1 (bridge no host, gate fechado) → F2
+(roteamento JS no compilador abre o gate escalar) → F3 (paridade E2E byte-a-byte
+JVM↔JS, +7). No target JS a **ABI escalar agora binda no host runner GraalJS/node**
+(FFM no host, sem bytecode no guest); o browser não tem host `kof_platform.ffi` e
+lança erro honesto em runtime (R7, mesmo degrade do `kof.io`); assinaturas não-
+escalares (array/struct/pointer) seguem `FFI002` em compilação (3.3/3.5/3.8 ⛔).
+**Callback/upcall (3.4): TOTALMENTE LANDADO
+18/09 (C1→C3.4) — a JVM *e* o host runner JS agora bindam callbacks primitivos **E com
+argumento `String`****
+(`extern` com parâmetro de tipo-função → `Linker.upcallStub` sobre o valor de função
+Kof; um `.kf` real computa `42/42/6.0/7.5` em ABIs Int/Long/Double/mistas e `5/104/2026`
+em args `String`, byte-a-byte JVM↔JS em `JvmFfiCallbackE2ETest`; a ponte JS chama o método `invoke` do objeto `Lambda`
+compilado, lendo o `char*` de um arg callback a `String` Kof na fronteira — design completo + a descoberta objeto-vs-arrow da C3.2 em §R3-3.4 abaixo).
+De resto, o próximo trabalho da R3 é o
+§61 nativo (3.7, lane nat) ou decisões da mantenedora (3.3/3.5/3.8).
+
+### §R3-3.4 — callbacks / upcalls (função Kof entregue a C)
+
+**Objetivo.** `extern` aceita um valor de função Kof como parâmetro *callback*: C
+recebe um ponteiro de função real que, ao ser invocado, roda o closure Kof e devolve
+seu resultado — o espelho de **upcall** FFM do downcall da 3.1.
+
+**Superfície.** Um parâmetro `extern` de tipo-função, ex.
+`extern "lib.so" each(Int n, (Int, Int) -> Int cb): Int`; o closure é baixado no
+`Object[]` de args como o valor de função Kof (um `FunctionValue` implementando uma
+interface sintética especializada, ex. `int invoke(int,int)` — medido). **Os parâmetros
+do callback são o conjunto bindável {Int, Long, Float, Double, Boolean} mais `String`
+(fatia 3.4-C3.4)** — um parâmetro `String` do callback chega como um `char*` do C que o
+runtime lê num `String` Kof (o espelho do upcall para o `getString` do downcall); o
+retorno do callback é **só** primitivo-ou-void: devolver `String` entregaria ao C um
+`char*` cujo dono da memória não é observável sob o contrato síncrono, então um **retorno**
+`String` segue `FFI001`/`FFI002` honesto (nunca stub silencioso, R6). Os carriers
+primitivos já vêm unboxed da interface especializada, sem adaptador de boxing.
+
+**Codificação da assinatura.** `FfiSignature.signature` codifica um parâmetro de
+callback como um **token de parêntese aninhado `(<retchar><paramchars>)`** (assim fica
+1:1 com o argumento — ex. `each(Int n, (Int,Int)->Int cb): Int` → `ii(iii)`: retorno
+`i`, parâmetro `i`, token de callback `(iii)`; um arg `String` carrega no mesmo token —
+`f(Int n, (String)->Int cb): Int` → `i(iS)`); layout nativo = `ADDRESS` (ponteiro de
+função). O `kof_ffi` parseia com cursor (um `(` consome seu descritor aninhado até o
+`)` correspondente).
+
+**Runtime (`kof_ffi` gerado).** Num arg `(` (callback), o objeto de função Kof recebido
+vira um stub achando o `invoke` por reflexão (por nome + aridade do callback),
+unreflectindo-o e fixando o tipo de carrier:
+`Linker.upcallStub(lookup.unreflect(invoke).bindTo(closure).asType(tipoCarrierUnboxed),
+innerFnDesc, arena)` → um `MemorySegment` usado como arg `ADDRESS` no spreader. Como a
+interface do Kof é **especializada** (`int invoke(int,int)`), o `.asType(...)` é no-op —
+os carriers já batem com os `ValueLayout`s do FFM; o `.asType` fica como a ponte geral
+de boxing/unboxing (**medido** na C1, onde um closure apagado
+`Object invoke(Object,Object)->Object` bridged do mesmo jeito devolveu `42` através de
+um upcall C real). **Um arg `String` do callback (3.4-C3.4)**: o `char*` que o lado C passa
+tem carrier nativo `ADDRESS`, então o tipo de método do stub recebe um `MemorySegment`
+naquela posição; `MethodHandles.filterArguments` insere um `kof_ffi_cstr`
+(`reinterpret(MAX).getString(0)`, NULL→null) que o vira `String` **antes** do `invoke` Kof
+rodar, de modo que o closure vê um string Kof real (conteúdo incluído — provado por
+`atol`-dentro-do-callback). Rooting: o stub é alocado no `Arena.ofConfined()` da chamada (≈ a
+arena confined que o `kof_ffi` já usa) e fica vivo exatamente enquanto o C o segura.
+**Espelho JS (`KofJsRunner`)**: o parse por cursor mora no `KofJsFfiBridge.call` (um slot
+`(` → `ADDRESS`, o stub pré-montado passa direto), e `jsCallbackStub` monta o `upcallStub`
+cuja ponte é um static de aridade fixa `executeJsX` alcançado via
+`MethodHandles.asVarargsCollector` (NÃO `asSpreader`, que o JDK rejeita num handle varargs)
+chamando `fn.getMember("invoke").execute(...)` — porque no JS o valor de função é um objeto
+`Lambda`, não chamável; um arg `String` do callback chega como o carrier `MemorySegment` e
+o `executeJsX` o lê via o mesmo `getString` (→ host String → JS string) antes da chamada;
+a arena confined do stub é aberta pelo `ProxyExecutable` e fechada
+após o downcall síncrono retornar.
+
+**Restrição honesta (escopo da fatia, R6/R7).** **O contrato do callback `extern` é
+síncrono, não-escapante** — o stub vive exatamente pela duração da chamada (arena
+`confined`), então é válido enquanto o C chama de volta *antes de retornar* (comparadores
+estilo `qsort`, `each`, `foreach`). Isso espelha a própria regra do C de não liberar um
+callback que o chamador ainda segura: passar um callback Kof a uma API que o **guarda**
+após o retorno (`atexit`, `signal`, async) é **fora do contrato** e seria use-after-free.
+Como o compilador não observa a retenção do C, isto é um **contrato documentado**, não um
+stub silencioso; um **binding explícito de callback persistente** (uma raiz GC real,
+R12) é uma fatia futura separada. O que o gate PEGA em **compilação** (R6,
+`FFI001`/`FFI002` honestos) são ABIs não-bindáveis: um arg struct/pointer, um **retorno**
+`String` (um **arg** `String` do callback binda desde 3.4-C3.4), ou callback-como-retorno.
+
+**Postura por target.** **JVM**: binda (upcall FFM no host, igual ao downcall; um arg
+`String` cruza como `MemorySegment` lido a `String` Kof pelo `kof_ffi_cstr`).
+**JS**: **binda (C3.2/C3.3 landados 18/09; arg `String` na 3.4-C3.4)** — o runner GraalJS/node é uma JVM, então o
+`ProxyExecutable` do `KofJsRunner` ganha o mesmo caminho de upcall; um arg de callback é
+marshalled montando um `Linker.upcallStub` sobre o valor de função Kof. **Descoberta
+(C3.2)**: um valor de função Kof compilado NÃO é uma arrow JS nativa — é um **objeto**
+`Lambda…` com um método `invoke`, então a ponte do stub chama `fn.getMember("invoke").execute(...)`
+(o pin C3.1 exercitava um `Value.execute` numa arrow nativa e foi corrigido para o enquadramento
+objeto-`invoke`); os carriers primitivos passam por `asInt`/`asLong`/`asFloat`/`asDouble`/
+`asBoolean` do Graal; um arg `String` chega como `MemorySegment` e o `executeJs*` o lê via
+`getString` antes do `Value.execute` (3.4-C3.4). O cenário reentrante (JS → `ProxyExecutable` no host → downcall nativo →
+`Linker.upcallStub` → de volta ao `Value.invoke`) roda na mesma thread; provado byte-a-byte
+JVM↔JS (`jvmAndJsCallbacksMatchByteForByte`: `42/42/6.0/7.5`; `stringCallbackArgsBindAndMatchJvmJs`: `5/104/2026`). O browser não tem host → degrade
+honesto em runtime (R7); um callback não-bindável (ex. **retorno** `String`) ainda falha em
+compilação no JS (`FFI002`). **Native**: §61 (3.7).
+
+**Fatias (espelham a disciplina F1→F3 da 3.6).** **C1** = pin do mecanismo no nível do
+host (`JvmFfiCallbackTest`: upcallStub + ponte de closure `.asType` + rooting por
+`Arena` + spreader `ADDRESS`, contra um `.so` temp compilado por gcc), gate do
+compilador **fechado**, zero risco ao backend. **C2** = token de callback em
+`FfiSignature` + parse por cursor no `JvmFfiRuntime.kof_ffi` + ponte
+`Linker.upcallStub`/`.asType` + ramo JVM do `isExternBound` → abre o gate de callback
+da JVM, provado por `JvmFfiCallbackE2ETest` (um `.kf` real computa `42/42/6.0/7.5` em
+ABIs Int/Long/Double/mistas; callback no JS segue `FFI002`; um callback com **retorno**
+`String` segue `FFI001`). **C3** = paridade JS de callback, dividida como F1→F3:
+**C3.1** = pin de reentrância no host (`KofJsFfiCallbackBridgeTest` — JS→nat→upcall→
+callback reentrante, Int `42`/Long `42L`/loop `46`; gate ainda fechado) ✅;
+**C3.2** = caminho de upcall no `KofJsFfiBridge` + marshalling do `Value` de callback no
+`ProxyExecutable` do `KofJsRunner` + abrir o ramo JS do `isExternBound` para callbacks
+bindáveis ✅; **C3.3** = E2E de paridade byte-a-byte JVM↔JS de callback + degrade honesto
+do browser (R7) ✅; **C3.4** = `String` como **argumento** do callback (o `char*` que o C
+passa é lido num `String` Kof na fronteira do upcall — JVM `filterArguments`+`kof_ffi_cstr`,
+JS `executeJs*` `getString`; **retorno** `String` segue gated) ✅ 18/09.
+Status: **C1→C3.4 todos landados 18/09** — a JVM e o host runner JS bindam callbacks
+primitivos **E com argumento `String`** (paridade byte-a-byte: `42/42/6.0/7.5` escalares,
+`5/104/2026` args `String`); o enquadramento arrow/`Value.execute` do pin C3.1 foi
+corrigido para a convenção real de objeto-`invoke` do `Lambda` na C3.2. As únicas formas
+de callback não-bindáveis que restam são um **retorno** `String`/struct/pointer ou
+callback-como-retorno aninhado — `FFI001`/`FFI002` honestos.
+
+---
+
+# Decisões necessárias (regra 6 — mantenedora)
+
+| # | Decisão | Bloqueia |
+|---|---------|----------|
+| D1 | Sign-off de re-baseline do auto-collect do GC x86 (§260 G-6(a)) | 1.2.2/1.2.3, Estágio 6 |
+| D2 | Registry de pacotes MVP — escopo/hospedagem | 1.5.3, Estágio 3+, 8.2 |
+| D3 | Agendamento do bare-metal/bootável | 1.7 |
+| D4 | Tiers de estabilidade por-namespace do R5 (quais são `stable` vs `experimental`) | R5, Estágio 7 (pacote oficial `kof-bio`) |
+| D5 | Sintaxe `using` de scoped resources (barrada por bump) | 6.5 |
+| D6 | Design do ABI de struct/array do R3 (nível de assinatura) | 3.5, 4.2, 5.4, 6.1 |
+| D7 | Value records / tipos-valor first-class (fila §2.7 do `roadmap.md` §23) | TIER 2.7 — planejado, precisa de autorização para abrir |
+
+---
+
+# Caminho crítico
+
+`Estágio 1 (SYSTEMS) fecha` → Estágios 2/3 → Estágios 4/5 → Estágio 6 →
+Estágio 7 → Estágio 8.
+
+Transversal: **R3 (FFI formalizada)** é a espinha dorsal dos Estágios 3–7 e
+**R4 (hook de codegen)** barra o Estágio 3 (`infra`). Dentro do Estágio 1, os
+itens restantes sem decisão são os gaps de paridade das lanes web/native
+(1.1.3–1.1.10) e o redesign de escalonamento JS do §132 (1.3.2, `.18`) — **FECHADO 18/09** (`06d8b322`); o Stage 1 agora só aguarda os gaps de paridade web/native + as decisões da mantenedora D1–D3.
+
+Veja o companion [`UNIVERSAL-PLATFORM-VISION.pt_BR.md`](../architecture/UNIVERSAL-PLATFORM-VISION.pt_BR.md)
+para o *porquê* por trás de cada item acima.

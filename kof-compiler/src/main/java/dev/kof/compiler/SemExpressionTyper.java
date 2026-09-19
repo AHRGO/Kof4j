@@ -46,7 +46,26 @@ public final class SemExpressionTyper {
             case LiteralExpr lit -> TypeChecker.inferLiteralType(lit);
             case IdentifierExpr ie -> {
                 SymbolTable.Symbol sym = scope.resolve(ie.name());
-                if (sym != null) yield sym.type();
+                if (sym != null) {
+                    // #345 (R6): campo de instância referido NU dentro de
+                    // método `static` = `this` implícito que não existe — o
+                    // emit gerava aload_0 → VerifyError "Bad local variable
+                    // type" no load (medido no tip; o `check` passava limpo).
+                    // Idiom: referência pela instância, ou campo `static`.
+                    if (sym instanceof SymbolTable.FieldSymbol fsm
+                            && (fsm.accessFlags() & AccessFlags.STATIC) == 0
+                            && sa.isCurrentMethodStatic()
+                            && sa.diagnostics() != null) {
+                        SourcePosition pos = ie.position();
+                        sa.diagnostics().error(pos != null ? pos.file() : "",
+                                pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
+                                "static method cannot reference instance field '" + ie.name()
+                                        + "' (no implicit 'this' in a static context; use an instance,"
+                                        + " or declare the field 'static')",
+                                "SEM075");
+                    }
+                    yield sym.type();
+                }
                 if ("args".equals(ie.name()) && "main".equals(sa.currentFunctionName())) {
                     yield new Type.ArrayType(BuiltinTypes.STRING);
                 }
@@ -68,7 +87,7 @@ public final class SemExpressionTyper {
                     }
                 }
                 if (sa.diagnostics() != null && !"this".equals(ie.name()) && !"super".equals(ie.name())
-                        && !"json".equals(ie.name()) && !"process".equals(ie.name())
+                        && !"json".equals(ie.name()) && !"process".equals(ie.name()) && !"shell".equals(ie.name())
                         && !KofWeb.isWebNamespace(ie.name())
                         && !KofConfig.isConfigNamespace(ie.name())
                         && !KofCache.isCacheNamespace(ie.name())
@@ -87,6 +106,7 @@ public final class SemExpressionTyper {
                         && !KofTetris.isTetrisNamespace(ie.name())
                         && !KofMedia.isStaticNamespace(ie.name())
                         && !KofUi.isPalette(ie.name()) && !KofUi.isConstructor(ie.name())
+                        && !KofUiTokens.isTokenNamespace(ie.name())
                         && !KofUi.isRouterNamespace(ie.name())
                         && !"Theme".equals(ie.name())
                         && !MemberResolver.isBuiltinTypeName(ie.name())
@@ -129,7 +149,7 @@ public final class SemExpressionTyper {
                             hasField = MemberResolver.resolveInHierarchy(sa, sa.currentClassName(), ie.name()) != null;
                         }
                         if (!hasField
-                                && !"json".equals(ie.name()) && !"process".equals(ie.name())
+                                && !"json".equals(ie.name()) && !"process".equals(ie.name()) && !"shell".equals(ie.name())
                                 && !KofWeb.isWebNamespace(ie.name())
                                 && !KofConfig.isConfigNamespace(ie.name())
                                 && !KofCache.isCacheNamespace(ie.name())
@@ -169,7 +189,7 @@ public final class SemExpressionTyper {
                 // (o lado só é avaliado se o esquerdo passou; short-circuit).
                 if ("&&".equals(bin.operator())) {
                     Type leftT = inferType(sa, bin.left(), scope);
-                    SymbolTable rightScope = SemNarrowing.narrowedScope(sa, bin.left(), scope);
+                    SymbolTable rightScope = SemNarrowing.narrowedScope(bin.left(), scope);
                     Type rightT = inferType(sa, bin.right(), rightScope);
                     yield TypeChecker.inferBinaryResultType(sa.diagnostics(), "&&", leftT, rightT);
                 }
@@ -309,6 +329,13 @@ public final class SemExpressionTyper {
             }
             case FieldAccessExpr fa -> {
                 if (fa.receiver() instanceof IdentifierExpr pId && KofUi.isPalette(pId.name()) && KofUi.paletteColor(fa.fieldName()) != null) yield KofUi.COLOR;
+                if (fa.receiver() instanceof IdentifierExpr tid && KofUiTokens.isTokenNamespace(tid.name())) {
+                    if (KofUiTokens.tokenValue(tid.name(), fa.fieldName()) == null && sa.diagnostics() != null) {
+                        sa.diagnostics().error("", 0, 0, 0,
+                                KofUiTokens.unknownMemberMessage(tid.name(), fa.fieldName()), "SEM079");
+                    }
+                    yield Type.PrimitiveType.INT;
+                }
                 String en = MemberResolver.enumNameOfConstant(sa.unit(), fa);
                 if (en != null) yield new Type.ClassType("", en, List.of());
                 Type recvType = inferType(sa, fa.receiver(), scope);
@@ -367,7 +394,7 @@ public final class SemExpressionTyper {
                         // silencio (R6/Q7). so com `this.x`/x nu (owner ==
                         // caller) e dentro da declarante/subclasse passa.
                         if (field instanceof SymbolTable.FieldSymbol fs) {
-                            MemberCallTyper.checkFieldAccess(sa, fs, ct.name());
+                            MemberCallTyper.checkFieldAccess(sa, fs);
                         }
                         yield CompilerTypes.substituteTypeVariableIn(field.type(), recvType, sa.unit());
                     }

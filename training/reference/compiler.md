@@ -35,7 +35,7 @@ Kof IR (backend-agnostic) → Optimizer (constant folding, branch simplification
 | `kof serve <file.kf> [--port] [--host]` | Start HTTP server (web.app + legacy handle API) |
 | `kof check <file.kf\|dir> [--target <t>]` | Type-check only (target-aware gaps) |
 | `kof test <file.kf\|dir> [--target jvm\|native\|js]` | Structured tests `test "nome" { }` on the 3 targets |
-| `kof script <file.ks> [--watch] [--inspect]` | KofScript top-level let → KofScriptGlobals + JIT |
+| `kof script <file.ks> [--watch] [--inspect]` | KofScript top-level var/val → KofScriptGlobals + JIT |
 | `kof repl` | Incremental KofScript REPL |
 | `kof c <file.c> [-o outDir]` | KofC C subset → ELF x86_64 (native-only) |
 | `kof fmt <file.kf\|dir>` | Formatter via the real parser (KofFormatter), idempotent |

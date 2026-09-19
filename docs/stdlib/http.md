@@ -351,7 +351,7 @@ http.circuit(0)       // turns off the circuit and resets the failure state
 
 JVM+JS parity is exercised by `KofHttpResilienceE2ETest` (3/3): retry
 recovers on a flaky endpoint (2×500 → 200), the circuit opens after a failure and
-fail-fast, and `circuit(0)` recovers. Native implements the three knobs for real since 17/09 (§259 CLOSED, the 4 native targets): non-blocking connect + `poll` deadline + `SO_RCVTIMEO`/`SO_SNDTIMEO` (`throw "kof.http: timeout"`), retry on exception/`>=500`, circuit fail-fast 30s half-open — messages identical to the JVM (`KofHttpNativeResilienceCrossTest` 4/4 under qemu). `HTTP002` remains the only emitted HTTP code (the branch stays dead because `KofHttp.supportedOn` always returns `true`).
+fail-fast, and `circuit(0)` recovers. Native implements the three knobs for real since 17/09 (§259 CLOSED, the 4 native targets): non-blocking connect + `poll` deadline + `SO_RCVTIMEO`/`SO_SNDTIMEO` (`throw "kof.http: timeout"`), retry on exception/`>=500`, circuit fail-fast 30s half-open — messages identical to the JVM (`KofHttpNativeResilienceCrossTest` 4/4 under qemu). `HTTP002` is the only HTTP gap code defined — it is **not emitted today** (the branch is dead because `KofHttp.supportedOn` always returns `true`; `KofHttp.gapCode()` has no callers, §259), reserved for a genuinely unsupported native HTTP target.
 
 ---
 

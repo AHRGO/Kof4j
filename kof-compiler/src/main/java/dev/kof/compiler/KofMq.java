@@ -65,6 +65,10 @@ public final class KofMq {
         return "MQ001";
     }
 
+/** X10 fatia 3: nomes aceitos pelo dispatch real (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case-literals da fonte abaixo. */
+    static List<String> functions() { return List.of("publish", "subscribe", "unsubscribe", "queue", "push", "pop", "queueSize"); }
+
     /** {@code mq.<method>(...)} — topics são Strings; mensagens são Object. */
     static MqCall staticCall(String name, List<Type> argTypes) {
         if (!isMqMethod(name)) return null;

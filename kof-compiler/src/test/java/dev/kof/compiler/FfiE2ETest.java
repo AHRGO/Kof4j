@@ -40,10 +40,14 @@ class FfiE2ETest {
     }
 
     @Test
-    void jsExternEmitsFfi002(@TempDir Path dir) throws IOException {
-        Path src = dir.resolve("ffi-js.kf");
+    void jsUnboundAbiEmitsFfi002(@TempDir Path dir) throws IOException {
+        // R3 fatia 3.6: o target JS agora BIND a ABI escalar (runner GraalJS tem
+        // java.lang.foreign no host) — ver ffiJs* abaixo. Mas assinaturas fora do
+        // conjunto escalar (array/struct/pointer, p.ex.) seguem FFI002 honesto na
+        // compilação (D6/3.8 pendentes) — nunca stub silencioso (R6).
+        Path src = dir.resolve("ffi-js-array.kf");
         Files.writeString(src, """
-                extern "libc.so.6" abs(Int x): Int
+                extern "libc.so.6" sum(Int[] xs): Int
 
                 main() {
                     println("hi")
@@ -51,9 +55,121 @@ class FfiE2ETest {
                 """);
 
         CompilationResult result = driver.compile(src, dir.resolve("out-js"), Target.JS);
-        assertFalse(result.success(), "JS target must not silently drop extern");
+        assertFalse(result.success(), "JS target must not silently drop an unbound extern ABI");
         String diags = result.diagnostics().getDiagnostics().toString();
-        assertTrue(diags.contains("FFI002"), "expected FFI002 on JS, got: " + diags);
+        assertTrue(diags.contains("FFI002"), "expected FFI002 on an unbound JS extern, got: " + diags);
+    }
+
+    // ── R3 fatia 3.6: paridade JS (host GraalJS) byte-a-byte com a JVM ──
+    // Mesmo fonte `.kf`, mesma saída nos dois alvos (o `KofJsFfiBridge` reproduz o
+    // downcall do `kof_ffi` do target JVM). O runner usa java.lang.foreign no host
+    // (JDK >=22, final). Browser sem host: degrada em runtime via kof_platform Proxy
+    // (R7) — não testável aqui, mesmo padrão do kof.io/console.
+
+    @Test
+    void ffiJsAbsIntToInt(@TempDir Path dir) throws Exception {
+        assertJvmJsParity(dir, "abs", """
+                extern "libc.so.6" abs(Int x): Int
+
+                main() {
+                    println(abs(-5))
+                }
+                """, "5");
+    }
+
+    @Test
+    void ffiJsAtoiStringToInt(@TempDir Path dir) throws Exception {
+        assertJvmJsParity(dir, "atoi", """
+                extern "libc.so.6" atoi(String s): Int
+
+                main() {
+                    println(atoi("42"))
+                }
+                """, "42");
+    }
+
+    @Test
+    void ffiJsSqrtDoubleToDouble(@TempDir Path dir) throws Exception {
+        assertJvmJsParity(dir, "sqrt", """
+                extern "libm.so.6" sqrt(Double x): Double
+
+                main() {
+                    println(sqrt(9.0))
+                }
+                """, "3.0");
+    }
+
+    @Test
+    void ffiJsPowTwoDoubleArgs(@TempDir Path dir) throws Exception {
+        assertJvmJsParity(dir, "pow", """
+                extern "libm.so.6" pow(Double x, Double y): Double
+
+                main() {
+                    println(pow(2.0, 10.0))
+                }
+                """, "1024.0");
+    }
+
+    @Test
+    void ffiJsLongReturnAndParam(@TempDir Path dir) throws Exception {
+        assertJvmJsParity(dir, "long", """
+                extern "libc.so.6" atol(String s): Long
+                extern "libc.so.6" labs(Long x): Long
+
+                main() {
+                    println(labs(atol("-9")))
+                }
+                """, "9");
+    }
+
+    @Test
+    void ffiJsStrstrTwoStringsToString(@TempDir Path dir) throws Exception {
+        assertJvmJsParity(dir, "strstr", """
+                extern "libc.so.6" strstr(String hay, String needle): String
+
+                main() {
+                    println(strstr("hello world", "wor"))
+                }
+                """, "world");
+    }
+
+    @Test
+    void ffiJsSrandVoid(@TempDir Path dir) throws Exception {
+        assertJvmJsParity(dir, "srand", """
+                extern "libc.so.6" srand(Int x)
+
+                main() {
+                    srand(42)
+                    println("ok")
+                }
+                """, "ok");
+    }
+
+    private void assertJvmJsParity(Path dir, String base, String kof, String expected) throws Exception {
+        Path jvmSrc = dir.resolve(base + "-jvm.kf");
+        Files.writeString(jvmSrc, kof);
+        Path jvmOut = dir.resolve(base + "-out-jvm");
+        CompilationResult rj = driver.compile(jvmSrc, jvmOut, Target.JVM);
+        assertTrue(rj.success(), "JVM compile " + base + ": " + rj.diagnostics().getDiagnostics());
+        String jvm = runJvm(jvmOut);
+        assertEquals(expected, jvm, "JVM golden " + base);
+
+        Path jsSrc = dir.resolve(base + "-js.kf");
+        Files.writeString(jsSrc, kof);
+        Path jsOut = dir.resolve(base + "-out-js");
+        CompilationResult rjs = driver.compile(jsSrc, jsOut, Target.JS);
+        assertTrue(rjs.success(), "JS compile " + base + ": " + rjs.diagnostics().getDiagnostics());
+        String js = runJs(jsOut);
+        assertEquals(expected, js, "JS parity " + base);
+        assertEquals(jvm, js, "JVM==JS byte-for-byte parity " + base);
+    }
+
+    private String runJs(Path outDir) throws IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int ec = dev.kof.runtime.KofJsRunner.run(outDir.resolve("Default.mjs"), out,
+                new java.io.ByteArrayInputStream(new byte[0]), out);
+        assertEquals(0, ec, "JS exit code, output: " + out);
+        return out.toString(java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
     }
 
     @Test
@@ -119,6 +235,79 @@ class FfiE2ETest {
 
         String output = runJvm(out);
         assertEquals("5", output, "abs(-5) must return 5 via libc");
+    }
+
+    @Test
+    void libcSrandDefaultVoidBindsJVM(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("ffi.kf");
+        Files.writeString(src, """
+                extern "libc.so.6" srand(Int x)
+
+                main() {
+                    srand(42)
+                    println("ok")
+                }
+                """);
+        Path out = dir.resolve("out");
+        CompilationResult result = driver.compile(src, out, Target.JVM);
+        assertTrue(result.success(), "default-void extern must bind on JVM (R3 3.2): "
+                + result.diagnostics().getDiagnostics());
+        assertEquals("ok", runJvm(out), "srand(Int) returns void via kof_ffi_void");
+    }
+
+    @Test
+    void ffiPowTwoDoubleArgsJVM(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("ffi.kf");
+        Files.writeString(src, """
+                extern "libm.so.6" pow(Double x, Double y): Double
+
+                main() {
+                    println(pow(2.0, 10.0))
+                }
+                """);
+        Path out = dir.resolve("out");
+        CompilationResult result = driver.compile(src, out, Target.JVM);
+        assertTrue(result.success(), "2-arg double extern must compile: "
+                + result.diagnostics().getDiagnostics());
+        assertEquals("1024.0", runJvm(out), "pow(2.0,10.0) via libm (multi-arity)");
+    }
+
+    @Test
+    void ffiStrstrTwoStringsToStringJVM(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("ffi.kf");
+        Files.writeString(src, """
+                extern "libc.so.6" strstr(String hay, String needle): String
+
+                main() {
+                    println(strstr("hello world", "wor"))
+                }
+                """);
+        Path out = dir.resolve("out");
+        CompilationResult result = driver.compile(src, out, Target.JVM);
+        assertTrue(result.success(), "String-return extern must compile on JVM: "
+                + result.diagnostics().getDiagnostics());
+        assertEquals("world", runJvm(out), "strstr char*→String with 2 String args");
+    }
+
+    @Test
+    void ffiLongReturnAndParamJVM(@TempDir Path dir) throws IOException {
+        // R3 escalar 'j' (Long) ponta-a-ponta: o Long é PRODUZIDO por atol(String)
+        // (evita depender de literal long no Kof) e CONSUMIDO por labs(Long).
+        // Prova layout JAVA_LONG + boxing/unboxing Long no caminho downcall genérico.
+        Path src = dir.resolve("ffi-long.kf");
+        Files.writeString(src, """
+                extern "libc.so.6" atol(String s): Long
+                extern "libc.so.6" labs(Long x): Long
+
+                main() {
+                    println(labs(atol("-9")))
+                }
+                """);
+        Path out = dir.resolve("out");
+        CompilationResult result = driver.compile(src, out, Target.JVM);
+        assertTrue(result.success(), "Long return+param extern must bind on JVM (R3 'j'): "
+                + result.diagnostics().getDiagnostics());
+        assertEquals("9", runJvm(out), "labs(atol(\"-9\")) via libc (Long in/out)");
     }
 
     private String runJava(Path outDir) throws IOException {

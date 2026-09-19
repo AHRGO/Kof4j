@@ -23,10 +23,10 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * Paridade honesta (regra 6 / R6): o Native **x86** executa o núcleo desde
  * §129 (DECISIONS §2, opção B: handler chain per-thread — o throw do worker
- * marca o handle como excepcional e o await/selectAny relança). riscv/aarch
- * bloqueiam no compile-time com OTP001 (clone cru sem TLS) e JS com OTP002
- * (§132 event-loop single-thread), nunca fallback silencioso. JVM (runJvm) +
- * Script (interpret) + Native x86 (runNative) executam o núcleo.
+  * marca o handle como excepcional e o await/selectAny relança). riscv/aarch
+  * bloqueiam no compile-time com OTP001 (clone cru sem TLS), nunca fallback
+  * silencioso. JVM (runJvm) + Script (interpret) + Native x86 (runNative) +
+  * **JS (runJs, desde 18/09 — §132 resolvido, OTP002 levantado)** executam o núcleo.
  */
 class KofSupervisorE2ETest {
 
@@ -199,13 +199,41 @@ class KofSupervisorE2ETest {
         }
     }
 
+    // ---- §132/#83-JS (18/09): JS roda o nucleo (sleep cooperativo async) ----
+    private String runJs(Path tmp, String name, String src) throws IOException {
+        Path out = tmp.resolve("oj-" + name);
+        CompilationResult r = driver.compile(writeNamed(tmp, name + ".kf", src), out, Target.JS);
+        assertTrue(r.success(), "JS compila supervisor: " + r.diagnostics().getDiagnostics());
+        Path entry;
+        try (var walk = Files.walk(out)) {
+            entry = walk.filter(p -> p.getFileName().toString().equals("Default.mjs"))
+                    .findFirst().orElseThrow();
+        }
+        try (java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+             java.io.ByteArrayOutputStream eb = new java.io.ByteArrayOutputStream()) {
+            int ec = dev.kof.runtime.KofJsRunner.run(entry, buf,
+                    java.io.InputStream.nullInputStream(), eb);
+            String os = buf.toString(java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n");
+            assertEquals(0, ec, "JS roda limpo: " + os + eb.toString(java.nio.charset.StandardCharsets.UTF_8));
+            return os;
+        }
+    }
+
     @Test
-    void jsGateOtp002(@TempDir Path tmp) throws IOException {
-        CompilationResult r = driver.compile(writeNamed(tmp, "J.kf", "import kof.supervisor\nmain(){ supervisor(\"x\") }"),
-                tmp.resolve("o"), Target.JS);
-        assertFalse(r.success(), "JS nao deve compilar supervisor hoje");
-        assertTrue(r.diagnostics().getDiagnostics().stream().anyMatch(d -> "OTP002".equals(d.code())),
-                "esperava OTP002, foi: " + r.diagnostics().getDiagnostics());
+    void supervisorJsParity(@TempDir Path tmp) throws IOException {
+        String os = runJs(tmp, "j1", APP);
+        assertTrue(os.contains("restarts=2"), "2 reinicios (worker chamado 3x) no JS: " + os);
+        assertTrue(os.contains("escaladas=2"), "escalate a cada falha no JS: " + os);
+        assertTrue(os.contains("fabrica=3"), "factory NOVA por reinicio no JS: " + os);
+        assertTrue(os.contains("parou vivos=0"), "stop encerra controlado no JS: " + os);
+    }
+
+    @Test
+    void supervisorJsS2Parity(@TempDir Path tmp) throws IOException {
+        String os = runJs(tmp, "j2", APP_S2);
+        assertTrue(os.contains("esc="), "escalate disparou no JS: " + os);
+        assertTrue(os.contains("parou vivos=0"), "stop encerra o laco unico no JS: " + os);
     }
 
     // ---- regressao: sem o import, nada muda (supervisor invisivel, programa limpo) ----

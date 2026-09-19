@@ -40,7 +40,7 @@ Kof IR (backend-agnostic, KofOperation)
 ┌─────────┬──────────┬──────┬─────────┬────────┐
 │  JVM    │ Native   │ JS   │ KofScript│ KofC  │
 │  (ASM)  │ x86_64   │ ES   │ JIT      │ C→ELF │
-│         │ riscv64* │      │ let/top  │       │
+│         │ riscv64* │      │ var/top  │       │
 │         │ aarch64* │      │ level    │       │
 └─────────┴──────────┴──────┴─────────┴────────┘
  * real riscv64 (02/09, pure asm, qemu); aarch64 placeholder
@@ -79,7 +79,7 @@ Kof IR (backend-agnostic, KofOperation)
 | kof.security (passwords/crypto/jwt/secrets/auth + rateLimit/sessions/apiKeys) | ✅ | ✅ | ✅ | |
 | kof.observability (health/readiness/liveness/counter/increment/gauge/requestId) | ✅ | ✅ | ✅ | |
 | kof.db + native SQLite + MySQL handshake | ✅ | ✅ (MySQL auth scramble SHA-1 done) | ✅ 16/09 | JS via GraalJS bridge (DB001 closed); typed `query<T>` = DB002 |
-| KofScript `let` top-level + repl --watch --inspect | ✅ | ✅ | ✅ | KofScriptGlobals |
+| KofScript top-level `var`/`val` + repl --watch --inspect | ✅ | ✅ | ✅ | KofScriptGlobals |
 | KofC C subset → ELF x86_64 | — | ✅ | — | native-only |
 
 ## Planned / Unavailable (0.4.0-beta)

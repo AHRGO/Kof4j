@@ -38,14 +38,14 @@ public final class NativeX86Calls {
 
     void emitCall(StringBuilder sb, KofCall kc) {
         if ("kof_box".equals(kc.methodName()) || "kof_unbox".equals(kc.methodName())) {
-            // §267 (GAP, stub catalogado — Q7): no-op silencioso. `emitErasureBox`
+            // §284 (GAP, stub catalogado — Q7): no-op silencioso. `emitErasureBox`
             // (JVM-only por design) emite kof_box ANTES deste caminho nos targets
             // nativos, mas a chamada chega aqui como KofCall e nao faz NADA →
             // primitivo cru fica na pilha onde o consumer espera um ponteiro
             // (medido: `var o: Object = 99` + println → SIGSEGV 139 no native,
             // pre-existente, nao-regressao do §253 face B). O fix e alancar um
             // box real (kof_alloc + store) no lugar do no-op, e kof_unbox ler o
-            // campo `value` — dono: lane nat (ver docs §267).
+            // campo `value` — dono: lane nat (ver docs §284).
             return;
         }
         if (kc.kind() == KofCallKind.INSTANCE && "println".equals(kc.methodName())) {
@@ -105,8 +105,9 @@ public final class NativeX86Calls {
         // STDLIB S10: random.double retorna bits em xmm0 (mesma convenção de
         // kof_string_to_double); int/hex/boolean seguem rax via o caminho
         // genérico FUNCTION abaixo (tail-jmp no runtime).
-        if ("kof_random_double".equals(kc.methodName())) {
-            sb.append("    call kof_random_double\n");
+        if ("kof_random_double".equals(kc.methodName())
+                || "kof_rng_double".equals(kc.methodName())) {
+            sb.append("    call ").append(kc.methodName()).append("\n");
             sb.append("    movq %xmm0, %rax\n");
             sb.append("    pushq %rax\n");
             return;

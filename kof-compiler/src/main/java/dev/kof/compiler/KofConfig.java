@@ -46,6 +46,10 @@ public final class KofConfig {
 
     record ConfigCall(String function, Type returnType, List<Type> parameterTypes) {}
 
+/** X10 fatia 3: nomes aceitos pelo dispatch real (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case-literals da fonte abaixo. */
+    static List<String> functions() { return List.of("get", "env", "has", "str", "int", "long", "bool", "required"); }
+
     /** {@code config.<method>(...) } — validates arity and maps to the runtime function. */
     static ConfigCall staticCall(String name, List<Type> argTypes) {
         return switch (name) {

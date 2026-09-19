@@ -36,6 +36,7 @@ var soma = l.reduce((a: Int, b: Int) -> a + b, 0)   // order: (lambda, init)
 var m = mapOf("a", 1)
 m.put("b", 2)
 var v = m.get("a")
+var n = m.getOrDefault("b", 0)   // default when key absent (0.4.0, 4 targets)
 var s = setOf(1, 2, 3)
 s.add(4)
 s.contains(2)
@@ -58,14 +59,36 @@ println(b.all().size())
 
 Fix 01/09: `Set<T>`/`Map<K,V>` as a class field/return on the JVM — the mapper mapped only `List`→`ArrayList` (so `Set`/`Map` became `Lkof/Set;` → `NoClassDefFoundError`); now `HashSet`/`HashMap`. Parser: a class method with a generic return (`Set<Int> all(`) now parses (before it fell into the field branch). `KofMapSetTest.setMapAsFieldAndReturn`.
 
+## `listOf` with related subtypes infers the common ancestor (0.4.0-beta, §285)
+
+```kof
+interface Animal { String sound() }
+class Dog implements Animal { String sound() { return "woof" } }
+class Cat implements Animal { String sound() { return "meow" } }
+var animals = listOf(new Dog(), new Cat())   // inferred List<Animal>, not List<Dog>
+animals.get(1).sound()                       // "meow" — no ClassCastException
+```
+
+Elements that SHARE a supertype (class or interface) are homogeneous at the
+ancestor level: the inference widens to the common supertype. Unrelated
+elements (`listOf(new Dog(), 42)`) keep the SEM056 homogeneity rejection.
+Before 0.4.0 the element type came from the FIRST argument only — the fix
+walks superclasses AND interfaces (family of §156). Measured 18/09 on the
+tip: `woof`/`meow`.
+
 ## `Map.get` returns `V?` for reference values (02/09)
 
 `m.get(chave)` returns `V?` when the value is a reference type
 (`Map<String, String>`, `Map<String, User>`): absence = `null`, use
 `if (v != null)` to narrow. For **primitive** values (`Map<String, Int>`)
-the type stays `V` — the current model stores primitives unboxed and does not
-represent absence (documented limitation; use `contains`/`containsKey`
-to check beforehand).
+the type is now `V?` as well (since the D-NULL-INTENT N1 merge, #438 `250f6207`,
+18/09: `Int z = m.get("a")` fails with a type-mismatch on `NullableType[int]` —
+absence is representable). **Caution while §294 is open:** on the JVM a
+present-key `if (v != null)` check over a primitive-valued map still dies at
+runtime (`NoSuchMethodError Object.valueOf(boxed)`); until §294 closes, prefer
+`m.getOrDefault(key, fallback)` (landed `62bd455e`, measured working) or
+`contains`/`containsKey` checks for primitive-valued maps. Reference values are
+unaffected.
 
 Fix 27/08: `listOf(...).get(n)` and `size` in large projects with `import a.b.C` now resolve correctly (CompilerDriver file-specific imports). A manual index workaround is not necessary.
 

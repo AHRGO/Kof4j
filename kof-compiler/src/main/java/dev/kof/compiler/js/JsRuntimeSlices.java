@@ -22,6 +22,7 @@ final class JsRuntimeSlices {
     static final List<Block> BLOCKS = List.of(
             new Block("core", JsRuntimeCore.CORE_RUNTIME, false),
             new Block("ui-components", JsRuntimeUiComponents.UI_COMPONENT_RUNTIME, false),
+            new Block("ui-link-image-icon", JsRuntimeUiLinkImageIcon.UI_LINK_IMAGE_ICON_RUNTIME, false),
             new Block("ui-widgets", JsRuntimeUiWidgets.UI_WIDGET_RUNTIME, false),
             new Block("ui-forms", JsRuntimeUiForms.UI_FORMS_RUNTIME, false),
             new Block("ui-layout", JsRuntimeUiLayout.UI_LAYOUT_RUNTIME, false),
@@ -34,6 +35,7 @@ final class JsRuntimeSlices {
             new Block("validation", JsRuntimeUiValidation.UI_VALIDATION_RUNTIME, false),
             new Block("stdlib", JsRuntimeUiStdlib.STDLIB_RUNTIME, false),
             new Block("random", JsRuntimeUiRandom.RANDOM_RUNTIME, false),
+            new Block("rng", JsRuntimeUiRng.RNG_RUNTIME, false),
             new Block("math-double", JsRuntimeUiMathDouble.MATH_DOUBLE_RUNTIME, false),
             new Block("num-fmt", JsRuntimeUiNumFmt.NUM_FMT_RUNTIME, false),
             new Block("net", JsRuntimeUiNet.NET_RUNTIME, false),

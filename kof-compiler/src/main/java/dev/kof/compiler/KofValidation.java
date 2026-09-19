@@ -25,6 +25,10 @@ public final class KofValidation {
 
     record ValidationCall(String function, Type returnType, List<Type> parameterTypes) {}
 
+/** X10 fatia 3: nomes aceitos pelo dispatch real (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case-literals da fonte abaixo. */
+    static List<String> functions() { return List.of("required", "notBlank", "minLength", "maxLength", "lengthBetween", "isEmail", "isUrl", "matches", "isInt", "isLong", "inRange", "min", "max", "formatCpf", "formatCep", "formatCnpj", "isCpf", "isCnpj", "isCep", "isPis", "isNis", "isIpv4", "isMac", "isPort", "isCreditCard", "isIpv6", "isDomain"); }
+
     static ValidationCall staticMethod(String namespace, String name, List<Type> argTypes) {
         if (!"validation".equals(namespace)) return null;
         int argc = argTypes.size();

@@ -3,6 +3,9 @@ package dev.kof.cli;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.junit.jupiter.api.io.TempDir;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -45,15 +48,20 @@ class LspServerTest {
     /** Extrai todos os envelopes JSON de uma saída LSP (skip de headers). */
     @SuppressWarnings("unchecked")
     private static List<Map<String, Object>> messages(String raw) {
+        // byte-safe: Content-Length do protocolo é em BYTES UTF-8 (o servidor
+        // usa body.length de byte[]); fatiar por char quebraria em payloads
+        // não-ASCII (ex.: hover com em-dash) — bug exposto pela fatia 7.
+        byte[] all = raw.getBytes(StandardCharsets.UTF_8);
+        String ascii = new String(all, StandardCharsets.ISO_8859_1); // 1 char == 1 byte
         List<Map<String, Object>> out = new ArrayList<>();
         int pos = 0;
         while (true) {
-            int h = raw.indexOf("Content-Length:", pos);
+            int h = ascii.indexOf("Content-Length:", pos);
             if (h < 0) break;
-            int end = raw.indexOf("\r\n\r\n", h);
-            int len = Integer.parseInt(raw.substring(h + "Content-Length:".length(), end).trim());
+            int end = ascii.indexOf("\r\n\r\n", h);
+            int len = Integer.parseInt(ascii.substring(h + "Content-Length:".length(), end).trim());
             int body = end + 4;
-            Object parsed = Json.parse(raw.substring(body, body + len));
+            Object parsed = Json.parse(new String(all, body, len, StandardCharsets.UTF_8));
             if (parsed instanceof Map<?, ?> m) out.add((Map<String, Object>) m);
             pos = body + len;
         }
@@ -370,4 +378,244 @@ class LspServerTest {
         assertInstanceOf(Map.class, provider, "codeActionProvider com opções");
         assertEquals(List.of("source"), ((Map<String, Object>) provider).get("codeActionKinds"));
     }
+
+
+    /** X10 fatia 4: definição em OUTRO arquivo do projeto (packages). */
+    @Test
+    void definitionJumpsAcrossProjectFiles(@TempDir Path dir) throws Exception {
+        String lib = "Int helper(Int x) { return x * 2 }\n";
+        String app = "main() { println(helper(21)) }\n";
+        Files.writeString(dir.resolve("lib.kf"), lib);
+        Path appFile = dir.resolve("app.kf");
+        Files.writeString(appFile, app);
+        String appUri = appFile.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        // coluna de "helper" na linha 0: "main() { println(" = 18 chars? localizar real
+        int col = app.indexOf("helper") + 2;
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/definition\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\"},"
+                + "\"position\":{\"line\":0,\"character\":" + col + "}}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> resp = byId(messages(out.toString(StandardCharsets.UTF_8)), 1);
+        @SuppressWarnings("unchecked")
+        List<Object> locs = (List<Object>) resp.get("result");
+        assertNotNull(locs, "esperava Location cross-file");
+        assertEquals(1, locs.size());
+        Map<?, ?> loc = (Map<?, ?>) locs.get(0);
+        String libUri = dir.resolve("lib.kf").toAbsolutePath().toUri().toString();
+        assertEquals(libUri, loc.get("uri"), "deve cair em lib.kf");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> range = (Map<String, Object>) loc.get("range");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> start = (Map<String, Object>) range.get("start");
+        assertEquals(0L, ((Number) start.get("line")).longValue(), "helper declarado na linha 0");
+    }
+
+    /** Nome inexistente no projeto: null honesto (nunca chute). */
+    @Test
+    void definitionUnknownNameIsNull(@TempDir Path dir) throws Exception {
+        Path f = dir.resolve("a.kf");
+        String app = "main() { println(naoExiste(1)) }\n";
+        Files.writeString(f, app);
+        String uriA = f.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + uriA + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        int col = app.indexOf("naoExiste") + 3;
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/definition\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + uriA + "\"},"
+                + "\"position\":{\"line\":0,\"character\":" + col + "}}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> resp = byId(messages(out.toString(StandardCharsets.UTF_8)), 1);
+        assertTrue(resp.containsKey("result"));
+        assertNull(resp.get("result"));
+    }
+
+
+    /** X10 fatia 5: referências também nos .kf irmãos (read-only). */
+    @Test
+    void referencesSpanProjectFiles(@TempDir Path dir) throws Exception {
+        String lib = "Int helper(Int x) { return x * 2 }\n";
+        String app = "main() { println(helper(21)) }\n";
+        Files.writeString(dir.resolve("lib.kf"), lib);
+        Path appFile = dir.resolve("app.kf");
+        Files.writeString(appFile, app);
+        String appUri = appFile.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        int col = app.indexOf("helper") + 2;
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/references\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\"},"
+                + "\"position\":{\"line\":0,\"character\":" + col + "}}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> resp = byId(messages(out.toString(StandardCharsets.UTF_8)), 1);
+        @SuppressWarnings("unchecked")
+        List<Object> locs = (List<Object>) resp.get("result");
+        assertEquals(2, locs.size(), "1 no buffer + 1 no irmão lib.kf");
+        java.util.Set<String> uris = new java.util.HashSet<>();
+        for (Object o : locs) uris.add(String.valueOf(((Map<?, ?>) o).get("uri")));
+        assertTrue(uris.contains(appUri));
+        assertTrue(uris.contains(dir.resolve("lib.kf").toAbsolutePath().toUri().toString()));
+    }
+
+
+    /** X10 fatia 6: workspace/symbol une buffers + .kf irmãos não-abertos. */
+    @Test
+    void workspaceSymbolSpansProject(@TempDir Path dir) throws Exception {
+        String lib = "Int helper(Int x) { return x * 2 }\n";
+        String app = "record Box(Int w)\nmain() { println(helper(21)) }\n";
+        Files.writeString(dir.resolve("lib.kf"), lib);
+        Path appFile = dir.resolve("app.kf");
+        Files.writeString(appFile, app);
+        String appUri = appFile.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"workspace/symbol\",\"params\":{\"query\":\"\"}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> resp = byId(messages(out.toString(StandardCharsets.UTF_8)), 1);
+        @SuppressWarnings("unchecked")
+        List<Object> syms = (List<Object>) resp.get("result");
+        assertEquals(3, syms.size(), "Box+main (buffer) e helper (irmão no disco)");
+        java.util.Set<String> names = new java.util.HashSet<>();
+        for (Object o : syms) names.add(String.valueOf(((Map<?, ?>) o).get("name")));
+        assertEquals(java.util.Set.of("Box", "main", "helper"), names);
+        String libUri = dir.resolve("lib.kf").toAbsolutePath().toUri().toString();
+        for (Object o : syms) {
+            Map<?, ?> m = (Map<?, ?>) o;
+            Map<?, ?> loc = (Map<?, ?>) m.get("location");
+            if ("helper".equals(m.get("name"))) assertEquals(libUri, loc.get("uri"));
+        }
+        // filtro substring case-insensitive: "BOx" acha Box (prefixo) e nada mais
+        String reqF = req.replace("\"query\":\"\"", "\"query\":\"BOx\"");
+        ByteArrayOutputStream out2 = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(reqF))), out2).run();
+        @SuppressWarnings("unchecked")
+        List<Object> filt = (List<Object>) byId(messages(out2.toString(StandardCharsets.UTF_8)), 1).get("result");
+        assertEquals(1, filt.size());
+        assertEquals("Box", ((Map<?, ?>) filt.get(0)).get("name"));
+    }
+
+
+    /** X10 fatia 7: hover mostra declara\u00e7\u00e3o cross-file do projeto. */
+    @Test
+    void hoverShowsCrossFileDeclaration(@TempDir Path dir) throws Exception {
+        String lib = "Int helper(Int x) { return x * 2 }\n";
+        String app = "main() { println(helper(21) + mystery(2)) }\n";
+        Files.writeString(dir.resolve("lib.kf"), lib);
+        Path appFile = dir.resolve("app.kf");
+        Files.writeString(appFile, app);
+        String appUri = appFile.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        int col = app.indexOf("helper") + 2;
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/hover\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\"},"
+                + "\"position\":{\"line\":0,\"character\":" + col + "}}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> resp = byId(messages(out.toString(StandardCharsets.UTF_8)), 1);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> res = (Map<String, Object>) resp.get("result");
+        assertNotNull(res, "esperava hover cross-file");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contents = (Map<String, Object>) res.get("contents");
+        String value = String.valueOf(contents.get("value"));
+        assertTrue(value.contains("lib.kf"), "deve apontar o arquivo de origem: " + value);
+        assertTrue(value.contains("Int helper(Int x)"), "linha de declara\u00e7\u00e3o real: " + value);
+        // nome sem declaração no projeto segue null honesto (R6, nunca chute)
+        int col2 = app.indexOf("mystery") + 3;
+        String req2 = req.replace("\"character\":" + col, "\"character\":" + col2);
+        ByteArrayOutputStream out2 = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req2))), out2).run();
+        Map<String, Object> resp2 = byId(messages(out2.toString(StandardCharsets.UTF_8)), 1);
+        assertTrue(resp2.containsKey("result"));
+        assertNull(resp2.get("result"), "mystery não é declarado no projeto: hover null honesto");
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> completionAt(String text, long line, long ch) throws Exception {
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + URI + "\",\"text\":\"" + Json.escape(text) + "\"}}}";
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/completion\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + URI + "\"},"
+                + "\"position\":{\"line\":" + line + ",\"character\":" + ch + "}}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> res = (Map<String, Object>) byId(messages(out.toString(StandardCharsets.UTF_8)), 1)
+                .get("result");
+        return (List<Map<String, Object>>) res.get("items");
+    }
+
+    /** X10 fatia 1: depois de `rng.` o LSP oferece os membros REAIS do typer. */
+    @Test
+    void completionRngDotOffersStdlibMembers() throws Exception {
+        List<Map<String, Object>> items = completionAt("main() {\n    rng.\n}", 1, 8);
+        List<String> labels = items.stream().map(i -> (String) i.get("label")).toList();
+        assertTrue(labels.containsAll(List.of("seed", "int", "boolean", "double", "string")),
+                "esperava os 5 membros de kof.rng, veio " + labels);
+        assertTrue(items.stream().allMatch(i -> "Function".equals(i.get("kind"))),
+                "membros stdlib sao kind Function: " + items);
+        assertEquals("kof.rng", items.get(0).get("detail"));
+    }
+
+    @Test
+    void completionMathDotOffersFunctions() throws Exception {
+        List<String> labels = completionAt("math.", 0, 5).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertTrue(labels.contains("sqrt"), "math.sqrt ausente: " + labels);
+        assertTrue(labels.contains("clamp"), "math.clamp ausente: " + labels);
+    }
+
+    /** Prefixo que NAO e namespace stdlib: nenhuma oferta de membros (no-op honesto). */
+    @Test
+    void completionNonNamespaceDotStaysQuiet() throws Exception {
+        List<Map<String, Object>> items = completionAt("foo.", 0, 4);
+        assertTrue(items.stream().noneMatch(i -> "Function".equals(i.get("kind"))),
+                "nao-inventar membros p/ prefixo estranho: " + items);
+    }
+
+    /** X10 fatia 2: dispatch próprio também completado (time/db/security). */
+    @Test
+    void completionSlice2Namespaces() throws Exception {
+        List<String> t = completionAt("time.", 0, 5).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertTrue(t.containsAll(List.of("sleep", "now", "interval", "daysBetween")),
+                "time.* faltando: " + t);
+        List<String> d = completionAt("db.", 0, 3).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertEquals(List.of("connect", "close", "transaction"), d);
+        List<String> c = completionAt("crypto.", 0, 7).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertTrue(c.contains("sha256") && c.contains("hmacSha256"), "crypto: " + c);
+    }
+
+    /** X10 fatia 3: receiver-typed (json/log/mq/validation/media). */
+    @Test
+    void completionSlice3Namespaces() throws Exception {
+        assertEquals(List.of("encode", "decode"),
+                completionAt("json.", 0, 5).stream().map(i -> (String) i.get("label")).toList());
+        List<String> lg = completionAt("log.", 0, 4).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertEquals(List.of("debug", "info", "warn", "error"), lg);
+        List<String> mi = completionAt("Mic.", 0, 4).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertEquals(List.of("record", "list"), mi);
+        List<String> img = completionAt("Image.", 0, 6).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertEquals(List.of("open"), img);
+    }
+
+    /** Fora do ponto, o completion de palavras/chaves existente nao regride. */
+    @Test
+    void completionStillOffersKeywordsAndVars() throws Exception {
+        List<String> labels = completionAt("var total = 0\n    ", 1, 4).stream()
+                .map(i -> (String) i.get("label")).toList();
+        assertTrue(labels.contains("total"), "variable sumiu: " + labels);
+        assertTrue(labels.contains("var"), "keywords sumiram: " + labels);
+    }
+
 }

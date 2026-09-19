@@ -231,14 +231,14 @@ final class CmdBuild {
             driver.setAndroidSdk(androidMin, androidTarget);
         }
         // dependências externas (android.jar etc.) geridas pelo Kof via
-        // ExternalClasspath — separadas por ':' ou ';'
+        // ExternalClasspath — separadas pelo separador de classpath da plataforma
+        // (#441: no Windows o ':' faz parte da unidade `C:\`, splitar por ':'
+        // quebrava entradas em fragmentos como "C" → CP002 falso).
         List<Path> externalEntries = new ArrayList<>();
-        if (classpath != null && !classpath.isBlank()) {
-            for (String part : classpath.split("[:;]")) {
-                if (!part.isBlank()) externalEntries.add(Path.of(part));
-            }
-            driver.setExternalClasspath(externalEntries);
+        for (String part : splitClasspathEntries(classpath)) {
+            externalEntries.add(Path.of(part));
         }
+        if (!externalEntries.isEmpty()) driver.setExternalClasspath(externalEntries);
         // kofdeps: dependências Maven resolvidas no cache ~/.kof/deps
         if (useDeps) {
             try {
@@ -301,7 +301,7 @@ final class CmdBuild {
         // (full-stack: as classes do backend saíram em backendOut)
         boolean apkOk = true;
         if (target == Target.ANDROID && apk) {
-            apkOk = runApkPipeline(backendOut, androidMin, androidTarget,
+            apkOk = ApkToolchain.runApkPipeline(backendOut, androidMin, androidTarget,
                     keystore, storepass, keypass, keyalias);
         }
         // --aab (App Bundle p/ Play): ainda NÃO produzido — precisa do
@@ -444,82 +444,24 @@ final class CmdBuild {
     }
 
     /**
-     * Pipeline APK standalone (#6/#7): chama os binários oficiais do SDK
-     * direto — d8 → aapt2 → zip → zipalign → apksigner. Sem --keystore,
-     * gera debug keystore local na primeira vez; com --keystore, assina
-     * com o keystore do usuário (release signing parametrizável).
+     * #441: divide um {@code --classpath} em entradas. Usa o separador real da
+     * plataforma ({@link java.io.File#pathSeparatorChar}): {@code ';'} no
+     * Windows (nunca parte um {@code C:\...} no dois-pontos), {@code ':'} fora
+     * dele. No Unix mantém a tolerância histórica a {@code ';'} também (zero
+     * regressão para quem já passava os dois). Visível p/ teste com separador
+     * injetado (o host do teste é Linux; a semântica Windows é a que se prova).
      */
-    private static boolean runApkPipeline(Path projDir, int minSdk, int targetSdk,
-                                          String keystore, String storepass,
-                                          String keypass, String keyalias) {
-        String androidHome = System.getenv("ANDROID_HOME");
-        if (androidHome == null || androidHome.isBlank()) {
-            System.err.println("--apk: ANDROID_HOME not set; generate the project and use 'mvn verify'");
-            return false;
-        }
-        Path bt = Path.of(androidHome, "build-tools", "34.0.0");
-        Path platformJar = Path.of(androidHome, "platforms", "android-" + targetSdk, "android.jar");
-        if (!Files.isExecutable(bt.resolve("aapt2"))) {
-            System.err.println("--apk: build-tools 34.0.0 not found in " + bt);
-            return false;
-        }
-        Path build = projDir.resolve("target");
-        Path apkDir = build.resolve("apk");
-        boolean userKs = keystore != null && !keystore.isBlank();
-        try {
-            Files.createDirectories(apkDir);
-            // debug keystore local (só quando o usuário não passou --keystore)
-            Path ks = userKs ? Path.of(keystore) : build.resolve("debug.keystore");
-            if (!userKs && !Files.exists(ks)) {
-                run(List.of("keytool", "-genkeypair", "-keystore", ks.toString(),
-                        "-alias", "androiddebugkey", "-storepass", "android",
-                        "-keypass", "android", "-keyalg", "RSA", "-validity", "9999",
-                        "-dname", "CN=Kof Debug,O=Kof,C=BR"), projDir);
-            }
-            run(List.of(bt.resolve("aapt2").toString(), "compile", "--dir",
-                    projDir.resolve("src/main/res").toString(),
-                    "-o", apkDir.resolve("res.zip").toString()), projDir);
-            run(List.of(bt.resolve("aapt2").toString(), "link",
-                    "-o", apkDir.resolve("base.apk").toString(),
-                    "-I", platformJar.toString(),
-                    "--manifest", projDir.resolve("src/main/AndroidManifest.xml").toString(),
-                    "-A", projDir.resolve("src/main/assets").toString(),
-                    "-R", apkDir.resolve("res.zip").toString()), projDir);
-            run(List.of(bt.resolve("d8").toString(), "--release",
-                    "--lib", platformJar.toString(), "--min-api", Integer.toString(minSdk),
-                    "--output", apkDir.toString(),
-                    projDir.resolve("libs/kof-app.jar").toString()), projDir);
-            run(List.of("jar", "uf", apkDir.resolve("base.apk").toString(),
-                    "-C", apkDir.toString(), "classes.dex"), projDir);
-            run(List.of(bt.resolve("zipalign").toString(), "-f", "4",
-                    apkDir.resolve("base.apk").toString(),
-                    apkDir.resolve("aligned.apk").toString()), projDir);
-            String sp = userKs && storepass != null ? storepass : "android";
-            String kp = userKs && keypass != null ? keypass : sp;
-            List<String> sign = new ArrayList<>(List.of(
-                    bt.resolve("apksigner").toString(), "sign",
-                    "--ks", ks.toString(), "--ks-pass", "pass:" + sp,
-                    "--key-pass", "pass:" + kp));
-            if (userKs && keyalias != null && !keyalias.isBlank()) {
-                sign.add("--ks-key-alias");
-                sign.add(keyalias);
-            }
-            sign.add("--out");
-            sign.add(build.resolve("kof-app.apk").toString());
-            sign.add(apkDir.resolve("aligned.apk").toString());
-            run(sign, projDir);
-            System.out.println("APK built: " + build.resolve("kof-app.apk"));
-            return true;
-        } catch (Exception e) {
-            System.err.println("APK pipeline failed: " + e.getMessage());
-            return false;
-        }
+    static java.util.List<String> splitClasspathEntries(String classpath) {
+        return splitClasspathEntries(classpath, java.io.File.pathSeparatorChar);
     }
 
-    private static void run(List<String> cmd, Path cwd) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(cmd).directory(cwd.toFile()).inheritIO();
-        Process proc = pb.start();
-        int code = proc.waitFor();
-        if (code != 0) throw new IOException("exit " + code + ": " + cmd.get(0));
+    static java.util.List<String> splitClasspathEntries(String classpath, char separator) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        if (classpath == null || classpath.isBlank()) return out;
+        for (String part : classpath.split(separator == ':' ? "[:;]" : String.valueOf(separator))) {
+            if (!part.isBlank()) out.add(part);
+        }
+        return out;
     }
+
 }

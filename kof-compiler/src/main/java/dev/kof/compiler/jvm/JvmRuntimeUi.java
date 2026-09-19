@@ -139,6 +139,10 @@ public final class JvmRuntimeUi {
                 public static void kof_ui_widget_set_flex_basis(int widget, int px) { }
                 public static void kof_ui_widget_set_max_width(int widget, int px) { }
 
+                // D-UI-STYLE (UI007) Q5: setStyle(style) — no-op JVM parity
+                // (real only on KofJS), same family as setId/setFont.
+                public static void kof_ui_widget_set_style(int widget, int style) { }
+
                 public static void kof_ui_widget_on(int widget, String type, Object handler) {
                 }
 
@@ -273,6 +277,15 @@ public final class JvmRuntimeUi {
 
                 public static int kof_ui_stores_live() {
                     return kofUiStoreLive.size();
+                }
+
+                private static int kofUiAppStateId = 0;
+
+                public static int kof_ui_app_state(int initial) {
+                    // Fase 8 §2.6 / D-UI-APPSTATE: create-or-get singleton
+                    // over the (no-op) Store machinery.
+                    if (kofUiAppStateId == 0) kofUiAppStateId = kof_ui_store_new(initial);
+                    return kofUiAppStateId;
                 }
 
                 // ── Fase 7: Router (no-ops — UI é KofJS) ──
@@ -421,6 +434,13 @@ public final class JvmRuntimeUi {
                 }
 
                 public static int kof_ui_style_new(int background, int foreground, int padding, int radius) {
+                    return 1;
+                }
+
+                // D-UI-STYLE (UI007): declarative style is real only on KofJS
+                // (documented no-op parity, UI001) — the compiler already
+                // parsed/validated the declarations.
+                public static int kof_ui_style_css(String css) {
                     return 1;
                 }
 

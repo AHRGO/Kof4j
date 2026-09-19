@@ -94,9 +94,9 @@ public final class KofInterpreter {
     void warnUi002(String fn) {
         if (ui002Warned || err == null) return;
         ui002Warned = true;
-        err.println("warning UI002: kof.ui não renderiza no target script "
-                + "(primeira chamada: " + fn + "); kof.ui é KofJS — "
-                + " rode com --target=js para UI real");
+        err.println("warning UI002: kof.ui does not render on the script target "
+                + "(first call: " + fn + "); kof.ui is KofJS — "
+                + " run with --target=js for real UI");
     }
 
     /**

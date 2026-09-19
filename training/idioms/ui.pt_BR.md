@@ -384,3 +384,88 @@ relatedTarget.id) — o payload vem do browser, não de estado global manual
 `tagName` minúsculo quando o nó não tem `setId`; `""` fora do browser).
 `relatedTarget()` idem para o nó relacionado (foco/mouse). Funciona em
 qualquer widget DOM via `.on(type, handler)`.
+
+## Style declarativo (string CSS-like)
+
+**RUIM — setters por propriedade, cerimônia de Java:**
+```kof
+// ❌ NÃO — uma chamada por propriedade, e só o View tinha estilo
+var v = View(Style(Palette.white, Palette.black, 8, 4))
+```
+
+**BOM — uma string CSS idiomática, parseada e validada no compilador:**
+```kof
+// ✅ IDIOMÁTICO — parse/validação em compile-time (SEM076/076/077, nunca silencioso)
+var card = Style("background: #ffffff; padding: 8; border-radius: 4")
+var v = View(card)
+var l = Label("titulo")
+l.setStyle(card)                       // qualquer widget DOM, não só View
+```
+
+**Por quê:** o compilador faz o parse (D-UI-STYLE/UI007): cores hex/nome/`Palette`,
+inteiro nu = px, `px`/`%`/`em`/`rem`, e uma whitelist tipada — propriedade
+desconhecida é `SEM076`, declaração malformada `SEM077`, valor inválido
+`SEM078`. Nunca fallback silencioso para `node.style` (R6). Real no KofJS;
+no-op documentado no JVM/Native/Script, igual ao `Style` de 4 Ints.
+
+## Tokens do design system (Spacing/Radius/Border/Elevation/Typography)
+
+**RUIM — números mágicos hard-coded (a intenção de design fica sem nome):**
+```kof
+// ❌ NÃO — 16 e 4 são literais; ninguém sabe o que significam
+var card = Style("background: #ffffff; padding: 16; border-radius: 4")
+l.setFontSize(20)
+```
+
+**BOM — nomear a intenção de design com as escalas de token (Fase 10, D-UI-TOKENS):**
+```kof
+// ✅ IDIOMÁTICO — Spacing/Radius/Border/Elevation/Typography.<name> = Int px
+var card = Style("background: #ffffff; padding: 16; border-radius: 4")  // Style ainda exige literal
+l.setFontSize(Typography.lg)        // 20
+var pad = Spacing.md                 // 16
+var rad = Radius.md                  // 4
+```
+
+**Por quê:** tokens são constantes em compile-time (Int px — D-UI-STYLE Q2),
+folding pelo mesmo idiom que o `Palette`; como o fold está no frontend
+compartilhado, os quatro targets carregam o mesmo valor. Membro inexistente
+(`Spacing.huge`) ou chamada de método num namespace (`Spacing.of(4)`) é
+`SEM079` (R6 — nunca 0 silencioso). Escalas (grade de 8px): `Spacing`
+xs/sm/md/lg/xl = 4/8/16/24/32 · `Radius` none/sm/md/lg/full = 0/2/4/8/9999 ·
+`Border` hairline/thin/medium/thick = 1/2/4/8 · `Elevation` none/sm/md/lg/xl
+= 0/1/2/3/4 · `Typography` xs/sm/md/lg/xl/hero = 12/14/16/20/24/32.
+
+## Estado da aplicação sem prop-drilling (Fase 8)
+
+**RUIM (prop-drilling):**
+
+```kof
+main() {
+    var theme = Store(0)
+    buildHeader(theme)              // descer o handle por camada...
+}
+Header buildHeader(Store theme) {   // ...toda, uma a uma
+    return buildLogo(theme)
+}
+```
+
+**PREFERIDO:**
+
+```kof
+main() {
+    AppState(0).set(1)              // store-raiz: um por aplicação
+}
+Label buildLogo() {
+    var l = Label("")
+    AppState(0).subscribe((v: Int) -> { l.text = "mode " + v })   // alcança direto
+    return l
+}
+```
+
+**Por quê:** `AppState(initial)` é o store-raiz do escopo da aplicação —
+singleton create-or-get sobre a máquina do `Store` (`D-UI-APPSTATE`): a
+primeira chamada cria com `initial`, as seguintes devolvem o mesmo handle.
+Components leem onde precisam, sem carregar handles por camadas. Os métodos
+são exatamente os do Store; `unsubscribe` é real desde o §279 (cleanup manual
+hoje — auto-atribuição ao ciclo de vida do component é regra 6, indecisa). O
+observable vive no KofJS; JVM/Native são no-ops documentados.

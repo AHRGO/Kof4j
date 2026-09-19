@@ -14,6 +14,8 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_json_decode_int", "kof_json_decode_bool" -> "I";
             case "kof_ffi_i", "kof_ffi_si" -> "I";
             case "kof_ffi_dd" -> "D";
+            case "kof_ffi" -> "Ljava/lang/Object;";
+            case "kof_ffi_void" -> "V";
             case "kof_json_decode_long", "kof_now" -> "J";
             case "kof_json_decode_float" -> "F";
             case "kof_json_decode_double" -> "D";
@@ -31,16 +33,19 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_io_file_exists", "kof_io_file_is_file", "kof_io_file_is_dir",
                     "kof_io_write_text", "kof_io_append_text", "kof_io_write_bytes", "kof_io_append_bytes",
                     "kof_io_delete", "kof_io_dir_create", "kof_io_dir_create_dirs", "kof_io_dir_delete",
-                    "kof_io_path_is_absolute" -> "I";
+                    "kof_io_path_is_absolute",
+                    "kof_io_file_copy_to", "kof_io_file_move_to", "kof_io_file_is_symlink" -> "I";
             case "kof_io_read_text", "kof_io_file_name", "kof_io_path_parent", "kof_io_path_file_name",
                     "kof_io_path_extension", "kof_io_path_normalize", "kof_io_path_resolve",
                     "kof_io_path_to_absolute" -> "Ljava/lang/String;";
             case "kof_process_run" -> "Ldev/kof/runtime/KofRuntime$ProcessResult;";
             case "kof_process_exit" -> "V";
+            case "kof_shell_argv" -> "Ljava/util/ArrayList;";
+            case "kof_shell_pipeline" -> "Ldev/kof/runtime/KofRuntime$ProcessResult;";
             case "kof_args_list" -> "Ljava/util/ArrayList;";
             case "kof_io_read_bytes" -> "[I";
             case "kof_io_read_range", "kof_io_read_range_path" -> "[I";
-            case "kof_io_file_size" -> "J";
+            case "kof_io_file_size", "kof_io_file_modified_time" -> "J";
             case "kof_io_dir_list" -> "Ljava/util/ArrayList;";
             case "kof_web_app_new", "kof_web_param", "kof_web_query", "kof_web_header",
                     "kof_web_body", "kof_web_method", "kof_web_path",
@@ -107,7 +112,7 @@ public final class JvmRuntimeReturnDescriptors {
                      "kof_ui_component_unmount", "kof_ui_flush_ui", "kof_ui_emit",
                      "kof_ui_event_stop", "kof_ui_store_set", "kof_ui_store_subscribe",
                      "kof_ui_store_unsubscribe" -> "V";
-             case "kof_ui_store_get", "kof_ui_store_new", "kof_ui_stores_live" -> "I";
+             case "kof_ui_store_get", "kof_ui_store_new", "kof_ui_stores_live", "kof_ui_app_state" -> "I";
              case "kof_ui_router_go1", "kof_ui_router_go2", "kof_ui_router_replace1",
                      "kof_ui_router_replace2", "kof_ui_router_back", "kof_ui_router_forward" -> "Z";
              case "kof_ui_router_param", "kof_ui_router_current" -> "Ljava/lang/String;";
@@ -167,6 +172,10 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_random_int", "kof_random_bool", "kof_random_boolean" -> "I";
             case "kof_random_string", "kof_random_hex" -> "Ljava/lang/String;";
             case "kof_random_double" -> "D";
+            // ── kof.rng (X8 fatia 1) ──────────────────────────────────────
+            case "kof_rng_int", "kof_rng_bool" -> "I";
+            case "kof_rng_string" -> "Ljava/lang/String;";
+            case "kof_rng_double" -> "D";
             // ── kof.observability (G5) ────────────────────────────────
             case "kof_observability_health", "kof_observability_request_id", "kof_observability_correlation_id",
                     "kof_observability_trace_id", "kof_observability_span_id",

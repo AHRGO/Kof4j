@@ -112,6 +112,8 @@ public final class NativeRiscvAsmRtB48 {
                 lw   t0, 0(a0)
                 li   t1, 2
                 bne  t0, t1, .Lkof_done_zero
+                fence r, rw                 # §256: acquire — pareia o release
+                                            # do trampoline antes de ler done
                 lbu  a0, 4(a0)
                 ret
             .Lkof_done_zero:
@@ -125,6 +127,8 @@ public final class NativeRiscvAsmRtB48 {
                 lw   t0, 0(a0)
                 li   t1, 2
                 bne  t0, t1, .Lkof_poll_zero
+                fence r, rw                 # §256: acquire antes da leitura de
+                                            # done/result (par release-publish)
                 lbu  t0, 4(a0)
                 beqz t0, .Lkof_poll_zero
                 ld   a0, 8(a0)
@@ -146,12 +150,25 @@ public final class NativeRiscvAsmRtB48 {
                 lw   t0, 0(a0)
                 li   t1, 2
                 bne  t0, t1, .Lkof_cancel_no
+                sd   a0, 0(sp)              # §286: handle vivo p/ o caminho pending
                 ld   a0, 32(a0)             # tid (kernel grava via clone ctid)
                 beqz a0, .Lkof_cancel_no    # nunca disparou
                 call kof_cancel_slot_find
-                beqz a0, .Lkof_cancel_no
+                bnez a0, .Lkof_cancel_hit
+                # §286: handle criado mas a trampoline ainda não registrou a
+                # entry (janela de agendamento sob carga → o cancel se perdia).
+                # pending=1 + re-check — Dekker com o `fence rw,rw` da trampoline.
+                ld   t1, 0(sp)
+                li   t0, 1
+                sd   t0, 56(t1)             # pending = 1
+                fence rw, rw
+                ld   a0, 32(t1)
+                call kof_cancel_slot_find
+                beqz a0, .Lkof_cancel_yes   # vale via pending no start
+            .Lkof_cancel_hit:
                 li   t0, 1
                 sd   t0, 8(a0)              # flag = 1
+            .Lkof_cancel_yes:
                 mv   a0, t0
                 j    .Lkof_cancel_out
             .Lkof_cancel_no:
@@ -207,6 +224,9 @@ public final class NativeRiscvAsmRtB48 {
                 bne  t0, t1, .Lksa_next
                 lbu  t0, 4(a0)
                 beqz t0, .Lksa_next
+                fence r, rw                 # §256: acquire — o mfence x86 tem
+                                            # par cross; sem isto TCF pode
+                                            # atrasar a visao de done/result
                 mv   s3, a0
                 ld   a0, 48(s3)             # §129: exc (hoje sempre 0 no cross)
                 beqz a0, .Lksa_val

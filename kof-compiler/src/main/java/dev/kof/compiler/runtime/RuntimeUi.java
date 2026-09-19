@@ -346,6 +346,7 @@ public final class RuntimeUi {
             kof_ui_widget_set_gradient:
             kof_ui_widget_set_flex_basis:
             kof_ui_widget_set_max_width:
+            kof_ui_widget_set_style:
                 ret
             kof_ui_widget_on:
                 ret
@@ -376,6 +377,11 @@ public final class RuntimeUi {
                 movl $1, %eax
                 ret
             kof_ui_style_new:
+                movl $1, %eax
+                ret
+            // D-UI-STYLE (UI007): declarative style — no-op Native (real only
+            // on KofJS, documented parity with the 4-Int Style, UI001).
+            kof_ui_style_css:
                 movl $1, %eax
                 ret
             kof_ui_view_bind:
@@ -482,6 +488,9 @@ public final class RuntimeUi {
                 jmp kof_ui_event_y
             // ── Fase 8: Store observável (no-ops) ──
             kof_ui_store_new:
+                movl $1, %eax
+                ret
+            kof_ui_app_state:
                 movl $1, %eax
                 ret
             kof_ui_store_get:

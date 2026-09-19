@@ -38,6 +38,7 @@ public static boolean hasRuntimeFn(String methodName) {
                 || methodName.startsWith("kof_net_")
                 || methodName.startsWith("kof_uuid_")
                 || methodName.startsWith("kof_random_")
+                || methodName.startsWith("kof_rng_")
                 || methodName.startsWith("kof_enum_")
                 || methodName.equals("kof_spawn_result") || methodName.equals("kof_await")
                 || methodName.equals("kof_poll") || methodName.equals("kof_done")
@@ -57,6 +58,8 @@ public static boolean hasRuntimeFn(String methodName) {
                 || methodName.equals("kof_ffi_i")
                 || methodName.equals("kof_ffi_si")
                 || methodName.equals("kof_ffi_dd")
+                || methodName.equals("kof_ffi")
+                || methodName.equals("kof_ffi_void")
                 || methodName.equals("kof_now")
                 || methodName.equals("kof_read_line")
                 || methodName.equals("kof_read_file")
@@ -66,6 +69,8 @@ public static boolean hasRuntimeFn(String methodName) {
                 || methodName.equals("kof_process_spawn")
                 || methodName.equals("kof_process_run")
                 || methodName.equals("kof_process_exit")
+                || methodName.equals("kof_shell_argv")
+                || methodName.equals("kof_shell_pipeline")
                 || methodName.equals("kof_args_list");
     }
 

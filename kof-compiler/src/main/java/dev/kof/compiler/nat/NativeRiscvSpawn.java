@@ -42,8 +42,9 @@ public final class NativeRiscvSpawn {
             # ---- spawn/await riscv64 (NATIVE002-stdlib) ----
             .section .text
             # handle: [typeId@0(i32) done@4(i32) result@8 stack@16 stacktop@24
-            #          tid@32 cancelEntry@40 exc@48] (56B) — tid é gravado pelo
-            # KERNEL (clone ctid); cancelEntry/exc pelas fatias CONC001 (B48).
+            #          tid@32 cancelEntry@40 exc@48 pending@56] (64B, §286) — tid
+            # é gravado pelo KERNEL (clone ctid); cancelEntry/exc/pending pelas
+            # fatias CONC001 (B48); pending = cancel pedido antes do registro.
             # kof_spawn_result(task@a0) -> handle@a0
             .globl kof_spawn_result
             kof_spawn_result:
@@ -53,7 +54,7 @@ public final class NativeRiscvSpawn {
                 sd   s1, 8(sp)
                 sd   s2, 0(sp)
                 mv   s0, a0                 # task
-                li   a0, 56
+                li   a0, 64                 # §286: +8 p/ pending@56
                 call kof_alloc
                 mv   s1, a0                 # handle
                 li   t0, 2
@@ -63,6 +64,7 @@ public final class NativeRiscvSpawn {
                 sd   zero, 32(s1)           # tid=0
                 sd   zero, 40(s1)           # cancelEntry=0
                 sd   zero, 48(s1)           # exc=0
+                sd   zero, 56(s1)           # §286: pending=0
                 # stack do worker: mmap(NULL, 1MB, RW, PRIVATE|ANON, -1, 0)
                 li   a0, 0
                 li   a1, 1048576
@@ -139,6 +141,16 @@ public final class NativeRiscvSpawn {
                 ecall
                 call kof_cancel_slot_insert
                 sd   a0, 40(s1)             # handle->cancelEntry
+                sd   a0, 16(sp)             # §286: cópia da entry NO FRAME (o delete
+                                            # lê daqui; o handle pode ser reciclado
+                                            # entre done=1 e o nosso delete)
+                fence rw, rw                # §286: Dekker — store(entry) → load(pending)
+                ld   t0, 56(s1)             # cancel pedido antes do registro?
+                beqz t0, .Lst_no_pend
+                beqz a0, .Lst_no_pend       # tabela cheia → nada a marcar
+                li   t0, 1
+                sd   t0, 8(a0)              # flag = 1 (pedido antigo vale agora)
+            .Lst_no_pend:
                 ld   t0, 8(s0)              # task vtable
                 ld   t0, 0(t0)              # vtable[0] = invoke
                 mv   a0, s0
@@ -154,8 +166,10 @@ public final class NativeRiscvSpawn {
                 li   a2, 1
                 li   a7, 98
                 ecall
-                # CONC001: slot volta a vazio (tid=0) sem tocar worker alheio
-                ld   t0, 40(s1)
+                # CONC001/§286: slot volta a vazio (tid=0) sem tocar worker
+                # alheio — a entry vem do FRAME (16(sp)), não do handle
+                # (reciclável entre done=1 e este delete).
+                ld   t0, 16(sp)
                 beqz t0, .Lst_nocl
                 sd   zero, 0(t0)
             .Lst_nocl:
@@ -169,7 +183,10 @@ public final class NativeRiscvSpawn {
             kof_await:
                 beqz a0, .Lkw_null
                 lw   t0, 4(a0)              # done?
-                bnez t0, .Lkw_val
+                beqz t0, .Lkw_futex
+                fence r, rw                 # §256: acquire no caminho rapido
+                j    .Lkw_val
+            .Lkw_futex:
                 addi sp, sp, -16
                 sd   s0, 8(sp)
                 sd   ra, 0(sp)

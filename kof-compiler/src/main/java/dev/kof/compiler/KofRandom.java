@@ -47,6 +47,10 @@ public final class KofRandom {
 
     record RandomCall(String function, Type returnType, List<Type> parameterTypes) {}
 
+
+    /** X10 fatia 1: nomes aceitos pelo staticMethod (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case literals do switch(name) abaixo. */
+    static List<String> functions() { return List.of("double", "boolean", "int", "hex", "randomBytesHex", "randomInt", "randomBoolean", "randomString"); }
     static RandomCall staticMethod(String namespace, String name, List<Type> argTypes) {
         if (!"random".equals(namespace)) return null;
         int argc = argTypes.size();

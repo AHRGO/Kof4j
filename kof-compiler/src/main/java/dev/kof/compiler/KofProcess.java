@@ -41,6 +41,10 @@ public final class KofProcess {
     }
 
     /** process.run(program, args...) — the only entry point for now. */
+/** X10 fatia 2: nomes aceitos pelo dispatch real (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case-literals da fonte abaixo. */
+    static List<String> functions() { return List.of("run"); }
+
     static ProcessCall runCall(List<Type> argTypes) {
         // [String, String, ...] or [String] — at least the program
         if (argTypes.isEmpty()) return null;

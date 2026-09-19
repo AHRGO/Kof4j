@@ -29,7 +29,7 @@ Não queremos acumular features até virar outro Java.
 | Arquivo | Linhas (31/08) | Função |
 |---------|--------|--------|
 | Lexer.java | ~480 | Análise léxica (pattern matching `case` + `String?`) |
-| Parser.java | ~1.720 | Análise sintática (pattern matching, `String?`, `let` KofScript, lambda trailing) |
+| Parser.java | ~1.720 | Análise sintática (pattern matching, `String?`, KofScript `var`/`val` no topo, lambda trailing) |
 | SemanticAnalyzer.java | ~1.870 | Análise semântica (pattern matching, `String?`, `CompilerDriver.java:243` import fix) |
 | CompilerDriver.java | ~7.520 | Lowering IR (free-list alloc, `substituteTypeVariable` `Box<T>`, `KofScriptGlobals`, stdlib dispatch) |
 | JvmBackend.java | ~1.320 | Backend JVM (V21, LineNumberTable, web ws/sse, `Java HttpClient` for JS) |
@@ -37,7 +37,7 @@ Não queremos acumular features até virar outro Java.
 | NativeRuntime.java | ~15.340 | Runtime nativo — maior parte é assembly embutido (free-list `kof_free_head`, spawn pthread 31/08, FP XMM, JSON objetos/arrays, config/log/security/cache asm, `kof_db_mysql_scramble`) |
 | JsBackend.java | ~5.280 | Backend JS (GraalJS, CORE_RUNTIME DOM/UI, `kof.http` interop) |
 | KofCCompiler + Lexer/Parser/AST/Emitter | ~710 | C subset (`kof c`) → ELF x86_64 |
-| KofScript.java | ~610 | KofScript (`let` → `KofScriptGlobals`, REPL) |
+| KofScript.java | ~610 | KofScript (`var`/`val` → `KofScriptGlobals`, REPL) |
 | IRNodes.java | ~250 | Representação intermediária (+ KofDebugInfo) |
 | Type.java | ~140 | Sistema de tipos (`Type?` nullable) |
 | SymbolTable.java | ~210 | Tabela de símbolos |
@@ -85,7 +85,7 @@ Não queremos acumular features até virar outro Java.
 
 ### No Compilador
 
-1. **Parser**: 1.720 linhas — cresceu com pattern matching, lambda trailing, `let` KofScript
+1. **Parser**: 1.720 linhas — cresceu com pattern matching, lambda trailing, KofScript `var`/`val` no topo
 2. **SemanticAnalyzer**: 1.874 linhas — razoável para análise semântica (inclui `supportedOn`/diagnostics de gap)
 3. **CompilerDriver**: 7.521 linhas — lowering + dispatch da stdlib inteira; candidato prioritário a extração de helpers
 4. **NativeBackend**: 1.803 linhas — complexo mas necessário (x86_64 + toolchains)

@@ -76,7 +76,7 @@ public final class KofJsRunner {
                     .mimeType("application/javascript+module")
                     .build();
             context.eval(source);
-            drainActiveTasks(context);
+            KofJsAsyncPump.drainActiveTasks(context);
             if (openWindow) {
                 Value uiRoot = context.getBindings("js").getMember("kof__uiRootHtml");
                 if (uiRoot != null && uiRoot.isString()) {
@@ -143,7 +143,7 @@ public final class KofJsRunner {
                     .mimeType("application/javascript+module")
                     .build();
             context.eval(source);
-            drainActiveTasks(context);
+            KofJsAsyncPump.drainActiveTasks(context);
             Value html = context.getBindings("js").getMember("kof__uiRootHtml");
             return html.isString() && !html.asString().isEmpty() ? html.asString() : null;
         } catch (Exception e) {
@@ -156,14 +156,7 @@ public final class KofJsRunner {
      * GraalJS pode não drenar a fila após um único eval; sem isso spawn/async
      * terminam antes do programa sair.
      */
-    private static void drainActiveTasks(Context context) {
-        Value active = context.getBindings("js").getMember("kofActiveTasks");
-        while (active != null && active.isNumber() && active.asInt() > 0) {
-            context.eval(Source.newBuilder("js", "void 0;", "kof-pump.js").buildLiteral());
-            active = context.getBindings("js").getMember("kofActiveTasks");
-        }
-    }
-
+    // async-sleep host pump moved to KofJsAsyncPump (§132/#83-JS)
     /**
      * Exposes the kof_platform object: IO and console primitives implemented
      * in Java. The generated JavaScript never reaches for Node/browser APIs.
@@ -216,6 +209,26 @@ public final class KofJsRunner {
                 result.put("exitCode", -1);
                 return result;
             }
+        });
+        // §239 (JS): String.format — ponte p/ o host java.lang.String.format
+        // (paridade byte-a-byte). Os varargs chegam como array JS (o lowering
+        // compart. empacota em Object[]); reconstruímos o boxed type de cada
+        // elemento p/ o Formatter do JDK. Limitaçao herdada do identity-boxing
+        // JS: double integral (30.0) vira Integer -> "30" (nao "30.0"); nao é
+        // testado e nao regressa face anterior (antes era ICE COMP002).
+        platform.put("stringFormat", (ProxyExecutable) args -> {
+            String fmt = args[0].asString();
+            java.util.List<Object> list = new java.util.ArrayList<>();
+            if (args.length > 1 && !args[1].isNull() && args[1].hasArrayElements()) {
+                long n = args[1].getArraySize();
+                if (n > Integer.MAX_VALUE) {
+                    throw new RuntimeException("lista excede o limite da ponte JS (" + n + ")");
+                }
+                for (long i = 0; i < n; i++) {
+                    list.add(toFormatArg(args[1].getArrayElement(i)));
+                }
+            }
+            return String.format(fmt, list.toArray());
         });
         platform.put("args", (ProxyExecutable) args -> java.util.Arrays.asList(programArgs));
         platform.put("readLine", (ProxyExecutable) args -> readLine(in));
@@ -403,6 +416,18 @@ public final class KofJsRunner {
                 return null;
             }
         });
+        // R3 fatia 3.6 (JS FFI parity) + 3.4-C3 (callbacks): extern no target JS baixa
+        // para kofFfi/kofFfiVoid -> kof_platform.ffi/ffi_void -> este bridge host, que
+        // delega o marshalling (args escalares + stubs de callback via Linker.upcallStub)
+        // para KofJsFfiMarshal -> KofJsFfiBridge (java.lang.foreign, mesmo downcall do
+        // target JVM). Browser: sem host, o kof_platform Proxy lança erro honesto (R7).
+        platform.put("ffi", (ProxyExecutable) args -> KofJsFfiMarshal.ffi(
+                args[0].asString(), args[1].asString(), args[2].asString(), args[3]));
+        platform.put("ffi_void", (ProxyExecutable) args -> {
+            KofJsFfiMarshal.ffiVoid(
+                    args[0].asString(), args[1].asString(), args[2].asString(), args[3]);
+            return null;
+        });
         bindings.putMember("kof_platform", ProxyObject.fromMap(platform));
     }
 
@@ -518,6 +543,20 @@ public final class KofJsRunner {
 
     /** O ultimo arg da chamada de dbExecute/dbQuery e a lista de binds
      *  (array guest); extrai p/ Value[] na ordem. */
+    /** §239: reconstrói o boxed type de um elemento do varargs Object[] do
+     *  String.format que chegou como valor JS. Ordem importa: null / boolean /
+     *  string antes dos numericos (evita string numerica virar number); depois
+     *  fitsInt/fitsLong/fitsDouble. Fallback: toString (nunca lança). */
+    private static Object toFormatArg(Value v) {
+        if (v == null || v.isNull()) return null;
+        if (v.isBoolean()) return v.asBoolean() ? Boolean.TRUE : Boolean.FALSE;
+        if (v.isString()) return v.asString();
+        if (v.fitsInInt()) return v.asInt();
+        if (v.fitsInLong()) return v.asLong();
+        if (v.fitsInDouble()) return v.asDouble();
+        return v.toString();
+    }
+
     private static org.graalvm.polyglot.Value[] listValues(Value[] args, int listIndex) {
         if (args.length <= listIndex || args[listIndex] == null || !args[listIndex].hasArrayElements()) {
             return new org.graalvm.polyglot.Value[0];

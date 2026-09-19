@@ -2,9 +2,57 @@
 
 # Kof Project Status
 
-**Last updated:** September 15, 2026
+**Last updated:** September 18, 2026
 **Version:** 0.4.0-beta (pom `revision`)
 
+> **18/09 — R3 FFI (JVM) generalized — `extern` binds the full scalar ABI
+> (owner = 192.168.100.18, development lane).** `CompilerPipeline.isExternBound`
+> now accepts **any arity** over {Int, Long, Float, Double, Boolean, String} in
+> every position and return, with a `String` result read back from the native
+> `char*`. One FFM downcall `kof_ffi(lib, name, sig, Object[])` replaces the old
+> `kof_ffi_i`/`_si`/`_dd` helpers; the lowering packs args into an `Object[]`
+> (`KofNewArray`, boxing primitives) and the JVM emitter unboxes/checks the boxed
+> return (`emitKofRuntimeCall`). `FfiE2ETest` 8→9 (adds `atol(String):Long` →
+> `labs(Long):Long` → `9`, proving the `Long` layout end-to-end — Kof has no `long`
+> literal so the `Long` value is produced by `atol`) + new `FfiSignatureTest` 4/4
+> locking the full scalar → FFM-layout → `Type` mapping incl. `Float`/`Boolean`,
+> whose generic downcall path is already exercised by the Int/Long/Double/String/void
+> e2es (`pow` 2.0^10 → `1024.0`, `strstr("hello world","wor")` → `world`;
+> `srand(Int)` default `void` via
+> `kof_ffi_void`). **JS parity CLOSED (slice 3.6, same day):** the same scalar ABI
+> now binds on the JS target through a host FFM bridge `KofJsFfiBridge` (`extern`→
+> `kofFfi`→`kof_platform.ffi` `ProxyExecutable` on the GraalJS/node runner); `FfiE2ETest`
+> adds 7 `assertJvmJsParity` cases proving byte-for-byte JVM↔JS equality (doubles
+> `3.0`/`1024.0`, `Long` via `atol`→`labs`, `char*`→String, `void`); a browser has no
+> host → honest runtime degrade (R7), and non-scalar signatures still `FFI002`. **Callbacks
+> bind on the JVM *and* the JS host runner (slice 3.4, C1→C3, same day):** an `extern` with a
+> function-typed parameter
+> lowers to `kof_ffi` (nested `(<ret><params>)` token) and the runtime builds a C function
+> pointer via `Linker.upcallStub` over the Kof function value — `JvmFfiCallbackE2ETest`
+> computes `42/42/6.0/7.5` across Int/Long/Double/mixed callback ABIs, byte-for-byte JVM↔JS
+> (`jvmAndJsCallbacksMatchByteForByte`); on JS the function value is a `Lambda…` **object**, so
+> the runner bridge calls `fn.getMember("invoke").execute(...)`; synchronous/non-
+> escaping contract, primitive-only ABI.
+> Parity not yet reached: struct/pointer (D6),
+> variadics and opaque handles stay `FFI001`; Native `FFI001` (§61) remains an honest
+> per-target gap (R7). Full decomposition in §R3-slices / §R3-3.4 of the
+> universal plan.
+>
+> **18/09 — §132 CLOSED (#83-JS) — KofJS runs the OTP supervisor to parity
+> (owner = 192.168.100.18, development lane).** `time.sleep` is now an **await-point**
+> on the JS backend: the compiler colors a method that reaches `kof_time_sleep` async
+> via the existing `computeAsyncColoring` fixpoint (the one that already governed
+> `await`) and emits `await kof_time_sleep(ms)`; `kofTimeSleep` returns a Promise
+> (node/browser: real `setTimeout`; embedded GraalJS: a sleeper queue drained by the
+> `KofJsRunner` host pump, which is the minimal event loop a single JS thread cannot be
+> on its own). Because the host can sleep AND advance microtasks, sibling/child spawned
+> tasks now run while a task sleeps — the `while(!done(h)){ time.sleep(10) }` idiom
+> makes progress and the supervisor worker fires. `OTP002` is lifted (JS `kof.supervisor`
+> no longer refused at compile-time); `KofSupervisorE2ETest#supervisorJsParity` runs
+> `APP` → `restarts=2 escaladas=2 fabrica=3 parou vivos=0`. Real clock preserved
+> (`time.now()`/`Date.now()` unchanged) — `KofTimeE2ETest` stays honest. riscv/aarch
+> remain `OTP001` (§129 cross-thread unwinding, nat lane). Proof: `AsyncSleepJsE2ETest`
+> 3/3 + full reactor green.
 > **15/09 — §129 CLOSED (DECISIONS §2 option B) — Native x86 unwinds per thread
 > (owner = 192.168.100.18, development lane).** The `kof_exc_chain` is now **TLS
 > per-thread** (`.section .tbss,"awT",@nobits` + `%fs:kof_exc_chain@tpoff`) instead
@@ -96,7 +144,7 @@ kof info             → PASS
 kof lsp              → PASS (hover/completion/references/rename + real diagnostics)
 kof install          → PASS
 kof c                → PASS (KofCcompiler native-only C subset → ELF x86_64 via kof_c)
-kof script           → PASS (KofScript top-level let → KofScriptGlobals, repl, --watch)
+kof script           → PASS (KofScript top-level `var`/`val` → KofScriptGlobals, repl, --watch)
 tests/run-golden.sh  → 16/16 (8 cases × jvm+native)
 tests/run-integration.sh → 9/9 (CLI + serve + kof test)
 scripts/package.sh   → PASS (dist layout + tar.gz/zip + SHA256SUMS + jars)
@@ -684,6 +732,7 @@ details leaking into the language.
 | default parameters | ✅ |
 | multi-file modules | ✅ (unified resolution: import a.b.C + moduleRoot from the LCA) |
 | `Process` API | ✅ (`kof.process` + `kof_process_run`) |
+| `kof.shell` (19/09 MVP `34e4344f`) | ✅ (`cmd`/`run`/`ok` JVM+JS, `pipeline` JVM real; JS/Native pipeline = PROC001 honesto) — sugar sobre `kof.process` |
 
 See the full guidelines in the session's todo.
 
@@ -799,13 +848,13 @@ Docs: `debugger-architecture.md`, `debugging.md`, `debug-adapter.md`,
 - HTTP client (JVM) + JS via `Java HttpClient` interop + **Native 03/09** (`NativeHttpRuntime.java` — HTTP/1.1 asm: URL parse, socket+connect, request parse, status; https throw; DNS↦127.0.0.1 fallback) + retry/circuit (3 targets, 30/08)
 - `kof.security` v1 (JVM/Native/JS); web security G9 — rateLimit, sessions, API keys (3 targets)
 - `kof.validation` (13 predicates, 3 targets); `kof.observability` (health/metrics/request IDs, 3 targets); `kof.ui` widgets with KofJS render
-- `kof.process` execution of external processes; `process.spawn` live stdin/stdout (F10, JVM/JS)
+- `kof.process` execution of external processes; `process.run`/`process.exit` on JVM+JS; `process.spawn` (live stdin/stdout) is **JVM-only** — an honest `PROC001` on Native *and* JS (the JS backend binds no `kof_process_spawn`; measured + gated 18/09, `DomainGapCodesTest`)
 - **Concurrency**: `spawn`/`await` JVM (virtual threads) + **Native (pthread — CONC001 closed 31/08)** + **Android (platform threads — AND001 closed 31/08, ART without virtual threads → fallback)** + JS event-loop (CONC003 closed 03/09); non-blocking `done`/`poll`; cooperative `cancel`/`cancelled` (JVM + Native by TID); `selectAny` (JVM + Native + JS); `awaitTimeout(r, ms)` — value within the deadline, catchable exception on timeout (JVM + Native + JS `kofAwaitTimeout` deadline poll); `channel<T>()` with `send`/`receive` (JVM LinkedBlockingQueue + Native FIFO futex + JS array); `scheduler.every/cancel` (JVM `ScheduledExecutor` + JS `setInterval` + **Native SCHED001**: thread per job with `usleep` ms→us trampoline + `active` futex flag); `at(cron)` is a real 5-field UTC cron on JVM/JS (Native `CRON001`; §274) — `KofConcurrency2Test` 15/15, `SpawnE2ETest` 5/5
 - **`kof.media` (31/08)** — multimedia file management without literal base64: `Image.open/save/saveAs/dataUri` (javax.imageio, PNG/JPEG/GIF/BMP), `Audio.openWav/saveWav` (WAV RIFF PCM 16-bit), `Mic.record` (javax.sound.sampled), `Video.open` (MP4/MOV container metadata + streaming); `web` `app.serveDir(prefix, dir)` serves a FILE from disk with the correct content-type + **Range requests (206/416)** for seekable video + path-traversal protection; app root via `-Dkof.root` (CLI `run`/`serve`). Gaps: video frames (no external lib), camera (MEDIA002), no mic hardware (MEDIA003), Native/JS parity (MEDIA001) — `KofMediaE2ETest` 16/16
-- **KofAndroid Phase 2 (31/08)** — standalone `--apk` (aapt2/d8/zipalign/apksigner straight from the CLI) + release signing `--keystore/--storepass/--keypass/--alias` + label/permissions derived from the program (`detectAppLabel`/`@Permissions`)
+- **KofAndroid Phase 2 (31/08; pipeline hardened + CI-proven 18/09, §299/X9)** — standalone `--apk` (aapt2/d8/zipalign/apksigner straight from the CLI; build-tools **≥35** pinned for d8 class-major-65/Java-21, `keytool` CWD fixed — e2e `androidWithSdkPackagesApk` runs without skip on CI ubuntu; without SDK = honest `DEP001` failure, R6) + release signing `--keystore/--storepass/--keypass/--alias` + label/permissions derived from the program (`detectAppLabel`/`@Permissions`)
 - enum on the 3 targets + exhaustive switch (SEM031); Map/Set on the 3 targets (COL001 closed)
 - IR optimizer always active; pattern matching (switch with types + destructuring, 3 targets); basic null safety (`String?`, 3 targets); higher-order on collections (map/filter/reduce, 3 targets); multi-file modules (`import a.b.C`)
-- KofScript — top-level let/const (`KofScriptGlobals`, repl, `--watch`); KofC compiler — C subset → ELF x86_64 (`kof c`)
+- KofScript — top-level `var`/`val` (`KofScriptGlobals`, repl, `--watch`); KofC compiler — C subset → ELF x86_64 (`kof c`)
 - LSP with hover/completion + real diagnostics; return widening
 - Native GC — mark-sweep 03/09 ✅: `kof_gc_mark` (conservative stack+bss) + `kof_gc_sweep` (clears dead entries to the free-list; flag bit1 @24) + `kof_gc_collect_now` (external call, explicit); **auto-collect off** in `kof_alloc` (needs safe-points/per-frame root maps — otherwise a double-free is detected). `KofGcE2ETest` 3/3
 - Real floating point on Native (FLT001 closed 31/08 — XMM); JSON objects/records on Native (JSN002 closed) + FP arrays (JSN001/003)
@@ -815,7 +864,7 @@ Docs: `debugger-architecture.md`, `debugging.md`, `debug-adapter.md`,
 
 - Standard Library (contracts stabilizing)
 - Async / Concurrency: ~~real JS async over Promises (CONC003)~~ — ✅ 03/09 (GraalJS `async`/`await`/`Promise`, async coloring by fixpoint in the compiler, `KofJsRunner` drains the microtask queue — see `docs/language-reference/concurrency.md`); ~~Android `AND001`~~ — ✅ 31/08 (platform threads on ART, fallback when `Thread.startVirtualThread` is absent); ~~pre-existing `spawn→await→spawn` bug~~ — ✅ resolved 01/09 (stack alignment in `pthread_create` — see "Remaining Bugs" #2)
-- ~~KofAndroid Phase 2~~ — ✅ 31/08 (standalone `--apk` + `--keystore` release signing + label/permissions derived from the program)
+- ~~KofAndroid Phase 2~~ — ✅ 31/08 (standalone `--apk` + `--keystore` release signing + label/permissions derived from the program) — pipeline real/CI-proven 18/09 (§299: build-tools ≥35 + keytool CWD + split ≤500)
 - ~~`kof.media` residual (31/08)~~ — ✅ 31/08: **video** (`Video.open` + container metadata + streaming) and **Range requests** (206/416) closed; camera remains (MEDIA002 — no external lib on the JVM) and Native/JS parity (MEDIA001 — ART without javax.imageio; the Android app runs in the KofJS WebView)
 - Native MySQL/MariaDB — **wire protocol ✅ 31/08** (handshake + SHA-1 scramble + auth-switch + COM_QUERY + resultset; `?` binds via client-side substitution; `nativeMysqlWireProtocol`) + **binary prepared statements ✅ 03/09** (COM_STMT_PREPARE/EXECUTE + binary-rows, `NativeDbPrepared` — see "Remaining Bugs" #18)
 - `native.risc` (riscv64) + `native.arm` (aarch64) **core complete (02-03/09)** — plumbing + codegen/runtimes in pure asm + qemu, `NativeRiscv64E2ETest 26/26` + `NativeAarch64E2ETest 26/26` (core + stdlib 05/09: JSON/HTTP/spawn/cache/time/mq/Map/Set/higher-order/toInt/metrics; gates DB001/SECN000/SCHED001/TIME001) — **detail + how to finish: `docs/development/native-multiarch.md`** (gap `NATIVE002`)

@@ -10,7 +10,7 @@
 kof/
 ├── kof-compiler/       ← compilador core (JVM/Native/JS + KofScript/KofC)
 ├── kof-cli/            ← CLI (build/run/script/c/test/bench/debug)
-├── kof-script/         ← KofScript (let→KofScriptGlobals, repl, --watch)
+├── kof-script/         ← KofScript (var/val→KofScriptGlobals, repl, --watch)
 ├── kof-c-compiler/     ← KofC (C subset → ELF nativo-only)
 ├── kof-runtime/        ← runtime nativo (free-list GC)
 ├── docs/               ← documentação interna
@@ -36,7 +36,7 @@ mvn test
 
 ```
 kof-compiler/src/main/java/dev/kof/compiler/
-├── KofScript.java      ← KofScript eval/runFile/repl (let→Globals)
+├── KofScript.java      ← KofScript eval/runFile/repl (var/val→Globals)
 ├── KofCCompiler.java   ← KofC C subset → ELF
 ├── KofFormatter.java   ← kof fmt (parser real, idempotente)
 ├── Lexer.java          ← lexer hand-written
@@ -163,7 +163,7 @@ O projeto está em 0.4.0-beta, funcional:
 - Backend JVM via ASM — bytecode V21, exception table, virtual threads
 - Backend Nativo — ELF x86-64 + riscv64/aarch64 estáveis (free-list GC + mark-sweep, spawn/pthread, FP XMM, JSON completo, SQLite, HTTP, debug DWARF)
 - KofJS — ES Modules via GraalJS (`kof.http` via Java HttpClient interop)
-- KofScript (`let`→`KofScriptGlobals`, repl, --watch) + KofC (`kof c` nativo-only)
+- KofScript (`var`/`val`→`KofScriptGlobals`, repl, --watch) + KofC (`kof c` nativo-only)
 - stdlib: kof.io, kof.web, kof.http, kof.security, kof.db, kof.orm, kof.ui, kof.config, kof.log, kof.cache, kof.mq
 - Testes: 2218 (golden 16/16, integração 9/9)
 

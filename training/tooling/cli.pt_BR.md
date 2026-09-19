@@ -16,7 +16,7 @@ comandos, tooling e editor support.
 | `kof serve <file.kf> [--port <port>] [--host <host>]` | Web server HTTP básico. `--port`/`--host` valem só no modo legacy (`handle`); app kof-native (`app.listen`) define a própria porta e a CLI avisa (#35.3) |
 | `kof check <file.kf\|dir> [--target <t>]` | Type-check sem emitir código (gaps por alvo) |
 | `kof test <file.kf\|dir> [--target jvm\|native\|js]` | Suíte estruturada `test "nome" { }`: PASS/FAIL por teste; arquivos sem testes rodam inteiros (PASS = exit 0) |
-| `kof script <file.ks> [--target jvm\|native\|js] [--watch] [--inspect] [args...]` | KofScript: JIT com top-level `let` → KofScriptGlobals, repl, cache 64 LRU |
+| `kof script <file.ks> [--target jvm\|native\|js] [--watch] [--inspect] [args...]` | KofScript: JIT com top-level `var`/`val` → KofScriptGlobals, repl, cache 64 LRU |
 | `kof repl` | Alias para `kof script` interativo |
 | `kof c <file.c> [-o outDir]` | KofCcompiler: C subset nativo-only → ELF x86_64 |
 | `kof fmt <file.kf\|dir>` | Formatter via parser real (`KofFormatter`), idempotente |
@@ -46,8 +46,8 @@ comandos, tooling e editor support.
 
 ```bash
 kof script app.ks --target jvm --watch --inspect
-let x = 5
-// top-level let/const → KofScriptGlobals static fields
+var x = 5
+// top-level var/val → KofScriptGlobals static fields
 ```
 
 ## KofCcompiler
@@ -75,7 +75,7 @@ kof c app.c
   IntelliJ via LSP4IJ, Neovim, Helix, Eglot).
 - **Regra: nunca duplicar o parser em um editor.** O editor consome o
   tooling do Kof; o LSP consome o frontend real do compilador.
-- LSP agora suporta `.ks` (KofScript) com preprocess `let` → `var` e wrap `main()`.
+- LSP agora suporta `.ks` (KofScript) pelo mesmo frontend real — top-level `var`/`val`, sem dialeto JS.
 
 ## LSP
 

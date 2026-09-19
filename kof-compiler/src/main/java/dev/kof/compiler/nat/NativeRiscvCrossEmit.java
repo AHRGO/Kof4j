@@ -354,7 +354,22 @@ public final class NativeRiscvCrossEmit {
     void emitCrossUnaryRiscv(StringBuilder sb, KofUnary ku) {
         sb.append("    pop t0\n");
         switch (ku.op()) {
-            case NEG -> sb.append("    neg t0, t0\n");
+            // §181 cross: NEG em float/double era `neg` INTEIRO no bit
+            // pattern cru — -inf (0x7FF0...) virava 0x8010... = NaN ->
+            // caminho NaN da saturacao imprimia 0 (d2i) em vez de -MAX.
+            // Negacao real = XOR do bit de sinal (sem `fneg`: o tradutor
+            // aarch64 nao conhece a mnemonic; xor/li sim -- RtB40 idem).
+            case NEG -> {
+                if (ku.operandType() != null && NativeTypeKinds.isFloatType(ku.operandType())) {
+                    sb.append("    li t1, 0x80000000\n");
+                    sb.append("    xor t0, t0, t1\n");
+                } else if (ku.operandType() != null && NativeTypeKinds.isDoubleType(ku.operandType())) {
+                    sb.append("    li t1, 0x8000000000000000\n");
+                    sb.append("    xor t0, t0, t1\n");
+                } else {
+                    sb.append("    neg t0, t0\n");
+                }
+            }
             case NOT -> sb.append("    seqz t0, t0\n");
             case I2L -> sb.append("    sext.w t0, t0\n");
             case I2C -> sb.append("    sext.w t0, t0\n");

@@ -117,9 +117,30 @@ main() {
 }
 ```
 
-> **Note:** there is no **annotated** function type as a declared parameter
-> (`(Int) -> Int f` does not compile). The function arrives as an anonymous lambda at the
-> call site.
+> **Note:** a function type IS legal as a declared parameter in BOTH forms — type-first
+> (`Int aplica((Int) -> Int f, Int x)`) and annotated (`Int aplica(f: (Int) -> Int, x: Int)`) —
+> measured 42/42 on the 0.4.0 tip (parser fix §277/#389, `NestedFnTypeArityTest`). Pass an
+> anonymous **lambda** at the call site: a bare named-function reference does not bind
+> (`training/anti-patterns/fake-idioms.md`).
+
+## Overloading (0.4.0-beta)
+
+Two functions with the SAME name coexist when their signatures differ
+(arity or parameter types):
+
+```kf
+main() {
+    println(g(4))       // 4
+    println(g(4, 5))    // 9
+}
+Int g(Int x) { return x }
+Int g(Int x, Int y) { return x + y }
+```
+
+An exact duplicate (same name + same parameters) is an error (SEM047).
+Changing ONLY the return type does not create an overload — the call
+becomes ambiguous (SEM057). Class methods overload the same way
+(`training/idioms/classes.md`, §131).
 
 ## Exercises
 

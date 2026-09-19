@@ -99,6 +99,7 @@ final class LspServer {
                 capabilities.put("renameProvider", Boolean.TRUE);
                 capabilities.put("documentFormattingProvider", Boolean.TRUE);
                 capabilities.put("documentSymbolProvider", Boolean.TRUE);
+                capabilities.put("workspaceSymbolProvider", Boolean.TRUE);
                 capabilities.put("codeActionProvider",
                         Map.of("codeActionKinds", List.of("source")));
                 Map<String, Object> result = new LinkedHashMap<>();
@@ -119,6 +120,7 @@ final class LspServer {
             case "textDocument/rename" -> rename(id, params);
             case "textDocument/formatting" -> formatting(id, params);
             case "textDocument/documentSymbol" -> documentSymbol(id, params);
+                case "workspace/symbol" -> workspaceSymbol(id, params);
             case "textDocument/codeAction" -> codeAction(id, params);
             default -> {  }
         }
@@ -267,6 +269,13 @@ final class LspServer {
         long ch = pos.get("character") instanceof Number n ? n.longValue() : 0;
         String word = wordAt(text, offsetOf(text, line, ch));
         String contents = word.isEmpty() ? null : LspHover.hoverFor(word, text);
+        if (contents == null && !word.isEmpty()) {
+            // X10 fatia 7: declaração do projeto (buffer ou .kf irmão) como fallback.
+            String[] d = LspProject.declarationLine(str(td.get("uri")), text, word);
+            if (d != null) {
+                contents = "**" + word + "** \u2014 declared in `" + d[1] + "`\n```kof\n" + d[0] + "\n```";
+            }
+        }
         if (contents == null) { respond(id, null); return; }
         respond(id, Map.of("contents", Map.of("kind", "markdown", "value", contents)));
     }
@@ -303,10 +312,32 @@ final class LspServer {
                 if (!name.isEmpty() && seen.add(name)) add.accept(name, "Variable");
             }
         }
+        // X10 fatia 1: completion domain-aware — membros reais do typer
+        // (StdCatalog) quando o prefixo antes do '.' é um namespace stdlib.
+        if (member) {
+            String ns = namespaceBefore(text, off - 1);
+            if (ns != null) {
+                for (String fn : dev.kof.compiler.StdCatalog.membersOf(ns)) {
+                    Map<String, Object> it = new LinkedHashMap<>();
+                    it.put("label", fn);
+                    it.put("kind", "Function");
+                    it.put("detail", "kof." + ns);
+                    items.add(it);
+                }
+            }
+        }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("isIncomplete", false);
         result.put("items", items);
         respond(id, result);
+    }
+
+    /** Identificador antes da posição do '.', se for namespace stdlib (X10). */
+    private static String namespaceBefore(String text, int dotIndex) {
+        int i = dotIndex;
+        while (i > 0 && isIdentChar(text.charAt(i - 1))) i--;
+        String w = text.substring(i, dotIndex);
+        return dev.kof.compiler.StdCatalog.isNamespace(w) ? w : null;
     }
 
     /** Todas as ocorrências (start, end) do identificador em fronteiras de palavra. */
@@ -343,7 +374,14 @@ final class LspServer {
         int off = offsetOf(text, line, ch);
         String word = wordAt(text, off);
         int[] decl = LspSymbols.declarationRange(text, word);
-        if (decl == null) { respond(id, null); return; }
+        if (decl == null) {
+            // X10 fatia 4: go-to-definition em packages — se o nome não é
+            // declarado no buffer, procura nos .kf irmãos do projeto (mesma
+            // convenção LspSymbols; sem parser paralelo; primeiro hit).
+            Map<String, Object> other = crossFileDefinition(uri, word);
+            respond(id, other == null ? null : List.of(other));
+            return;
+        }
         Map<String, Object> loc = new LinkedHashMap<>();
         loc.put("uri", uri);
         loc.put("range", rangeOf(text, decl[0], decl[1]));
@@ -408,6 +446,10 @@ final class LspServer {
     }
 
     @SuppressWarnings("unchecked")
+    private void workspaceSymbol(Object id, Map<String, Object> params) {
+        respond(id, LspProject.workspaceSymbols(openText, str(params.get("query"))));
+    }
+
     private void documentSymbol(Object id, Map<String, Object> params) {
         Map<String, Object> td = params.get("textDocument") instanceof Map<?, ?> p
                 ? (Map<String, Object>) p : Map.of();
@@ -416,6 +458,24 @@ final class LspServer {
     }
 
     @SuppressWarnings("unchecked")
+    private Map<String, Object> crossFileDefinition(String fromUri, String word) {
+        if (word.isEmpty()) return null;
+        java.nio.file.Path self = LspProject.toPath(fromUri);
+        if (self == null) return null;
+        for (java.nio.file.Path f : LspProject.siblings(self)) {
+            String txt = LspProject.readOrNull(f);
+            if (txt == null) continue;
+            int[] decl = LspSymbols.declarationRange(txt, word);
+            if (decl != null) {
+                Map<String, Object> loc = new LinkedHashMap<>();
+                loc.put("uri", f.toAbsolutePath().toUri().toString());
+                loc.put("range", rangeOf(txt, decl[0], decl[1]));
+                return loc;
+            }
+        }
+        return null;
+    }
+
     private void references(Object id, Map<String, Object> params) {
         Map<String, Object> td = params.get("textDocument") instanceof Map<?, ?> p
                 ? (Map<String, Object>) p : Map.of();
@@ -433,6 +493,20 @@ final class LspServer {
             loc.put("uri", uri);
             loc.put("range", rangeOf(text, r[0], r[1]));
             locations.add(loc);
+        }
+        // X10 fatia 5: referências também nos .kf irmãos do projeto (read-only).
+        java.nio.file.Path self = LspProject.toPath(uri);
+        if (self != null && !word.isEmpty()) {
+            for (java.nio.file.Path f : LspProject.siblings(self)) {
+                String txt = LspProject.readOrNull(f);
+                if (txt == null) continue;
+                for (int[] r : wordOccurrences(txt, word)) {
+                    Map<String, Object> loc = new LinkedHashMap<>();
+                    loc.put("uri", f.toAbsolutePath().toUri().toString());
+                    loc.put("range", rangeOf(txt, r[0], r[1]));
+                    locations.add(loc);
+                }
+            }
         }
         respond(id, locations);
     }
@@ -468,7 +542,7 @@ final class LspServer {
         respond(id, result);
     }
 
-    private static Map<String, Object> rangeOf(String text, int start, int end) {
+    static Map<String, Object> rangeOf(String text, int start, int end) {
         Map<String, Object> s = positionPoint(text, start);
         Map<String, Object> e = positionPoint(text, end);
         Map<String, Object> range = new LinkedHashMap<>();

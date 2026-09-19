@@ -1,0 +1,402 @@
+package dev.kof.cli;
+
+import dev.kof.compiler.CompilationResult;
+import dev.kof.compiler.CompilerDriver;
+import dev.kof.compiler.KofVersion;
+import dev.kof.compiler.Target;
+import dev.kof.compiler.TargetMatrix;
+import dev.kof.compiler.backend.AndroidProjectWriter;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * X9 fatia 1 (IMPLEMENTATION-UNIVERSAL-PLATFORM.md, fila X; VISION §9) —
+ * {@code kof deploy}: empacota uma release JVM a partir do pipeline do build.
+ *
+ * <p>O que a fatia faz (target JVM): compila o módulo, empacota o fat jar
+ * (D-APP.5, reusa {@link CmdBuild#buildFatJar}), e monta {@code deploy/} com
+ * o artefato + {@code RELEASE.md} (metadados legíveis: target, versão do
+ * compilador, timestamp UTC, main class) + {@code SHA256SUMS} (integridade) +
+ * {@code .tar.gz} (artefato de distribuição único).
+ *
+ * <p>Fatia 2 (18/09): faces NATIVE x86_64 (binário ELF, mode 0755 no tar) e
+ * JS ({@code Default.mjs}) empacotadas com a MESMA estrutura de release.
+ * Fatia 3 (18/09): face ANDROID — APK assinado via pipeline --apk do build
+ * (ANDROID_HOME/build-tools obrigatórios; sem SDK, recusa honesta).
+ *
+ * <p>O que a fatia NÃO faz (honesto, R6/R7): {@code --publish} (registry
+ * remoto) exige decisão D2/mantenedora — a flag recusa com {@code DEP001}.
+ * ANDROID e os cross riscv64/aarch64 recusam com {@code DEP001} (faces
+ * seguintes do plano). Nunca um fake-publish, nunca exit 0 sem artefato.
+ */
+final class CmdDeploy {
+
+    private static final String USAGE = "usage: kof deploy <source-dir|file.kf> --target jvm"
+            + " [--output <dir>] [--name <n>] [--version <v>] [--publish <registry>]";
+
+    private CmdDeploy() {
+    }
+
+    static void run(String[] args) {
+        if (args.length < 2) { System.err.println(USAGE); System.exit(1); return; }
+        if (args[1].equals("--help") || args[1].equals("-h")) {
+            System.out.println(USAGE);
+            return;
+        }
+        if (args[1].startsWith("-")) {
+            System.err.println("deploy: unknown flag: " + args[1] + " (see 'kof deploy --help')");
+            System.exit(1);
+            return;
+        }
+        Path src = Path.of(args[1]);
+        if (!Files.exists(src)) {
+            System.err.println("not found: " + src);
+            System.exit(1);
+            return;
+        }
+        if (Files.isRegularFile(src)) {
+            Path parent = src.toAbsolutePath().normalize().getParent();
+            if (parent == null) {
+                System.err.println("deploy: cannot resolve the module directory of " + src);
+                System.exit(1);
+                return;
+            }
+            src = parent;
+        }
+        Target target = Target.JVM;
+        Path out = Path.of("build");
+        String name = null;
+        String version = "0.0.0";
+        String publish = null;
+        for (int i = 2; i < args.length; i++) {
+            String arg = args[i];
+            if (arg.startsWith("--target=")) {
+                target = KofCliSupport.parseTarget(arg.substring("--target=".length()));
+            } else if (arg.equals("--target") && i + 1 < args.length) {
+                target = KofCliSupport.parseTarget(args[++i]);
+            } else if (arg.startsWith("--output=")) {
+                out = Path.of(arg.substring("--output=".length()));
+            } else if (arg.equals("--output") && i + 1 < args.length) {
+                out = Path.of(args[++i]);
+            } else if (arg.startsWith("--name=")) {
+                name = arg.substring("--name=".length());
+            } else if (arg.equals("--name") && i + 1 < args.length) {
+                name = args[++i];
+            } else if (arg.startsWith("--version=")) {
+                version = arg.substring("--version=".length());
+            } else if (arg.equals("--version") && i + 1 < args.length) {
+                version = args[++i];
+            } else if (arg.startsWith("--publish=")) {
+                publish = arg.substring("--publish=".length());
+            } else if (arg.equals("--publish") && i + 1 < args.length) {
+                publish = args[++i];
+            } else if (arg.equals("--publish")) {
+                publish = ""; // flag sem valor: mesmo gap honesto
+            } else if (arg.equals("--help") || arg.equals("-h")) {
+                System.out.println(USAGE);
+                return;
+            } else if (arg.startsWith("-")) {
+                System.err.println("deploy: unknown or incomplete flag: " + arg
+                        + " (accepts: --target jvm --output --name --version --publish)");
+                System.exit(1);
+                return;
+            } else {
+                System.err.println("deploy: unexpected argument: " + arg
+                        + " (see 'kof deploy --help')");
+                System.exit(1);
+                return;
+            }
+        }
+        // X9 fatia 3: JVM (fat jar), NATIVE x86_64 (ELF), JS (Default.mjs) e
+        // ANDROID (APK assinado, reusa o pipeline --apk do build) empacotam.
+        // Cross riscv64/aarch64 (sysroot) recusa honesto (R6) — face seguinte.
+        if (target == Target.NATIVE_RISCV64 || target == Target.NATIVE_AARCH64) {
+            System.err.println("deploy: target " + TargetMatrix.name(target)
+                    + " is not packaged yet (DEP001) —"
+                    + " slices so far: --target jvm|native|js|android");
+            System.exit(1);
+            return;
+        }
+        // --publish: registry remoto é decisão D2 (mantenedora) — recusa
+        // honesta, nunca um "publish" fingido (R6). DEP001 = gap do comando.
+        if (publish != null) {
+            System.err.println("deploy: --publish is not available yet (DEP001) —"
+                    + " the release registry needs a maintainer decision (D2);"
+                    + " the packaged release under --output is the deployable unit");
+            System.exit(1);
+            return;
+        }
+        if (name == null) name = src.toAbsolutePath().normalize().getFileName().toString();
+        String safeName = name.replaceAll("[^A-Za-z0-9._-]", "-");
+        if (safeName.isBlank() || safeName.equals("-")) {
+            System.err.println("deploy: --name resolved to an unusable artifact id: '" + name + "'");
+            System.exit(1);
+            return;
+        }
+        if (!version.matches("[A-Za-z0-9._+-]+")) {
+            System.err.println("deploy: --version must match [A-Za-z0-9._+-]+: '" + version + "'");
+            System.exit(1);
+            return;
+        }
+        try {
+            deploy(src, out, safeName, version, target);
+        } catch (IOException e) {
+            System.err.println("deploy: failed: " + e.getMessage());
+            System.exit(1);
+        }
+    }
+
+    private static void deploy(Path src, Path out, String name, String version,
+                               Target target) throws IOException {
+        // 1) compila o módulo (mesma convenção Go-like do build)
+        KofCliSupport.Layout layout = KofCliSupport.detectLayout(src);
+        Path backendDir = layout.backendDir();
+        String app001 = KofCliSupport.app001(target, layout.fullStack());
+        if (app001 != null) { System.err.println("deploy: " + app001); System.exit(1); return; }
+        List<Path> files = KofCliSupport.collect(backendDir);
+        if (files.isEmpty()) {
+            System.err.println("deploy: no .kf/.kof files found in " + backendDir);
+            System.exit(1);
+            return;
+        }
+        files.sort(java.util.Comparator.comparing(p -> p.getFileName().toString()));
+        Path classes = out.resolve("deploy-classes");
+        CompilerDriver driver = new CompilerDriver();
+        CompilationResult module = driver.compileSources(files, classes, target,
+                backendDir.toAbsolutePath().normalize());
+        for (var d : module.diagnostics().getDiagnostics()) System.out.println(d.format());
+        if (!module.success()) System.exit(1);
+
+        // 2) artefato único da face: fat jar (JVM, D-APP.5), ELF (native),
+        // Default.mjs (JS)
+        Path built;
+        String ext;
+        int tarMode;
+        switch (target) {
+            case JVM -> {
+                built = CmdBuild.buildFatJar(classes, List.of());
+                ext = ".jar";
+                tarMode = 0644;
+            }
+            case NATIVE -> {
+                built = classes.resolve("Default").resolve("Main");
+                if (!Files.isRegularFile(built)) {
+                    throw new IOException("native binary not found: " + built);
+                }
+                ext = "";
+                tarMode = 0755;
+            }
+            case JS -> {
+                built = findJsEntry(classes);
+                ext = ".mjs";
+                tarMode = 0644;
+            }
+            case ANDROID -> {
+                // pipeline --apk do build (gera o projeto Android dentro de
+                // classes/ e assina com debug.keystore ou --keystore do build).
+                boolean ok = ApkToolchain.runApkPipeline(classes,
+                        AndroidProjectWriter.DEFAULT_MIN_SDK,
+                        AndroidProjectWriter.DEFAULT_TARGET_SDK, null, null, null, null);
+                if (!ok) {
+                    System.err.println("deploy: android APK pipeline failed (DEP001"
+                            + " conditions: ANDROID_HOME/build-tools required)");
+                    System.exit(1);
+                    return;
+                }
+                built = classes.resolve("target").resolve("kof-app.apk");
+                if (!Files.isRegularFile(built)) {
+                    throw new IOException("apk not found: " + built);
+                }
+                ext = ".apk";
+                tarMode = 0644;
+            }
+            default -> throw new IOException("unreachable: " + target);
+        }
+
+        // 3) diretório da release
+        Path releaseDir = out.resolve("deploy").resolve(name + "-" + version);
+        Files.createDirectories(releaseDir);
+        String artifact = name + "-" + version + ext;
+        Path jarDst = releaseDir.resolve(artifact);
+        Files.copy(built, jarDst, StandardCopyOption.REPLACE_EXISTING);
+        // §298: a release JS precisa ser AUTOCONTIDA — o entry importa módulos
+        // relativos do build (./kof-runtime.mjs, ./kof-runtime-io.mjs, ...), que
+        // vivem AO LADO dele; copiar só o entry deixava o "node <x>.mjs" do
+        // RELEASE.md morrendo em ERR_MODULE_NOT_FOUND. Closure de imports.
+        List<Path> jsDeps = new ArrayList<>();
+        if (target == Target.JS) {
+            for (Path dep : jsImportClosure(built)) {
+                Path depSrc = built.getParent().resolve(dep.toString());
+                Path dst = releaseDir.resolve(dep.toString());
+                Files.copy(depSrc, dst, StandardCopyOption.REPLACE_EXISTING);
+                jsDeps.add(dep);
+            }
+        }
+
+        // 4) RELEASE.md (metadados legíveis) + SHA256SUMS (integridade)
+        String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now().atOffset(ZoneOffset.UTC));
+        String runCmd;
+        if (target == Target.JVM) {
+            runCmd = "java -jar " + artifact;
+        } else if (target == Target.NATIVE) {
+            runCmd = "./" + artifact;
+        } else if (target == Target.JS) {
+            runCmd = "node " + artifact;
+        } else {
+            runCmd = "adb install " + artifact;
+        }
+        String mainLine = target == Target.JVM
+                ? "- main class: " + KofCliSupport.findMainClass(classes) + "\n" : "";
+        Files.writeString(releaseDir.resolve("RELEASE.md"),
+                "# Release " + name + " " + version + "\n\n"
+                        + "- artifact: " + artifact + "\n"
+                        + "- target: " + TargetMatrix.name(target) + "\n"
+                        + mainLine
+                        + "- compiler: " + KofVersion.version() + "\n"
+                        + "- built at (UTC): " + timestamp + "\n"
+                        + "- run: " + runCmd + "\n",
+                StandardCharsets.UTF_8);
+        String sha256 = sha256Hex(jarDst);
+        StringBuilder sums = new StringBuilder(sha256 + "  " + artifact + "\n");
+        for (Path dep : jsDeps) {
+            sums.append(sha256Hex(releaseDir.resolve(dep))).append("  ").append(dep).append("\n");
+        }
+        Files.writeString(releaseDir.resolve("SHA256SUMS"), sums.toString(), StandardCharsets.UTF_8);
+
+        // 5) tar.gz do conjunto (artefato de distribuição único)
+        List<Path> releaseFiles = new ArrayList<>();
+        releaseFiles.add(jarDst.getFileName());
+        releaseFiles.addAll(jsDeps);
+        releaseFiles.add(Path.of("RELEASE.md"));
+        releaseFiles.add(Path.of("SHA256SUMS"));
+        Path tgz = out.resolve("deploy").resolve(name + "-" + version + ".tar.gz");
+        writeTarGz(tgz, releaseDir, releaseFiles, tarMode);
+
+        System.out.println("deploy → " + releaseDir);
+        System.out.println("artifact → " + tgz
+                + " (sha256 " + sha256.substring(0, 12) + "…)");
+    }
+
+    /**
+     * §298: closure (transitiva, sem ciclos) dos imports relativos de um
+     * módulo ES gerado pelo backend JS — os {@code ./x.mjs} que precisam
+     * acompanhar o entry para a release rodar fora do diretório de build.
+     */
+    static List<Path> jsImportClosure(Path entry) throws IOException {
+        List<Path> out = new ArrayList<>();
+        java.util.Set<Path> seen = new java.util.LinkedHashSet<>();
+        seen.add(entry.toAbsolutePath().normalize());
+        java.util.Deque<Path> queue = new java.util.ArrayDeque<>();
+        queue.add(entry);
+        while (!queue.isEmpty()) {
+            Path file = queue.poll();
+            for (Path dep : directJsImports(file)) {
+                Path key = dep.toAbsolutePath().normalize();
+                if (seen.add(key)) {
+                    out.add(dep.getFileName());
+                    queue.add(dep);
+                }
+            }
+        }
+        return out;
+    }
+
+    private static List<Path> directJsImports(Path file) throws IOException {
+        List<Path> deps = new ArrayList<>();
+        for (String line : Files.readAllLines(file)) {
+            String t = line.trim();
+            if (!t.startsWith("import ") || !t.contains(" from './")) continue;
+            int a = t.indexOf("from './") + "from '".length();
+            int b = t.indexOf("'", a);
+            if (b < 0) continue;
+            Path dep = file.getParent().resolve(t.substring(a, b));
+            if (Files.isRegularFile(dep)) deps.add(dep);
+        }
+        return deps;
+    }
+
+    private static Path findJsEntry(Path dir) throws IOException {
+        Path direct = dir.resolve("Default.mjs");
+        if (Files.isRegularFile(direct)) return direct;
+        try (var s = Files.walk(dir)) {
+            var opt = s.filter(p -> p.getFileName().toString().equals("Default.mjs")).findFirst();
+            if (opt.isPresent()) return opt.get();
+        }
+        throw new IOException("no Default.mjs found in " + dir);
+    }
+
+    static String sha256Hex(Path file) throws IOException {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            try (var in = Files.newInputStream(file)) {
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = in.read(buf)) > 0) md.update(buf, 0, n);
+            }
+            StringBuilder sb = new StringBuilder();
+            for (byte b : md.digest()) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IOException("SHA-256 unavailable", e);
+        }
+    }
+
+    /** Tar ustar mínimo (arquivos regulares) + gzip — sem dependência externa. */
+    static void writeTarGz(Path tgz, Path root, List<Path> relativeFiles,
+                           int artifactMode) throws IOException {
+        try (var fos = Files.newOutputStream(tgz);
+             var gzos = new java.util.zip.GZIPOutputStream(fos)) {
+            for (Path rel : relativeFiles) {
+                Path abs = root.resolve(rel);
+                byte[] data = Files.readAllBytes(abs);
+                // 1º entry = artefato da face (JVM 0644, native 0755, JS 0644);
+                // RELEASE.md/SHA256SUMS sempre 0644.
+                int mode = rel.equals(relativeFiles.get(0)) ? artifactMode : 0644;
+                byte[] header = new byte[512];
+                byte[] nameBytes = (rel.toString().replace('\\', '/') + "\0")
+                        .getBytes(StandardCharsets.UTF_8);
+                if (nameBytes.length > 100) {
+                    throw new IOException("tar entry name too long: " + rel);
+                }
+                System.arraycopy(nameBytes, 0, header, 0, nameBytes.length);
+                writeOctal(header, 100, mode, 8);   // mode
+                writeOctal(header, 108, 0, 8);      // uid
+                writeOctal(header, 116, 0, 8);      // gid
+                writeOctal(header, 124, data.length, 12); // size
+                writeOctal(header, 136, Instant.now().getEpochSecond(), 12); // mtime
+                header[156] = '0';                  // typeflag: regular file
+                System.arraycopy("ustar\000".getBytes(StandardCharsets.US_ASCII), 0, header, 257, 6);
+                System.arraycopy("00".getBytes(StandardCharsets.US_ASCII), 0, header, 263, 2);
+                int checksum = 0;
+                header[148] = 0x20; header[149] = 0x20; header[150] = 0x20;
+                header[151] = 0x20; header[152] = 0x20; header[153] = 0x20;
+                header[154] = 0x20; header[155] = 0x20; // campo a espaços p/ cálculo
+                for (byte b : header) checksum += b & 0xff;
+                writeOctal(header, 148, checksum, 8);
+                gzos.write(header);
+                gzos.write(data);
+                int pad = (512 - (data.length % 512)) % 512;
+                for (int i = 0; i < pad; i++) gzos.write(0);
+            }
+            byte[] eof = new byte[1024]; // dois blocos zero encerram o tar
+            gzos.write(eof);
+            gzos.finish();
+        }
+    }
+
+    private static void writeOctal(byte[] header, int off, long value, int len) {
+        String oct = String.format("%0" + (len - 1) + "o\0", value);
+        System.arraycopy(oct.getBytes(StandardCharsets.US_ASCII), 0, header, off, len);
+    }
+}

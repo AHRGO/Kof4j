@@ -239,6 +239,7 @@ The language semantics are single. The backends implement that semantics differe
 - It is not an interpreter (the compiler is real: bytecode/ELF/ESM; the `KofInterpreter` of the KofScript target executes the SAME optimized frontend IR — parity by construction, not a disguise)
 - It is not a language for scripts (although it can be used for that)
 - It is not a language for the web (although it can be used for that)
+- It is not markup in disguise: `kof.ui` does not take HTML tags, CSS classes/inline styles or `innerHTML` — the program declares the **intent** of the interface and the backend of each target renders it. What a widget set lacks becomes a Kof abstraction (or a maintainer decision), never imported syntax from a foreign stack
 
 Kof is a general-purpose, compiled programming language with multiple backends.
 

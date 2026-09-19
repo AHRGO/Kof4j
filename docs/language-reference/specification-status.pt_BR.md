@@ -102,7 +102,7 @@ Target-specific · Unspecified · Planned**.
 | Import ambíguo (não chuta) | Stable | `CompilerTypes:102` |
 | PKG002 (1 main) | Stable | probe |
 | Interop JVM (tipos Java) | **Target-specific** | `AndroidInteropE2ETest` |
-| FFI C (`extern "<lib>"`) | **Parcial** — whitelist JVM 1-arg: `Int→Int`, `String→Int`, `Double→Double`; multi-arg/retorno `String` = `FFI001`; JS = `FFI002`; Native = `FFI001` (R6, nunca silent) | medido 17/09 (`modules.md` §6); alargamento = fatia R3 (`PLAN-UNIVERSAL-PLATFORM.md`, #431) |
+| FFI C (`extern "<lib>"`) | **Parcial** — JVM qualquer assinatura escalar, aridade livre, retornos `void`/`String` (18/09, `.18`); não-escalar = `FFI001`; runner host JS = MESMA ABI escalar (3.6.F2/F3 ✅ 18/09, `FfiE2ETest` 16/16 byte-for-byte JVM↔JS), não-escalar = `FFI002`, browser = runtime R7; Native = `FFI001` §61 (R6, nunca silencioso) |
 
 ### Concorrência
 | Feature | Status | Teste-evidência |
@@ -130,6 +130,7 @@ Target-specific · Unspecified · Planned**.
 | collections (List/Map/Set) | Stable | `KofMapSetTest` |
 | string methods | Stable | `StringMethodRegistry` |
 | http / web / db / orm / cache / mq / time / scheduler / log / config / security / validation / observability / ui / media / process | **Experimental** | E2E por área |
+| `rng` (namespace embutido: `seed`/`int`/`boolean`/`double`/`string`) | **Experimental** — JVM+JS+NATIVE x86_64 (fatia 2 do X8); ANDROID/cross riscv64/aarch64 gap `RNG001` (honesto, R6); mesma seed ⇒ mesma sequência em todo backend | `KofRngTest` (11): `deterministicJvm/JsMatchesOracle`, `jvmJsParity`, `reseedRestartsSequence{Jvm,Js}`, `contractJvm/Js`, `jvmNativeParityFullFace`, `nativeMatchesOracle`, `contractNative`, `crossAndAndroidStayHonestGap` |
 | Map/Set com type-arg de classe | **Bug #33** | `known-bugs.md` |
 
 ---

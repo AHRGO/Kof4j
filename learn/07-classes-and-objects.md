@@ -176,6 +176,25 @@ class Cachorro extends Animal {
 
 Override is implicit (same method name); dispatch is virtual.
 
+## Method overloading (0.4.0-beta, §131)
+
+Methods with the same name coexist in a class when their signatures differ:
+
+```kf
+class Calc {
+    Int add(Int a, Int b) { return a + b }
+    Int add(Int a, Int b, Int c) { return a + b + c }
+}
+main() {
+    var c = Calc()
+    println(c.add(1, 2))       // 3
+    println(c.add(1, 2, 3))    // 6
+}
+```
+
+The rules are the functions' rules (SEM047 exact duplicate, SEM057
+ambiguity) — see ch. 06 and `training/idioms/classes.md`.
+
 ## Current status
 
 - ✅ `record` / `class X(...)` — immutable data, accessors (3 targets)

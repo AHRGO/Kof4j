@@ -72,6 +72,15 @@ if (("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc
         boolean isCharPrimitive = charCheck instanceof Type.PrimitiveType p
                 && "char".equals(Type.canonicalPrimitiveName(p.name()));
         if (isCharPrimitive) {
+            // D-NULL-INTENT (#278): `argType` Nullable(Char) chega
+            // FISICAMENTE boxed (Integer — return/local/Map.get do #278);
+            // sem desempacotar, `String.valueOf(C)` receberia a referência
+            // Integer onde espera um valor int-width (VerifyError). Um
+            // `Char` CRU (não-nullable) já está int-width na pilha —
+            // nenhum unbox extra.
+            if (argType instanceof Type.NullableType) {
+                driver.emitErasureUnbox(ops, Type.PrimitiveType.INT);
+            }
             ops.add(new KofCall(
                     BuiltinTypes.STRING,
                     "valueOf", List.of(Type.PrimitiveType.CHAR),
@@ -102,7 +111,20 @@ if (("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc
                     "valueOf", List.of(argType),
                     BuiltinTypes.STRING, KofCallKind.STATIC));
         } else {
-            TypeEmitter.boxPrimitive(ops, argType);
+            // D-NULL-INTENT: no JVM, argType já Nullable(primitivo) chega
+            // FISICAMENTE boxed (return/local/Map do #278) — boxPrimitive de
+            // novo chamaria Integer/Boolean.valueOf sobre uma referência já
+            // boxed (VerifyError). Só pula o box no JVM quando já é
+            // Nullable; Script/JS mantêm o box incondicional de sempre — o
+            // interpretador representa `Bool` em COLEÇÃO como Integer 1/0
+            // (KofInterpreterCollections.unbox) e depende do
+            // `Boolean.valueOf` aqui para reformatar de volta antes do
+            // `String.valueOf`, senão imprime "1"/"0" em vez de
+            // "true"/"false" (achado ao medir boolInCollectionsPrintsLikeJvm).
+            boolean skipBox = driver.target == Target.JVM && argType instanceof Type.NullableType;
+            if (!skipBox) {
+                TypeEmitter.boxPrimitive(ops, argType);
+            }
             ops.add(new KofCall(
                     BuiltinTypes.STRING,
                     "valueOf", List.of(Type.UnknownType.UNKNOWN),

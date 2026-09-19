@@ -2,23 +2,36 @@ package dev.kof.compiler;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import java.io.IOException;
 import java.nio.file.*;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * R6 sweep guard: domain namespaces must refuse unsupported targets with a
  * documented compile-time gap code — never a silent stub nor a link break.
- * Each case pins a row of {@code docs/bugs-and-gaps/backend-parity.md}
- * (Documented Gaps). Measured on the CLI 17/09; this keeps the matrix honest.
+ * Each case pins a row of {@code docs/backend-parity.md} (Documented Gaps).
+ * Measured on the CLI 17/09; this keeps the matrix honest.
  *
  * The web-gate cases pin the code the corpus promises for each feature
  * (TLS {@code WEB002}, SSE {@code WEB003}, WebSocket {@code WEB004},
  * security middleware {@code WEB006}) — the {@code app.serveDir} /
  * {@code WEB005} drift of §275 happened exactly because the catch-all
  * emitted {@code WEB001} while only the docs knew {@code WEB005}.
+ *
+ * {@link #everyPinnedGapIsDocumentedInTheParityMatrix()} closes the other
+ * direction: a code this guard proves the compiler EMITS must also be in the
+ * matrix (R6 — "every domain gap has a code + an entry in the parity
+ * matrix"). The ledger is derived from this file's own {@code assertGap}
+ * calls, so a new pin cannot be added without documenting it.
  */
 class DomainGapCodesTest {
     private final CompilerDriver driver = new CompilerDriver();
+
+    private static final Pattern GAP_CODE = Pattern.compile("\"([A-Z]{2,6}[0-9]{3})\"");
 
     @Test
     void processRunOnNativeIsProc001(@TempDir Path tmp) throws Exception {
@@ -28,6 +41,40 @@ class DomainGapCodesTest {
                 println(r.stdout)
             }
             """);
+    }
+
+    @Test
+    void processSpawnOnNativeIsProc001(@TempDir Path tmp) throws Exception {
+        assertGap(tmp, Target.NATIVE, "PROC001", """
+            main() {
+                val h = process.spawn("echo", "hi")
+                println(if (h.alive()) "alive" else "dead")
+            }
+            """);
+    }
+
+    @Test
+    void processSpawnOnJsIsProc001(@TempDir Path tmp) throws Exception {
+        assertGap(tmp, Target.JS, "PROC001", """
+            main() {
+                val h = process.spawn("echo", "hi")
+                println(if (h.alive()) "alive" else "dead")
+            }
+            """);
+    }
+
+    @Test
+    void processSpawnOnJvmHasNoGap(@TempDir Path tmp) throws Exception {
+        Path file = tmp.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, """
+            main() {
+                val h = process.spawn("echo", "hi")
+                println(if (h.alive()) "alive" else "dead")
+            }
+            """);
+        CompilationResult result = driver.compile(file, tmp.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "JVM process.spawn must compile: "
+                + result.diagnostics().getDiagnostics());
     }
 
     @Test
@@ -136,6 +183,63 @@ class DomainGapCodesTest {
         CompilationResult result = driver.compile(file, tmp.resolve("out"), Target.JVM);
         assertTrue(result.success(), "JVM process.run must compile: "
                 + result.diagnostics().getDiagnostics());
+    }
+
+    /**
+     * Android reuses {@code JvmBackend} but several {@code supportedOn} gates
+     * exclude {@code ANDROID} — measured 17/09, catalogued in
+     * {@code known-bugs.md} §276 and in the matrix's Android row. Pinning the
+     * diagnosis here makes the R6 doc gate cover Android: when the compiler
+     * lane resolves §276 (documented gap vs over-gating), this turns RED and
+     * forces the matrix/§276 to move with it.
+     */
+    @Test
+    void androidRefusesDbAndCryptoWithTheDocumentedCodes(@TempDir Path tmp) throws Exception {
+        assertGap(tmp, Target.ANDROID, "DB001", """
+            main() {
+                val c = db.connect("sqlite::memory:")
+                println(c)
+            }
+            """);
+        assertGap(tmp, Target.ANDROID, "SECN003", """
+            main() {
+                println(crypto.sha512("x"))
+            }
+            """);
+    }
+
+    /**
+     * R6 machine gate (mirrors the R1 boundary gate): every gap code this
+     * guard pins — i.e. every code the compiler is proven to emit for a
+     * domain namespace — must appear in {@code docs/backend-parity.md}. The
+     * ledger is read from this file's own {@code assertGap} calls, so the
+     * check cannot rot: adding a pin without a matrix row fails here.
+     */
+    @Test
+    void everyPinnedGapIsDocumentedInTheParityMatrix() throws IOException {
+        Path root = repoRoot();
+        Set<String> pinned = new LinkedHashSet<>();
+        Matcher m = GAP_CODE.matcher(Files.readString(root.resolve(
+                "kof-compiler/src/test/java/dev/kof/compiler/DomainGapCodesTest.java")));
+        while (m.find()) pinned.add(m.group(1));
+        assertFalse(pinned.isEmpty(), "no gap codes found in this guard's assertGap calls");
+
+        String matrix = Files.readString(root.resolve("docs/backend-parity.md"));
+        for (String code : pinned) {
+            assertTrue(matrix.contains(code),
+                    "gap " + code + " is pinned by this guard (the compiler emits it) "
+                            + "but has no entry in docs/backend-parity.md (R6)");
+        }
+    }
+
+    /** Repo root, found by walking up to the parity matrix (same as
+     *  {@code ConformanceMatrixDocTest}). */
+    private static Path repoRoot() {
+        Path p = Path.of(System.getProperty("user.dir")).toAbsolutePath();
+        for (int i = 0; i < 6 && p != null; i++, p = p.getParent()) {
+            if (Files.exists(p.resolve("docs/backend-parity.md"))) return p;
+        }
+        throw new IllegalStateException("backend-parity.md not found from " + p);
     }
 
     private void assertGap(Path tmp, Target target, String code, String source)

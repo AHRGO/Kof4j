@@ -5,7 +5,7 @@
 This is the **mandatory** guide for any AI agent (or human) who
 writes Kof code in this repository. Read it before generating any `.kf`.
 
-**Version:** 0.4.0-beta · Last update: 09/13/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships**; active branch = `beta-0.4.0`)
+**Version:** 0.4.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + rule 9 **docs-first gate** for philosophy-violating issues (#449) (18/09) + **mechanical push via `scripts/sync-push.sh` + conflict policy "preserve both sides, redo yours on top" (19/09)** + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09); active branch = `beta-0.4.0`)
 
 > **PRIORITY No. 1: QUALITY.** Before any feature, read the
 > **Quality gate — "no bug ships"** (§ below), **universal for
@@ -264,6 +264,13 @@ conceptual engineering nor decide architecture/direction. Practical consequences
    or the suite red (outside the documented environmental errors) is violating
    the gate: fix it in the same unit or revert. `git bisect`-hostile is the
    worst legacy an agent can leave.
+9. **Work in the real repo tree on the active branch — NEVER a `/tmp` clone/worktree.**
+   This host loses power frequently ("cai a luz"); everything under `/tmp` evaporates and
+   in-flight work/commits get lost. Edit directly in the working tree of `/home/mel/Kof4j`
+   on the active branch (`beta-0.4.0` unless the maintainer says otherwise), **commit locally**
+   so the work persists on disk immediately, and only then fetch/rebase/push. Do not create
+   `/tmp` scratch worktrees to do the actual work. (Made an explicit rule by the maintainer
+   09/18 after a `/tmp` worktree holding a verified fix was wiped by a power loss.)
 7. **Git identity & agent worker (09/12, updated 09/16 maintainer directive).**
    The GitHub App `kof-agent-worker` (App ID `4960796`, configured via `scripts/gh-as-agent.sh`
    and `~/.config/kof/agent-app.env`) is the dedicated identity for issues, PRs, and commits
@@ -312,6 +319,14 @@ Golden rule: **never two agents on the same gap or on the same giant file**
 (`NativeRuntime.java`, `CompilerDriver.java`) at the same time. If it's
 unavoidable, coordinate in the chat first.
 
+**§NNN numbers are shared claims too.** Before creating a new section in
+`known-bugs.md` (or any ledger that uses `§NNN`), `git fetch` and take the next
+free number from the **remote tip**
+(`git show origin/<branch>:docs/bugs-and-gaps/known-bugs.md | grep -oE '^#{2,3} §[0-9]+' | tail -3`) —
+numbers picked "in flight" (local write → push → rebase) already forced a
+parallel lane to renumber twice (§281/§282, 18/09). If someone claimed it first,
+renumber on your own side BEFORE pushing: always cheap, unlike the collision.
+
 **Mandatory synchronization (pull before, push after):** before **every
 commit** — `git fetch` + `git pull --rebase` (with a dirty working tree, use
 `git stash push` before and `git stash pop` after, or `--autostash`) and
@@ -321,6 +336,21 @@ only coordinates those who *see* the remote; an unclaimed local commit is a ghos
 for the other agents. After the pull, **re-read the DOING.md**: what was your
 "next step" may have been done or claimed by another agent in the
 interval.
+
+> **Mechanical push (maintainer 19/09): every push goes through
+> `scripts/sync-push.sh`** — fetch → `pull --rebase --autostash` → push →
+> verify `ahead=0 behind=0` against the remote before returning success. If
+> the final check is not 0/0, the push **did not happen** — never report the
+> work as "pushed" without that line.
+>
+> **Conflict policy — preserve both sides, redo yours on top (maintainer
+> 19/09).** A rebase/merge conflict is resolved keeping the **intent of both
+> hunks**; never `checkout --ours`/`--theirs` to "resolve" it (the `d7dba433`
+> truncation destroyed another lane's DOING.md lines that way). A hunk that
+> *looks* stale but arrived from another agent's rebase/merge is **updated
+> content, not garbage**: **redo your own edit** on top of the new version
+> (re-apply your change against it), never revert the other's edit "because
+> mine was written later".
 
 ### Lesson learned (09/04) — ALWAYS work in small parts
 
@@ -580,6 +610,26 @@ Bool isQuery(String op) {
    such close carries the "Kof is not Java" reason and points to
    `training/anti-patterns/fake-idioms.md`. Cross-check: if the reproducer
    would compile in **Kotlin/Java** but is *translated*, it is this rule.
+9. **The philosophy check precedes the issue — send the author to the docs
+   FIRST (ABSOLUTE, maintainer 18/09, case #449/RawView).** Rule 8 covers
+   translated *languages*; this one generalizes to any **foreign stack**: a
+   request that imports HTML tags, CSS selectors, inline styles or
+   `innerHTML` into `kof.ui` (e.g. a `RawView(tag, cssText, html)` escape
+   hatch), framework layers (`@Controller`, Service/Repository), template
+   engines — whatever the name given to it. Such a request is NOT a missing
+   feature: it is the author working around a philosophy they haven't read.
+   The FIRST reply — before any "gap confirmed", before touching code —
+   MUST send the author to the reading (`docs/philosophy.md` "What Kof Is
+   NOT", the idiom doc of the area, e.g. `training/idioms/ui.md`, and
+   `training/anti-patterns/`), state in one line WHY it violates the
+   philosophy (Kof code declares **intent**; the platform renders —
+   complexity belongs to the compiler/backends, never to embedded markup in
+   user code), and offer the Kof idiom that solves the underlying need.
+   The issue only stays open if, after that reading, the need is real AND
+   uncovered by a Kof abstraction — and the resolution is a Kof abstraction
+   decided by the maintainer (rule 6), never the imported syntax. Template
+   checkboxes make the human sign the same gate (`feature_request.yml`,
+   `bug_report.yml`).
 
 ---
 
@@ -743,7 +793,7 @@ ready.
 > suite) prove. **No agent may break behavior that already works.**
 
 1. **Zero regression.** No commit may make an existing test start to
-   fail. The full suite (`mvn test`, today **2411** across the 4 modules — see
+   fail. The full suite (`mvn test`, today **2687** across the 4 modules — see
    §"Verification loop" for the command with the failure.ignore flag) is a **merge gate** —
    a change that doesn't keep everything green doesn't get in. Single exception: a **deliberate**
    contract change, with a version bump + updated docs + migration.
@@ -771,7 +821,7 @@ ready.
 
 ---
 
-## Platform invariants (universal plan — `docs/development/PLAN-UNIVERSAL-PLATFORM.md`)
+## Platform invariants (universal plan — `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`)
 
 These rules **always** apply, even when there's no new domain code
 at stake. They are the anti-"god language" mechanism:
@@ -1090,6 +1140,16 @@ mvn test -o -pl kof-compiler,kof-script,kof-c-compiler,kof-cli -am \
 grep -rl "FAILURE" */target/surefire-reports/*.txt
 ```
 
+> **Windows hosts / Native validation:** the Native x86-64 backend invokes
+> real external assembler/linker tooling (`as`/`ld`) and Linux ELF runtime
+> dependencies. A `ToolchainMissing` / `as not available` / `ld not available`
+> result is an environment precondition failure, not by itself proof of a Kof
+> regression. When validating Native from Windows, run the relevant gate in a
+> Linux/WSL environment with the toolchain available. For nested build scripts
+> that explicitly use `bash -lc`, prefer `wsl.exe -e`/`--exec`; this is Kof
+> scripting guidance for predictable argument interpretation, not a WSL bug
+> claim. See `docs/debugging/debugging-native.md`.
+
 ### Pre-push checklist (Q0–Q7 — answer before `git push`, on ANY branch)
 
 0. Was the bug **fixed at the root cause** (not masked) and would the test that proves it
@@ -1110,9 +1170,15 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > it, Maven is fail-fast per module: any failure in **kof-compiler aborts
 > the reactor** and **kof-script, kof-c-compiler and kof-cli never run** — you
 > think you validated everything but only saw the first module. The real total with the flag
-> is **2411 tests** (compiler 2058 + script 38 + kof-c 7 + cli 308, measurement
-> 17/09 ~15:49 — grows with each commit): **0 regressions / 0 errors** (the only failure the
-> suite ever shows is the intermittent §252 native flake — silent again, last fired 16/09 09:44)
+> is **2687 tests** (compiler 2296 + script 48 + kof-c 7 + cli 336, measurement
+> 18/09 ~23:10 on CI Build+Tests job of tip `33363a3f` — grows with each commit): **0 regressions / 0 errors**
+> (UPDATE 18/09: the historical trio of natives red is CLOSED at code — §252
+> fixed `20495e48` (usleep-retaddr clobbered the cached list-size slot; size now
+> in callee-saved `%r14`), §181 cross residual fixed `c56c74a7` (cross `NEG` ran
+> integer `neg` on float bit patterns — -inf became NaN; sign-bit XOR), §256 face
+> (b) fixed `3a593734` (golden had no HB — `await b` + acquire `fence r,rw`/
+> `dmb ish` on the cross consumers). First 0-red kof-compiler run since the
+> residual was filed 14/09.)
 > (node now present on
 > the measuring host — the old "13 errors = node missing" no longer applies). The §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
 > regression of the §147 fix in `JsIfThrowElse`) was **FIXED 09/13** — the root was
@@ -1133,14 +1199,19 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > (2×42, `NativeRiscv64/Aarch64E2ETest`) are **skipped** by the guard
 > (`4408eb6`) + the other toolchain/external-DB guards + the §255 sysroot guard (`06e77e94`) → `2411/0/196-skip` (the flake §252 fired 16/09 09:44, then went silent at 11:38, 15:09, 15:54 and 17/09 15:49 — ~1/4 of full-suite runs)
 > (MEASURED 17/09 ~15:49, clean run on tip `f276e966`). With qemu, **everything executes** — the 84 cross run
-> green and the total stays `2411` with the skip count dropping to the
-> external-DB/`node`-env residual. Correct state TODAY (17/09 ~15:49, run on tip `f276e966`):
-> **0 regressions / 0 errors** (2411 = 2058+38+7+308, 196 skip) — the full run at 16/09 09:44 had the
+> green and the total stays the same with the skip count dropping to the
+> external-DB/`node`-env residual. Correct state TODAY (18/09 ~15:20, CI Build+Tests job of tip
+> `33363a3f`): **2687 = 2296+48+7+336, 0F / 0E / 178 skip (CI ubuntu executa o android APK; hosts sem SDK = 1 skip honest a mais)** (no-qemu guards; compiler 2292→2296 by §305 fmt tests; cli 333→336 by X10 fatias 5–7 `LspServerTest`; cli 308→313 by `CmdBuildClasspathTest` of #441 in `d14275f0`, 313→322 by `CmdDeployTest` of X9 slices 1–3 (`154ea1a4`/`bfdd452a`/`84c82139`); compiler 2216→2230 by rng (`KofRngTest` 8) + §286 race tests; CI Build+Tests of `0f3c42d6` measured; cross e2e green
+> in the dedicated `Native cross` job; `.17` measured 11-skip with qemu on `952acbc8`) — the
+> §252 flake, the §181 cross residual and the §256(b) poll flake are ALL closed
+> at code; the remaining skips are the optional asm-gate and toolchain guards.
+> **0 regressions / 0 errors** (2411 at the time = 2058+38+7+308, 196 skip) — the full run at 16/09 09:44 had the
 > known INTERMITTENT §252
 > native flake (`spawnWorkerThrowPropagatesThroughSelectAnyNative`, owner native
 > lane `.18`/nat; the 11:38, 15:09 and 15:54 runs it stayed silent — ~1/4 frequency, see §252), which
-> must be read as a TEST red, not a regression. What matters remains no FAILURE
-> outside the §252 flake and the documented guards.
+> must be read as a TEST red, not a regression. **HISTORY (superseded 18/09):**
+> §252 was later proven NOT a race — see `known-bugs.md §252` (root cause +
+> fix `20495e48`). What matters remains no FAILURE outside the documented guards.
 
 To validate an isolated snippet (e.g., confirm whether an idiom compiles),
 use the project harness or create a minimal E2E test in the area's package.
@@ -1179,7 +1250,7 @@ use the project harness or create a minimal E2E test in the area's package.
 | `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Spec gaps (SG-00x — maintainer queue complete, became a reference) + open bugs |
 | `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realized → stdlib) + audit ≤500 (snapshot → architecture) |
 | `docs/development/DECISIONS.md` | **Maintainer's decisions** (time/security/app-model/Spring — `decision-pending/` folder extinct 09/13) |
-| `docs/development/roadmap.md` §23 | **Consolidated implementation plan** (Tiers 0–12) — the only ordered plan; migration A–H ✅, universal **UNDER DEVELOPMENT** 17/09 (`PLAN-UNIVERSAL-PLATFORM.md`, R12 overridden — §D-UNIVERSAL) |
+| `docs/development/roadmap.md` §23 | **Consolidated implementation plan** (Tiers 0–12) — the only ordered plan; migration A–H ✅, universal **UNDER DEVELOPMENT** 17/09 (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, R12 overridden — §D-UNIVERSAL) |
 
 ---
 

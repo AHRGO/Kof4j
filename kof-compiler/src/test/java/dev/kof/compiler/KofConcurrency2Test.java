@@ -208,6 +208,53 @@ class KofConcurrency2Test {
                 "cancel do worker k não pode marcar o worker k+1 (§117)");
     }
 
+    private static final String CANCEL_BEFORE_START_KF = """
+            Int longo() {
+                var i = 0
+                while (i < 200 && !cancelled()) { time.sleep(1); i++ }
+                return i
+            }
+            main() {
+                var ok = 0
+                var k = 0
+                while (k < %ROUNDS%) {
+                    val a = spawn longo()
+                    cancel(a)
+                    val v = await a
+                    if (v < 200) { ok = ok + 1 }
+                    k = k + 1
+                }
+                println(ok + "/%ROUNDS%")
+            }
+            """;
+
+    @Test
+    void cancelImmediatelyAfterSpawnNative(@TempDir Path tmp) throws Exception {
+        // §286 (causa-raiz do flake sob carga): cancel ANTES da trampoline
+        // registrar a entry — o `find` falhava e o pedido se PERDIA (assert(
+        // cancel) mentia / worker corrido inteiro). O pending no handle + o
+        // re-check Dekker fecham a janela SEM depender de agendamento:
+        // deterministicamente 30/30 workers cancelam cedo. Runtime antigo
+        // marca ok=0 (todos fogem da janela) — RED mediato, não hang.
+        runNative(tmp, CANCEL_BEFORE_START_KF.replace("%ROUNDS%", "30"), "30/30");
+    }
+
+    @Test
+    void cancelImmediatelyAfterSpawnCrossArch(@TempDir Path tmp) throws Exception {
+        // Rule 5: o MESMO fechamento no riscv64 (fonte) e aarch64 (tradutor).
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            Assumptions.assumeTrue(NativeRiscv64E2ETest.hasToolchain(arch), "cross toolchain " + arch + " ausente — pulando");
+            Path f = tmp.resolve("CB" + arch + ".kf");
+            Files.writeString(f, CANCEL_BEFORE_START_KF.replace("%ROUNDS%", "10"));
+            Path outDir = tmp.resolve("cancelpend-" + arch);
+            CompilationResult r = driver.compile(f, outDir, t);
+            assertTrue(r.success(), t + " deve compilar: " + r.diagnostics().getDiagnostics());
+            String out = NativeRiscv64E2ETest.runQemu(arch, outDir.resolve("Default/Main"));
+            assertEquals("10/10", out, t + " cancel-imediato deve fechar a janela");
+        }
+    }
+
     @Test
     void awaitTimeoutJvm(@TempDir Path tmp) throws Exception {
         // G8/CONC residual: awaitTimeout(r, ms) -> valor no prazo; lança no estouro
@@ -821,17 +868,78 @@ class KofConcurrency2Test {
     @Test
     void spawnWorkerThrowPropagatesThroughSelectAnyNative(@TempDir Path tmp) throws Exception {
         // selectAny também relança a causa do handle excepcional.
+        // §291: a forma antiga (`rapida(){return 7}` sem delay) NÃO fixava
+        // qual handle concluía primeiro — dependia da sorte de agendamento
+        // do pthread_create (~6.5% de miss medido no host ocioso, invertia
+        // sob carga da suíte/CI). O contrato (oráculo JVM = anyOf) é
+        // "primeiro a concluir no TEMPO"; a propagação do throw exige um
+        // vencedor determinístico — aqui o worker que falha conclui pelo
+        // menos 20ms antes. O ramo oposto (valor vence) já é coberto por
+        // selectAnyJvm/selectAnyNative/selectAnyWaitPathReturnsValueAfterUsleep.
         runNative(tmp, """
                 Object falha() { throw "boom" }
-                Int rapida() { return 7 }
+                Int devagar() { time.sleep(20); return 7 }
                 main() {
                     val a = spawn falha()
+                    val b = spawn devagar()
+                    var ok = true
+                    try { selectAny(a, b); ok = false } catch (String e) { println("sel=" + e) }
+                    println("ok=" + ok)
+                }
+                """, "sel=boom\nok=true");
+    }
+
+    @Test
+    void spawnWorkerThrowPropagatesThroughSelectAnyJvm(@TempDir Path tmp) throws Exception {
+        // §291/paridade: o MESMO contrato no oráculo — handle excepcional
+        // concluído primeiro é relançado pelo selectAny no consumidor (JVM).
+        runJvm(tmp, """
+                Object falha() { throw "boom" }
+                Int devagar() { time.sleep(20); return 7 }
+                main() {
+                    val a = spawn falha()
+                    val b = spawn devagar()
+                    var ok = true
+                    try { selectAny(a, b); ok = false } catch (String e) { println("sel=" + e) }
+                    println("ok=" + ok)
+                }
+                """, "sel=boom\nok=true");
+    }
+
+    @Test
+    void selectAnyWaitPathSurvivesUsleepNative(@TempDir Path tmp) throws Exception {
+        // §252 (raiz): select_any cacheava size em -8(%rsp); o `call usleep`
+        // empilhava o endereço de retorno NA MESMA SLOT e o re-scan relia a
+        // slot -> varria idx 0,1,2 além do fim da lista -> pânico falso.
+        // AMBOS os handles lenta (>1ms) força o caminho de espera; o scan
+        // pós-usleep deve parar no fim da lista (2) e continuar esperando.
+        runNative(tmp, """
+                Object lenta() { time.sleep(2); throw "boom" }
+                Int rapida() { time.sleep(30); return 7 }
+                main() {
+                    val a = spawn lenta()
                     val b = spawn rapida()
                     var ok = true
                     try { selectAny(a, b); ok = false } catch (String e) { println("sel=" + e) }
                     println("ok=" + ok)
                 }
                 """, "sel=boom\nok=true");
+    }
+
+    @Test
+    void selectAnyWaitPathReturnsValueAfterUsleepNative(@TempDir Path tmp) throws Exception {
+        // mesmo caminho de espera (2 lentos), mas o primeiro pronto entrega
+        // VALOR: o re-scan pós-usleep não pode varrer pós-fim nem perder o
+        // handle concluído.
+        runNative(tmp, """
+                Int lenta1() { time.sleep(2); return 11 }
+                Int lenta2() { time.sleep(30); return 22 }
+                main() {
+                    val a = spawn lenta1()
+                    val b = spawn lenta2()
+                    println("sel=" + selectAny(a, b))
+                }
+                """, "sel=11");
     }
 
     private String runNative(Path tempDir, String source, String expected) throws java.io.IOException {
@@ -1068,8 +1176,11 @@ class KofConcurrency2Test {
         // este teste era o GATE NEGATIVO (compile-time CONC001 em cada helper);
         // agora o MESMO programa compila e executa sob qemu nas duas arches
         // com a ordem determinística: selectAny devolve 1 (a termina), done
-        // true, poll devolve 1 (b terminou no selectAny scan), cancel marca,
+        // true, poll devolve 1 APÓS `await b` (HB real), cancel marca,
         // cancelled()==false no main, awaitTimeout devolve o valor (prazo).
+        // §256(b): o golden antigo NÃO tinha HB com o worker b (poll logo
+        // após selectAny era 6/15 flake — ver SG-020/§4.4); `await b` antes
+        // do poll fecha a janela por construção.
         for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
             String arch = t.nativeArch();
             Assumptions.assumeTrue(NativeRiscv64E2ETest.hasToolchain(arch), "cross toolchain " + arch + " ausente — pulando");
@@ -1081,6 +1192,7 @@ class KofConcurrency2Test {
                         val b = spawn trabalho()
                         println(selectAny(a, b))
                         println(done(a))
+                        await b
                         println(poll(b))
                         cancel(a)
                         println(cancelled())

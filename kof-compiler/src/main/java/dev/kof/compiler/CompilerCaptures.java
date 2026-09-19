@@ -11,9 +11,26 @@ public final class CompilerCaptures {
 
     private CompilerCaptures() {}
 
+    /**
+     * #381 — push do valor de uma captura no creation-site. Capturas normais
+     * são locals (`cap.index() >= 0`); capturas de campo (índice sentinel < 0,
+     * criadas pelo collector) são lidas de `this` da classe ENVOLVENTE — o
+     * creation-site está dentro do método externo, onde slot 0 é o receiver
+     * real e o campo existe.
+     */
+    static void pushCapture(CompilerDriver driver, List<KofOperation> ops, IRLocalVariable cap) {
+        if (cap.index() < 0) {
+            Type encType = CompilerTypes.ownerTypeFromInternal(
+                    driver.currentLoweringOwner, driver.semanticAnalyzer);
+            ops.add(new KofLoadLocal(encType, 0));
+            ops.add(new KofLoadField(encType, cap.name(), cap.type()));
+        } else {
+            ops.add(new KofLoadLocal(cap.type(), cap.index()));
+        }
+    }
+
     static List<IRLocalVariable> collectCaptures(CompilerDriver driver, LambdaExpr le,
-                    List<IRLocalVariable> outerLocals) {
-        List<IRLocalVariable> captures = new ArrayList<>();
+                    List<IRLocalVariable> outerLocals) {        List<IRLocalVariable> captures = new ArrayList<>();
         java.util.Set<String> captured = new java.util.HashSet<>();
         java.util.Set<String> shadowed = new java.util.HashSet<>();
         for (FormalParameterNode p : le.parameters()) shadowed.add(p.name());
@@ -150,6 +167,30 @@ public final class CompilerCaptures {
                 if (outer != null) {
                     captures.add(outer);
                     captured.add(ie.name());
+                    return;
+                }
+                // #381 — identificador livre que é campo NÃO-estático da classe
+                // envolvente (lambda criada dentro de método de instância) deve
+                // ser capturado por VALOR: lido no creation-site, onde `this` é o
+                // receiver real. Sem isto, o corpo não resolvia o nome (o owner
+                // da lambda não tem o campo) e caía no fallback aload_0 do
+                // emitter — empurrando o objeto Lambda no lugar do valor →
+                // VerifyError no JVM, "not an int: Lambda0@…" no script.
+                // Índice < 0 é o sentinel do campo (o push do creation-site lê
+                // `this`+getfield em vez do local). Campos estáticos ficam com o
+                // GETSTATIC do próprio corpo; campo de instância em método
+                // estático já é barrado por SEM075 (#345), então `this` no push
+                // só existe quando existe receiver.
+                String enclosing = driver.currentLoweringOwner;
+                if (enclosing != null && !enclosing.isEmpty() && driver.semanticAnalyzer != null) {
+                    String className = enclosing.substring(enclosing.lastIndexOf('/') + 1);
+                    SymbolTable.Symbol fieldSym =
+                            HierarchyResolver.resolveFieldInHierarchy(className, ie.name(), driver.semanticAnalyzer);
+                    if (fieldSym instanceof SymbolTable.FieldSymbol fs
+                            && (fs.accessFlags() & AccessFlags.STATIC) == 0) {
+                        captures.add(new IRLocalVariable(-1, ie.name(), fs.type()));
+                        captured.add(ie.name());
+                    }
                 }
             }
             case BinaryExpr bin -> {

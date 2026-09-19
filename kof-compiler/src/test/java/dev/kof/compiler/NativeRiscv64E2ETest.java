@@ -1082,6 +1082,33 @@ main() {
         assertEquals("2\n1", output);
     }
 
+    /** §181 cross (18/09): unary NEG em Double/Float era o `neg` INTEIRO no
+     *  bit pattern cru (emitCrossUnaryRiscv ignorava operandType — x86 já
+     *  tratava). -inf virava NaN por complemento de dois; `(-inf) as Int`
+     *  imprimia 0 em vez de -2147483648. Fix = XOR do bit de sinal
+     *  (tradutor-safe: aarch nao conhece fneg). Golden = oracle JVM. */
+    @Test
+    void riscv64NegativeFloatDoubleRuns(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String out = runRiscv64(tempDir, """
+            main() {
+                var d = 2.5
+                var f = 1.5f
+                println(-d)
+                println(-f)
+                var z = 0.0
+                println(-z)
+                println((0.0 - z) as Int)
+                var inf = 1.0 / 0.0
+                println((-inf) as Int)
+                println((-f) as Int)
+                var g = -2.5
+                println(g)
+            }
+            """);
+        assertEquals("-2.5\n-1.5\n-0.0\n0\n-2147483648\n-1\n-2.5", out);
+    }
+
     /** §181 (13/09): cast Double/Float as Int/Long SATURANTE (JLS 5.1.3) no
      *  riscv64 sob qemu — o commit c90e85ee comparava o inteiro JÁ convertido,
      *  mas `fcvt.w.d` devolve o "indefinite" (0x80000000) p/ fora-de-faixa, o

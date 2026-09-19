@@ -48,6 +48,17 @@ public final class BuiltinCallTyper {
                     if (same && mc.arguments().size() > 1) {
                         elemType = new Type.FunctionType(ft.parameterTypes(), ft.returnType());
                     }
+                } else if (elemType instanceof Type.ClassType) {
+                    // #360: heterogênea por subtipes relacionados não deve
+                    // herdar o cast do PRIMEIRO elemento (Cat -> checkcast Dog
+                    // -> CCE no get()). Fecha sobre o ancestral comum; sem um
+                    // (Dog+String) mantém o comportamento antigo (r1 — nada
+                    // que roda hoje deixa de rodar).
+                    for (int i = 1; i < mc.arguments().size(); i++) {
+                        Type t = SemExpressionTyper.inferType(sa, mc.arguments().get(i), scope);
+                        if (!(t instanceof Type.ClassType)) continue;
+                        elemType = HierarchyResolver.widenToCommonSupertype(sa, (Type.ClassType) elemType, (Type.ClassType) t);
+                    }
                 }
             }
             for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
@@ -66,7 +77,17 @@ public final class BuiltinCallTyper {
         }
         if (mc.receiver() == null && "setOf".equals(mc.methodName())) {
             Type elemType = Type.UnknownType.UNKNOWN;
-            if (!mc.arguments().isEmpty()) elemType = SemExpressionTyper.inferType(sa, mc.arguments().get(0), scope);
+            if (!mc.arguments().isEmpty()) {
+                elemType = SemExpressionTyper.inferType(sa, mc.arguments().get(0), scope);
+                if (elemType instanceof Type.ClassType) { // #360 (mesma raiz do listOf)
+                    for (int i = 1; i < mc.arguments().size(); i++) {
+                        Type t = SemExpressionTyper.inferType(sa, mc.arguments().get(i), scope);
+                        if (!(t instanceof Type.ClassType tc)) continue;
+                        elemType = HierarchyResolver.widenToCommonSupertype(
+                                sa, (Type.ClassType) elemType, tc);
+                    }
+                }
+            }
             for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
             return new Type.ClassType("kof", "Set", List.of(elemType));
         }
@@ -220,6 +241,17 @@ public final class BuiltinCallTyper {
             for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
             return KofUi.STYLE;
         }
+        if (mc.receiver() == null && "Style".equals(mc.methodName()) && mc.arguments().size() == 1) {
+            // D-UI-STYLE (UI007): declarative form — parse/validate in the
+            // compiler (Q4) with a typed whitelist (Q3). SEM076 (unknown
+            // property) / SEM077 (malformed) / SEM078 (invalid value); the
+            // lowering re-parses only for the normalized text.
+            ExpressionNode arg = mc.arguments().get(0);
+            SemExpressionTyper.inferType(sa, arg, scope);
+            KofStyleParser.report(sa.diagnostics(), mc.position(),
+                    KofStyleParser.literalString(arg));
+            return KofUi.STYLE;
+        }
         if (mc.receiver() == null && "Link".equals(mc.methodName()) && mc.arguments().size() == 2) {
             for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
             return KofUi.LINK;
@@ -273,7 +305,7 @@ public final class BuiltinCallTyper {
                 // (SEM015) — ex.: `(s) -> s(1)` com param sem tipo.
                 if (sa.diagnostics() != null) {
                     String extra = (localSym.type() instanceof Type.UnknownType)
-                            ? " (sem tipo — declare o tipo do parâmetro da lambda)"
+                            ? " (untyped — declare the type of the lambda parameter)"
                             : "";
                     sa.diagnostics().error("", 0, 0, 0,
                             "variable '" + mc.methodName() + "' is not a function"

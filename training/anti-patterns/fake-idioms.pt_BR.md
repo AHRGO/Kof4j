@@ -42,6 +42,8 @@ porque existem em outras linguagens. Código assim **não compila** ou
 | Array literals `{1, 2, 3}` / `[1,2,3]` | ❌ Unavailable — use `new Int[n]` + `listOf` |
 | `async`/`await` (JS-style), `let`/`const` | ❌ Unavailable — use `spawn`/`await` e `var`/`val` (KofScript **não** é JavaScript) |
 | `fn` / `fun` / `func` (qualquer posição) | ❌ Unavailable — palavras **reservadas** (06/09, SG-001): não existem no Kof, nem como keyword nem como identificador (nome de função, variável, parâmetro, campo). Em posição de declaração: `PARSE085`; em outra: `PARSE037`/`PARSE023`/… Use `Tipo nome(...) { }` ou `nome(...): Tipo { }`. **Nem em KofScript** — `.ks` é Kof puro, não JavaScript |
+| `extern` com callback que NÃO é escalar/síncrono/não-escapante | ❌ Unavailable — o callback do R3 (C2 ✅ 18/09) liga parâmetro tipo-função com ABI de callback **primitiva**, só síncrono e não-escapante. `String`/struct/ponteiro na assinatura do callback ou callback **como retorno** → `FFI001` na JVM (medido, `JvmFfiCallbackE2ETest`); qualquer callback no JS → `FFI002` (paridade = fatia C3). Guardar o ponteiro para chamar DEPOIS (`atexit`/`signal`/async) também não liga — vida/GC-rooting seria R12. Mantenha o callback na chamada: `f(20, 22, (x: Int, y: Int) -> x + y)` |
+| binding nativo feito à mão (cola JNI / wrappers `.java`/`.h` gerados em volta do `extern`) | ❌ Não é o idiom — `extern "lib" sim(T): R` É o binding (FFM na JVM, ponte host no JS; medido 18/09). Escrever scaffolding JNI/FFI em volta duplica o trabalho do compilador e fura os códigos de gap (`FFI001`/`FFI002`) que tornam as capacidades ausentes HONESTAS |
 | `x as Char` (cast primitivo p/ char) | ✅ Implemented (I2C real, 01/09) |
 | `longVal as Int` (narrowing Long→Int) | ✅ Implemented (L2I real, 01/09) |
 | `new Long[n]` (array de 64 bits) | ✅ Implemented (01/09) |
@@ -50,6 +52,7 @@ porque existem em outras linguagens. Código assim **não compila** ou
 | Retorno/método com tipo genérico em classe (`List<String> foo()`) | ✅ Implemented (02/09 — parser parse-then-decide) |
 | Forma prefixada nullable `String? s` (tipo antes do nome) e retorno `String? f()` | ✅ Implemented (02/09 — statements, funções e classes). NOTA: inicializar com `= null` é SEM048 desde 10/09 — null só chega ao `T?` via API |
 | `Map.get` devolvendo `V?` para valores de referência | ✅ Implemented (02/09 — ausência = null, narrowing) |
+| `::twice` / referencia nua de funcao nomeada (`val f = twice`, `listOf(twice)`) | envoltorio lambda: `val f = (x: Int) -> twice(x)`; `listOf((x: Int) -> twice(x))` — medido 18/09: ref nua = SEM011, envoltorio = `42` |
 
 ## Bad example (ainda não compila)
 
@@ -176,7 +179,7 @@ construto neste corpus/docs e o compilador *discorda da própria doc*.
 | propriedade `val name: String` num `interface` | acessor-método: `interface I { String name() }` |
 | `n.abs()` / `n.equals(o)` / `n.toChar()` (métodos em **primitivo**) | `math.abs(n)`, `a == b`, `n as Char` — primitivos só têm `toString()` e as conversões `toInt()`/`toLong()`/`toFloat()`/`toDouble()`. Rejeitado com `SEM074` (#362 ✅ CORRIGIDA 18/09: a chamada fora da lista passava no `check` e morria no load — `ClassFormatError`, dono do Methodref vazio) |
 | `l.sort()` / `l.indexOf(x)` num `List` (API Java) | a API de `List` do Kof é `add/get/set/remove/contains/size/isEmpty/clear/map/filter/reduce`; ache a posição com `for` + `get(i)` (medido: `idx=2`); ordene fora da lista (interop) — não há promessa de `sort`/`indexOf` |
-| `m.containsValue(v)` / `m.getOrDefault(k, d)` num `Map` (API Java) | `m.values().contains(v)` (medido: `true`), ou `var v = m.get(k); if (v != null) { dft = v }` (medido: `fallback`) — a API de `Map` do Kof é `put/get/remove/containsKey/contains/size/clear/isEmpty/keys/values` |
+| `m.containsValue(v)` num `Map` (API Java) | `m.values()` + `contains` — a API de `Map` do Kof e `put/get/remove/containsKey/size/keys/values` (**`getOrDefault(k, d)` era fake ate 0.4.0 e virou REAL em 18/09 (`62bd455e`) — use-a**)
 | `this(args)` auto-delegação de construtor (Java/C#) | o Kof promete só **`super(args)`** (classe-base, primeira instrução — `learn/07`); compartilhe o init via um método auxiliar que os dois construtores chamam (workaround medido `0/3`) |
 
 > Cruzamento: se o reproducer compilaria em **Kotlin/Java** por ser

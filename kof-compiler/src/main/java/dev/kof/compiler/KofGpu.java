@@ -35,6 +35,10 @@ public final class KofGpu {
         return target.isNative() || target == Target.JVM;
     }
 
+/** X10 fatia 3: nomes aceitos pelo dispatch real (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case-literals da fonte abaixo. */
+    static List<String> functions() { return List.of("available", "failReason", "dispatchMatmul", "dispatchMatmul64", "mvSetShape", "mvLoadW", "mvMatvec", "mvPutW", "mvRun", "mvPut32", "mvRun32", "mvPutSp", "mvRunSp"); }
+
     static GpuCall staticCall(String name, List<Type> argTypes) {
         return switch (name) {
             case "available" -> argTypes.isEmpty() ? new GpuCall("kof_vk_available", BOOL, List.of()) : null;

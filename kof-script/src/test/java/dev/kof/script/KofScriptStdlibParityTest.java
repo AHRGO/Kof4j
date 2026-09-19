@@ -38,6 +38,22 @@ class KofScriptStdlibParityTest {
     }
 
     @Test
+    void mapGetOrDefaultParity() throws Exception {
+        // #386 slice 1: interpreter and compiled JVM must agree on hit,
+        // primitive-miss default and reference-miss default (R5).
+        parity("""
+            main() {
+                val m: Map<String, Int> = mapOf()
+                m.put("a", 1)
+                println(m.getOrDefault("a", 7))
+                println(m.getOrDefault("b", 0))
+                val s: Map<String, String> = mapOf()
+                println(s.getOrDefault("k", "fb"))
+            }
+            """, "1\n0\nfb");
+    }
+
+    @Test
     void uncapitalizeParity() throws Exception {
         parity("""
             main() {

@@ -1,6 +1,6 @@
 # R1 boundary ledger — one line per namespace registered in the compiler
 # surfaces (dev/kof/compiler/*.java + runtime). Layer values follow
-# docs/development/PLAN-UNIVERSAL-PLATFORM.md §3.4 (core -> base stdlib ->
+# docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md §3.4 (core -> base stdlib ->
 # platform -> official packages -> interop). Gate: scripts/check_stdlib_boundary.sh
 # HARD-DENY (heavy domain, never stdlib/platform): ml bio hpc data sci cloud infra game
 # `excluded` = the string "kof.<x>" is not a namespace (tooling keys, parser
@@ -30,6 +30,7 @@ mq platform — KofMq.java
 observability platform — ExpressionMethodCallLowerer.java (metrics/health)
 trace platform — ExpressionMethodCallLowerer.java (tracing/OTel seed)
 process platform — KofProcess.java
+shell platform — KofShell.java (sugar over kof.process; universal plan Stage 2 / 2.2)
 scheduler platform — KofScheduler.java
 security platform — ExpressionMethodCallLowerer.java (auth/JWT/rate-limit; stdlib-documented)
 supervisor platform — CompilerSupervisor.java (otp-style supervision, systems layer)
@@ -53,3 +54,4 @@ o excluded — NativeArchEmitter.java (register-name artifact, not a namespace)
 root excluded — JvmMediaCoreRuntime.java (filesystem path string, not a namespace)
 super excluded — keyword receiver (MemberCallTyper.java "super".equals(rid.name())), not a module
 this excluded — keyword receiver (same pattern), not a module
+rng base-stdlib — KofRng.java

@@ -184,6 +184,30 @@ public final class SymbolTableBuilder {
             String key;
             String shown;
             SourcePosition pos;
+            if (member instanceof FieldDeclarationNode fd) {
+                // #294 (forma ESTRETA, 18/09): um campo por NOME por classe,
+                // qualquer tipo — regra do javac. O guard original usava
+                // (nome, descritor) porque a JVMS 4.5 so proibe entradas
+                // duplicadas, mas as 4 faces do par "legal-JVM" `static Int a`
+                // + `Long a` foram medidas e NENHUM target jamais o executou
+                // (VerifyError / ICE JS / toString da classe no script /
+                // ponteiro-lixo silencioso no native, 289) — logo a chave por
+                // nome e aditiva sobre o que funciona e fecha a ferida na raiz.
+                key = "F:" + fd.name();
+                shown = "field '" + fd.name() + "' of type '" + fd.type() + "'";
+                pos = fd.position();
+                SourcePosition prevF = seen.putIfAbsent(key, pos);
+                if (prevF != null) {
+                    dc.error(pos != null ? pos.file() : "", pos != null ? pos.line() : 0,
+                            pos != null ? pos.column() : 0, 0,
+                            "'" + shown + "' is already defined in class '" + className
+                                    + "' at line " + prevF.line()
+                                    + " — a class cannot declare two fields with the same name"
+                                    + " (static or not, any type); rename one",
+                            "SEM076");
+                }
+                continue;
+            }
             if (member instanceof MethodDeclarationNode m) {
                 SymbolTable.MethodSymbol ms = sa.methodSymbols().get(m);
                 if (ms == null) continue;

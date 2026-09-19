@@ -35,6 +35,7 @@ boolean isRuntimeOp(KofCall kc) {
                 || name.startsWith("kof_encoding_")
                 || name.startsWith("kof_uuid_")
                 || name.startsWith("kof_random_")
+                || name.startsWith("kof_rng_")
                 || name.startsWith("kof_net_")
                 || name.startsWith("kof_enum_")
                 || name.startsWith("kof_config_")
@@ -57,7 +58,9 @@ boolean isRuntimeOp(KofCall kc) {
                 || name.equals("kof_now") || name.equals("kof_read_line")
                 || name.equals("kof_read_file") || name.equals("kof_write_file")
                 || name.equals("kof_process_run") || name.equals("kof_process_exit")
+                || name.equals("kof_shell_argv")
                 || name.equals("kof_args")
+                || name.equals("kof_ffi") || name.equals("kof_ffi_void")
                 || name.equals("kof_box") || name.equals("kof_unbox");
     }
 
@@ -155,6 +158,12 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofProcessExit"), args));
             return;
         }
+        if (name.equals("kof_shell_argv")) {
+            // kof.shell cmd(program, args) — argv builder (Stage 2 / 2.2)
+            p.lc.registerIoRuntime("kofShellArgv");
+            stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofShellArgv"), args));
+            return;
+        }
         if (name.equals("kof_ui_color_to_css")) {
             p.lc.registerRuntime("kofUiColorToCss");
             stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofUiColorToCss"), List.of(args.get(0))));
@@ -182,7 +191,8 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
                 || name.equals("kof_ui_wrap_new") || name.equals("kof_ui_grid_new")
                 || name.equals("kof_ui_spacer_new") || name.equals("kof_ui_center_new")
                 || name.equals("kof_ui_align_new")
-                || name.equals("kof_ui_style_new") || name.equals("kof_ui_view_bind")
+                || name.equals("kof_ui_style_new") || name.equals("kof_ui_style_css")
+                || name.equals("kof_ui_view_bind")
                 || name.equals("kof_ui_window_set_title") || name.equals("kof_ui_window_title")
                 || name.equals("kof_ui_window_bind") || name.equals("kof_ui_window_show")
                 || name.equals("kof_ui_window_close") || name.equals("kof_ui_label_set_text")
@@ -215,7 +225,7 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
                 || name.startsWith("kof_ui_event_key") || name.startsWith("kof_ui_event_value")
                 || name.startsWith("kof_ui_event_x") || name.startsWith("kof_ui_event_y")
                 || name.startsWith("kof_ui_event_target") || name.startsWith("kof_ui_event_related_target")
-                || name.equals("kof_ui_store_new") || name.equals("kof_ui_store_get")
+                || name.equals("kof_ui_store_new") || name.equals("kof_ui_app_state") || name.equals("kof_ui_store_get")
                 || name.equals("kof_ui_store_set") || name.equals("kof_ui_store_subscribe")
                 || name.equals("kof_ui_store_unsubscribe") || name.equals("kof_ui_stores_live")
                 || name.equals("kof_ui_route_register") || name.equals("kof_ui_router_go1")
@@ -427,6 +437,7 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
         }
         String fn = JsTypeMapper.runtimeJsName(name);
         if (name.startsWith("kof_io_") || name.startsWith("kof_db_") || name.startsWith("kof_orm_")
+                || name.equals("kof_ffi") || name.equals("kof_ffi_void")
                 || name.equals("kof_read_line")
                 || name.equals("kof_read_file") || name.equals("kof_write_file")) {
             p.lc.registerIoRuntime(fn);
@@ -485,7 +496,8 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             }
         }
         if (name.equals("kof_await") || name.equals("kof_await_timeout")
-                || name.equals("kof_select_any")) {
+                || name.equals("kof_select_any")
+                || name.equals("kof_time_sleep")) { // §132/#83-JS cooperative sleep
             call = new JsIr.JsAwait(call);
         }
         if (name.equals("kof_poll") && kc.returnType() instanceof Type.PrimitiveType) {
@@ -497,5 +509,28 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             throw new StatementEnd(call);
         }
         stack.add(call);
+    }
+
+    // §239 (JS): String.format(String, Object...) — o lowering compartilhado
+    // (StringFormatCallLowerer) empacota os varargs num Object[] e emite um
+    // KofCall STATIC owner=java/lang/String. Sem ramo proprio caia no dispatch
+    // estatico generico do JsCallEmitter: jsClassName("java/lang/String") devolve
+    // null (nao ha java_lang_String no class map JS) -> JsMember(null) -> ICE
+    // COMP002 ("unknown JS expression: null"), familia do §235. Roteamos para o
+    // export `kofStringFormat` do runtime `io`, que delega ao host
+    // kof_platform.stringFormat -> java.lang.String.format (paridade byte-a-byte
+    // no runner GraalJS). Browser (sem kof_platform): o Proxy do kof_platform da
+    // erro honesto em runtime, mesmo degrade de kof.io/FFI/process (R6/R7), nunca
+    // um valor errado em silencio. args[0]=fmt, args[1]=Object[] (array JS).
+    boolean isStaticFormat(KofCall kc) {
+        return BuiltinTypes.isString(kc.ownerType()) && "format".equals(kc.methodName())
+                && kc.kind() == KofCallKind.STATIC && kc.parameterTypes().size() == 2
+                && kc.parameterTypes().get(1) instanceof Type.ArrayType;
+    }
+
+    void emitStaticFormat(List<Object> stack, List<JsIr.JsExpression> args) {
+        p.lc.registerIoRuntime("kofStringFormat");
+        stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofStringFormat"),
+                List.of(args.get(0), args.get(1))));
     }
 }

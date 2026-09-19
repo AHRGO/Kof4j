@@ -19,6 +19,19 @@ public final class TypeMetrics {
         return type instanceof Type.PrimitiveType pt && !"void".equals(pt.name());
     }
 
+    /**
+     * §295(b): `Nullable(primitivo)` GENUÍNO (excluindo void) — CRÚ, sem o
+     * peek de {@link #isPrimitiveType} que desembrulha o wrapper. Os gates de
+     * box ESCRITOR (VarDecl/assign/compound/increment) precisam dos dois:
+     * slot = isNullablePrimitive (referência física desde o Commit B) e valor
+     * = PrimitiveType cru (um valor já Nullable chega boxed — re-boxar é o
+     * NoSuchMethodError do §294-2a).
+     */
+    static boolean isNullablePrimitive(Type type) {
+        return type instanceof Type.NullableType nt
+                && nt.inner() instanceof Type.PrimitiveType pt && !Type.isVoid(pt);
+    }
+
     static boolean isCharType(Type type) {
         if (type instanceof Type.NullableType nt) return isCharType(nt.inner());
         return type instanceof Type.PrimitiveType pt
@@ -106,9 +119,14 @@ public final class TypeMetrics {
     }
 
     static boolean isDoubleWidth(Type type) {
-        // §125: Nullable(primitivo) apaga p/ o primitivo na SIGNATURA
-        // (toDescriptor/returnOpcode) — a categoria-2 também: `Long? f()`
-        // retorna long (2 slots) e descartar exige POP2 (SG-020/bug-79).
+        // D-NULL-INTENT (supersede §125 opção A, DECISIONS.md 15/09):
+        // Nullable(primitivo) agora é referência de verdade (boxed) — 1 slot,
+        // como qualquer objeto. `Long?`/`Double?` NÃO são categoria-2; só o
+        // primitivo NÃO-nullable (`Long`/`Double` cru) continua 2 slots.
+        if (type instanceof Type.NullableType nt && nt.inner() instanceof Type.PrimitiveType pt0
+                && !Type.isVoid(pt0)) {
+            return false;
+        }
         if (type instanceof Type.NullableType nt) return isDoubleWidth(nt.inner());
         if (type instanceof Type.PrimitiveType pt) {
             return "long".equals(pt.name()) || "Long".equals(pt.name())

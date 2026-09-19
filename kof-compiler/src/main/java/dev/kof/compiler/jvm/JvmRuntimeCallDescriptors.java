@@ -38,6 +38,8 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_ffi_i" -> "(Ljava/lang/String;Ljava/lang/String;I)I";
             case "kof_ffi_si" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I";
             case "kof_ffi_dd" -> "(Ljava/lang/String;Ljava/lang/String;D)D";
+            case "kof_ffi" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/Object;";
+            case "kof_ffi_void" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V";
             case "kof_now" -> "()J";
             case "kof_read_line" -> "()Ljava/lang/String;";
             case "kof_read_file" -> "(Ljava/lang/String;)Ljava/lang/String;";
@@ -56,8 +58,13 @@ public final class JvmRuntimeCallDescriptors {
                     "kof_io_path_extension", "kof_io_path_normalize", "kof_io_path_to_absolute"
                     -> "(Ljava/lang/String;)Ljava/lang/String;";
             case "kof_io_path_resolve" -> "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;";
+            case "kof_io_file_copy_to", "kof_io_file_move_to" -> "(Ljava/lang/String;Ljava/lang/String;)I";
+            case "kof_io_file_modified_time" -> "(Ljava/lang/String;)J";
+            case "kof_io_file_is_symlink" -> "(Ljava/lang/String;)I";
             case "kof_process_run" -> "(Ljava/lang/String;Ljava/util/List;)Ldev/kof/runtime/KofRuntime$ProcessResult;";
             case "kof_process_exit" -> "(I)V";
+            case "kof_shell_argv" -> "(Ljava/lang/String;Ljava/util/List;)Ljava/util/ArrayList;";
+            case "kof_shell_pipeline" -> "(Ljava/util/List;)Ldev/kof/runtime/KofRuntime$ProcessResult;";
             case "kof_process_spawn" -> "(Ljava/lang/String;Ljava/util/List;)Ljava/lang/Long;";
             case "kof_spawn_read_line" -> "(Ljava/lang/Long;)Ljava/lang/String;";
             case "kof_spawn_write" -> "(Ljava/lang/Long;Ljava/lang/String;)V";
@@ -100,6 +107,7 @@ public final class JvmRuntimeCallDescriptors {
                     "kof_ui_hr_remove" -> "(I)V";
             case "kof_ui_view_new" -> "(I)I";
             case "kof_ui_style_new" -> "(IIII)I";
+            case "kof_ui_style_css" -> "(Ljava/lang/String;)I";
             case "kof_ui_window_set_theme", "kof_ui_label_set_font_size", "kof_ui_label_set_bold",
                     "kof_ui_label_set_color" -> "(II)V";
             case "kof_ui_label_font_size", "kof_ui_label_bold", "kof_ui_label_color" -> "(I)I";
@@ -129,7 +137,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_ui_event_x", "kof_ui_event_y" -> "(I)I";
             case "kof_ui_emit" -> "(ILjava/lang/String;)V";
             case "kof_ui_event_stop" -> "(I)V";
-            case "kof_ui_store_new" -> "(I)I";
+            case "kof_ui_store_new", "kof_ui_app_state" -> "(I)I";
             case "kof_ui_store_get" -> "(I)I";
             case "kof_ui_store_set" -> "(II)V";
             case "kof_ui_store_subscribe", "kof_ui_store_unsubscribe" -> "(ILjava/lang/Object;)V";
@@ -155,6 +163,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_ui_font_new" -> "(Ljava/lang/String;I)I";
             case "kof_ui_font_new_bold" -> "(Ljava/lang/String;IZ)I";
              case "kof_ui_widget_set_font" -> "(II)V";
+             case "kof_ui_widget_set_style" -> "(II)V";
              case "kof_ui_widget_set_id", "kof_ui_widget_set_class" -> "(ILjava/lang/String;)V";
              case "kof_ui_widget_set_disabled" -> "(II)V";
              case "kof_ui_widget_set_flex_basis", "kof_ui_widget_set_max_width" -> "(II)V";
@@ -404,6 +413,12 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_random_double" -> "()D";
             case "kof_random_boolean" -> "()Z";
             case "kof_random_hex" -> "(I)Ljava/lang/String;";
+            // ── kof.rng (X8 fatia 1 — PRNG semeável, xorshift128) ─────────
+            case "kof_rng_seed" -> "(I)V";
+            case "kof_rng_int" -> "(I)I";
+            case "kof_rng_bool" -> "()Z";
+            case "kof_rng_double" -> "()D";
+            case "kof_rng_string" -> "(ILjava/lang/String;)Ljava/lang/String;";
             // ── kof.observability (G5) ────────────────────────────────
             case "kof_observability_health", "kof_observability_request_id", "kof_observability_correlation_id",
                     "kof_observability_trace_id", "kof_observability_span_id",

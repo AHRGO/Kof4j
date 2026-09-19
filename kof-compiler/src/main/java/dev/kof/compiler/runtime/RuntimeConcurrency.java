@@ -42,7 +42,22 @@ public final class RuntimeConcurrency {
                 call kof_cancel_slot_insert     # rax = entry ptr (flag=0)
                 movq 8(%rbx), %r12              # handle
                 movq %rax, 32(%r12)             # handle->cancelEntry (trampoline SEMPRE tem handle)
+                movq %rax, 40(%rsp)             # §286: cópia da entry NO FRAME — o delete
+                                                # lê daqui; handle->cancelEntry pode apontar
+                                                # p/ slot ALHEIO se o handle for reciclado
+                                                # entre done=1 e o nosso delete
                 movq %r12, 32(%rsp)             # frame->handle (o catch lê daqui)
+                # §286: aplica cancel pendente marcado por kof_cancel ANTES deste
+                # registro (worker recém-spawnado ainda não registrado sob carga).
+                # Dekker com kof_cancel: store(cancelEntry) → fence → load(pending).
+                mfence
+                movq 48(%r12), %rdx
+                testq %rdx, %rdx
+                jz .Lkof_spawn_no_pend
+                testq %rax, %rax                # tabela cheia → nada a marcar
+                jz .Lkof_spawn_no_pend
+                movq $1, 8(%rax)                # flag = 1 (pedido antigo vale agora)
+            .Lkof_spawn_no_pend:
                 # §129 (DECISIONS §2, opção B): handler POR WORKER. O chain é
                 # TLS (RuntimeGc), então um `throw` sem try no worker longjmpa
                 # AQUI (não no try da main) e marca o handle como excepcional;
@@ -61,6 +76,7 @@ public final class RuntimeConcurrency {
                 # término normal: desinstala o handler e publica o resultado
                 movq 24(%rsp), %rcx
                 movq %rcx, %fs:kof_exc_chain@tpoff
+                movq 40(%rsp), %rbx             # §286: entry do FRAME antes de desmontar
                 addq $48, %rsp
                 testq %r12, %r12
                 jz .Lkof_spawn_thr_done
@@ -74,14 +90,18 @@ public final class RuntimeConcurrency {
                 movq 32(%rsp), %r12
                 movq %rsi, 40(%r12)             # handle->exc
                 movl $1, 4(%r12)                # handle->done = 1
+                movq 40(%rsp), %rbx             # §286: entry do FRAME antes de desmontar
                 addq $48, %rsp
             .Lkof_spawn_thr_done:
-                # §117: remove a entry deste TID (tid=0) — slot volta a vazio
-                # sem tocar em worker alheio (o bug do `movb $0` por hash).
-                movq 32(%r12), %r12
-                testq %r12, %r12
+                # §117/§286: remove a entry deste TID (tid=0) — slot volta a vazio
+                # sem tocar em worker alheio. §286: a entry vem do FRAME do próprio
+                # worker (%rbx), não do handle: entre `done=1` publicado e este
+                # delete o main pode RECICLAR o handle p/ outro worker, e ler
+                # handle->cancelEntry apagaria o slot ALHEIO (stale flag=1 →
+                # `cancelled()` vazando 999 p/ o worker novo sob carga).
+                testq %rbx, %rbx
                 jz .Lkof_spawn_thr_nocl
-                movq $0, (%r12)
+                movq $0, (%rbx)
             .Lkof_spawn_thr_nocl:
                 xorl %eax, %eax
                 popq %r12
@@ -179,7 +199,7 @@ public final class RuntimeConcurrency {
                 subq $24, %rsp
                 movq %rdi, %r13
                 movl %esi, %r14d
-                movl $48, %edi                  # §117: 32=cancelEntry, 40=pad
+                movl $56, %edi                  # §117: 32=cancelEntry, 40=exc; §286: 48=pending
                 call kof_alloc
                 movq %rax, %rbx                 # handle
                 movl $2, 0(%rbx)
@@ -189,6 +209,7 @@ public final class RuntimeConcurrency {
                 movq $0, 24(%rbx)
                 movq $0, 32(%rbx)               # cancelEntry = 0
                 movq $0, 40(%rbx)
+                movq $0, 48(%rbx)               # §286: pending = 0
                 # bloco do trampolim
                 movl $16, %edi
                 call kof_alloc
@@ -412,14 +433,31 @@ public final class RuntimeConcurrency {
                 jz .Lkof_cancel_no
                 cmpl $2, 0(%rdi)
                 jne .Lkof_cancel_no
-                movq 8(%rdi), %rdi              # TID (pthread_create grava)
-                testq %rdi, %rdi
+                movq 8(%rdi), %rsi              # TID (pthread_create grava)
+                testq %rsi, %rsi
                 jz .Lkof_cancel_no              # nunca disparou
+                pushq %rbx                      # §286: handle vivo p/ o caminho pending
+                movq %rdi, %rbx
+                movq %rsi, %rdi
                 call kof_cancel_slot_find
                 testq %rax, %rax
-                jz .Lkof_cancel_no              # worker não registrado (ainda não rodou/terminou)
+                jnz .Lkof_cancel_hit
+                # §286: handle criado mas a trampoline AINDA NÃO registrou a entry
+                # (janela de agendamento sob carga → o cancel se perdia e o
+                # assert(cancel) do §117 falava). Marca pending no handle e
+                # re-checa a entry — Dekker com o `mfence` da trampoline: ou o
+                # cancel pega a entry recém-criada, ou o start aplica o pending.
+                movq $1, 48(%rbx)               # pending = 1
+                mfence
+                movq 8(%rbx), %rdi
+                call kof_cancel_slot_find
+                testq %rax, %rax
+                jz .Lkof_cancel_yes
+            .Lkof_cancel_hit:
                 movq $1, 8(%rax)                # flag = 1
-                movq $1, %rax
+            .Lkof_cancel_yes:
+                movl $1, %eax
+                popq %rbx
                 ret
             .Lkof_cancel_no:
                 xorl %eax, %eax
@@ -454,24 +492,26 @@ public final class RuntimeConcurrency {
 
             # selectAny(list): valor do primeiro handle pronto; senão
             # aguarda (polling 1ms) até um terminar -- paridade JVM anyOf.
-            # frame: 2 push + subq 16 -> rsp≡8 nos calls.
+            # frame: 3 push -> mesmos offsets de callee-saved do frame
+            # antigo. §252: size em r14
+            # (callee-saved); na slot -8(%rsp) o `call usleep` gravava o
+            # próprio endereço de retorno e o re-scan lia lixo como size.
             .globl kof_select_any
             .type kof_select_any, @function
             kof_select_any:
                 pushq %rbx                      # list
                 pushq %r12                      # index
-                subq $16, %rsp                  # -8(%rsp)=size
+                pushq %r14                      # size (mesma prof. do frame)
                 movq %rdi, %rbx
                 testq %rbx, %rbx
                 jz .Lkof_sel_no
                 call kof_list_size              # rsp≡8
                 testq %rax, %rax
                 jz .Lkof_sel_no
-                movq %rax, -8(%rsp)            # size
+                movq %rax, %r14                 # size
                 xorl %r12d, %r12d
             .Lkof_sel_scan:
-                movq -8(%rsp), %rax             # rax = size
-                cmpq %rax, %r12                 # r12 - rax = index - size
+                cmpq %r14, %r12                 # r12 - r14 = index - size
                 jge .Lkof_sel_wait              # index >= size -> aguarda e re-escaneia
                 movq %rbx, %rdi
                 movl %r12d, %esi
@@ -487,7 +527,7 @@ public final class RuntimeConcurrency {
                 testq %rcx, %rcx
                 jnz .Lkof_sel_rethrow
                 movq 16(%rax), %rax             # pronto: devolve resultado
-                addq $16, %rsp
+                popq %r14
                 popq %r12
                 popq %rbx
                 ret
@@ -504,7 +544,7 @@ public final class RuntimeConcurrency {
                 jmp .Lkof_sel_scan
             .Lkof_sel_no:
                 xorl %eax, %eax
-                addq $16, %rsp
+                popq %r14
                 popq %r12
                 popq %rbx
                 ret

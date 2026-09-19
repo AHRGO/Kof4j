@@ -93,9 +93,10 @@ void handleCall(MethodCtx ctx, List<Object> stack,
             } else if (!kc.parameterTypes().isEmpty()
                     && kc.parameterTypes().get(0) instanceof Type.PrimitiveType pt
                     && "bool".equals(Type.canonicalPrimitiveName(pt.name()))) {
-                // Boolean.valueOf(Z) — format 0/1 as true/false
-                stack.add(new JsIr.JsConditional(args.get(0),
-                        new JsIr.JsIdentifier("true"), new JsIr.JsIdentifier("false")));
+                // Boolean.valueOf(Z) — format 0/1 as true/false, null-safe
+                // (#278/D-NULL-INTENT — ver kofBoolValueOf em JsRuntimeCore).
+                p.lc.registerRuntime("kofBoolValueOf");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofBoolValueOf"), List.of(args.get(0))));
             } else {
                 // boxed valueOf — JS values are already boxed; identity
                 stack.add(args.get(0));
@@ -133,6 +134,8 @@ void handleCall(MethodCtx ctx, List<Object> stack,
             stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofRecordEq"), args));
             return;
         }
+        // §239 (JS): String.format via host bridge — dispatch no p.rt (JsRuntimeOps)
+        if (p.rt.isStaticFormat(kc)) { p.rt.emitStaticFormat(stack, args); return; }
         if (isStringOp(kc)) {
             handleStringOp(ctx, stack, preambleExprs, kc, receiver, args);
             return;

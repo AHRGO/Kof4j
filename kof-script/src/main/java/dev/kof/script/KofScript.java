@@ -126,11 +126,23 @@ public final class KofScript {
             java.util.LinkedHashMap<String,String> typeMap = new java.util.LinkedHashMap<>();
             java.util.LinkedHashMap<String,String> initMap = new java.util.LinkedHashMap<>();
             for (int i = 0; i < gNames.size(); i++) { typeMap.put(gNames.get(i), gTypes.get(i)); initMap.put(gNames.get(i), gInits.get(i)); }
+            java.util.LinkedHashMap<String,String> resolved = new java.util.LinkedHashMap<>();
+            for (String n : typeMap.keySet()) {
+                String ty = typeMap.get(n);
+                resolved.put(n, ty != null ? ty : ScriptGlobalTypes.infer(initMap.get(n)));
+            }
+            // 2ª passada: `var d = items.map(...)` — receiver é outro global;
+            // o tipo herdado do receiver (null = mantém inferência própria).
+            for (int pass = 0; pass < 2; pass++) {
+                for (String n : resolved.keySet()) {
+                    if (typeMap.get(n) != null) continue;
+                    String ct = ScriptGlobalTypes.chain(initMap.get(n), resolved);
+                    if (ct != null) resolved.put(n, ct);
+                }
+            }
             prog.append("class KofScriptGlobals {\n");
             for (String n : initMap.keySet()) {
-                String ty = typeMap.get(n);
-                String init = initMap.get(n);
-                prog.append("  static ").append(ty != null ? ty : inferKofType(init)).append(" ").append(n).append(" = ").append(init).append("\n");
+                prog.append("  static ").append(resolved.get(n)).append(" ").append(n).append(" = ").append(initMap.get(n)).append("\n");
             }
             prog.append("}\n");
             String ds = qualifyGlobals(decls.toString(), initMap.keySet());
@@ -228,20 +240,6 @@ public final class KofScript {
         if (params.matches(".*[0-9\"'].*")) return false;
         String rest = t.substring(close + 1).strip();
         return rest.startsWith("{") || rest.startsWith("=") || rest.startsWith(":");
-    }
-
-    private static String inferKofType(String init) {
-        String t = init.strip();
-        // string literal
-        if ((t.startsWith("\"") && t.endsWith("\"")) || (t.startsWith("'") && t.endsWith("'"))) return "String";
-        if ("true".equals(t) || "false".equals(t)) return "Bool";
-        if (t.matches("-?\\d+")) return "Int";
-        if (t.matches("-?\\d*\\.\\d+([eE][+-]?\\d+)?")) return "Double";
-        if (t.startsWith("0x") || t.startsWith("0X")) return "Int";
-        // heuristic: contains quotes => String concatenation
-        if (t.contains("\"") || t.contains("'")) return "String";
-        // fallback to Int (most common) — explicit type in source is preferred
-        return "Int";
     }
 
 

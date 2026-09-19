@@ -399,6 +399,9 @@ public final class NativeRiscvAsmRtB4 {
             kof_obs_hist_count: .word 0
             kof_obs_hist_sum: .word 0
             .align 3
+            .Lrkobs_span_handles: .space 1024
+            .Lrkobs_span_len:     .space 8
+            .align 3
 
             .section .rodata
             .Lnewline: .asciz "\\n"
@@ -416,9 +419,18 @@ public final class NativeRiscvAsmRtB4 {
             .Lstr_open_json: .asciz "["
             .Lstr_close_json: .asciz "]"
             .Lstr_comma_json: .asciz ","
-            .Lstr_trace: .asciz "00000000000000000000000000000000"
-            .Lstr_span: .asciz "0000000000000000"
-            .Lstr_span_handle: .asciz "000000000000000000000000000000000000000000000000"
+            .Lrkobs_hexchars: .asciz "0123456789abcdef"
+            .Lrobs_span_1: .asciz "{\\"traceId\\":\\""
+            .Lrobs_span_2: .asciz "\\",\\"spanId\\":\\""
+            .Lrobs_span_4: .asciz "}"
+            .Lrobs_pe_1: .asciz "\\",\\"parentSpanId\\":\\""
+            .Lrobs_pe_2: .asciz "\\",\\"name\\":\\""
+            .Lrobs_pe_3: .asciz "\\",\\"startMicros\\":"
+            .Lrobs_pe_4: .asciz ",\\"endMicros\\":"
+            .Lrobs_pe_5: .asciz ",\\"durationMicros\\\":"
+            .Lrobs_esc_q: .asciz "\\\\\\\""
+            .Lrobs_esc_b: .asciz "\\\\\\\\"
+            .Lrobs_esc_e: .asciz ""
             .Lstr_mq: .asciz "mq-0"
             .Lstr_mq_prefix: .asciz "mq-"
             .Lstr_obs_type: .asciz "# TYPE "

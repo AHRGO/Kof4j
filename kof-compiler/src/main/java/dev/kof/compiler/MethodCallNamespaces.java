@@ -150,6 +150,14 @@ final class MethodCallNamespaces {
             if (procCall != null) return procCall.returnType();
             return Type.UnknownType.UNKNOWN;
         }
+        if (mc.receiver() instanceof IdentifierExpr rid && "shell".equals(rid.name())
+                && driver.findLocalVar(rid.name(), locals) == null) {
+            List<Type> argTypes = new ArrayList<>();
+            for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
+            KofShell.ShellCall shellCall = KofShell.staticCall(mc.methodName(), argTypes);
+            if (shellCall != null) return shellCall.returnType();
+            return Type.UnknownType.UNKNOWN;
+        }
         if (mc.receiver() instanceof IdentifierExpr rid && KofConfig.isConfigNamespace(rid.name())) {
             List<Type> argTypes = new ArrayList<>();
             for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));

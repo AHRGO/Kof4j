@@ -23,6 +23,10 @@ public final class KofTetris {
 
     record TetrisCall(String function, Type returnType, List<Type> parameterTypes) {}
 
+/** X10 fatia 3: nomes aceitos pelo dispatch real (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case-literals da fonte abaixo. */
+    static List<String> functions() { return List.of("run"); }
+
     /**
      * Resolves a call in the tetris namespace. Returns null when the call
      * is not part of the API (the analyzer reports an unknown method).

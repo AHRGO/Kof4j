@@ -234,19 +234,19 @@ public final class KofJsOrmBridge {
         return rows.isEmpty() ? null : rows.get(0);
     }
 
-    public static List<String> all(String id, String table, String schemaStr) throws Exception {
+    public static List<String> all(String id, String table, @SuppressWarnings("unused") String schemaStr) throws Exception {
         String dialect = dialect(id);
         return queryRows(id, "SELECT * FROM " + q(table, dialect));
     }
 
     public static List<String> where(String id, String field, Object value, String table,
-            String schemaStr) throws Exception {
+            @SuppressWarnings("unused") String schemaStr) throws Exception {
         String dialect = dialect(id);
         return queryRows(id, "SELECT * FROM " + q(table, dialect) + " WHERE "
                 + q(field, dialect) + " = ?", value);
     }
 
-    public static long count(String id, String table, String schemaStr) throws Exception {
+    public static long count(String id, String table, @SuppressWarnings("unused") String schemaStr) throws Exception {
         String dialect = dialect(id);
         try (java.sql.PreparedStatement ps = KofJsDbBridge.conn(id).prepareStatement(
                 "SELECT COUNT(*) FROM " + q(table, dialect))) {
@@ -257,7 +257,7 @@ public final class KofJsOrmBridge {
     }
 
     public static long countWhere(String id, String field, Object value, String table,
-            String schemaStr) throws Exception {
+            @SuppressWarnings("unused") String schemaStr) throws Exception {
         String dialect = dialect(id);
         try (java.sql.PreparedStatement ps = KofJsDbBridge.conn(id).prepareStatement(
                 "SELECT COUNT(*) FROM " + q(table, dialect) + " WHERE " + q(field, dialect) + " = ?")) {
@@ -276,13 +276,13 @@ public final class KofJsOrmBridge {
                 "DELETE FROM " + q(table, dialect) + " WHERE " + q(pk, dialect) + " = ?", key) >= 0;
     }
 
-    public static boolean deleteAll(String id, String table, String schemaStr) throws Exception {
+    public static boolean deleteAll(String id, String table, @SuppressWarnings("unused") String schemaStr) throws Exception {
         String dialect = dialect(id);
         return KofJsDbBridge.execute(id, "DELETE FROM " + q(table, dialect)) >= 0;
     }
 
     public static List<String> whereOp(String id, String field, String op, Object value,
-            String table, String schemaStr) throws Exception {
+            String table, @SuppressWarnings("unused") String schemaStr) throws Exception {
         String dialect = dialect(id);
         String sqlOp = switch (op) {
             case ">", "<", ">=", "<=", "!=", "LIKE" -> op;
@@ -294,7 +294,7 @@ public final class KofJsOrmBridge {
     }
 
     public static List<String> page(String id, Object limit, Object offset, String table,
-            String schemaStr) throws Exception {
+            @SuppressWarnings("unused") String schemaStr) throws Exception {
         String dialect = dialect(id);
         int lim = ((Number) limit).intValue();
         int off = ((Number) offset).intValue();

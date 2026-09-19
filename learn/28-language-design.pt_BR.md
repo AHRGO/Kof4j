@@ -32,7 +32,7 @@ convenção. O mecanismo nunca sobe para o código do usuário:
 | cor | `Palette.red` | Int 32-bit, canais por bitwise |
 | nullable | `String?` | verificação em compile-time |
 | pattern | `case String s` / `Point(x,y)` | instanceof+checkcast / field loads por backend |
-| script | `let x = 5` no topo | `KofScriptGlobals` (repl --watch) |
+| script | `var x = 5` no topo | `KofScriptGlobals` (repl --watch) |
 
 A intenção compila em todos os alvos; o alvo que não consegue realizá-la
 reporta em compile-time com código de gap (`HTTP002`, `WEB002`) — nunca
@@ -64,7 +64,7 @@ Isso é uma decisão de design fundamental. A mesma fonte Kof pode gerar (0.4.0-
 - Bytecode JVM para aplicações que precisam do ecossistema Java
 - Executáveis nativos x86-64 / riscv64 (`native.risc`) / aarch64 (`native.arm`) para ferramentas CLI e sistemas (Target separation)
 - ES Modules para o navegador/webview via KofJS (ver [capítulo 37](37-kofjs.md))
-- Execução direta via KofScript (`let`→`KofScriptGlobals`) e C via KofC (`kof c` nativo-only)
+- Execução direta via KofScript (`var`/`val`→`KofScriptGlobals`) e C via KofC (`kof c` nativo-only)
 
 ## Decisões de design
 

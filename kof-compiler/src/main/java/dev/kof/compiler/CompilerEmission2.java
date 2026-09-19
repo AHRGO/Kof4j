@@ -71,6 +71,18 @@ public final class CompilerEmission2 {
                     && !ExpressionTyper.boxesOwnBranches(driver, args.get(i), locals)) {
                 driver.emitErasureBox(ops, argType);
             }
+            // D-NULL-INTENT (#278): formal Nullable(primitivo) — o
+            // parâmetro/campo do record/construtor é referência de verdade
+            // agora (JvmTypeMapper.toDescriptor); um arg primitivo CRU (ex.
+            // `Pair(1, 2)` com `Pair(Int? x, Int? y)`) precisa boxear para
+            // casar o descritor do `<init>` (invokespecial esperava
+            // Integer, achava int — VerifyError). `argType` já
+            // Nullable(mesmo inner) (ex. repassando outro `Int?`) já chega
+            // boxed — não reboxa.
+            if (formal instanceof Type.NullableType formalNt && formalNt.inner() instanceof Type.PrimitiveType
+                    && argType instanceof Type.PrimitiveType) {
+                TypeEmitter.boxPrimitive(ops, formal);
+            }
             if (formal != null && BuiltinTypes.isString(formal)
                     && argType instanceof Type.PrimitiveType pt
                     && "char".equals(Type.canonicalPrimitiveName(pt.name()))) {
@@ -109,6 +121,23 @@ public final class CompilerEmission2 {
                     return localIdx;
                 }
                 ops.add(new KofLoadLocal(var.type(), var.index()));
+                // §295(b): `v++`/`++v` sobre slot Nullable(primitivo) — o
+                // DUP fica na REFERÊNCIA, a aritmética no INNER (unbox →
+                // bin → box) e o valor da expressão mantém a forma boxed
+                // (postfix=velho, prefix=novo). Caminho só-JVM (os helpers
+                // kof_box/unbox são auto-gated, mas o binário no inner só
+                // vale onde o slot é referência física).
+                if (driver.needsErasureBoxing() && TypeMetrics.isNullablePrimitive(var.type())) {
+                    Type incIn = ((Type.NullableType) var.type()).inner();
+                    if (!prefix) ops.add(new KofDup());
+                    driver.emitErasureUnbox(ops, incIn);
+                    CompilerEmissionHelpers.emitIncrementOne(ops, incIn);
+                    ops.add(new KofBinary(op, incIn));
+                    driver.emitErasureBox(ops, incIn);
+                    if (prefix) ops.add(new KofDup());
+                    ops.add(new KofStoreLocal(var.type(), var.index()));
+                    return localIdx;
+                }
                 if (!prefix) ops.add(new KofDup());
                 CompilerEmissionHelpers.emitIncrementOne(ops, var.type());
                 ops.add(new KofBinary(op, var.type()));

@@ -29,7 +29,7 @@ We do not want to accumulate features until it becomes another Java.
 | File | Lines (08/31) | Function |
 |---------|--------|--------|
 | Lexer.java | ~480 | Lexical analysis (`case` pattern matching + `String?`) |
-| Parser.java | ~1,720 | Syntactic analysis (pattern matching, `String?`, KofScript `let`, trailing lambda) |
+| Parser.java | ~1,720 | Syntactic analysis (pattern matching, `String?`, KofScript top-level `var`/`val`, trailing lambda) |
 | SemanticAnalyzer.java | ~1,870 | Semantic analysis (pattern matching, `String?`, `CompilerDriver.java:243` import fix) |
 | CompilerDriver.java | ~7,520 | IR lowering (free-list alloc, `substituteTypeVariable` `Box<T>`, `KofScriptGlobals`, stdlib dispatch) |
 | JvmBackend.java | ~1,320 | JVM backend (V21, LineNumberTable, web ws/sse, `Java HttpClient` for JS) |
@@ -37,7 +37,7 @@ We do not want to accumulate features until it becomes another Java.
 | NativeRuntime.java | ~15,340 | Native runtime — most of it is embedded assembly (free-list `kof_free_head`, spawn pthread 08/31, FP XMM, JSON objects/arrays, config/log/security/cache asm, `kof_db_mysql_scramble`) |
 | JsBackend.java | ~5,280 | JS backend (GraalJS, CORE_RUNTIME DOM/UI, `kof.http` interop) |
 | KofCCompiler + Lexer/Parser/AST/Emitter | ~710 | C subset (`kof c`) → ELF x86_64 |
-| KofScript.java | ~610 | KofScript (`let` → `KofScriptGlobals`, REPL) |
+| KofScript.java | ~610 | KofScript (`var`/`val` → `KofScriptGlobals`, REPL) |
 | IRNodes.java | ~250 | Intermediate representation (+ KofDebugInfo) |
 | Type.java | ~140 | Type system (`Type?` nullable) |
 | SymbolTable.java | ~210 | Symbol table |
@@ -85,7 +85,7 @@ We do not want to accumulate features until it becomes another Java.
 
 ### In the Compiler
 
-1. **Parser**: 1,720 lines — grew with pattern matching, trailing lambda, KofScript `let`
+1. **Parser**: 1,720 lines — grew with pattern matching, trailing lambda, KofScript top-level `var`/`val`
 2. **SemanticAnalyzer**: 1,874 lines — reasonable for semantic analysis (includes `supportedOn`/gap diagnostics)
 3. **CompilerDriver**: 7,521 lines — lowering + dispatch of the entire stdlib; priority candidate for helper extraction
 4. **NativeBackend**: 1,803 lines — complex but necessary (x86_64 + toolchains)

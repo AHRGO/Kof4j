@@ -31,6 +31,10 @@ public final class KofMath {
 
     record MathCall(String function, Type returnType, List<Type> parameterTypes) {}
 
+
+    /** X10 fatia 1: nomes aceitos pelo staticMethod (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case literals do switch(name) abaixo. */
+    static List<String> functions() { return List.of("abs", "sign", "clamp", "min", "max", "isEven", "sqrt", "lerp", "percentage", "isInteger", "roundTo", "pow", "parseInt", "parseLong", "parseDouble", "parseIntOrDefault", "parseLongOrDefault", "parseDoubleOrDefault"); }
     static MathCall staticMethod(String namespace, String name, List<Type> argTypes) {
         if (!"math".equals(namespace)) return null;
         int argc = argTypes.size();

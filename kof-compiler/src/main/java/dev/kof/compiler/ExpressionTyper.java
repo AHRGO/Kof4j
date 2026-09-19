@@ -208,6 +208,10 @@ public final class ExpressionTyper {
                         && KofUi.paletteColor(fa.fieldName()) != null) {
                     yield KofUi.COLOR;
                 }
+                if (fa.receiver() instanceof IdentifierExpr tid && KofUiTokens.isTokenNamespace(tid.name())
+                        && KofUiTokens.tokenValue(tid.name(), fa.fieldName()) != null) {
+                    yield Type.PrimitiveType.INT;
+                }
                 if (BuiltinTypes.isList(recvType) && ("size".equals(fa.fieldName()) || "length".equals(fa.fieldName()))) {
                     yield Type.PrimitiveType.INT;
                 }
@@ -371,7 +375,14 @@ public final class ExpressionTyper {
 
     /** Boxa o ramo se primitivo (p/ SEU boxed; JVM-only via emitErasureBox). */
     static void boxPrimitiveBranch(CompilerDriver driver, List<KofOperation> ops, Type branchT) {
-        if (TypeMetrics.isPrimitiveType(branchT)) driver.emitErasureBox(ops, branchT);
+        // D-NULL-INTENT: Nullable(primitivo) já É boxed em TODO target
+        // (slot de `Int?` físico = Integer após #438) — boxar de novo
+        // emitia Object.valueOf(Integer) (NoSuchMethodError, §294-2a).
+        // isPrimitiveType olha DENTRO do Nullable, então o guard precisa
+        // do teste cru: só primitivo NÃO-nullable boxa aqui.
+        if (branchT instanceof Type.PrimitiveType) {
+            driver.emitErasureBox(ops, branchT);
+        }
     }
 
     /**

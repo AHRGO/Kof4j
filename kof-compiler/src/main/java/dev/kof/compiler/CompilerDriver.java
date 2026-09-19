@@ -178,10 +178,6 @@ Target target = Target.JVM;
 
 
 
-    /** Cache de interfaces sintéticas de função (uma por assinatura). */
-    final java.util.Map<String, Type.ClassType> functionInterfaces = new java.util.HashMap<>();
-    final java.util.IdentityHashMap<LambdaExpr, String> lambdaClassNames = new java.util.IdentityHashMap<>();
-
     /**
      * Garante um método-ponte na classe DONA da lambda:
      *   kof_super$metodo(...) { super.metodo(...); }

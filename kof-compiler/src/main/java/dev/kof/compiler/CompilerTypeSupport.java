@@ -25,6 +25,19 @@ public final class CompilerTypeSupport {
                 if (sameLambdaSignature(driver, mc, locals, ft)) {
                     return new Type.FunctionType(ft.parameterTypes(), ft.returnType());
                 }
+            } else if (first instanceof Type.ClassType) {
+                // #360: espelho do BuiltinCallTyper — a lista heterogênea por
+                // subtipes relaciona-se ao ancestral comum (checkcast sai p/
+                // ele); sem ancestral comum (ou com primitivo no meio) o
+                // first-wins de hoje fica intacto (r1).
+                Type.ClassType elem = (Type.ClassType) first;
+                for (int i = 1; i < mc.arguments().size(); i++) {
+                    Type t = ExpressionTyper.inferExprType(driver, mc.arguments().get(i), locals);
+                    if (!(t instanceof Type.ClassType tc)) continue;
+                    elem = (Type.ClassType) HierarchyResolver.widenToCommonSupertype(
+                            driver.semanticAnalyzer, elem, tc);
+                }
+                return elem;
             }
             return first;
         }

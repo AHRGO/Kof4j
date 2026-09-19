@@ -171,7 +171,7 @@ Pontos centrais:
 kof build app.kf --target android --output app-android \
     --classpath $ANDROID_HOME/platforms/android-34/android.jar
 
-# ou direto pro APK (standalone, sem Maven; precisa de build-tools 34):
+# ou direto pro APK (standalone, sem Maven; precisa de build-tools >= 35 p/ classes Java 21):
 kof build app.kf --target android --output app-android --apk \
     --classpath $ANDROID_HOME/platforms/android-34/android.jar
 ```
@@ -193,7 +193,7 @@ vetorial (`res/drawable/ic_launcher_kof.xml`) — nenhum binário gerado.
 - ✅ **permissões declarativas**: `@Permissions([...])` numa classe Kof vira
   `<uses-permission>` no manifesto (`detectPermissions`);
 - ✅ **modo standalone sem Maven**: `kof build --target android --apk` chama
-  `aapt2 → d8 → zip → zipalign → apksigner` direto do CLI (build-tools 34 +
+  `aapt2 → d8 → zip → zipalign → apksigner` direto do CLI (build-tools >= 35 +
   `ANDROID_HOME`). Sem o SDK (`ANDROID_HOME` ausente, sem `aapt2`), a flag falha
   com **exit 1** e mensagem honesta — nunca exit 0 sem APK (R6); o projeto ainda
   é gerado, então `mvn verify` segue como alternativa;
@@ -262,6 +262,7 @@ alvos; o alvo que não consegue realizá-la diz isso na hora, com código.**
 | `AND002` | `web.app()` / `kof.web` (servidor embutido) | ✅ **imposto em compile-time (17/09)** tanto no `kof build` quanto no `kof check --target android` (18/09): app mobile não escuta porta — o alvo recusa com `AND002` e aponta o interop, nunca emite código de servidor que não roda (R6) |
 | `AND003` | reflexão sobre classes Kof via interop | *caveat, não gate de compile-time*: desugaring/R8 pode remover símbolos; a linguagem não tem superfície de reflexão própria, então não há o que o compilador detectar |
 | `AND004` | android.jar ausente no ExternalClasspath | host Activity não incluída (warning) |
+| `DB001` / `SECN00x` / `GPU001` | `kof.db` / `kof.security` / `kof.gpu` | 🟡 medido 17/09: embora o Android reuse o `JvmBackend`, vários gates de `supportedOn` excluem `ANDROID` (diferente do `KofScheduler`, que o inclui) — `db.connect` → `DB001`, `passwords.hash` → `SECN001`, `crypto.sha512` → `SECN003`, `jwt.create` → `SECN004`, chacha → `SECN002`, `gpu.available()` → `GPU001`. Se é intencional (ART sem JDBC/JCA) ou over-gating é decisão da lane do compilador — `known-bugs.md` §278 |
 | `SAM001` | aridade da lambda ≠ método SAM | interface externa exige N args |
 | `SUP001` | `super.metodo()` no Native | já coberto; ANDROID reusa o caminho JVM |
 

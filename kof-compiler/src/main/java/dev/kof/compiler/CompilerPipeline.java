@@ -233,7 +233,7 @@ public final class CompilerPipeline {
                         String lib = ext.library() != null ? " in " + ext.library() : "";
                         String code = driver.target == Target.JS ? "FFI002" : "FFI001";
                         String msg = driver.target == Target.JS
-                                ? "extern '" + ext.name() + "'" + lib + ": FFI not available on the JS target (FFI002)"
+                                ? "extern '" + ext.name() + "'" + lib + ": FFI signature not bound on the JS target yet (FFI002)"
                                 : "extern '" + ext.name() + "'" + lib + ": FFI binding not implemented on the "
                                         + driver.target + " target yet (FFI001)";
                         diagnostics.error(sp != null ? sp.file() : "", sp != null ? sp.line() : 0,
@@ -249,7 +249,8 @@ public final class CompilerPipeline {
                     AccessFlags.PUBLIC | AccessFlags.SUPER, List.of(), topLevelFunctions, List.of(), null, 0));
         }
         classes.addAll(driver.syntheticClasses);
-        return new IRModule(moduleName, classes, imports, driver.currentSourceName);
+        return new IRModule(moduleName, classes, imports, driver.currentSourceName,
+                driver.currentSourceContent);
     }
 
 
@@ -383,9 +384,10 @@ public final class CompilerPipeline {
             throws IOException {
         driver.currentSourceName = sources.get(0).getFileName() != null
                 ? sources.get(0).getFileName().toString() : null;
+        driver.currentSourceContent = Files.readString(sources.get(0));
         java.util.List<CompilationUnitNode> parsedUnits = new ArrayList<>();
         for (Path src : sources) {
-            String code = Files.readString(src);
+            String code = src == sources.get(0) ? driver.currentSourceContent : Files.readString(src);
             String fileName = src.getFileName().toString();
             Lexer lexer = new Lexer(code, fileName, diagnostics);
             List<Token> tokens = lexer.tokenize();
@@ -445,12 +447,17 @@ public final class CompilerPipeline {
 
     // ── FFI (TIER 2.1.4) — binding suportado por target ──
     static boolean isExternBound(CompilerDriver driver, ExternalFunctionNode ext) {
-        if (ext.parameters().size() != 1) return false;
-        String p = ext.parameters().get(0).type();
-        String r = ext.returnType();
-        if (driver.target == Target.JVM) {
-            return (isIntType(r) && (isIntType(p) || isStringType(p)))
-                    || (isDoubleType(r) && isDoubleType(p));
+        // JVM e JS (runner) compartilham a MESMA ABI escalar + callbacks (3.4-C3): o
+        // KofJS roda no host GraalJS/node, que É uma JVM com java.lang.foreign (bridge
+        // `KofJsFfiBridge` idêntico ao `kof_ffi` do target JVM; o browser não tem host e
+        // degrada em runtime como o resto do kof_platform, R7). Android intocado (§278).
+        if (driver.target == Target.JVM || driver.target == Target.JS) {
+            if (FfiSignature.returnChar(ext.returnType()) == null) return false;
+            for (var param : ext.parameters()) {
+                if (FfiSignature.paramChar(param.type()) != null) continue;
+                if (FfiSignature.callbackDescriptor(param.type()) == null) return false;
+            }
+            return true;
         }
         // NATIVE: dlopen/dlsym segfaulta no binário nativo (glibc exige TLS
         // que o _start cru não inicializa) — bug registrado (known-bugs);

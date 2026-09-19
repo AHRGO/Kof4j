@@ -33,6 +33,10 @@ public final class KofObservability {
 
     record ObservabilityCall(String function, Type returnType, List<Type> parameterTypes) {}
 
+/** X10 fatia 3: nomes aceitos pelo dispatch real (catálogo p/ LSP).
+     *  GUARDA: StdCatalogTest exige == case-literals da fonte abaixo. */
+    static List<String> functions() { return List.of("health", "readiness", "liveness", "counter", "increment", "gauge", "histogram", "metrics", "requestId", "correlationId", "traceId", "spanId", "spanStart", "spanEnd", "exportSpans"); }
+
     static ObservabilityCall staticMethod(String namespace, String name, List<Type> argTypes) {
         if (!"observability".equals(namespace)) return null;
         int argc = argTypes.size();

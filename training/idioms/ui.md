@@ -384,3 +384,88 @@ state (R3). `target()` returns the **id** of the node that originated the event
 (fallback to the lowercase `tagName` when the node has no `setId`; `""` outside
 the browser). `relatedTarget()` likewise for the related node (focus/mouse).
 Works on any DOM widget via `.on(type, handler)`.
+
+## Declarative style (CSS-like string)
+
+**BAD — manual per-property setters, Java-like ceremony:**
+```kof
+// ❌ NO — one call per property, and only View had a style
+var v = View(Style(Palette.white, Palette.black, 8, 4))
+```
+
+**GOOD — one idiomatic CSS string, parsed and validated in the compiler:**
+```kof
+// ✅ IDIOMATIC — parse/validate at compile time (SEM076/076/077, never silent)
+var card = Style("background: #ffffff; padding: 8; border-radius: 4")
+var v = View(card)
+var l = Label("titulo")
+l.setStyle(card)                       // any DOM widget, not only View
+```
+
+**Why:** the compiler owns the parse (D-UI-STYLE/UI007): hex/name/`Palette`
+colors, bare Int = px, `px`/`%`/`em`/`rem`, and a typed whitelist — an unknown
+property is `SEM076`, a malformed declaration `SEM077`, an invalid value
+`SEM078`. Never a silent fallback to `node.style` (R6). Real in KofJS;
+documented no-op on JVM/Native/Script, like the 4-Int `Style`.
+
+## Design-system tokens (Spacing/Radius/Border/Elevation/Typography)
+
+**BAD — hard-coded magic numbers (the design intent is unnamed):**
+```kof
+// ❌ NO — 16 and 4 are literals; nobody knows what they mean
+var card = Style("background: #ffffff; padding: 16; border-radius: 4")
+l.setFontSize(20)
+```
+
+**GOOD — name the design intent with the token scales (Fase 10, D-UI-TOKENS):**
+```kof
+// ✅ IDIOMATIC — Spacing/Radius/Border/Elevation/Typography.<name> = Int px
+var card = Style("background: #ffffff; padding: 16; border-radius: 4")  // literal still required by Style
+l.setFontSize(Typography.lg)        // 20
+var pad = Spacing.md                 // 16
+var rad = Radius.md                  // 4
+```
+
+**Why:** tokens are compile-time constants (Int px — D-UI-STYLE Q2), folded
+by the same idiom as `Palette`; because the fold is in the shared frontend,
+all four targets carry the same value. An unknown member (`Spacing.huge`)
+or a method call on a namespace (`Spacing.of(4)`) is `SEM079` (R6 — never a
+silent 0). Scales (8px grid): `Spacing` xs/sm/md/lg/xl = 4/8/16/24/32 ·
+`Radius` none/sm/md/lg/full = 0/2/4/8/9999 · `Border` hairline/thin/medium/
+thick = 1/2/4/8 · `Elevation` none/sm/md/lg/xl = 0/1/2/3/4 · `Typography`
+xs/sm/md/lg/xl/hero = 12/14/16/20/24/32.
+
+## Application state without prop-drilling (Fase 8)
+
+**BAD (prop-drilling):**
+
+```kof
+main() {
+    var theme = Store(0)
+    buildHeader(theme)              // thread the handle down...
+}
+Header buildHeader(Store theme) {   // ...through every layer
+    return buildLogo(theme)
+}
+```
+
+**PREFERRED:**
+
+```kof
+main() {
+    AppState(0).set(1)              // root store: one per application
+}
+Label buildLogo() {
+    var l = Label("")
+    AppState(0).subscribe((v: Int) -> { l.text = "mode " + v })   // reach it directly
+    return l
+}
+```
+
+**Why:** `AppState(initial)` is the application-scoped root store —
+create-or-get singleton over the `Store` machinery (`D-UI-APPSTATE`): the
+first call creates with `initial`, later calls return the same handle.
+Components read it where they need it instead of carrying handles through
+layers. Methods are exactly the Store's; `unsubscribe` is real since §279
+(manual cleanup today — auto-attribution to component lifecycle is rule 6,
+undecided). The observable lives in KofJS; JVM/Native are documented no-ops.

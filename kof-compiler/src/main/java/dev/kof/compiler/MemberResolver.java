@@ -199,10 +199,15 @@ public final class MemberResolver {
         if (declType == null) return false;
         String t = declType.trim();
         if (t.isEmpty() || "var".equals(t) || "val".equals(t) || "void".equals(t)) return false;
-        if (t.contains(" -> ")) {
-            int rp = t.indexOf(')');
+        // #374: o arrow só vale quando é do TOPO da string. Um ` -> ` aninhado
+        // dentro de <...> (List<(Int) -> Int>) NÃO é o conectivo deste tipo —
+        // antes caía aqui, o "retorno" virava `Int>` e o SEM011 acusava o tipo
+        // inteiro (face do parâmetro/campo; a local usava outro caminho e vivia).
+        int topArrow = topLevelFnArrow(t);
+        if (topArrow >= 0) {
+            int rp = topArrow - 1;
             String ps = t.startsWith("(") && rp > 0 ? t.substring(1, rp) : "";
-            String ret = t.substring(t.indexOf(" -> ") + 4).trim();
+            String ret = t.substring(topArrow + 4).trim();
             if (!ps.isEmpty()) {
                 for (String p : splitTopLevelTypes(ps)) {
                     if (declaredTypeUnresolved(sa, p, typeParams)) return true;
@@ -224,6 +229,20 @@ public final class MemberResolver {
         if (t.contains(".") || t.contains("(")) return false;
         if (typeParams != null && typeParams.contains(t)) return false;
         return isUnresolvedSimpleType(sa, t, null);
+    }
+
+    /** Índice do primeiro ` -> ` em profundidade zero (fora de `<>` e `()`), ou -1 (#374). */
+    private static int topLevelFnArrow(String t) {
+        int angle = 0, paren = 0;
+        for (int i = 0; i < t.length(); i++) {
+            char c = t.charAt(i);
+            if (c == '<') angle++;
+            else if (c == '>') angle--;
+            else if (c == '(') paren++;
+            else if (c == ')') paren--;
+            else if (c == ' ' && angle == 0 && paren == 0 && t.startsWith(" -> ", i)) return i;
+        }
+        return -1;
     }
 
     /** Divide `A, B<C, D>, E` em topo-de-nível (respeita o aninhamento de `<...>`). */

@@ -1,12 +1,12 @@
-[English](PLAN-UNIVERSAL-PLATFORM.md) | [Português](PLAN-UNIVERSAL-PLATFORM.pt_BR.md)
+[English](UNIVERSAL-PLATFORM-VISION.md) | [Português](UNIVERSAL-PLATFORM-VISION.pt_BR.md)
 
-# Strategic Plan — Kof as a Universal Platform
+# Universal Platform — Vision & Architecture
 
 **Type:** long-term architecture — **UNDER DEVELOPMENT** since 17/09/2026
 (promoted from `future/` by maintainer decision; the R12 gate is **overridden**
 — see `DECISIONS.md` §D-UNIVERSAL)
 **Date:** September 2, 2026
-**Base:** real state 0.2.6-beta — own frontend (lexer, parser, AST, symbol
+**Base:** real state **0.4.0-beta** (17/09/2026) — own frontend (lexer, parser, AST, symbol
 table, semantic, type checking), backend-agnostic Kof IR, 7 targets
 (jvm stable, native x86_64 stable, native.risc/native.arm toolchain+qemu,
 js alpha GraalJS, kofc native-only, android Phases 1–4), stdlib as **compile-time
@@ -14,14 +14,17 @@ dispatch tables** with diagnosed gaps, real FFI (SQLite `.so`
 direct, FFM Vulkan compute, Java + GraalJS interop), `mvn test` 2411
 (17/09/2026 — see `AGENTS.md` §"Verification loop" for the live count).
 
-> **Rule of this document:** this is a strategic architecture for the
-> platform. Promoted from `future/` to `development/` on 17/09/2026 **by
-> maintainer decision** (see `DECISIONS.md` §D-UNIVERSAL), which **overrides
-> the R12 gate** ("SYSTEMS closes before any Tier 6+"). It is now **current
-> work**: the entry point is Stage 1 (SYSTEMS consolidation, §10 Estágio 1) and
-> the executable recommendations R1–R12 (§15), with each unit gated like any
-> other change (Q0–Q7). The frozen core semantics and the currently-stable
-> behavior remain 100% intact; every change lands additive and per target.
+> **Rule of this document:** this is the **vision/architecture companion**
+> of [`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`](../development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md).
+> Promoted from `future/` to `development/` on 17/09/2026 **by maintainer
+> decision** (see `DECISIONS.md` §D-UNIVERSAL), which **overrides the R12 gate**
+> ("SYSTEMS closes before any Tier 6+"). It is now **current work**: the
+> executable steps (Stages 1–8) and the invariants R1–R12 — each with status,
+> owner lane and proof — live in the implementation doc. This companion holds
+> the philosophy, the domain map, the architectural model, the stdlib/interop
+> strategy, the risks and the non-goals that justify those steps. The frozen
+> core semantics and the currently-stable behavior remain 100% intact; every
+> change lands additive and per target.
 
 References (unchanged): `docs/development/roadmap.md` (vision), `docs/philosophy.md`
 (intent), `docs/architecture/architecture.md` (multi-target ADR),
@@ -212,7 +215,7 @@ platform from becoming an opaque "does-everything": what is missing is always vi
 | **Core** (language) | Syntax, types, control, abstractions, concurrency, minimal IO | classes, records, generics, `spawn`/`await`, `try/catch`, `for-in` | (almost nothing new — see §16) |
 | **Base stdlib** (always on, small) | `kof.core`, `kof.collections`, `kof.io`, `kof.time`, `kof.json` | same | same (stable) |
 | **Platform** (namespaces, the "Kof Platform") | `web`, `http`, `db`, `orm`, `security`, `config`, `log`, `observability`, `concurrent`, `cache`, `mq`, `validation`, `process`, `ui`, `test` | same | + `infra`, `cloud`, `shell`, `ssh`, `data`/`dataframe`, `sci`/`math`, `bio` |
-| **Official packages** (optional, managed) | Heavy/focused domains | (none yet — `kofdeps` planned) | `kof-infra-aws`, `kof-dataframe-parquet`, `kof-ml`, `kof-crypto-advanced`, `kof-bio`, `kof-hpc` |
+| **Official packages** (optional, managed) | Heavy/focused domains | (none yet — `kofdeps` MVP landed; registry pending ⛔) | `kof-infra-aws`, `kof-dataframe-parquet`, `kof-ml`, `kof-crypto-advanced`, `kof-bio`, `kof-hpc` |
 | **Ecosystem** (community) | Third parties via registry | (planned) | any domain |
 | **External / interop** (NOT Kof) | JVM libs, `.so` C/C++/Rust, Python/R, REST/gRPC, CLIs, clouds, databases | Java interop, SQLite `.so`, FFM Vulkan, GraalJS, JDBC drivers, MongoDB driver | BLAS/LAPACK, CUDA, Arrow, Terraform/cloud APIs, NGS tools, HPC libs |
 
@@ -239,7 +242,7 @@ Individual analysis. Each entry declares: what it is, **what Kof already has**, 
 is missing, the declarative-vs-imperative verdict (when applicable), the
 recommended mechanism, the interop strategy, and **what NOT to do**.
 
-> State convention used in all sections (detailed in §15.2):
+> State convention used in all sections (detailed in §14.2):
 > **A** already supported · **B** supported with small extensions · **C** requires
 > architectural evolution · **D** requires research · **E** probably not worth
 > the effort (or is a non-goal).
@@ -293,7 +296,7 @@ idempotency, state, plan/diff, reconciliation.
 Kof **supports both** with the same semantics, and the recommendation is:
 
 - **The canonical model is imperative-turned-data** (the form the prompt
-  shows as an alternative): `let production = Infrastructure("production")`,
+  shows as an alternative): `var production = Infrastructure("production")`,
   then `production.network(...)`, `production.database(...)`. This is Kof
   **pure today** (classes, records, functions, loops, conditions, tests) —
   **A/B** — and it is where the language shines (types, abstractions, LSP, static
@@ -524,7 +527,12 @@ tool*, not as "Kof is an attack framework". (Reflects the stance of
  audited implementation** (JCA/JCE on the JVM, `liboqs`/`Relic`/`libsodium` on
  Native, `SubtleCrypto` on JS), never its own algorithm.
  
- ### A. Current state (real audit — 0.2.6-beta, `KofSecurity.java`)
+ ### A. State at the audit (0.2.6-beta, 02/09, `KofSecurity.java`)
+
+> **Correction 18/09:** the AES-GCM face of `SECN002` was already closed on JS
+> (and on Native x86) on 01/09 — the cells/rows below originally said otherwise.
+> The remaining `SECN002` face is **chacha20 on Native x86** (plus all `SECN002`
+> on riscv/aarch, which is `SECN000`).
  
  6 intent namespaces, compiled by the same dispatch pattern of
  `kof.io`/`kof.web` (`KofSecurity.staticMethod` → `kof_sec_*` → 3 runtimes):
@@ -532,7 +540,7 @@ tool*, not as "Kof is an attack framework". (Reflects the stance of
  | Namespace | APIs today | JVM | Native x86_64/riscv64 | JS |
  |-----------|-----------|-----|----------------------|-----|
  | `passwords` | `hash`/`verify`/`needsRehash` (PBKDF2-HMAC-SHA256, 600k) | ✅ javax.crypto | ✅ **pure asm** (getrandom, FIPS) | ✅ platform |
- | `crypto` | `sha256`/`sha512`/`hmacSha256`/`encryptAesGcm`/`decryptAesGcm`/`randomHex`/`randomInt` | ✅ JCA | ✅ **asm** (FIPS 180-4, GCM, getrandom) | ✅ pure JS sha/hmac; ❌ **AES-GCM = SECN002** |
+ | `crypto` | `sha256`/`sha512`/`hmacSha256`/`encryptAesGcm`/`decryptAesGcm`/`randomHex`/`randomInt` | ✅ JCA | ✅ **asm** (FIPS 180-4, GCM, getrandom) | ✅ pure JS sha/hmac + **AES-GCM** (AES face closed 01/09); remaining `SECN002` = chacha20 (Native x86) |
  | `jwt` | `create(claims,secret[,ttl])`/`verify(token,secret[,iss,aud])`/`secret()` — **fixed HS256** | ✅ | ✅ asm (b64url+HMAC) | ✅ |
  | `secrets` | `get(name[,fallback])`/`redact` | ✅ env | ✅ `/proc/self/environ` | ✅ platform |
  | `security` | `constantTimeEquals`/`random*`/`redact`/`csrf*`/`corsAllowed`/`csp/hsts/nosniff/frame/referrerHeader`/`rateLimit`/`session*`/`apiKey*` | ✅ | ✅ ct/redact/random/rate/session/apiKey (asm); ❌ csrf/cors/headers | ✅ ct/redact/random/rate/session/apiKey; ❌ csrf/cors/headers |
@@ -544,7 +552,7 @@ tool*, not as "Kof is an attack framework". (Reflects the stance of
  locks algorithm confusion, `KofSecurityTest.jwtRejectsAlgorithmConfusionJvm`).
  
  **Real gaps** (never silent — `KofSecurity.supportedOn` + `gapCode`):
- `SECN002` (AES-GCM outside JVM/Native), csrf/cors/headers + `auth.*` (JVM-only).
+ `SECN002` (chacha20 on Native x86; the AES-GCM face closed on JS and Native x86 01/09 — see `docs/backend-parity.md`), csrf/cors/headers + `auth.*` (JVM-only).
  
  ### B. Current architecture
  
@@ -626,29 +634,29 @@ tool*, not as "Kof is an attack framework". (Reflects the stance of
  
  ```kof
  // symmetric secure by default (hides IV/alg/provider — already exists)
- let ct = crypto.encryptAesGcm(data, key)
- let pt = crypto.decryptAesGcm(ct, key)
+ var ct = crypto.encryptAesGcm(data, key)
+ var pt = crypto.decryptAesGcm(ct, key)
 
  // asymmetric (NEW — FFI)
- let kp   = keys.generatePair("P-256")
- let sig  = kp.sign(data)
+ var kp   = keys.generatePair("P-256")
+ var sig  = kp.sign(data)
  if (kp.verify(data, sig)) { ... }
 
  // post-quantum (NEW — FFI liboqs)
- let ct2 = crypto.encryptHybrid(data, key)     // ML-KEM-768 + AES-256-GCM (HKDF)
- let pt2 = crypto.decryptHybrid(ct2, key)
- let sig = crypto.signPq(data, kp)             // ML-DSA-65
+ var ct2 = crypto.encryptHybrid(data, key)     // ML-KEM-768 + AES-256-GCM (HKDF)
+ var pt2 = crypto.decryptHybrid(ct2, key)
+ var sig = crypto.signPq(data, kp)             // ML-DSA-65
 
  // key management (NEW)
- let k   = keys.derive(masterKey, "app/2026/db")   // HKDF — never use a password as a key
+ var k   = keys.derive(masterKey, "app/2026/db")   // HKDF — never use a password as a key
  k.rotate()
 
  // secure channel (NEW — hides KEM/KDF/AEAD/auth/replay)
- let ch  = secure.channel(peer, profile)
+ var ch  = secure.channel(peer, profile)
  ch.send(payload)
 
  // passwords (ready — keep)
- let h   = passwords.hash(pw)
+ var h   = passwords.hash(pw)
  if (passwords.verify(pw, h)) { ... }
  ```
  
@@ -726,7 +734,7 @@ tool*, not as "Kof is an attack framework". (Reflects the stance of
  
  | Layer | JVM | Native | JS |
  |--------|-----|--------|-----|
- | symmetric (GCM) | JCA | asm (ready) | `SubtleCrypto` (close **SECN002**) |
+ | symmetric (GCM) | JCA | asm (ready) | pure JS AES-GCM (ready 01/09) |
  | hash/HMAC | JCA | asm (ready) | pure JS (ready) |
  | asymmetric (ECC/RSA) | JCA/`KeyPair` | FFI `liboqs`/`openssl` | `SubtleCrypto` |
  | **PQC (ML-KEM/DSA)** | FFI `liboqs`/provider | FFI `liboqs` | **none** → gap `SECPQ` (diagnosis, never stub) |
@@ -768,7 +776,7 @@ tool*, not as "Kof is an attack framework". (Reflects the stance of
  ```text
  S1 SECURITY FOUNDATION   (base — almost ready)
     secure default (GCM/PBKDF2/constant-time/fixed-HS256) + vectors + redact
-    → already A; to complete: close SECN002 (AES-GCM JS) + adversarial vectors
+    → already A (AES-GCM on JS closed 01/09); to complete: adversarial vectors + the chacha20 face of SECN002 on Native x86
  S2 SAFE DEFAULTS / TYPES
     type `Secret`/`KeyHandle` + redaction in kof.log + warnings SECD00x
     → depends on S1; low risk; criterion: API without raw key exposure
@@ -798,7 +806,7 @@ tool*, not as "Kof is an attack framework". (Reflects the stance of
  
  | Item | Classif. | Justification (real state) |
  |------|----------|------------------------------|
- | AES-GCM in JS (SECN002) | **B** | `SubtleCrypto` in the browser/Node; closes gap, without changing the core |
+ | ~~AES-GCM in JS (SECN002)~~ | ✅ CLOSED 01/09 | pure JS AES-GCM landed; the code `SECN002` now covers only the chacha20 face |
  | `keys.*` (generate/derive/rotate) | **B/C** | over JCA/openssl (FFI); opaque `KeyHandle` is a type extension |
  | `Secret` type/forced redaction | **B** | type-system + `kof.log`; prevents leakage |
  | asymmetric ECC/RSA (sign/verify) | **B** | FFI JCA/openssl; versioned format already exists |
@@ -811,9 +819,8 @@ tool*, not as "Kof is an attack framework". (Reflects the stance of
  | "Kali in Kof" / offensive without context | **AVOID** | do not expose offensive primitives without control |
  | own algorithm (any) | **AVOID** | **absolute rule** — only FFI to an audited lib |
  
- **NOW** (without deep research, extends what already exists): close **SECN002**
- (AES-GCM JS) · `Secret` type + forced redaction · `keys.derive` (HKDF) +
- `keys.rotate`.
+ **NOW** (without deep research, extends what already exists): `Secret` type +
+ forced redaction · `keys.derive` (HKDF) + `keys.rotate`.
  **NEXT**: complete `keys.*` · asymmetric (ECC/RSA) · ChaCha20-Poly1305 ·
  X.509/PEM.
  **LATER**: full multi-target TLS · `secure.channel`.
@@ -883,7 +890,7 @@ variants, genomic pipelines, laboratory automation.
 - **Genomic pipelines** — **B/C**: exactly the automation/pipeline model
   (§4.3/§4.5): typed jobs + `spawn`/`channel` +
   checkpoints. Kof shines here (complex, typed, testable pipelines).
-- **HPC** — via §4.9 (FFI + distributed orchestration).
+- **HPC** — via §4.11 (FFI + distributed orchestration).
 - **Lab automation** — **B**: equipment orchestration via `kof.http`
   (REST) + `kof.process` (CLI/serial via FFI).
 
@@ -957,8 +964,9 @@ happens in layers with different guarantees.**
 (Expanded in §13; here the operational summary of the stdlib.)
 1. **Stdlib modularization** — independent namespaces, without inverse
    dependency (current rule: a lower module never depends on a higher one).
-2. **Official packages** — layer 4 with a package manager (`kofdeps`/registry
-   planned), versioned, optional.
+2. **Official packages** — layer 4 with a package manager (`kofdeps` MVP
+   landed: transitive resolution + lock; registry pending ⛔), versioned,
+   optional.
 3. **Capability-based APIs / optional modules** — link *only what the
    program uses* (pattern already used: SQLite/MySQL `.so` linked only when the literal
    DSN appears at compile-time). Generalize this mechanism to all
@@ -1128,13 +1136,13 @@ of errors as `kof check`).
 |------|--------|---------------------------------------------|
 | **CLI** | 26 commands (build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/decompile/translate/compare/migrate/debug/info/lsp/install/deps/editor/init/new/version) | + **`kof infra plan/apply/destroy`** (infra orchestration — *tooling*, not language); + **`kof workflow run`** (run pipelines/jobs); + **`kof deploy`** (build + package + publish — on top of the existing packager). *All consume the frontend.* |
 | **LSP** | minimal (hover/completion + diagnostics) | + **domain-sensitive** completion/diagnostics (`infra`, `entity`, `df` feature); go-to-definition in official packages; semantic tokens by domain. *Same frontend → no parallel parser.* |
-| **Package manager** | planned (`kof init`, `kofdeps`, registry) | **mandatory** for layers 4/5 (official packages + ecosystem): resolution, versioning, **capability/link by use**, audit. It is what lets the platform grow without bloating the core. (Architectural dependency, §13.) |
+| **Package manager** | MVP landed (`kof deps` + transitive resolution + lock; registry pending ⛔) | **mandatory** for layers 4/5 (official packages + ecosystem): resolution, versioning, **capability/link by use**, audit. It is what lets the platform grow without bloating the core. (Architectural dependency, §13.) |
 | **Debugger** | JVM MVP (DAP + JDWP) | + Native (DWARF) + JS (source maps) — phases 4-7; **pipeline/job debugging** (see a job's state at execution). |
 | **Profiler** | `kof bench`/`kof profile` (harness + baseline) | + **pipeline profiling** (time per job stage); + **HPC/FFI perf** (where time goes: Kof vs native lib). |
 | **Formatter** | ✅ `kof fmt` (real parser) | stable; extend to the new intention constructs (`infra`, `entity`). |
 | **Testing** | `kof.test` + golden + `kof bench` | + **property-based testing** (science: numeric invariant); + **golden diff** already covers multi-target parity; + **recon tests** (infra: idempotent plan). |
 | **Deployment** | `scripts/package.sh` + release CI (2 jobs × 3 platforms) | + **multi-target deploy** (same source → JVM/Native/JS, already exists via `--target`); + *infra* artifact (the plan as a versioned artifact). |
-| **Tooling observability** | `kof.observability` (health/metrics/request IDs) | + **tracing/OpenTelemetry** (already `PLANNED`) — to trace pipelines end to end. |
+| **Tooling observability** | `kof.observability` (health/metrics/request IDs) | + **tracing/OpenTelemetry** (spans + export landed; Native `OBS003` honest gap) — to trace pipelines end to end. |
 
 **Principle:** tooling is the **control surface** of the universal
 platform. Since it reuses the frontend, every new domain (infra, data, sci) gets
@@ -1142,170 +1150,12 @@ platform. Since it reuses the frontend, every new domain (infra, data, sci) gets
 
 ---
 
-# 10. Long-Term Roadmap
-
-No dates. Evolution by **capabilities and maturity**. Each stage: objective,
-required capabilities, dependencies, risks, impact (language / compiler /
-runtime / stdlib / tooling), and **what NOT to do**.
-
-> Positioning of the current state: Kof **has already passed FOUNDATION** (core
-> ready) and is **in the middle of SYSTEMS** (web, data, security, concurrency,
-> observability ready; the level of *systems/infrastructure/automation*
-> as a unified domain **does not yet** exist). The roadmap below starts
-> *here* — without rewriting anything.
-
-```text
-FOUNDATION (✅ surpassed)
-    ↓
-SYSTEMS (in progress — web/data/security/concurrency ready)
-    ↓
-AUTOMATION (next: unified layers)
-    ↓
-INFRASTRUCTURE (IaC + cloud)
-    ↓
-DATA (data engineering / science / ML)
-    ↓
-SECURITY (expansion: forensics, network, defensive)
-    ↓
-SCIENTIFIC COMPUTING (numeric / HPC / SIMD-GPU)
-    ↓
-BIOINFORMATICS (formats + genomic pipelines)
-    ↓
-UNIVERSAL PLATFORM (integrated platform)
-```
-
-### Stage 1 — SYSTEMS (consolidation of what is already "systems")
-- **Objective:** close the *systems* parity gaps that already exist (do not
-  open a new domain): web/HTTP on Native/JS, GC mark-sweep, event-loop,
-  tracing/OTel, typed query DSL, *basic* package manager.
-- **Capabilities:** HTTP002/WEB001/002, GC mark-sweep, CONC003 (real JS async),
-  `User.query { where ... }`, `kofdeps`/registry MVP, tracing.
-- **Dependencies:** nothing from the core (they are gaps + tooling).
-- **Risks:** spreading parity without closing it (doubles the "almost
-  works" surface).
-- **Impact:** language ~0; compiler: gaps + light codegen; runtime: GC +
-  event-loop (Native); stdlib: close existing namespaces; tooling:
-  package manager MVP.
-- **NOT to do:** do not open `infra`/`data`/`sci` *before* closing systems;
-  do not promise JS parity for heavy domains.
-
-### Stage 2 — AUTOMATION (unified layer)
-- **Objective:** Kof as a *unified* automation layer (replace
-  Bash+Python+YAML+jq+sed+awk **in a single typed language**).
-- **Capabilities:** `kof.workflow`/`kof.batch` (jobs, pipelines, retry,
-  checkpoints, dead-letter), `kof.shell` (idiomatic shell over
-  `kof.process`), `kof.ssh` (via FFI/interop), mature cron/scheduler,
-  CI/CD pipelines as **Kof code**.
-- **Dependencies:** stages 1 (concurrency, scheduler, mq ready).
-- **Risks:** becoming "shell in Kof" (leaking mechanism).
-- **Impact:** language 0; stdlib: new small namespaces; runtime:
-  workers/jobs (over spawn/channel); tooling: `kof workflow run`.
-- **NOT to do:** do not reimplement bash; jobs are **Kof code**, not YAML.
-
-### Stage 3 — INFRASTRUCTURE (IaC + cloud) — the **Kof Makealive** domain
-- **Objective:** **Kof Makealive** (§4.2): infrastructure as
-  **typed Kof code** with
-  plan/apply/state/reconciliation.
-- **Capabilities:** `kof.infra` (resource records + graph + diff),
-  `infra "prod" { ... }` (desugar over records — **compile-time codegen**),
-  reconciliation loop (spawn/await + channel), state in `kof.db`,
-  providers via **FFI/REST/CLI** (AWS/Azure/GCP — interop), secrets via
-  `kof.security`.
-- **Dependencies:** stages 1-2; **formalized FFI** (architectural
-  dependency); package capabilities.
-- **Risks:** copying Terraform/provider-plugins; promising parity with all
-  clouds.
-- **Impact:** language: *desugar* (codegen, not new semantics); compiler:
-  dependency graph + cycle detection (compile-time); runtime: reconciliation
-  loop; stdlib: `infra` + official packages `kof-infra-<provider>`;
-  tooling: `kof infra plan/apply/destroy`.
-- **NOT to do:** HCL inside Kof; a provider repository for *everything*;
-  coupling the core to a provider.
-
-### Stage 4 — DATA (data engineering / science / ML)
-- **Objective:** an **orchestrated** scientific layer (not reimplemented).
-- **Capabilities:** typed `dataframe` (lazy, columnar), **Arrow/Parquet via
-  FFI** (typed wrapper), statistics/probability (wrapper + FFI),
-  `kof.ml` (inference via FFI to ONNX/libtorch; orchestrated training),
-  light visualization (SVG/`kof.ui` + FFI), **experiment tracking** (light,
-  over `kof.db`/`kof.io`).
-- **Dependencies:** stages 1-3; FFI; Arrow as the exchange standard.
-- **Risks:** reimplementing Arrow/NumPy/ML frameworks (the #1 risk of the
-  god-language).
-- **Impact:** language 0 (records/functions/`List` suffice); stdlib: `data` +
-  packages `kof-ml`/`kf-dataframe-parquet`; runtime: FFI/Arrow; tooling:
-  pipeline profiling.
-- **NOT to do:** **do not build an ML/NumPy framework in Kof** — Kof provides the
-  *typed wrapper + pipeline*, the *engine* stays outside.
-
-### Stage 5 — SECURITY (expansion)
-- **Objective:** from "application security" (already strong) to **platform
-  security** (network, forensics, defensive) — and a **modern cryptographic
-  layer + post-quantum** (full detail in **§4.8.1**).
-- **Capabilities:** advanced crypto (RSA/ECC/X.509/TLS — B/FFI), **hybrid
-  PQC (ML-KEM-768 + ML-DSA-65 + HKDF + AES-256-GCM — D/FFI `liboqs`)**, `keys.*`
-  (generate/derive/rotate/store), `Secret` type + forced redaction,
-  `secure.channel` (KEM+KDF+AEAD+auth+replay — D), `kof.net` / packet
-  parsing (FFI to `libpcap`), forensics (FFI to parse libs + Kof pipelines),
-  security automation / threat-intel (`kof.http` + `spawn`/`channel` +
-  `kof.log`), defensive (monitoring/detection/audit over
-  `kof.observability` + `kof.log` + `kof.db`).
-- **Absolute rule (§4.8.1):** **never** homemade crypto — every new primitive
-  (incl. PQC) is FFI to an audited lib; identical API across targets; gap = diagnosis
-  (`SECN00x`/`SECPQ`), never a weak stub.
-- **Dependencies:** stages 1-3; FFI.
-- **Risks:** "Kali in Kof"; exposing offensive primitives without context.
-- **Impact:** language 0; stdlib: expand `security` + `net`/`forensics`
-  (packages); runtime: FFI to libs; tooling: audit (already exists).
-- **NOT to do:** reimplement audited crypto stacks; offensive work without
-  legitimate/controlled context; defend *first*.
-
-### Stage 6 — SCIENTIFIC COMPUTING (numeric / HPC)
-- **Objective:** Kof as a **typed scientific orchestration language** +
-  numeric zone via FFI.
-- **Capabilities:** linear algebra via **FFI to BLAS/LAPACK** (wrapper),
-  SIMD/vectorization (Native — research), GPU (Vulkan via FFI already exists;
-  CUDA/OpenCL via FFI), data-parallel (research), **formalized FFI**
-  (the backbone), **scoped resources** (GPU/files/connections),
-  distributed (FFI to MPI + Kof orchestration).
-- **Dependencies:** stages 1-4; formalized FFI; GC mark-sweep (stage 1).
-- **Risks:** promising native HPC; ownership in the core (rejected).
-- **Impact:** language: light *scoped resources*; compiler: FFI +
-  (research) SIMD codegen; runtime: GC + event-loop + FFI; stdlib: `sci`/
-  `math` (packages); tooling: HPC profiling.
-- **NOT to do:** reimplement BLAS/LAPACK/NumPy; ownership/borrowing in the core
-  (the non-GC zone is via FFI to C/Rust).
-
-### Stage 7 — BIOINFORMATICS
-- **Objective:** a typed platform for **scientific/genomic pipelines**.
-- **Capabilities:** `kof-bio` (official package): FASTA/FASTQ/VCF/BAM formats
-  (typed records), reading/writing; alignment/variants via **FFI/CLI**
-  (BLAST/htslib — do not reimplement); **genomic pipelines** (stage 2's
-  `workflow` model + checkpointing); HPC (stage 6); lab automation
-  (`kof.http` REST + `kof.process` via FFI).
-- **Dependencies:** stages 2, 4, 6.
-- **Risks:** "biology language"; reimplementing aligners.
-- **Impact:** language 0; stdlib: `kof-bio` package (official); runtime: FFI;
-  tooling: `kof workflow run` (pipelines).
-- **NOT to do:** turn Kof into an exclusive biology language;
-  reimplement aligners/variant callers.
-
-### Stage 8 — UNIVERSAL PLATFORM (integration)
-- **Objective:** an application **+** its infra **+** its deploy **+** its
-  data pipeline **+** its security **+** its research — **in the same
-  language**, with the same development experience.
-- **Capabilities:** total integration of stages 1-7; mature package manager;
-  LSP/debug/profiler by domain; multi-target deploy (same source →
-  JVM/Native/JS); documentation/corpus (`training/`) of the domains.
-- **Dependencies:** all the previous ones; package manager; FFI.
-- **Risks:** ecosystem fragmentation; maintenance (the greatest long-term
-  risk — see §11).
-- **Impact:** language **stays small** (the final proof that the
-  god-language was avoided); enormous and **modular** platform; unified tooling.
-- **NOT to do:** let the core grow to "support" the platform — the core
-  must **not change** (or change almost nothing) up to here.
-
----
+> **Moved to the implementation doc.** The stage-by-stage breakdown
+> (objective, capabilities, dependencies, risks, impact, what NOT to do)
+> now lives in [`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`](../development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md)
+> as executable items with status/owner/proof. The staged capability order
+> (FOUNDATION → SYSTEMS → AUTOMATION → INFRASTRUCTURE → DATA → SECURITY →
+> SCIENTIFIC COMPUTING → BIOINFORMATICS → UNIVERSAL PLATFORM) is preserved there.
 
 # 11. Risks
 
@@ -1406,7 +1256,7 @@ classified.
 
 ## 14.1 What Kof ALREADY has that naturally allows this evolution
 
-| What already exists (real state 0.2.6-beta) | How it enables the universal vision |
+| What already exists (state at 0.2.6-beta, 02/09) | How it enables the universal vision |
 |------------------------------------------|---------------------------------|
 | **Single frontend + backend-agnostic Kof IR + pluggable backends** | The substrate: a new capability = new table + runtime, **not** a new target/compiler |
 | **Stdlib as dispatch tables at compile-time + diagnosed gaps** | The *mechanism* by which each domain (infra/data/sci/bio) enters without touching the core; "never silent" |
@@ -1435,7 +1285,7 @@ worth it (or non-goal).
 | JSON/IO/config/logging/observability | **A** | `kof.json`/`kof.io`/`kof.config`/`kof.log`/`kof.observability` ready |
 | Infra state / experiment tracking | **A/B** | `kof.db`/`kof.io` ready; the state *format* is an extension |
 | Crypto/JWT/secrets/auth (app) | **A** | `kof.security` v1+G9+G10 ready on all 3 targets |
-| Crypto: AES-GCM in JS (close SECN002) | **B** | `SubtleCrypto` (browser/Node); no core change — §4.8.1 |
+| Crypto: AES-GCM in JS | ✅ CLOSED 01/09 | pure JS AES-GCM landed; the code `SECN002` now covers only chacha20 (Native x86) — §4.8.1 |
 | Crypto: `keys.*` (generate/derive HKDF/rotate/store) + `Secret` type | **B/C** | FFI JCA/openssl + type-system; opaque `KeyHandle` — §4.8.1 |
 | Crypto: asymmetric (ECC/RSA sign/verify) + X.509/PEM | **B/C** | FFI JCA/openssl; versioned format already exists — §4.8.1 |
 | Crypto: **PQC** (ML-KEM-768 KEM + ML-DSA-65 sig) | **D (FFI)** | **not available today**; FFI `liboqs` + NIST vectors; never homemade — §4.8.1 |
@@ -1464,7 +1314,7 @@ worth it (or non-goal).
 | GC mark-sweep (Native) | **C** | free-list exists; mark-sweep pending (needed for long pipelines) |
 | Event-loop / real async (Native) | **D** | today pthread; event-loop = research (CONC003 is the JS case) |
 | Compile-time codegen (gRPC stubs, DDL, infra) | **C** | already exists implicitly (KofRuntime, test runner, `entity` DDL); **formalize** |
-| Package manager / registry / capabilities | **C** | `kofdeps`/registry planned; capability/link by use already has a seed (DSN) |
+| Package manager / registry / capabilities | **C** | `kofdeps` MVP landed (transitive + lock); registry pending ⛔; capability/link by use already has a seed (DSN) |
 | Scoped resources (light RAII, no ownership) | **B/C** | today GC + `try/finally`; light scope for FFI/GPU/files |
 | Interop reflection | **C** | restricted to interop (ML/science); not a foundation |
 | Variance / sealed (type system) | **B/C** | useful for scientific collections/domains; medium cost |
@@ -1500,143 +1350,9 @@ not by implementation in the core.
 
 ---
 
-# 15. Concrete Architectural Recommendations
-
-Keep the current architecture **prepared** for the universal vision **without
-interrupting** present development. Each item: what, why, cost, and
-what **not** to do. (No item below is an action — they are future architectural
-dependencies and guardrails.)
-
-> **Note 17/09 (D-UNIVERSAL — this line is superseded for the CURRENT queue):**
-> the promotion in `DECISIONS.md` §D-UNIVERSAL made R1–R12 the entry point of
-> current work. Each R now tracks its real state below; the original text is
-> kept as history (dated-record convention).
-
-## R1 — Lock the core/platform boundary (the first and most important) — ✅ DONE 17/09 (`5f1422c6`)
-
-> **State 17/09:** the §3.4 order is now an invariant rule AND mechanically
-> enforced: `scripts/check_stdlib_boundary.sh` + ledger `scripts/stdlib_boundary.txt`
-> (31 namespaces; unknown namespace or heavy domain fails the build; `--selftest`
-> proves the gate bites) wired in CI after `check_500.sh`, and cited in
-> `AGENTS.md`/`.pt_BR.md` platform invariant 1. Proof: scan rc=0 at tip,
-> CI run `5f1422c6` "Build + Tests" SUCCESS with the Gate R1 step.
-- **What:** adopt the §3.4 decision order as an **invariant rule**
-  (core → base stdlib → platform → official packages → interop).
-- **Why:** it is the anti-god-language mechanism; without it, every domain "wants"
-  to be base stdlib.
-- **Cost:** zero (it is process/decision, not code).
-- **Not to do:** do not allow a heavy domain (ml/bio/hpc) to enter the
-  base stdlib.
-
-## R2 — Generalize "capability/link by use" (already has a seed)
-- **What:** extend the SQLite/MySQL mechanism (`.so` linked only when the literal
-  DSN appears at compile-time) to **all** packages/domains.
-- **Why:** the final binary carries only what it uses → enormous platform,
-  small artifact; and "link only what is used" *is* the capability-based API.
-- **Cost:** low (existing pattern in the lowering).
-- **Not to do:** do not link all domains by default.
-
-## R3 — Formalize FFI as first-class (highest value/cost of the roadmap)
-- **What:** signature declaration of `.so`/external function at compile-time
-  (types, ABI, arrays/pointers), reducing today's "manual asm".
-- **Why:** FFI is the backbone of interop/science/HPC; today it is ad-hoc
-  (SQLite `.so`, FFM Vulkan, MySQL scramble).
-- **Cost:** **low in the core** (it is lowering + runtime, not semantics).
-- **Not to do:** do not turn FFI into "pointers in the core" — the boundary is
-  safe; the non-GC zone stays outside.
-- **First slice (opened by #431, 17/09 — raylib is the motivating case; tracked
-  on the issue):** the current surface is fixed-shape JVM helpers
-  (`JvmFfiRuntime`: `i`/`si`/`dd`) gated by `CompilerPipeline.isExternBound`.
-  Concrete increments, in order, each with `FfiE2ETest`-pattern proof and
-  additive (previously `FFI001`-rejected signatures, never a change to what
-  compiles today): (1) **arity** — `ii`/`iii`/`id`-style helpers + lowering
-  dispatch; (2) **`void` returns**; (3) **String return** (`allocateUtf8String`
-  copy — same JDK 21/22 branch the `si` helper uses); (4) `const char*` params
-  **mixed with numerics** (the `InitWindow(Int,Int,String):void` case);
-  (5) native side waits on §61 (raw `_start` without libc TLS init — proven
-  direct-link path recorded there). Structs stay R3-proper (signature-level
-  ABI design), not a slice of this increment.
-
-## R4 — Formalize compile-time codegen (already exists implicitly)
-- **What:** make explicit the layer that today generates `KofRuntime`, synthesizes the
-  test runner, and generates the `entity` DDL.
-- **Why:** it is what allows `infra "prod" { }` (desugar over records), gRPC
-  stubs, and pipeline codegen **without** open macros.
-- **Cost:** low-medium (consolidates an existing pattern).
-- **Not to do:** **reject** open macros (they break static analysis + LSP).
-
-## R5 — Introduce stability tiers + official packages (growth guardrail)
-- **What:** mark each namespace/package as *stable* or *experimental*;
-  layer 4 (official packages) is born experimental.
-- **Why:** it allows domains to evolve fast **without** compromising the core.
-- **Cost:** low (metadata + versioning).
-- **Not to do:** do not promote to *stable* without a complete DoD (E2E + golden per
-  target — current rule).
-
-## R6 — Keep "never silent" for new domains
-- **What:** every domain gap has a code (`INFRA00x`, `DATA00x`, `SCI00x`,
-  `BIO00x`) + an entry in the parity matrix.
-- **Why:** it prevents the opaque "does-everything" — what is missing is always visible.
-- **Cost:** zero (existing pattern: `SECN00x`/`DB001`/`WEB002`...).
-- **Not to do:** never a silent stub; never partial parity without diagnosis.
-
-## R7 — Honest scope per target (JVM-first interop / Native systems / JS web)
-- **What:** explicitly adopt: heavy capabilities arrive **JVM-first**
-  (interop), **Native** for systems/deploy, **JS** only web/edge.
-- **Why:** avoids promising full parity (the biggest maintenance risk).
-- **Cost:** zero (strategy decision).
-- **Do not:** do not accelerate JS for ML/HPC/forensics.
-
-## R8 — Keep the tooling on the SAME frontend
-- **What:** all new tooling (per-domain LSP, `kof infra`, `kof workflow`,
-  pipeline debugger, package manager) **consumes the compiler frontend**.
-- **Why:** diagnostics/LSP/test for each domain come for free; no parallel
-  parser.
-- **Cost:** low (current rule).
-- **Do not:** never build a parallel parser/tooling.
-
-## R9 — Interop-first as the domain default
-- **What:** for each domain, the **first** question is "does it exist outside and is it
-  better?" → FFI/interop. Only if it does not exist, build it.
-- **Why:** it is the rule that prevents reimplementing the world (§11 of the statement).
-- **Cost:** zero (principle).
-- **Do not:** do not reimplement Arrow/BLAS/CUDA/ML frameworks/aligners.
-
-## R10 — Correct and deterministic by default (science)
-- **What:** for scientific/ML capabilities, numerical correctness and
-  determinism are an **acceptance requirement** (property-based testing + golden
-  diff).
-- **Why:** a silent numerical bug is unacceptable.
-- **Cost:** low (tests, not code).
-- **Do not:** do not deliver numerical "best effort" as *stable*.
-
-## R11 — Security: defense first
-- **What:** security domains enter with secure defaults, constant time,
-  versioned formats (current `kof.security` standard); offensive only
-  in a legitimate/controlled context.
-- **Why:** security is critical infrastructure; a design error has high impact.
-- **Cost:** zero (existing standard).
-- **Do not:** do not expose offensive primitives without context; no "Kali in
-  Kof".
-
-## R12 — Do not interrupt the present (meta-rule) — **OVERRIDDEN 17/09/2026**
-- **What (original):** no item of this plan is an **action** on the current
-  state. The **C/D** items above are **future architectural dependencies**, to be
-  resumed by the current roadmap (`roadmap.md` §23 — single consolidated plan)
-  **after** the current consolidation (P0-P5) — never as a parallel front now.
-- **Why:** the statement is explicit: preserve the work in progress.
-- **Cost:** zero.
-- **Do not:** do not open `infra`/`data`/`sci` before the SYSTEMS stage
-  (parity gap, GC, package manager) is closed.
-- **⚠️ Overridden (maintainer decision 17/09/2026, `DECISIONS.md`
-  §D-UNIVERSAL):** this plan was **promoted to current work** with the R12 gate
-  **overridden** — the front opens with SYSTEMS still in progress. The
-  entry point is Stage 1 (SYSTEMS consolidation) + R1–R12; Tier 6+ keeps its
-  order. The **core semantics stay frozen** and every change is additive —
-  "overridden" relaxes the scheduling gate, never the quality/freeze rules.
-  For every **other** `future/` plan, R12 remains the default.
-
----
+> **Moved to the implementation doc.** R1–R12 (each with status, owner lane
+> and proof) are tracked in [`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`](../development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md)
+> §Invariants R1–R12.
 
 # 16. Final mental model
 

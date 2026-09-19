@@ -21,17 +21,8 @@ public final class StatementLowerer {
                 // "finally roda no caminho normal, no capturado e na propagação").
                 if (!driver.finallyFrames.isEmpty()) {
                     CompilerDriverState.FinallyFrame f = driver.finallyFrames.peek();
-                    if (ret.value() != null && !CompilerComparisons.isNullablePrimNullReturn(ret, returnType)) {
-                        ExpressionNode rv = CompilerComparisons.foldNullablePrimBranches(ret.value(), returnType);
-                        localIdx = ExpressionLowerer.emitExpression(driver, rv, ops, owner, localIdx, locals);
-                        Type rvType = ExpressionTyper.inferExprType(driver, rv, locals);
-                        driver.emitWideningIfNeeded(ops, rvType, returnType);
-                        // Issue #169: retorno de primitivo de função tipo Object
-                        if (driver.erasesToReference(returnType)
-                                && TypeMetrics.isPrimitiveType(rvType)
-                                && !ExpressionTyper.boxesOwnBranches(driver, rv, locals)) {
-                            driver.emitErasureBox(ops, rvType);
-                        }
+                    if (ret.value() != null) {
+                        localIdx = ReturnValueLowerer.emitCoerced(driver, ret, returnType, ops, owner, localIdx, locals);
                         ops.add(new KofStoreLocal(returnType, f.slotValor()));
                     } else if (!Type.isVoid(returnType)) {
                         ops.add(CompilerTypes.defaultValueOp(returnType));
@@ -40,20 +31,8 @@ public final class StatementLowerer {
                     ops.add(new KofJump(f.returnFinallyLabel()));
                     yield localIdx;
                 }
-                if (ret.value() != null && !CompilerComparisons.isNullablePrimNullReturn(ret, returnType)) {
-                    // §125(A) extensão: ramo null de if/switch em retorno
-                    // Nullable(primitivo) colapsa p/ o default (evita o join
-                    // heterogêneo que boxia e quebra o ireturn).
-                    ExpressionNode rv = CompilerComparisons.foldNullablePrimBranches(ret.value(), returnType);
-                    localIdx = ExpressionLowerer.emitExpression(driver, rv, ops, owner, localIdx, locals);
-                    Type rvType = ExpressionTyper.inferExprType(driver, rv, locals);
-                    driver.emitWideningIfNeeded(ops, rvType, returnType);
-                    // Issue #169: retorno de primitivo de função tipo Object
-                    if (driver.erasesToReference(returnType)
-                            && TypeMetrics.isPrimitiveType(rvType)
-                            && !ExpressionTyper.boxesOwnBranches(driver, rv, locals)) {
-                        driver.emitErasureBox(ops, rvType);
-                    }
+                if (ret.value() != null) {
+                    localIdx = ReturnValueLowerer.emitCoerced(driver, ret, returnType, ops, owner, localIdx, locals);
                     ops.add(new KofReturn(returnType));
                 } else if (Type.isVoid(returnType)) {
                     ops.add(new KofReturnVoid());
@@ -87,93 +66,7 @@ public final class StatementLowerer {
                 }
                 yield localIdx;
             }
-            case VarDeclStmt vds -> {
-                // §179: usa a resolução semântica (qualifyDeep) — sem ela o tipo
-                // declarado kof.ui/kof.media saía ClassType("", "Label") e o
-                // store local virava `astore` sobre handle `int` (VerifyError).
-                Type varType = CompilerTypes.toType(vds.type(), driver.currentUnit, driver.semanticAnalyzer);
-                // §125(A) extensão: `Int? v = if (c) x else null` — slot
-                // explícito Nullable(primitivo) nunca guarda null (storage é o
-                // inner), então o ramo null colapsa p/ default do primitivo.
-                // `var`/`val` inferido INTocado (§68a: alargar slot = decisão
-                // de contrato).
-                ExpressionNode vdInit = CompilerComparisons.foldNullablePrimBranches(vds.initializer(), varType);
-                // nullable é constraint de compile-time: o storage é o inner
-                // (a referência já pode ser null na JVM/Native/JS)
-                if (varType instanceof Type.NullableType nt) {
-                    varType = nt.inner();
-                }
-                if (driver.mutatedCapturedNames.contains(vds.name())) {
-                    yield CapturedVarBox.emit(driver, vds, vdInit, ops, owner, localIdx, locals);
-                }
-                if (vdInit != null) {
-                    Type initType = ExpressionTyper.inferExprType(driver, vdInit, locals);
-                    if (Type.isVoid(initType)) {
-                        if (driver.currentDiagnostics != null) {
-                            driver.currentDiagnostics.error(vds.position() != null ? vds.position().file() : "",
-                                    vds.position() != null ? vds.position().line() : 0,
-                                    vds.position() != null ? vds.position().column() : 0, 0,
-                                    "assignment to '" + vds.name() + "' received a void value — the"
-                                            + " call does not return a value",
-                                    "SEM033");
-                        }
-                        yield localIdx;
-                    }
-                    localIdx = ExpressionLowerer.emitExpression(driver, vdInit, ops, owner, localIdx, locals);
-                    if ("var".equals(vds.type()) || "val".equals(vds.type())) {
-                        varType = ExpressionTyper.inferExprType(driver, vdInit, locals);
-                        // spawn-expr: pina Handle<T> com T do corpo (a inferência genérica pode ter perdido o typeArgument)
-                        if (vdInit instanceof MethodCallExpr sm && "__kof_spawn_expr".equals(sm.methodName())
-                                && varType instanceof Type.ClassType hct && "kof.concurrent".equals(hct.packageName())
-                                && (hct.typeArguments().isEmpty() || hct.typeArguments().get(0) instanceof Type.UnknownType)) {
-                            // #141: usa inferLambdaBodyType (mesmo chokepoint do MethodCallTyper/lowerer), NÃO inferExprType direto —
-                            // no corpo-bloco de expressão única este dava VOID e Handle<Void> poluía o local p/ o `await`.
-                            ExpressionNode spawnBody = sm.arguments().get(0);
-                            Type t = spawnBody instanceof LambdaExpr sle
-                                    ? ExpressionTyper.inferLambdaBodyType(driver, sle, locals)
-                                    : ExpressionTyper.inferExprType(driver, spawnBody, locals);
-                            varType = new Type.ClassType("kof.concurrent", "Handle", List.of(t));
-                        }
-                    } else {
-                        Type initT = ExpressionTyper.inferExprType(driver, vdInit, locals);
-                        // bug 8: `var s: (Int) -> Int = (x: Int) -> x * 2` — o
-                        // tipo declarado é FunctionType sem className, mas o
-                        // valor real é a classe sintética da lambda. Preservar
-                        // o className do initializer para o call site invocar
-                        // via invokevirtual (owner = classe da lambda) em vez
-                        // de SEM032 (dispatch por interface ainda não existe).
-                        if (varType instanceof Type.FunctionType dft
-                                && initT instanceof Type.FunctionType ift
-                                && ift.className() != null
-                                && dft.parameterTypes().equals(ift.parameterTypes())
-                                && dft.returnType().equals(ift.returnType())) {
-                            varType = ift;
-                        } else {
-                            driver.emitWideningIfNeeded(ops, initT, varType);
-                        }
-                    }
-                }
-                // bug 15: `Object n = 42` — primitivo atribuído a referência:
-                // boxa no JVM (JS/Native já são untyped). Sem isso o store de
-                // int num slot Object invalidava o bytecode.
-                // (#57: IfExpr/switch heterogêneo já boxeou in-branch → pular)
-                if (driver.erasesToReference(varType)
-                        && vdInit != null
-                        && TypeMetrics.isPrimitiveType(ExpressionTyper.inferExprType(driver, vdInit, locals))
-                        && !ExpressionTyper.boxesOwnBranches(driver, vdInit, locals)) {
-                    driver.emitErasureBox(ops, ExpressionTyper.inferExprType(driver, vdInit, locals));
-                }
-                // declaração sem inicializador: default (0 primitivo / null
-                // referência) — antes o store saía de pilha vazia (frame crash)
-                if (vdInit == null) {
-                    ops.add(driver.erasesToReference(varType)
-                            ? new KofLoadLiteral(varType, null)
-                            : new KofLoadLiteral(varType, 0));
-                }
-                ops.add(new KofStoreLocal(varType, localIdx));
-                locals.add(new IRLocalVariable(localIdx, vds.name(), varType));
-                yield localIdx + (TypeMetrics.isDoubleWidth(varType) ? 2 : 1);
-            }
+            case VarDeclStmt vds -> StatementLowererLocalBoxing.emitLocalDeclaration(driver, vds, ops, owner, localIdx, locals);
             case BlockStmt block -> {
                 int startSize = locals.size();
                 int idx = localIdx;
@@ -439,7 +332,7 @@ public final class StatementLowerer {
                     ops.add(new KofNewObject(taskTypeN, capTypesN));
                     ops.add(new KofDup());
                     for (IRLocalVariable cap : capN) {
-                        ops.add(new KofLoadLocal(cap.type(), cap.index()));
+                        CompilerCaptures.pushCapture(driver, ops, cap);
                     }
                     ops.add(new KofCall(taskTypeN, "<init>", capTypesN,
                             Type.PrimitiveType.VOID, KofCallKind.CONSTRUCTOR));
@@ -467,7 +360,7 @@ public final class StatementLowerer {
                 ops.add(new KofNewObject(taskType, captureTypes));
                 ops.add(new KofDup());
                 for (IRLocalVariable cap : captures) {
-                    ops.add(new KofLoadLocal(cap.type(), cap.index()));
+                    CompilerCaptures.pushCapture(driver, ops, cap);
                 }
                 ops.add(new KofCall(taskType, "<init>", captureTypes,
                         Type.PrimitiveType.VOID, KofCallKind.CONSTRUCTOR));

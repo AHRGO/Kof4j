@@ -81,6 +81,46 @@ class KofFormatterTest {
         assertEquals(once, twice, "fmt deve ser idempotente (2ª passada não muda)");
     }
 
+// ===== #447 — round-trip de literais com escape (CHAR e STRING) =====
+
+    @Test
+    void charEscapesSurviveRoundTrip() {
+        // regressão #447: '\\' virava '\' (unterminated) e '\t' virava TAB cru
+        for (String lit : new String[]{"'\\\\'", "'\\t'", "'\\n'", "'\\r'", "'\\''", "'\\0'"}) {
+            String out = fmt("var c = " + lit + "\n    println(c)");
+            assertTrue(out.contains(lit), lit + " deve sobreviver ao fmt, saída:\n" + out);
+        }
+    }
+
+    @Test
+    void stringEscapesSurviveRoundTrip() {
+        String out = fmt("var s = \"a\\tb\"\n    println(s)");
+        assertTrue(out.contains("\"a\\tb\""), "\"a\\tb\" nao deve virar TAB cru:\n" + out);
+        out = fmt("var s = \"c\\\"d\"\n    println(s)");
+        assertTrue(out.contains("\"c\\\"d\""), "\"c\\\"d\" nao deve quebrar a string:\n" + out);
+        out = fmt("var s = \"p\\\\q\"\n    println(s)");
+        assertTrue(out.contains("\"p\\\\q\""), "backslash literal nao deve sumir:\n" + out);
+    }
+
+    @Test
+    void escapedLiteralsAreIdempotentAndReparseable() {
+        String once = fmt("var c = '\\\\'\n    var s = \"a\\tb\"\n    println(c + s)");
+        String twice = KofFormatter.format(once, "Main.kf");
+        assertNotNull(twice, "saida do 1o fmt deve reparsar (nao pode ser codigo invalido):\n" + once);
+        assertEquals(once, twice, "2a passada nao deve mudar nada");
+        // saida compila de verdade (check passa onde antes dava LEX004):
+        assertNotNull(KofFormatter.format(once, "Main.kf"));
+    }
+
+    @Test
+    void plainLiteralsUnchangedByEscaper() {
+        // nao-ASCII cru e texto comum NAO sao convertidos (o lexer aceita cru)
+        String out = fmt("var s = \"café olá\"\n    println(s)");
+        assertTrue(out.contains("\"café olá\""), "acentos devem permanecer crus:\n" + out);
+        out = fmt("var c = 'ç'\n    println(c)");
+        assertTrue(out.contains("'ç'"), "char nao-ASCII cru deve permanecer:\n" + out);
+    }
+
     @Test
     void formatReturnsNullNotCorruptOutput() {
         // código inválido → null (fallback token-based no CLI), nunca saída errada

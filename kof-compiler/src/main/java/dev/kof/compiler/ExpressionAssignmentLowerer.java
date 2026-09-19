@@ -264,7 +264,29 @@ if (ae.target() instanceof IdentifierExpr cie) {
             ops.add(new KofStoreLocal(targetLocal.type(), targetLocal.index()));
             return localIdx;
         } else if (isCompoundOp(op)) {
-            ops.add(new KofLoadLocal(targetLocal.type(), targetLocal.index()));
+            // §295(b): `g += 1` sobre slot Nullable(primitivo) — referência
+            // física no JVM (Commit B) e IADD direto sobre ela é VerifyError.
+            // Aritmética no INNER (unbox → binário → box); emitErasureUnbox/
+            // Box se auto-gamam (só JVM) e só casam primitivo CRÚ — um RHS
+            // já Nullable passa o binário no wrapper como antes (nunca re-box
+            // de referência: lesson §294-2a). Slot null no unbox → crash
+            // honesto (NPE), nunca default silencioso (R6).
+            Type cSlot = targetLocal.type();
+            Type cInner = TypeMetrics.isNullablePrimitive(cSlot)
+                    && ExpressionTyper.inferExprType(driver, ae.value(), locals)
+                            instanceof Type.PrimitiveType
+                    ? ((Type.NullableType) cSlot).inner() : null;
+            ops.add(new KofLoadLocal(cSlot, targetLocal.index()));
+            if (cInner != null) {
+                driver.emitErasureUnbox(ops, cInner);
+                localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
+                emitCompoundRhsConv(driver, ops, op, cInner,
+                        ExpressionTyper.inferExprType(driver, ae.value(), locals));
+                ops.add(new KofBinary(compoundBinaryOp(op), cInner));
+                driver.emitErasureBox(ops, cInner);
+                ops.add(new KofStoreLocal(cSlot, targetLocal.index()));
+                return localIdx;
+            }
             localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
             // conversão ANTES do binário (shift: contagem int via L2I).
             emitCompoundRhsConv(driver, ops, op, targetLocal.type(),
@@ -283,10 +305,23 @@ if (ae.target() instanceof IdentifierExpr sie) {
             driver.emitWideningIfNeeded(ops, ExpressionTyper.inferExprType(driver, ae.value(), locals), locals.get(i).type());
             // bug 15: `Object o; o = 7` — box primitivo p/ referência
             // (#57: IfExpr/switch heterogêneo já boxeou in-branch → pular)
+            // §295(b): espelho do gate cru do return/VarDecl — slot
+            // Nullable(primitivo) é referência física (Commit B) e o gate de
+            // cima (erasesToReference, false p/ NullableType) não o conhecia:
+            // `g = 9` caía `bipush 9; astore` (VerifyError). Só primitivo CRÚ
+            // boxa; RHS já Nullable passa como referência (nunca re-box).
             if (driver.erasesToReference(locals.get(i).type())
                     && TypeMetrics.isPrimitiveType(ExpressionTyper.inferExprType(driver, ae.value(), locals))
                     && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)) {
                 driver.emitErasureBox(ops, ExpressionTyper.inferExprType(driver, ae.value(), locals));
+            } else if (TypeMetrics.isNullablePrimitive(locals.get(i).type())
+                    && ExpressionTyper.inferExprType(driver, ae.value(), locals) instanceof Type.PrimitiveType spt
+                    && !Type.isVoid(spt)
+                    && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)) {
+                // §295(b): `Int? v = 5; v = 9` — slot boxed (Commit B) recebe
+                // primitivo CRU → boxa (gate espelha return/VarDecl; RHS já
+                // Nullable é referência física e passa sem re-box).
+                driver.emitErasureBox(ops, spt);
             }
             ops.add(new KofStoreLocal(locals.get(i).type(), locals.get(i).index()));
             return localIdx;
