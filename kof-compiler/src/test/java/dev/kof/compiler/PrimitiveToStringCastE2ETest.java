@@ -76,7 +76,7 @@ class PrimitiveToStringCastE2ETest {
         Files.writeString(src, CAST_SOURCE);
         KofInterpreter.Result i = driver.interpret(java.util.List.of(src), src.getParent(), new String[0]);
         assertEquals(0, i.exitCode(), "Script exit/stderr: " + i.stdout() + " " + i.stderr());
-        assertEquals(EXPECTED, i.stdout().trim(), "Script");
+        assertEquals(EXPECTED, i.stdout().replace("\r\n", "\n").trim(), "Script");
         Path jsOut = tempDir.resolve("ptp-js");
         CompilationResult js = driver.compile(src, jsOut, Target.JS);
         assertTrue(js.success(), "JS compile: " + js.diagnostics().getDiagnostics());
