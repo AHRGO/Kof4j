@@ -1,0 +1,81 @@
+package dev.kof.compiler;
+
+/**
+ * #382/#386 — gates compartilhados dos métodos novos de coleção (aridade e
+ * domínio do sort). Vivem fora do {@code CollectionCallLowerer} (gate 500):
+ * um gate na semântica compartilhada, os 4 alvos reportam igual
+ * (precedente SEM072/#336, SEM073/#361 — nunca 4 crashes diferentes).
+ */
+public final class CollectionMethodGates {
+
+    private CollectionMethodGates() {}
+
+    /** Aridade esperada dos métodos novos; -1 = sem checagem (legados). */
+    static int expectedArgs(String opFn) {
+        return switch (opFn) {
+            case "kof_list_index_of", "kof_list_last_index_of", "kof_list_add_all" -> 1;
+            case "kof_list_sub_list" -> 2;
+            case "kof_list_sort" -> 0;
+            case "kof_map_contains_value" -> 1;
+            case "kof_map_put_if_absent" -> 2;
+            default -> -1;
+        };
+    }
+
+    /** SEM025 de aridade para os métodos novos; null = aridade correta. */
+    static String arityError(String opFn, String kind, String mn, int got) {
+        int want = expectedArgs(opFn);
+        if (want < 0 || got == want) return null;
+        return kind + "." + mn + " takes exactly " + want + " argument(s)"
+                + ("kof_list_sort".equals(opFn)
+                        ? " — sort() uses the natural order (Kof has no Comparator yet)" : "");
+    }
+
+    /**
+     * #382 — domínio do sort (SEM097, todos os alvos): Kof não tem
+     * Comparable/Comparator, então só ordens naturais existem. Aceitar
+     * record/class viraria 3 comportamentos divergentes no runtime
+     * (ClassCastException no JVM, ponteiro no Native, no-op estável no JS)
+     * — rejeição universal, mesmo gate de SEM056.
+     */
+    static boolean naturalOrderType(Type t) {
+        Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
+        if (inner instanceof Type.UnknownType) return true; // lista vazia / pré-pin
+        if (BuiltinTypes.isString(inner)) return true;
+        if (inner instanceof Type.PrimitiveType pt) {
+            return switch (Type.canonicalPrimitiveName(pt.name())) {
+                case "int", "long", "double", "float", "boolean", "bool", "char" -> true;
+                default -> false;
+            };
+        }
+        return false;
+    }
+
+    static String sortDomainError(Type elemType) {
+        Type inner = elemType instanceof Type.NullableType nt ? nt.inner() : elemType;
+        return "List.sort needs elements with a natural order (Int/Long/Double/Float/Bool/Char/String);"
+                + " '" + CollectionWrites.typeNameFor(inner) + "' has none"
+                + " (Kof has no Comparator/Comparable — sort the projected key list instead)";
+    }
+
+    /**
+     * Float no Native (NAT001): o runtime cross não tem compare de precisão
+     * simples tradutível (sem flw no aarch64) — diagnóstico honesto no par
+     * (sort, Float, nativo), nunca ordem errada silenciosa.
+     */
+    static boolean floatSortUnsupportedOnNative(Type elemType, boolean nativeTarget) {
+        if (!nativeTarget) return false;
+        Type inner = elemType instanceof Type.NullableType nt ? nt.inner() : elemType;
+        return inner instanceof Type.PrimitiveType pt
+                && "float".equals(Type.canonicalPrimitiveName(pt.name()));
+    }
+
+    /** Tag de comparação do sort: 0=raw signed qword, 1=String, 2=Double. */
+    static int sortTag(Type elemType) {
+        Type inner = elemType instanceof Type.NullableType nt ? nt.inner() : elemType;
+        if (BuiltinTypes.isString(inner)) return 1;
+        if (inner instanceof Type.PrimitiveType pt
+                && "double".equals(Type.canonicalPrimitiveName(pt.name()))) return 2;
+        return 0;
+    }
+}

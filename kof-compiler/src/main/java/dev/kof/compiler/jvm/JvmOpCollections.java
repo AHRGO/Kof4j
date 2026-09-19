@@ -147,6 +147,50 @@ public final class JvmOpCollections {
                 emitUnboxIfPrimitive(mv, elemType);
             }
             case "kof_list_clear" -> mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/ArrayList", "clear", "()V", false);
+            // #382 — indexOf/lastIndexOf: java.util.List busca por conteúdo
+            // (box pelo tipo do ARG, bug 35 como kof_list_contains — o tag
+            // extra do call-site é descartado: no JVM equals já é conteúdo).
+            case "kof_list_index_of", "kof_list_last_index_of" -> {
+                if (kc.parameterTypes().size() > 1) {
+                    mv.visitInsn(POP);
+                }
+                Type argT = kc.parameterTypes().isEmpty() ? elemType
+                        : kc.parameterTypes().get(0);
+                emitBoxIfPrimitive(mv, argT);
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/ArrayList",
+                        "kof_list_index_of".equals(kc.methodName()) ? "indexOf" : "lastIndexOf",
+                        "(Ljava/lang/Object;)I", false);
+            }
+            // #382 — addAll(Collection): bool "mudou?". O argumento é a outra
+            // ArrayList (List do mesmo elemento — homogeneidade §126).
+            case "kof_list_add_all" ->
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/ArrayList", "addAll",
+                            "(Ljava/util/Collection;)Z", false);
+            // #382 — subList(from,to): ArrayList.subList devolve VIEW; o IR
+            // declara List materializada (get/set/iteration em todos os
+            // alvos) — embrulha em ArrayList cópia (mesmo shape do
+            // kof_map_keys) para o verifier nunca ver SubList num slot
+            // tipado como ArrayList.
+            case "kof_list_sub_list" -> {
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/ArrayList", "subList",
+                        "(II)Ljava/util/List;", false);
+                mv.visitTypeInsn(NEW, "java/util/ArrayList");
+                mv.visitInsn(DUP_X1);
+                mv.visitInsn(SWAP);
+                mv.visitMethodInsn(INVOKESPECIAL, "java/util/ArrayList", "<init>",
+                        "(Ljava/util/Collection;)V", false);
+            }
+            // #382 — sort(): ordem natural (Comparator null), mesma
+            // restrição SEM097/NAT001 do lowerer compartilhado; o tag
+            // (destino nativo) é descartada aqui.
+            case "kof_list_sort" -> {
+                if (!kc.parameterTypes().isEmpty()) {
+                    mv.visitInsn(POP);
+                }
+                mv.visitInsn(ACONST_NULL);
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/ArrayList", "sort",
+                        "(Ljava/util/Comparator;)V", false);
+            }
             default -> {}
         }
     }
@@ -257,6 +301,39 @@ public final class JvmOpCollections {
             case "kof_map_contains" -> {
                 emitBoxIfPrimitive(mv, keyType);
                 mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "containsKey", "(Ljava/lang/Object;)Z", true);
+            }
+            // #386 — containsValue(Object): box pelo tipo do ARG (o arg é o
+            // valor candidato; keyType aqui resolvido do parameterTypes[0] é
+            // exatamente esse tipo — java.util usa equals, o tag extra do
+            // call-site nativo é descartado).
+            case "kof_map_contains_value" -> {
+                if (kc.parameterTypes().size() > 1) {
+                    mv.visitInsn(POP);
+                }
+                if (!kc.parameterTypes().isEmpty()) {
+                    emitBoxIfPrimitive(mv, kc.parameterTypes().get(0));
+                }
+                mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "containsValue",
+                        "(Ljava/lang/Object;)Z", true);
+            }
+            // #386 — putIfAbsent: mesmo contrato do put (anterior OU null);
+            // box key+value como getOrDefault, resultado V? como put
+            // (emitNullablyBoxedMapResult — CHECKCAST, nunca unbox: null
+            // ausente tem que sobreviver, D-NULL-INTENT/I7).
+            case "kof_map_put_if_absent" -> {
+                emitBoxIfPrimitive(mv, valueType);
+                if (isPrimitiveType(keyType)) {
+                    mv.visitInsn(SWAP);
+                    emitBoxIfPrimitive(mv, keyType);
+                    mv.visitInsn(SWAP);
+                }
+                mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "putIfAbsent",
+                        "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true);
+                if (Type.isVoid(kc.returnType())) {
+                    mv.visitInsn(POP);
+                } else {
+                    emitNullablyBoxedMapResult(mv, valueType);
+                }
             }
             case "kof_map_size" -> mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "size", "()I", true);
             case "kof_map_is_empty" -> mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "isEmpty", "()Z", true);

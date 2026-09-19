@@ -371,7 +371,10 @@ public final class NativeX86Calls {
                 // A2 String-arg em Int-map) cai no raw cmpq, que NUNCA deref e
                 // produz exatamente o miss do JVM (0/null) — sem SIGSEGV, sem
                 // rejeição, sem regressão dos targets que já rodavam.
-                if (collFn.startsWith("kof_map_")) {
+                // #386: contains_value NÃO é keyed lookup — carrega a tag do
+                // VALOR como arg explícito (espelho kof_list_contains); escrever
+                // no slot 40 corromperia a tag de chave do mapa (find seguinte).
+                if (collFn.startsWith("kof_map_") && !"kof_map_contains_value".equals(collFn)) {
                     Type mkt = BuiltinTypes.mapKey(kc.ownerType());
                     Type mat = argCount >= 1 ? kc.parameterTypes().get(0) : null;
                     if (mkt instanceof Type.NullableType nt) mkt = nt.inner();

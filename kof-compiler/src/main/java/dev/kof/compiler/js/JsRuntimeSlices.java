@@ -27,6 +27,7 @@ final class JsRuntimeSlices {
             new Block("ui-widgets", JsRuntimeUiWidgets.UI_WIDGET_RUNTIME, false),
             new Block("ui-forms", JsRuntimeUiForms.UI_FORMS_RUNTIME, false),
             new Block("ui-layout", JsRuntimeUiLayout.UI_LAYOUT_RUNTIME, false),
+            new Block("collections", JsRuntimeCollections.COLLECTIONS_RUNTIME, false),
             new Block("ui-jsonmap", JsRuntimeUiJsonMap.JSON_MAP_RUNTIME, false),
             new Block("ui-web", JsRuntimeUiWeb.UI_WEB_RUNTIME + JsRuntimeUiWebSse.uiWebSseRuntime(), false),
             new Block("ui-config", JsRuntimeUiConfig.CONFIG_RUNTIME, false),

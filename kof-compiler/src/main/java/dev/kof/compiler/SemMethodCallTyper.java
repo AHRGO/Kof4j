@@ -138,6 +138,10 @@ public final class SemMethodCallTyper {
                 if ("put".equals(mc.methodName()) || "remove".equals(mc.methodName()))
                     return new Type.NullableType(valueType);
                 if ("getOrDefault".equals(mc.methodName())) return valueType;
+                // #386 — containsValue→Bool; putIfAbsent→V? (contrato Java:
+                // anterior OU null; D-NULL-INTENT/I7, mesmo par put/remove).
+                if ("containsValue".equals(mc.methodName())) return Type.PrimitiveType.BOOL;
+                if ("putIfAbsent".equals(mc.methodName())) return new Type.NullableType(valueType);
                 if ("size".equals(mc.methodName()) || "length".equals(mc.methodName())
                         || "count".equals(mc.methodName())) return Type.PrimitiveType.INT;
                 if ("contains".equals(mc.methodName()) || "containsKey".equals(mc.methodName())

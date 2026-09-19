@@ -459,7 +459,9 @@ public final class NativeRiscvCrossOps {
             // §126(a): CONJUNÇÃO receptor×arg (espelha o x86) — equals só
             // quando ambos String; tipos errados em qualquer direção viram
             // raw cmpq = miss seguro (0/null como o JVM), nunca SIGSEGV.
-            if (mn.startsWith("kof_map_")) {
+            // #386: contains_value carrega a tag do VALOR como arg explícito
+            // (espelho x86) — não toca no slot 40 (tag de chave do header).
+            if (mn.startsWith("kof_map_") && !"kof_map_contains_value".equals(mn)) {
                 Type mkt = BuiltinTypes.mapKey(kc.ownerType());
                 Type mat = argCount >= 1 ? kc.parameterTypes().get(0) : null;
                 if (mkt instanceof Type.NullableType nt) mkt = nt.inner();

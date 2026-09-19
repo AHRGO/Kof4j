@@ -380,14 +380,18 @@ public final class CompilerComparisons {
             if (mc.receiver() != null && BuiltinTypes.isList(ExpressionTyper.inferExprType(driver, mc.receiver(), locals))) {
                 return switch (mc.methodName()) {
                     case "get", "remove", "size", "length", "count",
-                            "contains", "isEmpty" -> true;
+                            "contains", "isEmpty",
+                            // #382 — devolvem valor (sort é void, fica fora)
+                            "indexOf", "lastIndexOf", "addAll", "subList" -> true;
                     default -> false;
                 };
             }
             if (mc.receiver() != null && BuiltinTypes.isMap(ExpressionTyper.inferExprType(driver, mc.receiver(), locals))) {
                 return switch (mc.methodName()) {
                     case "get", "remove", "put", "size", "length", "count",
-                            "contains", "containsKey", "isEmpty", "keys", "values", "getOrDefault" -> true;
+                            "contains", "containsKey", "isEmpty", "keys", "values", "getOrDefault",
+                            // #386 — containsValue/putIfAbsent deixam valor
+                            "containsValue", "putIfAbsent" -> true;
                     default -> false;
                 };
             }

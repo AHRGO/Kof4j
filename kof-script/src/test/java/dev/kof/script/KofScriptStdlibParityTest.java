@@ -53,6 +53,41 @@ class KofScriptStdlibParityTest {
             """, "1\n0\nfb");
     }
 
+    // #386 slice 2 + #382: containsValue/putIfAbsent e a família de List
+    // (indexOf/lastIndexOf/subList/addAll/sort) — interpretador e JVM
+    // compilado concordam com o oráculo medido (java.util no dois lados).
+    @Test
+    void collectionMethodsParity() throws Exception {
+        parity("""
+            main() {
+                val m: Map<String, Int> = mapOf()
+                m.put("a", 1)
+                println(m.containsValue(1))
+                println(m.containsValue(9))
+                println(m.putIfAbsent("a", 5))
+                println(m.getOrDefault("a", 0))
+                println(m.putIfAbsent("b", 2) == null)
+                println(m.containsValue(2))
+                val l: List<Int> = listOf(3, 1, 2, 1)
+                println(l.indexOf(1))
+                println(l.indexOf(99))
+                println(l.lastIndexOf(1))
+                println(l.subList(1, 3).size)
+                println(l.subList(2, 2).size)
+                val b: List<Int> = listOf()
+                println(b.addAll(l))
+                println(b.addAll(listOf<Int>()))
+                val rev: List<Int> = listOf(5, 4, 3, 2, 1)
+                rev.sort()
+                println(rev.get(0))
+                println(rev.get(4))
+                val str: List<String> = listOf("pear", "apple")
+                str.sort()
+                println(str.get(0))
+            }
+            """, "true\nfalse\n1\n1\ntrue\ntrue\n1\n-1\n3\n2\n0\ntrue\nfalse\n1\n5\napple");
+    }
+
     @Test
     void uncapitalizeParity() throws Exception {
         parity("""
