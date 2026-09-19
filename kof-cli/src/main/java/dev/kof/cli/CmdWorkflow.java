@@ -118,10 +118,10 @@ final class CmdWorkflow {
             return 1;
         }
         Path out = temp.resolve("classes");
+        Path siblingDir = file.toAbsolutePath().normalize().getParent();
         try {
             Path entry = temp.resolve(file.getFileName().toString());
             Files.writeString(entry, source + "\n" + generatedMain(sub, job, dryRun), StandardCharsets.UTF_8);
-            Path siblingDir = file.toAbsolutePath().normalize().getParent();
             if (siblingDir != null) {
                 for (Path sib : KofCliSupport.collectShallow(siblingDir)) {
                     Path abs = sib.toAbsolutePath().normalize();
@@ -153,7 +153,9 @@ final class CmdWorkflow {
         try {
             ProcessBuilder pb = new ProcessBuilder(
                     KofCliSupport.javaExecutable(), "-cp", out.toString(), className);
-            pb.directory(temp.toFile());
+            // o pipeline roda no diretório do arquivo: caminhos relativos do
+            // pipeline (ex. build/) resolvem no projeto, não no staging.
+            pb.directory(siblingDir != null ? siblingDir.toFile() : temp.toFile());
             pb.redirectErrorStream(true);
             Process p = pb.start();
             output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);

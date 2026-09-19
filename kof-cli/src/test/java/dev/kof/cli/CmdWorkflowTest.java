@@ -1,5 +1,6 @@
 package dev.kof.cli;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -172,5 +173,52 @@ class CmdWorkflowTest {
         CliResult r = run(dir, "workflow", "run", f.toString());
         assertEquals(1, r.exit(), r.out());
         assertTrue(r.out().contains("ciclo detectado entre: a,b"), r.out());
+    }
+
+    /** 2.5 E2E: the REAL example `examples/ci/ci-pipeline.kf` runs end to end
+     *  — checkout/build/test/package with real filesystem artifacts, the
+     *  topological order, and `--job test` running only its subgraph. The
+     *  example is copied to a temp dir so the run leaves no build/ in the repo
+     *  (this test is the golden that keeps the example valid). */
+    @Test
+    void realCiPipelineExampleRunsEndToEnd(@TempDir Path dir) throws Exception {
+        Path example = repoExample();
+        Assumptions.assumeTrue(example != null, "examples/ci/ci-pipeline.kf not found");
+        Path copy = dir.resolve("ci-pipeline.kf");
+        Files.copy(example, copy);
+
+        CliResult list = run(dir, "workflow", "list", copy.toString());
+        assertEquals(0, list.exit(), list.out());
+        assertTrue(list.out().contains("jobs: 4"), list.out());
+        assertTrue(list.out().contains("  package (after: test)"), list.out());
+
+        CliResult dry = run(dir, "workflow", "run", copy.toString(), "--dry-run");
+        assertEquals(0, dry.exit(), dry.out());
+        assertTrue(dry.out().contains("1. checkout"), dry.out());
+        assertTrue(dry.out().contains("4. package"), dry.out());
+
+        CliResult full = run(dir, "workflow", "run", copy.toString());
+        assertEquals(0, full.exit(), full.out());
+        assertTrue(full.out().contains("ok=checkout,build,test,package"), full.out());
+        assertTrue(Files.isRegularFile(dir.resolve("build/ci-demo/app.jar")),
+                "artifact not produced:\n" + full.out());
+
+        // --job test: only checkout+build+test; checkout wipes the workspace,
+        // so the package artifact must NOT be recreated.
+        CliResult job = run(dir, "workflow", "run", copy.toString(), "--job", "test");
+        assertEquals(0, job.exit(), job.out());
+        assertTrue(job.out().contains("ok=checkout,build,test failed= skipped="), job.out());
+        assertTrue(!Files.exists(dir.resolve("build/ci-demo/app.jar")),
+                "package must not run for --job test:\n" + job.out());
+    }
+
+    private static Path repoExample() {
+        Path p = Path.of(System.getProperty("user.dir")).toAbsolutePath();
+        while (p != null) {
+            Path ex = p.resolve("examples/ci/ci-pipeline.kf");
+            if (Files.exists(ex)) return ex;
+            p = p.getParent();
+        }
+        return null;
     }
 }
