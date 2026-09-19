@@ -182,9 +182,23 @@ public class TypeParser {
         }
         while (ctx.check(TokenType.QUESTION)) {
             ctx.advance();
+            // D-TROOL (19/09): `Bool` tem exatamente dois valores. O terceiro
+            // estado mora em `Troolean` (DECISIONS.md) — `Bool?` morre aqui.
+            if (isBoolBase(type.toString())) {
+                ctx.error("'Bool' has two values; for true/false/unknown use "
+                        + "'Troolean' (DECISIONS.md D-TROOL)", "SEM095");
+            }
             type.append("?");
         }
         return type.toString();
+    }
+
+    /** D-TROOL: base `Bool` (qualquer grafia canonica) nunca leva `?`. */
+    static boolean isBoolBase(String typeText) {
+        return switch (typeText) {
+            case "Bool", "bool", "Boolean", "boolean" -> true;
+            default -> false;
+        };
     }
 
     static boolean isPrimitiveType(ParseContext ctx) {

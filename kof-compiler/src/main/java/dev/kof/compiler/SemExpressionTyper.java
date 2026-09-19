@@ -228,7 +228,11 @@ public final class SemExpressionTyper {
             }
             case UnaryExpr ue -> {
                 Type operandType = inferType(sa, ue.operand(), scope);
-                if ("!".equals(ue.operator())) yield Type.PrimitiveType.BOOL;
+                // D-TROOL (19/09): `!Troolean` = tres estados (Kleene `!U = U`)
+                // — o tipo semantico tem de casar com a caixa do lowering.
+                if ("!".equals(ue.operator())) yield CompilerComparisons.isNullableBool(operandType)
+                        ? new Type.NullableType(Type.PrimitiveType.BOOL)
+                        : Type.PrimitiveType.BOOL;
                 yield operandType;
             }
             case MethodCallExpr mc -> SemMethodCallTyper.infer(sa, mc, scope);

@@ -86,7 +86,14 @@ public final class TypeChecker {
             return Type.PrimitiveType.BOOL;
         }
 
-        if ("&&".equals(operator) || "||".equals(operator)) {
+        // D-TROOL (19/09): com um `Troolean` num dos lados, `&&`/`||`/`!`
+        // produzem tres estados (Kleene, DECISIONS.md) — o tipo semantico
+        // precisa casar com o da pilha do lowering (caixa Boolean|null),
+        // senão o slot do consumidor mente (classe do §462).
+        if ("&&".equals(operator) || "||".equals(operator) || "!".equals(operator)) {
+            if (Type.isTroolean(left) || Type.isTroolean(right)) {
+                return new Type.NullableType(Type.PrimitiveType.BOOL);
+            }
             return Type.PrimitiveType.BOOL;
         }
         if ("instanceof".equals(operator)) {
@@ -94,9 +101,6 @@ public final class TypeChecker {
         }
         if ("as".equals(operator)) {
             return right;
-        }
-        if ("!".equals(operator)) {
-            return Type.PrimitiveType.BOOL;
         }
         if (Type.isString(left) || Type.isString(right)) {
             if ("+".equals(operator)) {

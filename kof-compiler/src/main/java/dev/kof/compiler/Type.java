@@ -83,6 +83,12 @@ public sealed interface Type {
                             .map(String::trim).map(Type::of).toList();
             return new FunctionType(params, Type.of(retStr));
         }
+        // D-TROOL (19/09): o nome de superfície do bool de três estados. A
+        // representação continua Nullable(BOOL) (máquina boxed do §295/§306);
+        // `Bool?` como sintaxe morre (SEM095 nos pontos de parser).
+        if ("Troolean".equals(name) || "troolean".equals(name)) {
+            return new NullableType(PrimitiveType.BOOL);
+        }
         if (name.endsWith("?")) {
             Type inner = of(name.substring(0, name.length() - 1));
             return new NullableType(inner);
@@ -160,6 +166,20 @@ public sealed interface Type {
 
     static boolean isVoid(Type type) {
         return type instanceof PrimitiveType p && "void".equals(p.name());
+    }
+
+    /**
+     * D-TROOL (19/09): o bool de tres estados. Estrutura = {@code Nullable(Bool)}
+     * (mesma caixa do §295/§306); na superficie o nome e sempre {@code Troolean}
+     * — {@code Bool?} nao e mais sintaxe valida (SEM095).
+     */
+    static boolean isTroolean(Type type) {
+        return type instanceof NullableType n && isTroolean(n);
+    }
+
+    private static boolean isTroolean(NullableType n) {
+        return n.inner() instanceof PrimitiveType p
+                && "bool".equals(canonicalPrimitiveName(p.name()));
     }
 
     static boolean isUnknown(Type type) {
@@ -243,7 +263,7 @@ public sealed interface Type {
                         : c.typeArguments().stream().map(Type::display)
                             .collect(java.util.stream.Collectors.joining(", ", "<", ">")));
             case ArrayType a -> display(a.componentType()) + "[]";
-            case NullableType n -> display(n.inner()) + "?";
+            case NullableType n -> isTroolean(n) ? "Troolean" : display(n.inner()) + "?";
             case UnknownType _ -> "unknown";
             case TypeVariable v -> v.name();
             case FunctionType _ -> "function";
@@ -275,7 +295,7 @@ public sealed interface Type {
                         : c.typeArguments().stream().map(Type::describe)
                             .collect(java.util.stream.Collectors.joining(", ", "<", ">")));
             case ArrayType a -> describe(a.componentType()) + "[]";
-            case NullableType n -> describe(n.inner()) + "?";
+            case NullableType n -> isTroolean(n) ? "Troolean" : describe(n.inner()) + "?";
             case UnknownType _ -> "unknown";
             case TypeVariable v -> v.name();
             case FunctionType _ -> "function";

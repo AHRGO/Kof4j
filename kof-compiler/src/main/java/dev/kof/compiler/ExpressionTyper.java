@@ -103,13 +103,18 @@ public final class ExpressionTyper {
                         }
                         continue;
                     }
-                    // #462: `&&`/`||` materializam SEMPRE `Bool`, mesmo com
-                    // `Bool?` nos operandos — o `TypeChecker` semantico ja tem
-                    // esta regra. Sem ela o typer do lowering herdava o tipo do
-                    // operando ESQUERDO (`Bool?`) e o consumidor tratava um int
-                    // primitivo como se fosse referencia boxed (VerifyError).
+                    // #462: `&&`/`||` materializam `Bool` quando NENHUM lado é
+                    // nulável. D-TROOL (19/09): com um `Troolean` num dos lados
+                    // o resultado é tres-estado — o lowering Kleene deixa a
+                    // caixa (Boolean|null) na pilha, e o consumidor precisa
+                    // acreditar no tipo certo (a regra antiga forçava `Bool` e
+                    // o join de arcs boxed virava VerifyError invertido).
                     if ("&&".equals(be.operator()) || "||".equals(be.operator())) {
-                        leftType = Type.PrimitiveType.BOOL;
+                        boolean anyBool = CompilerComparisons.isNullableBool(leftType)
+                                || CompilerComparisons.isNullableBool(
+                                        ExpressionTyper.inferExprType(driver, be.right(), locals));
+                        leftType = anyBool ? new Type.NullableType(Type.PrimitiveType.BOOL)
+                                : Type.PrimitiveType.BOOL;
                         continue;
                     }
                     if (TypeMetrics.isComparisonOp(be.operator())) {
