@@ -10385,4 +10385,6 @@ Compila limpo no JVM; ao rodar morre no LOAD da classe com `java.lang.VerifyErro
 
 **Prova CI (tip `84e5c7b7`):** o UNICO vermelho restante e o passo "Gate ≤500" do Build+Tests; kof.io multiplatform (ubuntu/macos/windows) e Native cross (riscv64+aarch64/qemu) estao todos **SUCCESS** — provando que os 4 jobs vermelhos anteriores eram puramente a cascata de compilacao da `escapeLiteral` duplicada, resolvida em `82a09c35`. O split permanece decisao da lane dona.
 
-**Status:** 🟡 ABERTA — dona = lane compilador `.22`.
+**Fechamento (19/09 ~00:3x, medido):** o dono não apareceu e o gate seguiu vermelho para todas as lanes (Q0: gate vermelho é prioridade zero). A mantenedora reativou a lane docs→plataforma e o split landou no MESMO turno: o braço `VarDeclStmt` de `emitStatementInner` (declaração de local + erasure-box do bug 15/#57 + o gate cru §295(b) de `Nullable(primitivo)` — exatamente a costura catalogada acima) virou `StatementLowererLocalBoxing.java` (rule 7: nome pelo que contém). StatementLowerer 605→490, nova classe 134 — ambas abaixo de 500, entrada do baseline removida (`--update-baseline`, 43→42 dívidas). Prova (freeze rule 3 — refactor = mesma suíte): kof-compiler 2305/0F (17E = guarda ambiental node), kof-cli 336/0F, `NullablePrimitiveContractE2ETest` 26/26, `NullablePrimitiveRelationalConditionTest` verde, check_500 rc=0, stdlib-boundary rc=0.
+
+**Status:** ✅ FECHADA 19/09 ~00:3x (split landado pela lane docs→plataforma, reativada por ordem da mantenedora — ver fechamento).

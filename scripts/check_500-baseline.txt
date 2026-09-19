@@ -1,5 +1,5 @@
 547	kof-cli/src/main/java/dev/kof/cli/BytecodeStatements.java
-511	kof-cli/src/main/java/dev/kof/cli/LspServer.java
+585	kof-cli/src/main/java/dev/kof/cli/LspServer.java
 506	kof-cli/src/main/java/dev/kof/cli/TranslateExpr.java
 501	kof-cli/src/main/java/dev/kof/cli/Translate.java
 580	kof-compiler/src/main/java/dev/kof/compiler/BuiltinCallTyper.java
@@ -8,9 +8,10 @@
 501	kof-compiler/src/main/java/dev/kof/compiler/CompilerTypes.java
 553	kof-compiler/src/main/java/dev/kof/compiler/ExpressionBinaryLowerer.java
 569	kof-compiler/src/main/java/dev/kof/compiler/ExpressionLowerer.java
-597	kof-compiler/src/main/java/dev/kof/compiler/js/JsCallEmitter.java
+599	kof-compiler/src/main/java/dev/kof/compiler/js/JsCallEmitter.java
 559	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeCore.java
-505	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeOps.java
+529	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeOps.java
+530	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiComponents.java
 527	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiCrypto.java
 531	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiLayout.java
 522	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiSecurity.java
@@ -32,11 +33,10 @@
 568	kof-compiler/src/main/java/dev/kof/compiler/parser/ExpressionParser.java
 509	kof-compiler/src/main/java/dev/kof/compiler/parser/Lexer.java
 549	kof-compiler/src/main/java/dev/kof/compiler/parser/StatementParser.java
-515	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeConcurrency.java
+553	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeConcurrency.java
 579	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeTimeIso.java
 566	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeUi.java
 585	kof-compiler/src/main/java/dev/kof/compiler/SemanticAnalyzer.java
 566	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
 533	kof-compiler/src/main/java/dev/kof/compiler/StatementAnalyzer.java
-585	kof-compiler/src/main/java/dev/kof/compiler/StatementLowerer.java
-555	kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java
+589	kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java

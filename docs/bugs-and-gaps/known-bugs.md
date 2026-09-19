@@ -10940,3 +10940,16 @@ Gate≤500 step until the owner splits.
 **CI proof (tip `84e5c7b7`):** the ONLY red left is the "Gate ≤500" step of Build+Tests; kof.io multiplatform (ubuntu/macos/windows) and Native cross (riscv64+aarch64/qemu) are all **SUCCESS** — proving the earlier 4-job red was purely the compile-cascade from the duplicated `escapeLiteral`, fixed by `82a09c35`. Split remains the owner lane's call.
 
 **Status:** 🟡 OPEN — owner = compiler lane `.22`.
+
+**Closure (19/09 ~00:3x, measured):** the owner did not materialize and the gate stayed red
+for every lane (Q0: a red gate is priority zero). The maintainer re-activated the
+docs→platform lane and this split landed in the SAME turn: the `VarDeclStmt` arm of
+`emitStatementInner` (local declaration + bug-15/#57 erasure-box + the §295(b)
+`Nullable(primitive)` raw gate — exactly the seam catalogued above) moved to
+`StatementLowererLocalBoxing.java` (rule 7: named for what it contains). StatementLowerer
+605→490, new class 134 — both under 500, baseline entry removed (`--update-baseline`,
+43→42 dívidas). Proof (freeze rule 3 — refactor = same suite): kof-compiler 2305/0F
+(17E = node env guard), kof-cli 336/0F, `NullablePrimitiveContractE2ETest` 26/26,
+`NullablePrimitiveRelationalConditionTest` green, check_500 rc=0, stdlib-boundary rc=0.
+
+**Status:** ✅ CLOSED 19/09 ~00:3x (split landed by the docs→platform lane, reclaimed by maintainer order — see closure).
