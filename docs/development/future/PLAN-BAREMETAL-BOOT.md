@@ -6,7 +6,7 @@
 **Type:** future architecture / dependency record (NOT an implementation order)
 **Date:** September 15, 2026
 **Source:** `../../architecture/UNIVERSAL-PLATFORM-VISION.md` §8.2 (Native: "deploy/edge/systems") ·
-`PLAN-TREE-SHAKING.md` §T3 (embedded/MCU route) · `docs/development/native-multiarch.md`
+`PLAN-TREE-SHAKING.md` §T3 (embedded/MCU route) · `docs/native-multiarch.md`
 · maintainer directive (15/09): *"all native code must also talk directly to
 barebones — bootable code for microcontrollers, legacy and UEFI with Kof"*.
 

@@ -1246,7 +1246,7 @@ use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
 | `docs/development/future/` (plans) | **só plano sem código**: RAII TIER 2.4 (DD-STDLIB-01 FECHADO 13/09 → `docs/stdlib/`). A migração legado (decompiler/translator/IR/differential) foi p/ `docs/development/` 12/09, **voltou p/ `future/` 15/09 — DESPRIORIZADA pela mantenedora** (código fica em kof-cli; promoção exige decisão explícita dela) |
 | `docs/development/roadmap.md`, `docs/audits/roadmap-audit.md`, `docs/bugs-and-gaps/ecosystem-coverage.md` | Roadmaps & auditoria de cobertura (fila P0→P5) |
 | `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Gaps de spec (SG-00x — fila do maintainer completa, virou referência) + bugs abertos |
-| `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
+| `docs/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
 | `docs/development/DECISIONS.md` | **Decisões da mantenedora** (time/segurança/app-model/Spring — pasta `decision-pending/` extinta 13/09) |
 | `docs/development/roadmap.md` §23 | **Plano de implementação consolidado** (Tiers 0–12) — único plano ordenado; migração A–H ✅, universal **EM DESENVOLVIMENTO** 17/09 (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, R12 sobreposto — §D-UNIVERSAL) |
 

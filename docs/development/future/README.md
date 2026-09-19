@@ -13,7 +13,7 @@ is explicitly non-deliverable and outside the current scope).
 
 ## Recent example (09/01)
 
-- `kof-native-risc-arm.md` **left here** for `docs/development/native-multiarch.md`: the
+- `kof-native-risc-arm.md` **left here** for `docs/native-multiarch.md`: the
   plumbing (enum `Target.NATIVE_RISCV64/AARCH64`, CLI `native.risc/arm`,
   dispatch, cross-as/ld) is already in the code, so the item is **under development**
   and started being documented with real state + a finishing plan.

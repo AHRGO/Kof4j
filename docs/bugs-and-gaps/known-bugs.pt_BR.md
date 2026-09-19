@@ -3014,7 +3014,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
     `[?, ?]` com a pointer. Portar o descritor p/ B39 exige host c/ binutils
     riscv64/aarch64 + qemu (esta máquina da mantenedora não tem — `assumeToolchain`
     skipa; o CI `cross-native` é o árbitro). Face listada em
-    `docs/development/native-multiarch.md`.
+    `docs/native-multiarch.md`.
   - **Double/Float no cross:** **✅ FECHADO 15/09** — `println`/`valueOf`/concat
     e coleções (tags 4/5) convertem FP→string via `kof_dtoa` (fatia `RtB45`,
     libc `snprintf`/`strtod`, link dinâmico); o x86 já tinha.
@@ -9374,7 +9374,7 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   backend spill permanentemente as referências vivas no frame — a via
   mais simples, custo: push/pop por temporário). Sem G-6, manter o
   status-quo honesto: mmap backstop (sem corrupção, memória maior).
-- **Pointer:** `docs/development/native-multiarch.md` §"G-6 x86";
+- **Pointer:** `docs/native-multiarch.md` §"G-6 x86";
   fila = D-DEV-PRIORITY frente 2. `kof_gc_collect_now` MANUAL continua
   exposto e seguro quando chamado sem temporário vivo em registrador.
 - **CAUSA REAL, apurada a gdb no MESMO dia da catalogação (substitui a

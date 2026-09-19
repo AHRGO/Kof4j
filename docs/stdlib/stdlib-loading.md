@@ -49,7 +49,7 @@ per family (`nativeFamilyAbsenceAfterPrune`, `riscvFamilyAbsenceAfterPrune`,
 - **x86 without `--gc-sections`**: requires `kof_heap_root_end` + `emitStaticData`
   inside the root range of the conservative scan (bugfix queue).
 - **riscv/aarch bytes**: only really drop with GC mark-sweep (the `.bss` of the
-  bump heap is fixed) — see `docs/development/native-multiarch.md`.
+  bump heap is fixed) — see `docs/native-multiarch.md`.
 - **`kof_platform` in JS** (issue #104): `uuid`/`random`/`security` outside the
   GraalJS host give `ReferenceError` — pruning **preserves** the behavior,
   it is neither a regression nor fixed here.

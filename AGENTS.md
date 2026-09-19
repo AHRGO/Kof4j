@@ -1248,7 +1248,7 @@ use the project harness or create a minimal E2E test in the area's package.
 | `docs/development/future/` (plans) | **only plan without code**: RAII TIER 2.4 (DD-STDLIB-01 CLOSED 13/09 → `docs/stdlib/`). The legacy migration (decompiler/translator/IR/differential) went to `docs/development/` 12/09, **back to `future/` 15/09 — DEPRIORITIZED by the maintainer** (code stays in kof-cli; promotion needs her explicit decision) |
 | `docs/development/roadmap.md`, `docs/audits/roadmap-audit.md`, `docs/bugs-and-gaps/ecosystem-coverage.md` | Roadmaps & coverage audit (queue P0→P5) |
 | `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Spec gaps (SG-00x — maintainer queue complete, became a reference) + open bugs |
-| `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realized → stdlib) + audit ≤500 (snapshot → architecture) |
+| `docs/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realized → stdlib) + audit ≤500 (snapshot → architecture) |
 | `docs/development/DECISIONS.md` | **Maintainer's decisions** (time/security/app-model/Spring — `decision-pending/` folder extinct 09/13) |
 | `docs/development/roadmap.md` §23 | **Consolidated implementation plan** (Tiers 0–12) — the only ordered plan; migration A–H ✅, universal **UNDER DEVELOPMENT** 17/09 (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, R12 overridden — §D-UNIVERSAL) |
 

@@ -2,6 +2,29 @@
 
 # Kof Native — Multi-Arch (RISC-V 64 and ARM64/AArch64)
 
+> **✅ PROMOTED to `docs/` 19/09 (§5 step-8; maintainer order "assume
+> native-multiarch e termina") — NATIVE002 CLOSED.** The five implementation
+> faces are all closed: (1) cross GC mark-sweep G-0..G-6(a) DONE 15/09
+> (x86 auto-collect G-6(a) 19/09; the worker-stack-scan face is catalogued,
+> main-only contract); (2) DB001 + CONC001 cross CLOSED 15/09; (3) FP
+> cross (FLT001, slice `RtB45`) + §107 record/nested CLOSED 19/09 ON ALL 3
+> ARCHES (x86 `.rodata` recursive descriptor face (3) + cross port face (4):
+> slice `B39` interprets the SAME descriptor grammar — 8=vtable toString via
+> `jalr`, 9/10=nested containers, null→"null"; `NativeRiscv64E2ETest`/
+> `NativeAarch64E2ETest` 46/46 each under qemu, golden = the measured JVM
+> oracle; aarch64 inherits via the translator with the new `lhu`→`ldrh`);
+> (4) per-arch columns CLOSED 19/09 — section "Native per-arch" in
+> `docs/backend-parity.md`(+PT), 16 domains × 3 arches; (5) cross CI CLOSED
+> 12/09 — job `cross-native` runs both E2E suites under qemu. **The remaining
+> per-domain refusals are HONEST gap codes, not pending work of this doc:**
+> SECN000 (crypto asm — R11 non-goal), OTP001 (supervisor cross — §129 real-TLS
+> decision registered 19/09 in `DECISIONS.md`, execution owned by the nat
+> lane), JSN004 (`json.decode<Record>` in pure asm), RNG001 (cross rng),
+> `kof.ui` (no cross port) — each diagnosed at compile time, never silent
+> (R6), tracked in `docs/bugs-and-gaps/known-bugs.md` + the per-arch section
+> of `docs/backend-parity.md`. The build-out history below is kept verbatim
+> as the implementation record.
+
 > **🔄 RE-AUDIT 12/09 (measured under REAL qemu on this host — NOT memory):**
 > the 03/09 headers below are OUTDATED and this block is the source of the
 > REAL state (AGENTS rule "audit doc against the code/tests, not against
@@ -54,7 +77,8 @@
 > the SAME JVM-oracle golden as x86 (incl. `[Point[x=1, y=2]]`, `{k=Point[x=7,
 > y=8]}`, `[[[4]]]`, `"rec:" + Point(5,6)` — the concat face needed a
 > `valueOf(record)` vtable branch in `NativeRiscvCrossOps`); (4) `backend-parity.md` per-arch columns
-> still to be separated; (5) cross CI does not exist (host-dependent toolchain) —
+> **CLOSED 19/09** — section "Native per-arch (x86_64 · riscv64 · aarch64)"
+> in `docs/backend-parity.md`(+PT); (5) cross CI does not exist (host-dependent toolchain) —
 > **face (5) CLOSED 12/09**: job `cross-native` in `.github/workflows/ci.yml`
 > installs `binutils-riscv64/aarch64-linux-gnu` + `qemu-user-static` and runs
 > `NativeRiscv64E2ETest,NativeAarch64E2ETest` (they execute under qemu, do not skip —
@@ -65,8 +89,9 @@
 > runtime calls libc; the current 84 cross binaries stay static/portable.
 > **➕ First production consumer DONE 15/09**: `RuntimeDtoa` ported to the cross
 > runtime as slice `RtB45` (`snprintf`/`strtod`), closing **FLT001**. See §2.3.
-> This doc remains in `development/` (NATIVE002 does not close while (1)–(5)
-> remain); when (1)–(5) reach zero → move to `docs/`.
+> ~~This doc remains in `development/` (NATIVE002 does not close while (1)–(5)
+> remain); when (1)–(5) reach zero → move to `docs/`.~~ **SUPERSEDED 19/09:
+> (1)–(5) all closed (see the promotion block above) — doc moved to `docs/`.**
 >
 > **🪜 FACE (1) DECOMPOSITION — cross GC mark-sweep (12/09, queue for
 > step-by-step execution — each step fits in a session and has its own proof):**

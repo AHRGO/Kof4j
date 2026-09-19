@@ -6,7 +6,7 @@
 **Tipo:** arquitetura futura / registo de dependência (NÃO ordem de implementação)
 **Data:** 15 de setembro de 2026
 **Fonte:** `../../architecture/UNIVERSAL-PLATFORM-VISION.md` §8.2 (Native: "deploy/edge/sistemas") ·
-`PLAN-TREE-SHAKING.md` §T3 (rota embedded/MCU) · `docs/development/native-multiarch.md`
+`PLAN-TREE-SHAKING.md` §T3 (rota embedded/MCU) · `docs/native-multiarch.md`
 · diretiva da mantenedora (15/09): *"todo código nativo deve se comunicar direto
 com barebones também — código bootável para microcontroladores, legado e UEFI com Kof"*.
 

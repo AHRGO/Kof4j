@@ -3012,7 +3012,7 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
     goldens pin `[?, ?]` and carry the pointer. Porting the descriptor to
     B39 requires a host with riscv64/aarch64 binutils+qemu (this maintainer
     host has neither — `assumeToolchain` skips; CI `cross-native` is the
-    referee). Face listed in `docs/development/native-multiarch.md`.
+    referee). Face listed in `docs/native-multiarch.md`.
   - **Double/Float in cross:** **✅ CLOSED 15/09** — `println`/`valueOf`/concat
     and collections (tags 4/5) convert FP→string via `kof_dtoa` (slice `RtB45`,
     libc `snprintf`/`strtod`, dynamic link); x86 already had it.
@@ -9609,7 +9609,7 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   backend spill permanentemente as referências vivas no frame — a via
   mais simples, custo: push/pop por temporário). Sem G-6, manter o
   status-quo honesto: mmap backstop (sem corrupção, memória maior).
-- **Pointer:** `docs/development/native-multiarch.md` §"G-6 x86";
+- **Pointer:** `docs/native-multiarch.md` §"G-6 x86";
   fila = D-DEV-PRIORITY frente 2. `kof_gc_collect_now` MANUAL continua
   exposto e seguro quando chamado sem temporário vivo em registrador.
 - **CAUSA REAL, apurada a gdb no MESMO dia da catalogação (substitui a

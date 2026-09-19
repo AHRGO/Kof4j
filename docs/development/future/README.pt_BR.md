@@ -13,7 +13,7 @@ documento de arquitetura/visão **sem código implementado** (ou com código que
 
 ## Exemplo recente (01/09)
 
-- `kof-native-risc-arm.md` **saiu daqui** para `docs/development/native-multiarch.md`: o
+- `kof-native-risc-arm.md` **saiu daqui** para `docs/native-multiarch.md`: o
   plumbing (enum `Target.NATIVE_RISCV64/AARCH64`, CLI `native.risc/arm`,
   dispatch, cross-as/ld) já está no código, então o item é **em desenvolvimento**
   e passou a ser documentado com estado real + plano de finalização.

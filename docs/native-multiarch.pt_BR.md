@@ -2,6 +2,31 @@
 
 # Kof Native — Multi-Arch (RISC-V 64 e ARM64/AArch64)
 
+> **✅ PROMOVIDO p/ `docs/` 19/09 (§5 passo-8; ordem da mantenedora "assume
+> native-multiarch e termina") — NATIVE002 FECHADO.** As cinco faces de
+> implementação estão todas fechadas: (1) cross GC mark-sweep G-0..G-6(a)
+> FEITO 15/09 (auto-collect x86 G-6(a) 19/09; a face worker-stack-scan está
+> catalogada, contrato main-only); (2) DB001 + CONC001 cross FECHADOS 15/09;
+> (3) FP cross (FLT001, fatia `RtB45`) + §107 record/aninhado FECHADO 19/09
+> NAS 3 ARCOS (x86 descritor recursivo `.rodata` face (3) + port cross face
+> (4): a fatia `B39` interpreta a MESMA gramática de descritor — 8=toString
+> na vtable via `jalr`, 9/10=containers aninhados, null→"null";
+> `NativeRiscv64E2ETest`/`NativeAarch64E2ETest` 46/46 cada sob qemu, golden =
+> o oracle JVM medido; aarch64 herda via tradutor c/ o novo `lhu`→`ldrh`);
+> (4) colunas por-arch FECHADAS 19/09 — seção "Native per-arch" em
+> `docs/backend-parity.md`(+PT), 16 domínios × 3 arcos; (5) CI cross FECHADO
+> 12/09 — job `cross-native` roda as duas suítes E2E sob qemu. **As recusas
+> restantes por domínio são códigos de gap HONESTOS, não trabalho pendente
+> deste doc:** SECN000 (crypto asm — non-goal R11), OTP001 (supervisor cross —
+> decisão §129 TLS real registrada 19/09 no `DECISIONS.md`, execução dono =
+> lane nat), JSN004 (`json.decode<Record>` em asm puro), RNG001 (rng cross),
+> `kof.ui` (sem port cross) — cada uma diagnosticada em compile time, nunca
+> silenciosa (R6), rastreadas no `docs/bugs-and-gaps/known-bugs.md` + seção
+> por-arch do `docs/backend-parity.md`. O histórico de construção abaixo fica
+> verbatim como registro de implementação.
+
+> **🔄 RE-AUDIT 12/09 (measured under REAL qemu on this host — NOT memory):**
+
 > **🔄 RE-AUDITORIA 12/09 (medido sob qemu REAL neste host — NÃO memória):**
 > os cabeçalhos 03/09 abaixo estão DESATUALIZADOS e este bloco é a fonte do
 > estado REAL (regra AGENTS "auditar doc contra o código/testes, não contra a
@@ -54,7 +79,8 @@
 > MESMO golden do oracle JVM do x86 (incl. `[Point[x=1, y=2]]`,
 > `{k=Point[x=7, y=8]}`, `[[[4]]]`, `"rec:" + Point(5,6)` — a face de concat
 > exigiu ramo `valueOf(record)` vtable no `NativeRiscvCrossOps`); (4) `backend-parity.md` colunas por-arch
-> ainda por separar; (5) CI cross não existe (toolchain host-dependente) —
+> **FECHADAS 19/09** — seção "Native per-arch (x86_64 · riscv64 · aarch64)"
+> em `docs/backend-parity.md`(+PT); (5) CI cross não existe (toolchain host-dependente) —
 > **face (5) FECHADA 12/09**: job `cross-native` em `.github/workflows/ci.yml`
 > instala `binutils-riscv64/aarch64-linux-gnu` + `qemu-user-static` e roda
 > `NativeRiscv64E2ETest,NativeAarch64E2ETest` (executam sob qemu, não skipam —
@@ -65,8 +91,9 @@
 > podado chama libc; os 84 binários cross atuais seguem estáticos/portáveis.
 > **➕ 1º consumidor de produção FEITO 15/09**: `RuntimeDtoa` portado ao runtime
 > cross como fatia `RtB45` (`snprintf`/`strtod`), fechando o **FLT001**. Ver §2.3.
-> Este doc continua em `development/` (NATIVE002 não fecha enquanto restam
-> (1)–(5)); quando (1)–(5) zerarem → mover para `docs/`.
+> ~~Este doc continua em `development/` (NATIVE002 não fecha enquanto restam
+> (1)–(5)); quando (1)–(5) zerarem → mover para `docs/`.~~ **SUPERSEDED 19/09:
+> (1)–(5) todos fechados (bloco de promoção acima) — doc movido p/ `docs/`.**
 >
 > **🪜 DECOMPOSIÇÃO DA FACE (1) — GC mark-sweep cross (12/09, fila para
 > execução por degrau — cada degrau cabe numa sessão e tem prova própria):**
