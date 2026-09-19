@@ -35,14 +35,14 @@ class KofWfJob {
     // ("Unexpected token in class body", medido 19/09 — gramática é regra 6).
     String nome = null
     () -> Bool corpo = null
-    List<KofWfJob> deps
+    List<KofWfJob> deps = listOf()
+    KofWfRetry retryCfg = null
 
     public constructor(String nome, () -> Bool corpo) {
         if (nome == "") { throw "workflow: job com nome vazio" }
         if (corpo == null) { throw "workflow '" + nome + "': corpo nulo" }
         this.nome = nome
         this.corpo = corpo
-        this.deps = listOf()
     }
 
     KofWfJob after(KofWfJob dep) {
@@ -53,17 +53,40 @@ class KofWfJob {
     }
 }
 
+// face 1/N do bundle 2.1.3 (Q3: helper ADITIVO do próprio workflow): config
+// pendurada no job pelo dag; o laço de tentativa mora em run().
+class KofWfRetry {
+    Int times = 0
+    (Int) -> Int backoff = (n: Int) -> 0
+}
+
+(Int) -> Int exponential(Int baseMs, Int factor) {
+    if (baseMs < 0) { throw "workflow: exponential() com base negativa" }
+    if (factor < 1) { throw "workflow: exponential() com fator < 1" }
+    return (n: Int) -> {
+        var v = baseMs
+        var i = 1
+        while (i < n) {
+            v = v * factor
+            i = i + 1
+        }
+        return v
+    }
+}
+
 class KofWfReport {
     List<String> succeeded
     List<String> failed
     List<String> skipped
     List<String> errors
+    List<String> retries   // "nome: tentativas=N" p/ jobs que retryaram (face 2.1.3)
 
     public constructor() {
         succeeded = listOf()
         failed = listOf()
         skipped = listOf()
         errors = listOf()
+        retries = listOf()
     }
 
     Bool allOk() {
@@ -100,6 +123,34 @@ class KofWfDag {
         }
     }
 
+    // Q3 (enquete 19/09): retry ADITIVO do workflow — `flow.retry(job, 3,
+    // exponential(1000, 2.0))` na forma do sketch §2 (flat); `retryFixed` é a
+    // versão imediata. A migração do retry do kof.http sobre este helper é
+    // fatia assinada SEPARADA depois (regra 8) — nada aqui toca kof.http.
+    KofWfDag retry(KofWfJob j, Int times, (Int) -> Int backoff) {
+        if (j == null) { throw "workflow: retry() com job nulo" }
+        if (times < 1) { throw "workflow '" + j.nome + "': retry() com times < 1" }
+        var alvo = kofWfProcurar(j)
+        var cfg = KofWfRetry()
+        cfg.times = times
+        cfg.backoff = backoff
+        alvo.retryCfg = cfg
+        return this
+    }
+
+    KofWfDag retryFixed(KofWfJob j, Int times) {
+        return retry(j, times, (n: Int) -> 0)
+    }
+
+    KofWfJob kofWfProcurar(KofWfJob j) {
+        var i = 0
+        while (i < jobs.size) {
+            if (jobs.get(i).nome == j.nome) { return jobs.get(i) }
+            i = i + 1
+        }
+        throw "workflow: retry() em '" + j.nome + "' — job não está na dag"
+    }
+
     // fixpoint sequencial: roda o que está pronto, pula dependentes de
     // falha/skip, e para com erro acionável se uma ronda não progride
     // (ciclo). `done` = nomes concluídos; `bad` = falhou OU foi pulado.
@@ -133,12 +184,25 @@ class KofWfDag {
                     var corpoFn: () -> Bool = job.corpo
                     var ok = false
                     var erro = ""
-                    try {
-                        ok = corpoFn()
-                    } catch (String e) {
-                        ok = false
-                        erro = e
+                    var tentativa = 0
+                    var maxT = 0
+                    if (job.retryCfg != null) { maxT = job.retryCfg.times }
+                    while (tentativa <= maxT) {
+                        try {
+                            ok = corpoFn()
+                        } catch (String e) {
+                            ok = false
+                            erro = e
+                        }
+                        if (ok || tentativa == maxT) { break }
+                        tentativa = tentativa + 1
+                        erro = ""
+                        if (job.retryCfg != null) {
+                            var bFn: (Int) -> Int = job.retryCfg.backoff
+                            time.sleep(bFn(tentativa))
+                        }
                     }
+                    if (tentativa > 0) { rep.retries.add(job.nome + ": tentativas=" + (tentativa + 1)) }
                     if (erro != "") { rep.errors.add(job.nome + ": " + erro) }
                     if (ok) {
                         done.add(job.nome)

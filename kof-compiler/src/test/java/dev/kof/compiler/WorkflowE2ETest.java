@@ -15,7 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * kof.workflow 2.1.2 MVP golden (universal plan Stage 2, row 2.1; plan
  * docs/development/workflow-plan.md §5 2.1.2 — Q2 minimal surface: job, dag,
- * after, run, Report ONLY; retry/checkpoint/deadLetter are the 2.1.3 bundle).
+ * after, run, Report; plus 2.1.3 face 1 (Q3 additive retry: flow.retry/retryFixed/
+exponential/Report.retries). checkpoint/deadLetter/schedule stay in the bundle).
  *
  * The host is pure Kof (`/dev/kof/workflow-host.kf`) injected flat by
  * `CompilerWorkflow` on `import kof.workflow` (DD-OTP-01 option A, same
@@ -195,6 +196,31 @@ class WorkflowE2ETest {
                 println(acc.get(2))
             }
             """, "ok=build,image failed= skipped=", "imaged");
+    }
+
+    /** 2.1.3 face 1: ADDITIVE retry (Q3) — `flow.retry(job, 2,
+     *  exponential(1, 2))` recovers a flaky closure-counter on the 3rd
+     *  attempt; `retryFixed(job, 1)` exhausts a thrower and keeps the last
+     *  reason in errors; Report.retries records actual attempt counts. */
+    @Test
+    void retryFacesBothOutcomes() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var tries = 0
+                var flaky = job("flaky", () -> { tries = tries + 1; return tries >= 3 })
+                var boom = job("boom", () -> { if (true) { throw "sempre" } return false })
+                var flow = dag(listOf(flaky, boom))
+                flow.retry(flaky, 2, exponential(1, 2))
+                flow.retryFixed(boom, 1)
+                var rep = flow.run()
+                println(rep.summary())
+                println(rep.retries.get(0))
+                println(rep.retries.get(1))
+                println(rep.errors.get(0))
+            }
+            """, "ok=flaky failed=boom skipped=", "flaky: tentativas=3",
+                "boom: tentativas=2", "boom: sempre");
     }
 
     /** Rule-5 source portability: the same injected host compiles on Native

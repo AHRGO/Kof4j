@@ -5,9 +5,10 @@
 **Data:** 19 de setembro de 2026
 **Status:** MVP implementado (plano universal Estágio 2, linha 2.1, fatia 2.1.2) — `VERSION` 0.4.0-beta
 
-> **Escopo do MVP (Q2, enquete da mantenedora 19/09):** somente `job` / `dag` /
-> `after` / `run` / `Report`. `retry`, `checkpoint`, `deadLetter` e `schedule` são o
-> bundle de add-ons 2.1.3 — **ainda não** estão nesta superfície.
+> **Escopo do MVP (Q2, enquete da mantenedora 19/09):** `job` / `dag` / `after` /
+> `run` / `Report`. **Face 1 do 2.1.3 ENTREGUE 19/09:** `retry` (Q3 — helper aditivo
+> do próprio workflow; `kof.http` NÃO é tocado, a migração dele é fatia assinada à
+> parte). `checkpoint`, `deadLetter` e `schedule` ainda chegam com o resto do bundle 2.1.3.
 
 ---
 
@@ -35,8 +36,11 @@ job(String nome, () -> Bool corpo) -> KofWfJob
 KofWfJob.after(KofWfJob dep) -> KofWfJob        // encadeável; guarda nulo/auto-dependência
 dag(List<KofWfJob> jobs) -> KofWfDag            // guarda dag vazia / nomes duplicados / job nulo
 KofWfDag.run() -> KofWfReport                   // fixpoint topológico sequencial
+KofWfDag.retry(KofWfJob j, Int times, (Int) -> Int backoffMs) -> KofWfDag
+KofWfDag.retryFixed(KofWfJob j, Int times) -> KofWfDag   // imediato, sem sleep
+exponential(Int baseMs, Int factor) -> (Int) -> Int       // backoff(1)=base, *factor a cada try
 
-Campos do Report: succeeded failed skipped errors  // List<String> cada
+Campos do Report: succeeded failed skipped errors retries  // List<String> cada
 Report.allOk() -> Bool                          // sem falhas, sem skips
 Report.summary() -> String                      // "ok=... failed=... skipped=..."
 ```
@@ -51,6 +55,11 @@ Regras:
 - Um **ciclo é rejeitado no run time** com
   `workflow: ciclo detectado entre: ...` (mensagem acionável — nunca hang
   silencioso, invariante do §2 do plano).
+- `retry(job, times, backoff)`: o corpo roda de novo após `sleep(backoff(tentativa))`
+  até `times` tentativas extras (throw e `false` retryam ambos); `Report.retries`
+  registra `"nome: tentativas=N"`, e `errors` guarda o ÚLTIMO motivo se ainda falhar.
+  `retryFixed` é igual com espera zero. Só jobs membros da dag podem ser configurados
+  (a guarda diz isso).
 
 ## 3. Idiomática
 
@@ -85,10 +94,11 @@ var compile = job("compile", () -> process.run("make", listOf("-j4")).exitCode =
 
 | resultado do corpo | Report | dependentes |
 |---|---|---|
-| `true` | `succeeded` | rodam quando todos os deps succeederem |
-| `false` | `failed` + `errors` `"nome: false"` | `skipped` (transitivamente) |
-| `throw "why"` | `failed` + `errors` `"nome: why"` | `skipped` (transitivamente) |
+| corpo `true` | `succeeded` | rodam quando todos os deps succeederem |
+| `false` (após esgotar retries) | `failed` + `errors` `"nome: false"` | `skipped` (transitivamente) |
+| `throw "why"` (após retries) | `failed` + `errors` `"nome: why"` | `skipped` (transitivamente) |
 | ciclo nos deps | `run()` lança `workflow: ciclo detectado entre: ...` | — |
+| job com retry | `retries` `"nome: tentativas=N"` | — |
 
 Guardas de construção (`dag`/`job`/`after` lançam na hora): nome vazio, corpo
 nulo, dependência nula, auto-dependência, nomes duplicados na mesma dag, dag
@@ -106,8 +116,9 @@ vazia.
 
 ## 6. Prova
 
-`WorkflowE2ETest` 7/7 (goldens exatos de stdout, paridade byte JVM==JS): ordem
+`WorkflowE2ETest` 8/8 (goldens exatos de stdout, paridade byte JVM==JS): ordem
 linear, cascata de falha, throw com motivo, mensagem de ciclo, conjunto de
-guardas, corpos reais via lista capturada, compilação Native. A camada de formas é
+guardas, corpos reais via lista capturada, retry (recupera na 3ª + esgota com
+motivo + exponential), compilação Native. A camada de formas é
 travada por `WorkflowPrimitivesE2ETest` (6/6, incl. os pins negativos de sintaxe).
 Plano: `docs/development/workflow-plan.pt_BR.md` §5.
