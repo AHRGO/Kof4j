@@ -11202,3 +11202,22 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 - **Routed, not measured here (1):** #464 (AArch64 `Float +=` → NaN) — the isolation table is decisive (only the `+=` lowering on `float32` on aarch64; plain add/store/double all green; base `77eaa168` identical) → native/cross lane `.17`/`.18` with a qemu host; this lane has no cross toolchain.
 - **Mirrored fix-PRs (kofbughunter) — CI state measured on the runs:** **#479** (`+=` desugar) green Build+Tests; **#481** (SEM094 switch gate) green — flagged rule-6 docs follow-up (reject-vs-support Long/Double switch); **#478** (Locale.ROOT) **red**: it pushes `Locale.ROOT` through the shared lowerer and the **JS** backend ICEs (`StringFormatVarargsE2ETest` 9/9, `unknown JS expression: null`) — JVM-only fix, §239 face missing; **#480** (`i2b`) **red** on the machine gate: `JsCallEmitter` 599→**609** (≥600 CI breaker) — split first. **#465** (native boxed-`T?` front of D-NULL-INTENT, `.18`) green Build+Tests on 6 targets — it **activates** #460's dormant faces (pointer in the PR comment). The recurring `CodeQL Gate` fail on every PR = branch-level alert backlog (#870–#876) + a fork-token 403 when the gate comments — **not** the PRs.
 - **Not touched:** every fix belongs to the compiler/native lanes (golden rule). This lane's deliverable is the triage itself: measurement, classification, route, and this ledger line.
+<<<<<<< HEAD
+=======
+
+- **Same-day follow-ups (after this batch shipped):** **#485** — CI plumbing: the
+  `CodeQL Gate` comment step and the `Orchestrate Bots` dispatch died with 403 on
+  EVERY fork PR (read-only `GITHUB_TOKEN` on forks is a GitHub rule, not a config
+  typo) — fixed in-lane: comment is best-effort (`::notice::` when the token can't
+  write), the orchestrator job is gated off fork PRs (children bots keep their own
+  `pull_request` trigger); proof = next fork PR run, stated honestly (token
+  semantics are not testable locally). **#486** — `&&`/`||` over `Bool?` in value
+  position: **JVM dies at verification** (`VerifyError: Boolean not assignable to
+  integer` — the boxed `&&` result goes straight into `println(Z)V`; `run` had been
+  hiding it behind the JavaFX-launcher message — the AGENTS rule caught it again),
+  **JS prints `null`** (raw operand leaks; measured on the same build). Wider than
+  the reporter's JS framing; routed to `.22` with the corrected scope. **Lesson
+  for the posting lane:** `gh ... --body "..."` with backticks = shell executes
+  them (my first #486 comment shipped garbled) — heredoc file + `-F body=@file`
+  when the body contains code.
+>>>>>>> bca85268 (docs(ledger): anexo ao §337 — #485 (CI 403 de fork: consertado na lane, prova = proximo run) e #486 (&&/|| sobre Bool? morre no JVM por VerifyError E vaza null no JS — escopo maior que o relato, roteado a .22 com a medicao) + licao: corpo de comentario com crases via arquivo (-F body=@), nunca dupla-aspa no shell)
