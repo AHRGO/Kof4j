@@ -10884,3 +10884,15 @@ paths untouched (no `jsDeps` entries for them).
 **Root-cause area.** #438 changed the typer/`map.get` contract (returns `V?`, JVM/Script/JS); the native mapset (`NativeRiscvAsmMapset0/1/2` + x86 map runtime) predates it and its get path folds the missing-key sentinel to the primitive default instead of a null reference. The `Int?` slot representation on native is a separate open question from #438 (which declared native out of scope).
 
 **Why NOT fixed here.** It is native-runtime code in another lane's substrate (mapset), and the honest-resolution fork (null-as-sentinel on native vs `NATIVE00x` diagnostic for primitive maps) is a design decision (rule 6). Minimal repro above; expected = JVM's `42/0/null` on all four targets, or a compile-time diagnostic when native cannot represent `null` for `Map<K, primitive>.get`. Related: #376 (closed — JVM/Script/JS faces fixed by #438 + locked by `NullablePrimitiveContractE2ETest.mapGetMissingKeyIsNullDistinctFromPresentZero`), §294, #438, NATIVE002.
+
+## §305 — `kof fmt` corrupted escaped CHAR (and STRING) literals — round-trip broke valid code (#447) — ✅ FIXED 18/09 (same commit)
+
+**Found:** 18/09, issue #447 (reported on Windows host; reproduced verbatim on Linux tip `d5e4221a`).
+
+**Symptom (measured):** input `repro.kf` with `'\\'`, `'\t'`, `'\n'`, `'\r'` (all valid, `kof check` clean) → after `kof fmt` the file no longer compiles: `'\\'` (2 bytes in source) became `'\'` (single backslash = unterminated literal, LEX004) and `'\t'` became `'` + raw 0x09 TAB byte + `'`. Same root hit STRING: `"c\"d"` emitted as `"c"d"` (breaks the string into two + stray token).
+
+**Root cause:** `KofFormatter.formatExpr` re-serialized `LiteralExpr.value()` — which holds the **decoded** value (the lexer's `readEscape` already resolved `n t r \\ ' " 0 u`) — wrapped in quotes with **no re-escaping**. The formatter prints semantic values, not source forms: every escape whose decoded form is quote/backslash/control becomes raw and invalid source.
+
+**Fix (additive, behavior-preserving for all other literals):** `KofFormatter.escapeLiteral` re-emits exactly the escape vocabulary the Lexer recognizes (`\\ \t \n \r \' \" \0` + `\uXXXX` for other control chars); non-ASCII stays raw (the lexer accepts it; converting would be lossy churn). Applied to both the CHAR and STRING branches.
+
+**Proof:** `KofFormatterTest` + 4 tests (12/12). RED-before measured with the fix stashed: 3 of the 4 new tests fail on the old code (char escapes, string escapes, idempotency/reparse); the 4th (plain non-ASCII stays raw) is the over-escape guard and passes both ways. GREEN-after: 12/12; full kof-compiler module 2212/0F/0E; `check_500` OK (KofFormatter 468). Round-trip verified byte-level on the issue's repro: `'\\'` → `'\\'`, `'\t'` → `'\t'`, fmt is idempotent.

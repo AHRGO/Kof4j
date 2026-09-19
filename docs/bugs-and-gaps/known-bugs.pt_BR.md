@@ -10342,3 +10342,15 @@ Compila limpo no JVM; ao rodar morre no LOAD da classe com `java.lang.VerifyErro
 **Área da raiz.** O #438 mudou o contrato do typer/`map.get` (retorna `V?`, JVM/Script/JS); o mapset nativo (`NativeRiscvAsmMapset0/1/2` + runtime de map x86) é anterior e seu caminho de get converte o sentinela de chave ausente no default do primitivo em vez de uma referência null. A representação do slot `Int?` no nativo é questão aberta separada do #438 (que declarou nativo fora de escopo).
 
 **Por que NAO consertado aqui.** É código de runtime nativo no substrato de outra lane (mapset), e a bifurcação honesta (null-como-sentinela no nativo vs diagnóstico `NATIVE00x` para maps de primitivos) é decisão de projeto (regra 6). Repro mínima acima; esperado = o `42/0/null` do JVM nos quatro alvos, OU diagnóstico em compile-time quando o nativo não representa `null` para `Map<K, primitivo>.get`. Relacionado: #376 (fechada — faces JVM/Script/JS corrigidas pelo #438 + travadas por `NullablePrimitiveContractE2ETest.mapGetMissingKeyIsNullDistinctFromPresentZero`), §294, #438, NATIVE002.
+
+## §305 — `kof fmt` corrompia literais CHAR (e STRING) com escapes — round-trip quebrava código válido (#447) — ✅ CORRIGIDO 18/09 (mesmo commit)
+
+**Encontrado:** 18/09, issue #447 (reportado em host Windows; reproduzido verbatim no Linux tip `d5e4221a`).
+
+**Sintoma (medido):** entrada `repro.kf` com `'\\'`, `'\t'`, `'\n'`, `'\r'` (tudo válido, `kof check` limpo) → depois de `kof fmt` o arquivo não compila mais: `'\\'` (2 bytes na fonte) virou `'\'` (backslash único = literal não fechado, LEX004) e `'\t'` virou `'` + byte TAB 0x09 cru + `'`. A mesma raiz atingia STRING: `"c\"d"` era emitido como `"c"d"` (quebra a string em duas + token solto).
+
+**Causa raiz:** o `KofFormatter.formatExpr` re-serializava `LiteralExpr.value()` — que guarda o valor **decodificado** (o `readEscape` do lexer já resolveu `n t r \\ ' " 0 u`) — entre aspas **sem re-escapar**. O formatador imprime valores semânticos, não formas de fonte: todo escape cujo valor decodificado é aspa/backslash/control vira byte cru e código inválido.
+
+**Correção (aditiva, preserva comportamento dos demais literais):** `KofFormatter.escapeLiteral` re-emite exatamente o vocabulário de escapes que o Lexer reconhece (`\\ \t \n \r \' \" \0` + `\uXXXX` para outros controles); não-ASCII permanece cru (o lexer aceita; converter seria perda). Aplicada nos dois ramos, CHAR e STRING.
+
+**Prova:** `KofFormatterTest` + 4 testes (12/12). VERMELHO-ANTES medido com a correção sob stash: 3 dos 4 novos falham no código antigo (escapes de char, escapes de string, idempotência/reparse); o 4º (não-ASCII cru permanece cru) é a guarda contra over-escape e passa dos dois lados. VERDE-DEPOIS: 12/12; suíte completa kof-compiler 2212/0F/0E; `check_500` OK (KofFormatter 468). Round-trip verificado byte a byte no repro da issue: `'\\'` → `'\\'`, `'\t'` → `'\t'`, fmt idempotente.
