@@ -257,7 +257,7 @@ public final class JsRuntimeCore {
             // objeto Kof (record) que traz .equals(other) sintético → 1/0.
             // Assim `listOf(p1).contains(p2)`, `setOf/mapOf` por conteúdo batem
             // com o oracle JVM sem alterar o armazenamento nem o kofFormat.
-            function kofValEq(a, b) {
+            export function kofValEq(a, b) {
                 if (a === b) return true;
                 if (Number.isNaN(a) && Number.isNaN(b)) return true;
                 if (a === null || b === null || a === undefined || b === undefined) return false;
