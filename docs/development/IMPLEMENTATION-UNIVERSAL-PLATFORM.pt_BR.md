@@ -266,7 +266,7 @@ mesma experiência de desenvolvimento.
 |---|------|--------|------|------------|
 | 8.1 | Integração total dos Estágios 1–7 | 🔵 | — | todos |
 | 8.2 | Package manager maduro | 🔵 | — | 1.5.3 (registry ⛔) |
-| 8.3 | LSP/debug/profiler por domínio | 🟡 | — | LSP existe; por-domínio pendente |
+| 8.3 | LSP/debug/profiler por domínio | 🟡 | lane tooling/docs (.15) p/ LSP | **LSP domain-aware ✅ 19/09**: completion + hover lêem o `StdCatalog` (namespace lista membros; membro no contexto `ns.` nomeia a face; solto = null honesto). Restante: debugger/profiler por domínio (= X7 + faces futuras; profiler ainda não existe) |
 | 8.4 | Deploy multi-target (mesma fonte → JVM/Native/JS) | 🟡 | lane tooling/docs (.15) | **núcleo ✅ 19/09 (X9 fatia 4)**: `--target jvm,native,js`/`all` = mesma fonte, uma release por face + `.deploy-manifest.json` (SUCCESS/FAIL honesto por alvo, R6/R7, exit 1 se alguma falhar); maturidade restante: faces cross (sysroot/DEP001) + publish (D2) |
 | 8.5 | Documentação/corpus (`training/`) dos domínios | 🔵 | lane docs | por domínio |
 | 8.6 | **Teste final:** o core da linguagem quase não cresceu | 🔵 | — | verificação no fim |

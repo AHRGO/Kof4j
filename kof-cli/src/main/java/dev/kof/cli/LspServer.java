@@ -268,7 +268,7 @@ final class LspServer {
         long line = pos.get("line") instanceof Number n ? n.longValue() : 0;
         long ch = pos.get("character") instanceof Number n ? n.longValue() : 0;
         String word = wordAt(text, offsetOf(text, line, ch));
-        String contents = word.isEmpty() ? null : LspHover.hoverFor(word, text);
+        String contents = word.isEmpty() ? null : LspHover.hoverFor(word, text, offsetOf(text, line, ch));
         if (contents == null && !word.isEmpty()) {
             // X10 fatia 7: declaração do projeto (buffer ou .kf irmão) como fallback.
             String[] d = LspProject.declarationLine(str(td.get("uri")), text, word);

@@ -500,6 +500,70 @@ class LspServerTest {
     }
 
 
+    /** 8.3 (plano universal): hover POR DOMINIO — namespace e membro em contexto de ponto. */
+    @Test
+    void hoverCoversStdlibNamespacesAndMembers(@TempDir Path dir) throws Exception {
+        String app = "main() { val s = json.encode(mapOf(\"a\", 1)); val d = db }\n";
+        Path appFile = dir.resolve("app.kf");
+        Files.writeString(appFile, app);
+        String appUri = appFile.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        // membro no contexto exato json. -> membro de kof.json
+        int col = app.indexOf("encode") + 3;
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/hover\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\"},"
+                + "\"position\":{\"line\":0,\"character\":" + col + "}}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> res = (Map<String, Object>) byId(
+                messages(out.toString(StandardCharsets.UTF_8)), 1).get("result");
+        assertNotNull(res, "hover de membro stdlib nao pode ser null");
+        String v = String.valueOf(((Map<String, Object>) res.get("contents")).get("value"));
+        assertTrue(v.contains("member of `kof.json`"), "hover de membro: " + v);
+        // namespace sozinho -> lista membros reais do StdCatalog
+        int colDb = app.indexOf("db") + 1;
+        String reqDb = req.replace("\"character\":" + col, "\"character\":" + colDb);
+        ByteArrayOutputStream out2 = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(reqDb))), out2).run();
+        Map<String, Object> res2 = (Map<String, Object>) byId(
+                messages(out2.toString(StandardCharsets.UTF_8)), 1).get("result");
+        assertNotNull(res2, "hover de namespace nao pode ser null");
+        String v2 = String.valueOf(((Map<String, Object>) res2.get("contents")).get("value"));
+        assertTrue(v2.contains("namespace `kof.db`"), "hover de namespace: " + v2);
+    }
+
+    /** 8.3: local shadowing vence o dominio; membro solto sem '.' continua null honesto. */
+    @Test
+    void hoverStdlibDoesNotShadowLocalsOrGuessLooseNames(@TempDir Path dir) throws Exception {
+        String app = "main() {\n    val db = 1\n    println(db)\n    println(encode)\n}\n";
+        Path appFile = dir.resolve("a.kf");
+        Files.writeString(appFile, app);
+        String uri = appFile.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + uri + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        String tpl = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/hover\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + uri + "\"},"
+                + "\"position\":{\"line\":%d,\"character\":%d}}}";
+        // println(db): 'db' na linha 2, coluna 12 (mesmo nome do namespace kof.db)
+        String v = hoverValue(didOpen, String.format(tpl, 2, 13), dir);
+        assertTrue(v.contains("local variable"), "shadow local nao pode virar namespace: " + v);
+        // println(encode): membro solto, sem contexto de ponto -> null honesto (nunca chute)
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen),
+                frame(String.format(tpl, 3, 14)))), out).run();
+        Map<String, Object> resp = byId(messages(out.toString(StandardCharsets.UTF_8)), 1);
+        assertNull(resp.get("result"), "membro solto sem '.': null honesto");
+    }
+
+    private static String hoverValue(String didOpen, String req, Path dir) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> res = (Map<String, Object>) byId(
+                messages(out.toString(StandardCharsets.UTF_8)), 1).get("result");
+        return String.valueOf(((Map<String, Object>) res.get("contents")).get("value"));
+    }
+
     /** X10 fatia 7: hover mostra declara\u00e7\u00e3o cross-file do projeto. */
     @Test
     void hoverShowsCrossFileDeclaration(@TempDir Path dir) throws Exception {
