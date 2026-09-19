@@ -948,7 +948,7 @@ REVOGADA). Lane: **compiler** (contrato nos 4 backends — não a lane docs).
 
 **Estado da fila (18/09 ~13:40):** PR **#438** (fork externo, `fix/278-d-null-intent-atomic`) **MESCLADO pela mantenedora em `250f6207`** (18/09 12:53) — N1 (JVM+Script+JS) landou: `Map.get` agora retorna `V?` para valores de referencia e o repro de chave ausente com valor primitivo roda limpo (medido `9`, jars frescos). A face PRESENTE `!= null` em valores primitivos continua QUEBRADA pos-merge (Int/Long/Double/Boolean → `NoSuchMethodError Object.valueOf(boxed)`; Float → CCE `Double→Float` no sitio do mapa) — catalogada como re-procedimento 2a do §294, dona `.22` cluster erasure/boxing, NAO reabertura do #438. N2 (Native) e I4/i1 permanecem fora de escopo/fila; lanes nao devem abrir frente paralela no mesmo contrato (regra 6 / um contrato, um PR). O PR tambem declara `Map.get/put/remove` em chave ausente (I7) — engolindo a face parqueada `#376`/`#409` carimbada pela mantenedora 18/09 — NAO abra frente N4 separada para essas celulas enquanto #438 estiver em revisao.
 
-#### 2.7 — Value records / tipos de valor de primeira classe (fila de `D-VALUE-RECORD`, 16/09)
+#### 2.7 — Value records / tipos de valor de primeira classe (fila de `D-VALUE-RECORD`, 16/09) — **FRONT ABERTA 19/09 (D7-A)**
 
 **Decidido pela mantenedora 16/09** (registro: `DECISIONS.md` §D-VALUE-RECORD;
 origem issue #275). Aditivo, retrocompatível. **Apenas planejado — não é

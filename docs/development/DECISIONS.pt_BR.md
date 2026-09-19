@@ -1757,3 +1757,31 @@ O teste pode mudar.
 O roadmap pode mudar.
 
 O contrato só muda por decisão registrada.
+
+---
+
+## D-POLL-19 — todas as decisões pendentes resolvidas (enquete de múltipla escolha, mantenedora 19/09)
+
+**Data:** 2026-09-19 · **Estado:** `DECIDIDO` (lote) · **Respostas (mantenedora):**
+D1-A · D2-A · D3-A · D4-A · D5-B · D6-A · D7-A · #401 = "BUG REAL — `List<Int>` é
+diferente de `List<String>`" (= opção A, rejeição em compile-time) · X8-A · LSP-A
+(rename cross-file) · LSP-A (assinaturas de hover via `StdCatalog`).
+
+| # | Decisão (opção) | Destrava / fila |
+|---|---|---|
+| D1 (A) | re-baseline do auto-collect do GC x86 **aprovado agora** | 1.2.2/1.2.3 seguem; portão do Estágio 6 aberto — execução = lane nativa |
+| D2 (A) | registry MVP = **local + GitHub Releases como host oficial** (publish = Release com artefato + SHA256SUMS) | 1.5.3 ⛔→aberto; face `kof deploy --publish` (lane docs→plataforma); 8.2 gerenciador de pacotes |
+| D3 (A) | **plano de design do bare-metal/bootável autorizado** | 1.7: doc de plano em `docs/development/` (lane nativa rascunha, mantenedora revisa) |
+| D4 (A) | **padrão conservador**: todo namespace nasce `experimental`; promoção por-namespace com o DoD do R5 | R5; `docs/backend-parity.md` §Tiers (linha do default adicionada 19/09) |
+| D5 (B) | **sem sintaxe nova** — recursos escopados = `close()` + `try/finally`; `using` está FORA | 6.5 entrega padrão, não gramática; `future/scoped-resources` segue design-only |
+| D6 (A) | ABI struct/array do R3: **spec escrita primeiro, revisão, depois código** | spec `docs/development/ffi-abi-structs.md` (rascunho da lane docs→plataforma 19/09, design-only); implementação = lane compilador |
+| D7 (A) | value records (TIER 2.7) com **front aberta agora** | fila 2.7.1+ do roadmap §23 ativa — lane compilador (coordenação com Cluster A) |
+| #401 | **bug real**: `List<Int>` atribuído como `List<String>` deve ser REJEITADO em compile-time | Cluster A §270/§271 (`.22`) executa; freeze regra 1 respeitado — o código que compila hoje FALHA no runtime, então apertar casa com o contrato documentado |
+| X8 (A) | runner `kof.test` implementado **exatamente como o roadmap §G6 especifica** | X8 fatia 3 — lane docs→plataforma |
+| LSP-A (rename) | **rename cross-file via WorkspaceEdit** na mesma convenção textual dos `references` (honestidade "primeiro hit" documentada) | continuação X10 — lane docs→plataforma |
+| LSP-A (assinaturas) | assinaturas no hover: **`StdCatalog` estendido com assinaturas extraídas do typer** (fonte única) | continuação X10 — lane docs→plataforma |
+
+**Evidência:** mensagem da mantenedora 19/09 ~03:5x (-03), respostas de múltipla
+escolha em uma linha; o commit de ratificação atualiza a tabela D de
+`IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (+PT), `roadmap.md` §23 (D7),
+`backend-parity.md` (D4) e `known-bugs.md` §270 (#401).

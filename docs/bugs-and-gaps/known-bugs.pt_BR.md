@@ -9787,6 +9787,11 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 
 ## §270 — atribuicao generica nao verificada `List<Int>` → `List<String>` e ACEITA EM SILENCIO (tipo-args nunca lidos na atribuicao) → `ClassCastException` no runtime — face aceite-falso do buraco de substituicao por tras de #400/#390 — 🟡 ABERTO (achado 17/09 medindo o #401; conserto honesto e fork regra-6)
 
+**Decisão (mantenedora 19/09, D-POLL-19):** #401 = **BUG REAL** — `List<Int>`
+atribuído como `List<String>` deve ser REJEITADO em compile-time (opção A). O código
+que compila hoje falha no runtime com CCE, apertar casa com o contrato documentado
+(freeze regra 1 respeitado). Execução = Cluster A, lane compilador `.22`.
+
 - **Repro (verbatim #401, re-medido no jar do tip `81d995ce`, JVM):** `val nums: List<Int> = listOf(); nums.add(1); val strs: List<String> = nums; println(strs.get(0))`. `check` → `no errors` (o silencio real); o `run` executa e morre no `get`: `ClassCastException: class java.lang.Integer cannot be cast to class java.lang.String` (M.kf:5). Literal nao-vazio `listOf(1,2)` reproduz identico (M.kf:4).
 - **Raiz:** o check de atribuicao compara so o tipo RAW (`List` vs `List`) — os tipo-argumentos nunca sao consultados, e uma divergencia e aceita em silencio. Mesma passada de substituicao faltante que REJEITA-FALSO codigo valido no #400 (classe → interface generica implementada, SEM021) e #390 (override `put(T)` vs `put(Int)`, SEM043). Dossieres com ponteiros nos tres issues.
 - **Registro do cluster (uma raiz, dois contratos — NAO dividir em tres patches):** #400 + #390 sao as faces rejeicao-falsa: conserta-los e ADITIVO (codigo valido que falha hoje passa; nada que compila hoje quebra) — seguro p/ a lane compiler agora. #401 e a face aceite-falso: tornar args rejeicao real **muda semantica congelada** (programas errados que hoje compilam param de compilar) → decisao regra-6/freeze-1 da mantenedora com nota de versao + migracao; nao "consertar" as avancas.

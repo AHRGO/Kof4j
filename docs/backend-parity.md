@@ -227,6 +227,9 @@ Each namespace/package carries a tier:
   docs + `training/` synchronized, green suite).
 - **`experimental`** — may change; the **official packages** layer is born
   `experimental`.
+- **Default (D-POLL-19/09, D4-A):** every namespace — core or new — is born
+  `experimental`; promotion to `stable` is per-namespace, only with the full R5 DoD
+  (never in bulk, never by age).
 
 Heavy domains (`ml`, `bio`, `hpc`, `infra-<cloud>`) are **official packages**
 (layer 4), **never** base stdlib (R1).

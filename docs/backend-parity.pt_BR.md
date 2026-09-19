@@ -231,6 +231,9 @@ Cada namespace/pacote carrega um tier:
   docs + `training/` sincronizadas, suíte verde).
 - **`experimental`** — pode mudar; a camada de **pacotes oficiais** nasce
   `experimental`.
+- **Default (D-POLL-19/09, D4-A):** todo namespace — núcleo ou novo — nasce
+  `experimental`; a promoção a `stable` é por-namespace, só com o DoD completo do R5
+  (nunca em lote, nunca por idade).
 
 Domínios pesados (`ml`, `bio`, `hpc`, `infra-<cloud>`) são **pacotes
 oficiais** (camada 4), **nunca** stdlib base (R1).

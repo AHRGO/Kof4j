@@ -1791,3 +1791,31 @@ Tests may change.
 The roadmap may change.
 
 The contract changes only through a recorded decision.
+
+---
+
+## D-POLL-19 — every pending decision resolved (multiple-choice poll, maintainer 19/09)
+
+**Date:** 2026-09-19 · **State:** `DECIDED` (batch) · **Answers (maintainer):**
+D1-A · D2-A · D3-A · D4-A · D5-B · D6-A · D7-A · #401 = "BUG REAL — `List<Int>` is
+different from `List<String>`" (= option A, compile-time rejection) · X8-A · LSP-A
+(rename cross-file) · LSP-A (hover signatures via `StdCatalog`).
+
+| # | Decision (option) | Unblocks / queue |
+|---|---|---|
+| D1 (A) | GC x86 auto-collect re-baseline **approved now** | 1.2.2/1.2.3 proceed; Stage 6 gate open — execution = native lane |
+| D2 (A) | registry MVP = **local + GitHub Releases as official host** (publish = Release with artifact + SHA256SUMS) | 1.5.3 ⛔→open; `kof deploy --publish` face (docs→platform lane); 8.2 package manager |
+| D3 (A) | bare-metal/bootable **design plan authorized** | 1.7: plan doc in `docs/development/` (native lane drafts, maintainer reviews) |
+| D4 (A) | **conservative default**: every namespace is born `experimental`; promotion per-namespace with the R5 DoD | R5; `docs/backend-parity.md` §Stability (default line added 19/09) |
+| D5 (B) | **no new syntax** — scoped resources = `close()` + `try/finally`; `using` is OFF | 6.5 ships as pattern, not grammar; `future/scoped-resources` stays design-only |
+| D6 (A) | R3 struct/array ABI: **written spec first, review, then code** | spec doc `docs/development/ffi-abi-structs.md` (drafted by docs→platform lane 19/09, design-only); implementation = compiler lane |
+| D7 (A) | value records (TIER 2.7) **front opened now** | roadmap §23 2.7.1+ queue active — compiler lane (needs coordination with Cluster A) |
+| #401 | **real bug**: `List<Int>` assigned as `List<String>` must be REJECTED at compile time | §270/§271 Cluster A (`.22`) executes; freeze rule 1 satisfied — code that compiles today fails at runtime, so tightening matches the documented contract |
+| X8 (A) | `kof.test` runner implemented **exactly as roadmap §G6 specifies** | X8 slice 3 — docs→platform lane |
+| LSP-A (rename) | **cross-file rename via WorkspaceEdit** on the same textual convention as `references` ("first hit" honesty documented) | X10-continuation — docs→platform lane |
+| LSP-A (signatures) | hover signatures: **`StdCatalog` extended with signatures extracted from the typer** (single source) | X10-continuation — docs→platform lane |
+
+**Evidence:** maintainer's message 19/09 ~03:5x (-03), one-line multi-choice
+answers; ratification commit updates the D-table in
+`IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (+PT), `roadmap.md` §23 (D7),
+`backend-parity.md` (D4) and `known-bugs.md` §270 (#401).
