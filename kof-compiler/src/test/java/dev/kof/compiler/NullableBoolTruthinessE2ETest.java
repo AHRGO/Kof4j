@@ -271,18 +271,16 @@ class NullableBoolTruthinessE2ETest {
     }
 
     /**
-     * T2 face JS — comportamento ATUAL do backend JS, que NAO passa pelo bloco
-     * de IR do short-circuit (`ExpressionBinaryLowerer`: `&& driver.target !=
-     * Target.JS`). O JS emite `&&`/`||` crus, e a semantica do JavaScript e
-     * devolver o OPERANDO (`true && null` → `null`), nao um `Bool` canonico.
-     *
-     * <p>Pre-existente e alheio a esta correcao: no caso `true && nb()` o
-     * operando ESQUERDO ja era `Bool`, entao a regra nova do `ExpressionTyper`
-     * nao muda nada aqui — o `null` vem do backend JS. Fica pinado para nao
-     * mudar em silencio; a face esta na issue #486 e no ledger (§338).
+     * T2 face JS — o backend JS NAO passa pelo bloco de IR do short-circuit
+     * (`ExpressionBinaryLowerer`: `&& driver.target != Target.JS`), entao o
+     * `&&`/`||` sai CRU. A semantica do JavaScript devolve o OPERANDO
+     * (`true && null` → `null`), nao um `Bool` — e o tipo KOF da expressao e
+     * `Bool`. #486: o backend preserva o short-circuit nativo, mas materializa
+     * o resultado logico como `Bool` para nao vazar o operando nullable.
      */
     @Test
-    void logicalValuePositionWithNullableRhsJsGap(@TempDir Path tempDir) throws IOException {
+    void logicalValuePositionWithNullableRhsJsMatchesKofContract(
+            @TempDir Path tempDir) throws IOException {
         runJs(tempDir, """
                 Bool? fb() { return false }
                 Bool? nb() { return null }
@@ -293,7 +291,7 @@ class NullableBoolTruthinessE2ETest {
                     println(true && nb())
                     println(false || nb())
                 }
-                """, "false\ntrue\nnull\nnull");
+                """, "false\ntrue\nfalse\nfalse");
     }
 
     /** T3 — consumidor diferente de print (impede fix oportunista no println). */

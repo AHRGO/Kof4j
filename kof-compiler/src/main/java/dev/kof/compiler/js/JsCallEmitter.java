@@ -492,11 +492,19 @@ void handleStringOp(MethodCtx ctx, List<Object> stack,
             case LE -> new JsIr.JsBinary(left, "<=", right);
             case GT -> new JsIr.JsBinary(left, ">", right);
             case GE -> new JsIr.JsBinary(left, ">=", right);
+            // #486: o `&&`/`||` do JavaScript devolve o OPERANDO (`true && null`
+            // → `null`), mas o tipo KOF da expressao logica e `Bool` — um RHS
+            // `Bool?` nulo vazava `null` para o consumidor. O `!!` materializa
+            // um `Boolean` SEM tocar na avaliacao lazy (o operador nativo segue
+            // dentro, entao `false && rhs()` continua nao avaliando `rhs`).
+            // Nao usar `kofBoolValueOf`: ele preserva `null` (semantica de
+            // `Bool?`), que e justamente o que nao pode escapar aqui. Os
+            // caminhos bitwise `&`/`|` ficam intactos (guard `isBoolOperand`).
             case AND -> JsTypeMapper.isBoolOperand(kb.operandType())
-                    ? new JsIr.JsBinary(left, "&&", right)
+                    ? new JsIr.JsUnary("!!", new JsIr.JsBinary(left, "&&", right))
                     : new JsIr.JsBinary(left, "&", right);
             case OR -> JsTypeMapper.isBoolOperand(kb.operandType())
-                    ? new JsIr.JsBinary(left, "||", right)
+                    ? new JsIr.JsUnary("!!", new JsIr.JsBinary(left, "||", right))
                     : new JsIr.JsBinary(left, "|", right);
             case XOR -> new JsIr.JsBinary(left, "^", right);
             // §167: `int << long` tem tipo int (JLS 15.19) mas o RHS pode
