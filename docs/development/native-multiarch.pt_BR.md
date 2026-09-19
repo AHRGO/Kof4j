@@ -44,13 +44,16 @@
 > FECHADA 15/09 (SQLite; JS mantém DB001) e os helpers do CONC001
 > (selectAny/done/poll/cancel/cancelled/awaitTimeout) FECHADOS 15/09
 > — restam as recusas SECN000/OTP001/JSN004; (3) FP-coleção no cross
-> (FLT001 FECHADO 15/09 — fatia `RtB45`; §107 record/aninhado **x86 FECHADO
-> 19/09** — descritor recursivo `.rodata`,
-> `NativeE2ETest.execCollectionPrintRecordNestedJvmGolden` byte-idêntico ao
-> oracle JVM medido; a recusa `?` RESTA APENAS NO CROSS (tag imediata legada
-> riscv/aarch na fatia `B39`) — portar o descritor p/ B39 exige host c/
-> binutils+qemu, que esta máquina da mantenedora não tem (os testes cross
-> skipam aqui; o CI `cross-native` é o árbitro); (4) `backend-parity.md` colunas por-arch
+> (FLT001 FECHADO 15/09 — fatia `RtB45`; §107 record/aninhado **FECHADO 19/09
+> NAS 3 ARCOS** — x86 descritor recursivo `.rodata` (face (3) x86) + port
+> cross (face (4)): a fatia `B39` interpreta a MESMA gramática de descritor
+> (0..7 legados + 8=toString na vtable via `jalr`, 9/10=containers aninhados,
+> null→"null"), o call-site emite o nó `.rodata` (`NativePrintDescriptors`,
+> compartilhado c/ x86), aarch64 herda via tradutor (novo `lhu`→`ldrh`);
+> `NativeRiscv64E2ETest`/`NativeAarch64E2ETest` 46/46 cada sob qemu com o
+> MESMO golden do oracle JVM do x86 (incl. `[Point[x=1, y=2]]`,
+> `{k=Point[x=7, y=8]}`, `[[[4]]]`, `"rec:" + Point(5,6)` — a face de concat
+> exigiu ramo `valueOf(record)` vtable no `NativeRiscvCrossOps`); (4) `backend-parity.md` colunas por-arch
 > ainda por separar; (5) CI cross não existe (toolchain host-dependente) —
 > **face (5) FECHADA 12/09**: job `cross-native` em `.github/workflows/ci.yml`
 > instala `binutils-riscv64/aarch64-linux-gnu` + `qemu-user-static` e roda

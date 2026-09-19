@@ -44,12 +44,16 @@
 > DB001 cross face CLOSED 15/09 (SQLite; JS keeps DB001) and the CONC001
 > helpers (selectAny/done/poll/cancel/cancelled/awaitTimeout) CLOSED 15/09
 > — remaining refusals: SECN000/OTP001/JSN004; (3) FP-collection on cross
-> (FLT001 CLOSED 15/09 — slice `RtB45`; §107 record/nested **x86 CLOSED 19/09**
-> — `.rodata` recursive descriptor, `NativeE2ETest.execCollectionPrintRecordNestedJvmGolden`
-> byte-identical to the measured JVM oracle; the `?` REFUSAL REMAINS ONLY ON
-> THE CROSS (riscv/aarch legacy immediate tag in slice `B39`) — porting the
-> descriptor to B39 needs a binutils+qemu host, which this maintainer box does
-> not have (cross tests skip here; CI `cross-native` is the referee); (4) `backend-parity.md` per-arch columns
+> (FLT001 CLOSED 15/09 — slice `RtB45`; §107 record/nested **CLOSED 19/09 ON
+> ALL 3 ARCHES** — x86 `.rodata` recursive descriptor (face (3) x86) + cross
+> port (face (4)): slice `B39` now interprets the SAME descriptor grammar
+> (0..7 legacy + 8=vtable toString via `jalr`, 9/10=nested containers, null→
+> "null"), call-site emits the `.rodata` node (`NativePrintDescriptors`,
+> shared with x86), aarch64 inherits via the translator (new `lhu`→`ldrh`);
+> `NativeRiscv64E2ETest`/`NativeAarch64E2ETest` 46/46 each under qemu with
+> the SAME JVM-oracle golden as x86 (incl. `[Point[x=1, y=2]]`, `{k=Point[x=7,
+> y=8]}`, `[[[4]]]`, `"rec:" + Point(5,6)` — the concat face needed a
+> `valueOf(record)` vtable branch in `NativeRiscvCrossOps`); (4) `backend-parity.md` per-arch columns
 > still to be separated; (5) cross CI does not exist (host-dependent toolchain) —
 > **face (5) CLOSED 12/09**: job `cross-native` in `.github/workflows/ci.yml`
 > installs `binutils-riscv64/aarch64-linux-gnu` + `qemu-user-static` and runs

@@ -2916,7 +2916,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   (célula `mapmutret` do §112 intocada) + suíte completa 1292/0 (5 skip)
   + script/c-compiler/cli BUILD SUCCESS. Gate: `boolInCollectionsPrintsLikeJvm`.
 
-### 107. `println(<coleção>)` no nativo imprime LIXO de ponteiro (JVM: `[1, 2, 3]`/`{k=9}`) — 🟡 PARCIAL: face escalar x86+riscv/aarch CORRIGIDA 12/09; record/aninhado x86 ✅ CORRIGIDO 19/09 (descritor recursivo `.rodata`); o `?` de record/aninhado continua apenas no CROSS riscv/aarch (face catalogada)
+### 107. `println(<coleção>)` no nativo imprime LIXO de ponteiro (JVM: `[1, 2, 3]`/`{k=9}`) — ✅ FECHADO 19/09 nos 4 alvos: face escalar x86+riscv/aarch CORRIGIDA 12/09; record/aninhado x86 ✅ CORRIGIDO 19/09 (descritor recursivo `.rodata`); record/aninhado cross riscv/aarch ✅ CORRIGIDO 19/09 (face (4) — mesma gramática de descritor na fatia B39, aarch64 via tradutor; `NativeRiscv64/Aarch64E2ETest` 46/46 cada sob qemu, golden = o oracle JVM do x86)
 
 - **Menor repro (medido 11/09, pós-fix §104b-i que liberou o link):**
   ```kof

@@ -943,16 +943,12 @@ main() {
         // §107-cross (fatia B39): println(<coleção>) imprimia LIXO de ponteiro
         // (`@` medido no qemu antes do fix) — o valueOf cross não tinha ramo
         // List/Map/Set e caía em kof_println_string sobre o ponteiro cru. Os
-        // helpers riscv kof_{list,set,map}_to_string espelham o x86 (mesma
-        // tag compile-time 0/1/2/3/4/5/6, `?` p/ record/aninhado). Double/
-        // Float (tags 4/5) entraram em 15/09 (FLT001 fechado — slice B45);
-        // a linha 1.5/2.0f abaixo prova o novo ramo. DIVERGÊNCIA NOVA (19/09,
-        // face (3) do multiarch): o x86 ganhou descritor recursivo e imprime
-        // record/aninhado de verdade ([[1], [2]]); o cross MANTÉM a tag
-        // imediata legada e o `?` honesto — portar o descritor p/ B39 é a
-        // face cross restante, catalogada em
-        // docs/development/native-multiarch.md (exige host c/ binutils-qemu;
-        // esta máquina não tem o toolchain e o CI cross-native é o árbitro).
+        // helpers riscv kof_{list,set,map}_to_string espelham o x86. Double/
+        // Float (tags 4/5) entraram em 15/09 (FLT001 fechado — slice B45).
+        // 19/09 face (4) do multiarch: a linha aninhada ganhou print REAL via
+        // descritor recursivo (.rodata emitido no call-site, NativePrint-
+        // Descriptors) — MESMA gramática/ABI do x86 (face (3)); o `?` sobrevive
+        // só p/ tipo sem como (Object sem vtable, cap 64B).
         String out = runRiscv64(tempDir, """
                 main() {
                     println(listOf(1, 2, 3))
@@ -970,8 +966,34 @@ main() {
                 }
                 """);
         assertEquals("[1, 2, 3]\n[1, 2]\n{k=9}\n[a, b]\n[true, false]\n"
-                + "[100000000000, 2]\n[97, 98]\n[]\n[?, ?]\n{a=1, b=2}\n"
+                + "[100000000000, 2]\n[97, 98]\n[]\n[[1], [2]]\n{a=1, b=2}\n"
                 + "[1.5, 2.0]\n[1.5, 2.5]", out);
+    }
+
+    @Test
+    void nativeCollectionPrintRecordNestedMatchesJvmGolden(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        // §107 record/nested (face (4), 19/09): elementos que são RECORDS,
+        // LISTs/SETs/MAPs aninhados — o descritor recursivo (.rodata emitido
+        // no call-site) manda o helper chamar a vtable toString (ramo 8,
+        // jalr) e recursão de container com ponteiro de nó filho (9/10).
+        // Golden = o MESMO programa x86 (NativeE2ETest.execCollectionPrint-
+        // RecordNestedJvmGolden) — paridade nas 3 arcos.
+        String out = runRiscv64(tempDir, """
+                record Point(Int x, Int y)
+                main() {
+                    println(listOf(Point(1, 2)))
+                    println(listOf(listOf(1, 2), listOf(3)))
+                    println(mapOf("k", Point(7, 8)))
+                    println(setOf(listOf(1)))
+                    println(listOf(mapOf("a", 1)))
+                    println(listOf(listOf(listOf(4))))
+                    println("rec:" + Point(5, 6))
+                    println(Point(3, 4))
+                }
+                """);
+        assertEquals("[Point[x=1, y=2]]\n[[1, 2], [3]]\n{k=Point[x=7, y=8]}\n[[1]]\n"
+                + "[{a=1}]\n[[[4]]]\nrec:Point[x=5, y=6]\nPoint[x=3, y=4]", out);
     }
 
     @Test

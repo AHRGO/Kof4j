@@ -902,12 +902,12 @@ main() {
         assumeToolchain();
         // §107-cross (B39, aarch64 herda 100% do riscv via tradutor): os
         // mesmos helpers/semântica do riscv — golden idêntico ao riscv.
-        // 19/09: o x86 fechou a face record/aninhado (descritor recursivo);
-        // o cross (riscv E aarch) mantém o `?` honesto — face catalogada em
-        // docs/development/native-multiarch.md. (= oracle JVM medido p/ as
-        // demais linhas). Double/Float (tags 4/5) entraram em 15/09
-        // (FLT001 fechado, slice B45) — o tradutor mapeia faN -> dN e o
-        // vararg double vai no d0 do aarch64.
+        // 19/09 face (4) do multiarch: a linha aninhada ganhou print REAL via
+        // descritor recursivo (.rodata no call-site) — igual x86 (face (3));
+        // o `?` sobrevive só p/ tipo sem como (Object sem vtable, cap 64B).
+        // (= oracle JVM medido p/ as demais linhas). Double/Float (tags 4/5)
+        // entraram em 15/09 (FLT001 fechado, slice B45) — o tradutor mapeia
+        // faN -> dN e o vararg double vai no d0 do aarch64.
         String out = runAarch64(tempDir, """
                 main() {
                     println(listOf(1, 2, 3))
@@ -925,8 +925,31 @@ main() {
                 }
                 """);
         assertEquals("[1, 2, 3]\n[1, 2]\n{k=9}\n[a, b]\n[true, false]\n"
-                + "[100000000000, 2]\n[97, 98]\n[]\n[?, ?]\n{a=1, b=2}\n"
+                + "[100000000000, 2]\n[97, 98]\n[]\n[[1], [2]]\n{a=1, b=2}\n"
                 + "[1.5, 2.0]\n[1.5, 2.5]", out);
+    }
+
+    @Test
+    void nativeCollectionPrintRecordNestedMatchesJvmGolden(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        // §107 record/nested (face (4), 19/09): aarch64 herda o descritor
+        // recursivo via tradutor (lhu->ldrh incluso; jalr->blr já coberto).
+        // Golden = o MESMO programa x86/riscv — paridade nas 3 arcos.
+        String out = runAarch64(tempDir, """
+                record Point(Int x, Int y)
+                main() {
+                    println(listOf(Point(1, 2)))
+                    println(listOf(listOf(1, 2), listOf(3)))
+                    println(mapOf("k", Point(7, 8)))
+                    println(setOf(listOf(1)))
+                    println(listOf(mapOf("a", 1)))
+                    println(listOf(listOf(listOf(4))))
+                    println("rec:" + Point(5, 6))
+                    println(Point(3, 4))
+                }
+                """);
+        assertEquals("[Point[x=1, y=2]]\n[[1, 2], [3]]\n{k=Point[x=7, y=8]}\n[[1]]\n"
+                + "[{a=1}]\n[[[4]]]\nrec:Point[x=5, y=6]\nPoint[x=3, y=4]", out);
     }
 
     @Test

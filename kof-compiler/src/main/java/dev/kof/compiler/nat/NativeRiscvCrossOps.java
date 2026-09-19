@@ -299,30 +299,51 @@ public final class NativeRiscvCrossOps {
                     || BuiltinTypes.isSet(ct) || BuiltinTypes.isMap(ct))) {
                 // §107-cross: List/Map/Set são tipos de runtime (sem vtable
                 // toString) — o ramo genérico não emitia nada e o ponteiro cru
-                // caía em kof_println_string = lixo (`@` medido no qemu). A tag
-                // do elemento vem do typer (SEM056: homogênea), igual x86.
-                // FP-em-coleção (tags 4/5): fechado em 15/09 — o helper
-                // kof_elem_to_string do B39 chama kof_double_to_string/
-                // kof_float_to_string (slice B45), igual ao x86.
-                // Record/aninhado (tag 6) fica `?` no helper (cara do §104b-ii).
+                // caía em kof_println_string = lixo (`@` medido no qemu). O
+                // descritor do elemento sai do typer (SEM056: homogênea).
+                // 19/09 face (4): nó recursivo (record/vtable + List/Set/Map
+                // filhos) em .rodata no próprio call-site (NativePrintDescriptors)
+                // — MESMA gramática e ABI do x86; paridade record/aninhado
+                // nas 3 arcos.
                 Type elem = BuiltinTypes.isMap(ct) ? null
                         : BuiltinTypes.isList(ct) ? BuiltinTypes.listElement(ct)
                         : BuiltinTypes.setElement(ct);
-                int ktag = NativeBoxTags.collectionTag(BuiltinTypes.isMap(ct) ? BuiltinTypes.mapKey(ct) : elem);
-                int vtag = BuiltinTypes.isMap(ct) ? NativeBoxTags.mapValueTag(BuiltinTypes.mapValue(ct)) : -1;
                 sb.append("    pop a0\n");
                 if (BuiltinTypes.isList(ct)) {
-                    sb.append("    li a1, ").append(ktag).append("\n");
+                    String ld = NativePrintDescriptors.emit(sb, nb.printDescriptorCounter++,
+                            NativePrintDescriptors.node(nb, elem, false));
+                    sb.append("    la a1, ").append(ld).append("\n");
                     sb.append("    call kof_list_to_string\n");
                 } else if (BuiltinTypes.isSet(ct)) {
-                    sb.append("    li a1, ").append(ktag).append("\n");
+                    String ld = NativePrintDescriptors.emit(sb, nb.printDescriptorCounter++,
+                            NativePrintDescriptors.node(nb, elem, false));
+                    sb.append("    la a1, ").append(ld).append("\n");
                     sb.append("    call kof_set_to_string\n");
                 } else {
-                    sb.append("    li a1, ").append(ktag).append("\n");
-                    sb.append("    li a2, ").append(vtag).append("\n");
+                    String lk = NativePrintDescriptors.emit(sb, nb.printDescriptorCounter++,
+                            NativePrintDescriptors.node(nb, BuiltinTypes.mapKey(ct), false));
+                    String lv = NativePrintDescriptors.emit(sb, nb.printDescriptorCounter++,
+                            NativePrintDescriptors.node(nb, BuiltinTypes.mapValue(ct), true));
+                    sb.append("    la a1, ").append(lk).append("\n");
+                    sb.append("    la a2, ").append(lv).append("\n");
                     sb.append("    call kof_map_to_string\n");
                 }
                 other.pushRiscv(sb, "a0");
+            } else if (vArgType instanceof Type.ClassType ct && !BuiltinTypes.isString(vArgType)
+                    && BuiltinTypes.isObject(vArgType) == false) {
+                // §107 face (4) (19/09): valueOf(record/objeto com toString no
+                // IR) → vtable via jalr (mesma forma do dispatch virtual).
+                // Sem o ramo o ponteiro cru ficava na pilha e o concat virava
+                // "rec:" + lixo (medido: `rec:` vazio no qemu). Paridade x86.
+                int tosIdx = nb.findVirtualMethodIndex(ct.name(), "toString", java.util.List.of());
+                if (tosIdx >= 0) {
+                    sb.append("    pop a0\n");
+                    sb.append("    ld t0, 8(a0)\n");
+                    sb.append("    addi t0, t0, ").append(tosIdx * 8).append("\n");
+                    sb.append("    ld t0, 0(t0)\n");
+                    sb.append("    jalr t0\n");
+                    other.pushRiscv(sb, "a0");
+                }
             }
             return;
         }

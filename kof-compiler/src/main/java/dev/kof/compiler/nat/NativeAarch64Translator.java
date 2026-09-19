@@ -337,7 +337,7 @@ public final class NativeAarch64Translator {
             String rsW = rs.replace("x", "w");
             return List.of(indent + "sxtw " + rd + ", " + rsW);
         }
-        if (mn.equals("ld") || mn.equals("lw") || mn.equals("lbu") || mn.equals("lb") || mn.equals("lh")) {
+        if (mn.equals("ld") || mn.equals("lw") || mn.equals("lbu") || mn.equals("lb") || mn.equals("lh") || mn.equals("lhu")) {
             String[] args = rest.split(",");
             String rdRaw = args[0].trim();
             String mem = args[1].trim();
@@ -349,7 +349,7 @@ public final class NativeAarch64Translator {
             String base = R.apply(m.group(2));
             // sp como destino não é encodável como Rt -> usar temp
             if (rdRaw.equals("sp")) {
-                String op = mn.equals("ld") ? "ldr" : mn.equals("lw") ? "ldrsw" : mn.equals("lbu") ? "ldrb" : mn.equals("lb") ? "ldrsb" : "ldrsh";
+                String op = mn.equals("ld") ? "ldr" : mn.equals("lw") ? "ldrsw" : mn.equals("lbu") ? "ldrb" : mn.equals("lb") ? "ldrsb" : mn.equals("lhu") ? "ldrh" : "ldrsh";
                 String rtTmp = mn.equals("lbu") ? "w17" : "x17";
                 List<String> out = new ArrayList<>();
                 if (off >= -256 && off <= 255) {
@@ -368,6 +368,7 @@ public final class NativeAarch64Translator {
             else if (mn.equals("lw")) { rt = R.apply(rdRaw); op = "ldrsw"; }
             else if (mn.equals("lbu")) { rt = R.apply(rdRaw).replace("x", "w"); op = "ldrb"; }
             else if (mn.equals("lb")) { rt = R.apply(rdRaw); op = "ldrsb"; }
+            else if (mn.equals("lhu")) { rt = R.apply(rdRaw).replace("x", "w"); op = "ldrh"; }
             else { rt = R.apply(rdRaw); op = "ldrsh"; }
             if (off >= -256 && off <= 255) {
                 String addr = off == 0 ? "[" + base + "]" : "[" + base + ", #" + off + "]";

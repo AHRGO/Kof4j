@@ -2916,7 +2916,7 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   (cell `mapmutret` of §112 untouched) + full suite 1292/0 (5 skip)
   + script/c-compiler/cli BUILD SUCCESS. Gate: `boolInCollectionsPrintsLikeJvm`.
 
-### 107. `println(<collection>)` in native prints POINTER GARBAGE (JVM: `[1, 2, 3]`/`{k=9}`) — 🟡 PARTIAL: scalar face x86+riscv/aarch FIXED 12/09; record/nested x86 ✅ FIXED 19/09 (descritor recursivo); `?` record/nested continua só no CROSS riscv/aarch (face catalogada)
+### 107. `println(<collection>)` in native prints POINTER GARBAGE (JVM: `[1, 2, 3]`/`{k=9}`) — ✅ CLOSED 19/09 on ALL 4 targets: scalar x86+riscv/aarch FIXED 12/09; record/nested x86 ✅ FIXED 19/09 (recursive descriptor); record/nested cross riscv/aarch ✅ FIXED 19/09 (face (4) — same descriptor grammar in slice B39, aarch64 via translator; `NativeRiscv64/Aarch64E2ETest` 46/46 each under qemu, golden = the x86 JVM oracle)
 
 - **Minimal repro (measured 11/09, post-fix §104b-i which released the link):**
   ```kof
