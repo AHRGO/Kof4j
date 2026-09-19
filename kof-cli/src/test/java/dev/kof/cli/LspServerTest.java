@@ -849,4 +849,41 @@ class LspServerTest {
         assertTrue(labels.contains("var"), "keywords sumiram: " + labels);
     }
 
+
+    /** 8.3 (LSP-A, fila universal): o servidor anuncia signatureHelp e o
+     *  request devolve as formas gravadas no MESMA tabela do hover. */
+    @Test
+    @SuppressWarnings("unchecked")
+    void signatureHelpRoundTripUsesTableAndAnnouncesCapability(@TempDir Path dir) throws Exception {
+        String init = "{\"jsonrpc\":\"2.0\",\"id\":0,\"method\":\"initialize\",\"params\":{}}";
+        ByteArrayOutputStream out0 = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(init))), out0).run();
+        Map<String, Object> caps = (Map<String, Object>) byId(
+                messages(out0.toString(StandardCharsets.UTF_8)), 0).get("result");
+        assertNotNull(((Map<String, Object>) caps.get("capabilities")).get("signatureHelpProvider"),
+                "capability signatureHelp faltando: " + caps.get("capabilities"));
+        String app = "main() { val d = db.connect(\"x\", y }\n";
+        Path appFile = dir.resolve("app.kf");
+        Files.writeString(appFile, app);
+        String uri = appFile.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{\"textDocument\":{\"uri\":\""
+                + uri + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        int col = app.indexOf("y }") + 1;
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/signatureHelp\",\"params\":{\"textDocument\":{\"uri\":\""
+                + uri + "\"},\"position\":{\"line\":0,\"character\":" + col + "}}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> res = (Map<String, Object>) byId(
+                messages(out.toString(StandardCharsets.UTF_8)), 1).get("result");
+        assertNotNull(res, "db.connect( com tabela nao pode responder null");
+        assertEquals(1L, res.get("activeParameter"), res.toString());
+        List<Object> sigs = (List<Object>) res.get("signatures");
+        assertEquals(2, sigs.size(), "as duas formas de db.connect: " + sigs);
+        String u = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"textDocument/signatureHelp\",\"params\":{\"textDocument\":{\"uri\":\""
+                + uri + "\"},\"position\":{\"line\":0,\"character\":" + (app.indexOf("db") + 1) + "}}}";
+        ByteArrayOutputStream out2 = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(u))), out2).run();
+        assertNull(byId(messages(out2.toString(StandardCharsets.UTF_8)), 2).get("result"),
+                "fora de chamada com tabela => null, nunca chute (R6)");
+    }
 }
