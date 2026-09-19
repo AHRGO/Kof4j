@@ -40,17 +40,21 @@ fi
 if [ -z "${GIT_ASKPASS:-}" ]; then
   codebin=$(readlink -f "/proc/$(pgrep -x code 2>/dev/null | head -1)/exe" 2>/dev/null)
   [ -x "$codebin" ] || codebin=/usr/share/code/code
+  coderoot=$(dirname "$codebin")
   for sock in /run/user/"$(id -u)"/vscode-git-*.sock; do
     [ -S "$sock" ] || continue
-    if GIT_ASKPASS="$codebin/resources/app/extensions/git/dist/askpass.sh" \
+    # socket morto = arquivo órfão sem listener; o probe ls-remote NÃO serve de
+    # teste (repo publico responde anonimo). ss -xl lista os que ESTAO aceitos.
+    ss -xl 2>/dev/null | grep -qF "$sock" || continue
+    if GIT_ASKPASS="$coderoot/resources/app/extensions/git/dist/askpass.sh" \
        VSCODE_GIT_ASKPASS_NODE="$codebin" \
-       VSCODE_GIT_ASKPASS_MAIN="$codebin/resources/app/extensions/git/dist/askpass-main.js" \
+       VSCODE_GIT_ASKPASS_MAIN="$coderoot/resources/app/extensions/git/dist/askpass-main.js" \
        VSCODE_GIT_ASKPASS_EXTRA_ARGS="" \
        VSCODE_GIT_IPC_HANDLE="$sock" \
        timeout 30 git ls-remote -q origin HEAD >/dev/null 2>&1; then
-      export GIT_ASKPASS="$codebin/resources/app/extensions/git/dist/askpass.sh" \
+      export GIT_ASKPASS="$coderoot/resources/app/extensions/git/dist/askpass.sh" \
              VSCODE_GIT_ASKPASS_NODE="$codebin" \
-             VSCODE_GIT_ASKPASS_MAIN="$codebin/resources/app/extensions/git/dist/askpass-main.js" \
+             VSCODE_GIT_ASKPASS_MAIN="$coderoot/resources/app/extensions/git/dist/askpass-main.js" \
              VSCODE_GIT_ASKPASS_EXTRA_ARGS="" \
              VSCODE_GIT_IPC_HANDLE="$sock"
       echo "== credencial via ipc da janela VS Code ($sock)"
