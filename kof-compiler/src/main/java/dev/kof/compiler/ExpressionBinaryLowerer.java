@@ -11,66 +11,6 @@ public final class ExpressionBinaryLowerer {
     private ExpressionBinaryLowerer() {}
 
     /** Unknown OU Nullable(Unknown): o valor pode ser null (get sem pin). */
-    private static boolean isMaybeNullType(Type t) {
-        return t instanceof Type.UnknownType
-                || (t instanceof Type.NullableType nt && nt.inner() instanceof Type.UnknownType);
-    }
-
-    /** Int (ou Nullable(Int)) — alvo de cast que handle de UI/mídia satisfaz. */
-    private static boolean isIntPrimitive(Type t) {
-        if (t instanceof Type.NullableType nt) return isIntPrimitive(nt.inner());
-        return t instanceof Type.PrimitiveType pt
-                && ("int".equals(pt.name()) || "Int".equals(pt.name()));
-    }
-
-    /** §262(b): `Point?` (Nullable(record)) É record p/ o caminho de conteúdo. */
-    static boolean isRecordLike(Type t, CompilerDriver driver) {
-        Type u = t instanceof Type.NullableType nt ? nt.inner() : t;
-        return CompilerTypes.isRecordType(u, driver.currentUnit, driver.semanticAnalyzer);
-    }
-
-    /**
-     * D-NULL-INTENT (I6): {@code Nullable(primitivo)} GENUÍNO — física de
-     * referência boxed agora, então precisa do MESMO caminho null-safe de
-     * conteúdo que record usa (I6: igualdade lifted, nunca identidade do
-     * wrapper — cache do {@code Integer} faria dois {@code 10000} distintos
-     * darem {@code false} num {@code if_acmp} cru).
-     */
-    private static boolean isNullablePrimLike(Type t) {
-        return t instanceof Type.NullableType nt && nt.inner() instanceof Type.PrimitiveType pt
-                && !Type.isVoid(pt);
-    }
-
-    /**
-     * D-NULL-INTENT (I6, caso misto): {@code Nullable(primitivo)} genuíno OU
-     * primitivo CRU (bare, não-nullable) — cobre {@code m.get("a") == 1}
-     * (esquerda boxed, direita literal cru). O lado bare nunca é null, então
-     * o dance null-safe do {@link RecordEqualityLowerer} continua correto
-     * (equivale a comparar por valor sem nunca dar falso-negativo/NPE).
-     */
-    private static boolean isNullablePrimOrBarePrim(Type t) {
-        return isNullablePrimLike(t) || (t instanceof Type.PrimitiveType pt && !Type.isVoid(pt));
-    }
-
-    /** §284-map: familia com caixa fisica no slot de Map (unboxFn do backend). */
-    private static boolean isBoxedPrimConsumer(Type t) {
-        return t instanceof Type.NullableType nt && nt.inner() instanceof Type.PrimitiveType pt
-                && switch (pt.name()) {
-                    case "int", "char", "short", "byte", "long" -> true;
-                    default -> false;
-                };
-    }
-
-    /** §167: bitwise inteiro `& | ^` (o `&&`/`||` lógico já saiu antes). */
-    private static boolean isBitwiseOp(String op) {
-        return "&".equals(op) || "|".equals(op) || "^".equals(op);
-    }
-
-    /** §167: shift inteiro `<< >> >>>`. */
-    private static boolean isShiftOp(String op) {
-        return "<<".equals(op) || ">>".equals(op) || ">>>".equals(op);
-    }
-
     /**
      * Stringifica um operando de concatenação. D-PRINT (#168, manterdora
      * 15/09): um `Char` vira o CARÁTER ("A"), nunca o code point ("65") — a
@@ -141,7 +81,7 @@ if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
     // .toDescriptor → "I"). `label as Int` é IDENTITY, não checkcast — um
     // CHECKCAST sobre um valor int é inválido e derrubava o verifier
     // ("Bad type on operand stack") em qualquer função que monta UI.
-    boolean handleAsInt = isIntPrimitive(targetType)
+    boolean handleAsInt = ExpressionBinaryPredicates.isIntPrimitive(targetType)
             && (KofUi.isUiType(fromCastType) || KofMedia.isHandleType(fromCastType));
     if ("instanceof".equals(bin.operator())) {
         ops.add(new KofInstanceOf(targetType));
@@ -300,7 +240,7 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
                 // do `nulleq` arrombava em vez de dar true/false).
                 || (driver.target.isNative() && isRelationalOp
                     && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType))
-                || (isRelationalOp && isNullablePrimOrBarePrim(accType) && isNullablePrimOrBarePrim(rightType)
+                || (isRelationalOp && ExpressionBinaryPredicates.isNullablePrimOrBarePrim(accType) && ExpressionBinaryPredicates.isNullablePrimOrBarePrim(rightType)
                     && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType)));
     if ((isArithmetic || isNumericComparison)
             && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType)) {
@@ -352,7 +292,7 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         driver.emitWideningIfNeeded(ops, rightType, commonType);
         ops.add(new KofBinary(TypeMetrics.mapArithmeticOp(be.operator()), commonType));
         accType = commonType;
-    } else if (isBitwiseOp(be.operator())
+    } else if (ExpressionBinaryPredicates.isBitwiseOp(be.operator())
             && TypeMetrics.isInteger(accType) && TypeMetrics.isInteger(rightType)) {
         // §167: bitwise `& | ^` com Int e Long misturados. A promoção binária
         // do JVM eleva AMBOS ao tipo comum (long se qualquer lado for long);
@@ -371,7 +311,7 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         };
         ops.add(new KofBinary(bitOp, commonInt));
         accType = commonInt;
-    } else if (isShiftOp(be.operator())
+    } else if (ExpressionBinaryPredicates.isShiftOp(be.operator())
             && TypeMetrics.isInteger(accType) && TypeMetrics.isInteger(rightType)) {
         // §167: shift `<< >> >>>`. O tipo do resultado é o tipo PROMOVIDO do
         // operando ESQUERDO (JLS 15.19), não o tipo comum: `int << long` tem
@@ -448,10 +388,10 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         accType = Type.PrimitiveType.BOOL;
     } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
             && !driver.isNullLiteral(be.left()) && !driver.isNullLiteral(be.right())
-            && (isRecordLike(accType, driver) || isRecordLike(rightType, driver)
+            && (ExpressionBinaryPredicates.isRecordLike(accType, driver) || ExpressionBinaryPredicates.isRecordLike(rightType, driver)
                 || (!driver.target.isNative()
-                    && (isNullablePrimLike(accType) || isNullablePrimLike(rightType))
-                    && isNullablePrimOrBarePrim(accType) && isNullablePrimOrBarePrim(rightType))
+                    && (ExpressionBinaryPredicates.isNullablePrimLike(accType) || ExpressionBinaryPredicates.isNullablePrimLike(rightType))
+                    && ExpressionBinaryPredicates.isNullablePrimOrBarePrim(accType) && ExpressionBinaryPredicates.isNullablePrimOrBarePrim(rightType))
                 // §284-map: fase 2 D-NULL-INTENT no native SÓ para a familia
                 // com caixa fisica de slot (int/char/short/byte/long): o
                 // RecordEqualityLowerer guarda os dois lados e chama
@@ -460,8 +400,8 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
                 // == igualdade de numero), senão o .equals deles quebraria o
                 // que hoje funciona.
                 || (driver.target.isNative()
-                    && (isBoxedPrimConsumer(accType) || isBoxedPrimConsumer(rightType))
-                    && isNullablePrimOrBarePrim(accType) && isNullablePrimOrBarePrim(rightType)))) {
+                    && (ExpressionBinaryPredicates.isBoxedPrimConsumer(accType) || ExpressionBinaryPredicates.isBoxedPrimConsumer(rightType))
+                    && ExpressionBinaryPredicates.isNullablePrimOrBarePrim(accType) && ExpressionBinaryPredicates.isNullablePrimOrBarePrim(rightType)))) {
         // §262 / bug 11: `record == record` é igualdade de CONTEÚDO, null-safe
         // (Objects.equals). Desugaring em RecordEqualityLowerer (JS = chamada
         // p/ helper kofRecordEq; JVM/Script/Native = ternária com jumps). O
@@ -545,7 +485,7 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         // novo um valor já-Integer → Integer.valueOf(I) com Integer na
         // pilha (VerifyError).
         boolean boxLeftNow = ("==".equals(be.operator()) || "!=".equals(be.operator()))
-                && isMaybeNullType(rightType) && accType instanceof Type.PrimitiveType apt2 && !Type.isVoid(apt2);
+                && ExpressionBinaryPredicates.isMaybeNullType(rightType) && accType instanceof Type.PrimitiveType apt2 && !Type.isVoid(apt2);
         if (boxLeftNow) TypeEmitter.boxPrimitive(ops, accType);
         localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
         Type operandType = accType;
@@ -556,8 +496,8 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
                     || other instanceof Type.TypeVariable || other instanceof Type.NullableType)
                     ? other : new Type.ClassType("java.lang", "Object", List.of());
         } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
-                && ((isMaybeNullType(accType) && TypeMetrics.isPrimitiveType(rightType))
-                    || (isMaybeNullType(rightType) && TypeMetrics.isPrimitiveType(accType)))) {
+                && ((ExpressionBinaryPredicates.isMaybeNullType(accType) && TypeMetrics.isPrimitiveType(rightType))
+                    || (ExpressionBinaryPredicates.isMaybeNullType(rightType) && TypeMetrics.isPrimitiveType(accType)))) {
             operandType = new Type.ClassType("java.lang", "Object", List.of());
         } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
                 && accType instanceof Type.UnknownType && rightType instanceof Type.UnknownType) {

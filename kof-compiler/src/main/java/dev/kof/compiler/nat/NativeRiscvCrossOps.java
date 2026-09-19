@@ -135,7 +135,7 @@ public final class NativeRiscvCrossOps {
         if ("kof_box".equals(mn)) {
             Type bp = kc.parameterTypes().isEmpty() ? Type.UnknownType.UNKNOWN
                     : kc.parameterTypes().get(0);
-            String bfn = bp instanceof Type.PrimitiveType pt ? NativeX86Calls.boxFn(pt.name()) : null;
+            String bfn = bp instanceof Type.PrimitiveType pt ? NativeBoxTags.boxFn(pt.name()) : null;
             if (bfn == null) return;
             sb.append("    pop a0\n");
             sb.append("    call ").append(bfn).append("\n");
@@ -148,7 +148,7 @@ public final class NativeRiscvCrossOps {
             // cru passa, null -> CCE). O estrito fica para `as`/slots erasure.
             boolean soft = "kof_unbox_soft".equals(mn);
             String ufn = ur instanceof Type.PrimitiveType pt
-                    ? (soft ? NativeX86Calls.unboxSoftFn(pt.name()) : NativeX86Calls.unboxFn(pt.name()))
+                    ? (soft ? NativeBoxTags.unboxSoftFn(pt.name()) : NativeBoxTags.unboxFn(pt.name()))
                     : null;
             if (ufn == null) return;               // nao-primitivo: ponteiro ja e o valor
             sb.append("    pop a0\n");
@@ -157,7 +157,7 @@ public final class NativeRiscvCrossOps {
             return;
         }
         if (kc.kind() == KofCallKind.INSTANCE && "equals".equals(mn)
-                && NativeX86Calls.isBoxedNumericReceiver(kc.ownerType())) {
+                && NativeBoxTags.isBoxedNumericReceiver(kc.ownerType())) {
             // §284-map: `.equals` de wrapper numerico = kof_box_equals
             // (magic-aware; null==null true; cru nao e sonchado — entrada
             // do RecordEqualityLowerer so aceita caixa/null no native).
@@ -177,7 +177,7 @@ public final class NativeRiscvCrossOps {
             Type dispatchType = argType instanceof Type.NullableType nt ? nt.inner() : argType;
             if (argType instanceof Type.NullableType nnt2
                     && nnt2.inner() instanceof Type.PrimitiveType ipt2
-                    && NativeX86Calls.unboxFn(ipt2.name()) != null) {
+                    && NativeBoxTags.unboxFn(ipt2.name()) != null) {
                 // §284-map: Nullable(Int/Short/Byte/Long) = caixa fisica do
                 // slot de Map (escrita no lowerer). Despacha pela caixa; o
                 // Nullable(Char) ja chega DESEMBALADO do lowerer (ramo char,
@@ -235,7 +235,7 @@ public final class NativeRiscvCrossOps {
             Type vArgType = argType instanceof Type.NullableType nt ? nt.inner() : argType;
             if (argType instanceof Type.NullableType nnt3
                     && nnt3.inner() instanceof Type.PrimitiveType ipt3
-                    && NativeX86Calls.unboxFn(ipt3.name()) != null) {
+                    && NativeBoxTags.unboxFn(ipt3.name()) != null) {
                 // §284-map: valueOf(Nullable(Int/Long/...)) — a caixa do slot
                 // de Map; box_to_string imprime pelo tag (golden JVM do
                 // contexto de erasure) e passa nao-box cru.
@@ -294,8 +294,8 @@ public final class NativeRiscvCrossOps {
                 Type elem = BuiltinTypes.isMap(ct) ? null
                         : BuiltinTypes.isList(ct) ? BuiltinTypes.listElement(ct)
                         : BuiltinTypes.setElement(ct);
-                int ktag = NativeX86Calls.collectionTag(BuiltinTypes.isMap(ct) ? BuiltinTypes.mapKey(ct) : elem);
-                int vtag = BuiltinTypes.isMap(ct) ? NativeX86Calls.mapValueTag(BuiltinTypes.mapValue(ct)) : -1;
+                int ktag = NativeBoxTags.collectionTag(BuiltinTypes.isMap(ct) ? BuiltinTypes.mapKey(ct) : elem);
+                int vtag = BuiltinTypes.isMap(ct) ? NativeBoxTags.mapValueTag(BuiltinTypes.mapValue(ct)) : -1;
                 sb.append("    pop a0\n");
                 if (BuiltinTypes.isList(ct)) {
                     sb.append("    li a1, ").append(ktag).append("\n");
@@ -448,7 +448,7 @@ public final class NativeRiscvCrossOps {
                 // Nullable(V) NAO desempacota: null tem que sobreviver).
                 if (("kof_map_get".equals(mn) || "kof_map_get_or_default".equals(mn))
                         && kc.returnType() instanceof Type.PrimitiveType rpt2) {
-                    String ufm2 = NativeX86Calls.unboxSoftFn(rpt2.name());
+                    String ufm2 = NativeBoxTags.unboxSoftFn(rpt2.name());
                     if (ufm2 != null) sb.append("    call ").append(ufm2).append("\n");
                 }
                 other.pushRiscv(sb, "a0");

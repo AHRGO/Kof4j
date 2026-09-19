@@ -13,79 +13,6 @@ import dev.kof.compiler.Type;
  */
 public final class NativeX86Calls {
 
-    /** §107: tag de elemento/vetor de coleção → argumento do
-     *  kof_{list,set,map}_to_string. 0=int/char/short/byte, 1=String, 2=Long,
-     *  3=Bool, 4=Double, 5=Float, 6=desconhecido/record/aninhado (→ "?",
-     *  face do §104b-ii). SEM056 garante homogeneidade, então UMA tag basta. */
-    static int collectionTag(Type t) {
-        Type e = t instanceof Type.NullableType nt ? nt.inner() : t;
-        if (e instanceof Type.PrimitiveType pt) {
-            switch (pt.name()) {
-                case "int", "char", "short", "byte": return 0;
-                case "long": return 2;
-                case "bool": return 3;
-                case "float": return 5;
-                default: return NativeTypeKinds.isDoubleType(pt) ? 4 : 6;
-            }
-        }
-        if (BuiltinTypes.isString(e)) return 1;
-        return 6;
-    }
-
-    // §284-map (18/09): VALOR de Map da familia Int/Long e caixa fisica
-    // (contrato de escrita no CollectionCallLowerer, igual ao HashMap do
-    // JVM) — tag 7 = "caixa numerica" no kof_elem_to_string: despacha por
-    // MAGIC+tag via kof_box_to_string; nao-box passa cru (mapas antigos
-    // emitidos raw por outras rotas continuam imprimindo certo).
-    static int mapValueTag(Type t) {
-        Type e = t instanceof Type.NullableType nt ? nt.inner() : t;
-        if (e instanceof Type.PrimitiveType pt && unboxFn(pt.name()) != null) return 7;
-        return collectionTag(t);
-    }
-
-    /** §284: funcao de box por tipo primitivo (tags da tabela de colecao). */
-    static String boxFn(String primName) {
-        switch (primName) {
-            case "int", "char", "short", "byte": return "kof_box_int";
-            case "long": return "kof_box_long";
-            case "bool", "boolean": return "kof_box_bool";
-            case "double": return "kof_box_double";
-            case "float": return "kof_box_float";
-            default: return null;
-        }
-    }
-
-    /** §284: funcao de unbox por tipo esperado (v1: inteiros; demais = passthrough). */
-    static String unboxFn(String primName) {
-        switch (primName) {
-            case "int", "char", "short", "byte": return "kof_unbox_int";
-            // §284-map: Long aceita caixa Int OU Long (Number.longValue)
-            case "long": return "kof_unbox_long";
-            default: return null;
-        }
-    }
-
-    /** §284-map: variante soft (consumidor de `Int?`) — cru passa cru. */
-    static String unboxSoftFn(String primName) {
-        switch (primName) {
-            case "int", "char", "short", "byte": return "kof_unbox_int_soft";
-            case "long": return "kof_unbox_long_soft";
-            default: return null;
-        }
-    }
-
-    /** §284-map: receiver de `.equals` que no native e a caixa do slot. */
-    static boolean isBoxedNumericReceiver(Type t) {
-        Type u = t instanceof Type.NullableType nt ? nt.inner() : t;
-        if (!(u instanceof Type.ClassType ct)) return false;
-        String n = ct.name();
-        return switch (n) {
-            case "Integer", "java/lang/Integer", "Long", "java/lang/Long",
-                 "Character", "java/lang/Character", "Short", "java/lang/Short",
-                 "Byte", "java/lang/Byte" -> true;
-            default -> false;
-        };
-    }
 
     private final NativeBackend nb;
 
@@ -100,7 +27,7 @@ public final class NativeX86Calls {
             // nao embrulha referencias).
             Type p0 = kc.parameterTypes().isEmpty() ? Type.UnknownType.UNKNOWN
                     : kc.parameterTypes().get(0);
-            String fn = p0 instanceof Type.PrimitiveType pt ? boxFn(pt.name()) : null;
+            String fn = p0 instanceof Type.PrimitiveType pt ? NativeBoxTags.boxFn(pt.name()) : null;
             if (fn == null) return;
             sb.append("    popq %rdi\n");
             sb.append("    call ").append(fn).append("\n");
@@ -117,7 +44,7 @@ public final class NativeX86Calls {
             Type ret = kc.returnType();
             String fn = ret instanceof Type.PrimitiveType pt
                     ? ("kof_unbox_soft".equals(kc.methodName())
-                            ? unboxSoftFn(pt.name()) : unboxFn(pt.name()))
+                            ? NativeBoxTags.unboxSoftFn(pt.name()) : NativeBoxTags.unboxFn(pt.name()))
                     : null;
             if (fn == null) return;               // nao-primitivo: ponteiro ja e o valor
             sb.append("    popq %rdi\n");
@@ -126,7 +53,7 @@ public final class NativeX86Calls {
             return;
         }
         if (kc.kind() == KofCallKind.INSTANCE && "equals".equals(kc.methodName())
-                && isBoxedNumericReceiver(kc.ownerType())) {
+                && NativeBoxTags.isBoxedNumericReceiver(kc.ownerType())) {
             // §284-map: `tL.equals(tR)` do RecordEqualityLowerer (I6) sobre
             // wrapper numerico — no native o wrapper nao existe; o slot de
             // Map e a caixa MAGIC, entao a igualdade e kof_box_equals
@@ -277,7 +204,7 @@ public final class NativeX86Calls {
             // lowerer, ramo acima, e nao passa por aqui).
             if (argType instanceof Type.NullableType nnt
                     && nnt.inner() instanceof Type.PrimitiveType ipt
-                    && unboxFn(ipt.name()) != null) {
+                    && NativeBoxTags.unboxFn(ipt.name()) != null) {
                 sb.append("    popq %rdi\n");
                 sb.append("    call kof_box_to_string\n");
                 sb.append("    pushq %rax\n");
@@ -317,21 +244,21 @@ public final class NativeX86Calls {
                 // o ponteiro cru caía em kof_println_string = lixo (R6).
                 // A tag do elemento vem do typer (SEM056: homogênea).
                 sb.append("    popq %rdi\n");
-                sb.append("    movl $").append(collectionTag(BuiltinTypes.listElement(ct)))
+                sb.append("    movl $").append(NativeBoxTags.collectionTag(BuiltinTypes.listElement(ct)))
                   .append(", %esi\n");
                 sb.append("    call kof_list_to_string\n");
                 sb.append("    pushq %rax\n");
             } else if (dispatchType instanceof Type.ClassType ct && BuiltinTypes.isSet(ct)) {
                 sb.append("    popq %rdi\n");
-                sb.append("    movl $").append(collectionTag(BuiltinTypes.setElement(ct)))
+                sb.append("    movl $").append(NativeBoxTags.collectionTag(BuiltinTypes.setElement(ct)))
                   .append(", %esi\n");
                 sb.append("    call kof_set_to_string\n");
                 sb.append("    pushq %rax\n");
             } else if (dispatchType instanceof Type.ClassType ct && BuiltinTypes.isMap(ct)) {
                 sb.append("    popq %rdi\n");
-                sb.append("    movl $").append(collectionTag(BuiltinTypes.mapKey(ct)))
+                sb.append("    movl $").append(NativeBoxTags.collectionTag(BuiltinTypes.mapKey(ct)))
                   .append(", %esi\n");
-                sb.append("    movl $").append(mapValueTag(BuiltinTypes.mapValue(ct)))
+                sb.append("    movl $").append(NativeBoxTags.mapValueTag(BuiltinTypes.mapValue(ct)))
                   .append(", %edx\n");
                 sb.append("    call kof_map_to_string\n");
                 sb.append("    pushq %rax\n");
@@ -467,7 +394,7 @@ public final class NativeX86Calls {
                     if (("kof_map_get".equals(collFn) || "kof_map_get_or_default".equals(collFn))
                             && kc.returnType() instanceof Type.PrimitiveType rpt) {
                         // §284-map SOFT: caixa abre, cru passa, null -> CCE.
-                        String ufm = unboxSoftFn(rpt.name());
+                        String ufm = NativeBoxTags.unboxSoftFn(rpt.name());
                         if (ufm != null) {
                             sb.append("    popq %rdi\n");
                             sb.append("    call ").append(ufm).append("\n");

@@ -89,9 +89,9 @@ final class RecordEqualityLowerer {
         // WRAPPER boxed (Integer/Long/...) como "recordType": seu `.equals`
         // real já faz igualdade por VALOR null-safe (mesma mecânica).
         Type recordType;
-        if (ExpressionBinaryLowerer.isRecordLike(accType, driver)) {
+        if (ExpressionBinaryPredicates.isRecordLike(accType, driver)) {
             recordType = accType instanceof Type.NullableType nta ? nta.inner() : accType;
-        } else if (ExpressionBinaryLowerer.isRecordLike(rightType, driver)) {
+        } else if (ExpressionBinaryPredicates.isRecordLike(rightType, driver)) {
             recordType = rightType instanceof Type.NullableType ntr ? ntr.inner() : rightType;
         } else if (accType instanceof Type.NullableType ntp && ntp.inner() instanceof Type.PrimitiveType apt
                 && TypeMetrics.boxedTypeFor(apt) instanceof Type.ClassType aboxed) {

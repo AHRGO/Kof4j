@@ -6,8 +6,9 @@
 568	kof-compiler/src/main/java/dev/kof/compiler/CompilerCaptureScanner.java
 599	kof-compiler/src/main/java/dev/kof/compiler/CompilerClassLowering.java
 521	kof-compiler/src/main/java/dev/kof/compiler/CompilerTypes.java
-553	kof-compiler/src/main/java/dev/kof/compiler/ExpressionBinaryLowerer.java
+541	kof-compiler/src/main/java/dev/kof/compiler/ExpressionBinaryLowerer.java
 569	kof-compiler/src/main/java/dev/kof/compiler/ExpressionLowerer.java
+525	kof-compiler/src/main/java/dev/kof/compiler/ExpressionTyper.java
 599	kof-compiler/src/main/java/dev/kof/compiler/js/JsCallEmitter.java
 559	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeCore.java
 536	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeOps.java
@@ -26,10 +27,12 @@
 510	kof-compiler/src/main/java/dev/kof/compiler/MemberCallTyper.java
 504	kof-compiler/src/main/java/dev/kof/compiler/MethodCallTyper.java
 505	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeBackend.java
-535	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmMapset0.java
+553	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmMapset0.java
 581	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmRtB33.java
 569	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmRtB47.java
 505	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvCrossEmit.java
+520	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvCrossOps.java
+561	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeX86Calls.java
 568	kof-compiler/src/main/java/dev/kof/compiler/parser/ExpressionParser.java
 509	kof-compiler/src/main/java/dev/kof/compiler/parser/Lexer.java
 549	kof-compiler/src/main/java/dev/kof/compiler/parser/StatementParser.java
