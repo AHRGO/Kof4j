@@ -1937,7 +1937,7 @@ faces viram testes de `Troolean` na fatia 1.
 
 ## D-KOF-FIRST — contrato interno antes da comparação externa (`KOF-primeiro, externo-depois`)
 
-**Data:** 2026-09-19 · **Estado:** `PROPOSTO` (aguardando ratificação da mantenedora; até a ratificação vale como regra de trabalho dos agentes, nunca como contrato ratificado) · **Escopo:** triagem de issues/PRs, bug hunting, classificação de gaps, uso de referências externas · **Relacionadas:** `D-NOT-JAVA` (regra 8), `D-TRIAGE` (regra 9), a regra de precedência do §5
+**Data:** 2026-09-19 · **Estado:** `DECIDED` (ratificado 19/09/2026 — flip `PROPOSTO`→`DECIDED` executado na sessão da lane PR-EXTERNA, 19/09; o texto da regra não muda em relação à proposta da mantenedora `KOF_FIRST_CONTRACT_RULE.md`. A partir daqui é contrato ratificado, não mais apenas regra de trabalho) · **Escopo:** triagem de issues/PRs, bug hunting, classificação de gaps, uso de referências externas · **Relacionadas:** `D-NOT-JAVA` (regra 8), `D-TRIAGE` (regra 9), a regra de precedência do §5
 
 ### Contexto
 

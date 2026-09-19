@@ -1970,7 +1970,7 @@ same commit (the `SemExpressionTyper`/`ExpressionLowerer` files are the same
 
 ## D-KOF-FIRST — internal contract before external comparison (`KOF-first, external-second`)
 
-**Date:** 2026-09-19 · **State:** `PROPOSED` (awaiting maintainer ratification; until ratified it governs agent triage as a working rule, never as a ratified contract) · **Scope:** issue/PR triage, bug hunting, gap classification, use of external references · **Related:** `D-NOT-JAVA` (rule 8), `D-TRIAGE` (rule 9), the precedence rule of §5
+**Date:** 2026-09-19 · **State:** `DECIDED` (ratified 19/09/2026 — flip from `PROPOSED` executed in the PR-EXTERNA lane session, 19/09; the rule text is unchanged from the maintainer's proposal `KOF_FIRST_CONTRACT_RULE.md`. From here it is a ratified contract, no longer only a working rule) · **Scope:** issue/PR triage, bug hunting, gap classification, use of external references · **Related:** `D-NOT-JAVA` (rule 8), `D-TRIAGE` (rule 9), the precedence rule of §5
 
 ### Context
 
