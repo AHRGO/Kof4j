@@ -239,6 +239,7 @@ A semântica da linguagem é única. Os backends implementam essa semântica de 
 - Não é um interpretador (o compilador é real: bytecode/ELF/ESM; o `KofInterpreter` do target KofScript executa a MESMA IR otimizada do frontend — paridade por construção, não um disfarce)
 - Não é uma linguagem para scripts (embora possa ser usada para isso)
 - Não é uma linguagem para web (embora possa ser usada para isso)
+- Não é markup disfarçado: o `kof.ui` não recebe tags HTML, classes/estilo CSS nem `innerHTML` — o programa declara a **intenção** da interface e o backend de cada alvo renderiza. O que faltar no conjunto de widgets vira abstração Kof (ou decisão da mantenedora), nunca sintaxe importada de uma pilha estrangeira
 
 Kof é uma linguagem de programação geral, compilada, com múltiplos backends.
 

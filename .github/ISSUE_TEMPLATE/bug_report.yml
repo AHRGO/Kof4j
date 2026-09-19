@@ -91,3 +91,5 @@ body:
           required: true
         - label: I reproduced this against the latest build.
           required: true
+        - label: I read `docs/philosophy.md` ("What Kof Is NOT"). This is a deviation from Kof's documented behavior — not a request to import another language/stack's syntax (Java/Kotlin idioms, HTML/CSS into `kof.ui`, framework layers); those are closed with a pointer to the docs, not fixed.
+          required: true

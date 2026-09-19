@@ -1654,6 +1654,35 @@ renamed to `IMPLEMENTATION-UNIVERSAL-PLATFORM` in the same promotion) → answer
 ---
 
 
+## D-TRIAGE — philosophy check precedes the issue (docs-first gate)
+
+**Date:** 2026-09-18
+
+**State:** `DECIDED`
+
+### Contract
+
+A request that imports a **foreign stack** into Kof (HTML tags/CSS/`innerHTML`
+into `kof.ui`, framework layers, template engines — case #449 "RawView") is
+NOT a missing feature and NOT a bug: it is a philosophy violation by an author
+who has not read the docs. The FIRST reply must send the author to the reading
+(`docs/philosophy.md` "What Kof Is NOT", `training/idioms/<area>.md`,
+`training/anti-patterns/`) with one line of WHY and the Kof idiom that covers
+the real need. The issue stays open only if the need survives the reading AND
+no Kof abstraction covers it — resolution then is a maintainer decision
+(D-UI-* family), never the imported syntax. Rule 9 of `AGENTS.md` (generalizing
+rule 8 "Kof is not Java"); the issue templates carry a required checkbox that
+makes the human sign the same gate.
+
+### Evidence
+
+#449 closed by maintainer 18/09 (RawView with `setCss`/`setHtml`); rule in
+`AGENTS.md`/`AGENTS.pt_BR.md` §"Iron rules" item 9; philosophy bullet "It is
+not markup in disguise" EN+PT; `feature_request.yml`/`bug_report.yml`
+checkboxes. Governance-only change (no code).
+
+---
+
 # 4. Rejected or superseded decisions
 
 This section is historical. It does not define current behavior.

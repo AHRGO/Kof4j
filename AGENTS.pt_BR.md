@@ -5,7 +5,7 @@
 Este é o guia **obrigatório** para qualquer agente de IA (ou humano) que
 escreva código Kof neste repositório. Leia antes de gerar qualquer `.kf`.
 
-**Versão:** 0.4.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09); branch ativa = `beta-0.4.0`)
+**Versão:** 0.4.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + regra 9 **portão docs-first** para issues fora da filosofia (#449) (18/09) + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09); branch ativa = `beta-0.4.0`)
 
 > **PRIORIDADE Nº 1: QUALIDADE.** Antes de qualquer feature, leia o
 > **Portão de qualidade — "nenhum bug sobe"** (§ abaixo), **universal para
@@ -594,6 +594,26 @@ Bool isQuery(String op) {
    motivo "Kof não é Java" e aponta `training/anti-patterns/fake-idioms.pt_BR.md`.
    Cruzamento: se o reproducer compilaria em **Kotlin/Java** por ser
    *traduzido*, é esta regra.
+9. **A checagem de filosofia precede a issue — mande o autor LER a
+   documentação PRIMEIRO (ABSOLUTA, mantenedora 18/09, caso #449/RawView).** A
+   regra 8 cobre *linguagens* traduzidas; esta generaliza para qualquer
+   **pilha estrangeira**: um pedido que importa tags HTML, seletores CSS,
+   estilo inline ou `innerHTML` para o `kof.ui` (ex.: uma via de escape
+   `RawView(tag, cssText, html)`), camadas de framework (`@Controller`,
+   Service/Repository), engines de template — seja qual for o nome dado a
+   ele. Tal pedido NÃO é feature faltante: é o autor contornando uma filosofia
+   que não leu. A PRIMEIRA resposta — antes de qualquer "gap confirmado",
+   antes de tocar no código — DEVE mandar o autor para a leitura
+   (`docs/philosophy.pt_BR.md` "O que Kof NÃO é", o doc de idiom da área, ex.
+   `training/idioms/ui.pt_BR.md`, e `training/anti-patterns/`), declarar em
+   uma linha POR QUE viola a filosofia (código Kof declara **intenção**; a
+   plataforma renderiza — complexidade pertence ao compilador/backends, nunca
+   a markup embutido no código do usuário), e apontar o idiom Kof que resolve
+   a necessidade real. A issue só fica aberta se, depois da leitura, a
+   necessidade for real E destampada por abstração Kof — e a resolução é uma
+   abstração Kof decidida pela mantenedora (regra 6), nunca a sintaxe
+   importada. Os checkboxes dos templates fazem o humano assinar o mesmo
+   portão (`feature_request.yml`, `bug_report.yml`).
 
 ---
 

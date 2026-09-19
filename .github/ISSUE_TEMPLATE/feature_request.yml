@@ -49,3 +49,5 @@ body:
       options:
         - label: I searched existing issues and this is not a duplicate.
           required: true
+        - label: I read `docs/philosophy.md` ("What Kof Is NOT") and the idioms of the area (`training/idioms/`). My proposal is a Kof idiom — not syntax imported from another language or stack (HTML/CSS/`innerHTML` into `kof.ui`, Java/Kotlin idioms, framework layers). I understand such requests are closed with a pointer to the docs, not implemented.
+          required: true

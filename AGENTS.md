@@ -5,7 +5,7 @@
 This is the **mandatory** guide for any AI agent (or human) who
 writes Kof code in this repository. Read it before generating any `.kf`.
 
-**Version:** 0.4.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09); active branch = `beta-0.4.0`)
+**Version:** 0.4.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + rule 9 **docs-first gate** for philosophy-violating issues (#449) (18/09) + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09); active branch = `beta-0.4.0`)
 
 > **PRIORITY No. 1: QUALITY.** Before any feature, read the
 > **Quality gate — "no bug ships"** (§ below), **universal for
@@ -595,6 +595,26 @@ Bool isQuery(String op) {
    such close carries the "Kof is not Java" reason and points to
    `training/anti-patterns/fake-idioms.md`. Cross-check: if the reproducer
    would compile in **Kotlin/Java** but is *translated*, it is this rule.
+9. **The philosophy check precedes the issue — send the author to the docs
+   FIRST (ABSOLUTE, maintainer 18/09, case #449/RawView).** Rule 8 covers
+   translated *languages*; this one generalizes to any **foreign stack**: a
+   request that imports HTML tags, CSS selectors, inline styles or
+   `innerHTML` into `kof.ui` (e.g. a `RawView(tag, cssText, html)` escape
+   hatch), framework layers (`@Controller`, Service/Repository), template
+   engines — whatever the name given to it. Such a request is NOT a missing
+   feature: it is the author working around a philosophy they haven't read.
+   The FIRST reply — before any "gap confirmed", before touching code —
+   MUST send the author to the reading (`docs/philosophy.md` "What Kof Is
+   NOT", the idiom doc of the area, e.g. `training/idioms/ui.md`, and
+   `training/anti-patterns/`), state in one line WHY it violates the
+   philosophy (Kof code declares **intent**; the platform renders —
+   complexity belongs to the compiler/backends, never to embedded markup in
+   user code), and offer the Kof idiom that solves the underlying need.
+   The issue only stays open if, after that reading, the need is real AND
+   uncovered by a Kof abstraction — and the resolution is a Kof abstraction
+   decided by the maintainer (rule 6), never the imported syntax. Template
+   checkboxes make the human sign the same gate (`feature_request.yml`,
+   `bug_report.yml`).
 
 ---
 

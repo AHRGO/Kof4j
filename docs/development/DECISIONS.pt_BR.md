@@ -1622,6 +1622,37 @@ parem de tratá-la como bug.
 ---
 
 
+## D-TRIAGE — a checagem de filosofia precede a issue (portão docs-first)
+
+**Data:** 2026-09-18
+
+**Estado:** `DECIDIDA`
+
+### Contrato
+
+Um pedido que importa uma **pilha estrangeira** para o Kof (tags HTML/CSS/
+`innerHTML` no `kof.ui`, camadas de framework, engines de template — caso
+#449 "RawView") NÃO é feature faltante e NÃO é bug: é violação de filosofia
+de um autor que não leu a documentação. A PRIMEIRA resposta deve mandar o
+autor para a leitura (`docs/philosophy.pt_BR.md` "O que Kof NÃO é",
+`training/idioms/<área>.pt_BR.md`, `training/anti-patterns/`) com uma linha
+de PORQUÊ e o idiom Kof que cobre a necessidade real. A issue só fica aberta
+se a necessidade sobreviver à leitura E nenhuma abstração Kof cobri-la — a
+resolução é então decisão da mantenedora (família D-UI-*), nunca a sintaxe
+importada. Regra 9 do `AGENTS.pt_BR.md` (generalizando a regra 8 "Kof não é
+Java"); os templates de issue carregam um checkbox obrigatório que faz o
+humano assinar o mesmo portão.
+
+### Evidência
+
+#449 fechada pela mantenedora 18/09 (RawView com `setCss`/`setHtml`); regra
+no `AGENTS.md`/`AGENTS.pt_BR.md` §"Regras de ferro" item 9; bullet de
+filosofia "Não é markup disfarçado" EN+PT; checkboxes de
+`feature_request.yml`/`bug_report.yml`. Mudança apenas de governança (sem
+código).
+
+---
+
 # 4. Decisões rejeitadas ou substituídas
 
 Esta seção é histórica. Ela não define o comportamento atual.
