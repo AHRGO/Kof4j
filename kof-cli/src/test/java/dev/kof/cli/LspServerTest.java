@@ -641,6 +641,41 @@ class LspServerTest {
         assertTrue(v2.contains("namespace `kof.db`"), "hover de namespace: " + v2);
     }
 
+    /** X10 fatia 4 (travada por teste): o LSP e generico sobre o StdCatalog —
+     *  os 18 namespaces da fatia 3 aparecem em hover sem NENHUM codigo novo
+     *  de tooling (fonte unica; se um dia alguém fixar lista no hover, isto
+     *  aqui quebra e a duplicacao morre). */
+    @Test
+    void hoverCoversSliceThreeNamespacesFromSingleSource(@TempDir Path dir) throws Exception {
+        String app = "main() { val a = orm.save(x); val v = config.get(\"k\"); val o = orm; val c = config }\n";
+        Path appFile = dir.resolve("app.kf");
+        Files.writeString(appFile, app);
+        String uri = appFile.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + uri + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        String tpl = "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/hover\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + uri + "\"},"
+                + "\"position\":{\"line\":0,\"character\":%d}}}";
+        String[] cases = {"member of `kof.orm`", "member of `kof.config`",
+                "namespace `kof.orm`", "namespace `kof.config`"};
+        int[] cols = {app.indexOf("save") + 2, app.indexOf("get") + 1,
+                app.indexOf("val o = orm") + 8, app.indexOf("val c = config") + 8};
+        byte[] req0 = frame(didOpen);
+        byte[] req1 = frame(String.format(tpl, 1, cols[0]));
+        byte[] req2 = frame(String.format(tpl, 2, cols[1]));
+        byte[] req3 = frame(String.format(tpl, 3, cols[2]));
+        byte[] req4 = frame(String.format(tpl, 4, cols[3]));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(req0, req1, req2, req3, req4)), out).run();
+        List<Map<String, Object>> m = messages(out.toString(StandardCharsets.UTF_8));
+        for (int i = 0; i < cases.length; i++) {
+            Map<String, Object> res = (Map<String, Object>) byId(m, i + 1).get("result");
+            assertNotNull(res, "hover caso " + i + " nao pode ser null (col " + cols[i] + ")");
+            String v = String.valueOf(((Map<String, Object>) res.get("contents")).get("value"));
+            assertTrue(v.contains(cases[i]), "hover " + cases[i] + ": " + v);
+        }
+    }
+
     /** 8.3: local shadowing vence o dominio; membro solto sem '.' continua null honesto. */
     @Test
     void hoverStdlibDoesNotShadowLocalsOrGuessLooseNames(@TempDir Path dir) throws Exception {
