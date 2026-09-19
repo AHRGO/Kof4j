@@ -304,4 +304,70 @@ main() {
 }
 """);
     }
+
+    @Test
+    void observabilityFullFaceCompiles() throws Exception {
+        probe("""
+main() {
+    val h = observability.health()
+    val rdy = observability.readiness()
+    val live = observability.liveness()
+    val n = observability.counter("hits")
+    observability.increment("hits", 1)
+    observability.gauge("queue", 3)
+    observability.histogram("lat", 42)
+    val dump = observability.metrics()
+    val req = observability.requestId()
+    val cor = observability.correlationId()
+    val tr = observability.traceId()
+    val sp = observability.spanId()
+    println(h + rdy + live + n + dump + req + cor + tr + sp)
+}
+""");
+    }
+
+    @Test
+    void gpuProbeAndKernelFacesCompile() throws Exception {
+        probe("""
+main() {
+    val ok = gpu.available()
+    val why = gpu.failReason()
+    var a = new Int[4]
+    var b = new Int[4]
+    var c = new Int[4]
+    val rc = gpu.dispatchMatmul(a, b, c, 2, 2, 2)
+    println(ok + why + rc)
+}
+""");
+    }
+
+    @Test
+    void mediaFacesCompile() throws Exception {
+        probe("""
+main() {
+    val img = Image.open("x.png")
+    val wav = Audio.openWav("y.wav")
+    val vid = Video.open("z.mp4")
+    val mic = Mic.record(1)
+    val devs = Mic.list()
+    println(img.toString() + wav.toString() + vid.toString() + mic.toString() + devs.size)
+}
+""");
+    }
+
+    @Test
+    void fatiaThreeFacesPerTarget() throws Exception {
+        String obs = "main() { println(observability.health() + observability.increment(\"h\",1)) }\n";
+        String gpu = "main() { println(gpu.available() + gpu.failReason()) }\n";
+        String gpuMat = "main() { var a = new Int[4]; println(gpu.dispatchMatmul(a, a, a, 2, 2, 2)) }\n";
+        String media = "main() { val img = Image.open(\"x.png\"); println(img.toString()) }\n";
+        String mic = "main() { println(Mic.list().size) }\n";
+        for (Target t : new Target[] { Target.JVM, Target.SCRIPT, Target.JS, Target.NATIVE }) {
+            System.out.println("PROBE " + probeTarget("obs", obs, t));
+            System.out.println("PROBE " + probeTarget("gpu-probe", gpu, t));
+            System.out.println("PROBE " + probeTarget("gpu-matmul", gpuMat, t));
+            System.out.println("PROBE " + probeTarget("media-image", media, t));
+            System.out.println("PROBE " + probeTarget("media-mic", mic, t));
+        }
+    }
 }

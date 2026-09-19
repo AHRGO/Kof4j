@@ -1,6 +1,6 @@
 [English](stdlib.md) | [Português](stdlib.pt_BR.md)
 
-# Idioms — STDLIB (math / strings / encoding / uuid / time / process / cache / config / log / net)
+# Idioms — STDLIB (math / strings / encoding / uuid / time / process / cache / config / log / net / gpu / media)
 
 **Status:** available · **Introduced:** 0.3.0-beta (STDLIB track, 08/09/2026) · **Updated:** 08/09/2026
 
@@ -303,6 +303,39 @@ PORQUÊ: `split("/")`/regex feito à mão em URL quebra em porta, query e fragme
 cada peça é função real, em todos os targets (paridade do interpretador travada 19/09
 em `KofScriptStdlibParityTest`).
 
+## gpu — probe primeiro, kernels honestos (8.5 fatia 3, 19/09)
+
+```kof
+if (gpu.available()) {
+    var a = new Int[4]
+    var c = new Int[4]
+    val rc = gpu.dispatchMatmul(a, a, c, 2, 2, 2)   // rc != 0 = o kernel disse nao, nunca resposta errada silenciosa
+} else {
+    println(gpu.failReason())                        // POR QUE o host nao tem face (R6)
+}
+```
+
+PORQUE: computacao pesada e dominio de **pacote oficial** (R1) — `kof.gpu` expoe so o que a
+plataforma ja roda (kernels de forma fixa + as faces `mv*` int8/long do caminho on-device);
+frameworks de ML ficam em interop (R9). Gates honestos (medidos 19/09): JVM + Native x86 ✅;
+**JS = `GPU001`** em tempo de compilacao (nenhuma promessa de BLAS na web — R7); golden
+riscv/aarch ⏳.
+
+## media — Image/Audio/Video/Mic sao namespaces, nao widgets de UI (8.5 fatia 3, 19/09)
+
+```kof
+val img = Image.open("photo.png")        // ImageData (pixels + largura/altura)
+val wav = Audio.openWav("bell.wav")      // Audio
+val clip = Video.open("intro.mp4")       // Video
+val take = Mic.record(1)                 // Audio — 1 segundo do dispositivo padrao
+val inputs = Mic.list()                  // dispositivos de captura disponiveis
+```
+
+PORQUE: `Image` em `kof.ui` e um **widget de visao**; `Image.open` aqui e **I/O de midia**
+(mesmo nome, intencao diferente — nao confundir). Tudo que a plataforma decodifica fica no
+backend; o codigo do usuario nunca toca buffer nem codec. Gates honestos (medidos 19/09):
+JVM ✅; **JS e Native = `MEDIA001`** em tempo de compilacao (R6); riscv/aarch ⏳.
+
 ## Nota por target (gates honestos)
 
 | função | JVM/Script | Native x86_64 | Native riscv64/aarch64 | JS |
@@ -324,6 +357,9 @@ em `KofScriptStdlibParityTest`).
 | `cache.*` / `config.*` / `log.*` (8.5) | ✅ JVM (medido 19/09); cache+config ✅ paridade no interpretador 19/09 (`KofScriptStdlibParityTest`); log ⏳ interpretador | ✅ x86 (medido 19/09) | ⏳ golden cross não medido | ✅ (medido 19/09) |
 | `process.run`/`exit` (varargs) | ✅ | ❌ `PROC001` (tempo de compilação, travado em `DomainGapCodesTest`) | ❌ `PROC001` | ✅ |
 | `process.spawn` | ✅ | ❌ `PROC001` | ❌ `PROC001` | ❌ `PROC001` (travado 19/09) |
+| `observability.*` (spans 01/09 + metrics/health 8.5 19/09) | ✅ (medido 19/09) | ✅ x86 (medido 19/09) | ⏳ golden cross não medida | ✅ (medido 19/09) |
+| `gpu.available`/`failReason`/`dispatchMatmul(Int)` | ✅ | ✅ (medido 19/09) | ⏳ golden cross não medida | ❌ `GPU001` (tempo de compilação) |
+| `Image.open`/`Audio.openWav`/`Video.open`/`Mic.record/list` | ✅ (medido 19/09) | ❌ `MEDIA001` (tempo de compilação) | ❌ `MEDIA001` | ❌ `MEDIA001` |
 | shell.cmd/run/ok (v1) | ✅ | ❌ `PROC001` (tempo de compilação) | ❌ `PROC001` | ✅ paridade byte |
 | shell.pipeline (v1 — só JVM) | ✅ | ❌ `PROC001` | ❌ `PROC001` | ❌ `PROC001` |
 

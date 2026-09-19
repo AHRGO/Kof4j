@@ -161,6 +161,21 @@ val h = observability.spanStart("op")     // handle traceId+spanId (48 hex)
 val j = observability.spanEnd(h)          // JSON {traceId, spanId, durationMicros}
 ```
 
+Metrics and health, not only spans (8.5 fatia 3, 19/09 — compiled in `StdlibIdiomsCompileTest`):
+
+```kof
+observability.increment("hits", 1)          // counter (observability.counter("hits") reads)
+observability.gauge("queue", 3)             // instantaneous value
+observability.histogram("lat", 42)          // bucket sample
+val report = observability.metrics()         // text dump (Prometheus-style exposition)
+val healthy = observability.health()         // JSON summary
+val ready = observability.readiness(); val live = observability.liveness()
+val req = observability.requestId(); val cor = observability.correlationId()
+```
+
+Faces measured 19/09: JVM+JS+Native x86 ✅ (riscv/aarch golden ⏳; interpreter face ⏳ — `COMP003` is the emit guard by design, not the absence of the face).
+
+
 
 ## When not to use
 

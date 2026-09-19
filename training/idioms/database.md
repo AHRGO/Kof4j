@@ -54,6 +54,7 @@ orm.count<User>(db, "age", 30)
 orm.delete<User>(db, 1)
 orm.page<User>(db, 1, 20)
 orm.deleteAll<User>(db)
+orm.saveAll<User>(db, users)          // batch insert/update in one pass
 
 // Query DSL (level 3) — multiple where = AND
 User.query(db) {
