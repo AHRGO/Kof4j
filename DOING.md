@@ -18,15 +18,17 @@
 > decisão da mantenedora preserva grammar), #507 `= null` (D-NULL-INTENT/SG-008
 > documentado)); `completed` #508 (`class Box<T>` compila no tip — o PARSE016 real era
 > o colon-field `val: Int = 42` do repro) e #515 (default method = Stable + medido:
-> imprime `[LOG] hi`; o repro falhava por `class X: Iface`). **MANTIDAS ABERTAS
-> como VÁLIDAS: #514** (narrowing documentado vs flow-sensitivity ausente —SEM010
-> medido; face 0:0 = #502/#505) e **#512** (posição 0:0 do SEM028 — família #502).
+> imprime `[LOG] hi`; o repro falhava por `class X: Iface`). **#514/#512: fechadas depois por DIRECTIVE NOVA da
+> mantenedora ("pode fechar o resto", 19/09 ~19h)** — classificação VÁLIDA mantida no
+> commentário do worker (repro idiomático + medição; face 0:0 = família #502/PR #505).
 > **#511/#515 já estavam fechadas pelo autor** (comentário do worker postado).
-> **LOTE ANTIGO #284–#400: NÃO TOCADO** — já triado pela lane old-issue-sweep .15 +
-> decisões da mantenedora nos comentários (#382/#386 = capability requests mantidos
-> abertos POR DECISÃO DELA; #399/#363/#295/#284/#298 = bugs JVM reais reproduzidos
-> no tip também por mim; #400 face-compilação sumiu, resta crash = #385; #468 foi
-> fechada pela lane .22 em paralelo durante a sessão). **LICOES de identidade
+> **LOTE ANTIGO #284–#400 + #470: TAMBÉM FECHADOS `not_planned` pela mesma directive
+> (19 restantes, todas por `kof-agent-worker[bot]`, zero abertas do autor no repo)** —
+> os fechamentos NÃO retiram as triagens: evidências e fila continuam nos ledgers
+> (#382/#386 = capability requests da decisão 18/09, fila .22 "#386 fatias 2/3";
+> #399/#363/#295/#284/#298 = bugs JVM CONFIRMED medidos tambem por mim; #400
+> face-compilação fixada, resta bridge #385; #468 fora fechada pela lane .22 em
+> paralelo). Reabertura por ordem da mantenedora. **LICOES de identidade
 > (regra 7):** GH_TOKEN do app NÃO persiste entre chamadas do shell — o `eval
 > "$(scripts/gh-as-agent.sh token)"` DEVE estar na MESMA chamada que os `gh` de
 > write (1ª rodada postou 16 comentários + 12 closes como melmonfre → apagados via
