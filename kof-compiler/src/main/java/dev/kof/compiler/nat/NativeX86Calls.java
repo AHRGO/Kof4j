@@ -242,24 +242,30 @@ public final class NativeX86Calls {
                 // §107: List/Map/Set são tipos de RUNTIME (sem vtable) — o
                 // ramo genérico abaixo achava tosIdx=-1 e NÃO EMITIA NADA:
                 // o ponteiro cru caía em kof_println_string = lixo (R6).
-                // A tag do elemento vem do typer (SEM056: homogênea).
+                // O descritor do elemento sai do typer (SEM056: homogênea);
+                // 19/09: nó recursivo (record/vtable + List/Set/Map filhos)
+                // em .rodata no próprio call-site (NativePrintDescriptors).
                 sb.append("    popq %rdi\n");
-                sb.append("    movl $").append(NativeBoxTags.collectionTag(BuiltinTypes.listElement(ct)))
-                  .append(", %esi\n");
+                String ld = NativePrintDescriptors.emit(sb, nb.printDescriptorCounter++,
+                        NativePrintDescriptors.node(nb, BuiltinTypes.listElement(ct), false));
+                sb.append("    leaq ").append(ld).append("(%rip), %rsi\n");
                 sb.append("    call kof_list_to_string\n");
                 sb.append("    pushq %rax\n");
             } else if (dispatchType instanceof Type.ClassType ct && BuiltinTypes.isSet(ct)) {
                 sb.append("    popq %rdi\n");
-                sb.append("    movl $").append(NativeBoxTags.collectionTag(BuiltinTypes.setElement(ct)))
-                  .append(", %esi\n");
+                String ld = NativePrintDescriptors.emit(sb, nb.printDescriptorCounter++,
+                        NativePrintDescriptors.node(nb, BuiltinTypes.setElement(ct), false));
+                sb.append("    leaq ").append(ld).append("(%rip), %rsi\n");
                 sb.append("    call kof_set_to_string\n");
                 sb.append("    pushq %rax\n");
             } else if (dispatchType instanceof Type.ClassType ct && BuiltinTypes.isMap(ct)) {
                 sb.append("    popq %rdi\n");
-                sb.append("    movl $").append(NativeBoxTags.collectionTag(BuiltinTypes.mapKey(ct)))
-                  .append(", %esi\n");
-                sb.append("    movl $").append(NativeBoxTags.mapValueTag(BuiltinTypes.mapValue(ct)))
-                  .append(", %edx\n");
+                String lk = NativePrintDescriptors.emit(sb, nb.printDescriptorCounter++,
+                        NativePrintDescriptors.node(nb, BuiltinTypes.mapKey(ct), false));
+                String lv = NativePrintDescriptors.emit(sb, nb.printDescriptorCounter++,
+                        NativePrintDescriptors.node(nb, BuiltinTypes.mapValue(ct), true));
+                sb.append("    leaq ").append(lk).append("(%rip), %rsi\n");
+                sb.append("    leaq ").append(lv).append("(%rip), %rdx\n");
                 sb.append("    call kof_map_to_string\n");
                 sb.append("    pushq %rax\n");
             } else if (BuiltinTypes.isObject(dispatchType)) {

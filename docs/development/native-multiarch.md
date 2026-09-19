@@ -44,7 +44,12 @@
 > DB001 cross face CLOSED 15/09 (SQLite; JS keeps DB001) and the CONC001
 > helpers (selectAny/done/poll/cancel/cancelled/awaitTimeout) CLOSED 15/09
 > — remaining refusals: SECN000/OTP001/JSN004; (3) FP-collection on cross
-> (FLT001 CLOSED 15/09 — slice `RtB45`; §107 remaining face = record/nested `?`); (4) `backend-parity.md` per-arch columns
+> (FLT001 CLOSED 15/09 — slice `RtB45`; §107 record/nested **x86 CLOSED 19/09**
+> — `.rodata` recursive descriptor, `NativeE2ETest.execCollectionPrintRecordNestedJvmGolden`
+> byte-identical to the measured JVM oracle; the `?` REFUSAL REMAINS ONLY ON
+> THE CROSS (riscv/aarch legacy immediate tag in slice `B39`) — porting the
+> descriptor to B39 needs a binutils+qemu host, which this maintainer box does
+> not have (cross tests skip here; CI `cross-native` is the referee); (4) `backend-parity.md` per-arch columns
 > still to be separated; (5) cross CI does not exist (host-dependent toolchain) —
 > **face (5) CLOSED 12/09**: job `cross-native` in `.github/workflows/ci.yml`
 > installs `binutils-riscv64/aarch64-linux-gnu` + `qemu-user-static` and runs
@@ -232,8 +237,10 @@
 > FitsUnderMemoryCap` green (200k×`"s"+i` under `ulimit -v 256M`: exit 0 —
 > §260(1) as an IN-REPO guard, was a one-off script); (2) the two §260 repros
 > green (`KofStringParseTest` 6/8+2skip clean, `KofSupervisorE2ETest` 16/16 —
-> no 139); (3) full suite **2343/0F/0E** incl. cross riscv/aarch under qemu —
-> trigger is x86-only, cross untouched; (4) `ArtifactSizeTest.helloX86`
+> no 139); (3) full suite **2348/0F/0E + 183 skips** — CORRECTED 19/09: the recorded
+> "incl. cross under qemu" was WRONG (this host has no cross binutils; the
+> ~183 cross tests SKIP here; CI `cross-native` is the referee) — trigger is
+> x86-only, cross untouched anyway; (4) `ArtifactSizeTest.helloX86`
 > re-baselined 44→**84 syms WITH CAUSE documented in the constant's comment**
 > (collector link is the point of the feature; precedent riscv G-4 18→24) —
 > BYTES stayed inside the +5% gate (37.320B baseline held, the feared +19.7%

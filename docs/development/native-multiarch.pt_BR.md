@@ -44,7 +44,13 @@
 > FECHADA 15/09 (SQLite; JS mantém DB001) e os helpers do CONC001
 > (selectAny/done/poll/cancel/cancelled/awaitTimeout) FECHADOS 15/09
 > — restam as recusas SECN000/OTP001/JSN004; (3) FP-coleção no cross
-> (FLT001 FECHADO 15/09 — fatia `RtB45`; face restante do §107 = record/aninhado `?`); (4) `backend-parity.md` colunas por-arch
+> (FLT001 FECHADO 15/09 — fatia `RtB45`; §107 record/aninhado **x86 FECHADO
+> 19/09** — descritor recursivo `.rodata`,
+> `NativeE2ETest.execCollectionPrintRecordNestedJvmGolden` byte-idêntico ao
+> oracle JVM medido; a recusa `?` RESTA APENAS NO CROSS (tag imediata legada
+> riscv/aarch na fatia `B39`) — portar o descritor p/ B39 exige host c/
+> binutils+qemu, que esta máquina da mantenedora não tem (os testes cross
+> skipam aqui; o CI `cross-native` é o árbitro); (4) `backend-parity.md` colunas por-arch
 > ainda por separar; (5) CI cross não existe (toolchain host-dependente) —
 > **face (5) FECHADA 12/09**: job `cross-native` em `.github/workflows/ci.yml`
 > instala `binutils-riscv64/aarch64-linux-gnu` + `qemu-user-static` e roda
@@ -229,8 +235,10 @@
 > verde (200k×`"s"+i` sob `ulimit -v 256M`: exit 0 — §260(1) agora como GUARD
 > no repo, era script one-off); (2) os dois repros §260 verdes
 > (`KofStringParseTest` limpo, `KofSupervisorE2ETest` 16/16 — sem 139);
-> (3) suíte completa **2343/0F/0E** incl. riscv/aarch sob qemu — o trigger é
-> x86-only, cross intocado; (4) `ArtifactSizeTest.helloX86` re-baselined
+> (3) suíte completa **2348/0F/0E + 183 skips** — CORRIGIDO 19/09: o
+> "incl. riscv/aarch sob qemu" registrado era ERRADO (este host não tem
+> binutils cross; os ~183 testes cross SKIPAM aqui; CI `cross-native` é o
+> árbitro) — o trigger é x86-only, cross intocado de qualquer forma; (4) `ArtifactSizeTest.helloX86` re-baselined
 > 44→**84 syms COM causa documentada no comentário da constante** (linkar o
 > coletor é o ponto da feature; precedente riscv G-4 18→24) — os BYTES
 > ficaram DENTRO do gate +5% (baseline 37.320B segurada; o +19,7% temido não

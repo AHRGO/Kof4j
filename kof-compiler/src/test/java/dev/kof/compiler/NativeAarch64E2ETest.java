@@ -893,8 +893,11 @@ main() {
     void nativeCollectionPrintMatchesJvmGolden(@TempDir Path tempDir) throws IOException {
         assumeToolchain();
         // §107-cross (B39, aarch64 herda 100% do riscv via tradutor): os
-        // mesmos helpers/semântica do riscv — golden idêntico ao riscv/x86
-        // (= oracle JVM medido). Double/Float (tags 4/5) entraram em 15/09
+        // mesmos helpers/semântica do riscv — golden idêntico ao riscv.
+        // 19/09: o x86 fechou a face record/aninhado (descritor recursivo);
+        // o cross (riscv E aarch) mantém o `?` honesto — face catalogada em
+        // docs/development/native-multiarch.md. (= oracle JVM medido p/ as
+        // demais linhas). Double/Float (tags 4/5) entraram em 15/09
         // (FLT001 fechado, slice B45) — o tradutor mapeia faN -> dN e o
         // vararg double vai no d0 do aarch64.
         String out = runAarch64(tempDir, """

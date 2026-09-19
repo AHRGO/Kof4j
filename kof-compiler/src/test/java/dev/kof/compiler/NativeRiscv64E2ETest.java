@@ -939,10 +939,15 @@ main() {
         // (`@` medido no qemu antes do fix) — o valueOf cross não tinha ramo
         // List/Map/Set e caía em kof_println_string sobre o ponteiro cru. Os
         // helpers riscv kof_{list,set,map}_to_string espelham o x86 (mesma
-        // tag compile-time 0/1/2/3/4/5/6, `?` p/ record/aninhado). Golden =
-        // MESMA string do execCollectionPrintMatchesJvmGolden x86 (= oracle
-        // JVM medido). Double/Float (tags 4/5) entraram em 15/09 (FLT001
-        // fechado — slice B45); a linha 1.5/2.0f abaixo prova o novo ramo.
+        // tag compile-time 0/1/2/3/4/5/6, `?` p/ record/aninhado). Double/
+        // Float (tags 4/5) entraram em 15/09 (FLT001 fechado — slice B45);
+        // a linha 1.5/2.0f abaixo prova o novo ramo. DIVERGÊNCIA NOVA (19/09,
+        // face (3) do multiarch): o x86 ganhou descritor recursivo e imprime
+        // record/aninhado de verdade ([[1], [2]]); o cross MANTÉM a tag
+        // imediata legada e o `?` honesto — portar o descritor p/ B39 é a
+        // face cross restante, catalogada em
+        // docs/development/native-multiarch.md (exige host c/ binutils-qemu;
+        // esta máquina não tem o toolchain e o CI cross-native é o árbitro).
         String out = runRiscv64(tempDir, """
                 main() {
                     println(listOf(1, 2, 3))

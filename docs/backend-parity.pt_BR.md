@@ -5,7 +5,7 @@
 **Última atualização:** 18 de setembro de 2026
 **Versão:** 0.4.0-beta
 
-> Deltas desde 0.1.0: Targets `native.risc` (riscv64) e `native.arm` (aarch64) separados de `native` x86_64 (**core completo 02-03/09** — `NativeRiscv64E2ETest 13/13` + `NativeAarch64E2ETest 13/13` em asm puro + qemu, paridade avançada pendente; ver `docs/development/native-multiarch.md`); Native free-list (`kof_free_head`) + `kof_gc_collect` (mark-sweep implementado 03/09, `kof_gc_collect_now` manual; auto-GC desativado — auto-collect pendente §260); MySQL wire protocol em progresso (`kof_db_mysql_scramble` + `user:pass@`); pattern matching `switch case String s` + record destructuring `Point(x,y)` em JVM/Native/JS; `String?` null safety básica; `KofScript` top-level `let` → `KofScriptGlobals`; `KofCcompiler` (`kof c`) native-only C subset; `List map/filter/reduce` + `Box<T>`; Windows SIGPIPE fix.
+> Deltas desde 0.1.0: Targets `native.risc` (riscv64) e `native.arm` (aarch64) separados de `native` x86_64 (**core completo 02-03/09** — `NativeRiscv64E2ETest 13/13` + `NativeAarch64E2ETest 13/13` em asm puro + qemu, estado atual na seção "Native por arco" abaixo + `docs/development/native-multiarch.md`); Native free-list (`kof_free_head`) + `kof_gc_collect` (mark-sweep implementado 03/09; **auto-collect LIGADO 19/09 — §260/G-6(a) fechado**: o gatilho chama `kof_gc_collect_now` 1x por programa, gate `spawn_count==0`; histórico honesto no §260); MySQL wire protocol em progresso (`kof_db_mysql_scramble` + `user:pass@`); pattern matching `switch case String s` + record destructuring `Point(x,y)` em JVM/Native/JS; `String?` null safety básica; `KofScript` top-level `let` → `KofScriptGlobals`; `KofCcompiler` (`kof c`) native-only C subset; `List map/filter/reduce` + `Box<T>`; Windows SIGPIPE fix.
 > Deltas 30-31/08: `spawn`/`await` real no Native (pthread + trampoline + join + allocator thread-safe futex — CONC001); FP real em XMM (FLT001); JSON objetos/records + arrays FP no Native (JSN001/JSN002/JSN003); WebSocket/SSE no JVM (`app.ws`/`sse.*`, RFC 6455); `kof.http` retry/circuit JVM+JS (30s window, fail-fast); `kof.cache` 3 targets (fix de clobber de registradores); UI Fase 7 Router (JS real, JVM no-op); SQLite nativo via `.so` direto; `kof fmt` + `kof config gen`.
 > Deltas 18/09: **FFI da JVM generalizada (R3, `.18`)** — `extern` agora casa qualquer assinatura sobre o conjunto escalar {Int, Long, Float, Double, Boolean, String} em aridade arbitrária (parâmetros e retorno), um retorno `String` lê de volta o `char*` nativo; os downcalls FFM `kof_ffi`/`kof_ffi_void` substituem `kof_ffi_i`/`_si`/`_dd` (`FfiE2ETest` `pow` dois doubles → `1024.0`, `strstr` duas strings → `world`, `srand(Int)` default `void`; `FfiE2ETest` `atol`→`labs` prova `Long` ponta-a-ponta, `FfiSignatureTest` trava o mapeamento escalar→layout completo incl. `Float`/`Boolean`). Gaps honestos preservados: struct/pointer (D6), variadics e handles opacos/out-buffers seguem `FFI001`. **Paridade JS FECHADA 18/09 (3.6, `.18`)**: a ABI escalar binda no target JS via bridge FFM no host `KofJsFfiBridge` (`extern`→`kofFfi`→`ProxyExecutable` `kof_platform.ffi` no runner GraalJS/node), provada byte-a-byte JVM↔JS por `FfiE2ETest` (+7 `assertJvmJsParity`); browser não tem host → degrade honesto em runtime (R7); assinaturas não-escalares seguem `FFI002`. Native `FFI001` (§61) permanece gap honesto por target (R7).
 > Deltas 18/09 (2): **paridade FFI-JS FECHADA (R3.6-F2/F3, `d3598c2d`)** — o runner host JS (GraalJS/node) liga a MESMA ABI escalar via `KofJsFfiBridge` (`extern`→`kofFfi`→`kof_platform.ffi`); `FfiE2ETest` 16/16 afirma igualdade byte-for-byte JVM↔JS; browser = erro honesto de runtime (R7, sem host); nao-escalar JS = `FFI002` em compilacao.
@@ -106,10 +106,40 @@
 | `KofScript` top-level `var`/`val` → `KofScriptGlobals` (execução direta via `KofInterpreter`) | ✅ | ✅ | ✅ | `KofScript` 0.3.0 |
 | `KofCcompiler` (`kof c`) C subset | — | ✅ x86_64 native-only | — | `kof_c`, while/if/deref &/* |
 | FFI C (`extern "<lib>"`, R3) | **Parcial** — qualquer assinatura sobre {Int, Long, Float, Double, Boolean, String} aridade livre/void/String-retorno + callbacks com argumentos primitivos E String, sincronicos/nao-escapantes (C2→C3.4); argumentos struct/array/ponteiro + callback-retorno-String/D6 → `FFI001` | **FFI001** — gap em compile-time (medido 18/09: `extern` qualquer em `--target native` recusa honestamente) | **Parcial** — o host runner liga a MESMA ABI escalar + callbacks byte-for-byte (`KofJsFfiBridge`/`upcallStub`); nao-escalar → `FFI002`; browser = degrade honesto de runtime (R7, sem host) | `FfiE2ETest` 16/16 JVM↔JS byte-for-byte; `JvmFfiCallbackE2ETest` 42/42/6.0/7.5; `KofJsFfiBridgeTest` 8/8 |
-| `native.risc` (riscv64) / `native.arm` (aarch64) | — | **core completo (02-03/09)**: plumbing + codegen/runtimes asm puro + qemu — `NativeRiscv64E2ETest 13/13` + `NativeAarch64E2ETest 13/13` (core: classes/arrays/List/switch/try-catch/pattern/Strings/recursão) — paridade avançada pendente — `docs/development/native-multiarch.md` | — | target separation 0.2.0 |
+| `native.risc` (riscv64) / `native.arm` (aarch64) | — | **core completo (02-03/09)**: plumbing + codegen/runtimes asm puro + qemu — `NativeRiscv64E2ETest 13/13` + `NativeAarch64E2ETest 13/13` (core: classes/arrays/List/switch/try-catch/pattern/Strings/recursão) — SUPERSEDIDO pela re-auditagem 12/09; estado por arco indexado na seção "Native por arco" abaixo — `docs/development/native-multiarch.md` | — | target separation 0.2.0 |
 | `kof fmt` (formatter parser real, idempotente) | ✅ 31/08 | ✅ | ✅ | `KofFormatter` (2c3e794) |
 | **KofJS no browser real** (`kof.ui` renderizando DOM via ES Modules) | — | — | ✅ 01/09 (`KofJsBrowserE2ETest` — Chrome headless + HTTP + captura de DOM; pula se Chrome ausente) | ESM via HTTP local (módulos não carregam via `file://`); `KofJsRunner` serve `appDir` em `127.0.0.1` |
 | Android (Fase 1: `kof build --target android` → projeto Maven + APK, host Activity em Kof) | ✅ (bytecode JVM) | — | — | gaps `AND00x` em compile-time **mais `DB001`/`SECN00x`/`GPU001`** (medido 17/09 — §278): o alvo com backend JVM ainda exclui `ANDROID` em vários checks de `supportedOn` |
+
+### Native por arco (x86_64 · riscv64 · aarch64) — face (4) do multiarch, 19/09
+
+A coluna **Native** acima dobra três arquiteturas; o estado por arco estava
+enterado na prosa das células (e na linha obsoleta `native.risc`/`native.arm`,
+cujo "advanced parity pending" foi superado pela re-auditagem de 12/09 em
+`docs/development/native-multiarch.md`). Esta seção INDEXA estados JÁ MEDIDOS
+— nenhuma afirmação nova; cada linha cita evidência existente. riscv64 e
+aarch64 compartilham uma realidade: aarch64 herda 100% das fatias riscv pelo
+`NativeAarch64Translator` (regra 5), então as colunas deles são iguais salvo
+nota em contrário.
+
+| Domínio | x86_64 | riscv64 | aarch64 | Evidência |
+|---|---|---|---|---|
+| Linguagem core (classes/arrays/List/strings/FP/switch/try-catch/pattern/recursion, multi-dim §113, busca UTF-16 §43/§102/§111) | ✅ | ✅ | ✅ | `NativeE2ETest`, `NativeRiscv64E2ETest`/`NativeAarch64E2ETest` sob qemu (CI `cross-native`) |
+| GC mark-sweep + AUTO-COLLECT | ✅ gatilho ON 19/09 (G-6(a): 1x por programa, gate `spawn_count==0`; MT = comportamento antigo, face worker-stack catalogada) | ✅ tick-collect no alloc (G-4/B44) | ✅ herda G-4 (G-5) | `KofGcE2ETest` 4/4 incl. cap-test no repo; `NativeRiscvGcSweepTest` roda os dois arcos |
+| `println(<coleção>)` §107 — escalares | ✅ | ✅ | ✅ | três goldens byte-idênticos ao oracle JVM medido (x86 `f3b3821c` + cross B39) |
+| … record / coleções aninhadas | ✅ descritor recursivo `.rodata` 19/09 | `?` recusa honesta | `?` (herda riscv) | x86 `NativeE2ETest.execCollectionPrintRecordNestedJvmGolden`; goldens cross pinam `[?, ?]` — portar o descritor p/ a fatia `B39` é a face cross RESTANTE (exige host c/ binutils+qemu; CI é o árbitro) |
+| Map/Set + boxes de erasure (§284/§284-map) | ✅ | ✅ (`RtB49`/`RtB46`) | ✅ (tradutor) | `NativeErasureBoxE2ETest` 6/6 (md5 igual nos 3), `KofMapSetTest` |
+| FP→string Double/Float (FLT001) | ✅ | ✅ (`RtB45`, libc sob demanda) | ✅ | `nativeValueOfDoubleFloatMatchesJvmGolden` nos dois arcos |
+| spawn / channel / helpers CONC001 | ✅ (pthread) | ✅ (clone 220 + futex + `RtB48`) | ✅ | `SpawnE2ETest`, `KofConcurrency2Test.crossNative*` |
+| supervisor | ✅ | 🔴 OTP001 (`clone` cru, sem TLS) | 🔴 OTP001 | `KofSupervisorE2ETest` |
+| scheduler `every`/`at` | ✅ | ✅ | ✅ | `KofTimeE2ETest`; `at(cron)` = CRON001 em TODOS os native (não é por arco) |
+| math (MATH001 fechado; `pow`) | ✅ (`pow` via libm) | ✅ FP; `pow` recusa MATH001 | ✅ FP; `pow` recusa MATH001 | `KofMathTest`, `KofMath.supportedOn` |
+| db (SQLite) | ✅ SQLite + MySQL wire | ✅ SQLite (`RtB46`/`RtB47`); MySQL só x86 | ✅ SQLite | `KofDbE2ETest` incl. `crossNativeSqliteRoundtrip`; `NativeCrossLink` |
+| security | ✅ asm (faces SECN002/006) | 🔴 SECN000 | 🔴 SECN000 | `KofSecurity.supportedOn` |
+| rng | ✅ (X8 fatia 2) | 🔴 RNG001 | 🔴 RNG001 | `KofRngTest` |
+| http / kof.net / JSON escalar | ✅ | ✅ | ✅ | `riscvHttpGetPostStatus`, goldens JSON cross |
+| `json.decode<Record>` | — (não medido aqui) | 🔴 JSN004 (asm pura) | 🔴 JSN004 | lista de recusas cross na re-auditagem 12/09 |
+| `process` / C-FFI / `kof.ui` | PROC001 / FFI001 / sem port | recusas idênticas | recusas idênticas | as recusas de compile-time são do alvo inteiro, não por arco |
 
 ## Gaps documentados (não mascarados)
 
