@@ -2,14 +2,16 @@
 
 # `kof.workflow` — jobs, pipelines, retry, checkpoints, dead-letter (design plan · Stage 2 · TIER 2.1)
 
-> **Status: PROPOSED (18/09) — awaiting maintainer scope decision (rule 6). Zero code.**
-> This file exists because `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` row **2.1** is a bare
-> `🔵` line with owner `—`, while every other greenfield front in `future/`
-> (`value-records`, `scoped-resources`, `shell-plan`, …) has a concrete plan. It **proposes**
-> turning that line into an executable todo; it does **not** authorize opening the front —
-> that call is the maintainer's. It also does **not** implement anything: `kof.workflow`
-> is not in the lexer, the parser, any backend, or the stdlib today (measured 18/09).
-> Grounded in the **real, measured** primitives it would compose (§4).
+> **Status: SIGNED-OFF (19/09, maintainer poll) — front opened, owner lane `.18`.** Q1–Q4
+> answered: **stdlib composition ✓ / MVP minimal (job/dag/after/run/Report) ✓ / retry as an
+> ADDITIVE helper, `kof.http` migrates in a later signed slice ✓ / dead-letter ships BOTH
+> faces (in-memory + durable via `kof.orm`) ✓**. Zero code in this file; it stays design.
+> It exists because `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` row **2.1** was a bare `🔵` line
+> with owner `—` until this sign-off; every other greenfield front in `future/`
+> (`value-records`, `scoped-resources`, `shell-plan`, …) has a concrete plan. It does **not**
+> implement anything: `kof.workflow` is not in the lexer, the parser, any backend, or the
+> stdlib today (measured 18/09). Grounded in the **real, measured** primitives it would
+> compose (§4).
 
 ## 1. Objective
 One typed, composable idiom for **long-running, retryable, inspectable work**: define a
@@ -38,13 +40,20 @@ var build = workflow.job("build") { ctx -> run("make", ["-j"]) }
 var image = workflow.job("image").after(build) { ctx -> run("docker", ["build", "."]) }
 
 var flow  = workflow.dag(build, image)
-              .retry(image, times: 3, backoff: workflow.exponential(1s, 2.0))
+              .retry(image, 3, workflow.exponential(1000, 2.0))  // positional: Kof has no named args
               .checkpoint(kof.db)        // resume completed jobs after a crash
               .deadLetter(workflow.inMemory())  // terminal failures park here, don't crash the run
 
 var report = flow.run()                 // now
 var handle = flow.schedule("0 3 * * *") // cron, on top of kof.scheduler.at
 ```
+
+> **Sign-off note (19/09):** the §2 surface is the full idiom, but per Q2 the **v1/MVP
+> ships only `job`/`dag`/`after`/`run`/`Report`**; `retry` (Q3: **additive** helper),
+> `checkpoint` and `deadLetter` (Q4: **both** in-memory and durable faces) arrive together
+> in 2.1.3. The sketch's builder-chain, positional arguments and `1000`-ms backoff unit are
+> display-level: the concrete stdlib signature must parse as real Kof (no named arguments,
+> no duration literals of that form) — verify against the parser at 2.1.0, not by assumption.
 
 Design invariants (inherited from existing precedent, not invented here):
 - **DAG, not linear list.** Cycles are rejected **at run time** by default (same class of
@@ -55,10 +64,12 @@ Design invariants (inherited from existing precedent, not invented here):
   `checkpoint` store (over `kof.db`/`kof.orm`), and a `state: Map[String,Any]` for the
   next job's input. No bespoke job-IR — reuse the function type (D-FNTYPE / §155/§157 are
   the caution this stays out of).
-- **Retry/backoff is a shared helper**, currently only living inside `kof.http`
-  (`NativeHttpCore.java`, `JsRuntimeUiLayout.java`, `RuntimeConcurrency.java` — measured);
-  workflow lifts that pattern to a **generic** helper used by `http`, `process`, and
-  `workflow` verbatim (one `retry(times, backoff, when: (err) -> Bool)`; not a fork).
+- **Retry/backoff ships as an ADDITIVE helper inside workflow first** (Q3, signed 19/09).
+  Today the pattern lives only inside `kof.http` (`NativeHttpCore.java`,
+  `JsRuntimeUiLayout.java`, `RuntimeConcurrency.java` — measured); refactoring it into a
+  shared helper would edit other lanes' in-flight files (rule 8), so `http` migrates onto
+  workflow's helper in a **later, separately signed slice**. Same vocabulary
+  (`retry(times, backoff, when)`), no divergence in semantics, one migration test then.
 - **Checkpoint = `Result`-shaped record stored via the existing `kof.orm`** — same ABI
   as `shell` reusing `process.Result` (one type, no second shape). No new persistence
   backend.
@@ -111,58 +122,58 @@ green on native). The plan **does not** paper over native's `PROC001`/`ORM001`/`
 gaps — it inherits them verbatim.
 
 ## 5. Step queue (the executable todo this doc exists to produce)
-Owner is `—` until the maintainer assigns it; default proposed owner = **development lane**.
+Owner: **lane `.18`** (assigned by the 19/09 maintainer greenlight).
 
 - **2.1.0 [recon — 0 code]** — freeze the §4 table into a test-backed note: one
   `WorkflowPrimitivesE2ETest` that, for each primitive, asserts `supportedOn` on every
-  `Target` **and** runs the §209 program on JVM+JS (DAG + retry + checkpoint round-trip via
-  `kof.db`, dead-letter park) + asserts the honest `CRON001`/`ORM001`/`PROC001` on Native
-  via `DomainGapCodesTest`-style pins. No shipped surface.
-- **2.1.1 [design sign-off — ⛔ rule 6]** — maintainer approves the shape (§2/§3):
-  Kof-level stdlib (this proposal) vs compiler-builtin namespace, and the reuse-vs-fork
-  calls in §6. **Gate on the whole front.** No further slices until this lands.
-- **2.1.2 [MVP — pure-Kof stdlib, JVM+JS, one target parity]** — `job` + `dag` +
-  `after` + `run` + `Report`; retry/backoff **extracted from** `kof.http` into a shared
-  helper (JVM+JS+native byte-parity by construction, since it *is* the same code `http`
-  uses today); in-memory dead-letter. Golden `WorkflowE2ETest` against the existing
-  primitives.
-- **2.1.3 [parity add-ons]** — `checkpoint(kof.db)` (uses `kof.orm` — honest `ORM001` on
-  native), `schedule(cron)` (uses `kof.scheduler.at` — honest `CRON001` on native), and
-  supervision integration by delegating to `kof.supervisor.one_for_one` when the DAG run
-  is expressed as workers (rather than a plain synchronous walk).
+  `Target` **and** runs the minimal `job`/`dag`/`after`/`run`/`Report` idiom on JVM+JS +
+  asserts the honest `CRON001`/`ORM001`/`PROC001` on Native via `DomainGapCodesTest`-style
+  pins. Also resolve at the parser (not by assumption) how the §2 sketch's builder-chain,
+  positional shapes and `db` handle actually read as real Kof. No shipped surface.
+- **2.1.1 [design sign-off — ⛔ rule 6]** ✅ DONE 19/09 — maintainer poll: Q1 stdlib ✓,
+  Q2 minimal MVP ✓, Q3 additive retry ✓, Q4 both dead-letter faces ✓. Front opened.
+- **2.1.2 [MVP — pure-Kof stdlib, minimal, JVM+JS]** — `job` + `dag` + `after` + `run` +
+  `Report` only (Q2). Golden `WorkflowE2ETest` against the existing primitives.
+- **2.1.3 [add-ons — one bundle]** — `retry`/`backoff` additive helper (workflow's own;
+  http migrates later in a separate signed slice), `checkpoint` via `kof.orm` (honest
+  `ORM001` on native), `deadLetter` with BOTH faces (in-memory `List` + durable `kof.orm`
+  table — Q4), `schedule(cron)` via `kof.scheduler.at` (honest `CRON001`), and supervision
+  integration by delegating to `kof.supervisor.one_for_one` when the DAG run is expressed
+  as workers (rather than a plain synchronous walk).
 - **2.1.4 [docs]** — idiom doc `docs/stdlib/workflow.md` (+PT), `backend-parity` row,
   flip `IMPLEMENTATION-UNIVERSAL-PLATFORM` 2.1 `🔵 → 🟡` and cascade 2.5/2.6 (which
   depend on 2.1) from `🔵` to `⏳` with a real prerequisite, and only when shipped
   promote this file out of `future/` per the folder rule.
 
 ## 6. Open questions (maintainer decisions — do NOT resolve in code)
-- **Q1** — shape: a **Kof-level stdlib package** (`stdlib/workflow.kf`, like
-  `kof.supervisor` per DD-OTP-01 option A) vs a compiler builtin namespace
-  (`KofWorkflow.java`, like `KofProcess`/`KofOrm`). This proposal recommends stdlib-level:
-  the entire surface is already typed and pure; the only reason to be a builtin would be
-  to change scheduling semantics, which we explicitly reuse (`kof.scheduler.at`).
-- **Q2** — how much of §2's idiom is v1: minimal (`job`/`dag`/`after`/`run`/`Report`),
-  or including `retry` + `checkpoint` + `deadLetter` in the MVP, or also `schedule(cron)`?
-- **Q3** — is the generic `retry(times, backoff)` a **refactor of `kof.http`'s existing
-  retry** into a shared helper (this proposal's default), or an additive layer that
-  `http` migrates to **later** (bigger blast radius)? Refactor touches
-  `NativeHttpCore.java`, `RuntimeConcurrency.java`, `JsRuntimeUiLayout.java` — cross-lane
-  (`.17 nat`, `.22 compiler`, this lane).
-- **Q4** — dead-letter durability: is "in-memory `Iterable`" the only v1 shape, or must
-  the durable (`kof.orm` table) implementation ship at the same time? Durable requires
-  accepting an `ORM001` honest gap on Native **at the same release** (my recommendation:
-  yes — one release, both faces, the gap is catalogued and honest already).
+**All four ANSWERED 19/09 by the maintainer poll** (re-create via the same multi-choice
+decision if ever revisited — rule 6):
+
+- **Q1 — ANSWERED: Kof-level stdlib package** (`stdlib/workflow.kf`, like `kof.supervisor`
+  per DD-OTP-01 option A) — not a compiler builtin. The entire surface composes already
+  typed primitives; scheduling semantics are reused (`kof.scheduler.at`), not changed.
+- **Q2 — ANSWERED: minimal v1** — `job`/`dag`/`after`/`run`/`Report`; `retry`, `checkpoint`
+  and `deadLetter` move to 2.1.3 as one add-on bundle (see §5).
+- **Q3 — ANSWERED: additive layer first** — workflow ships its own `retry(times, backoff,
+  when)` helper; `kof.http` migrates onto it in a **later, separately signed slice**
+  (refactoring now would edit `NativeHttpCore.java`/`RuntimeConcurrency.java`/
+  `JsRuntimeUiLayout.java` — other lanes' territory, rule 8).
+- **Q4 — ANSWERED: both faces ship together** — in-memory `Iterable` AND durable
+  (`kof.orm` table) at the same release; the `ORM001` honest gap on Native is already
+  catalogued and stays honest.
 
 ## 7. What NOT to do
 - No new lexer/parser token or grammar production (this is **not** a `pipeline` keyword).
 - No new runtime primitive on any backend — every action routes to an existing namespace
   (`process`/`scheduler`/`orm`/`supervisor`/`concurrency`) and inherits its gap codes.
-- No fork of `retry`/`backoff` — either refactor `kof.http` to share the helper, or wait.
+- No fork of `retry`/`backoff` semantics — per Q3 the additive helper is workflow's own first;
+  `kof.http` migrates onto it later in a separately signed slice (no silent duplicate that
+drifts).
 - No new persistence layer for checkpoints — reuse `kof.db`/`kof.orm` (`ORM001` on native
   stays honest, do **not** write a native `checkpoint` in asm to sidestep it).
 - No re-implementation of restart/supervision — `kof.supervisor` (DD-OTP-01) is that
   home; `workflow` composes it, never duplicates it.
 - No papering over `PROC001`/`CRON001`/`ORM001` on native — the honest gap is the
   contract.
-- No code before **2.1.1** sign-off; no claiming a target until its underlying primitive is
+- No stdlib `.kf` before **2.1.0** recon confirms the §2 shapes parse as real Kof (sign-off2.1.1 is DONE 19/09); no claiming a target until its underlying primitive is
   green there (measured in §4, re-verified by `WorkflowPrimitivesE2ETest` per 2.1.0).
