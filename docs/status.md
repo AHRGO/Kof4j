@@ -732,6 +732,7 @@ details leaking into the language.
 | default parameters | ✅ |
 | multi-file modules | ✅ (unified resolution: import a.b.C + moduleRoot from the LCA) |
 | `Process` API | ✅ (`kof.process` + `kof_process_run`) |
+| `kof.shell` (19/09 MVP `34e4344f`) | ✅ (`cmd`/`run`/`ok` JVM+JS, `pipeline` JVM real; JS/Native pipeline = PROC001 honesto) — sugar sobre `kof.process` |
 
 See the full guidelines in the session's todo.
 

@@ -73,6 +73,8 @@ JSN00x, WEB001) — never silent divergence.
 | `kof.concurrent` | `spawn expr` / `spawn { }` (implicit join) | JvmRuntime | SpawnE2ETest (3) |
 | `kof.test` | `assert(cond[, msg])`, `test "name" { }` (synthesized runner), `kof test` | CompilerDriver/CLI | AssertE2ETest (5), StructuredTestE2ETest (11) |
 | `kof.ui` | `Color/Theme/Palette`, `Window/Label/Button/Input`, `Column/Row/View/Style`, events by lambda with captures, native webview | KofUi.java, JsBackend (runtime), kof-webview.c | UiE2ETest (14), WindowE2ETest (3) |
+| `kof.process` | `process.run(cmd)`/`run(cmd, args)`/`exit(code)`, `process.spawn` (live stdin/stdout) → `Result` | JvmRuntimeCore / KofProcess | ProcessE2ETest, KofProcess* — JVM/JS real; Native `PROC001` |
+| `kof.shell` | `shell.cmd(program, args)`/`shell.run`/`shell.ok(r)`/`shell.pipeline(stages)` — argv-as-list, never `sh -c` | KofShell.java (sugar over `kof.process`; `kof_shell_pipeline` JVM helper) | ShellE2ETest (11) — JVM+JS real (`run`/`ok`/`cmd`), pipeline JVM real, JS/Native honest `PROC001` (18/09, `34e4344f`, plan `development/shell-plan.md`) |
 | `kof.config` | `config.get/env/has`, `config.str/int/long/bool(name, fallback)` — JVM/Native (file+profiles+env) + JS (env) | KofConfig.java | KofConfigE2ETest (8) |
 | `kof.log` | `log.debug/info/warn/error`, levels (default INFO), `off`, warn→stderr | KofLog.java | KofLogE2ETest (7), NativeLogE2ETest (17) |
 | `kof.cli` | 26 commands: `kof build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/decompile/translate/compare/migrate/debug/info/lsp/install/deps/editor/init/new/version` (`fmt` + `config gen` 08/31) | kof-cli | Bench, KofDebug E2E |

@@ -730,6 +730,7 @@ plataforma vazando para a linguagem.
 | default parameters | ✅ |
 | módulos multi-arquivo | ✅ (resolução unificada: import a.b.C + moduleRoot do LCA) |
 | `Process` API | ✅ (`kof.process` + `kof_process_run`) |
+| `Shell` API | ✅ (`kof.shell` — `cmd`/`run`/`ok` JVM+JS reais; `pipeline` JVM real, JS/Native `PROC001` honesto; plano `development/shell-plan.md`, 18/09 `34e4344f`) |
 
 Ver as guidelines completas no todo da sessão.
 
