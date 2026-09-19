@@ -947,7 +947,7 @@ Lane: **compiler** (contract on the 4 backends — not the docs lane).
 
 **Queue status (18/09 ~13:40):** PR **#438** (external fork, `fix/278-d-null-intent-atomic`) **MERGED by the maintainer at `250f6207`** (18/09 12:53) — N1 (JVM+Script+JS) landed: `Map.get` now returns `V?` for reference values and the absent-key primitive repro runs clean (measured `9`, fresh jars). The PRESENT-key `!= null` face on primitive values is STILL broken post-merge (Int/Long/Double/Boolean → `NoSuchMethodError Object.valueOf(boxed)`; Float → CCE `Double→Float` at the map site) — catalogued as §294 re-procedure 2a, owner `.22` erasure/boxing cluster, NOT a reopen of #438. N2 (Native) and I4/i1 remain out of scope/queue; lanes must not open a parallel front on the same contract (rule 6 / one contract, one PR). It also declares `Map.get/put/remove` on absent keys (I7) — subsuming the parked `#376`/`#409` map-absent face stamped by the maintainer 18/09 — do NOT open a separate N4 front for those cells while #438 is under review.
 
-#### 2.7 — Value records / first-class value types (queue of `D-VALUE-RECORD`, 16/09)
+#### 2.7 — Value records / first-class value types (queue of `D-VALUE-RECORD`, 16/09) — **FRONT OPENED 19/09 (D7-A)**
 
 **Decided by the maintainer 16/09** (record: `DECISIONS.md` §D-VALUE-RECORD;
 origin issue #275). Additive, backward compatible. **Planned only — not

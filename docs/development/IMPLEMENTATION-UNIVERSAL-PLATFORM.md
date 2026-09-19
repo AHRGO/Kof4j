@@ -88,7 +88,7 @@ a new domain. **This stage closes before any Tier 6+ (R12).**
 | # | Item | Status | Owner | Proof / note |
 |---|------|--------|-------|--------------|
 | 1.2.1 | GC on riscv64 | ✅ | native lane | `356f33b9` |
-| 1.2.2 | GC on x86_64 — decomposed G-1..G-5 | 🟡 | native lane | `docs/development/native-multiarch.md`; **auto-collect disabled** for requiring safe-points (`status.md` #1); `KofGcE2ETest` 3/3 |
+| 1.2.2 | GC on x86_64 — decomposed G-1..G-5 | 🟡 | native lane | `docs/development/native-multiarch.md`; **auto-collect disabled** for requiring safe-points (`status.md` #1); `KofGcE2ETest` 3/3 — **D1-A ✅ 19/09**: re-baseline auto-collect APROVADO (exec = lane nativa) |
 | 1.2.3 | Re-baseline sign-off for x86 auto-collect | ⛔ | **maintainer** | §260 G-6(a) re-measured — the gate bites; needs maintainer re-baseline decision |
 
 ### 1.3 Event-loop / real JS async
@@ -110,7 +110,7 @@ a new domain. **This stage closes before any Tier 6+ (R12).**
 |---|------|--------|-------|--------------|
 | 1.5.1 | `kof deps` + Maven Central resolution | ✅ | tooling lane | — |
 | 1.5.2 | Transitive resolution + `kofdeps.lock` | ✅ 16/09 | tooling lane | `DepsTransitiveTest` 10/10 (incl. real-Maven E2E) |
-| 1.5.3 | Registry MVP | ⛔ | **maintainer** | needs maintainer decision (scope/hosting) |
+| 1.5.3 | Registry MVP | 🔵 | docs→platform lane | **D2-A ✅ 19/09**: local + GitHub Releases as official host (publish = Release + SHA256SUMS) — `DECISIONS.md` §D-POLL-19 |
 
 ### 1.6 Tracing / OpenTelemetry + `application{}` lifecycle
 
@@ -138,7 +138,7 @@ Bash+Python+YAML+jq+sed+awk **in a single typed language**).
 
 | # | Item | Status | Owner | Depends on |
 |---|------|--------|-------|------------|
-| 2.1 | `kof.workflow` / `kof.batch` — jobs, pipelines, retry, checkpoints, dead-letter | 🟡 | `.18` | Stage 1; **`workflow-plan.md`** SIGNED-OFF 19/09 (Q1–Q4 by maintainer poll); 2.1.0 recon DONE (`WorkflowPrimitivesE2ETest` 6/6 + lambda `Result` descriptor fix `8ec07214`); **MVP 2.1.2 LANDED 19/09** — pure-Kof host `workflow-host.kf` injected flat (`import kof.workflow` → `job`/`dag`/`after`/`run`/`Report`, no target gate, JVM==JS byte-parity, `WorkflowE2ETest` 7/7) + 2.1.4 docs (stdlib/workflow.md EN+PT, parity row, this flip); residual = 2.1.3 add-on bundle (retry/checkpoint/deadLetter/schedule) |
+| 2.1 | `kof.workflow` / `kof.batch` — jobs, pipelines, retry, checkpoints, dead-letter | 🟡 | `.18` | Stage 1; **`workflow-plan.md`** SIGNED-OFF 19/09 (Q1–Q4 by maintainer poll); 2.1.0 recon DONE (`WorkflowPrimitivesE2ETest` 6/6 + lambda `Result` descriptor fix `8ec07214`); **MVP 2.1.2 LANDED 19/09** — pure-Kof host `workflow-host.kf` injected flat (`import kof.workflow` → `job`/`dag`/`after`/`run`/`Report`, no target gate, JVM==JS byte-parity, `WorkflowE2ETest` 8/8) + 2.1.4 docs (stdlib/workflow.md EN+PT, parity row, this flip); 2.1.3 started — retry face LANDED 19/09 (`flow.retry`/`retryFixed`/`exponential`/`Report.retries`); checkpoint/deadLetter/schedule pending |
 | 2.2 | `kof.shell` — idiomatic shell over `kof.process` | 🟡 | `.18` | Stage 1; **`development/shell-plan.md`** SIGNED-OFF 18/09 (Q1–Q3 by maintainer poll); MVP 18/09: `cmd`/`run`/`ok` on JVM+JS byte-parity, `pipeline` JVM-only (`PROC001` on JS/Native, inherited from `process.spawn`); glob/`~`/redir out of v1; `ShellE2ETest` 11/11; 2.2.4 stdlib doc DONE 19/09 (`docs/stdlib/shell.md` +PT); 2.2.3 (`runWith` cwd/env, JS live pipes) open — row flips ✅ with it |
 | 2.3 | `kof.ssh` — via FFI/interop | 🔵 | — | R3 (FFI) |
 | 2.4 | Mature cron/scheduler | 🟡 | concurrency lane | `at(cron)` real 5-field UTC on JVM/JS since 17/09 (§274); Native `CRON001` honest gap |
@@ -229,7 +229,7 @@ zone via FFI.
 | 6.2 | SIMD/vectorization (Native — research) | 🔵 | native lane | 1.2 |
 | 6.3 | GPU — Vulkan via FFI (exists); CUDA/OpenCL via FFI | 🟡 | — | Vulkan compute exists; CUDA/OpenCL pending |
 | 6.4 | Data-parallel (research) | 🔵 | — | 6.2 |
-| 6.5 | Scoped resources (GPU/files/connections) | 🟡 | compiler lane | `future/scoped-resources-plan.md`; `using` syntax gated by bump ⛔ |
+| 6.5 | Scoped resources (GPU/files/connections) | 🟡 | compiler lane | `future/scoped-resources-plan.md`; `using` syntax gated by bump ⛔ — **D5-B ✅ 19/09**: no new syntax — `close()` + `try/finally` pattern |
 | 6.6 | Distributed (FFI to MPI + Kof orchestration) | 🔵 | — | R3, 2.1 |
 | 6.7 | Tooling: HPC profiling | 🔵 | — | 6.1 |
 
@@ -264,9 +264,9 @@ the same development experience.
 | # | Item | Status | Owner | Depends on |
 |---|------|--------|-------|------------|
 | 8.1 | Total integration of Stages 1–7 | 🔵 | — | all |
-| 8.2 | Mature package manager | 🔵 | — | 1.5.3 (registry ⛔) |
-| 8.3 | LSP/debug/profiler by domain | 🟡 | tooling/docs lane (.15) for LSP | **LSP domain-aware ✅ 19/09**: completion + hover lêem o `StdCatalog` (namespace lista membros; membro no contexto `ns.` nomeia a face; solto = null honesto). Restante: debugger/profiler por domínio (= X7 + faces futuras; profiler não existe ainda) |
-| 8.4 | Multi-target deploy (same source → JVM/Native/JS) | 🟡 | tooling/docs lane (.15) | **core ✅ 19/09 (X9 fatia 4)**: `--target jvm,native,js`/`all` = same source, one release per face + `.deploy-manifest.json` (SUCCESS/FAIL honesto por alvo, R6/R7, exit 1 se alguma falha); maturity restante: faces cross (sysroot/DEP001) + publish (D2) |
+| 8.2 | Mature package manager | 🔵 | — | 1.5.3 (registry ✅ D2-A 19/09) |
+| 8.3 | LSP/debug/profiler by domain | 🟡 | tooling/docs lane (.15) for LSP | **LSP domain-aware ✅ 19/09**: completion + hover lêem o `StdCatalog` (namespace lista membros; membro no contexto `ns.` nomeia a face; solto = null honesto). Restante: debugger/profiler por domínio (= X7 + faces futuras; profiler não existe ainda) **8.3-B DONE 19/09: `workspace/symbol`/hover/definition/references cobrem deps fora do pai do arquivo via `rootUri` do initialize (`LspProject.siblings(self,root)`, dedup+sorted; sem rootUri = comportamento antigo exato; `LspServerTest` 33/33 red->green)**. Pendente: signatureHelp por dominio (SemCatalog nao tem assinatura - requer metadata fonte-unica). |
+| 8.4 | Multi-target deploy (same source → JVM/Native/JS) | 🟡 | tooling/docs lane (.15) | **core ✅ 19/09 (X9 fatia 4)**: `--target jvm,native,js`/`all` = same source, one release per face + `.deploy-manifest.json` (SUCCESS/FAIL honesto por alvo, R6/R7, exit 1 se alguma falha); maturity restante: faces cross (sysroot/DEP001) + publish (D2) — **D2-A ✅ 19/09**: `--publish` deixou de ser ⛔ (face GitHub Releases na fila) |
 | 8.5 | Documentation/corpus (`training/`) of the domains | 🔵 | docs lane | per domain |
 | 8.6 | **Final test:** the language core barely grew | 🔵 | — | verification at the end |
 
@@ -289,9 +289,9 @@ the same development experience.
 | X5 | Variance / sealed types | ⛔ | **maintainer** | VISION §7 "B/C" — useful for scientific collections; a core type-system change (rule 6); type-classes stay rejected |
 | X6 | Interop reflection (restricted to interop) | ⛔ | **maintainer** | VISION §7 "C" — ML/science schema discovery; a core change (rule 6); never a foundation |
 | X7 | Debugger Native DWARF + JS source maps | 🟡 | tooling lane | VISION §9; `roadmap.md` §19.5 phases 4–7 — JS source map V3 landed 01/09 (`KofJsSourceMapTest`); Native DWARF pending |
-| X8 | Property-based testing | 🟡 | docs→platform lane (192.168.100.15) | slices 1–2 ✅ 18/09: `rng` namespace (seedable xorshift128+splitmix32) on JVM+JS+**NATIVE x86_64** — `KofRngTest` 11/11 incl. JVM==JS and JVM==NATIVE byte parity (asm `RuntimeRng`, bits by construction) + honest `RNG001` on cross/ANDROID (`a71f761c`,`1ff54c6e`,`367af29d`); slice 3 = `kof.test` property runner; cross port needs qemu (native lane) |
-| X9 | `kof deploy` (build + package + publish) | 🟡 | tooling/docs lane (192.168.100.15) | slices 1–3 ✅ 18/09: JVM (fat jar) + NATIVE (ELF 0755) + JS (.mjs) + ANDROID (APK via build --apk pipeline) — release = artifact + RELEASE.md + SHA256SUMS + tar.gz (`CmdDeployTest` 9/9+1-skip, module 322/322; `154ea1a4`, `bfdd452a`, slice 3); cross riscv/arm = `DEP001` honest; `--publish`/registry = ⛔ D2; **slice 4 ✅ 19/09 (linha 8.4)**: multi-target da MESMA fonte — `--target jvm,native,js`/`all`, uma release por face (subdir `-jvm/-native/-kofjs`) + `DEPLOY-MANIFEST` (`.deploy-manifest.json`), FAIL por alvo não derruba os demais (R6), exit 1 com falha; `CmdDeployTest` 13 (11+2-skip), cli 339/0F |
-| X10 | Domain-sensitive LSP (completion + go-to-definition in packages) | ✅ | docs→platform lane (192.168.100.15) | slices 1–3 ✅ 18/09: `StdCatalog` = **31 namespaces** completados por membros REAIS do typer (7 KofStd + time/http/db/cache/process + segurança×6 + json/log/orm/config/gpu/mq/validation/observability/tetris + Image/Audio/Video/Mic) — single-source travado contra a fonte (`StdCatalogTest` 10/10, `LspServerTest` 25/25; `48633d98`, `e79a3ea0`, `9e4d1728`); web/app-DSL + ui + ffi ficam de fora (R6 honesto); fatia 4 ✅ 18/09: go-to-definition **cruza arquivos do projeto** (`crossFileDefinition`, walk ≤6 + first-hit, convenção única `LspSymbols`; `null` honesto) — `0a4497c7`, `LspServerTest` 27/27; fatia 5 ✅ 18/09: **referências também cruzam arquivos** (read-only; varredura extraída p/ `LspProject` no split ≤600) — `f5df2362`, `LspServerTest` 28/28; fatia 6 ✅ 18/09: **`workspace/symbol`** indexa buffers + .kf irmãos (filtro/ordenação LSP) — `c04e16a4`, `LspServerTest` 29/29; fatia 7 ✅ 18/09: **hover de símbolos do projeto** (buffer+cross-file, linha completa; bug de framing byte-vs-char no teste-mate) — `848b7df1`, `LspServerTest` 30/30. **X10 CONCLUÍDA** (rename cross-file e assinaturas de membros = perguntas de superfície rule 6 no DOING) |
+| X8 | Property-based testing | 🟡 | docs→platform lane (192.168.100.15) | slices 1–2 ✅ 18/09: `rng` namespace (seedable xorshift128+splitmix32) on JVM+JS+**NATIVE x86_64** — `KofRngTest` 11/11 incl. JVM==JS and JVM==NATIVE byte parity (asm `RuntimeRng`, bits by construction) + honest `RNG001` on cross/ANDROID (`a71f761c`,`1ff54c6e`,`367af29d`); slice 3 = `kof.test` property runner; cross port needs qemu (native lane) — **X8-A ✅ 19/09**: kof.test = spec exata do roadmap G6 (fatia 3 em curso) |
+| X9 | `kof deploy` (build + package + publish) | 🟡 | tooling/docs lane (192.168.100.15) | slices 1–3 ✅ 18/09: JVM (fat jar) + NATIVE (ELF 0755) + JS (.mjs) + ANDROID (APK via build --apk pipeline) — release = artifact + RELEASE.md + SHA256SUMS + tar.gz (`CmdDeployTest` 9/9+1-skip, module 322/322; `154ea1a4`, `bfdd452a`, slice 3); cross riscv/arm = `DEP001` honest; `--publish`/registry = ⛔ D2; **slice 4 ✅ 19/09 (linha 8.4)**: multi-target da MESMA fonte — `--target jvm,native,js`/`all`, uma release por face (subdir `-jvm/-native/-kofjs`) + `DEPLOY-MANIFEST` (`.deploy-manifest.json`), FAIL por alvo não derruba os demais (R6), exit 1 com falha; `CmdDeployTest` 13 (11+2-skip), cli 339/0F — **slice 5 ✅ 19/09 (D2-A)**: `--publish` face = GitHub Releases (tar.gz+manifest, 422=reuse, no token = honest fail); multi-target (8.4) landed `28b004c4` |
+| X10 | Domain-sensitive LSP (completion + go-to-definition in packages) | ✅ | docs→platform lane (192.168.100.15) | slices 1–3 ✅ 18/09: `StdCatalog` = **31 namespaces** completados por membros REAIS do typer (7 KofStd + time/http/db/cache/process + segurança×6 + json/log/orm/config/gpu/mq/validation/observability/tetris + Image/Audio/Video/Mic) — single-source travado contra a fonte (`StdCatalogTest` 10/10, `LspServerTest` 25/25; `48633d98`, `e79a3ea0`, `9e4d1728`); web/app-DSL + ui + ffi ficam de fora (R6 honesto); fatia 4 ✅ 18/09: go-to-definition **cruza arquivos do projeto** (`crossFileDefinition`, walk ≤6 + first-hit, convenção única `LspSymbols`; `null` honesto) — `0a4497c7`, `LspServerTest` 27/27; fatia 5 ✅ 18/09: **referências também cruzam arquivos** (read-only; varredura extraída p/ `LspProject` no split ≤600) — `f5df2362`, `LspServerTest` 28/28; fatia 6 ✅ 18/09: **`workspace/symbol`** indexa buffers + .kf irmãos (filtro/ordenação LSP) — `c04e16a4`, `LspServerTest` 29/29; fatia 7 ✅ 18/09: **hover de símbolos do projeto** (buffer+cross-file, linha completa; bug de framing byte-vs-char no teste-mate) — `848b7df1`, `LspServerTest` 30/30. **X10 CONCLUÍDA** (rename cross-file e assinaturas de membros = perguntas de superfície rule 6 no DOING) — **pós-X10 (LSP-A ✅ 19/09)**: rename cross-file + assinatura de hover (StdCatalog) aprovados |
 
 ---
 
@@ -314,7 +314,7 @@ domain · a reimplementation of the scientific ecosystem.
 |---|-----------|--------|--------------|
 | R1 | Lock the core/platform boundary (§3.4 order as an invariant rule) | ✅ 17/09 | `5f1422c6` — `scripts/check_stdlib_boundary.sh` + ledger (31 namespaces) + CI + `--selftest`; AGENTS invariant 1 |
 | R2 | Generalize "capability/link by use" to all packages/domains | 🔵 | seed: SQLite/MySQL `.so` linked only when the literal DSN appears; extension pending |
-| R3 | Formalize FFI as first-class | 🟡 | **JVM scalar ABI + `void` 18/09 (`.18`)**: `kof_ffi`/`kof_ffi_void` bind arbitrary arity over {Int,Long,Float,Double,Boolean,String} in/out, `String` reads `char*`, `void` returns discarded as statement. `FfiE2ETest` covers `pow`/`strstr`/`srand`/`atol→labs` (Long) + `FfiSignatureTest` locks the full scalar→layout mapping. **JS parity CLOSED 18/09 (3.6 F1+F2+F3, `.18`)**: the same scalar ABI now binds on the JS target via the host FFM bridge `KofJsFfiBridge` (`extern`→`kofFfi`→`kof_platform.ffi` `ProxyExecutable`), proven byte-for-byte JVM↔JS (`FfiE2ETest` +7 `assertJvmJsParity`); a browser has no host → honest runtime degrade (R7, like `kof.io`). See §R3-slices for the full decomposition. **Callbacks/upcalls (3.4) JVM+JS parity CLOSED 18/09 (C1→C3.4)**: `extern` with a function-typed param binds on both the JVM and the JS host runner — a Kof function value handed to C as a real function pointer (`Linker.upcallStub`), proven byte-for-byte JVM↔JS (`42/42/6.0/7.5` across Int/Long/Double/mixed; `5/104/2026` across `String`-arg — `char*`->`String` at the upcall boundary); the JS bridge calls the compiled `Lambda` object's `invoke` method (a Kof function value is an object, not a native arrow — discovered in C3.2); synchronous/non-escaping; callback ABI = primitives + `String` as an argument; a `String` **return** stays non-bindable (`FFI001`/`FFI002`); a browser degrades honestly (R7). Remaining: opaque handles/out-buffers (3.3 ⛔), variadics (3.5 ⛔), struct/array D6 (3.8 ⛔), Native parity (§61, 3.7). Only Native (`FFI001`) + non-scalar signatures on JS (`FFI002`) remain honest per-target gaps (R7). |
+| R3 | Formalize FFI as first-class | 🟡 | **JVM scalar ABI + `void` 18/09 (`.18`)**: `kof_ffi`/`kof_ffi_void` bind arbitrary arity over {Int,Long,Float,Double,Boolean,String} in/out, `String` reads `char*`, `void` returns discarded as statement. `FfiE2ETest` covers `pow`/`strstr`/`srand`/`atol→labs` (Long) + `FfiSignatureTest` locks the full scalar→layout mapping. **JS parity CLOSED 18/09 (3.6 F1+F2+F3, `.18`)**: the same scalar ABI now binds on the JS target via the host FFM bridge `KofJsFfiBridge` (`extern`→`kofFfi`→`kof_platform.ffi` `ProxyExecutable`), proven byte-for-byte JVM↔JS (`FfiE2ETest` +7 `assertJvmJsParity`); a browser has no host → honest runtime degrade (R7, like `kof.io`). See §R3-slices for the full decomposition. **Callbacks/upcalls (3.4) JVM+JS parity CLOSED 18/09 (C1→C3.4)**: `extern` with a function-typed param binds on both the JVM and the JS host runner — a Kof function value handed to C as a real function pointer (`Linker.upcallStub`), proven byte-for-byte JVM↔JS (`42/42/6.0/7.5` across Int/Long/Double/mixed; `5/104/2026` across `String`-arg — `char*`->`String` at the upcall boundary); the JS bridge calls the compiled `Lambda` object's `invoke` method (a Kof function value is an object, not a native arrow — discovered in C3.2); synchronous/non-escaping; callback ABI = primitives + `String` as an argument; a `String` **return** stays non-bindable (`FFI001`/`FFI002`); a browser degrades honestly (R7). Remaining: opaque handles/out-buffers (3.3 ⛔), variadics (3.5 ⛔), struct/array D6 (3.8 ⛔), Native parity (§61, 3.7). Only Native (`FFI001`) + non-scalar signatures on JS (`FFI002`) remain honest per-target gaps (R7). — **D6-A ✅ 19/09**: struct/array = spec-first (ver 3.8) |
 | R4 | Formalize compile-time codegen (`CodegenStep`) | 🔵 | does NOT exist at HEAD (2.2.2); blocks `infra "prod" {}` (3.2) and DDL/runner migration |
 | R5 | Stability tiers + official packages | 🟡 | tiers defined in `backend-parity.md` §Stability tiers; **per-namespace tier marking not yet applied** — decision ⛔ |
 | R6 | Keep "never silent" for new domains | ✅ 17/09 | machine gate `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` (`19a740f2`) + full ledger sweep (`c5897cd5`, found §278) |
@@ -343,7 +343,7 @@ Incremental R3 slices toward "total FFI parity" (maintainer directive 18/09).
 | 3.6.F2 | Compiler JS routing: `isExternBound` JS branch + lower `extern`→`kofFfi`/`kofFfiVoid`→`kof_platform.ffi` (`JsRuntimeOps` route + `JsRuntimeIo` helper + `KofJsRunner` `ProxyExecutable`) — opens the JS scalar gate | ✅ 18/09 (.18) | .18 | F1 |
 | 3.6.F3 | Byte-for-byte JVM↔JS parity E2E — `FfiE2ETest` +7 `assertJvmJsParity` (abs/atoi/sqrt/pow/atol→labs Long/strstr/srand void): same `.kf`, identical output on both targets | ✅ 18/09 (.18) | .18 | F2 |
 | 3.7 | Native: dlopen/dlsym in asm — depends on §61 (init glibc/TLS in _start) | 🔵 | native lane | §61 |
-| 3.8 | Struct/array ABI (full D6) | ⛔ | maintainer | D6 |
+| 3.8 | Struct/array ABI (full D6) | 🟡 | compiler lane (pós-spec) | **D6-A ✅ 19/09**: spec escrita primeiro (`docs/development/ffi-abi-structs.md`), revisão da mantenedora, depois código |
 | 3.9 | Meta-parity: same extern source with the same behavior on every CAPABLE target (R7 honest-scope on the incapable ones) | meta | — | 3.1–3.8 |
 
 3.1+3.2 landed 18/09 → the JVM has the full scalar ABI + void, **proof-hardened**
@@ -456,17 +456,17 @@ callback-as-return — honest `FFI001`/`FFI002`.
 
 ---
 
-# Decisions needed (rule 6 — maintainer)
+# Decisions — ✅ ALL RESOLVED 19/09 (D-POLL-19 — ver `DECISIONS.md`)
 
-| # | Decision | Blocks |
-|---|----------|--------|
-| D1 | GC x86 auto-collect re-baseline sign-off (§260 G-6(a)) | 1.2.2/1.2.3, Stage 6 |
-| D2 | Package registry MVP — scope/hosting | 1.5.3, Stage 3+, 8.2 |
-| D3 | Bare-metal/bootable scheduling | 1.7 |
-| D4 | R5 per-namespace stability tiers (which namespaces are `stable` vs `experimental`) | R5, Stage 7 (`kof-bio` official package) |
-| D5 | `using` scoped-resources syntax (gated by bump) | 6.5 |
-| D6 | R3 struct/array ABI design (signature-level) | 3.5, 4.2, 5.4, 6.1 |
-| D7 | Value records / first-class value types (queue §2.7 of `roadmap.md` §23) | TIER 2.7 — planned, needs authorization to open |
+| # | Decision | Status | Blocks/unblocked |
+|---|---|---|---|
+| D1 | GC x86 auto-collect re-baseline sign-off (§260 G-6(a)) | 1.2.2/1.2.3, Stage 6 | `DECIDED (A) 19/09` |
+| D2 | Package registry MVP — scope/hosting | 1.5.3, Stage 3+, 8.2 | `DECIDED (A) 19/09` |
+| D3 | Bare-metal/bootable scheduling | 1.7 | `DECIDED (A) 19/09` |
+| D4 | R5 per-namespace stability tiers (which namespaces are `stable` vs `experimental`) | R5, Stage 7 (`kof-bio` official package) | `DECIDED (A) 19/09` |
+| D5 | `using` scoped-resources syntax (gated by bump) | 6.5 | `DECIDED (B) 19/09` |
+| D6 | R3 struct/array ABI design (signature-level) | 3.5, 4.2, 5.4, 6.1 | `DECIDED (A) 19/09` |
+| D7 | Value records / first-class value types (queue §2.7 of `roadmap.md` §23) | TIER 2.7 — planned, needs authorization to open | `DECIDED (A) 19/09 — front OPEN` |
 
 ---
 

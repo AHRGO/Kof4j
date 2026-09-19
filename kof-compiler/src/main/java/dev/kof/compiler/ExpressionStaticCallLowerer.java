@@ -364,7 +364,7 @@ if (mc.receiver() == null && "__kof_await".equals(mc.methodName())) {
 }
 if (mc.receiver() instanceof IdentifierExpr rid && CompilerTypes.isEnumName(rid.name(), driver.currentUnit)
         && !driver.isLocalVarName(rid.name(), locals)) {
-    Type enumT = new Type.ClassType("", rid.name(), List.of());
+    Type enumT = CompilerTypes.enumTypeOf(rid.name(), driver.semanticAnalyzer); // #445
     Type enumListT = new Type.ClassType("kof", "List", List.of(enumT));
     if ("values".equals(mc.methodName()) && mc.arguments().isEmpty()) {
         ops.add(new KofCall(enumT, "values", List.of(), enumListT, KofCallKind.STATIC));

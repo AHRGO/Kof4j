@@ -22,7 +22,8 @@
 > | **§304 🟡 ABERTO 18/09 (catalogado pela lane `.22`, dono = lane nativa/mapset)** | `Map.get` do nativo p/ chave ausente retorna `0` silencioso vs `null` dos outros 3 alvos — divergência do contrato `V?` do #438 |
 > | **§295 ✅ FECHADO 18/09 (face (a) `.18` atalho de condição; face (b) `.22` cluster escritor — `TypeMetrics.isNullablePrimitive` + `StatementLowerer`/`ExpressionAssignmentLowerer`/`CompilerEmission2`, `NullablePrimitiveContractE2ETest` 26/26 + CLI 4/4)** | O cluster de ESCRITA do slot boxed `Nullable(primitivo)` (Commit B): init literal / default / atribuição / composta / incremento guardavam primitivo cru em slot ASTORE → `VerifyError` no LOAD da classe (só-JVM; o launcher mascara de "JavaFX"). Faces leitoras → §306 |
 > | **§306 🟡 ABERTO 18/09 (catalogado pela lane compilador `.22` ao fechar o cluster escritor §295(b), dono `.22`)** | Faces LEITORAS de `Nullable(Bool)` deixadas pelo Commit B: truthiness JVM `if (b)` → `if_icmpne` sobre `java/lang/Boolean` = `VerifyError`; e o **Script** imprime local `Bool?` como `1/0` (JVM/JS imprimem `true/false`; medido no jar pré-fix — pré-existente, não regressão) |
-> | **§307 🟡 ABERTA 18/09 (catalogada pela lane tooling/cli `.15`, dona = compilador `.22`)** | gate CRÍTICO `check_500` quebrado: `StatementLowerer.java` **605** ≥ 600 (baseline 585 cresceu +20 no `7e35f177`/cluster escritor §295(b)); split = refactor estrutural da lane dona do arquivo; desde `82a09c35` o CI pisa vermelho SÓ no step Gate≤500 (compilação restaurada) |
+> | **§307 ✅ FECHADA 19/09 ~00:3x (split landado pela lane docs→plataforma, reativada por ordem da mantenedora; catalogada pela lane tooling/cli `.15`)** | gate CRÍTICO `check_500`: `StatementLowerer.java` 605 ≥ 600 — braço `VarDeclStmt` virou `StatementLowererLocalBoxing.java` (605→490, nova 134; baseline 43→42); prova kof-compiler 2305/0F |
+> | **§308 ✅ CORRIGIDO 19/09 (lane compilador `.22`, #445 — `EnumCrossFileE2ETest` 7/7 + CLI 4-target)** | enum em arquivo importado: classe emitida na RAIZ vs callers `pkg/Nome` (NoClassDefFoundError disfarçado de "JavaFX", §149), switch caía no ramo numérico (`isub` sobre referências), Script vazava o literal `ClassType[...]`, JS `COMP002` na forma identidade do D-ENUM207 (quebrado para TODO switch de enum, até mesmo-arquivo — medido com jar limpo do tip); `CompilerTypes.enumTypeOf` central + `lowerEnum(packageName)` + gates do switch na unidade mesclada + `identityEq` no parser JS |
 > | **§300 ✅ CORRIGIDO 18/09 (lane UI/style, dono = 192.168.100.17)** | O re-render do KofJS vazava a subárvore anterior inteira para `window.__kofNodes` a cada escrita de `state`: `kofUiRender` soltava do DOM só o elemento RAIZ antigo, enquanto os construtores de widget seguem alocando handles novos — crescimento silencioso e ilimitado do registro (invisível na página). Segunda face: ações de `Button` descartados ficavam para sempre em `window.__kofActions`. Fix = chamar o `kofUiRemoveSubtree` existente (poda de DOM + registro) na troca de raiz + apagar a entrada correspondente de `__kofActions`. Medido pré-fix 1 nó após mount / 6 após 5 re-renders; pós-fix fica 1. Prova: `ComponentCoreE2ETest.rerenderPrunesPreviousSubtreeFromRegistry` + `rerenderReleasesDiscardedButtonActions` (ambos VERMELHOS pré-fix), suíte 21/21. |
 > | **§301 ✅ CORRIGIDO 18/09 (lane UI/style, dono = 192.168.100.17)** | `Store.unsubscribe` do KofJS era no-op silencioso: `kofUiStoreSubscribe` guardava o WRAPPER (`fn.invoke.bind(fn)`, objeto novo por chamada) mas o `unsubscribe` buscava o handle RAW com `indexOf` → nunca casava → inscritos desinscritos seguiam recebendo todo `set()` para sempre. Conserto: subs guardadas como pares `{raw,f}`; unsubscribe casa `raw` por identidade e remove uma ocorrência. Prova: `ComponentCoreE2ETest.storeUnsubscribeStopsDelivery` (VERMELHO pré-fix `n=1,n=2,n=3,`, medido), suíte 22/22. |
 > | **§302 🟡 ABERTO 18/09 (achado pela lane kofscript, dono = 192.168.100.17)** | `List`/`Set`/`Map` crus como tipo declarado de CAMPO viram `ClassType("",nome)` (pin pulado pelo registro builtin na `sa.getClass`) → `.kf` compilado morre `NoSuchFieldError`, `.ks` morre vazamento reflection `InaccessibleObjectException` — quebra silenciosa em runtime, R6. Workaround: `List<T>` element-typed (idioma do corpus; `ScriptGlobalTypes` agora o infere p/ globais sem anotação no script). Fix de causa = unidade compiler-core (semântica do guard de pin, todos os backends). |
@@ -9787,6 +9788,11 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 
 ## §270 — atribuicao generica nao verificada `List<Int>` → `List<String>` e ACEITA EM SILENCIO (tipo-args nunca lidos na atribuicao) → `ClassCastException` no runtime — face aceite-falso do buraco de substituicao por tras de #400/#390 — 🟡 ABERTO (achado 17/09 medindo o #401; conserto honesto e fork regra-6)
 
+**Decisão (mantenedora 19/09, D-POLL-19):** #401 = **BUG REAL** — `List<Int>`
+atribuído como `List<String>` deve ser REJEITADO em compile-time (opção A). O código
+que compila hoje falha no runtime com CCE, apertar casa com o contrato documentado
+(freeze regra 1 respeitado). Execução = Cluster A, lane compilador `.22`.
+
 - **Repro (verbatim #401, re-medido no jar do tip `81d995ce`, JVM):** `val nums: List<Int> = listOf(); nums.add(1); val strs: List<String> = nums; println(strs.get(0))`. `check` → `no errors` (o silencio real); o `run` executa e morre no `get`: `ClassCastException: class java.lang.Integer cannot be cast to class java.lang.String` (M.kf:5). Literal nao-vazio `listOf(1,2)` reproduz identico (M.kf:4).
 - **Raiz:** o check de atribuicao compara so o tipo RAW (`List` vs `List`) — os tipo-argumentos nunca sao consultados, e uma divergencia e aceita em silencio. Mesma passada de substituicao faltante que REJEITA-FALSO codigo valido no #400 (classe → interface generica implementada, SEM021) e #390 (override `put(T)` vs `put(Int)`, SEM043). Dossieres com ponteiros nos tres issues.
 - **Registro do cluster (uma raiz, dois contratos — NAO dividir em tres patches):** #400 + #390 sao as faces rejeicao-falsa: conserta-los e ADITIVO (codigo valido que falha hoje passa; nada que compila hoje quebra) — seguro p/ a lane compiler agora. #401 e a face aceite-falso: tornar args rejeicao real **muda semantica congelada** (programas errados que hoje compilam param de compilar) → decisao regra-6/freeze-1 da mantenedora com nota de versao + migracao; nao "consertar" as avancas.
@@ -10388,3 +10394,50 @@ Compila limpo no JVM; ao rodar morre no LOAD da classe com `java.lang.VerifyErro
 **Fechamento (19/09 ~00:3x, medido):** o dono não apareceu e o gate seguiu vermelho para todas as lanes (Q0: gate vermelho é prioridade zero). A mantenedora reativou a lane docs→plataforma e o split landou no MESMO turno: o braço `VarDeclStmt` de `emitStatementInner` (declaração de local + erasure-box do bug 15/#57 + o gate cru §295(b) de `Nullable(primitivo)` — exatamente a costura catalogada acima) virou `StatementLowererLocalBoxing.java` (rule 7: nome pelo que contém). StatementLowerer 605→490, nova classe 134 — ambas abaixo de 500, entrada do baseline removida (`--update-baseline`, 43→42 dívidas). Prova (freeze rule 3 — refactor = mesma suíte): kof-compiler 2305/0F (17E = guarda ambiental node), kof-cli 336/0F, `NullablePrimitiveContractE2ETest` 26/26, `NullablePrimitiveRelationalConditionTest` verde, check_500 rc=0, stdlib-boundary rc=0.
 
 **Status:** ✅ FECHADA 19/09 ~00:3x (split landado pela lane docs→plataforma, reativada por ordem da mantenedora — ver fechamento).
+
+## §308 — #445: enum declarado em arquivo importado — classe emitida na RAIZ enquanto callers referenciam `pkg/Nome`, switch caía no ramo numérico, JS quebrava na forma identidade (medido no tip) — ✅ CORRIGIDO 19/09 (mesmo commit)
+
+**Descoberto:** #445 (report `jonasrochasilva-prog` com dossiê completo de causa-raiz;
+triagem independente da lane de issues em `055a8f55`, roteada para a lane compilador `.22` — §308).
+
+**Sintomas (medidos, tip pré-fix):** forma de dois arquivos `src/Main.kf` (`import pkg` +
+`println(ModoOperacao.SIMULAR)` / switch) + `src/pkg/Modo.kf` (`package pkg` + enum).
+`kof check src` limpo; `kof run src/Main.kf` → a mensagem disfarçada "componentes de
+runtime do JavaFX" (§149); o launcher reflexivo expõe a verdade: **`NoClassDefFoundError:
+pkg/ModoOperacao`** — `outj/ModoOperacao.class` emitido na RAIZ enquanto
+`Default/Main.class` referencia `Field pkg/ModoOperacao.SIMULAR` com `aload_0` (slot 0 =
+`args[]`); `switch` cross-file → `VerifyError: Bad type on operand stack @ isub` (duas
+referências de enum subtraídas — o switch pegava o ramo numérico porque
+`SwitchStmtLowerer` gateava `enumSwitch` em `packageName().isEmpty()`); Script cross-file
+switch → `not an int: ModoOperacao@…`; JS: `KofJS: unexpected op in switch case:
+KofConditionalJump[NE]` — medido com jar LIMPO do tip num switch de enum **mesmo-arquivo**:
+o JsSwitchParser nunca aprendeu a forma identidade do D-ENUM207
+(`KofBinary(EQ, ClassType)` + `CJump(NE)`), então switch-de-enum no JS estava quebrado para
+TODOS os enums (nenhum teste cobria).
+
+**Causas-raiz:** (1) `CompilerEnumLowering.lowerEnum` hardcodava o pacote vazio (e o
+`CompilerPipeline` nunca passava `declPkg` para ele, ao contrário de class/interface/record);
+(2) ~8 sítios de resolução assumiam pacote vazio de enum: self-type no `SymbolTableBuilder`,
+yields do `SemExpressionTyper`, guards de field-access em `ExpressionTyper`/`ExpressionLowerer`
+(`packageName().isEmpty()` → fallback silencioso para `KofLoadLocal(slot 0)`), reconhecimento
+em `BuiltinTypes`/`CompilerTypes`, statics (`values()`/`valueOf()`), detecção do
+`SwitchStmtLowerer`, gate de exaustividade switch-expr do `MemberResolver`;
+(3) backend JS: o parser de switch só conhecia as formas SUB/`kof_string_equals`.
+
+**Correção (package-aware ponta a ponta):** `CompilerTypes.enumTypeOf(name, sa)` central
+(fonte da verdade = `ClassSymbol.type()` registrado, `packageOf` real); `lowerEnum` recebe o
+pacote da declaração; todos os sítios de reconhecimento usam a symbol table / declarações do
+módulo mesclado (`currentUnit` no lowering É a unidade mesclada — a lookup por nome simples
+basta); o fallback `aload_0` do `ExpressionLowerer` deixou de existir para receivers de tipo
+classe (diagnóstico UNKNOWN honesto — R6); os gates de `SwitchStmtLowerer`/`MemberResolver`
+não exigem mais pacote vazio; o `JsSwitchParser` reconhece a forma identidade (`identityEq`
+— o `switch` JS já compara singletons por `===`).
+
+**Prova:** `EnumCrossFileE2ETest` 7/7 (verbatim cross-file; `.class` pousa em `pkg/`;
+`==`/identidade; `values()`/`valueOf()`; switch+param; controle mesmo-arquivo; SEM062
+enum×String mantido) × JVM/Script/JS. Pins Q0 medidos RED antes do fix (5/7).
+Controles verdes: `KofEnumTest` 6/6, `KofEnumSwitchTest` 4/4, `EnumIdentityE2ETest` 6/6,
+`KofSwitchExprE2ETest` 32/32, `GuardedPatternSwitchExprE2ETest` 3/3 (59/59 no total).
+Probe CLI 4-target na forma exata da issue (dois arquivos): **`cop\nmovido` rc=0 no JVM
+(via launcher reflexivo — sem VerifyError), Script, JS (node) e Native (ELF)**.
+Suíte completa: ver o fim do log deste commit (`/tmp/opencode/suite445.log`).

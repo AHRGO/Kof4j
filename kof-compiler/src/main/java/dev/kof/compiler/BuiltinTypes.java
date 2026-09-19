@@ -137,8 +137,10 @@ public final class BuiltinTypes {
     }
 
     public static boolean isEnumType(Type type) {
-        return type instanceof Type.ClassType ct
-                && ct.packageName().isEmpty() && isEnumName(ct.name());
+        // #445: exige só o NOME registrado — o pacote real chega no tipo via
+        // ClassSymbol/declPackage; a era "enum = pkg-vazio" morreu no D-ENUM207
+        // (valor é INSTÂNCIA da classe emitida, não a String do nome).
+        return type instanceof Type.ClassType ct && isEnumName(ct.name());
     }
 
 

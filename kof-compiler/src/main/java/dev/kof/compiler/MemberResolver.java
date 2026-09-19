@@ -344,7 +344,10 @@ public final class MemberResolver {
             }
             return;
         }
-        if (subjectType instanceof Type.ClassType sct && sct.packageName().isEmpty() && sa.unit() != null) {
+        // #445: `sa.unit()` é a unidade MESCLADA do módulo — enum de arquivo
+        // importado resolve por nome simples; o gate de pacote vazio pulava a
+        // exaustividade (SEM032) silenciosamente em switch-expr cross-file.
+        if (subjectType instanceof Type.ClassType sct && sa.unit() != null) {
             java.util.Set<String> covered = new java.util.HashSet<>();
             for (SwitchExprCase sc : se.cases()) {
                 String cn = enumConstantOfExpr(sa.unit(), sc.value());

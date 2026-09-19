@@ -213,7 +213,7 @@ Principais comandos já disponíveis (detalhes em
 | `kof build <dir|file.kf> [--target ...]` | compila para jvm / native / native.risc / native.arm / js / android |
 | `kof serve app.kf` | sobe um app `web.app()` |
 | `kof test <dir>` | roda a suíte de testes |
-| `kof deploy <dir|file.kf> [--target jvm|native|js|android]` | empacota uma release autocontida: artefato + `RELEASE.md` + `SHA256SUMS` + `.tar.gz` (JS embarca o fecho do runtime, §298); cross riscv64/aarch64 e `--publish` recusam com `DEP001` |
+| `kof deploy <dir|file.kf> [--target jvm|native|js|android[,..]|all] [--publish [<owner/repo>]]` | empacota uma release autocontida: artefato + `RELEASE.md` + `SHA256SUMS` + `.tar.gz` (JS embarca o fecho do runtime, §298); lista vírgula/`all` faz o multi-target da MESMA fonte com um `.deploy-manifest.json` por execução (8.4); `--publish` sobe o(s) artefato(s) ao GitHub Releases (`GH_TOKEN`, D2-A); cross riscv64/aarch64 recusam com `DEP001` |
 | `kof check <dir>` | type-check sem emitir código |
 | `kof script <f.kf>` / `kof repl` | execução direta / REPL |
 | `kof fmt <f.kf>` | formata o código |

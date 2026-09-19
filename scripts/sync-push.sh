@@ -27,9 +27,17 @@ if ! git pull --rebase --autostash origin "$branch"; then
     exit 1
 fi
 
-git push "$@" origin "$branch"
-rc=$?
-[ $rc -eq 0 ] || { echo "== push falhou (rc=$rc) — rode scripts/codeql-gate.sh --fast p/ ver a causa do hook" >&2; exit $rc; }
+# Árvore compartilhada: o remoto anda durante o push (outras lanes). Retry
+# mecânico: falhou → re-fetch + rebase + tenta de novo (até 3x). Conflito no
+# retry = PARA (preservar os dois lados, mesma política do rebase inicial).
+ok=""
+for try in 1 2 3; do
+    if git push "$@" origin "$branch"; then ok=1; break; fi
+    echo "== push falhou (tentativa $try/3) — re-fetch + rebase e tenta de novo" >&2
+    git pull -q --rebase --autostash origin "$branch" \
+        || { echo "== CONFLITO no rebase do retry — resolva os DOIS lados, git add, rebase --continue e rode $0 de novo" >&2; exit 1; }
+done
+[ -n "$ok" ] || { echo "== push falhou 3x — rode scripts/codeql-gate.sh --fast p/ ver a causa do hook" >&2; exit 1; }
 
 git fetch -q origin
 behind=$(git rev-list --count "HEAD..origin/$branch")

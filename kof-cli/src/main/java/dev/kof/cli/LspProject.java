@@ -25,13 +25,29 @@ final class LspProject {
 
     /** Arquivos `.kf` irmãos na árvore do projeto (profundidade ≤6, ordenados). */
     static List<Path> siblings(Path self) {
-        if (self.getParent() == null) return List.of();
-        try (var stream = Files.walk(self.getParent(), 6)) {
-            return stream.filter(p -> p.getFileName().toString().endsWith(".kf"))
-                    .filter(p -> !p.toAbsolutePath().equals(self.toAbsolutePath()))
-                    .sorted().toList();
+        return siblings(self, null);
+    }
+
+    /**
+     * Irmãos da árvore do arquivo + (8.3-B) irmãos sob a raiz do workspace do
+     * `initialize` — deps fora do pai imediato (multi-módulo) entram na mesma
+     * busca, ordenadas e deduplicadas; root nulo = comportamento antigo exato.
+     */
+    static List<Path> siblings(Path self, Path root) {
+        java.util.LinkedHashSet<Path> out = new java.util.LinkedHashSet<>();
+        walkInto(out, self);
+        if (root != null) walkInto(out, root.resolve("__workspace-root__.kf"));
+        out.removeIf(p -> p.toAbsolutePath().equals(self.toAbsolutePath()));
+        return out.stream().sorted().toList();
+    }
+
+    private static void walkInto(java.util.Set<Path> out, Path base) {
+        Path dir = base.getParent();
+        if (dir == null) return;
+        try (var stream = Files.walk(dir, 6)) {
+            stream.filter(p -> p.getFileName().toString().endsWith(".kf")).forEach(out::add);
         } catch (Exception e) {
-            return List.of();
+            // arvore ilegivel = nao contribui (nunca chute - R6)
         }
     }
 
@@ -52,6 +68,11 @@ final class LspProject {
     @SuppressWarnings("unchecked")
     static java.util.List<Object> workspaceSymbols(
             java.util.Map<String, String> buffers, String query) {
+        return workspaceSymbols(buffers, query, null);
+    }
+
+    static java.util.List<Object> workspaceSymbols(
+            java.util.Map<String, String> buffers, String query, Path root) {
         String q = query == null ? "" : query.toLowerCase(java.util.Locale.ROOT);
         java.util.List<Object> out = new java.util.ArrayList<>();
         java.util.Set<Path> seen = new java.util.HashSet<>();
@@ -61,7 +82,7 @@ final class LspProject {
             collect(out, e.getKey(), e.getValue(), q);
         }
         for (Path open : new java.util.ArrayList<>(seen)) {
-            for (Path f : siblings(open)) {
+            for (Path f : siblings(open, root)) {
                 if (!seen.add(f.toAbsolutePath())) continue;
                 String txt = readOrNull(f);
                 if (txt == null) continue;
@@ -104,6 +125,10 @@ final class LspProject {
      * null (nunca chute — R6).
      */
     static String[] declarationLine(String uri, String bufferText, String word) {
+        return declarationLine(uri, bufferText, word, null);
+    }
+
+    static String[] declarationLine(String uri, String bufferText, String word, Path root) {
         if (word == null || word.isEmpty()) return null;
         if (bufferText != null) {
             int[] r = LspSymbols.declarationRange(bufferText, word);
@@ -111,7 +136,7 @@ final class LspProject {
         }
         Path self = toPath(uri);
         if (self == null) return null;
-        for (Path f : siblings(self)) {
+        for (Path f : siblings(self, root)) {
             String txt = readOrNull(f);
             if (txt == null) continue;
             int[] r = LspSymbols.declarationRange(txt, word);

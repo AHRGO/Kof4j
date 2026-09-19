@@ -36,18 +36,19 @@ import java.util.List;
  * Fatia 3 (18/09): face ANDROID — APK assinado via pipeline --apk do build
  * (ANDROID_HOME/build-tools obrigatórios; sem SDK, recusa honesta).
  *
- * <p>O que a fatia NÃO faz (honesto, R6/R7): {@code --publish} (registry
- * remoto) exige decisão D2/mantenedora — a flag recusa com {@code DEP001}.
- * ANDROID e os cross riscv64/aarch64 recusam com {@code DEP001} (faces
- * seguintes do plano). Nunca um fake-publish, nunca exit 0 sem artefato.
+ * <p>D2-A (D-POLL-19, 19/09): {@code --publish} SUBLIGE a release ao host
+ * oficial GitHub Releases ({@link DeployPublish}) — sem token, falha honesta
+ * (R6) depois do pacote local pronto; nunca exit 0 sem artefato. Cross
+ * riscv64/aarch64 continuam {@code DEP001} (faces seguintes do plano).
  */
 final class CmdDeploy {
 
     private static final String USAGE = "usage: kof deploy <source-dir|file.kf> --target <t>[,<t>...|all]"
             + " [--output <dir>] [--name <n>] [--version <v>] [--publish <registry>]\n"
-            + "  targets: jvm|native|js|android (all = jvm,native,js); lista separada por"
+            + "  targets: jvm|native|js|android (all = jvm,native,js); --publish publica"
             + " virgula faz o multi-target 8.4 (mesma fonte, uma release por alvo"
-            + " + .deploy-manifest.json)";
+            + " + .deploy-manifest.json); --publish [<owner/repo>] sobe os tar.gz"
+            + " ao GitHub Releases (D2-A; GH_TOKEN necessário)";
 
     private CmdDeploy() {
     }
@@ -112,7 +113,7 @@ final class CmdDeploy {
                 return;
             } else if (arg.startsWith("-")) {
                 System.err.println("deploy: unknown or incomplete flag: " + arg
-                        + " (accepts: --target jvm --output --name --version --publish)");
+                        + " (accepts: --target --output --name --version --publish)");
                 System.exit(1);
                 return;
             } else {
@@ -136,15 +137,9 @@ final class CmdDeploy {
                 return;
             }
         }
-        // --publish: registry remoto é decisão D2 (mantenedora) — recusa
-        // honesta, nunca um "publish" fingido (R6). DEP001 = gap do comando.
-        if (publish != null) {
-            System.err.println("deploy: --publish is not available yet (DEP001) —"
-                    + " the release registry needs a maintainer decision (D2);"
-                    + " the packaged release under --output is the deployable unit");
-            System.exit(1);
-            return;
-        }
+        // --publish (D2-A, D-POLL-19 19/09): publica a release empacotada no
+        // host oficial GitHub Releases. Sem token/endpoint = falha honesta
+        // (R6) DEPOIS do pacote local existir — nunca "meia publicação" falsa.
         if (name == null) name = src.toAbsolutePath().normalize().getFileName().toString();
         String safeName = name.replaceAll("[^A-Za-z0-9._-]", "-");
         if (safeName.isBlank() || safeName.equals("-")) {
@@ -158,7 +153,7 @@ final class CmdDeploy {
             return;
         }
         if (targets.size() > 1) {
-            deployMulti(src, out, safeName, version, new ArrayList<>(targets));
+            deployMulti(src, out, safeName, version, new ArrayList<>(targets), publish);
             return;
         }
         try {
@@ -166,6 +161,9 @@ final class CmdDeploy {
             System.out.println("deploy → " + r.releaseDir());
             System.out.println("artifact → " + r.tgz()
                     + " (sha256 " + r.sha256().substring(0, 12) + "…)");
+            if (publish != null) {
+                DeployPublish.publishAll(List.of(r), null, publish, safeName, version);
+            }
         } catch (IOException e) {
             System.err.println("deploy: failed: " + e.getMessage());
             System.exit(1);
@@ -187,7 +185,7 @@ final class CmdDeploy {
     }
 
     /** Resultado de uma face num multi-deploy (8.4). */
-    private record Release(String target, String status, Path releaseDir, Path tgz,
+    record Release(String target, String status, Path releaseDir, Path tgz,
                            String artifact, String sha256, String error) {
     }
 
@@ -200,7 +198,7 @@ final class CmdDeploy {
      * (R6/R7) e o exit é 1 se houve falha.
      */
     private static void deployMulti(Path src, Path out, String name, String version,
-                                    List<Target> targets) {
+                                    List<Target> targets, String publish) {
         List<Release> results = new ArrayList<>();
         boolean anyFail = false;
         for (Target t : targets) {
@@ -220,21 +218,7 @@ final class CmdDeploy {
                 anyFail = true;
             }
         }
-        StringBuilder m = new StringBuilder("[\n");
-        for (int i = 0; i < results.size(); i++) {
-            Release r = results.get(i);
-            m.append("  {\"target\": \"").append(r.target())
-             .append("\", \"status\": \"").append(r.status()).append("\"");
-            if (r.artifact() != null) {
-                m.append(", \"artifact\": \"").append(r.artifact())
-                 .append("\", \"sha256\": \"").append(r.sha256()).append("\"");
-            }
-            if (r.error() != null) {
-                m.append(", \"error\": \"").append(escJson(r.error())).append('\"');
-            }
-            m.append("}").append(i + 1 < results.size() ? ",\n" : "\n");
-        }
-        m.append("]\n");
+        String m = DeployPublish.manifestJson(results);
         Path manifest = out.resolve("deploy").resolve(name + "-" + version + ".deploy-manifest.json");
         try {
             Files.createDirectories(manifest.getParent());
@@ -249,11 +233,19 @@ final class CmdDeploy {
                     + (r.error() != null ? ": " + r.error() : ""));
         }
         System.out.println("multi-deploy → " + manifest);
+        if (publish != null) {
+            List<Release> ok = new ArrayList<>();
+            for (Release r : results) if ("SUCCESS".equals(r.status())) ok.add(r);
+            if (!ok.isEmpty()) {
+                try {
+                    DeployPublish.publishAll(ok, manifest, publish, name, version);
+                } catch (IOException e) {
+                    System.err.println("deploy: failed: " + e.getMessage());
+                    System.exit(1);
+                }
+            }
+        }
         if (anyFail) System.exit(1);
-    }
-
-    private static String escJson(String v) {
-        return v.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     private static Release deploy(Path src, Path out, String name, String version,

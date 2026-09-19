@@ -214,10 +214,10 @@ public final class CompilerTypes {
      * tem pacote "" → preservado). Retorna null se não resolver (tipo preservado).
      */
     static String simpleNamePackage(String name, CompilationUnitNode unit, SemanticAnalyzer sa) {
-        // enum: o valor em runtime é String (classDescriptor mapeia pkg-vazio +
-        // isEnumName → Ljava/lang/String;). Ganhar pacote quebraria o cast —
-        // preservado. isEnumName é o registro GLOBAL (cobre enum de outro arquivo).
-        if (BuiltinTypes.isEnumName(name)) return null;
+        // #445: o ramo "enum = pkg-vazio" era legado da era em que o valor de
+        // enum era a String do nome; D-ENUM207 tornou-o INSTÂNCIA da classe
+        // emitida (JvmTypeMapper: "Descriptor próprio L<Dir>;"). Enum agora
+        // desce pelo fluxo comum (imports/allClasses devolvem o pacote real).
         if (unit != null) {
             String found = null;
             for (String imp : unit.imports()) {
@@ -359,8 +359,28 @@ public final class CompilerTypes {
     }
 
     static boolean isEnumType(Type t, CompilationUnitNode currentUnit) {
-        if (!(t instanceof Type.ClassType ct) || !ct.packageName().isEmpty() || !ct.typeArguments().isEmpty()) return false;
+        // #445: o pacote REAL do enum já flui pelo SymbolTable (ClassSymbol com
+        // packageOf) — exigir pacote vazio here era o modelo pré-D-ENUM207
+        // (valor=String, sempre raiz). Um enum de arquivo importado tem
+        // ClassType(pkg, nome) legítimo e deixa de ser reconhecido sem isso.
+        if (!(t instanceof Type.ClassType ct) || !ct.typeArguments().isEmpty()) return false;
         return !enumConstantsOf(ct.name(), currentUnit).isEmpty();
+    }
+
+    /**
+     * #445 — fonte ÚNICA do tipo de um enum por nome simples: o ClassSymbol
+     * registrado (pkg real de `package X`, cobre arquivos importados via
+     * expansão de módulo); fallback pacote vazio (mesmo arquivo/raiz — shape
+     * idêntica ao modelo antigo). Todo sítio que SYNTEZA um tipo de enum
+     * (acesso, statics, symbol table, switch/typer) passa por aqui; quem já
+     * RECEBE o recvType qualificado (FieldAccess guard) usa o próprio tipo.
+     */
+    static Type enumTypeOf(String name, SemanticAnalyzer sa) {
+        if (sa != null) {
+            SymbolTable.ClassSymbol cs = sa.getClass(name);
+            if (cs != null && "Enum".equals(cs.superClass())) return cs.type();
+        }
+        return new Type.ClassType("", name, List.of());
     }
 
     static boolean isRecordType(Type t, CompilationUnitNode currentUnit, SemanticAnalyzer semanticAnalyzer) {

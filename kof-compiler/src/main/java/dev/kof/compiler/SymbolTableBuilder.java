@@ -64,7 +64,7 @@ public final class SymbolTableBuilder {
             sa.currentScope().define(sym);
         } else if (decl instanceof EnumDeclarationNode en) {
             SymbolTable members = new SymbolTable();
-            Type self = new Type.ClassType("", en.name(), List.of());
+            Type self = new Type.ClassType(sa.packageOf(en), en.name(), List.of()); // #445: pkg real (era "" raiz — quebrava arquivo importado)
             members.define(new SymbolTable.MethodSymbol("values", en.name(),
                     new Type.ClassType("kof", "List", List.of(self)), List.of(),
                     AccessFlags.STATIC, SymbolTable.DispatchKind.STATIC));

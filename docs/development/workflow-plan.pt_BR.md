@@ -150,8 +150,10 @@ Dono: **lane `.18`** (atribuído pelo greenlight da mantenedora em 19/09).
   sequencial, sem fronteira de runtime). Golden `WorkflowE2ETest` 7/7 stdout exato JVM==JS +
   pin de compilação Native. Três bordas de parser/typer achadas e contornadas (documentadas
   em `docs/stdlib/workflow.pt_BR.md` §5).
-- **2.1.3 [add-ons — um bundle]** — helper `retry`/`backoff` aditivo (próprio do workflow;
-  http migra depois em slice assinado à parte), `checkpoint` via `kof.orm` (honesto `ORM001` no
+- **2.1.3 [add-ons — um bundle]** — **face retry ✅ ENTREGUE 19/09** (Q3 honrada: o helper é
+  PRÓPRIO do workflow — `dag.retry(job, times, exponential(base, factor))` + `retryFixed` +
+  `Report.retries`, `WorkflowE2ETest` 8/8; `kof.http` intocado, a migração dele segue fatia
+  assinada à parte). Faces restantes: `checkpoint` via `kof.orm` (honesto `ORM001` no
   native), `deadLetter` com AMBAS as faces (in-memory `List` + durável em tabela `kof.orm` — Q4),
   `schedule(cron)` via `kof.scheduler.at` (honesto `CRON001` no native), e integração de
   supervisão delegando ao `kof.supervisor.one_for_one` quando o run do DAG é expresso como
