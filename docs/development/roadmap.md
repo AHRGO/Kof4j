@@ -416,7 +416,7 @@ is written to a portable `kofdeps.lock` GAV list that `resolve`/`build`/`run
 --deps` consume; `KofDb`-style honest degradation when `mvn` is absent — explicit
 warning, never a silent truncated classpath; proof `DepsTransitiveTest` 10/10
 including a real-Maven E2E `jgrapht-core:1.4.0 → org.jheaps:jheaps:0.11`);
-**registry pending** (needs a maintainer decision — public format/hosting).
+**registry ✅ 19/09 (D2-A, `DECISIONS.md` §D-POLL-19)**: GitHub Releases as the official host — publish (`kof deploy --publish`: Release + `<name>-<v>.tar.gz` + `SHA256SUMS`) + pull (`owner/repo[@ver]` in `kofdeps`, checksum verified BEFORE install, cache `~/.kof/deps/kof/`, REG001–004 honest).
 
 ---
 
@@ -906,7 +906,7 @@ domain (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + parity matrix;
 | 1.1 | Parity gaps (`HTTP002`, WEB residual `WEB002`/`WEB003`/`WEB004`, ~~`CONC003`~~ ✅ 03/09, ~~`LOG001`~~ ✅ 01/09, ~~`MQ001`~~ ✅ 01/09, ~~`SCHED001`~~ ✅ 31/08, ~~`TIME001`~~ ✅ 02–05/09, ~~`SECN002`~~ ✅ 01/09, ~~`OBS002`~~ ✅ 01/09, `MEDIA`) | 🟡 in progress — JS web server base ✅ 16/09 (WEB001 closed; DB001 closed); residual per `backend-parity.md` (HTTP002 https/TLS native, ws/sse gap codes, MEDIA) |
 | 1.2 | Automatic GC mark-sweep in Native | 🟡 riscv `356f33b9` ✅; x86 decomposed G-1..G-5 (`native-multiarch.md`) |
 | 1.3 | Typed query DSL (`User.query {}`) | ✅ 01/09 (`KofOrmE2ETest`) |
-| 1.4 | Package manager MVP (`kofdeps`) | 🟡 `kof deps` + Maven Central resolution; **transitive ✅ 16/09** (Maven delegation + `kofdeps.lock`, `DepsTransitiveTest` 10/10 incl. real-Maven E2E); **registry pending (needs maintainer decision)** |
+| 1.4 | Package manager MVP (`kofdeps`) | ✅ `kof deps` + Maven Central resolution; **transitive ✅ 16/09** (Maven delegation + `kofdeps.lock`, `DepsTransitiveTest` 10/10 incl. real-Maven E2E); **registry ✅ 19/09** (D2-A publish + 1.5.3-S2 pull, `DepsRegistryTest` 6/6) |
 | 1.5 | Tracing/OpenTelemetry + `application{}` lifecycle | 🟡 W3C spans + lifecycle ✅ 3 targets; **OTel export ✅ JVM/JS (`exportSpans()` → OTLP/JSON, `OBS003`); Native gap honesto `OBS003`** |
 | 1.6 | **Native → bare-metal/bootable** (microcontroller, legacy BIOS, UEFI) — 15/09 maintainer directive | ⚪ **plan only** — HAL seam `kof_plat_*` + freestanding profile, faces B-0…B-5 in `docs/development/future/PLAN-BAREMETAL-BOOT.md`; not scheduled; MCU depends on 1.2 |
 
