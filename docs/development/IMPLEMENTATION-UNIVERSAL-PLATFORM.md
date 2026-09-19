@@ -142,8 +142,8 @@ Bash+Python+YAML+jq+sed+awk **in a single typed language**).
 | 2.2 | `kof.shell` — idiomatic shell over `kof.process` | 🟡 | `.18` | Stage 1; **`development/shell-plan.md`** SIGNED-OFF 18/09 (Q1–Q3 by maintainer poll); MVP 18/09: `cmd`/`run`/`ok` on JVM+JS byte-parity, `pipeline` JVM-only (`PROC001` on JS/Native, inherited from `process.spawn`); glob/`~`/redir out of v1; `ShellE2ETest` 11/11; 2.2.4 stdlib doc DONE 19/09 (`docs/stdlib/shell.md` +PT); 2.2.3 (`runWith` cwd/env, JS live pipes) open — row flips ✅ with it |
 | 2.3 | `kof.ssh` — via FFI/interop | 🔵 | — | R3 (FFI) |
 | 2.4 | Mature cron/scheduler | 🟡 | concurrency lane | `at(cron)` real 5-field UTC on JVM/JS since 17/09 (§274); Native `CRON001` honest gap |
-| 2.5 | CI/CD pipelines as **Kof code** | ⏳ | — | 2.1 (MVP landed 19/09 — `dag`/`job` run on JVM+JS; full prerequisite needs 2.1.3 retry/checkpoint) |
-| 2.6 | Tooling: `kof workflow run` | ⏳ | — | 2.1 (MVP landed 19/09 — `dag`/`job` run on JVM+JS; full prerequisite needs 2.1.3 retry/checkpoint) |
+| 2.5 | CI/CD pipelines as **Kof code** | ✅ | plataforma lane (.15) | **19/09 (2.1.3 landou completo nos commits irmas: retry `7db91735`+deadLetter `95f81747`+checkpoint `ee63dc80`+schedule `95f81747`/`d9adeb03`)**: o pipeline CI e codigo Kof tipado e o runner funciona HOJE — medido: pipeline verde `kof run` = exit 0, job falho + `throw` = exit 1 com `pipeline red: <summary>` nomeando o job (`StdlibIdiomsCompileTest#greenPipelineExitsZeroRedPipelineExitsNonZero`, golden de saida MEDIDO). Corpus: `training/idioms/automation.md`(+PT) — todas as formas (`job/dag/after/retry/exponential/retryFixed/deadLetter/checkpoint/schedule`) travadas compilandolas nos 4 alvos + matriz honesta (Native: `CRON001`/`ORM001` em runtime; SCRIPT: `COMP003` por design do alvo). |
+| 2.6 | Tooling: `kof workflow run` | ⏳ | — | prereq 2.1.3 ✅ 19/09. O CONTRATO do comando e decision da mantenedora (rule 6): exit-code/flags/saida-humana do runner dedicado — nada bloquea CI enquanto isso: `kof run pipeline.kf` ja e o runner (verde=0/vermelho!=0, medido na linha 2.5 + `automation.md`). Rascunhar opcoes A/B/C em planning quando ela abrir o front. |
 
 ---
 

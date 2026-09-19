@@ -283,6 +283,79 @@ main() {
         assertEquals("true", o, "doc exemplo round-trip (golden do doc em security.md)");
     }
 
+    // 2.5 (plano universal, fila 19/09): o idiom CI/CD "pipeline como codigo
+    // Kof" (training/idioms/automation.md) — TODAS as formas do doc compilam
+    // e os dois ouros do runner (verde=exit 0, vermelho=exit!=0) sao MEDIDOS,
+    // nunca de memoria (Q3). Faces de schedule/ckpt entram como probe de
+    // compilacao por target (os gates nativos CRON001/ORM001 sao runtime).
+    private static final String WF_PIPELINE = """
+import kof.workflow
+
+main() {
+    val compile = job("compile", () -> { println("build ok"); return true })
+    val test = job("test", () -> { println("test ok"); return true }).after(compile)
+    val flaky = job("flaky", () -> { return false })
+    val d = dag(listOf(compile, test, flaky))
+    d.retry(flaky, 2, exponential(100, 2))
+    d.deadLetter(flaky, (nome: String, motivo: String) -> { println(nome + ": " + motivo); return true })
+    val rep = d.run()
+    println(rep.summary())
+    if (!rep.allOk()) { throw "pipeline red: " + rep.summary() }
+}
+""";
+
+    @Test
+    void automationWorkflowFormsCompile() throws Exception {
+        probe(WF_PIPELINE);
+        for (Target t : new Target[] { Target.SCRIPT, Target.JS, Target.NATIVE }) {
+            System.out.println("PROBE " + probeTarget("wf-pipeline", WF_PIPELINE, t));
+        }
+        String sched = "import kof.workflow\nmain() { val d = dag(listOf(job(\"j\", () -> true))); println(schedule(d, \"0 3 * * *\")) }\n";
+        String ckpt = "import kof.workflow\nmain() { val d = dag(listOf(job(\"j\", () -> true))); println(checkpoint(d, \"jdbc:h2:mem:ck;DB_CLOSE_DELAY=-1\", \"ci\").run().summary()) }\n";
+        for (Target t : new Target[] { Target.JVM, Target.SCRIPT, Target.JS, Target.NATIVE }) {
+            System.out.println("PROBE " + probeTarget("wf-schedule", sched, t));
+            System.out.println("PROBE " + probeTarget("wf-checkpoint", ckpt, t));
+        }
+    }
+
+    @Test
+    void greenPipelineExitsZeroRedPipelineExitsNonZero() throws Exception {
+        Path outOk = Files.createTempDirectory("wfok");
+        runWf(outOk, """
+import kof.workflow
+
+main() {
+    val a = job("build", () -> { println("build ok"); return true })
+    val b = job("ship", () -> { println("ship ok"); return true }).after(a)
+    val rep = dag(listOf(a, b)).run()
+    println(rep.summary())
+    if (!rep.allOk()) { throw "pipeline red" }
+}
+""");
+        Process ok = new ProcessBuilder(System.getProperty("java.home") + "/bin/java",
+                "-cp", outOk.toString(), "Default.Main").redirectErrorStream(true).start();
+        String oOk = new String(ok.getInputStream().readAllBytes()).trim();
+        assertEquals(0, ok.waitFor(), oOk);
+        assertEquals("build ok\nship ok\nok=build,ship failed= skipped=", oOk,
+                "golden do doc (automation.md) — pipeline verde: sumario + exit 0");
+
+        Path outBad = Files.createTempDirectory("wfbad");
+        runWf(outBad, WF_PIPELINE);
+        Process bad = new ProcessBuilder(System.getProperty("java.home") + "/bin/java",
+                "-cp", outBad.toString(), "Default.Main").redirectErrorStream(true).start();
+        String oBad = new String(bad.getInputStream().readAllBytes()).trim();
+        assertTrue(bad.waitFor() != 0, "pipeline vermelho PRECISA sair com exit!=0 (contrato de CI):\n" + oBad);
+        assertTrue(oBad.contains("pipeline red"), "saida do caso vermelho deve nomear a falha (R6):\n" + oBad);
+        assertTrue(oBad.contains("failed=flaky") || oBad.contains("tentativas"), "Report tem que expor o job que falhou:\n" + oBad);
+    }
+
+    private void runWf(Path out, String src) throws Exception {
+        Path source = Files.createTempFile("wf", ".kf");
+        Files.writeString(source, src);
+        var r = driver.compile(source, out, Target.JVM);
+        assertTrue(r.success(), "" + r.diagnostics().getDiagnostics());
+    }
+
     @Test
     void secretsRedactProbe() throws Exception {
         probe("main() { println(secrets.redact(\"tok\") + security.redact(\"tok\")) }\n");
