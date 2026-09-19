@@ -138,7 +138,7 @@ no `RELEASE.md` funciona num diretório limpo. `--publish <registry>` é
 **recusado honesto com `DEP001`** até a mantenedora decidir o registry de
 release (decisão **D2** do plano); o mesmo vale para os cross riscv64/aarch64 —
 fatias seguintes em `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`
-(X9). Android recusa `DEP001` apenas quando ANDROID_HOME/build-tools faltam
+(X9). Android recusa `DEP001` apenas quando falta ANDROID_HOME ou as build-tools não têm um d8 que leia o bytecode do artefato (a CLI escolhe a maior versão instalada; >= 35.0.0 para Java 21)
 (guarda honesta de ambiente, nunca um APK fake). Nunca exit 0 sem artefato
 real, nunca fake-publish (R6).
 

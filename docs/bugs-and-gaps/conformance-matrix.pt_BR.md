@@ -284,7 +284,7 @@ different reason, both honest (R6):
   SDK (d8 → aapt2 → zip → zipalign → apksigner; see `CmdBuild.runApkPipeline`).
   The **language×target** conformance matrix already applies to the JVM bytecode
   that the APK packages; what Android adds is packaging toolchain, not
-  semantics. Environment requirement: `ANDROID_HOME` + build-tools 34 — without the
+  semantics. Environment requirement: `ANDROID_HOME` + build-tools (>= 35 p/ ler bytecode Java 21; a CLI escolhe a maior instalada) — without the
   SDK the CLI reports the error (never simulates the APK). Compilation on the target is
   covered by `AndroidInteropE2ETest` (JVM semantics in `Target.ANDROID`);
   the APK pipeline itself requires the SDK and has no E2E in the suite.

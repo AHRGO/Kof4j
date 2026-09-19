@@ -171,7 +171,7 @@ Pontos centrais:
 kof build app.kf --target android --output app-android \
     --classpath $ANDROID_HOME/platforms/android-34/android.jar
 
-# ou direto pro APK (standalone, sem Maven; precisa de build-tools 34):
+# ou direto pro APK (standalone, sem Maven; precisa de build-tools >= 35 p/ classes Java 21):
 kof build app.kf --target android --output app-android --apk \
     --classpath $ANDROID_HOME/platforms/android-34/android.jar
 ```
@@ -193,7 +193,7 @@ vetorial (`res/drawable/ic_launcher_kof.xml`) — nenhum binário gerado.
 - ✅ **permissões declarativas**: `@Permissions([...])` numa classe Kof vira
   `<uses-permission>` no manifesto (`detectPermissions`);
 - ✅ **modo standalone sem Maven**: `kof build --target android --apk` chama
-  `aapt2 → d8 → zip → zipalign → apksigner` direto do CLI (build-tools 34 +
+  `aapt2 → d8 → zip → zipalign → apksigner` direto do CLI (build-tools >= 35 +
   `ANDROID_HOME`). Sem o SDK (`ANDROID_HOME` ausente, sem `aapt2`), a flag falha
   com **exit 1** e mensagem honesta — nunca exit 0 sem APK (R6); o projeto ainda
   é gerado, então `mvn verify` segue como alternativa;
