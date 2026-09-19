@@ -5,7 +5,7 @@
 This is the **mandatory** guide for any AI agent (or human) who
 writes Kof code in this repository. Read it before generating any `.kf`.
 
-**Version:** 0.4.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + rule 9 **docs-first gate** for philosophy-violating issues (#449) (18/09) + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09); active branch = `beta-0.4.0`)
+**Version:** 0.4.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + rule 9 **docs-first gate** for philosophy-violating issues (#449) (18/09) + **mechanical push via `scripts/sync-push.sh` + conflict policy "preserve both sides, redo yours on top" (19/09)** + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09); active branch = `beta-0.4.0`)
 
 > **PRIORITY No. 1: QUALITY.** Before any feature, read the
 > **Quality gate — "no bug ships"** (§ below), **universal for
@@ -336,6 +336,21 @@ only coordinates those who *see* the remote; an unclaimed local commit is a ghos
 for the other agents. After the pull, **re-read the DOING.md**: what was your
 "next step" may have been done or claimed by another agent in the
 interval.
+
+> **Mechanical push (maintainer 19/09): every push goes through
+> `scripts/sync-push.sh`** — fetch → `pull --rebase --autostash` → push →
+> verify `ahead=0 behind=0` against the remote before returning success. If
+> the final check is not 0/0, the push **did not happen** — never report the
+> work as "pushed" without that line.
+>
+> **Conflict policy — preserve both sides, redo yours on top (maintainer
+> 19/09).** A rebase/merge conflict is resolved keeping the **intent of both
+> hunks**; never `checkout --ours`/`--theirs` to "resolve" it (the `d7dba433`
+> truncation destroyed another lane's DOING.md lines that way). A hunk that
+> *looks* stale but arrived from another agent's rebase/merge is **updated
+> content, not garbage**: **redo your own edit** on top of the new version
+> (re-apply your change against it), never revert the other's edit "because
+> mine was written later".
 
 ### Lesson learned (09/04) — ALWAYS work in small parts
 

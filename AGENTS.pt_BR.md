@@ -5,7 +5,7 @@
 Este é o guia **obrigatório** para qualquer agente de IA (ou humano) que
 escreva código Kof neste repositório. Leia antes de gerar qualquer `.kf`.
 
-**Versão:** 0.4.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + regra 9 **portão docs-first** para issues fora da filosofia (#449) (18/09) + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09); branch ativa = `beta-0.4.0`)
+**Versão:** 0.4.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + regra 9 **portão docs-first** para issues fora da filosofia (#449) (18/09) + **push mecânico via `scripts/sync-push.sh` + política de conflito "preserve os dois lados, refaça o seu em cima" (19/09)** + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09); branch ativa = `beta-0.4.0`)
 
 > **PRIORIDADE Nº 1: QUALIDADE.** Antes de qualquer feature, leia o
 > **Portão de qualidade — "nenhum bug sobe"** (§ abaixo), **universal para
@@ -335,6 +335,21 @@ só coordena quem *vê* o remoto; commit local não reivindicado é tarefa fanta
 para os outros agentes. Depois do pull, **releia o DOING.md**: o que era seu
 "próximo passo" pode ter sido feito ou reivindicado por outro agente no
 intervalo.
+
+> **Push mecânico (mantenedora 19/09): todo push passa por
+> `scripts/sync-push.sh`** — fetch → `pull --rebase --autostash` → push →
+> verifica `ahead=0 behind=0` contra o remoto antes de retornar sucesso. Se a
+> checagem final não for 0/0, o push **não aconteceu** — nunca reporte o
+> trabalho como "pushado" sem essa linha.
+>
+> **Política de conflito — preserve os dois lados, refaça o seu em cima
+> (mantenedora 19/09).** Conflito de rebase/merge se resolve mantendo a
+> **intenção dos dois hunks**; nunca `checkout --ours`/`--theirs` para
+> "resolver" (a truncagem do `d7dba433` destruiu assim ~4.586 linhas do
+> DOING.md de outras lanes). Um trecho que *parece* velho mas chegou de
+> rebase/merge de outro agente é **conteúdo atualizado, não lixo**: **refaça o
+> seu edit em cima da versão nova** (re-aplique sua mudança contra ela), nunca
+> reverta o edit do outro "porque o meu foi escrito depois".
 
 ### Lição aprendida (04/09) — trabalhe SEMPRE em partes pequenas
 
