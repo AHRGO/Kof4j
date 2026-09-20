@@ -126,17 +126,24 @@ idênticos (travado).
   mantenedora respondeu Q1–Q4 (§6, `DECISIONS.md` §D-MAKEALIVE:
   `kof.makealive` / providers genéricos completos / kof.db dia-1 / flat+EN).
   Frente aberta.
-- **3.1 [core]** 🔵 dono `.18` — injetor de namespace virtual (`CompilerMakealive`) +
-  `makealive-host.kf` + linha no ledger (camada conforme Q1) +
+- **3.1 [core]** 🔵 dono `.18` — **fatia COMPLETA (MK-1, enquete 20/09 — não
+  um fragmento só-núcleo)**: injetor de namespace virtual (`CompilerMakealive`) +
+  `makealive-host.kf` + linha no ledger (camada conforme Q1) + os providers
+  REST/CLI genéricos (3.5 dobrado aqui) + a face de estado `kof.db` (3.4
+  dobrado aqui — Q3: o store é kof.db **desde o primeiro apply**) +
   `MakealiveE2ETest` (golden de idempotência plan/apply/destroy, paridade byte
-  JVM==JS, pin de compilação Native, as guardas do §3).
+  JVM==JS, pin de compilação Native, as guardas do §3). Os goldens de kof.db
+  rodam onde `kof.db` é real (JVM/JS); o estado no Native espera D-DB-GAPS e
+  falha com `DB001`/`ORM001` honestos, nunca silente (R6).
 - **3.3 [reconcile]** — `reconcile(design, provider, intervalMs)` delegando ao
   `scheduler` (stub `CRON001` alto no Native, mesmo split do
   `workflow-sched-host.native.kf`).
-- **3.4 [state]** — JSON sobre `kof.io` no v1 (sancionado pela VISÃO); backend
-  `kof.db` como follow-up aditivo (`DB001`/`ORM001` honestos por target).
-- **3.5 [providers como interop]** — provider REST genérico (`kof.http`) +
-  provider CLI (`kof.shell`); clouds concretas = **pacotes oficiais**
+- **3.4 [state]** — **dobrado no 3.1 pelo MK-1 (20/09)**; mantido como item
+  de verificação: goldens de estado `kof.db` por target (JVM/JS reais; Native
+  `DB001`/`ORM001` honestos até D-DB-GAPS fechar).
+- **3.5 [providers como interop]** — **dobrado no 3.1 pelo MK-1 (20/09)**:
+  provider REST genérico (`kof.http`) + provider CLI (`kof.shell`) embarcam
+  na fatia do núcleo; clouds concretas seguem **pacotes oficiais**
   (`infra-<cloud>`, R1 — nunca literal no compilador).
 - **3.2 [sintaxe `infra "prod" {}`]** — ⛔ R4 (hook de codegen, linha R4 do
   tracker: "does NOT exist at HEAD") + bloco de parse novo = regra 6. Fora do v1.

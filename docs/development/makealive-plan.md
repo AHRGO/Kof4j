@@ -119,17 +119,24 @@ initializers compile and run identical (locked).
 - **3.0.2 [design sign-off — ⛔ rule 6]** ✅ DONE 20/09 — maintainer poll
   answered Q1–Q4 (§6, `DECISIONS.md` §D-MAKEALIVE: `kof.makealive` /
   complete generic providers / kof.db day-1 / flat+EN). Front opened.
-- **3.1 [core]** 🔵 owner `.18` — virtual-namespace injector (`CompilerMakealive`) +
-  `makealive-host.kf` + ledger line (layer per Q1) + `MakealiveE2ETest`
+- **3.1 [core]** 🔵 owner `.18` — **COMPLETE slice (MK-1, poll 20/09 — not a
+  core-only fragment)**: virtual-namespace injector (`CompilerMakealive`) +
+  `makealive-host.kf` + ledger line (layer per Q1) + the generic REST/CLI
+  providers (3.5 folded here) + the `kof.db` state surface (3.4 folded here —
+  Q3: the store is kof.db **from the first apply**) + `MakealiveE2ETest`
   (plan/apply/destroy idempotency golden, JVM==JS byte parity, Native compile
-  pin, the §3 guards).
+  pin, the §3 guards). The kof.db goldens run where `kof.db` is real (JVM/JS);
+  Native state awaits D-DB-GAPS and fails with the honest `DB001`/`ORM001`,
+  never silent (R6).
 - **3.3 [reconcile]** — `reconcile(design, provider, intervalMs)` delegating
   to `scheduler` (Native loud `CRON001` stub, same split as
   `workflow-sched-host.native.kf`).
-- **3.4 [state]** — JSON-over-`kof.io` in v1 (VISION-sanctioned); `kof.db`
-  backend as an additive follow-up (`DB001`/`ORM001` honest per target).
-- **3.5 [providers as interop]** — generic REST provider (`kof.http`) + CLI
-  provider (`kof.shell`); concrete clouds = **official packages**
+- **3.4 [state]** — **folded into 3.1 by MK-1 (20/09)**; kept as the
+  verification item: per-target `kof.db` state goldens (JVM/JS real; Native
+  honest `DB001`/`ORM001` until D-DB-GAPS closes).
+- **3.5 [providers as interop]** — **folded into 3.1 by MK-1 (20/09)**:
+  generic REST provider (`kof.http`) + CLI provider (`kof.shell`) ship with
+  the core slice; concrete clouds stay **official packages**
   (`infra-<cloud>`, R1 — never a compiler literal).
 - **3.2 [syntax `infra "prod" {}`]** — ⛔ R4 (codegen hook, tracker row R4:
   "does NOT exist at HEAD") + new parse block = rule 6. Out of v1.

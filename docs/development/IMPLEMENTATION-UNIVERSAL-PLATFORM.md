@@ -50,7 +50,7 @@ Claim an item in `DOING.md` **in the same commit** that starts the work.
 | 5 | SECURITY (expansion) | 🔵 not started | Stage 3, R3 (FFI) |
 | 6 | SCIENTIFIC COMPUTING | 🔵 not started | Stage 4, R3, GC (1.2) |
 | 7 | BIOINFORMATICS | 🔵 not started | Stages 2/4/6 |
-| 8 | UNIVERSAL PLATFORM | 🔵 not started | all previous |
+| 8 | UNIVERSAL PLATFORM | 🔵 not started | all previous | — north star `DECISIONS.md` §D-BOOTSTRAP (20/09): the compiler written in Kof closes this stage end-to-end (BS-1 design-plan draft = lane `.18`) |
 
 Invariants: **R1 ✅ · R6 ✅ · R7 ✅ · R8 ✅ · R12 ✅ (overridden)** ·
 **R2 🔵 · R3 🟡 · R4 🔵 · R5 🟡 · R9 🟡 · R10 🔵 · R11 🟡**
@@ -80,8 +80,8 @@ a new domain. **This stage closes before any Tier 6+ (R12).**
 | 1.1.6 | `WEB006` — security middleware on JS/Native | 🔵 | web lane | honest gap; pinned |
 | 1.1.7 | `HTTP002` — https + real DNS on Native | 🔵 | native lane | HTTP/1.1 asm landed 03/09; `timeout`/`retry`/`circuit` REAL on the 4 native targets since 17/09 (§259 CLOSED). `HTTP002` is a **reserved** code (branch dead — `KofHttp.supportedOn` always true) |
 | 1.1.8 | `MEDIA001`/`MEDIA003` — media handles / mic on non-JVM | 🔵 | queued behind the HTTP facades (`.22`) | JVM-only; honest compile-time gap; documented in the matrix |
-| 1.1.9 | `ORM001` — `kof.orm` on Native | 🔵 | native lane | JVM + JS closed (JS 18/09, `KofJsOrmBridge`); Native still `ORM001` |
-| 1.1.10 | §278 — Android reuses `JvmBackend` but refuses `kof.db`/`kof.security`/`kof.gpu` (`DB001`/`SECN00x`/`GPU001`) | 🔵 | compiler lane (rule 6) | measured with `CompilerDriver(Target.ANDROID)`; catalogued `known-bugs.md` §278; pin `DomainGapCodesTest.androidRefusesDbAndCryptoWithTheDocumentedCodes` |
+| 1.1.9 | `ORM001` — `kof.orm` on Native | 🟡 | `.18` (D-DB-GAPS DB-1 `DECIDED` 20/09) | JVM + JS closed (JS 18/09, `KofJsOrmBridge`); Native route = `kof_orm_*` asm **over the existing native `kof_db_*` surface** (x86 first, then cross; no JVM-embedding shortcut, no silent fallback) |
+| 1.1.10 | §278 — Android reuses `JvmBackend` but refuses `kof.db`/`kof.security`/`kof.gpu` (`DB001`/`SECN00x`/`GPU001`) | 🟡 | `.18` for the DB face (D-DB-GAPS DB-2 `DECIDED` 20/09) | **maintainer: "Android É JVM" → `DB001` refusal lifted, parity with JVM** (`DomainGapCodesTest` pin flips for db); `SECN00x`/`GPU001` stay honest until those stacks run on Android (their lanes; same principle); measured with `CompilerDriver(Target.ANDROID)`; catalogued §278 |
 
 ### 1.2 GC mark-sweep in Native
 
@@ -164,10 +164,10 @@ R4**; R4 gates only the declarative rows (3.2, 3.7).
 
 | # | Item | Status | Owner | Depends on |
 |---|------|--------|-------|------------|
-| 3.1 | `kof.infra` — resource records + dependency graph + diff | 🟡 | `.18` (plan + recon 3.0) | name ⛔ Q1 (plan §2.1, R1 hard-deny measured); imperative face needs no R4 (plan §5 3.1) |
+| 3.1 | `kof.makealive` (Q1 `DECIDED` 20/09 — was the R1-denied `kof.infra` literal) — resource records + dependency graph + diff | 🟡 | `.18` (plan + recon 3.0; core in flight) | **Q1–Q4 ANSWERED 20/09 (`DECISIONS.md` §D-MAKEALIVE)**; slice = COMPLETE per MK-1 (core + REST/CLI providers + kof.db state, 3.4/3.5 folded); imperative face needs no R4 (plan §5 3.1); recon 3.0.1 ✅ + 3.0.2 ✅ + 3.1.0 provider-shape probe ✅ (`MakealivePrimitivesE2ETest` 6/6) |
 | 3.2 | `infra "prod" { ... }` — desugar over records (compile-time codegen) | 🔵 | — | R4 + new parse block ⛔ rule 6 (out of v1, plan §5) |
 | 3.3 | Reconciliation loop (spawn/await + channel) | 🔵 | — | Stage 1 (2.1) |
-| 3.4 | State in `kof.db` | 🔵 | — | 3.1 |
+| 3.4 | State in `kof.db` | 🔵 | `.18` | **folded into 3.1 (MK-1 20/09)**; per-target verification item kept; Native state gated by §D-DB-GAPS |
 | 3.5 | Providers via FFI/REST/CLI (AWS/Azure/GCP — interop) | 🔵 | — | R3 |
 | 3.6 | Secrets via `kof.security` | 🟡 | security lane | `kof.security` exists; `Secret`/`KeyHandle` pending (Stage 5) |
 | 3.7 | Cycle detection in the `infra` graph at compile-time | 🔵 | — | 3.1 |

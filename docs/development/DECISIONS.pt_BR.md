@@ -2188,7 +2188,8 @@ Consequências para a fila (só agendamento — a R12 continua governando a
 execução):
 
 * um **plano de design** é autorizado (precedente D3 bare-metal: plano
-  rascunhado, mantenedora revisa, execução espera a ordem de estágios);
+  rascunhado, mantenedora revisa, execução espera a ordem de estágios) —
+  **BS-1 (enquete 20/09): DECIDIDO**, rascunho na lane `.18`;
 * a decisão NÃO abre a frente do bootstrapper antes dos estágios existentes
   fecharem — apenas o *planejamento* é puxado para frente (o padrão de
   override do D-UNIVERSAL);
@@ -2202,3 +2203,42 @@ execução):
 
 **Evidência:** mensagem da mantenedora 20/09 ("o final stage de tudo é
 bootstrapper. kof feito em kof").
+
+## D-DB-GAPS — os gaps órfãos de DB/ORM: rota por alvo (DECIDIDO)
+
+**Data:** 2026-09-20 · **Estado:** `DECIDIDO` (enquete da mantenedora
+20/09; lane dona `.18` — o dono anterior morreu sem sucessor: "não tem
+ninguém nas gaps de db. agente morto")
+
+**Decisão (três gaps, uma rota):**
+
+* **DB-1 — `ORM001` no Native (linha 1.1.9):** opção **A**. O ORM chega
+  como `kof_orm_*` em asm **sobre a superfície `kof_db_*` nativa que já
+  existe** (mesma pilha do JVM: `JvmOrmRuntime` → JDBC → `kof_db_*`); JS
+  mantém `KofJsOrmBridge`, JVM mantém o runtime host-side — Native fecha
+  por último, pela R7. Sem atalho de embutir JVM, sem fallback silencioso
+  (R6).
+* **DB-2 — Android recusa `kof.db` (§278, linha 1.1.10):** **implementar
+  corretamente — Android É JVM**, então tem que ter o **mesmo
+  comportamento que o JVM**. A recusa `DB001` no alvo Android é levantada;
+  o pin `DomainGapCodesTest.androidRefusesDbAndCryptoWithTheDocumentedCodes`
+  vira paridade na face de DB. As recusas `SECN00x`/`GPU001` seguem
+  honestas até aquelas pilhas de fato rodarem no Android (outras lanes; o
+  mesmo princípio fica registrado aqui — assinatura regra 6: mantenedora
+  20/09, "implementa corretamente. android é jvm, logo androids tem que ter
+  o mesmo comportamento que jvm").
+* **DB-3 — MySQL em riscv64/aarch64:** opção **B** — **estender** a
+  superfície MySQL aos alvos cross (degradação não permitida; o x86 é a
+  referência do contrato).
+
+Nota de sequência (MK-1, mesma enquete): a **fatia 3.1 do makealive é
+"completa" numa peça só** — núcleo + providers local-FS/REST/CLI + face de
+estado `kof.db`, não um fragmento só-núcleo (a decisão Q3 de `D-MAKEALIVE`
+vale desde o primeiro apply). Os gaps de DB são a **frente de
+pré-requisito** desse 3.1 completo no Native; a fatia segue honesta em
+JVM/JS enquanto isso (esses alvos já têm `kof.db` real).
+
+**Evidência:** respostas da mantenedora 20/09 — DB-1 "A) kof_orm_* em asm
+sobre os kof_db_* existentes", DB-2 "implementa corretamente… android é
+jvm", DB-3 "B) estender MySQL p/ riscv/aarch", MK-1 "B) completo de uma
+vez".

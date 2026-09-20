@@ -342,4 +342,46 @@ class MakealivePrimitivesE2ETest {
             }
             """, "2", "media", "private", "true", "true");
     }
+
+    /** §363 repro (measured by probe 2): calling a generic-typed lambda
+     *  through a typed local crashes the JVM with
+     *  `IncompatibleClassChangeError: Class LambdaN does not implement the
+     *  requested interface kof.Function1_CString_CMap` — compilation is green
+     *  (R6 violation: silent until runtime). Cases measured here: (a) no
+     *  capture + Map return, (b) capture + String return, (c) capture + Map
+     *  return (the probe-2 shape). */
+    @Test
+    void genericLambdaInvokeCases() throws Exception {
+        Path srcA = tmp.resolve("MAIfaceA.kf");
+        Files.writeString(srcA, """
+            main() {
+                var f: (String) -> Map<String, String> = (n: String) -> mapOf("k", n)
+                var m = f("x")
+                println(m.get("k"))
+            }
+            """);
+        Run a = runJvm(srcA, tmp.resolve("o-iface-a"));
+        System.err.println("CASE-A (no capture, Map return): ok=" + a.ok() + " out=[" + a.output().trim() + "]");
+        Path srcB = tmp.resolve("MAIfaceB.kf");
+        Files.writeString(srcB, """
+            main() {
+                var top = "acl"
+                var g: (String) -> String = (n: String) -> n + top
+                println(g("m"))
+            }
+            """);
+        Run b = runJvm(srcB, tmp.resolve("o-iface-b"));
+        System.err.println("CASE-B (capture, String return): ok=" + b.ok() + " out=[" + b.output().trim() + "]");
+        Path srcC = Path.of("/tmp/opencode/r363.kf");
+        Files.writeString(srcC, """
+            main() {
+                var data = mapOf("m", mapOf("acl", "private"))
+                var f: (String) -> Map<String, String> = (n: String) -> data.get(n)
+                var m = f("m")
+                println(m.get("acl"))
+            }
+            """);
+        Run c = runJvm(srcC, Path.of("/tmp/opencode/r363out"));
+        System.err.println("CASE-C (capture, Map return): ok=" + c.ok() + " out=[" + c.output().trim() + "]");
+    }
 }

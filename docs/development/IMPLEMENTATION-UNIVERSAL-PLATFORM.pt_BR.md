@@ -51,7 +51,7 @@ Reivindique um item no `DOING.md` **no mesmo commit** que inicia o trabalho.
 | 5 | SECURITY (expansão) | 🔵 não iniciado | Estágio 3, R3 (FFI) |
 | 6 | SCIENTIFIC COMPUTING | 🔵 não iniciado | Estágio 4, R3, GC (1.2) |
 | 7 | BIOINFORMATICS | 🔵 não iniciado | Estágios 2/4/6 |
-| 8 | UNIVERSAL PLATFORM | 🔵 não iniciado | todos os anteriores |
+| 8 | UNIVERSAL PLATFORM | 🔵 não iniciado | todos os anteriores | — norte `DECISIONS.md` §D-BOOTSTRAP (20/09): o compilador escrito em Kof fecha este estágio de ponta a ponta (rascunho do plano BS-1 = lane `.18`) |
 
 Invariantes: **R1 ✅ · R6 ✅ · R7 ✅ · R8 ✅ · R12 ✅ (sobreposto)** ·
 **R2 🔵 · R3 🟡 · R4 🔵 · R5 🟡 · R9 🟡 · R10 🔵 · R11 🟡**
@@ -81,8 +81,8 @@ domínio novo. **Este estágio fecha antes de qualquer Tier 6+ (R12).**
 | 1.1.6 | `WEB006` — middleware de segurança no JS/Native | 🔵 | lane web | gap honesto; pinado |
 | 1.1.7 | `HTTP002` — https + DNS real no Native | 🔵 | lane native | HTTP/1.1 asm landado 03/09; `timeout`/`retry`/`circuit` REAIS nos 4 alvos nativos desde 17/09 (§259 FECHADO). `HTTP002` é código **reservado** (ramo morto — `KofHttp.supportedOn` sempre true) |
 | 1.1.8 | `MEDIA001`/`MEDIA003` — handles de mídia / mic em não-JVM | 🔵 | na fila atrás das facades HTTP (`.22`) | JVM-only; gap honesto em compile-time; documentado na matriz |
-| 1.1.9 | `ORM001` — `kof.orm` no Native | 🔵 | lane native | JVM + JS fechados (JS 18/09, `KofJsOrmBridge`); Native ainda `ORM001` |
-| 1.1.10 | §278 — Android reusa `JvmBackend` mas recusa `kof.db`/`kof.security`/`kof.gpu` (`DB001`/`SECN00x`/`GPU001`) | 🔵 | lane compiler (regra 6) | medido com `CompilerDriver(Target.ANDROID)`; catalogado `known-bugs.md` §278; pin `DomainGapCodesTest.androidRefusesDbAndCryptoWithTheDocumentedCodes` |
+| 1.1.9 | `ORM001` — `kof.orm` no Native | 🟡 | `.18` (D-DB-GAPS DB-1 `DECIDIDO` 20/09) | JVM + JS fechados (JS 18/09, `KofJsOrmBridge`); rota no Native = `kof_orm_*` em asm **sobre a superfície `kof_db_*` nativa existente** (x86 primeiro, depois cross; sem atalho de embutir JVM, sem fallback silencioso) |
+| 1.1.10 | §278 — Android reusa `JvmBackend` mas recusa `kof.db`/`kof.security`/`kof.gpu` (`DB001`/`SECN00x`/`GPU001`) | 🟡 | `.18` na face DB (D-DB-GAPS DB-2 `DECIDIDO` 20/09) | **mantenedora: "Android É JVM" → recusa `DB001` levantada, paridade com o JVM** (pin `DomainGapCodesTest` vira paridade p/ db); `SECN00x`/`GPU001` seguem honestas até aquelas pilhas rodarem no Android (lanes próprias; mesmo princípio); medido com `CompilerDriver(Target.ANDROID)`; catalogado §278 |
 
 ### 1.2 GC mark-sweep no Native
 
@@ -165,10 +165,10 @@ NÃO precisa de **R4**; R4 barra só as linhas declarativas (3.2, 3.7).
 
 | # | Item | Status | Dono | Depende de |
 |---|------|--------|------|------------|
-| 3.1 | `kof.infra` — records de recurso + grafo de dependência + diff | 🟡 | `.18` (plano + recon 3.0) | nome ⛔ Q1 (plano §2.1, hard-deny R1 medido); face imperativa não precisa de R4 (plano §5 3.1) |
+| 3.1 | `kof.makealive` (Q1 `DECIDIDO` 20/09 — era o literal `kof.infra` vetado pela R1) — records de recurso + grafo de dependência + diff | 🟡 | `.18` (plano + recon 3.0; núcleo em voo) | **Q1–Q4 RESPONDIDAS 20/09 (`DECISIONS.md` §D-MAKEALIVE)**; fatia = COMPLETA por MK-1 (núcleo + providers REST/CLI + estado kof.db, 3.4/3.5 dobrados); face imperativa não precisa de R4 (plano §5 3.1); recon 3.0.1 ✅ + 3.0.2 ✅ + sonda de forma do provider 3.1.0 ✅ (`MakealivePrimitivesE2ETest` 6/6) |
 | 3.2 | `infra "prod" { ... }` — desugar sobre records (codegen em compile-time) | 🔵 | — | R4 + bloco de parse novo ⛔ regra 6 (fora do v1, plano §5) |
 | 3.3 | Loop de reconciliação (spawn/await + channel) | 🔵 | — | Estágio 1 (2.1) |
-| 3.4 | Estado em `kof.db` | 🔵 | — | 3.1 |
+| 3.4 | Estado em `kof.db` | 🔵 | `.18` | **dobrado no 3.1 pelo MK-1 (20/09)**; item de verificação por target mantido; estado no Native gated pelo §D-DB-GAPS |
 | 3.5 | Providers via FFI/REST/CLI (AWS/Azure/GCP — interop) | 🔵 | — | R3 |
 | 3.6 | Segredos via `kof.security` | 🟡 | lane security | `kof.security` existe; `Secret`/`KeyHandle` pendentes (Estágio 5) |
 | 3.7 | Detecção de ciclo no grafo `infra` em compile-time | 🔵 | — | 3.1 |

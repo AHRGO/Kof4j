@@ -14,6 +14,7 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
 ### Em desenvolvimento
+  - .18 - governança: **regra 11 (Lei da Simplicidade) é ABSOLUTA em AGENTS.md** + `DECISIONS.md` §D-MAKEALIVE/§D-KOF-AS-CLOUD/§D-BOOTSTRAP/§D-DB-GAPS (enquetes da mantenedora 20/09: namespace `kof.makealive`, providers genéricos completos, estado kof.db desde o dia 1, Android=paridade JVM no db, ORM no Native via asm `kof_orm_*`, MySQL no cross, bootstrapper = objetivo final).
 
   - **`shell.pipeline` REAL no JS (20/09, lane `.18`)** — fecha o último residual
     de pipes vivos da linha 2.2. Cadeia ProcessBuilder + threads de pump em

@@ -67,6 +67,7 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     REG001/REG002/REG003/REG004 against a fake registry).
 
 ### In development
+  - .18 - governance: **regra 11 (Simplicity Law) is ABSOLUTE in AGENTS.md** + `DECISIONS.md` §D-MAKEALIVE/§D-KOF-AS-CLOUD/§D-BOOTSTRAP/§D-DB-GAPS (maintainer polls 20/09: `kof.makealive` namespace, generic providers complete, kof.db day-1 state, Android=JVM db parity, ORM-on-Native via `kof_orm_*` asm, MySQL on cross, bootstrapper = final objective).
 
   - **`String.format` float output no longer depends on the host locale (#466, §339)** —
     `String.format("%.2f", 3.14)` printed `3,14` on a `pt_BR` JVM (the lowering emitted the
