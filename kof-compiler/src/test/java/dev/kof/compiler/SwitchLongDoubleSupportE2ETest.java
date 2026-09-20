@@ -85,7 +85,7 @@ class SwitchLongDoubleSupportE2ETest {
         Path jsOut = tempDir.resolve("sl2-js");
         CompilationResult js = driver.compile(src, jsOut, Target.JS);
         assertTrue(js.success(), "JS compile: " + js.diagnostics().getDiagnostics());
-        ProcessBuilder jb = new ProcessBuilder(TestJdk.which("node"), jsOut.resolve("Default.mjs").toString());
+        ProcessBuilder jb = new ProcessBuilder(TestJdk.onPath("node"), jsOut.resolve("Default.mjs").toString());
         jb.redirectErrorStream(true);
         Process jp = jb.start();
         String jout = new String(jp.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)

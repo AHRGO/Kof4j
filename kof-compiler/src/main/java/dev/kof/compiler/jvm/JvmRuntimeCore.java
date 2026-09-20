@@ -356,8 +356,16 @@ public final class JvmRuntimeCore {
                     if (p != null) {
                         p.destroyForcibly();
                         SPAWNED.remove(handle);
-                        SPAWN_WRITERS.remove(handle);
-                        SPAWN_READERS.remove(handle);
+                        try {
+                            var w = SPAWN_WRITERS.remove(handle);
+                            if (w != null) w.close();
+                        } catch (Exception ignored) {
+                        }
+                        try {
+                            var r = SPAWN_READERS.remove(handle);
+                            if (r != null) r.close();
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
 

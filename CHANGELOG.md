@@ -14,6 +14,36 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
  ### In development
+  - .22 - #555 CodeQL (compiler cluster, 22 alertas): os E2E que disparam `javac`/`java`/
+    `node` como subprocesso montavam o comando com concatenação de string ou nome relativo
+    (`java/concatenated-command-line`, `java/relative-path-command`). Conserto na fonte com
+    o helper `TestJdk` (caminho ABSOLUTO via `Path.of(javaHome, "bin", "java")`, sem `+`;
+    `onPath()` resolve `node` pelo PATH e ERRA honesto se não existe — nunca relativo
+    silencioso). Zera também #887/#889 (KofTimeE2ETest: dead local + @Override), #876
+    (SemanticAnalyzer: caso-`_` no-op removido, `default` já cobre — comportamento
+    idêntico), #890/#908 (params/locais mortos removidos) e #907 (overload privado
+    `isTroolean(NullableType)` renomeado `isTrooleanNullable` — a overload confusa fazia os
+    display/describe em :277/:309 resolverem o PRIVADO por tipo estático).
+  - .22 - #555 #918/#919/#940 + paridade JVM: `KofJsProcessBridge.kill()` removia os
+    readers/writers do mapa SEM fechá-los — o pipe do filho ficava vivo nos fds da JVM até
+    o GC (resource-leak REAL, não suprimido: close na face do kill). O espelho JVM
+    (`JvmRuntimeCore.kof_spawn_kill`, template) tinha o MESMO vazamento — corrigido junto
+    (regra 5, paridade por construção). Dead local `result` removido de `execute()` (#940).
+
+  - .22 - **#555 CodeQL — cluster do compilador + bridge de processo JS fechados na raiz.**
+    As ~20 chamadas de subprocesso dos E2Es marcadas (concat `java.home +
+    "/bin/java"` e nomes soltos `"java"`/`"javac"`/`"node"`) agora passam por
+    `TestJdk` (caminho absoluto via `Path.of`, resolucao PATH para `node`) —
+    #883/#884/#886/#891-#902/#912-#917/#921/#922/#932/#933/#939. No main: locais
+    mortos removidos (`SemanticAnalyzer` case vazio, `CompilerComparisons`,
+    `KofTimeE2ETest`), parametro nao usado do `mergeHostSlice` (#890), overload
+    privada confusa de `Type.isTroolean` renomeada (#907). `kill()` da bridge JS
+    era leak REAL: removia reader/writer do mapa sem `close()` (#918/#919) e o
+    `execute()` carregava um `result` morto (#940) — espelhado no JVM
+    (`JvmRuntimeCore.kof_spawn_kill`, regra 5 paridade). Prova: worktree limpo
+    no tip, compile+test-compile rc=0, classes afetadas + ProcessSpawn/Shell/
+    Troolean/NullableBool/DomainGap/BareCollectionPrimitiveArg verdes (serial,
+    suica).
 
   - **#564 FIXED — `kof deps` can now pull a package from a REAL GitHub Release** (20/09):
     `DepsRegistry` cut each release asset at the first `}` and looked for a `download_url` key

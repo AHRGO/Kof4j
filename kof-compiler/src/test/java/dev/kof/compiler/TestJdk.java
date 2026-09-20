@@ -26,17 +26,6 @@ final class TestJdk {
         return Path.of(System.getProperty("java.home"), "bin", "javac").toString();
     }
 
-    /** Variante não-lançante de {@link #onPath(String)} para call-sites sem
-     *  {@code throws} (ex.: inside ProcessBuilder). Mesmo contrato de miss:
-     *  devolve o nome cru e deixa o processo falhar com a mensagem natural (R6). */
-    static String which(String name) {
-        try {
-            return onPath(name);
-        } catch (java.io.IOException e) {
-            return name;
-        }
-    }
-
     /** Resolve um executável do PATH de forma absoluta (ex.: "sh", "node"). */
     static String onPath(String name) throws IOException {
         String path = System.getenv("PATH");
@@ -47,6 +36,6 @@ final class TestJdk {
                 if (Files.isExecutable(cand)) return cand.toString();
             }
         }
-        return name; // deixa o ProcessBuilder falhar com a mensagem natural (R6)
+        throw new IOException(name + " not found on PATH"); // R6: nunca relativo silencioso
     }
 }

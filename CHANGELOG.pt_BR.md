@@ -167,6 +167,21 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
   - .18 - GAPS-DB F1c (20/09): `orm.migrate(db, name, sql)` é REAL no Native x86-64 — `kof_orm_migrate` espelha o host: DDL da tabela de histórico, `SELECT name = ?` (prepare/bind/step), a sql do usuário pelo executor compartilhado e `INSERT (name, ms)` com `clock_gettime` via syscall cru (mesmo padrão dos spans de observabilidade). A fatia também normalizou o contrato de pilha da stack ORM inteira: todo call para C agora acontece com `rsp % 16 == 0` (a convenção `andq` do emitter reafirmada: entrada `≡0` + `andq` + `subq $56/$88`), `.Lorm_exec` perdeu o `subq $8` acidental e o literal do DDL virou KofString de verdade (`.Lorm_exec` recebe objetos e soma o header de 24 — um `char*` cru fazia o sqlite parsear `ts user (id INTEGER...`). Prova medida: `KofOrmE2ETest` 39/0F (idempotência do migrate + linhas do histórico + paridade do throw de id ruim, JVM==Native byte); suíte 4-módulos 3187/0F/0E no clone isolado.
   - .18 - GAPS-DB DB-2 (20/09): over-gating `kof.db`/`kof.orm` do Android (§278) FECHADO — `KofDb`/`KofOrm.supportedOn` aceitam `ANDROID` ("Android É JVM": o alvo reusa o `JvmBackend`). A prova é paridade por construção: `KofDbE2ETest.androidDbEmitsTheSameBytecodeAsJvm` compila entity+create+count nos dois alvos e afirma `Main.class` byte-idêntico. O pin R6 virou (`androidCompilesDbLikeJvmAndRefusesCryptoWithTheDocumentedCode`: db limpo, `SECN003` ainda recusado). `SECN00x`/`GPU001` seguem abertos — aquelas pilhas não rodam no Android (regra 6). §278 → PARCIAL; matriz + KOFANDROID + tracker 1.1.10 atualizados no mesmo commit (EN+PT).
   - .18 - GAPS-DB F1d (20/09): `orm.create<User>(db)` é REAL no Native x86-64 — nova fatia `RuntimeOrm2`: `kof_orm_create` faz parse byte a byte do literal de schema compilado (`name:dbType[:generated][:unique]`) e reconstrói o DDL exato do host (`"col"` VARCHAR(255)/INTEGER/BOOLEAN/DOUBLE/REAL + UNIQUE, generated → `INTEGER PRIMARY KEY AUTOINCREMENT`) pelo builder compartilhado de KofString; `CREATE IF NOT EXISTS` duas vezes devolve `true` nos dois motores. O pin de ORM001 de compilação migrou para `save` (a face row-object, F2). Prova medida: `KofOrmE2ETest` 40/0F (paridade byte JVM==Native de create, incl. um `select email from user` real provendo que UNIQUE/varchar chegaram); suíte 4-módulos 3188/0F/0E no clone isolado.
+  - .22 - #555 CodeQL (cluster do compilador, 22 alertas): os E2E que disparam `javac`/`java`/
+    `node` como subprocesso montavam o comando com concatenação de string ou nome relativo
+    (`java/concatenated-command-line`, `java/relative-path-command`). Conserto na fonte com o
+    helper `TestJdk` (caminho ABSOLUTO via `Path.of(javaHome, "bin", "java")`, sem `+`;
+    `onPath()` resolve `node` pelo PATH e ERRA honesto se não existe — nunca relativo
+    silencioso). Zera também #887/#889 (KofTimeE2ETest: local morto + @Override), #876
+    (SemanticAnalyzer: caso-`_` no-op removido, `default` já cobre — comportamento idêntico),
+    #890/#908 (parâmetro/local mortos removidos) e #907 (overload privado `isTroolean(
+    NullableType)` renomeado `isTrooleanNullable` — a overload confusa fazia display/describe
+    em :277/:309 resolverem o PRIVADO por tipo estático).
+  - .22 - #555 #918/#919/#940 + paridade JVM: `KofJsProcessBridge.kill()` removia os
+    readers/writers do mapa SEM fechá-los — o pipe do filho ficava vivo nos fds da JVM até o
+    GC (resource-leak REAL, não suprimido: close na face do kill). O espelho JVM
+    (`JvmRuntimeCore.kof_spawn_kill`, template) tinha o MESMO vazamento — corrigido junto
+    (regra 5, paridade por construção). Local morto `result` removido de `execute()` (#940).
   - .18 - GAPS-DB F1a (20/09): `orm.deleteAll<User>(db)` é REAL no Native x86-64 — `kof_orm_delete_all` em asm sobre o stack `kof_db_*` (sqlite; MySQL lanca ORM001 honesto em runtime; id ruim lanca a string exata do host); gate por-função `fnSupportedOn` (todas as outras faces e o cross mantem `ORM001`); fix de link: programa só-ORM agora puxa `-lsqlite3`. Prova medida: `KofOrmE2ETest` 35/0F paridade byte JVM==Native; suíte 4-módulos 3183/0F/0E no clone isolado.
 
   - **X9 fatia 6 — `kof deploy` empacota as faces cross (recusa preventiva DEP001 saiu)**

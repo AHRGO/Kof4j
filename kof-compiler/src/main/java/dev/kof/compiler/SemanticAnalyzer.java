@@ -217,7 +217,6 @@ public class SemanticAnalyzer {
             }
             case EntityDeclarationNode ent -> SemDeclarationAnalyzer.analyzeEntity(this, ent);
             case InterfaceDeclarationNode iface -> SemDeclarationAnalyzer.analyzeInterface(this, iface);
-            case EnumDeclarationNode _ -> { }
             case FunctionDeclarationNode func -> SemDeclarationAnalyzer.analyzeFunction(this, func);
             default -> {}
         }
