@@ -5,7 +5,7 @@
 This is the **mandatory** guide for any AI agent (or human) who
 writes Kof code in this repository. Read it before generating any `.kf`.
 
-**Version:** 0.4.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + rule 9 **docs-first gate** for philosophy-violating issues (#449) (18/09) + **mechanical push via `scripts/sync-push.sh` + conflict policy "preserve both sides, redo yours on top" (19/09)** + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09) + rule 10 **KOF-first, external-second** (`D-KOF-FIRST`, DECIDED 19/09) + rule 11 **Simplicity Law — anything that reaches the language surface** as ABSOLUTE (20/09) + `D-MAKEALIVE`/`D-KOF-AS-CLOUD`/`D-BOOTSTRAP`/`D-DB-GAPS` (20/09); active branch = `beta-0.4.0`)
+**Version:** 0.4.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + rule 9 **docs-first gate** for philosophy-violating issues (#449) (18/09) + **mechanical push via `scripts/sync-push.sh` + conflict policy "preserve both sides, redo yours on top" (19/09)** + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09) + rule 10 **KOF-first, external-second** (`D-KOF-FIRST`, DECIDED 19/09) + rule 11 **Simplicity Law — anything that reaches the language surface** as ABSOLUTE (20/09) + `D-MAKEALIVE`/`D-KOF-AS-CLOUD`/`D-BOOTSTRAP`/`D-DB-GAPS` (20/09); active branch = **`beta-0.5.0`** (`D-BRANCH-0.5.0`, 09/20 — `beta-0.4.0` only for in-flight landings + release prep); see rule 9)
 
 > **PRIORITY No. 1: QUALITY.** Before any feature, read the
 > **Quality gate — "no bug ships"** (§ below), **universal for
@@ -295,7 +295,7 @@ conceptual engineering nor decide architecture/direction. Practical consequences
 9. **Work in the real repo tree on the active branch — NEVER a `/tmp` clone/worktree.**
    This host loses power frequently ("cai a luz"); everything under `/tmp` evaporates and
    in-flight work/commits get lost. Edit directly in the working tree of `/home/mel/Kof4j`
-   on the active branch (`beta-0.4.0` unless the maintainer says otherwise), **commit locally**
+   on the active branch (`beta-0.5.0`, per `D-BRANCH-0.5.0` 09/20, unless the maintainer says otherwise), **commit locally**
    so the work persists on disk immediately, and only then fetch/rebase/push. Do not create
    `/tmp` scratch worktrees to do the actual work. (Made an explicit rule by the maintainer
    09/18 after a `/tmp` worktree holding a verified fix was wiped by a power loss.)

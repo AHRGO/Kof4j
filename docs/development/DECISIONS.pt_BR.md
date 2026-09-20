@@ -2242,3 +2242,25 @@ JVM/JS enquanto isso (esses alvos já têm `kof.db` real).
 sobre os kof_db_* existentes", DB-2 "implementa corretamente… android é
 jvm", DB-3 "B) estender MySQL p/ riscv/aarch", MK-1 "B) completo de uma
 vez".
+
+## D-BRANCH-0.5.0 — trabalho move para `beta-0.5.0`; `beta-0.4.0` fica para pousos em voo + preparo da release (20/09/2026, ordem da mantenedora)
+
+**Ordem (chat 20/09/2026):** "avise os outros agentes, vamos mover todo trabalho
+pra branch beta-0.5.0 e começar a preparar a nova release".
+
+**Decidido:**
+- Nova branch ativa: `beta-0.5.0`, cortada do tip de `beta-0.4.0`. Todo commit
+  novo (código e docs, todas as lanes) entra nela.
+- `beta-0.4.0` ainda recebe o que já está em voo (ex.: WIP §374/#553 da `.22`);
+  cada pouso lá é adiantado (ff) para `beta-0.5.0` pela lane docs, para as duas
+  nunca divergirem em conteúdo.
+- Bump de versão (`<revision>0.4.7-beta</revision>` do `pom.xml` → número novo),
+  corte do CHANGELOG e tag são **itens do preparo de release** — a mantenedora
+  confirma o número no corte (regra 6); ninguém bumpa unilateralmente.
+- A fila do preparo mora em `docs/development/release-beta-0.5.0-prep.pt_BR.md`
+  (+EN).
+
+**Evidência:** ordem da mantenedora 20/09/2026 (chat); linhas de branch ativa do
+`AGENTS.md`(+PT) e este registro no mesmo passo; issues abertas #550/#553/#554
+e o guarda-chuva #555 avisados por comentário; banner no `DOING.md`(+PT) para
+todas as lanes.

@@ -2270,3 +2270,24 @@ already have real `kof.db`).
 **Evidence:** maintainer answers 20/09 — DB-1 "A) kof_orm_* em asm sobre
 os kof_db_* existentes", DB-2 "implementa corretamente… android é jvm",
 DB-3 "B) estender MySQL p/ riscv/aarch", MK-1 "B) completo de uma vez".
+
+## D-BRANCH-0.5.0 — work moves to `beta-0.5.0`; `beta-0.4.0` stays for in-flight landings + release prep (09/20/2026, maintainer order)
+
+**Order (chat 09/20/2026):** "avise os outros agentes, vamos mover todo trabalho
+pra branch beta-0.5.0 e começar a preparar a nova release".
+
+**Decided:**
+- New active branch: `beta-0.5.0`, cut from the tip of `beta-0.4.0`. All new
+  commits (code and docs, every lane) land there.
+- `beta-0.4.0` still receives work already in flight (e.g. §374/#553 WIP of
+  `.22`); every landing there is fast-forwarded into `beta-0.5.0` by the docs
+  lane, so the two branches never diverge in content.
+- Version bump (`pom.xml` `<revision>0.4.7-beta</revision>` → new release
+  number), CHANGELOG cut and tag are **release-prep items** — the maintainer
+  confirms the number at the cut; no unilateral bump by an agent.
+- Release-prep queue lives in
+  `docs/development/release-beta-0.5.0-prep.md` (+ `release-beta-0.5.0-prep.pt_BR.md`).
+
+**Evidence:** maintainer order 09/20/2026 (chat); `AGENTS.md`/`AGENTS.pt_BR.md`
+active-branch lines and this record land in the same pass; open issues
+#550/#553/#554/#555 notified by comment; `DOING.md` banner for all lanes.

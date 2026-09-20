@@ -5,7 +5,7 @@
 Este é o guia **obrigatório** para qualquer agente de IA (ou humano) que
 escreva código Kof neste repositório. Leia antes de gerar qualquer `.kf`.
 
-**Versão:** 0.4.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + regra 9 **portão docs-first** para issues fora da filosofia (#449) (18/09) + **push mecânico via `scripts/sync-push.sh` + política de conflito "preserve os dois lados, refaça o seu em cima" (19/09)** + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09) + regra 10 **KOF-primeiro, externo-depois** (`D-KOF-FIRST`, DECIDED 19/09) + regra 11 **Lei da Simplicidade — tudo que chega à superfície da linguagem** como ABSOLUTO (20/09) + `D-MAKEALIVE`/`D-KOF-AS-CLOUD`/`D-BOOTSTRAP`/`D-DB-GAPS` (20/09); branch ativa = `beta-0.4.0`)
+**Versão:** 0.4.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + regra 9 **portão docs-first** para issues fora da filosofia (#449) (18/09) + **push mecânico via `scripts/sync-push.sh` + política de conflito "preserve os dois lados, refaça o seu em cima" (19/09)** + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09) + regra 10 **KOF-primeiro, externo-depois** (`D-KOF-FIRST`, DECIDED 19/09) + regra 11 **Lei da Simplicidade — tudo que chega à superfície da linguagem** como ABSOLUTO (20/09) + `D-MAKEALIVE`/`D-KOF-AS-CLOUD`/`D-BOOTSTRAP`/`D-DB-GAPS` (20/09); branch ativa = **`beta-0.5.0`** (`D-BRANCH-0.5.0`, 20/09 — `beta-0.4.0` só para pousos em voo + preparo de release); veja a regra 9)
 
 > **PRIORIDADE Nº 1: QUALIDADE.** Antes de qualquer feature, leia o
 > **Portão de qualidade — "nenhum bug sobe"** (§ abaixo), **universal para
@@ -296,7 +296,7 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
 9. **Trabalhe na árvore real do repo, na branch ativa — NUNCA num clone/worktree em `/tmp`.**
    Esta máquina perde energia com frequência ("cai a luz"); tudo em `/tmp` evapora e o
    trabalho/commits em andamento se perdem. Edite direto no working tree de `/home/mel/Kof4j`
-   na branch ativa (`beta-0.4.0`, salvo ordem contrária da mantenedora), **faça commit local**
+   na branch ativa (`beta-0.5.0`, desde `D-BRANCH-0.5.0` (20/09), salvo ordem contrária da mantenedora), **faça commit local**
    pra o trabalho persistir em disco na hora, e só então fetch/rebase/push. Não crie worktree
    de scratch em `/tmp` pro trabalho real. (Regra explícita da mantenedora em 18/09 depois que
    um worktree em `/tmp` com um fix já verificado foi apagado por queda de energia.)
