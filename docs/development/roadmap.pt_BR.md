@@ -1018,7 +1018,7 @@ Fila aberta (toda lane obedece; dono se declara no `DOING.md`):
 | # | Item (ref do doc) | Prova de aceitação |
 |---|---|---|
 | EG-1 | Definir `release-blocker` **mecanicamente** (§11; Q3) | toda issue aberta classificada em exatamente uma de BLOCKS 1.0 / OUTSIDE 1.0 SURFACE / POST-1.0 / NOT A BUG / TRACKING (`tracking/contract`) via label+ledger; script lista violações; teste RED primeiro. **FEITO** `ea5d4dfe` + complemento da 5ª categoria |
-| EG-2 | Implementar o gate mecânico (critérios §10; passos 6–7) | gate falha em fixtures de false-green/false-red plantados; veredito amarrado ao SHA analisado; análise velha não decide commit novo; uso de `CODEQL_GATE_SKIP` vira exceção com causa registrada, e morre |
+| EG-2 | Implementar o gate mecânico (critérios §10; passos 6–7) | gate falha em fixtures de false-green/false-red plantados; veredito amarrado ao SHA analisado; análise velha não decide commit novo; uso de `CODEQL_GATE_SKIP` vira exceção com causa registrada, e morre. **Avaliado 20/09 (proposta §10):** `0d2a019d` fecha 6/8 critérios; abertos = amarração ao SHA + vazio≠indisponível, ambos no `scripts/codeql-gate.sh` (dono: lane security / #563) — coordenar |
 | EG-3 | Validação ANTES/DEPOIS do gate (passo 8) | mesmo SHA medido antes/depois; nenhuma regressão nos pushes das lanes existentes |
 | EG-4 | Pacote real testado **fora do repo** (§12; passo 9) | artefato do layout publicado roda o corpus E2E em diretório limpo (a lição da #550, pinada) |
 | EG-5 | Matriz final de alvos (§13–§14; passo 10) | JVM / x86-64 / riscv64 / aarch64 / JS / Script **/ KofC / Android** verdes na MESMA candidata + paridade byte dos goldens onde o contrato exige; KofC e Android carregam cada um o seu gate (EG-9/EG-10) |

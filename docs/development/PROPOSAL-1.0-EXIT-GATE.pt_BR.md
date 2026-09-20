@@ -364,6 +364,26 @@ Critérios mínimos:
 
 O estado atual de `#555` mostra que esta área ainda precisa de fechamento.
 
+**Status (EG-2, avaliado em 20/09/2026 contra `0d2a019d`):** o
+`scripts/codeql-gate.sh` + `scripts/codeql-baseline.txt` da lane security fecham
+seis dos oito critérios — API fora é INCONCLUSIVO (rc=2, nunca "verde"); sem
+`CODEQL_GATE_SKIP` de rotina (exige motivo, imprime banner, deixa log e é
+ignorado em CI); o falso-verde do `state:null` é tratado (união por branch); o
+baseline carrega dono/data/motivo; e o gate tem regressão automatizada
+(`scripts/tests/codeql-gate-test.sh`, 7 cenários). **Restam duas lacunas de
+confiança**, ambas na frente do `codeql-gate.sh` (residual #563):
+1. **Amarração ao SHA** — o veredito é por ref de branch, nunca pelo SHA
+   analisado; uma análise velha ainda pode decidir um commit novo (critérios
+   1 + 3). A amarração não pode tornar todo push INCONCLUSIVO enquanto a análise
+   pós-push ainda está pendente — o desenho precisa dizer o que o gate faz
+   quando o HEAD é mais novo que a última análise.
+2. **vazio ≠ indisponível** — uma lista de alertas legitimamente vazia é
+   reportada igual a uma indisponibilidade da API (`NAO-AVALIADO` → rc=2); os
+   dois estados não são distinguidos (critério 2).
+O EG-2 segue aberto até as duas serem corrigidas com teste RED-first; o arquivo
+pertence à lane security, então a mudança é coordenada, não tomada de forma
+unilateral.
+
 A solução técnica final do Quality Gate é uma frente própria e não deve ser autorratificada por este documento.
 
 ---
