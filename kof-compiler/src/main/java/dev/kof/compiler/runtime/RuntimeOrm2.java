@@ -74,8 +74,6 @@ public final class RuntimeOrm2 {
                 call .Lorm_bp
                 movq 8(%rsp), %rdi
                 call .Lorm2_qq                  # "table"
-                movl $32, %r8d                  # ' ' — o host emite `"t" (`
-                call .Lorm_bh
                 movl $40, %r8d                  # '('
                 call .Lorm_bh
                 # loop de campos: r12=corpo, r13=fim
@@ -177,12 +175,7 @@ public final class RuntimeOrm2 {
                 cmpb $44, (%r12)
                 je .Lorm2_commaField
                 incq %r12                       # consome ':'
-                movq %r12, %r8                  # palavra comeca AQUI (bug
-                                                #   medido 20/09: ia p/ .Lorm2_
-                                                #   tok e badtok comia a flag
-                                                #   letra a letra — generated/
-                                                #   unique nunca casavam)
-                jmp .Lorm2_tscan
+                jmp .Lorm2_tok
             .Lorm2_badtok:
                 incq %r12
                 jmp .Lorm2_tok_next

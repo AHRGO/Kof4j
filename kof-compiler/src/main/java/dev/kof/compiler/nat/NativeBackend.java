@@ -297,10 +297,6 @@ public class NativeBackend implements Backend {
         if (usesOrm) {
             dev.kof.compiler.runtime.RuntimeOrm1.emit(sb);
             dev.kof.compiler.runtime.RuntimeOrm2.emit(sb);
-            StringBuilder o3 = new StringBuilder();
-            dev.kof.compiler.runtime.RuntimeOrm3.emit(o3);
-            sb.append(o3.toString().replace("@@MAGIC@@",
-                    dev.kof.compiler.runtime.RuntimeErasureBox.MAGIC));
         }
         if (usesHttp) {
             NativeHttpRuntime.emitHttpFunctions(sb);

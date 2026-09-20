@@ -75,8 +75,7 @@ public final class KofJsRunner {
             Source source = Source.newBuilder("js", moduleFile.toFile())
                     .mimeType("application/javascript+module")
                     .build();
-            context.eval(source);
-            KofJsAsyncPump.drainActiveTasks(context);
+            KofJsAsyncPump.drainActiveTasks(context, context.eval(source));
             if (openWindow) {
                 Value uiRoot = context.getBindings("js").getMember("kof__uiRootHtml");
                 if (uiRoot != null && uiRoot.isString()) {
@@ -142,8 +141,7 @@ public final class KofJsRunner {
             Source source = Source.newBuilder("js", moduleFile.toFile())
                     .mimeType("application/javascript+module")
                     .build();
-            context.eval(source);
-            KofJsAsyncPump.drainActiveTasks(context);
+            KofJsAsyncPump.drainActiveTasks(context, context.eval(source));
             Value html = context.getBindings("js").getMember("kof__uiRootHtml");
             return html.isString() && !html.asString().isEmpty() ? html.asString() : null;
         } catch (Exception e) {

@@ -25,6 +25,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     emite `new` + `<init>` com o descritor REAL do classpath. Prova:
     `ExternalClasspathE2ETest` 9/9 (RED-first; caso do relator + negativo R6) e
     vizinhança 101/0F. Defeito (ii) do #566 (`1.0-blocks`).
+  - **known-bugs §387 CORRIGIDO — o pump JS do host declarava quietude com a
+    promise do top-level-await do módulo ainda pendurada** (20/09, `.18`): um
+    `async main` pendurado num `await` simples (sem sleeper registrado ainda —
+    a janela que o makealive-3.3 abriu ao assíncronizar o dispatch do job)
+    devolvia rc=0 com stdout VAZIO, a classe silenciosa §255; deterministic
+    1/1 no método isolado. Fix em `KofJsAsyncPump`: quietude exige TAMBÉM o
+    promise do módulo settled (callback host via `then`; namespaces sem TLA
+    seguem settled, rejects do guest continuam estourando no eval — medido);
+    30s de starvation sem timer vira falha ALTA, nunca rc=0 vazio. Prova:
+    `retryFacesBothOutcomes` GREEN 6,9s, bateria 132/0F/0E (workflow/KofJS/
+    Makealive/async/sleep/cron/timer/io).
   - **known-bugs §382 CORRIGIDO — o host JS devolvia as faces BOOL do kof.io
   - **#566 — pacotes publicados com `kof deploy --publish` agora são consumidos como módulos-FONTE**
     (opção (b), decisão da mantenedora 20/09, adendo do `D-RELEASE-0.5.0-GATE`; sem mudança de

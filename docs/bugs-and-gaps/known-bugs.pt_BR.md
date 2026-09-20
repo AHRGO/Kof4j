@@ -11189,7 +11189,19 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 ## §387 — WorkflowE2ETest.retryFacesBothOutcomes: JS produz stdout VAZIO com rc=0 (pump cooperativo regresso do makealive 3.3)
 
 - **GitHub:** — · commits: introduzido por `9c0afc5c` (makealive-3.3, lane `.18`); verde no CI em `1ac23de9` (bisect: único commit entre o CI verde e o tip que toca o pump; vermelho reproduzido identico em `ea5d4dfe` e `9c0afc5c`, base sem nenhuma mudanca de outras lanes)
-- **Estado:** 🔴 ABERTO (owner = lane makealive/`.18` — NAO e da lane compilador; registrado por `sessao-issue-lane` ao varrer o gate de push da #555 em 20/09 ~19:0x)
+- **Estado:** ✅ FEITO 20/09 (`.18`, fix no pump do host família §132; bloco abaixo)
+- **Corrigido 20/09 (`.18`):** RAIZ — o pump do host (`KofJsAsyncPump.drainActiveTasks`) só
+  olhava timers/`kofActiveTasks`; um `async main` pendurado num `await` SEM sleeper
+  registrado (a janela entre o primeiro `await` de `run()` e o primeiro `time.sleep`, aberta
+  pelo makealive-3.3 ao tornar o dispatch do job async) fazia o host retornar na hora com a
+  promise do módulo (TLA) pendurada — rc=0, stdout vazio (classe silenciosa §255). Fix: o
+  runner passa o `Value` do módulo ao pump; quietude exige TAMBÉM o promise do módulo
+  settled — callback host via `then` (módulo sem TLA = namespace sem `then` = settled ✓;
+  reject do guest segue estourando no `eval` — medido, nada engolido); 30s de starvation
+  sem timer nem promise pendente viram `IllegalStateException` ALTA (rc≠0), nunca rc=0
+  vazio. Prova: método único deterministic-vermelho antes (1/1), GREEN 6,9s depois; bateria
+  132/0F/0E (Workflow 23 + KofJsE2ETest 40 + Makealive* + *Async*/*Sleep*/*Cron*/
+  *Schedul*/*Timer* + Shell/Process/File/Io/Bool); suíte completa no candidate = commit.
 - **Sintoma:** `mvn -o -pl kof-compiler -am test -Dtest='WorkflowE2ETest#retryFacesBothOutcomes'` falha em `assertJvmJsParity:86` com `expected: <ok=flaky failed=boom...> but was: <>` — o lado JVM imprime o golden completo, o lado JS (`node Default.mjs` via `KofJsRunner`) retorna **rc=0 com zero bytes de stdout**. `js.ok()` passa; so a igualdade de saida pega.
 - **Rca provavel:** `flow.retry(flaky, 2, exponential(1, 2))` agenda backoffs no pump JS cooperativo (§132); apos o makealive 3.3 (`scheduler.every` virou laco real `spawn`+`tick`) o `run()` resolve antes dos timers de 1/2 ms queimarem — o processo drena a microtask queue e EXITA sem imprimir o report (mesma assinatura da licao gravada pela propria lane no CHANGELOG: "golden deve ESPERAR com UM sleep longo; polling curto competia e morria silente rc=0"). O workflow JS precisa do mesmo tratamento: ou o `Report` espera os retry-timers no pump, ou o golden ganha espera explicita.
 - **Repro minimo:** o proprio teste (deterministico na maquina compartilhada; visto 1/1 na base `9c0afc5c`, `ea5d4dfe` e 2/2 no tip `9c88d590`).
@@ -11282,3 +11294,21 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Fix (na raiz, dois lados):** (1) `TopLevelCallTyper.infer` ganha `externalConstructorType` — sem receiver, o nome resolvido por imports (`qualifyViaImports` + `sa.isExternal`) com `<init>` de aridade casada registra o `<init>` real e devolve o `ClassType` externo (zero SEM015); (2) `ExpressionBareCallLowerer` ganha o ramo espelho do `allClasses` que emite `KofNewObject`+`Dup`+args+`KofCall <init>` com o descritor REAL do classpath. Classe do módulo/`new`/estático intocados.
 - **Prova (RED-first):** `ExternalClasspathE2ETest` 9/9 — o novo caso `implicitConstructorOnExternalClassFromJarCompilesAndRuns` era RED (`Undefined function: 'Greeter'`) antes do fix; o caso do relator `implicitConstructorWithArgsAndInstanceCallOnExternalClass` (`Greeter("producer").greet("consumer")` → `hi consumer from producer`) prova o `<init>` COM argumentos + método de instância encadeado; o negativo `implicitConstructorOnUnknownExternalClassStillFailsNotSilent` (R6) mantém SEM015 para nome fora dos entries. Vizinhança 101/0F (`ConstructorArgType`/`ConstructorPhantom`/`TopLevelCallTyper`/`TopLevelOverload`/`UserClassShadowsBuiltin`/`ClassNameInstanceCall`/`JdkInteropCall`/`WrapperStaticCalls`/`SemanticResolution`/`RecordImplements`/`CompilerImportsNullDiagnostics`).
 - **Relacionado:** #566 (pergunta de contrato-mãe; defeito (ii)), §134 (external classpath), #567/#569 (irmãos), D-KOF-FIRST (contrato interno antes do externo).
+
+## §392 — tip `beta-0.5.0` (9884b4a0) carrega KofOrmE2ETest VERMELHO 2/41: `createNativeEndToEndMatchesJvm` + `countWhereNativeEndToEndMatchesJvm` — `Native deve compilar <face>` (diags severity=ERROR em `NativeMain.kf`): F3a/F2a pousaram o lado do SUPPORTED-set/typer, o lado da compilação do runtime nativo não passa numa árvore limpa — 🔴 ABERTO 20/09 (achado pela `.18` rodando a suíte completa do §387; VERMELHO-DE-BASE PROVADO com o fix do pump em stash — 2/2F idênticos sem nenhum diff estranho; roteado para a lane gaps-db/.22)
+
+- **Medido (20/09, wt387 @`9884b4a0`, zero arquivos estranhos):** `mvn -o test
+  -pl kof-compiler -am -Dtest='KofOrmE2ETest'` → `Tests run: 41, Failures: 2`
+  (os mesmos 2F COM e SEM o fix do pump do §387 — isolamento provado por
+  stash). Números verdes da worktree compartilhada significam que as peças do
+  runtime nativo estão presentes LOCALMENTE, não commitadas (a família
+  árvore-suja §384/§389 de novo).
+- **Por que não se conserta aqui:** os arquivos são `KofOrm.java`,
+  `NativeBackend.java`, `RuntimeOrm2/3.java` (WIP da outra lane; regra 8: não
+  tocar trabalho inacabado alheio — o §389 é exatamente esta forma).
+- **Rota:** gaps-db/.22 — terminar de pousar as faces nativas (RuntimeOrm3
+  `count_where`/`create` no caminho de compilação + recursos) ou reabrir os
+  flags de suporte F3a/F2a até isso; então flipar este entry e o CI volta
+  verde nas condições 4/7 do gate de release.
+- **Relacionado:** §389 (mesma forma, fechada pela dona), a5d87fa7/e3e98d78
+  (linhagem F), §384 (verdade da árvore suja).

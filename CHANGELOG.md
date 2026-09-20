@@ -25,6 +25,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     emits `new` + `<init>` with the REAL classpath descriptor. Proof:
     `ExternalClasspathE2ETest` 9/9 (RED-first; reporter case + R6 negative) and
     101/0F neighbors. Defect (ii) of #566 (`1.0-blocks`).
+  - **known-bugs §387 FIXED — the JS host-pump declared quiescence while the
+    module's top-level-await promise was still pending** (20/09, `.18`): an
+    `async main` suspended on a plain await (no sleeper registered yet — the
+    window makealive-3.3 opened by async-ifying job dispatch) returned rc=0
+    with EMPTY stdout, the silent §255 class; deterministic 1/1 in isolation.
+    Fix in `KofJsAsyncPump`: quiescence now ALSO requires the module promise
+    settled (host `then` callback; non-TLA namespaces stay settled, guest
+    rejects still explode at eval — measured); 30s timer-less starvation fails
+    LOUD instead of exiting empty. Proof: `retryFacesBothOutcomes` GREEN 6.9s,
+    battery 132/0F/0E (workflow/KofJS/Makealive/async/sleep/cron/timer/io).
   - **known-bugs §382 FIXED — the JS host returned the BOOL faces of kof.io as
   - **#566 — packages published with `kof deploy --publish` are now consumed as SOURCE modules**
     (option (b), maintainer decision 20/09, `D-RELEASE-0.5.0-GATE` addendum; no syntax or
