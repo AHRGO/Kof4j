@@ -20,7 +20,7 @@ migrations) + **MongoDB**; native SQLite via `libsqlite3.so.0` directly
 (real E2E roundtrip); native MySQL/MariaDB via wire protocol in progress
 (auth scramble SHA-1 `kof_db_mysql_scramble` + `lenenc` + parse `user:pass@`
 done; full handshake/query/prepared pending); `VERSION` 0.5.0-beta;
-build 2218 tests.
+build 3225 tests.
 
 ---
 

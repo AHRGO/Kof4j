@@ -2,29 +2,30 @@
 
 # Development — backlog vivo (só trabalho em desenvolvimento)
 
-> **Base:** `0.5.0-beta` · branch `beta-0.4.0` · **atualizado:** 16/09/2026
-> **Suíte medida neste HEAD:** `2218` run (1911 kof-compiler + 38 kof-script
-> + 7 kof-c-compiler + 262 kof-cli), **0 regressões / 0 erros / 0 falhas nesta corrida**, 192 skip (a única falha que a suíte já mostrou é o flake INTERMITENTE conhecido do §252 nativo `spawnWorkerThrowPropagatesThroughSelectAnyNative`, dona lane nativa `.18`/nat — não é regressão; re-medido 16/09 ~15:54 no tip `9572949f` a partir de um CLONE LIMPO; o flake ficou CALADO pela 3ª vez seguida — disparou 09:44, calou 11:38/15:09/15:54 → ~1/4) (sem
-> qemu no host da medição: os 84 cross são pulados, + os 5 DBs externos +
-> outros guardas de toolchain; `node` presente — todos os `*Js` verdes) —
-> os 262 kof-cli refletem `e5013152` (DepsTransitiveTest, +10; `2a60b426` reescreveu o guard, mesmos 10 @Test). 1911 compiler = 1899 + 3 (`78b733fa` NumericFormatterE2ETest) + 2 (`7b38d0d4` §253-face-A KofTimeE2ETest) + 3 (`7cd69a7b` SSE-JS KofWebJsE2ETest) + 1 (`4ea099b3` §261 window-bind KofJsBrowserE2ETest) + 3 (`92d11a03` G-6b NativeX86GcMarkScopeTest); +1 skip no KofDbE2ETest = o guard de sysroot do §255 (`06e77e94`). O número 2199/1902/252 foi uma contagem no meio do caminho (medida enquanto `555d2afe`/`e5013152` landavam); 16/09 ~15:54 é o nº autoritativo do clone limpo. A leitura de 16/09 ~01:45 deu 297 erros = o trap de stub ECJ velho do §257, limpo com `mvn -pl kof-runtime clean`. O número
-> anterior (1662/13-erros, 13/09) era de host sem node. **Nº autoritativo da suíte = a execução no host** (o gate
-> `mvn test ... -Dmaven.test.failure.ignore=true`; conferir por módulo com
-> `grep -rl FAILURE */target/surefire-reports/*.txt`), não esta linha — ela
-> apodrece a cada commit. Refold da concatenação do `NativeRiscvAsm` para
-> `<clinit>` (anti-pattern novo `constant-folded-runtime-asm.md`) verde no
-> gate `gate1585.log` (HEAD 54da1325).
+> **Base:** `0.5.0-beta` · branch `beta-0.5.0` · **atualizado:** 20/09/2026
+> **Suíte medida neste HEAD:** `3225` run (2762 kof-compiler + 50 kof-script
+> + 7 kof-c-compiler + 406 kof-cli), **0 falhas / 0 erros**, 221 skip (cross
+> roda no job dedicado com qemu; o resto são guardas de toolchain/DB externo +
+> sysroot §255) — job CI Build+Tests do tip `404d8be6` em 20/09 ~18:14: o
+> **primeiro verde na `beta-0.5.0`**, reator `Kof 0.5.0-beta`. O flake §252, o
+> residual cross §181 e o §256(b) seguem fechados no código (`20495e48` /
+> `c56c74a7` / `3a593734`). **Nº autoritativo da suíte = o job CI no SHA
+> pushado** (o gate `mvn test ... -Dmaven.test.failure.ignore=true`; conferir
+> por módulo com `grep -rl FAILURE */target/surefire-reports/*.txt`), não esta
+> linha — ela apodrece a cada commit. Refold da concatenação
+> `NativeRiscvAsm` para `<clinit>` (novo anti-pattern
+> `constant-folded-runtime-asm.md`) verde no gate `gate1585.log` (HEAD 54da1325).
 > **Regra dos 3 estados (`AGENTS.md`):** `docs/` = implementado/decidido ·
 > `development/` = **trabalho técnico pendente** · `development/future/` =
-> **só plano, zero código**. Concluiu → move p/ submódulo de `docs/` no mesmo
-> commit; iniciou → cai p/ cá. A varredura de 12/09 (`655afa6b`) moveu 13 docs
-> de `future/` p/ cá (todos com código) e 4 concluídos p/ `docs/`.
+> **só plano, zero código**. Concluído → move para um submódulo de `docs/` no
+> mesmo commit; iniciado → cai aqui. A varredura de 12/09 (`655afa6b`) moveu 13
+> docs de `future/` para cá (todos com código) e 4 concluídos para `docs/`.
 > **Refactor de clareza 13/09 (mantenedora):** bugs/gaps/matrizes →
 > `docs/bugs-and-gaps/` (linhas 2, 41, §2, §3, §4.2, §5); planos **parados por
 > decisão** foram **ratificados 13/09 e consolidados em `DECISIONS.md`** (a
 > pasta `decision-pending/` foi extinta — ver §3). Este README lista o que
-> **anda**; decisão tomada mora em `DECISIONS.md` (regra 6: frente sem linha
-> lá não é atacada).
+> **anda**; uma decisão tomada vive em `DECISIONS.md` (regra 6: uma frente sem
+> linha ali não é atacada).
 
 **Fontes de verdade que NÃO estão aqui (não são backlog):** `docs/status.md`
 (o que funciona + gate da suíte), `docs/backend-parity.md` (matriz de

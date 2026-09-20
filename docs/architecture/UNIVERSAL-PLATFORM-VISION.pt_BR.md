@@ -11,7 +11,7 @@ table, semantic, type checking), Kof IR backend-agnóstica, 7 targets
 (jvm estável, native x86_64 estável, native.risc/native.arm toolchain+qemu,
 js alpha GraalJS, kofc native-only, android Fases 1–4), stdlib como **tabelas de
 dispatch em compile-time** com gaps diagnosticados, FFI real (SQLite `.so`
-direto, FFM Vulkan compute, interop Java + GraalJS), `mvn test` 2411
+direto, FFM Vulkan compute, interop Java + GraalJS), `mvn test` 3225
 (17/09/2026 — ver `AGENTS.md` §"Loop de verificação" para a contagem viva).
 
 > **Regra deste documento:** este é o **companion de visão/arquitetura** de

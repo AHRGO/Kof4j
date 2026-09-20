@@ -2,15 +2,16 @@
 
 # Development — living backlog (only work in development)
 
-> **Base:** `0.5.0-beta` · branch `beta-0.4.0` · **updated:** 16/09/2026
-> **Suite measured at this HEAD:** `2218` run (1911 kof-compiler + 38 kof-script
-> + 7 kof-c-compiler + 262 kof-cli), **0 regressions / 0 errors / 0 failures in this run**, 192 skip (the only failure the suite ever shows is the known INTERMITTENT §252 native flake `spawnWorkerThrowPropagatesThroughSelectAnyNative`, owner native lane `.18`/nat — not a regression; re-measured 16/09 ~15:54 on tip `9572949f` from a CLEAN clone; the flake stayed SILENT a 3rd straight time — fired 09:44, silent 11:38/15:09/15:54 → ~1/4)
-> (no qemu on the measuring host: the 84 cross are skipped, + the 5 external DBs
-> + other toolchain guards; `node` present — all `*Js` green) — measured
-> the 262 kof-cli reflects `e5013152` (DepsTransitiveTest, +10; `2a60b426` rewrote the guard, same 10 @Test). 1911 compiler = 1899 + 3 (`78b733fa` NumericFormatterE2ETest) + 2 (`7b38d0d4` §253-face-A KofTimeE2ETest) + 3 (`7cd69a7b` SSE-JS KofWebJsE2ETest) + 1 (`4ea099b3` §261 window-bind KofJsBrowserE2ETest) + 3 (`92d11a03` G-6b NativeX86GcMarkScopeTest); +1 skip in KofDbE2ETest = the §255 sysroot guard (`06e77e94`). The 2199/1902/252 figure was a mid-flight miscount (measured while `555d2afe`/`e5013152` were landing); 16/09 ~15:54 is the clean-clone authoritative number (re-measures at 11:38 and 15:09 kept the flake silent). Earlier 16/09 ~01:45 read showed 297 errors = the §257 stale-ECJ-stub trap, cleared by `mvn -pl kof-runtime clean`.
-> The previous number (1662/13-errors, 13/09) was a node-less host. **Authoritative suite number = the run on the host** (the gate
-> `mvn test ... -Dmaven.test.failure.ignore=true`; check per module with
-> `grep -rl FAILURE */target/surefire-reports/*.txt`), not this line — it
+> **Base:** `0.5.0-beta` · branch `beta-0.5.0` · **updated:** 20/09/2026
+> **Suite measured at this HEAD:** `3225` run (2762 kof-compiler + 50 kof-script
+> + 7 kof-c-compiler + 406 kof-cli), **0 failures / 0 errors**, 221 skip (cross
+> runs in the dedicated qemu job; the rest external-DB/toolchain guards + §255
+> sysroot) — CI Build+Tests job of tip `404d8be6` on 20/09 ~18:14: the **first
+> green on `beta-0.5.0`**, reactor `Kof 0.5.0-beta`. The §252 flake, the §181
+> cross residual and §256(b) stay closed at code (`20495e48` / `c56c74a7` /
+> `3a593734`). **Authoritative suite number = the CI job on the pushed SHA**
+> (the gate `mvn test ... -Dmaven.test.failure.ignore=true`; check per module
+> with `grep -rl FAILURE */target/surefire-reports/*.txt`), not this line — it
 > rots with every commit. Refold of the `NativeRiscvAsm` concatenation to
 > `<clinit>` (new anti-pattern `constant-folded-runtime-asm.md`) green in the
 > `gate1585.log` gate (HEAD 54da1325).

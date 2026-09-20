@@ -11,7 +11,7 @@ table, semantic, type checking), backend-agnostic Kof IR, 7 targets
 (jvm stable, native x86_64 stable, native.risc/native.arm toolchain+qemu,
 js alpha GraalJS, kofc native-only, android Phases 1–4), stdlib as **compile-time
 dispatch tables** with diagnosed gaps, real FFI (SQLite `.so`
-direct, FFM Vulkan compute, Java + GraalJS interop), `mvn test` 2411
+direct, FFM Vulkan compute, Java + GraalJS interop), `mvn test` 3225
 (17/09/2026 — see `AGENTS.md` §"Verification loop" for the live count).
 
 > **Rule of this document:** this is the **vision/architecture companion**

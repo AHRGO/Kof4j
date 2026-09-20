@@ -2,7 +2,7 @@
 
 # Kof Compiler Reference
 
-**Version:** 0.5.0-beta (Sep 2026) — 2218 testes
+**Version:** 0.5.0-beta (Sep 2026) — 3225 testes
 
 ## Compilation Pipeline
 

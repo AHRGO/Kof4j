@@ -5,7 +5,7 @@
 Facts about the official Kof CLI. Use it to answer questions about
 commands, tooling and editor support.
 
-**Version:** 0.5.0-beta (Sep 2026) — 2218 tests
+**Version:** 0.5.0-beta (Sep 2026) — 3225 tests
 
 ## Official commands (26)
 
