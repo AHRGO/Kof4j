@@ -114,7 +114,7 @@
 | `switch` as expression `case X -> v` (SYN001) | ✅ | ✅ (x86_64/riscv64/aarch64) | ✅ (nested ternaries) | 03/09 — `default` required or enum exhaustiveness (`SEM032`); `KofSwitchExprE2ETest` 19 + riscv64/aarch64 14/14 |
 | `String?` basic null safety | ✅ | ✅ | ✅ | 0.2.6-beta (`Type?`) |
 | `Troolean` three-state logic (Kleene; `Bool` never nullable — `Bool?` → `SEM095`) | ✅ | ✅ (x86_64; cross via desugar front-end, CI guard) | ✅ | 0.4.0-beta — D-TROOL 19/09, `TrooleanLawE2ETest` |
-| nullable-primitive FIELD write (`b.n = 42` em `Int?/Long?/...`) — #278/§361 | ✅ (`e293c4a5`; face `Char?` morre — addendum §361) | ⚠️ Int/Long/Double/composto ✅; escrita `Char?` → cast error na leitura | ✅ escrita; ⚠️ leitura nunca-escrita = `0` (devia `null`) — §365 | §361 PARTIAL + §365; Script morre junto do JVM na face char (launcher mascara — regra 12/09) |
+| nullable-primitive FIELD write (`b.n = 42` em `Int?/Long?/...`) — #278/§361 | ✅ (`e293c4a5`; face `Char?` morre — addendum §361) | ⚠️ Int/Long/Double/composto ✅; escrita `Char?` → cast error na leitura | ✅ escrita (`0aa6a307`); ✅ leitura nunca-escrita = `null` (era `0` — §365 fix `JsClassEmitter.insertFieldDefaults`+`KofInterpreterMembers.defaultValue`; matriz 4-alvos `NullablePrimitiveFieldWriterE2ETest` 9/9 matrix361c) | §361 PARTIAL (char face String-literal ainda deve RED); §365 FECHADO 20/09 |
 | `List map/filter/reduce` | ✅ | ✅ | ✅ | 0.2.6-beta |
 | `Box<T>` generic | ✅ | ✅ | ✅ | `substituteTypeVariable` |
 | `KofScript` top-level `var`/`val` → `KofScriptGlobals` (direct execution via `KofInterpreter`) | ✅ | ✅ | ✅ | `KofScript` 0.3.0 |

@@ -2,6 +2,7 @@ package dev.kof.compiler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -71,11 +72,78 @@ class NullablePrimitiveFieldWriterE2ETest {
         }
     }
 
+    private String runScript(Path tempDir, String source, String expected) throws IOException {
+        Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, source);
+        try {
+            KofInterpreter.Result r = driver.interpret(List.of(file), tempDir, new String[0]);
+            return assertTarget("SCRIPT", r.exitCode(), r.stdout().replace("\r\n", "\n").trim(), expected);
+        } catch (KofInterpretException e) {
+            fail("SCRIPT frontend error: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private String runJs(Path tempDir, String source, String expected) throws IOException {
+        Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, source);
+        Path outDir = tempDir.resolve("js-" + System.nanoTime());
+        CompilationResult result = driver.compile(file, outDir, Target.JS);
+        assertTrue(result.success(), "JS compile failed: " + result.diagnostics().getDiagnostics());
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int ec = dev.kof.runtime.KofJsRunner.run(outDir.resolve("Default.mjs"), out,
+                (java.io.InputStream) new java.io.ByteArrayInputStream(new byte[0]), out);
+        return assertTarget("JS", ec, out.toString().replace("\r\n", "\n").trim(), expected);
+    }
+
+    private String assertTarget(String target, int ec, String output, String expected) {
+        assertEquals(0, ec, target + " exit code, output: " + output);
+        assertEquals(expected, output, target + " output");
+        return output;
+    }
+
+    private void runAll3(Path tempDir, String source, String expected) throws IOException {
+        runJvm(tempDir, source, expected);
+        runScript(tempDir, source, expected);
+        runJs(tempDir, source, expected);
+        runNativeX86(tempDir, source, expected);
+    }
+
+    /**
+     * Face Native x86-64 do §361: o SIGSEGV original era AQUI (slot boxed lido
+     * como ponteiro sobre inteiro cru). `as`/`ld` ausentes = skip honesto via
+     * assume (Q5), nunca falacia; o golden igual fecha a matriz 4-alvos.
+     */
+    private String runNativeX86(Path tempDir, String source, String expected) throws IOException {
+        boolean toolchain = new java.io.File("/usr/bin/as").canExecute()
+                && new java.io.File("/usr/bin/ld").canExecute();
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                System.getProperty("os.name").toLowerCase().contains("linux") && toolchain,
+                "Native x86 requer Linux + as/ld");
+        Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, source);
+        Path outDir = tempDir.resolve("nat-" + System.nanoTime());
+        CompilationResult result = driver.compile(file, outDir, Target.NATIVE);
+        assertTrue(result.success(), "NATIVE compile failed: " + result.diagnostics().getDiagnostics());
+        try {
+            Process p = new ProcessBuilder(outDir.resolve("Default").resolve("Main").toString())
+                    .redirectErrorStream(true).start();
+            String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n").trim();
+            int ec = p.waitFor();
+            assertEquals(0, ec, "NATIVE run falhou (exit " + ec + "): " + output);
+            assertEquals(expected, output, "NATIVE golden");
+            return output;
+        } catch (InterruptedException e) {
+            throw new IOException("interrupted", e);
+        }
+    }
+
     private static final String BOX = "class Box { Int? n }\n";
 
     @Test
     void intNullableFieldWriteRead(@TempDir Path tempDir) throws IOException {
-        runJvm(tempDir, BOX + """
+        runAll3(tempDir, BOX + """
             main() {
                 var b = Box()
                 b.n = 42
@@ -86,7 +154,7 @@ class NullablePrimitiveFieldWriterE2ETest {
 
     @Test
     void longNullableFieldWriteRead(@TempDir Path tempDir) throws IOException {
-        runJvm(tempDir, "class Box { Long? n }\n" + """
+        runAll3(tempDir, "class Box { Long? n }\n" + """
             main() {
                 var b = Box()
                 b.n = 7
@@ -97,7 +165,7 @@ class NullablePrimitiveFieldWriterE2ETest {
 
     @Test
     void doubleNullableFieldWriteRead(@TempDir Path tempDir) throws IOException {
-        runJvm(tempDir, "class Box { Double? v }\n" + """
+        runAll3(tempDir, "class Box { Double? v }\n" + """
             main() {
                 var b = Box()
                 b.v = 2.5
@@ -108,7 +176,7 @@ class NullablePrimitiveFieldWriterE2ETest {
 
     @Test
     void charNullableFieldWriteRead(@TempDir Path tempDir) throws IOException {
-        runJvm(tempDir, "class Box { Char? c }\n" + """
+        runAll3(tempDir, "class Box { Char? c }\n" + """
             main() {
                 var b = Box()
                 b.c = 'x'
@@ -119,7 +187,7 @@ class NullablePrimitiveFieldWriterE2ETest {
 
     @Test
     void compoundPlusEqualsOnNullableField(@TempDir Path tempDir) throws IOException {
-        runJvm(tempDir, BOX + """
+        runAll3(tempDir, BOX + """
             main() {
                 var b = Box()
                 b.n = 40
@@ -131,7 +199,7 @@ class NullablePrimitiveFieldWriterE2ETest {
 
     @Test
     void staticNullableFieldWriteRead(@TempDir Path tempDir) throws IOException {
-        runJvm(tempDir, "class Holder { static Int? n }\n" + """
+        runAll3(tempDir, "class Holder { static Int? n }\n" + """
             main() {
                 Holder.n = 9
                 println(Holder.n)
@@ -141,7 +209,7 @@ class NullablePrimitiveFieldWriterE2ETest {
 
     @Test
     void controlPlainIntFieldStillWorks(@TempDir Path tempDir) throws IOException {
-        runJvm(tempDir, "class Box { Int n }\n" + """
+        runAll3(tempDir, "class Box { Int n }\n" + """
             main() {
                 var b = Box()
                 b.n = 42
@@ -152,7 +220,7 @@ class NullablePrimitiveFieldWriterE2ETest {
 
     @Test
     void controlNeverWrittenNullableFieldReadsNull(@TempDir Path tempDir) throws IOException {
-        runJvm(tempDir, BOX + """
+        runAll3(tempDir, BOX + """
             main() {
                 var b = Box()
                 println(b.n)

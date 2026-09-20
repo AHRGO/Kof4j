@@ -169,7 +169,16 @@ public final class JsTypeMapper {
     }
 
     static JsIr.JsExpression defaultForType(Type type) {
+        // §365 (D-NULL-INTENT): o `NullableType` desembrulhado aqui dava ao
+        // campo Int? nunca-escrito (e ao map-miss de Map<K,Int?>) o 0 cru do
+        // slot numerico — JVM/Native dao null na mesma face. Nullable e
+        // referencia boxed no JS: default null, nao 0.
+        if (type instanceof Type.NullableType) {
+            return new JsIr.JsNull();
+        }
         Type t = type instanceof Type.NullableType nt ? nt.inner() : type;
+        // (guard §365 acima ja intercepta Nullable; o unwrap abaixo so ve
+        // primitivos NAO-nullable — mantido p/ call-sites de colecao com T cru)
         if (t instanceof Type.PrimitiveType pt) {
             return switch (Type.canonicalPrimitiveName(pt.name())) {
                 // §127: Bool → false (não 0). Field-default de Bool sem

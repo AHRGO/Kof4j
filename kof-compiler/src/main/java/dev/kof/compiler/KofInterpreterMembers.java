@@ -184,6 +184,12 @@ public final class KofInterpreterMembers {
     }
 
     static Object defaultValue(Type t) {
+        // §365 (D-NULL-INTENT): `isPrimitiveType` DESEMBRULHA NullableType —
+        // sem o guard, campo Int? nunca-escito lia 0 (o slot boxed do JVM/Native
+        // e null). Nullable-primitivo so nao-nullable carrega o default 0/false.
+        if (t instanceof Type.NullableType) {
+            return null;
+        }
         if (JvmOpCollections.isPrimitiveType(t)) {
             String n = Type.canonicalPrimitiveName(
                     t instanceof Type.PrimitiveType pt ? pt.name() : "");
