@@ -140,7 +140,7 @@ fatia db do host deve ser gateada por alvo exatamente como `workflow-ckpt-host.k
   mantenedora respondeu Q1–Q4 (§6, `DECISIONS.md` §D-MAKEALIVE:
   `kof.makealive` / providers genéricos completos / kof.db dia-1 / flat+EN).
   Frente aberta.
-- **3.1 [core]** 🔵 dono `.18` — **fatia COMPLETA (MK-1, enquete 20/09 — não
+- **3.1 [core]** ✅ 20/09 dono `.18` — **fatia COMPLETA (MK-1, enquete 20/09 — não
   um fragmento só-núcleo)**: injetor de namespace virtual (`CompilerMakealive`) +
   `makealive-host.kf` + linha no ledger (camada conforme Q1) + os providers
   REST/CLI genéricos (3.5 dobrado aqui) + a face de estado `kof.db` (3.4
@@ -149,6 +149,11 @@ fatia db do host deve ser gateada por alvo exatamente como `workflow-ckpt-host.k
   JVM==JS, pin de compilação Native, as guardas do §3). Os goldens de kof.db
   rodam onde `kof.db` é real (JVM/JS); o estado no Native espera D-DB-GAPS e
   falha com `DB001`/`ORM001` honestos, nunca silente (R6).
+  **POUSOU 20/09 — MK-1 completo:** core `9e8be985`+`f5256f8f` (→ origin
+  `3be16f88`), face de estado db `c2850373`, provedor fs `4ee3a5c9`(0.4.0)/`f62206e0`(0.5.0),
+  provedores CLI+REST `13b44c6c`, docs stdlib `docs/stdlib/makealive.md` EN+PT; bateria Makealive
+  20/20 no tip (paridade byte JVM==JS incl. goldens cross-engine de mundo compartilhado).
+  🔵 próximo nesta fila: **3.3 reconcile**.
 - **3.3 [reconcile]** — `reconcile(design, provider, intervalMs)` delegando ao
   `scheduler` (stub `CRON001` alto no Native, mesmo split do
   `workflow-sched-host.native.kf`).

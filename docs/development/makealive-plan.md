@@ -133,7 +133,7 @@ the host db slice must be gated per target exactly like `workflow-ckpt-host.kf`
 - **3.0.2 [design sign-off — ⛔ rule 6]** ✅ DONE 20/09 — maintainer poll
   answered Q1–Q4 (§6, `DECISIONS.md` §D-MAKEALIVE: `kof.makealive` /
   complete generic providers / kof.db day-1 / flat+EN). Front opened.
-- **3.1 [core]** 🔵 owner `.18` — **COMPLETE slice (MK-1, poll 20/09 — not a
+- **3.1 [core]** ✅ 20/09 owner `.18` — **COMPLETE slice (MK-1, poll 20/09 — not a
   core-only fragment)**: virtual-namespace injector (`CompilerMakealive`) +
   `makealive-host.kf` + ledger line (layer per Q1) + the generic REST/CLI
   providers (3.5 folded here) + the `kof.db` state surface (3.4 folded here —
@@ -141,7 +141,11 @@ the host db slice must be gated per target exactly like `workflow-ckpt-host.kf`
   (plan/apply/destroy idempotency golden, JVM==JS byte parity, Native compile
   pin, the §3 guards). The kof.db goldens run where `kof.db` is real (JVM/JS);
   Native state awaits D-DB-GAPS and fails with the honest `DB001`/`ORM001`,
-  never silent (R6).
+  never silent (R6). **LANDED 20/09 — MK-1 complete:** core `9e8be985`+`f5256f8f`
+  (→ origin `3be16f88`), db state face `c2850373`, fs provider `4ee3a5c9`(0.4.0)/`f62206e0`(0.5.0),
+  CLI+REST providers `13b44c6c`, stdlib docs `docs/stdlib/makealive.md` EN+PT; Makealive battery
+  20/20 on the tip (JVM==JS byte parity incl. cross-engine shared-world goldens). 🔵 next in
+  this plan's queue: **3.3 reconcile**.
 - **3.3 [reconcile]** — `reconcile(design, provider, intervalMs)` delegating
   to `scheduler` (Native loud `CRON001` stub, same split as
   `workflow-sched-host.native.kf`).
