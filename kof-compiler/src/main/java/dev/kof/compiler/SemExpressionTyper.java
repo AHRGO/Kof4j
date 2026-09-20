@@ -79,6 +79,16 @@ public final class SemExpressionTyper {
                         }
                     }
                 }
+                if ("super".equals(ie.name()) && sa.currentClassName() != null
+                        && !sa.currentClassName().isEmpty()) {
+                    SymbolTable.ClassSymbol cur = sa.getClass(sa.currentClassName());
+                    Type sup = cur != null
+                            ? HierarchyResolver.superTypeOf(sa, cur.internalName()) : null;
+                    if (sup != null) {
+                        sa.putExpressionType(ie, sup);
+                        yield sup;
+                    }
+                }
                 if (sa.currentClassName() != null && !sa.currentClassName().isEmpty()) {
                     SymbolTable.Symbol fieldSym = MemberResolver.resolveInHierarchy(sa, sa.currentClassName(), ie.name());
                     if (fieldSym != null) {
@@ -86,45 +96,7 @@ public final class SemExpressionTyper {
                         yield fieldSym.type();
                     }
                 }
-                if (sa.diagnostics() != null && !"this".equals(ie.name()) && !"super".equals(ie.name())
-                        && !"json".equals(ie.name()) && !"process".equals(ie.name()) && !"shell".equals(ie.name())
-                        && !KofWeb.isWebNamespace(ie.name())
-                        && !KofConfig.isConfigNamespace(ie.name())
-                        && !KofCache.isCacheNamespace(ie.name())
-                        && !KofGpu.isGpuNamespace(ie.name())
-                        && !KofDb.isDbNamespace(ie.name())
-                        && !KofOrm.isOrmNamespace(ie.name())
-                        && !KofLog.isLogNamespace(ie.name())
-                        && !KofSecurity.isSecurityNamespace(ie.name())
-                        && !KofValidation.isValidationNamespace(ie.name())
-                        && !KofStd.isStdNamespace(ie.name())
-                        && !KofObservability.isObservabilityNamespace(ie.name())
-                        && !KofHttp.isHttpNamespace(ie.name())
-                        && !KofMq.isMqNamespace(ie.name())
-                        && !KofTime.isTimeNamespace(ie.name())
-                        && !KofScheduler.isSchedulerNamespace(ie.name())
-                        && !KofTetris.isTetrisNamespace(ie.name())
-                        && !KofMedia.isStaticNamespace(ie.name())
-                        && !KofUi.isPalette(ie.name()) && !KofUi.isConstructor(ie.name())
-                        && !KofUiTokens.isTokenNamespace(ie.name())
-                        && !KofUi.isRouterNamespace(ie.name())
-                        && !"Theme".equals(ie.name())
-                        && !MemberResolver.isBuiltinTypeName(ie.name())
-                        // bug 127/#336: operando de TIPO de `as`/`instanceof`
-                        // vira IdentifierExpr com o type-ref completo —
-                        // funcão (`() -> Int`), genericos (`List<Int>`),
-                        // array (`Int[]`), nullable (`Int?`). Nunca e
-                        // variavel/tipo declarado; toType cuida da resolucao.
-                        && !looksLikeTypeRefName(ie.name())
-                        && !sa.allClasses().containsKey(ie.name())
-                        // §134: nome de classe EXTERNA (Button.inflate,
-                        // Greeter.hello) — o lowering (ExpressionMethodCall
-                        // Lowerer) resolve via ExternalClasspath; sem este
-                        // passe a análise semântica marcava SEM011 e a
-                        // chamada estática com receiver identificador nunca
-                        // chegava ao lowering (só `new X()` e instância
-                        // funcionavam).
-                        && !isExternalImportedClass(sa, ie.name())) {
+                if (SemUndefinedVarGuard.reportsUndefined(sa, ie.name())) {
                     sa.diagnostics().error("", 0, 0, 0,
                             "Undefined variable or type: '" + ie.name() + "'", "SEM011");
                 }
@@ -548,34 +520,6 @@ public final class SemExpressionTyper {
             }
             default -> Type.UnknownType.UNKNOWN;
         };
-    }
-
-    /**
-     * §134: o nome simples é uma classe EXTERNA importada cujo .class está
-     * nos entries do ExternalClasspath (--classpath/--deps)? Usado para não
-     * marcar SEM011 no receiver de chamada estática externa (Greeter.hello),
-     * que o lowering resolve via knows()/resolveMethod().
-     */
-    private static boolean isExternalImportedClass(SemanticAnalyzer sa, String name) {
-        if (sa.externalTypes() == null || sa.unit() == null) return false;
-        Type t = MemberResolver.qualifyViaImports(sa.unit(), name, sa.externalTypes());
-        return t instanceof Type.ClassType ct && !ct.packageName().isEmpty()
-                && sa.externalTypes().knows(ct.internalName());
-    }
-
-    /**
-     * §336 (#459): um "identificador" com `&lt;...&gt;`, `[]` ou `?` so pode ter
-     * nascido do type-ref de `as`/`instanceof` (o lexer nao mistura esses
-     * caracteres em nomes) — Type.of/toType cuidam da resolucao. Espelha a
-     * isencao do tipo-funcao (bug 127) e o conservadorismo de
-     * MemberResolver.isUnresolvedSimpleType.
-     */
-    static boolean looksLikeTypeRefName(String name) {
-        if (name == null || name.isEmpty()) return false;
-        // bug 127: tipo-funcao `() -> Int` / `(Int) -> Bool`
-        if (name.startsWith("(") && name.contains(" -> ")) return true;
-        return (name.indexOf('<') >= 0 && name.endsWith(">"))
-                || name.endsWith("[]") || name.endsWith("?");
     }
 
     private static boolean isKofCollectionType(Type t) {

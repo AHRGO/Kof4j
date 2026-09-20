@@ -13,15 +13,11 @@ public final class CompilerClassLowering {
     static IRClass lowerClass(CompilerDriver driver, ClassDeclarationNode cls,
                         String packageName, int typeId) {
         String internalName = driver.toInternalName(packageName, cls.name());
-        // usa o superClass QUALIFICADO pelo analyzer ("extends Activity" +
-        // import → android/app/Activity); cai pro cru se analyzer ausente
-        String superName = null;
-        if (driver.semanticAnalyzer != null) {
-            SymbolTable.ClassSymbol sym = driver.semanticAnalyzer.getClass(cls.name());
-            if (sym != null && sym.superClass() != null && !"Object".equals(sym.superClass())) {
-                superName = driver.toInternalName("", sym.superClass());
-            }
-        }
+        // super registry-first (§308/§354): o nome armazenado pode ser SIMPLES
+        // ("Shape" — wildcard não qualifica) com a classe em package, e emitir
+        // o cru dava NoClassDefFoundError: Shape; externo pontuado segue o caminho antigo.
+        String superName = HierarchyResolver.canonicalSuperOf(
+                driver.semanticAnalyzer, cls.name());
         if (superName == null) {
             String rawSuper = eraseTypeArgs(cls.superClass());
             superName = rawSuper != null ? driver.toInternalName("", rawSuper)

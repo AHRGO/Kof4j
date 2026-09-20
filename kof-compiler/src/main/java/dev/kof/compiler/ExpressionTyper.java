@@ -46,6 +46,18 @@ public final class ExpressionTyper {
                         yield lv.type();
                     }
                 }
+                if ("super".equals(ie.name()) && driver.semanticAnalyzer != null
+                        && !locals.isEmpty()
+                        && locals.get(0).type() instanceof Type.ClassType selfType
+                        && !"Object".equals(selfType.name())) {
+                    // `super` NÃO é variável — é o receiver `this` tipado na
+                    // SUPERCLASSE. Sem isto saía UNKNOWN, o lowerField não
+                    // resolvia o campo herdado e vertia o valor num
+                    // temporário Object (PUTFIELD owner "?").
+                    Type sup = HierarchyResolver.superTypeOf(
+                            driver.semanticAnalyzer, selfType.internalName());
+                    if (sup != null) yield sup;
+                }
                 if (driver.semanticAnalyzer != null) {
                     // Resolve field within the current class first (via 'this'
                     // at index 0) to avoid picking a same-named field from an

@@ -138,6 +138,18 @@ class Dog extends Animal {
 - `super(args)` is the first statement of the subclass constructor.
 - Override is implicit (same method name).
 - Dispatch is virtual on both targets.
+- `super.field` reads/writes an **inherited** field keeping its declared
+  type (`super.width = w` is not boxed to `Object`). The same field written
+  through `this.width` or bare `width` behaves identically — `super` only
+  says "start lookup at the superclass".
+
+```kof
+class Rect extends Shape {
+    resize(Float w) {
+        super.width = w          // inherited field — typed store, no temp
+    }
+}
+```
 
 ## Generics Box<T> (0.4.0-beta)
 

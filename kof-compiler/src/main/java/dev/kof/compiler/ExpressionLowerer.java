@@ -118,7 +118,13 @@ public final class ExpressionLowerer {
                 if (driver.isBuiltinStaticReceiver(ie.name(), locals)) {
                     yield localIdx;
                 }
-                ops.add(new KofLoadLocal(Type.UnknownType.UNKNOWN, 0));
+                // Fallback (ex.: receiver `super` — slot 0 é o `this`):
+                // empilhar com o tipo REAL da classe quando slot 0 é
+                // referência de classe; UNKNOWN só onde não há `this`. O
+                // store spill do lowerField recebe o valor já tipado.
+                ops.add(new KofLoadLocal(
+                        !locals.isEmpty() && locals.get(0).type() instanceof Type.ClassType
+                                ? locals.get(0).type() : Type.UnknownType.UNKNOWN, 0));
                 yield localIdx;
             }
             case BinaryExpr bin -> {

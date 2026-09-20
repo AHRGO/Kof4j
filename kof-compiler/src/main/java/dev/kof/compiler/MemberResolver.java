@@ -22,16 +22,7 @@ public final class MemberResolver {
             if (cs == null) continue;
             SymbolTable.Symbol s = cs.members().resolve(memberName);
             if (s != null) return s;
-            if (cs.superClass() != null && !"Object".equals(cs.superClass()) && !visited.contains(cs.superClass())) {
-                visited.add(cs.superClass());
-                queue.add(cs.superClass());
-            }
-            for (String iface : cs.interfaces()) {
-                if (!visited.contains(iface)) {
-                    visited.add(iface);
-                    queue.add(iface);
-                }
-            }
+            enqueueAncestors(sa, cs, visited, queue);
         }
         return null;
     }
@@ -48,18 +39,31 @@ public final class MemberResolver {
             if (cs == null) continue;
             SymbolTable.FieldSymbol fs = cs.members().resolveField(fieldName);
             if (fs != null) return fs;
-            if (cs.superClass() != null && !"Object".equals(cs.superClass()) && !visited.contains(cs.superClass())) {
-                visited.add(cs.superClass());
-                queue.add(cs.superClass());
-            }
-            for (String iface : cs.interfaces()) {
-                if (!visited.contains(iface)) {
-                    visited.add(iface);
-                    queue.add(iface);
-                }
-            }
+            enqueueAncestors(sa, cs, visited, queue);
         }
         return resolveInHierarchy(sa, className, fieldName);
+    }
+
+    /**
+     * Super + interfaces na fila do BFS, NORMALIZADOS (simpleOfStored): o
+     * nome armazenado pode vir qualificado por import ("foo.bar.Shape"),
+     * pontuado-externo ("android.app.Activity") ou com genéricos ("Box<T>")
+     * — o registro é por nome simples, e o BFS cru quebrava a cadeia em
+     * qualquer uma dessas formas (SEM025/SEM011 falsos em herança
+     * cross-package → lowerField perdia o tipo do campo herdado).
+     */
+    private static void enqueueAncestors(SemanticAnalyzer sa, SymbolTable.ClassSymbol cs,
+                                         java.util.Set<String> visited, java.util.Queue<String> queue) {
+        String sup = HierarchyResolver.simpleOfStored(cs.superClass());
+        if (sup != null && !sup.isEmpty() && !"Object".equals(sup) && visited.add(sup)) {
+            queue.add(sup);
+        }
+        for (String iface : cs.interfaces()) {
+            String simple = HierarchyResolver.simpleOfStored(iface);
+            if (simple != null && !simple.isEmpty() && visited.add(simple)) {
+                queue.add(simple);
+            }
+        }
     }
 
     static boolean isObjectMethod(String name, int argCount) {
