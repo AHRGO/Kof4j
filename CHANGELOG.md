@@ -71,6 +71,21 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `NATIVE_METHOD` (511) — the JVM client now reports that one frame as `?`/line -1
     and keeps the Kof frames; a discarded `Method.VariableTable` (6,2) probe in
     `methodName` was removed.
+  - **§385 fixed — the JVM `LocalVariableTable` now starts each local at its
+    FIRST STORE** (20/09, `LocalVariableTableScopesTest` 2/2, javap real): the
+    table carried every entry with `Start=0`/`Length=<method>`, so a local
+    declared on the stopped line read "visible but unassigned" and JDWP
+    `StackFrame.GetValues` killed the whole batch with `INVALID_SLOT` — DAP
+    locals came back empty. `JvmBackend.emitMethod` now labels each slot's
+    first `KofStoreLocal`/`KofCatchStart` store and MATERIALIZES the label
+    (deferred) right before the next NON-terminator instruction — parameters
+    (no store) and a last store adjacent to the implicit RETURN keep
+    `debugStart`: with COMPUTE_FRAMES a debug label between a 2-word store and
+    the terminator crashes ASM `Frame.merge` (`NegativeArraySizeException: -1`
+    — caught by `ConfigGenTest`, reproduced outside Kof on asm-9.7.1).
+    Debug-only attributes: execution semantics untouched; the
+    `JdwpValues.locals` per-slot retry stays as honest defense-in-depth. Proved red-then-green on `javap -v` output and the
+    debug cluster 12/12 on the fixed table.
 
   - **JVM DAP parity — `next`/`stepIn`/`stepOut` + `evaluate`** (20/09, tooling/debug
     lane): the JVM debug adapter now steps (JDWP `SingleStep` event kind 1 + Step

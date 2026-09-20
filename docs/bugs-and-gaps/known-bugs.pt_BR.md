@@ -11101,7 +11101,23 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 
 ## §385 — o backend JVM emite TODO local no `LocalVariableTable` com `Start=0`/`Length=<método inteiro>`: um local declarado na linha do breakpoint fica "visível" mas sem valor, então o `StackFrame.GetValues` do JDWP falha com `INVALID_SLOT` (35) no lote inteiro — a lista de locais do DAP volta vazia nessa linha
 
-- **Estado:** 🟡 ABERTO 20/09 (achado ao pousar `next`/`stepIn`/`stepOut` + `evaluate` do DAP JVM); roteado à lane do backend JVM/compilador (rule 6/lane — o debugger agora degrada de forma honesta, ver o workaround).
+- **Estado:** ✅ CORRIGIDO 20/09 — raiz em `JvmBackend` (`firstStoreLabel` por slot); prova `LocalVariableTableScopesTest` 2/2 (javap real, RED medido antes)
+- **Correção (causa raiz, aditiva):** `JvmBackend.emitMethod` agora mantém um
+  `firstStoreLabel` por slot, criado no PRIMEIRO store (`KofStoreLocal`/
+  `KofCatchStart`) do slot e MATERIALIZADO (adiado) imediatamente antes da
+  próxima instrução NÃO-terminadora — a entrada do `LocalVariableTable` corre
+  desse pc até o fim do método (fallback `debugStart` para slots sem store —
+  parâmetros — e para um último store adjacente ao RETURN implícito: com
+  COMPUTE_FRAMES, um label de debug entre um store de 2 palavras e o terminador
+  derruba o `Frame.merge` do ASM com `NegativeArraySizeException: -1` — medido
+  pelo `ConfigGenTest` no caminho e reproduzido fora do Kof no asm-9.7.1;
+  descartar o label não-posicionado mantém o alcance antigo, nunca uma classe
+  quebrada). Prova com `javap -v` real na classe emitida (nunca texto de fonte):
+  o table do repro foi de `[Start=0 x3]` (RED medido) para três starts
+  distintos; `LocalVariableTableScopesTest` 3/3 inclui o local wide e a borda
+  adjacente ao terminador. Sem mudança de semântica de EXECUÇÃO (atributos só
+  de debug). O retry por slot em `JdwpValues.locals` permanece como defesa
+  honesta em profundidade.
 - **Medido (20/09, tip `beta-0.5.0`, `javap -v` na classe compilada):** para
   ```kof
   Int add(Int a, Int b) { return a + b }

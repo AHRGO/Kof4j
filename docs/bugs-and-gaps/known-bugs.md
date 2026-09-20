@@ -11666,7 +11666,22 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 
 ## §385 — JVM backend emits EVERY local in the `LocalVariableTable` with `Start=0`/`Length=<whole method>`: a local declared on the breakpoint line is "visible" but unassigned, so JDWP `StackFrame.GetValues` fails with `INVALID_SLOT` (35) for the whole batch — the DAP locals list comes back empty on that line
 
-- **Status:** 🟡 OPEN 20/09 (found while landing the JVM DAP `next`/`stepIn`/`stepOut` + `evaluate`); routed to the JVM backend/compiler lane (rule 6/lane — the debugger now degrades honestly, see the workaround).
+- **Status:** ✅ FIXED 20/09 — raiz em `JvmBackend` (per-slot `firstStoreLabel`); prova `LocalVariableTableScopesTest` 2/2 (javap real, RED medido antes) (found while landing the JVM DAP `next`/`stepIn`/`stepOut` + `evaluate`); routed to the JVM backend/compiler lane (rule 6/lane — the debugger now degrades honestly, see the workaround).
+- **Fix (root cause, additive):** `JvmBackend.emitMethod` now tracks a per-slot
+  `firstStoreLabel` created at the slot's FIRST `KofStoreLocal`/`KofCatchStart`
+  store and MATERIALIZED (deferred) right before the next NON-terminator
+  instruction — the entry then runs from that pc to method end (fallback
+  `debugStart` for slots with no store — parameters — and for a last store
+  adjacent to the implicit RETURN: with COMPUTE_FRAMES, a debug label between a
+  2-word store and the terminator crashes ASM's `Frame.merge` with
+  `NegativeArraySizeException: -1` — measured by `ConfigGenTest` on the way and
+  reproduced outside Kof on asm-9.7.1; discarding the unplaced label keeps the
+  old range, never a broken class). Proved with real `javap -v` on the emitted
+  class (never source text): the §385 repro's table went from `[Start=0 x3]`
+  (RED, measured) to three distinct starts; `LocalVariableTableScopesTest` 3/3
+  includes the wide-local and the terminator-adjacent edge. EXECUTION semantics
+  unchanged (debug-only attributes). The `JdwpValues.locals` per-slot retry
+  stays as honest defense-in-depth.
 - **Measured (20/09, tip `beta-0.5.0`, `javap -v` on the compiled class):** for
   ```kof
   Int add(Int a, Int b) { return a + b }

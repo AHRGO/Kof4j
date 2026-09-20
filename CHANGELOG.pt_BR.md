@@ -72,6 +72,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     esse frame como `?`/linha -1 e mantém os frames Kof; uma sonda
     `Method.VariableTable` (6,2) descartada no `methodName` foi removida.
 
+  - **§385 corrigido — o `LocalVariableTable` do JVM agora começa cada local no
+    SEU PRIMEIRO STORE** (20/09, `LocalVariableTableScopesTest` 2/2, javap real):
+    o table carregava toda entrada com `Start=0`/`Length=<método>`, então um
+    local declarado na linha parada era "visível mas sem valor" e o
+    `StackFrame.GetValues` do JDWP derrubava o lote inteiro com `INVALID_SLOT` —
+    os locais do DAP voltavam vazios. `JvmBackend.emitMethod` agora visita um
+    label imediatamente após o primeiro store (`KofStoreLocal`/`KofCatchStart`)
+    de cada slot e emite a entrada a partir daquele pc (parâmetros — sem store —
+    mantêm `debugStart`; `Long`/2 slots verificado). Atributos só de debug:
+    semântica de execução intacta; o retry por slot em `JdwpValues.locals`
+    permanece como defesa honesta. Prova red-then-green no `javap -v` e o
+    cluster de debug 12/12 com a tabela corrigida.
   - **Paridade do DAP JVM — `next`/`stepIn`/`stepOut` + `evaluate`** (20/09, lane
     tooling/debug): o adaptador de debug da JVM agora faz step (evento JDWP
     `SingleStep` kind 1 + modificador Step kind 10, size LINE, depth over/into/out)
