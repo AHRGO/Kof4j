@@ -2264,3 +2264,68 @@ pra branch beta-0.5.0 e começar a preparar a nova release".
 `AGENTS.md`(+PT) e este registro no mesmo passo; issues abertas #550/#553/#554
 e o guarda-chuva #555 avisados por comentário; banner no `DOING.md`(+PT) para
 todas as lanes.
+
+## D-RELEASE-1.0 — KOF 1.0 EXIT GATE: estabilização dos contratos é a meta de desenvolvimento; não existe RC/release 1.0 com qualquer item em falta ou qualquer aresta aberta (20/09/2026, ratificação da mantenedora)
+
+**Ordem (chat 20/09/2026):** "decisão de `docs/development/future/PROPOSAL-1.0-EXIT-GATE.md`
+ratificada. concordo com o planejamento. setar como meta de desenvolvimento a
+estabilização dos contratos seguindo o planejamento existente nessa issue. kof
+RC 1.0.0 e kof release 1.0.0 só existem QUANDO todos os pontos estiverem
+correspondentes e não houver nenhuma aresta aberta".
+
+**Decidido:**
+- A proposta vira o contrato normativo, registrado aqui como `D-RELEASE-1.0`.
+  O documento foi promovido de `future/` para
+  `docs/development/PROPOSAL-1.0-EXIT-GATE.md` (+`.pt_BR.md`), o bloco de
+  aprovação da §22 foi preenchido como registro mecânico desta aprovação no
+  chat (palavras dela citadas como evidência), e o status do cabeçalho mudou
+  para RATIFICADO.
+- **O EXIT GATE (§8 + complemento D-BRANCH-0.5.0) é vinculante**: uma build só
+  pode ser declarada Kof RC 1.0.0 com TODO item obrigatório satisfeito por
+  evidência reproduzível na mesma candidata, e o RC só vira Stable 1.0.0 com o
+  gate ainda verde e sem regressão RC→Stable. Não existe corte, tag nem
+  publicação de "1.0" enquanto QUALQUER item estiver em falta ou QUALQUER
+  aresta estiver aberta — essa é a definição de "todos os pontos correspondentes
+  e nenhuma aresta aberta", e é responsabilidade de toda lane, não cerimônia do
+  dia do release.
+- **Meta de desenvolvimento (imediata)**: estabilização dos contratos pela fila
+  da §23 — definir `release-blocker` mecanicamente (classificação §11 em quatro
+  categorias para toda issue aberta), implementar o gate mecânico com REDs
+  escritos ANTES de qualquer lógica de gate (critérios de confiabilidade §10:
+  veredito do mesmo SHA, sem análise velha decidindo commit novo, sem
+  false-green conhecido, fim do `CODEQL_GATE_SKIP` de rotina), validar
+  ANTES/DEPOIS, testar o pacote real fora do repo, rodar a matriz final de
+  alvos. Só então pode existir a primeira candidata a RC. Fila aberta em
+  `docs/development/roadmap.md` §23 e claimada no `DOING.md`.
+- **Q1 (quando a linha 1.0 começa)**: como proposto — quando a Mel declarar
+  explicitamente aberta a linha/candidata 1.0 (item do complemento do gate);
+  nada antes disso.
+- **Q2/Q7 (superfície — AINDA ABERTAS, são as primeiras "arestas" a fechar)**:
+  a ratificação aprova o contrato e o planejamento; não fabrica respostas que
+  ela não deu. KofC e Android dentro da superfície Stable 1.0, e os candidatos
+  de reforço `[? MEL]` da §35, continuam decisões da mantenedora que bloqueiam
+  apenas o primeiro RC — pergunta não respondida é aresta não fechada. Enquanto
+  isso, site/README NÃO PODEM implicar decisão que não existe (o site hoje
+  marca KofC "Disponível" — sincronizar docs/site é item da fila).
+- **Q3**: mecanismo = a classificação da §11 é normativa (toda issue aberta em
+  exatamente uma de BLOCKS 1.0 / OUTSIDE 1.0 SURFACE / POST-1.0 / NOT A BUG),
+  tornada mecânica por labels + ledger + o gate mecânico — nunca pela ausência
+  de label.
+- **Q4**: congelamento como proposto — a superfície pública congela a partir do
+  primeiro RC aprovado pela Mel; estabilização, fixes, testes, docs e CI seguem
+  andando.
+- **Q5**: gaps podem permanecer apenas explicitamente FORA da superfície 1.0,
+  com alvo conhecido, diagnóstico honesto, docs atualizadas e a decisão de
+  escopo registrada.
+- **Q6**: os critérios de confiabilidade do gate (§10) são aceitação vinculante,
+  não aspiração; a solução técnica do Quality Gate segue frente própria (passos
+  5–8 da §23).
+
+**Não-objetivos deste registro:** NÃO autoriza corte de 1.0, NÃO faz bump de
+VERSION (0.4.7-beta permanece até o release-prep, por D-BRANCH-0.5.0) e NÃO
+fecha a #560 — a issue fica como fio de acompanhamento até a fila que abriu ser
+executada.
+
+**Evidência:** ratificação da mantenedora 20/09/2026 (chat, verbatim no bloco
+§22 do doc e neste registro); doc EN+PT atualizado + promovido no mesmo passo;
+fila no `roadmap.md` §23; claim no `DOING.md`; #560 cross-notificada.

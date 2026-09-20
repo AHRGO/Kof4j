@@ -1000,3 +1000,32 @@ the order. **DEPRIORITIZED 15/09 (maintainer): TIER 3–5 is not current work.**
 `Diff-Framework` → `Migration-Reports` · `2.1 FFI` → Tiers 8/9/10 (everything via
 FFI) · `2.2 codegen hook` → `infra`/gRPC stubs · **TIER 1 (SYSTEMS) closes
 before ANY Tier 6+ (R12).**
+
+## 24. KOF 1.0 EXIT GATE — contract stabilization (RATIFIED 09/20/2026, `DECISIONS.md` §D-RELEASE-1.0)
+
+Development meta until the first RC: **no bug ships, no edge stays open.** The
+normative text is `docs/development/PROPOSAL-1.0-EXIT-GATE.md` (+`.pt_BR.md`)
+§§8–20; the order of execution is its §23 queue. Done here (ratification pass):
+steps 1–4 — active branch `beta-0.5.0` confirmed, `DECISIONS.md`/`AGENTS.md`
+re-read, `D-RELEASE-1.0` recorded, EN/PT synchronized (doc promoted from
+`future/`, approval block filled as record of the maintainer's chat order).
+
+Open queue (every lane obeys; owner claims in `DOING.md`):
+
+| # | Item (doc ref) | Acceptance proof |
+|---|---|---|
+| EG-1 | Define `release-blocker` **mechanically** (§11; Q3) | every OPEN issue classified in exactly one of BLOCKS 1.0 / OUTSIDE 1.0 SURFACE / POST-1.0 / NOT A BUG via label+ledger; script lists violations; RED test first |
+| EG-2 | Implement the machine gate (§10 trust criteria; steps 6–7) | gate fails on planted false-green/false-red fixtures; verdict bound to the analyzed SHA; stale analysis cannot decide a new commit; `CODEQL_GATE_SKIP` usage becomes an exception with recorded cause, then dies |
+| EG-3 | BEFORE/AFTER validation of the gate (step 8) | same SHA measured before/after; no regression in existing lanes' pushes |
+| EG-4 | Real package tested **outside the repo** (§12; step 9) | published-layout artifact runs the corpus E2E on a clean dir (the #550 lesson, pinned) |
+| EG-5 | Final target matrix (§13–§14; step 10) | JVM / x86-64 / riscv64 / aarch64 / JS / Script green on the SAME candidate + golden byte parity where the contract requires |
+| EG-6 | Close the open EDGES the maintainer owns (§21 Q2/Q7, §35 candidates) | explicit answer per item from Mel — no agent answers for her; the site/README stop implying an undecided surface meanwhile |
+| EG-7 | VERSION / docs / metadata sync (§16, §13 note, §35 site line) | VERSION, pom `revision`, package version.properties, CHANGELOG, AGENTS header, release docs, public site, support matrix — one consistent statement |
+| EG-8 | First 1.0 RC candidate (step 11) — ONLY when EG-1…EG-7 all close | the §8 checklist green with reproducible evidence on the candidate SHA + Mel's explicit "the 1.0 line is open" declaration (Q1) |
+
+Rules binding every item: the §8 gate is AND — one unmet item blocks the RC
+regardless of the others; gaps stay only per §15 (OUTSIDE 1.0 + honest +
+documented); the freeze (§17) starts at the first RC and freezes the surface,
+not the stabilization; RC→Stable adds no regression (§19). TIER 12's "final
+test" remains compatible: stabilization touches structure/diagnostics, never the
+core surface.

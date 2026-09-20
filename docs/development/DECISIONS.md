@@ -2291,3 +2291,60 @@ pra branch beta-0.5.0 e começar a preparar a nova release".
 **Evidence:** maintainer order 09/20/2026 (chat); `AGENTS.md`/`AGENTS.pt_BR.md`
 active-branch lines and this record land in the same pass; open issues
 #550/#553/#554/#555 notified by comment; `DOING.md` banner for all lanes.
+
+## D-RELEASE-1.0 — KOF 1.0 EXIT GATE: contract stabilization is the development meta; no RC/release 1.0 with any item unmet or any edge open (09/20/2026, maintainer ratification)
+
+**Order (chat 09/20/2026):** "decisão de `docs/development/future/PROPOSAL-1.0-EXIT-GATE.md`
+ratificada. concordo com o planejamento. setar como meta de desenvolvimento a
+estabilização dos contratos seguindo o planejamento existente nessa issue. kof
+RC 1.0.0 e kof release 1.0.0 só existem QUANDO todos os pontos estiverem
+correspondentes e não houver nenhuma aresta aberta".
+
+**Decided:**
+- The proposal becomes the normative contract, recorded here as
+  `D-RELEASE-1.0`. The document was promoted from `future/` to
+  `docs/development/PROPOSAL-1.0-EXIT-GATE.md` (+`.pt_BR.md`), its §22
+  approval block filled as the mechanical record of this chat approval (her
+  words quoted as evidence), and the header status switched to RATIFIED.
+- **The EXIT GATE (§8 + the D-BRANCH-0.5.0 complement) is binding**: a build
+  may be declared Kof RC 1.0.0 only with every mandatory item satisfied by
+  reproducible evidence on the same candidate, and RC may become Stable 1.0.0
+  only with the gate still green and no RC→Stable regression. No cut, tag or
+  publication of "1.0" exists while ANY item is unmet or ANY edge is open —
+  this is the definition of "all points matching and no open edge", and it is
+  the responsibility of every lane, not of a release-day ceremony.
+- **Development meta (immediate)**: contract stabilization per the §23 queue —
+  define `release-blocker` mechanically (§11 four-category classification of
+  every open issue), implement the machine gate with RED tests written before
+  any gate logic (§10 trust criteria: same-SHA verdict, no stale analysis, no
+  known false-green, end of routine `CODEQL_GATE_SKIP`), validate
+  BEFORE/AFTER, test the real package outside the repo, run the final target
+  matrix. Only then may the first RC candidate exist. Queue opened in
+  `docs/development/roadmap.md` §23 and claimed in `DOING.md`.
+- **Q1 (when the 1.0 line starts)**: as proposed — when Mel explicitly declares
+  the 1.0 line/candidate open (gate complement item); nothing before that.
+- **Q2/Q7 (surface — STILL OPEN, these are the first "arestas" to close)**: the
+  ratification approves the contract and the plan; it does not fabricate
+  answers she did not give. KofC and Android inside the Stable 1.0 surface, and
+  the §35 `[? MEL]` reinforcement candidates, remain maintainer decisions that
+  block only the first RC — a question not answered is an edge not closed.
+  Meanwhile the site/README MUST stop implying a decision that does not exist
+  (site marks KofC "Disponível" today — docs/site sync is a queue item).
+- **Q3**: mechanism = the §11 classification is normative (every open issue in
+  exactly one of BLOCKS 1.0 / OUTSIDE 1.0 SURFACE / POST-1.0 / NOT A BUG), made
+  mechanical by labels + ledger + the machine gate — never by absence of label.
+- **Q4**: freeze as proposed — the public surface freezes from the first
+  Mel-approved RC; stabilization, fixes, tests, docs and CI keep moving.
+- **Q5**: gaps may remain only explicitly OUTSIDE the 1.0 surface with known
+  target, honest diagnostic, docs updated and the scope decision recorded.
+- **Q6**: gate trust criteria (§10) are binding acceptance, not aspiration; the
+  Quality-Gate technical solution stays its own front (§23 steps 5–8).
+
+**Non-goals of this record:** it does NOT authorize a 1.0 cut, does NOT bump
+VERSION (0.4.7-beta stays until release-prep per D-BRANCH-0.5.0), and does NOT
+close #560 — the issue stays as the tracking thread until the queue it opened
+is executed.
+
+**Evidence:** maintainer ratification 09/20/2026 (chat, quoted verbatim in the
+§22 block of the doc and in this record); doc EN+PT updated + promoted the same
+pass; `roadmap.md` §23 queue; `DOING.md` claim; #560 cross-notified.

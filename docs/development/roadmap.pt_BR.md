@@ -1002,3 +1002,33 @@ ordem. **DESPRIORIZADO 15/09 (mantenedora): TIER 3–5 não é trabalho atual.**
 `Diff-Framework` → `Migration-Reports` · `2.1 FFI` → Tiers 8/9/10 (tudo por
 FFI) · `2.2 codegen hook` → `infra`/gRPC stubs · **TIER 1 (SYSTEMS) fecha
 antes de QUALQUER Tier 6+ (R12).**
+
+## 24. KOF 1.0 EXIT GATE — estabilização dos contratos (RATIFICADO 20/09/2026, `DECISIONS.md` §D-RELEASE-1.0)
+
+Meta de desenvolvimento até o primeiro RC: **nenhum bug embarca, nenhuma aresta
+fica aberta.** O texto normativo é `docs/development/PROPOSAL-1.0-EXIT-GATE.md`
+(+par PT) §§8–20; a ordem de execução é a fila da §23 dele. Feito aqui (passo da
+ratificação): itens 1–4 — branch ativa `beta-0.5.0` confirmada,
+`DECISIONS.md`/`AGENTS.md` relidos, `D-RELEASE-1.0` registrado, EN/PT
+sincronizados (doc promovido de `future/`, bloco de aprovação preenchido como
+registro da ordem da mantenedora no chat).
+
+Fila aberta (toda lane obedece; dono se declara no `DOING.md`):
+
+| # | Item (ref do doc) | Prova de aceitação |
+|---|---|---|
+| EG-1 | Definir `release-blocker` **mecanicamente** (§11; Q3) | toda issue aberta classificada em exatamente uma de BLOCKS 1.0 / OUTSIDE 1.0 SURFACE / POST-1.0 / NOT A BUG via label+ledger; script lista violações; teste RED primeiro |
+| EG-2 | Implementar o gate mecânico (critérios §10; passos 6–7) | gate falha em fixtures de false-green/false-red plantados; veredito amarrado ao SHA analisado; análise velha não decide commit novo; uso de `CODEQL_GATE_SKIP` vira exceção com causa registrada, e morre |
+| EG-3 | Validação ANTES/DEPOIS do gate (passo 8) | mesmo SHA medido antes/depois; nenhuma regressão nos pushes das lanes existentes |
+| EG-4 | Pacote real testado **fora do repo** (§12; passo 9) | artefato do layout publicado roda o corpus E2E em diretório limpo (a lição da #550, pinada) |
+| EG-5 | Matriz final de alvos (§13–§14; passo 10) | JVM / x86-64 / riscv64 / aarch64 / JS / Script verdes na MESMA candidata + paridade byte dos goldens onde o contrato exige |
+| EG-6 | Fechar as ARESTAS abertas que pertencem à mantenedora (§21 Q2/Q7, candidatos §35) | resposta explícita da Mel item a item — nenhum agente responde por ela; enquanto isso, site/README não podem implicar superfície não decidida |
+| EG-7 | Sincronizar VERSION / docs / metadados (§16, nota §13, linha do site §35) | VERSION, `revision` do pom, version.properties empacotado, CHANGELOG, cabeçalho AGENTS, docs de release, site público, matriz de suporte — uma única declaração consistente |
+| EG-8 | Primeira candidata a RC 1.0 (passo 11) — SOMENTE quando EG-1…EG-7 fecharem | checklist §8 verde com evidência reproduzível no SHA da candidata + declaração explícita da Mel de que "a linha 1.0 abriu" (Q1) |
+
+Regras que amarram todo item: o gate §8 é um E entre todos os itens — um item em falta
+trava o RC independentemente dos demais; gaps ficam só na forma do §15 (FORA da
+1.0 + honesto + documentado); o congelamento (§17) começa no primeiro RC e
+congela a superfície, não a estabilização; RC→Stable sem regressão (§19). O
+"teste final" do TIER 12 segue compatível: estabilização mexe em
+estrutura/diagnóstico, nunca na superfície do núcleo.
