@@ -148,7 +148,6 @@ final class CmdWorkflow {
             KofCliSupport.cleanup(temp);
             return 1;
         }
-        int exit;
         String output;
         try {
             ProcessBuilder pb = new ProcessBuilder(
@@ -159,7 +158,7 @@ final class CmdWorkflow {
             pb.redirectErrorStream(true);
             Process p = pb.start();
             output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            exit = p.waitFor();
+            p.waitFor();
         } catch (IOException | InterruptedException e) {
             System.err.println("workflow: failed to execute: " + e.getMessage());
             KofCliSupport.cleanup(temp);
