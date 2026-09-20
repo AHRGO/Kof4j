@@ -104,6 +104,26 @@ The CLI/REST goldens run JVM first and JS SECOND **against the same shared
 world** (the disk directory / the HTTP server), proving the READ-based
 idempotence crosses engines, and byte-compare the identical programs.
 
+## The reconciliation loop: `reconcile`
+
+`reconcile(design, provider, intervalMs)` (row 3.3) turns `apply` into a
+continuous loop: every tick runs `apply(design, last, provider)` inside a
+`spawn` (the same CONC003-JS-01 shape as workflow `schedule`) and returns the
+`scheduler.every` job id — stop it with `scheduler.cancel(id)`. Ticks may
+overlap and that is safe by construction: idempotence is the provider's READ,
+the `last` state is only a hint. There is **no Native stub** here — `every`
+is real on every target (CRON001 gates `at`/cron, never `every`). The golden
+(`MakealiveReconcileE2ETest`) proves the loop converges the world by itself
+and that after `cancel` the world stays dead across 4 intervals. Waiting for
+a tick in a test follows the §132 rule: ONE long `time.sleep`, never short
+polling inside `while (a && b)` (see `training/idioms/concurrency.md`).
+
+```kf
+var id = reconcile(design, provider, 5000)   // converge every 5s
+// ...
+scheduler.cancel(id)                          // the loop dies
+```
+
 ## Clouds stay OUT of the compiler
 
 Concrete AWS/Azure/GCP providers are **official packages** (`infra-<cloud>`,

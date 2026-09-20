@@ -146,9 +146,12 @@ the host db slice must be gated per target exactly like `workflow-ckpt-host.kf`
   CLI+REST providers `13b44c6c`, stdlib docs `docs/stdlib/makealive.md` EN+PT; Makealive battery
   20/20 on the tip (JVM==JS byte parity incl. cross-engine shared-world goldens). 🔵 next in
   this plan's queue: **3.3 reconcile**.
-- **3.3 [reconcile]** — `reconcile(design, provider, intervalMs)` delegating
-  to `scheduler` (Native loud `CRON001` stub, same split as
-  `workflow-sched-host.native.kf`).
+- **3.3 [reconcile]** ✅ 20/09 — `reconcile(design, provider, intervalMs)` delegating
+  to `scheduler.every` (tick = `apply` inside a `spawn`; stop = `scheduler.cancel(jobId)`).
+  **Correction measured while landing:** the planned `CRON001` Native stub was UNNECESSARY —
+  CRON001 gates `scheduler.at` (cron expression); `every` is real on ALL targets since
+  SCHED001 (05/09). Slice `makealive-recon-host.kf` ships to every target; Native gets the
+  compile pin (`MakealiveReconcileE2ETest` 1/1 x3, JVM==JS byte).
 - **3.4 [state]** — **folded into 3.1 by MK-1 (20/09)**; kept as the
   verification item: per-target `kof.db` state goldens (JVM/JS real; Native
   honest `DB001`/`ORM001` until D-DB-GAPS closes).

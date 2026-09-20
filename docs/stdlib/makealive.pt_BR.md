@@ -107,6 +107,26 @@ mundo compartilhado** (o diretório em disco / o servidor HTTP), provando que
 a idempotência por READ cruza motores, e comparam byte a byte os programas
 idênticos.
 
+## O laço de reconciliação: `reconcile`
+
+`reconcile(design, provider, intervalMs)` (linha 3.3) transforma o `apply` em
+um laço contínuo: cada tick roda `apply(design, last, provider)` dentro de um
+`spawn` (a mesma forma CONC003-JS-01 do `schedule` do workflow) e devolve o
+jobId do `scheduler.every` — pare com `scheduler.cancel(id)`. Ticks podem se
+sobrepor e isso é seguro por construção: a idempotência é o READ do provedor,
+o `last` é só uma dica. **Não há stub no Native** aqui — `every` é real em
+todo alvo (o CRON001 gateia `at`/cron, nunca o `every`). O golden
+(`MakealiveReconcileE2ETest`) prova que o laço converge o mundo sozinho e que
+após o `cancel` o mundo fica morto por 4 intervalos. Esperar um tick em teste
+segue a regra §132: UM `time.sleep` longo, nunca polling curto dentro de
+`while (a && b)` (ver `training/idioms/concurrency.md`).
+
+```kf
+var id = reconcile(design, provider, 5000)   // converge a cada 5s
+// ...
+scheduler.cancel(id)                          // o laco morre
+```
+
 ## Nuvens ficam FORA do compilador
 
 Provedores AWS/Azure/GCP concretos são **pacotes oficiais** (`infra-<cloud>`,

@@ -100,6 +100,11 @@ mechanisms — the decision of how to execute belongs to the runtime.
   and expression (CONC003 closed 03/09); known limitations: `cancelled()`
   always `0` (no thread-local for the current task) and only task-lambdas
   become `async function` (CONC003-JS-01);
+- JS `time.sleep` is COOPERATIVE (§132): it yields to the pump. A deterministic
+  golden must WAIT for timers with **one long `time.sleep(ms)`** (the pattern in
+  `WorkflowE2ETest`'s schedule test), never with `time.sleep(10)` polling inside
+  `while (a && b)` — the short-poll competes with the pump and can die silently
+  (rc=0, no output; measured 20/09 building makealive 3.3).
 - producer/consumer queues: `kof.mq` — 3 targets (Native 01/09, MQ001 closed; pub/sub + `mq.queue()`/`push`/`pop`);
 - self-cancel (`var id = time.interval(ms, () -> { … time.cancel(id) })`) — the handle var read inside
   its own initializer works on JVM/JS/Script since 16/09 (§253 face A); **Native rejects it at compile

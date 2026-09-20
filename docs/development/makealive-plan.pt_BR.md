@@ -154,9 +154,12 @@ fatia db do host deve ser gateada por alvo exatamente como `workflow-ckpt-host.k
   provedores CLI+REST `13b44c6c`, docs stdlib `docs/stdlib/makealive.md` EN+PT; bateria Makealive
   20/20 no tip (paridade byte JVM==JS incl. goldens cross-engine de mundo compartilhado).
   🔵 próximo nesta fila: **3.3 reconcile**.
-- **3.3 [reconcile]** — `reconcile(design, provider, intervalMs)` delegando ao
-  `scheduler` (stub `CRON001` alto no Native, mesmo split do
-  `workflow-sched-host.native.kf`).
+- **3.3 [reconcile]** ✅ 20/09 — `reconcile(design, provider, intervalMs)` delegando ao
+  `scheduler.every` (tick = `apply` dentro de um `spawn`; parar = `scheduler.cancel(jobId)`).
+  **Correção medida no pouso:** o stub `CRON001` no Native planejado era DESNECESSÁRIO —
+  CRON001 gateia `scheduler.at` (expressão cron); `every` é real em TODOS os alvos desde
+  SCHED001 (05/09). A fatia `makealive-recon-host.kf` vai para todo alvo; Native ganha o
+  pin de compilação (`MakealiveReconcileE2ETest` 1/1 x3, JVM==JS byte).
 - **3.4 [state]** — **dobrado no 3.1 pelo MK-1 (20/09)**; mantido como item
   de verificação: goldens de estado `kof.db` por target (JVM/JS reais; Native
   `DB001`/`ORM001` honestos até D-DB-GAPS fechar).
