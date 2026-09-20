@@ -48,6 +48,19 @@ public final class KofOrm {
         return target == Target.JVM || target == Target.JS;
     }
 
+    /** D-DB-GAPS DB-1 (20/09): faces SQL-puro do Native x86-64, uma por fatia.
+     *  F1a = {@code delete_all} (asm em {@code RuntimeOrm1}); count/migrate/
+     *  create e o row-object entram nas fatias seguintes. MySQL (runtime) e o
+     *  cross riscv/aarch64 (compile-time) seguem {@code ORM001} honesto
+     *  (R7, R6 — nunca silent). */
+    private static final java.util.Set<String> NATIVE_F1 = java.util.Set.of(
+            "kof_orm_delete_all");
+
+    static boolean fnSupportedOn(Target target, String fn) {
+        if (supportedOn(target)) return true;
+        return target == Target.NATIVE && NATIVE_F1.contains(fn);
+    }
+
     static String gapCode() {
         return "ORM001";
     }

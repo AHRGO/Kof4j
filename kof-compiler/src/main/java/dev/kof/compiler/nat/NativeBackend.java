@@ -88,6 +88,7 @@ public class NativeBackend implements Backend {
     Type lastPushedType = Type.UnknownType.UNKNOWN;
     IRClass currentClass = null;
     boolean usesDb = false;
+    boolean usesOrm = false;
     boolean usesHttp = false;
     boolean usesMysql = false;
     boolean usesConcurrency = false;
@@ -262,6 +263,9 @@ public class NativeBackend implements Backend {
                                 usesMysql |= connectsToMysql(i, ops);
                             }
                         }
+                        if (op instanceof KofCall kc && kc.methodName().startsWith("kof_orm_")) {
+                            usesOrm = true;
+                        }
                         if (op instanceof KofCall kc && (kc.methodName().equals("kof_spawn")
                                 || kc.methodName().equals("kof_spawn_result"))) {
                             usesConcurrency = true;
@@ -277,7 +281,7 @@ public class NativeBackend implements Backend {
                 }
             }
         }
-        if (usesDb) {
+        if (usesDb || usesOrm) {
             RuntimeDb1.emit(sb);
             RuntimeDb2.emit(sb);
             RuntimeDb3.emit(sb);
@@ -285,6 +289,9 @@ public class NativeBackend implements Backend {
             RuntimeDb5.emit(sb);
             RuntimeDb6.emit(sb);
             NativeDbPrepared.emitMysqlPrepared(sb);
+        }
+        if (usesOrm) {
+            dev.kof.compiler.runtime.RuntimeOrm1.emit(sb);
         }
         if (usesHttp) {
             NativeHttpRuntime.emitHttpFunctions(sb);

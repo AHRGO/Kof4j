@@ -805,4 +805,83 @@ class KofOrmE2ETest {
                 """);
         runJs(source, tempDir.resolve("out"), "2\nLeo\nMel\n1");
     }
+
+    // ── D-DB-GAPS F1a (20/09): kof_orm_delete_all REAL no Native x86-64 ──
+
+    @Test
+    void deleteAllNativeEndToEndMatchesJvm(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, ENTITY_SRC + """
+                main() {
+                    var db = db.connect("sqlite:%s/f1a.db")
+                    db.execute(db, "create table if not exists user (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, age INTEGER)")
+                    db.execute(db, "delete from user")
+                    db.execute(db, "insert into user (name, email, age) values ('Mel', 'm@kof.dev', 30)")
+                    println(orm.deleteAll<User>(db))
+                    var rows = db.query(db, "select count(*) as n from user")
+                    for (var r in rows) {
+                        println(r)
+                    }
+                }
+                """.formatted(tempDir));
+        String expected = "true\n{\"n\":0}";
+        runJvm(source, tempDir.resolve("jvm-out"), expected);
+        CompilationResult nativeResult = driver.compile(source, tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nativeResult.success(), "Native deve compilar orm.deleteAll: "
+                + nativeResult.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(
+                tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = p.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals(expected, out, "paridade byte JVM==Native (delete_all)");
+    }
+
+    @Test
+    void deleteAllUnknownConnectionThrowsJvmMessageOnBothTargets(@TempDir Path tempDir)
+            throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, ENTITY_SRC + """
+                main() {
+                    try {
+                        println(orm.deleteAll<User>("db:2"))
+                    } catch (String e) {
+                        println(e)
+                    }
+                }
+                """);
+        String expected = "unknown db connection: db:2";
+        runJvm(source, tempDir.resolve("jvm-out"), expected);
+        CompilationResult nativeResult = driver.compile(source, tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nativeResult.success(), "Native deve compilar: "
+                + nativeResult.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(
+                tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = p.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals(expected, out,
+                "id invalido deve lancar a MESMA string do host (R6, paridade)");
+    }
+
+    @Test
+    void sqlFacesRestantesNativeAindaOrm001(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, ENTITY_SRC + """
+                main() {
+                    var db = db.connect("sqlite:/tmp/f1a-gate.db")
+                    orm.create<User>(db)
+                }
+                """);
+        CompilationResult r = driver.compile(source, tempDir.resolve("out"), Target.NATIVE);
+        assertFalse(r.success(), "create ainda e ORM001 no Native ate F1d");
+        assertTrue(r.diagnostics().getDiagnostics().toString().contains("ORM001"),
+                "gate honesto (nunca silent): " + r.diagnostics().getDiagnostics());
+    }
 }
