@@ -423,6 +423,12 @@ public final class ExpressionLowerer {
                     yield localIdx;
                 }
                 Type recvType = ExpressionTyper.inferExprType(driver, fa.receiver(), locals);
+                // #375/§355: acesso a membro em type-variable com bound resolve
+                // no BOUND (getfield Animal.name, dono real) — espelha o typer.
+                if (recvType instanceof Type.TypeVariable tvb && tvb.bound() != null
+                        && tvb.bound() instanceof Type.ClassType) {
+                    recvType = tvb.bound();
+                }
                 // narrowing de null-safety (`if (x != null) { x.length }`): o tipo do
                 // receptor é o inner — antes emitia `getfield "?".length` para String?
                 // (owner "?" inválido → erro de launcher/verificação no JVM).

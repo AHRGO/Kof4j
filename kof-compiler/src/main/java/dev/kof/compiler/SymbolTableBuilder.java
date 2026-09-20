@@ -132,7 +132,9 @@ public final class SymbolTableBuilder {
         SymbolTable classScope = classSym.members().enterScope();
         sa.putClassMemberScope(cls.name(), classScope);
         for (String tp : cls.typeParameters()) {
-            classScope.define(new SymbolTable.TypeParameterSymbol(tp));
+            // §355: entry pode trazer bound ("T: Animal") — nome limpo +
+            // bound no symbol, para o TypeVariable do escopo apagar certo.
+            classScope.define(TypeParams.symbol(tp, sa));
         }
         for (AstNode member : cls.members()) {
             if (member instanceof FieldDeclarationNode field) {
@@ -291,7 +293,7 @@ public final class SymbolTableBuilder {
         sa.putClassMemberScope(rec.name(), classScope);
         List<String> typeParams = rec.typeParameters() == null ? List.of() : rec.typeParameters();
         for (String tp : typeParams) {
-            classScope.define(new SymbolTable.TypeParameterSymbol(tp));
+            classScope.define(TypeParams.symbol(tp, sa)); // §355
         }
         List<Type> compTypes = new ArrayList<>();
         for (RecordComponentNode comp : rec.components()) {
@@ -352,7 +354,7 @@ public final class SymbolTableBuilder {
         // membros, igual a defineClassMembers — sem isso `map(T input)` não
         // resolve o T.
         for (String tp : iface.typeParameters()) {
-            classScope.define(new SymbolTable.TypeParameterSymbol(tp));
+            classScope.define(TypeParams.symbol(tp, sa)); // §355
         }
         for (AstNode member : iface.members()) {
             if (member instanceof FieldDeclarationNode field) {

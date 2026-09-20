@@ -469,11 +469,23 @@ public final class CompilerTypes {
         if (!(recvType instanceof Type.ClassType ct) || ct.typeArguments().isEmpty()) return null;
         if (currentUnit != null) {
             for (AstNode d : currentUnit.declarations()) {
-                if (d instanceof ClassDeclarationNode cls && cls.name().equals(ct.name())) {
-                    for (int i = 0; i < cls.typeParameters().size(); i++) {
-                        if (i < ct.typeArguments().size() && cls.typeParameters().get(i).equals(tvName)) {
-                            return ct.typeArguments().get(i);
-                        }
+                // §355/#385: qualquer declaração com type-params é fonte de
+                // substituição — classe, INTERFACE genérica e record. Antes só
+                // ClassDeclarationNode era varrida, e `Wrapper<String>.get()`
+                // (interface) não substituia T → o efetivo saía TypeVariable.
+                List<String> tps = switch (d) {
+                    case ClassDeclarationNode cls when cls.name().equals(ct.name()) -> cls.typeParameters();
+                    case InterfaceDeclarationNode it when it.name().equals(ct.name()) -> it.typeParameters();
+                    case RecordDeclarationNode rc when rc.name().equals(ct.name()) -> rc.typeParameters();
+                    default -> null;
+                };
+                if (tps == null) continue;
+                for (int i = 0; i < tps.size(); i++) {
+                    // §355: a entrada pode carregar bound ("T: Animal") —
+                    // compara pelo NOME limpo, nunca pela crua.
+                    if (i < ct.typeArguments().size()
+                            && TypeParams.name(tps.get(i)).equals(tvName)) {
+                        return ct.typeArguments().get(i);
                     }
                 }
             }
@@ -497,8 +509,9 @@ public final class CompilerTypes {
         return memberType;
     }
     static Type resolveWithTypeParams(String typeName, List<String> typeParams, CompilationUnitNode currentUnit) {
-        if (typeParams.contains(typeName)) return new Type.TypeVariable(typeName);
-        return CompilerTypes.toType(typeName, currentUnit);
+        Type tv = TypeParams.variable(typeName, typeParams, currentUnit, null);
+        if (tv != null) return tv;
+        return eraseTypeVars(CompilerTypes.toType(typeName, currentUnit), typeParams, currentUnit, null);
     }
 
     /**
@@ -507,11 +520,27 @@ public final class CompilerTypes {
      * de resolução de tipos de campos/parâmetros/retornos/records — sem isso
      * `List<NodeUI>` ficava `ClassType("","NodeUI")` no arg e o cast/descritor
      * JVM saía sem pacote (NoClassDefFoundError).
+     *
+     * <p>§355 (rio da erasure): além do nome TOP (`T` → `TypeVariable(T,
+     * bound)`), varre RECURSIVAMENTE a estrutura do tipo resolvido e troca
+     * todo leaf que é um type-param em `TypeVariable` — `List<T>` carregava
+     * `ClassType("","T")` no argumento (→ `checkcast T`, `LT;`) e `T[]`
+     * carregava componente fantasma (→ campo com descritor `[LT;` →
+     * VerifyError). Com o TypeVariable no lugar, a erasure central
+     * (`JvmTypeMapper.toDescriptor`) apaga para o bound/Object em TODO
+     * descritor.
      */
     static Type resolveWithTypeParams(String typeName, List<String> typeParams,
                                       CompilationUnitNode currentUnit, SemanticAnalyzer sa) {
-        if (typeParams.contains(typeName)) return new Type.TypeVariable(typeName);
-        return CompilerTypes.toType(typeName, currentUnit, sa);
+        Type tv = TypeParams.variable(typeName, typeParams, currentUnit, sa);
+        if (tv != null) return tv;
+        return eraseTypeVars(CompilerTypes.toType(typeName, currentUnit, sa), typeParams, currentUnit, sa);
+    }
+
+    private static Type eraseTypeVars(Type t, List<String> typeParams,
+                                      CompilationUnitNode unit, SemanticAnalyzer sa) {
+        if (typeParams == null || typeParams.isEmpty()) return t;
+        return TypeParams.rewrite(t, n -> TypeParams.variable(n, typeParams, unit, sa));
     }
     static KofLoadLiteral defaultValueOp(Type type) {
         // §125 (decisão da mantenedora 12/09, opção A): default de

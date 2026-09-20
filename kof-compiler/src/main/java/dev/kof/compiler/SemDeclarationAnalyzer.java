@@ -156,7 +156,7 @@ final class SemDeclarationAnalyzer {
         checkThrowsClause(sa, func.thrownExceptions(), "function '" + func.name() + "'");
         SymbolTable funcScope = sa.currentScope().enterScope();
         for (String tp : func.typeParameters()) {
-            funcScope.define(new SymbolTable.TypeParameterSymbol(tp));
+            funcScope.define(TypeParams.symbol(tp, sa)); // §355
         }
         Type returnType = sa.resolveType(func.returnType(), funcScope);
         // #333 (medido no tip): funcao top-level declarada VOID ou SEM TIPO com
@@ -167,7 +167,13 @@ final class SemDeclarationAnalyzer {
         boolean funcValueReturnRejected = Type.isVoid(returnType) || Type.isUnknown(returnType);
         int idx = 0;
         for (FormalParameterNode param : func.parameters()) {
-            Type paramType = Type.of(param.type());
+            // §355/#368: parâmetro do tipo de um type-param (`item: T` em
+            // `process<T>(item: T)`) virava ClassType("","T") fantasma — o
+            // dono do invoke saía `""` (ClassFormatError). Resolve primeiro
+            // como type-variable (com bound), senão o Type.of de sempre.
+            Type paramType = TypeParams.variable(param.type(), func.typeParameters(),
+                    sa.unit(), sa);
+            if (paramType == null) paramType = Type.of(param.type());
             funcScope.define(new SymbolTable.ParameterSymbol(param.name(), paramType, idx));
             idx++;
         }

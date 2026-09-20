@@ -160,7 +160,14 @@ public final class MemberResolver {
         // → NoClassDefFoundError). Idempotente; não toca builtin/enum/nome local.
         // §179: qualifyDeep mapeia o builtin kof.ui/kof.media quando nada mais
         // resolve o nome (preservando shadowing por import/classe do módulo).
-        return CompilerTypes.qualifyDeep(qualifiedType(Type.of(name)), sa.unit(), sa);
+        // §355 (rio da erasure): os type-params do ESCOPO (classe/record/
+        // interface/função genérica) entram também nos ARGUMENTOS/COMPONENTES:
+        // `List<T>` carregava ClassType("","T") no arg (→ `checkcast T`, #399/
+        // #363) e `T[]` carregava o componente fantasma (→ campo `[LT;`, #295).
+        Type resolved = CompilerTypes.qualifyDeep(qualifiedType(Type.of(name)), sa.unit(), sa);
+        return TypeParams.rewrite(resolved, n ->
+                scope != null && scope.resolve(n) instanceof SymbolTable.TypeParameterSymbol tps
+                        ? tps.type() : null);
     }
 
     /**

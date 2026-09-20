@@ -25,6 +25,12 @@ final class GenericReturnAdapter {
             List<IRLocalVariable> locals, Type declaredReturn) {
         if (!(declaredReturn instanceof Type.TypeVariable)) return;
         Type effective = ExpressionTyper.inferExprType(driver, mc, locals);
+        // §355: efetivo ainda é uma variável de tipo COM bound (`T: Animal`
+        // passado como `T` doutro genérico) — o alvo concreto do cast é o
+        // bound; unbounded segue sem cast (Object cru na pilha é legal).
+        if (effective instanceof Type.TypeVariable tv && tv.bound() != null) {
+            effective = tv.bound();
+        }
         if (TypeMetrics.isPrimitiveType(effective)) {
             driver.emitErasureUnbox(ops, effective);
             return;

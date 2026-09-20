@@ -365,6 +365,14 @@ public final class SemExpressionTyper {
                 if (Type.isString(recvType) && ("name".equals(fa.fieldName()) || "path".equals(fa.fieldName()))) {
                     yield BuiltinTypes.STRING;
                 }
+                // #375/§355 (rio da erasure): receiver é type-variable COM bound
+                // (`item.name` com `item: T: Animal`) — o membro resolve no
+                // BOUND, como javac após a erasure. Sem isto o tipo caía em
+                // UNKNOWN e o emit saía owner "?" / descritor Object →
+                // NoClassDefFoundError: "?".
+                if (recvType instanceof Type.TypeVariable tv && tv.bound() != null) {
+                    recvType = tv.bound();
+                }
                 if (recvType instanceof Type.ClassType ct) {
                     SymbolTable.Symbol field = MemberResolver.resolveFieldInHierarchy(sa, ct.name(), fa.fieldName());
                     if (field != null) {

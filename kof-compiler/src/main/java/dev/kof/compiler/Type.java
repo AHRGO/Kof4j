@@ -23,7 +23,18 @@ public sealed interface Type {
         }
     }
 
-    record TypeVariable(String name) implements Type {
+    /**
+     * §355 (rio da erasure #399/#363/#368/#375): a variável de tipo agora
+     * carrega o BOUND declarado (`T: Animal` → bound = {@code Animal}), que o
+     * parser antes descartava. O bound é o que a erasure JVM usa no descritor
+     * e no owner de getfield/invoke (javac apaga {@code <T extends Animal>}
+     * para {@code Animal}; sem bound, {@code Object}). O construtor de 1 arg
+     * mantém os call-sites existentes (unbounded → {@code Object}).
+     */
+    record TypeVariable(String name, Type bound) implements Type {
+        public TypeVariable(String name) {
+            this(name, null);
+        }
     }
 
     record FunctionType(List<Type> parameterTypes, Type returnType, String className) implements Type {
