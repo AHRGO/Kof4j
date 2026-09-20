@@ -591,6 +591,35 @@ MAGIC/tag, `RuntimeList.kof_list_add` layout):
   `sqlFacesRestantes` (save → face REAL; manter ORM001 p/ find/all/where/page
   + row-object cross).
 
+### F2a PROBE — FATOS 2+3 MEDIDOS (native real, sem invencao) — 20/09 ~17:4x
+- **Fato 2 (layout do objeto):** compilado NATIVE real (harness
+  `/tmp/opencode/probe-f2a` — `CompilerDriver`+asm jars do ~/.m2; `Main.s`
+  efemero, ler via objdump/nm do ELF). `User_init_3` storeia slots em
+  `0x10/0x18/0x20(%rcx)` = **8B uniforme, campos comecam no offset 16 na ordem
+  do construtor**; accessor `User_name` = `mov 0x18(%rdi),%rax` (leitura crua);
+  chamada de accessor = vtable `call *%rbx`. Int no slot ja esta 8B
+  (sign-extended), Long idem.
+- **Consequencia (design SIMPLIFICADO pela medicao):** `kof_orm_save` nativo
+  recebe os MESMOS 4 args do lowering atual (dbId, obj, table, schema — zero
+  mudanca no `ExpressionOrmCallLowerer` alem do gate `NATIVE_F1`); o asm lê o
+  campo i em `16+8*i` e decide INSERT/UPDATE pelo PK-slot cru; PK offset =
+  `16+8*pkIndex` derivado do MESMO parse de schema do F1d; patch do id gerado =
+  `mov %rax,16+8*pkIndex(%rdi)` no mesmo obj (retorna o obj — paridade
+  observavel = valor retornado; nota "mutacao vs new-instance" no parity).
+  Sem row-array, sem box por campo, sem ClassLayout como arg.
+- **Fato 3 (binds):** precedente `RuntimeDb4` = sqlite prepared com
+  `sqlite3_bind_int/bind_text/step` ja em asm no repo — INSERT/UPDATE do save
+  segue Db4; falta so `bind_double/bind_int64/last_insert_rowid` (mesma
+  chamada PLT) e Float no slot (bits movss vs 8B — medir no primeiro teste com
+  campo Float; se o slot for 4B-only, `movl` no lugar de `movq`).
+- **NEXT STEP (unit F2a completa, comeca por aqui):** editar
+  `KofOrm.NATIVE_F1` +`kof_orm_save` (comentario das fatias), novo
+  `RuntimeOrmSave.java` (rule 7) com o asm acima reaproveitando
+  `.Lorm2_qq/.Lorm2_tis`+builder (precedente F1d), teste no `KofOrmE2ETest`
+  par JVM==Native (insert novo/insert 2x/update/strings com aspas/Float edge)
+  + virar pins `nativeReportsOrm001*`/`sqlFacesRestantes`; suite completa +
+  parity flip da linha row-object.
+
 ## PRÓXIMO PASSO (universal platform — D6-A resolvido 19/09)
 
 **Status D6-A:** RESOLVIDO 19/09 via D-POLL-19. Espécie `ffi-abi-structs.md` já existe (design-only, drafted by docs→platform lane 19/09). Decisões D6-1 a D6-3 definidas: (D6-1) qual Kof value mapeia a C struct (A=record imutável recomendado, B=struct mutável para in/out buffers, C=both); (D6-2) array mapping (primitive arrays → ptr, List<T> stays FFI001); (D6-3) out-parameters (new Byte[n] passed as S→ADDRESS, read back pós-chamada). Implementação = lane compilador. Próximo item da fila: D4-A (marcar 31 ns do StdCatalog como experimental na tabela de tiers).
