@@ -11,7 +11,7 @@ public final class JsRuntimeCollections {
 
     private JsRuntimeCollections() {}
 
-    static final String COLLECTIONS_RUNTIME = """
+    static String COLLECTIONS_RUNTIME = """
             export function kofListIndexOf(list, value) {
                 for (let i = 0; i < list.length; i++) {
                     if (kofValEq(list[i], value)) return i;
