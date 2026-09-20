@@ -30,6 +30,7 @@ public final class CompilerImports {
                                             java.util.Map<AstNode, String> declarationPackages,
                                             ExternalClasspath externalClasspath) {
         java.util.Set<String> visitedDirs = new java.util.HashSet<>();
+        Path officialLibraryRoot = officialLibraryRoot();
         // Fase 1 (PKG007): grafo import → imports do arquivo (fechado após
         // a expansão; ciclos detectados globalmente ao fim do loop).
         java.util.Map<String, java.util.Set<String>> graph = new java.util.HashMap<>();
@@ -43,9 +44,17 @@ public final class CompilerImports {
             if (wildcard) {
                 imp = imp.substring(0, imp.length() - 2);
             }
+            Path resolutionRoot = moduleRoot;
             Path pkgDir = moduleRoot != null
                     ? moduleRoot.resolve(imp.replace('.', '/'))
                     : Path.of(imp.replace('.', '/'));
+            if (!Files.isDirectory(pkgDir) && officialLibraryRoot != null) {
+                Path officialPackage = officialLibraryRoot.resolve(imp.replace('.', '/'));
+                if (Files.isDirectory(officialPackage)) {
+                    pkgDir = officialPackage;
+                    resolutionRoot = officialLibraryRoot;
+                }
+            }
             // Try directory import first (import a.b -> whole package a/b)
             if (Files.isDirectory(pkgDir)) {
                 String dirKey = pkgDir.toAbsolutePath().normalize().toString();
@@ -71,8 +80,9 @@ public final class CompilerImports {
                             }
                             continue;
                         }
-                        String expectedPkg = (moduleRoot != null
-                                && dirKey.equals(moduleRoot.toAbsolutePath().normalize().toString()))
+                        String expectedPkg = (resolutionRoot != null
+                                && resolutionRoot.equals(moduleRoot)
+                                && dirKey.equals(resolutionRoot.toAbsolutePath().normalize().toString()))
                                 ? "" : imp;
                         if (!libUnit.packageName().isEmpty()
                                 && !libUnit.packageName().equals(expectedPkg)
@@ -110,6 +120,10 @@ public final class CompilerImports {
                 String filePart = imp.substring(lastDot + 1);
                 Path pkgPath = moduleRoot != null ? moduleRoot.resolve(pkgPart.replace('.', '/')) : Path.of(pkgPart.replace('.', '/'));
                 Path kfFile = pkgPath.resolve(filePart + ".kf");
+                if (!Files.isRegularFile(kfFile) && officialLibraryRoot != null) {
+                    kfFile = officialLibraryRoot.resolve(pkgPart.replace('.', '/'))
+                            .resolve(filePart + ".kf");
+                }
                 if (Files.isRegularFile(kfFile)) {
                     String pkgKey = kfFile.toAbsolutePath().normalize().toString();
                     if (!visitedDirs.add(pkgKey)) {
@@ -169,7 +183,8 @@ public final class CompilerImports {
                 currentDiagnostics.error("", 0, 0, 0,
                         "import '" + imp + "' not found in the module"
                                 + " (expected " + imp.replace('.', '/') + "/ or "
-                                + imp.replace('.', '/') + ".kf under the root)",
+                                + imp.replace('.', '/') + ".kf under the root"
+                                + " or the official libraries)",
                         "PKG006");
             }
             // import externo (android.* etc.) — ignora
@@ -214,6 +229,15 @@ public final class CompilerImports {
         }
         return new CompilationUnitNode(unit.position(), unit.packageName(),
                 imports, decls);
+    }
+
+    private static Path officialLibraryRoot() {
+        String installDir = System.getProperty("kof.install.dir", "").trim();
+        if (installDir.isEmpty()) return null;
+
+        Path root = Path.of(installDir).resolve("lib").resolve("kof-libs")
+                .toAbsolutePath().normalize();
+        return Files.isDirectory(root) ? root : null;
     }
 
     static String declarationName(AstNode d) {
