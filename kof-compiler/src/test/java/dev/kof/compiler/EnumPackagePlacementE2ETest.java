@@ -52,8 +52,9 @@ class EnumPackagePlacementE2ETest {
     }
 
     private void runJvm(Path outDir, String tag, String expected) throws Exception {
-        Process p = new ProcessBuilder(System.getProperty("java.home") + "/bin/java",
-                "-cp", outDir.toString(), "Default.Main")
+        Path javaHome = Path.of(System.getProperty("java.home"));
+        Process p = new ProcessBuilder(javaHome.resolve("bin").resolve("java").toString(),
+                "-cp", outDir.toAbsolutePath().toString(), "Default.Main")
                 .redirectErrorStream(true).start();
         String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
                 .replace("\r\n", "\n").trim();
@@ -136,12 +137,12 @@ class EnumPackagePlacementE2ETest {
 
     @Test
     void samePackageMultiFileNoImportPlacesEnumCorrectly(@TempDir Path tmp) throws Exception {
-        Path enumFile = write(tmp, "foo/bar/Status.kf", """
+        write(tmp, "foo/bar/Status.kf", """
                 package foo.bar
 
                 enum Status { ACTIVE, INACTIVE }
                 """);
-        Path user = write(tmp, "foo/bar/User.kf", """
+        write(tmp, "foo/bar/User.kf", """
                 package foo.bar
 
                 class User {
