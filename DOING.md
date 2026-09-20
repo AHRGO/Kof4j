@@ -553,6 +553,38 @@ do checker validado green e **REVERTIDO** (trocar SEM014 alto por crash silencio
   segue honesto). Antes de escrever asm: ler `KofOrm.java`/`JvmOrmRuntime` p/
   extrair o contrato EXATO do save JVM (nunca inventar).
 
+### F2a PROBE (design medido, SEM codigo ainda) — 20/09 ~17:1x
+Contrato extraído SEM inventar (fontes: `JvmOrmRuntime.kof_orm_save` 151-210,
+`KofOrm` 60-66/86-88, `ExpressionOrmCallLowerer` inteiro, `RuntimeErasureBox`
+MAGIC/tag, `RuntimeList.kof_list_add` layout):
+- JVM: `kof_orm_save(id, obj, table, schema)`; INSERT quando PK numerica == 0 /
+  null → cols sem PK + RETURN_GENERATED_KEYS → NOVA instancia com id; senao
+  UPDATE e retorna o obj. E2E compara pelo VALOR RETORNADO.
+- Nativo NAO tem meta de campos no runtime (`NativeClassMeta` = vtable/string
+  only) e List nativo e HOMOGENEO (SEM056) — valores nao podem ir por List.
+- **Design F2a (escolhido, Kof-first):** lowering (target==NATIVE, save):
+  obj → temp local; `kof_row_new(N)` + `N x kof_row_add(boxed-field)` (boxes
+  existentes MAGIC+tag@8/value@16; String passa crua, distingue por MAGIC);
+  `kof_orm_save(dbId, table, schema, rowPtr, obj, pkOffLiteral)` = 6 args fixos
+  (regs da casa; >6 nao e necessario); asm: parser de schema reusa
+  `.Lorm2_qq/.Lorm2_tis/builder` (precedente F1d ja referencia labels de F1c no
+  MESMO .s); INSERT/UPDATE/last_insert_rowid iguais ao JVM; PATCH IN-PLACE do
+  slot PK em obj (offset do `ClassLayout` — `NativeBackend.layout()` 163) e
+  retorna o MESMO obj (paridade observavel = valor retornado; divergencia
+  "mutacao vs new-instance"/catalogada honesta no parity + teste que so le o
+  retornado).
+- **Fato AINDA NAO medido (1º passo da proxima sessao, 5 min):** como o
+  lowerer emite a LEITURA do campo (`u.name` accessor) no NATIVE — compilar
+  snippet `var v = u.name()` target NATIVE e ler o .s (nao chamar de memoria).
+- NEXT STEP: medir o fato acima → escrever `RuntimeOrm3RowSave.java` (rule 7:
+  nome pela responsabilidade, NAO RuntimeOrm3 numerico — decidir ao escrever:
+  `RuntimeOrmSave`) + branch NATIVE no `ExpressionOrmCallLowerer` + libera
+  `kof_orm_save` no `NATIVE_F1` (renomear p/ `NATIVE_FACES` com comentario de
+  fatias) + `KofOrmE2ETest` par JVM==Native (save 2x idempotente, string com
+  aspas, UPDATE por PK, edges) + virar as pins `nativeReportsOrm001*`/
+  `sqlFacesRestantes` (save → face REAL; manter ORM001 p/ find/all/where/page
+  + row-object cross).
+
 ## PRÓXIMO PASSO (universal platform — D6-A resolvido 19/09)
 
 **Status D6-A:** RESOLVIDO 19/09 via D-POLL-19. Espécie `ffi-abi-structs.md` já existe (design-only, drafted by docs→platform lane 19/09). Decisões D6-1 a D6-3 definidas: (D6-1) qual Kof value mapeia a C struct (A=record imutável recomendado, B=struct mutável para in/out buffers, C=both); (D6-2) array mapping (primitive arrays → ptr, List<T> stays FFI001); (D6-3) out-parameters (new Byte[n] passed as S→ADDRESS, read back pós-chamada). Implementação = lane compilador. Próximo item da fila: D4-A (marcar 31 ns do StdCatalog como experimental na tabela de tiers).
