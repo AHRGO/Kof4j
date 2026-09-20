@@ -2510,3 +2510,30 @@ authorize a 1.0 RC (EG-8 stays gated on the 0.5.0 cut).
 (EN×PT consistent); 4 OPEN `bug`-labeled issues (#561/#563/#564/#566);
 `scripts/check_release_blockers.sh --rc-gate` RED with 4 open `1.0-blocks`
 (#561/#563/#564/#566); `specification-gaps.md` 0 open.
+
+### Addendum (09/20/2026) — version string, `main` freeze, and the package consumption model
+
+Three maintainer answers (chat, 09/20/2026), same release scope:
+
+1. **The 0.5.0 release ships as `0.5.0-beta`** (keeps the beta suffix; no
+   codename — that is reserved for 1.0, `release-naming.md`). The lanes may
+   draft the CHANGELOG and pre-stage the tag; the cut itself still waits on the
+   seven conditions.
+2. **`main` stays frozen until the 0.5.0 release.** The 12 pre-fix CodeQL
+   alerts on `main` are not ported now; the port is a release-day action. The
+   gate's conditions 5/6 are measured on the active branch `beta-0.5.0`.
+3. **A package published by `kof deploy --publish` is consumed as a SOURCE
+   module — option (b) of #566.** The published artifact must carry the
+   sources; consumption is via the source module (`import regsmoke.Greeter`
+   resolves against the installed sources), **not** via the compiled jar.
+   Consequences opened for the cli/deps lane: `kof deploy --publish` must
+   package the library's public source surface (today it packages only classes
+   reachable from `main`), and the registry install (`kof deps resolve`) must
+   place the source module where the import gate finds it. The three concrete
+   defects split out of #566 (#567 `--classpath` silent no-op — R6, #568 SEM015
+   false positive, #569 `build` emits on error) remain defects and proceed
+   independently of the model.
+
+**Non-goals:** the model decision does NOT change Kof syntax/semantics; it
+settles the Registry consumption contract only. It does NOT cut 0.5.0 nor open
+1.0.

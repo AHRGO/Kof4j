@@ -22,10 +22,9 @@
 >
 > A salvaguarda original permanece para o futuro: nenhum agente ratifica nada em
 > nome da Mel; só ela preenche blocos de aprovação e responde perguntas em
-> aberto (KofC/Android na superfície Stable 1.0; a declaração que abre o primerio
-> RC; os candidatos de reforço `[? MEL]` da §35 — cada um é uma "aresta aberta"
-> que precisa ser fechada pela mantenedora ANTES do primeiro candidato a RC,
-> pela regra de zero aresta aberta).
+> aberto. A superfície KofC/Android, a declaração que abre o primeiro RC e os
+> candidatos de reforço foram todos respondidos pela Mel em 20/09/2026
+> (`D-1.0-EDGES`); não são mais arestas abertas.
 >
 > Após a aprovação explícita da Mel este contrato:
 >
@@ -1492,12 +1491,16 @@ As linhas abaixo são **candidatas**, não contrato.
 
 Cada uma precisa ser aprovada pela Mel antes de entrar no bloco normativo.
 
+**RATIFICADO 20/09/2026 (`D-1.0-EDGES`):** os nove candidatos de reforço viram
+**gates obrigatórios** (os marcadores abaixo leem `[RATIFICADO]`). As propostas
+da §32.x são agora gates normativos do contrato de saída, não candidatos.
+
 ## 32.1 Gate de aplicação real
 
 Adicionar:
 
 ```text
-[? MEL] aplicação real de referência validada com o pacote candidato
+[RATIFICADO] aplicação real de referência validada com o pacote candidato
 ```
 
 Forma proposta:
@@ -1526,7 +1529,7 @@ Kof Editor.
 Adicionar:
 
 ```text
-[? MEL] candidato comparado ao último baseline aceito, sem nova regressão
+[RATIFICADO] candidato comparado ao último baseline aceito, sem nova regressão
 ```
 
 Isso complementa:
@@ -1552,9 +1555,9 @@ ou
 Adicionar ao CI/release evidence:
 
 ```text
-[? MEL] 0 falhas obrigatórias sem classificação
-[? MEL] flakes conhecidas têm issue + owner + evidência
-[? MEL] rerun isolado não apaga automaticamente a primeira falha
+[RATIFICADO] 0 falhas obrigatórias sem classificação
+[RATIFICADO] flakes conhecidas têm issue + owner + evidência
+[RATIFICADO] rerun isolado não apaga automaticamente a primeira falha
 ```
 
 Para 1.0, uma flake não resolvida pode ser:
@@ -1572,8 +1575,8 @@ mas nunca "sumir" sem classificação.
 Adicionar:
 
 ```text
-[? MEL] Stable Surface snapshot criado no RC1
-[? MEL] nenhum drift de surface sem nova decisão
+[RATIFICADO] Stable Surface snapshot criado no RC1
+[RATIFICADO] nenhum drift de surface sem nova decisão
 ```
 
 Este snapshot torna o feature freeze mensurável.
@@ -1585,7 +1588,7 @@ Este snapshot torna o feature freeze mensurável.
 Adicionar:
 
 ```text
-[? MEL] corpus de consumidores reais compila/roda com o candidato
+[RATIFICADO] corpus de consumidores reais compila/roda com o candidato
 ```
 
 Não precisa ter escala Rust/Crater.
@@ -1605,7 +1608,7 @@ Fortalecer:
 para:
 
 ```text
-[? MEL] pacote testado tem o MESMO digest do artefato que será publicado
+[RATIFICADO] pacote testado tem o MESMO digest do artefato que será publicado
 ```
 
 Idealmente registrar:
@@ -1892,5 +1895,6 @@ Os pesos (seção 26) e o ranking (seção 34) **não foram alterados**: as corr
 **RATIFICADO EM 20/09/2026** — o bloco de aprovação (§22) foi preenchido como
 registro mecânico da aprovação da mantenedora no chat (palavras dela citadas
 lá); a decisão normativa é `D-RELEASE-1.0` em `docs/development/DECISIONS.md`.
-Os candidatos de reforço `[? MEL]` da §35 mantêm status pendente: são arestas
-abertas a fechar no desenho dos gates, nunca auto-ratificáveis.
+Os candidatos de reforço `[? MEL]` da §35 estão **fechados** pelo `D-1.0-EDGES`
+(20/09/2026): os nove viraram gates obrigatórios — os marcadores da §32 leem
+`[RATIFICADO]`; não são mais arestas abertas.

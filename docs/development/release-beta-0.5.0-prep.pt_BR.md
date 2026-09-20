@@ -22,13 +22,16 @@ dos três estados).
        (rc=0). Resta para marcar [x]: ff da `q555` + primeiro re-scan fechar
        os 14 `open` tolerados por id no baseline (podar as linhas então) e
        #563 (família src/test no CI) seguir na fila própria.
-3. [ ] Bump de versão: `pom.xml` `<revision>0.4.7-beta</revision>` para o
-       número que a mantenedora decidir no corte. Conferir referências à
-       versão codificadas (javadoc/testes citam a versão do artefato) ANTES
-       do bump; nunca edição unilateral.
+3. [ ] Bump de versão: **DECIDIDO 20/09/2026 — o release sai como
+       `0.5.0-beta`** (sufixo beta mantido, sem codename; adendo do
+       `D-RELEASE-0.5.0-GATE`). `VERSION`/`pom.xml` já estão em `0.5.0-beta`;
+       restam só o CHANGELOG/tag. Conferir referências à versão codificadas
+       (javadoc/testes citam a versão do artefato) ANTES do bump; nunca edição
+       unilateral.
 4. [ ] Corte do CHANGELOG (EN+PT): seção `0.5.0` reunindo os bullets não
        lançados; cabeçalho `Version:` do `AGENTS.md`(+PT) atualizado no
-       mesmo commit.
+       mesmo commit. (As lanes podem redigir já; o corte segue esperando as
+       sete condições.)
 5. [ ] Tally: `'Current build: **N**'` em `docs/backend-parity.md`(+PT) a
        partir da primeira CI Build+Tests hospedada VERDE no tip da release
        (contagem do log do job, nunca memória).
@@ -36,7 +39,10 @@ dos três estados).
        5/5 MEDIDOS no candidato à tag (AGENTS §Estabilidade — tag só com
        verde).
 7. [ ] Tag + release notes (EN+PT); declarar `beta-0.4.0` fechada exceto
-       pela lista de fixes residuais.
+       pela lista de fixes residuais. **O `main` fica congelado até este
+       release** (mantenedora 20/09/2026): os 12 alertas CodeQL pré-fix do
+       `main` são portados no dia do release, não antes; o gate mede a
+       `beta-0.5.0`.
 
 ## Issues abertas que viajam para `beta-0.5.0`
 
@@ -53,7 +59,7 @@ prioridade para "liberar o gate 0.5.0 para todos os agentes".
 | # | Condição | Como é medida | Estado 20/09 |
 |---|---|---|---|
 | 1 | Paridade 100% entre os alvos | matriz por alvo + paridade byte dos goldens onde o contrato exige; divergência = bug ou gap `XXX00x`. **Medida automaticamente** pelo `check_release_050_gate.sh` (roda `scripts/target-matrix.sh`, EG-5, e lê a linha `PARITY: 100%`) | GREEN (6 alvos core com paridade byte vs oráculo JVM) |
-| 2 | Nenhuma decisão pendente | `DECISIONS.md` sem pergunta aberta que mude a superfície | NEEDS-REVIEW |
+| 2 | Nenhuma decisão pendente | `DECISIONS.md` sem pergunta aberta que mude a superfície | GREEN (20/09: modelo da #566, string de versão e congelamento do `main` decididos; marcadores §35 ratificados — adendo `D-RELEASE-0.5.0-GATE`) |
 | 3 | Todos os `docs/development/*.md` soltos concluídos e movidos | regra dos três estados; só fica trabalho com implementação pendente | RED (docs em curso) |
 | 4 | Estabilidade total | suíte completa 0F/0E + matriz 5/5 na candidata. **Medida automaticamente** a partir de um log real da suíte via `scripts/stability-report.sh` (`KOF_SUITE_LOG=…`), que exige que o último `TOTAL` seja 0F/0E; os guards de conformidade fazem parte dessa suíte | NEEDS-MEASURE (sem corrida do dia do RC ainda) |
 | 5 | 0 issues abertas que sejam bug | issues OPEN do GitHub com label `bug` = 0 (inclui a #566 — mantenedora 20/09) | RED (#566) |

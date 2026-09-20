@@ -2498,3 +2498,29 @@ medido (20/09/2026): `scripts/check_known_bugs_status.sh` reporta 19
 known-bugs live (EN×PT consistentes); 4 issues OPEN com label `bug`
 (#561/#563/#564/#566); `scripts/check_release_blockers.sh --rc-gate` RED com 4
 `1.0-blocks` abertos (#561/#563/#564/#566); `specification-gaps.md` 0 abertos.
+
+### Adendo (20/09/2026) — string de versão, congelamento do `main` e o modelo de consumo de pacote
+
+Três respostas da mantenedora (chat, 20/09/2026), mesmo escopo de release:
+
+1. **O release 0.5.0 sai como `0.5.0-beta`** (mantém o sufixo beta; sem
+   codename — reservado para a 1.0, `release-naming.md`). As lanes podem
+   redigir o CHANGELOG e pré-preparar a tag; o corte em si segue esperando as
+   sete condições.
+2. **O `main` fica congelado até o release 0.5.0.** Os 12 alertas CodeQL
+   pré-fix do `main` não são portados agora; o port é ação do dia do release.
+   As condições 5/6 do gate são medidas na branch ativa `beta-0.5.0`.
+3. **Um pacote publicado por `kof deploy --publish` é consumido como MÓDULO-FONTE
+   — opção (b) da #566.** O artefato publicado precisa carregar as fontes; o
+   consumo é via módulo-fonte (`import regsmoke.Greeter` resolve contra as
+   fontes instaladas), **não** via jar compilado. Consequências abertas para a
+   lane cli/deps: o `kof deploy --publish` precisa empacotar a superfície
+   pública de fontes da biblioteca (hoje empacota só classes alcançáveis do
+   `main`), e a instalação do registry (`kof deps resolve`) precisa colocar o
+   módulo-fonte onde o gate de import o encontra. Os três defeitos concretos
+   separados da #566 (#567 `--classpath` no-op silencioso — R6, #568 falso
+   SEM015, #569 `build` emite em erro) seguem defeitos e andam independente do
+   modelo.
+
+**Não-objetivos:** a decisão do modelo NÃO muda sintaxe/semântica de Kof; ela
+apenas fecha o contrato de consumo do Registry. NÃO corta o 0.5.0 nem abre a 1.0.

@@ -20,10 +20,10 @@
 > release 1.0 exist while any mandatory item is unmet or any edge is open.**
 >
 > The original safeguard stands for the future: no agent may ratify anything on
-> Mel's behalf; only she fills approval blocks and answers open sub-questions
-> (KofC/Android in the Stable 1.0 surface; the declaration that opens the first
-> RC; the `[? MEL]` reinforcement candidates of §35 — each is an "aresta aberta"
-> that must be closed before the first RC candidate, per the no-open-edge rule).
+> Mel's behalf; only she fills approval blocks and answers open sub-questions.
+> The KofC/Android surface, the declaration that opens the first RC and the
+> reinforcement candidates were all answered by Mel on 09/20/2026
+> (`D-1.0-EDGES`); they are no longer open edges.
 >
 > After Mel's explicit approval this contract:
 >
@@ -1481,12 +1481,16 @@ The lines below are **candidates**, not contract.
 
 Each one needs Mel's approval before entering the normative block.
 
+**RATIFIED 09/20/2026 (`D-1.0-EDGES`):** all nine reinforcement candidates
+become **mandatory gates** (the markers below read `[RATIFIED]`). The §32.x
+proposals are now normative gates of the exit contract, not candidates.
+
 ## 32.1 Real-application gate
 
 Add:
 
 ```text
-[? MEL] reference real application validated with the candidate package
+[RATIFIED] reference real application validated with the candidate package
 ```
 
 Proposed form:
@@ -1515,7 +1519,7 @@ Kof Editor.
 Add:
 
 ```text
-[? MEL] candidate compared with the last accepted baseline, with no new regression
+[RATIFIED] candidate compared with the last accepted baseline, with no new regression
 ```
 
 This complements:
@@ -1541,9 +1545,9 @@ the last Beta declared a reference by Mel
 Add to the CI/release evidence:
 
 ```text
-[? MEL] 0 mandatory failures without classification
-[? MEL] known flakes have issue + owner + evidence
-[? MEL] an isolated rerun does not automatically erase the first failure
+[RATIFIED] 0 mandatory failures without classification
+[RATIFIED] known flakes have issue + owner + evidence
+[RATIFIED] an isolated rerun does not automatically erase the first failure
 ```
 
 For 1.0, an unresolved flake may be:
@@ -1561,8 +1565,8 @@ but never "disappear" without classification.
 Add:
 
 ```text
-[? MEL] Stable Surface snapshot created at RC1
-[? MEL] no surface drift without a new decision
+[RATIFIED] Stable Surface snapshot created at RC1
+[RATIFIED] no surface drift without a new decision
 ```
 
 This snapshot makes the feature freeze measurable.
@@ -1574,7 +1578,7 @@ This snapshot makes the feature freeze measurable.
 Add:
 
 ```text
-[? MEL] corpus of real consumers compiles/runs with the candidate
+[RATIFIED] corpus of real consumers compiles/runs with the candidate
 ```
 
 It does not need Rust/Crater scale.
@@ -1594,7 +1598,7 @@ Strengthen:
 to:
 
 ```text
-[? MEL] the tested package has the SAME digest as the artifact that will be published
+[RATIFIED] the tested package has the SAME digest as the artifact that will be published
 ```
 
 Ideally record:
@@ -1880,5 +1884,6 @@ The weights (section 26) and the ranking (section 34) **were not changed**: the 
 **RATIFIED 09/20/2026** — the approval block (§22) was filled in as the
 mechanical record of the maintainer's chat approval (her words quoted there);
 the normative decision is `D-RELEASE-1.0` in `docs/development/DECISIONS.md`.
-The `[? MEL]` reinforcement candidates of §35 keep their pending status: they
-are open edges to close at gate-design time, never to self-ratify.
+The `[? MEL]` reinforcement candidates of §35 are **closed** by `D-1.0-EDGES`
+(09/20/2026): all nine became mandatory gates — the §32 markers read
+`[RATIFIED]`; they are no longer open edges.

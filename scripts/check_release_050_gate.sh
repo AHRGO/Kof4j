@@ -90,9 +90,13 @@ c_decisions() {
     STATE[decisions]=RED; DETAIL[decisions]="decision-pending/ folder exists"
   else
     local open
-    open="$(grep -rhoE '\[[?] *MEL *\]' docs/development/PROPOSAL-1.0-EXIT-GATE.md 2>/dev/null | wc -l | tr -d ' ')"
-    STATE[decisions]=NEEDS-REVIEW
-    DETAIL[decisions]="decision-pending/ extinct; $open §35 [? MEL] marker(s) in the PROPOSAL — confirm none is an open surface decision"
+    open="$(grep -rhoE '^\[[?] *MEL *\]' docs/development/PROPOSAL-1.0-EXIT-GATE.md 2>/dev/null | wc -l | tr -d ' ')"
+    if [ "${open:-0}" -eq 0 ]; then
+      STATE[decisions]=GREEN; DETAIL[decisions]="no pending decision (decision-pending/ extinct; no unresolved [? MEL] candidate)"
+    else
+      STATE[decisions]=NEEDS-REVIEW
+      DETAIL[decisions]="decision-pending/ extinct; $open unresolved [? MEL] candidate(s) in the PROPOSAL"
+    fi
   fi
 }
 

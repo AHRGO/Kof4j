@@ -24,20 +24,24 @@ the release is cut (three-states rule).
        tick [x]: ff of `q555` + first re-scan closing the 14 ids tolerated in
        the baseline (prune those lines then); #563 (src/test family in CI)
        follows its own queue.
-3. [ ] Version bump: `pom.xml` `<revision>0.4.7-beta</revision>` to whatever
-       the maintainer decides at the cut. Check hardcoded version refs
-       (tests/javadoc mention the artifact version) BEFORE bumping; never a
-       unilateral edit.
+3. [ ] Version bump: **DECIDED 09/20/2026 — the release ships as
+       `0.5.0-beta`** (beta suffix kept, no codename; `D-RELEASE-0.5.0-GATE`
+       addendum). `VERSION`/`pom.xml` are already at `0.5.0-beta`; only the
+       CHANGELOG/tag remain. Check hardcoded version refs (tests/javadoc
+       mention the artifact version) BEFORE bumping; never a unilateral edit.
 4. [ ] CHANGELOG cut (EN+PT): a `0.5.0` section gathering the unreleased
        bullets; `AGENTS.md`(+PT) header `Version:` updated in the same
-       commit.
+       commit. (Lanes may draft it now; the cut still waits on the seven
+       conditions.)
 5. [ ] Tally: `'Current build: **N**'` in `docs/backend-parity.md`(+PT) from
        the first GREEN hosted CI Build+Tests run on the release tip
        (measured from the job log, never memory).
 6. [ ] Stability proof: full suite 0F/0E + 5/5 conformance matrix MEASURED
        on the tag candidate (AGENTS §Stability — tag only after green).
 7. [ ] Tag + release notes (EN+PT); declare `beta-0.4.0` closed except for
-       the residual-fix list.
+       the residual-fix list. **`main` stays frozen until this release**
+       (maintainer 09/20/2026): the 12 pre-fix CodeQL alerts on `main` are
+       ported on release day, not before; the gate measures `beta-0.5.0`.
 
 ## Open issues that travel to `beta-0.5.0`
 
@@ -55,7 +59,7 @@ agents".
 | # | Condition | How it is measured | State 09/20 |
 |---|---|---|---|
 | 1 | 100% parity between targets | per-target matrix + golden byte parity where the contract requires; divergence = bug or diagnosed `XXX00x`. **Auto-measured** by `check_release_050_gate.sh` (runs `scripts/target-matrix.sh`, EG-5, and reads its `PARITY: 100%` line) | GREEN (6 core targets byte-parity vs JVM oracle) |
-| 2 | No pending decision | `DECISIONS.md` has no open question changing the surface | NEEDS-REVIEW |
+| 2 | No pending decision | `DECISIONS.md` has no open question changing the surface | GREEN (09/20: #566 model, version string and `main` freeze decided; §35 markers ratified — `D-RELEASE-0.5.0-GATE` addendum) |
 | 3 | All loose `docs/development/*.md` concluded and moved out | three-states rule; only work with pending implementation stays | RED (in-flight docs) |
 | 4 | Total stability | full suite 0F/0E + 5/5 conformance matrix on the candidate. **Auto-measured** from a real suite log via `scripts/stability-report.sh` (`KOF_SUITE_LOG=…`), which requires the last `TOTAL` to be 0F/0E; the conformance guards are part of that suite | NEEDS-MEASURE (no RC-day run yet) |
 | 5 | 0 open issues that are a bug | GitHub OPEN issues with a `bug` label = 0 (includes #566 — maintainer 09/20) | RED (#566) |
