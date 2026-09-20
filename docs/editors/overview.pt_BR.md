@@ -37,7 +37,7 @@ o tooling do Kof:
 | Diagnostics / completion / hover / rename / references | `kof lsp` |
 | Formatação | `kof fmt` |
 | Build / Run / Test / Check / Serve | `kof build` / `run` / `test` / `check` / `serve` |
-| Debugging | `kof debug` (DAP — **PARTIAL**) |
+| Depuração | `kof debug` (DAP: JVM ✅, Native ✅ via GDB/MI — `--dap --target native`; JS = gap honesto — engine embutido) |
 
 ---
 
