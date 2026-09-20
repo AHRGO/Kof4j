@@ -6,6 +6,7 @@
 #   kof-<version>-<os>-<arch>/
 #     bin/kof, bin/kof.bat
 #     lib/kof.jar
+#     lib/kof-libs/        (official pure-Kof source libraries)
 #     tooling/  editor/  docs/  LICENSE  VERSION
 #     jdk/                  (only with --jdk: embedded OpenJDK 25)
 #   kof-<version>-<os>-<arch>.tar.gz | .zip
@@ -86,6 +87,8 @@ rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR/bin" "$DIST_DIR/lib" "$DIST_DIR/tooling" "$DIST_DIR/editor" "$DIST_DIR/docs"
 
 cp "$ROOT/kof-cli/target/kof-cli-$VERSION.jar" "$DIST_DIR/lib/kof.jar"
+mkdir -p "$DIST_DIR/lib/kof-libs"
+cp -r "$ROOT/libs/." "$DIST_DIR/lib/kof-libs/"
 cp "$ROOT/bin/kof" "$DIST_DIR/bin/kof"
 cp "$ROOT/bin/kof.bat" "$DIST_DIR/bin/kof.bat"
 chmod +x "$DIST_DIR/bin/kof"
