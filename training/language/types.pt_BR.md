@@ -124,6 +124,15 @@ String t = s            // erro SEM021: String? não atribuível a String sem ch
 
 `NullableType(inner)` em `Type.java`; `TypeChecker.isAssignable` trata `Nullable → non-null`.
 
+**CAMPOS nullable seguem o MESMO contrato nos 4 alvos** (D-NULL-INTENT, `slot ⇔
+load/store`; familia §295/§278): um campo declarado `Int?`/`Long?`/`Double?`/`Char?`/`Troolean`
+le **`null` antes de qualquer escrita** (JS corrigido 20/09, §365 `dd418419`), e escrever um
+primitivo o boxa (`b.n = 42` funciona — §361 `e293c4a5`; a face de escrita `Char?` e um gap
+aberto conhecido, §368 — nao anunciar). Literais sentinel `= null` continuam rejeitados
+(SEM048) — `null` chega a um campo `T?` via API ou pela leitura nunca-escrita, exatamente
+como nos locais.
+
+
 ### Troolean (tres estados — 0.4.0-beta, D-TROOL)
 
 `Bool` tem **exatamente dois valores**. O que precisa de `true / false / desconhecido`
