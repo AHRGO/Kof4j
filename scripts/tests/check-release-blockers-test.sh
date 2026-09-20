@@ -7,7 +7,8 @@
 #
 # Cobre a RED-first do mecanismo: issue sem label (UNCLASSIFIED) e issue com
 # dois labels de categoria (CONFLICT) tem de reprovar; fixture limpa passa;
-# --rc-gate reprova enquanto houver 1.0-blocks aberto.
+# --rc-gate reprova enquanto houver 1.0-blocks aberto; a 5a categoria
+# (tracking/contract) classifica sem virar violacao.
 #
 # Uso: scripts/tests/check-release-blockers-test.sh   (exit 0 = tudo verde)
 set -uo pipefail
@@ -47,6 +48,20 @@ FIX
 out="$(bash "$GATE" --fixture "$tmp" 2>&1)"; rc=$?
 expect "fixture conflito -> rc 1" 1 "$rc"
 printf '%s\n' "$out" | grep -q "CONFLICT.*#401" || { echo "!!! nao sinalizou #401"; FAILED=1; }
+
+cat > "$tmp" <<'FIX'
+501	documentation,tracking/contract
+FIX
+out="$(bash "$GATE" --fixture "$tmp" 2>&1)"; rc=$?
+expect "fixture tracking/contract -> rc 0" 0 "$rc"
+printf '%s\n' "$out" | grep -q "tracking/contract *#501" || { echo "!!! nao classificou #501"; FAILED=1; }
+
+cat > "$tmp" <<'FIX'
+601	tracking/contract,not-a-bug
+FIX
+out="$(bash "$GATE" --fixture "$tmp" 2>&1)"; rc=$?
+expect "fixture conflito tracking -> rc 1" 1 "$rc"
+printf '%s\n' "$out" | grep -q "CONFLICT.*#601" || { echo "!!! nao sinalizou #601"; FAILED=1; }
 
 rm -f "$tmp"
 [ "$FAILED" -eq 0 ] && echo "== check-release-blockers: VERDE" || echo "== check-release-blockers: VERMELHA"

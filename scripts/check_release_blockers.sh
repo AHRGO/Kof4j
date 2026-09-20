@@ -4,12 +4,15 @@
 # docs/development/PROPOSAL-1.0-EXIT-GATE.md §11; decision D-RELEASE-1.0).
 #
 # Why: "the absence of a label called release-blocker" proves nothing (§11).
-# Every OPEN issue must be EXPLICITLY in exactly one of four categories:
+# Every OPEN issue must be EXPLICITLY in exactly one of five categories:
 #
-#   1.0-blocks    BLOCKS 1.0        — must be closed before the first RC
-#   1.0-outside   OUTSIDE 1.0 SURFACE — real issue, subject outside the 1.0 surface
-#   post-1.0      POST-1.0          — accepted after 1.0, never a 1.0 blocker
-#   not-a-bug     NOT A BUG / CLOSE — not a bug; close it
+#   1.0-blocks       BLOCKS 1.0        — must be closed before the first RC
+#   1.0-outside      OUTSIDE 1.0 SURFACE — real issue, subject outside the 1.0 surface
+#   post-1.0         POST-1.0          — accepted after 1.0, never a 1.0 blocker
+#   not-a-bug        NOT A BUG / CLOSE — not a bug; close it
+#   tracking/contract TRACKING         — release-process/umbrella issue (5th
+#                     category, maintainer 20/09): valid during stabilization,
+#                     must still close before the RC
 #
 # The gate is RED when any OPEN issue has ZERO or MORE THAN ONE of these labels
 # (ambiguous/absent classification cannot be ignored). `--rc-gate` additionally
@@ -36,7 +39,7 @@ REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 GH_REPO="${RELEASE_BLOCKERS_REPO:-KofLang/Kof4j}"
 LEDGER="$REPO_DIR/scripts/release-blockers.tsv"
 
-CATEGORIES="1.0-blocks 1.0-outside post-1.0 not-a-bug"
+CATEGORIES="1.0-blocks 1.0-outside post-1.0 not-a-bug tracking/contract"
 
 # classify <labels-csv> -> prints the single category, or "UNCLASSIFIED" /
 # "CONFLICT:<a>+<b>". Pure function: no network, no state — this is what
@@ -78,6 +81,7 @@ selftest() {
 105	bug
 106	bug,1.0-blocks,post-1.0
 107	1.0-blocks
+108	documentation,tracking/contract
 FIX
   local out
   out="$(run_gate "$fixture" "" 2>&1)"; rc=$?
@@ -86,6 +90,7 @@ FIX
   printf '%s\n' "$out" | grep -q "UNCLASSIFIED  *#105" || { echo "selftest: did not flag #105"; fail=1; }
   printf '%s\n' "$out" | grep -q "CONFLICT.*#106"       || { echo "selftest: did not flag #106"; fail=1; }
   printf '%s\n' "$out" | grep -q "#101"                 || { echo "selftest: lost #101"; fail=1; }
+  printf '%s\n' "$out" | grep -q "tracking/contract *#108" || { echo "selftest: did not classify #108"; fail=1; }
   [ "$rc" -eq 1 ] || { echo "selftest: expected exit 1, got $rc"; fail=1; }
   # rc-gate variant must fail because 1.0-blocks are open
   run_gate "$fixture" "--rc-gate" >/dev/null 2>&1; local rc2=$?
@@ -128,6 +133,13 @@ run_gate() {
         echo "  LEDGER-DRIFT  #$ln  (ledger=$lcat labels=$lcat2)"; violations=$((violations+1))
       fi
     done < "$LEDGER"
+    # reverse coverage: every OPEN issue must be recorded in the ledger
+    local rn rlabels
+    while IFS=$'\t' read -r rn rlabels; do
+      [ -n "$rn" ] || continue
+      awk -F'\t' -v n="$rn" '$1==n{found=1} END{exit found?0:1}' "$LEDGER" \
+        || { echo "  LEDGER-MISSING  #$rn  (OPEN but absent from the ledger)"; violations=$((violations+1)); }
+    done <<< "$rows"
   fi
 
   echo "  -- $blocks open 1.0-blocks; $violations classification violation(s)"
