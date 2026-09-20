@@ -74,29 +74,10 @@ public final class CollectionCallLowerer {
         }
     }
     if (BuiltinTypes.isChannel(recvType)) {
-        // Canais tipados: c.send(v) enfileira; c.receive() retira.
-        // O receiver (Channel) está empilhado; o elemento vai
-        // após — o backend faz a ordem (send: chan,elem; receive: chan).
-        Type elemT = BuiltinTypes.channelElement(recvType);
-        if ("send".equals(mc.methodName()) && mc.arguments().size() == 1) {
-            localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(0), ops, owner, localIdx, locals);
-            ops.add(new KofCall(recvType, "kof_channel_send", List.of(elemT),
-                    Type.PrimitiveType.VOID, KofCallKind.INSTANCE));
-            return localIdx;
-        }
-        if ("receive".equals(mc.methodName()) && mc.arguments().isEmpty()) {
-            ops.add(new KofCall(recvType, "kof_channel_receive", List.of(),
-                    elemT, KofCallKind.INSTANCE));
-            return localIdx;
-        }
-        if (driver.currentDiagnostics != null) {
-            driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
-                    mc.position() != null ? mc.position().line() : 0,
-                    mc.position() != null ? mc.position().column() : 0, 0,
-                    "Cannot resolve method '" + mc.methodName() + "' on type 'Channel' (valid: send, receive)",
-                    "SEM025");
-            return localIdx;
-        }
+        // send/receive lowering em ChannelWrites (regra 7; §374 residual do
+        // canal: box-by-ARG no bare — lá a lei única mora).
+        int chIdx = ChannelWrites.lower(driver, recvType, mc, ops, owner, localIdx, locals);
+        if (chIdx >= 0) return chIdx;
     }
     if (BuiltinTypes.isList(recvType)) {
         String listFn = switch (mc.methodName()) {
