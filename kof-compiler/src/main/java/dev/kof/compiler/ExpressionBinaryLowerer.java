@@ -68,6 +68,16 @@ if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
         // toType resolve imports ("View" + import → android.view.View)
         targetType = CompilerTypes.toType(ie.name(), driver.currentUnit);
     }
+    // §356/#295 (família §355): `x as T[]` / `o instanceof T` baixavam o
+    // leaf fantasma ClassType("","T") → `checkcast [LT;` (NoClassDefFoundError
+    // "T" em runtime). O alvo do cast passa pelos type-params DO ESCOPO em
+    // lowering (driver.currentTypeParams) — cada leaf que é type-param vira
+    // TypeVariable e apaga para o bound (Object), como o descriptor do campo.
+    if (!driver.currentTypeParams.isEmpty()) {
+        targetType = TypeParams.rewrite(targetType, n ->
+                TypeParams.variable(n, driver.currentTypeParams, driver.currentUnit,
+                        driver.semanticAnalyzer));
+    }
     Type fromCastType = ExpressionTyper.inferExprType(driver, bin.left(), locals);
     // #293: primitivo → STRING (`42 as String`) caia no ramo §213 de box +
     // CHECKCAST java/lang/String — o boxed (Integer/Boolean/...) NAO e String

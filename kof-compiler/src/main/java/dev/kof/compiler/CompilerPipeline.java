@@ -346,6 +346,8 @@ public final class CompilerPipeline {
         DiagnosticCollector diagnostics = new DiagnosticCollector();
         driver.moduleRoot = moduleRoot;
         driver.target = Target.JVM;
+        boolean prevInterpreting = driver.interpreting;
+        driver.interpreting = true;
         driver.currentDiagnostics = diagnostics;
         CompilerPipeline.flushClasspathWarnings(driver);
         driver.entitySchemas.clear();
@@ -364,6 +366,8 @@ public final class CompilerPipeline {
             diagnostics.error(sources.get(0).toString(), 0, 0, 0,
                     "Error reading source file: " + e.getMessage(), "COMP001");
             throw new KofInterpretException(diagnostics);
+        } finally {
+            driver.interpreting = prevInterpreting;
         }
     }
 

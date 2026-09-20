@@ -156,9 +156,12 @@ public final class CompilerClassLowering {
                         String owner, boolean isInterface, List<String> typeParams) {
         String prevOwner = driver.currentLoweringOwner;
         driver.currentLoweringOwner = owner;
+        java.util.List<String> prevTps = driver.currentTypeParams;
+        driver.currentTypeParams = typeParams;
         try {
             return CompilerClassLowering.lowerMethodInner(driver,method, owner, isInterface, typeParams);
         } finally {
+            driver.currentTypeParams = prevTps;
             driver.currentLoweringOwner = prevOwner;
         }
     }
@@ -315,9 +318,12 @@ public final class CompilerClassLowering {
                                       java.util.Map<String, ExpressionNode> fieldInits) {
         String prevOwner = driver.currentLoweringOwner;
         driver.currentLoweringOwner = owner;
+        java.util.List<String> prevTps = driver.currentTypeParams;
+        driver.currentTypeParams = typeParams == null ? java.util.List.of() : typeParams;
         try {
             return CompilerClassLowering.lowerConstructorInner(driver,ctor, owner, superName, typeParams, fields, fieldInits);
         } finally {
+            driver.currentTypeParams = prevTps;
             driver.currentLoweringOwner = prevOwner;
         }
     }
