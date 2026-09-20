@@ -995,6 +995,7 @@ ordem. **DESPRIORIZADO 15/09 (mantenedora): TIER 3–5 não é trabalho atual.**
 | 10 | SCIENTIFIC | BLAS/LAPACK/GPU/MPI **por FFI**; SIMD Native (pesquisa); deps 2.1, 2.4, 1.2 |
 | 11 | BIO | `kof-bio` (pacote oficial): FASTA/FASTQ/VCF + alinhamento via FFI/CLI — deps 6, 8, 10 |
 | 12 | UNIVERSAL | integração total + pkg manager maduro + LSP/debug/profiler por domínio; **teste final: o core da linguagem quase não cresceu** |
+| — | **NORTH STAR (pós-12) — BOOTSTRAPPER** | o compilador Kof escrito em Kof; plano de design rascunhado `future/PLAN-BOOTSTRAP.md` (BS-1, `DECISIONS.md` §D-BOOTSTRAP, DECIDIDO 20/09, rascunho da `.18`); execução condicionada às E1–E6 do plano e ao exit gate 1.0 — R12 governa, nenhuma etapa é pulada por ele |
 
 ### Critical path (o que bloqueia o quê)
 
