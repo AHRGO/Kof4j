@@ -135,10 +135,22 @@ surface as 5s timeouts).
   `StackFrame.GetValues`, formatted by Kof type);
 - `verified: false` only until the class loads — at `ClassPrepare` the
   breakpoint is placed through LineTable and hits fire `stopped`;
-- remaining: stepping/pause/evaluation on the **JVM** DAP (the **Native** DAP
-  already has `next`/`stepIn`/`stepOut` and `evaluate`, X7-4), pause everywhere
-  and exception breakpoints (Phase 7); JS stays an honest gap (embedded
-  engine, no inspector).
+- `next`/`stepIn`/`stepOut` — ✅ JVM 20/09 (JDWP `SingleStep` request kind 1,
+  Step modifier kind 10: size LINE, depth over/into/out; the landing fires
+  `stopped` with reason `step`) and ✅ Native since X7-4;
+- `evaluate` — ✅ JVM 20/09 (a local-variable **name** of the frame, via the
+  same VariableTable/GetValues path; JDWP has no expression evaluator, so
+  anything else is an honest `success:false` naming the limitation) and ✅
+  Native since X7-4 (gdb evaluates full expressions);
+- remaining: pause everywhere and exception breakpoints (Phase 7); JS stays an
+  honest gap (embedded engine, no inspector).
+
+> A `LocalVariableTable` wart affects local reads on a line that declares a
+> variable: the JVM backend emits every local with `Start=0`/method-length, so a
+> just-declared local is "visible" but unassigned and JDWP answers
+> `INVALID_SLOT` (35) for the whole batch — the adapter retries per slot and
+> omits only the unreadable one (never fakes a value); root cause catalogued
+> §385 (JVM backend lane).
 
 ## 4. Runtime types
 
@@ -158,7 +170,8 @@ The user always sees the Kof type.
 - Phase 7: per-frame locals (`StackFrame.GetValues`), stepping, verified
   breakpoints, exception breakpoints, evaluation with the type system
   (Native: locals/scopes/stepping/evaluate landed X7-4/X7-5; JVM: locals +
-  verified breakpoints landed, stepping/evaluate pending)
+  verified breakpoints landed X7-5 and **stepping (`next`/`stepIn`/`stepOut`)
+  + `evaluate` landed 20/09**; remaining: pause and exception breakpoints)
 - ✅ 20/09: Native (DWARF) — console + DAP<->GDB/MI (X7-3/X7-4)
 - ✅ 20/09 (X7-5): attach on JVM + Native; per-frame locals and multi-frame
   stack landed with it (ahead of Phase 7); JS stays an honest gap

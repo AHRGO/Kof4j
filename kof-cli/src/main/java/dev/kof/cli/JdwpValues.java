@@ -54,21 +54,54 @@ final class JdwpValues {
         if (slotPos.isEmpty()) {
             return List.of();
         }
+        List<Object[]> out = new ArrayList<>();
+        try {
+            JdwpPacket gv = new JdwpPacket();
+            gv.writeReference(frame.threadId());
+            gv.writeLong(frame.frameId());
+            gv.writeInt(slotPos.size());
+            for (int i = 0; i < slotPos.size(); i++) {
+                gv.writeInt((int) slotPos.get(i)[0]);
+                gv.writeByte(sigByte(slotSig.get(i)));
+            }
+            JdwpPacket vals = client.sendCommand(16, 1, gv); // StackFrame.GetValues
+            int n = vals.readInt();
+            for (int i = 0; i < n; i++) {
+                out.add(new Object[]{slotName.get(i), slotSig.get(i), readTaggedValue(vals, vals.readByte())});
+            }
+            return out;
+        } catch (IOException batchFailed) {
+            // Um slot "visivel" mas ainda NAO armazenado (ex.: a declaracao esta
+            // na propria linha do breakpoint) faz o GetValues em LOTE inteiro
+            // falhar com INVALID_SLOT (35, medido). Le cada slot sozinho e
+            // mantem apenas os legiveis: um local que nao da para ler e OMITIDO,
+            // nunca inventado (R6). O compilador emite ranges Start=0 para todos
+            // os locais hoje (catalogado §385) — quando os ranges ficarem exatos
+            // o lote simplesmente nao falha mais.
+            for (int i = 0; i < slotPos.size(); i++) {
+                try {
+                    out.add(readOne(frame, (int) slotPos.get(i)[0], slotSig.get(i), slotName.get(i)));
+                } catch (IOException unreadable) {
+                    // local declarado mas sem valor neste pc — fora da lista
+                }
+            }
+            return out;
+        }
+    }
+
+    private Object[] readOne(JdwpClient.FullFrame frame, int slot, String sig, String name) throws IOException {
         JdwpPacket gv = new JdwpPacket();
         gv.writeReference(frame.threadId());
         gv.writeLong(frame.frameId());
-        gv.writeInt(slotPos.size());
-        for (int i = 0; i < slotPos.size(); i++) {
-            gv.writeInt((int) slotPos.get(i)[0]);
-            gv.writeByte(sigByte(slotSig.get(i)));
-        }
+        gv.writeInt(1);
+        gv.writeInt(slot);
+        gv.writeByte(sigByte(sig));
         JdwpPacket vals = client.sendCommand(16, 1, gv); // StackFrame.GetValues
         int n = vals.readInt();
-        List<Object[]> out = new ArrayList<>();
-        for (int i = 0; i < n; i++) {
-            out.add(new Object[]{slotName.get(i), slotSig.get(i), readTaggedValue(vals, vals.readByte())});
+        if (n < 1) {
+            throw new IOException("no value for slot " + slot);
         }
-        return out;
+        return new Object[]{name, sig, readTaggedValue(vals, vals.readByte())};
     }
 
     /** StringReference.Value (10,1) — conteudo de um java.lang.String para exibicao. */

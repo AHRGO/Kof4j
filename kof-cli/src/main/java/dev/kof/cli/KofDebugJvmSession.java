@@ -39,6 +39,7 @@ final class KofDebugJvmSession {
     private OutputStream out;
     private volatile long stoppedThread = -1;
     private volatile int stoppedLine = -1;
+    private volatile String stopReason = "breakpoint";
 
     KofDebugJvmSession(Path sourceFile, Integer attachPort) {
         this.sourceFile = sourceFile;
@@ -88,6 +89,7 @@ final class KofDebugJvmSession {
                 Map<String, Object> caps = new LinkedHashMap<>();
                 caps.put("supportsConfigurationDoneRequest", true);
                 caps.put("supportsTerminateRequest", true);
+                caps.put("supportsEvaluateForHovers", true);
                 respond(seq, command, caps);
             }
             case "launch" -> {
@@ -135,6 +137,9 @@ final class KofDebugJvmSession {
                 stoppedThread = -1;
                 respond(seq, command, Map.of("allThreadsContinued", true));
             }
+            case "next" -> step(seq, command, 1);
+            case "stepIn" -> step(seq, command, 0);
+            case "stepOut" -> step(seq, command, 2);
             case "threads" -> {
                 List<Object> threads = new ArrayList<>();
                 if (jdwp != null) {
@@ -203,6 +208,48 @@ final class KofDebugJvmSession {
                 }
                 respond(seq, command, Map.of("variables", vars));
             }
+            case "evaluate" -> {
+                // JDWP has no expression evaluator: resolve a local variable NAME
+                // of the given frame (the DAP hover case). Anything else is an
+                // honest refusal — never an invented value (R6).
+                if (!(args.get("expression") instanceof String expr) || expr.isBlank()) {
+                    fail2(seq, command, "missing expression");
+                    return;
+                }
+                if (jdwp == null) {
+                    fail2(seq, command, "not stopped — cannot evaluate");
+                    return;
+                }
+                if (lastFrames.isEmpty() && stoppedThread >= 0) {
+                    // the client may evaluate before asking for stackTrace
+                    lastFrames.addAll(jdwp.framesFull(stoppedThread, 50));
+                }
+                int frameId = args.get("frameId") instanceof Number n ? n.intValue() : 0;
+                if (frameId < 0 || frameId >= lastFrames.size()) {
+                    fail2(seq, command, "no frame — stop at a breakpoint first");
+                    return;
+                }
+                if (!expr.matches("[A-Za-z_$][A-Za-z0-9_$]*")) {
+                    fail2(seq, command, "JVM evaluate resolves a local variable name only"
+                            + " (JDWP has no expression evaluator)");
+                    return;
+                }
+                try {
+                    for (Object[] local : jdwp.locals(lastFrames.get(frameId))) {
+                        if (expr.equals(local[0])) {
+                            respond(seq, command, Map.of(
+                                    "result", formatValue(jdwp, (String) local[1], local[2]),
+                                    "type", sigType((String) local[1]),
+                                    "variablesReference", 0));
+                            return;
+                        }
+                    }
+                } catch (IOException e) {
+                    fail2(seq, command, "JDWP: " + e.getMessage());
+                    return;
+                }
+                fail2(seq, command, "no local named '" + expr + "' in this frame");
+            }
             case "disconnect", "terminate" -> {
                 if (!attached && jdwp != null) jdwp.dispose();
                 if (!attached && jvmProcess != null) jvmProcess.destroy();
@@ -222,8 +269,10 @@ final class KofDebugJvmSession {
                     jdwp.setLineBreakpoint(typeId, line);
                 }
                 jdwp.resume();
-            } else if (kind == 2) {
+            } else if (kind == 2 || kind == 1) {
+                // 2 = Breakpoint, 1 = SingleStep (a step landed)
                 stoppedThread = threadId;
+                stopReason = kind == 1 ? "step" : "breakpoint";
                 for (JdwpClient.FrameInfo f : jdwp.frames(threadId, 1)) {
                     stoppedLine = f.line();
                 }
@@ -232,6 +281,22 @@ final class KofDebugJvmSession {
         } catch (IOException e) {
             System.err.println("kof debug: " + e.getMessage());
         }
+    }
+
+    /**
+     * DAP next/stepIn/stepOut: set a line SingleStep for the stopped thread and
+     * resume; the resulting SingleStep event arrives as a `stopped` with
+     * reason "step". {@code depth}: 1 = over, 0 = into, 2 = out (JDWP).
+     */
+    private void step(Object seq, String command, int depth) throws IOException {
+        if (jdwp == null || stoppedThread < 0) {
+            fail2(seq, command, "not stopped — cannot step");
+            return;
+        }
+        jdwp.setStepRequest(stoppedThread, depth);
+        jdwp.resume();
+        stoppedThread = -1;
+        respond(seq, command, Map.of());
     }
 
     private void launch(Path file) throws Exception {
@@ -322,7 +387,7 @@ final class KofDebugJvmSession {
         evt.put("type", "event");
         evt.put("event", "stopped");
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("reason", "breakpoint");
+        body.put("reason", stopReason);
         body.put("threadId", stoppedThread);
         body.put("allThreadsStopped", true);
         evt.put("body", body);

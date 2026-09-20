@@ -106,7 +106,8 @@ Phase 6  JS: source maps + Node Inspector                         partial
 Phase 7  Advanced: per-frame locals, stepping, conditional/exception
         breakpoints, evaluation, async                            partial
         (Native has locals/scopes/stepping/evaluate; JVM has
-         stackTrace/scopes/variables)
+         stackTrace/scopes/variables/stepping/evaluate — 20/09; remaining:
+         pause + exception breakpoints)
 ```
 
 Implementation details of `kof-debug` (Phase 3): see `debug-adapter.md`.

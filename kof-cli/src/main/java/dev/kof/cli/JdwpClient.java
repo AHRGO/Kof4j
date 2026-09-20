@@ -218,6 +218,24 @@ final class JdwpClient {
         sendCommand(15, 1, req).skipRemaining();
     }
 
+    /**
+     * EventRequest.Set (15,1) for a line SingleStep in the given thread.
+     * {@code depth}: 0 = STEP_INTO, 1 = STEP_OVER, 2 = STEP_OUT (JDWP Step
+     * modifier kind 10; size 1 = STEP_LINE). The request is auto-deleted by the
+     * VM once the step event is generated.
+     */
+    void setStepRequest(long threadId, int depth) throws IOException {
+        JdwpPacket req = new JdwpPacket();
+        req.writeByte(1);   // event kind: SingleStep
+        req.writeByte(2);   // suspend policy: ALL
+        req.writeInt(1);    // modifier count
+        req.writeByte(10);  // Step modifier
+        req.writeReference(threadId);
+        req.writeInt(1);    // size: STEP_LINE
+        req.writeInt(depth); // depth: 0 into, 1 over, 2 out
+        sendCommand(15, 1, req).skipRemaining();
+    }
+
     /** ReferenceType.Methods (2,5): map method names to ids. */
     private long methodWithLine(long typeId, int line) throws IOException {
         JdwpPacket req = new JdwpPacket();
@@ -399,7 +417,8 @@ final class JdwpClient {
                         evt.readByte();
                         long typeId = evt.readReference();
                         dispatch(handler, kind, threadId, typeId);
-                    } else if (kind == 2) { // Breakpoint: threadID, location(tag, type, method, codeIndex)
+                    } else if (kind == 2 || kind == 1) {
+                        // Breakpoint (2) / SingleStep (1): threadID + location(tag, type, method, codeIndex)
                         long threadId = evt.readReference();
                         evt.readByte();       // location tag
                         long typeId = evt.readReference();

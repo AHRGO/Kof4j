@@ -15,6 +15,19 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
  ### In development
 
+  - **JVM DAP parity — `next`/`stepIn`/`stepOut` + `evaluate`** (20/09, tooling/debug
+    lane): the JVM debug adapter now steps (JDWP `SingleStep` event kind 1 + Step
+    modifier kind 10, size LINE, depth over/into/out) and evaluates, matching the
+    Native DAP that already had both (X7-4). `evaluate` resolves a local variable
+    **name** of the frame; JDWP has no expression evaluator, so any other expression
+    is an honest `success:false` naming the limitation — never an invented value.
+    Proof: `KofDebugJvmStepTest` 3/3 — a real JDWP conversation (break at line 7 →
+    `evaluate x` = `1` → `next` stops at line 8 → `stepIn` enters `add` → `stepOut`
+    returns to `main`; a just-declared local is refused honestly). On the way, the
+    JVM backend's `LocalVariableTable` `Start=0` wart was measured and catalogued
+    (§385) and `JdwpValues.locals` gained a per-slot fallback: an unreadable local is
+    omitted, never faked (R6).
+
   - **makealive 3.3 — `reconcile(design, provider, intervalMs)`** (20/09, `.18`):
     the convergence loop over `scheduler.every` (each tick runs `apply` inside a
     `spawn` — same CONC003-JS-01 shape as workflow `schedule`; stop =

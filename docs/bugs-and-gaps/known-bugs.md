@@ -11633,3 +11633,23 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 - **Fix (root, not symptom):** `sync-push.sh` now `fetch`es first and checks `git rev-list --merges origin/$branch..HEAD`; with a merge in the window it syncs by `git merge --no-edit` (preserving the graph and both sides), keeping the old mechanical rebase only for linear windows. The retry loop uses the same discriminator. Conflict paths keep the preserve-both-sides policy (d7dba433 lesson) with the correct continue-command per mode.
 - **Proof (isolated scenario repos in `~/.cache/kst*`, file:// remotes — never the real tree):** (a) REPRO of the old bug: clone with a true merge commit `M` in `origin/main..HEAD`, raw `git pull --rebase` -> `MERGE-DESCARTADO-PELO-REBASE` (M no longer an ancestor); (b) FIXED script, same shape: sync-push -> `== SYNCED main: ahead=0 behind=0` and `git merge-base --is-ancestor M origin/main` -> `MERGE-SOBREVIVEU` (tip graph keeps the merge diamond); (c) the real case re-landed: `2d81cb4f` is on `origin/beta-0.5.0` with `4ee3a5c9`/`d3f79e7a` ancestors (measured with `merge-base --is-ancestor` post-push).
 - **Not Kof language surface:** repo tooling (AGENTS mechanical-push duty); rule 11 gate N/A.
+
+## §385 — JVM backend emits EVERY local in the `LocalVariableTable` with `Start=0`/`Length=<whole method>`: a local declared on the breakpoint line is "visible" but unassigned, so JDWP `StackFrame.GetValues` fails with `INVALID_SLOT` (35) for the whole batch — the DAP locals list comes back empty on that line
+
+- **Status:** 🟡 OPEN 20/09 (found while landing the JVM DAP `next`/`stepIn`/`stepOut` + `evaluate`); routed to the JVM backend/compiler lane (rule 6/lane — the debugger now degrades honestly, see the workaround).
+- **Measured (20/09, tip `beta-0.5.0`, `javap -v` on the compiled class):** for
+  ```kof
+  Int add(Int a, Int b) { return a + b }
+  main() {
+      var x = 1
+      var y = 2
+      var z = add(x, y)
+      println(z)
+  }
+  ```
+  `javap -v Default/Main.class` shows `LocalVariableTable` for `main` = `x/y/z` ALL with `Start=0 Length=24` (the method length), while the `LineNumberTable` is exact (`line 5: 0, line 6: 2, line 7: 4, line 8: 10`) and the store of `z` is at bytecode offset 9. Breaking at line 7 (offset 4) makes `z` satisfy the "visible" test (`0 <= 4 < 24`) although its slot 3 is not yet written → `StackFrame.GetValues` (JDWP 16,1) answers **error 35 = `INVALID_SLOT`** and the DAP `variables`/`evaluate` see nothing for that frame.
+- **Root cause (pointer, no edit):** `jvm/JvmBackend.java:321-327` emits each `IRLocalVariable` with the SAME `debugStart`..`debugEnd` (method entry..end); `IRLocalVariable` carries no store offset. A correct `LocalVariableTable` must start each entry at its initializing store (and end at the end of its scope), which is exactly what the JDI visibility test assumes.
+- **Impact:** every DAP client that reads locals on a line that declares a variable gets an empty/incomplete list; the new `evaluate` of a just-declared local fails. Not a wrong *value* — an absent one — so it never fakes data, but it is a real debug-info defect (same JDK-25/debug-wire family as §376).
+- **Workaround (in use, semantics-preserving):** `JdwpValues.locals` catches the batch `INVALID_SLOT` and retries **per slot**, keeping only the readable ones — a local that cannot be read is OMITTED, never invented (R6). Pins the honest behavior until the ranges are exact; once they are, the batch simply stops failing. Proven by `KofDebugJvmStepTest` (`evaluate` of `x` = `1`, `evaluate` of the just-declared `z` = honest refusal).
+- **Fix shape (JVM backend lane):** track each local's initializing-store offset (or emit the table from the store label), `start = store`, `end = scope end`; then `javap -v` must show `z` starting at offset 9, not 0.
+- **Related:** §376 (JDK-25 JDWP wire faces rebuilt in the same DAP), D-KOF-FIRST repro = the two-line program above.

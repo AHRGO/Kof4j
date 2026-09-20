@@ -135,9 +135,22 @@ resposta síncrona (elas só aparecem como timeouts de 5s).
   `StackFrame.GetValues`, formatados pelo tipo Kof);
 - `verified: false` só até a classe carregar — no `ClassPrepare` o
   breakpoint é posicionado via LineTable e os hits disparam `stopped`;
-- o que falta: stepping/pause/avaliação no DAP **JVM** (o DAP **Native** já tem
-  `next`/`stepIn`/`stepOut` e `evaluate`, X7-4), pause em todos e exception
-  breakpoints (Fase 7); JS continua gap honesto (engine embutido, sem inspector).
+- `next`/`stepIn`/`stepOut` — ✅ JVM 20/09 (pedido JDWP `SingleStep`, evento
+  kind 1 + modificador Step kind 10: size LINE, depth over/into/out; o pouso
+  dispara `stopped` com reason `step`) e ✅ Native desde X7-4;
+- `evaluate` — ✅ JVM 20/09 (o **nome** de um local do frame, pela mesma rota
+  VariableTable/GetValues; o JDWP não tem avaliador de expressão, então
+  qualquer outra coisa é `success:false` honesto nomeando a limitação) e ✅
+  Native desde X7-4 (o gdb avalia expressões completas);
+- o que falta: pause em todos e exception breakpoints (Fase 7); JS continua
+  gap honesto (engine embutido, sem inspector).
+
+> Uma verruga do `LocalVariableTable` afeta a leitura de locals numa linha que
+> declara variável: o backend JVM emite todo local com `Start=0`/tamanho do
+> método, então um local recém-declarado fica "visível" mas sem valor e o JDWP
+> responde `INVALID_SLOT` (35) no lote inteiro — o adaptador refaz por slot e
+> omite só o ilegível (nunca inventa valor); a raiz está catalogada no §385
+> (lane do backend JVM).
 
 ## 4. Tipos de runtime
 
@@ -157,7 +170,8 @@ O usuário sempre vê o tipo Kof.
 - Fase 7: locals por frame (`StackFrame.GetValues`), stepping, breakpoints
   verificados, exception breakpoints, avaliação com o type system
   (Native: locals/scopes/stepping/evaluate pousaram X7-4/X7-5; JVM: locals +
-  breakpoints verificados pousaram, stepping/avaliação pendentes)
+  breakpoints verificados pousaram X7-5 e **stepping (`next`/`stepIn`/`stepOut`)
+  + `evaluate` pousaram 20/09**; resta: pause e exception breakpoints)
 - ✅ 20/09: Native (DWARF) — console + DAP<->GDB/MI (X7-3/X7-4)
 - ✅ 20/09 (X7-5): attach no JVM + Native; locals por frame e stack
   multi-frame vieram junto (antes da Fase 7); JS fica gap honesto

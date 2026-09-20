@@ -78,14 +78,15 @@ The session compiles with debug metadata, launches the JVM with
 **Implemented beyond the JVM MVP (measured in the DAP handlers 20/09):**
 
 - `next` / `stepIn` / `stepOut`, `scopes` / `variables` and `evaluate` — ✅ on
-  Native (DAP↔gdb/MI); the JVM DAP covers `stackTrace` / `scopes` / `variables`
+  Native (DAP↔gdb/MI) and, since 20/09, also on the **JVM** DAP (JDWP
+  `SingleStep`; `evaluate` resolves a local **name** — JDWP has no expression
+  evaluator, so anything else is an honest refusal)
 - attach (`--attach <pid>`) on JVM and Native — ✅ X7-5
 - ~~Native (DWARF — Phase 5)~~ ✅ **X7-3 landed 20/09** (`cfa67238`, `KofDebugNativeTest`);
   JS (source maps — Phase 6) = honest diagnostic today (embedded engine)
 
 **Still planned (Phase 4/7 — see `debugger-architecture.md`):**
 
-- step over/into/out and `evaluate` on the JVM DAP (Native already has them)
 - exceptions (break on throw / uncaught) with Kof stack
 - pause / restart
 
@@ -108,8 +109,8 @@ LSP and DAP do not mix: LSP = code; DAP = execution.
 - Phase 2 (JVM: SourceFile, LineNumberTable, LocalVariableTable) — ✅
 - Phase 3 (`kof-debug` MVP: raw DAP + JDWP) — ✅
   - DAP requests: `initialize`, `launch`, `attach`, `setBreakpoints`,
-    `configurationDone`, `continue`, `threads`, `stackTrace`, `scopes`,
-    `variables`, `disconnect`
+    `configurationDone`, `continue`, `next`, `stepIn`, `stepOut`, `threads`,
+    `stackTrace`, `scopes`, `variables`, `evaluate`, `disconnect`
   - `stopped` event when a Kof breakpoint is hit
   - call stack with Kof functions, file and line (via LineNumberTable)
 - Phase 5 (Native) — ✅ shipped as the DAP↔gdb/MI2 bridge

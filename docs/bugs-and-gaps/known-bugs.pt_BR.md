@@ -11068,3 +11068,23 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Correção (raiz, não sintoma):** o `sync-push.sh` agora faz `fetch` primeiro e checa `git rev-list --merges origin/$branch..HEAD`; havendo merge na janela, sincroniza por `git merge --no-edit` (preserva o grafo e os dois lados), mantendo o rebase mecânico só para janelas lineares. O retry usa o mesmo discriminador. Os caminhos de conflito mantêm a política preserve-both-sides (lição d7dba433) com o comando de continuação correto por modo.
 - **Prova (repositórios isolados em `~/.cache/kst*`, remotos file:// — nunca a árvore real):** (a) REPRO do bug antigo: clone com merge verdadeiro `M` em `origin/main..HEAD`, `git pull --rebase` cru -> `MERGE-DESCARTADO-PELO-REBASE` (M deixou de ser ancestral); (b) script CORRIGIDO, mesmo shape: sync-push -> `== SYNCED main: ahead=0 behind=0` e `merge-base --is-ancestor M origin/main` -> `MERGE-SOBREVIVEU` (o grafo remoto mantém o diamante do merge); (c) o caso real re-pousado: `2d81cb4f` está em `origin/beta-0.5.0` com `4ee3a5c9`/`d3f79e7a` como ancestrais (medido com `merge-base --is-ancestor` pós-push).
 - **Não é superfície da linguagem Kof:** tooling do repo (dever de push mecânico do AGENTS); gate da regra 11 não se aplica.
+
+## §385 — o backend JVM emite TODO local no `LocalVariableTable` com `Start=0`/`Length=<método inteiro>`: um local declarado na linha do breakpoint fica "visível" mas sem valor, então o `StackFrame.GetValues` do JDWP falha com `INVALID_SLOT` (35) no lote inteiro — a lista de locais do DAP volta vazia nessa linha
+
+- **Estado:** 🟡 ABERTO 20/09 (achado ao pousar `next`/`stepIn`/`stepOut` + `evaluate` do DAP JVM); roteado à lane do backend JVM/compilador (rule 6/lane — o debugger agora degrada de forma honesta, ver o workaround).
+- **Medido (20/09, tip `beta-0.5.0`, `javap -v` na classe compilada):** para
+  ```kof
+  Int add(Int a, Int b) { return a + b }
+  main() {
+      var x = 1
+      var y = 2
+      var z = add(x, y)
+      println(z)
+  }
+  ```
+  o `javap -v Default/Main.class` mostra o `LocalVariableTable` de `main` = `x/y/z` TODOS com `Start=0 Length=24` (o tamanho do método), enquanto a `LineNumberTable` é exata (`line 5: 0, line 6: 2, line 7: 4, line 8: 10`) e a store de `z` está no offset 9 do bytecode. Parar na linha 7 (offset 4) faz `z` passar no teste de "visibilidade" (`0 <= 4 < 24`) embora o slot 3 ainda não tenha sido escrito → o `StackFrame.GetValues` (JDWP 16,1) responde **erro 35 = `INVALID_SLOT`** e o `variables`/`evaluate` do DAP não vê nada nesse frame.
+- **Raiz (ponteiro, sem edit):** `jvm/JvmBackend.java:321-327` emite cada `IRLocalVariable` com o MESMO `debugStart`..`debugEnd` (entrada..fim do método); o `IRLocalVariable` não carrega offset de store. Um `LocalVariableTable` correto deve começar cada entrada na sua store de inicialização (e terminar no fim do escopo), que é exatamente o que o teste de visibilidade da JDI assume.
+- **Impacto:** todo cliente DAP que lê locais numa linha que declara variável recebe uma lista vazia/incompleta; o `evaluate` novo de um local recém-declarado falha. Não é um *valor* errado — é um valor ausente — então nunca inventa dado, mas é um defeito real de debug info (mesma família JDK-25/wire de debug do §376).
+- **Workaround (em uso, preservando semântica):** o `JdwpValues.locals` captura o `INVALID_SLOT` do lote e refaz **por slot**, mantendo só os legíveis — um local que não dá para ler é OMITIDO, nunca inventado (R6). Trava o comportamento honesto até os ranges ficarem exatos; quando ficarem, o lote simplesmente deixa de falhar. Provado pelo `KofDebugJvmStepTest` (`evaluate` de `x` = `1`, `evaluate` do `z` recém-declarado = recusa honesta).
+- **Fix shape (lane do backend JVM):** rastrear o offset da store de inicialização de cada local (ou emitir a tabela a partir do label da store), `start = store`, `end = fim do escopo`; aí o `javap -v` tem de mostrar `z` começando no offset 9, não 0.
+- **Relacionado:** §376 (faces do wire JDWP do JDK 25 reconstruídas no mesmo DAP), repro D-KOF-FIRST = o programa de duas linhas acima.

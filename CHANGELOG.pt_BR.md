@@ -14,6 +14,19 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
 ### Em desenvolvimento
+  - **Paridade do DAP JVM — `next`/`stepIn`/`stepOut` + `evaluate`** (20/09, lane
+    tooling/debug): o adaptador de debug da JVM agora faz step (evento JDWP
+    `SingleStep` kind 1 + modificador Step kind 10, size LINE, depth over/into/out)
+    e avalia, igual ao DAP Native que já tinha os dois (X7-4). O `evaluate` resolve
+    o **nome** de um local do frame; o JDWP não tem avaliador de expressão, então
+    qualquer outra expressão é `success:false` honesto nomeando a limitação —
+    nunca um valor inventado. Prova: `KofDebugJvmStepTest` 3/3 — conversa JDWP real
+    (break na linha 7 → `evaluate x` = `1` → `next` para na linha 8 → `stepIn`
+    entra em `add` → `stepOut` volta para `main`; um local recém-declarado é
+    recusado honestamente). No caminho, a verruga `Start=0` do
+    `LocalVariableTable` do backend JVM foi medida e catalogada (§385) e o
+    `JdwpValues.locals` ganhou fallback por-slot: um local ilegível é omitido,
+    nunca inventado (R6).
 
   - **makealive 3.3 — `reconcile(design, provider, intervalMs)`** (20/09, `.18`):
     o laço de convergência sobre `scheduler.every` (cada tick roda `apply` dentro
