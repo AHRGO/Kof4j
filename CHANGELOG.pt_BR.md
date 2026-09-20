@@ -26,6 +26,24 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `ExternalClasspathE2ETest` 9/9 (RED-first; caso do relator + negativo R6) e
     vizinhança 101/0F. Defeito (ii) do #566 (`1.0-blocks`).
   - **known-bugs §382 CORRIGIDO — o host JS devolvia as faces BOOL do kof.io
+  - **#566 — pacotes publicados com `kof deploy --publish` agora são consumidos como módulos-FONTE**
+    (opção (b), decisão da mantenedora 20/09, adendo do `D-RELEASE-0.5.0-GATE`; sem mudança de
+    sintaxe nem de semântica): (1) o compilador resolve `import` também nas raízes de fonte das
+    dependências instaladas (`CompilerDriver.setDependencySourceRoots`), depois do módulo local e
+    das bibliotecas oficiais — uma dependência nunca sombreia a biblioteca padrão — em todo alvo;
+    (2) `kof deps resolve` instala as fontes do pacote, cada uma verificada contra o `SHA256SUMS`
+    (`REG002` se adulterada; `REG004` se não listada, listada e ausente ou que não seja
+    `.kf`/`.kof`; nada é instalado em caso de falha), e `kof run|build --deps` entregam essas
+    raízes ao compilador; (3) o `kof deploy` leva as fontes do módulo (`src/…`, sem `tests/`,
+    ocultos nem diretórios de saída) e aceita uma **biblioteca** (módulo só com árvore de pacotes e
+    nenhuma fonte no topo), que é compilada para validar e publicada só como fontes. **Mudança de
+    contrato de propósito:** o tar.gz do deploy deixou de ter 3 entradas — as fontes viajam entre o
+    artefato e o `RELEASE.md`. Pacotes publicados antes (só jar) continuam funcionando (jar no
+    classpath). Uma dependência com fontes é consumida por elas, então `Classe()` sem `new`
+    funciona para suas classes. Prova: `DependencySourceRootE2ETest` 7/7,
+    `DepsSourceModuleTest` 8/8, `CmdDeploySourcesTest` 5/5 (inclui o ciclo completo deploy →
+    registry → `kof run --deps`).
+
     como o NUMERO 0/-1** (20/09, `.18`): um `writeText/appendText/writeBytes/
     appendBytes/writeFile` bem-sucedido saía `false` no guest (0 = falsy) com o
     arquivo NO DISCO e rc=0 (a classe silenciosa §255); `delete/dirDelete`

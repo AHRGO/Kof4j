@@ -148,6 +148,30 @@ fatias seguintes em `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`
 (guarda honesta de ambiente, nunca um APK fake). Nunca exit 0 sem artefato
 real, nunca fake-publish (R6).
 
+### Pacotes são consumidos como módulos-FONTE (#566)
+
+Uma release publicada com `kof deploy --publish` também leva as **fontes** do módulo
+(`src/<caminho>.kf`, cada uma coberta pelo `SHA256SUMS`; só `.kf`/`.kof`, nunca `tests/`,
+diretórios ocultos ou de saída). Um módulo sem `.kf` no topo — só uma árvore de pacotes —
+é uma **biblioteca**: é compilada para validar e a release leva só as fontes (sem
+artefato executável).
+
+```bash
+# produtor:  src/mylib/Thing.kf  (package mylib)
+kof deploy ./lib --name mylib --version 1.2.0 --publish owner/mylib
+
+# consumidor
+kof deps add owner/mylib@1.2.0
+kof deps resolve                     # instala as fontes VERIFICADAS (SHA256SUMS) no cache
+kof run Main.kf --deps               # `import mylib.Thing` resolve contra as fontes instaladas
+kof build src --target js --deps     # as MESMAS fontes compilam para qualquer alvo
+```
+
+O `import` procura no seu módulo primeiro, depois nas bibliotecas oficiais, depois nas
+fontes das dependências instaladas — uma dependência nunca sombreia a biblioteca padrão.
+Sem `--deps` o import é um `PKG006` honesto. Pacotes publicados antes desta mudança (só
+jar) continuam funcionando como antes (o jar vai ao classpath).
+
 ## `kof lsp`
 
 Language Server que consome o **frontend real do compilador**. Os

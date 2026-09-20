@@ -26,6 +26,23 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `ExternalClasspathE2ETest` 9/9 (RED-first; reporter case + R6 negative) and
     101/0F neighbors. Defect (ii) of #566 (`1.0-blocks`).
   - **known-bugs §382 FIXED — the JS host returned the BOOL faces of kof.io as
+  - **#566 — packages published with `kof deploy --publish` are now consumed as SOURCE modules**
+    (option (b), maintainer decision 20/09, `D-RELEASE-0.5.0-GATE` addendum; no syntax or
+    semantics change): (1) the compiler resolves `import` also in the source roots of installed
+    dependencies (`CompilerDriver.setDependencySourceRoots`), after the local module and the
+    official libraries — a dependency never shadows the standard library — for every target;
+    (2) `kof deps resolve` installs the package sources, each one verified against `SHA256SUMS`
+    (`REG002` if tampered; `REG004` if unlisted, listed-but-missing or not `.kf`/`.kof`; nothing is
+    installed on failure), and `kof run|build --deps` hand those roots to the compiler; (3)
+    `kof deploy` ships the module sources (`src/…`, no `tests/`/hidden/output dirs) and accepts a
+    **library** (a module with only a package tree and no top-level source), which is compiled to
+    validate it and published as sources only. **Contract change on purpose:** the deploy tar.gz is
+    no longer 3 entries — the sources travel between the artifact and `RELEASE.md`. Packages
+    published before this change (jar only) keep working (jar on the classpath). A dependency with
+    sources is consumed from them, so `Class()` without `new` works for its classes.
+    Proof: `DependencySourceRootE2ETest` 7/7, `DepsSourceModuleTest` 8/8, `CmdDeploySourcesTest` 5/5
+    (including the full cycle deploy → registry → `kof run --deps`).
+
     the NUMBER 0/-1** (20/09, `.18`): a successful `writeText/appendText/
     writeBytes/appendBytes/writeFile` read `false` in the guest (0 = falsy) with
     the file ON DISK and rc=0 (the §255 silent class); `delete/dirDelete`

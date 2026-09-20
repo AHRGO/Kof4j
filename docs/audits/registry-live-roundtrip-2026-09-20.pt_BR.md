@@ -100,3 +100,27 @@ Consequências, todas medidas (nada implementado):
 - O consumo JVM básico de um pacote publicado **existe** no caminho documentado (`kof deps` + `--deps` + `new Classe()`). O que segue em aberto é contrato, não transporte: se um pacote publicado é uma *biblioteca* com superfície pública (hoje o `kof deploy` empacota só o que o `main` alcança), se o consumo KOF→KOF é só JVM ou multi-alvo, e se o `new` opcional vale também para classe vinda de classpath externo (`Greeter()` dá `SEM015`; `new Greeter()` funciona). São decisões da mantenedora (regra 6).
 - "Build reporta erro mas emite artifact válido" **não reproduz**: com qualquer erro (`SEM015` por `--deps` ou `--classpath`, `SEM011` genuíno) o build sai com rc 1 e emite **0 classes**. O artifact visto no relato é **resíduo de um build anterior bem-sucedido no mesmo diretório de saída** (build 1 válido em `cout`; build 2 falha no mesmo `cout` sem limpar → `rc=1`, `classes=1`, `java -cp cout:<jar> Default.Main` imprime a saída do build *anterior*; com diretório limpo: `rc=1`, `classes=0`).
 - `kof run --classpath` não é flag documentada do `run`; adicioná-la seria uma superfície nova de CLI (decisão de design), não bugfix.
+
+## Consumo como módulo-fonte (#566, decisão (b) da mantenedora) — implementado e medido no GitHub real (20/09/2026)
+
+A mantenedora decidiu (adendo do `D-RELEASE-0.5.0-GATE`) que um pacote publicado por `kof deploy --publish` é consumido como **módulo-fonte**, e não pelo jar compilado. Isto substitui a leitura de "consumo canônico" acima para pacotes *novos* (a rota jar-no-classpath fica só para pacotes publicados antes desta mudança).
+
+**Implementação** (sem mudança de sintaxe/semântica): o compilador resolve `import` também nas raízes de fonte das dependências instaladas (depois do módulo local e das bibliotecas oficiais — uma dependência nunca sombreia a biblioteca padrão), em todo alvo; o `kof deps resolve` instala as fontes do pacote, cada uma verificada contra o `SHA256SUMS`; `kof run|build --deps` entregam essas raízes ao compilador; o `kof deploy` leva `src/…` e aceita uma **biblioteca** (só árvore de pacotes, nenhuma fonte no topo), que é compilada para validar e publicada só como fontes.
+
+**Round-trip real** (jar do tip; o produtor publica uma biblioteca no repo público de smoke; o consumidor com HOME limpo e **sem token** contra a API real). Varredura pré-publish do tarball e pós-publish do **asset real baixado**: 0 achados (caminhos de usuário, host, token, segredos); asset = 3 entradas (`src/regsmoke/Greeter.kf`, `RELEASE.md`, `SHA256SUMS`), `SHA256SUMS` confere.
+
+| Passo | Resultado (medido) |
+|---|---|
+| `kof deps add/resolve` por versão (biblioteca, só fontes) | **VERDE** — fontes instaladas em `$HOME/.kof/deps/kof/<owner>/<repo>/<ver>/src/`; sha256 da fonte instalada == publicada |
+| `kof run Main.kf --deps` com `import regsmoke.Greeter` + `Greeter()` (**sem `new`**) | **VERDE** — `hello, consumer` |
+| idem, sem `--deps` | `PKG006`, rc 1 (honesto) |
+| `kof build --target jvm --deps` e `java -cp dist` (sem jar de dependência) | **VERDE** — `hello, consumer` |
+| `kof build --target js --deps` (as mesmas fontes, outro alvo) | **VERDE** — rc 0 |
+| 2º `resolve` | **VERDE** — sem download, cache byte-idêntico |
+| `latest` (HOME/workspace novos) | **VERDE** — o `kofdeps` pina a versão concreta |
+| **pacote legado só-jar** (`0.1.0-smoke…`) com `run --deps` + `new Greeter()` | **VERDE** — regressão sobre um pacote real anterior à mudança |
+| tag inexistente | `REG001`, rc 1 |
+
+**Testes** (WSL Ubuntu-24.04, JDK 25; cada fatia com RED antes do fix): `DependencySourceRootE2ETest` 7/7 (RED 4/7), `DepsSourceModuleTest` 8/8 (RED 8/8), `CmdDeploySourcesTest` 5/5 (RED 3/5, inclui o ciclo completo deploy → registry → `kof run --deps`). Suíte local completa dos 4 módulos: kof-compiler 2792 testes — 7 falhas, **todas o §337 conhecido** (SIGSEGV do `qemu-aarch64` no WSL2: Dtoa + 5 classes GC; idêntico na base; o CI hospedado dá 0F), 0 erros; kof-script 50/0; kof-c 7/0; kof-cli 432/0F/0E/3 skips. O contrato do tar do deploy mudou de propósito (eram 3 entradas; as fontes agora viajam entre o artefato e o `RELEASE.md`).
+
+As perguntas residuais listadas antes (superfície pública de biblioteca, consumo multi-alvo) são respondidas por este modelo; `Classe()` sem `new` funciona porque a dependência é uma classe-fonte KOF (o `SEM015` da #568 só dizia respeito a classes vindas de jar externo).

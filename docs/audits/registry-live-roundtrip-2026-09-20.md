@@ -100,3 +100,27 @@ Consequences, all measured (nothing implemented):
 - Basic JVM consumption of a published package **exists** on the documented path (`kof deps` + `--deps` + `new Class()`). What is still open is contract, not transport: whether a published package is a *library* with a public surface (today `kof deploy` packages only what `main` reaches), whether KOF→KOF consumption is JVM-only or cross-target, and whether the optional `new` also applies to classes coming from an external classpath (`Greeter()` gives `SEM015`; `new Greeter()` works). Those are maintainer decisions (rule 6).
 - "Build reports an error but emits a valid artifact" **does not reproduce**: with any error (`SEM015` by `--deps` or `--classpath`, genuine `SEM011`) the build exits 1 and emits **0 classes**. The artifact seen in the report is a **leftover of a previous successful build in the same output directory** (build 1 valid into `cout`; build 2 fails into the same `cout` without cleaning → `rc=1`, `classes=1`, `java -cp cout:<jar> Default.Main` prints the *previous* build's output; with a clean directory: `rc=1`, `classes=0`).
 - `kof run --classpath` is not a documented flag of `run`; adding it would be a new CLI surface (a design decision), not a bugfix.
+
+## Source-module consumption (#566, maintainer decision (b)) — implemented and measured on the real GitHub (20/09/2026)
+
+The maintainer decided (`D-RELEASE-0.5.0-GATE` addendum) that a package published by `kof deploy --publish` is consumed as a **source module**, not through the compiled jar. This supersedes the "canonical consumption" reading above for *new* packages (the jar-on-the-classpath route stays only for packages published before this change).
+
+**Implementation** (no syntax/semantics change): the compiler resolves `import` also in the source roots of installed dependencies (after the local module and the official libraries — a dependency never shadows the standard library), for every target; `kof deps resolve` installs the package sources, each verified against `SHA256SUMS`; `kof run|build --deps` hand those roots to the compiler; `kof deploy` ships `src/…` and accepts a **library** (only a package tree, no top-level source), which is compiled to validate it and published as sources only.
+
+**Real round-trip** (jar built from the tip; producer publishes a library to the public smoke repo; consumer with fresh HOME and **no token** against the real API). Pre-publish scan of the tarball and post-publish scan of the **real downloaded asset**: 0 findings (user paths, host, token, secrets); asset = 3 entries (`src/regsmoke/Greeter.kf`, `RELEASE.md`, `SHA256SUMS`), `SHA256SUMS` verifies.
+
+| Step | Result (measured) |
+|---|---|
+| `kof deps add/resolve` by version (library, sources only) | **GREEN** — sources installed under `$HOME/.kof/deps/kof/<owner>/<repo>/<ver>/src/`; installed source sha256 == published |
+| `kof run Main.kf --deps` with `import regsmoke.Greeter` + `Greeter()` (**no `new`**) | **GREEN** — `hello, consumer` |
+| same, without `--deps` | `PKG006`, rc 1 (honest) |
+| `kof build --target jvm --deps` then `java -cp dist` (no dependency jar) | **GREEN** — `hello, consumer` |
+| `kof build --target js --deps` (the same sources, another target) | **GREEN** — rc 0 |
+| 2nd `resolve` | **GREEN** — no download, cache byte-identical |
+| `latest` (fresh HOME/workspace) | **GREEN** — `kofdeps` pins the concrete version |
+| **legacy jar-only package** (`0.1.0-smoke…`) with `run --deps` + `new Greeter()` | **GREEN** — regression check on a real pre-change package |
+| missing tag | `REG001`, rc 1 |
+
+**Tests** (WSL Ubuntu-24.04, JDK 25; each slice RED before the fix): `DependencySourceRootE2ETest` 7/7 (RED 4/7), `DepsSourceModuleTest` 8/8 (RED 8/8), `CmdDeploySourcesTest` 5/5 (RED 3/5, includes the full cycle deploy → registry → `kof run --deps`). Full local suite of the 4 modules: kof-compiler 2792 tests — 7 failures, **all the known §337** (`qemu-aarch64` SIGSEGV on WSL2: Dtoa + 5 GC classes; identical on the base; hosted CI is 0F), 0 errors; kof-script 50/0; kof-c 7/0; kof-cli 432/0F/0E/3 skips. The deploy tar contract changed on purpose (it was 3 entries; sources now travel between the artifact and `RELEASE.md`).
+
+The residual questions listed earlier (public surface of a library, cross-target consumption) are answered by this model; `Class()` without `new` works because the dependency is a KOF source class (the `SEM015` of #568 only concerned classes coming from an external jar).

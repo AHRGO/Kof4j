@@ -148,6 +148,30 @@ slices following in `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`
 (honest environment guard, never a fake APK). No exit 0 without a real
 artifact, ever (R6).
 
+### Packages are consumed as SOURCE modules (#566)
+
+A release published with `kof deploy --publish` also ships the module's **sources**
+(`src/<path>.kf`, each one covered by `SHA256SUMS`; only `.kf`/`.kof`, never `tests/`,
+hidden or output directories). A module with no `.kf` at its top level — only a tree of
+packages — is a **library**: it is compiled to validate it and the release carries the
+sources only (no runnable artifact).
+
+```bash
+# producer:  src/mylib/Thing.kf  (package mylib)
+kof deploy ./lib --name mylib --version 1.2.0 --publish owner/mylib
+
+# consumer
+kof deps add owner/mylib@1.2.0
+kof deps resolve                     # installs the VERIFIED sources (SHA256SUMS) in the cache
+kof run Main.kf --deps               # `import mylib.Thing` resolves against the installed sources
+kof build src --target js --deps     # the SAME sources compile for any target
+```
+
+An `import` looks in your module first, then in the official libraries, then in the
+installed dependency sources — a dependency never shadows the standard library. Without
+`--deps` the import is an honest `PKG006`. Packages published before this change (jar
+only) keep working as before (the jar goes on the classpath).
+
 ## `kof lsp`
 
 Language Server that consumes the **real compiler frontend**. The editor's
