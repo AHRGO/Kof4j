@@ -127,7 +127,19 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     classe homonima do usuario mantem o dono (controles provam os dois lados). Contrato congelado #139/#150/#214,
     nao semantica nova. Prova: `BareCollectionFieldE2ETest` 8/8 (RED 6/8 pre-fix); o print verbatim da `2` em JVM,
     Script, Native x86-64 e JS no jar limpo. A caca Q4 deste fix abriu a §374/#553 (arg primitivo em add/set de
-    colecao bare nunca boxeia) — fix ainda aberto.
+    colecao bare nunca boxeia) — CORRIGIDA no mesmo dia (abaixo).
+
+  - **#553/§374 — argumento primitivo em `add`/`set` de colecao BARE nao morre mais no LOAD da classe no JVM**
+    — `List xs = listOf(1)` + `xs.add(2)` (local, campo ou `send` de `Channel` nu) boxeava o argumento pelo tipo de
+    elemento DECLARADO, que e `Unknown` sem type-args no receiver: o `int` cru chegava em `ArrayList.add(Object)` →
+    `VerifyError: Type integer … not assignable to 'java/lang/Object'` (o launcher do CLI mascara como a mensagem do
+    JavaFX, §149 — o bug era invisivel, nao ausente). O fix espelha o precedente do bug-35 no MESMO arquivo:
+    `emitBoxIfPrimitive` agora boxeia pelo tipo do ARGUMENTO no call-site (`parameterTypes`), guardado por
+    `elemType instanceof UnknownType` — a emissao de colecao TIPADA fica byte-identica a antes, e o diagnostico de
+    homogeneidade do runtime (regra 5) permanece intocado. Prova: `BareCollectionPrimitiveArgE2ETest` 7/7 (VERMELHO
+    4/4 no baseline limpo: add local nu, add de campo nu, set nu, largos Long/Double; controles tipado/Set/Map verdes
+    nos dois lados), mais a face Native x86-64 do mesmo programa e vizinhanca `BareCollectionFieldE2ETest` 5/5,
+    `CollectionMethodsStdlibE2ETest` 47/47, `KofChannelTest` 14/14.
 
   - .18 - governança: **regra 11 (Lei da Simplicidade) é ABSOLUTA em AGENTS.md** + `DECISIONS.md` §D-MAKEALIVE/§D-KOF-AS-CLOUD/§D-BOOTSTRAP/§D-DB-GAPS (enquetes da mantenedora 20/09: namespace `kof.makealive`, providers genéricos completos, estado kof.db desde o dia 1, Android=paridade JVM no db, ORM no Native via asm `kof_orm_*`, MySQL no cross, bootstrapper = objetivo final).
 

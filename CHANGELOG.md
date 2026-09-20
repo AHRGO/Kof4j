@@ -141,7 +141,19 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     homonymous class keeps its owner (control proves both directions). Frozen contract #139/#150/#214, not a new
     semantic. Proved by `BareCollectionFieldE2ETest` 8/8 (RED 6/8 pre-fix); the verbatim print gives `2` on JVM,
     Script, Native x86-64 and JS on the clean jar. The Q4 hunt on this fix opened §374/#553 (primitive arg into
-    add/set of a bare collection never boxes) — fix still open.
+    add/set of a bare collection never boxes) — FIXED the same day (below).
+
+  - **#553/§374 — primitive arg into `add`/`set` of a BARE collection no longer dies at class LOAD on the JVM**
+    — `List xs = listOf(1)` + `xs.add(2)` (local, field or bare `Channel` send) boxed the argument by the DECLARED
+    element type, which is `Unknown` when the receiver carries no type-args: the raw `int` reached
+    `ArrayList.add(Object)` → `VerifyError: Type integer … not assignable to 'java/lang/Object'` (the CLI launcher
+    masks it as the JavaFX message, §149 — the bug was invisible, not absent). Fix mirrors the bug-35 precedent in
+    the SAME file: `emitBoxIfPrimitive` now boxes by the ARGUMENT type at the call-site (`parameterTypes`), gated on
+    `elemType instanceof UnknownType` — a TYPED collection's emission stays byte-identical, rule-5 parity and the
+    runtime homogeneity diagnostic untouched. Proved by `BareCollectionPrimitiveArgE2ETest` 7/7 (RED 4/4 on the
+    clean baseline: bare local add, bare field add, bare set, wide Long/Double; typed/Set/Map controls green both
+    sides), plus the Native x86-64 face of the same program and neighbors `BareCollectionFieldE2ETest` 5/5,
+    `CollectionMethodsStdlibE2ETest` 47/47, `KofChannelTest` 14/14.
 
 
   - **`kof debug --dap --target native` — the DAP<->GDB/MI bridge for the editor (X7-4, roadmap §19.5 phase 7)**
