@@ -243,8 +243,9 @@ WHY: `kof.process` = **one-shot command with args you already have as values**;
 `kof.shell` (section below) = the list-shaped/dynamic argv and pipeline idiom.
 Same `Result` shape in both (`stdout`/`stderr`/`exitCode`). Honest gates (measured
 19/09 + pinned in `DomainGapCodesTest`): `run`/`spawn`/`exit` = `PROC001` at
-**compile-time on Native**; `process.spawn` = `PROC001` on **JS** (`run` works
-there). Never a silent fallback.
+**compile-time on Native**; `process.spawn`/`pipeline` are **REAL on JS under the
+Kof JS host** (`KofJsRunner`, 19-20/09, byte-parity pinned); on a bare `node` they raise the
+honest `kof_platform.*: not available outside the Kof JS host` diagnostic. Never a silent fallback.
 
 ## cache — String KV with TTL (8.5, 19/09)
 
@@ -355,12 +356,12 @@ riscv/aarch ⏳.
 | `time.*` new faces (todayIso/addDays/diffDays/hoursBetween/iso parse-format/sleep/now/interval) | ✅ JVM (measured 19/09, `StdlibIdiomsCompileTest`); interpreter: dates ✅ (X8 parity), clock ⏳ | ✅ x86 (measured 19/09) | ⏳ cross golden not measured yet | ✅ (measured 19/09) |
 | `cache.*` / `config.*` / `log.*` (8.5) | ✅ JVM (measured 19/09); cache+config ✅ interpreter parity 19/09 (`KofScriptStdlibParityTest`); log ⏳ interpreter | ✅ x86 (measured 19/09) | ⏳ cross golden not measured yet | ✅ (measured 19/09) |
 | `process.run`/`exit` (varargs) | ✅ | ❌ `PROC001` (compile-time, pinned `DomainGapCodesTest`) | ❌ `PROC001` | ✅ |
-| `process.spawn` | ✅ | ❌ `PROC001` | ❌ `PROC001` | ❌ `PROC001` (pinned 19/09) |
+| `process.spawn` | ✅ | ❌ `PROC001` | ❌ `PROC001` | ✅ Kof JS host (`KofJsRunner`); bare node = honest diagnostic |
 | `observability.*` (spans 01/09 + metrics/health 8.5 19/09) | ✅ (measured 19/09) | ✅ x86 (measured 19/09) | ⏳ cross golden not measured | ✅ (measured 19/09) |
 | `gpu.available`/`failReason`/`dispatchMatmul(Int)` | ✅ | ✅ (measured 19/09) | ⏳ cross golden not measured | ❌ `GPU001` (compile-time) |
 | `Image.open`/`Audio.openWav`/`Video.open`/`Mic.record/list` | ✅ (measured 19/09) | ❌ `MEDIA001` (compile-time) | ❌ `MEDIA001` | ❌ `MEDIA001` |
 | shell.cmd/run/ok (v1) | ✅ | ❌ `PROC001` (compile-time) | ❌ `PROC001` | ✅ byte-parity |
-| shell.pipeline (v1 — JVM only) | ✅ | ❌ `PROC001` | ❌ `PROC001` | ❌ `PROC001` |
+| shell.pipeline (v1) | ✅ | ❌ `PROC001` | ❌ `PROC001` | ✅ Kof JS host (chain + pump, 20/09 `081a48f8`; bare node = honest diagnostic) |
 
 `strings.reverse` on non-ASCII: byte-reverse on Native vs UTF-16 on JVM/JS —
 gap **NAT-STR01** (parity only locked on ASCII in the matrix).
