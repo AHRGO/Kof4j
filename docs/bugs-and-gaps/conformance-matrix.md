@@ -234,6 +234,7 @@ CLOSED 11/09 (riscv64/aarch64)**: `addDays`/`diffDays` run on the 5 targets —
 | throw propagating to outer catch | `got:kaboom` | DONE | DONE | DONE | DONE | `throwprop` |
 | nested try | `caught-inner:inner` / `end` | DONE | DONE | DONE | DONE (fix 07/09) | `nestedtry` |
 | re-throw inside catch | `outer:re:x` / `end` | DONE | DONE | DONE | DONE (bug 52 — collateral fix of bug 45, `c727fee`) | `catchrethrow` |
+| nested `if` whose then ends in `throw`/`return` (outer epilogue must survive) | `p:y` / `c:yb` / `c:bx` / `out:y` / `mid` / `c:in` | DONE | DONE | DONE | DONE (§380 ✅ 20/09 — parse stack of ACTIVE if false-labels: the inner else-parse returns the enclosing label, never consumes it; §147/§149/§174 guards untouched) | `nestedifthrow` |
 | null-safety narrowing (`!= null`) | `val=1` / `null-ok` | DONE | DONE | DONE | DONE | `nullnarrow` |
 | json.encode int/string/bool | `42` / `"oi"` / `true` | DONE | DONE | DONE | DONE | `jsonenc-int` |
 | json.encode list | `[1,2,3]` | DONE | DONE | DONE | DONE | `jsonenc-list` |
