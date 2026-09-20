@@ -15,6 +15,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
+  - **#545/§362 — chamadas de construtor fantasma agora falham em tempo de compilacao (`57a0d5f0`)**
+    — `P(1, 2)` em `record P(Int x)`, `D(1)` em classe sem esse construtor e `C("s")` em
+    `constructor(Int)` compilavam "clean" e produziam `NoSuchElementException` de runtime no
+    lookup `kof_new` (ou comportamento silenciosamente errado). O caminho de construcao
+    implicita agora valida aridade e tipos dos argumentos: **SEM023** (sem construtor com N
+    argumentos) / **SEM014** (tipo do argumento), no call-site, em todo alvo (gate de frontend).
+    Formas legitimas intactas — medido: `Q(7)`, `E(9)`, `R(1, 2)` seguem compilando e rodando.
+    Provado por `ConstructorPhantomE2ETest` 7/7.
   - **#431 fatia 1 — a ABI escalar do `extern` agora VINCULA no Native x86-64 (`d946e6fa`, §369)**
     — `extern "<lib>" f(Int, Long, Float, Double, Bool, String)` com aridade livre,
     retornos void/String: link direto (a biblioteca entra no `ld`) + marshaling SysV

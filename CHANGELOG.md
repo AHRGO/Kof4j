@@ -15,6 +15,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
  ### In development
 
+  - **#545/§362 — phantom constructor calls now fail at compile time (`57a0d5f0`)**
+    — `P(1, 2)` in `record P(Int x)`, `D(1)` in a class without that ctor, and
+    `C("s")` in `constructor(Int)` compiled "clean" and produced a runtime
+    `NoSuchElementException` from `kof_new`/lookup (or silently wrong behavior).
+    The implicit-construction path now validates arity and argument types:
+    **SEM023** (no constructor with N args) / **SEM014** (argument type), at the
+    call-site, on every target (frontend gate). Legit forms unchanged — measured:
+    `Q(7)`, `E(9)`, `R(1, 2)` still compile and run. Proved by
+    `ConstructorPhantomE2ETest` 7/7.
   - **#431 fatia 1 — the `extern` scalar ABI now BINDS on Native x86-64 (`d946e6fa`, §369)**
     — `extern "<lib>" f(Int, Long, Float, Double, Bool, String)` with free arity,
     void/String returns: direct link (the library goes to `ld`) + SysV marshaling
