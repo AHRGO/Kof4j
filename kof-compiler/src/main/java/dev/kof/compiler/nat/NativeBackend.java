@@ -296,6 +296,7 @@ public class NativeBackend implements Backend {
         }
         if (usesOrm) {
             dev.kof.compiler.runtime.RuntimeOrm1.emit(sb);
+            dev.kof.compiler.runtime.RuntimeOrm2.emit(sb);
         }
         if (usesHttp) {
             NativeHttpRuntime.emitHttpFunctions(sb);

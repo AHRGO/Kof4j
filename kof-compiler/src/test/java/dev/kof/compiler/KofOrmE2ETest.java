@@ -540,7 +540,7 @@ class KofOrmE2ETest {
         Files.writeString(source, ENTITY_SRC + """
                 main() {
                     var db = db.connect("sqlite:/tmp/orm-test.db")
-                    orm.create<User>(db)
+                    orm.save(db, User(1, "Mel", "m@kof.dev", 30))
                 }
                 """);
         CompilationResult nativeResult = driver.compile(source, tempDir.resolve("native-out"), Target.NATIVE);
@@ -944,6 +944,42 @@ class KofOrmE2ETest {
     }
 
     @Test
+    void createNativeEndToEndMatchesJvm(@TempDir Path tempDir) throws Exception {
+        String body = """
+                    println(orm.create<User>(db))
+                    println(orm.create<User>(db))
+                    db.execute(db, "insert into user (name, email, age) values ('Mel', 'm@kof.dev', 30)")
+                    println(orm.count<User>(db))
+                    println(db.query(db, "select email from user").get(0))
+                }
+                """;
+        String expected = "true\ntrue\n1\n{\"email\":\"m@kof.dev\"}";
+        Path jvmSource = tempDir.resolve("JvmMain.kf");
+        Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmb.db") + "\")\n")
+                + body);
+        runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
+                findDriverJar("sqlite-jdbc", "SQLite"), expected);
+        Path nativeSource = tempDir.resolve("NativeMain.kf");
+        Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativeb.db") + "\")\n")
+                + body);
+        CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nativeResult.success(), "Native deve compilar orm.create: "
+                + nativeResult.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(
+                tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = p.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals(expected, out, "paridade byte JVM==Native (DDL real: UNIQUE/varchar/pk"
+                + " medidos pelo SELECT do email); CREATE IF NOT EXISTS duas vezes = true");
+    }
+
+    @Test
     void migrateNativeEndToEndMatchesJvm(@TempDir Path tempDir) throws Exception {
         String ddl = "create table if not exists user (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, age INTEGER)";
         String body = """
@@ -1016,11 +1052,11 @@ class KofOrmE2ETest {
         Files.writeString(source, ENTITY_SRC + """
                 main() {
                     var db = db.connect("sqlite:/tmp/f1a-gate.db")
-                    orm.create<User>(db)
+                    orm.save(db, User(1, "Mel", "m@kof.dev", 30))
                 }
                 """);
         CompilationResult r = driver.compile(source, tempDir.resolve("out"), Target.NATIVE);
-        assertFalse(r.success(), "create ainda e ORM001 no Native ate F1d");
+        assertFalse(r.success(), "save (row-object) ainda e ORM001 no Native ate F2");
         assertTrue(r.diagnostics().getDiagnostics().toString().contains("ORM001"),
                 "gate honesto (nunca silent): " + r.diagnostics().getDiagnostics());
     }
