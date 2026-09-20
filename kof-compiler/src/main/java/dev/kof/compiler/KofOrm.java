@@ -49,12 +49,12 @@ public final class KofOrm {
     }
 
     /** D-DB-GAPS DB-1 (20/09): faces SQL-puro do Native x86-64, uma por fatia.
-     *  F1a = {@code delete_all} (asm em {@code RuntimeOrm1}); count/migrate/
-     *  create e o row-object entram nas fatias seguintes. MySQL (runtime) e o
+     *  F1a = {@code delete_all}, F1b = {@code count} (asm em {@code RuntimeOrm1});
+     *  migrate/create e o row-object entram nas fatias seguintes. MySQL (runtime) e o
      *  cross riscv/aarch64 (compile-time) seguem {@code ORM001} honesto
      *  (R7, R6 — nunca silent). */
     private static final java.util.Set<String> NATIVE_F1 = java.util.Set.of(
-            "kof_orm_delete_all");
+            "kof_orm_delete_all", "kof_orm_count");
 
     static boolean fnSupportedOn(Target target, String fn) {
         if (supportedOn(target)) return true;

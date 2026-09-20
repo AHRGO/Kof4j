@@ -877,6 +877,73 @@ class KofOrmE2ETest {
     }
 
     @Test
+    void countNativeEndToEndMatchesJvm(@TempDir Path tempDir) throws Exception {
+        String body = """
+                    db.execute(db, "create table if not exists user (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, age INTEGER)")
+                    db.execute(db, "delete from user")
+                    db.execute(db, "insert into user (name, email, age) values ('Mel', 'm@kof.dev', 30)")
+                    db.execute(db, "insert into user (name, email, age) values ('Kof', 'k@kof.dev', 1)")
+                    println(orm.count<User>(db))
+                    println(orm.deleteAll<User>(db))
+                    println(orm.count<User>(db))
+                }
+                """;
+        String expected = "2\ntrue\n0";
+        Path jvmSource = tempDir.resolve("JvmMain.kf");
+        Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmb.db") + "\")\n")
+                + body);
+        runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
+                findDriverJar("sqlite-jdbc", "SQLite"), expected);
+        Path nativeSource = tempDir.resolve("NativeMain.kf");
+        Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativeb.db") + "\")\n")
+                + body);
+        CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nativeResult.success(), "Native deve compilar orm.count: "
+                + nativeResult.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(
+                tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = p.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals(expected, out, "paridade byte JVM==Native (count; 3 calls em sequencia testam a preservacao de registrantes da chamada)");
+    }
+
+    @Test
+    void countUnknownConnectionThrowsJvmMessageOnNative(@TempDir Path tempDir)
+            throws Exception {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, ENTITY_SRC + """
+                main() {
+                    try {
+                        println(orm.count<User>("db2"))
+                    } catch (String e) {
+                        println(e)
+                    }
+                    println("after-throw")
+                }
+                """);
+        String expected = "unknown db connection: db2\nafter-throw";
+        runJvm(source, tempDir.resolve("jvm-out"), expected);
+        CompilationResult nativeResult = driver.compile(source, tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nativeResult.success(), "Native deve compilar: "
+                + nativeResult.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(
+                tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = p.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals(expected, out, "throw + execucao continua (stack de excecao nativo)");
+    }
+
+    @Test
     void sqlFacesRestantesNativeAindaOrm001(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, ENTITY_SRC + """

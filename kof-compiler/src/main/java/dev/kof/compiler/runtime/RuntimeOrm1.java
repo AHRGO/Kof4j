@@ -152,7 +152,68 @@ public final class RuntimeOrm1 {
                 popq %rbx
                 ret
 
+            # .Lorm_count_cb(void*slot, int argc, char**argv, char**colv): salva argv[0] no slot
+            .Lorm_count_cb:                       # cb(void*d,int argc,char**argv,char**names)
+                # argv[0] so existe DURANTE o callback (sqlite libera quando
+                # exec volta) -> converte aqui; so o LONG sobrevive ao ret.
+                testl %esi, %esi
+                jle .Lorm_cb_skip
+                testq %rdx, %rdx                  # argv
+                jz .Lorm_cb_skip
+                movq (%rdx), %rsi                 # argv[0] = valor (ex. "2")
+                testq %rsi, %rsi
+                jz .Lorm_cb_skip
+                call .Lorm_atol
+                movq %rax, .Lorm_count_buf(%rip)
+            .Lorm_cb_skip:
+                xorl %eax, %eax                   # 0 = nao abortar
+                ret
+
+            # .Lorm_atol(rsi=char*) -> rax (digitos; NULL -> 0)
+            .Lorm_atol:
+                xorl %eax, %eax
+                testq %rsi, %rsi
+                jz .Lorm_al_done
+            .Lorm_al_loop:
+                movzbl (%rsi), %ecx
+                cmpb $'0', %cl
+                jb .Lorm_al_done
+                cmpb $'9', %cl
+                ja .Lorm_al_done
+                imulq $10, %rax, %rax
+                movl %ecx, %edx
+                subl $'0', %edx
+                addq %rdx, %rax
+                incq %rsi
+                jmp .Lorm_al_loop
+            .Lorm_al_done:
+                ret
+
+            # .Lorm_count_sql(rdi=db, rsi=sql*) -> rax = valor numerico unico
+            .Lorm_count_sql:
+                pushq %rbx
+                pushq %r12
+                pushq %r13
+                movq %rdi, %rbx
+                movq %rsi, %r12
+                subq $8, %rsp                   # 16-alinha o call
+                movq $0, .Lorm_count_buf(%rip)  # slot estatico (cb nao toca registrantes)
+                movq %rbx, %rdi
+                leaq 24(%r12), %rsi
+                leaq .Lorm_count_cb(%rip), %rdx
+                xorl %ecx, %ecx
+                xorl %r8d, %r8d
+                call sqlite3_exec
+                movq .Lorm_count_buf(%rip), %rax  # valor ja convertido pelo cb
+                addq $8, %rsp
+                popq %r13
+                popq %r12
+                popq %rbx
+                ret
+
             # ---------------------- literais / dados ----------------------
+            .Lorm_count_pre:
+                .ascii "SELECT COUNT(*) FROM \\""
             .Lorm_bc_pre:
                 .ascii "unknown db connection: "
             .Lorm_delit:
@@ -167,6 +228,11 @@ public final class RuntimeOrm1 {
                 .ascii "kof.orm on native mysql: not available yet (ORM001)"
                 .byte 0
                 .set .Lorm_mysql_len, . - .Lorm_mysql_body - 1
+            .bss
+                .align 8
+            .Lorm_count_buf:
+                .zero 8
+            .text
 
             # ---------------------------------------------------------------
             # kof_orm_delete_all(id*, table*, schema*) -> Bool (rax 0/1)
@@ -184,37 +250,36 @@ public final class RuntimeOrm1 {
                 pushq %r13
                 pushq %r14
                 pushq %r15
-                subq $32, %rsp
-                movq %rdi, -8(%rbp)             # id
-                movq %rsi, -16(%rbp)            # table
+                subq $48, %rsp
+                movq %rdi, (%rsp)               # id
+                movq %rsi, 8(%rsp)              # table
                 # cap = 13 + tblLen + 1 + 8 (folga)
-                movq -16(%rbp), %rax
+                movq 8(%rsp), %rax
                 movl 16(%rax), %eax
                 addl $22, %eax
                 movl %eax, %edi
                 call .Lorm_bbegin               # rbx=str, r14=cursor, r15d=0
-                movq %rbx, -24(%rbp)
+                movq %rbx, 16(%rsp)
                 leaq .Lorm_delit(%rip), %rsi
                 movl $13, %ecx
                 call .Lorm_bp
-                movq -16(%rbp), %r13
+                movq 8(%rsp), %r13
                 leaq 24(%r13), %rsi
                 movl 16(%r13), %ecx
                 call .Lorm_bp
                 movl $34, %r8d
                 call .Lorm_bh
                 call .Lorm_bfin
-                # conn depois de qualquer clobber de volatile: id em slot
-                movq -8(%rbp), %rdi
+                movq (%rsp), %rdi
                 call .Lorm_conn                 # rax = sqlite handle | lanca
-                movq %rax, -32(%rbp)
-                movq -32(%rbp), %rdi
-                movq -24(%rbp), %rsi
+                movq %rax, 24(%rsp)
+                movq 24(%rsp), %rdi
+                movq 16(%rsp), %rsi
                 call .Lorm_exec
                 testl %eax, %eax
                 sete %al
                 movzbl %al, %eax
-                addq $32, %rsp
+                addq $48, %rsp
                 popq %r15
                 popq %r14
                 popq %r13
@@ -223,6 +288,59 @@ public final class RuntimeOrm1 {
                 movq %rbp, %rsp
                 popq %rbp
                 ret
+
+            # ---------------------------------------------------------------
+            # kof_orm_count(id*, table*, schema*) -> Long (rax)
+            #   SELECT COUNT(*) FROM "table"; id invalido lanca a string do
+            #   host; mysql ORM001 (runtime). SQL error no SELECT: callback
+            #   nunca roda -> atol(0)=0 — mesmo zero-row do host (honesto).
+            # ---------------------------------------------------------------
+            .globl kof_orm_count
+            .type kof_orm_count, @function
+            kof_orm_count:
+                pushq %rbp
+                movq %rsp, %rbp
+                andq $-16, %rsp
+                pushq %rbx
+                pushq %r12
+                pushq %r13
+                pushq %r14
+                pushq %r15
+                subq $48, %rsp
+                movq %rdi, (%rsp)               # id
+                movq %rsi, 8(%rsp)              # table
+                movq 8(%rsp), %rax
+                movl 16(%rax), %eax
+                addl $39, %eax                  # 22 + tbl + 1 + folga
+                movl %eax, %edi
+                call .Lorm_bbegin               # rbx=str, r14=cursor, r15d=0
+                movq %rbx, 16(%rsp)
+                leaq .Lorm_count_pre(%rip), %rsi
+                movl $22, %ecx
+                call .Lorm_bp
+                movq 8(%rsp), %r13
+                leaq 24(%r13), %rsi
+                movl 16(%r13), %ecx
+                call .Lorm_bp
+                movl $34, %r8d
+                call .Lorm_bh
+                call .Lorm_bfin
+                movq (%rsp), %rdi
+                call .Lorm_conn                 # handle sqlite | lanca
+                movq %rax, 24(%rsp)
+                movq 16(%rsp), %rsi
+                movq 24(%rsp), %rdi
+                call .Lorm_count_sql
+                addq $48, %rsp                  # espelhos delete_all: pops na regiao andada, rbp so no fim
+                popq %r15
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                movq %rbp, %rsp
+                popq %rbp
+                ret
+
             """);
     }
 }
