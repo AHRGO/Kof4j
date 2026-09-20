@@ -135,10 +135,10 @@ de assinatura. Nada em `kof.makealive` sabe que uma nuvem existe.
 
 ## Itens abertos / gaps honestos
 
-- **§380** (aberto, codegen): um `if` NESTADO cujo ramo then termina em
-  `throw` rouba o false-label do `else` externo no JS — a forma de guarda de
-  nível único (`if (bad && refuse) return false; if (bad) throw …`) é o que
-  os goldens usam e é o workaround atual.
+- **§380** (corrigido 20/09, codegen): o roubo do false-label do `if`
+  ENVOLVENTE por `if` NESTADO com `throw` no JS está fechado — as duas formas
+  funcionam; a forma de guarda de nível único (`if (bad && refuse) return
+  false; if (bad) throw …`) continua legal e é o que os goldens usam.
 - **§382** (aberto, ponte): códigos numéricos do kof.io JS (acima).
 - Linhas 3.3 (reconcile via `scheduler`), 3.6 (secrets `kof.security` — lane
   security) e 3.8 (CLI `kof infra` — decisão do mantenedor) são o resto do

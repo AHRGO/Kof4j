@@ -132,10 +132,10 @@ signing API. Nothing in `kof.makealive` knows a cloud exists.
 
 ## Open items / honest gaps
 
-- **§380** (open, codegen): a NESTED `if` whose then-branch ends in `throw`
-  steals the enclosing `else` false-label on JS — the single-level-guard
-  shape (`if (bad && refuse) return false; if (bad) throw …`) is what the
-  goldens use and is the current workaround.
+- **§380** (fixed 20/09, codegen): the nested-`if`-throw false-label theft on
+  JS is closed — both shapes work; the single-level-guard shape
+  (`if (bad && refuse) return false; if (bad) throw …`) remains legal and is
+  still what the goldens use.
 - **§382** (open, bridge): kof.io JS numeric codes (above).
 - Rows 3.3 (reconcile via `scheduler`), 3.6 (`kof.security` secrets —
   security lane), 3.8 (`kof infra` CLI — maintainer decision) are the rest

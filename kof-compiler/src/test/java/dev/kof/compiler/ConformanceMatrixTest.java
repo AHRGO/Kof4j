@@ -1956,6 +1956,42 @@ class ConformanceMatrixTest {
                 """, "else\nafter", Set.of(), tempDir);
     }
 
+    // known-bugs §380 (20/09): `if` NESTADO cujo then termina em saída
+    // incondicional (throw/return, sem else) — o parse do else interno
+    // (JsIfThrowElse.parseElse) consumia QUALQUER label à frente, roubando o
+    // falseLabel do `if` ENVOLVENTE: o epílogo externo era absorvido no ramo e
+    // o caminho não-throw devolvia undefined (JS divergia de JVM/Native).
+    // O fix = pilha de falseLabels ativos (MethodCtx.enclosingIfFalses): label
+    // de estrutura envolvente é devolvido sem consumir. Guarda preserva
+    // §147/§149 (loop/try-check primeiro) e §174 (try-end-check primeiro).
+    @Test
+    void conformanceNestedIfThrowStealsFalseLabel(@TempDir Path tempDir) throws IOException {
+        matrix("nestedifthrow", """
+                String t2(String n, Bool b) {
+                    if (n == "x") {
+                        if (b) { throw "yb" }
+                        throw "bx"
+                    }
+                    return "p:" + n
+                }
+                String t4(String n, Bool b) {
+                    if (n == "x") {
+                        if (b) { throw "in" }
+                        return "mid"
+                    }
+                    return "out:" + n
+                }
+                main() {
+                    println(t2("y", false))
+                    try { println(t2("x", true)) } catch (String e) { println("c:" + e) }
+                    try { println(t2("x", false)) } catch (String e) { println("c:" + e) }
+                    println(t4("y", false))
+                    println(t4("x", false))
+                    try { println(t4("x", true)) } catch (String e) { println("c:" + e) }
+                }
+                """, "p:y\nc:yb\nc:bx\nout:y\nmid\nc:in", Set.of(), tempDir);
+    }
+
     @Test
     void conformanceNullSafety(@TempDir Path tempDir) throws IOException {
         matrix("nullnarrow", """

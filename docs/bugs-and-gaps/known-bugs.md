@@ -11586,7 +11586,7 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 - **Proof:** `MakealivePrimitivesE2ETest.genericLambdaInvokeCases` (a/b run green; c rejected at COMPILE with the named mismatch — the assertion that would fail on the old code) + `hostGrammarBuilderAndStatePortRun` (the host shapes, JVM==JS byte parity + Native compile); full suite 0F/0E.
 - **Related:** §355 (same "compiles-green/dies-red" family — dead routing branch); AGENTS.md null-safety contract ("null cannot be assigned: narrowing first") now enforced at function-type boundaries too.
 
-## §380 — JS codegen: a NESTED `if` whose then-path ends in `throw` (no else) steals the enclosing `if`'s false-label — the outer epilogue gets absorbed into the then-branch and the non-throw path returns `undefined` (fails on node AND Graal; JVM/Script unaffected) — 🔴 OPEN 20/09 (`.18`, makealive 3.1 E2E)
+## §380 — JS codegen: a NESTED `if` whose then-path ends in `throw` (no else) steals the enclosing `if`'s false-label — the outer epilogue gets absorbed into the then-branch and the non-throw path returns `undefined` (fails on node AND Graal; JVM/Script unaffected) — ✅ FIXED 20/09 (`.18`, KofJS lane)
 
 - **Measured (20/09, `MakealiveE2ETest.failedApplyKeepsStateAndNamesTheResource`):** `Bool mkSet(World w, Resource r, Bool refuse) { if (r.name()=="bad") { if (refuse) { return false } throw "boom do provider" } w.events.add("set:"+r.name()); return true }` — JVM: `mkSet(ok1)` → `true`; JS: the outer-then's code lands on the wrong path and the outer epilogue (`add; return true`) is swallowed into the then — the program took "recusou em 'ok1'" for a resource that must pass. Minimal repro: `String t2(String n, Bool b) { if (n=="x") { if (b) { throw "yb" } throw "bx" } return "p:"+n }` → `t2("y",false)` = `p:y` on JVM, `undefined` on JS (both engines).
 - **Root cause (measured via IR dump):** the JS if-IR here is LABEL-ONLY (no unconditional `KofJump`/`Label(end)` after a throw-then — §147 noted the same). `JsIfThrowElse.parseElse` consumes ANY trailing `isIfEndLabel` label — `isIfEndLabel` is permissive (non-loop, non-try), so when the NESTED if's then ends unconditional the inner parseElse eats the ENCLOSING if's `falseLabel`; with the boundary gone, the outer `parseStatements` keeps parsing the function epilogue as part of the outer then and the outer if's §147 else-capture misroutes the rest. A sibling leak sits at `JsControlFlowParser.parseIfBody:188` (any trailing non-loop label consumed even when it belongs to the parent — `t4` shape: `if(n=="x"){ if(n=="y"){throw "in"} return "mid" } return "out"`).
@@ -11594,6 +11594,26 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 - **Workaround (in use, rule-legal — no semantics change):** write guards at SINGLE nesting level (`if (bad && refuse) { return false } if (bad) { throw "..." }`) or give the inner if an explicit `else` (both forms are the corpus-documented §147-proven shapes). `MkFailure`'s `mkSet` uses the two-guard form; hosts must avoid the nested form until this closes.
 - **Proof/when-closed:** a `runAll3` golden (`t2`/`t4` programs) that fails on JS today and passes after the fix, + `WorkflowE2ETest` 23/23 + full suite green.
 - **Related:** §147/§149 (the else-capture machinery this bug breaks and the fix must preserve), §174/§266/§267 (label-consumption guards in the same parser), §255 (compiles-green/diverges-red family), `MakealiveE2ETest` `MkFailure`.
+- **Fixed 20/09 (`.18`, KofJS lane):** root cause CONFIRMED with an IR dump on tip —
+  a throw-then `if` emits no `KofJump(end)`/`Label(end)` (LABEL-ONLY, as §147 noted),
+  so the first trailing label the inner else-parse sees is the ENCLOSING if's
+  `falseLabel`, and the two permissive consumptions (`JsIfThrowElse.parseElse`
+  trailing label; `JsControlFlowParser.parseIfBody` no-else and post-else label)
+  swallowed it. Fix = parse stack of ACTIVE if false-labels
+  (`MethodCtx.enclosingIfFalses`, push/pop in `parseIfBody`): a label owned by an
+  enclosing structure is RETURNED, NOT CONSUMED — which is exactly how
+  `parseStatements` already propagates ("unmatched label — the enclosing pattern
+  owns it"). Different from the reverted attempt (`∪ exits` of the then-parse):
+  loop/try labels keep their own earlier guards, so §147/§149 (assert-inside-while
+  parses its loop INSIDE the else) and §174 (try-end) are untouched.
+  Proof: `ConformanceMatrixTest.conformanceNestedIfThrowStealsFalseLabel` (t2/t4,
+  4 engines) — RED measured WITHOUT the fix (JS printed `undefined` for
+  `t2("y",false)`/`t4("y",false)` with node rc=0 — the §255 silent class), GREEN
+  byte-equal to the JVM oracle with it; origin case
+  `MakealiveE2ETest.failedApplyKeepsStateAndNamesTheResource`; preservation
+  batteries (`KofRandomTest`/`CoreRegressionE2ETest`/`WorkflowE2ETest`/errors
+  matrix) 142/0F/0E and Makealive*/KofJs/exceptions/control-flow 61/0F/0E; full
+  suite (4 modules) green at push.
 
 ## §381 — entity with a RESERVED-keyword field name OOMs the compiler (infinite loop in `parseEntityDeclaration`)
 

@@ -15,6 +15,22 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
+  - **known-bugs §380 CORRIGIDO — `if` NESTADO cujo then termina em `throw` não
+    rouba mais o false-label do `if` ENVOLVENTE no JS** (20/09, `.18`): dump de IR
+    confirmou que o if-IR de throw-then é LABEL-ONLY (forma do §147) — o parse do
+    else interno encontrava o `falseLabel` ENVOLVENTE como "label final" e o
+    consumia, engolindo o epílogo externo; o caminho não-throw devolvia
+    `undefined` com node rc=0 (a classe silenciosa do §255). Fix cirúrgico: pilha
+    de parsing dos falseLabels ATIVOS (`MethodCtx.enclosingIfFalses`) — label de
+    estrutura envolvente é devolvido, nunca consumido; guardas de loop/try
+    intactas, então §147/§149/§174 (assert-dentro-de-while, end de try) seguem
+    funcionando — era exatamente o que a tentativa revertida (`∪ exits`) quebrava.
+    Prova: golden de matriz 4-motores `conformanceNestedIfThrowStealsFalseLabel`
+    (RED sem o fix, GREEN = oracle JVM byte a byte), caso de origem
+    `MakealiveE2ETest.failedApplyKeepsStateAndNamesTheResource`, baterias de
+    preservação 142/0F/0E + 61/0F/0E; suíte completa verde no push.
+
+
   - **EXIT GATE 1.0 — EG-3: `scripts/test-package-outside-repo.sh`** (20/09, `.18`):
     a condicao §12/§23-9 virou um comando repetivel — o tar.gz REAL extraido para
     diretorio limpo em `$HOME` (regra 9 do repo), env do repo desexportado; `kof
@@ -95,6 +111,7 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     1/1 cada, bateria Makealive 20/20 no tip).
   - .18 - GAPS-DB F1b (20/09): `orm.count<User>(db)` é REAL no Native x86-64 — `kof_orm_count` monta `SELECT COUNT(*) FROM "table"` com o builder privado de KofString e roda via `sqlite3_exec`; o callback converte `argv[0]` NO LUGAR (o sqlite libera as strings do valor quando `exec` volta — ponteiro salvo lá é lixo) e o resultado sobrevive num slot estático. Dois bugs latentes morreram no caminho: (a) o epílogo do `delete_all` da F1a salvava slots sobre o `%rbx` gravado (o teste do throw passava só porque o chamador nunca relia `%rbx`); (b) o `count` novo estourava ao fazer pops na região errada da pilha após a injeção `andq $-16,%rsp` do emitter (SIGSEGV) — epílogo agora espelha `delete_all` exatamente. Prova medida: `KofOrmE2ETest` 37/0F (paridade byte JVM==Native de count, incl. três chamadas em sequência na mesma moldura); suíte 4-módulos 3185/0F/0E no clone isolado.
   - .18 - GAPS-DB F1c (20/09): `orm.migrate(db, name, sql)` é REAL no Native x86-64 — `kof_orm_migrate` espelha o host: DDL da tabela de histórico, `SELECT name = ?` (prepare/bind/step), a sql do usuário pelo executor compartilhado e `INSERT (name, ms)` com `clock_gettime` via syscall cru (mesmo padrão dos spans de observabilidade). A fatia também normalizou o contrato de pilha da stack ORM inteira: todo call para C agora acontece com `rsp % 16 == 0` (a convenção `andq` do emitter reafirmada: entrada `≡0` + `andq` + `subq $56/$88`), `.Lorm_exec` perdeu o `subq $8` acidental e o literal do DDL virou KofString de verdade (`.Lorm_exec` recebe objetos e soma o header de 24 — um `char*` cru fazia o sqlite parsear `ts user (id INTEGER...`). Prova medida: `KofOrmE2ETest` 39/0F (idempotência do migrate + linhas do histórico + paridade do throw de id ruim, JVM==Native byte); suíte 4-módulos 3187/0F/0E no clone isolado.
+  - .18 - GAPS-DB DB-2 (20/09): over-gating `kof.db`/`kof.orm` do Android (§278) FECHADO — `KofDb`/`KofOrm.supportedOn` aceitam `ANDROID` ("Android É JVM": o alvo reusa o `JvmBackend`). A prova é paridade por construção: `KofDbE2ETest.androidDbEmitsTheSameBytecodeAsJvm` compila entity+create+count nos dois alvos e afirma `Main.class` byte-idêntico. O pin R6 virou (`androidCompilesDbLikeJvmAndRefusesCryptoWithTheDocumentedCode`: db limpo, `SECN003` ainda recusado). `SECN00x`/`GPU001` seguem abertos — aquelas pilhas não rodam no Android (regra 6). §278 → PARCIAL; matriz + KOFANDROID + tracker 1.1.10 atualizados no mesmo commit (EN+PT).
   - .18 - GAPS-DB F1d (20/09): `orm.create<User>(db)` é REAL no Native x86-64 — nova fatia `RuntimeOrm2`: `kof_orm_create` faz parse byte a byte do literal de schema compilado (`name:dbType[:generated][:unique]`) e reconstrói o DDL exato do host (`"col"` VARCHAR(255)/INTEGER/BOOLEAN/DOUBLE/REAL + UNIQUE, generated → `INTEGER PRIMARY KEY AUTOINCREMENT`) pelo builder compartilhado de KofString; `CREATE IF NOT EXISTS` duas vezes devolve `true` nos dois motores. O pin de ORM001 de compilação migrou para `save` (a face row-object, F2). Prova medida: `KofOrmE2ETest` 40/0F (paridade byte JVM==Native de create, incl. um `select email from user` real provendo que UNIQUE/varchar chegaram); suíte 4-módulos 3188/0F/0E no clone isolado.
   - .18 - GAPS-DB F1a (20/09): `orm.deleteAll<User>(db)` é REAL no Native x86-64 — `kof_orm_delete_all` em asm sobre o stack `kof_db_*` (sqlite; MySQL lanca ORM001 honesto em runtime; id ruim lanca a string exata do host); gate por-função `fnSupportedOn` (todas as outras faces e o cross mantem `ORM001`); fix de link: programa só-ORM agora puxa `-lsqlite3`. Prova medida: `KofOrmE2ETest` 35/0F paridade byte JVM==Native; suíte 4-módulos 3183/0F/0E no clone isolado.
 
