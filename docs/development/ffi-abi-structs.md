@@ -59,8 +59,8 @@ Three worked examples the implementation tests must reproduce bit-exactly:
 | Kof shape | C shape | size | align | SysV classes |
 |---|---|---|---|---|
 | `Point2(Int x, Int y)` | `struct{int,int}` | 8 | 4 | INTEGER (1 eightbyte) |
-| `Mixed(Bool b, Int n, Float f)` | `struct{_Bool,int,float}` | 12 | 4 | padding after `b`; INTEGER (8B: b+n) + INTEGER (4B: f) |
-| `Time(Int64 s, Double d)` | `struct{int64_t,double}` | 16 | 8 | INTEGER + SSE (SysV), 2 eightwords (aarch64) |
+| `Mixed(Bool b, Int n, Float f)` | `struct{_Bool,int,float}` | 12 | 4 | padding after `b`; eightbyte 0 (b+n) = INTEGER, eightbyte 1 (f) = **SSE** — MEASURED (GCC 13.3, x86-64 `-O0 -S`): first eightbyte in `%rdi`, `f` in `%xmm0`; offsets n=4, f=8 (corrected 20/09: the draft said INTEGER+INTEGER) |
+| `Time(Long s, Double d)` | `struct{int64_t,double}` | 16 | 8 | INTEGER + SSE (SysV; MEASURED: `s`→`%rdi`, `d`→`%xmm0`), 2 eightwords (aarch64). Kof has no `Int64` — the 64-bit integer is `Long` (corrected 20/09) |
 
 ## 4. Design decisions for the maintainer (rule 6 — this lane proposes, never decides)
 
@@ -76,7 +76,12 @@ Three worked examples the implementation tests must reproduce bit-exactly:
   param — the C API decides), `List<T>` stays FFI001 until a boxed-unboxing
   benchmark proves otherwise.
 - **D6-3 · out-parameters.** No new syntax in v1: out-buffer = `new Byte[n]`
-  passed as `S`→`ADDRESS` and read back after the call. Pointer-in-struct
+  crossing as its OWN ABI kind — `Buffer(U8, INOUT)`, copy-in / call / copy-back —
+  **never the `S` token** (corrected 20/09: `S` = `String` = NUL-terminated UTF-8 `char*`,
+  read-only; a buffer differs in mutability, length, direction and lifetime, so it
+  cannot reuse `S`; `CString`, `Buffer`, `Pointer`, `OpaqueHandle` and `Struct` are distinct
+  ABI types even when all become an address in a register). Length stays an explicit C
+  argument. Pointer-in-struct
   fields = out of scope (opaque handles are 3.3, separate decision).
 - **D6-4 · return-by-value > 16 B.** SysV hidden-pointer (sret) / AAPCS64
   hidden-x8 / LP64 reference — the *JVM* Linker hides this; the *asm*

@@ -60,8 +60,8 @@ Três exemplos resolvidos que os testes de implementação devem reproduzir bit 
 | Forma Kof | Forma C | size | align | classes SysV |
 |---|---|---|---|---|
 | `Point2(Int x, Int y)` | `struct{int,int}` | 8 | 4 | INTEGER (1 eightbyte) |
-| `Mixed(Bool b, Int n, Float f)` | `struct{_Bool,int,float}` | 12 | 4 | padding após `b`; INTEGER (8B: b+n) + INTEGER (4B: f) |
-| `Time(Int64 s, Double d)` | `struct{int64_t,double}` | 16 | 8 | INTEGER + SSE (SysV), 2 eightwords (aarch64) |
+| `Mixed(Bool b, Int n, Float f)` | `struct{_Bool,int,float}` | 12 | 4 | padding após `b`; eightbyte 0 (b+n) = INTEGER, eightbyte 1 (f) = **SSE** — MEDIDO (GCC 13.3, x86-64 `-O0 -S`): primeiro eightbyte em `%rdi`, `f` em `%xmm0`; offsets n=4, f=8 (corrigido 20/09: o rascunho dizia INTEGER+INTEGER) |
+| `Time(Long s, Double d)` | `struct{int64_t,double}` | 16 | 8 | INTEGER + SSE (SysV; MEDIDO: `s`→`%rdi`, `d`→`%xmm0`), 2 eightwords (aarch64). O Kof não tem `Int64` — o inteiro de 64 bits é `Long` (corrigido 20/09) |
 
 ## 4. Decisões de design para a mantenedora (rule 6 — esta lane propõe, nunca decide)
 
@@ -77,7 +77,12 @@ Três exemplos resolvidos que os testes de implementação devem reproduzir bit 
   parâmetro de comprimento implícito — quem decide é a API C); `List<T>`
   permanece FFI001 até um benchmark de unboxing provar o contrário.
 - **D6-3 · parâmetros out.** Sem sintaxe nova na v1: out-buffer =
-  `new Byte[n]` passado como `S`→`ADDRESS` e lido de volta após a chamada.
+  `new Byte[n]` cruzando como tipo ABI PRÓPRIO — `Buffer(U8, INOUT)`, copia-para-dentro /
+  chamada / copia-de-volta — **nunca o token `S`** (corrigido 20/09: `S` = `String` = `char*`
+  UTF-8 terminado em NUL, somente-leitura; um buffer difere em mutabilidade, comprimento,
+  direção e tempo de vida, então não pode reusar `S`; `CString`, `Buffer`, `Pointer`,
+  `OpaqueHandle` e `Struct` são tipos ABI distintos mesmo quando todos viram um endereço
+  num registrador). O comprimento segue argumento explícito do C.
   Campos ponteiro-em-struct ficam fora (handles opacos são 3.3, decisão
   separada).
 - **D6-4 · retorno by-value > 16 B.** SysV hidden-pointer (sret) /
