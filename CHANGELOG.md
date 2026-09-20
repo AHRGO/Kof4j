@@ -15,6 +15,25 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
  ### In development
 
+  - **`Bool` is never nullable — the three-valued type is `Troolean` (D-TROOL,
+    19/09, DECISIONS.md §D-TROOL)** — migration of the same class approved for
+    #401: `Bool?`/`Boolean?` (any position: local, field, parameter, return) now
+    fail at compile time with `SEM095` ("`Bool` has two values; for
+    true/false/unknown use `Troolean`") — the old face compiled but was a
+    crash-face at runtime (#462/#486 VerifyError; JS leaking operands). Code
+    that wants `true/false/unknown` writes `Troolean`: declaration without
+    instantiation is `null` (unknown), functions may `return null` into it,
+    `println` shows `true`/`false`/`null`, and `!`/`&&`/`||` follow the
+    **Kleene** tables (F dominates AND, T dominates OR, `NOT U = U`) — a logical
+    with a `Troolean` side yields `Troolean`; consume it as `Bool` with an
+    explicit `== true`/`!= null`. Programs with pure `Bool` operands are
+    untouched (#487 face intact). Proved by `TrooleanLawE2ETest` (Kleene
+    matrices 9+9+3, nested chains, short-circuit both sides, `== null`,
+    condition sugar, `SEM095` in both spellings — JVM+Script+JS identical;
+    Native-x86-64 measured in the landing probes) and the migrated §306 faces.
+    Closes the #462/#486 family by decision (rule 8: the foreign construct's
+    replacement is now IN the language).
+
   - **JS collection equality is now by content (`#518`)** — a Kof `List` or `Set`
     used as an element of another `Set`/`Map`/`List` compared by identity on the JS
     target (`add` said `true`, `contains` said `false`, `setOf(setOf(1)).size()` was

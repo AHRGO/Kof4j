@@ -235,6 +235,32 @@ class TrooleanLawE2ETest {
                 """, "RHS\nRHS\nU\nT");
     }
 
+    @Test
+    void nestedChainsFollowKleene(@TempDir Path tempDir) throws IOException {
+        // Medido (NC.kf): cadeias e parenteses dobram pela tabela —
+        // (T&&U)||F = U||F = U; (T&&U)||T = T; !(U&&T) = !U = U.
+        runAll3(tempDir, show3(List.of(
+                "tb() && nb() || fb()",
+                "(tb() && nb()) || tb()",
+                "!(nb() && tb())")),
+                "U\nT\nU");
+    }
+
+    @Test
+    void conditionSugarEqualsCompareTrue(@TempDir Path tempDir) throws IOException {
+        // `if (t)` e o acucar de `if (t == true)`: U cai no ramo falso; as
+        // comparacoes == true / == false separam os tres estados.
+        runAll3(tempDir, TROOLS + """
+                main() {
+                    if (tb()) { println("ifT") }
+                    if (nb()) { println("ifU") } else { println("elseU") }
+                    println(tb() == true)
+                    println(nb() == true)
+                    println(nb() == false)
+                }
+                """, "ifT\nelseU\ntrue\nfalse\nfalse");
+    }
+
     // ---- SEM095: Bool? nao existe mais (as duas grafias) ---------------------
 
     @Test

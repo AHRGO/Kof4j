@@ -102,6 +102,7 @@
 | `switch` record destructuring `Point(x,y)` | ✅ | ✅ | ✅ | 0.2.6-beta |
 | `switch` como expressão `case X -> v` (SYN001) | ✅ | ✅ (x86_64/riscv64/aarch64) | ✅ (ternários aninhados) | 03/09 — `default` obrigatório ou exaustividade enum (`SEM032`); `KofSwitchExprE2ETest` 19 + riscv64/aarch64 14/14 |
 | `String?` null safety básica | ✅ | ✅ | ✅ | 0.2.6-beta (`Type?`) |
+| `Troolean` lógica tres-estado (Kleene; `Bool` nunca nulavel — `Bool?` → `SEM095`) | ✅ | ✅ (x86_64; cross via desugar front-end, guarda CI) | ✅ | 0.4.0-beta — D-TROOL 19/09, `TrooleanLawE2ETest` |
 | `List map/filter/reduce` | ✅ | ✅ | ✅ | 0.2.6-beta |
 | `Box<T>` generic | ✅ | ✅ | ✅ | `substituteTypeVariable` |
 | `KofScript` top-level `var`/`val` → `KofScriptGlobals` (execução direta via `KofInterpreter`) | ✅ | ✅ | ✅ | `KofScript` 0.3.0 |

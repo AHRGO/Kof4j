@@ -124,6 +124,28 @@ String t = s            // error SEM021: String? not assignable to String withou
 
 `NullableType(inner)` in `Type.java`; `TypeChecker.isAssignable` handles `Nullable → non-null`.
 
+### Troolean (three-state — 0.4.0-beta, D-TROOL)
+
+`Bool` has **exactly two values**. What needs `true / false / unknown` is
+`Troolean` (DECISIONS.md §D-TROOL):
+
+```kof
+Troolean t                 // declaration without instantiation = unknown
+Troolean nb() { return null }   // unknown reaches the variable via API
+Bool? b = nb()             // ERROR SEM095: 'Bool' has two values; use 'Troolean'
+println(t)                 // "null"
+if (t == true) { }         // the comparisons separate the three states
+if (t) { }                 // sugar for `t == true` — unknown falls in the false branch
+var r = nb() && fb()       // false — F dominates AND (Kleene)
+var u = nb() && tb()       // null — unknown persists
+```
+
+`!`/`&&`/`||` over `Troolean` follow the **Kleene** tables (F dominates AND,
+T dominates OR, `NOT U = U`); the result of a logical with a `Troolean` side
+is `Troolean` (to consume as `Bool` narrow with `== true`/`!= null`).
+`println` shows `true`/`false`/`null`. Proof: `TrooleanLawE2ETest` (JVM+Script+JS;
+the tables are measured on Native-x86-64 in the landing probes).
+
 ## Type Inference
 
 ```kof

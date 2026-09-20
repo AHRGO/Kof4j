@@ -15,6 +15,25 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
+  - **`Bool` nunca e nulavel — o tipo tres-estado e `Troolean` (D-TROOL,
+    19/09, DECISIONS.md §D-TROOL)** — migracao da mesma classe aprovada para
+    #401: `Bool?`/`Boolean?` (qualquer posicao: local, campo, parametro,
+    retorno) agora falham em compilacao com `SEM095` ("`Bool` tem dois valores;
+    para true/false/desconhecido use `Troolean`") — a face antiga compilava mas
+    era crash-face em runtime (#462/#486 VerifyError; JS vazando operandos).
+    Codigo que quer `true/false/desconhecido` escreve `Troolean`: declaracao
+    sem instancia e `null` (unknown), funcoes podem `return null` nele,
+    `println` mostra `true`/`false`/`null`, e `!`/`&&`/`||` seguem as tabelas
+    de **Kleene** (F domina AND, T domina OR, `NOT U = U`) — logico com lado
+    `Troolean` da `Troolean`; consuma como `Bool` com `== true`/`!= null`
+    explicito. Programas com operandos puro-`Bool` continuam intactos (face
+    #487 preservada). Prova: `TrooleanLawE2ETest` (matrizes Kleene 9+9+3,
+    cadeias aninhadas, curto-circuito dos dois lados, `== null`, acucar de
+    condicao, `SEM095` nas duas grafias — JVM+Script+JS identicos;
+    Native-x86-64 medido nos probes do landing) e as faces §306 migradas.
+    Fecha a familia #462/#486 por decisao (regra 8: o substituto do constructo
+    estrangeiro agora esta NA lingua).
+
   - **Bundle 2.1.3 do `kof.workflow` COMPLETO (19/09, lane `.18`)** — retry +
     deadLetter (duas faces) + schedule + checkpoint (3a) + **supervisão (3b)**:
     `runSupervised(dag, nome, maxReinicios)` roda a DAG como workers one_for_one
