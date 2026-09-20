@@ -145,11 +145,10 @@ c_bug_issues() {
 }
 
 c_edges() {
-  # Criterion 6 counts the edges that gate the 0.5.0 release: the EG-1..EG-7
-  # queue (Q1 ties the 0.5.0 cut to EG-1..EG-7) + the open `1.0-blocks` issues.
-  # EG-8 (1.0 RC) and EG-9/EG-10 (KofC/Android gates) belong to the 1.0 phase,
-  # so they are reported informationally, not as 0.5.0 blockers.
-  local eg_open="" eg_late="" blocks=0
+  # Criterion 6 counts the FULL edge queue (maintainer 09/20/2026): every open
+  # EG item, EG-1 through EG-10 (no 1.0-phase exemption), plus the open
+  # `1.0-blocks` issues.
+  local eg_open="" blocks=0
   if [ -n "$EG_TSV" ]; then
     while IFS=$'\t' read -r eg st; do
       [ -z "$eg" ] && continue
@@ -157,25 +156,18 @@ c_edges() {
     done < "$EG_TSV"
     blocks="${R050_OPEN_BLOCKS:-0}"
   else
-    while IFS=$'\t' read -r eg st; do
-      [ -z "$eg" ] && continue
-      case "$st" in *DONE*|*FEITO*) : ;; *)
-        n="${eg#EG-}"
-        if [ "$n" -le 7 ] 2>/dev/null; then eg_open="$eg_open $eg"; else eg_late="$eg_late $eg"; fi ;;
-      esac
-    done < <(awk -F'|' '/^\| *EG-[0-9]+ /{ id=$2; gsub(/ /,"",id); s=($0 ~ /DONE|FEITO/)?"DONE":"OPEN"; print id"\t"s }' docs/development/roadmap.md 2>/dev/null)
+    eg_open="$(awk -F'|' '/^\| *EG-[0-9]+ /{ id=$2; gsub(/ /,"",id); if ($0 !~ /DONE|FEITO/) print id }' docs/development/roadmap.md 2>/dev/null | tr '\n' ' ')"
     eval "$(scripts/gh-as-agent.sh token 2>/dev/null)" || true
     local out; out="$(bash scripts/check_release_blockers.sh --rc-gate 2>&1)"
     blocks="$(printf '%s\n' "$out" | sed -n 's/.*-- \([0-9]*\) open 1.0-blocks.*/\1/p' | head -1)"
     blocks="${blocks:-0}"
   fi
   if [ -z "${eg_open// }" ] && [ "${blocks:-0}" -eq 0 ]; then
-    STATE[edges]=GREEN; DETAIL[edges]="no open edge (EG-1..EG-7 closed, 0 open 1.0-blocks)"
+    STATE[edges]=GREEN; DETAIL[edges]="no open edge (EG-1..EG-10 closed, 0 open 1.0-blocks)"
   else
     STATE[edges]=RED
     DETAIL[edges]="open edge(s):${eg_open:- none}; open 1.0-blocks: $blocks"
   fi
-  [ -n "${eg_late// }" ] && DETAIL[edges]="${DETAIL[edges]} | 1.0-phase (outside 0.5.0):${eg_late}"
 }
 
 c_bugs_gaps() {
@@ -223,7 +215,7 @@ EOF
 
   # dirty fixture -> REDs on every condition that has data
   printf '561\tbug,1.0-blocks\n563\tbug,1.0-blocks\n566\tbug,1.0-outside\n' > "$T/issues"
-  printf 'EG-1\tDONE\nEG-5\tOPEN\n' > "$T/eg"
+  printf 'EG-1\tDONE\nEG-5\tOPEN\nEG-9\tOPEN\n' > "$T/eg"
   printf 'PARITY: 97%%\n' > "$T/parity"
   printf 'STABILITY: RED\n' > "$T/stab"
   printf '2\n' > "$T/pending"

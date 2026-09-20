@@ -2485,8 +2485,12 @@ gate: the seven are the **acceptance**; the queue that satisfies them is
 4. **Total stability** — full suite green (0F/0E outside documented
    environmental guards) + the 5/5 conformance matrix measured on the candidate.
 5. **0 open issues that are a bug** — no OPEN GitHub issue that is a bug.
-6. **All edges closed** — every open edge (the `1.0-blocks` issues + the EG
-   queue items that gate the release) closed with proof.
+   #566 enters as a blocker (maintainer 09/20/2026).
+6. **All edges closed** — every open edge closed with proof: the **full EG
+   queue (EG-1 through EG-10)** and the open `1.0-blocks` issues. The 0.5.0
+   release waits until every owner closes and moves their own work (confirmed
+   by the maintainer 09/20/2026 — the gate measures, it does not take over
+   another lane's item).
 7. **Nothing pending in bugs-and-gaps** — `docs/bugs-and-gaps/known-bugs.md`
    and `specification-gaps.md` with no live/OPEN entry.
 
@@ -2504,5 +2508,5 @@ authorize a 1.0 RC (EG-8 stays gated on the 0.5.0 cut).
 **Evidence:** maintainer directive 09/20/2026 (chat); measured starting state
 (09/20/2026): `scripts/check_known_bugs_status.sh` reports 19 live known-bugs
 (EN×PT consistent); 4 OPEN `bug`-labeled issues (#561/#563/#564/#566);
-`scripts/check_release_blockers.sh --rc-gate` RED with 3 open `1.0-blocks`
-(#561/#563/#564); `specification-gaps.md` 0 open.
+`scripts/check_release_blockers.sh --rc-gate` RED with 4 open `1.0-blocks`
+(#561/#563/#564/#566); `specification-gaps.md` 0 open.

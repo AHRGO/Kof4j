@@ -2472,9 +2472,12 @@ release e o gate §8: as sete são a **aceitação**; a fila que as satisfaz é 
 4. **Estabilidade total** — suíte completa verde (0F/0E fora das guardas
    ambientais documentadas) + matriz de conformidade 5/5 medida na candidata.
 5. **0 issues abertas que sejam bug** — nenhuma issue OPEN do GitHub que seja
-   bug.
-6. **Todas as arestas fechadas** — toda aresta aberta (as issues `1.0-blocks`
-   + os itens da fila EG que gateiam o release) fechada com prova.
+   bug. A #566 entra como bloqueio (mantenedora 20/09/2026).
+6. **Todas as arestas fechadas** — toda aresta aberta fechada com prova: a
+   **fila EG inteira (EG-1 até EG-10)** e as issues `1.0-blocks` abertas. O
+   release 0.5.0 espera até cada dono fechar e mover o próprio trabalho
+   (confirmado pela mantenedora 20/09/2026 — o gate mede, não assume o item de
+   outra lane).
 7. **Nada pendente em bugs-and-gaps** — `docs/bugs-and-gaps/known-bugs.md` e
    `specification-gaps.md` sem entrada live/OPEN.
 
@@ -2493,5 +2496,5 @@ corte, regra 6), NÃO bumpa `VERSION`, NÃO abre a linha 1.0, NÃO autoriza RC
 **Evidência:** diretiva da mantenedora 20/09/2026 (chat); estado inicial
 medido (20/09/2026): `scripts/check_known_bugs_status.sh` reporta 19
 known-bugs live (EN×PT consistentes); 4 issues OPEN com label `bug`
-(#561/#563/#564/#566); `scripts/check_release_blockers.sh --rc-gate` RED com 3
-`1.0-blocks` abertos (#561/#563/#564); `specification-gaps.md` 0 abertos.
+(#561/#563/#564/#566); `scripts/check_release_blockers.sh --rc-gate` RED com 4
+`1.0-blocks` abertos (#561/#563/#564/#566); `specification-gaps.md` 0 abertos.

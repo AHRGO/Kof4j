@@ -56,8 +56,8 @@ prioridade para "liberar o gate 0.5.0 para todos os agentes".
 | 2 | Nenhuma decisão pendente | `DECISIONS.md` sem pergunta aberta que mude a superfície | NEEDS-REVIEW |
 | 3 | Todos os `docs/development/*.md` soltos concluídos e movidos | regra dos três estados; só fica trabalho com implementação pendente | RED (docs em curso) |
 | 4 | Estabilidade total | suíte completa 0F/0E + matriz 5/5 na candidata | NEEDS-MEASURE |
-| 5 | 0 issues abertas que sejam bug | issues OPEN do GitHub com label `bug` = 0 | RED (#561/#563/#564/#566) |
-| 6 | Todas as arestas fechadas | `1.0-blocks` abertos = 0 + itens da fila EG que gateiam o release fechados | RED (#561/#563/#564) |
+| 5 | 0 issues abertas que sejam bug | issues OPEN do GitHub com label `bug` = 0 (inclui a #566 — mantenedora 20/09) | RED (#561/#563/#564/#566) |
+| 6 | Todas as arestas fechadas | a fila EG INTEIRA (EG-1..EG-10) fechada + `1.0-blocks` abertos = 0; o 0.5.0 espera cada dono fechar/mover o próprio trabalho | RED (#561/#563/#564/#566 + EG-5/EG-8/EG-9/EG-10) |
 | 7 | Nada pendente em bugs-and-gaps | conjunto live do `check_known_bugs_status.sh` vazio + `specification-gaps.md` 0 abertos | RED (19 live) |
 
 Mecanizado por `scripts/check_release_050_gate.sh` (reporta cada condição como
