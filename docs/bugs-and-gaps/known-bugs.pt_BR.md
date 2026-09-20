@@ -11371,3 +11371,43 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
   #545 (padrão SEM023 "no constructor of"), #566 (guarda-chuva), #567/#569
   (irmãs i/iii), `D-KOF-FIRST` (resolvido contra o contrato de entries do
   próprio Kof, não contra Java).
+## §394 — o harness de teste vaza o app servido: o `ServePortTest` mata a CLI com `destroyForcibly` (SIGKILL), o shutdown hook do `kof serve` nunca roda e o filho `java -cp <tmp> Default.Main` fica órfão — 19 JVMs vazados acumulados em 2 dias — 🔴 ABERTO 20/09 (lane estabilização/tooling, achado ao medir o gate 0.5.0)
+
+- **Sintoma (medido 20/09, host da árvore compartilhada):**
+  `ps -eo pid,ppid,etimes,args | grep kof-serve` mostrou **19** processos
+  `java -Dkof.root=/tmp/junit-… -cp /tmp/kof-serve-… Default.Main` vivos,
+  **todos reparentados ao init (`ppid=1`)**, idades de **22–48 h** — um JVM
+  vazado por corrida completa da suíte, acumulando por dias. Cada um também
+  deixa seu diretório de classes `/tmp/kof-serve-*` para trás
+  (`KofCliSupport.cleanup(tempDir)` nunca roda).
+- **Causa raiz:** o `kof serve` de um app Kof-native (`web.app()` + um
+  `main()`) gera um **JVM filho** (`KofCliSupport.executeProcess`, call site
+  `CmdServe.java:201-203`) e bloqueia no `p.waitFor()`. O filho só é destruído
+  pelo **shutdown hook** da CLI (`CmdServe.java:189-195`,
+  `servedProcess.destroy()`), que roda em **SIGTERM/SIGINT** — nunca em
+  SIGKILL. O `ServePortTest.nativeAppPortIsOwnedByApp_cliPortFlagIsIgnoredWithNotice`
+  (`kof-cli/src/test/java/dev/kof/cli/ServePortTest.java:115`) derruba com
+  `p.destroyForcibly()` (**SIGKILL**), então o hook é pulado e o filho servido
+  sobrevive ao teste como órfão.
+- **Repro controlado (medido, não inferido):** um app `web.app()` mínimo
+  servido com `bin/kof serve`, então `kill -TERM <cli>` → o hook imprimiu
+  `kof serve shutting down...` e **ambos** (CLI e filho) morreram. A mesma
+  árvore sob `destroyForcibly()` (SIGKILL) deixa o filho vivo com `ppid=1` —
+  exatamente os 19 observados. O teste legacy `handle(...)` não vaza: serve
+  in-process (sem filho).
+- **Impacto:** exaustão de recursos (cada órfão segura um JVM + heap + uma
+  porta escutando), flakiness do reuso de `freePort()` e pressão de OOM no host
+  compartilhado — o modo de morte documentado da sessão `.18`.
+- **Por que não corrigir na camada de produção:** SIGKILL é, por definição,
+  não-capturável; usuários reais param o `serve` com Ctrl+C (SIGINT → hook
+  roda, provado acima). O defeito está no **teardown do teste**, que deve matar
+  a árvore inteira de processos (os `descendants()` da CLI primeiro) — sem
+  mudança de comportamento do `CmdServe`.
+- **Fix planejado (esta lane, cirúrgico):** no `finally`, destruir
+  `p.descendants()` (o filho servido) antes de `p.destroyForcibly()`; mesmo
+  endurecimento para o `FullStackE2ETest` (o caminho `destroy()`→
+  `destroyForcibly()` de 5 s também pode orfanar). Prova: `ServePortTest` verde
+  + nenhum `Default.Main` novo com `ppid=1` após a corrida.
+- **Relacionado:** `CmdServe.java:189-203`, `KofCliSupport.executeProcess`
+  (`servedProcess`), `FullStackE2ETest:185-186`, §389 (mesma família "verdade
+  da árvore suja compartilhada").

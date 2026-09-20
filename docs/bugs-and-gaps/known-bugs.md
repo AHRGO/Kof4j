@@ -11927,3 +11927,43 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
   faces), §240 (JDK `knows()` ≠ kof-builtin), §362 (SEM023 ctor-message
   family), #566 (umbrella, CLOSED upstream), #567/#569 (siblings i/iii),
   `D-KOF-FIRST` (measured against Kof's own entry-table contract).
+## §394 — test harness leaks the served app: `ServePortTest` kills the CLI with `destroyForcibly` (SIGKILL) so the `kof serve` shutdown hook never runs and the child `java -cp <tmp> Default.Main` is orphaned — 19 leaked JVMs accumulated in 2 days — 🔴 OPEN 20/09 (stabilization/tooling lane, found while measuring the 0.5.0 gate)
+
+- **Symptom (measured 20/09, host with the shared tree):**
+  `ps -eo pid,ppid,etimes,args | grep kof-serve` showed **19** live
+  `java -Dkof.root=/tmp/junit-… -cp /tmp/kof-serve-… Default.Main` processes,
+  **all reparented to init (`ppid=1`)**, ages **22–48 h** — one leaked JVM per
+  full-suite run, accumulating over days. Each also leaves its
+  `/tmp/kof-serve-*` classes dir behind (`KofCliSupport.cleanup(tempDir)` never
+  runs).
+- **Root cause:** `kof serve` on a Kof-native web app (`web.app()` + a
+  `main()`) spawns a **child JVM** (`KofCliSupport.executeProcess`, call site
+  `CmdServe.java:201-203`) and blocks in `p.waitFor()`. The child is destroyed
+  only by the CLI's **shutdown hook** (`CmdServe.java:189-195`,
+  `servedProcess.destroy()`), which runs on **SIGTERM/SIGINT** — never on
+  SIGKILL. `ServePortTest.nativeAppPortIsOwnedByApp_cliPortFlagIsIgnoredWithNotice`
+  (`kof-cli/src/test/java/dev/kof/cli/ServePortTest.java:115`) tears down with
+  `p.destroyForcibly()` (**SIGKILL**), so the hook is skipped and the served
+  child survives the test as an orphan.
+- **Controlled repro (measured, not inferred):** a minimal `web.app()` app
+  served with `bin/kof serve`, then `kill -TERM <cli>` → the hook printed
+  `kof serve shutting down...` and **both** CLI and child died. The same tree
+  under `destroyForcibly()` (SIGKILL) leaves the child alive with `ppid=1` —
+  exactly the 19 observed. The legacy `handle(...)` test does not leak: it
+  serves in-process (no child).
+- **Impact:** resource exhaustion (each orphan holds a JVM + heap + a listening
+  port), flaky `freePort()` reuse and OOM pressure on the shared host — the
+  documented death mode of the `.18` session.
+- **Why not fixed at the production layer:** SIGKILL is by definition
+  uncatchable; real users stop `serve` with Ctrl+C (SIGINT → hook runs, proven
+  above). The defect is in the **test teardown**, which must kill the whole
+  process tree (the CLI's `descendants()` first) — no `CmdServe` behavior
+  change.
+- **Planned fix (this lane, surgical):** in the `finally`, destroy
+  `p.descendants()` (the served child) before `p.destroyForcibly()`; same
+  hardening for `FullStackE2ETest` (its `destroy()`→`destroyForcibly()` 5 s
+  path can orphan too). Proof: `ServePortTest` green + no new
+  `ppid=1 Default.Main` after the run.
+- **Related:** `CmdServe.java:189-203`, `KofCliSupport.executeProcess`
+  (`servedProcess`), `FullStackE2ETest:185-186`, §389 (same
+  dirty-shared-tree truth family).
