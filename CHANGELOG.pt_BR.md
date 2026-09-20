@@ -134,6 +134,21 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     perdendo o stdout do filho) foi medido **nao-reproduzivel** no tip atual (`x`/`0` nos dois alvos); a paridade
     JVM×Script byte-a-byte fica fixada como teste permanente na mesma classe.
 
+  - **#554/§378 — `check_known_bugs_status.sh` agora cruza o CONJUNTO INTEIRO de §NNN EN×PT** —
+    o gate comparava só os ABERTOS, então um FIXED existente em UMA única língua passava
+    verde (o caso real §376/§377). Todos os headings são comparados com mapeamento de
+    família de status + self-test com fixture (FIXED so-uma-língua → exit 1).
+
+  - **#550/§371 — a CLI DISTRIBUIDA agora compila cross (riscv64/aarch64) de QUALQUER
+    diretório** — o carregador da ordem de slices lia os fontes `.java` do runtime por
+    caminho relativo ao CWD, então `kof build --target native.risc` morria em erro de
+    sysroot fora da árvore do repo (todo E2E cross rodava via surefire com CWD=raiz do
+    módulo — ponto cego). Fix: carga classpath-first das fontes dos slices
+    (`RuntimeSourceLoader`), fallback a arquivo só em árvore de desenvolvimento. Provado
+    por `RuntimeSourceLoaderTest` 6/6 + `ShippedCliCrossSmokeTest` 2/2 (CLI como
+    subprocesso de um `@TempDir` FORA da árvore); a lane docs re-mediu AMBOS no tip limpo
+    `aabd7bff` (0F/0E). O ticket §371 já pinava a raiz com o mesmo repro que o smoke roda.
+
   - **#443/§373 — `List`/`Set`/`Map` bare em posicao DECLARADA agora resolve para as colecoes builtin (`d969bc3a`)**
     — `class Box { List items }` + `items = listOf(1,2)` compilava "limpo" e morria no class load com descriptor
     fantasma `LList;` (`NoClassDefFoundError: List`): dois resolvedores para o mesmo nome declarado, so o caminho

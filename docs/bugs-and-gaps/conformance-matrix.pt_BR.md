@@ -96,6 +96,7 @@
 | gate de atributibilidade no store de campo — §368 | SEM012 no call-site | CONCLUIDO (`5cd078c1`) | CONCLUIDO | CONCLUIDO | CONCLUIDO | `FieldAssignabilityPhantomE2ETest` 8/8; medido 20/09: `x.n = "s"`(Int) e `y.c = "x"`(Char?) -> SEM012 em check+build; `y.c = 'x'` imprime `x` nos 4 alvos |
 | aridade/tipo de construtor no call-site (`Class(args)` sem `new`) — §362 | `SEM023 no call-site` | CONCLUIDO (`57a0d5f0`) | CONCLUIDO | N/D (frontend compartilhado) | CONCLUIDO | `ConstructorPhantomE2ETest` 7/7 |
 | `List` bare em campo declarado (`List items = listOf(1,2)`; `b.items.size`) — §373 FECHADO | `2` | CONCLUIDO (`d969bc3a`) | CONCLUIDO | CONCLUIDO | CONCLUIDO | `BareCollectionFieldE2ETest` 8/8 (RED 6/8 pre-fix); controles gemeos: colecao tipada + classe homonima do usuario intactos; caca Q4 abriu §374/#553 |
+| argumento primitivo em `add`/`set` de colecao builtin BARE (`List xs = listOf(1)` + `xs.add(2)`; `println(xs.size)`+`println(xs.get(1))`) — §374 FECHADO | `2` / `2` | CONCLUIDO (`238d1a35`) | CONCLUIDO | CONCLUIDO | CONCLUIDO | `BareCollectionPrimitiveArgE2ETest` 7/7 (RED 4/4 pre-fix); espelha bug-35/#382 box-por-ARG; caminhos tipados/Set/Map byte-identicos |
 | static field `+=` | `2` / `4` / `4` | DONE | DONE (bug 41) | DONE | DONE | `staticpluseq` |
 | concat string+num (order) | `n=42` / `3x` / `x12` | DONE | DONE | DONE | DONE | `concat` |
 | boolean logic + comparison | `false` / `true` / `false` / `true` | DONE | DONE | DONE | DONE | `boollogic` |

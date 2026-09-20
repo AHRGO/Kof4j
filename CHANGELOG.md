@@ -146,6 +146,21 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     #547/§366 (Script losing the child's stdout) was measured **not reproducible** on the current tip (`x`/`0` on both
     targets); its JVM×Script byte parity is now pinned permanently by the same test's `F:0|x` assertions.
 
+  - **#554/§378 — `check_known_bugs_status.sh` now cross-compares the FULL §NNN set EN×PT** —
+    the gate only compared OPEN headings, so a FIXED entry existing in ONE language sailed
+    through green (the real §376/§377 case). All headings compared with status-family
+    mapping + fixture self-test (one-language FIXED → exit 1).
+
+  - **#550/§371 — the SHIPPED CLI now compiles cross targets (riscv64/aarch64) from ANY
+    directory** — the slice-order loader read the runtime `.java` sources by a CWD-relative
+    path, so `kof build --target native.risc` died on a sysroot error outside the repo tree
+    (every cross E2E ran via surefire with CWD=module-root — blind spot). Fix:
+    classpath-first load of the slice sources (`RuntimeSourceLoader`), file fallback only in
+    a dev tree. Proved by `RuntimeSourceLoaderTest` 6/6 + `ShippedCliCrossSmokeTest` 2/2
+    (CLI as subprocess from a `@TempDir` OUTSIDE the tree); docs lane re-measured BOTH on
+    the clean tip `aabd7bff` (0F/0E). The §371 ticket had pinned the root cause with the
+    same repro the smoke test now runs.
+
   - **#443/§373 — bare `List`/`Set`/`Map` in a DECLARED position now resolves to the builtin collections (`d969bc3a`)**
     — `class Box { List items }` + `items = listOf(1,2)` compiled "clean" and died at class load with a phantom
     descriptor `LList;` (`NoClassDefFoundError: List`): two resolvers for the same declared name, only the IR/`toType`
