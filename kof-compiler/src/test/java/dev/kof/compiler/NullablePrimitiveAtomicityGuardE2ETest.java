@@ -80,6 +80,11 @@ class NullablePrimitiveAtomicityGuardE2ETest {
                         }
 
                         @Override
+                        public void visitJumpInsn(int opcode, org.objectweb.asm.Label label) {
+                            ops.add(opcode);
+                        }
+
+                        @Override
                         public void visitMethodInsn(int opcode, String owner, String name,
                                 String descriptor, boolean isInterface) {
                             calls.add(owner + "." + name + ":" + descriptor);
@@ -124,8 +129,14 @@ class NullablePrimitiveAtomicityGuardE2ETest {
     @Test
     void nullComparisonIsRealReferenceCheckNotFoldedConstant(@TempDir Path tempDir) throws IOException {
         MethodShape main = inspect(compileCorpus(tempDir), "main");
+        // comparacao real com null: `a == null` de um slot boxed lowers como
+        // ACONST_NULL + IF_ACMPEQ/IF_ACMPNE (referencia), e IFNULL/IFNONNULL
+        // sao as variantes de teste direto. Dobramento em constante nao deixa
+        // NENHUMA dessas marcas.
         boolean refCheck = main.opcodes().contains(Opcodes.IFNULL)
-                || main.opcodes().contains(Opcodes.IFNONNULL);
+                || main.opcodes().contains(Opcodes.IFNONNULL)
+                || main.opcodes().contains(Opcodes.IF_ACMPEQ)
+                || main.opcodes().contains(Opcodes.IF_ACMPNE);
         assertTrue(refCheck,
                 "nenhum IFNULL/IFNONNULL no main: a comparacao com null foi dobrada "
                         + "(slot boxed otimizado como primitivo = face exata do §241)");
