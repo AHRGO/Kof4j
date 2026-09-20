@@ -101,7 +101,7 @@ class CmdDeployTest {
         // checksum confere com o artefato
         String sums = Files.readString(releaseDir.resolve("SHA256SUMS"), StandardCharsets.UTF_8);
         String expected = CmdDeploy.sha256Hex(jar) + "  servico-1.2.3.jar";
-        assertEquals(expected, sums.trim(), "SHA256SUMS diverge do artefato");
+        assertEquals(expected, sums.lines().findFirst().orElse(""), "1a linha do SHA256SUMS = o artefato (as fontes vem depois, #566)");
 
         // RELEASE.md com os metadados
         String release = Files.readString(releaseDir.resolve("RELEASE.md"), StandardCharsets.UTF_8);
@@ -110,18 +110,22 @@ class CmdDeployTest {
         assertTrue(release.contains("Default.Main"), release);
         assertTrue(release.contains("java -jar servico-1.2.3.jar"), release);
 
-        // tar.gz: ustar legível, primeiro entry = jar, 3 entries no total
+        // tar.gz: ustar legível, primeiro entry = jar, depois as FONTES (#566, opção b: contrato do
+        // tar mudou de propósito — era 3 entries), RELEASE.md e SHA256SUMS por último.
         Path tgz = dir.resolve("dist/deploy/servico-1.2.3.tar.gz");
         assertTrue(Files.size(tgz) > 512, "tar vazio");
         try (GZIPInputStream in = new GZIPInputStream(Files.newInputStream(tgz))) {
             TarEntry e1 = tarEntry(in);
             assertEquals("servico-1.2.3.jar", e1.name(), "1º entry");
             skipTarPayload(in, e1.size());
+            TarEntry srcEntry = tarEntry(in);
+            assertEquals("src/Main.kf", srcEntry.name(), "2º entry = a fonte do módulo");
+            skipTarPayload(in, srcEntry.size());
             TarEntry rel = tarEntry(in);
-            assertEquals("RELEASE.md", rel.name(), "2º entry");
+            assertEquals("RELEASE.md", rel.name(), "3º entry");
             skipTarPayload(in, rel.size());
             TarEntry sumsEntry = tarEntry(in);
-            assertEquals("SHA256SUMS", sumsEntry.name(), "3º entry");
+            assertEquals("SHA256SUMS", sumsEntry.name(), "4º entry");
             skipTarPayload(in, sumsEntry.size());
             byte[] eof = new byte[512];
             assertEquals(512, in.readNBytes(eof, 0, 512));
@@ -339,7 +343,7 @@ class CmdDeployTest {
         // checksum confere
         String sums = Files.readString(dir.resolve("dist/deploy/edge-2.0.0/SHA256SUMS"),
                 StandardCharsets.UTF_8);
-        assertEquals(CmdDeploy.sha256Hex(bin) + "  edge-2.0.0", sums.trim(),
+        assertEquals(CmdDeploy.sha256Hex(bin) + "  edge-2.0.0", sums.lines().findFirst().orElse(""),
                 "SHA256SUMS diverge do ELF");
 
         // tar: artefato com mode 0755 no header
@@ -437,7 +441,7 @@ class CmdDeployTest {
             assertTrue(Files.isRegularFile(bin), t + " artefato ELF ausente:\n" + r.out());
             assertTrue(Files.isExecutable(bin), t + " artefato deve ser executavel (0755 no tar)");
             String sums = Files.readString(rel.resolve("SHA256SUMS"));
-            assertEquals(CmdDeploy.sha256Hex(bin) + "  xapp-9.9.9", sums.trim(), t + " checksum");
+            assertEquals(CmdDeploy.sha256Hex(bin) + "  xapp-9.9.9", sums.lines().findFirst().orElse(""), t + " checksum");
             String release = Files.readString(rel.resolve("RELEASE.md"));
             assertTrue(release.contains("./xapp-9.9.9"), t + " run hint deve ser ./binario: " + release);
             assertTrue(Files.isRegularFile(dir.resolve("dist-" + t + "/deploy/xapp-9.9.9.tar.gz")),
@@ -537,7 +541,7 @@ class CmdDeployTest {
         assertTrue(Files.isRegularFile(apk), "APK ausente:\n" + r.out());
         String sums = Files.readString(dir.resolve("dist/deploy/app-1.0.0/SHA256SUMS"),
                 StandardCharsets.UTF_8);
-        assertEquals(CmdDeploy.sha256Hex(apk) + "  app-1.0.0.apk", sums.trim());
+        assertEquals(CmdDeploy.sha256Hex(apk) + "  app-1.0.0.apk", sums.lines().findFirst().orElse(""));
     }
 
     @Test

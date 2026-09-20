@@ -153,7 +153,8 @@ final class CmdDeploy {
             Release r = deploy(src, out, safeName, version, targets.iterator().next(), "");
             System.out.println("deploy → " + r.releaseDir());
             System.out.println("artifact → " + r.tgz()
-                    + " (sha256 " + r.sha256().substring(0, 12) + "…)");
+                    + (r.sha256() == null ? " (library: sources only)"
+                            : " (sha256 " + r.sha256().substring(0, 12) + "…)"));
             if (publish != null) {
                 DeployPublish.publishAll(List.of(r), null, publish, safeName, version);
             }
@@ -243,6 +244,11 @@ final class CmdDeploy {
         String app001 = KofCliSupport.app001(target, layout.fullStack());
         if (app001 != null) throw new IOException(app001);
         List<Path> files = KofCliSupport.collect(backendDir);
+        // #566 (b): a release carrega as FONTES (todo o modulo, recursivo); um modulo sem fontes no
+        // topo (so arvore de pacotes) e uma BIBLIOTECA — valida compilando e publica so as fontes.
+        List<Path> tree = DeploySources.collectTree(backendDir, out, layout.fullStack() ? "web" : null);
+        boolean library = files.isEmpty();
+        if (library) files = new ArrayList<>(tree);
         if (files.isEmpty()) throw new IOException("no .kf/.kof files found in " + backendDir);
         files.sort(java.util.Comparator.comparing(p -> p.getFileName().toString()));
         Path classes = out.resolve("deploy-classes" + dirSuffix);
@@ -257,7 +263,11 @@ final class CmdDeploy {
         Path built;
         String ext;
         int tarMode;
-        switch (target) {
+        if (library) {
+            built = null;
+            ext = "";
+            tarMode = 0644;
+        } else switch (target) {
             case JVM -> {
                 built = CmdBuild.buildFatJar(classes, List.of());
                 ext = ".jar";
@@ -304,13 +314,14 @@ final class CmdDeploy {
         Files.createDirectories(releaseDir);
         String artifact = name + "-" + version + ext;
         Path jarDst = releaseDir.resolve(artifact);
-        Files.copy(built, jarDst, StandardCopyOption.REPLACE_EXISTING);
+        if (!library) Files.copy(built, jarDst, StandardCopyOption.REPLACE_EXISTING);
+        List<Path> staged = DeploySources.stage(backendDir, tree, releaseDir);
         // §298: a release JS precisa ser AUTOCONTIDA — o entry importa módulos
         // relativos do build (./kof-runtime.mjs, ./kof-runtime-io.mjs, ...), que
         // vivem AO LADO dele; copiar só o entry deixava o "node <x>.mjs" do
         // RELEASE.md morrendo em ERR_MODULE_NOT_FOUND. Closure de imports.
         List<Path> jsDeps = new ArrayList<>();
-        if (target == Target.JS) {
+        if (target == Target.JS && !library) {
             for (Path dep : jsImportClosure(built)) {
                 Path depSrc = built.getParent().resolve(dep.toString());
                 Path dst = releaseDir.resolve(dep.toString());
@@ -332,34 +343,43 @@ final class CmdDeploy {
         } else {
             runCmd = "adb install " + artifact;
         }
-        String mainLine = target == Target.JVM
+        String mainLine = target == Target.JVM && !library
                 ? "- main class: " + KofCliSupport.findMainClass(classes) + "\n" : "";
+        String artifactLine = library
+                ? "- kind: library (source module, no runnable artifact)\n"
+                : "- artifact: " + artifact + "\n";
         Files.writeString(releaseDir.resolve("RELEASE.md"),
                 "# Release " + name + " " + version + "\n\n"
-                        + "- artifact: " + artifact + "\n"
+                        + artifactLine
                         + "- target: " + TargetMatrix.name(target) + "\n"
                         + mainLine
+                        + "- sources: " + staged.size() + " file(s) under src/ (consumed as a source module)\n"
                         + "- compiler: " + KofVersion.version() + "\n"
                         + "- built at (UTC): " + timestamp + "\n"
-                        + "- run: " + runCmd + "\n",
+                        + (library ? "" : "- run: " + runCmd + "\n"),
                 StandardCharsets.UTF_8);
-        String sha256 = sha256Hex(jarDst);
-        StringBuilder sums = new StringBuilder(sha256 + "  " + artifact + "\n");
+        String sha256 = library ? null : sha256Hex(jarDst);
+        StringBuilder sums = new StringBuilder(library ? "" : sha256 + "  " + artifact + "\n");
         for (Path dep : jsDeps) {
             sums.append(sha256Hex(releaseDir.resolve(dep))).append("  ").append(dep).append("\n");
+        }
+        for (Path s : staged) {   // cada fonte coberta: o consumidor recusa a que nao conferir
+            sums.append(sha256Hex(releaseDir.resolve(s))).append("  ")
+                    .append(s.toString().replace('\\', '/')).append("\n");
         }
         Files.writeString(releaseDir.resolve("SHA256SUMS"), sums.toString(), StandardCharsets.UTF_8);
 
         // 5) tar.gz do conjunto (artefato de distribuição único)
         List<Path> releaseFiles = new ArrayList<>();
-        releaseFiles.add(jarDst.getFileName());
+        if (!library) releaseFiles.add(jarDst.getFileName());
         releaseFiles.addAll(jsDeps);
+        releaseFiles.addAll(staged);
         releaseFiles.add(Path.of("RELEASE.md"));
         releaseFiles.add(Path.of("SHA256SUMS"));
         Path tgz = out.resolve("deploy").resolve(name + "-" + version + dirSuffix + ".tar.gz");
         writeTarGz(tgz, releaseDir, releaseFiles, tarMode);
         return new Release(TargetMatrix.name(target), "SUCCESS", releaseDir, tgz,
-                artifact, sha256, null);
+                library ? null : artifact, sha256, null);
     }
 
     /**
