@@ -11232,7 +11232,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
   §149 (mascaramento JavaFX).
 
 
-## §389 — tip `beta-0.5.0` com test-compile VERMELHO: `BareCollectionPrimitiveArgE2ETest` cita `dev.kof.compiler.nat.NativeToolchainGate.present()` — a classe NUNCA foi commitada (`git log -S`/`git cat-file -e` no tip: só hits de teste) — o módulo de teste inteiro do kof-compiler não compila no tip limpo — 🔴 ABERTO 20/09 (`.18`, validando o §382 em clone isolado; a metade `TestJdk.which/java/javac` do avistamento das 17h5x FOI resolvida upstream pela própria lane #945 — o tip compila aqueles arquivos com `onPath/javaBin`, medido — a metade do gate persiste)
+## §389 — tip `beta-0.5.0` com test-compile VERMELHO: `BareCollectionPrimitiveArgE2ETest` cita `dev.kof.compiler.nat.NativeToolchainGate.present()` — a classe NUNCA foi commitada (`git log -S`/`git cat-file -e` no tip: só hits de teste) — o módulo de teste inteiro do kof-compiler não compila no tip limpo — ✅ FIXADO 20/09 (causa-raiz real: o `9c88d590` (#945, docs-lane) varreu por engano 17 testes WIP da lane `.22` sem o helper `NativeToolchainGate.java` — o `amend` sem `--only` durante a saga do stash. Fix landed: `de5354eb` comitou o Gate com o `static boolean present()` exato do recipe. Prova de GREEN no tip (clone ISOLADO, não a árvore compartilhada): `git ls-tree origin/beta-0.5.0` = Gate presente desde `136feea1`; `mvn -o -pl kof-compiler -am test-compile` no tip = 0 ERROR / rc=0 (medido 20/09 ~18:5x por `192.168.100.14`, lane docs, fechando o próprio rombo). LIÇÃO para todas as lanes: medir sempre contra `origin` após `git fetch` — o tip `94011544` citado na abertura da entrada é um SHA SUSPENSO (fantasma de rebase, fora de toda história); a entrada estava desatualizada no momento em que abriu)
 
 - **Medido (20/09, tips `94011754`→`136feea1`):** o teste cita
   `NativeToolchainGate.present()` (1 site, guarda `assumeTrue`) e a classe não
@@ -11254,3 +11254,13 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Relacionado:** #945/`9c88d590` (linhagem da autoria), §382 (o fix que isto
   sombreou), §309 (catalogar-não-remendar), §384 (mesma família "verdade da
   árvore suja").
+
+- **Resolvido (20/09 ~18:5x, lane docs, fechando o próprio rombo):** a entrada foi
+  catalogada contra um tip SUSPENSO (`94011544` — fantasma de rebase, em nenhuma
+  história); o `origin` já carregava o Gate desde `de5354eb` (16:45 — 1h46 ANTES
+  desta entrada abrir, às 18:31). Medido no tip real em clone ISOLADO (nunca a
+  árvore compartilhada — a própria regra Q5 da entrada aplicada ao catalogador):
+  `git ls-tree origin/beta-0.5.0 -r | grep nat/NativeToolchainGate` = presente
+  desde `136feea1`; `mvn -o -pl kof-compiler -am test-compile` → 0 ERROR, rc=0
+  em `4e71aae2`/`e841477f`. A rodada completa do CI no tip fecha a prova em
+  nível de suíte; qualquer vermelho futuro reabre esta entrada com o SHA novo.

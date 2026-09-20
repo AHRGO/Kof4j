@@ -11791,7 +11791,7 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
   (coercion family), §255 (compiles-green/diverges-red), §149 (JavaFX masking).
 
 
-## §389 — tip `beta-0.5.0` test-compile RED: `BareCollectionPrimitiveArgE2ETest` cites `dev.kof.compiler.nat.NativeToolchainGate.present()` — the class was NEVER committed (`git log -S`/`git cat-file -e` on the tip: test-side hits only) — the whole kof-compiler test module fails to compile on a clean tip — 🔴 OPEN 20/09 (`.18`, validating §382 in an isolated clone; the `TestJdk.which/java/javac` half of the 17:5x sighting was resolved upstream by the #945 lane itself — tip compiles those files with `onPath/javaBin`, measured — the gate half persists)
+## §389 — tip `beta-0.5.0` test-compile RED: `BareCollectionPrimitiveArgE2ETest` cites `dev.kof.compiler.nat.NativeToolchainGate.present()` — the class was NEVER committed (`git log -S`/`git cat-file -e` on the tip: test-side hits only) — the whole kof-compiler test module fails to compile on a clean tip — ✅ FIXED 20/09 (root cause real: `9c88d590` (#945 docs-lane) varreu por engano 17 testes WIP da lane `.22` sem o helper `NativeToolchainGate.java` — o `amend` sem `--only` durante a saga do stash. Fix landed: `de5354eb` comitou o Gate com o `static boolean present()` exato do recipe. Prova de GREEN no tip (clone ISOLADO, nao a arvore compartilhada): `git ls-tree origin/beta-0.5.0` = Gate presente desde `136feea1`; `mvn -o -pl kof-compiler -am test-compile` no tip = 0 ERROR / rc=0 (medido 20/09 ~18:5x por `192.168.100.14`, lane docs, fechando o proprio rombo). LIÇÃO para todas as lanes: medir sempre contra `origin` apos `git fetch` — o tip `94011544` citado na abertura da entrada e um SHA DANGLING (fantasma de rebase, fora de toda historia); a entrada estava desatualizada no momento em que abriu
 
 - **Measured (20/09, tips `94011754`→`136feea1`):** the test cites
   `NativeToolchainGate.present()` (1 site, `assumeTrue` guard) and the class
@@ -11808,5 +11808,14 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
   then foreign lanes validate with a local (never committed) stub — §382's
   gate ran exactly that way (clone battery 106/0F/0E; full suite with stub,
   1F = external mariadb guard).
+- **Resolved (20/09 ~18:5x, docs-lane, fechando o proprio rombo):** the entry was
+  catalogged against a DANGLING tip (`94011544` — rebase ghost, in no history);
+  `origin` already carried the Gate from `de5354eb` (16:45 — 1h46m BEFORE this
+  entry opened at 18:31). Measured on the real tip in an isolated clone (never
+  the shared tree — the entry's own Q5 rule applied to the cataloguer):
+  `git ls-tree origin/beta-0.5.0 -r | grep nat/NativeToolchainGate` = present
+  since `136feea1`; `mvn -o -pl kof-compiler -am test-compile` → 0 ERROR, rc=0
+  at `4e71aae2`/`e841477f`. The full CI run on the tip completes the suite-level
+  proof; any future red re-opens this entry with the fresh SHA.
 - **Related:** #945/`9c88d590` (author lineage), §382 (the fix this shadowed),
   §309 (catalog-don't-patch), §384 (same dirty-tree-truth family).
