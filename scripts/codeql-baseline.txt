@@ -46,3 +46,5 @@
 940	java/local-variable-is-never-read	kof-runtime/src/main/java/dev/kof/runtime/KofJsProcessBridge.java	lane #555	2026-09-20	fix: `result` morto (sobrou da troca por KofResult no §367) removido
 941	java/relative-path-command	kof-cli/src/test/java/dev/kof/cli/ShippedCliCrossSmokeTest.java	lane #555	2026-09-20	fix: probe `sh -c command -v` virou varredura de PATH com Files.isExecutable (mesmo padrao do #931); ShippedCliCrossSmokeTest 2/2
 942	java/unused-reference-type	kof-compiler/src/test/java/dev/kof/compiler/TestJdk.java	lane #555	2026-09-20	fix: helper criado para a triagem #555 chegou ao tip sem nenhum caller (merge 2d81cb4f); agora ligado no ProcessResultContentE2ETest (#939) — usado
+948	java/useless-null-check	kof-compiler/src/main/java/dev/kof/compiler/ExpressionBareCallLowerer.java	lane compiler/.22 (#568)	2026-09-20	fix: `driver.externalClasspath != null` removido (campo final nunca null) — fix pousado, aguarda re-scan
+949	java/unused-container	kof-compiler/src/main/java/dev/kof/compiler/TopLevelCallTyper.java	lane compiler/.22 (#568)	2026-09-20	fix: `List<Type> argTypes` nao lido removido (so a inferencia importa) — fix pousado, aguarda re-scan

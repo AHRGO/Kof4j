@@ -185,8 +185,9 @@ final class TopLevelCallTyper {
         ExternalClasspath.MethodSignature ctor =
                 sa.externalTypes().resolveConstructor(ct.internalName(), mc.arguments().size());
         if (ctor == null) return null;
-        List<Type> argTypes = new ArrayList<>();
-        for (ExpressionNode arg : mc.arguments()) argTypes.add(SemExpressionTyper.inferType(sa, arg, scope));
+        // Inferir os args registra os tipos das sub-expressões (efeito do
+        // typer) — o resultado não é lido aqui (o emit re-infere).
+        for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
         List<Type> params = new ArrayList<>();
         for (String d : ctor.parameterDescriptors()) params.add(ExternalClasspath.typeFromDescriptor(d));
         sa.putResolvedMethod(mc, new SymbolTable.MethodSymbol("<init>", ct.internalName(),

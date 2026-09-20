@@ -108,8 +108,7 @@ public final class ExpressionBareCallLowerer {
                     ? ctor.parameterTypes() : argTypes;
             localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), ctorParamTypes, ops, owner, localIdx, locals);
             ops.add(new KofCall(cs.type(), "<init>", ctorParamTypes, Type.PrimitiveType.VOID, KofCallKind.CONSTRUCTOR));
-        } else if (driver.externalClasspath != null
-                && CompilerTypes.qualifyViaImports(mc.methodName(), driver.currentUnit,
+        } else if (CompilerTypes.qualifyViaImports(mc.methodName(), driver.currentUnit,
                         driver.externalClasspath) instanceof Type.ClassType extCtor
                 && !extCtor.packageName().isEmpty()
                 && driver.externalClasspath.knows(extCtor.internalName())
