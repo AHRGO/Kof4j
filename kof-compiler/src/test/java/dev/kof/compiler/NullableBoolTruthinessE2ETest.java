@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * §306 — faces LEITORAS de {@code Nullable(Bool)} deixadas pelo Commit B
  * (#278/#438, fechado no cluster escritor §295(b)).
  *
- * <p><b>Face (a) — JVM truthiness.</b> O slot {@code Bool?} é fisicamente
+ * <p><b>Face (a) — JVM truthiness.</b> O slot {@code Troolean} é fisicamente
  * boxed ({@code java/lang/Boolean}) desde o Commit B, mas os sítios de
  * truthiness ({@code if}/{@code while}/{@code if-expr}/{@code ?:}) emitiam
  * {@code LOAD; INT 0; IF_ICMPNE} — {@code if_icmpne} sobre referência =
@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * veem a mudança.
  *
  * <p><b>Face (b) — representação no Script.</b> {@code println} de um local
- * {@code Bool?} imprimia {@code 1}/{@code 0} (JVM/JS imprimem {@code true}/
+ * {@code Troolean} imprimia {@code 1}/{@code 0} (JVM/JS imprimem {@code true}/
  * {@code false}) — divergência cross-target (freeze rule 5).
  */
 class NullableBoolTruthinessE2ETest {
@@ -111,14 +111,14 @@ class NullableBoolTruthinessE2ETest {
         return output;
     }
 
-    // ---- face (a): truthiness de Bool? em if/while/if-expr/ternário -------
+    // ---- face (a): truthiness de Troolean em if/while/if-expr/ternário -------
 
     @Test
     void ifStmtOverNullableBoolTrue(@TempDir Path tempDir) throws IOException {
         // Verbatim do repro catalogado em §306(a).
         runAll3(tempDir, """
                 main() {
-                    Bool? b = true
+                    Troolean b = true
                     if (b) { println("Y") } else { println("N") }
                 }
                 """, "Y");
@@ -128,7 +128,7 @@ class NullableBoolTruthinessE2ETest {
     void ifStmtOverNullableBoolFalse(@TempDir Path tempDir) throws IOException {
         runAll3(tempDir, """
                 main() {
-                    Bool? b = false
+                    Troolean b = false
                     if (b) { println("Y") } else { println("N") }
                 }
                 """, "N");
@@ -141,8 +141,8 @@ class NullableBoolTruthinessE2ETest {
         runAll3(tempDir, """
                 main() {
                     var m = mapOf("flag", true)
-                    var hit: Bool? = m.get("flag")
-                    var miss: Bool? = m.get("nope")
+                    var hit: Troolean = m.get("flag")
+                    var miss: Troolean = m.get("nope")
                     if (hit) { println("HIT") } else { println("NOHIT") }
                     if (miss) { println("MISS") } else { println("NO") }
                 }
@@ -153,7 +153,7 @@ class NullableBoolTruthinessE2ETest {
     void ifExprOverNullableBool(@TempDir Path tempDir) throws IOException {
         runAll3(tempDir, """
                 main() {
-                    Bool? b = true
+                    Troolean b = true
                     var s = if (b) "A" else "B"
                     println(s)
                 }
@@ -164,7 +164,7 @@ class NullableBoolTruthinessE2ETest {
     void whileLoopOverNullableBool(@TempDir Path tempDir) throws IOException {
         runAll3(tempDir, """
                 main() {
-                    Bool? go = true
+                    Troolean go = true
                     var n = 0
                     while (go) {
                         n = n + 1
@@ -186,7 +186,7 @@ class NullableBoolTruthinessE2ETest {
         // cru do ofBool ("1/0") enquanto JVM/JS imprimiam "true/false".
         runAll3(tempDir, """
                 main() {
-                    Bool? b = true
+                    Troolean b = true
                     println(b)
                     b = false
                     println(b)
@@ -212,7 +212,7 @@ class NullableBoolTruthinessE2ETest {
         runAll3(tempDir, """
                 main() {
                     var m = mapOf("flag", true)
-                    var b: Bool? = m.get("nope")
+                    var b: Troolean = m.get("nope")
                     if (b != null) { println("X") } else { println("Z") }
                 }
                 """, "Z");
@@ -224,20 +224,20 @@ class NullableBoolTruthinessE2ETest {
     // POSICAO DE VALOR (`println(x && y)`, `Bool b = ...`, `return ...`).
     //
     // Duas causas: (A) o `ExpressionTyper` do lowering nao tinha regra para
-    // `&&`/`||` e herdava o tipo do operando ESQUERDO (`Bool?`), enquanto o
+    // `&&`/`||` e herdava o tipo do operando ESQUERDO (`Troolean`), enquanto o
     // `TypeChecker` semantico ja diz `Bool` — o consumidor entao acreditava
-    // num `Bool?` boxed e recebia um int primitivo; (B) so o LHS passava pelo
-    // `nullableBoolTruthinessRewrite`, entao um RHS `Bool?` chegava ao join
+    // num `Troolean` boxed e recebia um int primitivo; (B) so o LHS passava pelo
+    // `nullableBoolTruthinessRewrite`, entao um RHS `Troolean` chegava ao join
     // como referencia enquanto o outro arco deixava int.
     // ---------------------------------------------------------------------
 
-    /** T1 — reproducer verbatim da issue (value position, LHS `Bool?`). */
+    /** T1 — value position, LHS `Troolean` (D-TROOL: Kleene — mesmo golden do #487). */
     @Test
     void logicalValuePositionWithNullableLhs(@TempDir Path tempDir) throws IOException {
         runAll3(tempDir, """
-                Bool? fb() { return false }
-                Bool? nb() { return null }
-                Bool? tb() { return true }
+                Troolean fb() { return false }
+                Troolean nb() { return null }
+                Troolean tb() { return true }
                 main() {
                     println(fb() && true)
                     println(tb() && true)
@@ -255,9 +255,9 @@ class NullableBoolTruthinessE2ETest {
     @Test
     void logicalValuePositionWithNullableRhs(@TempDir Path tempDir) throws IOException {
         String src = """
-                Bool? fb() { return false }
-                Bool? nb() { return null }
-                Bool? tb() { return true }
+                Troolean fb() { return false }
+                Troolean nb() { return null }
+                Troolean tb() { return true }
                 main() {
                     println(true && fb())
                     println(false || tb())
@@ -265,7 +265,7 @@ class NullableBoolTruthinessE2ETest {
                     println(false || nb())
                 }
                 """;
-        String golden = "false\ntrue\nfalse\nfalse";
+        String golden = "false\ntrue\nnull\nnull";
         runJvm(tempDir, src, golden);
         runScript(tempDir, src, golden);
     }
@@ -282,23 +282,23 @@ class NullableBoolTruthinessE2ETest {
     void logicalValuePositionWithNullableRhsJsMatchesKofContract(
             @TempDir Path tempDir) throws IOException {
         runJs(tempDir, """
-                Bool? fb() { return false }
-                Bool? nb() { return null }
-                Bool? tb() { return true }
+                Troolean fb() { return false }
+                Troolean nb() { return null }
+                Troolean tb() { return true }
                 main() {
                     println(true && fb())
                     println(false || tb())
                     println(true && nb())
                     println(false || nb())
                 }
-                """, "false\ntrue\nfalse\nfalse");
+                """, "false\ntrue\nnull\nnull");
     }
 
     /** T3 — consumidor diferente de print (impede fix oportunista no println). */
     @Test
     void logicalResultAssignedToBoolLocal(@TempDir Path tempDir) throws IOException {
         runAll3(tempDir, """
-                Bool? fb() { return false }
+                Bool fb() { return false }
                 main() {
                     Bool x = fb() && true
                     println(x)
@@ -310,7 +310,7 @@ class NullableBoolTruthinessE2ETest {
     @Test
     void logicalResultReturnedAsBool(@TempDir Path tempDir) throws IOException {
         runAll3(tempDir, """
-                Bool? fb() { return false }
+                Bool fb() { return false }
                 Bool g() { return fb() && true }
                 main() { println(g()) }
                 """, "false");
@@ -320,7 +320,7 @@ class NullableBoolTruthinessE2ETest {
     @Test
     void logicalShortCircuitStillLazy(@TempDir Path tempDir) throws IOException {
         runAll3(tempDir, """
-                Bool? rhs() {
+                Troolean rhs() {
                     println("RHS")
                     return true
                 }

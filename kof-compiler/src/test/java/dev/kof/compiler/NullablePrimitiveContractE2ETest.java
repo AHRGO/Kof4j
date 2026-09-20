@@ -162,7 +162,7 @@ class NullablePrimitiveContractE2ETest {
     @Test
     void returnFalseStaysDistinctFromNull(@TempDir Path tempDir) throws IOException {
         runAll3(tempDir, """
-                Boolean? no() { return false }
+                Troolean no() { return false }
                 main() {
                     println(no() == null)
                     println(no())
@@ -378,7 +378,7 @@ class NullablePrimitiveContractE2ETest {
                 main() {
                     Int? v = if (false) 9 else null
                     println(v)
-                    Bool? bn = if (false) true else null
+                    Troolean bn = if (false) true else null
                     println(bn)
                 }
                 """, "null\nnull");
@@ -496,7 +496,7 @@ class NullablePrimitiveContractE2ETest {
     // §295(b): slot Nullable(Bool) — o ESCRITOR (init literal + assign) boxa
     // e o println lê a referência (JVM). Faces LEITORAS pré-existentes ficam
     // no §306: JVM truthiness `if (b)` (if_icmpne sobre Boolean) e o Script
-    // que imprime `Bool?` local como 1/0 (bool canônico do interpretador é
+    // que imprime `Troolean` local como 1/0 (bool canônico do interpretador é
     // Int; medido no jar pré-fix — não é regressão deste pino). §306 FECHADO
     // 19/09 (`.22`): truthiness `if (b)` → açucar `b == true` (null-seguro,
     // JVM/JS/Script) + `kof_box`/`kof_unbox` canonizam Boolean no
@@ -505,7 +505,7 @@ class NullablePrimitiveContractE2ETest {
     void nullablePrimBoolWriterFacesStoreBoxed(@TempDir Path tempDir) throws IOException {
         runJvm(tempDir, """
                 main() {
-                    Bool? b = true
+                    Troolean b = true
                     println(b)
                     b = false
                     println(b)

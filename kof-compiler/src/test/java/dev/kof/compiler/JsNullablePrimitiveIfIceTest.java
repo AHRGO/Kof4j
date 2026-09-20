@@ -38,10 +38,10 @@ class JsNullablePrimitiveIfIceTest {
             main() { println(probe(null)) }
             """;
 
-    // Forma (b): null-check de Boolean? num if SEM else, como ultimo statement de void
+    // Forma (b): null-check de Troolean num if SEM else, como ultimo statement de void
     // (o gatilho KofReturnVoid).
     private static final String VOID_TAIL_KOF = """
-            void probe(Boolean? flag) {
+            void probe(Troolean flag) {
                 if (flag == null) { println("n") }
             }
             main() { probe(null) }

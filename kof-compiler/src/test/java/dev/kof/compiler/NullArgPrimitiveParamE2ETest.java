@@ -88,13 +88,13 @@ class NullArgPrimitiveParamE2ETest {
 
     @Test
     void nullToNullableIntParamNotRejected(@TempDir Path tempDir) throws IOException {
-        // o caso EXATO #266: `handle(Boolean? flag)` com `handle(null)` e
+        // o caso EXATO #266: `handle(Troolean flag)` com `handle(null)` e
         // legitimo — o guard nao pode engoli-lo (isso seria desfazer a emenda).
         CompilationResult r = compile(tempDir, "M5.kf",
-                "class Handler {\n    void handle(Boolean? flag) {\n"
+                "class Handler {\n    void handle(Troolean flag) {\n"
                         + "        if (flag == null) { println(\"null\") }\n    }\n}\n"
                         + "main() { new Handler().handle(null) }\n");
-        assertNoSem048(r, "Boolean? param + null");
+        assertNoSem048(r, "Troolean param + null");
     }
 
     @Test

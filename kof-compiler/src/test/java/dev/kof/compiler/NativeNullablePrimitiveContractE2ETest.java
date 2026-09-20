@@ -26,8 +26,8 @@ class NativeNullablePrimitiveContractE2ETest {
                 Int? zi() { return 0 }
                 Long? nl() { return null }
                 Long? zl() { return 0 }
-                Bool? nb() { return null }
-                Bool? zb() { return false }
+                Troolean nb() { return null }
+                Troolean zb() { return false }
                 Float? nf() { return null }
                 Float? zf() { return 0.0 }
                 Double? nd() { return null }
@@ -84,7 +84,7 @@ class NativeNullablePrimitiveContractE2ETest {
                 Int? a() { return 10000 }
                 Int? b() { return 10000 }
                 Int? n() { return null }
-                Bool? f() { return false }
+                Troolean f() { return false }
                 Double? d() { return 10.5 }
                 Float? x() { return 2.5 }
                 main() {
@@ -172,7 +172,7 @@ class NativeNullablePrimitiveContractE2ETest {
     }
 
     /**
-     * #259 × §306: com o slot nativo de {@code Bool?} agora BOXED (e não mais o
+     * #259 × §306: com o slot nativo de {@code Troolean} agora BOXED (e não mais o
      * int cru), a truthiness não pode testar o PONTEIRO — {@code Present(false)}
      * é um ponteiro não-nulo e viraria "verdadeiro". O §306 tinha deixado o
      * Native de fora justamente porque o slot era o int cru.
@@ -181,16 +181,16 @@ class NativeNullablePrimitiveContractE2ETest {
     @EnumSource(value = Target.class, names = {"ANDROID"}, mode = EnumSource.Mode.EXCLUDE)
     void boxedBoolTruthinessReadsValueNotPointer(Target target, @TempDir Path dir) throws Exception {
         run(target, dir, """
-                Bool? nb() { return null }
-                Bool? tb() { return true }
-                Bool? fb() { return false }
+                Troolean nb() { return null }
+                Troolean tb() { return true }
+                Troolean fb() { return false }
                 main() {
                     if (nb()) println("null-true") else println("null-false")
                     if (tb()) println("true-true") else println("true-false")
                     if (fb()) println("false-true") else println("false-false")
-                    Bool? x = fb()
+                    Troolean x = fb()
                     if (x) println("x-true") else println("x-false")
-                    Bool? y = tb()
+                    Troolean y = tb()
                     if (y) println("y-true") else println("y-false")
                     var g = 0
                     while (fb() && g < 4) { g += 1 }

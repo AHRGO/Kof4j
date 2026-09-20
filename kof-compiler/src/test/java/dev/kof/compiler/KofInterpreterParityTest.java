@@ -526,7 +526,7 @@ class KofInterpreterParityTest {
                 }
                 """);
         parity("print-null-bool", """
-                Bool? nb() { return null }
+                Troolean nb() { return null }
                 main() {
                     println(nb())
                 }
