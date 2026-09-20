@@ -96,7 +96,7 @@ public final class ExpressionBareCallLowerer {
         }
         SymbolTable.ClassSymbol cs = driver.semanticAnalyzer != null ? driver.semanticAnalyzer.getClass(mc.methodName()) : null;
         if (cs == null) {
-            // §392 (#568): construtor externo implicito (`Greeter()` sem `new`)
+            // §393 (#568): construtor externo implicito (`Greeter()` sem `new`)
             // — espelho do ramo `new` do ExpressionLowerer; classe/funcao
             // declaradas venceram acima (precedencia do typer preservada).
             int extCtor = tryLowerExternalCtor(driver, mc, ops, owner, localIdx, locals);
@@ -218,7 +218,7 @@ public final class ExpressionBareCallLowerer {
     }
 
     /**
-     * §392 — #568: baixa `Classe(args)` sem `new` quando `Classe` e uma classe
+     * §393 — #568: baixa `Classe(args)` sem `new` quando `Classe` e uma classe
      * EXTERNA (--classpath/--deps) com construtor PUBLICO de aridade
      * compativel: KofNewObject + DUP + args convertidos aos formais do
      * descritor + INVOKESPECIAL <init> (MESMO plano da face `new` em

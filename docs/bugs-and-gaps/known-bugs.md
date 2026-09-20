@@ -11867,7 +11867,7 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
   on release-gate conditions 4/7.
 - **Related:** §389 (same shape, closed by the owner), a5d87fa7/e3e98d78
   (F-series lineage), §384 (dirty-tree truth).
-## §392 — the landed #568 fix (`d05d499b`) missed 4 edges: top-level-function precedence (frozen-semantics regression), private/abstract ctors resolved, no arg-type gates, "Undefined function" when the external class DOES exist — ✅ FIXED 20/09 (compiler lane, branch `fix-568`)
+## §393 — the landed #568 fix (`d05d499b`) missed 4 edges: top-level-function precedence (frozen-semantics regression), private/abstract ctors resolved, no arg-type gates, "Undefined function" when the external class DOES exist — ✅ FIXED 20/09 (compiler lane, branch `fix-568`)
 
 - **GitHub:** #568 (closed upstream by `d05d499b`/§391) · branch `fix-568`
   off `30c804bd` — NOT pushed (maintainer order; integrator ff-lands it).

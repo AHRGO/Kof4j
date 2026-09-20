@@ -11312,7 +11312,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
   verde nas condições 4/7 do gate de release.
 - **Relacionado:** §389 (mesma forma, fechada pela dona), a5d87fa7/e3e98d78
   (linhagem F), §384 (verdade da árvore suja).
-## §392 — o fix landed do #568 (`d05d499b`) deixou 4 edges de fora: precedência de função top-level (regressão de semântica congelada), ctor private/abstrato resolvendo, sem gate de tipo de arg, "Undefined function" quando a classe externa EXISTE — ✅ CORRIGIDO 20/09 (lane compilador, branch `fix-568`)
+## §393 — o fix landed do #568 (`d05d499b`) deixou 4 edges de fora: precedência de função top-level (regressão de semântica congelada), ctor private/abstrato resolvendo, sem gate de tipo de arg, "Undefined function" quando a classe externa EXISTE — ✅ CORRIGIDO 20/09 (lane compilador, branch `fix-568`)
 
 - **GitHub:** #568 (fechado upstream por `d05d499b`/§391) · branch `fix-568`
   sobre `30c804bd` — SEM push (ordem da mantenedora; o ff é do integrador).

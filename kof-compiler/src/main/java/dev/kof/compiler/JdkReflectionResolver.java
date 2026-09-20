@@ -102,7 +102,7 @@ final class JdkReflectionResolver {
     }
 
     /**
-     * §392 (#568): construtor PUBLICO do JDK com a aridade dada via reflexao
+     * §393 (#568): construtor PUBLICO do JDK com a aridade dada via reflexao
      * (`getConstructors` = so publicos; classe abstrata nao entrega
      * construtor). Retorno sempre "V" — construtor nunca tem valor.
      */

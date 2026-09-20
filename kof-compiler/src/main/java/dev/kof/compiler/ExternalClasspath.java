@@ -327,7 +327,7 @@ public final class ExternalClasspath {
     }
 
     /**
-     * §392 (#568): construtor PUBLICO da classe externa com a aridade dada,
+     * §393 (#568): construtor PUBLICO da classe externa com a aridade dada,
      * ou null — recusa honesta (private/abstrata/interface NAO resolvem).
      */
     public synchronized MethodSignature resolvePublicConstructor(String ownerInternalName,

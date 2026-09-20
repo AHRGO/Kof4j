@@ -154,7 +154,7 @@ final class TopLevelCallTyper {
                 }
             }
             if (!found && !sa.allClasses().containsKey(mc.methodName())) {
-                // §392 (#568): nome que NAO e funcao top-level nem classe do
+                // §393 (#568): nome que NAO e funcao top-level nem classe do
                 // programa pode ser construtor IMPLICITO de classe externa
                 // (--classpath/--deps, §134) — resolve pela tabela de
                 // construtores publicos do .class ANTES do SEM015, que e

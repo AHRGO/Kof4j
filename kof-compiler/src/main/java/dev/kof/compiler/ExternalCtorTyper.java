@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * §392 — #568: construtor EXTERNO implicito (`Greeter(args)` sem `new`) de
+ * §393 — #568: construtor EXTERNO implicito (`Greeter(args)` sem `new`) de
  * classe carregada pelo ExternalClasspath (--classpath/--deps, §134). O
  * typer nao consultava os entries e a chamada caia em SEM015 "Undefined
  * function" mesmo com o emit resolvendo o construtor e o programa rodando

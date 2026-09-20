@@ -7,7 +7,7 @@ import org.objectweb.asm.MethodVisitor;
 import java.util.List;
 
 /**
- * §392 (#568) — tabela de construtores PUBLICOS de um .class externo (gate
+ * §393 (#568) — tabela de construtores PUBLICOS de um .class externo (gate
  * ≤500: a varredura ASM vive aqui, a fachada {@link ExternalClasspath}
  * mantém a API). Casa somente {@code <init>} ACC_PUBLIC com a aridade dada;
  * construtor private/protected/package e classe abstrata/interface NAO

@@ -15,7 +15,7 @@ import java.util.zip.ZipOutputStream;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * §392 — #568: o construtor IMPLICITO (`Greeter()`) de classe EXTERNA vinda de
+ * §393 — #568: o construtor IMPLICITO (`Greeter()`) de classe EXTERNA vinda de
  * `--classpath`/`--deps` caía no resolver de função top-level e morria em
  * `SEM015: Undefined function: 'Greeter'` mesmo com o emit resolvendo e o
  * artefato rodando (bug (ii) do #566). O §134 (`ExternalClasspathE2ETest`)
