@@ -10901,7 +10901,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 
 ## §370 — Slot `extern` FLOAT sem cast explicito vira bit-garbage silencioso no Native (o gemeo extern do §368; familia #431/§369) — ✅ FIXED 20/09 (lowering do call-site converte ao slot; medido no tip `57a0d5f0`+fix)
 
-- **Estado:** ✅ CORRIGIDO 20/09 — abriu 🔴 ABERTO 20/09 (roteado ao cluster #431, lane docs nao edita typer); fechado pela frente FFI pós-#431 (`DOING.md`), #549 fechável com esta prova
+- **Estado:** ✅ CORRIGIDO 20/09 (aberto 20/09 pela lane docs, roteado ao cluster #431; fechado pela frente FFI pós-#431 (`DOING.md`), #549 fechável com esta prova
 - **Sintoma (medido no tip `30412d72`+`d946e6fa`, jar `mvn clean package` + md5 jar==modulo pela regra `docs/debugging/debugging.md` §6):** fixture `float fmid(float a, float b) { return (a+b)/2.0f; }` + `extern "<abs>/libkoffixture.so" fmid(Float a, Float b): Float`:
   - `println(fmid(1.0, 2.0))` (literal Double): **Native imprime `0.0`** (bits double lidos no slot float); **JVM lanca em execucao** `RuntimeException: kof_ffi ... Cannot cast java.lang.Double to java.lang.Float`.
   - `println(fmid(1, 2))` (literal Int): **Native imprime `3.0E-45`** (o inteiro 3 reinterpretado como float denormal); **JVM imprime `1.5`** (correto). Mesma fonte, mesma lib, saida divergente nos dois formatos — quebra da regra 5 do freeze (paridade cross-target) e do R6 no Native (valor errado sem diagnostico).
