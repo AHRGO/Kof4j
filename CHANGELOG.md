@@ -82,6 +82,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `FieldAssignabilityPhantomE2ETest` 8/8 (RED baseline before the gate).
 
 
+  - **#443/§373 — bare `List`/`Set`/`Map` in a DECLARED position now resolves to the builtin collections (`d969bc3a`)**
+    — `class Box { List items }` + `items = listOf(1,2)` compiled "clean" and died at class load with a phantom
+    descriptor `LList;` (`NoClassDefFoundError: List`): two resolvers for the same declared name, only the IR/`toType`
+    path normalized it. Normalization moved to the ONE convergence point — `qualifyDeep` step 2b (the §179 mechanism,
+    §243 shadow guard preserved) mapping the bare names through `BuiltinTypes.declaredCollectionType`; a user-declared
+    homonymous class keeps its owner (control proves both directions). Frozen contract #139/#150/#214, not a new
+    semantic. Proved by `BareCollectionFieldE2ETest` 8/8 (RED 6/8 pre-fix); the verbatim print gives `2` on JVM,
+    Script, Native x86-64 and JS on the clean jar. The Q4 hunt on this fix opened §374/#553 (primitive arg into
+    add/set of a bare collection never boxes) — fix still open.
+
 
   - **`kof debug --dap --target native` — the DAP<->GDB/MI bridge for the editor (X7-4, roadmap §19.5 phase 7)**
     — the editor speaks one protocol with every target: DAP requests (setBreakpoints,

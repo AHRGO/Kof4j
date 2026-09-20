@@ -79,6 +79,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     reusa o mesmo gate `TypeChecker.isAssignable` da atribuicao local — SEM012 no
     call-site (R6, sem quebra silenciosa). Provado por
     `FieldAssignabilityPhantomE2ETest` 8/8 (baseline RED pre-gate).
+
+  - **#443/§373 — `List`/`Set`/`Map` bare em posicao DECLARADA agora resolve para as colecoes builtin (`d969bc3a`)**
+    — `class Box { List items }` + `items = listOf(1,2)` compilava "limpo" e morria no class load com descriptor
+    fantasma `LList;` (`NoClassDefFoundError: List`): dois resolvedores para o mesmo nome declarado, so o caminho
+    IR/`toType` normalizava. A normalizacao mudou para o UNICO ponto de convergencia — passo 2b do `qualifyDeep`
+    (mecanismo do §179, guarda de shadow do §243 preservada) mapeando os nomes bare via `BuiltinTypes.declaredCollectionType`;
+    classe homonima do usuario mantem o dono (controles provam os dois lados). Contrato congelado #139/#150/#214,
+    nao semantica nova. Prova: `BareCollectionFieldE2ETest` 8/8 (RED 6/8 pre-fix); o print verbatim da `2` em JVM,
+    Script, Native x86-64 e JS no jar limpo. A caca Q4 deste fix abriu a §374/#553 (arg primitivo em add/set de
+    colecao bare nunca boxeia) — fix ainda aberto.
+
   - .18 - governança: **regra 11 (Lei da Simplicidade) é ABSOLUTA em AGENTS.md** + `DECISIONS.md` §D-MAKEALIVE/§D-KOF-AS-CLOUD/§D-BOOTSTRAP/§D-DB-GAPS (enquetes da mantenedora 20/09: namespace `kof.makealive`, providers genéricos completos, estado kof.db desde o dia 1, Android=paridade JVM no db, ORM no Native via asm `kof_orm_*`, MySQL no cross, bootstrapper = objetivo final).
 
   - **`shell.pipeline` REAL no JS (20/09, lane `.18`)** — fecha o último residual
