@@ -15,6 +15,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
+  - **#564 CORRIGIDO — `kof deps` agora baixa um pacote de uma Release REAL do GitHub** (20/09):
+    o `DepsRegistry` cortava cada asset da release na primeira `}` e procurava uma chave
+    `download_url` que a API do GitHub não tem (o asset real aninha `uploader{…}` e expõe `url` /
+    `browser_download_url`), então todo `owner/repo[@ver]` real falhava com `REG002 … has no
+    .tar.gz asset`; a suíte só ficava verde contra um mock plano. O JSON da release agora é lido
+    com o `Json.parse` estrutural do CLI; o binário sai do `url` do asset (API) com
+    `Accept: application/octet-stream`, `User-Agent: kof-cli` e `X-GitHub-Api-Version` pinada; um
+    redirect para o host de armazenamento é seguido sem enviar o token a ele. `SHA256SUMS`
+    continua obrigatório e a seleção exato → `-jvm` → primeiro `.tar.gz` não mudou. Prova:
+    `DepsRegistryTest` 13/13 no shape real do GitHub (11 estavam RED antes do fix) + round-trip
+    real contra uma release pública (sem token, HOME limpo).
+
   - **#565 CORRIGIDO — fat jars JVM não embutem mais uma cópia truncada de `kof-app.jar`
     dentro de si mesmos** (20/09): o `CmdBuild.buildFatJar` criava `classesDir/kof-app.jar` e
     depois percorria `classesDir`, então o output — ainda em escrita — virava um dos próprios

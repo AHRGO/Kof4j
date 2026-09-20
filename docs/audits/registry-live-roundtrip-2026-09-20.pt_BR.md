@@ -1,8 +1,13 @@
 [English](registry-live-roundtrip-2026-09-20.md) | [Português](registry-live-roundtrip-2026-09-20.pt_BR.md)
 
-# Registry 1.5.3 — smoke real de round-trip no GitHub (20/09/2026) — **VERMELHO**
+# Registry 1.5.3 — smoke real de round-trip no GitHub (20/09/2026) — **VERMELHO → VERDE após a #564**
 
-> **Resultado: VERMELHO.** O publish funciona contra o GitHub real. O pull **não**: dois bugs
+> **ATUALIZAÇÃO — VERDE após o fix da #564** (ver "Re-run após o fix da #564" abaixo): publish, pull por
+> versão, pin do `latest`, 2º resolve idempotente e erro honesto passam contra o GitHub real.
+> Um passo segue aberto e **não** é defeito do Registry: código KOF não consegue `import` o pacote
+> baixado (#566, pergunta de contrato para a mantenedora). O texto abaixo é o registro RED original.
+>
+> **Resultado da 1ª rodada: VERMELHO.** O publish funciona contra o GitHub real. O pull **não**: dois bugs
 > reais achados, ambos abertos (#564, #565). A nota do tracker `round-trip live no GitHub =
 > smoke manual pendente` (`IMPLEMENTATION-UNIVERSAL-PLATFORM`, item 1.5.3) **continua pendente**.
 > Este smoke não alterou código de produção. Abaixo só dados sanitizados: nenhum token foi
@@ -44,7 +49,7 @@ A fase F prova que o caminho de falha é honesto (R6): só o parsing dos assets 
 | A | [#564](https://github.com/KofLang/Kof4j/issues/564) | BUG REAL | `DepsRegistry.pickTarball` lê `"download_url"` (a chave real é `"browser_download_url"`) e corta cada objeto de asset na primeira `}` (o asset real tem `"uploader": {…}` aninhado antes da URL). O pull nunca funciona no GitHub real; o `DepsRegistryTest` só passava contra um servidor falso mínimo. |
 | B | [#565](https://github.com/KofLang/Kof4j/issues/565) | BUG REAL (baixo) | `CmdBuild.buildFatJar` grava `classesDir/kof-app.jar` dentro do diretório que percorre, então todo fat jar embute uma entrada `kof-app.jar` truncada e inválida (561 bytes). Não é falha de execução. |
 
-> **Atualização 20/09 — #565 CORRIGIDA** (entregue em `d1a12dd9`): self-inclusion removida de `kof build --fat` e `kof deploy --target jvm` (jar em staging fora do `classesDir` + exclusão exata do path final + substituição só após fechar; um rebuild que falha mantém o jar anterior e não deixa `.kof-app-*`). Travada por `CmdBuildFatTest` (build 1, rebuild no mesmo `classesDir`, rebuild que falha) e pela inspeção estrutural do jar distribuído no `CmdDeployTest`. **O smoke continua VERMELHO**: a #564 ainda bloqueia o pull real (fases C–E); o lado produtor está limpo, mas o round-trip só fica VERDE com a #564 corrigida e as fases C–E refeitas.
+> **Atualização 20/09 — #565 CORRIGIDA** (entregue em `d1a12dd9`): self-inclusion removida de `kof build --fat` e `kof deploy --target jvm` (jar em staging fora do `classesDir` + exclusão exata do path final + substituição só após fechar; um rebuild que falha mantém o jar anterior e não deixa `.kof-app-*`). Travada por `CmdBuildFatTest` (build 1, rebuild no mesmo `classesDir`, rebuild que falha) e pela inspeção estrutural do jar distribuído no `CmdDeployTest`. (Naquele momento o smoke seguia VERMELHO por causa da #564 — superado pelo re-run abaixo.)
 
 Ambos triados KOF-first (D-KOF-FIRST): bugs de tooling, sem sintaxe KOF; contrato = `DECISIONS.md` D2-A;
 busca de duplicatas (abertas+fechadas) não achou nenhuma.
@@ -55,6 +60,23 @@ busca de duplicatas (abertas+fechadas) não achou nenhuma.
 - O `kof deploy` empacota só classes alcançáveis a partir do `main`. Um pacote só-biblioteca não leva nada se o entry point não o usa — questão de contrato para publicar *bibliotecas* (regra 6: da mantenedora), não um defeito alegado aqui.
 - Meu próprio script chamou `kof run .` (COMP001: exige um arquivo `.kf`); foi mau uso do harness, não bug, e por isso o passo `run` de C/D/E não é evidência.
 
-## Para chegar ao VERDE (depois de corrigir a #564 — não feito aqui)
+## Re-run após o fix da #564 — **VERDE** (20/09/2026)
 
-Rodar de novo as fases C–E com o jar reconstruído, HOME novo, sem token: add por versão → resolve (sha256 verificado antes de instalar, jar em `~/.kof/deps/kof/...`, `kofdeps.lock` gravado) → programa consumidor importa o pacote e roda; `latest` pinna a versão no `kofdeps`; 2º `resolve` deixa cache e lock byte-idênticos. Só então virar a nota do tracker (EN+PT) para feito e linkar a evidência.
+Mesma release pública, mesmas condições limpas: jar construído da árvore (`kof-cli-0.5.0-beta.jar`, verificado como contendo o fix), `-Duser.home` novo por fase, diretório de consumidor novo, `GH_TOKEN`/`GITHUB_TOKEN` **removidos**, `api.github.com` real. Nada sensível é registrado (caminhos como `$HOME`).
+
+| Fase | Resultado (medido) |
+|---|---|
+| C — por versão explícita | **VERDE** — `resolve` exit 0; jar instalado em `$HOME/.kof/deps/kof/<owner>/<repo>/<ver>/<repo>-<ver>.jar`; sha256 do jar instalado == sha256 do jar publicado (`6099e28f…`); o `SHA256SUMS` do próprio pacote publicado confere (`OK`) |
+| E — idempotência | **VERDE** — 2º `resolve` exit 0, **sem download**; mtime/tamanho do jar, `kofdeps` e estado do lock byte-idênticos |
+| D — `latest` (sem `@version`), HOME e workspace separados | **VERDE** — `kofdeps` `owner/repo` vira `owner/repo@0.1.0-smoke.5d8a2b98`, jar instalado |
+| F — referência inexistente | **VERDE** — `REG001` (exit 1), 0 arquivos no cache |
+| rodar o pacote instalado | `java -cp <jar> Default.Main` → `hello, producer` |
+
+Prova no código: o `DepsRegistryTest` agora serve o **shape real do GitHub** (`uploader{…}` aninhado com `url` próprio antes de `browser_download_url`, sem `download_url`, `author{…}` antes de `tag_name`, delimitadores e aspas escapadas dentro de string, ordem de campos invertida) e afirma o contrato HTTP (asset baixado pelo `url` da API do asset com `Accept: application/octet-stream`; `User-Agent: kof-cli`; `X-GitHub-Api-Version: 2022-11-28`; um 302 para outro host é seguido e o token `Authorization` **não** é enviado a ele). Antes do fix 11 dos 13 testes falhavam com `REG002: … has no .tar.gz asset`; depois: 13/13 (+ `DepsTest` 4, `DepsTransitiveTest` 10).
+
+Decisão do fix (KOF-first): o JSON da release é lido com o `Json.parse` estrutural do próprio CLI (sem dependência nova, diferente do `jackson-core` proposto no plano); a exigência de `SHA256SUMS` e a seleção exato → `-jvm` → primeiro `.tar.gz` não mudaram.
+
+## Observações do re-run
+
+- O `kofdeps.lock` não é gravado para deps do registry: ele é o fecho transitivo Maven (roadmap 1.5.2). Deps do registry são pinadas **no próprio `kofdeps`** (`latest` → versão concreta) — comportamento existente, afirmado por `latestResolvesAndPinsConcreteVersion`.
+- Um programa KOF não consegue `import` o pacote baixado: `PKG006` mesmo com `--classpath` (o gate de import procura módulo-fonte). É uma pergunta de contrato, registrada como #566 — fora do defeito de pull/publish do Registry.

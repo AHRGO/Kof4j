@@ -15,6 +15,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
  ### In development
 
+  - **#564 FIXED — `kof deps` can now pull a package from a REAL GitHub Release** (20/09):
+    `DepsRegistry` cut each release asset at the first `}` and looked for a `download_url` key
+    that the GitHub API does not have (real assets nest `uploader{…}` and expose `url` /
+    `browser_download_url`), so every real `owner/repo[@ver]` failed with `REG002 … has no
+    .tar.gz asset`; the suite had been green only against a flat mock. The release JSON is now
+    read with the CLI's structural `Json.parse`; the binary is downloaded from the asset API
+    `url` with `Accept: application/octet-stream`, `User-Agent: kof-cli` and a pinned
+    `X-GitHub-Api-Version`; a redirect to the storage host is followed without sending the
+    token to it. `SHA256SUMS` stays mandatory and the exact → `-jvm` → first `.tar.gz`
+    selection is unchanged. Proof: `DepsRegistryTest` 13/13 on the real GitHub shape (11 were
+    RED before the fix) + a live round-trip against a public release (no token, clean HOME).
+
   - **#565 FIXED — JVM fat jars no longer embed a truncated copy of `kof-app.jar` inside
     themselves** (20/09): `CmdBuild.buildFatJar` created `classesDir/kof-app.jar` and then
     walked `classesDir`, so the output — still being written — became one of its own inputs
