@@ -2,6 +2,8 @@
 
 # DOING.md — coordenação multi-agente (quem faz o quê)
 
+> **🔄 EM CURSO (20/09 ~04:5x, dono = sessão 9093, lane tooling/debug): `kof profile --methods` = o SAMPLING profiler method-level in-house do JVM via JFR (`jdk.jfr`, embutido no JDK — nenhuma dependência externa), fechando a face residual da linha 8.3/tracker ("what does NOT exist is an in-house SAMPLING profiler (method-level)") e o "`kof profile` must integrate JFR" de `docs/architecture/performance.md` §34. Files: `kof-cli/src/main/java/dev/kof/cli/Profile.java`, novo `kof-cli/src/test/java/dev/kof/cli/ProfileMethodsTest.java`, docs performance EN+PT + tracker 8.3 EN+PT. Escopo: JVM-first (R7) — grava `jdk.ExecutionSample` no ELF filho via `-XX:StartFlightRecording=settings=profile`, agrega por top-frame, imprime os métodos quentes com a linha Kof (o LineNumberTable do JVM já aponta p/ o `.kf`, medido); Native/JS = recusa honesta nomeando a ferramenta (perf/DevTools), NUNCA silêncio (R6). NÃO TOCAR: cluster `.22`, §366/§367, makealive `.18`.**
+
 > **✅ FEITO (19/09 ~19:4x, dono = 192.168.100.14, lane ISSUES-NAO-PUBLIO, pedido
 > direto da mantenedora "pega pra matar as que não são do PublioSantos"):**
 > **fixes próprios landed e fechados com prova:** **#518** (kofValEq profundo p/
