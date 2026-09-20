@@ -799,7 +799,7 @@ regardless of target. Phases 1-3 implemented: DebugInfo in the IR with
 source location per op, JVM LineNumberTable/SourceFile/LocalVariableTable
 generated and **functional `kof debug` MVP** (DAP over stdio + raw JDWP: launch,
 breakpoints by Kof line, `stopped`, stack trace with Kof functions/lines,
-continue, disconnect). Phase 4 (Kof Editor) planned; Phase 5 (Native DWARF) x86-64 LANDED — `.debug_line`+`.debug_info`+`.debug_abbrev` on by default, `--release` strips, locked by `NativeDwarfLineInfoTest`/`NativeDwarfSubprogramTest`; the real residual is DWARF in the riscv64/aarch64 translators (no `.debug_*` emitted — measured 19/09) and cross-target debug front-ends; Phase 6 (JS source maps) V3 landed 01/09 (`KofJsSourceMapTest`); Phase 7 (advanced) planned. See: `docs/debugging/debugger-architecture.md`,
+continue, disconnect). Phase 4 (Kof Editor) planned; Phase 5 (Native DWARF) x86-64 LANDED — `.debug_line`+`.debug_info`+`.debug_abbrev` on by default, `--release` strips, locked by `NativeDwarfLineInfoTest`/`NativeDwarfSubprogramTest`; cross line table LANDED 19/09 (`.file`/`.loc` in riscv64, passed verbatim to the aarch64 translation — `NativeDwarfCrossTest`); residual: CU/subprogram DIEs in the cross (frame_base by ABI: s11/x29 — `NativeDwarf` is %rbp-hardcoded) and cross-target debug front-ends; Phase 6 (JS source maps) V3 landed 01/09 (`KofJsSourceMapTest`); Phase 7 (advanced) planned. See: `docs/debugging/debugger-architecture.md`,
 `docs/debugging/debugging.md`, `docs/debugging/debug-adapter.md`.
 
 ## 20. Design Principles

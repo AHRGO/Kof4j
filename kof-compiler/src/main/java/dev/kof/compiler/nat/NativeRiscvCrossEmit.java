@@ -1,6 +1,7 @@
 package dev.kof.compiler.nat;
 import dev.kof.compiler.BuiltinTypes;
 import dev.kof.compiler.ClassLayout;
+import dev.kof.compiler.SourcePosition;
 import dev.kof.compiler.CompilerClassLowering;
 import dev.kof.compiler.IRBasicBlock;
 import dev.kof.compiler.IRClass;
@@ -100,6 +101,16 @@ public final class NativeRiscvCrossEmit {
         boolean endsWithReturn = false;
         for (IRBasicBlock block : method.basicBlocks()) {
             for (KofOperation op : block.operations()) {
+                // X7-2 (DWARF cross, fatia 1): `.loc` por operação, do mesmo
+                // KofDebugInfo do x86 (NativeMethodEmitter.emitOperation) — a
+                // line table riscv/aarch espelha a fonte Kof (o tradutor
+                // aarch repassa a diretiva verbatim).
+                if (nb.debugInfo && method.debugInfo() != null) {
+                    SourcePosition dbg = method.debugInfo().positions().get(op);
+                    if (dbg != null && dbg.line() > 0) {
+                        sb.append("    .loc 1 ").append(dbg.line()).append(" 0\n");
+                    }
+                }
                 if (op instanceof KofReturn || op instanceof KofReturnVoid) endsWithReturn = true;
                 emitCrossOpRiscv(sb, op, frameSize, joinMain);
             }
