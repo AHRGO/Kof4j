@@ -415,6 +415,20 @@ smoke por target
 
 O artefato que o usuário instala é o objeto da validação.
 
+**Mecanismo (pousado 20/09, EG-3 — fila §23 item 9 do `D-RELEASE-1.0`):**
+`scripts/test-package-outside-repo.sh` automatiza exatamente o fluxo acima —
+builda a dist, extrai o **tar.gz real** para um diretório limpo em `$HOME`
+(nunca `/tmp`, regra 9 do repo) com as variáveis do repo desexportadas, e roda
+`kof version → kof info → kof new → run do template por alvo → resolução de
+lib pura-Kof` (`kof.pdf` de `lib/kof-libs` — a classe de bug do #550), com
+preflights honestos (JDK ≥ 25 / node / toolchain cross ausentes falham alto,
+nunca falso-verde; alvos cross são build-only aqui — o exec mora na matriz
+final, §23 item 10). PASS medido 20/09 com `kof-0.4.7-beta-linux-x86_64`
+(jvm+script+js+native). Prova offline RED-first para a suíte de agentes:
+`scripts/tests/test-package-outside-repo-test.sh`. O **re-run no dia do RC, no
+mesmo candidato**, continua sendo o que satisfaz este item do checklist — o
+mecanismo apenas torna esse re-run um comando.
+
 ---
 
 # 13. Targets propostos no checklist

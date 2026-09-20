@@ -15,6 +15,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
  ### In development
 
+  - **EXIT GATE 1.0 — EG-3: `scripts/test-package-outside-repo.sh`** (20/09, `.18`):
+    the §12/§23-9 condition became one repeatable command — the REAL tar.gz extracted
+    to a clean directory under `$HOME` (repo rule 9), repo env unexported; `kof
+    version`/`info`/`new` + template `Hello, Kof!` run on **jvm, script, js and
+    native (x86-64 ELF)**, cross = honest build-only guard (exec belongs to the
+    final matrix, item 10), and the **pure-Kof official lib** (`kof.pdf` from
+    `lib/kof-libs`) resolved OUTSIDE the repo — the exact bug class #550 exposed.
+    PASS measured on kof-0.4.7-beta. RED-first offline proof wired into the agent
+    suite (`scripts/tests/test-package-outside-repo-test.sh`, registered in
+    `run-agent-tests.sh`); RC day re-runs the gate on the same candidate with one
+    command. Honest preflights: missing JDK 25/node/toolchain fail loud, never fake-green.
+
   - **JVM DAP parity — `next`/`stepIn`/`stepOut` + `evaluate`** (20/09, tooling/debug
     lane): the JVM debug adapter now steps (JDWP `SingleStep` event kind 1 + Step
     modifier kind 10, size LINE, depth over/into/out) and evaluates, matching the
@@ -328,6 +340,7 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 ### In development
   - .18 - GAPS-DB F1b (20/09): `orm.count<User>(db)` is REAL on Native x86-64 — `kof_orm_count` builds `SELECT COUNT(*) FROM "table"` with the private KofString builder and runs it through `sqlite3_exec`; the callback converts `argv[0]` IN-PLACE (sqlite frees the value strings when `exec` returns — a saved pointer is already garbage there) and the result survives in a static slot. Two latent bugs died on the way: (a) F1a's `delete_all` saved frame slots over the saved `%rbx` (the throw-test passed only because the caller never read `%rbx` again); (b) the new `count` popped in the wrong region after the emitter's `andq $-16,%rsp` prologue injection (SIGSEGV) — epilogue now mirrors `delete_all` exactly. Proof measured: `KofOrmE2ETest` 37/0F (count byte parity JVM==Native incl. three calls in sequence on one frame); full 4-module suite 3185/0F/0E in the isolated clone.
   - .18 - GAPS-DB F1c (20/09): `orm.migrate(db, name, sql)` is REAL on Native x86-64 — `kof_orm_migrate` mirrors the host: history-table DDL, `SELECT name = ?` (prepare/bind/step), user SQL through the shared executor, `INSERT (name, ms)` with `clock_gettime` via the raw syscall (same pattern as the observability spans). The fatia also normalized the whole ORM stack frame contract: every call to C now happens with `rsp % 16 == 0` (the emitter's `andq` convention restated: entry `≡0` + `andq` + `subq $56/$88`), `.Lorm_exec` lost its accidental `subq $8`, and the DDL literal became a real KofString (`.Lorm_exec` takes objects and adds the 24-byte header itself — a raw `char*` made sqlite parse `ts user (id INTEGER...`). Proof measured: `KofOrmE2ETest` 39/0F (migrate idempotence + history rows + bad-id throw parity, JVM==Native byte); full 4-module suite 3187/0F/0E in the isolated clone.
+  - .18 - GAPS-DB F1d (20/09): `orm.create<User>(db)` is REAL on Native x86-64 — new `RuntimeOrm2` slice: `kof_orm_create` parses the compile-time schema literal (`name:dbType[:generated][:unique]`) byte by byte and rebuilds the host's exact DDL (`"col"` VARCHAR(255)/INTEGER/BOOLEAN/DOUBLE/REAL + UNIQUE, generated → `INTEGER PRIMARY KEY AUTOINCREMENT`) through the shared KofString builder; `CREATE IF NOT EXISTS` twice returns `true` on both engines. The remaining ORM001 compile-pin moved to `save` (the row-object face, F2). Proof measured: `KofOrmE2ETest` 40/0F (create byte parity JVM==Native incl. a real `select email from user` proving UNIQUE/varchar landed); full 4-module suite 3188/0F/0E in the isolated clone.
   - .18 - GAPS-DB F1a (20/09): `orm.deleteAll<User>(db)` is REAL on Native x86-64 — `kof_orm_delete_all` in asm over the `kof_db_*` stack (sqlite; MySQL throws honest ORM001 at runtime; bad id throws the host's exact string); per-function gate `fnSupportedOn` (every other face and the cross targets keep `ORM001`); link fix: ORM-only programs now pull `-lsqlite3`. Proof measured: `KofOrmE2ETest` 35/0F byte parity JVM==Native; full 4-module suite 3183/0F/0E in the isolated clone.
   - .18 - governance: **regra 11 (Simplicity Law) is ABSOLUTE in AGENTS.md** + `DECISIONS.md` §D-MAKEALIVE/§D-KOF-AS-CLOUD/§D-BOOTSTRAP/§D-DB-GAPS (maintainer polls 20/09: `kof.makealive` namespace, generic providers complete, kof.db day-1 state, Android=JVM db parity, ORM-on-Native via `kof_orm_*` asm, MySQL on cross, bootstrapper = final objective).
 

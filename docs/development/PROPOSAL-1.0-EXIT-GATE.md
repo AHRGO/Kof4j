@@ -412,6 +412,20 @@ per-target smoke
 ```
 
 The artifact the user installs is the object of the validation.
+**Mechanism (landed 20/09, EG-3 — `D-RELEASE-1.0` queue §23 item 9):**
+`scripts/test-package-outside-repo.sh` automates exactly the flow above — it
+builds the dist, extracts the **real tar.gz** into a clean directory under
+`$HOME` (never `/tmp`, repo rule 9) with the repo's env unexported, then runs
+`kof version → kof info → kof new → per-target run of the template → pure-Kof
+lib resolution` (`kof.pdf` from `lib/kof-libs` — the #550 class of bug), with
+honest preflights (missing JDK ≥ 25 / node / cross toolchain fail loud, never
+fake-green; cross targets are build-only here — exec lives in the final matrix,
+§23 item 10). Measured PASS on 20/09 with `kof-0.4.7-beta-linux-x86_64`
+(jvm+script+js+native). Offline RED-first proof for the agent suite:
+`scripts/tests/test-package-outside-repo-test.sh`. The **RC-day re-run on the
+same candidate** remains what satisfies this checklist item — the mechanism
+only makes that re-run one command.
+
 
 ---
 
