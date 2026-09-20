@@ -10,7 +10,7 @@
 # Uso:
 #   agent-evidence.sh init --issue N --classification "BUG REAL" [--risk auto|low|medium|high]
 #                          [--base SHA] [--session S] [--text "..."] [--repo DIR]   # imprime o run-id
-#   agent-evidence.sh run  --run-id ID --label L [--kind test|gate|smoke|cross|adversarial] -- CMD...
+#   agent-evidence.sh run  --run-id ID --label L [--kind test|gate|smoke|cross|adversarial] [--cwd DIR] -- CMD...
 #   agent-evidence.sh mark --run-id ID --name N --status FAIL|NOT_RUN [--reason R] [--section cross_target|structural_gates]
 #   agent-evidence.sh verdict --run-id ID --worker pass|fail
 #   agent-evidence.sh show     --run-id ID
@@ -27,7 +27,7 @@ RISK="$HERE/agent-risk.sh"
 
 sub="${1:-}"; shift || true
 run_id=""; issue=""; classification=""; risk="auto"; base=""; session=""; text=""; repo="."
-label=""; kind="test"; name=""; status=""; reason=""; section="cross_target"; worker=""
+label=""; kind="test"; name=""; status=""; reason=""; section="cross_target"; worker=""; cwd=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --run-id) run_id="${2:-}"; shift 2;;
@@ -45,6 +45,7 @@ while [ $# -gt 0 ]; do
         --reason) reason="${2:-}"; shift 2;;
         --section) section="${2:-cross_target}"; shift 2;;
         --worker) worker="${2:-}"; shift 2;;
+        --cwd) cwd="${2:-}"; shift 2;;
         --) shift; break;;
         *) echo "argumento desconhecido: $1" >&2; exit 2;;
     esac
@@ -138,16 +139,17 @@ run)
     logf="$d/logs/$(printf '%02d' "$n")-$(printf '%s' "$label" | tr -c 'A-Za-z0-9_.-' '_').log"
     start="$(date -Is)"; sha_tested="$(git -C "$repo" rev-parse HEAD 2>/dev/null || echo unknown)"
     dirty_run=false; [ -n "$(git -C "$repo" status --porcelain 2>/dev/null)" ] && dirty_run=true
-    ( cd "$repo" && "$@" ) > "$logf" 2>&1; rc=$?
+    run_dir="${cwd:-$repo}"; run_dir="$(cd "$run_dir" && pwd)"
+    ( cd "$run_dir" && "$@" ) > "$logf" 2>&1; rc=$?
     end="$(date -Is)"
     # resumo do Maven quando confiável: ÚLTIMA linha "Tests run: N, Failures: F, Errors: E, Skipped: S" sem " -- in "
     summ="$(grep -E 'Tests run: [0-9]+, Failures: [0-9]+, Errors: [0-9]+, Skipped: [0-9]+' "$logf" | grep -v ' -- in ' | tail -n1 || true)"
-    entry="$(python3 - "$label" "$kind" "$rc" "$start" "$end" "$sha_tested" "$dirty_run" "$logf" "$summ" "$*" <<'PY'
+    entry="$(python3 - "$label" "$kind" "$rc" "$start" "$end" "$sha_tested" "$dirty_run" "$logf" "$summ" "$*" "$run_dir" <<'PY'
 import json, sys, re
-label, kind, rc, start, end, sha, dirty, log, summ, cmd = sys.argv[1:11]
+label, kind, rc, start, end, sha, dirty, log, summ, cmd, cwd = sys.argv[1:12]
 e = {"label": label, "kind": kind, "command": cmd, "start": start, "end": end,
      "exit_code": int(rc), "status": "PASS" if int(rc) == 0 else "FAIL",
-     "sha_tested": sha, "dirty_at_run": dirty == "true", "log_path": log,
+     "sha_tested": sha, "dirty_at_run": dirty == "true", "cwd": cwd, "log_path": log,
      "executed_tests": None, "failures": None, "errors": None, "skips": None}
 m = re.search(r"Tests run: (\d+), Failures: (\d+), Errors: (\d+), Skipped: (\d+)", summ or "")
 if m:
