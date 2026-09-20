@@ -15,6 +15,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
+  - **#431 fatia 1 — a ABI escalar do `extern` agora VINCULA no Native x86-64 (`d946e6fa`, §369)**
+    — `extern "<lib>" f(Int, Long, Float, Double, Bool, String)` com aridade livre,
+    retornos void/String: link direto (a biblioteca entra no `ld`) + marshaling SysV
+    por classe; Kof↔Native agora roda o mesmo programa byte-a-byte com a JVM
+    (re-verificado pela lane docs com jar limpo reconstruido: `5` / `3.5` / `5` / `10`
+    nos dois alvos). Slots FLOAT exigem o cast explicito (`fmid(4.0 as Float,
+    9.0 as Float)` → `13.0`); literal sem cast compila limpo e reinterpreta bits no
+    Native — gap aberto §370/#549, nao licencia para usar.
+    Callback/struct/array no Native seguem honestos FFI001/FFI002. Provado por
+    `FfiNativeE2ETest` 16/16 (+ `FfiE2ETest` 16/16 regressao JVM, 38/38 total).
+
   - **#278/§361 — escritas de campo nullable-primitivo agora BOXAM no JVM (`e293c4a5`)**
     — `class Box { Int? n }` + `b.n = 42` gravava o inteiro cru no slot boxado
     (`VerifyError` na carga de classe em JVM/Script, erro de cast em execucao no

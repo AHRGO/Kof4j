@@ -31,6 +31,10 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — Stri
 //   (NULL->NULL); >=9 same-class args spill; String return = boundary copy (C buffer never freed);
 //   riscv64/aarch64 glibc passes AND returns FP in fa0..fa7 (MEASURED under qemu — NOT ft0);
 //   C stdio is flushed at exit; struct/array/callback/missing-library -> FFI001 at the decl line
+//   FLOAT slots require an explicit cast: call `f(Float x)` as `f(4.0 as Float)`.
+//     A Double/Int literal WITHOUT the cast compiles clean and reinterprets raw bits
+//     on Native (0.0 / 3.0E-45 — silent wrong value, open gap §370/#549) and throws
+//     or differs on JVM. NEVER pass an uncast literal to a Float slot.
 
 // (c) CALLBACKS (C2 ✅ + JS parity C3.2/C3.3 ✅, 18/09): a Kof function handed to C as a
 // function pointer. Function-typed parameter + lambda at the call site;

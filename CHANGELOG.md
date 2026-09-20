@@ -15,6 +15,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
  ### In development
 
+  - **#431 fatia 1 — the `extern` scalar ABI now BINDS on Native x86-64 (`d946e6fa`, §369)**
+    — `extern "<lib>" f(Int, Long, Float, Double, Bool, String)` with free arity,
+    void/String returns: direct link (the library goes to `ld`) + SysV marshaling
+    per class; Kof↔Native now runs the same program byte-for-byte with the JVM
+    (re-verified by the docs lane on a clean-rebuilt jar: `5` / `3.5` / `5` / `10`
+    in both targets). FLOAT slots require the explicit cast (`fmid(4.0 as Float,
+    9.0 as Float)` → `13.0`); an uncast literal compiles clean and reinterprets
+    bits on Native — open gap §370/#549, not a license to use it.
+    Callback/struct/array on Native stay honest FFI001/FFI002. Proved by
+    `FfiNativeE2ETest` 16/16 (+ `FfiE2ETest` 16/16 JVM regression, 38/38 total).
+
   - **#278/§361 — nullable-primitive FIELD writes now BOX on the JVM (`e293c4a5`)**
     — `class Box { Int? n }` + `b.n = 42` stored the raw int into the boxed slot
     (`VerifyError` at class load on JVM/Script, SIGSEGV-era cast error on Native,
