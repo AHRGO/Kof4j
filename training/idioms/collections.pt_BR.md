@@ -125,6 +125,24 @@ referência não são afetados.
 
 Fix 27/08: `listOf(...).get(n)` e `size` em projetos grandes com `import a.b.C` agora resolvem corretamente (CompilerDriver file-specific imports). Não é necessário workaround manual de índice.
 
+## `List`/`Set`/`Map` bare em posicao declarada (0.4.0 — §373/#443)
+
+Um nome de colecao SEM argumentos de tipo em campo, parametro ou retorno e a
+**colecao builtin** — exatamente o que a forma local sempre significou (#139/#150/#214):
+
+```kof
+class Box {
+    List items                      // bare = List builtin (antes do §373: quebrava no class load)
+    public constructor() { items = listOf(1, 2) }
+}
+count(xs: List): Int { return xs.size }     // bare em parametro
+```
+
+Prefira o tipo de elemento explicito (`List<Int> items`) quando conhecido — o compilador
+checa mais. Uma classe do usuario com o mesmo nome (`class List { ... }` no seu pacote)
+continua vencendo a builtin (guarda de shadow do §243, provado pelos controles de
+`BareCollectionFieldE2ETest` 8/8, o mesmo print nos 4 alvos).
+
 ## When to use
 
 Qualquer problema que requer uma sequência de elementos:
