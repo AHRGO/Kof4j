@@ -91,6 +91,9 @@ public class NativeBackend implements Backend {
     boolean usesHttp = false;
     boolean usesMysql = false;
     boolean usesConcurrency = false;
+    /** #431: bibliotecas dos `extern` bound (ligadas no ld, link-by-use). */
+    final Set<String> ffiLibs = new LinkedHashSet<>();
+    boolean ffiUsesCstr = false;
     final Map<String, String> functionMangleMap = new HashMap<>();
     private final Map<String, ClassLayout> layoutCache = new HashMap<>();
     Map<String, IRClass> allClassesMap = new HashMap<>();
@@ -261,6 +264,13 @@ public class NativeBackend implements Backend {
                                 || kc.methodName().equals("kof_spawn_result"))) {
                             usesConcurrency = true;
                         }
+                        if (op instanceof KofCall kc && NativeFfiCall.isExternCall(kc)) {
+                            // #431: o extern liga a `library()` declarada no ld
+                            // (link-by-use, padrão DB001/sqlite) — sem ela o
+                            // `call sym@PLT` não resolve.
+                            ffiLibs.add(NativeFfiCall.libOf(kc));
+                            if (NativeFfiCall.returnsCstr(kc)) ffiUsesCstr = true;
+                        }
                     }
                 }
             }
@@ -307,6 +317,12 @@ public class NativeBackend implements Backend {
                 }
             }
             emitStart(sb, mainClass);
+        }
+        if (ffiUsesCstr) {
+            // #431: copy helper char*→String p/ extern com retorno String
+            // (uma definição por programa, no texto do programa — a poda de
+            // runtime não alcança rótulos do programa; chamado via call-site).
+            NativeFfiCall.emitX86CstrHelper(sb);
         }
         if (debugInfo && target == Target.NATIVE) {
             kofDwarf.emit(sb, sourceFile);
@@ -408,7 +424,7 @@ public class NativeBackend implements Backend {
         // assinatura de NativeAssembler.assemble é 4). A -lm é INCONDICIONAL lá
         // (pow shim sempre presente — ver comentário do commit), então o arg é
         // morto: chamo com os 4 reais. pow segue linkando.
-        NativeAssembler.assemble(asmFile, binFile, usesDb, usesMysql, usesConcurrency);
+        NativeAssembler.assemble(asmFile, binFile, usesDb, usesMysql, usesConcurrency, ffiLibs);
     }
 
     // ---------------------------------------------------------------------

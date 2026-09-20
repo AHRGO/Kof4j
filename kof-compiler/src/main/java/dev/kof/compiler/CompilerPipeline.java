@@ -465,10 +465,32 @@ public final class CompilerPipeline {
             }
             return true;
         }
-        // NATIVE: dlopen/dlsym segfaulta no binário nativo (glibc exige TLS
-        // que o _start cru não inicializa) — bug registrado (known-bugs);
-        // enquanto o backend não inicializa libc, extern nativo é FFI001 (R6).
+        // #431/§61 (Native x86-64): ABI escalar direto — o link do binário traz a
+        // `library()` do extern como input do ld e o call-site baixa marshaling
+        // SysV + `call sym@PLT` (o mesmo caminho do consumidor SQLite/DB001, que
+        // prova o PLT a partir do _start cru). Sem dlopen em runtime — a rota do
+        // §61 que nunca dependeu de glibc initialized. Callback (sem mechanism de
+        // upcall nativo), array/struct e `extern` sem `library()` (nada a linkar)
+        // continuam FFI001 honesto na linha da declaração (R6). riscv64/aarch64:
+        // mesma ABI com shim próprio — ver branch abaixo.
+        if (driver.target == Target.NATIVE) {
+            return nativeExternBound(ext);
+        }
+        // NATIVE (riscv64/aarch64): o shim cross (LP64/AAPCS64) só abre o gate na
+        // sua fatia, com prova sob qemu no MESMO commit (política das fatias R3:
+        // gate+lowering+E2E juntos, nunca meio-aberto). Enquanto não landa,
+        // FFI001 honesto.
         return false;
+    }
+
+    private static boolean nativeExternBound(ExternalFunctionNode ext) {
+        if (ext.library() == null || ext.library().isEmpty()) return false;
+        Character rc = FfiSignature.returnChar(ext.returnType());
+        if (rc == null) return false;
+        for (var param : ext.parameters()) {
+            if (FfiSignature.paramChar(param.type()) == null) return false;
+        }
+        return true;
     }
 
     static boolean isIntType(String t) {

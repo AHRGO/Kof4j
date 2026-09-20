@@ -431,6 +431,41 @@ public final class BuiltinCallTyper {
                     // contrato (tipo de retorno), nunca SEM015 — o binding real é
                     // lowering por target (JVM/Native); JS emite FFI002.
                     found = true;
+                    // #431 (Native-safe): aridade/tipos contra o contrato declarado.
+                    // Sem isto, um `abs(1,2,3)` (que na JVM só falha em runtime no
+                    // spread do kof_ffi) baixaria no Native com N slots na pilha de
+                    // operandos e 1 pop no shim — corrupção silenciosa de stack.
+                    // Mesma política do #266(c)/SEM048: o compile-time pega o que o
+                    // runtime pagaria caro (posição do CALL SITE, §350).
+                    List<Type> extFormals = new ArrayList<>();
+                    for (FormalParameterNode p : ext.parameters()) {
+                        extFormals.add(MemberResolver.resolveType(sa, p.type(), scope));
+                    }
+                    if (argTypes.size() != extFormals.size()) {
+                        if (sa.diagnostics() != null) {
+                            sa.diagnostics().error(mc.position() != null ? mc.position().file() : "",
+                                    mc.position() != null ? mc.position().line() : 0,
+                                    mc.position() != null ? mc.position().column() : 0, 0,
+                                    "Wrong number of arguments for '" + ext.name() + "': expected "
+                                            + extFormals.size() + " but got " + argTypes.size(), "SEM013");
+                        }
+                    } else {
+                        for (int ai = 0; ai < argTypes.size(); ai++) {
+                            Type at = argTypes.get(ai), ft = extFormals.get(ai);
+                            if (!Type.isUnknown(at) && !Type.isUnknown(ft)
+                                    && !TypeChecker.isAssignable(at, ft)) {
+                                if (sa.diagnostics() != null) {
+                                    sa.diagnostics().error(mc.position() != null ? mc.position().file() : "",
+                                            mc.position() != null ? mc.position().line() : 0,
+                                            mc.position() != null ? mc.position().column() : 0, 0,
+                                            "Argument " + (ai + 1) + " of '" + ext.name() + "': expected '"
+                                                    + Type.display(ft) + "' but got '" + Type.display(at) + "'",
+                                            "SEM014");
+                                }
+                                break;
+                            }
+                        }
+                    }
                     Type extRet = MemberResolver.resolveType(sa, ext.returnType(), scope);
                     if (!Type.isVoid(extRet)) {
                         sa.putExpressionType(mc, extRet);

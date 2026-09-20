@@ -19,8 +19,11 @@ public final class NativeAssembler {
         ToolchainMissing(String m) { super(m); }
     }
 
+    /** #431: `ffiLibs` = as `library()` dos `extern` bound (link-by-use). Um
+     *  caminho (contém '/') entra como input posicional do ld; um soname vira
+     *  `-l:<nome>` — exatamente o padrão do SQLite (DB001), sem dlopen. */
     static void assemble(Path asmFile, Path binFile, boolean usesDb, boolean usesMysql,
-                   boolean usesConcurrency) throws IOException {
+                   boolean usesConcurrency, java.util.Collection<String> ffiLibs) throws IOException {
         Path objFile = asmFile.resolveSibling(asmFile.getFileName() + ".o");
         System.err.println("NativeBackend: assembling " + asmFile);
         try {
@@ -48,6 +51,12 @@ public final class NativeAssembler {
             // -lm é sempre ligado, como -lc (dyn). Recusa em riscv/aarch =
             // KofMath.supportedOn (MATH001) — lá o link é estático sem libc.
             cmdL.add("-lm");
+            // #431: as libs dos `extern` bound entram no link (posicional se é
+            // caminho, `-l:` se é soname). Arquivo ausente → erro honesto do ld
+            // (nunca um binário que resolve em runtime pra faltar).
+            for (String lib : ffiLibs) {
+                cmdL.add(lib.indexOf('/') >= 0 ? lib : "-l:" + lib);
+            }
             runCommand(cmdL.toArray(new String[0]), "ld");
         } else {
             if (usesDb) {
