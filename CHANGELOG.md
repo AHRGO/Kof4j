@@ -22,11 +22,21 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     — the precise predicate the §295(b) local fix established — with the second
     root layer ( `isPrimitiveType` UNWRAPS nullables, so the plain-widening branch
     must exclude them or the gate is dead code). Proved by
-    `NullablePrimitiveFieldWriterE2ETest` 9/9. **Status §361: PARTIAL** — the
-    `Char?` write face remains broken (JVM/Script `VerifyError` String→Character;
-    Native runtime cast at the read; JS green) — addendum in the ledger, routed
-    to the cluster. Related open: §365 (never-written nullable field reads `0`
-    on JS vs `null` elsewhere — pre-existing, independent face of the same family).
+    `NullablePrimitiveFieldWriterE2ETest` 9/9. **Status §361: CLOSED (`5cd078c1`)** —
+    the `Char?` write face was not a writer bug of its own: the root cause was that
+    the field store never passed through the assignability gate (§368). The gate now
+    rejects `String → Char/Char?` (and every non-assignable field store) with SEM012
+    at compile time, and the legitimate idiom — char literal `y.c = 'x'` — runs green
+    on the 4 targets (re-verified 20/09 with a clean rebuilt `kof-cli` jar). §365
+    (never-written nullable field read `0` on JS vs `null` elsewhere) was fixed
+    separately on `dd418419`.
+  - **#278/§368 — the field store now passes the assignability gate (`5cd078c1`)**
+    — `x.n = "s"` in `Int n`, `y.c = "x"` in `Char`/`Char?`, `x.n = 2.5` in `Int`
+    compiled "clean" and died at class load (JVM/Script `VerifyError`, Native cast)
+    or became a phantom store (JS). `StatementAnalyzer.analyzeAssignmentStatement`
+    reuses the same `TypeChecker.isAssignable` gate as local assignment — SEM012 at
+    the call-site (R6, no silent breakage). Proved by
+    `FieldAssignabilityPhantomE2ETest` 8/8 (RED baseline before the gate).
 
 
 

@@ -23,11 +23,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     §295(b) estabeleceu — com a segunda camada de causa (`isPrimitiveType`
     DESEMBRECA nullables, entao o branch de widening puro precisa exclui-los ou o
     gate vira codigo morto). Provado por `NullablePrimitiveFieldWriterE2ETest` 9/9.
-    **Status §361: PARCIAL** — a face de escrita `Char?` segue quebrada (JVM/Script
-    `VerifyError` String→Character; cast em execucao no Native na leitura; JS ok) —
-    adendo no ledger, roteada ao cluster. Aberto relacionado: §365 (campo nullable
-    nunca-escrito le `0` no JS vs `null` nos demais — pre-existente, face
-    independente da mesma familia).
+    **Status §361: FECHADO (`5cd078c1`)** — a face de escrita `Char?` nao era um bug
+    de escritor proprio: a raiz era o store de campo nunca passar pelo gate de
+    atributibilidade (§368). O gate agora rejeita `String → Char/Char?` (e todo
+    store de campo nao-atribuivel) com SEM012 em tempo de compilacao, e o idiom
+    legitimo — literal de char `y.c = 'x'` — roda verde nos 4 alvos (re-verificado
+    20/09 com jar `kof-cli` limpo reconstruido). §365 (campo nullable nunca-escrito
+    le `0` no JS vs `null` nos demais) foi corrigido a parte em `dd418419`.
+  - **#278/§368 — o store de campo agora passa pelo gate de atributibilidade (`5cd078c1`)**
+    — `x.n = "s"` em `Int n`, `y.c = "x"` em `Char`/`Char?`, `x.n = 2.5` em `Int`
+    compilavam "clean" e morriam na carga de classe (JVM/Script `VerifyError`, cast
+    no Native) ou viravam phantom-store (JS). `StatementAnalyzer.analyzeAssignmentStatement`
+    reusa o mesmo gate `TypeChecker.isAssignable` da atribuicao local — SEM012 no
+    call-site (R6, sem quebra silenciosa). Provado por
+    `FieldAssignabilityPhantomE2ETest` 8/8 (baseline RED pre-gate).
   - .18 - governança: **regra 11 (Lei da Simplicidade) é ABSOLUTA em AGENTS.md** + `DECISIONS.md` §D-MAKEALIVE/§D-KOF-AS-CLOUD/§D-BOOTSTRAP/§D-DB-GAPS (enquetes da mantenedora 20/09: namespace `kof.makealive`, providers genéricos completos, estado kof.db desde o dia 1, Android=paridade JVM no db, ORM no Native via asm `kof_orm_*`, MySQL no cross, bootstrapper = objetivo final).
 
   - **`shell.pipeline` REAL no JS (20/09, lane `.18`)** — fecha o último residual
