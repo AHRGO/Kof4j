@@ -809,7 +809,7 @@ class KofOrmE2ETest {
     // ── D-DB-GAPS F1a (20/09): kof_orm_delete_all REAL no Native x86-64 ──
 
     @Test
-    void deleteAllNativeEndToEndMatchesJvm(@TempDir Path tempDir) throws IOException {
+    void deleteAllNativeEndToEndMatchesJvm(@TempDir Path tempDir) throws Exception {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, ENTITY_SRC + """
                 main() {
@@ -842,7 +842,7 @@ class KofOrmE2ETest {
 
     @Test
     void deleteAllUnknownConnectionThrowsJvmMessageOnBothTargets(@TempDir Path tempDir)
-            throws IOException {
+            throws Exception {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, ENTITY_SRC + """
                 main() {
