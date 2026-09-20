@@ -11819,3 +11819,12 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
   proof; any future red re-opens this entry with the fresh SHA.
 - **Related:** #945/`9c88d590` (author lineage), §382 (the fix this shadowed),
   §309 (catalog-don't-patch), §384 (same dirty-tree-truth family).
+
+## §390 — `codeql-gate-test.sh` NÃO era hermético ao ambiente de CI: `run_gate` herdava `GITHUB_ACTIONS=true` do runner, e como o gate IGNORA o `CODEQL_GATE_SKIP` em CI (contrato #555), os cenários 5/6 mediam o caminho de CI e falhavam — a suíte de agentes passava no host local e ficava VERMELHA só no runner
+
+- **Status:** ✅ FIXED 20/09 (lane estabilização, EG-2) — CI do tip `2206cc94` RED no job "Structural quality gates" (run `35541184649`, job `106159031687`, step 7 "Gate automacao de agentes"): `!! FALHOU: scripts/tests/codeql-gate-test.sh`. Os outros 12 testes da suíte passaram no runner.
+- **Sintoma (medido no log do runner):** cenário 5 (`CODEQL_GATE_SKIP=1` deve ser recusado) e cenário 6 (skip com motivo deve pular, gritar e logar) falhavam — `FAIL— skip '1' foi aceito`, `FAIL— sem banner`, `FAIL— skip.log nao gravado`, `exit=1 (esperado 0)`.
+- **Root cause:** `run_gate()` (o helper que invoca o gate com o `gh` FAKE) usava `env PATH=... "$@" timeout ...` sem controlar `GITHUB_ACTIONS`; no runner a variável é `true`, então o gate entrava no ramo "ignorado em CI" (`codeql-gate.sh:48`) em vez do ramo LOCAL que os cenários 5/6 exercitam. O teste dependia do ambiente — não era hermético.
+- **Fix (na raiz, no artefato com o defeito):** `run_gate` passa a usar `env -u GITHUB_ACTIONS ...`; o cenário 7 (que PROVA que em CI o skip é ignorado) injeta `GITHUB_ACTIONS=true` explicitamente no `"$@"`, então o caminho de CI continua coberto. O comportamento do gate NÃO mudou (skip ignorado em CI é o contrato intencional, #555).
+- **Prova (RED-first, local):** `GITHUB_ACTIONS=true bash scripts/tests/codeql-gate-test.sh` = `RESULTADO: FALHOU` (reproduz o runner); após o fix, o MESMO comando = `todos os cenarios OK`, e sem a variável também. `run-agent-tests.sh` verde.
+- **Related:** #555/#563 (contrato do gate/baseline), EG-2 (§10), §384/§389 (mesma família "só o runner/CI revela").

@@ -87,8 +87,13 @@ EOF
 }
 
 run_gate() { # $1=dir fake, $2...=env overrides
+  # Hermetico quanto ao CI: sem GITHUB_ACTIONS explicito, o cenario roda como
+  # um push LOCAL (onde o CODEQL_GATE_SKIP vale). O cenario 7 e que injeta
+  # GITHUB_ACTIONS=true para provar que em CI o skip e IGNORADO — sem o
+  # `env -u` a suite herdava o GITHUB_ACTIONS=true do runner e os cenarios
+  # 5/6 mediam o caminho de CI, falhando (a suite so passava no host local).
   local dir="$1"; shift
-  env PATH="$dir:$PATH" CODEQL_GATE_SKIP_LOG="$dir/skip.log" "$@" timeout 60 bash "$GATE" --fast 2>&1
+  env -u GITHUB_ACTIONS PATH="$dir:$PATH" CODEQL_GATE_SKIP_LOG="$dir/skip.log" "$@" timeout 60 bash "$GATE" --fast 2>&1
 }
 
 TMP=$(mktemp -d)
