@@ -94,7 +94,6 @@
 | static field + bump | `1` / `2` / `2` | DONE | DONE (bug 41 fixed 07/09) | DONE | DONE | `staticfield` |
 | escrita de campo nullable-primitivo + leitura (`b.n = 42`) — §361 FECHADO | `42` | CONCLUIDO (`e293c4a5`) | CONCLUIDO | CONCLUIDO | CONCLUIDO | `NullablePrimitiveFieldWriterE2ETest` 9/9; face char resolvida pelo gate §368 (SEM012 em store invalido; idiom `y.c = 'x'` verde nos 4 alvos, re-verificacao 20/09 jar limpo) |
 | gate de atributibilidade no store de campo — §368 | SEM012 no call-site | CONCLUIDO (`5cd078c1`) | CONCLUIDO | CONCLUIDO | CONCLUIDO | `FieldAssignabilityPhantomE2ETest` 8/8; medido 20/09: `x.n = "s"`(Int) e `y.c = "x"`(Char?) -> SEM012 em check+build; `y.c = 'x'` imprime `x` nos 4 alvos |
-| chamada de construtor fantasma — §362 | `SEM023` de aridade, `SEM014` de tipo no call-site | CONCLUIDO (`57a0d5f0`) | CONCLUIDO | CONCLUIDO | N/A (frontend) | `ConstructorPhantomE2ETest` 7/7 + sonda da lane docs 20/09: `P(1,2)` em `record P(Int x)` e `D(1)` sem ctor -> SEM023 em check/build (jvm/js/native), `C("s")` em ctor(Int) -> SEM014; formas legitimas intactas |
 | aridade/tipo de construtor no call-site (`Class(args)` sem `new`) — §362 | `SEM023 no call-site` | CONCLUIDO (`57a0d5f0`) | CONCLUIDO | N/D (frontend compartilhado) | CONCLUIDO | `ConstructorPhantomE2ETest` 7/7 |
 | static field `+=` | `2` / `4` / `4` | DONE | DONE (bug 41) | DONE | DONE | `staticpluseq` |
 | concat string+num (order) | `n=42` / `3x` / `x12` | DONE | DONE | DONE | DONE | `concat` |
