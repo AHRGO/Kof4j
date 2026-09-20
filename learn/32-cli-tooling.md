@@ -33,7 +33,7 @@ The CLI is the central tool of the Kof platform.
 | `kof migrate <file.class\|java> [--output <file.kf>] [--json]` | Migration + traceable report |
 | `kof config gen <file.kf\|dir> [--output <arquivo>]` | Generates a `kof.config` template from the `config.*` keys in the code |
 | `kof fmt <file.kf\|dir> [-w]` | Real formatter via parser (`KofFormatter`), idempotent — implemented on 31/08 |
-| `kof debug <file.kf> [--target jvm]` | DAP MVP (breakpoints by Kof line, stack trace) |
+| `kof debug <file.kf> [--target jvm\|native]` | DAP MVP on the JVM (breakpoints by Kof line, stack trace); on `native`, delegates to the target's **gdb** over the Kof DWARF (X7-3 `cfa67238`) — DAP bridge for native is the next phase |
 | `kof new <name>` | Project skeletons by type |
 | `kof init` | Initialize a project in the current directory |
 | `kof deps <init\|add\|remove\|list\|resolve>` | Package manager (`kofdeps`: Maven `g:a:v` + registry `owner/repo[@ver]` — GitHub Releases) |
