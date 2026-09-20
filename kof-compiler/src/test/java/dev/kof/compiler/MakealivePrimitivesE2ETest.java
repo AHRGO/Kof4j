@@ -235,4 +235,49 @@ class MakealivePrimitivesE2ETest {
             }
             """.formatted(state.toString()), "roundtrip", "gone");
     }
+
+    /** 3.1.0 probe (claim D-MAKEALIVE): the provider shape is function-typed
+     *  fields over a host record + generic `Map<String,String>` — the workflow
+     *  `KofWfJob` locks `() -> Bool` and `(String, String) -> Bool`, but a
+     *  record parameter and a Map return are NOT covered by 3.0.1. MEASURED
+     *  today: direct invoke on a function-typed field (`p.read(r)`) does NOT
+     *  typecheck ("Cannot resolve method 'read' on type 'MvProvider'") — the
+     *  locked form is the workflow precedent (`var corpoFn: () -> Bool =
+     *  job.corpo`, workflow-host.kf:356): copy to a typed local, then invoke.
+     *  JVM==JS byte parity; Native compiles. */
+    @Test
+    void providerShapeFunctionTypedFieldsRunsJvmJs() throws Exception {
+        assertRunsJvmJsNativeCompiles("MAProvider", """
+            record MvRes(String kind, String name)
+
+            class MvProvider {
+                (MvRes) -> Map<String, String> read = null
+                (MvRes, Map<String, String>) -> Bool set = null
+                (MvRes) -> Bool del = null
+
+                public constructor((MvRes) -> Map<String, String> read,
+                                   (MvRes, Map<String, String>) -> Bool set,
+                                   (MvRes) -> Bool del) {
+                    this.read = read
+                    this.set = set
+                    this.del = del
+                }
+            }
+
+            main() {
+                var p = MvProvider(
+                    (r: MvRes) -> mapOf("seen", r.kind() + ":" + r.name()),
+                    (r: MvRes, props: Map<String, String>) -> props.get("seen") != null,
+                    (r: MvRes) -> true
+                )
+                var readFn: (MvRes) -> Map<String, String> = p.read
+                var setFn: (MvRes, Map<String, String>) -> Bool = p.set
+                var delFn: (MvRes) -> Bool = p.del
+                var m = readFn(MvRes("service", "web"))
+                println(m.get("seen"))
+                println(setFn(MvRes("service", "web"), m))
+                println(delFn(MvRes("service", "web")))
+            }
+            """, "service:web", "true", "true");
+    }
 }
