@@ -187,8 +187,9 @@ cmd_seed() {
 
 cmd_note() {
     [ -n "$mode" ] && [ -n "$decision_arg" ] && [ -n "$reason_arg" ] || { echo "note exige modo, --decision e --reason" >&2; exit 2; }
+    # `--decision dispatch` = o chamador VAI invocar o modelo (ex.: watcher de 1 issue)
     tel type decision source "$mode" session "$session" decision "$decision_arg" reason "$reason_arg" \
-        opencode_invoked @false
+        opencode_invoked "@$([ "$decision_arg" = dispatch ] && echo true || echo false)"
 }
 
 cmd_events() { [ -f "$D/events" ] && cat "$D/events"; return 0; }
