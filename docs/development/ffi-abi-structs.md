@@ -6,6 +6,9 @@
 D-POLL-19: "written spec first, review, then code").
 **Execution after approval:** compiler lane (tracker line 3.8) + native lane (3.7).
 This document is DESIGN ONLY — it changes no semantics and binds nothing.
+**Landed 20/09 (decision-free slice):** 3.8a `AbiLayout` — the layout/
+classification substrate, with golden measured on the three ABIs (§6.1). The
+binding (3.8b/3.7) and D6-1..D6-5 still wait for the maintainer.
 
 
 ## 1. What exists today (measured 19/09, not remembered)
@@ -52,7 +55,7 @@ trailing padding included; no `#pragma pack` in v1.
 |---|---|
 | x86-64 SysV | classify each *eightbyte*: INTEGER / SSE / SSEUP / NO_CLASS ≤ 8 fields total; ≤ 16 B of INTEGER-class → two int regs (`rdi…`), ≤ 16 B SSE → XMM; anything bigger → **memory** (stack), caller-allocated copy |
 | aarch64 AAPCS64 | HFA check (≤ 4 homogeneous float); otherwise ≤ 16 B → core regs `x0…` (by eightword class), > 16 B → stack; `w` register for the upper half when mixed |
-| riscv64 LP64 | fields ≤ 8 B packed into *doublewords* `a0…a7`; alignment may force a doubleword skip; struct > 2 doublewords or with unaligned-class → **reference** (pointer to caller copy), `Byref` class |
+| riscv64 LP64D | **MEASURED 20/09 (corrects the draft prose "packed into doublewords a0…a7"):** a struct ≤ 16 B with **≤ 2 fields** is *flattened* — floating fields to `fa0/fa1`, integer fields packed into `a0/a1` (`Time(Long,Double)`→`a0`+`fa0`; `{Float,Int}`→`fa0`+`a0`); with **3+ fields** it is packed into integer doublewords (`{Int,Int,Int}`→`a0,a1`); > 16 B → **reference** (pointer to caller copy), `Byref` class. The host `riscv64-linux-gnu-gcc` 13.3 is LP64D (hard-float), which is why the draft's soft-float packing did not match |
 
 Three worked examples the implementation tests must reproduce bit-exactly:
 
@@ -105,6 +108,10 @@ until decided — no silent partial binding.
 
 1. **3.8a** layout engine: `AbiLayout` (size/align/classes per triple) in
    compiler, pure data + golden tests vs the three worked examples (§3).
+   **✅ LANDED 20/09** — `AbiLayout.java` + `AbiLayoutTest` (14 shapes × 3 ABIs,
+   golden measured with GCC 13.3 on x86-64/aarch64/riscv64 and re-proved live
+   with `_Static_assert` against the real compilers). It binds nothing and
+   decides nothing of D6-1..D6-5; it is the shared substrate 3.8b/3.7 consume.
 2. **3.8b** JVM binding: records→`StructLayout` in `kof_ffi` (FFM does
    classification); D6-5 arena policy.
 3. **3.7** native asm: classification by hand per target (x86-64 now;

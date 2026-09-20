@@ -14,6 +14,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
 ### Em desenvolvimento
+  - **Fatia 3.8a da ABI de struct na FFI — `AbiLayout`, o engine de layout/classificação medido**
+    — engine puro (`kof-compiler` `AbiLayout`) que, dados os campos escalares de
+    um struct e uma ABI alvo (`SYSV_X86_64`/`AAPCS64`/`RISCV64`), devolve o
+    size/align/offsets C e as classes de registrador em que o valor é passado.
+    Não binda nada e não decide nada de D6-1..D6-5; é o substrato que 3.8b/3.7
+    vão consumir. O golden é medição real (GCC 13.3 em x86-64/aarch64/riscv64,
+    14 shapes × 3 ABIs) e é reprovado ao vivo com `_Static_assert` contra os três
+    compiladores (`AbiLayoutTest` 3/3). A medição corrigiu a prosa riscv da spec:
+    o LP64D faz *flatten* de struct ≤2 campos (FP→`fa0/fa1`, inteiros em
+    `a0/a1`), não empacota tudo em doublewords inteiros.
 
   - **makealive 3.1 MK-1 providers — fs, CLI e REST como corpos de usuario, goldens JVM==JS**
     (20/09, `.18`): tres formas de provedor executaveis sobre as interfaces sistemicas

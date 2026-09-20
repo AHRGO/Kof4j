@@ -15,6 +15,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
  ### In development
 
+  - **FFI struct ABI slice 3.8a — `AbiLayout`, the measured layout/classification engine**
+    — a pure engine (`kof-compiler` `AbiLayout`) that, given a struct's scalar
+    fields and a target ABI (`SYSV_X86_64`/`AAPCS64`/`RISCV64`), returns the C
+    size/align/offsets and the register classes the value is passed in. It binds
+    nothing and decides nothing of D6-1..D6-5; it is the substrate 3.8b/3.7 will
+    consume. The golden is real measurement (GCC 13.3 on x86-64/aarch64/riscv64,
+    14 shapes × 3 ABIs) and is re-proved live with `_Static_assert` against the
+    three compilers (`AbiLayoutTest` 3/3). The measurement corrected the spec's
+    riscv prose: LP64D flattens a ≤2-field struct (FP→`fa0/fa1`, integers packed
+    into `a0/a1`), it does not pack everything into integer doublewords.
+
   - **makealive 3.1 MK-1 providers — fs, CLI and REST as user bodies, goldens JVM==JS**
     (20/09, `.18`): three executable provider shapes on the generic system interfaces.
     `MakealiveFsProviderE2ETest` — world on disk via `kof.io` `File` (apply writes real
