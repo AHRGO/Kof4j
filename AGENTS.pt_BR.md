@@ -200,19 +200,48 @@ scripts/auto-loop.sh status           # confirmar que está ativo
   continuada do heartbeat.
 - O re-disparo chega como turno normal: vale a regra 6 (responder com tool
   call, não com "ok") e o contrato do `PRÓXIMO PASSO` no `DOING.md`.
-- **Watchers de issue (12/09, multi-issue 13/09):** `scripts/issue-watcher.sh start <issue|all> <min>
-  <sessão>` vigia comentários novos de uma issue (ou de **todas as abertas** com
-  `all` — snapshot `N=id` por issue) a cada N minutos e injeta um turno na
-  sessão viva (mesmo `--attach` obrigatório do heartbeat; `seen` só avança
-  após injeção bem sucedida; `server=` gravado no state fixa a porta p/ o tick
-  do cron). Em uso: **todas a cada 5min → sessão `ses_f69c2cb03ffe2zDYCqW7fesphi`
-  (porta 9094)** — o tick `all` **injeta a CADA tick** (com ou sem comentário
-  novo) com prompt de **varredura completa**: listar TODAS as abertas, ler
-  corpo+comentários, responder tecnicamente, **triar** (corrigir o que for da
-  lane / registrar gap-plano regra 6 / declarar não-procedente), **corrigir e
-  fechar com `gh issue close` + commit** (só com prova; frente de outra lane =
-  pedir review do dono, nunca tocar). Interagir com issue que
-  impacta o trabalho EM CURSO é parte do loop, não distração.
+- **Gate de despacho (20/09, Onda 1 do Agent Worker):** o polling pode continuar
+  frequente (`*/5`) porque custa **zero chamadas de modelo**; o modelo só é chamado
+  quando um gate determinístico (`scripts/agent-dispatch-gate.sh`) encontra mudança.
+  O tick do heartbeat compara um fingerprint do estado (HEAD, `DOING.md`,
+  `known-bugs.md`, listagem de `docs/development/`, árvore de trabalho, estado da CI
+  do HEAD) com o tirado **antes do último despacho** — assim um run produtivo (que
+  muda HEAD/`DOING.md`) continua no tick seguinte e um run ocioso deixa os próximos
+  ticks de graça. Falhas do agente têm backoff (1ª retenta no tick seguinte, 2ª espera
+  15 min, 3ª+ 30 min). `auto-loop.sh tick --dry-run` mostra a decisão; todo
+  dispatch/skip é registrado em `~/.local/state/kof-agent/dispatch.jsonl`;
+  `auto-loop.sh stats` / `issue-watcher.sh stats` reportam ticks × chamadas de modelo
+  evitadas (medido, sem custo de token inventado). **Rollout:** cron iniciado antes
+  desta mudança não tem `gate_mode` e roda em `shadow` (comportamento legado + registro
+  do que o gate faria); vire com `set-mode active`. `flock`, watchdog e o `--attach`
+  obrigatório não mudam.
+- **Watchers de issue (12/09, multi-issue 13/09, por eventos 20/09):**
+  `scripts/issue-watcher.sh start <issue|all> <min> <sessão>` vigia issues a cada N
+  minutos e injeta um turno na sessão viva (mesmo `--attach` obrigatório do heartbeat;
+  o snapshot só avança após injeção bem sucedida; `server=` gravado no state fixa a
+  porta p/ o tick do cron). Em uso: **todas a cada 5min → sessão
+  `ses_f69c2cb03ffe2zDYCqW7fesphi` (porta 9094)** — o tick `all` **injeta SÓ com
+  evento externo** detectado pelo gate: **issue nova (mesmo sem comentários)**,
+  **título/corpo editado** ou **comentário externo novo**. Comentário do próprio
+  `kof-agent-worker[bot]` nunca retriga; comentário humano (mantenedora inclusive)
+  sempre conta; falha de GitHub/API é retry, nunca "estável". O prompt é **focalizado
+  nos eventos listados** (lê-los primeiro, depois o `DOING.md`; ampliar só com relação
+  técnica comprovada) — a auditoria global é ação explícita e separada, não mais a
+  cada tick. Depois **triar** (corrigir o que for da lane / registrar gap-plano
+  regra 6 / declarar não-procedente); frente de outra lane = pedir review do dono,
+  nunca tocar. Interagir com issue que impacta o trabalho EM CURSO é parte do loop,
+  não distração.
+- **Fechar issue como corrigida (20/09):** o caminho oficial do worker é
+  `scripts/agent-close-issue.sh <issue> --run-id <id>`, que recusa a menos que o
+  manifesto de evidência (`scripts/agent-evidence.sh`: comandos reais, exit codes, SHA
+  testado; `NOT_RUN` nunca é `PASS`) seja válido para o SHA já pushado e o verifier
+  determinístico (`scripts/agent-verify.sh`) passe. O risco é classificado por
+  `scripts/agent-risk.sh`; **HIGH** (FFI/ABI, backends Native, nullability,
+  generics/erasure, concorrência, GC, cross-target, segurança, `DECISIONS.md`,
+  `AGENTS*.md`) exige além disso um veredito de verifier **independente**, em outra
+  sessão (sem ele o veredito é `NEEDS_MAINTAINER` — independência nunca é fingida).
+  LOW/MEDIUM não pagam um segundo modelo. Pedido de design / ambiguidade de contrato
+  nunca é fechado como "fixed" (regra 6).
 - **Duas sessões, dois crons (13/09, pedido da mantenedora):** 9093 =
   `ses_f69e2a3f7ffe9J10aWcHEUOfW8` (heartbeat auto-loop, `*/5`) e 9094 =
   `ses_f69c2cb03ffe2zDYCqW7fesphi` (watcher all, `*/5`). **Nunca cruzar:**
