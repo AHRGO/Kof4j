@@ -178,15 +178,22 @@ note "DELEGATED kofc    → EG-9 (gate próprio; ver scripts/ e CI kof-c)"
 note "DELEGATED android → EG-10 (gate próprio; CI android.yml roda o APK)"
 
 # ── veredito ───────────────────────────────────────────────────────────────
+# Linha de paridade machine-readable (consumida pelo gate 0.5.0 / §14):
+#   PARITY: 100%   → todos os alvos core batem o oráculo JVM
+#   PARITY: 0%     → há divergência (FAIL)
+#   PARITY: unknown→ não certificou (ferramenta de execução ausente)
 if [ -n "$FAILURES" ]; then
     echo "TARGET-MATRIX: FAIL — alvos fora do contrato:" >&2
     echo "$FAILURES" >&2
+    echo "PARITY: 0%"
     exit 1
 fi
 if [ -n "$SKIPS" ]; then
     echo "TARGET-MATRIX: INCOMPLETE — execucao ausente (nao certifica o RC):" >&2
     echo "$SKIPS" >&2
+    echo "PARITY: unknown"
     exit 2
 fi
+echo "PARITY: 100%"
 echo "TARGET-MATRIX: PASS — jvm/x86_64/riscv64/aarch64/js/script com paridade byte-a-byte (oraculo JVM); kofc=EG-9, android=EG-10"
 exit 0

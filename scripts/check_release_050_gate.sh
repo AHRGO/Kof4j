@@ -27,6 +27,9 @@
 #   R050_LOOSE_MD_FILE    file listing loose md basenames (default: ls)
 #   R050_PENDING_FILE     file whose first line is the pending-decision count
 #   R050_PARITY_FILE      file containing "PARITY: 100%" when parity holds
+#   R050_MATRIX_CMD       command that runs the per-target matrix (default
+#                         `bash scripts/target-matrix.sh`, §14/EG-5); set empty
+#                         to disable the auto-measure and stay NEEDS-MEASURE
 #
 # Usage: scripts/check_release_050_gate.sh [--selftest]
 set -uo pipefail
@@ -49,15 +52,26 @@ ALLOWLIST="DECISIONS.md DECISIONS.pt_BR.md README.md README.pt_BR.md roadmap.md 
 declare -A STATE DETAIL
 
 c_parity() {
-  if [ -n "$PARITY_FILE" ]; then
-    if grep -q "PARITY: 100%" "$PARITY_FILE" 2>/dev/null; then
-      STATE[parity]=GREEN; DETAIL[parity]="per-target matrix reports 100%"
-    else
-      STATE[parity]=RED; DETAIL[parity]="matrix reports a divergence — see $PARITY_FILE"
+  local report="$PARITY_FILE" provided=1
+  if [ -z "$report" ]; then
+    provided=0
+    # auto-mede: roda o harness da matriz (§14/EG-5) e le a linha PARITY.
+    # R050_MATRIX_CMD sobrescreve (vazio = desliga → NEEDS-MEASURE, uso offline).
+    local cmd="${R050_MATRIX_CMD-bash scripts/target-matrix.sh}"
+    if [ -z "$cmd" ] || [ ! -f scripts/target-matrix.sh ]; then
+      STATE[parity]=NEEDS-MEASURE
+      DETAIL[parity]="run the per-target matrix on the candidate (JVM/x86-64/riscv64/aarch64/JS/Script); divergence = bug or XXX00x gap"
+      return
     fi
+    report="$(mktemp)"
+    $cmd > "$report" 2>&1 || true
+  fi
+  if grep -q "PARITY: 100%" "$report" 2>/dev/null; then
+    STATE[parity]=GREEN; DETAIL[parity]="per-target matrix reports 100%"
+  elif [ "$provided" -eq 1 ] || grep -q "PARITY: 0%" "$report" 2>/dev/null; then
+    STATE[parity]=RED; DETAIL[parity]="matrix reports a divergence — see $report"
   else
-    STATE[parity]=NEEDS-MEASURE
-    DETAIL[parity]="run the per-target matrix on the candidate (JVM/x86-64/riscv64/aarch64/JS/Script); divergence = bug or XXX00x gap"
+    STATE[parity]=NEEDS-MEASURE; DETAIL[parity]="matrix could not certify (missing toolchain/qemu) — see $report"
   fi
 }
 
@@ -236,6 +250,7 @@ EOF
   printf 'EN open/partial (0):\nPT open/partial (0):\n' > "$T/kb"
   R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_LOOSE_MD_FILE="$T/loose" \
   R050_SPEC_GAPS_FILE="$T/spec" R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 \
+  R050_MATRIX_CMD=: \
     bash "$0" > "$T/out3"; rc=$?
   [ "$rc" -eq 2 ] || fail "inconclusive fixture should be exit 2, got $rc"
   grep -q 'NEEDS-MEASURE' "$T/out3" || fail "inconclusive run should surface NEEDS-MEASURE"

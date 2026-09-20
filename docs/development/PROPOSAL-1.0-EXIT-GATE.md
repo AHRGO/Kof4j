@@ -554,7 +554,9 @@ rows, each with its own gate. Measured PASS on 20/09 on the six core targets
 accepts equality; a coherent matrix PASSes; a divergent core target FAILs naming
 it; preflight without a JDK exits high) — registered in `run-agent-tests.sh`.
 The **RC-day run on the same candidate** remains what satisfies this checklist
-item; the harness only makes that run one command.
+item; the harness only makes that run one command. The **0.5.0 release gate**
+(`scripts/check_release_050_gate.sh`, condition 1) auto-runs this harness and
+reads its `PARITY: 100%` line, so parity is MEASURED, never by eye.
 
 ---
 

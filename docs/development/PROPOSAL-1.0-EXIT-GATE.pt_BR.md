@@ -557,6 +557,9 @@ RED-first offline para a suíte de agentes: `scripts/tests/target-matrix-test.sh
 PASSA; alvo core divergente FALHA nomeando-o; preflight sem JDK sai alto) —
 registrado no `run-agent-tests.sh`. A **rodada do dia do RC na mesma candidata**
 continua sendo o que satisfaz este item; o harness só torna essa rodada um comando.
+O **gate de release 0.5.0** (`scripts/check_release_050_gate.sh`, condição 1)
+auto-executa este harness e lê sua linha `PARITY: 100%`, então a paridade é
+MEDIDA, nunca a olho.
 
 ---
 
