@@ -433,7 +433,8 @@ public class NativeBackend implements Backend {
         // assinatura de NativeAssembler.assemble é 4). A -lm é INCONDICIONAL lá
         // (pow shim sempre presente — ver comentário do commit), então o arg é
         // morto: chamo com os 4 reais. pow segue linkando.
-        NativeAssembler.assemble(asmFile, binFile, usesDb, usesMysql, usesConcurrency, ffiLibs);
+        NativeAssembler.assemble(asmFile, binFile, usesDb || usesOrm, usesMysql,
+                usesConcurrency, ffiLibs);
     }
 
     // ---------------------------------------------------------------------
