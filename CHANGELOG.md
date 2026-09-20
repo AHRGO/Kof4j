@@ -101,6 +101,12 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     the call-site (R6, no silent breakage). Proved by
     `FieldAssignabilityPhantomE2ETest` 8/8 (RED baseline before the gate).
 
+  - **#551/§372 — the §368 field-store gate no longer swallows the erasure river (`b321fcb1`)**
+    — `5cd078c1` fired the new SEM012 BEFORE the erasure river (§355-357) could run on the array-element
+    stores of the `T[]` goldens, turning 5 previously-green cases red (3F+1E + 1F) and masking SEM098.
+    The makealive-3.1 collateral fix routes those stores through `TypeChecker` correctly; the docs lane
+    re-verified the whole battery on the clean tip: `GenericFieldArrayEraseE2ETest` 5/5 +
+    `MakealivePrimitivesE2ETest` 8/8 + `FieldAssignabilityPhantomE2ETest` 8/8.
 
   - **#443/§373 — bare `List`/`Set`/`Map` in a DECLARED position now resolves to the builtin collections (`d969bc3a`)**
     — `class Box { List items }` + `items = listOf(1,2)` compiled "clean" and died at class load with a phantom

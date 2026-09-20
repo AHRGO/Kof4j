@@ -89,6 +89,13 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     call-site (R6, sem quebra silenciosa). Provado por
     `FieldAssignabilityPhantomE2ETest` 8/8 (baseline RED pre-gate).
 
+  - **#551/§372 — o gate de escrita de campo do §368 nao engole mais o rio da erasure (`b321fcb1`)**
+    — `5cd078c1` disparava o SEM012 novo ANTES do rio de erasure (§355-357) nos stores de elemento de
+    array dos goldens `T[]`, virando 5 casos verdes (3F+1E + 1F) e mascarando o SEM098. O colateral da
+    pilha makealive-3.1 roteia esses stores corretamente pelo `TypeChecker`; a lane docs reverificou a
+    bateria inteira no tip limpo: `GenericFieldArrayEraseE2ETest` 5/5 + `MakealivePrimitivesE2ETest`
+    8/8 + `FieldAssignabilityPhantomE2ETest` 8/8.
+
   - **#443/§373 — `List`/`Set`/`Map` bare em posicao DECLARADA agora resolve para as colecoes builtin (`d969bc3a`)**
     — `class Box { List items }` + `items = listOf(1,2)` compilava "limpo" e morria no class load com descriptor
     fantasma `LList;` (`NoClassDefFoundError: List`): dois resolvedores para o mesmo nome declarado, so o caminho
