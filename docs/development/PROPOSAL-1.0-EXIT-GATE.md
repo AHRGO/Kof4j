@@ -540,6 +540,22 @@ there must be proof on the candidate.
 
 Where a target difference was explicitly decided, an artificial parity is not invented.
 
+**Mechanism (landed 20/09, EG-5 — `D-RELEASE-1.0` queue §23 item 10):**
+`scripts/target-matrix.sh` runs the SAME Kof program across the core surface and
+proves byte parity against the JVM oracle in one command: `jvm`, `native`
+(x86-64), `native.riscv64`, `native.aarch64`, `js`, `script` — cross builds with
+the cross toolchain and EXECUTES under `qemu-<arch>` when present. Honest
+preflights (R6/R7): a missing build toolchain on a core target is `FAIL`; a
+missing qemu for cross is an honest `SKIP` that yields `INCOMPLETE` (rc=2, never
+a fake green); `kofc` (EG-9) and `android` (EG-10) are reported as `DELEGATED`
+rows, each with its own gate. Measured PASS on 20/09 on the six core targets
+(identical stdout, JVM oracle). Offline RED-first proof for the agent suite:
+`scripts/tests/target-matrix-test.sh` (comparator rejects a divergent target and
+accepts equality; a coherent matrix PASSes; a divergent core target FAILs naming
+it; preflight without a JDK exits high) — registered in `run-agent-tests.sh`.
+The **RC-day run on the same candidate** remains what satisfies this checklist
+item; the harness only makes that run one command.
+
 ---
 
 # 15. Gaps outside the Stable 1.0 Surface

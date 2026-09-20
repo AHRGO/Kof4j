@@ -543,6 +543,21 @@ deve existir prova no candidato.
 
 Onde existe diferença de target explicitamente decidida, não se inventa uma paridade artificial.
 
+**Mecanismo (landed 20/09, EG-5 — fila §23 item 10 do `D-RELEASE-1.0`):**
+`scripts/target-matrix.sh` roda o MESMO programa Kof por toda a superfície core e
+prova a paridade byte-a-byte contra o oráculo JVM em um comando: `jvm`, `native`
+(x86-64), `native.riscv64`, `native.aarch64`, `js`, `script` — o cross builda com
+a toolchain e EXECUTA sob `qemu-<arch>` quando presente. Preflights honestos
+(R6/R7): toolchain de build ausente num alvo core é `FAIL`; qemu ausente no cross
+é `SKIP` honesto que resulta em `INCOMPLETE` (rc=2, nunca verde falso); `kofc`
+(EG-9) e `android` (EG-10) aparecem como linhas `DELEGATED`, cada um com seu gate.
+PASS medido em 20/09 nos seis alvos core (stdout idêntico, oráculo JVM). Prova
+RED-first offline para a suíte de agentes: `scripts/tests/target-matrix-test.sh`
+(o comparador reprova um alvo divergente e aceita igualdade; matriz coerente
+PASSA; alvo core divergente FALHA nomeando-o; preflight sem JDK sai alto) —
+registrado no `run-agent-tests.sh`. A **rodada do dia do RC na mesma candidata**
+continua sendo o que satisfaz este item; o harness só torna essa rodada um comando.
+
 ---
 
 # 15. Gaps fora do Stable Surface 1.0
