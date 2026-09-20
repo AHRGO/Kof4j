@@ -15,7 +15,7 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
-  - **Face JS de `process.spawn` landada (19/09, lane `.18`) + §355 corrigido na raiz**
+  - **Face JS de `process.spawn` landada (19/09, lane `.18`) + §360 corrigido na raiz**
     — as ops de handle (`readLine`/`write`/`exitCode`/`kill`/`alive`) baixavam para um
     `invokevirtual java/lang/Long.readLine` cru: a branch `isHandle` morava atras de um
     dispatcher que nunca roteia receiver `Long`, entao **nenhum alvo as executou jamais**
@@ -64,7 +64,6 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     o `<T>` do decode com SEM025 — a regra sempre existiu; faltava só a tabela). O
     dispatch por tipo segue no lowerer (`JsonDispatch`) — nenhuma semântica de
     linguagem mudou.
->>>>>>> 1b4c95f8 (feat(lsp): fechamento X10 — catalogo de assinaturas 32/32 com `json` na tabela (trava comportamental ao SEM025))
   - **Bundle 2.1.3 do `kof.workflow` COMPLETO (19/09, lane `.18`)** — retry +
     deadLetter (duas faces) + schedule + checkpoint (3a) + **supervisão (3b)**:
     `runSupervised(dag, nome, maxReinicios)` roda a DAG como workers one_for_one
