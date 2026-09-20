@@ -120,6 +120,15 @@ public final class BuiltinCallTyper {
                 // resolve por aridade+assignability).
                 TypeChecker.checkCtorArgTypes(sa, ctorClass.members(), mc.methodName(),
                         ctorArgTypes);
+            } else {
+                // §362/#545: face IMPLICITA sem aridade casada caia aqui em
+                // silencio — `P(1,2)` em `record P(Int x)` compilava "clean" e
+                // morria em NoSuchMethodError no JVM (Script imprimia phantom,
+                // JS nem Main.js emitia). MESMO diagnostico SEM023 do caminho
+                // `new` (SemExpressionTyper) — R6: nunca silencioso. Classe sem
+                // construtor declarado (default implicito) nao casa os guards do
+                // else e continua legal (`Z()` com `class Z {}` e o contrato).
+                reportNoCtorArity(sa, ctorClass, mc);
             }
             return new Type.ClassType(ctorClass.packageName(), ctorClass.name(), List.of());
         }
@@ -538,6 +547,10 @@ public final class BuiltinCallTyper {
                 // inventava <init>(String)V e o load estourava VerifyError.
                 TypeChecker.checkCtorArgTypes(sa, ctorClass.members(), mc.methodName(),
                         ctorArgTypes);
+            } else {
+                // §362/#545: mesmo gate do site de typper acima (face implicita
+                // `Class(args)` sem `new`), fase/visitor irmão.
+                reportNoCtorArity(sa, ctorClass, mc);
             }
             return new Type.ClassType(ctorClass.packageName(), ctorClass.name(), List.of());
         }
@@ -572,5 +585,28 @@ public final class BuiltinCallTyper {
             }
         }
         return Type.UnknownType.UNKNOWN;
+    }
+
+    // §362/#545: o call-site implicito `Class(args)` sem aridade casada —
+    // MESMO SEM023 (e MESMAS excecoes) do caminho `new` em SemExpressionTyper:
+    // so reclama quando EXISTE construtor declarado (a aridade chamada e que
+    // nao casa); `class Z {}` + `Z()` (default implicito) fica legal.
+    static void reportNoCtorArity(SemanticAnalyzer sa, SymbolTable.ClassSymbol ctorClass,
+            MethodCallExpr mc) {
+        if (sa.diagnostics() == null) return;
+        SymbolTable.Symbol anyInit = ctorClass.members().resolve("<init>");
+        if (anyInit instanceof SymbolTable.ConstructorSymbol c) {
+            sa.diagnostics().error("", 0, 0, 0,
+                    "no constructor of '" + mc.methodName() + "' with "
+                            + mc.arguments().size() + " argument(s) (expected "
+                            + c.parameterTypes().size() + ")",
+                    "SEM023");
+        } else if (anyInit instanceof SymbolTable.ConstructorSet set
+                && !set.constructors().isEmpty()) {
+            sa.diagnostics().error("", 0, 0, 0,
+                    "no constructor of '" + mc.methodName() + "' with "
+                            + mc.arguments().size() + " argument(s)",
+                    "SEM023");
+        }
     }
 }
