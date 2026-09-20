@@ -11037,3 +11037,13 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Fix shape (decisão da lane do parser):** no fail de expectId dentro do loop de campos, ou consome 1 token (panic recovery clássico) ou sai do loop com PARSE024 uma vez (o caminho `expect(RBRACE)` já reporta); um progress-guard no loop (iteração precisa consumir >=1 token) deixaria qualquer edição futura de entity segura.
 - **Relacionado:** família §147/§149 (riscos de loop de parse achados por sondas, não por usuários), D-KOF-FIRST (repro é um .kf).
 
+
+## §382 — ponte kof.io no JS: `writeText/appendText/delete/writeBytes/appendBytes` devolvem o NÚMERO `0/-1` — em JS `0` é FALSY, então uma escrita BEM-SUCEDIDA reporta `false` (JVM reporta o `true` tipado) — INVERSÃO semântica entre motores
+
+- **Estado:** 🔴 ABERTO 20/09 — achado ao pousar o golden fs-provider da MK-1 (`MakealiveFsProviderE2ETest`, que já embarca o WORKAROUND via exists() abaixo); roteado à lane da ponte JS (`KofJsRunner.java:456-471` + `js/JsRuntimeIo.java:150-176` são arquivos deles; regras 2/6).
+- **Medido (20/09, mesmo programa, diretórios separados por motor):** JVM `File.writeText("...")` -> `true`; JS `... -> false` com o ARQUIVO NO DISCO. Forma da causa: `writeFileText` devolve `0` (sucesso) / `-1` (IOException) e o `kofIoWriteText` devolve o número cru; o contrato do método em kof é `Bool`. Em JS `0` é falsy -> todo sucesso vira false. `exists/fileExists` devolve `1/0` (sucesso truthy) — por isso o mesmo idioma ACERTA lá.
+- **Superfície (mesmo shape `return 0/-1`):** `writeFile`, `writeText`, `appendText`, `writeBytes`, `appendBytes`, `delete`, `dirCreate`, `dirCreateDirs`, `dirDelete`, `dbExecute` (o último alimenta os writes do orm — a face db da 3.1 só escapou porque `orm.save` nunca expôs o booleano).
+- **Workaround (em uso, preservando semântica):** nunca devolver a chamada da ponte direto — executar o efeito e TESTAR O MUNDO (`writeText(...)` e `return f.exists()`; `delete()` e `return !f.exists()`). Golden: `MakealiveFsProviderE2ETest` (provider fs com arquivos reais, JVM==JS byte).
+- **Fix shape (lane da ponte):** `return kof_platform.writeText(p, c) === 0;` nos emissores do `JsRuntimeIo` (ou o runner devolver booleans de verdade — mas o runner é compartilhado com node, manter o protocolo numero lá e converter no emitter).
+- **Relacionado:** família §355/§376 (compila-verde/morre-vermelho é a mesma classe: a ponte JS re-tipando em silêncio); repro D-KOF-FIRST = o próprio E2E.
+

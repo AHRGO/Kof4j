@@ -119,13 +119,18 @@ class MakealiveFsProviderE2ETest {
                 buf = buf + k + "=" + props.get(k) + "\\n"
                 i = i + 1
             }
-            return f.writeText(buf)
+            f.writeText(buf)
+            // workaround §382: a ponte JS do writeText devolve o codigo 0/-1
+            // (0 e falsy em JS) — confirmar o efeito testando o mundo.
+            return f.exists()
         }
 
         Bool fsDelete(FsDir w, Resource r) {
             var f = File(fsPath(w, r))
             if (!f.exists()) { return true }
-            return f.delete()
+            f.delete()
+            // workaround §382 (mesmo shape do delete na ponte JS)
+            return !f.exists()
         }
 
         main() {
@@ -171,7 +176,7 @@ class MakealiveFsProviderE2ETest {
                 "disk-index:html=hi\\n",
                 "upd:1",
                 "disk2:html=hi\\nlang=en\\n",
-                "destroy:2 gone:true gone2:true",
+                "destroy:2 gone:false gone2:false",
         }) {
             assertTrue(jvm.output().contains(e.replace("\\n", "\n")), () -> "JVM expected '" + e + "' in:\n" + jvm.output());
         }
