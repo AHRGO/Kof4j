@@ -15,9 +15,6 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
-<<<<<<< Updated upstream
-  - **Face JS de `process.spawn` landada (19/09, lane `.18`) + §360 corrigido na raiz**
-=======
   - **`shell.pipeline` REAL no JS (20/09, lane `.18`)** — fecha o último residual
     de pipes vivos da linha 2.2. Cadeia ProcessBuilder + threads de pump em
     `KofJsProcessBridge.processPipeline`, contrato espelhado do `kof_shell_pipeline`
@@ -28,8 +25,7 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     de 3 estágios multi-pump (`echo|tr|wc`→2). Linha 2.2 do tracker universal vira ✅;
     Native mantém o `PROC001` herdado (espera o `process.run`/spawn em asm).
 
-  - **Face JS de `process.spawn` landada (19/09, lane `.18`) + §355 corrigido na raiz**
->>>>>>> Stashed changes
+  - **Face JS de `process.spawn` landada (19/09, lane `.18`) + §360 corrigido na raiz**
     — as ops de handle (`readLine`/`write`/`exitCode`/`kill`/`alive`) baixavam para um
     `invokevirtual java/lang/Long.readLine` cru: a branch `isHandle` morava atras de um
     dispatcher que nunca roteia receiver `Long`, entao **nenhum alvo as executou jamais**

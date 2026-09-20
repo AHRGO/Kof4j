@@ -280,4 +280,66 @@ class MakealivePrimitivesE2ETest {
             }
             """, "service:web", "true", "true");
     }
+
+    /** 3.1.0 probe (2): the full host grammar the `makealive-host.kf` will use
+     *  — method returning own class via `return this` (builder fluent), state
+     *  port with `List<String>`/record/Map function fields (re-confirming the
+     *  probe-1 measurement: invoke on a function field needs a typed local),
+     *  and `Map<String, Map<String,String>>` nested in a `mapOf` literal as
+     *  LOCAL + function-typed PARAM. JVM==JS byte parity; Native compiles. */
+    @Test
+    void hostGrammarBuilderAndStatePortRun() throws Exception {
+        assertRunsJvmJsNativeCompiles("MAHostGrammar", """
+            record HgRes(String kind, String name)
+
+            Bool hgTemNome(List<HgRes> xs, String nome) {
+                var i = 0
+                while (i < xs.size()) {
+                    if (xs.get(i).name() == nome) { return true }
+                    i = i + 1
+                }
+                return false
+            }
+
+            class HgDesign {
+                List<HgRes> declared = listOf()
+                HgDesign resource(String kind, String name) {
+                    declared.add(HgRes(kind, name))
+                    return this
+                }
+            }
+
+            class HgState {
+                () -> List<String> names = null
+                (String) -> Map<String, String> props = null
+                (String, Map<String, String>) -> Bool put = null
+            }
+
+            HgState hgStateFrom(Map<String, Map<String, String>> data, List<String> order) {
+                var s = HgState()
+                s.names = () -> order
+                s.props = (n: String) -> data.get(n)
+                s.put = (n: String, p: Map<String, String>) -> true
+                return s
+            }
+
+            main() {
+                var d = HgDesign()
+                d.resource("bucket", "media")
+                d.resource("db", "main")
+                println(d.declared.size())
+                var data = mapOf("media", mapOf("acl", "private"))
+                var st = hgStateFrom(data, listOf("media"))
+                var namesFn: () -> List<String> = st.names
+                var propsFn: (String) -> Map<String, String> = st.props
+                var putFn: (String, Map<String, String>) -> Bool = st.put
+                var nm = namesFn()
+                println(nm.get(0))
+                var pr = propsFn("media")
+                println(pr.get("acl"))
+                println(putFn("main", mapOf("engine", "pg")))
+                println(hgTemNome(d.declared, "db"))
+            }
+            """, "2", "media", "private", "true", "true");
+    }
 }
