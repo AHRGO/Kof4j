@@ -494,6 +494,15 @@ If not, it must be explicitly outside the 1.0 surface.
 Surface and needs its own gate.** The site's "Disponível" is now consistent
 with the contract.
 
+**Gate mechanism (landed 20/09, EG-9):** `scripts/test-kofc-gate.sh` — it
+preflights the native toolchain (`as` + `ld`/`gcc`) and a JDK ≥ 25 (missing =
+loud failure naming the tool, never a silent skip), compiles **and executes**
+the supported corpus (5 cases, real ELF run with stdout asserted) and rejects
+malformed input without emitting a binary (the #485 class — R6/Q7). The verdict
+is bound to the SHA (`KOFC-GATE: PASS sha=…`). RED-first offline proof:
+`scripts/tests/test-kofc-gate-test.sh` (5 scenarios, registered in
+`run-agent-tests.sh`). Measured PASS on `8fa39ff9`.
+
 ## Android
 
 The repository has Android under evolution and recent decisions say, on specific faces, that "Android is JVM" and that it must share behavior where that parity was decided (verified: `docs/development/DECISIONS.md`, record of the DB faces; Android also appears in `docs/distribution/INSTALL.md`).

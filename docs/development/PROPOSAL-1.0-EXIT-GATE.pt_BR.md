@@ -497,6 +497,15 @@ Se não, precisa ficar explicitamente fora do surface 1.0.
 1.0 e precisa de gate próprio.** O "Disponível" do site agora fica consistente
 com o contrato.
 
+**Mecanismo do gate (pousado 20/09, EG-9):** `scripts/test-kofc-gate.sh` — faz
+o preflight do toolchain nativo (`as` + `ld`/`gcc`) e de um JDK ≥ 25 (ausência =
+falha alta nomeando a ferramenta, nunca skip silencioso), compila **e executa**
+o corpus suportado (5 casos, ELF real rodado com stdout afirmado) e rejeita
+entrada malformada sem emitir binário (a classe do #485 — R6/Q7). O veredito é
+amarrado ao SHA (`KOFC-GATE: PASS sha=…`). Prova RED-first offline:
+`scripts/tests/test-kofc-gate-test.sh` (5 cenários, registrado em
+`run-agent-tests.sh`). PASS medido em `8fa39ff9`.
+
 ## Android
 
 O repositório possui Android em evolução e decisões recentes dizem, em faces específicas, que "Android é JVM" e deve compartilhar comportamento onde essa paridade foi decidida (verificado: `docs/development/DECISIONS.md`, registro das faces DB; Android também aparece em `docs/distribution/INSTALL.md`).
