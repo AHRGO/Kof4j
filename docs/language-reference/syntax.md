@@ -194,9 +194,14 @@ The Kof function name IS the C symbol (no alias). Non-scalar types (struct/array
 pointer/callback) → `FFI001` at compile time; the JS **host runner** (GraalJS/node) binds the
 same scalar ABI through `KofJsFfiBridge` — JVM↔JS parity proven 18/09 (`FfiE2ETest` 16/16,
 slice 3.6.F2/F3 ✅) — with non-scalars → `FFI002` there and the browser an honest **runtime**
-error (R7, no host, same degrade as `kof.io`); Native → `FFI001` until §61.
-The lib path is resolved at **runtime** (missing symbol = `kof_ffi_*` exception).
-History: widening was the R3 slice (#431); the JVM face landed 18/09 (`.18`) — JS/Native remain honest gaps.
+error (R7, no host, same degrade as `kof.io`); **Native binds the same scalar ABI DIRECT on
+x86-64, riscv64 and aarch64** (#431 slices 1–2, 20/09, §369): the `library()` is a link-by-use
+linker input and the call is `call sym@PLT` — no `dlopen` (§61 closed). Non-scalar or a missing
+`library()` → `FFI001` at the declaration line on Native (R6). A `Float` slot needs an explicit
+`as Float` argument today (§370/#549 open: a bare `Double`/`Int` literal there is not yet diagnosed).
+The lib path is resolved at **runtime** on JVM/JS (missing symbol = `kof_ffi_*` exception).
+History: widening was the R3 slice (#431); the JVM face landed 18/09 (`.18`), JS host the same day,
+Native x86-64 + riscv64/aarch64 on 20/09.
 
 ## Tests and lifecycle
 

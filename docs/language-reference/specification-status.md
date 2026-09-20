@@ -102,7 +102,7 @@ Target-specific · Unspecified · Planned**.
 | Ambiguous import (does not guess) | Stable | `CompilerTypes:102` |
 | PKG002 (1 main) | Stable | probe |
 | JVM interop (Java types) | **Target-specific** | `AndroidInteropE2ETest` |
-| C FFI (`extern "<lib>"`) | **Partial** — JVM any scalar signature, free arity, `void`/`String` returns (18/09, `.18`); non-scalar = `FFI001`; JS host runner = SAME scalar ABI (3.6.F2/F3 ✅ 18/09, `FfiE2ETest` 16/16 JVM↔JS byte-for-byte), non-scalar = `FFI002`, browser = runtime R7; Native = `FFI001` §61 (R6, never silent) | measured 18/09 (`modules.md` §6; fmod/ldexp/strncmp/puts/getenv verbatims in `syntax.md`) (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, #431) |
+| C FFI (`extern "<lib>"`) | **Partial** — JVM any scalar signature, free arity, `void`/`String` returns (18/09, `.18`); non-scalar = `FFI001`; JS host runner = SAME scalar ABI (3.6.F2/F3 ✅ 18/09, `FfiE2ETest` 16/16 JVM↔JS byte-for-byte), non-scalar = `FFI002`, browser = runtime R7; **Native = scalar ABI DIRECT on x86-64/riscv64/aarch64** (#431 slices 1–2 ✅ 20/09, §369: link-by-use + `call sym@PLT`, no `dlopen`; `FfiNativeE2ETest` 16/16 + `FfiNativeCrossE2ETest` 6/6 qemu), non-scalar/callback/missing `library()` = `FFI001` (R6, never silent); `Float` slot without `as Float` = §370/#549 open | measured 18/09 (`modules.md` §6; fmod/ldexp/strncmp/puts/getenv verbatims in `syntax.md`) (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, #431) |
 
 ### Concurrency
 | Feature | Status | Test evidence |

@@ -15,14 +15,14 @@ nada.
 (`FfiSignature.java`): `i`=Int, `j`=Long, `f`=Float, `d`=Double, `b`=Boolean,
 `S`=String (`char*`), `v`=retorno void; parâmetro callback é o token aninhado
 `(<ret><params>)`. O que o mapa não cobre é **gap honesto em tempo de
-compilação**: `FFI001` (JVM/Native não bound) / `FFI002` (JS) —
+compilação**: `FFI001` (JVM/Native não bindável) / `FFI002` (JS) —
 `CompilerPipeline.java:225-236`, R6 (nunca stub silencioso).
 
 | Superfície | JVM | Native | JS |
 |---|---|---|---|
-| downcall/upcall escalar | ✅ `kof_ffi` FFM (`JvmFfiRuntime.java:142+`) | ❌ `FFI001` (linha 3.7) | ✅ bridge do host `KofJsFfiBridge` (browser degrada honesto, R7) |
-| callbacks (3.4) | ✅ `Linker.upcallStub` | ❌ | ✅ host |
-| String = `char*` | ✅ entrada + saída | — | ✅ |
+| downcall escalar | ✅ `kof_ffi` FFM (`JvmFfiRuntime.java:142+`) | ✅ **`call sym@PLT` direto em x86-64/riscv64/aarch64** (#431 fatias 1–2, 20/09, §369 — link-by-use, sem `dlopen`) | ✅ bridge do host `KofJsFfiBridge` (browser degrada honesto, R7) |
+| callbacks/upcalls (3.4) | ✅ `Linker.upcallStub` | ❌ `FFI001` (sem mecanismo) | ✅ host |
+| String = `char*` | ✅ entrada + saída | ✅ entrada (payload off 24) + saída (cópia na fronteira) | ✅ |
 | **struct / array / out-buffer / opaco** | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
 
 Mapeamento escalar JVM→FFM (medido): `i→JAVA_INT, j→JAVA_LONG, f→JAVA_FLOAT,

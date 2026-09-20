@@ -14,14 +14,14 @@ This document is DESIGN ONLY — it changes no semantics and binds nothing.
 (`FfiSignature.java`): `i`=Int, `j`=Long, `f`=Float, `d`=Double, `b`=Boolean,
 `S`=String (`char*`), `v`=void return; a callback param is the nested token
 `(<ret><params>)`. Anything the map does not cover is a **compile-time honest
-gap**: `FFI001` (JVM/Native not bound) / `FFI002` (JS) —
+gap**: `FFI001` (JVM/Native not bindable) / `FFI002` (JS) —
 `CompilerPipeline.java:225-236`, R6 (never a silent stub).
 
 | Surface | JVM | Native | JS |
 |---|---|---|---|
-| scalar downcall/upcall | ✅ `kof_ffi` FFM (`JvmFfiRuntime.java:142+`) | ❌ `FFI001` (line 3.7) | ✅ host bridge `KofJsFfiBridge` (browser degrades honestly, R7) |
-| callbacks (3.4) | ✅ `Linker.upcallStub` | ❌ | ✅ host |
-| String = `char*` | ✅ in + out | — | ✅ |
+| scalar downcall | ✅ `kof_ffi` FFM (`JvmFfiRuntime.java:142+`) | ✅ **direct `call sym@PLT` on x86-64/riscv64/aarch64** (#431 slices 1–2, 20/09, §369 — link-by-use, no `dlopen`) | ✅ host bridge `KofJsFfiBridge` (browser degrades honestly, R7) |
+| callbacks/upcalls (3.4) | ✅ `Linker.upcallStub` | ❌ `FFI001` (no mechanism) | ✅ host |
+| String = `char*` | ✅ in + out | ✅ in (payload off 24) + out (boundary copy) | ✅ |
 | **struct / array / out-buffer / opaque** | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
 
 JVM scalar→FFM mapping (measured): `i→JAVA_INT, j→JAVA_LONG, f→JAVA_FLOAT,
