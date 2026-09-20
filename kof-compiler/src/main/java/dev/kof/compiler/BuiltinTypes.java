@@ -153,6 +153,38 @@ public final class BuiltinTypes {
 
 
     /**
+     * §373 (issue #443, "§297 do corpo da issue"): tipo builtin para nome
+     * NÚ (sem type-args) de coleção/concorrência em posição DECLARADA — campo,
+     * parâmetro, retorno, var. O pin do {@code toType} (#139/#150/#214/§243)
+     * cobria só o caminho IR do {@code lowerField}; o caminho do SÍMBOLO
+     * ({@code SymbolTableBuilder.defineClassMembers →
+     * MemberResolver.resolveType → Type.of → qualifyDeep passo 2b}) nunca o
+     * via, e o tipo do FieldSymbol ficava {@code ClassType("", "List")} —
+     * divergindo do IRField ({@code kof/List}), o que produzia Fieldrefs com
+     * descritor fantasma ({@code Field Box.items:LList;}, receiver
+     * {@code List.size}) e {@code ClassNotFoundException: List} no LOAD da
+     * classe (a resolução de Fieldref carrega o tipo do descritor ANTES de
+     * comparar nome). Espelha o MESMO conjunto de pins do {@code toType}
+     * (inclui o apelido {@code LinkedList}); o shadowing do usuário (§243,
+     * DECISIONS §4) é preservado pelo guard do caller (qualifyDeep 2b:
+     * {@code !unitDeclaresType && sa.getClass == null}). Retorna null caso
+     * contrário.
+     */
+    public static Type declaredCollectionType(String name) {
+        if ("LinkedList".equals(name)) return LIST;
+        String base = baseTypeName(name);
+        if (base == null) return null;
+        return switch (base) {
+            case "List" -> LIST;
+            case "Set" -> SET;
+            case "Map" -> MAP;
+            case "Channel" -> CHANNEL;
+            default -> null;
+        };
+    }
+
+
+    /**
      * §249: nome simples (sem type-args) de um tipo builtin de coleção/
      * concorrência — `List`, `Map`, `Set`, `Channel`, `Handle` e os apelidos
      * `ArrayList`/`HashMap`/`HashSet`. O {@code Type.of} só mapeia esses nomes
