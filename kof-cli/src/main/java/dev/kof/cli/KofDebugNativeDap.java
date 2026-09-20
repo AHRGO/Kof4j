@@ -20,18 +20,28 @@ import java.util.Map;
 final class KofDebugNativeDap {
 
     private final Path sourceFile;
+    private final Integer attachPid;
     private final OutputStream out = System.out;
     private KofGdbMi mi;
     private Path buildDir;
     private int nextSeq = 1;
     private final Map<Integer, Integer> frameLevel = new LinkedHashMap<>();
 
-    KofDebugNativeDap(Path sourceFile) {
+    KofDebugNativeDap(Path sourceFile, Integer attachPid) {
         this.sourceFile = sourceFile;
+        this.attachPid = attachPid;
     }
 
     void run() throws Exception {
         buildDir = null;
+        if (attachPid != null) {
+            // X7-5: o alvo NATIVO ja esta vivo — gdb -p ANTES de qualquer pedido
+            // (mesma semantica da sessao JVM); launch/configurationDone viram no-op honesto.
+            String gdb = System.getenv("KOF_GDB");
+            mi = KofGdbMi.attach(gdb == null || gdb.isEmpty() ? "gdb" : gdb,
+                    sourceFile.toAbsolutePath().getParent(), attachPid);
+            mi.setEventHandler(this::onMiEvent);
+        }
         InputStream in = System.in;
         while (true) {
             int contentLength = -1;
@@ -73,16 +83,25 @@ final class KofDebugNativeDap {
                     "supportsConfigurationDoneRequest", true,
                     "supportsTerminateRequest", true));
             case "launch" -> {
-                KofDebug.NativeBuild built = KofDebug.buildNativeElf(sourceFile);
-                if (built == null) {
-                    fail(seq, command, "native build failed (toolchain or source error — see stderr)");
+                if (attachPid != null) {
+                    respond(seq, command, Map.of());
                     return;
                 }
-                buildDir = built.dir();
                 String gdb = System.getenv("KOF_GDB");
                 String gdbExe = gdb == null || gdb.isEmpty() ? "gdb" : gdb;
                 try {
-                    mi = new KofGdbMi(gdbExe, sourceFile.toAbsolutePath().getParent(), built.bin());
+                    if (attachPid != null) {
+                        // X7-5: gdb -p PID no processo NATIVO vivo — sem build, sem launch.
+                        mi = KofGdbMi.attach(gdbExe, sourceFile.toAbsolutePath().getParent(), attachPid);
+                    } else {
+                        KofDebug.NativeBuild built = KofDebug.buildNativeElf(sourceFile);
+                        if (built == null) {
+                            fail(seq, command, "native build failed (toolchain or source error — see stderr)");
+                            return;
+                        }
+                        buildDir = built.dir();
+                        mi = new KofGdbMi(gdbExe, sourceFile.toAbsolutePath().getParent(), built.bin());
+                    }
                 } catch (IOException spawnFail) {
                     mi = null;
                     KofCliSupport.cleanup(buildDir);
@@ -114,7 +133,7 @@ final class KofDebugNativeDap {
                 respond(seq, command, Map.of("breakpoints", result));
             }
             case "configurationDone" -> {
-                if (mi != null) {
+                if (mi != null && attachPid == null) {
                     mi.send("-exec-run --all");
                 }
                 respond(seq, command, Map.of());

@@ -2,7 +2,7 @@
 
 # DEBUG-ADAPTER.md — kof-debug (Debug Adapter DAP)
 
-**Status:** JVM (JDWP cru, sem jdk.jdi) + NATIVE (console gdb + DAP↔GDB/MI, X7-3/X7-4) implementados e validados — `kof debug --dap --target native` faz a ponte DAP↔gdb/MI2 real (`KofGdbMi` + `KofDebugNativeDap`); `stackTrace`/breakpoints sempre mostram o `.kf`; sem gdb = erro DAP honesto nomeando a ferramenta (R6); JS = recusa honesta (o alvo roda no engine EMBUTIDO — não há node/inspector para anexar)
+**Status:** JVM (JDWP cru, sem jdk.jdi) + NATIVE (console gdb + DAP↔GDB/MI, X7-3/X7-4) implementados e validados — `kof debug --dap --target native` faz a ponte DAP↔gdb/MI2 real (`KofGdbMi` + `KofDebugNativeDap`); `stackTrace`/breakpoints sempre mostram o `.kf`; sem gdb = erro DAP honesto nomeando a ferramenta (R6); JS = recusa honesta (o alvo roda no engine EMBUTIDO — não há node/inspector para anexar). **20/09 (X7-5):** o attach é REAL no JVM (`--dap --attach <pid>`, JDWP cru numa VM viva) e no Native (`--dap --attach <pid>`, gdb `-p`); o cliente JVM foi reconstruído contra o wire do JDK 25 (`known-bugs.md §376`) e as conversas completas de launch/attach agora têm testes E2E (`KofDebugJvmTest`, `KofDebugAttachTest`)
 **Data:** 27 de agosto de 2026 (atualizada 20/09 com as faces Native)
 **Versão:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
 
@@ -19,7 +19,7 @@ Não criar protocolo proprietário.
 ## 2. Responsabilidades
 
 - iniciar programas (`launch`);
-- anexar a processos (`attach` — futuro);
+- anexar a processos (`attach` — ✅ 20/09: JVM `--dap --attach <pid>` e Native `--dap --attach <pid>`; JS = gap honesto);
 - controle de execução: continue, pause, step over/into/out, restart, terminate;
 - breakpoints (source; depois conditional, hit count, exception);
 - stack traces, scopes, locals, arguments, campos;
@@ -104,22 +104,39 @@ resposta síncrona (elas só aparecem como timeouts de 5s).
   entrada (ordem long/line, não line/codeIndex);
 - `ReferenceType.Methods` retorna `methodID + name + signature +
   modifiers` (4 campos);
-- `ThreadReference.Frames` é o command set **11** (o 10 é StackFrame) e
-  o HotSpot rejeita `length > 5` com `INVALID_LENGTH` (504);
+- `ThreadReference` é o command set **11** (`Frames`=6, `FrameCount`=7);
+  `StackFrame` é o **16** (`GetValues`=1); `StringReference` é o **10**
+  (`Value`=1) (medido contra `jdk.jdi/.../JDWP.java` do `src.zip` da própria JDK);
+- o HotSpot rejeita `maxFrames` MAIOR QUE O TAMANHO REAL do stack em
+  `ThreadReference.Frames` com `INVALID_LENGTH` (504) — pergunte o
+  `FrameCount` primeiro e corte (não existe limite de "5 frames");
 - o handler de eventos roda fora do event loop (dispatch em thread) —
   comandos JDWP emitidos pelo handler precisam do loop para receber
   replies (sem isso: deadlock de timeout);
-- eventos `Composite` têm `suspendPolicy + eventCount` antes dos kinds.
+- eventos `Composite` têm `suspendPolicy + eventCount` antes dos kinds, e
+  cada evento é **`[kind (byte)][requestID (int)]`** — kind PRIMEIRO
+  (JDWP.java 7827; ler o requestID antes desloca o corpo inteiro);
+- `IDSizes` responde **5 tamanhos, não 6** no JDK 25+ (`argIDSize` saiu);
+  ler o 6º int rouba 4 bytes do próximo pacote e dessincroniza o stream
+  inteiro desde o handshake (medido byte a byte, §376);
+- `VM.ClassesBySignature (1,2)` está QUEBRADO no JDK 25.0.4 (responde
+  `count=0` + lixo e trava o comando seguinte; o `jdb` nunca o usa) —
+  resolva classes via `VM.Classes (1,3)` ([tag][ref][signature][status]);
+- `Method.VariableTable (6,2)` responde `{argWords, slotCount,
+  slots[start(long), name, sig, length, slot]}` — NÃO há lista de
+  argumentos; chamá-lo num frame nativo devolve `NATIVE_METHOD` (511) —
+  trate isso, nunca engula os outros.
 
-## 3.3 Limitações do MVP
+## 3.3 Limites atuais (pós-X7-5)
 
-- `stackTrace` retorna até 5 frames (limite do JDK 25) e o frame atual
-  mostra a função/linha Kof;
-- `scopes`/`variables` são placeholders (locals por frame ficam na
-  Fase 7, via `StackFrame.GetValues`);
-- breakpoints são reportados como `verified: false` (a verificação
-  efetiva via LineTable fica na Fase 7);
-- sem stepping, pause, attach, exception breakpoints nem avaliação.
+- `stackTrace` retorna a profundidade pedida (cortada pelo `FrameCount`)
+  com nome do método e linha Kof reais por frame;
+- `scopes`/`variables` retornam **locals reais por frame** (VariableTable +
+  `StackFrame.GetValues`, formatados pelo tipo Kof);
+- `verified: false` só até a classe carregar — no `ClassPrepare` o
+  breakpoint é posicionado via LineTable e os hits disparam `stopped`;
+- o que falta: stepping, pause, exception breakpoints e avaliação
+  (Fase 7); JS continua gap honesto (engine embutido, sem inspector).
 
 ## 4. Tipos de runtime
 
@@ -139,7 +156,9 @@ O usuário sempre vê o tipo Kof.
 - Fase 7: locals por frame (`StackFrame.GetValues`), stepping, breakpoints
   verificados, exception breakpoints, avaliação com o type system
 - ✅ 20/09: Native (DWARF) — console + DAP<->GDB/MI (X7-3/X7-4)
-- Depois: attach; JS fica gap honesto (engine embutido, sem inspector)
+- ✅ 20/09 (X7-5): attach no JVM + Native; locals por frame e stack
+  multi-frame vieram junto (antes da Fase 7); JS fica gap honesto
+  (engine embutido, sem inspector)
 - ✅ locals no DWARF: DW_TAG_variable + DW_OP_fbreg + DW_AT_type nos 3
   arquétipos nativos (já existiam desde o trabalho da fatia-2; RE-MEDIDO
   20/09 com objdump depois que esta doc afirmou o contrário por um turno —

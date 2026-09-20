@@ -44,14 +44,36 @@ final class KofGdbMi {
     private volatile Runnable onExit;
 
     KofGdbMi(String gdbExe, Path sourceDir, Path bin) throws IOException {
-        ProcessBuilder pb = new ProcessBuilder(gdbExe, "-q", "-nx",
+        this(spawn(gdbExe, sourceDir, bin));
+    }
+
+    /** X7-5: anexa ao PID vivo (`gdb -p`) — sem ELF próprio; o DWARF vem do exe em execucao. */
+    static KofGdbMi attach(String gdbExe, Path sourceDir, int pid) throws IOException {
+        return new KofGdbMi(spawn(gdbExe, sourceDir, null, pid));
+    }
+
+    private static Process spawn(String gdbExe, Path sourceDir, Path bin) throws IOException {
+        return spawn(gdbExe, sourceDir, bin, 0);
+    }
+
+    private static Process spawn(String gdbExe, Path sourceDir, Path bin, int pid) throws IOException {
+        List<String> argv = new ArrayList<>(List.of(gdbExe, "-q", "-nx",
                 "-iex", "set pagination off",
                 "-iex", "set mi async on",
                 "-iex", "directory " + sourceDir,
-                "--interp", "mi2",
-                bin.toString());
+                "--interp", "mi2"));
+        if (pid > 0) {
+            argv.addAll(List.of("-p", String.valueOf(pid)));
+        } else {
+            argv.add(bin.toString());
+        }
+        ProcessBuilder pb = new ProcessBuilder(argv);
         pb.redirectErrorStream(true);
-        gdb = pb.start();
+        return pb.start();
+    }
+
+    private KofGdbMi(Process started) {
+        gdb = started;
         toGdb = gdb.getOutputStream();
         Thread reader = new Thread(this::pump, "gdb-mi-reader");
         reader.setDaemon(true);

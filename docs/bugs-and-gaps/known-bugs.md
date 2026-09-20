@@ -11528,3 +11528,31 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 - **Symptom (repro):** `git checkout 38f5591e && ./scripts/check_500.sh` → exit 1; the §344 split had deliberately brought the file to 541 (`9711e940`), and the §362 arity-gate fix (`57a0d5f0`, +71 lines) pushed it past the red line without a baseline/split step (precedent and policy: §303 — "≥600 fails CI, split remains the path; first agent with free hands claims").
 - **Fix shape (owner lane):** extract the new arity-gate helpers (`reportNoCtorArity` + the implicit-construction resolution added by §362) into a named-responsibility sibling (rule 7 — e.g. `BuiltinCtorArityTyper`), mirroring §344's `BuiltinUiCallTyper` split; behavior-preserving (freeze rule 3) — proof = `ConstructorPhantomE2ETest` 7/7 + `BuiltinCall*` battery green, then `./scripts/check_500.sh --update-baseline`.
 - **Related:** §303 (identical incident, `CmdBuild`), §344 (the prior split of this very file), §362 (the commit that grew it).
+
+## §376 — Cliente JDWP do `--dap` JVM quebrado de ponta a ponta no JDK 25 (launch SEMPRE mudo): IDSizes 6→5 rouba bytes do primeiro pacote, ClassesBySignature (1,2) morto, `frames` com `maxFrames` estourando (504), VariableTable lida com layout errado, `variables`/stackDepth hardcoded (stub Q7) — FIXED 20/09 (mesmo commit de X7-5)
+- **Status:** ✅ FIXED 20/09 (mesmo commit de X7-5) — reconstruído contra o wire medido no JDK 25.0.4
+  (oráculos: `jdb` da própria JDK + `jdk.jdi/.../JDWP.java` do `src.zip`); prova E2E `KofDebugJvmTest` +
+  `KofDebugAttachTest` (conversa completa com VM viva: bp real, `stopped`, frames reais, locals reais).
+
+
+- **Descoberta:** medição byte-a-byte com proxy de sniff no handshake + probes raw no wire do JDK 25.0.4 host (`java version "25.0.4.1"`). O `jdb` da própria JDK serviu de oráculo (funciona); o `src.zip` (`jdk.jdi/com/sun/tools/jdi/{JDWP,PacketStream}.java`) = verdade do formato de linha (regra 10: é o formato da VM, não semântica de linguagem).
+- **Root causes medidos (todos corrigidos):**
+  1. **`VirtualMachine.IDSizes` responde 5 tamanhos, não 6** (argIDSize removido do JDK 25) — `connect()` lia 6 ints; o 6º `readInt` engolia 4 bytes do PRÓXIMO pacote → todo o stream dessincronizado desde o handshake (0 eventos, 0 replies válidos). Fix: lê os 4 + `refSize`, drena o resto com `remaining()`.
+  2. **`VM.ClassesBySignature (1,2)` está QUEBRADO no 25.0.4** (responde `count=0` + bytes de lixo e congela o comando seguinte; o jdb não o usa). Fix: resolução de classe via **`VM.Classes (1,3)`** ([tag][ref][String sig][status]), que responde e é estável.
+  3. **`ThreadReference.Frames (11,6)` com `maxFrames` > tamanho real do stack = erro 504 `INVALID_LENGTH`** (oficial). Fix: `FrameCount (11,7)` primeiro, `min(depth, total)`.
+  4. **`Method.VariableTable (6,2)` reply = `{int argWords, int slotCount, slots[start(long), name, sig, length, slot]}`** — primeira leitura minha inventou lista de argumentos fantasma → estouro de pacote. Layout real confirmado no `JDWP.java` e no wire (medido com `beat@0`, 2/2 slots).
+  5. **`stackTrace` devolvia 1 frame fixo (`Math.min(depth,1)`) e `variables` devolvia pseudo-var "line N"** — dois stubs Q7 no produto; implementados de verdade (frames reais com nome/linha; locals via `VariableTable`+`StackFrame.GetValues (16,1)` com tag-byte da signature, `l`→0x6C; `StringReference.Value (10,1)`).
+- **Prova (testes E2E no mesmo commit):** `KofDebugJvmTest` (launch pelo CLI: initialize→launch→setBreakpoints→configurationDone→stopped por BREAKPOINT event→stackTrace frame `main` linha real→scopes→variables com local real do thread suspenso→disconnect) e `KofDebugAttachTest#jvmAttachBreaksIntoALivingProgramAndNeverKillsIt` (anexa a JVM viva; o debuggee sobrevive ao disconnect). Verde no host com JDK 25.0.4.
+- **Lições para a doc (`docs/debugging/debug-adapter.md`):** corpo COMPOSITE = `[suspendPolicy][count][ (kind byte, requestID int, corpo...) ]` — **kind ANTES do requestID** (JDWP.java:7827); erro JDWP nomeado no diagnóstico (`on cmd (SET,CMD)`); `time.sleep`-loop só tem LineTable para as linhas `2@0 3@2` — bp na 4/5 é "No code" (verificado com jdb); `NATIVE_METHOD` (511) em `VariableTable` = frame nativo → tratado com guarda, não silêncio.
+- **Related:** §377 (como isso passou verde), X7-5 (attach), Q7 (stubs encontrados no produto), `JdwpClient.java`, `KofDebugJvmSession.java`.
+
+## §377 — X7-2 foi entregue com FALSO VERDE: o launch DAP do JVM nunca teve E2E (o `KofDebugJvmTest` citado no commit não existia no repositório) — FIXED 20/09 com o teste real
+- **Status:** ✅ FIXED 20/09 — os primeiros E2E do canal entraram no commit que conserta o §376
+  (conversa completa contra VM viva, não só parse). Lição gravada em DOING + aqui: verde sem teste
+  não é entrega.
+
+
+- **Evidência:** `git log --diff-filter=A -- kof-cli/src/test/java/dev/kof/cli/KofDebugJvmTest.java` no tip 20/09 = o arquivo só nasceu com este commit; a mensagem do X7-2 citava testes que não estavam na árvore. Suite verde + docs dizendo "JVM DAP ok" durante semanas, enquanto `--dap` JVM não entregava UM evento sequer (§376.1).
+- **Como passou:** o gate media só o build/`initialize` (respostas locais ao parser DAP), nunca uma conversa completa com a VM viva (breakpoint real → `stopped` → frames → locals). Verde sem teste = verde falso.
+- **Correção permanente:** `KofDebugJvmTest` E2E real (conversa completa contra JVM lançada pelo próprio CLI) + `KofDebugAttachTest` (attach vivo); qualquer mudança futura no `JdwpClient` é obrigada a passar pela conversa completa, não só pelo parse.
+- **Related:** §376, Q0/Q1/Q5, X7-2 (o commit false-green).

@@ -58,6 +58,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     JVM, Native and JS host print identically (`FfiExternTypeConversionTest` 11/11; the
     10-class FFI battery is 94/0/0/0 before AND after).
 
+
+  - **X7-5 — `kof debug --dap --attach <pid>` is REAL on JVM and Native (20/09)** —
+    JVM attach breaks into a live VM over raw JDWP (the debuggee survives the
+    disconnect); Native attach drives `gdb -p <pid>` and never kills a foreign
+    process. On the way, the JVM DAP client was rebuilt against the measured JDK 25
+    wire (`known-bugs.md §376`: `IDSizes` answers 5 sizes not 6; `ClassesBySignature`
+    dead, classes now resolved via `VM.Classes`; `FrameCount` clamp; real
+    `VariableTable`+`GetValues` locals; COMPOSITE `[kind][requestID]` order) and the
+    two Q7 stubs it exposed (`stackTrace` 1-frame hardcode, `variables` placeholder)
+    are gone. `KofDebugJvmTest` + `KofDebugAttachTest` (3/3) are the FIRST E2E
+    conversations against a live VM — the previous "JVM DAP ok" had no test in the
+    tree at all (`known-bugs.md §377`, lesson: green without a test is false green).
   - **#278/§361 — nullable-primitive FIELD writes now BOX on the JVM (`e293c4a5`)**
     — `class Box { Int? n }` + `b.n = 42` stored the raw int into the boxed slot
     (`VerifyError` at class load on JVM/Script, SIGSEGV-era cast error on Native,

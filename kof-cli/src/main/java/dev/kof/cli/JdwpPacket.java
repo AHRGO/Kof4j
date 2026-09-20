@@ -64,6 +64,10 @@ final class JdwpPacket {
     }
 
     int readByte() {
+        if (pos >= data.length) {
+            throw new IllegalStateException("JDWP packet underflow: wanted 1 byte at pos "
+                    + pos + " of " + data.length);
+        }
         return data[pos++] & 0xFF;
     }
 
@@ -94,5 +98,17 @@ final class JdwpPacket {
 
     void skipRemaining() {
         pos = data.length;
+    }
+
+    int remaining() {
+        return data.length - pos;
+    }
+
+    String peekHex(int max) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = pos; i < Math.min(data.length, pos + max); i++) {
+            sb.append(String.format("%02x", data[i] & 255));
+        }
+        return sb.toString();
     }
 }
