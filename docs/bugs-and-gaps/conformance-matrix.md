@@ -92,8 +92,8 @@
 | `Char[]` out of range (`c[0]=70000`, `c[1]=-1`) in 1-D and 2-D + control `Short[] -1` — §187 | `4464` / `65535` / `4464` / `65535` / `-1` | DONE | DONE | PARTIAL (bug §185 — crash on the `Char[]` store) | DONE (bug §187 ✅ 15/09 JS face — `kofArraySet` kind char→`& 0xFFFF`; `c[0]=70000`→`4464`, `c[1]=-1`→`65535`) | `charnarrow` |
 | `static` initializer of CONSTANT expression (`-1`, `2+3`, `-7L`, `-1.5`, `"a"+"b"`, `!false`) — §186 ✅ 13/09 | `-1` / `5` / `-7` / `-1.5` / `ab` / `true` / `7` | DONE | DONE | DONE | DONE | `staticinit` |
 | static field + bump | `1` / `2` / `2` | DONE | DONE (bug 41 fixed 07/09) | DONE | DONE | `staticfield` |
-| nullable-primitive FIELD write + read-back (`b.n = 42`) — §361 | `42` | DONE (`e293c4a5`) | DONE nao-Char; ⚠️ `Char?` morre na leitura pos-escrita | DONE | DONE nao-Char; ⚠️ `Char?` morre em class-load | `NullablePrimitiveFieldWriterE2ETest` 9/9 — face char deve entrar RED (addendo §361) |
-| never-written nullable-field READ — §365 | `null` | DONE | DONE | **FAIL — `0`** | DONE | §365 (ctor JS inicializa slot com default cru) |
+| nullable-primitive FIELD write + read-back (`b.n = 42`) — §361 | `42` | DONE (`e293c4a5`) | DONE nao-Char; ⚠️ `Char?` morre na leitura pos-escrita | DONE | DONE nao-Char; ⚠️ `Char?` morre em class-load | `NullablePrimitiveFieldWriterE2ETest` 9/9 — face char deve entrar RED (addendo §361; raiz = §368) |
+| never-written nullable-field READ — §365 | `null` | DONE | DONE | DONE (`dd418419` — `JsClassEmitter.insertFieldDefaults`; re-verified docs lane) | DONE | §365 CLOSED |
 | static field `+=` | `2` / `4` / `4` | DONE | DONE (bug 41) | DONE | DONE | `staticpluseq` |
 | concat string+num (order) | `n=42` / `3x` / `x12` | DONE | DONE | DONE | DONE | `concat` |
 | boolean logic + comparison | `false` / `true` / `false` / `true` | DONE | DONE | DONE | DONE | `boollogic` |

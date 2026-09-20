@@ -92,8 +92,8 @@
 | `Char[]` out of range (`c[0]=70000`, `c[1]=-1`) in 1-D and 2-D + control `Short[] -1` — §187 | `4464` / `65535` / `4464` / `65535` / `-1` | DONE | DONE | PARTIAL (bug §185 — crash on the `Char[]` store) | PARTIAL (bug §184 — pure JS `Array` without type tag) | `charnarrow` |
 | `static` initializer of CONSTANT expression (`-1`, `2+3`, `-7L`, `-1.5`, `"a"+"b"`, `!false`) — §186 ✅ 13/09 | `-1` / `5` / `-7` / `-1.5` / `ab` / `true` / `7` | DONE | DONE | DONE | DONE | `staticinit` |
 | static field + bump | `1` / `2` / `2` | DONE | DONE (bug 41 fixed 07/09) | DONE | DONE | `staticfield` |
-| escrita de campo nullable-primitivo + leitura (`b.n = 42`) — §361 | `42` | CONCLUIDO (`e293c4a5`) | CONCLUIDO nao-Char; ⚠️ `Char?` morre na leitura pos-escrita | CONCLUIDO | CONCLUIDO nao-Char; ⚠️ `Char?` morre no class-load | `NullablePrimitiveFieldWriterE2ETest` 9/9 — face char deve entrar RED (adendo §361) |
-| LEITURA de campo nullable nunca-escrito — §365 | `null` | CONCLUIDO | CONCLUIDO | **FALHA — `0`** | CONCLUIDO | §365 (ctor JS inicializa o slot com o default cru) |
+| escrita de campo nullable-primitivo + leitura (`b.n = 42`) — §361 | `42` | CONCLUIDO (`e293c4a5`) | CONCLUIDO nao-Char; ⚠️ `Char?` morre na leitura pos-escrita | CONCLUIDO | CONCLUIDO nao-Char; ⚠️ `Char?` morre no class-load | `NullablePrimitiveFieldWriterE2ETest` 9/9 — face char deve entrar RED (adendo §361; raiz = §368) |
+| LEITURA de campo nullable nunca-escrito — §365 | `null` | CONCLUIDO | CONCLUIDO | CONCLUIDO (`dd418419` — `JsClassEmitter.insertFieldDefaults`; re-verificado pela lane docs) | CONCLUIDO | §365 FECHADO |
 | static field `+=` | `2` / `4` / `4` | DONE | DONE (bug 41) | DONE | DONE | `staticpluseq` |
 | concat string+num (order) | `n=42` / `3x` / `x12` | DONE | DONE | DONE | DONE | `concat` |
 | boolean logic + comparison | `false` / `true` / `false` / `true` | DONE | DONE | DONE | DONE | `boollogic` |
