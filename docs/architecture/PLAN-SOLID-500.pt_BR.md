@@ -259,6 +259,6 @@ medido, fora do ratchet (12 dívidas remanescentes, todas paradas)**.
 > (11/09, sobrecarga top-level)** — a Fase 6 continua "✅ FEITA" na tabela;
 > `Parser` 456→513 (Fase 7 idem). Correção: o gate virou **ratchet**
 > (baseline `scripts/check_500-baseline.txt` congela as 17 dívidas; dívida nova
-> ou crescente = CI vermelho; só encolhe) e foi **ligado no `build-and-test`**
-> do `.github/workflows/ci.yml`. A fila real desta frente agora é o baseline,
+> ou crescente = CI vermelho; só encolhe) e foi **ligado no CI** (`.github/workflows/ci.yml`; desde 20/09 no job
+> independente `structural-quality`, então um gate vermelho não esconde mais o build funcional do mesmo SHA). A fila real desta frente agora é o baseline,
 > não a tabela de 9 fases — cada linha removida = um split feito.

@@ -259,6 +259,6 @@ measured, outside the ratchet (12 remaining debts, all stalled)**.
 > (11/09, top-level overload)** — Phase 6 is still "✅ DONE" in the table;
 > `Parser` 456→513 (Phase 7 likewise). Fix: the gate became a **ratchet**
 > (baseline `scripts/check_500-baseline.txt` freezes the 17 debts; new
-> or growing debt = red CI; only shrinks) and was **wired into `build-and-test`**
-> of `.github/workflows/ci.yml`. The real queue of this front is now the baseline,
+> or growing debt = red CI; only shrinks) and was **wired into CI** (`.github/workflows/ci.yml`; since 20/09 in the
+> independent `structural-quality` job, so a red gate no longer hides the functional build of the same SHA). The real queue of this front is now the baseline,
 > not the 9-phase table — each line removed = one split done.
