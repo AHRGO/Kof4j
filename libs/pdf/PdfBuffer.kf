@@ -1,0 +1,20 @@
+package pdf
+
+class PdfBuffer {
+    List<String> parts
+    Int length
+
+    constructor() {
+        parts = listOf<String>()
+        length = 0
+    }
+
+    append(String value) {
+        parts.add(value)
+        length = length + value.length
+    }
+
+    content(): String {
+        return String.join("", parts)
+    }
+}
