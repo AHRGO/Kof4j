@@ -2,7 +2,10 @@
 
 # `kof.workflow` — jobs, pipelines, retry, checkpoints, dead-letter (plano de design · Estágio 2 · TIER 2.1)
 
-> **Estado: APROVADO (19/09, enquete da mantenedora) — frente aberta, dono lane `.18`.**
+> **Estado: CONCLUÍDO 19/09 — as cinco fatias (2.1.0–2.1.4) landaram com prova
+> (`WorkflowE2ETest` 20/20, paridade byte JVM==JS, face real no Native); promovido de
+> `docs/development/` pela regra dos 3 estados.** Originalmente APROVADO (19/09, enquete
+> da mantenedora) — frente aberta, dono lane `.18`.**
 > Q1–Q4 respondidos: **stdlib de composição ✓ / MVP mínimo (job/dag/after/run/Report) ✓ /
 > retry como helper ADITIVO, `kof.http` migra depois em slice assinado à parte ✓ /
 > dead-letter com AMBAS as faces (in-memory + durável via `kof.orm`) ✓**. Zero código neste

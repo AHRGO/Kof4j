@@ -2,7 +2,10 @@
 
 # `kof.workflow` — jobs, pipelines, retry, checkpoints, dead-letter (design plan · Stage 2 · TIER 2.1)
 
-> **Status: SIGNED-OFF (19/09, maintainer poll) — front opened, owner lane `.18`.** Q1–Q4
+> **Status: CONCLUDED 19/09 — all five slices (2.1.0–2.1.4) landed with proof
+> (`WorkflowE2ETest` 20/20, byte-parity JVM==JS, Native real face); promoted from
+> `docs/development/` per the 3-state rule.** Originally SIGNED-OFF (19/09, maintainer
+> poll) — front opened, owner lane `.18`.** Q1–Q4
 > answered: **stdlib composition ✓ / MVP minimal (job/dag/after/run/Report) ✓ / retry as an
 > ADDITIVE helper, `kof.http` migrates in a later signed slice ✓ / dead-letter ships BOTH
 > faces (in-memory + durable via `kof.orm`) ✓**. Zero code in this file; it stays design.

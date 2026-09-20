@@ -2,7 +2,11 @@
 
 # `kof.shell` — idiomatic shell over `kof.process` (design plan · Stage 2 · TIER 2.2)
 
-> **Status: v1 LANDED (18/09 `34e4344f`, `.18` lane)** — `cmd`/`run`/`ok` reais em JVM+JS
+> **Status: CONCLUDED 19/09 — v1 LANDED (18/09 `34e4344f`, `.18` lane) + 2.2.3
+> `runWith` ✅ 19/09 (`ShellE2ETest` 15/15); queue closed, promoted from
+> `docs/development/` per the 3-state rule.** The only residual — JS live-pipe
+> `pipeline` — is a platform item on `IMPLEMENTATION-UNIVERSAL-PLATFORM` row 2.2, not a
+> slice of this plan. `cmd`/`run`/`ok` reais em JVM+JS
 > (byte-parity nos 5 casos do `ShellE2ETest`), `pipeline` real no JVM; pipeline em JS/Native =
 > `PROC001` honesto em compile-time (nunca `ReferenceError` cru — disciplina §235). Q1–Q3 da
 > enquete da mantenedora respondidos: forma-função ✓, builtin `KofShell.java` ✓, glob/`~`/

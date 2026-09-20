@@ -4,7 +4,7 @@
 
 **Status:** v1 implemented (18/09, `34e4344f`, universal plan Stage 2 row 2.2) ·
 **Source:** `KofShell.java` (dispatch) + `ExpressionShellCallLowerer` (gates/lowering) ·
-**Tests:** `ShellE2ETest` (11) · **Design record:** `docs/development/shell-plan.md`
+**Tests:** `ShellE2ETest` (15) · **Design record:** `docs/docs/shell-plan.md`
 
 ## What it is
 
@@ -80,6 +80,6 @@ pins `Result.exitCode` as data.
 
 ## See also
 
-- `docs/development/shell-plan.md` (design decisions Q1–Q3, wiring map, slices 2.2.0–2.2.4)
+- `docs/docs/shell-plan.md` (design decisions Q1–Q3, wiring map, slices 2.2.0–2.2.4)
 - `docs/backend-parity.md` — `kof.shell` rows in the namespace table + gap table
 - `kof.process` face on Native: `PROC001` (backend-parity, Known Gaps)
