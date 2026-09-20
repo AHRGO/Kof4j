@@ -46,8 +46,12 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Kof source, never to the mangle. `KOF_GDB` resolves the executable (test/environment
     override, same house pattern as `KOF_PUBLISH_API`/`KOF_CROSS_SYSROOT`); missing gdb
     is an honest failure, `--target js` is an honest refusal (the JS target runs on the
-    embedded engine — there is no node/inspector to attach to). Proved by
-    `KofDebugNativeTest` 4/4 (stub-gdb construction + failure paths + R6 flag strictness).
+    embedded engine — there is no node/inspector to attach to). `--break <line>`
+    turns it into a scriptable BATCH session (stop on the Kof LINE + `bt`, CI-friendly)
+    and `--output <dir>` preserves the built ELF for reuse; both are honest on the JVM
+    target (`only apply to --target native`). Proved by `KofDebugNativeTest` 7/7
+    (real-gdb batch stop on `Main.kf:4` + backtrace, stub-gdb construction + failure
+    paths + R6 flag strictness).
   - **`Bool` is never nullable — the three-valued type is `Troolean` (D-TROOL,
     19/09, DECISIONS.md §D-TROOL)** — migration of the same class approved for
     #401: `Bool?`/`Boolean?` (any position: local, field, parameter, return) now

@@ -1,5 +1,6 @@
 package dev.kof.cli;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -83,6 +84,58 @@ class KofDebugNativeTest {
         assertEquals(1, r.exit(), r.out());
         assertTrue(r.out().contains("EMBEDDED"),
                 "js roda no engine embutido — sem inspector p/ anexar; honesto: " + r.out());
+    }
+
+    private static boolean has(String... executables) {
+        for (String e : executables) {
+            try {
+                Process p = new ProcessBuilder("sh", "-c", "command -v " + e)
+                        .redirectErrorStream(true).start();
+                p.getInputStream().readAllBytes();
+                if (!p.waitFor(20, TimeUnit.SECONDS) || p.exitValue() != 0) return false;
+            } catch (Exception ex) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * `--break <linha>` = sessao batch scriptavel: com o gdb REAL + toolchain
+     * x86-64 o breakpoint cai na LINHA Kof e o backtrace nomeia a funcao Kof.
+     * Sem gdb/toolchain o caso vira skip honesto (o CI ubuntu roda).
+     */
+    @Test
+    void nativeBatchBreaksAtKofLineAndShowsBacktrace(@TempDir Path dir) throws Exception {
+        Assumptions.assumeTrue(has("gdb", "as", "ld"),
+                "gdb + toolchain x86-64 ausentes — pulando (o CI ubuntu roda)");
+        Path src = dir.resolve("Main.kf");
+        Files.writeString(src, "main() {\n    println(\"dbg\")\n    var x = 41\n    println(x + 1)\n}\n");
+        Cli r = cli(dir, Map.of(), "debug", "--target", "native", "--break", "4", "Main.kf");
+        Assumptions.assumeFalse(r.out().contains("no ELF produced"),
+                "toolchain nativa indisponivel nesta invocacao:\n" + r.out());
+        assertEquals(0, r.exit(), "gdb batch deveria sair 0:\n" + r.out());
+        assertTrue(r.out().contains("Main.kf:4"),
+                "o ponto de parada cai na linha Kof 4, nunca no assembly:\n" + r.out());
+        assertTrue(r.out().contains("main"), "o backtrace nomeia a funcao Kof:\n" + r.out());
+        assertTrue(r.out().contains("dbg"),
+                "o programa executou ate a linha 4 (o println da 2 ja saiu):\n" + r.out());
+    }
+
+    @Test
+    void badBreakLineIsRejected(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Main.kf"), "main() { println(\"oi\") }\n");
+        Cli r = cli(dir, Map.of(), "debug", "--target", "native", "--break", "abc", "Main.kf");
+        assertEquals(1, r.exit(), r.out());
+        assertTrue(r.out().contains("--break expects a line number"), r.out());
+    }
+
+    @Test
+    void breakOnJvmTargetIsRejectedHonestly(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Main.kf"), "main() { println(\"oi\") }\n");
+        Cli r = cli(dir, Map.of(), "debug", "--break", "4", "Main.kf");
+        assertEquals(1, r.exit(), r.out());
+        assertTrue(r.out().contains("only apply to --target native"), r.out());
     }
 
     @Test

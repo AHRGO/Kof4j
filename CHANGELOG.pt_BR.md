@@ -147,8 +147,11 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     nunca no mangle. `KOF_GDB` resolve o executável (override de teste/ambiente, mesmo
     padrão da casa: `KOF_PUBLISH_API`/`KOF_CROSS_SYSROOT`); gdb ausente é falha honesta,
     `--target js` é recusa honesta (o alvo JS roda no engine embutido — não há
-    node/inspector para anexar). Provado por `KofDebugNativeTest` 4/4 (construção com
-    stub-gdb + caminhos de falha + estrita de flags R6).
+    node/inspector para anexar). `--break <linha>` transforma a frente em sessao BATCH
+    scriptavel (para na LINHA Kof + `bt`, amigavel a CI) e `--output <dir>` preserva o ELF
+    construido para reuso; ambos sao honestos no alvo JVM (`only apply to --target native`).
+    Provado por `KofDebugNativeTest` 7/7 (batch com gdb real parando em `Main.kf:4` +
+    backtrace, construcao com stub-gdb + caminhos de falha + estrita de flags R6).
   - **O output de ponto flutuante de `String.format` nao depende mais do locale do host (#466, §339)** —
     `String.format("%.2f", 3.14)` imprimia `3,14` num JVM `pt_BR` (o lowering emitia o overload de
     2 argumentos `String.format(String, Object[])`, locale-sensive por contrato) e a ponte do host

@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * KofDebug — Debug Adapter Protocol (DAP) server for Kof.
@@ -32,40 +33,53 @@ final class KofDebug {
     private KofDebug() {
     }
 
+    private static final String USAGE =
+            "usage: kof debug [--dap] [--target jvm|native] [--break <line>]... [--output <dir>] <file.kf>";
+
     public static int run(String[] args) {
         if (args.length < 2) {
-            System.err.println("usage: kof debug [--dap] [--target jvm|native] <file.kf>");
+            System.err.println(USAGE);
             return 1;
         }
         String target = "jvm";
         boolean dap = false;
-        int i = 1;
-        while (i < args.length && args[i].startsWith("-")) {
-            if (args[i].equals("--target")) {
-                i++;
-                if (i >= args.length) {
-                    System.err.println("debug: --target requires a value (jvm|native)");
+        Path out = null;
+        List<Integer> breaks = new ArrayList<>();
+        Path file = null;
+        for (int i = 1; i < args.length; i++) {
+            String a = args[i];
+            if (a.equals("--target") || a.equals("--break") || a.equals("--output")) {
+                if (i + 1 >= args.length) {
+                    System.err.println("debug: " + a + " requires a value (" + USAGE + ")");
                     return 1;
                 }
-                target = args[i++];
-            } else if (args[i].equals("--dap")) {
+                String v = args[++i];
+                switch (a) {
+                    case "--target" -> target = v;
+                    case "--output" -> out = Path.of(v);
+                    case "--break" -> {
+                        Integer line = parseBreakLine(v);
+                        if (line == null) return 1;
+                        breaks.add(line);
+                    }
+                    default -> {
+                    }
+                }
+            } else if (a.equals("--dap")) {
                 dap = true;
-                i++;
-            } else {
+            } else if (a.startsWith("-")) {
                 // R6 strictness (CliFlagStrictnessTest): a typo must not be silently ignored.
-                System.err.println("debug: unknown flag: " + args[i]
-                        + " (usage: kof debug [--dap] [--target jvm|native] <file.kf>)");
+                System.err.println("debug: unknown flag: " + a + " (" + USAGE + ")");
+                return 1;
+            } else if (file == null) {
+                file = Path.of(a);
+            } else {
+                System.err.println("debug: unexpected argument: " + a + " (" + USAGE + ")");
                 return 1;
             }
         }
-        if (i >= args.length) {
-            System.err.println("debug: missing file (usage: kof debug [--dap] [--target jvm|native] <file.kf>)");
-            return 1;
-        }
-        Path file = Path.of(args[i++]);
-        if (i < args.length) {
-            System.err.println("debug: " + (args[i].startsWith("-") ? "unknown flag: " : "unexpected argument: ")
-                    + args[i] + " (usage: kof debug [--target jvm|native] <file.kf>)");
+        if (file == null) {
+            System.err.println("debug: missing file (" + USAGE + ")");
             return 1;
         }
         if (!Files.exists(file)) {
@@ -73,16 +87,25 @@ final class KofDebug {
             return 1;
         }
         if (target.equals("native")) {
-            if (!dap) {
-                return debugNative(file);
+            if (dap) {
+                if (!breaks.isEmpty() || out != null) {
+                    System.err.println("debug: --break/--output only apply to the native gdb console"
+                            + " (not --dap)");
+                    return 1;
+                }
+                try {
+                    new KofDebugNativeDap(file.toAbsolutePath()).run();
+                    return 0;
+                } catch (Exception e) {
+                    System.err.println("kof debug native (dap): " + e.getMessage());
+                    return 1;
+                }
             }
-            try {
-                new KofDebugNativeDap(file.toAbsolutePath()).run();
-                return 0;
-            } catch (Exception e) {
-                System.err.println("kof debug native (dap): " + e.getMessage());
-                return 1;
-            }
+            return debugNative(file, out, breaks);
+        }
+        if (!breaks.isEmpty() || out != null) {
+            System.err.println("debug: --break/--output only apply to --target native");
+            return 1;
         }
         if (target.equals("js")) {
             System.err.println("debug js: honest gap — the JS target runs on the EMBEDDED engine"
@@ -113,22 +136,52 @@ final class KofDebug {
      * resolvido por `KOF_GDB` (override de teste/ambiente; padrao da casa:
      * `KOF_PUBLISH_API`/`KOF_CROSS_SYSROOT`), senao `gdb`.
      */
-    private static int debugNative(Path file) {
+    private static int debugNative(Path file, Path outDir, List<Integer> breaks) {
         NativeBuild built = null;
         try {
-            built = buildNativeElf(file);
+            built = buildNativeElf(file, outDir);
             if (built == null) {
                 return 1;
             }
             Path bin = built.bin();
             String gdb = firstNonEmpty(System.getenv("KOF_GDB"), "gdb");
-            ProcessBuilder pb = new ProcessBuilder(gdb, "-q",
-                    "-iex", "set pagination off",
-                    "-iex", "directory " + file.toAbsolutePath().getParent(),
-                    bin.toString());
-            pb.inheritIO();
+            // `--break` = sessao batch (scriptavel/CI): para na LINHA Kof e imprime
+            // o backtrace. Sem ele = console interativo do gdb (o usuario dirige).
+            boolean batch = !breaks.isEmpty();
+            List<String> cmd = new ArrayList<>();
+            cmd.add(gdb);
+            cmd.add("-q");
+            if (batch) cmd.add("-batch");
+            cmd.add("-iex"); cmd.add("set pagination off");
+            cmd.add("-iex"); cmd.add("set debuginfod enabled off");
+            if (batch) {
+                cmd.add("-iex"); cmd.add("set confirm off");
+                cmd.add("-iex"); cmd.add("directory " + file.toAbsolutePath().getParent());
+                cmd.add("-ex"); cmd.add("file " + bin);
+                for (int line : breaks) {
+                    cmd.add("-ex"); cmd.add("break " + file.getFileName() + ":" + line);
+                }
+                cmd.add("-ex"); cmd.add("run");
+                cmd.add("-ex"); cmd.add("bt");
+            } else {
+                cmd.add("-iex"); cmd.add("directory " + file.toAbsolutePath().getParent());
+                cmd.add(bin.toString());
+            }
+            ProcessBuilder pb = new ProcessBuilder(cmd);
+            if (batch) pb.redirectErrorStream(true);
+            else pb.inheritIO();
             try {
-                return pb.start().waitFor();
+                Process p = pb.start();
+                if (!batch) return p.waitFor();
+                String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                System.out.print(output);
+                System.out.flush();
+                if (!p.waitFor(120, TimeUnit.SECONDS)) {
+                    p.destroyForcibly();
+                    System.err.println("debug native: gdb did not finish in 120s");
+                    return 1;
+                }
+                return p.exitValue();
             } catch (java.io.IOException spawnFail) {
                 System.err.println("debug native: '" + gdb + "' not available — install gdb"
                         + " (roadmap §19.5 fase 6: gdb front-end over the Kof ELF; the DWARF"
@@ -142,7 +195,7 @@ final class KofDebug {
             System.err.println("kof debug native: " + e.getMessage());
             return 1;
         } finally {
-            if (built != null) {
+            if (built != null && outDir == null) {
                 KofCliSupport.cleanup(built.dir());
             }
         }
@@ -153,22 +206,42 @@ final class KofDebug {
     }
 
     static NativeBuild buildNativeElf(Path file) throws IOException {
-        Path out = Files.createTempDirectory("kof-debug-native-");
+        return buildNativeElf(file, null);
+    }
+
+    /**
+     * `outDir` != null = o ELF fica no diretorio do usuario (`--output`, reuso entre
+     * sessoes de debug); null = diretorio temporario, limpo pelo chamador.
+     */
+    static NativeBuild buildNativeElf(Path file, Path outDir) throws IOException {
+        boolean temp = outDir == null;
+        Path out = temp ? Files.createTempDirectory("kof-debug-native-") : outDir;
         CompilerDriver driver = new CompilerDriver();
         driver.setDebugInfoEnabled(true);
         CompilationResult r = driver.compile(file.toAbsolutePath(), out, Target.NATIVE);
         if (!r.success()) {
             r.diagnostics().getDiagnostics().forEach(d -> System.err.println(d.format()));
-            KofCliSupport.cleanup(out);
+            if (temp) KofCliSupport.cleanup(out);
             return null;
         }
         Path bin = out.resolve("Default").resolve("Main");
         if (!Files.exists(bin)) {
             System.err.println("debug native: no ELF produced (native toolchain missing on this host)");
-            KofCliSupport.cleanup(out);
+            if (temp) KofCliSupport.cleanup(out);
             return null;
         }
         return new NativeBuild(out, bin);
+    }
+
+    private static Integer parseBreakLine(String value) {
+        try {
+            int line = Integer.parseInt(value.trim());
+            if (line < 1) throw new NumberFormatException();
+            return line;
+        } catch (NumberFormatException e) {
+            System.err.println("debug: --break expects a line number (got '" + value + "')");
+            return null;
+        }
     }
 
     private static String firstNonEmpty(String a, String b) {
