@@ -4,8 +4,9 @@
 
 > **UPDATE — GREEN after the #564 fix** (see "Re-run after the #564 fix" below): publish, pull by
 > version, `latest` pin, idempotent 2nd resolve and honest error all pass against real GitHub.
-> One step stays open and is **not** a Registry defect: KOF code cannot `import` the pulled
-> package (#566, contract question for the maintainer). The text below is the original RED record.
+> The one step that looked open is **not** a Registry defect either: KOF code **can** consume the
+> pulled package on the documented path (`kof deps` + `--deps` + `new Class()`); see "Canonical
+> consumption" at the end (an earlier claim here was wrong). The text below is the original RED record.
 >
 > **Result of the first run: RED.** Publish works against real GitHub. Pull does **not**: two real bugs
 > found, both filed (#564, #565). The tracker note `live GitHub round-trip = smoke
@@ -79,4 +80,23 @@ Fix decision (KOF-first): the release JSON is read with the CLI's own structural
 ## Observations from the re-run
 
 - `kofdeps.lock` is not written for registry deps: it is the Maven transitive closure (roadmap 1.5.2). Registry deps are pinned **in `kofdeps`** itself (`latest` → concrete version) — existing behavior, asserted by `latestResolvesAndPinsConcreteVersion`.
-- A KOF program cannot `import` the pulled package: `PKG006` even with `--classpath` (the import gate looks for a source module). That is a contract question, filed as #566 — not part of the Registry pull/publish defect.
+- Consuming the pulled package from KOF code: see the correction section below (the earlier `PKG006` reading came from measuring without `--deps`).
+
+## Canonical consumption of the pulled package — measured 20/09/2026 (correction of an earlier claim)
+
+An earlier version of this audit (and the tracker line) said a KOF program **cannot** `import` the pulled package (`PKG006`, even with `--classpath`). That premise was wrong: it was measured **without `--deps`** (the documented way to put the resolved dependencies on the classpath) and with `run --classpath`, which is not a `kof run` flag (`kof run <file.kf> … [--deps] [args...]`: anything else after the file is passed to the program). Re-measured on the documented surface, same public release, no token, clean HOME, jar built from the tip:
+
+| Step | Result (measured) |
+|---|---|
+| `kof deps init/add/resolve` | jar installed; classes `Default/Main`, `regsmoke/Greeter` |
+| `kof run Main.kf --deps` with `import regsmoke.Greeter` + `new Greeter()` | **GREEN** — `hello, consumer`, rc 0 |
+| same, **without** `--deps` (what was measured before) | `PKG006`, rc 1 — expected: the dependency is not on the classpath |
+| `kof build src --target jvm --deps`, then `java -cp dist:<jar> Default.Main` | **GREEN** — `hello, consumer`, rc 0 |
+| `Greeter()` **without** `new`, `run`/`build` `--deps` (or `--classpath`) | `SEM015` ×3, rc 1, **0 classes emitted** — see below |
+| `kof run Main.kf --deps --unknown-flag` | runs, rc 0: extra arguments after the file are program arguments (`[args...]`), by design |
+
+Consequences, all measured (nothing implemented):
+
+- Basic JVM consumption of a published package **exists** on the documented path (`kof deps` + `--deps` + `new Class()`). What is still open is contract, not transport: whether a published package is a *library* with a public surface (today `kof deploy` packages only what `main` reaches), whether KOF→KOF consumption is JVM-only or cross-target, and whether the optional `new` also applies to classes coming from an external classpath (`Greeter()` gives `SEM015`; `new Greeter()` works). Those are maintainer decisions (rule 6).
+- "Build reports an error but emits a valid artifact" **does not reproduce**: with any error (`SEM015` by `--deps` or `--classpath`, genuine `SEM011`) the build exits 1 and emits **0 classes**. The artifact seen in the report is a **leftover of a previous successful build in the same output directory** (build 1 valid into `cout`; build 2 fails into the same `cout` without cleaning → `rc=1`, `classes=1`, `java -cp cout:<jar> Default.Main` prints the *previous* build's output; with a clean directory: `rc=1`, `classes=0`).
+- `kof run --classpath` is not a documented flag of `run`; adding it would be a new CLI surface (a design decision), not a bugfix.
