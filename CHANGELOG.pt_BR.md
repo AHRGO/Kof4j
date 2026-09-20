@@ -14,6 +14,7 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
 ### Em desenvolvimento
+  - .18 - GAPS-DB F1a (20/09): `orm.deleteAll<User>(db)` é REAL no Native x86-64 — `kof_orm_delete_all` em asm sobre o stack `kof_db_*` (sqlite; MySQL lanca ORM001 honesto em runtime; id ruim lanca a string exata do host); gate por-função `fnSupportedOn` (todas as outras faces e o cross mantem `ORM001`); fix de link: programa só-ORM agora puxa `-lsqlite3`. Prova medida: `KofOrmE2ETest` 35/0F com paridade byte JVM==Native.
 
   - **Dívida CodeQL do cluster debug/tooling fechada na raiz (sem mudança de comportamento observável)**
     — os 11 alertas CodeQL abertos do cluster de debug da CLI foram corrigidos na fonte, não

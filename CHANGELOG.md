@@ -218,6 +218,7 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     REG001/REG002/REG003/REG004 against a fake registry).
 
 ### In development
+  - .18 - GAPS-DB F1a (20/09): `orm.deleteAll<User>(db)` is REAL on Native x86-64 — `kof_orm_delete_all` in asm over the `kof_db_*` stack (sqlite; MySQL throws honest ORM001 at runtime; bad id throws the host's exact string); per-function gate `fnSupportedOn` (every other face and the cross targets keep `ORM001`); link fix: ORM-only programs now pull `-lsqlite3`. Proof measured: `KofOrmE2ETest` 35/0F with byte parity JVM==Native.
   - .18 - governance: **regra 11 (Simplicity Law) is ABSOLUTE in AGENTS.md** + `DECISIONS.md` §D-MAKEALIVE/§D-KOF-AS-CLOUD/§D-BOOTSTRAP/§D-DB-GAPS (maintainer polls 20/09: `kof.makealive` namespace, generic providers complete, kof.db day-1 state, Android=JVM db parity, ORM-on-Native via `kof_orm_*` asm, MySQL on cross, bootstrapper = final objective).
 
   - **`String.format` float output no longer depends on the host locale (#466, §339)** —
