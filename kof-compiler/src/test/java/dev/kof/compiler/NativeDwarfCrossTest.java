@@ -144,7 +144,10 @@ class NativeDwarfCrossTest {
         String info = runCmd(objdump(Target.NATIVE_RISCV64), "--dwarf=info", bin.toString());
         assertTrue(info.contains("DW_TAG_subprogram") && info.contains("main"),
                 "ELF riscv deve conter o DIE subprogram de main; got: " + head(info));
-        assertTrue(info.contains("DW_OP_reg27"), "frame_base riscv = x27/s11; got: " + head(info));
+        assertTrue(info.contains("DW_OP_regx: 27"),
+                "frame_base riscv = DW_OP_regx x27/s11 (0x90 0x1b); got: " + head(info));
+        assertFalse(info.contains("DW_OP_reg6"),
+                "riscv nao pode carregar o rbp do x86; got: " + head(info));
     }
 
     @Test
