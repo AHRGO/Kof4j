@@ -84,7 +84,7 @@ final class DepsRegistry {
         String ver = versionOf(spec);
         if (ver != null) {
             Path cached = jarPath(owner, repo, ver);
-            if (Files.exists(cached)) return cached;
+            if (installed(cached)) return cached;
         }
         String base = apiBase();
         String releaseUrl = ver == null
@@ -104,7 +104,7 @@ final class DepsRegistry {
             throw new IOException("REG001: release has no parsable version tag: " + tag);
         }
         Path cached = jarPath(owner, repo, version);
-        if (Files.exists(cached)) return cached;   // latest aponta p/ já instalado
+        if (installed(cached)) return cached;   // latest aponta p/ já instalado
         Asset asset = pickTarball(release, repo, version);
         if (asset == null) {
             throw new IOException("REG002: release " + tag + " has no .tar.gz asset (publish a"
@@ -121,13 +121,17 @@ final class DepsRegistry {
                         + " optional) — refusing to install " + owner + "/" + repo);
             }
             Path jar = findJar(tmpDir);
-            if (jar == null) {
-                throw new IOException("REG003: package has no .jar (non-JVM face?) — "
+            // #566 (b): o pacote e consumido como MODULO-FONTE — o jar e opcional numa biblioteca
+            if (jar == null && !Files.isDirectory(tmpDir.resolve(DepsSources.DIR))) {
+                throw new IOException("REG003: package has no .jar and no sources (non-JVM face?) — "
                         + owner + "/" + repo + "@" + version);
             }
-            verifyChecksum(sums, jar);
-            Files.createDirectories(cached.getParent());
-            Files.move(jar, cached, StandardCopyOption.REPLACE_EXISTING);
+            if (jar != null) verifyChecksum(sums, jar);
+            DepsSources.install(sums, tmpDir, cached.getParent());   // fontes verificadas; nada se falha
+            if (jar != null) {
+                Files.createDirectories(cached.getParent());
+                Files.move(jar, cached, StandardCopyOption.REPLACE_EXISTING);
+            }
         } finally {
             if (dl != null) Files.deleteIfExists(dl);
             deleteTree(tmpDir);
@@ -220,9 +224,16 @@ final class DepsRegistry {
         }
     }
 
+    /** Versão já instalada: o jar (pacote de aplicação) OU as fontes (pacote-biblioteca, #566). */
+    private static boolean installed(Path jar) {
+        return Files.exists(jar) || DepsSources.hasSources(jar.getParent());
+    }
+
     private static Path findJar(Path dir) throws IOException {
+        Path sources = dir.resolve(DepsSources.DIR);
         try (var walk = Files.walk(dir)) {
             return walk.filter(Files::isRegularFile)
+                    .filter(p -> !p.startsWith(sources))     // um .jar dentro de src/ nunca e "o" jar
                     .filter(p -> p.getFileName().toString().endsWith(".jar"))
                     .sorted().findFirst().orElse(null);
         }

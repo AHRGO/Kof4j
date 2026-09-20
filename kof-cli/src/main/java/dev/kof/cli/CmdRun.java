@@ -124,6 +124,7 @@ final class CmdRun {
         }
         if (useDeps) {
             try {
+                driver.setDependencySourceRoots(DepsSources.roots(Path.of(".")));   // #566 (b)
                 String depsCp = Deps.classpath();
                 if (!depsCp.isBlank()) {
                     java.util.List<Path> entries = new ArrayList<>();

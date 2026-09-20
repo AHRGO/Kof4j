@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class DepsRegistryTest {
 
-    private static CliResult runWithEnv(Path workDir, Map<String, String> env, String... cliArgs)
+    static CliResult runWithEnv(Path workDir, Map<String, String> env, String... cliArgs)
             throws Exception {
         java.util.List<String> cmd = new java.util.ArrayList<>();
         cmd.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
@@ -48,7 +48,7 @@ class DepsRegistryTest {
         return new CliResult(p.exitValue(), out);
     }
 
-    private record CliResult(int exit, String out) {}
+    record CliResult(int exit, String out) {}
 
 
 
@@ -92,10 +92,10 @@ class DepsRegistryTest {
     // `Accept: application/octet-stream`.
 
     /** Asset servido pelo fake: id na API + nome publicado. */
-    private record FakeAsset(long id, String name) {}
+    record FakeAsset(long id, String name) {}
 
     /** Ordem dos campos do asset: a do GitHub, ou invertida (o parser nao pode depender dela). */
-    private enum Order { GITHUB, REVERSED }
+    enum Order { GITHUB, REVERSED }
 
     /** Requisicoes vistas por cada fake (headers relevantes) — prova de contrato HTTP. */
     private static final Map<HttpServer, List<String>> SEEN =
@@ -145,14 +145,14 @@ class DepsRegistryTest {
                 + as + "]}";
     }
 
-    private static HttpServer serveFakeRegistry(Path dir, String repo, String version,
+    static HttpServer serveFakeRegistry(Path dir, String repo, String version,
                                                 byte[] tgz, boolean found) throws Exception {
         return serveFakeRegistry(repo, version, tgz, found,
                 List.of(new FakeAsset(123, repo + "-" + version + ".tar.gz")),
                 Order.GITHUB, false, false);
     }
 
-    private static HttpServer serveFakeRegistry(String repo, String version, byte[] tgz,
+    static HttpServer serveFakeRegistry(String repo, String version, byte[] tgz,
                                                 boolean found, List<FakeAsset> assets,
                                                 Order order, boolean viaRedirect,
                                                 boolean malformedRelease) throws Exception {
@@ -208,7 +208,7 @@ class DepsRegistryTest {
         return server;
     }
 
-    private static Map<String, String> envOf(HttpServer server, Path fakeHome) {
+    static Map<String, String> envOf(HttpServer server, Path fakeHome) {
         return Map.of(
                 "KOF_REGISTRY_API", "http://127.0.0.1:" + server.getAddress().getPort(),
                 "HOMEOF", fakeHome.toString());

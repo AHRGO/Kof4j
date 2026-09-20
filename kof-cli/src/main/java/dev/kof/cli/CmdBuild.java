@@ -242,6 +242,7 @@ final class CmdBuild {
         // kofdeps: dependências Maven resolvidas no cache ~/.kof/deps
         if (useDeps) {
             try {
+                driver.setDependencySourceRoots(DepsSources.roots(Path.of(".")));   // #566 (b)
                 String depsCp = Deps.classpath();
                 if (!depsCp.isBlank()) {
                     externalEntries = new ArrayList<>();
