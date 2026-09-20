@@ -176,6 +176,30 @@ static int lowerField(CompilerDriver driver, AssignmentExpr ae, FieldAccessExpr 
             if (desc != null) fieldType = ExternalClasspath.typeFromDescriptor(desc);
         }
     }
+    // §357/#295 (rio da erasure): slot `T[]` (apagado para Object[] no JVM)
+    // recebendo array de PRIMITIVO (`new Int[10]` = `[I`) — o verifier
+    // rejeita `[I` → `[Ljava/lang/Object;` (JVMS 4.10.1: int[] NÃO é subtipo
+    // de Object[]; javac idem). Com a erasure correta do descritor (o bug
+    // filed) a falha deixou de ser crash de load e passou a ser decisão de
+    // tipo: SEM098 no ALVO JVM (gate de alvo, precedente SEM092 só em
+    // NATIVE*; Script/JS/Native têm array dinâmico e continuam verdes —
+    // R7/R6, nunca VerifyError escondido).
+    if (driver.target == dev.kof.compiler.Target.JVM && !driver.interpreting
+            && driver.currentDiagnostics != null) {
+        Type faPreValueType = ExpressionTyper.inferExprType(driver, ae.value(), locals);
+        if (TypeParams.primitiveArrayIntoErasedRefArray(fieldType, faPreValueType)) {
+            var gpos = fa.position();
+            driver.currentDiagnostics.error(gpos != null ? gpos.file() : "",
+                    gpos != null ? gpos.line() : 0, gpos != null ? gpos.column() : 0, 0,
+                    "cannot store a primitive array (Int[]) into '" + fa.fieldName()
+                            + "' of erased reference-array type T[] (erases to Object[] on the"
+                            + " JVM — int[] is not a subtype of Object[]). Use List<Int> (the Kof"
+                            + " idiom for a growable sequence of primitives) or a reference-typed"
+                            + " array slot",
+                    "SEM098");
+            return localIdx;
+        }
+    }
     int faRecvSlot = -1;
     if (!isStaticField) {
         // §253 face B (campo de instância): o receiver NAO pode ficar na pilha

@@ -43,7 +43,10 @@ public final class KofProcess {
     /** process.run(program, args...) — the only entry point for now. */
 /** X10 fatia 2: nomes aceitos pelo dispatch real (catálogo p/ LSP).
      *  GUARDA: StdCatalogTest exige == case-literals da fonte abaixo. */
-    static List<String> functions() { return List.of("run"); }
+    static List<String> functions() { return List.of("run", "spawn", "exit"); }
+    // 19/09 LSP-A fatia 2: drift do db repetido aqui — runCall/entryCall/exitCall
+    // aceitam spawn e exit, mas a transcricao antiga só tinha run. GUARDA:
+    // StdCatalogTest agora exige == nomes roteados em ExpressionProcessCallLowerer.
 
     static ProcessCall runCall(List<Type> argTypes) {
         // [String, String, ...] or [String] — at least the program

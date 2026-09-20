@@ -187,8 +187,15 @@ public final class MemberCallTyper {
                 return Type.PrimitiveType.INT;
             if ("contains".equals(mn) || "isEmpty".equals(mn))
                 return Type.PrimitiveType.BOOL;
+            // #382 — indexOf/lastIndexOf: Int (posição, -1 ausente); addAll:
+            // Bool (mudou?); subList: List<E> do mesmo tipo; sort: void
+            // (in-place, ordem natural — SEM097 gateia o domínio).
+            if ("indexOf".equals(mn) || "lastIndexOf".equals(mn))
+                return Type.PrimitiveType.INT;
+            if ("addAll".equals(mn)) return Type.PrimitiveType.BOOL;
+            if ("subList".equals(mn)) return recvType;
             if ("add".equals(mn) || "push".equals(mn) || "append".equals(mn)
-                    || "set".equals(mn) || "clear".equals(mn))
+                    || "set".equals(mn) || "clear".equals(mn) || "sort".equals(mn))
                 return Type.PrimitiveType.VOID;
             // #334 — `map` devolvia recvType (ELEMENTO-FONTE) e `reduce`
             // devolvia elemType: a expressao era cacheada com o tipo errado
@@ -220,7 +227,7 @@ public final class MemberCallTyper {
             if (!"toArray".equals(mn) && !"sublist".equals(mn) && !"subSet".equals(mn)) {
                 if (sa.diagnostics() != null) {
                     sa.diagnostics().error("", 0, 0, 0,
-                            "Cannot resolve method '" + mn + "' on type 'List' (valid: add/get/set/remove/contains/size/isEmpty/clear/map/filter/reduce)",
+                            "Cannot resolve method '" + mn + "' on type 'List' (valid: add/get/set/remove/contains/size/isEmpty/clear/map/filter/reduce/indexOf/lastIndexOf/addAll/subList/sort)",
                             "SEM025");
                 }
             }
@@ -244,6 +251,10 @@ public final class MemberCallTyper {
             if ("remove".equals(mn)) return new Type.NullableType(valueType);
             if ("put".equals(mn)) return new Type.NullableType(valueType);
             if ("getOrDefault".equals(mn)) return valueType;
+            // #386 — containsValue: Bool; putIfAbsent: V? (valor anterior OU
+            // null quando ausente — contrato Java, D-NULL-INTENT/I7).
+            if ("containsValue".equals(mn)) return Type.PrimitiveType.BOOL;
+            if ("putIfAbsent".equals(mn)) return new Type.NullableType(valueType);
             if ("size".equals(mn) || "length".equals(mn) || "count".equals(mn))
                 return Type.PrimitiveType.INT;
             if ("containsKey".equals(mn) || "contains".equals(mn) || "isEmpty".equals(mn))
@@ -253,7 +264,7 @@ public final class MemberCallTyper {
             if ("values".equals(mn)) return new Type.ClassType("kof", "List", List.of(valueType));
             if (sa.diagnostics() != null) {
                 sa.diagnostics().error("", 0, 0, 0,
-                        "Cannot resolve method '" + mn + "' on type 'Map' (valid: put/get/getOrDefault/remove/containsKey/contains/size/clear/isEmpty/keys/values)",
+                        "Cannot resolve method '" + mn + "' on type 'Map' (valid: put/get/getOrDefault/putIfAbsent/remove/containsKey/contains/containsValue/size/clear/isEmpty/keys/values)",
                         "SEM025");
             }
         }

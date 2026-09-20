@@ -449,8 +449,12 @@ if (mc.receiver() != null) {
     }
     for (FunctionDeclarationNode fn : tloFns) {
             Type returnType = CompilerTypes.toType(fn.returnType(), driver.currentUnit);
-            if (fn.typeParameters().contains(fn.returnType())) {
-                returnType = new Type.TypeVariable(fn.returnType());
+            // §355: retorno T de genérica — compara pelo nome limpo do entry
+            // (que pode carregar bound "T: Animal") e preserva o bound.
+            Type.TypeVariable tvRet = TypeParams.variable(fn.returnType(),
+                    fn.typeParameters(), driver.currentUnit, driver.semanticAnalyzer);
+            if (tvRet != null) {
+                returnType = tvRet;
             }
             if (returnType instanceof Type.TypeVariable tv) {
                 for (int pi = 0; pi < fn.parameters().size(); pi++) {
@@ -482,6 +486,8 @@ if (mc.receiver() != null) {
     // só o caminho que produz o local nullable; W1 `var v = maybe()`
     // reproduz sem coleção). Espelha o unwrap da linha do handle acima.
     if (recvT instanceof Type.NullableType nt) recvT = nt.inner();
+    // #375/§355: receiver type-variable com bound resolve pelo BOUND.
+    if (recvT instanceof Type.TypeVariable tvb && tvb.bound() != null) recvT = tvb.bound();
     if (recvT instanceof Type.ClassType ct && driver.semanticAnalyzer != null) {
         SymbolTable.Symbol m = driver.semanticAnalyzer.resolveInHierarchy(ct.name(), mc.methodName());
         if (m instanceof SymbolTable.MethodSymbol ms) {

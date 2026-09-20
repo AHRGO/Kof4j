@@ -1,0 +1,28 @@
+// dev/kof/workflow-sched-host.kf — fatia schedule do `kof.workflow`
+// (bundle 2.1.3), injetada SEPARADAMENTE do host principal:
+//   • não-Native (JVM/ANDROID/Script/JS): delega ao `scheduler.at`
+//     (duração idiomática OU cron de 5 campos — D-SCHED-DURATION 19/09).
+//     Contrato §3: o workflow NÃO re-implementa cron — compõe. Cada disparo
+//     roda a dag DENTRO de `spawn` (a forma permitida p/ async em callbacks
+//     de timer — CONC003-JS-01: `run()` usa time.sleep no backoff de retry,
+//     o que marca async; JVM = thread por disparo, JS = pump cooperativo).
+//     Falhas do disparo NÃO derrubam o scheduler (isoladas no spawn);
+//     persistência de falhas = deadLetter (roda dentro de run()).
+//   • Native: o gate CRON001 do scheduler.at é estático — se esta fatia
+//     referenciasse scheduler.at, o host INTEIRO deixaria de compilar no
+//     Native mesmo sem uso. Aqui vai um STUB que falha ALTO em runtime
+//     citando CRON001 (R6 — nunca silencioso); o scheduler.at DIRETO do
+//     usuário continua com a recusa em compile-time.
+//
+// Injetada por CompilerWorkflow junto com workflow-host.kf no
+// `import kof.workflow` (DD-OTP-01 opção A).
+
+String schedule(KofWfDag d, String expr) {
+    if (d == null) { throw "workflow: schedule() com dag nula" }
+    return scheduler.at(expr, () -> {
+        spawn {
+            d.run()
+        }
+        return true
+    })
+}

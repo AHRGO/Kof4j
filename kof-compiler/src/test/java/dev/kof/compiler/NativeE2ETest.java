@@ -171,12 +171,40 @@ class NativeE2ETest {
             """);
         runNative(source, tempDir.resolve("out"),
             "[1, 2, 3]\n[1, 2]\n{k=9}\n[a, b]\n[true, false]\n[1.5, 2.0]\n"
-            + "[100000000000, 2]\n[97, 98]\n[]\n[?, ?]\n{a=1, b=2}");
-        // A linha aninhada vale `?` (não `[1], [2]`) até o §104b-ii — o
-        // placeholder é a recusa HONESTA (R6): imprimia lixo de ponteiro
-        // antes; hoje marca o buraco sem esconder. multi-entry Set/Map com
-        // ordem de hash do JVM também ficam de fora do golden (arquitetura
-        // linear nativa vs HashSet/HashMap — divergência registrada §107).
+            + "[100000000000, 2]\n[97, 98]\n[]\n[[1], [2]]\n{a=1, b=2}");
+        // 19/09 (face (3) do native-multiarch): a linha aninhada ganhou print
+        // REAL via descritor (.rodata) — antes `?` (recusa honesta do §107);
+        // o `?` sobrevive só p/ tipo sem como (Object sem vtable, cap 64B).
+        // multi-entry Set/Map com ordem de hash do JVM também ficam de fora do
+        // golden (arquitetura linear nativa vs HashSet/HashMap — divergência
+        // registrada §107). Cross riscv/aarch mantêm `[?, ?]` (face própria
+        // catalogada; os dois goldens cross têm nota apontando p/ cá).
+    }
+
+    @Test
+    void execCollectionPrintRecordNestedJvmGolden(@TempDir Path tempDir) throws IOException {
+        // §107 record/nested (face (3), 19/09): elementos que são RECORDS,
+        // LISTs/SETs/MAPs aninhados — o descritor recursivo (.rodata, emitido
+        // no call-site) manda o helper x86 chamar a vtable toString (record)
+        // e recursão de container com ponteiro de nó filho. Golden = oracle
+        // JVM MEDIDO no mesmo programa (regra §107: medir, não adivinhar).
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            record Point(Int x, Int y)
+            main() {
+                println(listOf(Point(1, 2)))
+                println(listOf(listOf(1, 2), listOf(3)))
+                println(mapOf("k", Point(7, 8)))
+                println(setOf(listOf(1)))
+                println(listOf(mapOf("a", 1)))
+                println(listOf(listOf(listOf(4))))
+                println("rec:" + Point(5, 6))
+                println(Point(3, 4))
+            }
+            """);
+        runNative(source, tempDir.resolve("out"),
+            "[Point[x=1, y=2]]\n[[1, 2], [3]]\n{k=Point[x=7, y=8]}\n[[1]]\n"
+            + "[{a=1}]\n[[[4]]]\nrec:Point[x=5, y=6]\nPoint[x=3, y=4]");
     }
 
     @Test

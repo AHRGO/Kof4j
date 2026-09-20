@@ -39,6 +39,7 @@ training/
 │   ├── compiler.md
 │   └── targets.md
 ├── idioms/                # IDIOMATIC FORM of each problem (BAD/GOOD/WHY)
+│   ├── automation.md
 │   ├── collections.md
 │   ├── classes.md
 │   ├── records.md
@@ -51,7 +52,9 @@ training/
 │   ├── composition.md
 │   ├── concurrency.md
 │   ├── stdlib.md
+│   ├── database.md
 │   ├── ui.md
+│   ├── security.md
 │   └── interop.md
 ├── anti-patterns/         # Catalog of what NOT to do
 │   ├── common-mistakes.md

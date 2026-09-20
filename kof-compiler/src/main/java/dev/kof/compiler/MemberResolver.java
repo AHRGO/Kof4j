@@ -22,16 +22,7 @@ public final class MemberResolver {
             if (cs == null) continue;
             SymbolTable.Symbol s = cs.members().resolve(memberName);
             if (s != null) return s;
-            if (cs.superClass() != null && !"Object".equals(cs.superClass()) && !visited.contains(cs.superClass())) {
-                visited.add(cs.superClass());
-                queue.add(cs.superClass());
-            }
-            for (String iface : cs.interfaces()) {
-                if (!visited.contains(iface)) {
-                    visited.add(iface);
-                    queue.add(iface);
-                }
-            }
+            enqueueAncestors(sa, cs, visited, queue);
         }
         return null;
     }
@@ -48,18 +39,31 @@ public final class MemberResolver {
             if (cs == null) continue;
             SymbolTable.FieldSymbol fs = cs.members().resolveField(fieldName);
             if (fs != null) return fs;
-            if (cs.superClass() != null && !"Object".equals(cs.superClass()) && !visited.contains(cs.superClass())) {
-                visited.add(cs.superClass());
-                queue.add(cs.superClass());
-            }
-            for (String iface : cs.interfaces()) {
-                if (!visited.contains(iface)) {
-                    visited.add(iface);
-                    queue.add(iface);
-                }
-            }
+            enqueueAncestors(sa, cs, visited, queue);
         }
         return resolveInHierarchy(sa, className, fieldName);
+    }
+
+    /**
+     * Super + interfaces na fila do BFS, NORMALIZADOS (simpleOfStored): o
+     * nome armazenado pode vir qualificado por import ("foo.bar.Shape"),
+     * pontuado-externo ("android.app.Activity") ou com genéricos ("Box<T>")
+     * — o registro é por nome simples, e o BFS cru quebrava a cadeia em
+     * qualquer uma dessas formas (SEM025/SEM011 falsos em herança
+     * cross-package → lowerField perdia o tipo do campo herdado).
+     */
+    private static void enqueueAncestors(SemanticAnalyzer sa, SymbolTable.ClassSymbol cs,
+                                         java.util.Set<String> visited, java.util.Queue<String> queue) {
+        String sup = HierarchyResolver.simpleOfStored(cs.superClass());
+        if (sup != null && !sup.isEmpty() && !"Object".equals(sup) && visited.add(sup)) {
+            queue.add(sup);
+        }
+        for (String iface : cs.interfaces()) {
+            String simple = HierarchyResolver.simpleOfStored(iface);
+            if (simple != null && !simple.isEmpty() && visited.add(simple)) {
+                queue.add(simple);
+            }
+        }
     }
 
     static boolean isObjectMethod(String name, int argCount) {
@@ -72,10 +76,13 @@ public final class MemberResolver {
 
     static boolean isBuiltinTypeName(String name) {
         return switch (name) {
+            // D-TROOL (19/09): `Troolean` e o nome de superficie do bool de
+            // tres estados (Nullable(Bool) por baixo) — builtin, nao classe.
             case "String", "string", "Object", "Int", "int", "Long", "long",
                     "Bool", "bool", "boolean", "Boolean", "Char", "char",
                     "Byte", "byte", "Short", "short", "Float", "float",
-                    "Double", "double", "void", "Void" -> true;
+                    "Double", "double", "Troolean", "troolean",
+                    "void", "Void" -> true;
             default -> false;
         };
     }
@@ -153,7 +160,14 @@ public final class MemberResolver {
         // → NoClassDefFoundError). Idempotente; não toca builtin/enum/nome local.
         // §179: qualifyDeep mapeia o builtin kof.ui/kof.media quando nada mais
         // resolve o nome (preservando shadowing por import/classe do módulo).
-        return CompilerTypes.qualifyDeep(qualifiedType(Type.of(name)), sa.unit(), sa);
+        // §355 (rio da erasure): os type-params do ESCOPO (classe/record/
+        // interface/função genérica) entram também nos ARGUMENTOS/COMPONENTES:
+        // `List<T>` carregava ClassType("","T") no arg (→ `checkcast T`, #399/
+        // #363) e `T[]` carregava o componente fantasma (→ campo `[LT;`, #295).
+        Type resolved = CompilerTypes.qualifyDeep(qualifiedType(Type.of(name)), sa.unit(), sa);
+        return TypeParams.rewrite(resolved, n ->
+                scope != null && scope.resolve(n) instanceof SymbolTable.TypeParameterSymbol tps
+                        ? tps.type() : null);
     }
 
     /**

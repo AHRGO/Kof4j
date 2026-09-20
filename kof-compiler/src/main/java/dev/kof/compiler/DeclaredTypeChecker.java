@@ -31,7 +31,7 @@ final class DeclaredTypeChecker {
         for (AstNode decl : sa.unit().declarations()) {
             switch (decl) {
                 case FunctionDeclarationNode f -> {
-                    Set<String> tps = new HashSet<>(f.typeParameters());
+                    Set<String> tps = new HashSet<>(TypeParams.names(f.typeParameters())); // §355: nome limpo
                     report(dc, sa, f.returnType(), tps,
                             "return type of function '" + f.name() + "'");
                     for (FormalParameterNode p : f.parameters()) {
@@ -41,7 +41,7 @@ final class DeclaredTypeChecker {
                 }
                 case ClassDeclarationNode c -> checkMembers(sa, dc, c.typeParameters(), c.members());
                 case RecordDeclarationNode r -> {
-                    Set<String> tps = new HashSet<>(r.typeParameters());
+                    Set<String> tps = new HashSet<>(TypeParams.names(r.typeParameters())); // §355
                     for (RecordComponentNode comp : r.components()) {
                         report(dc, sa, comp.type(), tps,
                                 "component '" + comp.name() + "' of record '" + r.name() + "'");
@@ -63,7 +63,7 @@ final class DeclaredTypeChecker {
     private static void checkMembers(SemanticAnalyzer sa, DiagnosticCollector dc,
                                      List<String> classTypeParams,
                                      List<? extends AstNode> members) {
-        Set<String> tps = new HashSet<>(classTypeParams);
+        Set<String> tps = new HashSet<>(TypeParams.names(classTypeParams)); // §355
         for (AstNode member : members) {
             switch (member) {
                 case FieldDeclarationNode field -> report(dc, sa, field.type(), tps,

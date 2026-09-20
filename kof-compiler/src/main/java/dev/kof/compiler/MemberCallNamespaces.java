@@ -110,7 +110,8 @@ final class MemberCallNamespaces {
             if (shellCall != null) return shellCall.returnType();
             if (sa.diagnostics() != null) {
                 sa.diagnostics().error("", 0, 0, 0,
-                        "Cannot resolve method '" + mc.methodName() + "' on 'shell' (valid: cmd, run, pipeline, ok)",
+                        "Cannot resolve method '" + mc.methodName() + "' on 'shell' (valid: "
+                                + String.join(", ", KofShell.functions()) + ")",
                         "SEM025");
             }
             return Type.UnknownType.UNKNOWN;

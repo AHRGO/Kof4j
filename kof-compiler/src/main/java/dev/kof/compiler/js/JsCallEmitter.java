@@ -1,10 +1,7 @@
 package dev.kof.compiler.js;
 import dev.kof.compiler.BuiltinTypes;
-import dev.kof.compiler.KofBinary;
 import dev.kof.compiler.KofCall;
 import dev.kof.compiler.KofCallKind;
-import dev.kof.compiler.KofLoadLiteral;
-import dev.kof.compiler.KofUnary;
 import dev.kof.compiler.Type;
 
 import java.util.ArrayList;
@@ -60,45 +57,28 @@ void handleCall(MethodCtx ctx, List<Object> stack,
         // colapsava para o argumento (`Color.valueOf("Blue")` virava "Blue").
         if ("valueOf".equals(kc.methodName()) && kc.kind() == KofCallKind.STATIC
                 && isJdkValueOfOwner(kc.ownerType())) {
-            if (!kc.parameterTypes().isEmpty()
-                    && kc.parameterTypes().get(0) instanceof Type.PrimitiveType cpt
-                    && "char".equals(Type.canonicalPrimitiveName(cpt.name()))) {
-                // String.valueOf(char) — caractere UTF-16 (paridade JVM/Native:
-                // "h", não o codepoint numérico). Ver known-bugs #27.
-                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("String.fromCharCode"),
-                        List.of(args.get(0))));
-            } else if (!kc.parameterTypes().isEmpty()
-                    && kc.parameterTypes().get(0) instanceof Type.ClassType ct
-                    && "kof".equals(ct.packageName())
+            Type p0 = kc.parameterTypes().isEmpty() ? null : kc.parameterTypes().get(0);
+            if (p0 != null && isCharUnwrapped(p0)) {
+                if (p0 instanceof Type.NullableType) {
+                    p.lc.registerRuntime("kofCharValueOf");
+                    stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofCharValueOf"), List.of(args.get(0))));
+                } else {
+                    stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("String.fromCharCode"), List.of(args.get(0))));
+                }
+            } else if (p0 instanceof Type.ClassType ct && "kof".equals(ct.packageName())
                     && (ct.name().equals("List") || ct.name().equals("Map") || ct.name().equals("Set"))) {
-                // §107-JS: String.valueOf(coleção) = toString do contêiner
-                // (JVM: ArrayList/HashMap/HashSet.toString → "[1, 2]", "{k=1}").
-                // String() do JS dava "1,2" (Array) / "[object Map]" — sem
-                // colchetes/ordem errada. kofFormat espelha o formato JVM.
                 p.lc.registerRuntime("kofFormat");
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofFormat"), List.of(args.get(0))));
-            } else if (BuiltinTypes.isString(kc.ownerType())
-                    && !kc.parameterTypes().isEmpty()
-                    && isDoubleOrFloatUnwrapped(kc.parameterTypes().get(0))) {
-                // §264: String.valueOf(Double/Float) — formato do JDK ("4.0",
-                // "1.0E7"), nao o String() cru do JS ("4", "10000000"). O
-                // lowerer compartilhado passou o tipo REAL no arg do valueOf
-                // (ExpressionPrintLowerer/ExpressionBinaryLowerer, faces JS).
+            } else if (BuiltinTypes.isString(kc.ownerType()) && p0 != null && isDoubleOrFloatUnwrapped(p0)) {
                 p.lc.registerRuntime("kofNumFmt");
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofNumFmt"),
-                        List.of(args.get(0), new JsIr.JsNumber(isFloatUnwrapped(
-                                kc.parameterTypes().get(0)) ? "1" : "0"))));
+                        List.of(args.get(0), new JsIr.JsNumber(isFloatUnwrapped(p0) ? "1" : "0"))));
             } else if (BuiltinTypes.isString(kc.ownerType())) {
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("String"), List.of(args.get(0))));
-            } else if (!kc.parameterTypes().isEmpty()
-                    && kc.parameterTypes().get(0) instanceof Type.PrimitiveType pt
-                    && "bool".equals(Type.canonicalPrimitiveName(pt.name()))) {
-                // Boolean.valueOf(Z) — format 0/1 as true/false, null-safe
-                // (#278/D-NULL-INTENT — ver kofBoolValueOf em JsRuntimeCore).
+            } else if (p0 instanceof Type.PrimitiveType pt && "bool".equals(Type.canonicalPrimitiveName(pt.name()))) {
                 p.lc.registerRuntime("kofBoolValueOf");
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofBoolValueOf"), List.of(args.get(0))));
             } else {
-                // boxed valueOf — JS values are already boxed; identity
                 stack.add(args.get(0));
             }
             return;
@@ -125,13 +105,15 @@ void handleCall(MethodCtx ctx, List<Object> stack,
             p.rt.handleRuntimeOp(ctx, stack, preambleExprs, kc, receiver, args);
             return;
         }
-        if ("kofRecordEq".equals(kc.methodName()) && kc.parameterTypes().size() == 2) {
+        if (("kofRecordEq".equals(kc.methodName()) || "kofFpEq".equals(kc.methodName()))
+                && kc.parameterTypes().size() == 2) {
             // §262(b): igualdade de record null-safe partilhada (Objects.equals
             // semantics) baixada p/ helper do runtime — o desugar com jumps da
             // lane não dobra em posição de condição no reconstructor JS (o
             // mesmo motivo do `&&`/`||` p/ target != JS, ExpressionBinaryLowerer:167).
-            ctx.lc.registerRuntime("kofRecordEq");
-            stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofRecordEq"), args));
+            String eqFn = kc.methodName();
+            ctx.lc.registerRuntime(eqFn);
+            stack.add(new JsIr.JsCall(new JsIr.JsIdentifier(eqFn), args));
             return;
         }
         // §239 (JS): String.format via host bridge — dispatch no p.rt (JsRuntimeOps)
@@ -359,6 +341,11 @@ boolean isPrintCall(KofCall kc) {
                 && "float".equals(Type.canonicalPrimitiveName(pt.name()));
     }
 
+    private static boolean isCharUnwrapped(Type t) {
+        Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
+        return inner instanceof Type.PrimitiveType pt && "char".equals(Type.canonicalPrimitiveName(pt.name()));
+    }
+
     /** §264: wrapper-boxed Double/Float (o typer boxou o receiver de `toString`). */
     private static boolean isJdkWrapperFp(Type t) {
         Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
@@ -476,124 +463,4 @@ void handleStringOp(MethodCtx ctx, List<Object> stack,
         }
     }
 
-    JsIr.JsExpression binaryExpr(KofBinary kb, JsIr.JsExpression left, JsIr.JsExpression right) {
-        // §81 (5b): binário de LONG no JS = BigInt. Os lados podem chegar como
-        // Number (literal Int promovido, var Int) — BigInt() é idempotente e
-        // garante a promoção Int->Long do JVM (mistura BigInt/Number lança).
-        if (JsTypeMapper.isLongType(kb.operandType())) return JsLongEmitter.longBinaryExpr(kb, left, right);
-        return switch (kb.op()) {
-            case ADD -> intWrap(kb.operandType(), new JsIr.JsBinary(left, "+", right));
-            case SUB -> intWrap(kb.operandType(), new JsIr.JsBinary(left, "-", right));
-            case MUL -> intWrap(kb.operandType(), new JsIr.JsBinary(left, "*", right));
-            case DIV -> {
-                if (JsTypeMapper.isIntFamily(kb.operandType())) {
-                    yield intWrap(kb.operandType(), new JsIr.JsBinary(left, "/", right));
-                }
-                yield new JsIr.JsBinary(left, "/", right);
-            }
-            case MOD -> new JsIr.JsBinary(left, "%", right);
-            case EQ -> JsTypeMapper.isBoolOperand(kb.operandType()) || JsTypeMapper.isBoolLiteral(left) || JsTypeMapper.isBoolLiteral(right)
-                    ? boolEq(left, right, true)
-                    : new JsIr.JsBinary(left, "===", right);
-            case NE -> JsTypeMapper.isBoolOperand(kb.operandType()) || JsTypeMapper.isBoolLiteral(left) || JsTypeMapper.isBoolLiteral(right)
-                    ? boolEq(left, right, false)
-                    : new JsIr.JsBinary(left, "!==", right);
-            case LT -> new JsIr.JsBinary(left, "<", right);
-            case LE -> new JsIr.JsBinary(left, "<=", right);
-            case GT -> new JsIr.JsBinary(left, ">", right);
-            case GE -> new JsIr.JsBinary(left, ">=", right);
-            case AND -> JsTypeMapper.isBoolOperand(kb.operandType())
-                    ? new JsIr.JsBinary(left, "&&", right)
-                    : new JsIr.JsBinary(left, "&", right);
-            case OR -> JsTypeMapper.isBoolOperand(kb.operandType())
-                    ? new JsIr.JsBinary(left, "||", right)
-                    : new JsIr.JsBinary(left, "|", right);
-            case XOR -> new JsIr.JsBinary(left, "^", right);
-            // §167: `int << long` tem tipo int (JLS 15.19) mas o RHS pode
-            // chegar como BigInt (literal Long ou var Long) → TypeError no JS.
-            // Normaliza o contador p/ Number 32-bit (o JS já mascara em 0x1f).
-            case SHL -> new JsIr.JsBinary(JsLongEmitter.int32(left), "<<", JsLongEmitter.toNumber32(right));
-            case SHR -> new JsIr.JsBinary(JsLongEmitter.int32(left), ">>", JsLongEmitter.toNumber32(right));
-            case USHR -> new JsIr.JsBinary(JsLongEmitter.int32(left), ">>>", JsLongEmitter.toNumber32(right));
-        };
-    }
-
-    /**
-     * Kof Int is a signed 32-bit type; JavaScript numbers are doubles. Wrap
-     * int arithmetic with ToInt32 (| 0) to preserve Kof/JVM 32-bit semantics.
-     */
-    JsIr.JsExpression intWrap(Type operandType, JsIr.JsExpression inner) {
-        if (JsTypeMapper.isIntFamily(operandType)) {
-            return new JsIr.JsBinary(inner, "|", new JsIr.JsNumber("0"));
-        }
-        return inner;
-    }
-
-    /**
-     * §93 paridade Bool no JS: uma expressão Bool pode chegar como 1/0 (funções
-     * stdlib, instanceof, predicados de coleção) ou true/false (literais). O
-     * === cru faz 1===true ser false. Normaliza ambos os lados com !! (ToBoolean)
-     * para casar a semântica de conteúdo do == de Kof com JVM/Native (que usam Z).
-     */
-JsIr.JsExpression boolEq(JsIr.JsExpression left, JsIr.JsExpression right, boolean eq) {
-        JsIr.JsExpression l = new JsIr.JsUnary("!!", left);
-        JsIr.JsExpression r = new JsIr.JsUnary("!!", right);
-        return new JsIr.JsBinary(l, eq ? "===" : "!==", r);
-    }
-
-JsIr.JsExpression unaryExpr(KofUnary ku, JsIr.JsExpression operand) {
-        return switch (ku.op()) {
-            case NEG -> JsTypeMapper.isLongType(ku.operandType())
-                    ? JsLongEmitter.wrap64(new JsIr.JsUnary("-", JsLongEmitter.longOperand(operand)))
-                    : new JsIr.JsUnary("-", operand);
-            case NOT -> new JsIr.JsConditional(operand, new JsIr.JsNumber("0"), new JsIr.JsNumber("1"));
-            case I2F, I2D, I2C, L2F, L2D, F2D, D2F -> operand;
-            case I2L -> new JsIr.JsCall(new JsIr.JsIdentifier("BigInt"), List.of(operand));   // §81
-            // §81/§167: Long(BigInt)->Int — truncamento EXATO sobre BigInt
-            // (BigInt.asIntN(32,...) faz o wrap signed do JVM; Number() direto
-            // perderia precisão >2^53 e daria 0 onde o JVM dá 1). O resultado
-            // volta a Number: Int no JS é Number, e um BigInt fluindo p/
-            // aritmética Int lançava `Cannot mix BigInt and other types` (§167).
-            case L2I -> new JsIr.JsCall(new JsIr.JsIdentifier("Number"),
-                    List.of(new JsIr.JsCall(
-                            new JsIr.JsMember(new JsIr.JsIdentifier("BigInt"), "asIntN"),
-                            List.of(new JsIr.JsNumber("32"), operand))));
-            // §181 (13/09): saturação JLS 5.1.3 via helpers do runtime —
-            // Math.trunc cru divergia do JVM (3e9, NaN, Infinity).
-            // registerRuntime é OBRIGATÓRIO (sem isso o helper não entra no
-            // kof-runtime.mjs — ReferenceError na execução).
-            case D2I -> {
-                p.lc.registerRuntime("kofD2I");
-                yield new JsIr.JsCall(new JsIr.JsIdentifier("kofD2I"), List.of(operand));
-            }
-            case F2I -> {
-                p.lc.registerRuntime("kofF2I");
-                yield new JsIr.JsCall(new JsIr.JsIdentifier("kofF2I"), List.of(operand));
-            }
-            case D2L -> {
-                p.lc.registerRuntime("kofD2L");
-                yield new JsIr.JsCall(new JsIr.JsIdentifier("kofD2L"), List.of(operand));
-            }
-            case F2L -> {
-                p.lc.registerRuntime("kofF2L");
-                yield new JsIr.JsCall(new JsIr.JsIdentifier("kofF2L"), List.of(operand));
-            }
-        };
-    }
-
-JsIr.JsExpression literalExpr(KofLoadLiteral lit) {
-        if (lit.type() instanceof Type.PrimitiveType pt
-                && "bool".equals(Type.canonicalPrimitiveName(pt.name()))) {
-            Object v = lit.value();
-            return new JsIr.JsIdentifier((v instanceof Integer i && i != 0) ? "true" : "false");
-        }
-        if (lit.value() instanceof Integer i) return new JsIr.JsNumber(Integer.toString(i));
-        // §81 (5b, 13/09): Long no JS = BigInt (paridade 64-bit real); o
-        // sufixo `n` fabrica o literal BigInt.
-        if (lit.value() instanceof Long l) return new JsIr.JsNumber(Long.toString(l) + "n");
-        if (lit.value() instanceof Float f) return new JsIr.JsNumber(Float.toString(f));
-        if (lit.value() instanceof Double d) return new JsIr.JsNumber(Double.toString(d));
-        if (lit.value() instanceof String s) return new JsIr.JsString(s);
-        return new JsIr.JsNull();
-    }
 }

@@ -1,0 +1,19 @@
+// dev/kof/workflow-sched-host.native.kf — fatia schedule do `kof.workflow`
+// no NATIVE (bundle 2.1.3). O gate CRON001 do scheduler.at é estático: se
+// esta fatia referenciasse scheduler.at, o host INTEIRO deixaria de
+// compilar no Native mesmo sem uso (medido 19/09 — hostCompilesOnNative
+// quebrou). Aqui vai um STUB que falha ALTO em runtime citando CRON001
+// (R6 — nunca silencioso); o scheduler.at DIRETO do usuário continua com a
+// recusa em compile-time (KofScheduler.supportedOn).
+//
+// Injetada por CompilerWorkflow no lugar de workflow-sched-host.kf quando
+// driver.target.isNative() (DD-OTP-01 opção A).
+
+String schedule(KofWfDag d, String expr) {
+    if (d == null) { throw "workflow: schedule() com dag nula" }
+    if (expr == null) { throw "workflow: schedule() com expressão nula" }
+    if (true) {
+        throw "workflow: schedule() não disponível no NATIVE — CRON001 (delega a scheduler.at; cron/duração exigem o runtime JVM/JS)"
+    }
+    return ""
+}

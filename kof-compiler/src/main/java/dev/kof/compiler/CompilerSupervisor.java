@@ -18,17 +18,16 @@ import java.util.List;
  *
  * <p>Paridade honesta (regra 6 / R6): o núcleo observa falha de worker via
  * {@code try { await h } catch} no laço por filho. Desde §129 (DECISIONS §2,
- * opção B) o handler chain do Native x86 é PER-THREAD (TLS) e o trampolim do
-  * spawn instala handler próprio: o {@code throw} de um worker marca o handle
-  * como excepcional e {@code await}/{@code selectAny} relançam no consumidor —
-  * x86 entrega o núcleo. riscv/aarch seguem {@code OTP001} (clone cru sem TLS
-  * para a cadeia de handlers — os auxiliares poll/done/cancel/selectAny/
-  * awaitTimeout existem desde 15/09, CONC001 fechado {@code e8364c97}).
-  * JS entrega o núcleo desde 18/09 (§132 resolvido: {@code time.sleep} é ponto de
-  * await cooperativo, o worker spawnado de dentro de outra task dispara; o gate
-  * {@code OTP002} foi levantado). Em riscv/aarch o diagnóstico é claro — NUNCA
-  * fallback silencioso. JVM/ANDROID (JvmBackend), Script (interpretador),
-  * Native x86 e JS entregam o núcleo.
+ * opção B) o handler chain do Native é PER-THREAD e o trampolim do spawn
+ * instala handler próprio: o {@code throw} de um worker marca o handle como
+ * excepcional e {@code await}/{@code selectAny} relançam no consumidor. No x86
+ * a cadeia é TLS local-exec; em riscv/aarch (port 19/09) é uma tabela por-TID
+ * {@code kof_exc_slots} — o TLS-via-{@code tp} foi provado ABI-inseguro (quebra
+ * a TLS da libc; ver known-bugs §129 adendo 19/09). Com isso o núcleo é
+ * entregue nos 4 targets. JS entrega desde 18/09 (§132 resolvido:
+ * {@code time.sleep} é ponto de await cooperativo; o gate {@code OTP002} foi
+ * levantado). JVM/ANDROID (JvmBackend), Script (interpretador), Native x86,
+ * riscv64, aarch64 e JS entregam o núcleo.
  */
 final class CompilerSupervisor {
 
@@ -50,23 +49,11 @@ final class CompilerSupervisor {
                         && ("Supervisor".equals(t.name()) || "KofWorker".equals(t.name())
                                 || "KofWorkerFactory".equals(t.name())));
         if (collision) return unit;
-        // §129 (DECISIONS §2, opção B) FECHADO no x86: o handler chain é TLS
-        // (per-thread) e o trampolim do spawn instala handler próprio — um
-        // throw em worker marca o handle como excepcional e await/selectAny
-        // relança. riscv/aarch seguem OTP001 (clone cru sem TLS; os helpers
-        // selectAny/poll/done/cancel/awaitTimeout existem desde 15/09 —
-        // CONC001 fechado e8364c97).
-        if (driver.target == Target.NATIVE_RISCV64 || driver.target == Target.NATIVE_AARCH64) {
-            diagnostics.error(driver.currentSourceName, 0, 0, 0,
-                    "kof.supervisor no target " + driver.target + ": the supervisor loop "
-                            + "uses 'try { await } catch' over tasks that "
-                            + "fail, and on riscv/aarch cross the throw in a task "
-                            + "longjmps into the GLOBAL handler chain of the main thread "
-                            + "(crash/hang — known-bugs §129, fixed on x86). "
-                            + "OTP core available on JVM, Script and Native x86.",
-                    "OTP001");
-            return null;
-        }
+        // §129 (DECISIONS §2, opção B) FECHADO nos 4 targets: o handler chain é
+        // per-thread (TLS local-exec no x86; tabela por-TID kof_exc_slots em
+        // riscv/aarch, port 19/09) e o trampolim do spawn instala handler
+        // próprio — um throw em worker marca o handle como excepcional e
+        // await/selectAny relançam no consumidor. Sem gate OTP001.
         try (var in = CompilerDriver.class.getResourceAsStream("/dev/kof/supervisor-host.kf")) {
             if (in == null) {
                 diagnostics.error("", 0, 0, 0,

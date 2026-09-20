@@ -1,0 +1,58 @@
+import kof.workflow
+
+// ---------------------------------------------------------------------------
+// CI/CD pipeline written in Kof — Stage 2, row 2.5
+// (docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md; D-WORKFLOW-RUN).
+//
+// The RUNNER is tooling; the PIPELINE is Kof code (VISION §4.3). No YAML, no
+// shell glue: the stages are typed Kof functions over kof.io / kof.process,
+// composed as a DAG with dependencies, retry and a dead-letter sink.
+//
+//   kof workflow list examples/ci/ci-pipeline.kf
+//   kof workflow run  examples/ci/ci-pipeline.kf
+//   kof workflow run  examples/ci/ci-pipeline.kf --job test
+//   kof workflow run  examples/ci/ci-pipeline.kf --dry-run --json
+//
+// Stages mirror a real build: checkout -> build -> test -> package. `build`
+// retries once (flaky step), and `package` parks a terminal failure in the
+// dead-letter sink instead of losing it. The runner synthesizes main(); a
+// pipeline file defines pipeline() and no main().
+// ---------------------------------------------------------------------------
+KofWfDag pipeline() {
+    var ws = "build/ci-demo"
+
+    // NOTE (measured 19/09, cataloged §353): a lambda whose body returns an
+    // `io` method result DIRECTLY (`() -> File(p).exists()`) is rejected with
+    // SEM014 — the typer does not resolve the io return type in that position.
+    // Binding to an explicit `Bool` first is the idiom that compiles.
+    var checkout = job("checkout", () -> {
+        if (Directory(ws).exists()) { Directory(ws).delete() }
+        Directory(ws).createDirectories()
+        Bool ok = Directory(ws).exists()
+        return ok
+    })
+
+    var build = job("build", () -> {
+        File(ws + "/app.txt").writeText("artifact-v1")
+        Bool ok = File(ws + "/app.txt").exists()
+        return ok
+    }).after(checkout)
+
+    var test = job("test", () -> {
+        String? content = File(ws + "/app.txt").readText()
+        return content != null && content == "artifact-v1"
+    }).after(build)
+
+    var packageJob = job("package", () -> {
+        Bool ok = File(ws + "/app.txt").copyTo(ws + "/app.jar")
+        return ok
+    }).after(test)
+
+    var flow = dag(listOf(packageJob, test, build, checkout))
+    flow.retryFixed(build, 1)
+    flow.deadLetter(packageJob, (n: String, m: String) -> {
+        println("dead-letter: " + n + " -> " + m)
+        return true
+    })
+    return flow
+}

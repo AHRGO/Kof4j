@@ -489,14 +489,14 @@ O modelo não muda entre essas topologias.
 * `KofWebE2ETest`
 
 **Referência:** `docs/architecture/application-model.md`
-**Fila:** `CmdNew`, integração completa de manifesto/deps e gaps de target.
+**Fila:** `CmdNew` ✅ (`new` em `Main.java:37`); integração de manifesto/dependências ✅ (`kofdeps` + lock transitivo 1.5.2 + registry pull 1.5.3-S2, 19/09); gaps de target → rastreados em `docs/backend-parity.md` (ledger, não este registro).
 
 ---
 
 ## D-SPRING — independência de framework
 
-**Data:** 13/09/2026
-**Estado:** `IN_PROGRESS`
+**Data:** 13/09/2026 · **Concluída:** 19/09/2026 (auditoria vs código, este commit)
+**Estado:** `CONCLUÍDA`
 
 ### Contrato
 
@@ -511,9 +511,9 @@ O modelo não muda entre essas topologias.
 | Fase                | Estado        |
 | ------------------- | ------------- |
 | 1–9                 | `IMPLEMENTED` |
-| 10 — testing nativo | `DECIDED`     |
-| 11 — CLI completa   | `IN_PROGRESS` |
-| 12 — blog E2E       | `IN_PROGRESS` |
+| 10 — testing nativo | `IMPLEMENTADA 19/09` (`kof test` harness: `test "nome" { }` → runner sintetizado, `CmdTest.java:15,78`; CliFlagStrictness/CmdBuildAndroidAab cobrem a face; suíte 2772/0F) |
+| 11 — CLI completa   | `IMPLEMENTADA 19/09` (run/build/test/serve/fmt/deps/init/check ligados em `Main.java:18-41`; deps = Maven + registry 1.5.3-S2) |
+| 12 — blog E2E       | `IMPLEMENTADA 19/09` (`KofBlogE2ETest` verde na suíte reactor completa) |
 
 ### Fase 10
 
@@ -664,6 +664,43 @@ A cadeia de exceções é thread-scoped.
 Worker sem handler interno publica a exceção no handle.
 
 O consumidor relança em `await`, `await_timeout` e `select_any`.
+
+**Extensão 19/09 — mecanismo riscv64/aarch64 (decisão da mantenedora no chat):**
+o mesmo contrato §129 é portado para os targets cross usando **TLS real via
+`clone`** (não uma tabela por-TID). Cada thread ganha seu próprio topo de
+cadeia: a main no `_start` (nosso entry point — **não** passa por
+`__libc_start_main`, então a `tp` é nossa para definir) e cada worker via
+`CLONE_SETTLS` + bloco TLS por worker (as flags do clone já carregam
+`CLONE_SETTLS`; hoje `a3`/tls vai como `0`). O `kof_spawn_trampoline` instala
+o frame de handler por worker e publica a causa em `handle->exc` (offset 48 no
+riscv), como faz o option B do x86_64. **Bloqueio conhecido a resolver na
+implementação:** o tradutor aarch64 mapeia riscv `tp` → `x4`
+(`NativeAarch64Helpers:74`), o que colide com `a4` → `x4` (`:98`) e não lê
+`TPIDR_EL0` (o thread pointer real do aarch64, via `mrs`) — os sítios de acesso
+compartilhados precisam funcionar nas duas arches antes do port entrar.
+Evidência do baseline RED: dois testes cross espelhando o §129 x86 penduram sob
+qemu (o `throw` do worker faz longjmp na `kof_exc_chain` global da `main`).
+
+**Correção 19/09 — TLS-via-`tp` é ABI-inseguro; mecanismo trocado por tabela
+por-TID (medido, agente).** O mecanismo "TLS real via `clone`" acima foi
+implementado e **quebra a libc de forma provada**: sobrescrever o thread pointer
+(riscv `tp`=x4 / aarch64 `TPIDR_EL0`) dessincroniza a TLS da própria biblioteca
+C. Sob qemu isso produziu `SIGSEGV` (exit 139) em testes aarch64 que chamam
+`snprintf`/`strtod` via `RuntimeDtoa` (B45): `nativeValueOfDoubleFloatMatchesJvmGolden`,
+`aarch64NegativeFloatDoubleRuns`, `nativeCollectionPrintMatchesJvmGolden`. No
+riscv a mesma mudança também regrediu `crossNativeConcurrencyHelpersRun`
+(`done(a)` true→false). Causa raiz: nosso `_start` é nosso, mas qualquer
+programa Kof ainda pode chamar a libc (dtoa/format), então a `tp` **não** é
+nossa para reaproveitar. **Resolução (desvio de mecanismo, contrato intacto):**
+o *contrato* §129 (cadeia thread-scoped, worker publica em `handle->exc`,
+consumidor relança em `await`/`await_timeout`/`select_any`) é mantido exatamente;
+só o *mecanismo* muda para uma **tabela por-TID** `kof_exc_slots` (256 entries ×
+16 B `[tid, chain]`, chave `gettid`=a7 178, probe linear, mesmo padrão do
+`kof_cancel_slots`/CONC001), com um helper `kof_exc_slot()` retornando `&chain`
+da thread atual. É a segunda opção, mais segura, e não toca o thread pointer.
+Prova: os dois testes cross agora passam verdes em riscv64/aarch64 sob qemu
+(`KofConcurrency2Test` `spawnWorkerThrowIsolatedFromSiblingsCrossArch` +
+`spawnWorkerThrowUnhandledPropagatesCrossArch`, 138/0 na rodada de 19/09).
 
 ### `roundTo`
 
@@ -1054,7 +1091,8 @@ sincronizam como unidade-doc de acompanhamento por pacote traduzido.
 
 **Data:** 16/09/2026
 
-**Estado:** `DECIDIDO`
+**Estado:** `IMPLEMENTADO` (top-level/ctor) — `b1ea1718`, 19/09. Ver nota abaixo
+sobre o escopo de métodos
 
 **Origem:** issue #333 (decisão da mantenedora no chat, 16/09: "classe
 definida como int deve obrigatoriamente retornar int"; "função definida como
@@ -1085,6 +1123,30 @@ função de um tipo declarado deve retornar aquele tipo").
 Dono: lane compiler (issue sweep reivindicado no DOING, 17/09). O texto do
 diagnóstico segue D-DIAG-EN (inglês).
 
+**Como chegou no código (`b1ea1718`, 19/09, `SEM093`) — medido no jar do tip
+0.4.6:**
+
+- **Item 1 (void declarado):** vale para **funções top-level e construtores**;
+  um **método de classe** declarado `void` com `return <valor>` ainda compila
+  pela reinferência bug-26 dos dois lados (§130) — o commit da mantenedora diz
+  isso de propósito: "Metodos ficam de fora". A face b do thread #333
+  (`b.m()` imprimindo através do slot retipado) continua aceita por decisão,
+  a menos que a mantenedora estreite o §130 depois.
+- **Item 2 (re-tipo silencioso):** o re-tipo só-do-descritor do
+  `FunctionLowering` (a metade NoSuchMethodError) **sumiu no top-level**; o
+  re-tipo do symbol em `analyzeMethodBody` sobrevive em métodos, com os
+  call-sites resolvendo contra o symbol retipado (par consistente — sem crash
+  de link).
+- **Item 3 (sem tipo declarado):** no **top-level** o "as hoje" foi apertado de
+  propósito — `f() { return 5 }` (sem anotação) agora é `SEM093` (prova:
+  `VoidReturnValueE2ETest#untypedTopLevelWithReturnRejected`), porque o
+  top-level sem anotação era exatamente a face do NSME silencioso. Métodos sem
+  anotação continuam inferindo (§130). Este registro preside; afrouxar depois
+  é decisão da mantenedora (regra 6).
+- **Item 4:** a entrada do CHANGELOG vem neste mesmo commit (EN+PT).
+
+
+
 ### Relacionamentos
 
 - Fecha o bloqueio por regra 6 do #333 (o fix estava catalogado, esperando
@@ -1097,7 +1159,7 @@ diagnóstico segue D-DIAG-EN (inglês).
 
 **Data:** 2026-09-18
 
-**Estado:** `DECIDIDO`
+
 
 **Origem:** diretriz da mantenedora, 18/09 (varredura de issues): "ele ta
 abrindo issue de java no kof. kof não é java. não tem string builder no kof.
@@ -1785,3 +1847,272 @@ diferente de `List<String>`" (= opção A, rejeição em compile-time) · X8-A �
 escolha em uma linha; o commit de ratificação atualiza a tabela D de
 `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (+PT), `roadmap.md` §23 (D7),
 `backend-parity.md` (D4) e `known-bugs.md` §270 (#401).
+
+---
+
+## D-TROOL — `Bool` nunca é nullable; os três estados vivem em `Troolean` (mantenedora 19/09)
+
+**Data:** 2026-09-19 · **Estado:** `DECIDIDO` · **Revisão de:** a face
+`Nullable(Bool)` do D-NULL-INTENT (família §295/§306) · **Evidência:** diretiva
+da mantenedora no chat 19/09 ~12:0x (-03): "se voce declara uma variavel
+nullable e nao instancia ela, ela ja tem valor null por padrao, a tentativa de
+atribuir null a um nullable via codigo precisa continuar sendo recusada. null
+so existe como valor se a variavel nao for instanciavel ou se o retorno de
+alguma funcao vier null. alem disso nao deve interferir nos valores de
+primitivos e boolean nao pode ser nullable. so existe 2 valores possiveis pra
+ele. se quiser true, false, null use troolean, que tem 3 estados. cria a logica
+do tipo trool."
+
+### Contrato (medido 19/09 no jar do tip — itens 1–3 JÁ são o comportamento atual, agora ratificados)
+
+1. **Nullable não-instanciado = `null`** — `String? s`, `Int? q`, `Bool? b` (até
+   o item 4 desta decisão) declarados sem inicializador já imprimem/comparam
+   `null` em JVM, Script e JS (medido). Ratificado como contrato.
+2. **Atribuição direta `= null` continua recusada** — `SEM048` (null só chega a
+   um `T?` via API — `map.get`, `readLine`, função que `return null` num `T?`) —
+   inalterado desde 10/09 (D-NULL-INTENT/SG-008).
+3. **Primitivos não são tocados** — `Int n` não-nullable mantém default `0`
+   (`println` → `0`, medido); primitivos nullable (`Int?`…) mantêm a
+   representação boxed e o default `null` do §295. Esta decisão não muda NADA
+   para eles.
+4. **NOVO — `Bool` tem exatamente dois valores.** `Bool?` vira diagnóstico de
+   compile-time **`SEM095`** (`"Bool tem exatamente dois valores (true/false) —
+   para true/false/desconhecido use Troolean"`). Vale para declarações,
+   parâmetros, retornos e argumentos de tipo (`Nullable(BOOL)` do usuário). O
+   corpus tem **0** ocorrências de `Bool?` (medido em `training/`, `learn/`,
+   `docs/language/`); só 4 arquivos de teste internos a carregam, e migram com
+   a mudança. SEM094 fica reservado ao gate de switch-return do PR #481 (bot,
+   fechado sem merge) — se ele reaparecer primeiro, os códigos trocam e esta
+   entrada é atualizada.
+5. **NOVO — `Troolean`**: tipo nominal de três estados `{true, false,
+   unknown}`.
+   - unknown chega exatamente como `null` nas regras 1–2: declaração
+     não-instanciada (`Troolean t`) ou API/função retornando `null` nele;
+     atribuição literal `= null`/`= unknown` NÃO é adicionada (mesmo espírito do
+     SEM048).
+   - **Lógica forte de Kleene** (o "trool" canônico): `!` troca T/F e mantém U;
+     `&&` = F-dominante (F∧qualquer=F; senão U se há U; senão T); `||` =
+     espelho (T-dominante). `!`, `&&`, `||` sobre Trooleans seguem essas tabelas.
+   - igualdade `==`/`!=` contra `true`/`false`; o teste do estado unknown é o
+     intent-check `== null` do D-NULL-INTENT (`t == null` significa "é
+     desconhecido" — nenhuma sintaxe nova); `println` mostra `true` / `false` /
+     `null` (mesmas faces de hoje).
+   - em **posição de condição** (`if`/`while`/if-expr): `if (t)` ≡
+     `if (t == true)` — idêntico ao açúcar §306(a) ratificado para `Bool?`
+     (UNKNOWN pega o ramo false; documentado, não silencioso).
+
+### Deliberação de implementação (decisão de lane dentro do contrato decidido)
+
+`Troolean` baixa para a **maquinaria boxed-Boolean nullable que já funciona**
+(§295/§306) em JVM/Script/JS — o front-end desaçúcar as tabelas de Kleene em
+comparações `== true` / `== false` / `== null` + árvores de if-expr que os
+backends já emitem corretamente; nenhuma classe de runtime nova por backend.
+Native: a face boxed-`T?` lá é a frente aberta do PR #465 (fila 2 do
+D-NULL-INTENT) — se `Nullable(Bool)` ainda não se comporta em Native,
+`Troolean` entra com diagnóstico honesto `NAT-TROOL001`, nunca fallback
+silencioso (regra 6 do freeze / R6).
+
+### Fila
+
+1. Front-end: registrar `Troolean`; `SEM095` em todo `Nullable(Bool)` escrito
+   pelo usuário; desaçúcar Kleene; faces de condição/println/`==` — provas
+   JVM+Script+JS via `runAll3`; os 4 arquivos de teste com `Bool?` migram para
+   `Troolean` (mesmas asserções — as faces de truthiness do §306 sempre foram
+   sobre a leitura de 3 estados).
+2. Face Native (medir; diagnóstico-ou-funciona — nada inventado).
+3. Corpus: `training/idioms/` (errors/control-flow) + `fake-idioms.md` (linha
+   `Bool?` → Troolean), `docs/language/types.md`, nota de revisão no
+   D-NULL-INTENT, entrada de migração no CHANGELOG (linha 0.4.0), célula da
+   matriz em `backend-parity.md`.
+
+### Relacionadas
+
+Fecha a família por decisão: **#462** (`Bool?` em contexto de valor →
+VerifyError) e **#486** (`&&`/`||` sobre `Bool?` vazam `null` no JS /
+VerifyError no JVM) — os relatos são reais, mas a correção deixou de ser
+"far o `Bool?` funcionar em posição de valor": `Bool?` está sendo REMOVIDO; as
+faces viram testes de `Troolean` na fatia 1.
+
+---
+
+## D-KOF-FIRST — contrato interno antes da comparação externa (`KOF-primeiro, externo-depois`)
+
+**Data:** 2026-09-19 · **Estado:** `DECIDED` (ratificado 19/09/2026 — flip `PROPOSTO`→`DECIDED` executado na sessão da lane PR-EXTERNA, 19/09; o texto da regra não muda em relação à proposta da mantenedora `KOF_FIRST_CONTRACT_RULE.md`. A partir daqui é contrato ratificado, não mais apenas regra de trabalho) · **Escopo:** triagem de issues/PRs, bug hunting, classificação de gaps, uso de referências externas · **Relacionadas:** `D-NOT-JAVA` (regra 8), `D-TRIAGE` (regra 9), a regra de precedência do §5
+
+### Contexto
+
+O risco não é uma issue errada; é a linguagem evoluir por acidente. Uma
+expectativa estrangeira entra como "bug", recebe um patch plausível, um teste
+congela o novo comportamento, a documentação passa a ensiná-lo — e a
+superfície do Kof cresceu sem decisão. O repositório já carrega as peças da
+resposta (regra 8 "Kof não é Java", regra 9 "a checagem de filosofia precede a
+issue", `D-NOT-JAVA`, `D-TRIAGE`, e a precedência que põe o `DECISIONS.md`
+acima da implementação) e, ao mesmo tempo, os casos medidos que motivaram esta
+regra: #410 (`0..n` como range), #416 (`!!`), #407 (`val`/`var` top-level),
+#424 (`StringBuilder`), #415 (`String[i]`), #449 (`RawView`), #483
+(`name() -> Type`), #492/PR #496 (`(Int x) -> x * x`).
+
+### Contrato
+
+1. **Nenhum resultado externo é oráculo.** Uma língua, especificação, fórum,
+   benchmark, paper ou runtime não define, por si só, o comportamento esperado
+   do Kof.
+2. **O reproducer deve ser Kof válido.** Antes de abrir ou validar uma issue,
+   provar que o trecho usa gramática e sintaxe reconhecidas pelo Kof.
+3. **O contrato do Kof vem antes da implementação.** Identificar a decisão, a
+   documentação normativa, o teste de conformidade ou a regra aplicável
+   *antes* de classificar o comportamento observado.
+4. **O idiom Kof é procurado antes da feature estrangeira.** Se a necessidade
+   já é resolvida por abstração Kof existente, rejeitar a sintaxe estrangeira
+   não é bug.
+5. **Divergência interna precede comparação externa.** Um bug é demonstrado
+   como divergência entre o Kof e o próprio contrato, ou entre alvos regidos
+   pelo mesmo contrato.
+6. **Gap precisa ser provado.** Só existe gap quando a necessidade legítima
+   permanece sem solução satisfatória dentro do Kof atual.
+7. **A pesquisa externa só começa depois do gap.** Provado o problema interno,
+   outras línguas e a literatura podem ser estudadas.
+8. **Referências externas fornecem princípios, não superfície.** Extrair
+   invariantes, técnicas, modelos formais, falhas conhecidas, trade-offs.
+9. **Toda solução externa é traduzida de volta para Kof.** Nome, sintaxe, API,
+   semântica e ergonomia são avaliados contra a filosofia, as decisões, os
+   alvos e as abstrações do Kof.
+10. **Mudança de contrato é decisão, não bugfix.** Proposta que muda
+    gramática, semântica, operadores, modelo de tipos ou API congelada exige
+    decisão explícita da mantenedora (regra 6).
+
+### Classificação (Gate 4 — sem ela não há patch de produção)
+
+| Categoria | Existe quando |
+|---|---|
+| `BUG REAL` | programa Kof válido + contrato Kof define o comportamento + implementação diverge |
+| `DIVERGÊNCIA DE ALVO` | a mesma construção Kof válida se comporta diferente entre alvos sem gap honesto documentado |
+| `GAP REAL` | necessidade legítima + sem sintaxe/idiom/stdlib/composição Kof adequada + sem decisão que a rejeite |
+| `DESIGN REQUEST` | a intenção é alterar, ampliar ou substituir uma decisão de superfície/semântica |
+| `NOT-VALID` | o reproducer depende de construção que não é Kof e há idiom Kof para a intenção |
+| `AMBIGUIDADE DE CONTRATO` | docs, decisões, testes e implementação não determinam o comportamento normativo → evidências + alternativas + decisão da mantenedora, nunca fix automático |
+
+### Gates (o pipeline, em ordem)
+
+- **Gate 0 — o reproducer é Kof?** Conferir `docs/language-reference/`
+  (grammar, syntax, types), o doc da própria feature, `training/`, `learn/`,
+  `training/anti-patterns/fake-idioms.md`, este arquivo. Não é Kof → não há
+  bug demonstrado; ir ao Gate 1.
+- **Gate 1 — intenção e idiom.** Nunca parar em "essa sintaxe não existe":
+  nomear a intenção real e o idiom Kof que a expressa. Idiom resolve →
+  `NOT-VALID`.
+- **Gate 2 — contrato que governa.** `DECISIONS.md` → docs normativos →
+  conformidade/golden → matriz de paridade → implementação; histórico de chat
+  só como evidência auxiliar. Registrar `fonte do contrato` / `enunciado do
+  contrato` / `comportamento esperado do Kof`.
+- **Gate 3 — medição interna.** Rodar o reproducer **Kof válido** nos alvos
+  relevantes (JVM / Script / JS / Native x86 / Native riscv64-aarch64 quando
+  aplicável).
+- **Gate 4 — classificação.** Uma das seis categorias acima.
+- **Gate 5 — prova do gap.** Para `GAP REAL`, responder *não* a todas: existe
+  sintaxe Kof válida? existe idiom documentado? existe stdlib/API? existe
+  composição de recursos Kof que resolve razoavelmente? existe decisão que
+  rejeita conscientemente essa superfície? existe gap já catalogado?
+- **Gate 6 — pesquisa externa.** Agora, e só agora.
+- **Gate 7 — tradução de volta para Kof** (que problema interno resolve, que
+  princípio é reaproveitável, o que é específico da língua de origem, conflito
+  com alguma decisão Kof, nova sintaxe/API, complexidade acidental, paridade,
+  gap honesto em algum alvo, se é expressável com mecanismos existentes).
+- **Gate 8 — decisão.** Mudança de contrato → proposta comparativa,
+  trade-offs, impacto de migração e por alvo, recomendação técnica **sem
+  auto-ratificação**, decisão da mantenedora.
+- **Gate 9 — implementação e prova.** RED reproduzindo o contrato → fix da
+  causa raiz → GREEN → conformidade cross-target → golden/migração → docs e
+  CHANGELOG.
+
+### Bloqueado sem decisão
+
+PR automática de produção é apropriada **só** para `BUG REAL` confirmado,
+`DIVERGÊNCIA DE ALVO` confirmada, ou implementação de decisão já ratificada.
+Fica bloqueada enquanto a issue for `AMBIGUIDADE DE CONTRATO`,
+`DESIGN REQUEST` ou `GAP` não ratificado. Qualquer diff de parser/lexer que
+introduza forma nova aceita deve responder *qual decisão autoriza esta nova
+superfície* — sem decisão, `STOP`.
+
+### Bloco de evidência (issues e PRs)
+
+Issues e relatórios do bug hunter carregam `KOF VALIDITY` (fonte da gramática,
+fonte da sintaxe/documentação, reproducer validado como Kof), `CONTRACT`
+(decisão/fonte, comportamento esperado), `MEASUREMENT` (alvos, comportamento
+real), `CLASSIFICATION` e `DUPLICATE CHECK`. Se `KOF VALIDITY` não puder ser
+provado, nenhuma issue é aberta automaticamente. PRs carregam a fonte do
+contrato, o reproducer Kof válido, o RED antes da mudança de produção, a causa
+raiz, o fix, por que a mudança altera (ou não) o contrato do Kof, a prova de
+regressão e o impacto cross-target.
+
+### Evidência
+
+Proposta para a mantenedora `KOF_FIRST_CONTRACT_RULE.md` (19/09); regras 8 e 9
+do `AGENTS.md`/`AGENTS.pt_BR.md`; `D-NOT-JAVA`, `D-TRIAGE`, regra de
+precedência do §5; casos medidos #407, #410, #415, #416, #424, #449, #483,
+#492/#496. Mudança só de governança: nenhum código, semântica ou superfície
+tocada.
+## D-SCHED-DURATION — expressões de duração idiomáticas no `scheduler.at`
+
+**Data:** 19/09/2026 · **Estado:** `DECIDIDO` (diretriz da mantenedora no
+chat: "coloca pra aceitar expressões idiomáticas também. scheduler.at(30m)
+por exemplo, pode ter s, m, h, d, M, a" + "e aceitar expressões compostas
+(1d&30m) por exemplo")
+
+**Decisão (aditiva, regra 2 do freeze):** o 1º argumento de
+`scheduler.at(expr, fn)` aceita, ALÉM do cron de 5 campos UTC (inalterado),
+uma **expressão de duração idiomática**:
+
+* `termo := dígitos unidade`, `unidade ∈ { s, ms, m, h, d, M, a }` — `s` segundos, `ms` milissegundos,
+  `m` minutos, `h` horas, `d` dias (fixos, em ms); `M` meses e `a` anos
+  avançam o CALENDÁRIO UTC (virada de mês/ano, com clamp no último dia do
+  mês alvo — `2024-01-31` + `1M` = `2024-02-29`);
+* composição com **`&`** (ex. `1d&30m`, `1M&15m`): os termos fixos
+  (s/m/h/d) somam em ms e entram como OFFSET após o avanço de calendário;
+* semântica: 1º disparo após o intervalo contado de agora, depois
+  repetidamente (intervalo fixo, ou o próximo instante avançado no
+  calendário para M/a — a âncora avança do disparo anterior, nunca de
+  `now`, sem drift);
+* string que NÃO é duração mantém o caminho cron (mesmo parser de 5
+  campos, mesmos erros); duração MALFORMADA (unidade desconhecida, termo
+  zero/vazio) lança com mensagem clara — nunca silencioso (R6);
+* alvos: JVM + JS (mesmo algoritmo, golden de paridade via probe); Native
+  mantém a recusa honesta `CRON001` em compile-time (o gap já cobre toda a
+  superfície do `at`).
+
+**Evidência:** mensagens da mantenedora 19/09 (esta sessão, lane .18).
+1º consumidor: `flow.schedule(cron)` do bundle 2.1.3 do `kof.workflow`
+(mesmo gap honesto no Native).
+
+## D-WORKFLOW-RUN — `kof workflow run` é um runner completo de introspecção sobre `pipeline()`
+
+**Data:** 19/09/2026 · **Estado:** `DECIDIDO` (enquete da mantenedora no
+chat desta sessão: escolheu **runner completo (introspecção)** para a linha
+2.6 e **exemplo de pipeline real + prova E2E** para a linha 2.5)
+
+**Decisão (aditiva, regra 2 do freeze):** a linha 2.6 de
+`IMPLEMENTATION-UNIVERSAL-PLATFORM.md` entrega um **runner completo**, não
+um alias do `kof run`:
+
+* um **arquivo de pipeline** é um módulo `.kf` que importa `kof.workflow` e
+  define uma função top-level `pipeline(): KofWfDag`; não tem `main()` (o
+  runner sintetiza a entrada). É a única convenção nova; nada do que existe
+  hoje muda (`kof run` continua rodando qualquer `.kf` inalterado);
+* `kof workflow list <file.kf>` — lista os jobs e suas dependências (a DAG);
+  `--json` para a forma legível por máquina;
+* `kof workflow run <file.kf>` — roda a dag; `--job <name>` restringe ao job
+  nomeado **e suas dependências transitivas**; `--dry-run` imprime a ordem
+  topológica sem executar nenhum corpo; `--json` emite o `Report`
+  estruturado;
+* código de saída: `0` se `Report.allOk()`, senão `1` (mesma honestidade do
+  `kof test`);
+* alvos: JVM primeiro (R7); JS e os demais alvos são fatias seguintes com o
+  mesmo gap honesto quando um corpo de job precisa de uma primitiva que o
+  alvo não tem;
+* o runner é **tooling**, o pipeline é **código Kof** (VISION §4.3);
+  `kof workflow run` consome o mesmo frontend — sem parser paralelo.
+
+**Evidência:** enquete da mantenedora nesta sessão (opções: alias fino /
+convenção mínima `pipeline()` / **introspecção completa** / só plano).
+VISION `UNIVERSAL-PLATFORM-VISION.md:1137`; `workflow-plan.md` (2.1
+assinado 19/09); precedente X9 `kof deploy` para fatias de tooling.

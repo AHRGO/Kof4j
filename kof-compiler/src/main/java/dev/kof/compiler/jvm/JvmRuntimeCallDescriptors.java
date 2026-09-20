@@ -65,6 +65,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_process_exit" -> "(I)V";
             case "kof_shell_argv" -> "(Ljava/lang/String;Ljava/util/List;)Ljava/util/ArrayList;";
             case "kof_shell_pipeline" -> "(Ljava/util/List;)Ldev/kof/runtime/KofRuntime$ProcessResult;";
+            case "kof_shell_runwith" -> "(Ljava/util/List;Ljava/lang/String;Ljava/util/Map;)Ldev/kof/runtime/KofRuntime$ProcessResult;";
             case "kof_process_spawn" -> "(Ljava/lang/String;Ljava/util/List;)Ljava/lang/Long;";
             case "kof_spawn_read_line" -> "(Ljava/lang/Long;)Ljava/lang/String;";
             case "kof_spawn_write" -> "(Ljava/lang/Long;Ljava/lang/String;)V";
@@ -274,6 +275,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_time_parseDateIso" -> "(Ljava/lang/String;)I";
             case "kof_time_tzOffsetSeconds" -> "()I";
             case "kof_time_now" -> "()J";
+            case "kof_gc_collect_now" -> "()V";
             case "kof_time_interval" -> "(ILjava/lang/Object;)Ljava/lang/String;";
             case "kof_time_cancel" -> "(Ljava/lang/String;)V";
             case "kof_scheduler_every" -> "(ILjava/lang/Object;)Ljava/lang/String;";

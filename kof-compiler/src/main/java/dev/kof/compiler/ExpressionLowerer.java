@@ -118,7 +118,13 @@ public final class ExpressionLowerer {
                 if (driver.isBuiltinStaticReceiver(ie.name(), locals)) {
                     yield localIdx;
                 }
-                ops.add(new KofLoadLocal(Type.UnknownType.UNKNOWN, 0));
+                // Fallback (ex.: receiver `super` — slot 0 é o `this`):
+                // empilhar com o tipo REAL da classe quando slot 0 é
+                // referência de classe; UNKNOWN só onde não há `this`. O
+                // store spill do lowerField recebe o valor já tipado.
+                ops.add(new KofLoadLocal(
+                        !locals.isEmpty() && locals.get(0).type() instanceof Type.ClassType
+                                ? locals.get(0).type() : Type.UnknownType.UNKNOWN, 0));
                 yield localIdx;
             }
             case BinaryExpr bin -> {
@@ -129,6 +135,11 @@ public final class ExpressionLowerer {
                 if ("++".equals(ue.operator()) || "--".equals(ue.operator())) {
                     localIdx = driver.emitIncrement(ue, operandType, ops, owner, localIdx, locals);
                     yield localIdx;
+                }
+                // D-TROOL: `!` de `Troolean` — Kleene (!U = U). O NOT cru do
+                // operando boxed era VerifyError (JVM) / "not an int" (Script).
+                if ("!".equals(ue.operator()) && CompilerComparisons.isNullableBool(operandType)) {
+                    yield CompilerComparisons.lowerTrooleanNot(driver, ue, ops, owner, localIdx, locals);
                 }
                 localIdx = ExpressionLowerer.emitExpression(driver, ue.operand(), ops, owner, localIdx, locals);
                 if ("-".equals(ue.operator())) {
@@ -412,6 +423,12 @@ public final class ExpressionLowerer {
                     yield localIdx;
                 }
                 Type recvType = ExpressionTyper.inferExprType(driver, fa.receiver(), locals);
+                // #375/§355: acesso a membro em type-variable com bound resolve
+                // no BOUND (getfield Animal.name, dono real) — espelha o typer.
+                if (recvType instanceof Type.TypeVariable tvb && tvb.bound() != null
+                        && tvb.bound() instanceof Type.ClassType) {
+                    recvType = tvb.bound();
+                }
                 // narrowing de null-safety (`if (x != null) { x.length }`): o tipo do
                 // receptor é o inner — antes emitia `getfield "?".length` para String?
                 // (owner "?" inválido → erro de launcher/verificação no JVM).
@@ -516,9 +533,8 @@ public final class ExpressionLowerer {
                     localIdx = driver.emitComparisonShortcut(bin, ops, owner, localIdx, locals);
                     ops.add(new KofConditionalJump(driver.mapComparison(bin.operator()), driver.comparisonOperandType(bin, locals), thenLabel, elseLabel));
                 } else {
-                    localIdx = ExpressionLowerer.emitExpression(driver, ie.condition(), ops, owner, localIdx, locals);
-                    ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
-                    ops.add(new KofConditionalJump(KofComparison.NE, thenLabel, elseLabel));
+                    localIdx = CompilerComparisons.emitTruthinessJump(driver, ie.condition(),
+                            ops, owner, localIdx, locals, thenLabel, elseLabel);
                 }
                 ops.add(new KofLabel(thenLabel));
                 localIdx = ExpressionLowerer.emitExpression(driver, ie.thenExpr(), ops, owner, localIdx, locals);

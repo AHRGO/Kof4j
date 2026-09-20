@@ -4,7 +4,7 @@
 
 **Status:** v1 implemented (18/09, `34e4344f`, universal plan Stage 2 row 2.2) ·
 **Source:** `KofShell.java` (dispatch) + `ExpressionShellCallLowerer` (gates/lowering) ·
-**Tests:** `ShellE2ETest` (11) · **Design record:** `docs/development/shell-plan.md`
+**Tests:** `ShellE2ETest` (15) · **Design record:** `docs/docs/shell-plan.md`
 
 ## What it is
 
@@ -30,6 +30,9 @@ var n = shell.run(argv.get(0), listOf("-l")).stdout.trim()
 
 var out = shell.pipeline(listOf(listOf("echo", "one two three"),
                                                listOf("wc", "-w"))).stdout  // JVM
+
+var build = shell.runWith(shell.cmd("make", listOf("-j4")), "/src",
+                          mapOf("CC", "clang"))                              // JVM + JS
 ```
 
 | Call | What it does |
@@ -38,6 +41,7 @@ var out = shell.pipeline(listOf(listOf("echo", "one two three"),
 | `shell.run(program)` / `shell.run(program, args)` | runs the command, returns `kof.process.Result` (`exitCode`/`stdout`/`stderr`) |
 | `shell.ok(result)` | `exitCode == 0` as a `Bool` (pure field/compare IR — `Result` carries no methods) |
 | `shell.pipeline(listOf(argv, ...))` | chains stdout→stdin between stages, returns the last stage's `Result` (JVM: `kof_shell_pipeline`, ProcessBuilder chain + pump threads) |
+| `shell.runWith(argv, cwd, env)` | runs argv **in `cwd`** with an **additive** env (`""` cwd inherits the process dir; the map's keys override inherited ones — never a silent env wipe). Spawn errors and empty argv return an **honest** `Result` (`stderr` set, `exitCode == -1`) on JVM and JS; Native is the same compile-time `PROC001` as `run` |
 
 ## The security property (pinned by golden)
 
@@ -51,7 +55,7 @@ good path.
 
 | Face | JVM | JS | Native |
 |---|---|---|---|
-| `cmd` / `run` / `ok` | ✅ real (`kof_process_run`) | ✅ real (byte-parity with JVM — 5 pinned cases) | ❌ honest `PROC001` at compile-time (inherits `process.run` Native face) |
+| `cmd` / `run` / `runWith` / `ok` | ✅ real (`kof_process_run`; `runWith` via `kof_shell_runwith` — cwd + additive env, honest `-1` Results) | ✅ real (byte-parity with JVM — 5 pinned cases + `runWith` cwd/env/failures) | ❌ honest `PROC001` at compile-time (inherits `process.run` Native face) |
 | `pipeline` | ✅ real (pump-thread chain, golden `echo|wc`) | ❌ honest `PROC001` (needs live `process.spawn`) | ❌ honest `PROC001` |
 | unknown member (`shell.foo`) | ✅ `SEM025` | — | — |
 
@@ -76,6 +80,6 @@ pins `Result.exitCode` as data.
 
 ## See also
 
-- `docs/development/shell-plan.md` (design decisions Q1–Q3, wiring map, slices 2.2.0–2.2.4)
+- `docs/docs/shell-plan.md` (design decisions Q1–Q3, wiring map, slices 2.2.0–2.2.4)
 - `docs/backend-parity.md` — `kof.shell` rows in the namespace table + gap table
 - `kof.process` face on Native: `PROC001` (backend-parity, Known Gaps)

@@ -128,7 +128,43 @@ public final class NativeRiscvAsmRtB30 {
             # o runtime riscv NÃO tinha to_long: link quebrava)
             """ + String.format(TEMPLATE, "kof_string_to_long", ".Lstl",
                 "-9223372036854775808", "-9223372036854775807", "-922337203685477580") + """
+
+            # §235 native face: Boolean.parseBoolean — contrato do JVM
+            # (s != null && s.equalsIgnoreCase("true"), SEM trim). Folha, só
+            # registradores caller-saved; aarch64 herda via tradutor (regra 5).
+            .globl kof_string_to_bool
+            kof_string_to_bool:
+                beqz a0, .Lstb_no
+                lw   t0, 16(a0)
+                li   t1, 4
+                bne  t0, t1, .Lstb_no
+                la   t2, .Lstb_true
+                li   t3, 0
+            .Lstb_loop:
+                li   t1, 4
+                bge  t3, t1, .Lstb_yes
+                add  t4, a0, t3
+                lbu  t5, 24(t4)
+                add  t6, t2, t3
+                lbu  t0, 0(t6)
+                li   t1, 65
+                blt  t5, t1, .Lstb_cmp
+                li   t1, 90
+                bgt  t5, t1, .Lstb_cmp
+                addi t5, t5, 32
+            .Lstb_cmp:
+                bne  t5, t0, .Lstb_no
+                addi t3, t3, 1
+                j    .Lstb_loop
+            .Lstb_yes:
+                li   a0, 1
+                ret
+            .Lstb_no:
+                li   a0, 0
+                ret
+
             .section .data
+            .Lstb_true: .asciz "true"
             .Lparse_msg: .asciz "Invalid number"
             """;
 }

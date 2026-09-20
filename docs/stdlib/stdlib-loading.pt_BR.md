@@ -49,7 +49,7 @@ por família (`nativeFamilyAbsenceAfterPrune`, `riscvFamilyAbsenceAfterPrune`,
 - **x86 sem `--gc-sections`**: exige `kof_heap_root_end` + `emitStaticData`
   dentro do intervalo de raízes do scan conservative (fila bugfix).
 - **Bytes riscv/aarch**: só caem de verdade com GC mark-sweep (o `.bss` do
-  heap bump é fixo) — ver `docs/development/native-multiarch.md`.
+  heap bump é fixo) — ver `docs/native-multiarch.md`.
 - **`kof_platform` no JS** (issue #104): `uuid`/`random`/`security` fora do
   host GraalJS dão `ReferenceError` — a poda **preserva** o comportamento,
   não é regressão nem é corrigida aqui.

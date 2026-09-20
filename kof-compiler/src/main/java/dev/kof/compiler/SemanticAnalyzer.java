@@ -54,6 +54,10 @@ public class SemanticAnalyzer {
     /** DD-02/#42: dentro de corpo de construtor? `this.campo =` em record só
      *  é legal no construtor (JVMS: final field init); métodos → SEM038. */
     boolean inConstructor;
+    // #333: true durante corpo cujo `return <valor>` e SEMPRE erro (void
+    // explicito ou funcao top-level sem tipo; a inferencia bug-26 so vale p/ METODOS,
+    // onde SA e codegen mudam de tipo juntos — §130).
+    boolean currentExplicitVoid;
     /** Pacote efetivo por declaração (multi-pacote num módulo), vindo do driver. */
     private java.util.function.Function<AstNode, String> declarationPackageLookup;
 
@@ -207,11 +211,14 @@ public class SemanticAnalyzer {
     private void analyzeDeclaration(AstNode decl) {
         switch (decl) {
             case ClassDeclarationNode cls -> analyzeClass(cls);
-            case RecordDeclarationNode rec -> analyzeRecord(rec);
-            case EntityDeclarationNode ent -> analyzeEntity(ent);
-            case InterfaceDeclarationNode iface -> analyzeInterface(iface);
+            case RecordDeclarationNode rec -> {
+                ClassShapeChecks.checkRecordDeclaration(this, rec);
+                SemDeclarationAnalyzer.analyzeRecord(this, rec);
+            }
+            case EntityDeclarationNode ent -> SemDeclarationAnalyzer.analyzeEntity(this, ent);
+            case InterfaceDeclarationNode iface -> SemDeclarationAnalyzer.analyzeInterface(this, iface);
             case EnumDeclarationNode _ -> { }
-            case FunctionDeclarationNode func -> analyzeFunction(func);
+            case FunctionDeclarationNode func -> SemDeclarationAnalyzer.analyzeFunction(this, func);
             default -> {}
         }
     }
@@ -221,7 +228,7 @@ public class SemanticAnalyzer {
         return scope.resolve(name) != null;
     }
 
-    private Type resolveType(String name, SymbolTable scope) {
+    Type resolveType(String name, SymbolTable scope) {
         return MemberResolver.resolveType(this, name, scope);
     }
 
@@ -325,6 +332,14 @@ public class SemanticAnalyzer {
     void addInterface(String name) { interfaceNames.add(name); }
     void addAbstractClass(String name) { abstractClasses.add(name); }
     void addFinalClass(String name) { finalClasses.add(name); }
+    // REFACTOR-500 (split p/ SemDeclarationAnalyzer): mutadores de ESTADO DE
+    // CONTEXTO — a mutacao acontece no dono do estado (mesmo padrao da fase 6);
+    // os satellites dirigem via estes setters.
+    void setCurrentScope(SymbolTable scope) { this.currentScope = scope; }
+    void setCurrentClassName(String name) { this.currentClassName = name; }
+    void setCurrentFunctionName(String name) { this.currentFunctionName = name; }
+    void clearExpressionTypes() { expressionTypes.clear(); }
+    boolean knowsClass(String name) { return knownClasses.containsKey(name); }
 
     private void analyzeConstructorBody(ConstructorDeclarationNode ctor) {
         SymbolTable ctorScope = ctorScopes.get(ctor);
@@ -339,12 +354,15 @@ public class SemanticAnalyzer {
         // continuam visíveis via resolve() pai-acima; locals não vazam entre
         // passes (só o pinning de tipo SG-008 é por-pass, e o codegen lê
         // expressionTypes, não estes escopos).
+        boolean prevEvCtor = currentExplicitVoid;
+        currentExplicitVoid = true; // #333: constructor nunca devolve valor
         StatementAnalyzer.analyzeBody(this, ctor.body(), ctorScope.enterScope(), Type.PrimitiveType.VOID);
+        currentExplicitVoid = prevEvCtor;
         inConstructor = prevCtor;
         currentScope = prevScope;
     }
 
-    private void analyzeMethodBody(MethodDeclarationNode method) {
+    void analyzeMethodBody(MethodDeclarationNode method) {
         SymbolTable methodScope = methodScopes.get(method);
         if (methodScope == null) return;
         checkThrowsClause(method.thrownExceptions(), "method '" + method.name() + "'");
@@ -382,100 +400,6 @@ public class SemanticAnalyzer {
         }
     }
 
-    private void analyzeEntity(EntityDeclarationNode ent) {
-        List<RecordComponentNode> components = new java.util.ArrayList<>();
-        for (EntityFieldNode f : ent.fields()) {
-            components.add(new RecordComponentNode(f.position(), List.of(), f.type(), f.name(), null));
-        }
-        analyzeRecord(new RecordDeclarationNode(ent.position(), ent.name(), ent.modifiers(),
-                null, List.of(), components, List.of()));
-    }
-
-    private void analyzeRecord(RecordDeclarationNode rec) {
-        String prevClass = currentClassName;
-        currentClassName = rec.name();
-        SymbolTable classScope = classMemberScopes.get(rec.name());
-        if (classScope == null) {
-            SymbolTableBuilder.defineRecordMembers(this, rec);
-            classScope = classMemberScopes.get(rec.name());
-        }
-        SymbolTable prevScope = currentScope;
-        currentScope = classScope;
-        for (RecordComponentNode comp : rec.components()) {
-            if (comp.initializer() != null) {
-                inferType(comp.initializer(), classScope);
-            }
-        }
-        for (AstNode member : rec.members()) {
-            if (member instanceof FieldDeclarationNode field && field.initializer() != null) {
-                inferType(field.initializer(), classScope);
-            }
-        }
-        for (int pass = 0; pass < 4; pass++) {
-            boolean changed = false;
-            expressionTypes.clear();
-            for (AstNode member : rec.members()) {
-                if (member instanceof MethodDeclarationNode method) {
-                    SymbolTable.MethodSymbol ms = methodSymbols.get(method);
-                    Type before = ms != null ? ms.returnType() : null;
-                    analyzeMethodBody(method);
-                    Type after = ms != null ? ms.returnType() : null;
-                    if (before != null && after != null && !before.equals(after)) {
-                        changed = true;
-                    }
-                }
-            }
-            if (!changed) break;
-        }
-        currentScope = prevScope;
-        currentClassName = prevClass;
-    }
-
-    private void analyzeInterface(InterfaceDeclarationNode iface) {
-        String prevClass = currentClassName;
-        currentClassName = iface.name();
-        SymbolTable classScope = classMemberScopes.get(iface.name());
-        if (classScope == null) {
-            SymbolTableBuilder.defineInterfaceMembers(this, iface);
-            classScope = classMemberScopes.get(iface.name());
-        }
-        SymbolTable prevScope = currentScope;
-        currentScope = classScope;
-        // #321 — `interface J extends Base` onde Base é CLASSE: o JVM escreve
-        // o supertype na interface como super_class → IncompatibleClassChangeError
-        // no load, silencioso no compile (R6/Q7). Interfaces só estendem
-        // interfaces; o alvo precisa existir E ser interface (nome
-        // desconhecido: SEM011 de resolveType cuida — nao duplicar aqui).
-        for (String parent : iface.interfaces()) {
-            if (diagnostics == null) break;
-            String base = parent.contains("<") ? parent.substring(0, parent.indexOf('<')).trim() : parent;
-            if (knownClasses.containsKey(base) && !interfaceNames.contains(base)) {
-                reportError(iface, "interface '" + iface.name() + "' cannot extend class '"
-                        + base + "' (interfaces may only extend interfaces)", "SEM064");
-            }
-        }
-        // #213: corpos de métodos default de interface precisam ser analisados
-        // (resolução de `greet(name)` como this.greet, tipos de retorno) — antes
-        // eram ignorados e a chamada nua virava função hoisted.
-        for (int pass = 0; pass < 4; pass++) {
-            boolean changed = false;
-            expressionTypes.clear();
-            for (AstNode member : iface.members()) {
-                if (member instanceof MethodDeclarationNode method
-                        && method.body() != null && !method.body().isEmpty()) {
-                    SymbolTable.MethodSymbol ms = methodSymbols.get(method);
-                    Type before = ms != null ? ms.returnType() : null;
-                    analyzeMethodBody(method);
-                    Type after = ms != null ? ms.returnType() : null;
-                    if (before != null && after != null && !before.equals(after)) changed = true;
-                }
-            }
-            if (!changed) break;
-        }
-        currentScope = prevScope;
-        currentClassName = prevClass;
-    }
-
     /**
      * SG-019 (SEM045): a cláusula `throw X, Y` não é checked-exception (exceções
      * são Strings em Kof), mas os nomes devem ser TIPOS conhecidos — classe do
@@ -483,62 +407,7 @@ public class SemanticAnalyzer {
      * e nunca validado (decorativo).
      */
     void checkThrowsClause(List<String> thrown, String owner) {
-        if (diagnostics == null) return;
-        for (String name : thrown) {
-            if ("String".equals(name) || Type.isPrimitive(Type.of(name))) continue;
-            if (knownClasses.containsKey(name) || interfaceNames.contains(name)) continue;
-            Type viaImports = MemberResolver.qualifyViaImports(currentUnit, name);
-            if (viaImports != null) continue;
-            diagnostics.error("", 0, 0, 0,
-                    "throw clause of " + owner + " references unknown type '" + name + "'",
-                    "SEM045");
-        }
-    }
-
-    private void analyzeFunction(FunctionDeclarationNode func) {
-        // SG-018 (SEM044): o entry point é SÓ `main()` — sem tipo de retorno,
-        // sem modifiers (o IR já emite public static void — CompilerFunctionLowering).
-        if ("main".equals(func.name())) {
-            String rt = func.returnType();
-            boolean badReturnType = rt != null && !"void".equals(rt)
-                    && !"var".equals(rt) && !"val".equals(rt);
-            if (!func.modifiers().isEmpty() && diagnostics != null) {
-                diagnostics.error(func.position().file(), func.position().line(),
-                        func.position().column(), 0,
-                        "main() must be declared without modifiers: 'main() { ... }' (found "
-                                + func.modifiers() + ")",
-                        "SEM044");
-            }
-            if (badReturnType && diagnostics != null) {
-                diagnostics.error(func.position().file(), func.position().line(),
-                        func.position().column(), 0,
-                        "main() must have no return type: 'main() { ... }' (found '"
-                                + rt + " main(...)')",
-                        "SEM044");
-            }
-        }
-        String prevFunction = currentFunctionName;
-        currentFunctionName = func.name();
-        checkThrowsClause(func.thrownExceptions(), "function '" + func.name() + "'");
-        SymbolTable funcScope = currentScope.enterScope();
-        for (String tp : func.typeParameters()) {
-            funcScope.define(new SymbolTable.TypeParameterSymbol(tp));
-        }
-        Type returnType = resolveType(func.returnType(), funcScope);
-        int idx = 0;
-        for (FormalParameterNode param : func.parameters()) {
-            Type paramType = Type.of(param.type());
-            funcScope.define(new SymbolTable.ParameterSymbol(param.name(), paramType, idx));
-            idx++;
-        }
-        SymbolTable prevScope = currentScope;
-        currentScope = funcScope;
-        // bug 26: função top-level com tipo não-void pode terminar sem return
-        ReturnPathAnalyzer.check(this, func.body(), returnType, func.position(),
-                "function '" + func.name() + "'");
-        StatementAnalyzer.analyzeBody(this, func.body(), funcScope, returnType);
-        currentScope = prevScope;
-        currentFunctionName = prevFunction;
+        SemDeclarationAnalyzer.checkThrowsClause(this, thrown, owner);
     }
 
     /**

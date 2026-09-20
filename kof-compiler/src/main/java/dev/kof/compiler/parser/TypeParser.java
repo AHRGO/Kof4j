@@ -35,15 +35,41 @@ public class TypeParser {
         return sb.toString();
     }
 
+    /**
+     * §355: parâmetros de tipo com BOUND real. `T : Animal` era consumido
+     * token a token e o `Animal` ENTRAVA como um segundo type-param fantasma
+     * (a lista virava ["T","Animal"] e o bound se perdia). Agora a entrada é
+     * o nome, com o bound anexado na forma {@code "T: Animal"} — os
+     * consumidores comparam/resolvem via {@code CompilerTypes.typeParamName}
+     * / {@code typeParamBound} (ponto único). Sem bound: entrada limpa "T"
+     * (comportamento idêntico ao atual).
+     */
     static List<String> parseTypeParameters(ParseContext ctx) {
         List<String> typeParams = new ArrayList<>();
         if (ctx.check(TokenType.LESS)) {
             ctx.advance();
             while (!ctx.check(TokenType.GREATER) && !ctx.atEnd()) {
-                if (ctx.check(TokenType.IDENTIFIER)) {
-                    typeParams.add(ctx.advance().value());
-                } else {
-                    ctx.advance();
+                String name = null;
+                StringBuilder bound = null;
+                int depth = 0;
+                while (!ctx.atEnd() && !(depth == 0
+                        && (ctx.check(TokenType.COMMA) || ctx.check(TokenType.GREATER)))) {
+                    Token t = ctx.advance();
+                    if (t.type() == TokenType.LESS) depth++;
+                    else if (t.type() == TokenType.GREATER) depth--;
+                    if (t.type() == TokenType.COLON && bound == null && depth == 0) {
+                        bound = new StringBuilder();
+                        continue;
+                    }
+                    if (bound != null) {
+                        bound.append(t.value());
+                    } else if (name == null && t.type() == TokenType.IDENTIFIER) {
+                        name = t.value();
+                    }
+                }
+                if (name != null) {
+                    String boundText = bound == null ? "" : bound.toString().trim();
+                    typeParams.add(boundText.isEmpty() ? name : name + ": " + boundText);
                 }
                 if (ctx.check(TokenType.COMMA)) ctx.advance();
             }
@@ -182,9 +208,23 @@ public class TypeParser {
         }
         while (ctx.check(TokenType.QUESTION)) {
             ctx.advance();
+            // D-TROOL (19/09): `Bool` tem exatamente dois valores. O terceiro
+            // estado mora em `Troolean` (DECISIONS.md) — `Bool?` morre aqui.
+            if (isBoolBase(type.toString())) {
+                ctx.error("'Bool' has two values; for true/false/unknown use "
+                        + "'Troolean' (DECISIONS.md D-TROOL)", "SEM095");
+            }
             type.append("?");
         }
         return type.toString();
+    }
+
+    /** D-TROOL: base `Bool` (qualquer grafia canonica) nunca leva `?`. */
+    static boolean isBoolBase(String typeText) {
+        return switch (typeText) {
+            case "Bool", "bool", "Boolean", "boolean" -> true;
+            default -> false;
+        };
     }
 
     static boolean isPrimitiveType(ParseContext ctx) {

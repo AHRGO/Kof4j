@@ -43,9 +43,17 @@ public final class SemMethodCallTyper {
             // bytecode inválido (ClassFormatError no JVM, undefined
             // reference no Native).
             if (recv instanceof Type.ArrayType && sa.diagnostics() != null) {
-                sa.diagnostics().error("", 0, 0, 0,
-                        "array has no method '" + mc.methodName()
-                                + "()'; use the operator arr[i] / arr[i] = v",
+                // #512: o diagnóstico saía em :0:0 sem arquivo — impossível de
+                // localizar no editor/CLI. Segue o padrão SEM049 acima
+                // (posição do call-site). O hint arr[i] só faz sentido para
+                // get/set; em `arr.toString()` ele empurrava o usuário para a
+                // sintaxe errada.
+                SourcePosition mcPos = mc.position();
+                boolean accessMethod = "get".equals(mc.methodName()) || "set".equals(mc.methodName());
+                sa.diagnostics().error(mcPos != null ? mcPos.file() : "",
+                        mcPos != null ? mcPos.line() : 0, mcPos != null ? mcPos.column() : 0, 0,
+                        "array has no method '" + mc.methodName() + "()'"
+                                + (accessMethod ? "; use the operator arr[i] / arr[i] = v" : ""),
                         "SEM028");
             }
             // #362 (R6, nunca silencioso): método de instância em primitivo.
@@ -130,6 +138,10 @@ public final class SemMethodCallTyper {
                 if ("put".equals(mc.methodName()) || "remove".equals(mc.methodName()))
                     return new Type.NullableType(valueType);
                 if ("getOrDefault".equals(mc.methodName())) return valueType;
+                // #386 — containsValue→Bool; putIfAbsent→V? (contrato Java:
+                // anterior OU null; D-NULL-INTENT/I7, mesmo par put/remove).
+                if ("containsValue".equals(mc.methodName())) return Type.PrimitiveType.BOOL;
+                if ("putIfAbsent".equals(mc.methodName())) return new Type.NullableType(valueType);
                 if ("size".equals(mc.methodName()) || "length".equals(mc.methodName())
                         || "count".equals(mc.methodName())) return Type.PrimitiveType.INT;
                 if ("contains".equals(mc.methodName()) || "containsKey".equals(mc.methodName())

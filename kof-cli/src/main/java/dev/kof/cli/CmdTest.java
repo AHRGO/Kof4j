@@ -6,6 +6,7 @@ import dev.kof.compiler.CompilerDriver;
 import dev.kof.compiler.Target;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -20,33 +21,46 @@ final class CmdTest {
     private CmdTest() {
     }
 
+    private static final String USAGE =
+            "usage: kof test <file.kf|dir> [--target jvm|native|js] [--timeout <sec>]";
+
     static void run(String[] args) {
-        if (args.length < 2) { System.err.println("usage: kof test <file.kf|dir> [--target jvm|native|js]"); System.exit(1); return; }
+        if (args.length < 2) { System.err.println(USAGE); System.exit(1); return; }
         if (args[1].equals("--help") || args[1].equals("-h")) {
-            System.out.println("usage: kof test <file.kf|dir> [--target jvm|native|js]");
+            System.out.println(USAGE);
             return;
         }
         Path src = Path.of(args[1]);
         Target target = Target.JVM;
+        long timeoutSec = 0;   // 0 = sem limite (comportamento histórico, aditivo)
         for (int i = 2; i < args.length; i++) {
             if (args[i].startsWith("--target=")) {
                 target = KofCliSupport.parseTarget(args[i].substring("--target=".length()));
             } else if (args[i].equals("--target") && i + 1 < args.length) {
                 target = KofCliSupport.parseTarget(args[i + 1]);
                 i++;
+            } else if (args[i].startsWith("--timeout=")) {
+                Long t = parseTimeout(args[i].substring("--timeout=".length()));
+                if (t == null) { badTimeout(); return; }
+                timeoutSec = t;
+            } else if (args[i].equals("--timeout") && i + 1 < args.length) {
+                Long t = parseTimeout(args[i + 1]);
+                if (t == null) { badTimeout(); return; }
+                timeoutSec = t;
+                i++;
             } else if (args[i].equals("--help") || args[i].equals("-h")) {
-                System.err.println("usage: kof test <file.kf|dir> [--target jvm|native|js]");
+                System.err.println(USAGE);
                 return;
             } else if (args[i].startsWith("-")) {
-                // R6: an unknown flag (or --target without its value) must never
-                // be silently ignored — the user/CI would believe it took effect.
+                // R6: an unknown flag (or --target/--timeout without its value) must
+                // never be silently ignored — the user/CI would believe it took effect.
                 System.err.println("test: unknown or incomplete flag: " + args[i]
-                        + " (accepts: --target jvm|native|js)");
+                        + " (accepts: --target jvm|native|js, --timeout <sec>)");
                 System.exit(1);
                 return;
             } else {
                 System.err.println("test: unexpected argument: " + args[i]
-                        + " (accepts: --target jvm|native|js)");
+                        + " (accepts: --target jvm|native|js, --timeout <sec>)");
                 System.exit(1);
                 return;
             }
@@ -94,11 +108,14 @@ final class CmdTest {
                         try {
                             ProcessBuilder pb = new ProcessBuilder(KofCliSupport.javaExecutable(), "-cp", tmp.toString(), className);
                             pb.redirectErrorStream(true);
-                            Process p = pb.start();
-                            output.append(new String(p.getInputStream().readAllBytes()));
-                            int ec = p.waitFor();
-                            ok = ec == 0;
-                            if (!ok) output.append("exit code: ").append(ec).append('\n');
+                            Integer ec = boundedRun(pb, timeoutSec, output);
+                            if (ec == null) {
+                                ok = false;
+                                output.append("timeout after ").append(timeoutSec).append("s — process killed (--timeout)\n");
+                            } else {
+                                ok = ec == 0;
+                                if (!ok) output.append("exit code: ").append(ec).append('\n');
+                            }
                         } catch (IOException | InterruptedException e) {
                             ok = false;
                             output.append("failed to execute: ").append(e.getMessage()).append('\n');
@@ -111,12 +128,42 @@ final class CmdTest {
                         output.append("no JS entry point found\n");
                     } else {
                         try {
-                            int ec = dev.kof.runtime.KofJsRunner.run(java.nio.file.Path.of(entry),
-                                    System.out, System.in, System.err, false, new String[0]);
-                            ok = ec == 0;
-                            if (!ok) output.append("exit code: ").append(ec).append('\n');
-                        } catch (IOException e) {
+                            // JS roda in-process (KofJsRunner): sem subprocesso para
+                            // matar, o --timeout é best-effort — o join sai, o FAIL é
+                            // reportado, a thread é daemon (o CLI termina sem ela).
+                            final int[] code = {1};
+                            final boolean[] over = {false};
+                            Thread js = new Thread(() -> {
+                                try {
+                                    code[0] = dev.kof.runtime.KofJsRunner.run(java.nio.file.Path.of(entry),
+                                            System.out, System.in, System.err, false, new String[0]);
+                                } catch (IOException e) {
+                                    code[0] = 1;
+                                }
+                            });
+                            js.setDaemon(true);
+                            js.start();
+                            if (timeoutSec > 0) {
+                                js.join(timeoutSec * 1000L);
+                                if (js.isAlive()) {
+                                    js.interrupt();
+                                    over[0] = true;
+                                }
+                            } else {
+                                js.join();
+                            }
+                            if (over[0]) {
+                                ok = false;
+                                output.append("timeout after ").append(timeoutSec)
+                                        .append("s — JS harness roda in-process (best-effort kill;")
+                                        .append(" prefira --target jvm em CI)\n");
+                            } else {
+                                ok = code[0] == 0;
+                                if (!ok) output.append("exit code: ").append(code[0]).append('\n');
+                            }
+                        } catch (InterruptedException e) {
                             ok = false;
+                            Thread.currentThread().interrupt();
                             output.append("failed to execute: ").append(e.getMessage()).append('\n');
                         }
                     }
@@ -129,11 +176,14 @@ final class CmdTest {
                         try {
                             ProcessBuilder pb = new ProcessBuilder(bin.toString());
                             pb.redirectErrorStream(true);
-                            Process p = pb.start();
-                            output.append(new String(p.getInputStream().readAllBytes()));
-                            int ec = p.waitFor();
-                            ok = ec == 0;
-                            if (!ok) output.append("exit code: ").append(ec).append('\n');
+                            Integer ec = boundedRun(pb, timeoutSec, output);
+                            if (ec == null) {
+                                ok = false;
+                                output.append("timeout after ").append(timeoutSec).append("s — process killed (--timeout)\n");
+                            } else {
+                                ok = ec == 0;
+                                if (!ok) output.append("exit code: ").append(ec).append('\n');
+                            }
                         } catch (IOException | InterruptedException e) {
                             ok = false;
                             output.append("failed to execute: ").append(e.getMessage()).append('\n');
@@ -156,5 +206,51 @@ final class CmdTest {
         }
         System.out.println(passed + " passed, " + failed + " failed");
         if (failed > 0) System.exit(1);
+    }
+
+    private static Long parseTimeout(String v) {
+        try {
+            long n = Long.parseLong(v.trim());
+            return n > 0 ? n : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static void badTimeout() {
+        System.err.println("test: --timeout expects a positive integer of seconds");
+        System.exit(1);
+    }
+
+    /**
+     * Roda o processo do do harness capturando stdout+stderr SEM bloquear a
+     * leitura (gotejamento em thread daemon): com `timeoutSec > 0` mata o processo
+     * ao estourar (devolve null = timeout); com 0 preserva o comportamento
+     * histórico (espera infinita). (X8-A / G6 "timeouts".)
+     */
+    private static Integer boundedRun(ProcessBuilder pb, long timeoutSec, StringBuilder output)
+            throws IOException, InterruptedException {
+        Process p = pb.start();
+        java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+        Thread pump = new Thread(() -> {
+            try { p.getInputStream().transferTo(buf); } catch (IOException ignored) { }
+        });
+        pump.setDaemon(true);
+        pump.start();
+        boolean finished;
+        if (timeoutSec > 0) {
+            finished = p.waitFor(timeoutSec, java.util.concurrent.TimeUnit.SECONDS);
+            if (!finished) {
+                p.destroyForcibly();
+                p.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
+            }
+        } else {
+            p.waitFor();
+            finished = true;
+        }
+        pump.join(5000);
+        output.append(new String(buf.toByteArray(), StandardCharsets.UTF_8));
+        if (!finished) return null;
+        return p.exitValue();
     }
 }

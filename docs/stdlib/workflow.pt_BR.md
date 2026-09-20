@@ -8,7 +8,18 @@
 > **Escopo do MVP (Q2, enquete da mantenedora 19/09):** `job` / `dag` / `after` /
 > `run` / `Report`. **Face 1 do 2.1.3 ENTREGUE 19/09:** `retry` (Q3 — helper aditivo
 > do próprio workflow; `kof.http` NÃO é tocado, a migração dele é fatia assinada à
-> parte). `checkpoint`, `deadLetter` e `schedule` ainda chegam com o resto do bundle 2.1.3.
+> parte). **Faces 2–3 do 2.1.3 ENTREGUES 19/09 (esta fatia):** `deadLetter` (Q4 — as
+> DUAS faces: `Report.dead` in-memory sempre + sink durável opt-in por job) e
+> `schedule` (delega a `scheduler.at` — durações D-SCHED-DURATION ou cron; Native
+> recebe stub que falha ALTO em runtime c/ `CRON001`, o gate do scheduler segue
+> em compile-time). **2.1.3 face 4 LANÇADA 19/09 (3a):** `checkpoint` (store sobre
+> `kof.db`/`kof.orm`; Native recebe stub ALTO `ORM001` em runtime).
+> **2.1.3 face 5 LANÇADA 19/09 (3b):** `runSupervised(dag, nome, maxReinicios)` —
+> a DAG roda como workers supervisionados: cada job é um child `transient` de um
+> `kof.supervisor` (o laço por filho É o one_for_one — só o filho que falha
+> reinicia). Política de reinício = a do supervisor (plano §3 — o workflow nunca
+> re-implementa); NÃO precisa de `import kof.supervisor` (o host vem com a face,
+> dedupado pela marca quando o usuário também importa).
 
 ---
 
@@ -38,9 +49,13 @@ dag(List<KofWfJob> jobs) -> KofWfDag            // guarda dag vazia / nomes dupl
 KofWfDag.run() -> KofWfReport                   // fixpoint topológico sequencial
 KofWfDag.retry(KofWfJob j, Int times, (Int) -> Int backoffMs) -> KofWfDag
 KofWfDag.retryFixed(KofWfJob j, Int times) -> KofWfDag   // imediato, sem sleep
+KofWfDag.deadLetter(KofWfJob j, (String, String) -> Bool sink) -> KofWfDag  // face durável opt-in
+schedule(KofWfDag d, String expr) -> String               // 19/09: delega a scheduler.at, devolve o job id
+checkpoint(KofWfDag d, String dbConn, String dagName) -> KofWfDag  // 19/09: store = kof.db/kof.orm (entity KofWfCk)
+runSupervised(KofWfDag d, String supNome, Int maxReinicios) -> KofWfReport  // 19/09 (3b): dag como workers one_for_one (kof.supervisor)
 exponential(Int baseMs, Int factor) -> (Int) -> Int       // backoff(1)=base, *factor a cada try
 
-Campos do Report: succeeded failed skipped errors retries  // List<String> cada
+Campos do Report: succeeded failed skipped errors retries dead  // List<String> cada
 Report.allOk() -> Bool                          // sem falhas, sem skips
 Report.summary() -> String                      // "ok=... failed=... skipped=..."
 ```
@@ -59,6 +74,59 @@ Regras:
   até `times` tentativas extras (throw e `false` retryam ambos); `Report.retries`
   registra `"nome: tentativas=N"`, e `errors` guarda o ÚLTIMO motivo se ainda falhar.
   `retryFixed` é igual com espera zero. Só jobs membros da dag podem ser configurados
+- `Report.dead` (deadLetter, face in-memory — SEMPRE presente): todo job que
+  esgotou retry entra como `"nome: motivo"` (mesmo texto de `errors`); jobs
+  bem-sucedidos nunca entram.
+- `deadLetter(job, sink)`: a face durável é CÓDIGO DO USUÁRIO — o sink
+  `(nome, motivo) -> Bool` recebe cada falha final (persista onde quiser, ex.
+  `kof.orm` no SEU corpo; o workflow segue puro e neutro de alvo, nunca
+  dependendo do `kof.orm`). `false` ou throw do sink falha ALTO com o nome do
+  job (R6 — dead letter recusado não pode sumir). Um sink por job
+  (re-registrar lança).
+- `schedule(expr, dag)`: DELEGA ao `scheduler.at` (durações idiomáticas
+  `30m`/`1d&30m` ou cron de 5 campos — D-SCHED-DURATION) e devolve o job id do
+  scheduler. Cada disparo roda a dag INTEIRA dentro de `spawn` (JVM = uma
+  thread por disparo; JS = pump cooperativo — a forma que a CONC003 permite
+  dentro de callbacks de timer, já que `run()` pode `time.sleep` no backoff de
+  retry). Disparo que falha não derruba o scheduler (isolado no spawn);
+  persistência por disparo vai pelo `deadLetter`, que roda dentro de `run()`.
+  No NATIVE a fatia é um stub que falha ALTO em runtime citando `CRON001`
+  (o gate do scheduler é estático — referenciar `scheduler.at` no host
+  rejeitaria o host INTEIRO no compile; o `scheduler.at` DIRETO do usuário
+  mantém a recusa em compile-time).
+- `checkpoint(d, dbConn, dagName)`: o store REUSA `kof.db`/`kof.orm`
+  (entity `KofWfCk`, chave `dagName/jobName`, `CREATE TABLE IF NOT EXISTS` —
+  idempotente). Job restaurado re-entra como `succeeded` SEM re-executar o
+  corpo; o save acontece 1x por job após o sucesso (a chave unique mantém 1
+  linha por job); save recusado/lançando falha ALTO com o nome do job (R6).
+  A conexão vive nos closures da dag (sem close automático; em H2 mem use
+  `DB_CLOSE_DELAY=-1`). No NATIVE a fatia é um stub que falha ALTO em
+  runtime citando `ORM001` — o `kof.db`/`kof.orm` DIRETO do usuário mantém o
+  gap honesto dele. BORDA DO PARSER (medida 19/09): campo de função-tipo
+  logo após um campo `List<...>` não parseia (`PARSE023` "Expected parameter
+  name") — os hooks do ck seguem um campo simples `String dagNome = null` e
+  levam `(dagName, jobName)`; mexer na gramática é regra 6.
+- `runSupervised(d, supNome, maxReinicios)` (2.1.3b — a supervisão DELEGA ao
+  `kof.supervisor`, plano §3): todo job vira um child `transient` de UM
+  `Supervisor`; o laço por filho É o one_for_one (só o filho que falha reinicia,
+  vizinhos intocados). O corpo roda UMA vez por visita do watcher — `false`/throw
+  faz o worker LANÇAR para o supervisor aplicar o `restartLimit`; esgotados os
+  `maxReinicios` reinícios o job é derrubado (falha final) e os dependentes
+  pulam (`skipped`) transitivamente. Dependências = espera cooperativa sobre
+  flags de status por job (campo `Bool` mutável = `ACC_VOLATILE`, o mecanismo do
+  DD-OTP-08). O `Report` é montado na ORDEM DE DECLARAÇÃO — determinístico em
+  qualquer alvo (a face roda nos 4 alvos, sem stub: o núcleo supervisor entrega
+  em todos — §129/OTP001 removido, JS desde §132). Guardas, todas ALTAS (R6):
+  `maxReinicios < 1` é recusado (restart ilimitado silencioso = storm de threads
+  — a lição medida quando um host caiu em 19/09); job com `retry()` na mesma dag
+  é recusado (UMA política de reinício por face — o `retry` do workflow mora no
+  `run()`); supervisor sem nome é recusado; orçamentos de espera/settle (30 s)
+  falham com o nome do job, nunca travam em silêncio. `checkpoint` e
+  `deadLetter` registrados na dag são HONRADOS aqui (restaurado = succeeded sem
+  re-executar; o sink recebe a falha final). `kof.supervisor` NÃO precisa de
+  import próprio — o `CompilerWorkflow` injeta o host do supervisor flat junto
+  com a face e dedupa pela marca quando o usuário também importa
+  `kof.supervisor`.
   (a guarda diz isso).
 
 ## 3. Idiomática
@@ -116,9 +184,13 @@ vazia.
 
 ## 6. Prova
 
-`WorkflowE2ETest` 8/8 (goldens exatos de stdout, paridade byte JVM==JS): ordem
+`WorkflowE2ETest` 20/20 (goldens exatos de stdout, paridade byte JVM==JS): ordem
 linear, cascata de falha, throw com motivo, mensagem de ciclo, conjunto de
 guardas, corpos reais via lista capturada, retry (recupera na 3ª + esgota com
-motivo + exponential), compilação Native. A camada de formas é
+motivo + exponential), fire-count do schedule, restore do checkpoint entre runs,
+caminho feliz supervisionado, one_for_one (o filho flaky reinicia, o vizinho não
+— contadores provam os dois lados do "one"), drop por limite + skip transitivo,
+as guardas R6 da face e o dedup do import duplo; compilação Native travada.
+A camada de formas é
 travada por `WorkflowPrimitivesE2ETest` (6/6, incl. os pins negativos de sintaxe).
-Plano: `docs/development/workflow-plan.pt_BR.md` §5.
+Plano: `docs/docs/workflow-plan.pt_BR.md` §5.

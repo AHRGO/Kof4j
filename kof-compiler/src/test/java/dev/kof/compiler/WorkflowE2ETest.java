@@ -6,10 +6,12 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -223,6 +225,159 @@ class WorkflowE2ETest {
                 "boom: tentativas=2", "boom: sempre");
     }
 
+    /** 2.1.3 face 2 (Q4): deadLetter IN-MEMORY — `Report.dead` coleta
+     *  "nome: motivo" para TODO job que esgotou retry (throw e false),
+     *  sem depender de sink; jobs bem-sucedidos nunca entram. */
+    @Test
+    void deadLetterInMemoryFaceCollectsDeadJobs() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var boom = job("boom", () -> { if (true) { throw "estourou" } return false })
+                var falsey = job("falsey", () -> false)
+                var ok = job("ok", () -> true)
+                var rep = dag(listOf(boom, falsey, ok)).run()
+                println(rep.summary())
+                println(rep.dead.get(0))
+                println(rep.dead.get(1))
+                println(rep.dead.size)
+            }
+            """, "ok=ok failed=boom,falsey skipped=", "boom: estourou", "falsey: false", "2");
+    }
+
+    /** 2.1.3 face 2 (Q4): deadLetter DURÁVEL — sink `(nome, motivo) -> Bool`
+     *  do USUÁRIO recebe cada falha final (persistência é código dele, ex.
+     *  kof.orm); recusa (false) falha ALTO com o nome do job (R6). */
+    @Test
+    void deadLetterDurableSinkReceivesFailuresAndRefusalIsLoud() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var log = listOf()
+                var boom = job("boom", () -> { if (true) { throw "persiste-me" } return false })
+                var flow = dag(listOf(boom))
+                flow.deadLetter(boom, (n: String, m: String) -> { log.add(n + "/" + m); return true })
+                var rep = flow.run()
+                println(rep.dead.get(0))
+                println(log.get(0))
+                println(log.size)
+            }
+            """, "boom: persiste-me", "boom/persiste-me", "1");
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var boom = job("boom", () -> { if (true) { throw "x" } return false })
+                var flow = dag(listOf(boom))
+                flow.deadLetter(boom, (n: String, m: String) -> false)
+                try {
+                    flow.run()
+                    println("no-throw")
+                } catch (String e) {
+                    println(e)
+                }
+            }
+            """, "workflow: deadLetter sink recusou 'boom'");
+    }
+
+    /** 2.1.3 face 3: `flow.schedule(expr, dag)` DELEGA ao scheduler.at
+     *  (duração idiomática ou cron — D-SCHED-DURATION); cada disparo roda a
+     *  dag e devolve allOk(). Fire-count real com "20ms" nos 2 alvos. */
+    @Test
+    void scheduleDelegatesToSchedulerAtAndFires() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var runs = 0
+                var a = job("a", () -> { runs = runs + 1; return true })
+                var id = schedule(dag(listOf(a)), "20ms")
+                time.sleep(100)
+                scheduler.cancel(id)
+                println(id != "")
+                println(runs >= 2)
+            }
+            """, "true", "true");
+    }
+
+    /** Native: o gate CRON001 do scheduler.at é estático — referenciá-lo no
+     *  host derrubaria a compilação INTEIRA. A fatia schedule entra no
+     *  Native como STUB que falha ALTO em runtime citando CRON001 (R6);
+     *  prova: o host + schedule compilam no Native (a delegação não está lá). */
+    @Test
+    void scheduleOnNativeCompilesViaStubHostStillPortable() throws Exception {
+        Files.writeString(tmp.resolve("S.kf"), """
+            import kof.workflow
+            main() {
+                var id = schedule(dag(listOf(job("a", () -> true))), "*/5 * * * *")
+                println(id)
+            }
+            """);
+        CompilationResult nativeRes = driver.compile(tmp.resolve("S.kf"), tmp.resolve("s-native"), Target.NATIVE);
+        assertTrue(nativeRes.success(), () -> "Native deve compilar o host + stub schedule: " + diags(nativeRes));
+    }
+
+    /** 2.1.3 face 4: `checkpoint(d, dbConn, dagName)` — store REUSA kof.db
+     *  (H2 mem) via a fatia orm; restored jobs re-enter as succeeded WITHOUT
+     *  re-running their bodies (counter proves the skip). JVM-only golden:
+     *  the store is H2; JS orm bridge parity is that lane's surface. */
+    @Test
+    void checkpointRestoresCompletedJobsAcrossRuns() throws Exception {
+        Files.writeString(tmp.resolve("C.kf"), """
+            import kof.workflow
+            main() {
+                var runs = 0
+                var a = job("a", () -> { runs = runs + 1; return true })
+                var b = job("b", () -> { runs = runs + 1; return true }).after(a)
+                var d = dag(listOf(b, a))
+                checkpoint(d, "jdbc:h2:mem:wfck1;DB_CLOSE_DELAY=-1", "pipelinha")
+                var rep1 = d.run()
+                println(rep1.summary())
+                println(runs)
+                var rep2 = d.run()
+                println(rep2.summary())
+                println(runs)
+            }
+            """);
+        CompilationResult result = driver.compile(tmp.resolve("C.kf"), tmp.resolve("c-jvm"), Target.JVM);
+        assertTrue(result.success(), () -> "JVM compile: " + diags(result));
+        String h2 = null;
+        for (String entry : System.getProperty("java.class.path").split(java.io.File.pathSeparator)) {
+            if (entry.contains("h2") && entry.endsWith(".jar")) { h2 = entry; break; }
+        }
+        if (h2 == null) {
+            org.junit.jupiter.api.Assumptions.assumeTrue(false, "h2 jar ausente no classpath");
+        }
+        ProcessBuilder pb = new ProcessBuilder(System.getProperty("java.home") + "/bin/java",
+                "-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8",
+                "-cp", tmp.resolve("c-jvm").toString() + java.io.File.pathSeparator + h2,
+                "Default.Main");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        int ec = p.waitFor();
+        assertEquals(0, ec, "exit: " + output);
+        assertEquals("""
+            ok=a,b failed= skipped=
+            2
+            ok=a,b failed= skipped=
+            2""".trim(), output.trim(), "checkpoint: 2a run executa, 2a restaura sem re-executar");
+    }
+
+    /** Native: a fatia checkpoint entra como STUB (ORM001 em runtime) — o
+     *  host + stub compilam (a referência a kof.orm não está lá). */
+    @Test
+    void checkpointOnNativeCompilesViaStub() throws Exception {
+        Files.writeString(tmp.resolve("CK.kf"), """
+            import kof.workflow
+            main() {
+                var d = dag(listOf(job("a", () -> true)))
+                checkpoint(d, "jdbc:h2:mem:x", "dag1")
+                d.run()
+            }
+            """);
+        CompilationResult nativeRes = driver.compile(tmp.resolve("CK.kf"), tmp.resolve("c-native"), Target.NATIVE);
+        assertTrue(nativeRes.success(), () -> "Native deve compilar o host + stub checkpoint: " + diags(nativeRes));
+    }
+
     /** Rule-5 source portability: the same injected host compiles on Native
      *  (no runtime boundary in this layer — bodies decide). Script shares the
      *  exact same merge/injection pipeline (CompilerPipeline.interpret), so
@@ -238,5 +393,171 @@ class WorkflowE2ETest {
             """);
         CompilationResult nativeRes = driver.compile(tmp.resolve("P.kf"), tmp.resolve("p-native"), Target.NATIVE);
         assertTrue(nativeRes.success(), () -> "Native must compile the host: " + diags(nativeRes));
+    }
+
+    /** D-WORKFLOW-RUN slice 1: introspection — `order()` gives the
+     *  topological order without running a body, `runJob(name)` runs only the
+     *  named job plus its transitive deps, and both surfaces are byte-parity
+     *  JVM/JS. The acc list proves which bodies actually ran. */
+    @Test
+    void orderAndRunJobIntrospectWithoutRunningEverything() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var acc = listOf()
+                var a = job("a", () -> { acc.add("a"); return true })
+                var b = job("b", () -> { acc.add("b"); return true }).after(a)
+                var c = job("c", () -> { acc.add("c"); return true }).after(b)
+                var d = dag(listOf(c, b, a))
+                println(kofWfJoin(d.order(), ","))
+                println(acc.size)
+                var rep = d.runJob("b")
+                println(rep.summary())
+                println(kofWfJoin(acc, ","))
+            }
+            """, "a,b,c", "0", "ok=a,b failed= skipped=", "a,b");
+    }
+
+    /** `runJob` on an unknown name is loud (R6), never a silent empty run. */
+    @Test
+    void runJobUnknownNameIsLoud() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var d = dag(listOf(job("a", () -> true)))
+                try { d.runJob("ghost") } catch (String e) { println(e) }
+                try { d.depsOf("ghost") } catch (String e) { println(e) }
+            }
+            """, "workflow: job 'ghost' não existe na dag");
+    }
+
+    /** `order()` rejects a cycle with the same actionable message as `run()`. */
+    @Test
+    void orderRejectsCycleWithSameMessage() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var a = job("a", () -> true)
+                var b = job("b", () -> true).after(a)
+                a.after(b)
+                try { dag(listOf(a, b)).order() } catch (String e) { println(e) }
+            }
+            """, "ciclo detectado entre: a,b");
+    }
+
+    /** 2.1.3 face 5 (supervision — plano §3/§5: o workflow DELEGA o restart
+     *  ao kof.supervisor): happy path chain+independente roda sob o one_for_one
+     *  e o Report sai na ordem de declaração — SEM o usuário importar
+     *  kof.supervisor (o CompilerWorkflow injeta o host flat, dedup por marca
+     *  KofSupWrap). */
+    @Test
+    void supervisedHappyPathRunsDagUnderOneForOne() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var a = job("a", () -> true)
+                var b = job("b", () -> true).after(a)
+                var c = job("c", () -> true)
+                var rep = runSupervised(dag(listOf(b, a, c)), "s1", 2)
+                println(rep.summary())
+                println(rep.allOk())
+            }
+            """, "ok=b,a,c failed= skipped=", "true");
+    }
+
+    /** one_for_one de verdade: SÓ o filho que falha reinicia (laço vigiar por
+     *  filho do núcleo OTP). `flaky` tropeça 2x e vence na 3ª visita; `vizinho`
+     *  roda UMA vez e nunca é tocado — os dois contadores provam os dois lados
+     *  da palavra "one". Report.retries expõe o custo em tentativas. */
+    @Test
+    void supervisedOneForOneRestartsOnlyTheFailedChild() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var f = 0
+                var v = 0
+                var flaky = job("flaky", () -> { f = f + 1; if (f <= 2) { throw "tropeco-" + f } return true })
+                var vizinho = job("vizinho", () -> { v = v + 1; return true })
+                var rep = runSupervised(dag(listOf(flaky, vizinho)), "s2", 3)
+                println(rep.summary())
+                println(rep.retries.get(0))
+                println("f=" + f + " v=" + v)
+            }
+            """, "ok=flaky,vizinho failed= skipped=", "flaky: tentativas=3", "f=3 v=1");
+    }
+
+    /** A política de reinício é do supervisor: com max=1 o job que sempre
+     *  falha encerra na 2ª visita (limite excedido → drop via escalate),
+     *  vira failed/dead com o motivo cru, o dependente pula (skip transitivo
+     *  no status podre) e o independente fecha — nada trava nem reinicia
+     *  para sempre (R6). */
+    @Test
+    void supervisedLimitExceededDropsAndSkipsDependents() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var boom = job("boom", () -> { if (true) { throw "sempre" } return false })
+                var depois = job("depois", () -> true).after(boom)
+                var okjob = job("okjob", () -> true)
+                var rep = runSupervised(dag(listOf(boom, depois, okjob)), "s3", 1)
+                println(rep.summary())
+                println(rep.errors.get(0))
+                println(rep.dead.get(0))
+                println(rep.retries.get(0))
+                println(rep.allOk())
+            }
+            """, "ok=okjob failed=boom skipped=depois", "boom: sempre", "boom: sempre",
+                "boom: tentativas=2", "false");
+    }
+
+    /** R6 da face, três recusas ALTAS: retry() na mesma dag (duas políticas
+     *  de reinício = uma só manda), maxReinicios < 1 (restart ilimitado
+     *  silencioso = storm de threads — a lição medida do host que caiu hoje)
+     *  e supervisor sem nome. */
+    @Test
+    void supervisedGuardsFailLoud() throws Exception {
+        assertJvmJsParity("""
+            import kof.workflow
+            main() {
+                var x = job("x", () -> true)
+                var flow = dag(listOf(x))
+                flow.retry(x, 2, (n: Int) -> 0)
+                try { runSupervised(flow, "s", 1) } catch (String e) { println(e) }
+                try { runSupervised(dag(listOf(x)), "s", 0) } catch (String e) { println(e) }
+                try { runSupervised(dag(listOf(x)), "", 1) } catch (String e) { println(e) }
+            }
+            """, "é política do supervisor", "maxReinicios < 1", "sem nome de supervisor");
+    }
+
+    /** Native: o núcleo supervisor roda nos 4 alvos (§129 portado, OTP001
+     *  removido 19/09) — a face NÃO precisa de stub; prova: o host + o
+     *  supervisor + a fatia compilam no Native. */
+    @Test
+    void supervisedCompilesOnNative() throws Exception {
+        Files.writeString(tmp.resolve("U.kf"), """
+            import kof.workflow
+            main() {
+                var a = job("a", () -> true)
+                var rep = runSupervised(dag(listOf(a)), "s", 2)
+                println(rep.summary())
+            }
+            """);
+        CompilationResult nativeRes = driver.compile(tmp.resolve("U.kf"), tmp.resolve("u-native"), Target.NATIVE);
+        assertTrue(nativeRes.success(), () -> "Native deve compilar host + supervisor + fatia: " + diags(nativeRes));
+    }
+
+    /** Import duplo: `kof.supervisor` injeta o host ANTES (pipeline 438→440);
+     *  o `import kof.workflow` não pode DUBLAR Supervisor/KofWorker — a dedup
+     *  pela marca KofSupWrap decide e o programa roda igual. */
+    @Test
+    void importedSupervisorDoesNotDoubleHost() throws Exception {
+        assertJvmJsParity("""
+            import kof.supervisor
+            import kof.workflow
+            main() {
+                var rep = runSupervised(dag(listOf(job("a", () -> true))), "s", 2)
+                println(rep.summary())
+            }
+            """, "ok=a failed= skipped=");
     }
 }

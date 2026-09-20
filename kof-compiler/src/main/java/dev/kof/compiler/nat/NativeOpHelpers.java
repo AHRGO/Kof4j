@@ -189,6 +189,39 @@ final class NativeOpHelpers {
         return nb.sanitizeName(kc.methodName());
     }
 
+    /**
+     * §235 native face: the wrapper statics (`Int.parseInt`, `Double.isNaN`, …)
+     * have no JDK class in the native runtime — without this dispatch the
+     * generic call emits `java_lang_Integer_parseInt` and the LINK fails
+     * (COMP001, R6-honest but not rule-5 parity). Both backends classify the
+     * call here and then map it to the existing runtime helpers (parse*) or to
+     * an inline IEEE predicate (is*).
+     */
+    enum WrapperStatic {
+        PARSE_INT, PARSE_LONG, PARSE_DOUBLE, PARSE_FLOAT, PARSE_BOOL,
+        IS_NAN_D, IS_NAN_F, IS_INF_D, IS_INF_F, IS_FIN_D, IS_FIN_F, NONE
+    }
+
+    static WrapperStatic wrapperStatic(KofCall kc) {
+        if (kc.kind() != KofCallKind.STATIC) return WrapperStatic.NONE;
+        if (kc.parameterTypes().size() != 1) return WrapperStatic.NONE;
+        if (!(kc.ownerType() instanceof Type.ClassType ct)) return WrapperStatic.NONE;
+        String owner = ct.name();
+        boolean d = "Double".equals(owner);
+        boolean f = "Float".equals(owner);
+        return switch (kc.methodName()) {
+            case "parseInt" -> "Integer".equals(owner) ? WrapperStatic.PARSE_INT : WrapperStatic.NONE;
+            case "parseLong" -> "Long".equals(owner) ? WrapperStatic.PARSE_LONG : WrapperStatic.NONE;
+            case "parseDouble" -> d ? WrapperStatic.PARSE_DOUBLE : WrapperStatic.NONE;
+            case "parseFloat" -> f ? WrapperStatic.PARSE_FLOAT : WrapperStatic.NONE;
+            case "parseBoolean" -> "Boolean".equals(owner) ? WrapperStatic.PARSE_BOOL : WrapperStatic.NONE;
+            case "isNaN" -> d ? WrapperStatic.IS_NAN_D : f ? WrapperStatic.IS_NAN_F : WrapperStatic.NONE;
+            case "isInfinite" -> d ? WrapperStatic.IS_INF_D : f ? WrapperStatic.IS_INF_F : WrapperStatic.NONE;
+            case "isFinite" -> d ? WrapperStatic.IS_FIN_D : f ? WrapperStatic.IS_FIN_F : WrapperStatic.NONE;
+            default -> WrapperStatic.NONE;
+        };
+    }
+
     static int resolveFieldOffset(NativeBackend nb, Type ownerType, String fieldName) {
         ClassLayout layout = nb.getLayoutForType(ownerType);
         if (layout != null) {

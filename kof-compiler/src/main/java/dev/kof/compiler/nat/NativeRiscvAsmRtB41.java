@@ -20,38 +20,42 @@ public final class NativeRiscvAsmRtB41 {
     private static  String TEMPLATE = """
             .globl %1$s
             %1$s:
-                addi sp, sp, -48
+                addi sp, sp, -64
                 sd   ra, 40(sp)
-                sd   s0, 32(sp)
+                sd   s0, 48(sp)
+                sd   a0, 56(sp)             # String arg (kof_exc_slot clobbera a0)
+                sd   a1, 32(sp)             # default (NÃO usar 24(sp): é o chain)
                 # frame do handler: [0]=handler [8]=sp [16]=s11(rbp) [24]=chain antigo
                 la   t0, %2$s_handler
                 sd   t0, 0(sp)
                 sd   sp, 8(sp)
                 sd   s11, 16(sp)
-                la   t1, kof_exc_chain
-                ld   t2, 0(t1)
+                call kof_exc_slot           # §129: chain da thread atual
+                ld   t2, 0(a0)
                 sd   t2, 24(sp)
-                sd   sp, 0(t1)
-                # args: a0 = String (já pronto); default (a1) salvo no frame
-                sd   a1, 24(sp)
+                sd   sp, 0(a0)
+                ld   a0, 56(sp)             # restaura o String arg
                 call %3$s
+                sd   a0, 56(sp)             # preserva o RESULTADO (o slot do arg
+                                            # já foi consumido; kof_exc_slot clobbera a0)
                 # sucesso: restaura a chain e devolve a0
-                la   t1, kof_exc_chain
+                call kof_exc_slot
                 ld   t2, 24(sp)
-                sd   t2, 0(t1)
+                sd   t2, 0(a0)
+                ld   a0, 56(sp)             # restaura o resultado
                 ld   ra, 40(sp)
-                ld   s0, 32(sp)
-                addi sp, sp, 48
+                ld   s0, 48(sp)
+                addi sp, sp, 64
                 ret
             %2$s_handler:
                 # chega com a String do erro em a0; devolve o default
-                la   t1, kof_exc_chain
+                call kof_exc_slot
                 ld   t2, 24(sp)
-                sd   t2, 0(t1)
-                ld   a0, 24(sp)
+                sd   t2, 0(a0)
+                ld   a0, 32(sp)
                 ld   ra, 40(sp)
-                ld   s0, 32(sp)
-                addi sp, sp, 48
+                ld   s0, 48(sp)
+                addi sp, sp, 64
                 ret
             """;
 

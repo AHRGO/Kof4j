@@ -1,6 +1,7 @@
 package dev.kof.compiler.nat;
 import dev.kof.compiler.BuiltinTypes;
 import dev.kof.compiler.ClassLayout;
+import dev.kof.compiler.SourcePosition;
 import dev.kof.compiler.CompilerClassLowering;
 import dev.kof.compiler.IRBasicBlock;
 import dev.kof.compiler.IRClass;
@@ -100,6 +101,16 @@ public final class NativeRiscvCrossEmit {
         boolean endsWithReturn = false;
         for (IRBasicBlock block : method.basicBlocks()) {
             for (KofOperation op : block.operations()) {
+                // X7-2 (DWARF cross, fatia 1): `.loc` por operação, do mesmo
+                // KofDebugInfo do x86 (NativeMethodEmitter.emitOperation) — a
+                // line table riscv/aarch espelha a fonte Kof (o tradutor
+                // aarch repassa a diretiva verbatim).
+                if (nb.debugInfo && method.debugInfo() != null) {
+                    SourcePosition dbg = method.debugInfo().positions().get(op);
+                    if (dbg != null && dbg.line() > 0) {
+                        sb.append("    .loc 1 ").append(dbg.line()).append(" 0\n");
+                    }
+                }
                 if (op instanceof KofReturn || op instanceof KofReturnVoid) endsWithReturn = true;
                 emitCrossOpRiscv(sb, op, frameSize, joinMain);
             }
@@ -273,10 +284,10 @@ public final class NativeRiscvCrossEmit {
                 sb.append("    sd t0, 0(sp)\n");
                 sb.append("    sd sp, 8(sp)\n");
                 sb.append("    sd s11, 16(sp)\n");
-                sb.append("    la t1, kof_exc_chain\n");
-                sb.append("    ld t2, 0(t1)\n");
+                sb.append("    call kof_exc_slot\n");
+                sb.append("    ld t2, 0(a0)\n");
                 sb.append("    sd t2, 24(sp)\n");
-                sb.append("    sd sp, 0(t1)\n");
+                sb.append("    sd sp, 0(a0)\n");
             }
             case KofStatementIf _ -> {
                 // §267: marcador de if de statement (uso exclusivo do dispatcher JS) — no-op
@@ -285,9 +296,9 @@ public final class NativeRiscvCrossEmit {
                 // §266: marcador estrutural (fronteira corpo/update do for) — no-op
             }
             case KofTryEnd _ -> {
-                sb.append("    la t1, kof_exc_chain\n");
+                sb.append("    call kof_exc_slot\n");
                 sb.append("    ld t2, 24(sp)\n");
-                sb.append("    sd t2, 0(t1)\n");
+                sb.append("    sd t2, 0(a0)\n");
                 sb.append("    addi sp, sp, 32\n");
             }
             case KofCatchStart kcs -> {

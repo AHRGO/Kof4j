@@ -36,8 +36,14 @@ public final class CollectionMethodTyper {
         if ("get".equals(mn) || "remove".equals(mn)) return driver.listElementType(recvType);
         if ("size".equals(mn) || "length".equals(mn) || "count".equals(mn)) return Type.PrimitiveType.INT;
         if ("contains".equals(mn) || "isEmpty".equals(mn)) return Type.PrimitiveType.BOOL;
+        // #382 — indexOf/lastIndexOf são Int (posição; -1 quando ausente,
+        // mesmo oracle java.util.List); addAll é Bool (mudou?); subList
+        // devolve List do MESMO tipo de elemento; sort é void (in-place).
+        if ("indexOf".equals(mn) || "lastIndexOf".equals(mn)) return Type.PrimitiveType.INT;
+        if ("addAll".equals(mn)) return Type.PrimitiveType.BOOL;
+        if ("subList".equals(mn)) return recvType;
         if ("add".equals(mn) || "push".equals(mn) || "append".equals(mn)
-                || "set".equals(mn) || "clear".equals(mn)) {
+                || "set".equals(mn) || "clear".equals(mn) || "sort".equals(mn)) {
             return Type.PrimitiveType.VOID;
         }
     }
@@ -59,6 +65,11 @@ public final class CollectionMethodTyper {
         if ("remove".equals(mn)) return new Type.NullableType(valueType);
         if ("put".equals(mn)) return new Type.NullableType(valueType);
         if ("getOrDefault".equals(mn)) return valueType;
+        // #386 — containsValue é Bool; putIfAbsent segue o contrato Java
+        // (valor anterior OU null quando ausente) → V? pela mesma razão do
+        // put/remove acima (D-NULL-INTENT/I7).
+        if ("containsValue".equals(mn)) return Type.PrimitiveType.BOOL;
+        if ("putIfAbsent".equals(mn)) return new Type.NullableType(valueType);
         if ("size".equals(mn) || "length".equals(mn) || "count".equals(mn)) return Type.PrimitiveType.INT;
         if ("containsKey".equals(mn) || "contains".equals(mn) || "isEmpty".equals(mn)) return Type.PrimitiveType.BOOL;
         if ("clear".equals(mn)) return Type.PrimitiveType.VOID;

@@ -254,9 +254,10 @@ Estado 13/09: concorrência real **JVM** (virtual threads) + **Native**
 1ms) + **JS** ✅ 03/09 (CONC003 fechado — stmt/expr/cancel/selectAny com
 async/await/Promise reais) + **supervisão OTP** (`kof.supervisor`: 1ª fatia
 11/09 núcleo JVM+Script, **S2-JVM 13/09** `startAll`/`lacoUnico` — ver
-`planning-otp-supervision.md`; **Native x86 ✅ 15/09** — §129 fechado via
-DECISIONS §2 opção B, então `kof.supervisor` roda no Native x86; riscv/aarch=OTP001
-(gate honesto da era §132). **JS ✅ 18/09 — §132 resolvido:** `time.sleep` virou um
+`docs/planning-otp-supervision.md`; **Native x86 ✅ 15/09** — §129 fechado via
+DECISIONS §2 opção B; **riscv64/aarch64 ✅ 19/09** — §129 port cross (tabela de
+cadeia por-TID `kof_exc_slots`, gate `OTP001` removido), então `kof.supervisor`
+roda em todos os targets nativos. **JS ✅ 18/09 — §132 resolvido:** `time.sleep` virou um
 ponto de await async cooperativo (o compilador colore async o método que o alcança,
 `kofTimeSleep` devolve Promise, a bomba do host `KofJsRunner` a drena), então um worker
 spawnado de dentro de outra task dispara e `OTP002` foi levantado — `kof.supervisor`
@@ -417,7 +418,7 @@ para um `kofdeps.lock` portável (lista GAV) consumido por `resolve`/`build`/`ru
 --deps`; degradação honesta quando `mvn` não está no PATH — warning explícito,
 nunca classpath truncado em silêncio; prova `DepsTransitiveTest` 10/10 incluindo
 E2E com Maven real `jgrapht-core:1.4.0 → org.jheaps:jheaps:0.11`);
-**registry pendente** (precisa de decisão da mantenedora — formato/hosting público).
+**registry ✅ 19/09 (D2-A, `DECISIONS.md` §D-POLL-19)**: GitHub Releases como host oficial — publish (`kof deploy --publish`: Release + `<name>-<v>.tar.gz` + `SHA256SUMS`) + pull (`owner/repo[@ver]` no `kofdeps`, soma verificada ANTES de instalar, cache `~/.kof/deps/kof/`, REG001–004 honestos).
 
 ---
 
@@ -799,8 +800,7 @@ independentemente do target. Fases 1-3 implementadas: DebugInfo na IR com
 source location por op, JVM LineNumberTable/SourceFile/LocalVariableTable
 gerados e **`kof debug` MVP funcional** (DAP over stdio + JDWP cru: launch,
 breakpoints por linha Kof, `stopped`, stack trace com funções/linhas Kof,
-continue, disconnect). Fases 4-7 (Kof Editor, Native DWARF, JS source
-maps, avançado) planejadas. Ver: `docs/debugging/debugger-architecture.md`,
+continue, disconnect). Fase 4 (Kof Editor) planejada; Fase 5 (Native DWARF) x86-64 POUSOU — `.debug_line`+`.debug_info`+`.debug_abbrev` ligadas por default, `--release` remove, travadas por `NativeDwarfLineInfoTest`/`NativeDwarfSubprogramTest`; a line table cross POUSOU 19/09 (`.file`/`.loc` no riscv64, repassados verbatim pela tradução aarch64 — `NativeDwarfCrossTest`); residual: CU/subprogram DIEs nos cross (frame_base por ABI: s11/x29 — o `NativeDwarf` é hardcoded p/ %rbp) e os front-ends de debug cross-alvo; Fase 6 (source maps JS) V3 pousada 01/09 (`KofJsSourceMapTest`); Fase 7 (avançado) planejada. Ver: `docs/debugging/debugger-architecture.md`,
 `docs/debugging/debugging.md`, `docs/debugging/debug-adapter.md`.
 
 ## 20. Princípios de Design
@@ -908,7 +908,7 @@ tiers `stable`/`experimental` (`docs/backend-parity.md`).
 | 1.1 | Gaps de paridade (`HTTP002`, resíduo web `WEB002`/`WEB003`/`WEB004`, ~~`CONC003`~~ ✅ 03/09, ~~`LOG001`~~ ✅ 01/09, ~~`MQ001`~~ ✅ 01/09, ~~`SCHED001`~~ ✅ 31/08, ~~`TIME001`~~ ✅ 02–05/09, ~~`SECN002`~~ ✅ 01/09, ~~`OBS002`~~ ✅ 01/09, `MEDIA`) | 🟡 em progresso — JS web server base ✅ 16/09 (WEB001 fechado; DB001 fechado); residual por `backend-parity.md` (HTTP002 https/TLS nativo, gap codes ws/sse, MEDIA) |
 | 1.2 | GC mark-sweep automático no Native | 🟡 riscv `356f33b9` ✅; x86 decomposto G-1..G-5 (`native-multiarch.md`) |
 | 1.3 | Query DSL tipada (`User.query {}`) | ✅ 01/09 (`KofOrmE2ETest`) |
-| 1.4 | Package manager MVP (`kofdeps`) | 🟡 `kof deps` + resolução Maven Central; **transitivos ✅ 16/09** (delegação ao Maven + `kofdeps.lock`, `DepsTransitiveTest` 10/10 incl. E2E com Maven real); **registry pendente (decisão da mantenedora)** |
+| 1.4 | Package manager MVP (`kofdeps`) | ✅ `kof deps` + resolução Maven Central; **transitivos ✅ 16/09** (delegação ao Maven + `kofdeps.lock`, `DepsTransitiveTest` 10/10 incl. E2E com Maven real); **registry ✅ 19/09** (D2-A publish + pull 1.5.3-S2, `DepsRegistryTest` 6/6) |
 | 1.5 | Tracing/OpenTelemetry + lifecycle `application{}` | 🟡 spans W3C + lifecycle ✅ 3 targets; **export OTel ✅ JVM/JS (`exportSpans()` → OTLP/JSON, `OBS003`); gap honesto no Native `OBS003`** |
 | 1.6 | **Native → bare-metal/bootável** (microcontrolador, BIOS legado, UEFI) — diretiva da mantenedora 15/09 | ⚪ **só plano** — costura HAL `kof_plat_*` + perfil freestanding, faces B-0…B-5 em `docs/development/future/PLAN-BAREMETAL-BOOT.md`; sem agendamento; MCU depende de 1.2 |
 
@@ -942,9 +942,12 @@ REVOGADA). Lane: **compiler** (contrato nos 4 backends — não a lane docs).
 | # | Passo | Escopo (uma linha) | Depende de |
 |---|-------|--------------------|------------|
 | 2.6.1 | **N1** — JVM+Script+JS: `Nullable(primitivo)` carrega null REAL | `T?` boxed em retorno/campo/slot nos 3 targets com tipo boxed; virar a célula `nullableprint` + as 3 paridades null-branch de `KofInterpreterParityTest` no MESMO commit do comportamento (regra 1) | — |
-| 2.6.2 | **N2** — Native: null real via ABI de box tagged §104b-ii | box `typeId=3` + `object_to_string`/unbox com dispatch; x86 à mão + riscv à mão + aarch64 via tradutor | §104b-ii / §205 fatia 2 dividem este ABI |
+| 2.6.2 | **N2** — Native: null real via ABI de box tagged §104b-ii | **`RuntimeErasureBox`** (`[MAGIC][tag][value]`, 24 B) + dispatch `kof_box_*` / `kof_unbox_*` strict+soft; x86 à mão + riscv à mão + aarch64 via tradutor. O esboço antigo de box `typeId=3` está **superseded — não criar como segundo ABI**; ver `docs/runtime/RUNTIME_ABI.md` §3.9. | §104b-ii / §205 fatia 2 dividem este ABI |
 | 2.6.3 | **N3** — `== null` em NÃO-nullable: legal, constant-foldable, NUNCA diagnóstico | a intenção é a própria comparação; regra 2 (retrocompat): código existente que compara continua compilando | N1 |
 | 2.6.4 | **N4** — auditar as faces restantes de null silencioso | map-miss `0` (SG-008), campo não-inicializado `0`, unbox-de-null `0` — cada um ganha decisão ou diagnóstico honesto (R6) | N1–N3 |
+| 2.6.5 | **D-TROOL-1 (front-end) ✅ LANDADA 19/09** (`916b9fb7` core + `d61836eb` migracao/lei; `TrooleanLawE2ETest` 13/13, gate dirigido 8/8, goldens medidos JVM=Script=JS=Native-x86) — registrar `Troolean` (3 estados); `Nullable(Bool)` escrito pelo usuário → `SEM095` ("`Bool` tem exatamente dois valores — para true/false/desconhecido use `Troolean`"); `Troolean` não-instanciado = unknown; `!`/`&&`/`||` de Kleene + `== true/false`/`== null` + `println` + açúcar de condição `if (t)`≡`if (t == true)` — JVM+Script+JS via `runAll3`; migrar os 4 arquivos de teste com `Bool?` | DECISIONS §D-TROOL; prova `TrooleanLawE2ETest` + faces §306 migradas | — |
+| 2.6.6 | **D-TROOL-2 (Native) ✅ 19/09 (medido)** | face de três estados no backend nativo — medir primeiro o comportamento de `Nullable(Bool)` lá (o front do PR #465 é a lane boxed-`T?`); entregar trabalho ou o diagnóstico honesto `NAT-TROOL001`, nunca fallback silencioso — MEDIDO: tabelas de Kleene IDENTICAS no Native-x86-64 (slot boxado §295/§306 reusado, zero edicao de backend; NAT-TROOL001 desnecessario; cross sob guarda qemu, CI verde) | D-TROOL-1, família 2.6.2 |
+| 2.6.7 | **D-TROOL-3 (corpo+migração) ✅ 19/09** (`5f0757e8`) | `training/idioms` + `fake-idioms.md` (linha `Bool?` → Troolean), `docs/language/types.md`, nota de migração no CHANGELOG (regra 1 do freeze — a classe do precedente #401), célula em `backend-parity.md` | D-TROOL-1 |
 
 **Estado da fila (18/09 ~13:40):** PR **#438** (fork externo, `fix/278-d-null-intent-atomic`) **MESCLADO pela mantenedora em `250f6207`** (18/09 12:53) — N1 (JVM+Script+JS) landou: `Map.get` agora retorna `V?` para valores de referencia e o repro de chave ausente com valor primitivo roda limpo (medido `9`, jars frescos). A face PRESENTE `!= null` em valores primitivos continua QUEBRADA pos-merge (Int/Long/Double/Boolean → `NoSuchMethodError Object.valueOf(boxed)`; Float → CCE `Double→Float` no sitio do mapa) — catalogada como re-procedimento 2a do §294, dona `.22` cluster erasure/boxing, NAO reabertura do #438. N2 (Native) e I4/i1 permanecem fora de escopo/fila; lanes nao devem abrir frente paralela no mesmo contrato (regra 6 / um contrato, um PR). O PR tambem declara `Map.get/put/remove` em chave ausente (I7) — engolindo a face parqueada `#376`/`#409` carimbada pela mantenedora 18/09 — NAO abra frente N4 separada para essas celulas enquanto #438 estiver em revisao.
 

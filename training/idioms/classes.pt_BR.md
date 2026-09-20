@@ -138,6 +138,18 @@ class Dog extends Animal {
 - `super(args)` é a primeira instrução do construtor da subclasse.
 - Override é implícito (mesmo nome de método).
 - Dispatch é virtual em ambos os targets.
+- `super.campo` lê/escreve um campo **herdado** preservando o tipo declarado
+  (`super.width = w` não vira `Object`). O mesmo campo escrito via
+  `this.width` ou `width` a puro nome tem comportamento idêntico — `super`
+  só diz "comece a busca na superclasse".
+
+```kof
+class Rect extends Shape {
+    resize(Float w) {
+        super.width = w          // campo herdado — store tipado, sem temporário
+    }
+}
+```
 
 ## Generics Box<T> (0.4.0-beta)
 

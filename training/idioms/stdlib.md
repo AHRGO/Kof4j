@@ -1,6 +1,6 @@
 [English](stdlib.md) | [Português](stdlib.pt_BR.md)
 
-# Idioms — STDLIB (math / strings / encoding / uuid)
+# Idioms — STDLIB (math / strings / encoding / uuid / time / process / cache / config / log / net / gpu / media)
 
 **Status:** available · **Introduced:** 0.3.0-beta (STDLIB track, 08/09/2026) · **Updated:** 08/09/2026
 
@@ -208,6 +208,133 @@ element; `Result` is the SAME type as `kof.process`'s (one shape, never a fork);
 non-zero exit is data, not an exception. Honest faces: `pipeline` = JVM-real,
 JS/Native = `PROC001` at compile-time (R6); full doc in `docs/stdlib/shell.md`.
 
+## time — calendar, ISO, clock (8.5, 19/09)
+
+```kof
+val iso  = time.todayIso()                       // "2026-09-19"
+val week = time.addDays(iso, 7)                  // ISO in, ISO out
+val gap  = time.diffDays("2026-01-01", "2026-09-19")
+val dim  = time.daysInMonth(2026, 2)             // 28
+val dow  = time.dayOfWeek(2026, 9, 19)
+val hrs  = time.hoursBetween(2026, 9, 19, 0, 2026, 9, 19, 12)
+val leap = time.isLeapYear(2026)                 // own calendar math: BAD, 18 members exist
+time.sleep(50); val t = time.now()               // epoch millis
+val id = time.interval(1000, () -> println("tick"))
+time.cancel(id)
+```
+
+WHY: the calendar face is **pure String/Int functions** — no date object to import,
+no corner-case math of your own. `parseDateIso`/`formatDateIso` move between the
+ISO string and parts. LSP hover/signatureHelp lists all 18 with real arities.
+Interpreter parity for the new faces: `KofScriptStdlibParityTest`.
+
+## process — external commands, argv as varargs (8.5, 19/09)
+
+```kof
+// ❌ BAD — a List here (that is shell's shape; process's varargs reject it, SEM025)
+val r = process.run("git", listOf("status"))
+// ✅ direct command: varargs of String
+val r = process.run("git", "status", "--short")
+if (r.exitCode == 0) { println(r.stdout) }       // non-zero exit is DATA, never an exception
+process.exit(1)                                  // terminate with code — taught in learn/23-testing.md
+```
+
+WHY: `kof.process` = **one-shot command with args you already have as values**;
+`kof.shell` (section below) = the list-shaped/dynamic argv and pipeline idiom.
+Same `Result` shape in both (`stdout`/`stderr`/`exitCode`). Honest gates (measured
+19/09 + pinned in `DomainGapCodesTest`): `run`/`spawn`/`exit` = `PROC001` at
+**compile-time on Native**; `process.spawn` = `PROC001` on **JS** (`run` works
+there). Never a silent fallback.
+
+## cache — String KV with TTL (8.5, 19/09)
+
+```kof
+cache.set("k", "v")                    // no expiry: cache.ttl("k") gives -1
+cache.set("session", tok, 300)         // ttl in seconds
+val v = cache.get("k")
+val left = cache.ttl("session")
+cache.delete("k")
+cache.clear()
+```
+
+WHY: deliberately tiny — String→String in-process KV. No serialization ceremony;
+if you need persistence that is `kof.orm`, not a cache flag.
+
+## config — key + default, no sentinel strings (8.5, 19/09)
+
+```kof
+val port = config.get("server.port")            // 1 arg: value as stored
+val name = config.str("app.name", "demo")       // str/int/long/bool take key + default
+val url  = config.required("db.url")            // missing key is an ERROR, never a silent ""
+val has  = config.has("app.name")
+val home = config.env("HOME")                   // raw environment
+```
+
+WHY: literal keys are discovered **at compile-time** (`CompilerDriver.discoveredConfigKeys()`
+— deploy/tooling read them before the program runs; a computed key degrades to the
+runtime path, pinned in `ConfigGenTest`). Default belongs in the call, not in an
+`if (s == "")`.
+
+## log — four levels (8.5, 19/09)
+
+```kof
+log.debug("payload " + n)
+log.info("boot")
+log.warn("deprecated path")
+log.error("boom: " + err)
+```
+
+WHY: `println` is program **output**; `log` is program **observation** — mixing them
+loses the level. Four members, `String` in, `void` out, no format ceremony
+(concatenation is already efficient).
+
+## net — URL apart, no regex (8.5, 19/09)
+
+```kof
+val u = "https://api.x.io:8443/v1/items?page=2#top"
+net.scheme(u); net.host(u); net.port(u); net.path(u); net.query(u); net.fragment(u)
+val q = net.queryEncode("a b&c")
+val back = net.queryDecode(q)
+```
+
+WHY: hand-rolled `split("/")`/regex over URLs breaks on port, query and fragment —
+each piece is a real function, all targets (interpreter parity pinned 19/09 in
+`KofScriptStdlibParityTest`).
+
+## gpu — probe first, kernels honest (8.5 fatia 3, 19/09)
+
+```kof
+if (gpu.available()) {
+    var a = new Int[4]
+    var c = new Int[4]
+    val rc = gpu.dispatchMatmul(a, a, c, 2, 2, 2)   // rc != 0 = kernel said no, never a silent wrong answer
+} else {
+    println(gpu.failReason())                        // WHY the host has no face (R6)
+}
+```
+
+WHY: heavy compute is an **official package** domain (R1) — `kof.gpu` exposes only
+what the platform already runs (fixed-shape kernels + the `mv*` int8/long faces for
+the on-device path); ML frameworks stay interop (R9). Honest gates (measured 19/09):
+JVM + Native x86 ✅; **JS = `GPU001`** at compile-time (no BLAS promise on the web —
+R7); riscv/aarch golden ⏳.
+
+## media — Image/Audio/Video/Mic are namespaces, not UI widgets (8.5 fatia 3, 19/09)
+
+```kof
+val img = Image.open("photo.png")        // ImageData (pixels + width/height)
+val wav = Audio.openWav("bell.wav")      // Audio
+val clip = Video.open("intro.mp4")       // Video
+val take = Mic.record(1)                 // Audio — 1 second from the default device
+val inputs = Mic.list()                  // available capture devices
+```
+
+WHY: `Image` in `kof.ui` is a **view widget**; `Image.open` here is **media I/O**
+(same name, different intent — do not confuse them). Everything the platform
+decodes stays in the backend; user code never touches buffers or codecs. Honest
+gates (measured 19/09): JVM ✅; **JS and Native = `MEDIA001`** at compile-time (R6);
+riscv/aarch ⏳.
+
 ## Note per target (honest gates)
 
 | function | JVM/Script | Native x86_64 | Native riscv64/aarch64 | JS |
@@ -225,6 +352,13 @@ JS/Native = `PROC001` at compile-time (R6); full doc in `docs/stdlib/shell.md`.
 | math.pow (S1b.2 — libm `pow@PLT` + `-lm` on x86) | ✅ | ✅ | ❌ `MATH001` (static cross without libc) | ✅ |
 | random.randomInt/randomBoolean/randomString (beta face S10a/b) | ✅ | ✅ | ✅ (B27/B28, getrandom/lemire) | ✅ |
 | random.double/boolean/int/hex (main face S10) | ✅ | ✅ | ✅ (B27) | ✅ |
+| `time.*` new faces (todayIso/addDays/diffDays/hoursBetween/iso parse-format/sleep/now/interval) | ✅ JVM (measured 19/09, `StdlibIdiomsCompileTest`); interpreter: dates ✅ (X8 parity), clock ⏳ | ✅ x86 (measured 19/09) | ⏳ cross golden not measured yet | ✅ (measured 19/09) |
+| `cache.*` / `config.*` / `log.*` (8.5) | ✅ JVM (measured 19/09); cache+config ✅ interpreter parity 19/09 (`KofScriptStdlibParityTest`); log ⏳ interpreter | ✅ x86 (measured 19/09) | ⏳ cross golden not measured yet | ✅ (measured 19/09) |
+| `process.run`/`exit` (varargs) | ✅ | ❌ `PROC001` (compile-time, pinned `DomainGapCodesTest`) | ❌ `PROC001` | ✅ |
+| `process.spawn` | ✅ | ❌ `PROC001` | ❌ `PROC001` | ❌ `PROC001` (pinned 19/09) |
+| `observability.*` (spans 01/09 + metrics/health 8.5 19/09) | ✅ (measured 19/09) | ✅ x86 (measured 19/09) | ⏳ cross golden not measured | ✅ (measured 19/09) |
+| `gpu.available`/`failReason`/`dispatchMatmul(Int)` | ✅ | ✅ (measured 19/09) | ⏳ cross golden not measured | ❌ `GPU001` (compile-time) |
+| `Image.open`/`Audio.openWav`/`Video.open`/`Mic.record/list` | ✅ (measured 19/09) | ❌ `MEDIA001` (compile-time) | ❌ `MEDIA001` | ❌ `MEDIA001` |
 | shell.cmd/run/ok (v1) | ✅ | ❌ `PROC001` (compile-time) | ❌ `PROC001` | ✅ byte-parity |
 | shell.pipeline (v1 — JVM only) | ✅ | ❌ `PROC001` | ❌ `PROC001` | ❌ `PROC001` |
 

@@ -194,6 +194,19 @@ for (int i = 0; i < ss.cases().size(); i++) {
         ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
         ops.add(new KofConditionalJump(KofComparison.NE, bodyLabels.get(i),
                 i + 1 < ss.cases().size() ? testLabels.get(i + 1) : defaultLabel));
+    } else if (isWideOrFloating(switchType)) {
+        // #471-regression (lane 499-505): o ramo SUB do stmt sobreviveu ao
+        // "EQ não-SUB" de 2238bd0a só na face pattern/expression — sobre
+        // LONG/DOUBLE o lsub/dsub deixa categoria 2 na pilha e o jump
+        // int-if_icmpeq = VerifyError (medido: if_icmpeq @ long_2nd).
+        // Igualdade larga/FP usa o MESMO KofBinary(EQ, switchType) da face
+        // pattern (LCMP/FCMP/DCMP + IFEQ no backend; NaN nunca casa), e o
+        // bool 0/1 resultante compara com 0 como INT — shape válido nos
+        // 4 alvos (JVM/Script/JS/Native roteiam pelo mesmo IR).
+        ops.add(new KofBinary(KofBinaryOp.EQ, switchType));
+        ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
+        ops.add(new KofConditionalJump(KofComparison.NE, bodyLabels.get(i),
+                i + 1 < ss.cases().size() ? testLabels.get(i + 1) : defaultLabel));
     } else {
         ops.add(new KofBinary(KofBinaryOp.SUB, switchType));
         ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
@@ -236,5 +249,12 @@ ops.add(new KofLabel(endLabel));
             if (lv.index() == switchTmp) return lv.type();
         }
         return fallback;
+    }
+
+    private static boolean isWideOrFloating(Type t) {
+        Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
+        if (!(inner instanceof Type.PrimitiveType p)) return false;
+        String n = Type.canonicalPrimitiveName(p.name());
+        return "long".equals(n) || "float".equals(n) || "double".equals(n);
     }
 }

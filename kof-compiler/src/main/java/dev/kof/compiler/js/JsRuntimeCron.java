@@ -13,14 +13,78 @@ final class JsRuntimeCron {
 
     static String cronRuntime() {
         return """
+            // ── kof.scheduler.at — duração idiomática (D-SCHED-DURATION)
+            // Além do cron de 5 campos, `at` aceita "30m", "1d&30m" etc.
+            // (termo = dígitos + unidade; unidade ∈ { s, m, h, d, M, a };
+            // composição com '&'). s/m/h/d fixos em ms; M/a avançam o
+            // calendário UTC com clamp no último dia do mês alvo — mesmo
+            // algoritmo do JVM (paridade byte-idêntica via golden probe).
+            const KOF_DUR_UNITS = { ms: 1, s: 1000, m: 60000, h: 3600000, d: 86400000 };
+            export function kofDurationParse(expr) {
+                if (expr === null || expr === undefined) return null;
+                const e = String(expr).trim();
+                if (e.length === 0) return null;
+                let fixed = 0;
+                let months = 0;
+                let years = 0;
+                for (const raw of e.split("&")) {
+                    const t = raw.trim();
+                    const m = /^(\\d+)(ms|[smhdMa])$/.exec(t);
+                    if (m === null) return null;
+                    const n = Number(m[1]);
+                    if (!(n > 0)) return null;
+                    const u = m[2];
+                    if (u === "M") months += n;
+                    else if (u === "a") years += n;
+                    else {
+                        fixed += n * KOF_DUR_UNITS[u];
+                        if (!(fixed < 9007199254740993)) return null;
+                    }
+                }
+                return { fixed: fixed, months: months, years: years };
+            }
+            function kofDurationDim(y, m1) {
+                if (m1 === 2 && ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0)) return 29;
+                return [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m1 - 1];
+            }
+            function kofDurationNextFrom(dur, anchor) {
+                if (dur.months === 0 && dur.years === 0) return anchor + dur.fixed;
+                const d = new Date(anchor);
+                // total de meses desde o ano 0 (mês 0-based); clamp no
+                // último dia do mês alvo — mesmo algoritmo do JVM.
+                const mo0 = d.getUTCFullYear() * 12 + d.getUTCMonth() + dur.years * 12 + dur.months;
+                const y2 = Math.floor(mo0 / 12);
+                const m2 = mo0 - y2 * 12;
+                const da2 = Math.min(d.getUTCDate(), kofDurationDim(y2, m2 + 1));
+                const base = Date.UTC(y2, m2, da2, d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds());
+                return base + dur.fixed;
+            }
+            export function kofDurationNextDelayMs(expr, nowMillis) {
+                const dur = kofDurationParse(expr);
+                if (dur === null) throw new Error("duration: not a duration expression: " + expr);
+                return kofDurationNextFrom(dur, nowMillis) - nowMillis;
+            }
             // ── kof.scheduler.at — cron real (CRON001) ──────────────
             // 5 campos em UTC (paridade com o JVM). BigInt como máscara de
             // bits (o minuto precisa de 60 bits; Number só tem 32 em bitwise).
             // Cron inválido lança (alto, nunca silencioso — R6).
             export function kofTimeScheduleCron(cron, fn) {
-                const fields = kofCronParse(cron);
+                const dur = kofDurationParse(cron);
                 const id = "a" + (++kofTimeSeq.value);
                 const now = Date.now();
+                if (dur !== null) {
+                    const anchor = now;
+                    kofTimeJobs.set(id, {
+                        dur: dur,
+                        anchor: anchor,
+                        run: () => kofTimeRunJob(fn),
+                        // via kofDurationNextDelayMs (= API pública): a fatia
+                        // só sobrevive ao tree-shake se for alcançável.
+                        next: now + kofDurationNextDelayMs(cron, now)
+                    });
+                    return id;
+                }
+                const fields = kofCronParse(cron);
                 kofTimeJobs.set(id, {
                     cron: fields,
                     run: () => kofTimeRunJob(fn),

@@ -118,6 +118,17 @@ class NativeRiscv64E2ETest {
         return output;
     }
 
+
+    @Test
+    void riscv64CollectionMethodsStdlibGolden(@TempDir Path tempDir) throws IOException {
+        // #386/#382 — os 7 métodos novos no riscv64 (NativeRiscvAsmLookups0).
+        // Golden = MESMA medição do oráculo JVM (CollectionMethodsStdlibE2ETest).
+        assumeToolchain();
+        String out = runRiscv64(tempDir, CollectionMethodsStdlibE2ETest.PROGRAM);
+        assertEquals(CollectionMethodsStdlibE2ETest.GOLDEN, out,
+                "riscv64 must match the JVM oracle (regra 5)");
+    }
+
     @Test
     void riscv64HelloWorld(@TempDir Path tempDir) throws IOException {
         assumeToolchain();
@@ -387,7 +398,9 @@ class NativeRiscv64E2ETest {
                 println(s.charAt(0))
             }
             """);
-        assertEquals("10\nKof\ntrue\ntrue\n72", out);
+        // 19/09 (#259/N2, §333): `72` -> `H` — `Char` imprime o CARÁTER
+        // (§216/D-PRINT); o cross ainda imprimia codepoint.
+        assertEquals("10\nKof\ntrue\ntrue\nH", out);
     }
 
     @Test
@@ -570,8 +583,9 @@ class NativeRiscv64E2ETest {
     // casos que o `riscv64MapSet` (só String-key, default tag=1) NÃO toca:
     // (a) chave INT → tag=0 raw-cmp (senão o scan deref um Int cru = SIGSEGV);
     // (b) chave de TIPO ERRADO (String-arg num map Int / Int-arg num map
-    // String) → miss seguro (null/0 como o JVM), nunca SIGSEGV nem lixo.
-    // Golden = oracle JVM medido 12/09 (`java Default.Main`).
+    // String) → miss seguro (null como o JVM), nunca SIGSEGV nem lixo.
+    // Golden = oracle JVM medido 12/09; 18/09 §284-map/§304: o ultimo miss
+    // passou de `0` p/ `null` (contrato V? com caixa real — 4-alvos identicos).
     @Test
     void riscv64MapKeyTagCross(@TempDir Path tempDir) throws IOException {
         assumeToolchain();
@@ -590,7 +604,7 @@ class NativeRiscv64E2ETest {
                 println(n.get("k"))
             }
             """);
-        assertEquals("a\nnull\ntrue\nnull\nfalse\ntrue\n0\n7", out);
+        assertEquals("a\nnull\ntrue\nnull\nfalse\ntrue\nnull\n7", out);
     }
 
     // NATIVE002-stdlib: higher-order (map/filter/reduce) no cross — closure
@@ -806,12 +820,15 @@ main() {
                     println("a\\u20ac".length)
                     println("a\\u20ac".charAt(1))
                     println("a\\uD83D\\uDE00b".length)
-                    println("a\\uD83D\\uDE00b".charAt(1))
-                    println("a\\uD83D\\uDE00b".charAt(2))
+                    println("a\\uD83D\\uDE00b".charAt(1) as Int)
+                    println("a\\uD83D\\uDE00b".charAt(2) as Int)
                     println("a\\uD83D\\uDE00b".charAt(3))
                 }
                 """);
-        assertEquals("4\n233\n3\n233\n232\n2\n8364\n4\n55357\n56832\n98", out);
+        // Golden atualizado 19/09 (#259/N2, §333): idem NativeAarch64E2ETest —
+        // o de 11/09 é PRÉ-D-PRINT (§216: `Char` imprime o CARÁTER) e o x86 já
+        // usa o formato novo com `as Int` nos surrogates soltos.
+        assertEquals("4\né\n3\né\nè\n2\n€\n4\n55357\n56832\nb", out);
     }
 
     @Test
@@ -937,11 +954,12 @@ main() {
         // §107-cross (fatia B39): println(<coleção>) imprimia LIXO de ponteiro
         // (`@` medido no qemu antes do fix) — o valueOf cross não tinha ramo
         // List/Map/Set e caía em kof_println_string sobre o ponteiro cru. Os
-        // helpers riscv kof_{list,set,map}_to_string espelham o x86 (mesma
-        // tag compile-time 0/1/2/3/4/5/6, `?` p/ record/aninhado). Golden =
-        // MESMA string do execCollectionPrintMatchesJvmGolden x86 (= oracle
-        // JVM medido). Double/Float (tags 4/5) entraram em 15/09 (FLT001
-        // fechado — slice B45); a linha 1.5/2.0f abaixo prova o novo ramo.
+        // helpers riscv kof_{list,set,map}_to_string espelham o x86. Double/
+        // Float (tags 4/5) entraram em 15/09 (FLT001 fechado — slice B45).
+        // 19/09 face (4) do multiarch: a linha aninhada ganhou print REAL via
+        // descritor recursivo (.rodata emitido no call-site, NativePrint-
+        // Descriptors) — MESMA gramática/ABI do x86 (face (3)); o `?` sobrevive
+        // só p/ tipo sem como (Object sem vtable, cap 64B).
         String out = runRiscv64(tempDir, """
                 main() {
                     println(listOf(1, 2, 3))
@@ -959,8 +977,34 @@ main() {
                 }
                 """);
         assertEquals("[1, 2, 3]\n[1, 2]\n{k=9}\n[a, b]\n[true, false]\n"
-                + "[100000000000, 2]\n[97, 98]\n[]\n[?, ?]\n{a=1, b=2}\n"
+                + "[100000000000, 2]\n[97, 98]\n[]\n[[1], [2]]\n{a=1, b=2}\n"
                 + "[1.5, 2.0]\n[1.5, 2.5]", out);
+    }
+
+    @Test
+    void nativeCollectionPrintRecordNestedMatchesJvmGolden(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        // §107 record/nested (face (4), 19/09): elementos que são RECORDS,
+        // LISTs/SETs/MAPs aninhados — o descritor recursivo (.rodata emitido
+        // no call-site) manda o helper chamar a vtable toString (ramo 8,
+        // jalr) e recursão de container com ponteiro de nó filho (9/10).
+        // Golden = o MESMO programa x86 (NativeE2ETest.execCollectionPrint-
+        // RecordNestedJvmGolden) — paridade nas 3 arcos.
+        String out = runRiscv64(tempDir, """
+                record Point(Int x, Int y)
+                main() {
+                    println(listOf(Point(1, 2)))
+                    println(listOf(listOf(1, 2), listOf(3)))
+                    println(mapOf("k", Point(7, 8)))
+                    println(setOf(listOf(1)))
+                    println(listOf(mapOf("a", 1)))
+                    println(listOf(listOf(listOf(4))))
+                    println("rec:" + Point(5, 6))
+                    println(Point(3, 4))
+                }
+                """);
+        assertEquals("[Point[x=1, y=2]]\n[[1, 2], [3]]\n{k=Point[x=7, y=8]}\n[[1]]\n"
+                + "[{a=1}]\n[[[4]]]\nrec:Point[x=5, y=6]\nPoint[x=3, y=4]", out);
     }
 
     @Test
@@ -1186,5 +1230,47 @@ main() {
             assertTrue(Files.exists(outDir.resolve("Default/Main")),
                     "sem .s E sem binário linkado — nem prova mecânica nem de texto");
         }
+    }
+
+    /** §129-addendum (19/09): FP de precisão SIMPLES no riscv64 — par do
+     *  teste do aarch64. O riscv emitia `fadd.s`/`fcvt.s.w` corretos (o bug
+     *  era do tradutor aarch64), mas o contrato é cross: mesmas 9 linhas.
+     *  Golden = oracle JVM. */
+    @Test
+    void riscv64SinglePrecisionFloatAndIntToFloatCast(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String out = runRiscv64(tempDir, """
+            main() {
+                var a = 1.5 as Float
+                var b = 2.5 as Float
+                println(a + b)
+                println(b - a)
+                println(a * b)
+                println(b / a)
+                var i = 7
+                var fi = i as Float
+                println(fi)
+                println(fi / (2 as Float))
+                var l = 9007199254740993
+                println(l as Float)
+                var total = 0.0 as Float
+                for (var n in listOf(1, 2, 3)) { total += n as Float }
+                println(total)
+                Float? x = 2.5
+                x += 1.0
+                println(x)
+            }
+            """);
+        assertEquals("4.0\n1.0\n3.75\n1.6666666\n7.0\n3.5\n9.007199E15\n6.0\n3.5", out);
+    }
+
+    // §235 native face (riscv64): wrapper statics (parse*/is*) — before the fix
+    // the link failed with `undefined reference to java_lang_Integer_parseInt`.
+    // Golden = JVM oracle of the same program (WrapperStaticCallsE2ETest).
+    @Test
+    void riscv64WrapperStaticsParseAndPredicates(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String out = runRiscv64(tempDir, WrapperStaticCallsE2ETest.WRAPPER_STATICS_SRC);
+        assertEquals(WrapperStaticCallsE2ETest.WRAPPER_STATICS_GOLDEN, out);
     }
 }

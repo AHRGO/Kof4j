@@ -22,7 +22,7 @@ l.contains(3)
 l.isEmpty()
 var r = l.remove(1)       // remove by INDEX (Int), returns the element
 // NEVER l.remove("x") (Java's by-value): SEM055 (bug 122) — to find by
-// value use contains(x); to find the position, loop with get(i).
+// value use contains(x); to find the POSITION, indexOf(x) (0.4.0, #382).
 l.clear()
 var vazio = listOf<Int>()
 
@@ -58,6 +58,39 @@ println(b.all().size())
 ```
 
 Fix 01/09: `Set<T>`/`Map<K,V>` as a class field/return on the JVM — the mapper mapped only `List`→`ArrayList` (so `Set`/`Map` became `Lkof/Set;` → `NoClassDefFoundError`); now `HashSet`/`HashMap`. Parser: a class method with a generic return (`Set<Int> all(`) now parses (before it fell into the field branch). `KofMapSetTest.setMapAsFieldAndReturn`.
+
+## Search, cut and order (0.4.0 — #382/#386, 4 targets)
+
+```kof
+val l: List<Int> = listOf(3, 1, 2, 1)
+var i = l.indexOf(1)          // first occurrence, -1 when absent
+var j = l.lastIndexOf(1)      // last occurrence, -1 when absent
+val mid = l.subList(1, 3)     // [begin, end) — copy; begin==end yields empty
+val all = l.subList(0, l.size)
+var grew = mid.addAll(l)      // true when the list changed (false: empty source)
+val ordered: List<Int> = listOf(5, 4, 3)
+ordered.sort()                // NATURAL order, in-place (no Comparator in Kof)
+
+val m: Map<String, Int> = mapOf("a", 1)
+var has = m.containsValue(1)             // scan by VALUE (containsKey is by key)
+var prev = m.putIfAbsent("a", 9)         // V? — returns the previous and does NOT
+prev = m.putIfAbsent("z", 9)             // overwrite; null when the key is new
+```
+
+- `sort()` accepts naturally ordered elements (Int/Long/Double/String…);
+  a record or other without order → `SEM097` (shared compile-time gate).
+  `Float` on Native → `NAT001` with an honest diagnostic (§349) — never a
+  silent wrong order.
+- `indexOf`/`lastIndexOf` search by value with the pinned type; searching a
+  type ≠ is a safe MISS (`-1`), same rule as `contains` (SEM056 only checks
+  the WRITE).
+- `subList` out-of-range dies with the bounds check (measured:
+  `IndexOutOfBoundsException: toIndex = N` on the JVM; `kof_bounds_error`
+  on Native) — same family as `get(i)`.
+- `putIfAbsent` returns `V?` (D-NULL-INTENT): narrow with `if (prev != null)`.
+- The Java idiom `Collections.sort(l, comparator)` does not exist in Kof:
+  `sort()` is natural order, period. To search a position, `indexOf(x)`
+  (not a manual `get(i)` loop with `||`).
 
 ## `listOf` with related subtypes infers the common ancestor (0.4.0-beta, §285)
 

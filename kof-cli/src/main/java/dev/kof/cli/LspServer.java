@@ -94,6 +94,9 @@ final class LspServer {
                 completion.put("triggerCharacters", List.of("."));
                 capabilities.put("completionProvider", completion);
                 capabilities.put("hoverProvider", Boolean.TRUE);
+                Map<String, Object> sigHelp = new LinkedHashMap<>();
+                sigHelp.put("triggerCharacters", List.of("(", ","));
+                capabilities.put("signatureHelpProvider", sigHelp);
                 capabilities.put("definitionProvider", Boolean.TRUE);
                 capabilities.put("referencesProvider", Boolean.TRUE);
                 capabilities.put("renameProvider", Boolean.TRUE);
@@ -117,6 +120,7 @@ final class LspServer {
             case "textDocument/didChange" -> publishDiagnostics(params);
             case "textDocument/didClose" -> clearDiagnostics(params);
             case "textDocument/hover" -> hover(id, params);
+            case "textDocument/signatureHelp" -> signatureHelp(id, params);
             case "textDocument/definition" -> definition(id, params);
             case "textDocument/completion" -> completion(id, params);
             case "textDocument/references" -> references(id, params);
@@ -347,7 +351,7 @@ final class LspServer {
     }
 
     /** Todas as ocorrências (start, end) do identificador em fronteiras de palavra. */
-    private static List<int[]> wordOccurrences(String text, String word) {
+    static List<int[]> wordOccurrences(String text, String word) {
         List<int[]> out = new ArrayList<>();
         if (word.isEmpty()) return out;
         int from = 0;
@@ -368,6 +372,17 @@ final class LspServer {
     }
 
     @SuppressWarnings("unchecked")
+    private void signatureHelp(Object id, Map<String, Object> params) {
+        Map<String, Object> td = params.get("textDocument") instanceof Map<?, ?> p
+                ? (Map<String, Object>) p : Map.of();
+        String text = openText.getOrDefault(str(td.get("uri")), "");
+        Map<String, Object> pos = params.get("position") instanceof Map<?, ?> p
+                ? (Map<String, Object>) p : Map.of();
+        long line = pos.get("line") instanceof Number n ? n.longValue() : 0;
+        long ch = pos.get("character") instanceof Number n ? n.longValue() : 0;
+        respond(id, LspSignatureHelp.helpFor(text, offsetOf(text, line, ch)));
+    }
+
     private void definition(Object id, Map<String, Object> params) {
         Map<String, Object> td = params.get("textDocument") instanceof Map<?, ?> p
                 ? (Map<String, Object>) p : Map.of();
@@ -527,25 +542,12 @@ final class LspServer {
                 ? (Map<String, Object>) p : Map.of();
         long line = pos.get("line") instanceof Number n ? n.longValue() : 0;
         long ch = pos.get("character") instanceof Number n ? n.longValue() : 0;
-        int off = offsetOf(text, line, ch);
-        String word = wordAt(text, off);
+        String word = wordAt(text, offsetOf(text, line, ch));
         String newName = str(params.get("newName"));
-        if (word.isEmpty() || !isValidIdentifier(newName)) { respond(id, null); return; }
-        List<int[]> occ = wordOccurrences(text, word);
-        if (occ.isEmpty()) { respond(id, null); return; }
-        List<Object> edits = new ArrayList<>();
-        for (int[] r : occ) {
-            Map<String, Object> edit = new LinkedHashMap<>();
-            edit.put("range", rangeOf(text, r[0], r[1]));
-            edit.put("newText", newName);
-            edits.add(edit);
-        }
-        Map<String, Object> docEdit = new LinkedHashMap<>();
-        docEdit.put("textDocument", Map.of("uri", uri));
-        docEdit.put("edits", edits);
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("documentChanges", List.of(docEdit));
-        respond(id, result);
+        // LSP-A (D-POLL-19 19/09): rename cross-file na mesma convenção dos
+        // references; guardas (keyword/namespace/nome inválido) em LspRename.
+        respond(id, LspRename.workspaceEdit(uri, text, word, newName, openText,
+                LspProject.toPath(uri), workspaceRoot));
     }
 
     static Map<String, Object> rangeOf(String text, int start, int end) {
@@ -569,15 +571,6 @@ final class LspServer {
         return p;
     }
 
-    private static boolean isValidIdentifier(String s) {
-        if (s == null || s.isEmpty()) return false;
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            boolean ok = Character.isLetterOrDigit(c) || c == '_';
-            if (!ok) return false;
-        }
-        return true;
-    }
 
     private void writeMessage(String json) {
         byte[] body = json.getBytes(StandardCharsets.UTF_8);

@@ -35,8 +35,13 @@ public final class KofNet {
 
 
     /** X10 fatia 1: nomes aceitos pelo staticMethod (catálogo p/ LSP).
-     *  GUARDA: StdCatalogTest exige == case literals do switch(name) abaixo. */
-    static List<String> functions() { return List.of("scheme"); }
+     *  GUARDA: StdCatalogTest exige == case literals do switch(name) abaixo
+     *  (19/09 LSP-A fatia 3: a família `case "scheme", "host", ...` binda os 8
+     *  e a lista só tinha o primeiro literal — drift do tipo db/process). */
+    static List<String> functions() {
+        return List.of("scheme", "host", "port", "path", "query",
+                "fragment", "queryEncode", "queryDecode");
+    }
     static NetCall staticMethod(String namespace, String name, List<Type> argTypes) {
         int argc = argTypes.size();
         return switch (name) {

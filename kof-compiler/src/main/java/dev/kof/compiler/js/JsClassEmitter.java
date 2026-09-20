@@ -105,13 +105,16 @@ public final class JsClassEmitter {
      * em todos os targets.
      */
     JsIr.JsFunction lowerRecordEquals(IRClass clazz) {
+        // Componente objeto (record/classe com equals) compara por conteúdo,
+        // como o Objects.equals da JVM — `===` só serve para primitivos.
+        p.lc.registerRuntime("kofValEq");
         List<JsIr.JsExpression> conds = new ArrayList<>();
         for (IRField field : clazz.fields()) {
             String backing = "_" + JsTypeMapper.sanitizeName(field.name());
-            conds.add(new JsIr.JsBinary(
-                    new JsIr.JsMember(new JsIr.JsThis(), backing),
-                    "===",
-                    new JsIr.JsMember(new JsIr.JsIdentifier("other"), backing)));
+            conds.add(new JsIr.JsCall(
+                    new JsIr.JsIdentifier("kofValEq"),
+                    List.of(new JsIr.JsMember(new JsIr.JsThis(), backing),
+                            new JsIr.JsMember(new JsIr.JsIdentifier("other"), backing))));
         }
         JsIr.JsExpression body = null;
         for (int i = conds.size() - 1; i >= 0; i--) {
@@ -249,7 +252,7 @@ public final class JsClassEmitter {
         for (IRField field : clazz.fields()) {
             if ((field.accessFlags() & AccessFlags.STATIC) != 0) continue;
             JsIr.JsExpression value = field.initialValue() != null
-                    ? p.calls.literalExpr(new KofLoadLiteral(field.type(), field.initialValue()))
+                    ? p.ops.literalExpr(new KofLoadLiteral(field.type(), field.initialValue()))
                     : JsTypeMapper.defaultForType(field.type());
             defaults.add(new JsIr.JsExprStmt(new JsIr.JsBinary(
                     new JsIr.JsMember(new JsIr.JsThis(), jsFieldName(clazz, field.name())), "=", value)));

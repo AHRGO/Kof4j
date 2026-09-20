@@ -438,7 +438,7 @@ class KofMathTest {
             Path outDir = tmp.resolve("xout-" + t + "-" + System.nanoTime());
             CompilationResult result = driver.compile(file, outDir, t);
             assertTrue(result.success(), t + " compile failed: " + result.diagnostics().getDiagnostics());
-            Process p = new ProcessBuilder(qemu, outDir.resolve("Default/Main").toString())
+            Process p = NativeRiscv64E2ETest.qemu(qemu.substring(5), outDir.resolve("Default/Main"))
                     .redirectErrorStream(true).start();
             String output = new String(p.getInputStream().readAllBytes(),
                     java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();

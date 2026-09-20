@@ -58,7 +58,7 @@ NOT APPLICABLE   → does not apply to the Kof architecture
 | SSE | (Spring via `SseEmitter`) | `kof.web` (`app.sse`) | **EXISTS (JVM)** | `sse.send/event/close` (JVM + JS handler-scoped ✅ 16/09, `7cd69a7b`; Native `WEB003`, JS post-return push `WEB003` residual) |
 | Messaging | spring-messaging | `kof.mq` (publish/subscribe/queue) | **EXISTS** | JVM+Native+JS (MQ001 closed 01/09) |
 | Transactions | spring-tx | `kof.db` (`transaction {}`) | **EXISTS** | JVM (JDBC commit/rollback) + Native (SQLite) + JS (untyped 16/09) |
-| Scheduling | spring-context | `kof.scheduler` (`every`/`cancel` + `spawn`) | PARTIAL | JVM (ScheduledExecutor) + JS (setInterval) + Native (`SCHED001` closed 31/08); `at(cron)` = real 5-field UTC cron (JVM + JS, 17/09); Native refuses at compile time (`CRON001`) |
+| Scheduling | spring-context | `kof.scheduler` (`every`/`cancel` + `spawn`) | PARTIAL | JVM (ScheduledExecutor) + JS (setInterval) + Native (`SCHED001` closed 31/08); `at(expr)` = real 5-field UTC cron **or idiomatic duration** (`30m`, `90s`, `1d&30m`, `3a&6M...`; units `ms/s/m/h/d/M/a`, `&` composition, UTC calendar clamp for `M`/`a`, D-SCHED-DURATION 19/09; JVM + JS parity, `kof_duration_next_delay_ms`); Native refuses at compile time (`CRON001`) |
 | Events | ApplicationEvent | `kof.mq` pub/sub | PARTIAL | pub/sub queues in the stdlib |
 | Resources | Resource | `kof.io` | EXISTS | |
 | Cache | spring-cache | `kof.cache` (`get/set/set-ttl/ttl/delete/clear`) | **EXISTS** | 3 targets (native fix 30/08) |

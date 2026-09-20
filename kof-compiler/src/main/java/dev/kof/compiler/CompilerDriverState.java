@@ -176,6 +176,17 @@ IRModule currentModule;
     /** Dono do método sendo lowered agora (para capturar this de lambda). */
     String currentLoweringOwner;
 
+    /** §356: type-params do método/constructor/campo em lowering (`as T[]`). */
+    java.util.List<String> currentTypeParams = java.util.List.of();
+
+    /**
+     * §357/#295: o interpretador baixa com {@code target = JVM} "por tempero"
+     * (prepareForInterpretation), mas o RUNTIME é dinâmico — gates de EMISSÃO
+     * JVM (SEM098) não podem rejeitar um programa que o script sempre aceitou
+     * (compatibilidade regressiva, regra 2 do freeze).
+     */
+    boolean interpreting;
+
     final java.util.List<CompilerDriver.TestInfo> discoveredTests = new java.util.ArrayList<>();
 
     boolean testHarnessMode = false;

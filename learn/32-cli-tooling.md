@@ -36,7 +36,7 @@ The CLI is the central tool of the Kof platform.
 | `kof debug <file.kf> [--target jvm]` | DAP MVP (breakpoints by Kof line, stack trace) |
 | `kof new <name>` | Project skeletons by type |
 | `kof init` | Initialize a project in the current directory |
-| `kof deps <init\|add\|remove\|list\|resolve>` | Package manager (`kofdeps`, Maven Central) |
+| `kof deps <init\|add\|remove\|list\|resolve>` | Package manager (`kofdeps`: Maven `g:a:v` + registry `owner/repo[@ver]` — GitHub Releases) |
 | `kof editor <list\|detect\|status\|setup\|install\|uninstall\|update>` | Editor integration (EDI001) |
 | `kof info [--json]` | Environment report |
 | `kof lsp` | Language Server (stdio, LSP 3.x) |

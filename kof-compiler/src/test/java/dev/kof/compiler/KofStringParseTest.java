@@ -241,7 +241,7 @@ main() {
         Path out = tmp.resolve(outName);
         CompilationResult r = driver.compile(src, out, t);
         assertTrue(r.success(), t + " fp cross compile: " + r.diagnostics().getDiagnostics());
-        Process p = new ProcessBuilder(qemuBin, out.resolve("Default/Main").toString())
+        Process p = NativeRiscv64E2ETest.qemu(qemuBin.substring(5), out.resolve("Default/Main"))
                 .redirectErrorStream(true).start();
         String output = new String(p.getInputStream().readAllBytes(),
                 java.nio.charset.StandardCharsets.UTF_8).trim();

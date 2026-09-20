@@ -1,0 +1,48 @@
+name: issue-spam-guard
+
+# Limite GLOBAL de issues por janela rolling de 24h (diretriz da mantenedora
+# 19/09): ferramentas automatizadas que abrem dezenas de issues por dia causam
+# mais problemas do que soluções. Qualquer autor acima do limite tem a issue
+# excedente fechada como not planned, com explicação. Lanes próprias do repo
+# (mantenedora + worker) são isentas.
+
+on:
+  issues:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: issue-spam-guard-${{ github.event.issue.user.login }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      LIMIT: "10"
+      EXEMPT_AUTHORS: "melmonfre kof-agent-worker[bot] kof-agent-worker"
+      AUTHOR: ${{ github.event.issue.user.login }}
+      ISSUE: ${{ github.event.issue.number }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: enforce global 24h issue limit
+        run: |
+          set -euo pipefail
+          case " $EXEMPT_AUTHORS " in
+            *" $AUTHOR "*) echo "author '$AUTHOR' is exempt (own lane)"; exit 0 ;;
+          esac
+          since=$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+          count=$(gh api "/repos/$REPO/issues?creator=$AUTHOR&since=$since&state=all&per_page=100" \
+            --jq "[.[] | select(has(\"pull_request\") | not) | select(.created_at >= \"$since\")] | length")
+          echo "author=$AUTHOR issues_created_in_24h=$count limit=$LIMIT (this issue included)"
+          if [ "$count" -gt "$LIMIT" ]; then
+            msg=$(printf 'Closed automatically: global limit of **%s issues per 24h** reached (%s opened in the window). This guard is not about you personally — it exists because automated tools flood the tracker with more issues than the project can triage, and untriaged noise buries real bugs. If these reports are real, group related findings into one issue per area (parser, semantics, backend) with a minimal repro and they will be triaged. Maintainers can reopen anything this bot closed.\n\nFechada automaticamente: limite global de **%s issues por 24h** atingido (%s no período). Agrupe relatórios relacionados em uma issue por área, com repro mínimo, e elas serão triadas normalmente.\n' "$LIMIT" "$count" "$LIMIT" "$count")
+            gh issue close "$ISSUE" -R "$REPO" --reason "not planned" --comment "$msg"
+            echo "excess issue #$ISSUE closed (count=$count > limit=$LIMIT)"
+          else
+            echo "under limit — no action"
+          fi

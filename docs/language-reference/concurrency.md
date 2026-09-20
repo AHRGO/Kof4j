@@ -185,9 +185,9 @@ generic `sanitizeName` of `NativeRiscvCrossOps.resolveCalleeNameRiscv` and
 the error appeared only at **link** time, as an undefined symbol, the same
 pattern as bug 59); the gate was removed with the port. Proof:
 `KofConcurrency2Test.crossNativeConcurrencyHelpersRun` and
-`crossNativeCancelDuringRunningWorker` (qemu, both arches). What remains
-open on cross is the OTP supervisor (`OTP001` — raw `clone` without TLS for
-the §129 handler chain), not the helpers (Native lane).
+`crossNativeCancelDuringRunningWorker` (qemu, both arches). The OTP supervisor
+also runs on cross since 19/09 (§129 port — per-TID handler chain
+`kof_exc_slots`; `OTP001` removed), not just the helpers (Native lane).
 
 In JS specifically: only lambdas created directly at a `spawn` site
 ("task-lambdas") can become an `async function`; see restriction
@@ -235,11 +235,12 @@ supervisor("net")                       // new object per system
   cause on the handle; `await`/`selectAny` rethrow it in the consumer —
   `selectAny` resolves the handle that completes first **in time** (wall-clock,
   `anyOf` oracle); there is no argument-order tie-break, so programs must not
-  rely on which of two instant handles wins (§291)) · Native
-  riscv/aarch = `OTP001` (raw `clone`, no TLS) · JS ✅ since 18/09 (§132 resolved:
+  rely on which of two instant handles wins (§291)) · Native riscv64/aarch64 ✅
+  since 19/09 (§129 cross port — per-TID handler chain `kof_exc_slots`; `OTP001`
+  removed) · JS ✅ since 18/09 (§132 resolved:
   `time.sleep` is an await-point — cooperative async sleep driven by the `KofJsRunner`
-  host pump — so the supervisor worker fires and `OTP002` was lifted; only riscv/aarch
-  still block at compile-time with a diagnostic).
+  host pump — so the supervisor worker fires and `OTP002` was lifted; no target
+  blocks at compile-time any more).
 
 ## 5. Concurrent I/O
 

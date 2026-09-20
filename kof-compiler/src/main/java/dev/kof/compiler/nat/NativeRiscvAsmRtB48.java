@@ -7,11 +7,11 @@ package dev.kof.compiler.nat;
 // RuntimeConcurrency.java (x86) sobre o clone+futex do NativeRiscvSpawn.
 // Divergências documentadas vs x86: (1) gettid(178) no lugar de pthread_self;
 // (2) o TID do filho é gravado pelo PRÓPRIO kernel via clone ctid
-// (&handle->tid) — pthread_create grava no pai; (3) handle 32→56B
-// (tid@32 cancelEntry@40 exc@48); (4) sem rethrow de handle->exc no trampoline
-// (a chain EH é global, não TLS — o catch per-worker do x86 §129 continua
-// sendo a face OTP001; selectAny/awaitTimeout relançam SE exc!=0, que hoje
-// nunca é setado no cross).
+// (&handle->tid) — pthread_create grava no pai; (3) handle 32→64B
+// (tid@32 cancelEntry@40 exc@48 pending@56); (4) §129 port 19/09: a chain EH
+// é POR-TID (tabela kof_exc_slots em B4) e o trampoline instala o catch
+// per-worker — um throw sem try publica em handle->exc e
+// selectAny/awaitTimeout/await relançam no consumidor (paridade x86/JVM).
 public final class NativeRiscvAsmRtB48 {
 
     private NativeRiscvAsmRtB48() {}
@@ -24,6 +24,11 @@ public final class NativeRiscvAsmRtB48 {
             .align 3
             kof_cancel_slots: .space 4096
             .section .text
+
+            # §129 (port riscv/aarch 19/09): kof_exc_slot() (helper = &chain da
+            # thread atual, chave gettid) vive em B4, ao lado da tabela
+            # kof_exc_slots — mantê-lo lá evita puxar esta peça (CONC001) ao
+            # link de um programa que só dá throw. Ver comentário em B4.
 
             # kof_cancel_slot_insert(tid@a0) -> entry@a0 (flag=0) ou 0
             .globl kof_cancel_slot_insert

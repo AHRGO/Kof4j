@@ -234,20 +234,38 @@ public final class CompilerRecordSupport {
      * Issue #248: Gera métodos bridge sintéticos para métodos sobrescritos com
      * tipo de retorno covariante (subtipo do retorno da superclasse).
      * O bridge possui o descritor da superclasse e delega ao método covariante.
+     *
+     * <p>§356 (rio da erasure — #385/#366/#365): os pais agora incluem as
+     * INTERFACES implementadas (uma classe que implementa `Wrapper<String>`
+     * precisa do bridge `get()Ljava/lang/Object;` da interface APAGADA, senão
+     * o invokeinterface não acha o método → NoSuchMethodError), os argumentos
+     * casam por ERASURE (não por igualdade crua — `set(item: T)` apagado vs
+     * `set(String)` concreto é o mesmo slot erased), e o corpo atravessa a
+     * fronteira apagada: checkcast/unbox nos argumentos, box no retorno
+     * primitivo (#365: bridge `Object getValue()` que fazia `areturn` sobre
+     * `int` cru → VerifyError).
      */
     static List<IRMethod> generateCovariantReturnBridges(CompilerDriver driver, String internalName,
-                                                        String superName, List<IRMethod> methods) {
-        if (driver.semanticAnalyzer == null || superName == null
-                || "java/lang/Object".equals(superName) || superName.isEmpty()) {
+                                                         String superName, List<String> ifaces,
+                                                         List<IRMethod> methods) {
+        if (driver.semanticAnalyzer == null) {
             return List.of();
         }
-        String superSimple = superName.contains("/")
-                ? superName.substring(superName.lastIndexOf('/') + 1) : superName;
-        SymbolTable.ClassSymbol superSym = driver.semanticAnalyzer.getClass(superSimple);
-        if (superSym == null) return List.of();
+        List<String> parents = new ArrayList<>();
+        if (superName != null && !superName.isEmpty() && !"java/lang/Object".equals(superName)) {
+            parents.add(superName);
+        }
+        if (ifaces != null) parents.addAll(ifaces);
+        if (parents.isEmpty()) return List.of();
 
         Type ownerType = CompilerTypes.ownerTypeFromInternal(internalName, driver.semanticAnalyzer);
         List<IRMethod> bridges = new ArrayList<>();
+
+        for (String parent : parents) {
+        String superSimple = parent.contains("/")
+                ? parent.substring(parent.lastIndexOf('/') + 1) : parent;
+        SymbolTable.ClassSymbol superSym = driver.semanticAnalyzer.getClass(superSimple);
+        if (superSym == null) continue;
 
         for (IRMethod m : methods) {
             if ("<init>".equals(m.name()) || "<clinit>".equals(m.name())
@@ -272,24 +290,47 @@ public final class CompilerRecordSupport {
                 if (parentMethod.parameterTypes().size() != m.parameterTypes().size()) {
                     continue;
                 }
-                boolean paramsMatch = true;
+                // §356: casa por ERASURE (T→Object/bound), não por igualdade
+                // crua — o bridge JVM existe para o mesmo SLOT apagado.
+                // Quando o parâmetro do PAI é um type-variable (ou aninha um,
+                // ex. `T[]`) e o filho tem o tipo concreto, o slot apagado é o
+                // MESMO na interface/abstrato — a fronteira faz unbox (primitivo)
+                // ou checkcast (referência) abaixo. Sem isto, `set(v: T)` vs
+                // `set(v: Int)` ficava sem bridge → AbstractMethodError (slot
+                // (Ljava/lang/Object;)V nunca implementado).
+                boolean paramsErasureMatch = true;
+                boolean paramsDiffer = false;
                 for (int i = 0; i < m.parameterTypes().size(); i++) {
-                    if (!m.parameterTypes().get(i).equals(parentMethod.parameterTypes().get(i))) {
-                        paramsMatch = false;
-                        break;
+                    if (!erasureKey(m.parameterTypes().get(i)).equals(
+                            erasureKey(parentMethod.parameterTypes().get(i)))) {
+                        if (!containsTypeVar(parentMethod.parameterTypes().get(i))) {
+                            paramsErasureMatch = false;
+                            break;
+                        }
+                        paramsDiffer = true;
+                    } else if (!m.parameterTypes().get(i).equals(parentMethod.parameterTypes().get(i))) {
+                        paramsDiffer = true;
                     }
                 }
-                if (!paramsMatch) continue;
+                if (!paramsErasureMatch) continue;
 
                 Type parentRet = parentMethod.returnType();
                 Type childRet = m.returnType();
+                boolean retDiffer = !childRet.equals(parentRet);
 
-                if (!childRet.equals(parentRet) && TypeChecker.isAssignable(driver.semanticAnalyzer, childRet, parentRet)) {
-                    // Já existe um método na classe com a mesma assinatura do pai?
+                if ((retDiffer || paramsDiffer)
+                        && TypeChecker.isAssignable(driver.semanticAnalyzer, childRet, parentRet)) {
+                    // Já existe um método na classe com a MESMA assinatura
+                    // apagada do pai? (chave por erasure — §356: um segundo
+                    // bridge para o mesmo slot JVM = ClassFormatError)
                     boolean alreadyExists = methods.stream().anyMatch(existing ->
-                            existing.name().equals(m.name())
-                            && existing.returnType().equals(parentRet)
-                            && existing.parameterTypes().equals(parentMethod.parameterTypes()));
+                            existing != m
+                            && existing.name().equals(m.name())
+                            && erasureKey(existing.returnType()).equals(erasureKey(parentRet))
+                            && existing.parameterTypes().size() == parentMethod.parameterTypes().size()
+                            && java.util.stream.IntStream.range(0, existing.parameterTypes().size())
+                                    .allMatch(i -> erasureKey(existing.parameterTypes().get(i))
+                                            .equals(erasureKey(parentMethod.parameterTypes().get(i)))));
                     if (alreadyExists) continue;
 
                     List<KofOperation> ops = new ArrayList<>();
@@ -299,16 +340,34 @@ public final class CompilerRecordSupport {
 
                     int localIdx = 1;
                     for (int i = 0; i < m.parameterTypes().size(); i++) {
-                        Type pt = m.parameterTypes().get(i);
-                        locals.add(new IRLocalVariable(localIdx, "arg" + i, pt));
-                        ops.add(new KofLoadLocal(pt, localIdx));
-                        localIdx += TypeMetrics.isDoubleWidth(pt) ? 2 : 1;
+                        Type bridgePt = parentMethod.parameterTypes().get(i);
+                        Type childPt = m.parameterTypes().get(i);
+                        locals.add(new IRLocalVariable(localIdx, "arg" + i, bridgePt));
+                        ops.add(new KofLoadLocal(bridgePt, localIdx));
+                        // fronteira apagada: o slot do bridge tem a erasure
+                        // (Object); o método concreto quer o tipo real.
+                        if (!childPt.equals(bridgePt)) {
+                            if (TypeMetrics.isPrimitiveType(childPt)) {
+                                driver.emitErasureUnbox(ops, childPt);
+                            } else if (childPt instanceof Type.ClassType
+                                    || childPt instanceof Type.ArrayType) {
+                                ops.add(new KofCheckCast(childPt));
+                            }
+                        }
+                        localIdx += TypeMetrics.isDoubleWidth(bridgePt) ? 2 : 1;
                     }
 
                     ops.add(new KofCall(ownerType, m.name(), m.parameterTypes(), childRet, KofCallKind.INSTANCE));
                     if (Type.isVoid(parentRet)) {
                         ops.add(new KofReturnVoid());
                     } else {
+                        if (TypeMetrics.isPrimitiveType(childRet)
+                                && !TypeMetrics.isPrimitiveType(parentRet)) {
+                            // #365: retorno primitivo atravessando o bridge
+                            // apagado (Object) — box na fronteira, senão
+                            // `areturn` sobre `int` → VerifyError.
+                            driver.emitErasureBox(ops, childRet);
+                        }
                         ops.add(new KofReturn(parentRet));
                     }
 
@@ -318,7 +377,38 @@ public final class CompilerRecordSupport {
                 }
             }
         }
+        }
         return bridges;
     }
+
+    /**
+     * §356 — chave de comparacao de descritor APAGADO para o par pai×filho do
+     * bridge: primitivo fica primitivo, TypeVariable cai para o bound/Object,
+     * args de classe caem para o nome qualificado (type-arguments irrelevantes
+     — `List<Int>` × `List<String>` ocupam o mesmo slot java/util/List).
+     */
+    static String erasureKey(Type t) {
+        if (t == null) return "?";
+        if (t instanceof Type.NullableType n) t = n.inner();
+        if (t instanceof Type.PrimitiveType p) return "P:" + Type.canonicalPrimitiveName(p.name());
+        if (t instanceof Type.TypeVariable tv) {
+            return tv.bound() != null ? erasureKey(tv.bound()) : "Ljava/lang/Object;";
+        }
+        if (t instanceof Type.WildcardType) return "Ljava/lang/Object;";
+        if (t instanceof Type.ArrayType a) return "[" + erasureKey(a.componentType());
+        if (t instanceof Type.ClassType c) return "C:" + c.packageName() + "." + c.name();
+        if (t instanceof Type.FunctionType f) return f.className() != null ? "C:" + f.className() : "Ljava/lang/Object;";
+        return "O:" + t;
+    }
+
+    /** §356: o tipo contém um type-variable (topo, componente de array ou nullable)? */
+    static boolean containsTypeVar(Type t) {
+        if (t == null) return false;
+        if (t instanceof Type.NullableType n) return containsTypeVar(n.inner());
+        if (t instanceof Type.TypeVariable || t instanceof Type.WildcardType) return true;
+        if (t instanceof Type.ArrayType a) return containsTypeVar(a.componentType());
+        return false;
+    }
+
 
 }

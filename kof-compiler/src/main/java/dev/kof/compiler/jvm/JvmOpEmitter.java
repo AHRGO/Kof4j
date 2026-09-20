@@ -77,7 +77,12 @@ public final class JvmOpEmitter {
                 if (BuiltinTypes.isString(lf.ownerType()) && "length".equals(lf.name())) {
                     c.mv().visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", "length", "()I", false);
                 } else {
-                    String owner = JvmTypeMapper.toInternalName(
+                    // §355: dono TypeVariable (T cru) → erasure (bound/Object),
+                    // nunca o literal "T" (NoClassDefFoundError) nem "?".
+                    String tvOwner = lf.ownerType() instanceof Type.TypeVariable
+                            || lf.ownerType() instanceof Type.WildcardType
+                            ? JvmTypeMapper.erasureInternalName(lf.ownerType()) : null;
+                    String owner = tvOwner != null ? tvOwner : JvmTypeMapper.toInternalName(
                             lf.ownerType() instanceof Type.ClassType ct ? ct.packageName() : "",
                             lf.ownerType() instanceof Type.ClassType ct ? ct.name() : "?");
                     if (KofProcess.isResult(lf.ownerType())) {
@@ -108,7 +113,11 @@ public final class JvmOpEmitter {
                 }
             }
             case KofStoreField sf -> {
-                String owner = JvmTypeMapper.toInternalName(
+                // §355: dono TypeVariable → erasure (bound/Object), nunca "?".
+                String sfOwner = sf.ownerType() instanceof Type.TypeVariable
+                        || sf.ownerType() instanceof Type.WildcardType
+                        ? JvmTypeMapper.erasureInternalName(sf.ownerType()) : null;
+                String owner = sfOwner != null ? sfOwner : JvmTypeMapper.toInternalName(
                         sf.ownerType() instanceof Type.ClassType ct ? ct.packageName() : "",
                         sf.ownerType() instanceof Type.ClassType ct ? ct.name() : "?");
                 c.mv().visitFieldInsn(PUTFIELD, owner, sf.name(), JvmTypeMapper.toDescriptor(sf.fieldType()));
@@ -179,9 +188,19 @@ public final class JvmOpEmitter {
                     JvmOpCollections.emitSetCall(c.mv(), kc);
                 }
                 else {
+                    // #368 (família §355): dono TypeVariable (T cru num parâmetro
+                    // genérico — `item.toString()` com item: T) chegava cru e
+                    // virava `invokevirtual "".toString` → ClassFormatError
+                    // (Illegal class name ""). Erasure JVM: dono = bound
+                    // (`T: Animal` → Animal, dispatch virtual real) ou Object.
+                    String tvOwner = kc.ownerType() instanceof Type.TypeVariable
+                            || kc.ownerType() instanceof Type.WildcardType
+                            ? JvmTypeMapper.erasureInternalName(kc.ownerType()) : null;
                     String owner = "";
                     if (kc.ownerType() instanceof Type.ClassType ct) {
                         owner = JvmTypeMapper.toInternalName(ct.packageName(), ct.name());
+                    } else if (tvOwner != null) {
+                        owner = tvOwner;
                     }
                     String desc = JvmTypeMapper.toMethodDescriptor(kc.returnType(), kc.parameterTypes());
                     boolean isInterfaceOwner = false;
@@ -258,21 +277,22 @@ public final class JvmOpEmitter {
                 c.mv().visitVarInsn(ASTORE, kcs.localIndex());
             }
             case KofCheckCast cc -> {
-                Type castT = cc.type() instanceof Type.PrimitiveType pt ? TypeMetrics.boxedTypeFor(pt) : cc.type();
-                String type = castT instanceof Type.ClassType ct
-                        ? JvmTypeMapper.toInternalName(ct.packageName(), ct.name()) : "?";
-                c.mv().visitTypeInsn(CHECKCAST, type);
+                c.mv().visitTypeInsn(CHECKCAST, castTargetName(cc.type()));
             }
             case KofInstanceOf io -> {
-                Type checkT = io.type() instanceof Type.PrimitiveType pt ? TypeMetrics.boxedTypeFor(pt) : io.type();
-                String type = checkT instanceof Type.ClassType ct
-                        ? JvmTypeMapper.toInternalName(ct.packageName(), ct.name()) : "?";
-                c.mv().visitTypeInsn(INSTANCEOF, type);
+                c.mv().visitTypeInsn(INSTANCEOF, castTargetName(io.type()));
             }
             case KofNewArray na -> {
                 if (na.elementType() instanceof Type.ClassType ct) {
                     // array de referência: ANEWARRAY (NEWARRAY é só primitivo)
                     c.mv().visitTypeInsn(ANEWARRAY, JvmTypeMapper.toInternalName(ct.packageName(), ct.name()));
+                } else if (na.elementType() instanceof Type.TypeVariable
+                        || na.elementType() instanceof Type.WildcardType) {
+                    // §355: `new T[n]` — componente é variável de tipo; o ramo
+                    // primitivo NÃO tem opcode p/ ela (arrayTypeForType cairia
+                    // em T_BYTE = array de bytes falsificado). ANEWARRAY da
+                    // erasure (bound/Object) é o equivalente javac.
+                    c.mv().visitTypeInsn(ANEWARRAY, JvmTypeMapper.erasureInternalName(na.elementType()));
                 } else {
                     c.mv().visitIntInsn(NEWARRAY, JvmLiteralEmitter.arrayTypeForType(na.elementType()));
                 }
@@ -298,6 +318,30 @@ public final class JvmOpEmitter {
         Type t = base;
         for (int i = 0; i < n; i++) t = new Type.ArrayType(t);
         return t;
+    }
+
+    /**
+     * §336 (#459): alvo de CHECKCAST/INSTANCEOF em nome interno válido.
+     * Array (`x as Int[]`, `xs instanceof Int[]`) chegava aqui cru desde o
+     * type-ref do parser e caía no fallback "?" → NoClassDefFoundError em
+     * runtime. Descriptor de array ja e nome-interno ([I, [Ljava/lang/X;);
+     * Nullable olha o inner (primitivo boxa, referencia segue).
+     */
+    private static String castTargetName(Type t) {
+        Type x = t instanceof Type.NullableType nt ? nt.inner() : t;
+        if (x instanceof Type.PrimitiveType pt) x = TypeMetrics.boxedTypeFor(pt);
+        if (x instanceof Type.ClassType ct) {
+            return JvmTypeMapper.toInternalName(ct.packageName(), ct.name());
+        }
+        if (x instanceof Type.ArrayType) {
+            return JvmTypeMapper.toDescriptor(x);
+        }
+        // §355: `as T`/checkcast duma variável de tipo → alvo é a erasure
+        // (bound/Object), nunca o fallback "?" (NoClassDefFoundError: ?).
+        if (x instanceof Type.TypeVariable || x instanceof Type.WildcardType) {
+            return JvmTypeMapper.erasureInternalName(x);
+        }
+        return "?";
     }
 
     private static void emitBinary(MethodVisitor mv, KofBinary kb) {
@@ -383,6 +427,10 @@ public final class JvmOpEmitter {
             mv.visitInsn(I2D);
         } else if (ku.op() == KofUnaryOp.I2C) {
             mv.visitInsn(I2C);
+        } else if (ku.op() == KofUnaryOp.I2B) {
+            mv.visitInsn(I2B);
+        } else if (ku.op() == KofUnaryOp.I2S) {
+            mv.visitInsn(I2S);
         } else if (ku.op() == KofUnaryOp.L2I) {
             mv.visitInsn(L2I);
         } else if (ku.op() == KofUnaryOp.L2F) {

@@ -50,7 +50,7 @@ Kof IR (backend-agnostic) → Optimizer (constant folding, branch simplification
 | `kof debug <file.kf>` | DAP MVP on the JVM target |
 | `kof info [--json]` | Environment report |
 | `kof lsp` | Language Server (stdio, LSP 3.x) |
-| `kof deps <init\|add\|remove\|list\|resolve>` | Package manager (`kofdeps`, Maven Central) |
+| `kof deps <init\|add\|remove\|list\|resolve>` | Package manager (`kofdeps`: Maven `g:a:v` + registry `owner/repo[@ver]` — GitHub Releases) |
 | `kof editor <list\|detect\|status\|setup\|install\|uninstall\|update>` | Editor integration (EDI001) |
 | `kof new <name>` | Project skeletons by type |
 | `kof init` | Initialize a project in the current directory |

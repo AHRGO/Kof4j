@@ -40,14 +40,14 @@ classify() { # $1=file -> "NNN status" lines
       t = $0; sub(/^#*[ ]*§/, "", t); gsub(/[^0-9].*/, "", t); num = t
       # status embedded in the header line itself (suffix after the dash)
       if ($0 ~ /✅/) last = "closed"
-      else if ($0 ~ /🟡|🔴/) last = "live"
+      else if ($0 ~ /🟡|🔴|🔓/) last = "live"
       next
     }
     sid != "" {
       # status-bearing lines only (chronological append wins)
       if ($0 ~ /\*\*[Ss]tatus\*\*|Estat/ || $0 ~ /^[>\- ]*\*\*(Status|Estado|Resolu|Fechamento|Resolution|Fix|✅|🟡|🔴|⚠️|CORRIGIDO|FECHADO|FIXED|RESOLVIDO)/ || $0 ~ /— *(✅|🟡|🔴)/ || $0 ~ /\*\*(✅|🟡|🔴|⚠️) /) {
         if (($0 ~ /✅/ || $0 ~ /🟢/) && $0 !~ /🟡|🔴/) last = "closed"
-        else if ($0 ~ /🟡|🔴|OPEN|ABERTO|PARTIAL|PARCIAL/) last = "live"
+        else if ($0 ~ /🟡|🔴|🔓|OPEN|ABERTO|PARTIAL|PARCIAL/) last = "live"
       }
     }
     END { flush() }
@@ -69,6 +69,8 @@ just prose here
 ## §904 — warning-face sample
 - **✅ FIXED 16/09 (JS face):** done here.
 - **⚠️ NATIVE face REMAINS OPEN (different lane):** not silently fixed.
+## §905 — gap sample — 🔓 GAPS OPEN 19/09
+- **Catalogued (Q7):** honest diagnostics landed; resolution pending.
 EOF
   OUT="$(classify "$FIX/t.md")"
   rm -rf "$FIX"
@@ -78,6 +80,7 @@ EOF
   echo "$OUT" | grep -qx "902 live" || { echo "SELFTEST FAIL: 902"; exit 2; }
   echo "$OUT" | grep -qx "903 unknown"     || { echo "SELFTEST FAIL: 903"; exit 2; }
   echo "$OUT" | grep -qx "904 live"       || { echo "SELFTEST FAIL: 904"; exit 2; }
+  echo "$OUT" | grep -qx "905 live"       || { echo "SELFTEST FAIL: 905"; exit 2; }
   echo "SELFTEST OK"
   exit 0
 fi

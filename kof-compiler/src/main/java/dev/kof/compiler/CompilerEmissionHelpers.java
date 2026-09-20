@@ -10,7 +10,13 @@ public final class CompilerEmissionHelpers {
     private CompilerEmissionHelpers() {}
 
     static boolean needsErasureBoxing(CompilerDriver driver) {
-        return driver.target == Target.JVM;
+        // §284: Native tambem precisa do box — o runtime nativo ganhou
+        // kof_box_*/kof_unbox_* reais; sem eles o primitivo cru caia na
+        // pilha onde o consumer esperava ponteiro (SIGSEGV 139).
+        return switch (driver.target) {
+            case JVM, NATIVE, NATIVE_RISCV64, NATIVE_AARCH64 -> true;
+            default -> false;
+        };
     }
 
     static boolean isJvmTarget(CompilerDriver driver) {
@@ -110,6 +116,13 @@ public final class CompilerEmissionHelpers {
             if (ai == valIdx && coerceStoreWiden(driver, ops, argTypes.get(ai), slotType)) {
                 argTypes.set(valIdx, slotType instanceof Type.NullableType nt ? nt.inner() : slotType);
             }
+            // §284 follow-up (18/09): escrita de primitivo em slot de MAP
+            // — o slot físico do Map é sempre objeto (contrato JVM, medido:
+            // JvmOpCollections faz emitUnboxIfPrimitive no leitor e o HashMap
+            // guarda Integer). Com o box real do §284 o par write-raw ×
+            // read-unbox (`mapOf(); m.put("a",1); m.get("a") == 1`) SIGSEGVava
+            // no rdi=1 do unbox. O box é aplicado pelo CALLER do helper (só
+            // Map; List/Set nativos permanecem raw — contrato próprio §253).
         }
         return localIdx;
     }
@@ -130,6 +143,10 @@ public final class CompilerEmissionHelpers {
                 case "double", "Double" -> KofUnaryOp.D2L;
                 default -> null;
             };
+            // #471: as Byte / as Short must emit i2b / i2s before Byte/Short.valueOf
+            // so the value is truncated to the correct range before boxing
+            case "byte", "Byte" -> KofUnaryOp.I2B;
+            case "short", "Short" -> KofUnaryOp.I2S;
             default -> null;
         };
         if (conv != null) {
@@ -160,6 +177,23 @@ public final class CompilerEmissionHelpers {
     static void emitErasureUnbox(CompilerDriver driver, List<KofOperation> ops, Type primitive) {
         if (!driver.needsErasureBoxing()) return;
         Type boxed = TypeMetrics.boxedTypeFor(primitive);
+        ops.add(new KofCall(primitive, "kof_unbox", List.of(boxed), primitive, KofCallKind.FUNCTION));
+    }
+
+    /**
+     * §284-map (18/09): unbox para CONSUMIDORES de {@code Int?} no native —
+     * variantes do contrato de slot de Map (fisicamente boxed) cruzado com o
+     * caminho de funcao local (cru). Soft = caixa abre, cru passa, null da o
+     * mesmo diagnostico do estrito. Em JVM/Script o helper e identico ao
+     * estrito (la o Nullable(primitivo) e sempre a referencia do wrapper).
+     */
+    static void emitErasureUnboxSoft(CompilerDriver driver, List<KofOperation> ops, Type primitive) {
+        if (!driver.needsErasureBoxing()) return;
+        Type boxed = TypeMetrics.boxedTypeFor(primitive);
+        if (driver.target.isNative()) {
+            ops.add(new KofCall(primitive, "kof_unbox_soft", List.of(boxed), primitive, KofCallKind.FUNCTION));
+            return;
+        }
         ops.add(new KofCall(primitive, "kof_unbox", List.of(boxed), primitive, KofCallKind.FUNCTION));
     }
 

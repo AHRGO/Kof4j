@@ -48,7 +48,7 @@ class NativeStringCompareCrossTest {
         assertTrue(result.success(), "compile: " + result.diagnostics().getDiagnostics());
         Path bin = outDir.resolve("Default/Main");
         assertTrue(Files.exists(bin), "binary should exist");
-        ProcessBuilder pb = new ProcessBuilder(qemu, bin.toString());
+        ProcessBuilder pb = NativeRiscv64E2ETest.qemu(qemu.substring(5), bin);
         pb.redirectErrorStream(true);
         Process p = pb.start();
         String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)

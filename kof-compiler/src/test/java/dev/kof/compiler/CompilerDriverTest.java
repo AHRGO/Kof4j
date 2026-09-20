@@ -312,6 +312,51 @@ class CompilerDriverTest {
         assertTrue(diags.contains("SEM028"), "Should be a clean diagnostic, was: " + diags);
     }
 
+    // #512 — o SEM028 saía em `:0:0` sem arquivo (inútil no editor/CLI) e o
+    // hint `arr[i]` era empurrado até em `arr.toString()`, onde não é
+    // alternativa. Mesma família do #120 (SEM049): posição real do call-site.
+    @Test
+    void arrayMethodCallDiagnosticPointsToCallSite(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("P512.kf");
+        Files.writeString(source, """
+            main() {
+                var arr = new Int[3]
+                println("x")
+                println(arr.toString())
+            }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertFalse(result.success(), "arr.toString() deve falhar no compile (SEM028)");
+        String diags = result.diagnostics().getDiagnostics().toString();
+        Diagnostic sem028 = result.diagnostics().getDiagnostics().stream()
+                .filter(d -> "SEM028".equals(d.code())).findFirst()
+                .orElseThrow(() -> new AssertionError("SEM028 não encontrado: " + diags));
+        assertEquals(4, sem028.line(), "SEM028 deve apontar a linha do call-site, não 0: " + diags);
+        assertTrue(sem028.file().endsWith("P512.kf"), "SEM028 deve apontar o arquivo real: " + diags);
+        assertTrue(sem028.column() > 0, "SEM028 deve ter coluna real: " + diags);
+        assertFalse(sem028.message().contains("arr[i]"),
+                "hint arr[i] não faz sentido para toString(): " + sem028.message());
+    }
+
+    @Test
+    void arrayGetMethodKeepsAccessHint(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("P512g.kf");
+        Files.writeString(source, """
+            main() {
+                var arr = new Int[3]
+                println(arr.get(0))
+            }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertFalse(result.success(), "arr.get() deve falhar no compile (SEM028)");
+        Diagnostic sem028 = result.diagnostics().getDiagnostics().stream()
+                .filter(d -> "SEM028".equals(d.code())).findFirst()
+                .orElseThrow(() -> new AssertionError("SEM028 não encontrado"));
+        assertEquals(3, sem028.line(), "SEM028 deve apontar a linha do get(): " + sem028);
+        assertTrue(sem028.message().contains("arr[i]"),
+                "get()/set() mantêm o hint da operadora correta: " + sem028.message());
+    }
+
     // known-bugs #12 — `var c = a = b` (assignment as an expression VALUE)
     // produced invalid bytecode. Kof has no assignment-expression: reject with
     // SEM027. Statement `a = b` must keep working.

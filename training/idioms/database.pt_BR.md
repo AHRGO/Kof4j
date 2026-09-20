@@ -54,6 +54,7 @@ orm.count<User>(db, "age", 30)
 orm.delete<User>(db, 1)
 orm.page<User>(db, 1, 20)
 orm.deleteAll<User>(db)
+orm.saveAll<User>(db, users)          // insert/update em lote, uma passada
 
 // Query DSL (nível 3) — múltiplos where = AND
 User.query(db) {

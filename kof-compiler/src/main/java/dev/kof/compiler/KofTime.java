@@ -39,11 +39,13 @@ public final class KofTime {
 
 /** X10 fatia 2: nomes aceitos pelo dispatch real (catálogo p/ LSP).
      *  GUARDA: StdCatalogTest exige == case-literals da fonte abaixo. */
-    static List<String> functions() { return List.of("sleep", "now", "interval", "cancel", "isLeapYear", "daysInMonth", "dayOfWeek", "daysBetween", "isWeekend", "addDays", "diffDays", "todayIso", "formatDateIso", "isToday", "hoursBetween", "parseDateIso", "tzOffsetSeconds"); }
+    static List<String> functions() { return List.of("sleep", "now", "interval", "cancel", "collect", "isLeapYear", "daysInMonth", "dayOfWeek", "daysBetween", "isWeekend", "addDays", "diffDays", "todayIso", "formatDateIso", "isToday", "hoursBetween", "parseDateIso", "tzOffsetSeconds"); }
 
     static boolean isTimeMethod(String name) {
         return switch (name) {
             case "sleep", "now", "interval", "cancel",
+                    // GC manual: mark+sweep conservador do runtime (kof_gc_collect_now)
+                    "collect",
                     // STDLIB S7-wedge: calendário civil (escalares puros —
                     // dias entre datas e dia-da-semana chegam no próximo degrau)
                     "isLeapYear", "daysInMonth", "dayOfWeek", "daysBetween",
@@ -122,6 +124,9 @@ public final class KofTime {
                     : null;
             case "now" -> argTypes.size() == 0
                     ? new TimeCall("kof_time_now", LONG, List.of())
+                    : null;
+            case "collect" -> argTypes.size() == 0
+                    ? new TimeCall("kof_gc_collect_now", VOID, List.of())
                     : null;
             case "interval" -> argTypes.size() == 2
                     ? new TimeCall("kof_time_interval", STR, List.of(INT, OBJ))

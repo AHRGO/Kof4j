@@ -13,7 +13,124 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+ ### In development
+
+  - **`Bool` is never nullable — the three-valued type is `Troolean` (D-TROOL,
+    19/09, DECISIONS.md §D-TROOL)** — migration of the same class approved for
+    #401: `Bool?`/`Boolean?` (any position: local, field, parameter, return) now
+    fail at compile time with `SEM095` ("`Bool` has two values; for
+    true/false/unknown use `Troolean`") — the old face compiled but was a
+    crash-face at runtime (#462/#486 VerifyError; JS leaking operands). Code
+    that wants `true/false/unknown` writes `Troolean`: declaration without
+    instantiation is `null` (unknown), functions may `return null` into it,
+    `println` shows `true`/`false`/`null`, and `!`/`&&`/`||` follow the
+    **Kleene** tables (F dominates AND, T dominates OR, `NOT U = U`) — a logical
+    with a `Troolean` side yields `Troolean`; consume it as `Bool` with an
+    explicit `== true`/`!= null`. Programs with pure `Bool` operands are
+    untouched (#487 face intact). Proved by `TrooleanLawE2ETest` (Kleene
+    matrices 9+9+3, nested chains, short-circuit both sides, `== null`,
+    condition sugar, `SEM095` in both spellings — JVM+Script+JS identical;
+    Native-x86-64 measured in the landing probes) and the migrated §306 faces.
+    Closes the #462/#486 family by decision (rule 8: the foreign construct's
+    replacement is now IN the language).
+
+  - **Signature catalog is now 32/32 — `json` has hover/signatureHelp** (X10 close,
+    19/09): `json.encode`/`json.decode` join the generated table
+    (`encode(value) -> String`, `decode<T>(jsonString) -> T`), bound behaviorally to
+    the typer's real arity rule (`MemberCallNamespaces` enforces 1 arg + the `<T>` on
+    decode with SEM025 — the rule always existed; only the table was missing). Type
+    dispatch stays in the lowerer (`JsonDispatch`) — no language semantics changed.
+>>>>>>> 1b4c95f8 (feat(lsp): fechamento X10 — catalogo de assinaturas 32/32 com `json` na tabela (trava comportamental ao SEM025))
+  - **JS collection equality is now by content (`#518`)** — a Kof `List` or `Set`
+    used as an element of another `Set`/`Map`/`List` compared by identity on the JS
+    target (`add` said `true`, `contains` said `false`, `setOf(setOf(1)).size()` was
+    2), while the JVM compares contents (`AbstractList`/`AbstractSet.equals`). The
+    shared JS helper `kofValEq` now recurses: arrays element-by-element (order
+    sensitive) and sets by membership — never via `Set.has`, whose SameValueZero
+    reference check is exactly the bug. The three equality helpers (`kofValEq`,
+    `kofRecordEq`, `kofFpEq`) moved to a dedicated runtime slice. Proved by
+    `KofSetEqualityTest.collectionsAsElementsCompareByContentOnJs` (was disabled)
+    and the JVM twin, 21/21 green.
+
+  - **`kof deps` now pulls from the registry (`owner/repo[@version]`, 0.4.0 line,
+    1.5.3-S2 / D-POLL-19)** — a line like `acme/hello@1.2.3` (or bare `acme/hello`
+    for *latest*) in `kofdeps` resolves against the GitHub Releases published by
+    `kof deploy --publish`: the `<repo>-<ver>.tar.gz` asset is downloaded, its
+    embedded `SHA256SUMS` is **verified before install** (integrity is not optional),
+    and the jar is cached at `~/.kof/deps/kof/<owner>/<repo>/<ver>/` — re-resolve is
+    a cache hit with zero network. A bare `latest` pins the concrete version into
+    `kofdeps` after the first resolve (lock-stable). `kof deps classpath` merges the
+    registry jars with the Maven closure. Honest diagnostics (R6): `REG001` release
+    not found, `REG002` checksum mismatch / no parsable asset, `REG003` package has
+    no jar, `REG004` package has no `SHA256SUMS` (refuses to install). Private repos
+    work with `GH_TOKEN`/`GITHUB_TOKEN`; tests pin the endpoint via `KOF_REGISTRY_API`.
+    Proof: `DepsRegistryTest` (6 cases: happy path + idempotency, latest pin,
+    REG001/REG002/REG003/REG004 against a fake registry).
+
 ### In development
+
+  - **`String.format` float output no longer depends on the host locale (#466, §339)** —
+    `String.format("%.2f", 3.14)` printed `3,14` on a `pt_BR` JVM (the lowering emitted the
+    2-arg `String.format(String, Object[])` overload, locale-sensitive by contract) and the
+    GraalJS host bridge inherited the machine default too — the §239 "byte-a-byte parity"
+    silently depended on the OS locale. The lowering now always emits the real 3-arg form
+    `String.format(Locale.ROOT, fmt, args)` and the JS bridge pins `Locale.ROOT`: deterministic
+    output on every JVM-like target (R10). **Proof:** `StringFormatLocaleE2ETest` 3/3 (JVM child
+    under `-Duser.language=pt -Duser.country=BR`, Script, JS-via-Graal) against a JDK oracle
+    golden; RED 3/3 pre-fix. `String.format` on Native remains an honest pre-existing link gap
+    (no JDK formatter; catalogued in §339 for the native lane).
+
+  - **`X as T <op> Y` no longer silently drops the operator (#459, §336)** — the type operand
+    of `as`/`instanceof` was parsed by the value precedence-climber and swallowed whatever
+    came next (`a as Double / 2.0` became a malformed type rendered as `"?"` in the constant
+    pool, the arithmetic node vanished, and the program died at runtime with
+    `NoClassDefFoundError: ?`). `check` said "no errors" — a silent miscompile (R6). The RHS
+    now goes through the dedicated type-ref parser (primitive, dotted, generics, arrays,
+    nullable, function types — the bug-127 case included) and control returns to the operator
+    loop: the cast binds first, exactly as `grammar.md` §5.1 already documented. Follow-on
+    consequences the fixed parser made reachable were completed in the same unit: parameterized
+    targets resolve (`x as List<Int>` now really carries the args), and array/nullable casts
+    emit a valid `CHECKCAST`/`INSTANCEOF` descriptor instead of the `"?"` fallback.
+    **Proof:** `AsCastPrecedenceE2ETest` 6/6 on JVM+Script+JS (verbatim repro = `0.5`, the full
+    `+ - * / % << >> >>>` matrix on both sides, `as List<Int>`/`as Int[]` end-to-end, and the
+    honest `SEM002` when `instanceof` is legitimately followed by `+` on a Bool).
+
+  - **Cross-assigning generic types is rejected at compile time (#401, §270, D-POLL-19)** —
+    `List<Int>` assigned to `List<String>` used to pass every check (assignment compared only
+    the RAW type) and died later with a `ClassCastException` at the first `get`. Type arguments
+    are now INVIARIANT when both sides carry concrete args on the same raw name — the existing
+    SEM012/SEM021 checkpoints report `type mismatch: cannot assign ...`, before any backend
+    (all 4 targets share the semantic check). Inference stays sound and permissive:
+    `listOf()` (UNKNOWN args), raw targets (`List`), `Object`, and class→generic-interface
+    assignments (#400) are unaffected. **Migration:** code that compiled and crashed at runtime
+    now fails at compile time — change the declared type or map the collection.
+    **Proof:** `GenericArgAssignmentE2ETest` 8/8 (verbatim #401, plain-assign and nested
+    `Map<String, List<Int>>` faces rejected; same-args/inference/raw/`Object`/#400 controls
+    accepted).
+
+  - **`kof test` gains `--timeout <sec>` (0.4.0 line, X8-A / §G6 "timeouts")** — a hanging
+    test program used to hang the whole runner (the harness waited forever on the child
+    process; CI froze). With `--timeout 3` the JVM/Native child is killed at the deadline
+    and reported as an honest `FAIL <file>` (`timeout after 3s — process killed`) with
+    `0 passed, 1 failed` and exit 1. The JS face runs in-process, so there the timeout is
+    best-effort (the CLI says so instead of lying). Without the flag the historical
+    behavior is untouched (additive, zero regression). Proof: `CmdTestTimeoutTest` (3 cases:
+    infinite loop killed in seconds, fast suite passes under the limit, garbage/zero/missing
+    values rejected with R6 strictness).
+
+  - **`return <value>` in a `void`/untyped/constructor is now `SEM093` (0.4.0 line,
+    D-DECL-RETURN, #333)** — a top-level function that declares `void` — **or declares no
+    type at all** — can no longer `return <value>`, and neither can a constructor. Before,
+    `FunctionLowering` emitted the *inferred* descriptor (`()I`) while the symbol and every
+    call-site stayed at `()V`: `kof check` passed and the program died at runtime with
+    `NoSuchMethodError` (the #333 repro). Now the definition itself is rejected at compile
+    time: `void function cannot return a value - drop the value (bare \`return\` exits) or
+    declare a return type [SEM093]`. A bare `return` in void stays legal (early exit).
+    Class methods are out of this rule by design: there the old bug-26 re-inference retypes
+    symbol and descriptor together (§130), so they cannot produce the link crash.
+    **Migration:** drop the value (`return`), or declare the real type (`Int f() { ... }`).
+    Proof: `VoidReturnValueE2ETest` (7 cases: void/untyped/ctor rejected, bare-return,
+    non-void `SEM010` mismatch and method inference preserved).
 
   - **KofScript became a direct execution target with an IR interpreter
     (06/09)** — `KofInterpreter` executes the SAME optimized IR that the JVM
@@ -133,6 +250,9 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
   - PR6 hardening limits and observability (upstream rebase)
 
 ### Bugfixes
+  - re-land das 4 faces silenciosamente reintroduzidas pelo recovery `09e40afb` (#467-gate SEM012 / `i2b` LOCAL p/ `as Byte|Short` / switch STMT Long-FP no JVM e no parser JS) com `StringCompoundAssignE2ETest` 4/4, `ByteShortNarrowE2ETest` 2/2, `SwitchLongDoubleSupportE2ETest` 3/3 — §346 EN/PT
+  - #502: `return` fora de função agora aponta a LINHA do `return` (SEM010 com posição) + `Sem010PositionE2ETest` 2/2
+  - §343 adendo: face runtime do workflow-JS (`retryFacesBothOutcomes`) segue aberta no tip, dono `.18`
 
   - real time.now() riscv64/aarch64 (clock_gettime=113, x86 parity)
   - numeric println(char) (72) preserved; String.valueOf(char) → UTF-8 character (h)
@@ -3054,6 +3174,9 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
   - shell idiom docs landed — docs/stdlib/shell.md+PT, training per-target+BAD/GOOD, universal-plan 2.2 note; samples compile-proved on tip jar (run+pipeline executed); conflict resolution preserved .18 row 2.1; Q5 self-corrected fake [list] literal and run(cmd) overload in first draft
   - .18 - hash corrigido apos rebase do sync-push (f5ce4579->f23e1b6a no tip)
   - .18 - workflow MVP 2.1.2 landed (f5ce4579) + 2.1.4 docs; check_500 green (.22 split); drift corrigido: entradas ~02:4x agora PT nos dois arquivos; next 2.1.3
+  - .18 - workflow 2.1.3 bundle COMPLETO 19/09: retry + deadLetter (duas faces) + schedule + checkpoint (3a) + **supervision (3b)** — `runSupervised(dag, nome, maxReinicios)` roda a DAG como workers one_for_one DELEGANDO ao `kof.supervisor` (job = child `transient`; laço por filho reinicia só o que falhou; deps = espera cooperativa em flags voláteis; drop por limite + skip transitivo); guardas R6 ALTAS: `maxReinicios < 1` recusado (restart ilimitado = thread storm — lição do host que caiu 19/09), `retry()` na mesma dag recusado (uma política por face); o host do supervisor vem injetado flat com dedup pela marca (import duplo seguro); face REAL nos 4 alvos (sem stub — §129); `WorkflowE2ETest` 20/20 (JVM==JS byte-parity, Native pin, import-duplo pin) — dono = 192.168.100.18
+  - .18 - JS face of `process.spawn` landed 19/09 (F10 closes on JS) + **§355 fixed at root**: handle ops (`readLine`/`write`/`exitCode`/`kill`/`alive`) lowered to a raw `invokevirtual java/lang/Long.readLine` — the `isHandle` branch sat behind a dispatcher that never routed a `Long` receiver, so NO target ever ran them (old pins asserted compilation only). Routing fix + `KofJsProcessBridge` host binding (same JDK/ProcessBuilder — parity by construction: failed spawn `-1`, EOF `""`, alive sentinel `Integer.MIN_VALUE`, kill=forget); lowerer gate narrowed to Native-only; `DomainGapCodesTest.processSpawnOnJs` flipped PROC001→no-gap; proof `ProcessSpawnE2ETest` 4/4 byte-parity JVM==JS. Honest quirk kept: child stdin is `/dev/null` → public `write` no-op on both targets (live input = rule-6 contract change). `JsRuntimeOps` split into `JsRuntimeProcessShellOps` (gate 500, 577→537) — dono = 192.168.100.18
+  - .18 - shell 2.2.3 landed 19/09: `shell.runWith(argv, cwd, env)` no JVM + host JS (ambiente ADITIVO — chaves do map sobrescrevem herdadas, nunca wipe silencioso; `cwd` `""` = herda; spawn inexistente/argv vazio = `Result` honesto com `exitCode -1`, nunca hang — R6); Native segue `PROC001` de compilação herdado de `process.run`; JVM `kof_shell_runwith` + shim JS → `KofJsRunner.processRunWith`; `ShellE2ETest` 15/15 (goldens `pwd`/`printenv` paridade byte, pins de falha honesta, pin Native, pin SEM025); docs stdlib/plan/parity/tracker sincronizados EN+PT; residual da linha 2.2 = só pipes vivos JS (item à parte) — dono = 192.168.100.18
   - workflow 2.1.4 slice - stdlib/workflow.md EN+PT, parity row+delta, tracker flips, plan §2 shipped surface + §5 2.1.2/2.1.4 DONE
 
 ## [0.4.7-beta] - 2026-09-19

@@ -22,6 +22,15 @@ jobs:
     name: Orchestrate Bots
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # PR de FORK: o GITHUB_TOKEN e read-only (regra da plataforma) e o
+    # createWorkflowDispatch morre em 403 — o job inteiro vermelhava por
+    # INFRA em todo PR externo. Os bots-children ja rodam no proprio
+    # gatilho pull_request; o dispatch extra so faz sentido em push/PR
+    # interno/schedule/dispatch. Nao e mascara de falha: o que falhava era
+    # o veiculo, nao o veredito.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Trigger kof-quality-bot
         uses: actions/github-script@v7

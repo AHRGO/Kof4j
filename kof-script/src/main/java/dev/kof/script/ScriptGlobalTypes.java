@@ -58,13 +58,22 @@ final class ScriptGlobalTypes {
             if (isList && ("map".equals(method) || "filter".equals(method) || "take".equals(method) || "drop".equals(method))) return recv;
             if ("contains".equals(method) || "isEmpty".equals(method)) return "Bool";
             if (isList && "size".equals(method)) return "Int";
+            // #382 — indexOf/lastIndexOf: Int; addAll: Bool; subList: a
+            // própria List; sort: sem valor (null = mantém tipo do receiver,
+            // o emit trata sort como statement).
+            if (isList && ("indexOf".equals(method) || "lastIndexOf".equals(method))) return "Int";
+            if (isList && "addAll".equals(method)) return "Bool";
+            if (isList && "subList".equals(method)) return recv;
         }
         if (isMap) {
             String[] kv = mapKV(recv);
             if ("get".equals(method) && kv != null) return kv[1];
             if ("keys".equals(method) && kv != null) return "List<" + kv[0] + ">";
             if ("values".equals(method) && kv != null) return "List<" + kv[1] + ">";
-            if ("containsKey".equals(method) || "isEmpty".equals(method)) return "Bool";
+            if ("containsKey".equals(method) || "isEmpty".equals(method)
+                    || "containsValue".equals(method)) return "Bool";
+            // #386 — putIfAbsent devolve o valor (ou null) — mesmo slot do put.
+            if ("putIfAbsent".equals(method) && kv != null) return kv[1];
         }
         if ("String".equals(recv)) {
             if ("toUpperCase".equals(method) || "toLowerCase".equals(method) || "trim".equals(method) || "substring".equals(method) || "replace".equals(method)) return "String";

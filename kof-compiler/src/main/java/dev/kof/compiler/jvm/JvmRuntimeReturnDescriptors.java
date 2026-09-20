@@ -42,6 +42,7 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_process_exit" -> "V";
             case "kof_shell_argv" -> "Ljava/util/ArrayList;";
             case "kof_shell_pipeline" -> "Ldev/kof/runtime/KofRuntime$ProcessResult;";
+            case "kof_shell_runwith" -> "Ldev/kof/runtime/KofRuntime$ProcessResult;";
             case "kof_args_list" -> "Ljava/util/ArrayList;";
             case "kof_io_read_bytes" -> "[I";
             case "kof_io_read_range", "kof_io_read_range_path" -> "[I";
@@ -80,6 +81,7 @@ public final class JvmRuntimeReturnDescriptors {
                     "kof_mq_publish", "kof_mq_subscribe", "kof_mq_unsubscribe",
                     "kof_mq_push", "kof_time_sleep", "kof_time_cancel", "kof_scheduler_cancel" -> "V";
             case "kof_time_now" -> "J";
+            case "kof_gc_collect_now" -> "V";
             case "kof_time_isLeapYear", "kof_time_daysInMonth", "kof_time_dayOfWeek", "kof_time_daysBetween", "kof_time_isWeekend", "kof_time_diffDays" -> "I";
             case "kof_time_interval", "kof_time_addDays" -> "Ljava/lang/String;";
             case "kof_config_int", "kof_config_bool", "kof_config_has" -> "I";

@@ -32,6 +32,16 @@ final class RecordEqualityLowerer {
     private RecordEqualityLowerer() {}
 
     /**
+     * #259: o tipo ESTÁTICO do lado (já desembrulhado o {@code Nullable}) é
+     * {@code float}/{@code double}? Decide entre o helper de wrapper (NaN/±0.0)
+     * e o {@code ===} comum do JS.
+     */
+    private static boolean isFloatingOperand(Type t) {
+        Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
+        return inner instanceof Type.PrimitiveType && TypeMetrics.isFloatingPoint(inner);
+    }
+
+    /**
      * Emite a comparação de conteúdo null-safe. Deixa um número 0/1 (BOOL) no
      * topo representando {@code a == b} (NUNCA aplica o `!=` — o chamador faz
      * isso uma vez). O chamador define {@code accType = BOOL}. Pilha ao entrar:
@@ -55,9 +65,19 @@ final class RecordEqualityLowerer {
             // o box IR é no-op lá (número continua número); mantém o par
             // simétrico com o box do lado esquerdo (ExpressionBinaryLowerer).
             if (rightType instanceof Type.PrimitiveType rpt0 && !Type.isVoid(rpt0)) {
-                TypeEmitter.boxPrimitive(ops, rightType);
+                // §284-map: native = kof_box_* (TypeEmitter e JVM-only).
+                if (driver.target.isNative()) {
+                    CompilerEmissionHelpers.emitErasureBox(driver, ops, rightType);
+                } else {
+                    TypeEmitter.boxPrimitive(ops, rightType);
+                }
             }
-            ops.add(new KofCall(BuiltinTypes.STRING, "kofRecordEq", List.of(objT, objT),
+            // #259: `Float?`/`Double?` nullable baixa p/ o helper de semântica
+            // do wrapper JVM (NaN != NaN e +0.0 != -0.0 no `===` do JS); Int/
+            // Long/Char/Bool seguem no kofRecordEq, cujo `===` já coincide.
+            String eqFn = isFloatingOperand(accType) || isFloatingOperand(rightType)
+                    ? "kofFpEq" : "kofRecordEq";
+            ops.add(new KofCall(BuiltinTypes.STRING, eqFn, List.of(objT, objT),
                     Type.PrimitiveType.INT, KofCallKind.FUNCTION));
             return localIdx;
         }
@@ -71,16 +91,22 @@ final class RecordEqualityLowerer {
         // precisa boxear antes de entrar no par de temporários Object
         // abaixo (KofStoreLocal ASTORE exige referência na pilha).
         if (rightType instanceof Type.PrimitiveType rpt1 && !Type.isVoid(rpt1)) {
-            TypeEmitter.boxPrimitive(ops, rightType);
+            // §284-map: native = kof_box_* (o literal `1` de `m.get("a") == 1`
+            // precisa chegar CAIXA p/ o kof_box_equals comparar por valor).
+            if (driver.target.isNative()) {
+                CompilerEmissionHelpers.emitErasureBox(driver, ops, rightType);
+            } else {
+                TypeEmitter.boxPrimitive(ops, rightType);
+            }
         }
         // D-NULL-INTENT (I6): quando NENHUM lado é record, o chamador só
         // despacha aqui com os DOIS lados Nullable(primitivo) — resolve o
         // WRAPPER boxed (Integer/Long/...) como "recordType": seu `.equals`
         // real já faz igualdade por VALOR null-safe (mesma mecânica).
         Type recordType;
-        if (ExpressionBinaryLowerer.isRecordLike(accType, driver)) {
+        if (ExpressionBinaryPredicates.isRecordLike(accType, driver)) {
             recordType = accType instanceof Type.NullableType nta ? nta.inner() : accType;
-        } else if (ExpressionBinaryLowerer.isRecordLike(rightType, driver)) {
+        } else if (ExpressionBinaryPredicates.isRecordLike(rightType, driver)) {
             recordType = rightType instanceof Type.NullableType ntr ? ntr.inner() : rightType;
         } else if (accType instanceof Type.NullableType ntp && ntp.inner() instanceof Type.PrimitiveType apt
                 && TypeMetrics.boxedTypeFor(apt) instanceof Type.ClassType aboxed) {

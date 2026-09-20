@@ -19,7 +19,12 @@ public final class JvmTypeMapper {
             case Type.ClassType c when KofUi.isUiType(c) || KofMedia.isHandleType(c) -> "I";
             case Type.ClassType c -> classDescriptor(c);
             case Type.ArrayType a -> "[" + toDescriptor(a.componentType());
-            case Type.TypeVariable _ -> "Ljava/lang/Object;";
+            // §355 (rio da erasure): a variável APAGA para o seu BOUND
+            // (javac: `<T extends Animal>` → `LAnimal;`), sem bound → Object.
+            // O TypeVariable agora carrega o bound (Type.java §355); o caso
+            // antigo (Object puro) continua para os unbounded.
+            case Type.TypeVariable tv -> tv.bound() != null
+                    ? toDescriptor(tv.bound()) : "Ljava/lang/Object;";
             case Type.WildcardType _ -> "Ljava/lang/Object;";
             case Type.FunctionType ft -> ft.className() != null
                     ? "L" + ft.className() + ";" : "Ljava/lang/Object;";
@@ -183,6 +188,30 @@ public final class JvmTypeMapper {
         if (packageName.isEmpty()) return simpleName;
         return packageName.replace('.', '/') + "/" + simpleName;
     }
+
+    /**
+     * §355 (rio da erasure) — NOME INTERNO de erasure de um tipo em posição
+     * de OWNER (getfield/putfield/invoke/checkcast/anewarray). A família de
+     * bugs #399/#363/#368/#375 é sempre a mesma forma: um TypeVariable (ou
+     * qualquer não-ClassType) chegava cru no emit e saía como owner `""`
+     * (ClassFormatError: Illegal class name), `"?"` (NoClassDefFoundError: ?)
+     * ou o LITERAL `T` (NoClassDefFoundError: T). A erasure JVM manda:
+     * variável de tipo → bound (`T: Animal` → Animal), senão Object.
+     */
+    public static String erasureInternalName(Type t) {
+        return switch (t) {
+            case Type.ClassType ct -> toInternalName(ct.packageName(), ct.name());
+            case Type.TypeVariable tv -> tv.bound() != null
+                    ? erasureInternalName(tv.bound()) : "java/lang/Object";
+            case Type.WildcardType wt -> wt.bound() != null
+                    ? erasureInternalName(wt.bound()) : "java/lang/Object";
+            case Type.NullableType nt -> erasureInternalName(nt.inner());
+            case Type.FunctionType ft -> ft.className() != null
+                    ? ft.className() : "java/lang/Object";
+            default -> null;
+        };
+    }
+
 
     static Type fromTypeName(String typeName) {
         return Type.of(typeName);

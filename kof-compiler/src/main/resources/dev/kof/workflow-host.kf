@@ -1,7 +1,14 @@
 // dev/kof/workflow-host.kf — host escrito EM KOF do pacote virtual
-// `kof.workflow` (tracker 2.1, plano §5 2.1.2). Superfície MVP (Q2 da enquete
-// 19/09): SOMENTE job/dag/after/run/Report — retry/checkpoint/deadLetter são
-// do bundle 2.1.3. Injetado flat por CompilerWorkflow no `import kof.workflow`
+// `kof.workflow` (tracker 2.1, plano §5). MVP (Q2 da enquete 19/09):
+// job/dag/after/run/Report + faces do bundle 2.1.3 (aditivas): retry
+// (dag.retry/retryFixed/exponential, 7db91735), deadLetter (duas faces do
+// Q4: `Report.dead` in-memory SEMPRE + sink durável opt-in por job) e
+// schedule(expr, dag) que DELEGA a scheduler.at (contrato §3: workflow não
+// re-implementa cron — no Native a recusa CRON001 sobe honesta no call-site).
+// checkpoint: face 2.1.3a (workflow-ckpt-host.kf); supervisor one_for_one:
+// face 2.1.3b runSupervised (workflow-sup-host.kf — delega ao kof.supervisor,
+// nunca restart próprio).
+// Injetado flat por CompilerWorkflow no `import kof.workflow`
 // explícito (mesmo mecanismo do kof.supervisor, DD-OTP-01 opção A).
 //
 // Execução sequencial e determinística (sem threads, sem await): funciona em
@@ -29,6 +36,34 @@ String kofWfJoin(List<String> xs, String sep) {
     return out
 }
 
+Bool kofWfTemJob(List<KofWfJob> xs, String nome) {
+    var i = 0
+    while (i < xs.size) {
+        if (xs.get(i).nome == nome) { return true }
+        i = i + 1
+    }
+    return false
+}
+
+// coleta o alvo + TODAS as dependências transitivas (worklist iterativa,
+// sem recursão) — base do `runJob` do runner (D-WORKFLOW-RUN).
+void kofWfColetar(KofWfJob alvo, List<KofWfJob> out) {
+    var pend = listOf()
+    pend.add(alvo)
+    while (pend.size > 0) {
+        var cur = pend.get(pend.size - 1)
+        pend.remove(pend.size - 1)
+        if (!kofWfTemJob(out, cur.nome)) {
+            out.add(cur)
+            var i = 0
+            while (i < cur.deps.size) {
+                pend.add(cur.deps.get(i))
+                i = i + 1
+            }
+        }
+    }
+}
+
 class KofWfJob {
     // NUNCA tirar os inicializadores daqui: `String nome` sem `= null` na
     // linha de cima de um campo-lambda confunde o lookahead do parser
@@ -37,6 +72,7 @@ class KofWfJob {
     () -> Bool corpo = null
     List<KofWfJob> deps = listOf()
     KofWfRetry retryCfg = null
+    (String, String) -> Bool deadSink = null
 
     public constructor(String nome, () -> Bool corpo) {
         if (nome == "") { throw "workflow: job com nome vazio" }
@@ -80,6 +116,7 @@ class KofWfReport {
     List<String> skipped
     List<String> errors
     List<String> retries   // "nome: tentativas=N" p/ jobs que retryaram (face 2.1.3)
+    List<String> dead      // "nome: motivo" p/ todo job que esgotou retry (face deadLetter, sempre presente)
 
     public constructor() {
         succeeded = listOf()
@@ -87,6 +124,7 @@ class KofWfReport {
         skipped = listOf()
         errors = listOf()
         retries = listOf()
+        dead = listOf()
     }
 
     Bool allOk() {
@@ -102,6 +140,14 @@ class KofWfReport {
 
 class KofWfDag {
     List<KofWfJob> jobs
+    String dagNome = null
+    // ⚠️ PARSE023 medido 19/09: função-tipo em CAMPO logo após um campo
+    // `List<...>` não parseia ("Expected parameter name") — os campos-lambda
+    // seguem um campo tipado simples (mesmo padrão do deadSink em KofWfJob,
+    // que segue `KofWfRetry retryCfg = null`). Hooks levam (dagName,
+    // jobName): a forma de 1 param em campo é o próprio quirk (PARSE023).
+    (String, String) -> Bool ckLoad = null
+    (String, String) -> Bool ckSave = null
 
     public constructor(List<KofWfJob> jobs) {
         if (jobs == null) { throw "workflow: dag() sem jobs" }
@@ -142,6 +188,22 @@ class KofWfDag {
         return retry(j, times, (n: Int) -> 0)
     }
 
+    // face durável do deadLetter (Q4, opt-in): `flow.deadLetter(job, sink)` —
+    // o sink `(nome, motivo) -> Bool` é CÓDIGO DO USUÁRIO (persiste onde
+    // quiser, ex. kof.orm no corpo dele); o workflow continua puro e
+    // target-neutro (nunca depende do kof.orm aqui — ORM001 só alcança quem
+    // usa, R6/R7). `false` ou throw no sink falha ALTO com o nome do job.
+    KofWfDag deadLetter(KofWfJob j, (String, String) -> Bool sink) {
+        if (j == null) { throw "workflow: deadLetter() com job nulo" }
+        if (sink == null) { throw "workflow '" + j.nome + "': deadLetter() com sink nulo" }
+        var alvo = kofWfProcurar(j)
+        if (alvo.deadSink != null) {
+            throw "workflow '" + j.nome + "': deadLetter já registrado para este job"
+        }
+        alvo.deadSink = sink
+        return this
+    }
+
     KofWfJob kofWfProcurar(KofWfJob j) {
         var i = 0
         while (i < jobs.size) {
@@ -149,6 +211,102 @@ class KofWfDag {
             i = i + 1
         }
         throw "workflow: retry() em '" + j.nome + "' — job não está na dag"
+    }
+
+    KofWfJob kofWfProcurarNome(String nome) {
+        var i = 0
+        while (i < jobs.size) {
+            if (jobs.get(i).nome == nome) { return jobs.get(i) }
+            i = i + 1
+        }
+        throw "workflow: job '" + nome + "' não existe na dag"
+    }
+
+    // introspecção (D-WORKFLOW-RUN): nomes na ordem de declaração e as
+    // dependências diretas de um job — o runner monta o DAG a partir daqui.
+    List<String> jobNames() {
+        var out = listOf()
+        var i = 0
+        while (i < jobs.size) { out.add(jobs.get(i).nome); i = i + 1 }
+        return out
+    }
+
+    List<String> depsOf(String nome) {
+        var j = kofWfProcurarNome(nome)
+        var out = listOf()
+        var i = 0
+        while (i < j.deps.size) { out.add(j.deps.get(i).nome); i = i + 1 }
+        return out
+    }
+
+    // ordem topológica SEM executar corpo (--dry-run): mesmo fixpoint do
+    // run(), mas só resolve a ordem; ciclo sobe com a MESMA mensagem do run().
+    List<String> order() {
+        var out = listOf()
+        var rest = listOf()
+        var i = 0
+        while (i < jobs.size) { rest.add(jobs.get(i)); i = i + 1 }
+        var done = listOf()
+        while (rest.size > 0) {
+            var progressed = false
+            var keep = listOf()
+            var j = 0
+            while (j < rest.size) {
+                var job = rest.get(j)
+                var ready = true
+                var d = 0
+                while (d < job.deps.size) {
+                    if (!kofWfTem(done, job.deps.get(d).nome)) { ready = false }
+                    d = d + 1
+                }
+                if (ready) {
+                    out.add(job.nome)
+                    done.add(job.nome)
+                    progressed = true
+                } else {
+                    keep.add(job)
+                }
+                j = j + 1
+            }
+            if (!progressed) {
+                var nomes = listOf()
+                var c = 0
+                while (c < rest.size) { nomes.add(rest.get(c).nome); c = c + 1 }
+                throw "workflow: ciclo detectado entre: " + kofWfJoin(nomes, ",")
+            }
+            rest = keep
+        }
+        return out
+    }
+
+    // roda SÓ o job nomeado + suas dependências transitivas (--job do
+    // runner). Monta uma sub-dag com os MESMOS objetos de job (preserva
+    // retry/deadSink por job) e os hooks de checkpoint desta dag.
+    KofWfReport runJob(String nome) {
+        if (nome == null || nome == "") { throw "workflow: runJob() sem nome de job" }
+        var alvo = kofWfProcurarNome(nome)
+        var sel = listOf()
+        kofWfColetar(alvo, sel)
+        var sub = KofWfDag(sel)
+        sub.dagNome = dagNome
+        sub.ckLoad = ckLoad
+        sub.ckSave = ckSave
+        return sub.run()
+    }
+
+    // checkpoint hooks (face 2.1.3, registrados pela fatia ck via
+    // `checkpoint(d, db, dagName)`): o host-core NUNCA referencia kof.orm
+    // (gate ORM001 é estático — derrubaria o host inteiro no Native, mesmo
+    // mecanismo do CRON001 do schedule). Restaurado = succeeded (não
+    // re-executa); save recusado/lançando falha ALTO (R6).
+    KofWfDag ckHooks(String dagName, (String, String) -> Bool load, (String, String) -> Bool save) {
+        if (dagName == null || dagName == "") { throw "workflow: checkpoint() sem nome de dag" }
+        if (load == null || save == null) { throw "workflow: checkpoint() com hook nulo" }
+        if (ckLoad != null || ckSave != null) { throw "workflow: checkpoint já registrado nesta dag" }
+        dagNome = dagName
+        ckLoad = load
+        ckSave = save
+        return this
     }
 
     // fixpoint sequencial: roda o que está pronto, pula dependentes de
@@ -181,38 +339,77 @@ class KofWfDag {
                     bad.add(job.nome)
                     progressed = true
                 } else if (depsOk) {
-                    var corpoFn: () -> Bool = job.corpo
-                    var ok = false
-                    var erro = ""
-                    var tentativa = 0
-                    var maxT = 0
-                    if (job.retryCfg != null) { maxT = job.retryCfg.times }
-                    while (tentativa <= maxT) {
+                    var jaFeito = false
+                    if (ckLoad != null) {
+                        var lFn: (String, String) -> Bool = ckLoad
                         try {
-                            ok = corpoFn()
-                        } catch (String e) {
-                            ok = false
-                            erro = e
-                        }
-                        if (ok || tentativa == maxT) { break }
-                        tentativa = tentativa + 1
-                        erro = ""
-                        if (job.retryCfg != null) {
-                            var bFn: (Int) -> Int = job.retryCfg.backoff
-                            time.sleep(bFn(tentativa))
+                            jaFeito = lFn(dagNome, job.nome)
+                        } catch (String ce) {
+                            throw "workflow: checkpoint load falhou para '" + job.nome + "': " + ce
                         }
                     }
-                    if (tentativa > 0) { rep.retries.add(job.nome + ": tentativas=" + (tentativa + 1)) }
-                    if (erro != "") { rep.errors.add(job.nome + ": " + erro) }
-                    if (ok) {
+                    if (jaFeito) {
                         done.add(job.nome)
                         rep.succeeded.add(job.nome)
+                        progressed = true
                     } else {
-                        if (erro == "") { rep.errors.add(job.nome + ": false") }
-                        bad.add(job.nome)
-                        rep.failed.add(job.nome)
+                        var corpoFn: () -> Bool = job.corpo
+                        var ok = false
+                        var erro = ""
+                        var tentativa = 0
+                        var maxT = 0
+                        if (job.retryCfg != null) { maxT = job.retryCfg.times }
+                        while (tentativa <= maxT) {
+                            try {
+                                ok = corpoFn()
+                            } catch (String e) {
+                                ok = false
+                                erro = e
+                            }
+                            if (ok || tentativa == maxT) { break }
+                            tentativa = tentativa + 1
+                            erro = ""
+                            if (job.retryCfg != null) {
+                                var bFn: (Int) -> Int = job.retryCfg.backoff
+                                time.sleep(bFn(tentativa))
+                            }
+                        }
+                        if (tentativa > 0) { rep.retries.add(job.nome + ": tentativas=" + (tentativa + 1)) }
+                        if (erro != "") { rep.errors.add(job.nome + ": " + erro) }
+                        if (ok) {
+                            done.add(job.nome)
+                            rep.succeeded.add(job.nome)
+                            if (ckSave != null) {
+                                var sCk: (String, String) -> Bool = ckSave
+                                var okS = false
+                                try {
+                                    okS = sCk(dagNome, job.nome)
+                                } catch (String se) {
+                                    throw "workflow: checkpoint save falhou para '" + job.nome + "': " + se
+                                }
+                                if (!okS) { throw "workflow: checkpoint save recusou '" + job.nome + "'" }
+                            }
+                        } else {
+                            if (erro == "") { rep.errors.add(job.nome + ": false") }
+                            bad.add(job.nome)
+                            rep.failed.add(job.nome)
+                            var motivo = if (erro == "") { "false" } else { erro }
+                            rep.dead.add(job.nome + ": " + motivo)
+                            if (job.deadSink != null) {
+                                var sFn: (String, String) -> Bool = job.deadSink
+                                var okD = false
+                                try {
+                                    okD = sFn(job.nome, motivo)
+                                } catch (String de) {
+                                    throw "workflow: deadLetter sink falhou para '" + job.nome + "': " + de
+                                }
+                                if (!okD) {
+                                    throw "workflow: deadLetter sink recusou '" + job.nome + "'"
+                                }
+                            }
+                        }
+                        progressed = true
                     }
-                    progressed = true
                 } else {
                     keep.add(job)
                 }

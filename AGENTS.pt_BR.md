@@ -5,7 +5,7 @@
 Este é o guia **obrigatório** para qualquer agente de IA (ou humano) que
 escreva código Kof neste repositório. Leia antes de gerar qualquer `.kf`.
 
-**Versão:** 0.4.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + regra 9 **portão docs-first** para issues fora da filosofia (#449) (18/09) + **push mecânico via `scripts/sync-push.sh` + política de conflito "preserve os dois lados, refaça o seu em cima" (19/09)** + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09); branch ativa = `beta-0.4.0`)
+**Versão:** 0.4.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + regra 9 **portão docs-first** para issues fora da filosofia (#449) (18/09) + **push mecânico via `scripts/sync-push.sh` + política de conflito "preserve os dois lados, refaça o seu em cima" (19/09)** + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09) + regra 10 **KOF-primeiro, externo-depois** (`D-KOF-FIRST`, DECIDED 19/09); branch ativa = `beta-0.4.0`)
 
 > **PRIORIDADE Nº 1: QUALIDADE.** Antes de qualquer feature, leia o
 > **Portão de qualidade — "nenhum bug sobe"** (§ abaixo), **universal para
@@ -629,6 +629,30 @@ Bool isQuery(String op) {
    abstração Kof decidida pela mantenedora (regra 6), nunca a sintaxe
    importada. Os checkboxes dos templates fazem o humano assinar o mesmo
    portão (`feature_request.yml`, `bug_report.yml`).
+10. **KOF-primeiro, externo-depois — nenhum comportamento externo é oráculo
+    (ABSOLUTA — `D-KOF-FIRST`).** Nenhum comportamento de Java, Kotlin, C#,
+    Rust, Swift, JavaScript, Python, SQL, nem de qualquer outra língua,
+    framework, runtime, especificação, fórum, paper ou benchmark é, **por si
+    só**, expectativa de comportamento do Kof. Antes de abrir issue ou sugerir
+    fix: **(1)** prove que o reproducer é **Kof válido** (docs de
+    gramática/sintaxe, `training/`, `learn/` — o
+    `training/anti-patterns/fake-idioms.md` nomeia os suspeitos estrangeiros
+    de sempre); **(2)** identifique o **contrato Kof que governa**
+    (`DECISIONS.md` → docs normativos → testes de conformidade/golden → matriz
+    de paridade → implementação; nunca outra língua); **(3)** procure o
+    **idiom ou abstração Kof** que já expressa a intenção; **(4)** **meça** o
+    comportamento real nos alvos relevantes. Só existe **bug** quando o Kof
+    diverge do **próprio contrato**; só existe **gap** quando uma necessidade
+    legítima permanece sem solução Kof adequada. **A pesquisa externa começa
+    só depois dessa prova interna** — e contribui com princípios, invariantes,
+    trade-offs e bugs conhecidos, nunca com sintaxe, API ou semântica para
+    copiar automaticamente; toda importação é reexpressa pela filosofia do Kof
+    primeiro. Qualquer proposta que mude gramática, semântica, operadores,
+    modelo de tipos ou API congelada é **decisão de projeto da mantenedora**
+    (regra 6), não bugfix de agente — um diff pequeno no parser que aceita uma
+    forma nova é **feature nova de linguagem**, não conserto de parser.
+    Pipeline completo (Gates 0–9) e o bloco de evidência: `DECISIONS.md`
+    §`D-KOF-FIRST`.
 
 ---
 
@@ -1199,8 +1223,8 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > (`4408eb6`) + os outros guards de toolchain/BD externo + o guard de sysroot do §255 (`06e77e94`) → `2411/0/196-skip` (o flake §252 disparou 16/09 09:44, depois calou às 11:38, 15:09, 15:54 e 17/09 15:49 — ~1/4 das corridas completas)
 > (MEDIDO 17/09 ~15:49, run limpo no tip `f276e966`). Com qemu, **tudo executa** — os 84 cross rodam
 > verdes e o total fica igual com a contagem de skip caindo para o
-> resíduo externo de BD/ambiente `node`. Estado correto HOJE (18/09 ~05:20, run no tip `c56c74a7`,
- > job CI Build+Tests do tip `33363a3f`): **2687 = 2296+48+7+336, 0F / 0E / 178 skip (CI ubuntu executa o android APK; hosts sem SDK = 1 skip honest a mais)** (compiler 2292→2296 pelos testes fmt §305; cli 333→336 pelas fatias X10 5–7 `LspServerTest`; cli 308→313 por `CmdBuildClasspathTest` da #441 em `d14275f0`, 313→322 por `CmdDeployTest` das fatias 1–3 do X9 (`154ea1a4`/`bfdd452a`/`84c82139`); compiler 2216→2230 por rng (`KofRngTest` 8) + testes de corrida do §286; CI Build+Tests de `0f3c42d6` medido) — o flake
+> resíduo externo de BD/ambiente `node`. Estado correto HOJE (19/09 ~07:20, suíte reactor local +
+> re-run limpo do kof-compiler no tip `972086f3`, `.class` fantasma removido): **2786 = 2376+48+7+355, 0F / 0E / 209 skip (CI ubuntu executa o android APK; hosts sem SDK = 1 skip honest a mais)** (medido 19/09 ~09:20 no tip `ae0f6ab9` + o run reactor do 1.5.3-S2 neste commit — suíte completa 35:34 BUILD SUCCESS + docs: suíte reactor completa 32:36 + re-run limpo do kof-compiler após deletar o `.class` órfão de `DeclaredReturnLawE2ETest` (minha árvore pré-rebase vazou teste fantasma em `target/test-classes`; mvn sem `clean` executa cadáveres; rm do órfão + re-run = prova 2354/0F; lição: classes órfãs no target/ são fantasmas de testes deletados — o tally da suíte DEVE vir de um reactor cujo target/ casa com a fonte do tip) (compiler 2362→2376 pelo §336+§270 (`AsCastPrecedenceE2ETest` 6, `GenericArgAssignmentE2ETest` 8, 19/09); compiler 2292→2296 pelos testes fmt §305; compiler 2354→2362 pelo §306 (`NullableBoolTruthinessE2ETest` 8, `4abc68f0`); cli 349→355 por `DepsRegistryTest` (pull 1.5.3-S2); cli 333→336 pelas fatias X10 5–7 `LspServerTest`; cli 308→313 por `CmdBuildClasspathTest` da #441 em `d14275f0`, 313→322 por `CmdDeployTest` das fatias 1–3 do X9 (`154ea1a4`/`bfdd452a`/`84c82139`); compiler 2216→2230 por rng (`KofRngTest` 8) + testes de corrida do §286; CI Build+Tests de `0f3c42d6` medido) — o flake
 > §252, o resíduo cross §181 e o flake de poll §256(b) estão TODOS fechados no
 > código; os skips restantes são o gate opcional de asm e as guardas de toolchain.
 > **0 regressões / 0 erros** (2411 na época = 2058+38+7+308, 196 skip) — a corrida completa das 09:44 teve o flake INTERMITENTE
@@ -1246,7 +1270,7 @@ use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
 | `docs/development/future/` (plans) | **só plano sem código**: RAII TIER 2.4 (DD-STDLIB-01 FECHADO 13/09 → `docs/stdlib/`). A migração legado (decompiler/translator/IR/differential) foi p/ `docs/development/` 12/09, **voltou p/ `future/` 15/09 — DESPRIORIZADA pela mantenedora** (código fica em kof-cli; promoção exige decisão explícita dela) |
 | `docs/development/roadmap.md`, `docs/audits/roadmap-audit.md`, `docs/bugs-and-gaps/ecosystem-coverage.md` | Roadmaps & auditoria de cobertura (fila P0→P5) |
 | `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Gaps de spec (SG-00x — fila do maintainer completa, virou referência) + bugs abertos |
-| `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
+| `docs/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
 | `docs/development/DECISIONS.md` | **Decisões da mantenedora** (time/segurança/app-model/Spring — pasta `decision-pending/` extinta 13/09) |
 | `docs/development/roadmap.md` §23 | **Plano de implementação consolidado** (Tiers 0–12) — único plano ordenado; migração A–H ✅, universal **EM DESENVOLVIMENTO** 17/09 (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, R12 sobreposto — §D-UNIVERSAL) |
 

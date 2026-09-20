@@ -124,6 +124,24 @@ public final class BuiltinCallTyper {
             return new Type.ClassType(ctorClass.packageName(), ctorClass.name(), List.of());
         }
         if (mc.receiver() == null && ("println".equals(mc.methodName()) || "print".equals(mc.methodName()))) {
+            // #495 (maintainer 19/09: "empty println should not compile"): o
+            // builtin aceita exatamente UM valor. Zero argumentos passava pelo
+            // typer e caía no emissor genérico de método → NoSuchMethodError no
+            // runtime (R6 — diagnóstico no compile, nunca falha muda).
+            // Não sombreia (espelha a checagem do `sleep` abaixo e a varredura
+            // de FunctionDeclarationNode do próprio typer): função ou método de
+            // CLASSE do usuário chamado `println`/`print` continua legal — foi
+            // o que o hunt Q4 pegou (função top-level 0-args homônima virava
+            // falso-positivo; backward compat, freeze regra 2).
+            if (mc.arguments().isEmpty() && !hasUserZeroArgDeclaration(sa, scope, mc.methodName())
+                    && sa.diagnostics() != null) {
+                sa.diagnostics().error(mc.position() != null ? mc.position().file() : "",
+                        mc.position() != null ? mc.position().line() : 0,
+                        mc.position() != null ? mc.position().column() : 0, 0,
+                        mc.methodName() + "() needs an argument — println and print take the"
+                                + " value to print (println(x)); for a blank line use println(\"\")",
+                        "SEM096");
+            }
             for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
             return Type.PrimitiveType.VOID;
         }
@@ -198,87 +216,8 @@ public final class BuiltinCallTyper {
             SemExpressionTyper.inferType(sa, mc.arguments().get(0), scope);
             return KofIo.constructorType(mc.methodName());
         }
-        if (mc.receiver() == null && "Color".equals(mc.methodName())
-                && (mc.arguments().size() == 1 || mc.arguments().size() == 3)) {
-            for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
-            return KofUi.COLOR;
-        }
-        if (mc.receiver() == null && "Window".equals(mc.methodName()) && mc.arguments().size() == 1) {
-            SemExpressionTyper.inferType(sa, mc.arguments().get(0), scope);
-            return KofUi.WINDOW;
-        }
-        if (mc.receiver() == null && "Label".equals(mc.methodName()) && mc.arguments().size() == 1) {
-            SemExpressionTyper.inferType(sa, mc.arguments().get(0), scope);
-            return KofUi.LABEL;
-        }
-        if (mc.receiver() == null && "Button".equals(mc.methodName())
-                && (mc.arguments().size() == 1 || mc.arguments().size() == 2)) {
-            for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
-            return KofUi.BUTTON;
-        }
-        if (mc.receiver() == null && "Input".equals(mc.methodName()) && mc.arguments().size() == 1) {
-            SemExpressionTyper.inferType(sa, mc.arguments().get(0), scope);
-            return KofUi.INPUT;
-        }
-        if (mc.receiver() == null && ("Column".equals(mc.methodName()) || "Row".equals(mc.methodName()))
-                && mc.arguments().size() == 1) {
-            SemExpressionTyper.inferType(sa, mc.arguments().get(0), scope);
-            return "Column".equals(mc.methodName()) ? KofUi.COLUMN : KofUi.ROW;
-        }
-        if (mc.receiver() == null && "View".equals(mc.methodName()) && mc.arguments().size() == 1) {
-            SemExpressionTyper.inferType(sa, mc.arguments().get(0), scope);
-            return KofUi.VIEW;
-        }
-        if (mc.receiver() == null && KofUi.isConstructor(mc.methodName())
-                && !mc.arguments().isEmpty() && mc.arguments().size() <= 3) {
-            Type ct = KofUi.constructorType(mc.methodName());
-            if (KofUi.isLayoutType(ct) || KofUi.isStore(ct)) {
-                for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
-                return ct;
-            }
-        }
-        if (mc.receiver() == null && "Style".equals(mc.methodName()) && mc.arguments().size() == 4) {
-            for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
-            return KofUi.STYLE;
-        }
-        if (mc.receiver() == null && "Style".equals(mc.methodName()) && mc.arguments().size() == 1) {
-            // D-UI-STYLE (UI007): declarative form — parse/validate in the
-            // compiler (Q4) with a typed whitelist (Q3). SEM076 (unknown
-            // property) / SEM077 (malformed) / SEM078 (invalid value); the
-            // lowering re-parses only for the normalized text.
-            ExpressionNode arg = mc.arguments().get(0);
-            SemExpressionTyper.inferType(sa, arg, scope);
-            KofStyleParser.report(sa.diagnostics(), mc.position(),
-                    KofStyleParser.literalString(arg));
-            return KofUi.STYLE;
-        }
-        if (mc.receiver() == null && "Link".equals(mc.methodName()) && mc.arguments().size() == 2) {
-            for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
-            return KofUi.LINK;
-        }
-        if (mc.receiver() == null && "Image".equals(mc.methodName()) && mc.arguments().size() == 1) {
-            SemExpressionTyper.inferType(sa, mc.arguments().get(0), scope);
-            return KofUi.IMAGE;
-        }
-        if (mc.receiver() == null && "Canvas".equals(mc.methodName()) && mc.arguments().size() == 2) {
-            for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
-            return KofUi.CANVAS;
-        }
-        if (mc.receiver() == null && "Icon".equals(mc.methodName())
-                && (mc.arguments().size() == 1 || mc.arguments().size() == 2)) {
-            for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
-            return KofUi.ICON;
-        }
-        if (mc.receiver() == null && "Font".equals(mc.methodName())
-                && (mc.arguments().size() == 2 || mc.arguments().size() == 3)) {
-            for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
-            return KofUi.FONT;
-        }
-        if (mc.receiver() == null && "Component".equals(mc.methodName())
-                && mc.arguments().size() == 1) {
-            SemExpressionTyper.inferType(sa, mc.arguments().get(0), scope);
-            return KofUi.COMPONENT;
-        }
+        Type ui = BuiltinUiCallTyper.infer(sa, mc, scope);
+        if (ui != null) return ui;
         return null;
     }
 
@@ -289,6 +228,28 @@ public final class BuiltinCallTyper {
      * a API String — na ordem exata e com as guardas originais (alguns
      * branches só valem sem receiver).
      */
+
+    /** #495: o diagnostico de aridade so vale para o BUILTIN. Se uma
+     *  funcao/metodo do usuario com o MESMO nome existe (top-level com
+     *  qualquer aridade, ou membro da classe atual com 0 params), o call
+     *  site e dela — nao SEM096 (backward compat, freeze regra 2). Medido no
+     *  hunt Q4: `void println() { ... }` + `println()` virava falso-positivo. */
+    private static boolean hasUserZeroArgDeclaration(SemanticAnalyzer sa,
+            SymbolTable scope, String name) {
+        for (AstNode d : sa.unit().declarations()) {
+            if (d instanceof FunctionDeclarationNode fn && fn.name().equals(name)
+                    && TopLevelOverload.requiredArityOf(fn) == 0) {
+                return true;
+            }
+            if (d instanceof ExternalFunctionNode ext && ext.name().equals(name)) return true;
+        }
+        if (sa.currentClassName() != null && !sa.currentClassName().isEmpty()
+                && MemberResolver.resolveInHierarchy(sa, sa.currentClassName(), name) != null) {
+            return true;
+        }
+        return scope.resolve(name) != null;
+    }
+
     static Type inferTail(SemanticAnalyzer sa, MethodCallExpr mc, SymbolTable scope) {
         if (mc.receiver() == null) {
             SymbolTable.Symbol localSym = scope != null ? scope.resolve(mc.methodName()) : null;

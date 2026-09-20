@@ -145,7 +145,7 @@ void consumeExpressionOp(MethodCtx ctx, int[] pos, List<Object> stack,
         pos[0]++;
         switch (op) {
             case KofLoadLiteral lit -> {
-                stack.add(p.calls.literalExpr(lit));
+                stack.add(p.ops.literalExpr(lit));
             }
             case KofLoadLocal ll -> {
                 stack.add(new JsIr.JsIdentifier(localName(ctx, ll.index())));
@@ -181,11 +181,11 @@ void consumeExpressionOp(MethodCtx ctx, int[] pos, List<Object> stack,
             case KofBinary kb -> {
                 JsIr.JsExpression right = pop(stack);
                 JsIr.JsExpression left = pop(stack);
-                stack.add(p.calls.binaryExpr(kb, left, right));
+                stack.add(p.ops.binaryExpr(kb, left, right));
             }
             case KofUnary ku -> {
                 JsIr.JsExpression operand = pop(stack);
-                stack.add(p.calls.unaryExpr(ku, operand));
+                stack.add(p.ops.unaryExpr(ku, operand));
             }
             case KofNewObject no -> {
                 stack.add(new NewPending(JsTypeMapper.jsClassName(JsTypeMapper.ownerInternalName(no.type()))));

@@ -1,5 +1,6 @@
 package dev.kof.compiler;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -21,12 +22,14 @@ import static org.junit.jupiter.api.Assertions.*;
  * reiniciar individualmente, respeitar limite e encerrar controlado — nunca
  * árvore/heartbeat (DD-OTP-04/05 adiados no plano).
  *
- * Paridade honesta (regra 6 / R6): o Native **x86** executa o núcleo desde
- * §129 (DECISIONS §2, opção B: handler chain per-thread — o throw do worker
-  * marca o handle como excepcional e o await/selectAny relança). riscv/aarch
-  * bloqueiam no compile-time com OTP001 (clone cru sem TLS), nunca fallback
-  * silencioso. JVM (runJvm) + Script (interpret) + Native x86 (runNative) +
-  * **JS (runJs, desde 18/09 — §132 resolvido, OTP002 levantado)** executam o núcleo.
+ * Paridade honesta (regra 6 / R6): o Native executa o núcleo desde §129
+ * (DECISIONS §2, opção B: handler chain per-thread — o throw do worker marca o
+ * handle como excepcional e o await/selectAny relança). x86 usa TLS local-exec;
+ * riscv64/aarch64 usam a tabela por-TID `kof_exc_slots` (port 19/09 — o
+ * TLS-via-`tp` foi provado ABI-inseguro, ver known-bugs §129 adendo 19/09), logo
+ * o gate `OTP001` deixou de existir. JVM (runJvm) + Script (interpret) + Native
+ * x86/riscv/aarch (runNative/runCross) + **JS (runJs, desde 18/09 — §132
+ * resolvido, OTP002 levantado)** executam o núcleo.
  */
 class KofSupervisorE2ETest {
 
@@ -186,16 +189,21 @@ class KofSupervisorE2ETest {
         assertTrue(os.contains("parou vivos=0"), "stop encerra o laço único no Native: " + os);
     }
 
-    // ---- R6: riscv/aarch e JS bloqueiam no compile-time com codigo claro ----
+    // ---- §129 port 19/09: riscv64/aarch64 rodam o nucleo (tabela por-TID) ----
     @Test
     void crossGateOtp001(@TempDir Path tmp) throws IOException {
         for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
-            CompilationResult r = driver.compile(writeNamed(tmp, "X" + t + ".kf",
-                            "import kof.supervisor\nmain(){ supervisor(\"x\") }"),
-                    tmp.resolve("o" + t), t);
-            assertFalse(r.success(), t + " nao deve compilar supervisor");
-            assertTrue(r.diagnostics().getDiagnostics().stream().anyMatch(d -> "OTP001".equals(d.code())),
-                    t + ": esperava OTP001, foi: " + r.diagnostics().getDiagnostics());
+            String arch = t.nativeArch();
+            Assumptions.assumeTrue(NativeRiscv64E2ETest.hasToolchain(arch),
+                    "cross toolchain " + arch + " ausente — pulando");
+            Path out = tmp.resolve("o" + arch);
+            CompilationResult r = driver.compile(writeNamed(tmp, "X" + arch + ".kf", APP), out, t);
+            assertTrue(r.success(), t + " compila supervisor: " + r.diagnostics().getDiagnostics());
+            String os = NativeRiscv64E2ETest.runQemu(arch, out.resolve("Default/Main"));
+            assertTrue(os.contains("restarts=2"), t + " 2 reinicios: " + os);
+            assertTrue(os.contains("escaladas=2"), t + " escalate a cada falha: " + os);
+            assertTrue(os.contains("fabrica=3"), t + " factory NOVA por reinicio: " + os);
+            assertTrue(os.contains("parou vivos=0"), t + " stop encerra controlado: " + os);
         }
     }
 

@@ -79,10 +79,10 @@ public final class NativeAarch64Translator {
                 String src = (parts[2].equals("s") ? "s" : "d") + fs.substring(1);
                 return List.of(indent + "fcvtzs " + dst + ", " + src);
             }
-            if (parts.length == 3 && parts[1].equals("d") && (parts[2].equals("l") || parts[2].equals("w"))) {
-                String[] a = rest.split(","); // fcvt.d.l/w int->double (bug 82: faltava)
+            if (parts.length == 3 && (parts[1].equals("d") || parts[1].equals("s")) && (parts[2].equals("l") || parts[2].equals("w"))) {
+                String[] a = rest.split(","); // fcvt.<d|s>.<l|w> int->float (bug 82: faltava o d; 19/09: faltava o s)
                 String src = parts[2].equals("w") ? "w" + R.apply(a[1].trim()).substring(1) : R.apply(a[1].trim());
-                return List.of(indent + "scvtf d" + a[0].trim().substring(1) + ", " + src);
+                return List.of(indent + "scvtf " + parts[1] + a[0].trim().substring(1) + ", " + src);
 
             }
             if (parts.length == 3 && (parts[1].equals("s") || parts[1].equals("d")) && (parts[2].equals("s") || parts[2].equals("d"))) {
@@ -156,7 +156,7 @@ public final class NativeAarch64Translator {
         }
         if (mn.startsWith("fadd.") || mn.startsWith("fsub.") || mn.startsWith("fmul.") || mn.startsWith("fdiv.")) {
             String op = mn.substring(1, 4); // add, sub, mul, div (sem o '.')
-            String suffix = mn.substring(5); // .s ou .d
+            String suffix = mn.substring(4); // ".s" ou ".d" (o ponto entra na comparação)
             String[] args = rest.split(",");
             String fd = args[0].trim(), fs1 = args[1].trim(), fs2 = args[2].trim();
             String rFD = (suffix.equals(".s") ? "s" : "d") + fd.substring(1);
@@ -337,7 +337,7 @@ public final class NativeAarch64Translator {
             String rsW = rs.replace("x", "w");
             return List.of(indent + "sxtw " + rd + ", " + rsW);
         }
-        if (mn.equals("ld") || mn.equals("lw") || mn.equals("lbu") || mn.equals("lb") || mn.equals("lh")) {
+        if (mn.equals("ld") || mn.equals("lw") || mn.equals("lbu") || mn.equals("lb") || mn.equals("lh") || mn.equals("lhu")) {
             String[] args = rest.split(",");
             String rdRaw = args[0].trim();
             String mem = args[1].trim();
@@ -349,7 +349,7 @@ public final class NativeAarch64Translator {
             String base = R.apply(m.group(2));
             // sp como destino não é encodável como Rt -> usar temp
             if (rdRaw.equals("sp")) {
-                String op = mn.equals("ld") ? "ldr" : mn.equals("lw") ? "ldrsw" : mn.equals("lbu") ? "ldrb" : mn.equals("lb") ? "ldrsb" : "ldrsh";
+                String op = mn.equals("ld") ? "ldr" : mn.equals("lw") ? "ldrsw" : mn.equals("lbu") ? "ldrb" : mn.equals("lb") ? "ldrsb" : mn.equals("lhu") ? "ldrh" : "ldrsh";
                 String rtTmp = mn.equals("lbu") ? "w17" : "x17";
                 List<String> out = new ArrayList<>();
                 if (off >= -256 && off <= 255) {
@@ -368,6 +368,7 @@ public final class NativeAarch64Translator {
             else if (mn.equals("lw")) { rt = R.apply(rdRaw); op = "ldrsw"; }
             else if (mn.equals("lbu")) { rt = R.apply(rdRaw).replace("x", "w"); op = "ldrb"; }
             else if (mn.equals("lb")) { rt = R.apply(rdRaw); op = "ldrsb"; }
+            else if (mn.equals("lhu")) { rt = R.apply(rdRaw).replace("x", "w"); op = "ldrh"; }
             else { rt = R.apply(rdRaw); op = "ldrsh"; }
             if (off >= -256 && off <= 255) {
                 String addr = off == 0 ? "[" + base + "]" : "[" + base + ", #" + off + "]";

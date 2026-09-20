@@ -9,6 +9,49 @@ Releases**. Siga o passo a passo do **seu sistema** e pronto.
 > versão**: os comandos funcionam em qualquer release, atual ou futura.
 > Você não precisa saber qual é a versão para instalar.
 
+## Instalação automatizada (recomendado — Linux/macOS)
+
+O jeito mais rápido: rode o instalador direto do cURL disponibilizado
+pelo script de instalação contido no repositório (URL pinada na branch ativa
+`beta-0.4.0` — `main` dá 404 para este script até o merge do release; medido 19/09):
+
+```bash
+# instale uma versão específica com variáveis de ambiente
+# e sem argumentos
+curl -fsSL https://raw.githubusercontent.com/KofLang/Kof4j/beta-0.4.0/scripts/install.sh \
+  | KOF_INSTALL_VERSION=0.4.5-beta bash
+```
+
+ou
+
+```bash
+# instale uma versão específica com argumentos
+curl -fsSL https://raw.githubusercontent.com/KofLang/Kof4j/beta-0.4.0/scripts/install.sh \
+  | bash -s -- --version 0.4.5-beta --yes
+```
+
+O que ele faz automaticamente:
+
+1. Detecta sua plataforma (`linux-x86_64` / `macos-arm64`).
+2. Resolve a release mais recente para a sua plataforma (ou o `--version`
+   que você fixar).
+3. Baixa `kof-<version>-<platform>.tar.gz` e o `SHA256SUMS`.
+4. Verifica o checksum SHA-256.
+5. Extrai para `~/.local/share/kof/kof-<version>-<platform>` e mantém um
+   symlink `current`.
+6. Adiciona a linha absoluta do PATH
+   (`export PATH="<prefix>/current/bin:$PATH"`, onde `<prefix>` por padrão é
+   `~/.local/share/kof`) no seu `~/.zshrc` / `~/.bashrc` **de forma
+   idempotente** (nunca duplica a linha).
+7. Exibe o `kof version` como prova.
+
+Opções: `--prefix <dir>` (padrão `~/.local/share/kof`), `--yes` (sem
+perguntas), `--no-modify-shell` (só imprime a linha do PATH), `--uninstall`
+(remove a instalação e as linhas do PATH), `--help`.
+
+> O instalador baixa o **binário oficial da release** — não precisa de
+> Java/Maven. O Windows continua seguindo os passos manuais abaixo.
+
 ---
 
 ## 0. O que você precisa (e o que você NÃO precisa)

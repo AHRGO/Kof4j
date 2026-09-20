@@ -20,6 +20,7 @@ public final class JsMethodParser {
     final JsSwitchParser sw;
     final JsExpressionParser expr;
     final JsCallEmitter calls;
+    final JsOperatorEmitter ops;
     final JsCollectionOps coll;
     final JsRuntimeOps rt;
 
@@ -29,6 +30,7 @@ public final class JsMethodParser {
         this.sw = new JsSwitchParser(this);
         this.expr = new JsExpressionParser(this);
         this.calls = new JsCallEmitter(this);
+        this.ops = new JsOperatorEmitter(this);
         this.coll = new JsCollectionOps(this);
         this.rt = new JsRuntimeOps(this);
     }

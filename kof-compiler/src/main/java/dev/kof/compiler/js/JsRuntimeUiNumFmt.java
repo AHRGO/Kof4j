@@ -66,6 +66,7 @@ final class JsRuntimeUiNumFmt {
                 return lead + out;
             }
             export function kofNumFmt(v, isFloat) {
+                if (v === null || v === undefined) return "null";
                 return kofFpToString(Number(v), isFloat);
             }
             """;

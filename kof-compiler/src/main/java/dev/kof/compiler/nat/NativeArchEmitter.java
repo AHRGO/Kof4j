@@ -48,6 +48,13 @@ final class NativeArchEmitter {
 
         StringBuilder sb = new StringBuilder();
         sb.append(".option arch, rv64g\n");
+        // X7-2 (DWARF cross, fatia 1): a line table é arch-independente — o
+        // GAS do riscv/aarch aceita `.file`/`.loc` idênticos ao x86 e gera o
+        // .debug_line (gdb `break Main.kf:3` funciona). Os DIEs de subprogram
+        // (frame_base por ABI: s11/x29) ficam para a fatia 2.
+        if (nb.debugInfo) {
+            sb.append(".file 1 \"").append(nb.sourceFile).append("\"\n");
+        }
         sb.append(".section .data\n");
         // G-3 (NATIVE002 face 1): abertura do intervalo de raízes estáticas do
         // mark conservador riscv. Rótulo LOCAL (`.L`, fora do .symtab — a lição
@@ -230,6 +237,12 @@ final class NativeArchEmitter {
         }
         StringBuilder riscvSb = new StringBuilder();
         riscvSb.append(".option arch, rv64g\n");
+        // X7-2 (DWARF cross, fatia 1): idem emitRiscv — `.file`/`.loc` passam
+        // pelo tradutor aarch64 intactos (diretivas `.` são verbatim) e o GAS
+        // ARM gera o .debug_line.
+        if (nb.debugInfo) {
+            riscvSb.append(".file 1 \"").append(nb.sourceFile).append("\"\n");
+        }
         riscvSb.append(".section .data\n");
         // G-3: abertura do intervalo de raízes estáticas riscv (o aarch64 herda
         // via tradutor). Ver comentário em emitRiscv.

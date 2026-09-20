@@ -129,10 +129,18 @@ public class SymbolTable {
     record ParameterSymbol(String name, Type type, int index) implements Symbol {
     }
 
-    record TypeParameterSymbol(String name) implements Symbol {
+    // §355 (rio da erasure): o symbol guarda o BOUND declarado (`T: Animal`),
+    // entregue pelo parser na entrada "T: Animal". type() devolve o
+    // TypeVariable COM bound — é o que a erasure JVM central usa para apagar
+    // para o bound (e o member-access resolve em Animal, não em "?").
+    record TypeParameterSymbol(String name, Type bound) implements Symbol {
+        TypeParameterSymbol(String name) {
+            this(name, null);
+        }
+
         @Override
         public Type type() {
-            return new Type.TypeVariable(name);
+            return new Type.TypeVariable(name, bound);
         }
     }
 

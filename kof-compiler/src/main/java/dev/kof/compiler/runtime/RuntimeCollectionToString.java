@@ -6,17 +6,21 @@ package dev.kof.compiler.runtime;
  * <p>Antes o dispatch {@code valueOf} não achava vtable {@code toString} em
  * List/Map/Set (tipos de RUNTIME, sem vtable), não emitia nada e o ponteiro
  * cru caía em {@code kof_println_string} = lixo de ponteiro (R6). Aqui o
- * despachante passa, <b>em tempo de compilação</b>, a TAG do elemento
- * ({@code collectionTag}): 0=int/char/short/byte, 1=String, 2=Long, 3=Bool,
- * 4=Double, 5=Float, 6=desconhecido/record/aninhado → {@code "?"} (a recusa
- * honesta, cara do §104b-ii). SEM056 garante homogeneidade: UMA tag basta.
+ * despachante passa, <b>em tempo de compilação</b>, um PONTEIRO para o nó
+ * descritor do elemento ({@code NativePrintDescriptors}): a tag legada
+ * 0=int/char/short/byte, 1=String, 2=Long, 3=Bool, 4=Double, 5=Float,
+ * 6=desconhecido → {@code "?"} mais as extensões record/nested de 19/09
+ * (8=objeto com toString na vtable, 9=List/Set aninhada, 10=Map aninhado).
+ * SEM056 garante homogeneidade: um nó descreve todos os elementos.
  *
  * <p>Nenhum mutador compartilhado nem header de container é tocado (lição
  * §104b-ii): os helpers só LEEM o layout (List/Set: size@16, data@24; Map:
  * size@16, keys@24, vals@32). O acumulador e cada String temporária vivem no
  * <b>frame</b> (varredura conservadora da pilha no GC — {@code [rsp, rbp)}) e
  * nunca só em registrador, senão o {@code kof_alloc} de um concat subsequente
- * liberaria a String viva.
+ * liberaria a String viva. Os ponteiros de descritor são {@code .rodata}
+ * (não-GC). Elemento {@code null} de referência imprime {@code "null"}
+ * (oracle JVM medido no ArrayList.toString do JDK).
  */
 public final class RuntimeCollectionToString {
 
@@ -33,12 +37,13 @@ public final class RuntimeCollectionToString {
      * Constantes usadas pelos helpers. O rótulo é definido em `.rodata` e a
      * seção volta para `.text` no mesmo bloco (idioma do `RuntimeStringBase`,
      * `.Lkof_null_str`) — assim as referências `leaq .Lc2s_*(%rip)` abaixo, já
-     * dentro de `.text`, resolvem para o endereço na rodata.
+     * dentro de `.text`, resolvem para a endereço na rodata.
      */
     static void emitRodata(StringBuilder sb) {
         sb.append("""
             .section .rodata
             .Lc2s_qstr: .ascii "?"
+            .Lc2s_null: .ascii "null"
             .Lc2s_lbr:  .ascii "["
             .Lc2s_rbr:  .ascii "]"
             .Lc2s_lcur: .ascii "{"
@@ -50,10 +55,11 @@ public final class RuntimeCollectionToString {
     }
 
     /**
-     * kof_elem_to_string(rdi = &slot, esi = tag) -> rax String* (NULL só se a
-     * alocação falhar). Tag 0 lê os 4 bytes baixos do slot (int/char/short/
-     * byte); 1 é o ponteiro String; demais primitivos seguem o converter da
-     * RuntimeStringConv; 6 e qualquer tag fora = "?" (honesto).
+     * kof_elem_to_string(rdi = &slot, rsi = descritor) -> rax String* (NULL só
+     * se a alocação falhar). Tag 0 lê os 4 bytes baixos do slot (int/char/
+     * short/byte); 1 é o ponteiro String; demais primitivos seguem o
+     * converter da RuntimeStringConv; 6 e qualquer tag fora = "?" (honesto);
+     * 8 = vtable toString (off u16 no nó); 9/10 = recursão aninhada.
      */
     static void emitElemToString(StringBuilder sb) {
         sb.append("""
@@ -61,18 +67,27 @@ public final class RuntimeCollectionToString {
             .type kof_elem_to_string, @function
             kof_elem_to_string:
                 pushq %rbx
-                cmpb $1, %sil
+                movzbl (%rsi), %eax
+                cmpl $8, %eax
+                je .Lce_rec
+                cmpl $9, %eax
+                je .Lce_list
+                cmpl $10, %eax
+                je .Lce_map
+                cmpl $1, %eax
                 je .Lce_str
-                cmpb $2, %sil
+                cmpl $2, %eax
                 je .Lce_long
-                cmpb $3, %sil
+                cmpl $3, %eax
                 je .Lce_bool
-                cmpb $4, %sil
+                cmpl $4, %eax
                 je .Lce_double
-                cmpb $5, %sil
+                cmpl $5, %eax
                 je .Lce_float
-                cmpb $6, %sil
-                je .Lce_q
+                cmpl $7, %eax
+                je .Lce_boxed
+                cmpl $0, %eax
+                jne .Lce_q
             .Lce_int:
                 movl (%rdi), %edi
                 call kof_int_to_string
@@ -108,14 +123,70 @@ public final class RuntimeCollectionToString {
                 call kof_string_from_literal
                 popq %rbx
                 ret
+            .Lce_null:
+                leaq .Lc2s_null(%rip), %rdi
+                movl $4, %esi
+                call kof_string_from_literal
+                popq %rbx
+                ret
+            # tag 7 (§284-map): caixa numerica de slot de Map — box_to_string
+            # despacha por MAGIC+tag; nao-box passa cru (value já era ptr).
+            .Lce_boxed:
+                movq (%rdi), %rdi
+                call kof_box_to_string
+                popq %rbx
+                ret
+            # §107-nested (19/09): 8 = obj.toString() via vtable, MESMA forma
+            # do ramo generico do dispatch (8(obj) = base da vtable; entrada =
+            # *(base + off)); obj vivo fica enraizado no slot da pilha do
+            # chamador (varredura conservadora) e em %rbx (callee-saved,
+            # preservado pelo collect_now com o blanket-spill do G-6a).
+            .Lce_rec:
+                movq (%rdi), %rbx
+                testq %rbx, %rbx
+                jz .Lce_null
+                movq 8(%rbx), %rax
+                movzwl 1(%rsi), %ecx
+                addq %rcx, %rax
+                movq (%rax), %rax
+                movq %rbx, %rdi
+                call *%rax
+                popq %rbx
+                ret
+            # 9 = List/Set aninhada: slot carrega o ponteiro do container; o
+            # filho do no (rsi+1) descreve os elementos dele.
+            .Lce_list:
+                movq (%rdi), %rbx
+                testq %rbx, %rbx
+                jz .Lce_null
+                incq %rsi
+                movq %rbx, %rdi
+                call kof_list_to_string
+                popq %rbx
+                ret
+            # 10 = Map aninhada: no = [10, valOffLo, valOffHi, key..., val...];
+            # valOff mede do inicio do no ate o no do valor (3 + len(key)).
+            .Lce_map:
+                movq (%rdi), %rbx
+                testq %rbx, %rbx
+                jz .Lce_null
+                movq %rsi, %rcx
+                movzwl 1(%rsi), %eax
+                addq %rcx, %rax
+                leaq 3(%rcx), %rsi
+                movq %rax, %rdx
+                movq %rbx, %rdi
+                call kof_map_to_string
+                popq %rbx
+                ret
             """);
     }
 
     /**
-     * kof_list_to_string / kof_set_to_string (rdi = container, esi = tag do
-     * elem) -> rax String* "[e1, e2, ...]". Set É um List no runtime
-     * (kof_set_new = kof_list_new, mesma forma 100), então os dois são o MESMO
-     * código: um galho `.globl` a mais aponta para a mesma etiqueta.
+     * kof_list_to_string / kof_set_to_string (rdi = container, rsi = nó
+     * descritor do elem) -> rax String* "[e1, e2, ...]". Set É um List no
+     * runtime (kof_set_new = kof_list_new, mesma forma 100), então os dois são
+     * o MESMO código: um galho `.globl` a mais aponta para a mesma etiqueta.
      */
     static void emitListToString(StringBuilder sb) {
         sb.append("""
@@ -135,7 +206,7 @@ public final class RuntimeCollectionToString {
                 subq $64, %rsp              # rbp; os pushq de CALL caem ABAIXO
                                             # dos locais (não os pisa)
                 movq %rdi, -32(%rbp)        # container (raiz p/ GC)
-                movl %esi, -40(%rbp)        # tag do elem
+                movq %rsi, -40(%rbp)        # descritor do elem (.rodata)
                 movl 16(%rdi), %r12d        # size
                 movq 24(%rdi), %r13         # data
                 xorl %ebx, %ebx             # i
@@ -148,7 +219,8 @@ public final class RuntimeCollectionToString {
             .Lcl_loop:
                 movslq %ebx, %rax
                 movq (%r13,%rax,8), %rax
-                movq %rax, -24(%rbp)        # slot do elem (raiz p/ tag 1)
+                movq %rax, -24(%rbp)        # slot do elem (raiz p/ tag 1 e p/
+                                            # as recursivo-record 8/9/10)
                 testl %ebx, %ebx
                 jnz .Lcl_sep2
                 leaq .Lc2s_lbr(%rip), %rdi
@@ -161,7 +233,7 @@ public final class RuntimeCollectionToString {
                 call kof_string_from_literal
                 movq %rax, -16(%rbp)        # sep (raiz p/ alloc do elem)
                 leaq -24(%rbp), %rdi
-                movl -40(%rbp), %esi
+                movq -40(%rbp), %rsi
                 call kof_elem_to_string
                 movq %rax, %rsi
                 movq -16(%rbp), %rdi
@@ -192,7 +264,7 @@ public final class RuntimeCollectionToString {
     }
 
     /**
-     * kof_map_to_string (rdi = map, esi = tag da chave, edx = tag do valor)
+     * kof_map_to_string (rdi = map, rsi = nó da chave, rdx = nó do valor)
      * -> rax String* "{k=v, k=v}". Ordem de ARMAZENAMENTO (inserção) — o
      * runtime usa vetores lineares, não buckets de hash do HashMap do JVM
      * (divergência de arquitetura registrada no §107, não lixo). A String
@@ -212,8 +284,8 @@ public final class RuntimeCollectionToString {
                 movq %rsp, %rbp
                 subq $80, %rsp
                 movq %rdi, -48(%rbp)        # container (raiz)
-                movl %esi, -56(%rbp)        # tag chave
-                movl %edx, -64(%rbp)        # tag valor
+                movq %rsi, -56(%rbp)        # descritor da chave (.rodata)
+                movq %rdx, -64(%rbp)        # descritor do valor (.rodata)
                 movl 16(%rdi), %r12d        # size
                 movq 24(%rdi), %r13         # keys
                 movq 32(%rdi), %r14         # vals
@@ -242,7 +314,7 @@ public final class RuntimeCollectionToString {
                 call kof_string_from_literal
                 movq %rax, -16(%rbp)        # sep (raiz)
                 leaq -24(%rbp), %rdi
-                movl -56(%rbp), %esi
+                movq -56(%rbp), %rsi
                 call kof_elem_to_string
                 movq %rax, -40(%rbp)        # keyStr (raiz)
                 leaq .Lc2s_eq(%rip), %rdi
@@ -253,7 +325,7 @@ public final class RuntimeCollectionToString {
                 call kof_string_concat      # keyStr + '='
                 movq %rax, -40(%rbp)        # 'chave=' (raiz p/ alloc do valor)
                 leaq -32(%rbp), %rdi
-                movl -64(%rbp), %esi
+                movq -64(%rbp), %rsi
                 call kof_elem_to_string
                 movq %rax, %rsi
                 movq -40(%rbp), %rdi

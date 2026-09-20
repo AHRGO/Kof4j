@@ -79,6 +79,14 @@ void handleListOp(MethodCtx ctx, List<Object> stack,
             case "kof_list_is_empty" -> "kofListIsEmpty";
             case "kof_list_remove" -> "kofListRemove";
             case "kof_list_clear" -> "kofListClear";
+            // #382 — indexOf/lastIndexOf/addAll/subList/sort (arg tag extra
+            // do lowerer é ignorado aqui: kofValEq/kofNaturalCmp decidem por
+            // tipo de valor, como no JVM via equals).
+            case "kof_list_index_of" -> "kofListIndexOf";
+            case "kof_list_last_index_of" -> "kofListLastIndexOf";
+            case "kof_list_add_all" -> "kofListAddAll";
+            case "kof_list_sub_list" -> "kofListSubList";
+            case "kof_list_sort" -> "kofListSort";
             default -> throw new IllegalStateException("KofJS: unknown list op " + kc.methodName());
         };
         p.lc.registerRuntime(fn);
@@ -128,6 +136,10 @@ void handleMapOp(MethodCtx ctx, List<Object> stack,
             case "kof_map_is_empty" -> "kofMapIsEmpty";
             case "kof_map_keys" -> "kofMapKeys";
             case "kof_map_values" -> "kofMapValues";
+            // #386 — containsValue/putIfAbsent (kofMapPutIfAbsent devolve o
+            // anterior OU null; Nullable(V) → sem o `?? default` abaixo).
+            case "kof_map_contains_value" -> "kofMapContainsValue";
+            case "kof_map_put_if_absent" -> "kofMapPutIfAbsent";
             default -> throw new IllegalStateException("KofJS: unknown map op " + kc.methodName());
         };
         p.lc.registerRuntime(fn);

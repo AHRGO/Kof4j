@@ -266,8 +266,8 @@ class KofRandomTest {
         assertTrue(result.success(), target + " compile failed: "
                 + result.diagnostics().getDiagnostics());
         Path bin = outDir.resolve("Default/Main");
-        Process p = new ProcessBuilder(target == Target.NATIVE_RISCV64 ? "qemu-riscv64" : "qemu-aarch64",
-                bin.toString()).redirectErrorStream(true).start();
+        Process p = NativeRiscv64E2ETest.qemu(target == Target.NATIVE_RISCV64 ? "riscv64" : "aarch64",
+                bin).redirectErrorStream(true).start();
         String output = new String(p.getInputStream().readAllBytes(),
                 java.nio.charset.StandardCharsets.UTF_8).trim();
         int ec = p.waitFor();

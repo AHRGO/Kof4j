@@ -166,6 +166,13 @@ public final class ExpressionInstanceCallLowerer {
     // narrowing de null-safety (`if (x != null) { x.substring(...) }`):
     // dispatch pelo inner — antes emitia `"".substring` (owner "" inválido)
     if (recvType instanceof Type.NullableType nt) recvType = nt.inner();
+    // #375/§355 (rio da erasure): method call em type-variable COM bound
+    // (`item.shout()` com `item: T: Animal`) — dispatch pelo BOUND, como
+    // javac pós-erasure; sem bound o dono sai por erasure no emit (§355,
+    // JvmOpEmitter → Object). Sem isto o owner saía `""` (ClassFormatError).
+    if (recvType instanceof Type.TypeVariable tvb && tvb.bound() != null) {
+        recvType = tvb.bound();
+    }
     if (KofUi.isUiType(recvType)) {
         localIdx = driver.emitUiInstance(recvType, mc, ops, owner, localIdx, locals);
         return localIdx;
@@ -210,7 +217,12 @@ public final class ExpressionInstanceCallLowerer {
         return localIdx;
     }
     if (BuiltinTypes.isList(recvType) || BuiltinTypes.isChannel(recvType)
-            || BuiltinTypes.isMap(recvType) || BuiltinTypes.isSet(recvType)) {
+            || BuiltinTypes.isMap(recvType) || BuiltinTypes.isSet(recvType)
+            || KofProcess.isHandle(recvType)) {
+        // KofProcess.isHandle: F10 handle ops (write/readLine/exitCode/kill/
+        // alive) live in CollectionCallLowerer's isHandle branch — without this
+        // routing they leaked to a raw invokevirtual java.lang.Long.readLine
+        // (NoSuchMethodError at run; never executed until ProcessSpawnE2ETest).
         int handled = CollectionCallLowerer.lower(driver, recvType, mc, ops, owner, localIdx, locals);
         if (handled >= 0) return handled;
     }

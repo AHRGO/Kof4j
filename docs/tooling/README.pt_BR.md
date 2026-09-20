@@ -69,6 +69,7 @@ O baseline de API Java para todo o tooling é **Java 21**:
 | Test runner | ✅ | `kof test <file.kf\|dir>` (PASS/FAIL por exit code) |
 | Diagnóstico do ambiente | ✅ | `kof info [--json]` |
 | Formatter | ✅ | `kof fmt` |
+| Workflow runner | ✅ | `kof workflow <list\|run> <file.kf>` (pipelines como código Kof: `pipeline(): KofWfDag`; `--job`/`--dry-run`/`--json`; JVM-first) |
 
 
 ---

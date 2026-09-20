@@ -107,6 +107,9 @@ public final class NativeRiscvAsm {
                 // done/poll/cancel/cancelled/selectAny/awaitTimeout (port
                 // RuntimeConcurrency; cancel por TID real via gettid+clone ctid).
                 .append(NativeRiscvAsmRtB48.RISCV_RUNTIME_ASM_B_48)
+                // §284 (18/09): box de erasure — kof_box_*/unbox/box_to_string
+                // (port RuntimeErasureBox x86; aarch64 herda via tradutor).
+                .append(NativeRiscvAsmRtB49.RISCV_RUNTIME_ASM_B_49)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();
@@ -115,6 +118,7 @@ public final class NativeRiscvAsm {
                 .append(NativeRiscvAsmMapset0.RISCV_MAPSET_ASM_0)
                 .append(NativeRiscvAsmMapset1.RISCV_MAPSET_ASM_1)
                 .append(NativeRiscvAsmMapset2.RISCV_MAPSET_ASM_2)
+                .append(NativeRiscvAsmLookups0.RISCV_LOOKUPS_ASM_0)
                 .toString();
     }
 }

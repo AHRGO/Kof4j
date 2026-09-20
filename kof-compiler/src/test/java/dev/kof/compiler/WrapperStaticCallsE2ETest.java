@@ -54,6 +54,20 @@ class WrapperStaticCallsE2ETest {
         return out.toString().trim();
     }
 
+    private String runNativeX86(Path outDir) throws IOException {
+        try {
+            ProcessBuilder pb = new ProcessBuilder(outDir.resolve("Default/Main").toString());
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n").trim();
+            assertEquals(0, p.waitFor(), "Native x86 exit code, output: " + output);
+            return output;
+        } catch (InterruptedException e) {
+            throw new IOException("Interrupted", e);
+        }
+    }
+
     private void runBoth(String source, String expected, Path tempDir, String name) throws IOException {
         Path src = tempDir.resolve(name + ".kf");
         Files.writeString(src, source);
@@ -112,6 +126,57 @@ class WrapperStaticCallsE2ETest {
                     println(Bool.parseBoolean("true"))
                 }
                 """, "true\nfalse\n43\n200\n4.0\ntrue", tempDir, "wrap-is-parse");
+    }
+
+    // §235 NATIVE face: the wrapper statics must compile+run on native (before:
+    // `undefined reference to java_lang_Integer_parseInt [COMP001]`). The golden
+    // is the JVM oracle of this exact program (`wrapperStaticsJvmOracle`).
+    // Covers the Q3 edges: NaN/inf/finite both ways, parse* happy path, and
+    // parseBoolean case-insensitivity (no trim — JVM contract).
+    static final String WRAPPER_STATICS_SRC = """
+            main() {
+                var nan: Double = 0.0 / 0.0
+                var inf: Double = 1.0 / 0.0
+                println(Double.isNaN(nan))
+                println(Double.isNaN(1.5))
+                println(Double.isInfinite(inf))
+                println(Double.isInfinite(1.5))
+                println(Double.isFinite(1.5))
+                println(Double.isFinite(inf))
+                println(Double.isFinite(nan))
+                println(Int.parseInt("42") + 1)
+                println(Long.parseLong("100") * 2L)
+                println(Double.parseDouble("3.5") + 0.5)
+                println(Bool.parseBoolean("true"))
+                println(Bool.parseBoolean("TRUE"))
+                println(Bool.parseBoolean("false"))
+                var fnan: Float = Float.parseFloat("NaN")
+                println(Float.isNaN(fnan))
+                println(Float.isFinite(fnan))
+                println(Float.parseFloat("2.5"))
+            }
+            """;
+    static final String WRAPPER_STATICS_GOLDEN =
+            "true\nfalse\ntrue\nfalse\ntrue\nfalse\nfalse\n43\n200\n4.0\ntrue\ntrue\nfalse\ntrue\nfalse\n2.5";
+
+    @Test
+    void wrapperStaticsJvmOracle(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("wrap-oracle.kf");
+        Files.writeString(src, WRAPPER_STATICS_SRC);
+        Path out = tempDir.resolve("wrap-oracle-out");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals(WRAPPER_STATICS_GOLDEN, runJvm(out), "JVM oracle mismatch");
+    }
+
+    @Test
+    void wrapperStaticsNativeX86(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("wrap-native.kf");
+        Files.writeString(src, WRAPPER_STATICS_SRC);
+        Path out = tempDir.resolve("wrap-native-out");
+        CompilationResult r = driver.compile(src, out, Target.NATIVE);
+        assertTrue(r.success(), "Native compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals(WRAPPER_STATICS_GOLDEN, runNativeX86(out), "Native x86 output mismatch");
     }
 
     // §264 (JS): Double/Float print no contrato do JDK — inteiro com ponto

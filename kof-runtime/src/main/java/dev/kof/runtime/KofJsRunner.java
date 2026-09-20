@@ -179,43 +179,16 @@ public final class KofJsRunner {
             }
             return 0;
         });
-        platform.put("processRun", (ProxyExecutable) args -> {
-            try {
-                String program = args[0].asString();
-                java.util.List<String> cmd = new java.util.ArrayList<>();
-                cmd.add(program);
-                if (args.length > 1 && !args[1].isNull() && args[1].hasArrayElements()) {
-                    long n = args[1].getArraySize();
-                    for (long i = 0; i < n; i++) {
-                        Value v = args[1].getArrayElement(i);
-                        cmd.add(v.isString() ? v.asString() : String.valueOf(v));
-                    }
-                }
-                Process p = new ProcessBuilder(cmd).redirectErrorStream(false).start();
-                String outText = new String(p.getInputStream().readAllBytes(),
-                        java.nio.charset.StandardCharsets.UTF_8);
-                String errText = new String(p.getErrorStream().readAllBytes(),
-                        java.nio.charset.StandardCharsets.UTF_8);
-                int code = p.waitFor();
-                java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
-                result.put("stdout", outText);
-                result.put("stderr", errText);
-                result.put("exitCode", code);
-                return result;
-            } catch (Exception e) {
-                java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
-                result.put("stdout", "");
-                result.put("stderr", e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
-                result.put("exitCode", -1);
-                return result;
-            }
-        });
+        KofJsProcessBridge.install(platform);
         // §239 (JS): String.format — ponte p/ o host java.lang.String.format
         // (paridade byte-a-byte). Os varargs chegam como array JS (o lowering
         // compart. empacota em Object[]); reconstruímos o boxed type de cada
         // elemento p/ o Formatter do JDK. Limitaçao herdada do identity-boxing
         // JS: double integral (30.0) vira Integer -> "30" (nao "30.0"); nao é
         // testado e nao regressa face anterior (antes era ICE COMP002).
+        // #466: Locale.ROOT na ponte tambem — sem ele o runner (host pt_BR)
+        // divergia do lowering JVM (ROOT) e do browser (toFixed), quebrando
+        // a paridade byte-a-byte que a ponte promete (§239).
         platform.put("stringFormat", (ProxyExecutable) args -> {
             String fmt = args[0].asString();
             java.util.List<Object> list = new java.util.ArrayList<>();
@@ -228,7 +201,7 @@ public final class KofJsRunner {
                     list.add(toFormatArg(args[1].getArrayElement(i)));
                 }
             }
-            return String.format(fmt, list.toArray());
+            return String.format(java.util.Locale.ROOT, fmt, list.toArray());
         });
         platform.put("args", (ProxyExecutable) args -> java.util.Arrays.asList(programArgs));
         platform.put("readLine", (ProxyExecutable) args -> readLine(in));

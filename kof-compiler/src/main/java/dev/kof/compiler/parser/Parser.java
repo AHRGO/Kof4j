@@ -146,6 +146,12 @@ public class Parser {
                     || (ctx.check(TokenType.LBRACKET) && ctx.checkNext(TokenType.RBRACKET))) {
                 if (ctx.check(TokenType.QUESTION)) {
                     ctx.advance();
+                    // D-TROOL (19/09): `Bool?` no retorno morre com SEM095;
+                    // o tres-estado e `Troolean` (DECISIONS.md).
+                    if (TypeParser.isBoolBase(returnType)) {
+                        ctx.error("'Bool' has two values; for true/false/unknown use "
+                                + "'Troolean' (DECISIONS.md D-TROOL)", "SEM095");
+                    }
                     returnType += "?";
                 } else {
                     ctx.advance();

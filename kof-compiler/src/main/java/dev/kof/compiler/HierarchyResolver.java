@@ -30,12 +30,67 @@ public final class HierarchyResolver {
         SymbolTable.ClassSymbol cs = semanticAnalyzer.getClass(simpleName);
         if (cs == null) return null;
         String superName = cs.superClass();
-        if (superName == null || superName.isEmpty() || "Object".equals(superName)) return null;
-        if (!superName.contains("/")) {
-            SymbolTable.ClassSymbol superCs = semanticAnalyzer.getClass(superName);
-            if (superCs != null) return superCs.internalName();
+        if (superName == null || superName.isEmpty()) return null;
+        String bare = stripGenerics(superName);
+        String simple = simpleOfStored(bare);
+        if (simple.isEmpty() || "Object".equals(simple)) return null;
+        SymbolTable.ClassSymbol superCs = semanticAnalyzer.getClass(simple);
+        if (superCs != null) return superCs.internalName();
+        return bare.replace('.', '/');
+    }
+
+    /**
+     * Nome como ARMAZENADO na symbol table de super/interface: o
+     * SymbolTableBuilder qualifica via import explícito ("foo.bar.Shape"),
+     * wildcards deixam o nome simples ("Shape"), genéricos chegam grudados
+     * ("Box<T>") e classes externas vêm pontuadas ("android.app.Activity").
+     * O registro (knownClasses) é CHAVEADO pelo nome simples — qualquer BFS
+     * pela hierarquia precisa normalizar antes de consultar. Simples
+     * ("foo.bar.Shape<T>" → "Shape"); null só para null.
+     */
+    static String simpleOfStored(String stored) {
+        if (stored == null) return null;
+        String bare = stripGenerics(stored);
+        int cut = Math.max(bare.lastIndexOf('.'), bare.lastIndexOf('/'));
+        return cut >= 0 ? bare.substring(cut + 1) : bare;
+    }
+
+    /**
+     * Internal name canônico de um nome de super/interface armazenado:
+     * registro local primeiro (módulo mesclado é a verdade — §308), senão a
+     * forma pontuada→barras do próprio nome. Null para null/`Object`.
+     */
+    static String canonicalSuperInternal(String stored, SemanticAnalyzer sa) {
+        if (stored == null || stored.isEmpty()) return null;
+        String bare = stripGenerics(stored);
+        String simple = simpleOfStored(bare);
+        if (simple.isEmpty() || "Object".equals(simple)) return null;
+        if (sa != null) {
+            SymbolTable.ClassSymbol cs = sa.getClass(simple);
+            if (cs != null) return cs.internalName();
         }
-        return superName;
+        return bare.replace('.', '/');
+    }
+
+    /** Registry-first: internal name canônico da SUPERCLASSE declarada da
+     *  classe simples `simpleName` (null se ausente/Object/nada conhecido). */
+    static String canonicalSuperOf(SemanticAnalyzer sa, String simpleName) {
+        if (sa == null || simpleName == null) return null;
+        SymbolTable.ClassSymbol cs = sa.getClass(simpleName);
+        return cs == null ? null : canonicalSuperInternal(cs.superClass(), sa);
+    }
+
+    /**
+     * Tipo da SUPERCLASSE da classe `internalName` (registry-first). Null
+     * quando não há superclasse conhecida (Object / ausente). Fonte única do
+     * typing de `super` (READ, WRITE e análise semântica) — sem ela o
+     * receiver `super` chegava UNKNOWN ao lowerField e o valor do campo
+     * herdado era vertido num temporário Object.
+     */
+    static Type superTypeOf(SemanticAnalyzer sa, String internalName) {
+        String sup = findSuperClass(internalName, sa);
+        if (sup == null) return null;
+        return CompilerTypes.ownerTypeFromInternal(sup.replace('.', '/'), sa);
     }
 
     /**
@@ -103,9 +158,9 @@ public final class HierarchyResolver {
         SymbolTable.ClassSymbol start = sa.getClass(from);
         if (start == null) return null;
         if (start.superClass() != null && !"Object".equals(start.superClass())) {
-            queue.add(stripGenerics(start.superClass()));
+            queue.add(simpleOfStored(start.superClass()));
         }
-        for (String iface : start.interfaces()) queue.add(stripGenerics(iface));
+        for (String iface : start.interfaces()) queue.add(simpleOfStored(iface));
         int hops = 0;
         while (!queue.isEmpty() && hops++ < 64) {
             String cur = queue.poll();
@@ -115,9 +170,9 @@ public final class HierarchyResolver {
             SymbolTable.ClassSymbol cs = sa.getClass(cur);
             if (cs != null) {
                 if (cs.superClass() != null && !"Object".equals(cs.superClass())) {
-                    queue.add(stripGenerics(cs.superClass()));
+                    queue.add(simpleOfStored(cs.superClass()));
                 }
-                for (String iface : cs.interfaces()) queue.add(stripGenerics(iface));
+                for (String iface : cs.interfaces()) queue.add(simpleOfStored(iface));
             }
         }
         return null;

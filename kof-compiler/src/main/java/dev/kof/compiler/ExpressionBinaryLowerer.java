@@ -11,57 +11,6 @@ public final class ExpressionBinaryLowerer {
     private ExpressionBinaryLowerer() {}
 
     /** Unknown OU Nullable(Unknown): o valor pode ser null (get sem pin). */
-    private static boolean isMaybeNullType(Type t) {
-        return t instanceof Type.UnknownType
-                || (t instanceof Type.NullableType nt && nt.inner() instanceof Type.UnknownType);
-    }
-
-    /** Int (ou Nullable(Int)) — alvo de cast que handle de UI/mídia satisfaz. */
-    private static boolean isIntPrimitive(Type t) {
-        if (t instanceof Type.NullableType nt) return isIntPrimitive(nt.inner());
-        return t instanceof Type.PrimitiveType pt
-                && ("int".equals(pt.name()) || "Int".equals(pt.name()));
-    }
-
-    /** §262(b): `Point?` (Nullable(record)) É record p/ o caminho de conteúdo. */
-    static boolean isRecordLike(Type t, CompilerDriver driver) {
-        Type u = t instanceof Type.NullableType nt ? nt.inner() : t;
-        return CompilerTypes.isRecordType(u, driver.currentUnit, driver.semanticAnalyzer);
-    }
-
-    /**
-     * D-NULL-INTENT (I6): {@code Nullable(primitivo)} GENUÍNO — física de
-     * referência boxed agora, então precisa do MESMO caminho null-safe de
-     * conteúdo que record usa (I6: igualdade lifted, nunca identidade do
-     * wrapper — cache do {@code Integer} faria dois {@code 10000} distintos
-     * darem {@code false} num {@code if_acmp} cru).
-     */
-    private static boolean isNullablePrimLike(Type t) {
-        return t instanceof Type.NullableType nt && nt.inner() instanceof Type.PrimitiveType pt
-                && !Type.isVoid(pt);
-    }
-
-    /**
-     * D-NULL-INTENT (I6, caso misto): {@code Nullable(primitivo)} genuíno OU
-     * primitivo CRU (bare, não-nullable) — cobre {@code m.get("a") == 1}
-     * (esquerda boxed, direita literal cru). O lado bare nunca é null, então
-     * o dance null-safe do {@link RecordEqualityLowerer} continua correto
-     * (equivale a comparar por valor sem nunca dar falso-negativo/NPE).
-     */
-    private static boolean isNullablePrimOrBarePrim(Type t) {
-        return isNullablePrimLike(t) || (t instanceof Type.PrimitiveType pt && !Type.isVoid(pt));
-    }
-
-    /** §167: bitwise inteiro `& | ^` (o `&&`/`||` lógico já saiu antes). */
-    private static boolean isBitwiseOp(String op) {
-        return "&".equals(op) || "|".equals(op) || "^".equals(op);
-    }
-
-    /** §167: shift inteiro `<< >> >>>`. */
-    private static boolean isShiftOp(String op) {
-        return "<<".equals(op) || ">>".equals(op) || ">>>".equals(op);
-    }
-
     /**
      * Stringifica um operando de concatenação. D-PRINT (#168, manterdora
      * 15/09): um `Char` vira o CARÁTER ("A"), nunca o code point ("65") — a
@@ -70,13 +19,12 @@ public final class ExpressionBinaryLowerer {
      * pilha, sem boxear; nos 4 alvos o dispatch `valueOf(C)` é o mesmo de
      * `String.valueOf(c)` (§27). Os demais primitivos mantêm o box.
      */
-    private static void emitOperandToString(CompilerDriver driver, List<KofOperation> ops, Type type) {
+    static void emitOperandToString(CompilerDriver driver, List<KofOperation> ops, Type type) {
         Type check = type instanceof Type.NullableType nt ? nt.inner() : type;
         boolean isChar = check instanceof Type.PrimitiveType p
                 && "char".equals(Type.canonicalPrimitiveName(p.name()));
         if (isChar) {
-            ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
-                    List.of(Type.PrimitiveType.CHAR), BuiltinTypes.STRING, KofCallKind.STATIC));
+            PrimitiveStringLowering.emitChar(driver, ops, type);
             return;
         }
         // D-NULL-INTENT (#278): `TypeMetrics.isPrimitiveType` desembrulha
@@ -86,10 +34,7 @@ public final class ExpressionBinaryLowerer {
         // segundo caso chama Integer.valueOf(int) sobre uma REFERÊNCIA
         // (VerifyError JVM; NPE silenciosa no interpretador — achado em
         // `"a" + ni()` com `Int? ni() { return null }`). Native mantém o
-        // desembrulho antigo (fase 2 do rollout, representação inalterada).
-        boolean stringified = !Type.isString(type) && (driver.target.isNative()
-                ? TypeMetrics.isPrimitiveType(type)
-                : type instanceof Type.PrimitiveType pt3 && !Type.isVoid(pt3));
+        boolean stringified = !Type.isString(type) && (type instanceof Type.PrimitiveType pt3 && !Type.isVoid(pt3));
         if (driver.target == Target.JS
                 && TypeMetrics.isFloatingPoint(
                         type instanceof Type.NullableType ntp ? ntp.inner() : type)) {
@@ -109,19 +54,48 @@ public final class ExpressionBinaryLowerer {
 
     static int lower(CompilerDriver driver, BinaryExpr bin, List<KofOperation> ops,
                         String owner, int localIdx, List<IRLocalVariable> locals) {
+        // D-TROOL (19/09): Kleene antes de qualquer caminho de `&&`/`||` — com
+        // um `Troolean` num dos lados o resultado e tres-estado (caixa do
+        // §295/§306) nos 4 alvos, incluindo o JS (a exclusao de alvo aqui nao
+        // se aplica ao desugar; ela protege o IF_ICMP cru do caminho antigo).
+        if ("&&".equals(bin.operator()) || "||".equals(bin.operator())) {
+            int kl = CompilerComparisons.lowerTrooleanAndOr(driver, bin, ops, owner, localIdx, locals);
+            if (kl >= 0) return kl;
+        }
 if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
-    localIdx = ExpressionLowerer.emitExpression(driver, bin.left(), ops, owner, localIdx, locals);
     Type targetType = Type.UnknownType.UNKNOWN;
     if (bin.right() instanceof IdentifierExpr ie) {
         // toType resolve imports ("View" + import → android.view.View)
         targetType = CompilerTypes.toType(ie.name(), driver.currentUnit);
     }
+    // §356/#295 (família §355): `x as T[]` / `o instanceof T` baixavam o
+    // leaf fantasma ClassType("","T") → `checkcast [LT;` (NoClassDefFoundError
+    // "T" em runtime). O alvo do cast passa pelos type-params DO ESCOPO em
+    // lowering (driver.currentTypeParams) — cada leaf que é type-param vira
+    // TypeVariable e apaga para o bound (Object), como o descriptor do campo.
+    if (!driver.currentTypeParams.isEmpty()) {
+        targetType = TypeParams.rewrite(targetType, n ->
+                TypeParams.variable(n, driver.currentTypeParams, driver.currentUnit,
+                        driver.semanticAnalyzer));
+    }
     Type fromCastType = ExpressionTyper.inferExprType(driver, bin.left(), locals);
+    // #293: primitivo → STRING (`42 as String`) caia no ramo §213 de box +
+    // CHECKCAST java/lang/String — o boxed (Integer/Boolean/...) NAO e String
+    // -> ClassCastException em runtime no JVM (JS/Script stringificam = oracle
+    // da issue). stringify = descer pela MESMA rota do `x + ""` (valueOf nos 4
+    // alvos). ANTES de emitir left (a recursao emite a sua propria vez).
+    if ("as".equals(bin.operator()) && BuiltinTypes.isString(targetType)
+            && TypeMetrics.isPrimitiveType(fromCastType)) {
+        return lower(driver, new BinaryExpr(bin.position(), "+",
+                bin.left(), new LiteralExpr(bin.position(), ConcreteLiteralKind.STRING, "")),
+                ops, owner, localIdx, locals);
+    }
+    localIdx = ExpressionLowerer.emitExpression(driver, bin.left(), ops, owner, localIdx, locals);
     // UIW050: handle de UI/mídia APAGA para int no runtime (JvmTypeMapper
     // .toDescriptor → "I"). `label as Int` é IDENTITY, não checkcast — um
     // CHECKCAST sobre um valor int é inválido e derrubava o verifier
     // ("Bad type on operand stack") em qualquer função que monta UI.
-    boolean handleAsInt = isIntPrimitive(targetType)
+    boolean handleAsInt = ExpressionBinaryPredicates.isIntPrimitive(targetType)
             && (KofUi.isUiType(fromCastType) || KofMedia.isHandleType(fromCastType));
     if ("instanceof".equals(bin.operator())) {
         ops.add(new KofInstanceOf(targetType));
@@ -197,20 +171,30 @@ if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
 // Short-circuit evaluation for || and &&:
 // a || b → eval a; if true, jump to true_label; eval b; result = b
 // a && b → eval a; if false, jump to false_label; eval b; result = b
-if (("||".equals(bin.operator()) || "&&".equals(bin.operator()))
-        && driver.target != Target.JS) {
-    LabelId trueLabel = LabelId.create();
-    LabelId falseLabel = LabelId.create();
-    LabelId endLabel = LabelId.create();
-    localIdx = ExpressionLowerer.emitExpression(driver, bin.left(), ops, owner, localIdx, locals);
-    ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
-    if ("||".equals(bin.operator())) {
-        ops.add(new KofConditionalJump(KofComparison.NE, trueLabel, falseLabel));
-    } else {
-        ops.add(new KofConditionalJump(KofComparison.NE, falseLabel, trueLabel));
-    }
+        if (("||".equals(bin.operator()) || "&&".equals(bin.operator()))
+                && driver.target != Target.JS) {
+            LabelId trueLabel = LabelId.create();
+            LabelId falseLabel = LabelId.create();
+            LabelId endLabel = LabelId.create();
+            // §306(a): `b || x` / `b && x` com `b: Bool?` — a truthiness passa
+            // pelo rewrite do emitTruthinessJump (`b == true`, caminho de VALOR
+            // null-safe); o IF_ICMPNE cru sobre o slot boxed (JVM) dava
+            // VerifyError. #462: o RHS avaliado usa o MESMO rewrite — um RHS
+            // `Bool?` chegava ao join como referência enquanto o outro arco
+            // deixava int (VerifyError; `true && fb()`).
+            ExpressionNode leftC = CompilerComparisons.nullableBoolTruthinessRewrite(
+                    driver, bin.left(), locals);
+            ExpressionNode rightC = CompilerComparisons.nullableBoolTruthinessRewrite(
+                    driver, bin.right(), locals);
+            localIdx = ExpressionLowerer.emitExpression(driver, leftC, ops, owner, localIdx, locals);
+            ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
+            if ("||".equals(bin.operator())) {
+                ops.add(new KofConditionalJump(KofComparison.NE, trueLabel, falseLabel));
+            } else {
+                ops.add(new KofConditionalJump(KofComparison.NE, falseLabel, trueLabel));
+            }
     ops.add(new KofLabel(falseLabel));
-    localIdx = ExpressionLowerer.emitExpression(driver, bin.right(), ops, owner, localIdx, locals);
+    localIdx = ExpressionLowerer.emitExpression(driver, rightC, ops, owner, localIdx, locals);
     ops.add(new KofJump(endLabel));
     ops.add(new KofLabel(trueLabel));
     if ("||".equals(bin.operator())) {
@@ -231,7 +215,14 @@ java.util.List<BinaryExpr> chain = new ArrayList<>();
 ExpressionNode cursor = bin;
 while (cursor instanceof BinaryExpr be
         && !"as".equals(be.operator())
-        && !"instanceof".equals(be.operator())) {
+        && !"instanceof".equals(be.operator())
+        // D-TROOL: `&&`/`||` NAO achatam como filho-esquerdo — re-despachados
+        // via emitExpression caem no gancho Kleene (ou no #487 p/ Bool puro);
+        // no loop viravam KofBinaryOp.AND = iand sobre a caixa Boolean
+        // (VerifyError medido 19/09 em `if (a && b)` com Troolean). No TOPO
+        // (chain vazio) o flatten segue valendo: la o gancho/#487 ja
+        // interceptaram, e parar deixaria cursor==bin -> recursao infinita.
+        && (chain.isEmpty() || (!"&&".equals(be.operator()) && !"||".equals(be.operator())))) {
     chain.add(be);
     cursor = be.left();
 }
@@ -273,8 +264,14 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
     boolean isNumericComparison = TypeMetrics.isComparisonOp(be.operator())
             && ((accType instanceof Type.PrimitiveType && TypeMetrics.isNumeric(accType)
                     && rightType instanceof Type.PrimitiveType && TypeMetrics.isNumeric(rightType))
-                || (driver.target.isNative() && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType))
-                || (isRelationalOp && isNullablePrimOrBarePrim(accType) && isNullablePrimOrBarePrim(rightType)
+                // §284-map (18/09): a familia de slot boxed SÓ vale p/ os
+                // relacionais aqui — `==`/`!=` com Nullable(primitivo) ficam
+                // o caminho I6 (RecordEqualityLowerer + kof_box_equals), que
+                // e null-seguro (null==null -> true; sem isto o soft-unbox
+                // do `nulleq` arrombava em vez de dar true/false).
+                || (driver.target.isNative() && isRelationalOp
+                    && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType))
+                || (isRelationalOp && ExpressionBinaryPredicates.isNullablePrimOrBarePrim(accType) && ExpressionBinaryPredicates.isNullablePrimOrBarePrim(rightType)
                     && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType)));
     if ((isArithmetic || isNumericComparison)
             && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType)) {
@@ -286,7 +283,11 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         // `ni() + 1`). `null + 1` continua indefinido (NPE em runtime,
         // como Java) — narrowing explícito é responsabilidade do programa.
         if (accType instanceof Type.NullableType accNt) {
-            driver.emitErasureUnbox(ops, accNt.inner());
+            // §284-map (18/09): SOFT no native — a caixa do slot abre, o cru
+            // de variável/função passa cru, null dá o mesmo CCE honesto do
+            // estrito. Era o SIGSEGV `nulleq`: unbox ESTRITO cego sobre o
+            // null de get ausente.
+            CompilerEmissionHelpers.emitErasureUnboxSoft(driver, ops, accNt.inner());
             accType = accNt.inner();
         }
         // OBS-009: divisão (ou resto) por zero constante é
@@ -315,13 +316,14 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         driver.emitWideningIfNeeded(ops, accType, commonType);
         localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
         if (rightType instanceof Type.NullableType rightNt) {
-            driver.emitErasureUnbox(ops, rightNt.inner());
+            // §284-map: mesmo soft do lado esquerdo.
+            CompilerEmissionHelpers.emitErasureUnboxSoft(driver, ops, rightNt.inner());
             rightType = rightNt.inner();
         }
         driver.emitWideningIfNeeded(ops, rightType, commonType);
         ops.add(new KofBinary(TypeMetrics.mapArithmeticOp(be.operator()), commonType));
         accType = commonType;
-    } else if (isBitwiseOp(be.operator())
+    } else if (ExpressionBinaryPredicates.isBitwiseOp(be.operator())
             && TypeMetrics.isInteger(accType) && TypeMetrics.isInteger(rightType)) {
         // §167: bitwise `& | ^` com Int e Long misturados. A promoção binária
         // do JVM eleva AMBOS ao tipo comum (long se qualquer lado for long);
@@ -340,7 +342,7 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         };
         ops.add(new KofBinary(bitOp, commonInt));
         accType = commonInt;
-    } else if (isShiftOp(be.operator())
+    } else if (ExpressionBinaryPredicates.isShiftOp(be.operator())
             && TypeMetrics.isInteger(accType) && TypeMetrics.isInteger(rightType)) {
         // §167: shift `<< >> >>>`. O tipo do resultado é o tipo PROMOVIDO do
         // operando ESQUERDO (JLS 15.19), não o tipo comum: `int << long` tem
@@ -417,10 +419,20 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         accType = Type.PrimitiveType.BOOL;
     } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
             && !driver.isNullLiteral(be.left()) && !driver.isNullLiteral(be.right())
-            && (isRecordLike(accType, driver) || isRecordLike(rightType, driver)
+            && (ExpressionBinaryPredicates.isRecordLike(accType, driver) || ExpressionBinaryPredicates.isRecordLike(rightType, driver)
                 || (!driver.target.isNative()
-                    && (isNullablePrimLike(accType) || isNullablePrimLike(rightType))
-                    && isNullablePrimOrBarePrim(accType) && isNullablePrimOrBarePrim(rightType)))) {
+                    && (ExpressionBinaryPredicates.isNullablePrimLike(accType) || ExpressionBinaryPredicates.isNullablePrimLike(rightType))
+                    && ExpressionBinaryPredicates.isNullablePrimOrBarePrim(accType) && ExpressionBinaryPredicates.isNullablePrimOrBarePrim(rightType))
+                // §284-map: fase 2 D-NULL-INTENT no native SÓ para a familia
+                // com caixa fisica de slot (int/char/short/byte/long): o
+                // RecordEqualityLowerer guarda os dois lados e chama
+                // `.equals` — o backend roteia p/ kof_box_equals (magic).
+                // Double/Bool/Float crus ficam no caminho de sempre (identidade
+                // == igualdade de numero), senão o .equals deles quebraria o
+                // que hoje funciona.
+                || (driver.target.isNative()
+                    && (ExpressionBinaryPredicates.isBoxedPrimConsumer(accType) || ExpressionBinaryPredicates.isBoxedPrimConsumer(rightType))
+                    && ExpressionBinaryPredicates.isNullablePrimOrBarePrim(accType) && ExpressionBinaryPredicates.isNullablePrimOrBarePrim(rightType)))) {
         // §262 / bug 11: `record == record` é igualdade de CONTEÚDO, null-safe
         // (Objects.equals). Desugaring em RecordEqualityLowerer (JS = chamada
         // p/ helper kofRecordEq; JVM/Script/Native = ternária com jumps). O
@@ -441,7 +453,14 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         // Windows local sem `as`/`ld`). Record continua passando por aqui
         // no Native (equals de classe usuário, já suportado antes do #278).
         if (accType instanceof Type.PrimitiveType apt4 && !Type.isVoid(apt4)) {
-            TypeEmitter.boxPrimitive(ops, accType);
+            // §284-map: no native o box do lado cru entra no par Object do
+            // RecordEqualityLowerer via kof_box_* (TypeEmitter e bytecode
+            // JVM-only).
+            if (driver.target.isNative()) {
+                CompilerEmissionHelpers.emitErasureBox(driver, ops, accType);
+            } else {
+                TypeEmitter.boxPrimitive(ops, accType);
+            }
         }
         localIdx = RecordEqualityLowerer.emit(driver, be, ops, owner, localIdx, locals,
                 accType, rightType);
@@ -497,7 +516,7 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         // novo um valor já-Integer → Integer.valueOf(I) com Integer na
         // pilha (VerifyError).
         boolean boxLeftNow = ("==".equals(be.operator()) || "!=".equals(be.operator()))
-                && isMaybeNullType(rightType) && accType instanceof Type.PrimitiveType apt2 && !Type.isVoid(apt2);
+                && ExpressionBinaryPredicates.isMaybeNullType(rightType) && accType instanceof Type.PrimitiveType apt2 && !Type.isVoid(apt2);
         if (boxLeftNow) TypeEmitter.boxPrimitive(ops, accType);
         localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
         Type operandType = accType;
@@ -508,8 +527,8 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
                     || other instanceof Type.TypeVariable || other instanceof Type.NullableType)
                     ? other : new Type.ClassType("java.lang", "Object", List.of());
         } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
-                && ((isMaybeNullType(accType) && TypeMetrics.isPrimitiveType(rightType))
-                    || (isMaybeNullType(rightType) && TypeMetrics.isPrimitiveType(accType)))) {
+                && ((ExpressionBinaryPredicates.isMaybeNullType(accType) && TypeMetrics.isPrimitiveType(rightType))
+                    || (ExpressionBinaryPredicates.isMaybeNullType(rightType) && TypeMetrics.isPrimitiveType(accType)))) {
             operandType = new Type.ClassType("java.lang", "Object", List.of());
         } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
                 && accType instanceof Type.UnknownType && rightType instanceof Type.UnknownType) {

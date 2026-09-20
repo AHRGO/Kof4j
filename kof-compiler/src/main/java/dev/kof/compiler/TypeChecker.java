@@ -86,7 +86,14 @@ public final class TypeChecker {
             return Type.PrimitiveType.BOOL;
         }
 
-        if ("&&".equals(operator) || "||".equals(operator)) {
+        // D-TROOL (19/09): com um `Troolean` num dos lados, `&&`/`||`/`!`
+        // produzem tres estados (Kleene, DECISIONS.md) — o tipo semantico
+        // precisa casar com o da pilha do lowering (caixa Boolean|null),
+        // senão o slot do consumidor mente (classe do §462).
+        if ("&&".equals(operator) || "||".equals(operator) || "!".equals(operator)) {
+            if (Type.isTroolean(left) || Type.isTroolean(right)) {
+                return new Type.NullableType(Type.PrimitiveType.BOOL);
+            }
             return Type.PrimitiveType.BOOL;
         }
         if ("instanceof".equals(operator)) {
@@ -94,9 +101,6 @@ public final class TypeChecker {
         }
         if ("as".equals(operator)) {
             return right;
-        }
-        if ("!".equals(operator)) {
-            return Type.PrimitiveType.BOOL;
         }
         if (Type.isString(left) || Type.isString(right)) {
             if ("+".equals(operator)) {
@@ -329,6 +333,34 @@ public final class TypeChecker {
      * BuiltinTypes resolve), ou classe não declarada no módulo — restringir
      * esses quebraria interop legítima (regra 6: nunca quebrar o que funciona).
      */
+    /** Nome RAW de um ClassType (pkg.Simple), ignorando type-args. §270. */
+    static String rawTypeOf(Type.ClassType ct) {
+        return ct.packageName().isEmpty() ? ct.name() : ct.packageName() + "." + ct.name();
+    }
+
+    /**
+     * §270 (#401): os dois lados têm args CONCRETOS (mesma aridade, nenhum
+     * UNKNOWN/TypeVariable) e os args não são iguais? Só então a rejeição é
+     * segura — inferência (`listOf()`), raw (`List`) e type-param (`T`)
+     * permanecem permissivos como sempre. Recursiva p/ args aninhados
+     * (`Map<String, List<Int>>` vs `Map<String, List<String>>`).
+     */
+    static boolean argsIncompatible(List<Type> from, List<Type> to) {
+        if (from.isEmpty() || to.isEmpty() || from.size() != to.size()) return false;
+        boolean allEqual = true;
+        for (int i = 0; i < from.size(); i++) {
+            Type a = from.get(i), b = to.get(i);
+            if (Type.isUnknown(a) || Type.isUnknown(b)
+                    || a instanceof Type.TypeVariable || b instanceof Type.TypeVariable) {
+                return false;
+            }
+            if (!a.equals(b)) {
+                allEqual = false;
+            }
+        }
+        return !allEqual;
+    }
+
     static boolean isAssignable(SemanticAnalyzer sa, Type from, Type to) {
         // caminhos não-nominais primeiro (primitivos, nullability, Unknown):
         if (!isReferenceCandidate(from, to)) return isAssignable(from, to);
@@ -340,6 +372,17 @@ public final class TypeChecker {
         String toName = tc.name();
         // Object é raiz: qualquer referência atribui
         if ("Object".equals(toName) && "java.lang".equals(tc.packageName())) return true;
+        // §270 (#401, D-POLL-19 18/09): `List<Int>` → `List<String>` era
+        // aceito porque o check só comparava o RAW (tipos genéricos nunca
+        // consultavam type-args). Invariante nos args quando AMBOS os lados
+        // têm args concretos no MESMO raw: rejeita. Conservador onde a
+        // semântica é inferência/erasure: args vazios (raw, ou classe →
+        // interface do #400), UNKNOWN (`listOf()` vazio/inferido),
+        // TypeVariable (`T`) e aridades diferentes ficam permissivos.
+        if (argsIncompatible(fc.typeArguments(), tc.typeArguments())
+                && rawTypeOf(fc).equals(rawTypeOf(tc))) {
+            return false;
+        }
         // tipos builtin (String, List, Map, Set...) têm relações próprias
         // (String → Object via regra acima; List<X> → List<Y> não é nominal)
         if (isBuiltinClassType(fc) || isBuiltinClassType(tc)) {

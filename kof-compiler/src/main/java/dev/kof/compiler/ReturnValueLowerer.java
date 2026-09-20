@@ -30,16 +30,9 @@ final class ReturnValueLowerer {
         if (CompilerComparisons.isNullablePrimNullReturn(ret, returnType)) {
             return ExpressionLowerer.emitExpression(driver, ret.value(), ops, owner, localIdx, locals);
         }
-        // D-NULL-INTENT (#278): o fold §125-ext (ramo null -> default) só
-        // continua vivo no Native (fase 2 do rollout, DECISIONS.md — Native
-        // mantém a representação antiga de Nullable(primitivo)). JVM/Script/
-        // JS deixam o ramo null real e reusam a maquinaria genérica de join
-        // heterogêneo (#57/§70, ifBranchTypes/boxesOwnBranches) — ela já
-        // boxa o ramo primitivo p/ o SEU boxed e mantém aconst_null no outro,
-        // exatamente a representação Absent|Present(T) que o contrato exige.
-        ExpressionNode rv = driver.target.isNative()
-                ? CompilerComparisons.foldNullablePrimBranches(ret.value(), returnType)
-                : ret.value();
+        // D-NULL-INTENT: o join heterogêneo preserva null e boxa somente
+        // o ramo presente, inclusive nos três backends Native (#259/N2).
+        ExpressionNode rv = ret.value();
         localIdx = ExpressionLowerer.emitExpression(driver, rv, ops, owner, localIdx, locals);
         Type rvType = ExpressionTyper.inferExprType(driver, rv, locals);
         driver.emitWideningIfNeeded(ops, rvType, returnType);
@@ -59,7 +52,11 @@ final class ReturnValueLowerer {
         if (returnType instanceof Type.NullableType nt && nt.inner() instanceof Type.PrimitiveType
                 && rvType instanceof Type.PrimitiveType pt && !Type.isVoid(pt)
                 && !ExpressionTyper.boxesOwnBranches(driver, rv, locals)) {
-            TypeEmitter.boxPrimitive(ops, returnType);
+            if (driver.target.isNative()) {
+                driver.emitErasureBox(ops, nt.inner());
+            } else {
+                TypeEmitter.boxPrimitive(ops, returnType);
+            }
         }
         return localIdx;
     }

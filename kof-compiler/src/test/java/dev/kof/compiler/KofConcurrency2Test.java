@@ -787,8 +787,9 @@ class KofConcurrency2Test {
             CompilationResult r = driver.compile(f, tmp.resolve("out-" + i), ts[i]);
             assertTrue(r.success(), ts[i] + " deve compilar: " + r.diagnostics().getDiagnostics());
             Path bin = tmp.resolve("out-" + i).resolve("Default/Main");
-            var pb = new ProcessBuilder(bin.toString()).redirectErrorStream(true);
-            if (q[i] != null) pb.command().add(0, q[i]);
+            var pb = q[i] != null ? NativeRiscv64E2ETest.qemu(q[i].substring(5), bin)
+                    : new ProcessBuilder(bin.toString());
+            pb.redirectErrorStream(true);
             Process p = pb.start();
             String output = new String(p.getInputStream().readAllBytes()).trim();
             assertEquals(0, p.waitFor(), ts[i] + " exit, output: " + output);
@@ -805,6 +806,67 @@ class KofConcurrency2Test {
     // (known-bugs §129, provado por GDB). Agora o chain é TLS e o trampolim do
     // spawn instala handler próprio: o worker marca o handle como excepcional e
     // o await/selectAny relança no consumidor (paridade JVM).
+    @Test
+    void spawnWorkerThrowIsolatedFromSiblingsCrossArch(@TempDir Path tmp) throws Exception {
+        // §129 (DECISIONS §2, opção B) porta do x86 para riscv/aarch: o throw
+        // de um worker TEM de marcar o handle como excepcional (handle->exc) e
+        // NÃO longjmpa na chain GLOBAL da main (crash/hang).
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            Assumptions.assumeTrue(NativeRiscv64E2ETest.hasToolchain(arch), "cross toolchain " + arch + " ausente — pulando");
+            Path f = tmp.resolve("ISO" + arch + ".kf");
+            Files.writeString(f, """
+                    Object bomba() { throw "boom" }
+                    Void vigia() {
+                        val h = spawn bomba()
+                        try { await h; println("nao-deveria") } catch (String e) { println("cap=" + e) }
+                    }
+                    main() {
+                        val a = spawn vigia()
+                        val b = spawn vigia()
+                        await a
+                        await b
+                        println("fim")
+                    }
+                    """);
+            Path outDir = tmp.resolve("iso-" + arch);
+            CompilationResult r = driver.compile(f, outDir, t);
+            assertTrue(r.success(), t + " compila: " + r.diagnostics().getDiagnostics());
+            String out = NativeRiscv64E2ETest.runQemu(arch, outDir.resolve("Default/Main"));
+            assertEquals("cap=boom\ncap=boom\nfim", out, t + " throw isolado no worker");
+        }
+    }
+
+    @Test
+    void spawnWorkerThrowUnhandledPropagatesCrossArch(@TempDir Path tmp) throws Exception {
+        // Um worker INTERMEDIÁRIO sem try: a falha do filho sobe até o try da
+        // main via rethrow do await (paridade JVM).
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            Assumptions.assumeTrue(NativeRiscv64E2ETest.hasToolchain(arch), "cross toolchain " + arch + " ausente — pulando");
+            Path f = tmp.resolve("PROP" + arch + ".kf");
+            Files.writeString(f, """
+                    Object falha() { throw "boom" }
+                    Void vigiar() {
+                        val h = spawn falha()
+                        var r = await h
+                        println("nao-deveria")
+                    }
+                    main() {
+                        val v = spawn vigiar()
+                        try { await v; println("nao-deveria") }
+                        catch (String e) { println("cap=" + e) }
+                        println("fim")
+                    }
+                    """);
+            Path outDir = tmp.resolve("prop-" + arch);
+            CompilationResult r = driver.compile(f, outDir, t);
+            assertTrue(r.success(), t + " compila: " + r.diagnostics().getDiagnostics());
+            String out = NativeRiscv64E2ETest.runQemu(arch, outDir.resolve("Default/Main"));
+            assertEquals("cap=boom\nfim", out, t + " rethrow no consumidor");
+        }
+    }
+
     @Test
     void spawnWorkerThrowAwaitedAndCaughtNative(@TempDir Path tmp) throws Exception {
         runNative(tmp, """

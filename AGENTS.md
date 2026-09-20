@@ -5,7 +5,7 @@
 This is the **mandatory** guide for any AI agent (or human) who
 writes Kof code in this repository. Read it before generating any `.kf`.
 
-**Version:** 0.4.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + rule 9 **docs-first gate** for philosophy-violating issues (#449) (18/09) + **mechanical push via `scripts/sync-push.sh` + conflict policy "preserve both sides, redo yours on top" (19/09)** + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09); active branch = `beta-0.4.0`)
+**Version:** 0.4.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + rule 9 **docs-first gate** for philosophy-violating issues (#449) (18/09) + **mechanical push via `scripts/sync-push.sh` + conflict policy "preserve both sides, redo yours on top" (19/09)** + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09) + rule 10 **KOF-first, external-second** (`D-KOF-FIRST`, DECIDED 19/09); active branch = `beta-0.4.0`)
 
 > **PRIORITY No. 1: QUALITY.** Before any feature, read the
 > **Quality gate — "no bug ships"** (§ below), **universal for
@@ -630,6 +630,29 @@ Bool isQuery(String op) {
    decided by the maintainer (rule 6), never the imported syntax. Template
    checkboxes make the human sign the same gate (`feature_request.yml`,
    `bug_report.yml`).
+10. **KOF-first, external-second — no external behavior is an oracle
+    (ABSOLUTE — `D-KOF-FIRST`).** No behavior of Java, Kotlin, C#, Rust,
+    Swift, JavaScript, Python, SQL, or of any other language, framework,
+    runtime, specification, forum, paper or benchmark is, **by itself**, an
+    expectation of Kof's behavior. Before opening an issue or suggesting a
+    fix: **(1)** prove the reproducer is **valid Kof** (grammar/syntax docs,
+    `training/`, `learn/` — `training/anti-patterns/fake-idioms.md` names the
+    usual foreign suspects); **(2)** identify the **governing Kof contract**
+    (`DECISIONS.md` → normative docs → conformance/golden tests → parity
+    matrix → implementation; never another language); **(3)** search for the
+    **Kof idiom or abstraction** that already expresses the intent; **(4)**
+    **measure** the real behavior on the relevant targets. There is a **bug**
+    only when Kof diverges from **its own contract**; there is a **gap** only
+    when a legitimate need remains with no adequate Kof solution. **External
+    research starts only after that internal proof** — and it contributes
+    principles, invariants, trade-offs and known bugs, never syntax, API or
+    semantics to copy automatically; every borrowing is re-expressed through
+    Kof's philosophy first. Any proposal that changes grammar, semantics,
+    operators, the type model or a frozen API is a **design decision of the
+    maintainer** (rule 6), not an agent bugfix — a small parser diff that
+    accepts a new form is a **new language feature**, not a parser fix. Full
+    pipeline (Gates 0–9) and the evidence block: `DECISIONS.md`
+    §`D-KOF-FIRST`.
 
 ---
 
@@ -1200,8 +1223,8 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > (`4408eb6`) + the other toolchain/external-DB guards + the §255 sysroot guard (`06e77e94`) → `2411/0/196-skip` (the flake §252 fired 16/09 09:44, then went silent at 11:38, 15:09, 15:54 and 17/09 15:49 — ~1/4 of full-suite runs)
 > (MEASURED 17/09 ~15:49, clean run on tip `f276e966`). With qemu, **everything executes** — the 84 cross run
 > green and the total stays the same with the skip count dropping to the
-> external-DB/`node`-env residual. Correct state TODAY (18/09 ~15:20, CI Build+Tests job of tip
-> `33363a3f`): **2687 = 2296+48+7+336, 0F / 0E / 178 skip (CI ubuntu executa o android APK; hosts sem SDK = 1 skip honest a mais)** (no-qemu guards; compiler 2292→2296 by §305 fmt tests; cli 333→336 by X10 fatias 5–7 `LspServerTest`; cli 308→313 by `CmdBuildClasspathTest` of #441 in `d14275f0`, 313→322 by `CmdDeployTest` of X9 slices 1–3 (`154ea1a4`/`bfdd452a`/`84c82139`); compiler 2216→2230 by rng (`KofRngTest` 8) + §286 race tests; CI Build+Tests of `0f3c42d6` measured; cross e2e green
+> external-DB/`node`-env residual. Correct state TODAY (19/09 ~07:20, local reactor suite +
+> clean kof-compiler re-run on tip `972086f3`, phantom `.class` removed): **2786 = 2376+48+7+355, 0F / 0E / 209 skip (CI ubuntu executa o android APK; hosts sem SDK = 1 skip honest a mais)** (measured 19/09 ~09:20 on tip `ae0f6ab9` + the 1.5.3-S2 reactor run in this commit — full suite 35:34 BUILD SUCCESS + docs: full reactor suite 32:36 + kof-compiler clean re-run after deleting a stale `DeclaredReturnLawE2ETest.class` orphan (my pre-rebase tree leaked phantom tests into `target/test-classes`; mvn without `clean` executes them; rm-orphan + re-run = 2354/0F proof; lesson: stale test-class corpses in target/ are ghosts of deleted tests — the suite tally MUST come from a reactor whose target/ matches the tip source) (no-qemu guards; compiler 2362→2376 by §336+§270 (`AsCastPrecedenceE2ETest` 6, `GenericArgAssignmentE2ETest` 8, 19/09); compiler 2292→2296 by §305 fmt tests; compiler 2354→2362 by §306 (`NullableBoolTruthinessE2ETest` 8, `4abc68f0`); cli 349→355 by `DepsRegistryTest` (1.5.3-S2 pull); cli 333→336 by X10 fatias 5–7 `LspServerTest`; cli 308→313 by `CmdBuildClasspathTest` of #441 in `d14275f0`, 313→322 by `CmdDeployTest` of X9 slices 1–3 (`154ea1a4`/`bfdd452a`/`84c82139`); compiler 2216→2230 by rng (`KofRngTest` 8) + §286 race tests; CI Build+Tests of `0f3c42d6` measured; cross e2e green
 > in the dedicated `Native cross` job; `.17` measured 11-skip with qemu on `952acbc8`) — the
 > §252 flake, the §181 cross residual and the §256(b) poll flake are ALL closed
 > at code; the remaining skips are the optional asm-gate and toolchain guards.
@@ -1248,7 +1271,7 @@ use the project harness or create a minimal E2E test in the area's package.
 | `docs/development/future/` (plans) | **only plan without code**: RAII TIER 2.4 (DD-STDLIB-01 CLOSED 13/09 → `docs/stdlib/`). The legacy migration (decompiler/translator/IR/differential) went to `docs/development/` 12/09, **back to `future/` 15/09 — DEPRIORITIZED by the maintainer** (code stays in kof-cli; promotion needs her explicit decision) |
 | `docs/development/roadmap.md`, `docs/audits/roadmap-audit.md`, `docs/bugs-and-gaps/ecosystem-coverage.md` | Roadmaps & coverage audit (queue P0→P5) |
 | `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Spec gaps (SG-00x — maintainer queue complete, became a reference) + open bugs |
-| `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realized → stdlib) + audit ≤500 (snapshot → architecture) |
+| `docs/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realized → stdlib) + audit ≤500 (snapshot → architecture) |
 | `docs/development/DECISIONS.md` | **Maintainer's decisions** (time/security/app-model/Spring — `decision-pending/` folder extinct 09/13) |
 | `docs/development/roadmap.md` §23 | **Consolidated implementation plan** (Tiers 0–12) — the only ordered plan; migration A–H ✅, universal **UNDER DEVELOPMENT** 17/09 (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, R12 overridden — §D-UNIVERSAL) |
 

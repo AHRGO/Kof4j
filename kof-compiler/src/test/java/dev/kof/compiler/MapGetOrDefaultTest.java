@@ -104,19 +104,25 @@ class MapGetOrDefaultTest {
     }
 
     @Test
-    void remainingTrioStillFailsHonestly(@TempDir Path tempDir) throws Exception {
-        // #386 slices 2-3 pending: containsValue/putIfAbsent must keep the
-        // loud SEM025 (R6 — never a silent fallback). This test flips in the
-        // commits that implement them.
+    void remainingTrioFlippedToWork(@TempDir Path tempDir) throws Exception {
+        // #386 slice 2: containsValue landed (4 targets, slice 3). The
+        // old guard asserted SEM025 here "until slice 2" — per its own
+        // comment, this test flips in the commit that implements them.
+        // putIfAbsent's full matrix lives in CollectionMethodsStdlibE2ETest.
         CompilationResult r = compile(tempDir, "R", """
                 main() {
                     val m: Map<String, Int> = mapOf()
+                    m.put("a", 1)
                     println(m.containsValue(1))
+                    println(m.containsValue(2))
                 }
                 """, Target.JVM);
-        assertFalse(r.success(), "containsValue must still be rejected until slice 2");
-        assertTrue(r.diagnostics().getDiagnostics().stream()
-                .anyMatch(d -> d.code().equals("SEM025")),
-                "SEM025 expected: " + r.diagnostics().getDiagnostics());
+        assertTrue(r.success(), "containsValue must compile now: " + r.diagnostics().getDiagnostics());
+        String javaCmd = System.getProperty("java.home") + "/bin/java";
+        Process p = new ProcessBuilder(javaCmd, "-cp", tempDir.resolve("out-RJVM").toString(), "Default.Main")
+                .redirectErrorStream(true).start();
+        String out = new String(p.getInputStream().readAllBytes()).replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run exit 0, got:\n" + out);
+        assertEquals("true\nfalse", out, "hit / miss on values");
     }
 }

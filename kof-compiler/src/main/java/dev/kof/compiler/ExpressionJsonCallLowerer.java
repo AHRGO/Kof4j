@@ -29,6 +29,15 @@ public final class ExpressionJsonCallLowerer {
             // o encoder tipado (v1 flat: int/string/bool).
             Type mv2 = BuiltinTypes.mapValue(argType);
             int tag = JsonDispatch.listTag(mv2);
+            // §284-map (18/09): no NATIVO o slot da familia Int/Long vive em
+            // caixa MAGIC — o walker do kof_json_encode_map precisa da tag 7
+            // (desembale via kof_box_to_string, mesma tabela do println) para
+            // nao JSONificar o PONTEIRO da caixa. List/Set seguem crus.
+            if (driver.target.isNative()
+                    && CollectionCallLowerer.mapBoxablePrim(
+                        mv2 instanceof Type.NullableType nt ? nt.inner() : mv2)) {
+                tag = 7;
+            }
             ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, tag));
             paramTypes = List.of(argType, Type.PrimitiveType.INT);
         } else if (driver.target.isNative()

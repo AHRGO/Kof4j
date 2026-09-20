@@ -15,6 +15,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -25,7 +26,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class LspServerTest {
 
-    private static final String URI = "file:///tmp/main.kf";
+    private static final String URI = "file:///kof-lsp-selftest/a.kf";
+    // (antes /tmp/main.kf: o walk-6 do irmao pegava os scraps .kf alheios
+    // de /tmp — determinismo de teste = URI num caminho que nunca exists)
 
     private static byte[] frame(String json) {
         byte[] body = json.getBytes(StandardCharsets.UTF_8);
@@ -137,6 +140,111 @@ class LspServerTest {
         for (Object e : edits) {
             assertEquals("total", ((Map<?, ?>) e).get("newText"));
         }
+    }
+
+    /** LSP-A (D-POLL-19): rename cruza os arquivos do projeto (mesma convenção dos references). */
+    @Test
+    void renameCrossesProjectFiles(@TempDir Path dir) throws Exception {
+        String lib = "Int helper(Int x) { return x * 2 }\n";
+        String app = "main() { println(helper(21) + helper(1)) }\n";
+        Files.writeString(dir.resolve("lib.kf"), lib);
+        Path appFile = dir.resolve("app.kf");
+        Files.writeString(appFile, app);
+        String appUri = appFile.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        int col = app.indexOf("helper") + 2;
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"textDocument/rename\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\"},"
+                + "\"position\":{\"line\":0,\"character\":" + col + "},\"newName\":\"calc\"}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> res = (Map<String, Object>) byId(
+                messages(out.toString(StandardCharsets.UTF_8)), 2).get("result");
+        assertNotNull(res, "rename cross-file nao pode ser null");
+        java.util.List<Map<String, Object>> dc =
+                (java.util.List<Map<String, Object>>) res.get("documentChanges");
+        assertEquals(2, dc.size(), "app (2 usos) + lib (1 declaracao)");
+        java.util.Map<String, Integer> perDoc = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> de : dc) {
+            String u = String.valueOf(((Map<?, ?>) de.get("textDocument")).get("uri"));
+            int n = ((java.util.List<?>) de.get("edits")).size();
+            perDoc.put(u.endsWith("lib.kf") ? "lib" : "app", n);
+            for (Object e : (java.util.List<Object>) de.get("edits")) {
+                assertEquals("calc", ((Map<?, ?>) e).get("newText"));
+            }
+        }
+        assertEquals(2, perDoc.get("app"), "dois usos no buffer");
+        assertEquals(1, perDoc.get("lib"), "uma ocorrencia no irmao em disco");
+        // aplicando os edits manualmente: nenhum "helper" sobrevive nos dois arquivos
+        String appliedApp = applyEdits(app, dc, appUri);
+        String appliedLib = applyEdits(lib, dc, dir.resolve("lib.kf").toAbsolutePath().toUri().toString());
+        assertFalse(appliedApp.contains("helper"), appliedApp);
+        assertFalse(appliedLib.contains("helper"), appliedLib);
+        assertTrue(appliedLib.contains("Int calc(Int x)"), "declaracao renomeada: " + appliedLib);
+    }
+
+    /** LSP-A: keyword e namespace da stdlib nunca sao renomeaveis (guarda honesta). */
+    @Test
+    void renameRefusesKeywordsAndStdlibNamespaces() throws Exception {
+        String app = "main() { spawn go() }\nString db = \"x\"\n";
+        String reqTpl = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"textDocument/rename\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + URI + "\"},"
+                + "\"position\":{\"line\":0,\"character\":%d},\"newName\":\"z\"}}";
+        for (int col : new int[]{app.indexOf("spawn") + 2}) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            new LspServer(new ByteArrayInputStream(all(
+                    frame("{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                            + "\"textDocument\":{\"uri\":\"" + URI + "\",\"text\":\""
+                            + Json.escape(app) + "\"}}}"),
+                    frame(String.format(reqTpl, col)))), out).run();
+            Map<String, Object> resp = byId(messages(out.toString(StandardCharsets.UTF_8)), 2);
+            assertNull(resp.get("result"), "rename de keyword deve ser null honesto (col " + col + ")");
+        }
+        // 'go' e um nome comum: renomeia (2 ocorrencias no proprio buffer)
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(
+                frame("{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                        + "\"textDocument\":{\"uri\":\"" + URI + "\",\"text\":\"" + Json.escape(app) + "\"}}}"),
+                frame(String.format(reqTpl, app.indexOf("go") + 1)))), out).run();
+        Map<String, Object> res = (Map<String, Object>) byId(
+                messages(out.toString(StandardCharsets.UTF_8)), 2).get("result");
+        assertNotNull(res, "nome comum renomeia");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static String applyEdits(String text, java.util.List<Map<String, Object>> dc, String wantUri) {
+        StringBuilder sb = new StringBuilder(text);
+        for (Map<String, Object> de : dc) {
+            String u = String.valueOf(((Map<?, ?>) de.get("textDocument")).get("uri"));
+            if (!u.equals(wantUri)) continue;
+            java.util.List<Map<String, Object>> edits = (java.util.List<Map<String, Object>>) de.get("edits");
+            edits.sort((a, b) -> Integer.compare(start(a, text), start(b, text)));
+            for (int k = edits.size() - 1; k >= 0; k--) {
+                Map<String, Object> e = edits.get(k);
+                int st = start(e, text);
+                int en = end(e, text);
+                sb.replace(st, en, String.valueOf(e.get("newText")));
+            }
+        }
+        return sb.toString();
+    }
+
+    private static int start(Map<String, Object> edit, String text) {
+        return offsetIn(text, (Map<?, ?>) edit.get("range"), true);
+    }
+
+    private static int end(Map<String, Object> edit, String text) {
+        return offsetIn(text, (Map<?, ?>) edit.get("range"), false);
+    }
+
+    private static int offsetIn(String text, Map<?, ?> range, boolean start) {
+        Map<?, ?> pt = (Map<?, ?>) range.get(start ? "start" : "end");
+        int line = ((Number) pt.get("line")).intValue();
+        int ch = ((Number) pt.get("character")).intValue();
+        int off = 0;
+        for (int i = 0; i < line; i++) off = text.indexOf('\n', off) + 1;
+        return off + ch;
     }
 
     @Test
@@ -533,6 +641,41 @@ class LspServerTest {
         assertTrue(v2.contains("namespace `kof.db`"), "hover de namespace: " + v2);
     }
 
+    /** X10 fatia 4 (travada por teste): o LSP e generico sobre o StdCatalog —
+     *  os 18 namespaces da fatia 3 aparecem em hover sem NENHUM codigo novo
+     *  de tooling (fonte unica; se um dia alguém fixar lista no hover, isto
+     *  aqui quebra e a duplicacao morre). */
+    @Test
+    void hoverCoversSliceThreeNamespacesFromSingleSource(@TempDir Path dir) throws Exception {
+        String app = "main() { val a = orm.save(x); val v = config.get(\"k\"); val o = orm; val c = config }\n";
+        Path appFile = dir.resolve("app.kf");
+        Files.writeString(appFile, app);
+        String uri = appFile.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + uri + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        String tpl = "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/hover\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + uri + "\"},"
+                + "\"position\":{\"line\":0,\"character\":%d}}}";
+        String[] cases = {"member of `kof.orm`", "member of `kof.config`",
+                "namespace `kof.orm`", "namespace `kof.config`"};
+        int[] cols = {app.indexOf("save") + 2, app.indexOf("get") + 1,
+                app.indexOf("val o = orm") + 8, app.indexOf("val c = config") + 8};
+        byte[] req0 = frame(didOpen);
+        byte[] req1 = frame(String.format(tpl, 1, cols[0]));
+        byte[] req2 = frame(String.format(tpl, 2, cols[1]));
+        byte[] req3 = frame(String.format(tpl, 3, cols[2]));
+        byte[] req4 = frame(String.format(tpl, 4, cols[3]));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(req0, req1, req2, req3, req4)), out).run();
+        List<Map<String, Object>> m = messages(out.toString(StandardCharsets.UTF_8));
+        for (int i = 0; i < cases.length; i++) {
+            Map<String, Object> res = (Map<String, Object>) byId(m, i + 1).get("result");
+            assertNotNull(res, "hover caso " + i + " nao pode ser null (col " + cols[i] + ")");
+            String v = String.valueOf(((Map<String, Object>) res.get("contents")).get("value"));
+            assertTrue(v.contains(cases[i]), "hover " + cases[i] + ": " + v);
+        }
+    }
+
     /** 8.3: local shadowing vence o dominio; membro solto sem '.' continua null honesto. */
     @Test
     void hoverStdlibDoesNotShadowLocalsOrGuessLooseNames(@TempDir Path dir) throws Exception {
@@ -675,7 +818,7 @@ class LspServerTest {
                 "time.* faltando: " + t);
         List<String> d = completionAt("db.", 0, 3).stream()
                 .map(i -> (String) i.get("label")).toList();
-        assertEquals(List.of("connect", "close", "transaction"), d);
+        assertEquals(List.of("connect", "query", "execute", "close", "transaction"), d);
         List<String> c = completionAt("crypto.", 0, 7).stream()
                 .map(i -> (String) i.get("label")).toList();
         assertTrue(c.contains("sha256") && c.contains("hmacSha256"), "crypto: " + c);
@@ -706,4 +849,41 @@ class LspServerTest {
         assertTrue(labels.contains("var"), "keywords sumiram: " + labels);
     }
 
+
+    /** 8.3 (LSP-A, fila universal): o servidor anuncia signatureHelp e o
+     *  request devolve as formas gravadas no MESMA tabela do hover. */
+    @Test
+    @SuppressWarnings("unchecked")
+    void signatureHelpRoundTripUsesTableAndAnnouncesCapability(@TempDir Path dir) throws Exception {
+        String init = "{\"jsonrpc\":\"2.0\",\"id\":0,\"method\":\"initialize\",\"params\":{}}";
+        ByteArrayOutputStream out0 = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(init))), out0).run();
+        Map<String, Object> caps = (Map<String, Object>) byId(
+                messages(out0.toString(StandardCharsets.UTF_8)), 0).get("result");
+        assertNotNull(((Map<String, Object>) caps.get("capabilities")).get("signatureHelpProvider"),
+                "capability signatureHelp faltando: " + caps.get("capabilities"));
+        String app = "main() { val d = db.connect(\"x\", y }\n";
+        Path appFile = dir.resolve("app.kf");
+        Files.writeString(appFile, app);
+        String uri = appFile.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{\"textDocument\":{\"uri\":\""
+                + uri + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        int col = app.indexOf("y }") + 1;
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/signatureHelp\",\"params\":{\"textDocument\":{\"uri\":\""
+                + uri + "\"},\"position\":{\"line\":0,\"character\":" + col + "}}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> res = (Map<String, Object>) byId(
+                messages(out.toString(StandardCharsets.UTF_8)), 1).get("result");
+        assertNotNull(res, "db.connect( com tabela nao pode responder null");
+        assertEquals(1L, res.get("activeParameter"), res.toString());
+        List<Object> sigs = (List<Object>) res.get("signatures");
+        assertEquals(2, sigs.size(), "as duas formas de db.connect: " + sigs);
+        String u = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"textDocument/signatureHelp\",\"params\":{\"textDocument\":{\"uri\":\""
+                + uri + "\"},\"position\":{\"line\":0,\"character\":" + (app.indexOf("db") + 1) + "}}}";
+        ByteArrayOutputStream out2 = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(u))), out2).run();
+        assertNull(byId(messages(out2.toString(StandardCharsets.UTF_8)), 2).get("result"),
+                "fora de chamada com tabela => null, nunca chute (R6)");
+    }
 }

@@ -361,7 +361,7 @@ class ConformanceMatrixTest {
         // célula usa predicado (`d > 1.0`) p/ exercitar o storage Double sem
         // colidir com ele.
         // D-NULL-INTENT (#278, supersede §125 opção A): a última célula
-        // (`miss`, Bool? de chave ausente) imprimia "false" — o fold
+        // (`miss`, Troolean de chave ausente) imprimia "false" — o fold
         // null→default. Agora JVM/Script/JS preservam o null genuíno
         // (Absent|Present(T)); Native fica de fora (fase 2, DECISIONS.md).
         matrix("mapgetprim", """
@@ -395,12 +395,12 @@ class ConformanceMatrixTest {
         // 2 do rollout, DECISIONS.md — representação antiga preservada lá).
         matrix("nullableprint", """
                 Int? ni() { return null }
-                Bool? nb() { return null }
+                Troolean nb() { return null }
                 Long? nl() { return null }
                 Double? nd() { return null }
                 Int? five() { return 5 }
                 Int? en(Int x) = if (x > 0) x else null
-                Bool? bn(Int x) = if (x > 0) true else null
+                Troolean bn(Int x) = if (x > 0) true else null
                 main() {
                     println(ni())
                     println(nb())

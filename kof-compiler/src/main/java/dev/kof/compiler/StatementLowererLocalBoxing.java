@@ -22,21 +22,16 @@ final class StatementLowererLocalBoxing {
         // else null` -> ramo null vira default) só continua vivo no
         // Native (fase 2, DECISIONS.md — representação antiga
         // preservada lá). JVM/Script/JS deixam o ramo null real; o
-        // join heterogêneo (#57/§70) já boxa o ramo primitivo.
-        ExpressionNode vdInit = driver.target.isNative()
-                ? CompilerComparisons.foldNullablePrimBranches(vds.initializer(), varType)
-                : vds.initializer();
+        ExpressionNode vdInit = vds.initializer();
         // nullable de REFERÊNCIA é constraint de compile-time: o
         // storage é o inner (a referência já é nullable por si só).
         // Nullable(primitivo) é DIFERENTE desde o #278: o storage
         // PRECISA continuar Nullable (boxed — Commit B já ensina
         // storeVarOpcode/loadVarOpcode/isDoubleWidth a despachar
         // ASTORE/ALOAD/1-slot para ele) — desembrulhar aqui devolvia
-        // ao slot bruto e perdia a distinção null/default. Native
-        // mantém o unwrap antigo (fase 2, mesma representação de
-        // sempre).
+        // ao slot bruto e perdia a distinção null/default.
         if (varType instanceof Type.NullableType nt
-                && !(nt.inner() instanceof Type.PrimitiveType && !driver.target.isNative())) {
+                && !(nt.inner() instanceof Type.PrimitiveType)) {
             varType = nt.inner();
         }
         if (driver.mutatedCapturedNames.contains(vds.name())) {
@@ -105,6 +100,17 @@ final class StatementLowererLocalBoxing {
         boolean nullablePrimSlot = TypeMetrics.isNullablePrimitive(varType);
         Type vdBoxT = vdInit != null
                 ? ExpressionTyper.inferExprType(driver, vdInit, locals) : null;
+        // #259: o box do slot Nullable(primitivo) usa o inner DECLARADO, não
+        // o tipo do initializer — o widening acima já converteu o valor da
+        // pilha para o destino, e boxar pelo tipo de ORIGEM empilhava um
+        // valor de um tipo e chamava o boxer de outro:
+        //   `Double? d = 2`   -> i2d (double)  + Integer.valueOf(int)  VerifyError
+        //   `Float?  x = 2.5` -> f   (float)   + Double.valueOf(double) frame crash
+        //   `Long?   l = 2`   -> i2l (long)    + Integer.valueOf(int)  VerifyError
+        // O gate de re-box continua no tipo de ORIGEM (vdBoxT cru): init já
+        // Nullable (`Int? g = m.get(...)`) chega fisicamente boxed — §294-2a.
+        Type slotBoxT = nullablePrimSlot && varType instanceof Type.NullableType nts
+                && nts.inner() instanceof Type.PrimitiveType ? nts.inner() : vdBoxT;
         if (driver.erasesToReference(varType)
                 && vdInit != null
                 && TypeMetrics.isPrimitiveType(vdBoxT)
@@ -114,7 +120,7 @@ final class StatementLowererLocalBoxing {
                 && vdBoxT instanceof Type.PrimitiveType ipt
                 && !Type.isVoid(ipt)
                 && !ExpressionTyper.boxesOwnBranches(driver, vdInit, locals)) {
-            driver.emitErasureBox(ops, ipt);
+            driver.emitErasureBox(ops, slotBoxT);
         }
         // declaração sem inicializador: default (0 primitivo / null
         // referência) — antes o store saía de pilha vazia (frame crash).

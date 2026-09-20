@@ -28,7 +28,7 @@ public final class ExpressionShellCallLowerer {
             if (driver.currentDiagnostics != null) {
                 driver.currentDiagnostics.error(posFile(mc), posLine(mc), posCol(mc), 0,
                         "Cannot resolve method '" + mc.methodName()
-                                + "' on 'shell' (valid: cmd, run, pipeline, ok)",
+                                + "' on 'shell' (valid: " + String.join(", ", KofShell.functions()) + ")",
                         "SEM025");
             }
             return localIdx;
@@ -86,6 +86,15 @@ public final class ExpressionShellCallLowerer {
                 ops.add(new KofCall(KofProcess.RESULT, "kof_shell_pipeline",
                         List.of(KofShell.STRING_LIST_LIST), KofProcess.RESULT,
                         KofCallKind.FUNCTION));
+            }
+            case "runWith" -> {
+                for (int i = 0; i < 3; i++) {
+                    localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(i),
+                            ops, owner, localIdx, locals);
+                }
+                ops.add(new KofCall(KofProcess.RESULT, "kof_shell_runwith",
+                        List.of(KofProcess.STRING_LIST, BuiltinTypes.STRING, KofShell.MAP_SS),
+                        KofProcess.RESULT, KofCallKind.FUNCTION));
             }
             default -> {
                 // "ok": shell.ok(result) == result.exitCode == 0 — pure IR, no binding

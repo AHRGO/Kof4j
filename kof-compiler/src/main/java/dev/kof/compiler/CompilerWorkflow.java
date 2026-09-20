@@ -42,7 +42,7 @@ final class CompilerWorkflow {
         boolean collision = unit.declarations().stream()
                 .anyMatch(d -> d instanceof TypeDeclarationNode t
                         && ("KofWfJob".equals(t.name()) || "KofWfDag".equals(t.name())
-                                || "KofWfReport".equals(t.name())));
+                                || "KofWfReport".equals(t.name()) || "KofWfCk".equals(t.name())));
         if (collision) return unit;
         try (var in = CompilerDriver.class.getResourceAsStream("/dev/kof/workflow-host.kf")) {
             if (in == null) {
@@ -71,11 +71,86 @@ final class CompilerWorkflow {
                 driver.declarationPackages.put(d, "");
                 decls.add(d);
             }
+            // fatia schedule (bundle 2.1.3): separada do host principal
+            // porque o gate CRON001 do scheduler.at é estático — no NATIVE
+            // entra o STUB (throw CRON001 em runtime, R6), nunca a
+            // delegação (que derrubaria o host INTEIRO na recusa).
+            if (!driver.target.isNative()) {
+                mergeHostSlice(driver, unit, decls, diagnostics, "/dev/kof/workflow-sched-host.kf");
+            } else {
+                mergeHostSlice(driver, unit, decls, diagnostics, "/dev/kof/workflow-sched-host.native.kf");
+            }
+            // fatia checkpoint (bundle 2.1.3): MESMO mecanismo — o gate
+            // ORM001 do kof.orm é estático; não-Native injeta a fatia orm
+            // (entity KofWfCk + hooks), Native injeta o stub ORM001.
+            if (!driver.target.isNative()) {
+                mergeHostSlice(driver, unit, decls, diagnostics, "/dev/kof/workflow-ckpt-host.kf");
+            } else {
+                mergeHostSlice(driver, unit, decls, diagnostics, "/dev/kof/workflow-ckpt-host.native.kf");
+            }
+            // fatia supervisão (bundle 2.1.3, plano §3: o workflow DELEGA o
+            // restart ao kof.supervisor — nunca re-implementa). O
+            // CompilerSupervisor roda ANTES no pipeline: se o usuário
+            // importou kof.supervisor, o host já está nas decls (KofSupWrap é
+            // a marca dele — Supervisor/supervisor() então NÃO são colisão,
+            // são o próprio host) e só injeta a fatia. Sem o import, o host é
+            // injetado flat aqui (mesmo mecanismo DD-OTP-01). Supervisor
+            // PRÓPRIO do usuário sem o host, ou um runSupervised/KofWfSupStatus
+            // dele = colisão — a peça correspondente não entra (regra 8:
+            // jamais quebrar um programa que compila hoje).
+            boolean hostSupJa = decls.stream().anyMatch(d -> d instanceof TypeDeclarationNode t
+                    && "KofSupWrap".equals(t.name()));
+            boolean colideHostSup = !hostSupJa && decls.stream().anyMatch(d ->
+                    (d instanceof TypeDeclarationNode t
+                            && ("Supervisor".equals(t.name()) || "KofWorker".equals(t.name())
+                                    || "KofWorkerFactory".equals(t.name())))
+                            || (d instanceof FunctionDeclarationNode f && "supervisor".equals(f.name())));
+            boolean colideFace = decls.stream().anyMatch(d ->
+                    (d instanceof TypeDeclarationNode t && "KofWfSupStatus".equals(t.name()))
+                            || (d instanceof FunctionDeclarationNode f && "runSupervised".equals(f.name())));
+            if (!hostSupJa && !colideHostSup) {
+                mergeHostSlice(driver, unit, decls, diagnostics, "/dev/kof/supervisor-host.kf");
+            }
+            if (!colideHostSup && !colideFace) {
+                mergeHostSlice(driver, unit, decls, diagnostics, "/dev/kof/workflow-sup-host.kf");
+            }
             return new CompilationUnitNode(unit.position(), unit.packageName(), imports, decls);
         } catch (IOException e) {
             diagnostics.error("", 0, 0, 0,
                     "workflow host could not be loaded: " + e.getMessage(), "PKG003");
             return null;
+        }
+    }
+
+    private static void mergeHostSlice(CompilerDriver driver,
+                                       CompilationUnitNode unit,
+                                       List<AstNode> decls,
+                                       DiagnosticCollector diagnostics,
+                                       String resource) {
+        try (var in = CompilerDriver.class.getResourceAsStream(resource)) {
+            if (in == null) {
+                diagnostics.error("", 0, 0, 0,
+                        "workflow host slice resource " + resource + " missing", "PKG003");
+                return;
+            }
+            String schedSource = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            String sliceName = resource.substring(resource.lastIndexOf('/') + 1);
+            DiagnosticCollector silent = new DiagnosticCollector();
+            Lexer lexer = new Lexer(schedSource, sliceName, silent);
+            Parser parser = new Parser(lexer.tokenize(), silent, sliceName);
+            CompilationUnitNode schedUnit = parser.parse();
+            if (silent.hasErrors() || schedUnit == null) {
+                for (Diagnostic d : silent.getDiagnostics()) diagnostics.report(d);
+                diagnostics.error("", 0, 0, 0, "workflow host slice did not parse", "PKG003");
+                return;
+            }
+            for (AstNode d : schedUnit.declarations()) {
+                driver.declarationPackages.put(d, "");
+                decls.add(d);
+            }
+        } catch (IOException e) {
+            diagnostics.error("", 0, 0, 0,
+                    "workflow host slice could not be loaded: " + e.getMessage(), "PKG003");
         }
     }
 }

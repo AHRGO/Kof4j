@@ -204,8 +204,8 @@ public final class CompilerPipeline {
         for (AstNode decl : unit.declarations()) {
             String declPkg = driver.declPackage(decl, unit.packageName());
             if (decl instanceof ClassDeclarationNode cls) classes.add(CompilerClassLowering.lowerClass(driver, cls, declPkg, nextTypeId++));
-            else if (decl instanceof InterfaceDeclarationNode iface) classes.add(CompilerClassLowering.lowerInterface(driver, iface, declPkg, nextTypeId++));
-            else if (decl instanceof RecordDeclarationNode rec) classes.add(CompilerClassLowering.lowerRecord(driver, rec, declPkg, nextTypeId++));
+            else if (decl instanceof InterfaceDeclarationNode iface) classes.add(CompilerIfaceRecordLowering.lowerInterface(driver, iface, declPkg, nextTypeId++));
+            else if (decl instanceof RecordDeclarationNode rec) classes.add(CompilerIfaceRecordLowering.lowerRecord(driver, rec, declPkg, nextTypeId++));
             else if (decl instanceof EnumDeclarationNode en) classes.add(CompilerEnumLowering.lowerEnum(driver, en, declPkg, nextTypeId++)); // #445
             else switch (decl) {
                 case EntityDeclarationNode ent -> {
@@ -214,7 +214,7 @@ public final class CompilerPipeline {
                     for (EntityFieldNode f : ent.fields()) {
                         components.add(new RecordComponentNode(f.position(), List.of(), f.type(), f.name(), null));
                     }
-                    classes.add(CompilerClassLowering.lowerRecord(driver, new RecordDeclarationNode(ent.position(), ent.name(),
+                    classes.add(CompilerIfaceRecordLowering.lowerRecord(driver, new RecordDeclarationNode(ent.position(), ent.name(),
                             ent.modifiers(), null, List.of(), components, List.of()),
                             declPkg, nextTypeId++));
                 }
@@ -346,6 +346,8 @@ public final class CompilerPipeline {
         DiagnosticCollector diagnostics = new DiagnosticCollector();
         driver.moduleRoot = moduleRoot;
         driver.target = Target.JVM;
+        boolean prevInterpreting = driver.interpreting;
+        driver.interpreting = true;
         driver.currentDiagnostics = diagnostics;
         CompilerPipeline.flushClasspathWarnings(driver);
         driver.entitySchemas.clear();
@@ -364,6 +366,8 @@ public final class CompilerPipeline {
             diagnostics.error(sources.get(0).toString(), 0, 0, 0,
                     "Error reading source file: " + e.getMessage(), "COMP001");
             throw new KofInterpretException(diagnostics);
+        } finally {
+            driver.interpreting = prevInterpreting;
         }
     }
 

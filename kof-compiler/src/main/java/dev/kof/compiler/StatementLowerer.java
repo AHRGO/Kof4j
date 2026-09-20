@@ -90,9 +90,8 @@ public final class StatementLowerer {
                     localIdx = driver.emitComparisonShortcut(bin, ops, owner, localIdx, locals);
                     ops.add(new KofConditionalJump(driver.mapComparison(bin.operator()), driver.comparisonOperandType(bin, locals), thenLabel, elseLabel));
                 } else {
-                    localIdx = ExpressionLowerer.emitExpression(driver, ifStmt.condition(), ops, owner, localIdx, locals);
-                    ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
-                    ops.add(new KofConditionalJump(KofComparison.NE, thenLabel, elseLabel));
+                    localIdx = CompilerComparisons.emitTruthinessJump(driver, ifStmt.condition(),
+                            ops, owner, localIdx, locals, thenLabel, elseLabel);
                 }
                 ops.add(new KofLabel(thenLabel));
                 localIdx = driver.emitStatement(ifStmt.thenBranch(), ops, owner, localIdx, locals, returnType);
@@ -113,9 +112,8 @@ public final class StatementLowerer {
                     localIdx = driver.emitComparisonShortcut(bin, ops, owner, localIdx, locals);
                     ops.add(new KofConditionalJump(driver.mapComparison(bin.operator()), driver.comparisonOperandType(bin, locals), bodyLabel, endLabel));
                 } else {
-                    localIdx = ExpressionLowerer.emitExpression(driver, ws.condition(), ops, owner, localIdx, locals);
-                    ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
-                    ops.add(new KofConditionalJump(KofComparison.NE, bodyLabel, endLabel));
+                    localIdx = CompilerComparisons.emitTruthinessJump(driver, ws.condition(),
+                            ops, owner, localIdx, locals, bodyLabel, endLabel);
                 }
                 ops.add(new KofLabel(bodyLabel));
                 driver.breakLabels.push(endLabel);

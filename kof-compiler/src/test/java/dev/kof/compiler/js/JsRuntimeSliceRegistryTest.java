@@ -14,11 +14,13 @@ class JsRuntimeSliceRegistryTest {
     private static String legacyCoreRuntime() {
         return new StringBuilder()
                 .append(JsRuntimeCore.CORE_RUNTIME)
+                .append(JsRuntimeEquality.EQUALITY_RUNTIME)  // #518: kofValEq por conteudo (registro posicao 2)
                 .append(JsRuntimeUiComponents.UI_COMPONENT_RUNTIME)
                 .append(JsRuntimeUiLinkImageIcon.UI_LINK_IMAGE_ICON_RUNTIME)
                 .append(JsRuntimeUiWidgets.UI_WIDGET_RUNTIME)
                 .append(JsRuntimeUiForms.UI_FORMS_RUNTIME)
                 .append(JsRuntimeUiLayout.UI_LAYOUT_RUNTIME)
+                .append(JsRuntimeCollections.COLLECTIONS_RUNTIME)
                 .append(JsRuntimeUiJsonMap.JSON_MAP_RUNTIME)
                 .append(JsRuntimeUiWeb.UI_WEB_RUNTIME)
                 .append(JsRuntimeUiWebSse.uiWebSseRuntime())

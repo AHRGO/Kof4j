@@ -108,6 +108,12 @@ public final class CollectionCallLowerer {
             case "isEmpty" -> "kof_list_is_empty";
             case "remove" -> "kof_list_remove";
             case "clear" -> "kof_list_clear";
+            // #382 — indexOf/lastIndexOf/addAll/subList/sort
+            case "indexOf" -> "kof_list_index_of";
+            case "lastIndexOf" -> "kof_list_last_index_of";
+            case "addAll" -> "kof_list_add_all";
+            case "subList" -> "kof_list_sub_list";
+            case "sort" -> "kof_list_sort";
             default -> null;
         };
         // R6: método desconhecido em List não pode ser silencioso (bug Set.first)
@@ -119,14 +125,45 @@ public final class CollectionCallLowerer {
             driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
                     mc.position() != null ? mc.position().line() : 0,
                     mc.position() != null ? mc.position().column() : 0, 0,
-                    "Cannot resolve method '" + m + "' on type 'List' (valid: add/get/set/remove/contains/size/isEmpty/clear/map/filter/reduce)",
+                    "Cannot resolve method '" + m + "' on type 'List' (valid: add/get/set/remove/contains/size/isEmpty/clear/map/filter/reduce/indexOf/lastIndexOf/addAll/subList/sort)",
                     "SEM025");
             return localIdx;
         }
         if (listFn != null) {
+            // #382/#386 — gates compartilhados (aridade + domínio do sort)
+            // em CollectionMethodGates; precedente SEM072/#336, SEM073/#361:
+            // um gate na semântica compartilhada, os 4 alvos reportam igual
+            // (sem ele, `l.indexOf()` empilhava 0 args e quebrava de um
+            // jeito diferente em cada backend — R6).
+            String arityMsg = CollectionMethodGates.arityError(
+                    listFn, "List", mc.methodName(), mc.arguments().size());
+            if (arityMsg != null && driver.currentDiagnostics != null) {
+                var pos = mc.position();
+                driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                        pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
+                        arityMsg, "SEM025");
+                return localIdx;
+            }
             List<Type> argTypes = new ArrayList<>();
             for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
             Type elemType = driver.listElementType(recvType);
+            // SEM097 (domínio natural do sort) / NAT001 (Float no native) —
+            // nunca ordem silenciosa errada (par sort×Float no cross não tem
+            // compare de precisão simples tradutível; usar Double).
+            if ("kof_list_sort".equals(listFn) && driver.currentDiagnostics != null
+                    && (!CollectionMethodGates.naturalOrderType(elemType)
+                        || CollectionMethodGates.floatSortUnsupportedOnNative(
+                                elemType, driver.target.isNative()))) {
+                boolean natFloat = CollectionMethodGates.naturalOrderType(elemType);
+                var pos = mc.position();
+                driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                        pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
+                        natFloat ? "List.sort on Float elements is not supported on the native target yet"
+                                + " (NAT001) — sort a Double list or insert manually"
+                                : CollectionMethodGates.sortDomainError(elemType),
+                        natFloat ? "NAT001" : "SEM097");
+                return localIdx;
+            }
             // §122 (opção B, família SEM051/052/053/054): o índice de
             // get/set/remove é Int (learn/12: remove(0) devolve o elemento);
             // String/record/array no índice era ACEITO em silêncio e quebrava
@@ -136,16 +173,26 @@ public final class CollectionCallLowerer {
             // flagados (SG-008: pode chegar Int em runtime); numéricos passam
             // (Int é o contrato; o verifier cuida do resto).
             if (("kof_list_get".equals(listFn) || "kof_list_set".equals(listFn)
-                    || "kof_list_remove".equals(listFn))
+                    || "kof_list_remove".equals(listFn) || "kof_list_sub_list".equals(listFn))
                     && !argTypes.isEmpty() && driver.currentDiagnostics != null) {
                 Type idxT = argTypes.get(0);
                 if (isReferenceIndexType(idxT)) {
                     var pos = mc.position();
                     driver.currentDiagnostics.error(pos != null ? pos.file() : "",
-                            pos != null ? pos.line() : 0,
-                            pos != null ? pos.column() : 0, 0,
+                            pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
                             "List." + mc.methodName() + " takes an Int INDEX; " + CollectionWrites.typeNameFor(idxT)
                                     + " is not an index (to search by value use contains)",
+                            "SEM055");
+                    return localIdx;
+                }
+                // #382: subList tem DOIS índices — o segundo também é Int.
+                if ("kof_list_sub_list".equals(listFn) && argTypes.size() > 1
+                        && isReferenceIndexType(argTypes.get(1))) {
+                    var pos = mc.position();
+                    driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                            pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
+                            "List.subList takes Int INDEX bounds; " + CollectionWrites.typeNameFor(argTypes.get(1))
+                                    + " is not an index",
                             "SEM055");
                     return localIdx;
                 }
@@ -207,18 +254,32 @@ public final class CollectionCallLowerer {
                     localIdx, locals, argTypes, elemType,
                     ("kof_list_add".equals(listFn) || "kof_list_set".equals(listFn)) ? storeValIdx : -1);
             Type retType = switch (listFn) {
-                case "kof_list_add", "kof_list_set", "kof_list_clear" -> Type.PrimitiveType.VOID;
-                case "kof_list_contains", "kof_list_is_empty" -> Type.PrimitiveType.BOOL;
+                case "kof_list_add", "kof_list_set", "kof_list_clear", "kof_list_sort" -> Type.PrimitiveType.VOID;
+                case "kof_list_contains", "kof_list_is_empty", "kof_list_add_all" -> Type.PrimitiveType.BOOL;
+                // #382 — indexOf/lastIndexOf: Int (-1 ausente, oracle java.util);
+                // subList: List do mesmo tipo de elemento.
+                case "kof_list_index_of", "kof_list_last_index_of" -> Type.PrimitiveType.INT;
+                case "kof_list_sub_list" -> recvType;
                 case "kof_list_remove" -> elemType;
                 default -> elemType;
             };
-            if ("kof_list_contains".equals(listFn)) {
+            if ("kof_list_contains".equals(listFn) || "kof_list_index_of".equals(listFn)
+                    || "kof_list_last_index_of".equals(listFn)) {
 
                 // §126: equals de String só quando AMBOS elemType e arg são
                 // String conhecidos; senão raw cmpq (nunca deref → miss seguro
                 // = false do JVM). Int-arg em String-list era SIGSEGV (E1).
                 ops.add(new KofLoadLiteral(Type.PrimitiveType.INT,
                         CollectionWrites.stringTag(elemType, argTypes, 0)));
+                argTypes = new ArrayList<>(argTypes);
+                argTypes.add(Type.PrimitiveType.INT);
+            }
+            // #382 — sort: tag derivada só do elemType (sem arg):
+            // 0=raw signed qword (Int/Long/Bool/Char/Unknown-vazio),
+            // 1=String (kof_string_compare_to), 2=Double (ucomisd/fld+flt.d).
+            if ("kof_list_sort".equals(listFn)) {
+                ops.add(new KofLoadLiteral(Type.PrimitiveType.INT,
+                        CollectionMethodGates.sortTag(elemType)));
                 argTypes = new ArrayList<>(argTypes);
                 argTypes.add(Type.PrimitiveType.INT);
             }
@@ -239,17 +300,30 @@ public final class CollectionCallLowerer {
             case "isEmpty" -> "kof_map_is_empty";
             case "keys" -> "kof_map_keys";
             case "values" -> "kof_map_values";
+            // #386 — containsValue/putIfAbsent
+            case "containsValue" -> "kof_map_contains_value";
+            case "putIfAbsent" -> "kof_map_put_if_absent";
             default -> null;
         };
         if (mapFn == null && driver.currentDiagnostics != null) {
             driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
                     mc.position() != null ? mc.position().line() : 0,
                     mc.position() != null ? mc.position().column() : 0, 0,
-                    "Cannot resolve method '" + mc.methodName() + "' on type 'Map' (valid: put/get/getOrDefault/remove/containsKey/contains/size/clear/isEmpty/keys/values)",
+                    "Cannot resolve method '" + mc.methodName() + "' on type 'Map' (valid: put/get/getOrDefault/putIfAbsent/remove/containsKey/contains/containsValue/size/clear/isEmpty/keys/values)",
                     "SEM025");
             return localIdx;
         }
         if (mapFn != null) {
+            // #386 — aridade (CollectionMethodGates, mesmo gate dos List).
+            String mapArityMsg = CollectionMethodGates.arityError(
+                    mapFn, "Map", mc.methodName(), mc.arguments().size());
+            if (mapArityMsg != null && driver.currentDiagnostics != null) {
+                var pos = mc.position();
+                driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                        pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
+                        mapArityMsg, "SEM025");
+                return localIdx;
+            }
             List<Type> argTypes = new ArrayList<>();
             for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
             Type keyType = Type.UnknownType.UNKNOWN;
@@ -260,8 +334,11 @@ public final class CollectionCallLowerer {
             }
             // mapOf() nasce Map<Unknown,Unknown>: o primeiro put()
             // pina os tipos no local para que get()/remove() tenham
-            // tipo concreto (comparações e unboxing corretos)
-            if ("kof_map_put".equals(mapFn)
+            // tipo concreto (comparações e unboxing corretos).
+            // #386: putIfAbsent ESCREVE como put → entra no mesmo pin
+            // (sem ele, putIfAbsent("a",1) num mapa fresco deixava o JVM
+            // empilhando int cru contra putIfAbsent(Object,Object)).
+            if (("kof_map_put".equals(mapFn) || "kof_map_put_if_absent".equals(mapFn))
                     && keyType instanceof Type.UnknownType
                     && argTypes.size() == 2
                     && !(argTypes.get(0) instanceof Type.UnknownType)
@@ -290,7 +367,9 @@ public final class CollectionCallLowerer {
             // Chave errada = scan tag=1 sobre Int cru → SIGSEGV no Native
             // (A2/H4); valor errado = ClassCastException no JVM no get/unbox.
             // Rejeição cobre os dois lados (decisão "put heterogêneo").
-            if (("kof_map_put".equals(mapFn) || "kof_map_get_or_default".equals(mapFn))
+            // #386: putIfAbsent escreve os dois slots → mesma parede.
+            if (("kof_map_put".equals(mapFn) || "kof_map_get_or_default".equals(mapFn)
+                    || "kof_map_put_if_absent".equals(mapFn))
                     && driver.currentDiagnostics != null) {
                 String badSlot = null; Type badType = null, slotType = null;
                 int valIdx = 1;
@@ -304,7 +383,7 @@ public final class CollectionCallLowerer {
                     driver.currentDiagnostics.error(pos != null ? pos.file() : "",
                             pos != null ? pos.line() : 0,
                             pos != null ? pos.column() : 0, 0,
-                            "Map.put: " + badSlot + " " + CollectionWrites.typeNameFor(badType)
+                            "Map." + mc.methodName() + ": " + badSlot + " " + CollectionWrites.typeNameFor(badType)
                                     + " does not match the map type (" + CollectionWrites.typeNameFor(slotType)
                                     + ") — Kof collections are homogeneous",
                             "SEM056");
@@ -321,6 +400,11 @@ public final class CollectionCallLowerer {
                 // (Type.isVoid guard) consultam ESTE campo, não o typer.
                 case "kof_map_put", "kof_map_remove" -> new Type.NullableType(valueType);
                 case "kof_map_get_or_default" -> valueType;
+                // #386 — putIfAbsent: contrato Java (anterior OU null quando
+                // ausente) → V? de verdade, mesma linha do put acima
+                // (D-NULL-INTENT/I7). containsValue: Bool.
+                case "kof_map_put_if_absent" -> new Type.NullableType(valueType);
+                case "kof_map_contains_value" -> Type.PrimitiveType.BOOL;
                 // get() devolve V? (SG-008/bug 87): ausência é null comparável
                 // (`x == null`), nunca NPE por unbox. O unbox acontece no
                 // USE (aritmética), guiado pelo tipo do slot.
@@ -337,7 +421,36 @@ public final class CollectionCallLowerer {
             // emitArgsCoercingValue ajusta argTypes ao converter.
             localIdx = CompilerEmissionHelpers.emitArgsCoercingValue(driver, mc, ops, owner,
                     localIdx, locals, argTypes, valueType,
-                    "kof_map_put".equals(mapFn) ? 1 : -1);
+                    ("kof_map_put".equals(mapFn) || "kof_map_put_if_absent".equals(mapFn)) ? 1 : -1);
+            // §284-map (18/09): o slot de VALOR do Map e fisicamente caixa
+            // para a familia Int/Long no nativo — mesmo contrato do JVM
+            // (HashMap guarda Integer/Long; JvmOpCollections unboxa no leitor;
+            // os consumidores de Nullable(V) emitem kof_unbox nos dois
+            // targets). Pre-§284 o par raw-write × unbox-read so fechava
+            // porque o unbox era no-op; com a caixa real virou SIGSEGV
+            // (rdi=1). Double/Float/Bool ficam crus: nao existe kof_unbox
+            // para eles (unboxFn null) — cru × no-op continua casado.
+            // List/Set nativos nao sao tocados (storage raw tipado, §253).
+            if (("kof_map_put".equals(mapFn) || "kof_map_get_or_default".equals(mapFn)
+                    || "kof_map_put_if_absent".equals(mapFn))
+                    && argTypes.size() > 1 && driver.target.isNative()
+                    && driver.needsErasureBoxing() && mapSlotAcceptsBox(valueType)
+                    && mapBoxablePrim(argTypes.get(1))
+                    && !ExpressionTyper.boxesOwnBranches(driver, mc.arguments().get(1), locals)) {
+                CompilerEmissionHelpers.emitErasureBox(driver, ops, argTypes.get(1));
+            }
+            // #386 — containsValue: extras de valor (box do arg + tag por
+            // valueType×arg + NAT002 p/ mapa de valor Object no nativo) —
+            // responsabilidade em CollectionValueOps; o JVM faz POP do tag,
+            // o nativo usa no scan (valorCmpTag: String/box/miss-seguro).
+            if ("kof_map_contains_value".equals(mapFn)) {
+                if (CollectionValueOps.emitContainsValueExtras(driver, mc, ops, locals,
+                        argTypes, valueType)) {
+                    return localIdx;
+                }
+                argTypes = new ArrayList<>(argTypes);
+                argTypes.add(Type.PrimitiveType.INT);
+            }
             ops.add(new KofCall(recvType, mapFn, argTypes, retType, KofCallKind.INSTANCE));
             return localIdx;
         }
@@ -440,6 +553,25 @@ public final class CollectionCallLowerer {
         ExpressionTyper.inferExprType(driver, arg, locals);
     }
         return -1;
+    }
+
+    // §284-map (18/09): slot que comporta caixa — concreto na familia
+    // Int/Long OU apagado (Unknown/Object — mapOf() sem pin, Map<_,Object>).
+    private static boolean mapSlotAcceptsBox(Type t) {
+        Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
+        if (inner instanceof Type.UnknownType || BuiltinTypes.isObject(inner)) return true;
+        return mapBoxablePrim(inner);
+    }
+
+    // ...e o dominio exato de unboxFn no nativo (int/char/short/byte/long).
+    // Double/Float/Bool ficam crus la e ca: sem kof_unbox para eles, o par
+    // cru × no-op que existia antes do §284 permanece casado (zero regressao).
+    static boolean mapBoxablePrim(Type t) {
+        if (!(t instanceof Type.PrimitiveType pt)) return false;
+        return switch (pt.name()) {
+            case "int", "char", "short", "byte", "long" -> true;
+            default -> false;
+        };
     }
 
     /** §122: tipos que NUNCA são um índice válido p/ get/set/remove de List. */

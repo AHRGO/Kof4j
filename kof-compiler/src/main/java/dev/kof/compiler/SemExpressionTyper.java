@@ -79,6 +79,16 @@ public final class SemExpressionTyper {
                         }
                     }
                 }
+                if ("super".equals(ie.name()) && sa.currentClassName() != null
+                        && !sa.currentClassName().isEmpty()) {
+                    SymbolTable.ClassSymbol cur = sa.getClass(sa.currentClassName());
+                    Type sup = cur != null
+                            ? HierarchyResolver.superTypeOf(sa, cur.internalName()) : null;
+                    if (sup != null) {
+                        sa.putExpressionType(ie, sup);
+                        yield sup;
+                    }
+                }
                 if (sa.currentClassName() != null && !sa.currentClassName().isEmpty()) {
                     SymbolTable.Symbol fieldSym = MemberResolver.resolveInHierarchy(sa, sa.currentClassName(), ie.name());
                     if (fieldSym != null) {
@@ -86,43 +96,7 @@ public final class SemExpressionTyper {
                         yield fieldSym.type();
                     }
                 }
-                if (sa.diagnostics() != null && !"this".equals(ie.name()) && !"super".equals(ie.name())
-                        && !"json".equals(ie.name()) && !"process".equals(ie.name()) && !"shell".equals(ie.name())
-                        && !KofWeb.isWebNamespace(ie.name())
-                        && !KofConfig.isConfigNamespace(ie.name())
-                        && !KofCache.isCacheNamespace(ie.name())
-                        && !KofGpu.isGpuNamespace(ie.name())
-                        && !KofDb.isDbNamespace(ie.name())
-                        && !KofOrm.isOrmNamespace(ie.name())
-                        && !KofLog.isLogNamespace(ie.name())
-                        && !KofSecurity.isSecurityNamespace(ie.name())
-                        && !KofValidation.isValidationNamespace(ie.name())
-                        && !KofStd.isStdNamespace(ie.name())
-                        && !KofObservability.isObservabilityNamespace(ie.name())
-                        && !KofHttp.isHttpNamespace(ie.name())
-                        && !KofMq.isMqNamespace(ie.name())
-                        && !KofTime.isTimeNamespace(ie.name())
-                        && !KofScheduler.isSchedulerNamespace(ie.name())
-                        && !KofTetris.isTetrisNamespace(ie.name())
-                        && !KofMedia.isStaticNamespace(ie.name())
-                        && !KofUi.isPalette(ie.name()) && !KofUi.isConstructor(ie.name())
-                        && !KofUiTokens.isTokenNamespace(ie.name())
-                        && !KofUi.isRouterNamespace(ie.name())
-                        && !"Theme".equals(ie.name())
-                        && !MemberResolver.isBuiltinTypeName(ie.name())
-                        // bug 127: operando de TIPO do cast `as` — `x as
-                        // () -> Int` vira IdentifierExpr com o type-ref
-                        // completo (não é variável/tipo declarado).
-                        && !(ie.name().startsWith("(") && ie.name().contains(" -> "))
-                        && !sa.allClasses().containsKey(ie.name())
-                        // §134: nome de classe EXTERNA (Button.inflate,
-                        // Greeter.hello) — o lowering (ExpressionMethodCall
-                        // Lowerer) resolve via ExternalClasspath; sem este
-                        // passe a análise semântica marcava SEM011 e a
-                        // chamada estática com receiver identificador nunca
-                        // chegava ao lowering (só `new X()` e instância
-                        // funcionavam).
-                        && !isExternalImportedClass(sa, ie.name())) {
+                if (SemUndefinedVarGuard.reportsUndefined(sa, ie.name())) {
                     sa.diagnostics().error("", 0, 0, 0,
                             "Undefined variable or type: '" + ie.name() + "'", "SEM011");
                 }
@@ -172,7 +146,9 @@ public final class SemExpressionTyper {
                     }
                     if (sym != null) {
                         targetType = Narrowing.assignTarget(scope, ie.name(), sym).type();
+                        boolean strConcat = "+=".equals(ae.operator()) && BuiltinTypes.isString(targetType);
                         if (sa.diagnostics() != null && !Type.isUnknown(targetType) && !Type.isUnknown(valueType)
+                                && !strConcat
                                 && !TypeChecker.isAssignable(sa, valueType, targetType)) {
                             sa.diagnostics().error("", 0, 0, 0,
                                     "Type mismatch: cannot assign " + valueType + " to " + targetType, "SEM012");
@@ -224,7 +200,11 @@ public final class SemExpressionTyper {
             }
             case UnaryExpr ue -> {
                 Type operandType = inferType(sa, ue.operand(), scope);
-                if ("!".equals(ue.operator())) yield Type.PrimitiveType.BOOL;
+                // D-TROOL (19/09): `!Troolean` = tres estados (Kleene `!U = U`)
+                // — o tipo semantico tem de casar com a caixa do lowering.
+                if ("!".equals(ue.operator())) yield CompilerComparisons.isNullableBool(operandType)
+                        ? new Type.NullableType(Type.PrimitiveType.BOOL)
+                        : Type.PrimitiveType.BOOL;
                 yield operandType;
             }
             case MethodCallExpr mc -> SemMethodCallTyper.infer(sa, mc, scope);
@@ -385,6 +365,14 @@ public final class SemExpressionTyper {
                 if (Type.isString(recvType) && ("name".equals(fa.fieldName()) || "path".equals(fa.fieldName()))) {
                     yield BuiltinTypes.STRING;
                 }
+                // #375/§355 (rio da erasure): receiver é type-variable COM bound
+                // (`item.name` com `item: T: Animal`) — o membro resolve no
+                // BOUND, como javac após a erasure. Sem isto o tipo caía em
+                // UNKNOWN e o emit saía owner "?" / descritor Object →
+                // NoClassDefFoundError: "?".
+                if (recvType instanceof Type.TypeVariable tv && tv.bound() != null) {
+                    recvType = tv.bound();
+                }
                 if (recvType instanceof Type.ClassType ct) {
                     SymbolTable.Symbol field = MemberResolver.resolveFieldInHierarchy(sa, ct.name(), fa.fieldName());
                     if (field != null) {
@@ -467,7 +455,13 @@ public final class SemExpressionTyper {
                     lambdaScope.define(new SymbolTable.ParameterSymbol(p.name(), paramType, idx));
                     idx++;
                 }
+                // #333: o corpo de LAMBDA inferiu o tipo pelo contexto (o `-> expr`
+                // vira ReturnStmt sintetico no LambdaParser:142) — nunca herda a
+                // rejeicao de valor da funcao envolvente.
+                boolean prevEv = sa.currentExplicitVoid;
+                sa.currentExplicitVoid = false;
                 StatementAnalyzer.analyzeBody(sa, le.body(), lambdaScope, Type.UnknownType.UNKNOWN);
+                sa.currentExplicitVoid = prevEv;
                 Type returnType = Type.UnknownType.UNKNOWN;
                 boolean hasReturn = false;
                 for (StatementNode s : le.body()) {
@@ -534,19 +528,6 @@ public final class SemExpressionTyper {
             }
             default -> Type.UnknownType.UNKNOWN;
         };
-    }
-
-    /**
-     * §134: o nome simples é uma classe EXTERNA importada cujo .class está
-     * nos entries do ExternalClasspath (--classpath/--deps)? Usado para não
-     * marcar SEM011 no receiver de chamada estática externa (Greeter.hello),
-     * que o lowering resolve via knows()/resolveMethod().
-     */
-    private static boolean isExternalImportedClass(SemanticAnalyzer sa, String name) {
-        if (sa.externalTypes() == null || sa.unit() == null) return false;
-        Type t = MemberResolver.qualifyViaImports(sa.unit(), name, sa.externalTypes());
-        return t instanceof Type.ClassType ct && !ct.packageName().isEmpty()
-                && sa.externalTypes().knows(ct.internalName());
     }
 
     private static boolean isKofCollectionType(Type t) {

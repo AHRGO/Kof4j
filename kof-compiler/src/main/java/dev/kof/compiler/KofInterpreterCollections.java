@@ -108,6 +108,28 @@ public final class KofInterpreterCollections {
                 l.clear();
                 yield null;
             }
+            // #382 — indexOf/lastIndexOf: box pelo tipo do ARG (bug 35 como
+            // contains; o tag extra do call-site é ignorado — equals de
+            // conteúdo é o do java.util). -1 quando ausente (mesmo oracle).
+            case "kof_list_index_of", "kof_list_last_index_of" -> {
+                Type argT = kc.parameterTypes().isEmpty() ? elemType : kc.parameterTypes().get(0);
+                yield "kof_list_index_of".equals(kc.methodName())
+                        ? l.indexOf(box(argT, args[0]))
+                        : l.lastIndexOf(box(argT, args[0]));
+            }
+            // #382 — addAll: 1 se a lista mudou (false p/ coleção vazia,
+            // espelha java.util). O arg chega como o próprio ArrayList.
+            case "kof_list_add_all" -> (l.addAll((java.util.Collection<?>) args[0]) ? 1 : 0);
+            // #382 — subList: cópia materializada (o IR declara List
+            // concreta; view do java.util não tem contrato na linguagem).
+            case "kof_list_sub_list" -> new ArrayList<>(
+                    l.subList(KofInterpreter.unboxInt(args[0]), KofInterpreter.unboxInt(args[1])));
+            // #382 — sort: ordem natural (Comparator null = mesma escolha
+            // do JVM; o gate SEM097/NAT001 já restringeu o domínio).
+            case "kof_list_sort" -> {
+                l.sort(null);
+                yield null;
+            }
             default -> NOT_HANDLED;
         };
     }
@@ -158,6 +180,15 @@ public final class KofInterpreterCollections {
             case "kof_map_remove" -> m.remove(box(kT, args[0]));
             case "kof_map_get_or_default" -> unbox(vT, m.getOrDefault(box(kT, args[0]), box(vT, args[1])));
             case "kof_map_contains" -> m.containsKey(box(kT, args[0])) ? 1 : 0;
+            // #386 — containsValue: kT aqui é exatamente o tipo do ARG
+            // (parameterTypes[0]) — para este op o arg é o VALOR candidato,
+            // então o box por ele é o correto (equals de conteúdo java.util).
+            case "kof_map_contains_value" -> m.containsValue(box(kT, args[0])) ? 1 : 0;
+            // #386 — putIfAbsent: sempre INSTANCE (nunca o swap de args do
+            // mapOf-FUNCTION); contrato do put (anterior OU null) — sem
+            // unbox() no resultado (D-NULL-INTENT/I7, null ausente é
+            // observável), box key+value como o put acima.
+            case "kof_map_put_if_absent" -> m.putIfAbsent(box(kT, args[0]), box(vT, args[1]));
             case "kof_map_size" -> m.size();
             case "kof_map_is_empty" -> m.isEmpty() ? 1 : 0;
             case "kof_map_clear" -> {

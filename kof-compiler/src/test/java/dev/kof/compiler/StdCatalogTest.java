@@ -65,9 +65,13 @@ class StdCatalogTest {
                 new Entry("random", "KofRandom", KofRandom.functions()),
                 new Entry("rng", "KofRng", KofRng.functions()));
         for (Entry e : entries) {
-            Set<String> inSource = caseLiterals(methodBody(source(e.cls()),
-                    "staticMethod(String namespace"));
-            assertEquals(inSource, new LinkedHashSet<>(e.fns()),
+            List<String> inSource = topCaseNames(switchBlock(
+                    methodBody(source(e.cls()), "staticMethod(String namespace"),
+                    "switch (name)"));
+            // 19/09 fatia 3: o lock antigo (regex `case "x"`) via so o 1o literal
+            // de um case de familia — foi exatamente como net/encoding esconderam
+            // membros. topCaseNames segue as virgulas (a garantia agora e maior).
+            assertEquals(new LinkedHashSet<>(inSource), new LinkedHashSet<>(e.fns()),
                     e.ns() + ": catalog != case-literals do " + e.cls());
             assertEquals(e.fns(), StdCatalog.membersOf(e.ns()), e.ns() + ": membros");
         }
@@ -177,31 +181,50 @@ class StdCatalogTest {
 
     @Test
     void slice2ListsMatchTyperSources() throws Exception {
-        assertEquals(topCaseNames(switchBlock(
-                methodBody(source("KofTime"), "isTimeMethod(String name)"), "switch (name)")),
-                KofTime.functions(), "time");
+        List<String> timeExpected = new ArrayList<>(topCaseNames(switchBlock(
+                methodBody(source("KofTime"), "isTimeMethod(String name)"), "switch (name)")));
+        assertEquals(timeExpected.stream().sorted().toList(),
+                KofTime.functions().stream().sorted().toList(), "time");
         assertEquals(topCaseNames(switchBlock(
                 methodBody(source("KofHttp"), "isHttpMethod(String name)"), "switch (name)")),
                 KofHttp.functions(), "http");
         assertEquals(topCaseNames(switchBlock(
                 methodBody(source("KofCache"), "isCacheMethod(String name)"), "switch (name)")),
                 KofCache.functions(), "cache");
-        assertEquals(topCaseNames(switchBlock(
+        List<String> dbExpected = new ArrayList<>(topCaseNames(switchBlock(
                 methodBody(source("KofDb"),
                         "staticCall(String name, List<Type> argTypes, boolean typed)"),
-                "switch (name)")),
-                KofDb.functions(), "db");
-        assertEquals(List.of("run"), KofProcess.functions(), "process");
+                "switch (name)")));
+        for (String fam : List.of("isQuery", "isExecute")) {
+            java.util.regex.Matcher fm = Pattern.compile("\"(\\w+)\"\\.equals\\(name\\)")
+                    .matcher(methodBody(source("KofDb"), fam + "(String name)"));
+            while (fm.find()) dbExpected.add(fm.group(1));
+        }
+        List<String> dbGot = new ArrayList<>(KofDb.functions());
+        assertEquals(dbExpected.stream().sorted().toList(), dbGot.stream().sorted().toList(), "db");
+        assertEquals(List.of("run", "spawn", "exit"), KofProcess.functions(), "process");
+        // 19/09 LSP-A fatia 2: spawn/exit vivem em entryCall/exitCall roteados por
+        // ExpressionProcessCallLowerer (case-literals la) — a lista acima tem que
+        // bater com os nomes aceitos pelo dispatcher real (behavioural, abaixo).
+        assertNotNull(KofProcess.entryCall("spawn", List.of(BuiltinTypes.STRING)), "spawn binda");
+        assertNull(KofProcess.entryCall("run", List.of()), "run sem programa NAO binda");
+        assertNotNull(KofProcess.exitCall(List.of(Type.PrimitiveType.INT)), "exit(Int)");
     }
 
     @Test
     void shellCatalogMatchesDispatchAndSignatures() {
-        assertEquals(List.of("cmd", "run", "pipeline", "ok"), KofShell.functions(), "shell");
+        assertEquals(List.of("cmd", "run", "runWith", "pipeline", "ok"), KofShell.functions(), "shell");
         assertNotNull(KofShell.staticCall("cmd",
                 List.of(BuiltinTypes.STRING, KofShell.STRING_LIST)), "shell.cmd");
         assertNotNull(KofShell.staticCall("run", List.of(BuiltinTypes.STRING)), "shell.run/1");
         assertNotNull(KofShell.staticCall("run",
                 List.of(BuiltinTypes.STRING, KofShell.STRING_LIST)), "shell.run/2");
+        assertNotNull(KofShell.staticCall("runWith", List.of(KofShell.STRING_LIST,
+                BuiltinTypes.STRING, BuiltinTypes.MAP)), "shell.runWith");
+        assertNotNull(KofShell.staticCall("runWith", List.of(KofProcess.STRING_LIST,
+                BuiltinTypes.STRING, BuiltinTypes.MAP)), "shell.runWith (empty argv inferred List<Object>)");
+        assertNull(KofShell.staticCall("runWith",
+                List.of(BuiltinTypes.STRING, BuiltinTypes.STRING, BuiltinTypes.MAP)), "shell.runWith(String argv)");
         assertNotNull(KofShell.staticCall("pipeline",
                 List.of(KofShell.STRING_LIST_LIST)), "shell.pipeline");
         assertNotNull(KofShell.staticCall("ok", List.of(KofProcess.RESULT)), "shell.ok");

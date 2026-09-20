@@ -25,6 +25,8 @@ import dev.kof.compiler.runtime.RuntimeJsonDecode;
 import dev.kof.compiler.runtime.RuntimeJsonEncode;
 import dev.kof.compiler.runtime.RuntimeJsonUtils;
 import dev.kof.compiler.runtime.RuntimeList;
+import dev.kof.compiler.runtime.RuntimeListLookups;
+import dev.kof.compiler.runtime.RuntimeMapLookups;
 import dev.kof.compiler.runtime.RuntimeCollectionToString;
 import dev.kof.compiler.runtime.RuntimeDtoa;
 import dev.kof.compiler.runtime.RuntimeLog1;
@@ -41,6 +43,7 @@ import dev.kof.compiler.runtime.RuntimeObservability1;
 import dev.kof.compiler.runtime.RuntimeObservability2;
 import dev.kof.compiler.runtime.RuntimeObservabilitySpans;
 import dev.kof.compiler.runtime.RuntimeObservability3;
+import dev.kof.compiler.runtime.RuntimeErasureBox;
 import dev.kof.compiler.runtime.RuntimePrint;
 import dev.kof.compiler.runtime.RuntimePrintNum;
 import dev.kof.compiler.runtime.RuntimeScheduler;
@@ -96,6 +99,7 @@ public final class NativeRuntime {
         sb.append("            .section .text\n");
         RuntimePrint.emitPrint(sb);
         RuntimePrint.emitPrintln(sb);
+        RuntimeErasureBox.emitBox(sb);   // §284
         RuntimePrintNum.emitPrintInt(sb);
         RuntimePrintNum.emitPrintFloat(sb);
         RuntimePrintNum.emitPrintDouble(sb);
@@ -105,6 +109,7 @@ public final class NativeRuntime {
         RuntimeStringConv.emitLongToString(sb);
         RuntimeStringConv.emitBoolToString(sb);
         RuntimeList.emitListFunctions(sb);
+        RuntimeListLookups.emit(sb);
         RuntimeCollectionToString.emit(sb);
         RuntimeJsonBuilder.emitJsonBuilder(sb);
         RuntimeJsonEncode.emitJsonEncode(sb);
@@ -131,6 +136,7 @@ public final class NativeRuntime {
         RuntimeStringBase.emitStringEquals(sb);
         RuntimeStringParse.emitStringToInt(sb);
         RuntimeStringParse.emitStringToLong(sb);
+        RuntimeStringParse.emitStringToBool(sb);
         RuntimeStringParseFp.emitStringToDouble(sb);
         // S13b (plan-stdlib-expansion): parse com default (briefing §43) —
         // wrappers com handler local no exc_chain; nunca lançam.
@@ -211,6 +217,7 @@ public final class NativeRuntime {
         RuntimeObservability3.emit(sb);
         RuntimeEnum.emit(sb);
         RuntimeMap.emit(sb);
+        RuntimeMapLookups.emit(sb);
         RuntimeSet.emit(sb);
         return sb.toString();
     }
