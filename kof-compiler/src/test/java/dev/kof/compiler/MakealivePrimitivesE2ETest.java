@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -315,10 +316,15 @@ class MakealivePrimitivesE2ETest {
                 (String, Map<String, String>) -> Bool put = null
             }
 
+            Map<String, String> hgOr(Map<String, String>? m, Map<String, String> fallback) {
+                if (m != null) { return m }
+                return fallback
+            }
+
             HgState hgStateFrom(Map<String, Map<String, String>> data, List<String> order) {
                 var s = HgState()
                 s.names = () -> order
-                s.props = (n: String) -> data.get(n)
+                s.props = (n: String) -> hgOr(data.get(n), mapOf())
                 s.put = (n: String, p: Map<String, String>) -> true
                 return s
             }
@@ -343,13 +349,16 @@ class MakealivePrimitivesE2ETest {
             """, "2", "media", "private", "true", "true");
     }
 
-    /** §363 repro (measured by probe 2): calling a generic-typed lambda
-     *  through a typed local crashes the JVM with
+    /** §371 (measured by probe 2; FIXED): calling a generic-typed lambda
+     *  through a typed local crashed the JVM with
      *  `IncompatibleClassChangeError: Class LambdaN does not implement the
-     *  requested interface kof.Function1_CString_CMap` — compilation is green
-     *  (R6 violation: silent until runtime). Cases measured here: (a) no
-     *  capture + Map return, (b) capture + String return, (c) capture + Map
-     *  return (the probe-2 shape). */
+     *  requested interface kof.Function1_CString_CMap` — the lambda class was
+     *  emitted with the interface mangled from the INFERRED body return
+     *  (`data.get(n)` is `Map?` -> NCMap) while the call site dispatched by
+     *  the DECLARED type (CMap), and the SC2 conformance check skipped
+     *  FunctionType assignments silently (R6). Now rejected at compile time
+     *  with SEM021 — cases (a) no capture + Map return and (b) capture +
+     *  String return stay green (no false positives). */
     @Test
     void genericLambdaInvokeCases() throws Exception {
         Path srcA = tmp.resolve("MAIfaceA.kf");
@@ -372,7 +381,7 @@ class MakealivePrimitivesE2ETest {
             """);
         Run b = runJvm(srcB, tmp.resolve("o-iface-b"));
         System.err.println("CASE-B (capture, String return): ok=" + b.ok() + " out=[" + b.output().trim() + "]");
-        Path srcC = Path.of("/tmp/opencode/r363.kf");
+        Path srcC = tmp.resolve("MAIfaceC.kf");
         Files.writeString(srcC, """
             main() {
                 var data = mapOf("m", mapOf("acl", "private"))
@@ -381,7 +390,10 @@ class MakealivePrimitivesE2ETest {
                 println(m.get("acl"))
             }
             """);
-        Run c = runJvm(srcC, Path.of("/tmp/opencode/r363out"));
-        System.err.println("CASE-C (capture, Map return): ok=" + c.ok() + " out=[" + c.output().trim() + "]");
+        Run c = runJvm(srcC, tmp.resolve("o-iface-c"));
+        assertFalse(c.ok(), "§371: body returning Map? assigned to (String) -> Map must be a COMPILE error, got ok + out=" + c.output());
+        assertTrue(c.output().contains("SEM021") || c.output().contains("type mismatch"),
+                "§371 fix must name the mismatch: " + c.output());
+        System.err.println("CASE-C (capture, Map return): rejected at compile-time as expected");
     }
 }
