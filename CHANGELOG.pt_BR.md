@@ -14,6 +14,21 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
 ### Em desenvolvimento
+
+  - **makealive 3.1 MK-1 providers — fs, CLI e REST como corpos de usuario, goldens JVM==JS**
+    (20/09, `.18`): tres formas de provedor executaveis sobre as interfaces sistemicas
+    genericas. `MakealiveFsProviderE2ETest` — mundo em disco via `File` de `kof.io`
+    (apply grava `k=v` reais, idempotencia pelo READ do provedor, destroy apaga; dirs
+    por motor; o workaround do §382 = efeito-e-verificacao: `f.writeText(x); return
+    f.exists()`). `MakealiveCliProviderE2ETest` — mundo via `run` de `kof.shell`
+    (existencia = `test -f`/`test ! -e` pela mesma interface; programa ausente =
+    `exitCode -1`, nunca throw). `MakealiveRestProviderE2ETest` — servidor HTTP KV real
+    (loopback, mesmo processo): `http.get(url)` devolve o BODY como String, 404 = corpo
+    vazio SEM throw (falha de conexao da throw nos dois motores — paridade honesta), a
+    existencia passa pela sonda separada `http.status(url)`. CLI/REST rodam JVM primeiro
+    e JS SEGUNDO contra O MESMO mundo compartilhado — idempotencia por READ cross-engine
+    provada byte a byte, e os programas identicos comparam byte (fs/CLI/REST goldens
+    1/1 cada, bateria Makealive 20/20 no tip).
   - .18 - GAPS-DB F1a (20/09): `orm.deleteAll<User>(db)` é REAL no Native x86-64 — `kof_orm_delete_all` em asm sobre o stack `kof_db_*` (sqlite; MySQL lanca ORM001 honesto em runtime; id ruim lanca a string exata do host); gate por-função `fnSupportedOn` (todas as outras faces e o cross mantem `ORM001`); fix de link: programa só-ORM agora puxa `-lsqlite3`. Prova medida: `KofOrmE2ETest` 35/0F paridade byte JVM==Native; suíte 4-módulos 3183/0F/0E no clone isolado.
 
   - **X9 fatia 6 — `kof deploy` empacota as faces cross (recusa preventiva DEP001 saiu)**

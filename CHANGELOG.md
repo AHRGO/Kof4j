@@ -15,6 +15,21 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
  ### In development
 
+  - **makealive 3.1 MK-1 providers — fs, CLI and REST as user bodies, goldens JVM==JS**
+    (20/09, `.18`): three executable provider shapes on the generic system interfaces.
+    `MakealiveFsProviderE2ETest` — world on disk via `kof.io` `File` (apply writes real
+    `k=v`, idempotence by the provider's READ, destroy deletes; per-engine dirs; the
+    §382 workaround is effect-then-verify: `f.writeText(x); return f.exists()`).
+    `MakealiveCliProviderE2ETest` — world through `kof.shell` `run` (existence =
+    `test -f`/`test ! -e` by the same interface; missing program = `exitCode -1`, never
+    a throw). `MakealiveRestProviderE2ETest` — a real HTTP KV server (loopback, same
+    process): `http.get(url)` returns the BODY as String, 404 = empty body WITHOUT
+    throw (connection failure throws on both engines — honest parity), existence goes
+    through the separate probe `http.status(url)`. CLI/REST run JVM first and JS second
+    against THE SAME shared world — cross-engine read-idempotence proven byte-for-byte,
+    and the identical programs byte-compare (fs/CLI/REST goldens 1/1 each, Makealive
+    battery 20/20 on the tip).
+
   - **X9 fatia 6 — `kof deploy` packages the cross faces (DEP001 preventive refusal gone)**
     — `--target native.riscv64|native.aarch64` now runs the SAME release pipeline as
     native x86: cross ELF (`Default/Main`, 0755) + `RELEASE.md` (run hint `./artifact`,
