@@ -33,6 +33,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Native-x86-64 medido nos probes do landing) e as faces §306 migradas.
     Fecha a familia #462/#486 por decisao (regra 8: o substituto do constructo
     estrangeiro agora esta NA lingua).
+  - **`kof.shell` 2.2.3 landado (19/09, lane `.18`)** — `shell.runWith(argv, cwd, env)`
+    no JVM + host JS: ambiente **aditivo** (as chaves do map sobrescrevem as herdadas,
+    nunca uma limpeza silenciosa), `cwd` `""` herda o diretório do processo, e erro de
+    spawn / argv vazio devolvem `Result` **honesto** (`stderr` preenchido,
+    `exitCode == -1`) — nunca hang, nunca sucesso silencioso (R6). No Native a face
+    segue o `PROC001` de compilação herdado de `process.run`. **Prova:**
+    `ShellE2ETest` 15/15 — goldens `pwd`/`printenv` com paridade byte JVM==JS, pins de
+    falha honesta, pin do gap Native e pin SEM025 de forma errada. Docs
+    stdlib/plan/parity/tracker sincronizados EN+PT; residual da linha 2.2 = só os
+        pipes vivos do `pipeline` JS (item de plataforma `process.spawn`, à parte).
 
   - **Catálogo de assinaturas agora é 32/32 — `json` tem hover/signatureHelp**
     (fechamento X10, 19/09): `json.encode`/`json.decode` entram na tabela gerada

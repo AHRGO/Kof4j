@@ -123,7 +123,10 @@ proposto = lane de desenvolvimento, confirmado).
   `PROC001`; paridade JS do run via `runBoth`. `cwd/env` (`runWith`) mudou para o 2.2.3 —
   precisa de ligações *novas* no runtime JVM e no host JS, o que alargaria o raio do MVP sem
   ganho.
-- **2.2.3 [paridade + extras]** — `runWith(cwd, env)` no JVM + ligação no host JS; `pipeline`
+- **2.2.3 [paridade + extras]** — ✅ LANDADO 19/09: `runWith(argv, cwd, env)` no JVM +
+  ligação no host JS (ambiente **aditivo**, `cwd` `""` herda, `Result` **honesto** com
+  `exitCode -1` p/ erro de spawn e argv vazio; `ShellE2ETest` 15/15 com paridade byte +
+  pin `PROC001` no Native). `pipeline`
   no JS quando (e somente quando) uma ligação JS de pipes vivos (`process.spawn`) landar
   (item de plataforma à parte); Native segue `PROC001` até o `process.run` da lane nativa
   fechar.

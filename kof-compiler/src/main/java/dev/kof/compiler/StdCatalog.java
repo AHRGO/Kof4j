@@ -120,6 +120,7 @@ public final class StdCatalog {
             Map.entry("shell", java.util.Map.ofEntries(
                     Map.entry("cmd", List.of("cmd(String program, List<String> args) -> List<String>")),
                     Map.entry("run", List.of("run(String program) -> Result", "run(String program, List<String> args) -> Result")),
+                    Map.entry("runWith", List.of("runWith(List<String> argv, String cwd, Map<String,String> env) -> Result")),
                     Map.entry("pipeline", List.of("pipeline(List<List<String>> stages) -> Result")),
                     Map.entry("ok", List.of("ok(result) -> Bool")))),
             Map.entry("net", java.util.Map.ofEntries(

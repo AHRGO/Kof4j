@@ -213,12 +213,18 @@ class StdCatalogTest {
 
     @Test
     void shellCatalogMatchesDispatchAndSignatures() {
-        assertEquals(List.of("cmd", "run", "pipeline", "ok"), KofShell.functions(), "shell");
+        assertEquals(List.of("cmd", "run", "runWith", "pipeline", "ok"), KofShell.functions(), "shell");
         assertNotNull(KofShell.staticCall("cmd",
                 List.of(BuiltinTypes.STRING, KofShell.STRING_LIST)), "shell.cmd");
         assertNotNull(KofShell.staticCall("run", List.of(BuiltinTypes.STRING)), "shell.run/1");
         assertNotNull(KofShell.staticCall("run",
                 List.of(BuiltinTypes.STRING, KofShell.STRING_LIST)), "shell.run/2");
+        assertNotNull(KofShell.staticCall("runWith", List.of(KofShell.STRING_LIST,
+                BuiltinTypes.STRING, BuiltinTypes.MAP)), "shell.runWith");
+        assertNotNull(KofShell.staticCall("runWith", List.of(KofProcess.STRING_LIST,
+                BuiltinTypes.STRING, BuiltinTypes.MAP)), "shell.runWith (empty argv inferred List<Object>)");
+        assertNull(KofShell.staticCall("runWith",
+                List.of(BuiltinTypes.STRING, BuiltinTypes.STRING, BuiltinTypes.MAP)), "shell.runWith(String argv)");
         assertNotNull(KofShell.staticCall("pipeline",
                 List.of(KofShell.STRING_LIST_LIST)), "shell.pipeline");
         assertNotNull(KofShell.staticCall("ok", List.of(KofProcess.RESULT)), "shell.ok");

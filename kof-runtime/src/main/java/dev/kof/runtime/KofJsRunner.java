@@ -179,37 +179,7 @@ public final class KofJsRunner {
             }
             return 0;
         });
-        platform.put("processRun", (ProxyExecutable) args -> {
-            try {
-                String program = args[0].asString();
-                java.util.List<String> cmd = new java.util.ArrayList<>();
-                cmd.add(program);
-                if (args.length > 1 && !args[1].isNull() && args[1].hasArrayElements()) {
-                    long n = args[1].getArraySize();
-                    for (long i = 0; i < n; i++) {
-                        Value v = args[1].getArrayElement(i);
-                        cmd.add(v.isString() ? v.asString() : String.valueOf(v));
-                    }
-                }
-                Process p = new ProcessBuilder(cmd).redirectErrorStream(false).start();
-                String outText = new String(p.getInputStream().readAllBytes(),
-                        java.nio.charset.StandardCharsets.UTF_8);
-                String errText = new String(p.getErrorStream().readAllBytes(),
-                        java.nio.charset.StandardCharsets.UTF_8);
-                int code = p.waitFor();
-                java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
-                result.put("stdout", outText);
-                result.put("stderr", errText);
-                result.put("exitCode", code);
-                return result;
-            } catch (Exception e) {
-                java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
-                result.put("stdout", "");
-                result.put("stderr", e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
-                result.put("exitCode", -1);
-                return result;
-            }
-        });
+        KofJsProcessBridge.install(platform);
         // §239 (JS): String.format — ponte p/ o host java.lang.String.format
         // (paridade byte-a-byte). Os varargs chegam como array JS (o lowering
         // compart. empacota em Object[]); reconstruímos o boxed type de cada

@@ -31,6 +31,9 @@ var n = shell.run(argv.get(0), listOf("-l")).stdout.trim()
 
 var out = shell.pipeline(listOf(listOf("echo", "um dois três"),
                                                listOf("wc", "-w"))).stdout  // JVM
+
+var build = shell.runWith(shell.cmd("make", listOf("-j4")), "/src",
+                          mapOf("CC", "clang"))                              // JVM + JS
 ```
 
 | Chamada | O que faz |
@@ -39,6 +42,7 @@ var out = shell.pipeline(listOf(listOf("echo", "um dois três"),
 | `shell.run(program)` / `shell.run(program, args)` | roda o comando, devolve `kof.process.Result` (`exitCode`/`stdout`/`stderr`) |
 | `shell.ok(result)` | `exitCode == 0` como `Bool` (IR puro de campo/comparação — `Result` não tem métodos) |
 | `shell.pipeline(listOf(argv, ...))` | encadeia stdout→stdin entre estágios, devolve o `Result` do último (JVM: `kof_shell_pipeline`, cadeia ProcessBuilder + threads de pump) |
+| `shell.runWith(argv, cwd, env)` | roda o argv **em `cwd`** com ambiente **aditivo** (`cwd` `""` herda o diretório do processo; as chaves do map sobrescrevem as herdadas — nunca uma limpeza silenciosa do ambiente). Erro de spawn e argv vazio devolvem `Result` **honesto** (`stderr` preenchido, `exitCode == -1`) no JVM e no JS; no Native é o mesmo `PROC001` de compilação do `run` |
 
 ## A propriedade de segurança (pinada por golden)
 
@@ -52,7 +56,7 @@ nesta API. Scripts do próprio repo que concatenam strings de comando re-limpam 
 
 | Face | JVM | JS | Native |
 |---|---|---|---|
-| `cmd` / `run` / `ok` | ✅ real (`kof_process_run`) | ✅ real (paridade byte-a-byte com JVM — 5 casos pinados) | ❌ `PROC001` honesto em tempo de compilação (herda a face `process.run` do Native) |
+| `cmd` / `run` / `runWith` / `ok` | ✅ real (`kof_process_run`; `runWith` via `kof_shell_runwith` — cwd + ambiente aditivo, `Result` honesto com `-1`) | ✅ real (paridade byte-a-byte com JVM — 5 casos pinados + `runWith` cwd/env/falhas) | ❌ `PROC001` honesto em tempo de compilação (herda a face `process.run` do Native) |
 | `pipeline` | ✅ real (cadeia com pump-threads, golden `echo|wc`) | ❌ `PROC001` honesto (precisa de `process.spawn` vivo) | ❌ `PROC001` honesto |
 | membro desconhecido (`shell.foo`) | ✅ `SEM025` | — | — |
 

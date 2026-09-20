@@ -71,6 +71,22 @@ public final class JsRuntimeIo {
                 return [program, ...args];
             }
 
+            // kof.shell runWith(argv, cwd, env) — 2.2.3. Map do Kof é JS Map
+            // nativo; o host recebe objeto plain de strings. Browser sem
+            // kof_platform: o Proxy honesto acima degrada (R7), nunca stub.
+            export function kofShellRunWith(argv, cwd, env) {
+                const o = {};
+                if (env) {
+                    env.forEach((v, k) => { o[String(k)] = String(v); });
+                }
+                const result = kof_platform.processRunWith(argv, cwd || "", o);
+                return {
+                    stdout: result.stdout,
+                    stderr: result.stderr,
+                    exitCode: result.exitCode
+                };
+            }
+
             // §239 (JS): String.format delega ao host (java.lang.String.format ->
             // paridade byte-a-byte). Sem kof_platform (browser) o Proxy acima da
             // tabela lança erro honesto — nunca um resultado errado em silêncio (R6/R7).

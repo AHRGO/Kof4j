@@ -58,7 +58,7 @@ boolean isRuntimeOp(KofCall kc) {
                 || name.equals("kof_now") || name.equals("kof_read_line")
                 || name.equals("kof_read_file") || name.equals("kof_write_file")
                 || name.equals("kof_process_run") || name.equals("kof_process_exit")
-                || name.equals("kof_shell_argv")
+                || name.equals("kof_shell_argv") || name.equals("kof_shell_runwith")
                 || name.equals("kof_args")
                 || name.equals("kof_ffi") || name.equals("kof_ffi_void")
                 || name.equals("kof_box") || name.equals("kof_unbox");
@@ -162,6 +162,12 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             // kof.shell cmd(program, args) — argv builder (Stage 2 / 2.2)
             p.lc.registerIoRuntime("kofShellArgv");
             stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofShellArgv"), args));
+            return;
+        }
+        if (name.equals("kof_shell_runwith")) {
+            // kof.shell runWith(argv, cwd, env) — 2.2.3 (JVM + JS host binding)
+            p.lc.registerIoRuntime("kofShellRunWith");
+            stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofShellRunWith"), args));
             return;
         }
         if (name.equals("kof_ui_color_to_css")) {

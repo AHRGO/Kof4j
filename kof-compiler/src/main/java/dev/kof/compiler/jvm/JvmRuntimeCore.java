@@ -358,6 +358,41 @@ public final class JvmRuntimeCore {
                     return argv;
                 }
 
+                public static ProcessResult kof_shell_runwith(List<String> argv, String cwd,
+                        java.util.Map<String, String> env) {
+                    // 2.2.3: argv-first, cwd "" = herdado, env ADDITIVO (nunca
+                    // limpa o ambiente em silêncio); erro de spawn = Result
+                    // honesto (stderr, -1) — mesma convenção do kof_process_run.
+                    try {
+                        if (argv == null || argv.isEmpty()) {
+                            return new ProcessResult("", "kof_shell_runwith: empty argv", -1);
+                        }
+                        ProcessBuilder pb = new ProcessBuilder(argv)
+                                .redirectErrorStream(false)
+                                .redirectInput(java.lang.ProcessBuilder.Redirect.from(new java.io.File("/dev/null")));
+                        if (cwd != null && !cwd.isEmpty()) {
+                            pb.directory(new java.io.File(cwd));
+                        }
+                        if (env != null) {
+                            pb.environment().putAll(env);
+                        }
+                        Process p = pb.start();
+                        java.util.concurrent.FutureTask<String> outTask = new java.util.concurrent.FutureTask<>(
+                                () -> new String(p.getInputStream().readAllBytes(),
+                                        java.nio.charset.StandardCharsets.UTF_8));
+                        java.util.concurrent.FutureTask<String> errTask = new java.util.concurrent.FutureTask<>(
+                                () -> new String(p.getErrorStream().readAllBytes(),
+                                        java.nio.charset.StandardCharsets.UTF_8));
+                        kofStartTask(outTask);
+                        kofStartTask(errTask);
+                        int code = p.waitFor();
+                        return new ProcessResult(outTask.get(), errTask.get(), code);
+                    } catch (Exception e) {
+                        return new ProcessResult("", e.getMessage() == null
+                                ? e.getClass().getSimpleName() : e.getMessage(), -1);
+                    }
+                }
+
                 public static ProcessResult kof_shell_pipeline(List<List<String>> stages) {
                     try {
                         if (stages == null || stages.isEmpty()) {

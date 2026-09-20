@@ -11,7 +11,7 @@
 568	kof-compiler/src/main/java/dev/kof/compiler/ExpressionLowerer.java
 533	kof-compiler/src/main/java/dev/kof/compiler/ExpressionTyper.java
 540	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeCore.java
-549	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeOps.java
+555	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeOps.java
 530	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiComponents.java
 527	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiCrypto.java
 531	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiLayout.java
@@ -44,4 +44,4 @@
 566	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeUi.java
 591	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
 546	kof-compiler/src/main/java/dev/kof/compiler/StatementAnalyzer.java
-592	kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java
+562	kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java

@@ -122,7 +122,10 @@ development lane, confirmed).
   `PROC001` pins; JS run parity via `runBoth`. `cwd/env` (`runWith`) moved to 2.2.3 — it
   needs *new* runtime bindings on both JVM and JS host, which would grow the MVP blast
   radius for nothing.
-- **2.2.3 [parity + add-ons]** — `runWith(cwd, env)` on JVM + JS host binding; JS
+- **2.2.3 [parity + add-ons]** — ✅ LANDED 19/09: `runWith(argv, cwd, env)` on JVM +
+  JS host binding (additive env, `""` cwd inherits, honest `-1` Results for spawn
+  errors and empty argv; `ShellE2ETest` 15/15 with byte-parity + Native `PROC001`
+  pin). JS
   `pipeline` when (and only if) a JS live-pipe `process.spawn` binding lands (separate
   platform item); Native stays `PROC001` until the native-lane `process.run` ships.
 - **2.2.4 [docs]** — idiom doc `docs/stdlib/shell.md` (+PT), `backend-parity` row, flip

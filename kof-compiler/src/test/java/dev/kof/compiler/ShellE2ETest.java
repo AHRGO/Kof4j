@@ -210,6 +210,92 @@ class ShellE2ETest {
             """);
     }
 
+    /** 2.2.3 — runWith(argv, cwd, env) real on JVM+JS with byte parity:
+     *  `pwd` proves cwd, `printenv` proves the ADDITIVE env (child inherits
+     *  the parent and the map's keys override — never a silent env wipe). */
+    @Test
+    void runWithCwdAndEnvParityJvmJs() throws Exception {
+        Files.writeString(tmp.resolve("RW.kf"), """
+            main() {
+                var r = shell.runWith(listOf("pwd"), "%1$s", mapOf("KOF_SHELL23", "on"))
+                println(r.exitCode)
+                println(r.stdout.trim())
+                var e = shell.runWith(shell.cmd("printenv", listOf("KOF_SHELL23")), "", mapOf("KOF_SHELL23", "on"))
+                println(e.stdout.trim())
+                var p = shell.runWith(shell.cmd("printenv", listOf("PATH")), "", mapOf())
+                if (p.stdout.length() > 0) {
+                    println("inherited")
+                } else {
+                    println("wiped")
+                }
+            }
+            """.formatted(tmp.toString()));
+        Run jvm = runJvm(tmp.resolve("RW.kf"), tmp.resolve("o-rw-jvm"));
+        assertTrue(jvm.ok(), () -> "JVM runWith: " + jvm.output());
+        Run js = runJs(tmp.resolve("RW.kf"), tmp.resolve("o-rw-js"));
+        assertTrue(js.ok(), () -> "JS runWith: " + js.output());
+        assertEquals(jvm.output(), js.output(), "2.2.3 JVM==JS byte parity");
+        assertTrue(jvm.output().contains(tmp.getFileName().toString()),
+                () -> "cwd missing in: " + jvm.output());
+        assertTrue(jvm.output().contains("on"), () -> "env missing in: " + jvm.output());
+        assertTrue(jvm.output().contains("inherited"), () -> "env wipe in: " + jvm.output());
+    }
+
+    /** 2.2.3 — missing cwd and empty argv are HONEST Results (stderr non-empty,
+     *  exit -1) on both targets, never a hang and never a silent success (R6). */
+    @Test
+    void runWithHonestFailuresJvmJs() throws Exception {
+        Files.writeString(tmp.resolve("RWF.kf"), """
+            main() {
+                var r = shell.runWith(listOf("pwd"), "/nonexistent-kof-2-2-3", mapOf())
+                println(r.exitCode)
+                var hasErr = "no"
+                if (r.stderr.length() > 0) {
+                    hasErr = "yes"
+                }
+                println(hasErr)
+                var e = shell.runWith(listOf(), "/tmp", mapOf())
+                println(e.exitCode)
+                var hasMsg = "no"
+                if (e.stderr.contains("empty argv")) {
+                    hasMsg = "yes"
+                }
+                println(hasMsg)
+            }
+            """);
+        Run jvm = runJvm(tmp.resolve("RWF.kf"), tmp.resolve("o-rwf-jvm"));
+        assertTrue(jvm.ok(), () -> "JVM: " + jvm.output());
+        Run js = runJs(tmp.resolve("RWF.kf"), tmp.resolve("o-rwf-js"));
+        assertTrue(js.ok(), () -> "JS: " + js.output());
+        assertEquals(jvm.output(), js.output(), "failure shapes must also be byte-parity");
+        assertTrue(jvm.output().contains("-1"), () -> "expected exit -1: " + jvm.output());
+        assertTrue(jvm.output().contains("yes"), () -> "expected honest stderr: " + jvm.output());
+    }
+
+    /** 2.2.3 — Native stays an honest PROC001 gap (waits for the native lane's
+     *  process.run; no silent stub — the §129 rule). */
+    @Test
+    void runWithOnNativeIsHonestProc001() throws Exception {
+        assertGap(Target.NATIVE, "PROC001", """
+            main() {
+                var r = shell.runWith(shell.cmd("make", listOf("-j4")), "/src", mapOf("CC", "clang"))
+                println(r.stdout)
+            }
+            """);
+    }
+
+    /** 2.2.3 — wrong arity/types on runWith fall through to SEM025 (the
+     *  dispatcher never guesses shapes). */
+    @Test
+    void runWithWrongShapeIsSem025() throws Exception {
+        assertGap(Target.JVM, "SEM025", """
+            main() {
+                var r = shell.runWith(listOf("ls"), "/tmp", "CC=clang")
+                println(r.exitCode)
+            }
+            """);
+    }
+
     private void assertGap(Target target, String code, String source) throws Exception {
         Files.writeString(tmp.resolve("G.kf"), source);
         CompilationResult r = driver.compile(tmp.resolve("G.kf"), tmp.resolve("o-" + target), target);
