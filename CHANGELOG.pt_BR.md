@@ -117,6 +117,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
+  - **`kof debug --target native` — gdb sobre o ELF Kof (X7-3, roadmap §19.5 fase 6)**
+    — a frente de debug nativa existe sem a linguagem reinventar um debugger: o ELF é
+    construído com o DWARF Kof completo (line table + DIEs, X7-1/X7-2) e o gdb é lançado
+    com o `directory` da fonte configurado — `break Main.kf:2` vincula na fonte Kof,
+    nunca no mangle. `KOF_GDB` resolve o executável (override de teste/ambiente, mesmo
+    padrão da casa: `KOF_PUBLISH_API`/`KOF_CROSS_SYSROOT`); gdb ausente é falha honesta,
+    `--target js` é recusa honesta (o alvo JS roda no engine embutido — não há
+    node/inspector para anexar). Provado por `KofDebugNativeTest` 4/4 (construção com
+    stub-gdb + caminhos de falha + estrita de flags R6).
   - **O output de ponto flutuante de `String.format` nao depende mais do locale do host (#466, §339)** —
     `String.format("%.2f", 3.14)` imprimia `3,14` num JVM `pt_BR` (o lowering emitia o overload de
     2 argumentos `String.format(String, Object[])`, locale-sensive por contrato) e a ponte do host

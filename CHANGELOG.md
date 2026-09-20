@@ -15,6 +15,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
  ### In development
 
+  - **`kof debug --target native` — gdb over the Kof ELF (X7-3, roadmap §19.5 phase 6)**
+    — the native debug front-end now exists without the language reinventing a
+    debugger: the ELF is built with the full Kof DWARF (line table + DIEs, X7-1/X7-2)
+    and gdb is launched with the source `directory` set, so `break Main.kf:2` binds to
+    Kof source, never to the mangle. `KOF_GDB` resolves the executable (test/environment
+    override, same house pattern as `KOF_PUBLISH_API`/`KOF_CROSS_SYSROOT`); missing gdb
+    is an honest failure, `--target js` is an honest refusal (the JS target runs on the
+    embedded engine — there is no node/inspector to attach to). Proved by
+    `KofDebugNativeTest` 4/4 (stub-gdb construction + failure paths + R6 flag strictness).
   - **`Bool` is never nullable — the three-valued type is `Troolean` (D-TROOL,
     19/09, DECISIONS.md §D-TROOL)** — migration of the same class approved for
     #401: `Bool?`/`Boolean?` (any position: local, field, parameter, return) now

@@ -34,22 +34,48 @@ final class KofDebug {
 
     public static int run(String[] args) {
         if (args.length < 2) {
-            System.err.println("usage: kof debug <file.kf>");
+            System.err.println("usage: kof debug [--target jvm|native] <file.kf>");
             return 1;
         }
-        if (args[1].startsWith("-")) {
-            // R6: `debug` takes no flags — a typo must not be silently ignored.
-            System.err.println("debug: unknown flag: " + args[1] + " (usage: kof debug <file.kf>)");
+        String target = "jvm";
+        int i = 1;
+        if (args[i].equals("--target")) {
+            i++;
+            if (i >= args.length) {
+                System.err.println("debug: --target requires a value (jvm|native)");
+                return 1;
+            }
+            target = args[i++];
+        } else if (args[i].startsWith("-")) {
+            // R6 strictness (CliFlagStrictnessTest): a typo must not be silently ignored.
+            System.err.println("debug: unknown flag: " + args[i] + " (usage: kof debug [--target jvm|native] <file.kf>)");
             return 1;
         }
-        if (args.length > 2) {
-            System.err.println("debug: " + (args[2].startsWith("-") ? "unknown flag: " : "unexpected argument: ")
-                    + args[2] + " (usage: kof debug <file.kf>)");
+        if (i >= args.length) {
+            System.err.println("debug: missing file (usage: kof debug [--target jvm|native] <file.kf>)");
             return 1;
         }
-        Path file = Path.of(args[1]);
+        Path file = Path.of(args[i++]);
+        if (i < args.length) {
+            System.err.println("debug: " + (args[i].startsWith("-") ? "unknown flag: " : "unexpected argument: ")
+                    + args[i] + " (usage: kof debug [--target jvm|native] <file.kf>)");
+            return 1;
+        }
         if (!Files.exists(file)) {
             System.err.println("file not found: " + file);
+            return 1;
+        }
+        if (target.equals("native")) {
+            return debugNative(file);
+        }
+        if (target.equals("js")) {
+            System.err.println("debug js: honest gap — the JS target runs on the EMBEDDED engine"
+                    + " (there is no node/inspector to attach to). Roadmap §19.5 face 7 stays open.");
+            return 1;
+        }
+        if (!target.equals("jvm")) {
+            System.err.println("debug: unknown --target '" + target + "' (jvm|native; js = honest gap;"
+                    + " android = packaging, not a debug target)");
             return 1;
         }
         try {
@@ -59,6 +85,63 @@ final class KofDebug {
             System.err.println("kof debug: " + e.getMessage());
             return 1;
         }
+    }
+
+    /**
+     * X7-3 (face NATIVE do debug, fase 6 do §19.5): o Kof NAO reimplementa um
+     * debugger — ele constrói o ELF com DWARF (line table + DIEs do X7-1/X7-2,
+     * on por default) e delega ao gdb do alvo, apontando-o para o diretório da
+     * FONTE Kof (o `.file` do DWARF é nome relativo; sem o `directory`, o gdb
+     * mostra asm). Intenção no comando, mecanismo no platform — o usuario escreve
+     * `break Main.kf:2` na fonte, nunca no mangle. O executavel do gdb e
+     * resolvido por `KOF_GDB` (override de teste/ambiente; padrao da casa:
+     * `KOF_PUBLISH_API`/`KOF_CROSS_SYSROOT`), senao `gdb`.
+     */
+    private static int debugNative(Path file) {
+        Path out = null;
+        try {
+            out = Files.createTempDirectory("kof-debug-native-");
+            CompilerDriver driver = new CompilerDriver();
+            driver.setDebugInfoEnabled(true);
+            CompilationResult r = driver.compile(file.toAbsolutePath(), out, Target.NATIVE);
+            if (!r.success()) {
+                r.diagnostics().getDiagnostics().forEach(d -> System.err.println(d.format()));
+                return 1;
+            }
+            Path bin = out.resolve("Default").resolve("Main");
+            if (!Files.exists(bin)) {
+                System.err.println("debug native: no ELF produced (native toolchain missing on this host)");
+                return 1;
+            }
+            String gdb = firstNonEmpty(System.getenv("KOF_GDB"), "gdb");
+            ProcessBuilder pb = new ProcessBuilder(gdb, "-q",
+                    "-iex", "set pagination off",
+                    "-iex", "directory " + file.toAbsolutePath().getParent(),
+                    bin.toString());
+            pb.inheritIO();
+            try {
+                return pb.start().waitFor();
+            } catch (java.io.IOException spawnFail) {
+                System.err.println("debug native: '" + gdb + "' not available — install gdb"
+                        + " (roadmap §19.5 fase 6: gdb front-end over the Kof ELF; the DWARF"
+                        + " is already emitted by the compiler)");
+                return 1;
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                return 1;
+            }
+        } catch (Exception e) {
+            System.err.println("kof debug native: " + e.getMessage());
+            return 1;
+        } finally {
+            if (out != null) {
+                KofCliSupport.cleanup(out);
+            }
+        }
+    }
+
+    private static String firstNonEmpty(String a, String b) {
+        return a != null && !a.isEmpty() ? a : b;
     }
 
     private static final class DebugSession {
