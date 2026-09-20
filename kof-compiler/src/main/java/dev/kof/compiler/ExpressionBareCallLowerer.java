@@ -108,6 +108,30 @@ public final class ExpressionBareCallLowerer {
                     ? ctor.parameterTypes() : argTypes;
             localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), ctorParamTypes, ops, owner, localIdx, locals);
             ops.add(new KofCall(cs.type(), "<init>", ctorParamTypes, Type.PrimitiveType.VOID, KofCallKind.CONSTRUCTOR));
+        } else if (driver.externalClasspath != null
+                && CompilerTypes.qualifyViaImports(mc.methodName(), driver.currentUnit,
+                        driver.externalClasspath) instanceof Type.ClassType extCtor
+                && !extCtor.packageName().isEmpty()
+                && driver.externalClasspath.knows(extCtor.internalName())
+                && driver.externalClasspath.resolveConstructor(extCtor.internalName(),
+                        mc.arguments().size()) != null) {
+            // #568 (defeito (ii) do #566): construtor IMPLICITO `Greeter()`
+            // (sem `new`) de classe EXTERNA (--classpath/--deps). A classe não
+            // está em allClasses, então caía no fallback de função de topo e
+            // emitia invokestatic phantom. Espelha a construção implícita de
+            // classe do módulo, resolvendo o <init> pelo ExternalClasspath.
+            ExternalClasspath.MethodSignature ctorSig = driver.externalClasspath
+                    .resolveConstructor(extCtor.internalName(), mc.arguments().size());
+            List<Type> extFormal = new ArrayList<>();
+            for (String d : ctorSig.parameterDescriptors()) {
+                extFormal.add(ExternalClasspath.typeFromDescriptor(d));
+            }
+            ops.add(new KofNewObject(extCtor, extFormal));
+            ops.add(new KofDup());
+            localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), extFormal,
+                    ops, owner, localIdx, locals);
+            ops.add(new KofCall(extCtor, "<init>", extFormal, Type.PrimitiveType.VOID,
+                    KofCallKind.CONSTRUCTOR));
         } else {
             IRLocalVariable lambdaVar = driver.findLocalVar(mc.methodName(), locals);
             if (lambdaVar != null && lambdaVar.type() instanceof Type.FunctionType lft) {

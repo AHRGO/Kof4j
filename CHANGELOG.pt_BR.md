@@ -14,6 +14,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
 ### Em desenvolvimento
+  - **known-bugs §391 CORRIGIDO — #568: o construtor IMPLÍCITO de classe EXTERNA
+    (`Greeter()` sem `new`) via `--classpath` disparava `SEM015` FALSO**
+    (20/09, lane compilador `.22`): `kof build ... --classpath producer.jar` com
+    `Greeter("producer").greet("consumer")` imprimia `Undefined function: 'Greeter'`
+    embora o artefato saísse correto e rodasse. O §134 cobria só a chamada estática
+    e o `new Greeter()`; o `Greeter()` puro caía no resolver de funções e nunca
+    consultava o `ExternalClasspath`. Fix nos dois lados: o `TopLevelCallTyper`
+    resolve o `<init>` externo (sem SEM015 falso) e o `ExpressionBareCallLowerer`
+    emite `new` + `<init>` com o descritor REAL do classpath. Prova:
+    `ExternalClasspathE2ETest` 9/9 (RED-first; caso do relator + negativo R6) e
+    vizinhança 101/0F. Defeito (ii) do #566 (`1.0-blocks`).
   - **known-bugs §382 CORRIGIDO — o host JS devolvia as faces BOOL do kof.io
     como o NUMERO 0/-1** (20/09, `.18`): um `writeText/appendText/writeBytes/
     appendBytes/writeFile` bem-sucedido saía `false` no guest (0 = falsy) com o
