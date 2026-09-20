@@ -46,7 +46,7 @@ cd "$REPO" && echo "doing \$(date +%s%N)" > DOING.md && git add -A && git commit
 EOF
     chmod +x "$FAKE_GH_DIR/opencode.hook"
 }
-setup() { mk_env; mk_repo; mk_loop_state "${1:-active}"; }
+setup() { mk_env; mk_repo; mk_loop_state "${1-active}"; }
 
 echo "A1 — 1º tick despacha"
 setup
