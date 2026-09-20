@@ -211,7 +211,9 @@ scripts/auto-loop.sh status           # confirmar que está ativo
   15 min, 3ª+ 30 min). `auto-loop.sh tick --dry-run` mostra a decisão; todo
   dispatch/skip é registrado em `~/.local/state/kof-agent/dispatch.jsonl`;
   `auto-loop.sh stats` / `issue-watcher.sh stats` reportam ticks × chamadas de modelo
-  evitadas (medido, sem custo de token inventado). **Rollout:** cron iniciado antes
+  evitadas e o **custo real medido pelo `opencode stats`** (dólares e tokens das
+  sessões da máquina; janela em dias inteiros; "indisponível" quando o OpenCode
+  falta/falha — nunca estimado). **Rollout:** cron iniciado antes
   desta mudança não tem `gate_mode` e roda em `shadow` (comportamento legado + registro
   do que o gate faria); vire com `set-mode active`. `flock`, watchdog e o `--attach`
   obrigatório não mudam.
