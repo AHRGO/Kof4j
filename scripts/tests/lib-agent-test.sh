@@ -112,3 +112,15 @@ finish() {
     if [ "$FAILED" -eq 0 ]; then echo "TODOS OS CENÁRIOS PASSARAM"; exit 0; fi
     echo "HÁ CENÁRIOS FALHANDO"; exit 1
 }
+
+# repo git temporário com DOING/known-bugs/docs-development (auto-loop e fingerprint)
+mk_repo() {
+    REPO="$TMP/repo"
+    mkdir -p "$REPO/docs/bugs-and-gaps" "$REPO/docs/development"
+    ( cd "$REPO" && git init -q -b beta-0.4.0 . \
+        && git config user.email t@t && git config user.name t \
+        && echo "doing v0" > DOING.md \
+        && echo "bugs v0" > docs/bugs-and-gaps/known-bugs.md \
+        && echo "plan" > docs/development/plan.md \
+        && git add -A && git commit -q -m init )
+}

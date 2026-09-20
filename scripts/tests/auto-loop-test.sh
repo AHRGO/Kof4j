@@ -24,16 +24,6 @@ cd "$(git rev-parse --show-toplevel)"
 
 LOOP="$REPO_ROOT/scripts/auto-loop.sh"
 
-mk_repo() {
-    REPO="$TMP/repo"
-    mkdir -p "$REPO/docs/bugs-and-gaps" "$REPO/docs/development"
-    ( cd "$REPO" && git init -q -b beta-0.4.0 . \
-        && git config user.email t@t && git config user.name t \
-        && echo "doing v0" > DOING.md \
-        && echo "bugs v0" > docs/bugs-and-gaps/known-bugs.md \
-        && echo "plan" > docs/development/plan.md \
-        && git add -A && git commit -q -m init )
-}
 mk_loop_state() { # gate_mode
     local st="$XDG_STATE_HOME/kof-auto-loop"
     mkdir -p "$st"
