@@ -1,0 +1,5 @@
+issue	category	reason	owner
+#	D-RELEASE-1.0 §11 classification of every OPEN issue. Columns: issue, category, reason, owner. The gate scripts/check_release_blockers.sh cross-checks this ledger against the GitHub labels; drift is RED. Categories: 1.0-blocks | 1.0-outside | post-1.0 | not-a-bug.	-
+555	1.0-blocks	quality-bot RED for days: 21 CodeQL alerts OPEN at the tip without owner; local codeql-gate.sh breaks every push and lanes skip with CODEQL_GATE_SKIP — directly the §10 "gates green AND trustworthy" + "no routine CODEQL_GATE_SKIP" requirement.	quality/compiler lane
+561	1.0-blocks	§383: blessed miss of §126 rewrites the stored value — heterogeneous primitive add in a pinned slot boxes by SLOT (listOf(1).add(true) reads 1 on JVM/Script/Native vs true on JS). Correctness + cross-target parity (§5).	compiler lane
+563	1.0-blocks	CodeQL #555 family: toolchain command in src/test re-generated despite paths-ignore (imported suites) — baseline tolerates, CI must exclude for real. Same §10 gate-trustworthiness front as #555.	quality/compiler lane
