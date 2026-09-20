@@ -288,6 +288,19 @@ public final class TypeChecker {
             // nesse caso (CodeQL contradictory-type-checks — ramo morto removido).
             return isAssignable(from, tn.inner());
         }
+        // §373: o gate de store de campo (§368) expôs que isAssignable nao
+        // desembolava ArrayType — o MESMO TypeMetrics.isPrimitiveType/§270
+        // padrao. `T[] v = <T[]>` com os dois lados vistos por vias de
+        // representacao diferentes (ClassType[T] do campo apagado vs
+        // TypeVariable[T] do escopo generico) caia em equals()=false e o
+        // gate rejeitava ouro verde do §270 (GenericFieldArrayEraseE2ETest).
+        // Recurso ao componente preserva o §270 (nome do parametrico decide;
+        // int[]→T[] continua caindo no SEM098 de runtime do writer, que e o
+        // contrato antigo do golden) e mantem as recusas reais (String[]→
+        // Char[] etc.) porque a recursao usa a MESMA regra no componente.
+        if (from instanceof Type.ArrayType fa && to instanceof Type.ArrayType ta) {
+            return isAssignable(fa.componentType(), ta.componentType());
+        }
         if (from.equals(to)) return true;
         if (from instanceof Type.PrimitiveType fp && to instanceof Type.PrimitiveType tp) {
             if ("bool".equals(Type.canonicalPrimitiveName(fp.name())) || "bool".equals(Type.canonicalPrimitiveName(tp.name()))) {
@@ -362,7 +375,7 @@ public final class TypeChecker {
     }
 
     /**
-     * §371: conformação de TIPO-FUNÇÃO para atribuição (`var f: (T) -> U =
+     * §370: conformação de TIPO-FUNÇÃO para atribuição (`var f: (T) -> U =
      * <lambda>`, `s.camp = <lambda>`). O SC2 de VarDecl pulava o check
      * whenever um lado era FunctionType, e a escrita em campo não comparava
      * o tipo do campo — o lambda era EMITIDO com a interface da assinatura
