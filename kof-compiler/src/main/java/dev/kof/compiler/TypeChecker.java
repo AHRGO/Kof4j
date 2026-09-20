@@ -288,7 +288,7 @@ public final class TypeChecker {
             // nesse caso (CodeQL contradictory-type-checks — ramo morto removido).
             return isAssignable(from, tn.inner());
         }
-        // §373: o gate de store de campo (§368) expôs que isAssignable nao
+        // §372 (lane docs): o gate de store de campo (§368) expôs que isAssignable nao
         // desembolava ArrayType — o MESMO TypeMetrics.isPrimitiveType/§270
         // padrao. `T[] v = <T[]>` com os dois lados vistos por vias de
         // representacao diferentes (ClassType[T] do campo apagado vs
