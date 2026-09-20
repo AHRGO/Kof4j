@@ -2,13 +2,8 @@
 
 # DEBUG-ADAPTER.md — kof-debug (DAP Debug Adapter)
 
-<<<<<<< HEAD
-**Status:** MVP implemented and validated (JVM; raw JDWP, without jdk.jdi) + **Native face landed 20/09 (X7-4 `bda631a7`)** — `kof debug --dap --target native` bridges DAP to the real gdb/MI2 (`KofGdbMi` + `KofDebugNativeDap`, `KofDebugNativeDapTest` 204 lines); sources in `stackTrace`/breakpoints are always the `.kf`; no gdb = honest DAP error naming the tool (R6)
-**Date:** August 27, 2026
-=======
-**Status:** JVM (raw JDWP, no jdk.jdi) + NATIVE (console gdb + DAP<->GDB/MI, X7-3/X7-4) implemented and validated; JS = honest refusal (the target runs on the EMBEDDED engine — there is no node/inspector to attach to)
+**Status:** JVM (raw JDWP, no jdk.jdi) + NATIVE implemented and validated — console gdb (X7-3) and `kof debug --dap --target native` bridging DAP to the real gdb/MI2 (X7-4 `bda631a7`: `KofGdbMi` + `KofDebugNativeDap`, `KofDebugNativeDapTest`); sources in `stackTrace`/breakpoints are always the `.kf`; no gdb = honest DAP error naming the tool (R6); JS = honest refusal (the target runs on the EMBEDDED engine — there is no node/inspector to attach to)
 **Date:** August 27, 2026 (updated 20/09 with the Native faces)
->>>>>>> cfae7ec9 (docs(debug): debug-adapter.md(+PT) + editors/overview(+PT) sincronizadas com as faces Native pousadas hoje (X7-3/X7-4) — JS vira recusa honesta documentada (engine embutido, sem inspector — NUNCA ponte falsa), fluxo DAP<->MI nativo na §3.1b com o detalhe do TOKEN-MI que custou a sessao de debug, e a face ABERTA catalogada na linha X7 do tracker: DW_TAG_variable p/ locals (o editor ve lista vazia ate la — honesto, nunca inventado); o PT do overview era a linha EN 6a2d78b8? nao — estava 6a2d78b? — corrigida a ocorrencia EN isolada (docs-lang 'pt orfao' nao pega tabela, achar no sweep foi da lane))
 **Version:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
 
 ---
@@ -38,16 +33,11 @@ Do not create a proprietary protocol.
 kof-debug (DAP over stdio — Content-Length framing)
     ↓
 JVM: launch java -agentlib:jdwp + JDWP client (raw wire protocol)
-<<<<<<< HEAD
-Native: launch binary + DWARF/frame info   (X7-4 LANDED 20/09 — DAP↔gdb/MI bridge)
-JS: launch node --inspect + Inspector protocol  (future)
-=======
 Native: build ELF with DWARF + gdb (console: --target native; editor: --dap
         --target native translates DAP -> GDB/MI 2, `KofGdbMi`/`KofDebugNativeDap`)  [✅ 20/09]
 JS: honest refusal — the JS target runs on the embedded Graal engine; there is no
     node/inspector to launch or attach (roadmap §19.5 face 7 stays open for a future
     engine inspector, never a fake bridge)
->>>>>>> cfae7ec9 (docs(debug): debug-adapter.md(+PT) + editors/overview(+PT) sincronizadas com as faces Native pousadas hoje (X7-3/X7-4) — JS vira recusa honesta documentada (engine embutido, sem inspector — NUNCA ponte falsa), fluxo DAP<->MI nativo na §3.1b com o detalhe do TOKEN-MI que custou a sessao de debug, e a face ABERTA catalogada na linha X7 do tracker: DW_TAG_variable p/ locals (o editor ve lista vazia ate la — honesto, nunca inventado); o PT do overview era a linha EN 6a2d78b8? nao — estava 6a2d78b? — corrigida a ocorrencia EN isolada (docs-lang 'pt orfao' nao pega tabela, achar no sweep foi da lane))
 ```
 
 The CLI (`kof debug`) is only an interface — the logic lives in the adapter.
