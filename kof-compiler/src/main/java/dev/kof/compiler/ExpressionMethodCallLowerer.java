@@ -60,7 +60,10 @@ if (mc.receiver() == null && driver.externSignatures.containsKey(mc.methodName()
         // marshaling SysV + `call sym@PLT` (precedente: consumidor SQLite/DB001).
         // O KofCall carrega owner=kof.ffi + methodName "lib::simbolo" como
         // metadado — nenhum lowering de usuário gera "::" num nome de método.
-        if (driver.target == Target.NATIVE) {
+        if (driver.target.isNative()) {
+            // #431 fatia 2: o mesmo KofCall "lib::simbolo" serve as 3 archs —
+            // o backend escolhe o shim (x86 SysV / riscv LP64 / aarch AAPCS64
+            // via tradução do texto riscv).
             List<Type> ffiParams = new java.util.ArrayList<>();
             for (var p : ext.parameters()) ffiParams.add(FfiSignature.paramType(p.type()));
             for (ExpressionNode arg : mc.arguments()) {

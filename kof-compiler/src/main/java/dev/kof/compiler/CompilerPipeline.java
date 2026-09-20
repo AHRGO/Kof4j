@@ -473,13 +473,13 @@ public final class CompilerPipeline {
         // upcall nativo), array/struct e `extern` sem `library()` (nada a linkar)
         // continuam FFI001 honesto na linha da declaração (R6). riscv64/aarch64:
         // mesma ABI com shim próprio — ver branch abaixo.
-        if (driver.target == Target.NATIVE) {
+        if (driver.target.isNative()) {
             return nativeExternBound(ext);
         }
-        // NATIVE (riscv64/aarch64): o shim cross (LP64/AAPCS64) só abre o gate na
-        // sua fatia, com prova sob qemu no MESMO commit (política das fatias R3:
-        // gate+lowering+E2E juntos, nunca meio-aberto). Enquanto não landa,
-        // FFI001 honesto.
+        // NATIVE (riscv64/aarch64): o shim cross (LP64/AAPCS64) landou na
+        // fatia 2 do #431 — gate+lowering+E2E qemu no MESMO commit (política
+        // das fatias R3). Struct/array/callback e extern sem `library()`
+        // continuam FFI001 honesto na linha da declaração (R6).
         return false;
     }
 

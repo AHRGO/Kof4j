@@ -127,6 +127,13 @@ public final class NativeRiscvCrossOps {
 
     void emitCrossCallRiscv(StringBuilder sb, KofCall kc) {
         String mn = kc.methodName();
+        // #431 fatia 2: extern BINDA no cross — ABI LP64/AAPCS64 direta
+        // (link-by-use da `library()` no ld cross; `call sym` → PLT). O
+        // aarch64 herda via tradução linha-a-linha do texto riscv.
+        if (NativeFfiCall.isExternCall(kc)) {
+            NativeFfiCall.emitRiscv(nb, sb, kc);
+            return;
+        }
         Type argType = kc.parameterTypes().isEmpty() ? Type.UnknownType.UNKNOWN : kc.parameterTypes().get(0);
         // §284 (FIXADO 18/09): box/unbox de erasure reais — port do x86
         // (RuntimeErasureBox; fatia B49). Mesma pareamento por tipo do

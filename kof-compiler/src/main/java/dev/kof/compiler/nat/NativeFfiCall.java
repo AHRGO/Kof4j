@@ -133,6 +133,107 @@ final class NativeFfiCall {
         sb.append("    pushq %rax\n");
     }
 
+    // ── riscv64 / aarch64 (LP64 duploat + AAPCS64) ───────────────────
+    // O aarch64 é tradução linha-a-linha deste texto (NativeAarch64Translator
+    // cobre ld/sd/mv/li/addi/and/j/beqz/call→bl/sext.w/fmv.*/lbu/ret) — um
+    // shim serve as duas archs. Modelo do backend cross: `sp` É a pilha de
+    // operandos; bloco de args [E, E+8n) (direita em 0(sp)); nada é popado —
+    // os registradores saem por OFFSET de t0 e o sp é movido UMA vez para o
+    // bloco derramado + consumo. O ponto de restauração (E+8n) mora numa
+    // pilha privada ALINHADA entregue à C: a C escreve só abaixo do sp que
+    // recebe e lê só [0(sp), 8·ns(sp)) — a slot salva em 8·ns+8 fica intacta.
+    static void emitRiscv(NativeBackend nb, StringBuilder sb, KofCall kc) {
+        String[] intRegs = {"a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7"};
+        int n = kc.parameterTypes().size();
+        char[] cls = new char[n];
+        for (int i = 0; i < n; i++) cls[i] = FfiSignature.charOfType(kc.parameterTypes().get(i));
+        char ret = FfiSignature.charOfType(kc.returnType()).charValue();
+        // ordinais POR CLASSE na ordem formal (arg0 → reg0 da sua classe)
+        int[] ord = new int[n];
+        int nInt = 0, nFlt = 0;
+        for (int i = 0; i < n; i++) {
+            if (isFloatClass(cls[i])) { ord[i] = nFlt++; } else { ord[i] = nInt++; }
+        }
+        int ns = (nInt > 8 ? nInt - 8 : 0) + (nFlt > 8 ? nFlt - 8 : 0);
+        int seq = nb.inlineSeq++;
+        // 1) t0 = topo E; args de registro por offset SEM popar (o bloco fica
+        //    intacto p/ os derramados; String: payload no offset 24, NULL→NULL)
+        sb.append("    mv t0, sp\n");
+        for (int i = 0; i < n; i++) {
+            char c = cls[i];
+            boolean floatC = isFloatClass(c);
+            if (floatC ? ord[i] >= 8 : ord[i] >= 8) continue; // derramado: passo 3
+            String dst = floatC ? "t2" : intRegs[ord[i]];
+            sb.append("    ld ").append(dst).append(", ").append(8 * (n - 1 - i)).append("(t0)\n");
+            if (c == 'S') {
+                String lbl = ".Lffis" + seq + "_" + i;
+                sb.append("    beqz ").append(dst).append(", ").append(lbl).append("\n");
+                sb.append("    addi ").append(dst).append(", ").append(dst).append(", 24\n");
+                sb.append(lbl).append(":\n");
+            }
+            // fa0..fa7 (NÃO f0..f7!): a ABI C riscv64 põe args FP nos apelidos
+            // fa* = registradores FÍSICOS f10-f17 (ft0/f0 é só o RETORNO) —
+            // medido 19/09: glibc riscv64 `exp` lê fa0; f0 passava despercebido.
+            // O tradutor aarch normaliza fa0..7→f0..7→d0..d7 (AAPCS64 ✓) — o
+            // MESMO texto serve as duas archs.
+            if (floatC) {
+                sb.append(c == 'f' ? "    fmv.w.x fa" : "    fmv.d.x fa")
+                  .append(ord[i]).append(", t2\n");
+            }
+        }
+        // 2) consome o bloco inteiro + reserva o área derramada + alinha 16.
+        //    Immediato = 8n − 8ns − 16 ≥ 48 p/ n ≥ 1 (ns ≤ n−8 por classe).
+        // Alinhamento via t3 (nunca `and sp,sp,..` direto: no aarch64 `and`
+        // rejeita sp como Rn — o tradutor receberia instrução inválida).
+        sb.append("    addi t3, t0, ").append(8 * n - 8 * ns - 16).append("\n");
+        sb.append("    li t1, -16\n");
+        sb.append("    and t3, t3, t1\n");
+        sb.append("    mv sp, t3\n");
+        // 3) derramados na ordem formal (arg0 → 0(sp) — o 1º stack-arg da C);
+        //    valor cru (8 bytes) passa direto p/ o slot da C, float incluso.
+        int k = 0;
+        for (int i = 0; i < n; i++) {
+            char c = cls[i];
+            boolean floatC = isFloatClass(c);
+            if (!(floatC ? ord[i] >= 8 : ord[i] >= 8)) continue;
+            sb.append("    ld t2, ").append(8 * (n - 1 - i)).append("(t0)\n");
+            if (c == 'S') {
+                String lbl = ".Lffis" + seq + "_" + i;
+                sb.append("    beqz t2, ").append(lbl).append("\n");
+                sb.append("    addi t2, t2, 24\n");
+                sb.append(lbl).append(":\n");
+            }
+            sb.append("    sd t2, ").append(8 * k++).append("(sp)\n");
+        }
+        // 4) ponto de restauração (E+8n) salvo ACIMA dos args da C: a callee
+        //    toca só [< sp, +8ns); a chamada devolve sp = A (ABI) — o slot é
+        //    lido com sp ainda em A.
+        sb.append("    addi t2, t0, ").append(8 * n).append("\n");
+        sb.append("    sd t2, ").append(8 * ns + 8).append("(sp)\n");
+        // 5) call direto (PLT gerado pelo ld; §61: resolve no exec sem dlopen)
+        sb.append("    call ").append(symbolOf(kc)).append("\n");
+        sb.append("    ld sp, ").append(8 * ns + 8).append("(sp)\n");
+        switch (ret) {
+            case 'v': return;
+            case 'i': sb.append("    sext.w a0, a0\n"); break; // canonicaliza o Int 32-bit
+            case 'j': break;
+            // RETORNO FP em fa0 (NÃO ft0!): medido 19/09 — o glibc riscv64
+            // deste sysroot devolve double/float em fa0=f10 (a cadeia do
+            // `exp` termina em fa0; o strtod do próprio runtime cross já lê
+            // fa0 — testes verdes). No aarch64 o tradutor mapeia fa0→f0→d0,
+            // que É o registro de retorno AAPCS64 — um texto, duas archs.
+            case 'f': sb.append("    fmv.x.w a0, fa0\n"); break;
+            case 'd': sb.append("    fmv.x.d a0, fa0\n"); break;
+            case 'b': break; // C _Bool: 0/1 em a0 (zext pela ABI) — como o Kof guarda
+            case 'S':
+                sb.append("    call kof_ffi_from_cstr\n");
+                break;
+            default: return;
+        }
+        sb.append("    addi sp, sp, -8\n");
+        sb.append("    sd a0, 0(sp)\n");
+    }
+
     /** Helper char*→String (cópia UTF-8 crua na fronteira — o buffer C nunca é
      *  liberado; NULL → 0 = null Kof). Definido UMA vez por programa quando um
      *  extern retorna String; o PRÓPRIO call-site o referencia (a poda de
@@ -174,6 +275,37 @@ final class NativeFfiCall {
                     ret
                 .Lffc_null:
                     xorl %eax, %eax
+                    ret
+                """);
+    }
+
+    /** Helper char*→String no cross: strlen + kof_string_from_literal (copia
+     *  UTF-8 + NUL-termina — o buffer C nunca e free'd; NULL → 0 = null Kof).
+     *  Mesma forma x86; mnemonicos todos cobertos pelo tradutor aarch. */
+    static void emitRiscvCstrHelper(StringBuilder sb) {
+        sb.append("""
+                kof_ffi_from_cstr:
+                    beqz a0, .Lffc_null
+                    addi sp, sp, -16
+                    sd ra, 8(sp)
+                    sd a0, 0(sp)
+                    mv a1, a0
+                    li a2, 0
+                .Lffc_scan:
+                    lbu a3, 0(a1)
+                    beqz a3, .Lffc_got
+                    addi a1, a1, 1
+                    addi a2, a2, 1
+                    j .Lffc_scan
+                .Lffc_got:
+                    ld a0, 0(sp)
+                    mv a1, a2
+                    call kof_string_from_literal
+                    ld ra, 8(sp)
+                    addi sp, sp, 16
+                    ret
+                .Lffc_null:
+                    li a0, 0
                     ret
                 """);
     }

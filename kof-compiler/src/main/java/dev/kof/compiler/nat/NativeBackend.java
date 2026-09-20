@@ -187,10 +187,12 @@ public class NativeBackend implements Backend {
     @Override
     public void emit(IRModule module, Path outputDir) throws IOException {
         if (target == Target.NATIVE_RISCV64) {
+            scanExterns(module);
             emitRiscv(module, outputDir);
             return;
         }
         if (target == Target.NATIVE_AARCH64) {
+            scanExterns(module);
             emitAarch64(module, outputDir);
             return;
         }
@@ -501,6 +503,25 @@ public class NativeBackend implements Backend {
     }
     private void emitStart(StringBuilder sb, IRClass clazz) {
         nativeMethods.emitStart(sb, clazz);
+    }
+
+    /** #431 fatia 2: link-by-use dos externs no cross (mesmo scan do x86 —
+     *  `library()` vira input do ld, retorno String pede o helper cstr). */
+    private void scanExterns(IRModule module) {
+        ffiLibs.clear();
+        ffiUsesCstr = false;
+        for (IRClass c : module.classes()) {
+            for (IRMethod m : c.methods()) {
+                for (IRBasicBlock b : m.basicBlocks()) {
+                    for (KofOperation op : b.operations()) {
+                        if (op instanceof KofCall kc && NativeFfiCall.isExternCall(kc)) {
+                            ffiLibs.add(NativeFfiCall.libOf(kc));
+                            if (NativeFfiCall.returnsCstr(kc)) ffiUsesCstr = true;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private void emitRiscv(IRModule module, Path outputDir) throws IOException {
