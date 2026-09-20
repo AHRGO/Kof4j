@@ -13,13 +13,15 @@ dos três estados).
        `JvmOpCollections`), §371/#550 (CLI cross build), §378/#554 (gate
        docs). Cada um fecha com prova nos 4 alvos; a lane docs faz ff da
        `beta-0.5.0` após cada pouso na 0.4.0.
-2. [ ] Dívida CodeQL (#555): instâncias restantes por dono — bridge
-       #918/#919, ~~profiler #938~~ (✅ tooling/debug 20/09), s297 #932/#933,
-       DWARF #920, testes erasure #912–#917, enum/herança #904/#905/#909/#910,
-       main #907/#908/#911, legados #921/#922. O **cluster debug/tooling está
-       LIMPO** (#925–#937 + #938, 12 alertas, `e70859bd`+este). Quando
-       `scripts/codeql-gate.sh --fast` ficar VERDE, as lanes abandonam o
-       `CODEQL_GATE_SKIP` e o guarda-chuva fecha.
+2. [ ] Dívida CodeQL (#555): **TRIAGEM FECHADA 20/09 (unidade I, §385)** —
+       os 40 da janela: 13 fixados no código com teste alvo, 26 descartados
+       com motivo (25 harness `src/test` + FP JEP 443 #876), #938 da tooling
+       lane. O portão agora é por BASELINE (`scripts/codeql-baseline.txt`:
+       só alerta NOVO bloqueia; skip exige motivo e deixa rastro; ignorado
+       em CI) — `scripts/codeql-gate.sh --fast` já mede VERDE sem skip
+       (rc=0). Resta para marcar [x]: ff da `q555` + primeiro re-scan fechar
+       os 14 `open` tolerados por id no baseline (podar as linhas então) e
+       #563 (família src/test no CI) seguir na fila própria.
 3. [ ] Bump de versão: `pom.xml` `<revision>0.4.7-beta</revision>` para o
        número que a mantenedora decidir no corte. Conferir referências à
        versão codificadas (javadoc/testes citam a versão do artefato) ANTES

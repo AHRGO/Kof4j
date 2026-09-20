@@ -1,0 +1,48 @@
+# scripts/codeql-baseline.txt — alertas CodeQL JA TRIADOS que o gate tolera (#555)
+#
+# Contrato (novo em 20/09, issue #555): scripts/codeql-gate.sh falha apenas em
+# alerta ABERTO fora deste baseline. Cada linha e um achado com disposicao
+# registrada — nada entra aqui sem triagem com motivo real (Q5: no false green).
+# Formato: TAB-separado  id  rule  path-glob|fixo  owner  reviewed  motivo
+#   - `id` numerico  -> tolera aquele alerta (e o que reabre com o mesmo numero).
+#   - `id` == "-"    -> familia por rule+glob de path (cobre gemeos recriados
+#     pela API quando a linha muda e o alerta ganha numero novo).
+# Revisao obrigatoria: janela de release 0.5.0 (dono da fila: #555). Linhas
+# "fixed, awaiting re-scan" expiram sozinhas (o alerta vira `fixed` e sai de
+# open); podar na primeira CI verde apos o pouso.
+#
+# —— Familias aceitas por contrato de harness de teste (issue #563) ———
+# O repo decidiu (804a03ea, 14/09: paths-ignore em src/test; confirmacao da
+# mantenedora na triagem de 495 alertas) que construcao de comando de toolchain
+# em `src/test` com Strings do proprio teste NAO e superficie do produto
+# (sem entrada externa; o vetor de injecao nao existe). GitHub classifica
+# esses arquivos como test (classifications=["test"]) e a API tem
+# state_reason=used_in_tests exatamente para isso. O paths-ignore do config
+# NAO suprime queries importadas por suite (empirico: instancias voltaram a
+# nascer em src/test 20/09 com a config ativa) — enquanto durar a limitacao,
+# a familia e tolerada no gate e os alertas nascidos sao dismissados com
+# este mesmo motivo. Dono: #555 -> #563. Revisar: 0.5.0 GA (re-medir
+# paths-ignore na versao do codeql-action; se passar a funcionar, apagar).
+-	java/relative-path-command	kof-*/src/test/**	#555/#563	2026-09-20	familia harness de teste (used_in_tests, contrato 804a03ea)
+-	java/concatenated-command-line	kof-*/src/test/**	#555/#563	2026-09-20	familia harness de teste (used_in_tests, contrato 804a03ea)
+#
+# —— FP de ferramenta (motivo por alerta; re-abrir so se o CodeQL corrigir) ——
+876	java/local-variable-is-never-read	kof-compiler/src/main/java/dev/kof/compiler/SemanticAnalyzer.java	#555	2026-09-20	FP CodeQL 2.27: `case EnumDeclarationNode _` e padrao SEM NOME (JEP 443) — nao existe binding para ler; mesmo caso ja dismissado em #510/#631-#636/#885
+#
+# —— FIXADOS no codigo, aguardando o proximo re-scan fechar o alerta ——
+# (todos provados com teste alvo em 20/09; sairao de `open` sozinhos no re-scan
+#  do ref correspondente; podar apos a primeira CI verde que os fechar)
+877	java/type-variable-hides-type	kof-cli/src/main/java/dev/kof/cli/DepsRegistry.java	lane #555	2026-09-20	fix: type var <T>-><B> (o <T> escondia o enum TranslateLexer.T); DepsRegistryTest 6/6
+887	java/local-variable-is-never-read	kof-compiler/src/test/java/dev/kof/compiler/KofTimeE2ETest.java	lane #555	2026-09-20	fix: `int[] n = {0}` morto (substituido pelo TickCounter) removido; KofTimeE2ETest#durationSchedulerAtFiresJvm 1/1
+889	java/missing-override-annotation	kof-compiler/src/test/java/dev/kof/compiler/KofTimeE2ETest.java	lane #555	2026-09-20	fix: @Override em TickCounter.invoke
+890	java/unused-parameter	kof-compiler/src/main/java/dev/kof/compiler/CompilerWorkflow.java	lane #555	2026-09-20	fix: parametro `unit` morto de mergeHostSlice removido (6 call sites); WorkflowE2ETest 23/23
+907	java/confusing-method-signature	kof-compiler/src/main/java/dev/kof/compiler/Type.java	lane #555	2026-09-20	fix: overload privado `isTroolean(NullableType)` renomeado isTrooleanNullable; TrooleanLawE2ETest 13/13 + NullableBoolTruthinessE2ETest 15/15
+908	java/local-variable-is-never-read	kof-compiler/src/main/java/dev/kof/compiler/CompilerComparisons.java	lane #555	2026-09-20	fix: local morto `nullableBool` (restos do D-TROOL) removido; WorkflowE2ETest verde
+918	java/output-resource-leak	kof-runtime/src/main/java/dev/kof/runtime/KofJsProcessBridge.java	lane #555	2026-09-20	fix: kill() fecha o writer; spawn() em falha fecha+destroi; ProcessResultContentE2ETest 4/4 + ProcessSpawnE2ETest 4/4
+919	java/input-resource-leak	kof-runtime/src/main/java/dev/kof/runtime/KofJsProcessBridge.java	lane #555	2026-09-20	fix: simetrico ao #918 (reader)
+920	java/unused-parameter	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeDwarfCrossRegister.java	lane #555	2026-09-20	fix: parametro `clazz` morto removido (1 call site); NativeDwarfCrossTest 6/6
+938	java/relative-path-command	kof-cli/src/test/java/dev/kof/cli/ProfileMethodsTest.java	lane tooling/debug (sessao 9093)	2026-09-20	fix ja pousado em beta-0.5.0 (resolucao de node via PATH, DOING 20/09 ~11:2x); alerta segue open no ref main ate o re-scan la
+939	java/relative-path-command	kof-compiler/src/test/java/dev/kof/compiler/ProcessResultContentE2ETest.java	lane #555	2026-09-20	fix: javaBin via TestJdk (caminho absoluto de java.home); ProcessResultContentE2ETest 4/4
+940	java/local-variable-is-never-read	kof-runtime/src/main/java/dev/kof/runtime/KofJsProcessBridge.java	lane #555	2026-09-20	fix: `result` morto (sobrou da troca por KofResult no §367) removido
+941	java/relative-path-command	kof-cli/src/test/java/dev/kof/cli/ShippedCliCrossSmokeTest.java	lane #555	2026-09-20	fix: probe `sh -c command -v` virou varredura de PATH com Files.isExecutable (mesmo padrao do #931); ShippedCliCrossSmokeTest 2/2
+942	java/unused-reference-type	kof-compiler/src/test/java/dev/kof/compiler/TestJdk.java	lane #555	2026-09-20	fix: helper criado para a triagem #555 chegou ao tip sem nenhum caller (merge 2d81cb4f); agora ligado no ProcessResultContentE2ETest (#939) — usado

@@ -35,14 +35,21 @@ class ShippedCliCrossSmokeTest {
     }
 
     private static boolean has(String... cmds) {
+        // #555 (java/relative-path-command): sonda o PATH direto, sem spawnar
+        // `sh -c command -v` — mesmo padrao do KofDebugNativeTest (#931).
+        String path = System.getenv("PATH");
+        if (path == null) {
+            return false;
+        }
         for (String c : cmds) {
-            try {
-                Process p = new ProcessBuilder("sh", "-c", "command -v " + c)
-                        .redirectErrorStream(true).start();
-                String out = new String(p.getInputStream().readAllBytes(),
-                        StandardCharsets.UTF_8).trim();
-                if (p.waitFor() != 0 || out.isEmpty()) return false;
-            } catch (Exception e) {
+            boolean found = false;
+            for (String dir : path.split(java.io.File.pathSeparator)) {
+                if (java.nio.file.Files.isExecutable(java.nio.file.Path.of(dir, c))) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
                 return false;
             }
         }

@@ -185,10 +185,12 @@ public sealed interface Type {
      * — {@code Bool?} nao e mais sintaxe valida (SEM095).
      */
     static boolean isTroolean(Type type) {
-        return type instanceof NullableType n && isTroolean(n);
+        return type instanceof NullableType n && isTrooleanNullable(n);
     }
 
-    private static boolean isTroolean(NullableType n) {
+    // #555 (java/confusing-method-signature): o overload privado nao chama
+    // `isTroolean` — mesma cara, dispatch diferente e a armadilha do 907.
+    private static boolean isTrooleanNullable(NullableType n) {
         return n.inner() instanceof PrimitiveType p
                 && "bool".equals(canonicalPrimitiveName(p.name()));
     }

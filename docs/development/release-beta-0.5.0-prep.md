@@ -13,13 +13,17 @@ the release is cut (three-states rule).
        `JvmOpCollections`), §371/#550 (CLI cross build), §378/#554 (docs
        gate). Each closes with 4-target proof; docs lane ff `beta-0.5.0`
        after every landing on `beta-0.4.0`.
-2. [ ] CodeQL debt (#555): remaining instances by owner — bridge #918/#919,
-       ~~profiler #938~~ (✅ tooling/debug 20/09), s297 #932/#933, DWARF #920,
-       erasure tests #912–#917, enum/inherit #904/#905/#909/#910, main
-       #907/#908/#911, legacy #921/#922. The **debug/tooling cluster is
-       CLEARED** (#925–#937 + #938, 12 alerts, `e70859bd`+this). When
-       `scripts/codeql-gate.sh --fast` goes green, the lanes stop
-       `CODEQL_GATE_SKIP` and the umbrella closes.
+2. [ ] CodeQL debt (#555): **TRIAGE CLOSED 20/09 (unit I, §385)** — the 40
+       in the window: 13 fixed in code with targeted tests, 26 dismissed with
+       a real reason (25 test-harness `used in tests` + FP JEP 443 #876),
+       #938 fixed by the tooling lane awaiting `main` re-scan. The gate is now
+       BASELINE-driven (`scripts/codeql-baseline.txt`: only NEW alerts block;
+       `CODEQL_GATE_SKIP` requires a reason, prints a banner, logs to
+       `.git/codeql-gate-skips.log`; ignored in CI) — `scripts/codeql-gate.sh
+       --fast` already measures GREEN with no skip (rc=0). Still needed to
+       tick [x]: ff of `q555` + first re-scan closing the 14 ids tolerated in
+       the baseline (prune those lines then); #563 (src/test family in CI)
+       follows its own queue.
 3. [ ] Version bump: `pom.xml` `<revision>0.4.7-beta</revision>` to whatever
        the maintainer decides at the cut. Check hardcoded version refs
        (tests/javadoc mention the artifact version) BEFORE bumping; never a

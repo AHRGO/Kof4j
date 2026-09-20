@@ -1277,7 +1277,6 @@ class KofTimeE2ETest {
             Class<?> rt = cl.loadClass("dev.kof.runtime.KofRuntime");
             java.lang.reflect.Method at = rt.getMethod("kof_scheduler_at", String.class, Object.class);
             java.lang.reflect.Method cancel = rt.getMethod("kof_scheduler_cancel", String.class);
-            int[] n = {0};
             TickCounter fn = new TickCounter();
             Object id = at.invoke(null, "20ms", fn);
             Thread.sleep(150);
@@ -1298,6 +1297,7 @@ class KofTimeE2ETest {
      *  e lambdas Java são package-private/hidden (IllegalAccessException). */
     public static class TickCounter implements Tick {
         public int n = 0;
+        @Override
         public void invoke() { n++; }
     }
 

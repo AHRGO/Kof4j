@@ -101,7 +101,6 @@ public final class CompilerComparisons {
         // preservado onde a tabela permite (a==dom nao toca em b).
         int aIdx = localIdx;
         localIdx = aIdx + 1;
-        Type nullableBool = new Type.NullableType(Type.PrimitiveType.BOOL);
         locals.add(new IRLocalVariable(aIdx, "$klt" + aIdx, lt));
         ExpressionNode a = new IdentifierExpr(pos, "$klt" + aIdx);
         ExpressionNode litTrue = new LiteralExpr(pos, ConcreteLiteralKind.BOOLEAN, "true");

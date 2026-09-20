@@ -244,7 +244,7 @@ final class DepsRegistry {
     // ---- http/dirs helpers ----
 
     @SuppressWarnings("unchecked")
-    private static <T> HttpResponse<T> get(String url, Class<T> kind) throws IOException {
+    private static <B> HttpResponse<B> get(String url, Class<B> kind) throws IOException {
         HttpRequest.Builder rb = HttpRequest.newBuilder(URI.create(url))
                 .timeout(Duration.ofSeconds(60))
                 .header("Accept", "application/vnd.github+json");
@@ -252,7 +252,7 @@ final class DepsRegistry {
         if (token == null || token.isBlank()) token = System.getenv("GITHUB_TOKEN");
         if (token != null && !token.isBlank()) rb.header("Authorization", "Bearer " + token);
         try {
-            HttpResponse.BodyHandler<T> handler = (HttpResponse.BodyHandler<T>)
+            HttpResponse.BodyHandler<B> handler = (HttpResponse.BodyHandler<B>)
                     (kind == Path.class ? HttpResponse.BodyHandlers.ofFile(
                             Files.createTempFile("kofdep-dl", ".bin"))
                             : HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));

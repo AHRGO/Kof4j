@@ -124,7 +124,7 @@ public final class NativeRiscvCrossEmit {
             sb.append("    addi sp, sp, 16\n");
             sb.append("    ret\n");
         }
-        if (nb.debugInfo) NativeDwarfCrossRegister.register(this, sb, mangled, clazz, method);
+        if (nb.debugInfo) NativeDwarfCrossRegister.register(this, sb, mangled, method);
     }
 
     int crossLocalOffRiscv(int idx) { return -(idx + 1) * 8 - 16; }
