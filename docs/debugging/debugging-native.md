@@ -25,8 +25,14 @@ Float=float4, Bool=boolean1, Char=unsigned2, Void=size-0/no-encoding,
 class/array/String = opaque 8-byte handle for now). Codes taken from
 GCC's own `.debug_abbrev` bytes, not guessed. gdb end-to-end now reads
 typed values: `print w` -> `5`, `ptype Box_twice` -> `Int (Opaque, Int)`.**
-DAP on native and stepping pending.**
-**Date:** September 17, 2026
+DAP on native and stepping landed 20/09.**
+**X7-3/X7-4/X7-5 (20/09):** `kof debug --target native` drives the target's
+real gdb over the Kof DWARF (breakpoints on `Main.kf:N`, never the mangle);
+`--break`/`--output` = scriptable batch session (gdb `-batch`, `break`/`run`/
+`bt`); `kof debug --dap --target native` = DAP↔gdb/MI2 bridge (the editor sees
+`.kf`); `--attach <pid>` = gdb `-p`. Proof: `KofDebugNativeTest` 7/7,
+`KofDebugNativeDapTest` 3/3 (stub-gdb on the host, real gdb in CI).
+**Date:** September 20, 2026
 **Version:** 0.4.0-beta (7 targets)
 
 ---
@@ -36,7 +42,7 @@ DAP on native and stepping pending.**
 ```text
 Kof Debug Info (IR)
     ↓
-symbols + line tables (DWARF future)
+symbols + line tables (DWARF ✅ x86-64 + cross)
     ↓
 ELF x86-64
     ↓
@@ -58,7 +64,7 @@ Editor
 
 ## 3. Later
 
-- complete DWARF;
+- ~~complete DWARF~~ ✅ x86-64 + cross (riscv64/aarch64) — X7-1/X7-2;
 - optimized variable locations;
 - native memory inspection.
 

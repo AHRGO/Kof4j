@@ -38,8 +38,8 @@ Each backend translates the Kof debug model to the platform format
 | CompilerDriver | **Debug Metadata** — each IR op knows where it came from |
 | IR | KofDebugInfo (source files, functions, locals, scopes, mappings) |
 | JvmBackend | LineNumberTable, LocalVariableTable, SourceFile |
-| NativeBackend | symbols, line tables (DWARF in the future) |
-| JsBackend | Kof → JS source maps |
+| NativeBackend | symbols, line tables (DWARF ✅ x86-64 + cross) |
+| JsBackend | Kof → JS source maps (function-level) |
 | kof-debug | Debug Adapter (DAP) |
 | Kof Editor | breakpoints, stack, variables (DAP) |
 
@@ -78,8 +78,8 @@ Do not create JVM-specific metadata — the source information exists
 | Target | Native format | User-facing exposure |
 |--------|----------------|----------------------|
 | JVM | LineNumberTable, LocalVariableTable, SourceFile + JDWP | Kof functions and lines |
-| Native | symbols + line tables (DWARF future) | Kof functions and lines |
-| KofJS | Kof → JS source maps + Node Inspector/Chrome | Kof functions and lines |
+| Native | symbols + line tables (DWARF ✅ x86-64 + cross) | Kof functions and lines |
+| KofJS | Kof → JS source maps (function-level) | Kof functions and lines |
 
 ## 5. Rules
 
@@ -99,10 +99,14 @@ Phase 3  kof-debug MVP: DAP over stdio + raw JDWP                 ✅
         (launch, breakpoints by Kof line, stopped, stack trace
          with Kof functions/lines, continue, disconnect)
 Phase 4  Kof Editor: breakpoints, toolbar, call stack, variables, stepping
-Phase 5  Native: DWARF
-Phase 6  JS: source maps + Node Inspector
+Phase 5  Native: DWARF + DAP↔gdb/MI2 bridge + attach              ✅ (X7-1..X7-5)
+Phase 6  JS: source maps + Node Inspector                         partial
+        (map emitted but function-level; Node Inspector = honest gap —
+         embedded GraalJS engine, see `debugging-js.md`)
 Phase 7  Advanced: per-frame locals, stepping, conditional/exception
-        breakpoints, evaluation, async
+        breakpoints, evaluation, async                            partial
+        (Native has locals/scopes/stepping/evaluate; JVM has
+         stackTrace/scopes/variables)
 ```
 
 Implementation details of `kof-debug` (Phase 3): see `debug-adapter.md`.

@@ -135,8 +135,10 @@ surface as 5s timeouts).
   `StackFrame.GetValues`, formatted by Kof type);
 - `verified: false` only until the class loads — at `ClassPrepare` the
   breakpoint is placed through LineTable and hits fire `stopped`;
-- remaining: stepping, pause, exception breakpoints and evaluation
-  (Phase 7); JS stays an honest gap (embedded engine, no inspector).
+- remaining: stepping/pause/evaluation on the **JVM** DAP (the **Native** DAP
+  already has `next`/`stepIn`/`stepOut` and `evaluate`, X7-4), pause everywhere
+  and exception breakpoints (Phase 7); JS stays an honest gap (embedded
+  engine, no inspector).
 
 ## 4. Runtime types
 
@@ -155,6 +157,8 @@ The user always sees the Kof type.
 - Phase 3 (MVP): JVM launch + breakpoints by Kof line + stack — ✅
 - Phase 7: per-frame locals (`StackFrame.GetValues`), stepping, verified
   breakpoints, exception breakpoints, evaluation with the type system
+  (Native: locals/scopes/stepping/evaluate landed X7-4/X7-5; JVM: locals +
+  verified breakpoints landed, stepping/evaluate pending)
 - ✅ 20/09: Native (DWARF) — console + DAP<->GDB/MI (X7-3/X7-4)
 - ✅ 20/09 (X7-5): attach on JVM + Native; per-frame locals and multi-frame
   stack landed with it (ahead of Phase 7); JS stays an honest gap

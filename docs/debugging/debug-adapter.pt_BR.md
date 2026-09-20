@@ -25,7 +25,7 @@ Não criar protocolo proprietário.
 - stack traces, scopes, locals, arguments, campos;
 - eventos de exceção;
 - inspeção de variáveis com tipos Kof;
-- avaliação de expressões (futuro — com type system, nunca Java/JS cru).
+- avaliação de expressões (Native ✅ X7-4; JVM pendente — com type system, nunca Java/JS cru).
 
 ## 3. Interface
 
@@ -135,8 +135,9 @@ resposta síncrona (elas só aparecem como timeouts de 5s).
   `StackFrame.GetValues`, formatados pelo tipo Kof);
 - `verified: false` só até a classe carregar — no `ClassPrepare` o
   breakpoint é posicionado via LineTable e os hits disparam `stopped`;
-- o que falta: stepping, pause, exception breakpoints e avaliação
-  (Fase 7); JS continua gap honesto (engine embutido, sem inspector).
+- o que falta: stepping/pause/avaliação no DAP **JVM** (o DAP **Native** já tem
+  `next`/`stepIn`/`stepOut` e `evaluate`, X7-4), pause em todos e exception
+  breakpoints (Fase 7); JS continua gap honesto (engine embutido, sem inspector).
 
 ## 4. Tipos de runtime
 
@@ -155,6 +156,8 @@ O usuário sempre vê o tipo Kof.
 - Fase 3 (MVP): launch JVM + breakpoints por linha Kof + stack — ✅
 - Fase 7: locals por frame (`StackFrame.GetValues`), stepping, breakpoints
   verificados, exception breakpoints, avaliação com o type system
+  (Native: locals/scopes/stepping/evaluate pousaram X7-4/X7-5; JVM: locals +
+  breakpoints verificados pousaram, stepping/avaliação pendentes)
 - ✅ 20/09: Native (DWARF) — console + DAP<->GDB/MI (X7-3/X7-4)
 - ✅ 20/09 (X7-5): attach no JVM + Native; locals por frame e stack
   multi-frame vieram junto (antes da Fase 7); JS fica gap honesto
