@@ -66,8 +66,12 @@ if (mc.receiver() == null && driver.externSignatures.containsKey(mc.methodName()
             // via tradução do texto riscv).
             List<Type> ffiParams = new java.util.ArrayList<>();
             for (var p : ext.parameters()) ffiParams.add(FfiSignature.paramType(p.type()));
-            for (ExpressionNode arg : mc.arguments()) {
+            for (int i = 0; i < mc.arguments().size(); i++) {
+                ExpressionNode arg = mc.arguments().get(i);
                 localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
+                // #549/§370: o marshaling SysV lê os bits pela classe do SLOT — o
+                // argumento chega já convertido ao tipo declarado (regra comum).
+                ExternArgumentCoercion.coerce(driver, arg, i < ffiParams.size() ? ffiParams.get(i) : null, ops, locals);
             }
             ops.add(new KofCall(new Type.ClassType("kof", "ffi", List.of()),
                     ext.library() + "::" + ext.name(), ffiParams,
@@ -91,6 +95,10 @@ if (mc.receiver() == null && driver.externSignatures.containsKey(mc.methodName()
             ExpressionNode arg = mc.arguments().get(i);
             localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
             Type argType = ExpressionTyper.inferExprType(driver, arg, locals);
+            // #549/§370: `Double→Float`/`Int→Float`… viram a conversão real ANTES do
+            // box — o `kof_ffi` faz cast pelo wrapper do slot (Float), nunca reinterpreta.
+            Type slot = i < ext.parameters().size() ? FfiSignature.paramType(ext.parameters().get(i).type()) : null;
+            if (ExternArgumentCoercion.coerce(driver, arg, slot, ops, locals)) argType = slot;
             if (argType instanceof Type.PrimitiveType) {
                 TypeEmitter.boxPrimitive(ops, argType);
             }

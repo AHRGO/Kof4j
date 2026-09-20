@@ -32,10 +32,11 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — "mel
 //   (NULL->NULL); >=9 args da mesma classe derramam; retorno String = copia na fronteira (buffer C nunca free'd);
 //   o glibc riscv64/aarch64 passa E devolve FP em fa0..fa7 (MEDIDO sob qemu — NAO ft0);
 //   o stdio da C e flushado no exit; struct/array/callback/sem-library -> FFI001 na linha da declaracao
-//   Slots FLOAT exigem cast explicito: chame `f(Float x)` como `f(4.0 as Float)`.
-//     Um literal Double/Int SEM o cast compila limpo e reinterpreta bits crus no
-//     Native (0.0 / 3.0E-45 — valor errado silencioso, gap aberto §370/#549) e lanca
-//     ou difere na JVM. NUNCA passe literal sem cast para uma slot Float.
+//   Argumentos numericos seguem a regra COMUM de conversao do Kof (#549/§370 FIXED 20/09): `f(Float x)`
+//     aceita `f(4.0 as Float)`, `f(4.0)` (Double->Float) e `f(4)` (Int->Float) com o MESMO
+//     resultado na JVM, no Native e no host JS; `sqrt(9)` (slot Double) e `labs(i)` idem.
+//     O que o Kof nao converte (String/Bool em slot numerico, Double->Int estreitando) e SEM014
+//     no call-site — nunca bits reinterpretados pela classe do slot.
 
 // (c) CALLBACKS (C2 ✅ JVM + paridade JS C3 ✅, 18/09): uma função Kof entregue
 // ao C como ponteiro de função. Parâmetro tipo-função + lambda no call site;

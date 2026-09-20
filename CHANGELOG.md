@@ -29,11 +29,22 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     void/String returns: direct link (the library goes to `ld`) + SysV marshaling
     per class; Kof↔Native now runs the same program byte-for-byte with the JVM
     (re-verified by the docs lane on a clean-rebuilt jar: `5` / `3.5` / `5` / `10`
-    in both targets). FLOAT slots require the explicit cast (`fmid(4.0 as Float,
-    9.0 as Float)` → `13.0`); an uncast literal compiles clean and reinterprets
-    bits on Native — open gap §370/#549, not a license to use it.
+    in both targets). the explicit cast (`fmid(4.0 as Float, 9.0 as Float)` → `13.0`) always worked; an
+    uncast `Int`/`Double` in a Float/Double slot used to reinterpret bits on Native
+    (`3.0E-45`/`0.0`) — FIXED in the #549/§370 entry below.
     Callback/struct/array on Native stay honest FFI001/FFI002. Proved by
     `FfiNativeE2ETest` 16/16 (+ `FfiE2ETest` 16/16 JVM regression, 38/38 total).
+
+  - **#549/§370 — `extern` arguments now follow the ordinary Kof numeric conversion (FIXED 20/09)**
+    — the call-site pushed the argument RAW and the Native SysV marshaling read the bits
+    by the SLOT class: `fmid(1, 2)` in a `Float` slot printed `3.0E-45`, `fmid(1.0, 2.0)`
+    printed `0.0` (wrong value, no diagnostic) and `sqrt(9)` in a `Double` slot was the
+    same garbage; the JVM threw a `Double→Float` cast error. `ExternArgumentCoercion`
+    now converts to the declared slot with the SAME widening/`Double→Float` rule as any
+    call (`Int→Float`, `Double→Float`, `Int→Double`, `Long→Double`…), before the
+    marshaling/box; `String`/`Bool` in a numeric slot and `Double→Int` stay `SEM014`.
+    JVM, Native and JS host print identically (`FfiExternTypeConversionTest` 11/11; the
+    10-class FFI battery is 94/0/0/0 before AND after).
 
   - **#278/§361 — nullable-primitive FIELD writes now BOX on the JVM (`e293c4a5`)**
     — `class Box { Int? n }` + `b.n = 42` stored the raw int into the boxed slot

@@ -197,8 +197,9 @@ slice 3.6.F2/F3 ✅) — with non-scalars → `FFI002` there and the browser an 
 error (R7, no host, same degrade as `kof.io`); **Native binds the same scalar ABI DIRECT on
 x86-64, riscv64 and aarch64** (#431 slices 1–2, 20/09, §369): the `library()` is a link-by-use
 linker input and the call is `call sym@PLT` — no `dlopen` (§61 closed). Non-scalar or a missing
-`library()` → `FFI001` at the declaration line on Native (R6). A `Float` slot needs an explicit
-`as Float` argument today (§370/#549 open: a bare `Double`/`Int` literal there is not yet diagnosed).
+`library()` → `FFI001` at the declaration line on Native (R6). Numeric arguments follow the ordinary
+Kof conversion rule on every target (§370/#549 fixed 20/09): `Int`/`Double` into a `Float` slot,
+`Int`/`Long`/`Float` into a `Double` slot etc. are converted; String/Bool/`Double→Int` are `SEM014`.
 The lib path is resolved at **runtime** on JVM/JS (missing symbol = `kof_ffi_*` exception).
 History: widening was the R3 slice (#431); the JVM face landed 18/09 (`.18`), JS host the same day,
 Native x86-64 + riscv64/aarch64 on 20/09.
