@@ -94,8 +94,7 @@
 | static field + bump | `1` / `2` / `2` | DONE | DONE (bug 41 fixed 07/09) | DONE | DONE | `staticfield` |
 | nullable-primitive FIELD write + read-back (`b.n = 42`) — §361 CLOSED | `42` | DONE (`e293c4a5`) | DONE | DONE | DONE | `NullablePrimitiveFieldWriterE2ETest` 9/9; face char resolvida pelo gate §368 (SEM012 em store invalido; idiom `y.c = 'x'` verde 4 alvos, re-verification 20/09 jar limpo) |
 | field-store assignability gate — §368 | SEM012 at the call-site | DONE (`5cd078c1`) | DONE | DONE | DONE | `FieldAssignabilityPhantomE2ETest` 8/8; medido 20/09: `x.n = "s"`(Int) e `y.c = "x"`(Char?) -> SEM012 em check+build; `y.c = 'x'` imprime `x` nos 4 alvos |
-| constructor-arity/type at call site (implicit `Class(args)`) — §362 | `SEM023 no call-site` | DONE (`57a0d5f0`) | DONE | N/D | DONE | `ConstructorPhantomE2ETest` (7/7) |
-| never-written nullable-field READ — §365 | `null` | DONE | DONE | DONE (`dd418419` — `JsClassEmitter.insertFieldDefaults`; re-verified docs lane) | DONE | §365 CLOSED |
+| constructor-arity/type at call site (implicit `Class(args)` no `new`) — §362 | `SEM023 no call-site` | DONE (`57a0d5f0`) | DONE | N/D (frontend compartilhado) | DONE | `ConstructorPhantomE2ETest` 7/7 |
 | static field `+=` | `2` / `4` / `4` | DONE | DONE (bug 41) | DONE | DONE | `staticpluseq` |
 | concat string+num (order) | `n=42` / `3x` / `x12` | DONE | DONE | DONE | DONE | `concat` |
 | boolean logic + comparison | `false` / `true` / `false` / `true` | DONE | DONE | DONE | DONE | `boollogic` |
