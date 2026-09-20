@@ -190,7 +190,18 @@ public final class CollectionCallLowerer {
                 // List<Unknown> não é poluição — é a definição do tipo).
                 // set: o VALOR é o arg 1 (o índice já foi checado em SEM055).
                 int valIdx = "kof_list_set".equals(listFn) ? 1 : 0;
-                if (argTypes.size() > valIdx && CollectionWrites.pollutesPinned(elemType, argTypes.get(valIdx))
+                if (argTypes.size() > valIdx
+                        && (CollectionWrites.pollutesPinned(elemType, argTypes.get(valIdx))
+                            // §383/#561: escrita de primitivo em slot de
+                            // REFERENCIA pinado (ex.: listOf(listOf(1))
+                            // .add(true)) e seu espelho (objeto em slot
+                            // primitivo) NAO sao "miss abençoado" — quebram
+                            // de verdade nos dois alvos compilados (JVM
+                            // VerifyError no load, Native SIGSEGV — medidos
+                            // 20/09, faces F9/X3). Rejeicao universal com o
+                            // mesmo SEM056 (doutina do §126: rejeitar so o
+                            // que quebra; aqui quebra nos 4).
+                            || CollectionWrites.breaksPinnedList(elemType, argTypes.get(valIdx)))
                         && driver.currentDiagnostics != null) {
                     var pos = mc.position();
                     driver.currentDiagnostics.error(pos != null ? pos.file() : "",
@@ -233,7 +244,10 @@ public final class CollectionCallLowerer {
             int storeValIdx = "kof_list_set".equals(listFn) ? 1 : 0;
             localIdx = CompilerEmissionHelpers.emitArgsCoercingValue(driver, mc, ops, owner,
                     localIdx, locals, argTypes, elemType,
-                    ("kof_list_add".equals(listFn) || "kof_list_set".equals(listFn)) ? storeValIdx : -1);
+                    ("kof_list_add".equals(listFn) || "kof_list_set".equals(listFn)) ? storeValIdx : -1,
+                    // §383: bool→long e conversao de store SO no site de List
+                    // (Map/Set toleram heterogeneidade pelo consenso 3/4).
+                    "kof_list_add".equals(listFn) || "kof_list_set".equals(listFn));
             Type retType = switch (listFn) {
                 case "kof_list_add", "kof_list_set", "kof_list_clear", "kof_list_sort" -> Type.PrimitiveType.VOID;
                 case "kof_list_contains", "kof_list_is_empty", "kof_list_add_all" -> Type.PrimitiveType.BOOL;

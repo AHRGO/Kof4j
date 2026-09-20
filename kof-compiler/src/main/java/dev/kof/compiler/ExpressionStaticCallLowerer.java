@@ -194,7 +194,9 @@ if ("listOf".equals(mc.methodName()) && mc.receiver() == null) {
         // Int-pinado) virava VerifyError no JVM, `listOf(1L, 2)` (widening)
         // quebrava igual. Mesma disciplina do add: rejeitar o que quebra,
         // converter o widening abençoado.
-        if (CollectionWrites.pollutesPinned(elemType, argType) && driver.currentDiagnostics != null) {
+        if ((CollectionWrites.pollutesPinned(elemType, argType)
+                || CollectionWrites.breaksPinnedList(elemType, argType))
+                && driver.currentDiagnostics != null) {
             var pos = mc.position();
             driver.currentDiagnostics.error(pos != null ? pos.file() : "",
                     pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
@@ -207,7 +209,7 @@ if ("listOf".equals(mc.methodName()) && mc.receiver() == null) {
         ops.add(new KofDup());
         localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
         Type paramT = argType;
-        if (CompilerEmissionHelpers.coerceStoreWiden(driver, ops, argType, elemType)) {
+        if (CompilerEmissionHelpers.coerceStoreWiden(driver, ops, argType, elemType, true)) {
             paramT = elemType instanceof Type.NullableType nt ? nt.inner() : elemType;
         }
         ops.add(new KofCall(listType, "kof_list_add", List.of(paramT),
@@ -412,7 +414,7 @@ if ("mapOf".equals(mc.methodName()) && mc.receiver() == null) {
         localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(ai + 1), ops, owner, localIdx, locals);
         // §121/§143 (B1): widening abençoado no VALOR (M1: put(2) em Map<_,Long>
         // dava CCE no get — Integer salvo sob pin Long).
-        if (CompilerEmissionHelpers.coerceStoreWiden(driver, ops, vType, valueType)) {
+        if (CompilerEmissionHelpers.coerceStoreWiden(driver, ops, vType, valueType, false)) {
             vType = valueType instanceof Type.NullableType nt2 ? nt2.inner() : valueType;
         }
         // §284-map (18/09): UMA convenção física para o valor do Map — o

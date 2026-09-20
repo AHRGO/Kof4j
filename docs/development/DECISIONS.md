@@ -2427,3 +2427,37 @@ EG-1..EG-7 + the 0.5.0 release), does NOT change VERSION, does NOT close #560.
 `tracking/contract` on #560; #564/#565 labeled `1.0-blocks`; ledger
 `scripts/release-blockers.tsv`; gate `scripts/check_release_blockers.sh`
 (five categories; `--rc-gate` RED with 4 open `1.0-blocks`).
+## D-SLOT-PIN — §383/#561 blessed-miss stored value: the pinned slot wins; JS coerces at store (option (a)) (09/20/2026, maintainer dispatch)
+
+**Date:** 2026-09-20 · **State:** `DECIDED` (maintainer dispatch of the
+#561 unit, 20/09 — "the slot's pinned type wins, value rewritten at store;
+JS MUST match the 3-target majority")
+
+**Decision:** the §383 dossier (three measured options) is resolved with
+**option (a) — coerce JS to the slot**. Grounds, all pre-existing law (the
+question is CLOSED by the contract, not re-opened): freeze rule 5 (JVM/Native/JS
+divergence on the same program is a parity bug — never a silent divergence),
+the "golden = JVM oracle" measurement law, and the §126 blessed-miss contract
+as IMPLEMENTED (box-by-slot at store — `listOf(1).add(true)` stores `1` on
+JVM/Script/Native). Consequences landed the same commit:
+
+- **JS** (`JsCollectionOps.slotStoreCoerce`): at the pinned List add/set store,
+  numeric-slot + Bool arg → `v ? 1 : 0`; Bool-slot + numeric/char arg →
+  truthiness — the SAME coercion point the other targets use (the store).
+- **JVM** (`CompilerEmissionHelpers.coerceStoreWiden`, List sites only): the
+  blessed bool→Long miss now emits `I2L` before the slot box — the face used
+  to die in `Long.valueOf(J)` over `ICONST_1` (COMP002 frame crash, measured
+  20/09); Script/Native already stored `1` and keep byte-identical results.
+- **Category-cross pairs are NOT blessed misses** (`CollectionWrites.breaksPinnedList`,
+  List add/set + `listOf` literal sites): primitive into a pinned REFERENCE
+  slot (`listOf(listOf(1)).add(true)`) and the mirror (object into a pinned
+  primitive slot) break on BOTH compiled targets (JVM VerifyError at load,
+  Native SIGSEGV/garbage) and diverge on the two tolerated ones — §126's own
+  doctrine ("reject only what truly breaks") makes them SEM056 on all four.
+- **Map/Set stay untouched**: there the neighboring-category heterogeneity is
+  tolerated by the 3/4 consensus (faces S2/M1 measured 20/09 — coercing would
+  move JS to the Native-minority side).
+
+**Evidence:** `HeterogeneousSlotPinE2ETest` 16/16 (JVM≡Script≡JS≡Native
+byte-a-byte, goldens from JVM runs 20/09); §383 flipped in
+`known-bugs.md` EN+PT; #561 answered with the measured matrix.

@@ -2411,3 +2411,40 @@ EG-1..EG-7 + o release 0.5.0), NÃO muda a VERSION, NÃO fecha a #560.
 `tracking/contract` na #560; #564/#565 rotuladas `1.0-blocks`; ledger
 `scripts/release-blockers.tsv`; gate `scripts/check_release_blockers.sh` (cinco
 categorias; `--rc-gate` RED com 4 `1.0-blocks` abertos).
+## D-SLOT-PIN — §383/#561 valor armazenado do "miss abençoado": o slot pinado vence; o JS coage no store (opção (a)) (20/09/2026, despacho da mantenedora)
+
+**Data:** 20/09/2026 · **Estado:** `DECIDIDO` (despacho da mantenedora da
+unidade #561, 20/09 — "o tipo pinado do slot vence, o valor é reescrito no
+store; o JS DEVE bater com o consenso de 3 alvos")
+
+**Decisão:** o dossiê §383 (três opções medidas) resolve-se com a
+**opção (a) — coagir o JS ao slot**. Fundamentos, todos em lei pré-existente
+(a questão está FECHADA pelo contrato, não reaberta): freeze regra 5
+(divergência JVM/Native/JS no mesmo programa é bug de paridade — nunca
+divergência silenciosa), a lei de medida "golden = oracle JVM" e o contrato do
+miss abençoado do §126 COMO IMPLEMENTADO (box-pelo-slot no store —
+`listOf(1).add(true)` guarda `1` em JVM/Script/Native). Consequências no mesmo
+commit:
+
+- **JS** (`JsCollectionOps.slotStoreCoerce`): no store pinado de List
+  add/set, slot numérico + arg Bool → `v ? 1 : 0`; slot Bool + arg
+  numérico/char → truthiness — no MESMO ponto da coerção dos outros alvos (o
+  store).
+- **JVM** (`CompilerEmissionHelpers.coerceStoreWiden`, só sites de List): o
+  miss abençoado bool→Long agora emite `I2L` antes do box do slot — a face
+  morria em `Long.valueOf(J)` sobre `ICONST_1` (frame crash COMP002, medido
+  20/09); Script/Native já gravavam `1` e permanecem byte-idênticos.
+- **Pares que cruzam a fronteira de categoria NÃO são miss abençoado**
+  (`CollectionWrites.breaksPinnedList`, sites de List add/set + literal
+  `listOf`): primitivo em slot de REFERÊNCIA (`listOf(listOf(1)).add(true)`)
+  e o espelho (objeto em slot primitivo) quebram nos DOIS alvos compilados
+  (VerifyError no load no JVM, SIGSEGV/lixo no Native) e divergem nos dois
+  tolerados — a própria doutina do §126 ("rejeitar só o que quebra de
+  verdade") os torna SEM056 nos quatro.
+- **Map/Set continuam intocados**: lá a heterogeneidade de categorias
+  vizinhas é tolerada pelo consenso 3/4 (faces S2/M1 medidas 20/09 — coagir
+  moveria o JS para o lado da minoria Native).
+
+**Evidência:** `HeterogeneousSlotPinE2ETest` 16/16
+(JVM≡Script≡JS≡Native byte-a-byte, goldens de execuções JVM 20/09); §383
+virado em `known-bugs.md` EN+PT; #561 respondida com a matriz medida.
