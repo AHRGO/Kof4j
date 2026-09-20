@@ -131,6 +131,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
+  - **`kof debug --dap --target native` — a ponte DAP<->GDB/MI para o editor (X7-4, roadmap §19.5 fase 7)**
+    — o editor fala um unico protocolo com todos os alvos: os pedidos DAP (setBreakpoints,
+    continue, stackTrace, variables, evaluate) são traduzidos para GDB/MI contra o ELF
+    construído com DWARF; o `source.path` de cada frame e a fonte Kof (o `Main.kf`), nunca
+    o asm. Gdb ausente = erro DAP honesto (`success:false` nomeando a ferramenta); evaluate
+    de símbolo inexistente = erro do gdb repassado, nunca valor inventado (R6). Arquivos
+    proprios pela regra 7: `KofGdbMi` (cliente MI minimo) + `KofDebugNativeDap` (sessao).
+    Prova `KofDebugNativeDapTest` 3/3 com stub-MI (a conversa completa do editor, o caminho
+    de tool ausente, as recusas honestas); gdb real exercitado na CI.
   - **`kof debug --target native` — gdb sobre o ELF Kof (X7-3, roadmap §19.5 fase 6)**
     — a frente de debug nativa existe sem a linguagem reinventar um debugger: o ELF é
     construído com o DWARF Kof completo (line table + DIEs, X7-1/X7-2) e o gdb é lançado

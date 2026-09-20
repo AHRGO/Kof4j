@@ -29,6 +29,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     on JS vs `null` elsewhere — pre-existing, independent face of the same family).
 
 
+
+  - **`kof debug --dap --target native` — the DAP<->GDB/MI bridge for the editor (X7-4, roadmap §19.5 phase 7)**
+    — the editor speaks one protocol with every target: DAP requests (setBreakpoints,
+    continue, stackTrace, variables, evaluate) are translated to GDB/MI against the
+    ELF built with DWARF; every frame's `source.path` is the Kof source (`Main.kf`),
+    never the asm. Missing gdb = an honest DAP error naming the tool; evaluating an
+    unknown symbol = the gdb error passed through, never an invented value (R6). Own
+    files per rule 7: `KofGdbMi` (minimal MI client) + `KofDebugNativeDap` (session).
+    Proved by `KofDebugNativeDapTest` 3/3 with a stub-MI (the full editor conversation,
+    the tool-missing path, the honest refusals); real gdb exercised in CI.
   - **`kof debug --target native` — gdb over the Kof ELF (X7-3, roadmap §19.5 phase 6)**
     — the native debug front-end now exists without the language reinventing a
     debugger: the ELF is built with the full Kof DWARF (line table + DIEs, X7-1/X7-2)

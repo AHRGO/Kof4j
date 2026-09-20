@@ -34,25 +34,32 @@ final class KofDebug {
 
     public static int run(String[] args) {
         if (args.length < 2) {
-            System.err.println("usage: kof debug [--target jvm|native] <file.kf>");
+            System.err.println("usage: kof debug [--dap] [--target jvm|native] <file.kf>");
             return 1;
         }
         String target = "jvm";
+        boolean dap = false;
         int i = 1;
-        if (args[i].equals("--target")) {
-            i++;
-            if (i >= args.length) {
-                System.err.println("debug: --target requires a value (jvm|native)");
+        while (i < args.length && args[i].startsWith("-")) {
+            if (args[i].equals("--target")) {
+                i++;
+                if (i >= args.length) {
+                    System.err.println("debug: --target requires a value (jvm|native)");
+                    return 1;
+                }
+                target = args[i++];
+            } else if (args[i].equals("--dap")) {
+                dap = true;
+                i++;
+            } else {
+                // R6 strictness (CliFlagStrictnessTest): a typo must not be silently ignored.
+                System.err.println("debug: unknown flag: " + args[i]
+                        + " (usage: kof debug [--dap] [--target jvm|native] <file.kf>)");
                 return 1;
             }
-            target = args[i++];
-        } else if (args[i].startsWith("-")) {
-            // R6 strictness (CliFlagStrictnessTest): a typo must not be silently ignored.
-            System.err.println("debug: unknown flag: " + args[i] + " (usage: kof debug [--target jvm|native] <file.kf>)");
-            return 1;
         }
         if (i >= args.length) {
-            System.err.println("debug: missing file (usage: kof debug [--target jvm|native] <file.kf>)");
+            System.err.println("debug: missing file (usage: kof debug [--dap] [--target jvm|native] <file.kf>)");
             return 1;
         }
         Path file = Path.of(args[i++]);
@@ -66,7 +73,16 @@ final class KofDebug {
             return 1;
         }
         if (target.equals("native")) {
-            return debugNative(file);
+            if (!dap) {
+                return debugNative(file);
+            }
+            try {
+                new KofDebugNativeDap(file.toAbsolutePath()).run();
+                return 0;
+            } catch (Exception e) {
+                System.err.println("kof debug native (dap): " + e.getMessage());
+                return 1;
+            }
         }
         if (target.equals("js")) {
             System.err.println("debug js: honest gap — the JS target runs on the EMBEDDED engine"
@@ -98,21 +114,13 @@ final class KofDebug {
      * `KOF_PUBLISH_API`/`KOF_CROSS_SYSROOT`), senao `gdb`.
      */
     private static int debugNative(Path file) {
-        Path out = null;
+        NativeBuild built = null;
         try {
-            out = Files.createTempDirectory("kof-debug-native-");
-            CompilerDriver driver = new CompilerDriver();
-            driver.setDebugInfoEnabled(true);
-            CompilationResult r = driver.compile(file.toAbsolutePath(), out, Target.NATIVE);
-            if (!r.success()) {
-                r.diagnostics().getDiagnostics().forEach(d -> System.err.println(d.format()));
+            built = buildNativeElf(file);
+            if (built == null) {
                 return 1;
             }
-            Path bin = out.resolve("Default").resolve("Main");
-            if (!Files.exists(bin)) {
-                System.err.println("debug native: no ELF produced (native toolchain missing on this host)");
-                return 1;
-            }
+            Path bin = built.bin();
             String gdb = firstNonEmpty(System.getenv("KOF_GDB"), "gdb");
             ProcessBuilder pb = new ProcessBuilder(gdb, "-q",
                     "-iex", "set pagination off",
@@ -134,10 +142,33 @@ final class KofDebug {
             System.err.println("kof debug native: " + e.getMessage());
             return 1;
         } finally {
-            if (out != null) {
-                KofCliSupport.cleanup(out);
+            if (built != null) {
+                KofCliSupport.cleanup(built.dir());
             }
         }
+    }
+
+    /** ELF Kof construido com DWARF em um diretorio temporario (console mode e DAP session). */
+    record NativeBuild(Path dir, Path bin) {
+    }
+
+    static NativeBuild buildNativeElf(Path file) throws IOException {
+        Path out = Files.createTempDirectory("kof-debug-native-");
+        CompilerDriver driver = new CompilerDriver();
+        driver.setDebugInfoEnabled(true);
+        CompilationResult r = driver.compile(file.toAbsolutePath(), out, Target.NATIVE);
+        if (!r.success()) {
+            r.diagnostics().getDiagnostics().forEach(d -> System.err.println(d.format()));
+            KofCliSupport.cleanup(out);
+            return null;
+        }
+        Path bin = out.resolve("Default").resolve("Main");
+        if (!Files.exists(bin)) {
+            System.err.println("debug native: no ELF produced (native toolchain missing on this host)");
+            KofCliSupport.cleanup(out);
+            return null;
+        }
+        return new NativeBuild(out, bin);
     }
 
     private static String firstNonEmpty(String a, String b) {
