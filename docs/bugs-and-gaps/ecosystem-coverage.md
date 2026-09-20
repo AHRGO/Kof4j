@@ -523,7 +523,7 @@ external module), cloud integrations, provider adapters.
   flexible signing remain for the P2 identity layer.
 - **`new` accepted for backward compatibility**, not recommended.
 - **AI**: stdlib vs external module decision postponed until P3.
-- **Observability**: tooling (`kof bench/profile`) + `kof.log`
+- **Observability**: tooling REAL 20/09 — `kof bench` + `kof profile --methods` method-level sampling (JVM: own JFR `jdk.ExecutionSample`, report on the `.kf` line via LineNumberTable; JS: Node `--cpu-prof` + `.mjs.map` back to the Kof line; native face pending) + `kof.log`
   (levels, stderr — JVM); health/metrics/request IDs enter in P0-G5.
 - **Configuration**: `kof.config` (JVM) follows the precedence
   explicit file > env > profile > default; typed via
