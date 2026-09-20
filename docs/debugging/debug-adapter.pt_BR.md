@@ -77,7 +77,7 @@ stackTrace            → -stack-list-frames; source.path é SEMPRE o .kf — o
                         ponto inteiro da frente (o editor nunca vê asm)
 variables             → -stack-list-variables --simple-values sobre os DIEs
                         DW_TAG_variable reais (nome + DW_OP_fbreg + DW_AT_type)
-                        que o compilador já emite nos 3 arquiteturas nativas —
+                        que o compilador já emite nas 3 arquiteturas nativas —
                         medido 20/09 com objdump no ELF/.s; temporários do
                         lowering (tmp/cap/lambda$) ficam FORA das DIEs, o
                         editor só vê nome Kof
