@@ -11590,3 +11590,13 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 - **Workaround (in use, rule-legal — no semantics change):** write guards at SINGLE nesting level (`if (bad && refuse) { return false } if (bad) { throw "..." }`) or give the inner if an explicit `else` (both forms are the corpus-documented §147-proven shapes). `MkFailure`'s `mkSet` uses the two-guard form; hosts must avoid the nested form until this closes.
 - **Proof/when-closed:** a `runAll3` golden (`t2`/`t4` programs) that fails on JS today and passes after the fix, + `WorkflowE2ETest` 23/23 + full suite green.
 - **Related:** §147/§149 (the else-capture machinery this bug breaks and the fix must preserve), §174/§266/§267 (label-consumption guards in the same parser), §255 (compiles-green/diverges-red family), `MakealiveE2ETest` `MkFailure`.
+
+## §381 — entity with a RESERVED-keyword field name OOMs the compiler (infinite loop in `parseEntityDeclaration`)
+
+- **Status:** 🔴 OPEN 20/09 — measured with a standalone repro (256MB heap dies in ~2s); routed to the parser lane (rules 2/6 — not my file to heal; the workaround is already used).
+- **Measured (20/09, fatia db makealive 3.1):** `entity E { val: String }` (also `gen`? no — `val`, `as`, `string` etc. = Lexer KEYWORDS, `parser/Lexer.java:71`) → the compile never returns; `java.lang.OutOfMemoryError: Java heap space` inside `Diagnostic.error` (every iteration allocates a diagnostic forever).
+- **Root cause (pointer):** `parser/TypeDeclarations.java` `parseEntityDeclaration` field loop `while (!check(RBRACE) && !atEnd())` calls `ctx.expectId(...)` (ParseContext.java:84) which REPORTS "Expected field name in entity" **without advancing** — no progress = infinite. Class/interface members go through `ClassMemberParser` and reject fine (`ok=false` with PARSE error, no loop) — the flaw is entity-local.
+- **Workaround (in use):** entity field names must avoid the keyword list — `val` → `v` (done in `makealive-db-host.kf` before it shipped; the JS "row duplication" scare during the same session was MY harness reusing one in-mem H2 name across engines, NOT this bug).
+- **Fix shape (decision of the parser lane):** on expectId-fail inside the field loop, either consume one token (classic panic recovery) or bail out of the loop with PARSE024 once (the `expect(RBRACE)` path already reports); a progress-guard on the loop (iteration must consume >=1 token) would also make every future entity edit safe.
+- **Related:** §147/§149 family (parse-loop hazards reported by probes, not by users), D-KOF-FIRST (repro is a .kf).
+

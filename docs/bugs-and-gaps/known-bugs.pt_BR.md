@@ -11025,3 +11025,13 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Workaround (em uso, legal pelas regras — sem mudar semântica):** escrever guards em nível ÚNICO de aninhamento (`if (bad && refuse) { return false } if (bad) { throw "..." }`) ou dar `else` explícito ao if interno (as duas formas são as provadas pelo §147 e documentadas no corpus). O `mkSet` do `MkFailure` usa a forma de dois guards; hosts devem evitar a forma aninhada até este fechar.
 - **Prova/quando fechar:** um golden `runAll3` (programas `t2`/`t4`) que falha no JS hoje e passa após o fix + `WorkflowE2ETest` 23/23 + suíte completa verde.
 - **Relacionado:** §147/§149 (a máquina de else-capture que este bug quebra e que o fix precisa preservar), §174/§266/§267 (guardas de consumo de labels no mesmo parser), §255 (família compila-verde/diverge-vermelho), `MakealiveE2ETest` `MkFailure`.
+
+## §381 — `entity` com nome de campo PALAVRA-RESERVADA faz o compilador OOMAR (loop infinito em `parseEntityDeclaration`)
+
+- **Estado:** 🔴 ABERTO 20/09 — medido com repro standalone (heap de 256MB morre em ~2s); roteado à lane do parser (regras 2/6 — não é meu arquivo para curar; o workaround já está em uso).
+- **Medido (20/09, fatia db do makealive 3.1):** `entity E { val: String }` (e qualquer nome da lista KEYWORDS do `parser/Lexer.java:71` — `as`, `string`, `val`...) → o compile nunca retorna; `java.lang.OutOfMemoryError: Java heap space` dentro de `Diagnostic.error` (cada aloca um diagnostico para sempre).
+- **Causa-raiz (ponteiro):** o loop de campos do `parser/TypeDeclarations.parseEntityDeclaration` (`while (!check(RBRACE) && !atEnd())`) chama `ctx.expectId(...)` (ParseContext.java:84) que REPORTA "Expected field name in entity" **sem avançar** — sem progresso = infinito. Membros de classe/interface passam pelo `ClassMemberParser` e recusam bem (`ok=false` com erro PARSE, sem loop) — a falha é local do entity.
+- **Workaround (em uso):** nomes de campo de entity devem evitar a lista de palavras-reservadas — `val` → `v` (feito em `makealive-db-host.kf` antes de embarcar; o susto de "linha duplicada no JS" da mesma sessão era MEU harness reusando um nome de H2 in-mem entre engines, NÃO este bug).
+- **Fix shape (decisão da lane do parser):** no fail de expectId dentro do loop de campos, ou consome 1 token (panic recovery clássico) ou sai do loop com PARSE024 uma vez (o caminho `expect(RBRACE)` já reporta); um progress-guard no loop (iteração precisa consumir >=1 token) deixaria qualquer edição futura de entity segura.
+- **Relacionado:** família §147/§149 (riscos de loop de parse achados por sondas, não por usuários), D-KOF-FIRST (repro é um .kf).
+
