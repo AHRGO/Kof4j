@@ -2220,7 +2220,12 @@ ninguém nas gaps de db. agente morto")
   (R6).
 * **DB-2 — Android recusa `kof.db` (§278, linha 1.1.10):** **implementar
   corretamente — Android É JVM**, então tem que ter o **mesmo
-  comportamento que o JVM**. A recusa `DB001` no alvo Android é levantada;
+  comportamento que o JVM**. **IMPLEMENTADO 20/09**: `supportedOn` de
+  `KofDb`/`KofOrm` inclui `ANDROID`; pinado por
+  `KofDbE2ETest.androidDbEmitsTheSameBytecodeAsJvm` (`Main.class`
+  byte-idêntico) e pelo pin virado
+  `DomainGapCodesTest.androidCompilesDbLikeJvmAndRefusesCryptoWithTheDocumentedCode`;
+  §278 agora é PARCIAL (SECN/GPU abertos). A recusa `DB001` no alvo Android é levantada;
   o pin `DomainGapCodesTest.androidRefusesDbAndCryptoWithTheDocumentedCodes`
   vira paridade na face de DB. As recusas `SECN00x`/`GPU001` seguem
   honestas até aquelas pilhas de fato rodarem no Android (outras lanes; o

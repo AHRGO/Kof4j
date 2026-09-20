@@ -43,9 +43,12 @@ public final class KofOrm {
         return "orm".equals(name);
     }
 
-    /** JVM: JDBC via kof.db. JS: KofJsOrmBridge (18/09, ORM001). Native: ORM001. */
+    /** JVM/ANDROID: JDBC via kof.db (ANDROID fecha 20/09, D-DB-GAPS DB-2 —
+     *  mesmo JvmBackend, paridade por construção). JS: KofJsOrmBridge (18/09,
+     *  ORM001). Native: SQL-puro das fatias F1 (delete_all/count/migrate/
+     *  create); o resto e cross seguem ORM001. */
     static boolean supportedOn(@SuppressWarnings("unused") Target target) {
-        return target == Target.JVM || target == Target.JS;
+        return target == Target.JVM || target == Target.ANDROID || target == Target.JS;
     }
 
     /** D-DB-GAPS DB-1 (20/09): faces SQL-puro do Native x86-64, uma por fatia.

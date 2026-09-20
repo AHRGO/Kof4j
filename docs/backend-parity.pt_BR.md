@@ -126,7 +126,7 @@
 | `native.risc` (riscv64) / `native.arm` (aarch64) | — | **core completo (02-03/09)**: plumbing + codegen/runtimes asm puro + qemu — `NativeRiscv64E2ETest 13/13` + `NativeAarch64E2ETest 13/13` (core: classes/arrays/List/switch/try-catch/pattern/Strings/recursão) — SUPERSEDIDO pela re-auditagem 12/09; estado por arco indexado na seção "Native por arco" abaixo — `docs/native-multiarch.md` | — | target separation 0.2.0 |
 | `kof fmt` (formatter parser real, idempotente) | ✅ 31/08 | ✅ | ✅ | `KofFormatter` (2c3e794) |
 | **KofJS no browser real** (`kof.ui` renderizando DOM via ES Modules) | — | — | ✅ 01/09 (`KofJsBrowserE2ETest` — Chrome headless + HTTP + captura de DOM; pula se Chrome ausente) | ESM via HTTP local (módulos não carregam via `file://`); `KofJsRunner` serve `appDir` em `127.0.0.1` |
-| Android (Fase 1: `kof build --target android` → projeto Maven + APK, host Activity em Kof) | ✅ (bytecode JVM) | — | — | gaps `AND00x` em compile-time **mais `DB001`/`SECN00x`/`GPU001`** (medido 17/09 — §278): o alvo com backend JVM ainda exclui `ANDROID` em vários checks de `supportedOn` |
+| Android (Fase 1: `kof build --target android` → projeto Maven + APK, host Activity em Kof) | ✅ (bytecode JVM) | — | — | gaps `AND00x` em compile-time; `kof.db`/`kof.orm` são **paridade JVM desde 20/09** (D-DB-GAPS DB-2 — gates `supportedOn` incluem `ANDROID`, `Main.class` byte-idêntico ao JVM); recusas `SECN00x`/`GPU001` seguem honestas até aquelas pilhas rodarem no Android (medido 17/09 — §278 PARCIAL) |
 
 ### Native por arco (x86_64 · riscv64 · aarch64) — face (4) do multiarch, 19/09
 

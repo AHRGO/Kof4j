@@ -193,21 +193,25 @@ class DomainGapCodesTest {
     }
 
     /**
-     * Android reuses {@code JvmBackend} but several {@code supportedOn} gates
-     * exclude {@code ANDROID} — measured 17/09, catalogued in
-     * {@code known-bugs.md} §276 and in the matrix's Android row. Pinning the
-     * diagnosis here makes the R6 doc gate cover Android: when the compiler
-     * lane resolves §276 (documented gap vs over-gating), this turns RED and
-     * forces the matrix/§276 to move with it.
+     * Android reuses {@code JvmBackend} — the {@code kof.db}/{@code kof.orm}
+     * over-gating of §278 was closed 20/09 by D-DB-GAPS DB-2 ("android is
+     * JVM", byte-identical emission), so db now compiles clean on Android
+     * (asserted right here AND byte-pinned in {@code KofDbE2ETest}). The
+     * security gates stay honest refusals: §278 keeps SECN/GPU open (rule 6
+     * — separate decisions not taken), so the doc gate still covers Android.
      */
     @Test
-    void androidRefusesDbAndCryptoWithTheDocumentedCodes(@TempDir Path tmp) throws Exception {
-        assertGap(tmp, Target.ANDROID, "DB001", """
+    void androidCompilesDbLikeJvmAndRefusesCryptoWithTheDocumentedCode(@TempDir Path tmp) throws Exception {
+        Path file = tmp.resolve("Db-" + System.nanoTime() + ".kf");
+        Files.writeString(file, """
             main() {
                 val c = db.connect("sqlite::memory:")
                 println(c)
             }
             """);
+        CompilationResult r = driver.compile(file, tmp.resolve("out-db"), Target.ANDROID);
+        assertTrue(r.success(), "android compila kof.db desde DB-2 (20/09): "
+                + r.diagnostics().getDiagnostics());
         assertGap(tmp, Target.ANDROID, "SECN003", """
             main() {
                 println(crypto.sha512("x"))

@@ -10005,7 +10005,7 @@ O corpus (`backend-parity.md` linha de mídia + `stdlib-web.md` ×3 + mensagem A
   pós-fix ambos `true`. Native de compilação única continua linkando e
   rodando (`nm`: `T kof_Function1_int_int_invoke`; binário imprime `7`/`14`).
 
-### §278 — Android (`--target android`) recusa `kof.db`/`kof.security`/`kof.gpu` com `DB001`/`SECN00x`/`GPU001`, que o corpus nunca atribui ao Android — 🟡 ABERTO (achado 17/09, lane bugs-and-gaps `.15`; dono da decisão = lane do compilador, regra 6)
+### §278 — Android (`--target android`) recusa `kof.db`/`kof.security`/`kof.gpu` com `DB001`/`SECN00x`/`GPU001`, que o corpus nunca atribui ao Android — 🟡 PARCIAL (achado 17/09, lane bugs-and-gaps `.15`; **face `kof.db`/`kof.orm` CORRIGIDA 20/09 por D-DB-GAPS DB-2**; recusas `kof.security`/`kof.gpu` seguem abertas — aquelas pilhas ainda não rodam no Android)
 
 `--target android` reusa o backend JVM (`CompilerPipeline.java:186` → `new JvmBackend()`) e o `ExternalClasspath` do JVM (`:438`), então emite o mesmo bytecode que `--target jvm`. Mas vários gates de `supportedOn` listam só `JVM`/`JS`/`isNative()` e portanto **excluem `ANDROID`**, então o compilador recusa chamadas que o alvo JVM aceita, com códigos que o corpus atribui a outros alvos:
 
@@ -10021,6 +10021,16 @@ O corpus (`backend-parity.md` linha de mídia + `stdlib-web.md` ×3 + mensagem A
 - **(b) over-gating** — o runtime JVM é empacotado no APK, então incluir `ANDROID` nas allow-lists (como `KofScheduler.java:29` já faz).
 
 **Docs corrigidas nesta unidade (EN+PT):** a linha Android do `backend-parity.md` + a seção de convenção agora declaram os códigos medidos no Android e apontam para cá; a nota de "códigos reservados" deixou de listar `DB001`/`SECN001`/`SECN003`/`SECN004` como mortos — são vivos no Android (medido). O §Restrições do `docs/targets/KOFANDROID.md` ganhou a linha. Pinado por `DomainGapCodesTest.androidRefusesDbAndCryptoWithTheDocumentedCodes` (SECN003 + DB001) para o gate R6 cobrir o Android — quando a lane do compilador resolver (a)/(b), o pin fica RED e força este registro a mudar.
+
+**CORRIGIDO — metade db/orm (20/09, D-DB-GAPS DB-2, lane GAPS-DB):** a
+opção (b) "over-gating" foi confirmada pela mantenedora ("android é JVM").
+`KofDb.supportedOn` e `KofOrm.supportedOn` agora incluem `ANDROID`; a prova é
+**paridade por construção** — `KofDbE2ETest.androidDbEmitsTheSameBytecodeAsJvm`
+compila o mesmo programa entity+create+count nos dois alvos e afirma que o
+`Default/Main.class` emitido é byte-idêntico. O pin antigo virou:
+`DomainGapCodesTest.androidCompilesDbLikeJvmAndRefusesCryptoWithTheDocumentedCode`
+(db compila limpo; `SECN003` ainda recusado — a metade security/gpu segue
+aberta acima, regra 6).
 
 ### §279 — KofJS: um `if` sobre **primitivo nulável** cuja condição o otimizador dobra deixa o marcador `KofStatementIf` do §267 órfão → `COMP002 unexpected op in expression statement` (ICE) — ✅ CORREGIDO (achado 18/09 na triagem da ISSUE-LANE `.22`, re-medido pela lane bugs-and-gaps `.15`; dono do fix = lane KofJS `.18` — regressão do marcador do §267; ICE do JS sumiu desde o #278 `495445cd`, re-medido + travado 18/09 pela `.18`)
 

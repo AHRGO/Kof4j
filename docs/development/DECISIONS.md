@@ -2249,7 +2249,11 @@ nas gaps de db. agente morto")
   per R7. No JVM-embedding shortcut, no silent fallback (R6).
 * **DB-2 — Android refuses `kof.db` (§278, row 1.1.10):** **implement
   correctly — Android IS the JVM**, so it must have the **same behavior as
-  the JVM**. The `DB001` refusal on the Android target is lifted; the
+  the JVM**. **IMPLEMENTED 20/09**: `KofDb`/`KofOrm` `supportedOn` include
+  `ANDROID`; pinned by `KofDbE2ETest.androidDbEmitsTheSameBytecodeAsJvm`
+  (byte-identical `Main.class`) and the flipped
+  `DomainGapCodesTest.androidCompilesDbLikeJvmAndRefusesCryptoWithTheDocumentedCode`;
+  §278 is now PARTIAL (SECN/GPU open). The `DB001` refusal on the Android target is lifted; the
   `DomainGapCodesTest.androidRefusesDbAndCryptoWithTheDocumentedCodes` pin
   flips to parity for the DB face. `SECN00x`/`GPU001` refusals stay honest
   until those stacks themselves run on Android (different lanes; same
