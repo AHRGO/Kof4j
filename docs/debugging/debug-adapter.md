@@ -2,7 +2,7 @@
 
 # DEBUG-ADAPTER.md — kof-debug (DAP Debug Adapter)
 
-**Status:** JVM (raw JDWP, no jdk.jdi) + NATIVE implemented and validated — console gdb (X7-3) and `kof debug --dap --target native` bridging DAP to the real gdb/MI2 (X7-4 `bda631a7`: `KofGdbMi` + `KofDebugNativeDap`, `KofDebugNativeDapTest`); sources in `stackTrace`/breakpoints are always the `.kf`; no gdb = honest DAP error naming the tool (R6); JS = honest refusal (the target runs on the EMBEDDED engine — there is no node/inspector to attach to)
+**Status:** JVM (raw JDWP, no jdk.jdi) + NATIVE (console gdb + DAP↔GDB/MI, X7-3/X7-4) implemented and validated — console gdb (X7-3, `--break`/`--output`) and `kof debug --dap --target native` bridging DAP to the real gdb/MI2 (X7-4 `bda631a7`: `KofGdbMi` + `KofDebugNativeDap`, `KofDebugNativeDapTest`); sources in `stackTrace`/breakpoints are always the `.kf`; no gdb = honest DAP error naming the tool (R6); JS = honest refusal (the target runs on the EMBEDDED engine — there is no node/inspector to attach to)
 **Date:** August 27, 2026 (updated 20/09 with the Native faces)
 **Version:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
 
@@ -33,8 +33,8 @@ Do not create a proprietary protocol.
 kof-debug (DAP over stdio — Content-Length framing)
     ↓
 JVM: launch java -agentlib:jdwp + JDWP client (raw wire protocol)
-Native: build ELF with DWARF + gdb (console: --target native; editor: --dap
-        --target native translates DAP -> GDB/MI 2, `KofGdbMi`/`KofDebugNativeDap`)  [✅ 20/09]
+Native: build ELF with DWARF + gdb (console: `--target native` with `--break`/`--output`;
+        editor: `--dap --target native` translates DAP -> GDB/MI 2, `KofGdbMi`/`KofDebugNativeDap`)  [✅ 20/09]
 JS: honest refusal — the JS target runs on the embedded Graal engine; there is no
     node/inspector to launch or attach (roadmap §19.5 face 7 stays open for a future
     engine inspector, never a fake bridge)
