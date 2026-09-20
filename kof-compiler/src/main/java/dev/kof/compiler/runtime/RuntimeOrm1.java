@@ -139,10 +139,8 @@ public final class RuntimeOrm1 {
                 xorl %edx, %edx
                 xorl %ecx, %ecx
                 xorl %r8d, %r8d
-                subq $8, %rsp
                 movq %rbx, %rdi
                 call sqlite3_exec
-                addq $8, %rsp
                 testl %eax, %eax
                 jz .Lorm_ex_ok
                 movl $-1, %eax
@@ -196,7 +194,6 @@ public final class RuntimeOrm1 {
                 pushq %r13
                 movq %rdi, %rbx
                 movq %rsi, %r12
-                subq $8, %rsp                   # 16-alinha o call
                 movq $0, .Lorm_count_buf(%rip)  # slot estatico (cb nao toca registrantes)
                 movq %rbx, %rdi
                 leaq 24(%r12), %rsi
@@ -205,7 +202,6 @@ public final class RuntimeOrm1 {
                 xorl %r8d, %r8d
                 call sqlite3_exec
                 movq .Lorm_count_buf(%rip), %rax  # valor ja convertido pelo cb
-                addq $8, %rsp
                 popq %r13
                 popq %r12
                 popq %rbx
@@ -214,6 +210,22 @@ public final class RuntimeOrm1 {
             # ---------------------- literais / dados ----------------------
             .Lorm_count_pre:
                 .ascii "SELECT COUNT(*) FROM \\""
+            .Lorm_mig_ddl:                       # KofString* (o .Lorm_exec espera objeto)
+                .long 1
+                .long 0
+                .quad 0
+                .long .Lorm_mig_ddl_len
+                .long 0
+            .Lorm_mig_ddl_body:
+                .ascii "CREATE TABLE IF NOT EXISTS \\"kof_migrations\\" (\\"name\\" VARCHAR(255) PRIMARY KEY, \\"applied_at\\" BIGINT)"
+                .byte 0
+                .set .Lorm_mig_ddl_len, . - .Lorm_mig_ddl_body - 1
+            .Lorm_mig_sel:
+                .ascii "SELECT COUNT(*) FROM \\"kof_migrations\\" WHERE \\"name\\" = ?"
+                .byte 0
+            .Lorm_mig_ins:
+                .ascii "INSERT INTO \\"kof_migrations\\" (\\"name\\", \\"applied_at\\") VALUES (?, ?)"
+                .byte 0
             .Lorm_bc_pre:
                 .ascii "unknown db connection: "
             .Lorm_delit:
@@ -250,7 +262,7 @@ public final class RuntimeOrm1 {
                 pushq %r13
                 pushq %r14
                 pushq %r15
-                subq $48, %rsp
+                subq $56, %rsp
                 movq %rdi, (%rsp)               # id
                 movq %rsi, 8(%rsp)              # table
                 # cap = 13 + tblLen + 1 + 8 (folga)
@@ -279,7 +291,7 @@ public final class RuntimeOrm1 {
                 testl %eax, %eax
                 sete %al
                 movzbl %al, %eax
-                addq $48, %rsp
+                addq $56, %rsp
                 popq %r15
                 popq %r14
                 popq %r13
@@ -306,7 +318,7 @@ public final class RuntimeOrm1 {
                 pushq %r13
                 pushq %r14
                 pushq %r15
-                subq $48, %rsp
+                subq $56, %rsp
                 movq %rdi, (%rsp)               # id
                 movq %rsi, 8(%rsp)              # table
                 movq 8(%rsp), %rax
@@ -331,7 +343,7 @@ public final class RuntimeOrm1 {
                 movq 16(%rsp), %rsi
                 movq 24(%rsp), %rdi
                 call .Lorm_count_sql
-                addq $48, %rsp                  # espelhos delete_all: pops na regiao andada, rbp so no fim
+                addq $56, %rsp                  # espelhos delete_all: pops na regiao andada, rbp so no fim
                 popq %r15
                 popq %r14
                 popq %r13
@@ -340,6 +352,125 @@ public final class RuntimeOrm1 {
                 movq %rbp, %rsp
                 popq %rbp
                 ret
+
+
+            # ---------------------------------------------------------------
+            # kof_orm_migrate(id*, name*, sql*) -> Bool
+            #   espelha o host: CREATE da tabela de historico (rc ignorado,
+            #   como la); SELECT name = ? ja aplicada -> true; exec sql < 0 ->
+            #   false; INSERT (name, ms desde epoch via clock_gettime syscall
+            #   228, mesmo padrao dos spans) -> true. id ruim/mysql lanca as
+            #   mesmas strings do host (.Lorm_conn). Pilha fica 16-alinhada
+            #   (subq $88) nos calls diretos ao sqlite; epilogio espelha
+            #   delete_all (pops na regiao andada, rbp so no fim).
+            # ---------------------------------------------------------------
+            .globl kof_orm_migrate
+            .type kof_orm_migrate, @function
+kof_orm_migrate:
+            pushq %rbp
+            movq %rsp, %rbp
+            andq $-16, %rsp               # mesmo padrao de delete_all/count (calls 16-alinhados)
+            pushq %rbx
+            pushq %r12
+            pushq %r13
+            pushq %r14
+            pushq %r15
+            subq $88, %rsp
+            movq %rdi, (%rsp)               # id
+            movq %rsi, 8(%rsp)              # name
+            movq %rdx, 16(%rsp)             # sql
+            movq (%rsp), %rdi
+            call .Lorm_conn
+            movq %rax, %rbx                 # conn (callee-saved; .Lorm_* preservam)
+            movq %rbx, %rdi
+            leaq .Lorm_mig_ddl(%rip), %rsi
+            call .Lorm_exec                 # CREATE IF NOT EXISTS; rc ignorado (host)
+            leaq .Lorm_mig_sel(%rip), %rsi
+            movq %rbx, %rdi
+            movq $-1, %rdx
+            leaq 40(%rsp), %rcx
+            xorl %r8d, %r8d
+            call sqlite3_prepare_v2
+            testl %eax, %eax
+            jnz .Lorm_mig_false
+            movq 40(%rsp), %r14
+            movq %r14, %rdi
+            movl $1, %esi
+            movq 8(%rsp), %rax
+            leaq 24(%rax), %rdx             # corpo do name (KofString*)
+            movq $-1, %rcx
+            xorl %r8d, %r8d
+            call sqlite3_bind_text
+            movq %r14, %rdi
+            call sqlite3_step
+            cmpl $100, %eax                 # SQLITE_ROW
+            jne .Lorm_mig_norow
+            movq %r14, %rdi
+            xorl %esi, %esi
+            call sqlite3_column_text        # "0"/"N" enquanto vivo o stmt -> atol ja
+            movq %rax, %rsi
+            call .Lorm_atol
+            movq %rax, 48(%rsp)
+            .Lorm_mig_norow:
+            movq %r14, %rdi
+            call sqlite3_finalize
+            cmpq $0, 48(%rsp)
+            jg .Lorm_mig_true               # ja aplicada
+            movq %rbx, %rdi
+            movq 16(%rsp), %rsi             # KofString* cru (o .Lorm_exec soma o 24)
+            call .Lorm_exec
+            testl %eax, %eax
+            js .Lorm_mig_false              # sql falhou (host: rc<0 -> false)
+            xorl %edi, %edi                 # CLOCK_REALTIME
+            leaq 24(%rsp), %rsi             # struct timespec
+            movl $228, %eax
+            syscall
+            movq 24(%rsp), %rax
+            imulq $1000, %rax, %r12         # sec -> ms
+            movq 32(%rsp), %rax             # nsec
+            xorl %edx, %edx
+            movq $1000000, %rcx
+            divq %rcx
+            addq %rax, %r12                 # ms total
+            leaq .Lorm_mig_ins(%rip), %rsi
+            movq %rbx, %rdi
+            movq $-1, %rdx
+            leaq 40(%rsp), %rcx
+            xorl %r8d, %r8d
+            call sqlite3_prepare_v2
+            testl %eax, %eax
+            jnz .Lorm_mig_false
+            movq 40(%rsp), %r14
+            movq %r14, %rdi
+            movl $1, %esi
+            movq 8(%rsp), %rax
+            leaq 24(%rax), %rdx
+            movq $-1, %rcx
+            xorl %r8d, %r8d
+            call sqlite3_bind_text
+            movq %r14, %rdi
+            movl $2, %esi
+            movq %r12, %rdx
+            call sqlite3_bind_int64
+            movq %r14, %rdi
+            call sqlite3_step
+            movq %r14, %rdi
+            call sqlite3_finalize
+            .Lorm_mig_true:
+            movl $1, %eax
+            jmp .Lorm_mig_ret
+            .Lorm_mig_false:
+            xorl %eax, %eax
+            .Lorm_mig_ret:
+            addq $88, %rsp
+            popq %r15
+            popq %r14
+            popq %r13
+            popq %r12
+            popq %rbx
+            movq %rbp, %rsp
+            popq %rbp
+            ret
 
             """);
     }

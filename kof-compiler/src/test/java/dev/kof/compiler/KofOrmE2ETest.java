@@ -944,6 +944,73 @@ class KofOrmE2ETest {
     }
 
     @Test
+    void migrateNativeEndToEndMatchesJvm(@TempDir Path tempDir) throws Exception {
+        String ddl = "create table if not exists user (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, age INTEGER)";
+        String body = """
+                    println(orm.migrate(db, "001-user", "DDL1"))
+                    println(orm.migrate(db, "001-user", "DDL1"))
+                    println(orm.migrate(db, "002-t2", "create table if not exists t2 (id INTEGER)"))
+                    db.execute(db, "insert into user (name, email, age) values ('Mel', 'm@kof.dev', 30)")
+                    println(db.query(db, "select count(*) as n from kof_migrations").get(0))
+                    println(orm.count<User>(db))
+                }
+                """.replace("DDL1", ddl);
+        String expected = "true\ntrue\ntrue\n{\"n\":2}\n1";
+        Path jvmSource = tempDir.resolve("JvmMain.kf");
+        Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmb.db") + "\")\n")
+                + body);
+        runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
+                findDriverJar("sqlite-jdbc", "SQLite"), expected);
+        Path nativeSource = tempDir.resolve("NativeMain.kf");
+        Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativeb.db") + "\")\n")
+                + body);
+        CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nativeResult.success(), "Native deve compilar orm.migrate: "
+                + nativeResult.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(
+                tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = p.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals(expected, out, "paridade byte JVM==Native (migrate idempotente; "
+                + "applied_at nao sai no golden - valor de relogio nao e observavel pela API, como no host)");
+    }
+
+    @Test
+    void migrateUnknownConnectionThrowsJvmMessageOnNative(@TempDir Path tempDir)
+            throws Exception {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, ENTITY_SRC + """
+                main() {
+                    try {
+                        println(orm.migrate("db2", "001", "create table t(x int)"))
+                    } catch (String e) {
+                        println(e)
+                    }
+                }
+                """);
+        runJvmWithExtra(source, tempDir.resolve("jvm-out"), null,
+                "unknown db connection: db2");
+        CompilationResult nativeResult = driver.compile(source, tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nativeResult.success(), "Native deve compilar: "
+                + nativeResult.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(
+                tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = p.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals("unknown db connection: db2", out);
+    }
+
+    @Test
     void sqlFacesRestantesNativeAindaOrm001(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, ENTITY_SRC + """
