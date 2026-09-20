@@ -1034,3 +1034,12 @@ trava o RC independentemente dos demais; gaps ficam só na forma do §15 (FORA d
 congela a superfície, não a estabilização; RC→Stable sem regressão (§19). O
 "teste final" do TIER 12 segue compatível: estabilização mexe em
 estrutura/diagnóstico, nunca na superfície do núcleo.
+
+**Gate de release 0.5.0 (`D-RELEASE-0.5.0-GATE`, 20/09/2026):** o release 0.5.0
+(pré-condição para abrir a linha 1.0, Q1) só é cortado quando as sete condições
+da mantenedora valerem, cada uma medida — paridade 100% entre alvos; nenhuma
+decisão pendente; todos os `docs/development/*.md` soltos concluídos e movidos;
+estabilidade total; 0 issues abertas de bug; todas as arestas fechadas; nada
+pendente em bugs-and-gaps. Fila + estado atual:
+`release-beta-0.5.0-prep.md` §"Gate de release". Mecanizado por
+`scripts/check_release_050_gate.sh`.

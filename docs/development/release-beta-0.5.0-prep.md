@@ -43,3 +43,26 @@ the release is cut (three-states rule).
 
 #550 (§371), #553 (§374), #554 (§378), #555 (CodeQL umbrella). Announced on
 each issue and via the `DOING.md`(+PT) banner.
+
+## Release gate (`D-RELEASE-0.5.0-GATE`, 09/20/2026, maintainer directive)
+
+The 0.5.0 release is cut only when **all seven conditions** hold, each one
+**measured** (never by eye). This gate refines the checklist above: the
+checklist is the tactical queue, these seven are the acceptance. The
+maintainer's directive is the priority for "releasing the 0.5.0 gate to all
+agents".
+
+| # | Condition | How it is measured | State 09/20 |
+|---|---|---|---|
+| 1 | 100% parity between targets | per-target matrix + golden byte parity where the contract requires; divergence = bug or diagnosed `XXX00x` | NEEDS-MEASURE |
+| 2 | No pending decision | `DECISIONS.md` has no open question changing the surface | NEEDS-REVIEW |
+| 3 | All loose `docs/development/*.md` concluded and moved out | three-states rule; only work with pending implementation stays | RED (in-flight docs) |
+| 4 | Total stability | full suite 0F/0E + 5/5 conformance matrix on the candidate | NEEDS-MEASURE |
+| 5 | 0 open issues that are a bug | GitHub OPEN issues with a `bug` label = 0 | RED (#561/#563/#564/#566) |
+| 6 | All edges closed | open `1.0-blocks` = 0 + the EG queue items that gate the release closed | RED (#561/#563/#564) |
+| 7 | Nothing pending in bugs-and-gaps | `check_known_bugs_status.sh` live set empty + `specification-gaps.md` 0 open | RED (19 live) |
+
+Mechanized by `scripts/check_release_050_gate.sh` (reports each condition as
+GREEN / RED / NEEDS-MEASURE; RED-first test
+`scripts/tests/check-release-050-gate-test.sh`). RED is expected until the
+queue closes — the gate is the driver, not a blocker to work around.

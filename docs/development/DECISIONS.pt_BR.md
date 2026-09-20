@@ -2448,3 +2448,50 @@ commit:
 **Evidência:** `HeterogeneousSlotPinE2ETest` 16/16
 (JVM≡Script≡JS≡Native byte-a-byte, goldens de execuções JVM 20/09); §383
 virado em `known-bugs.md` EN+PT; #561 respondida com a matriz medida.
+
+## D-RELEASE-0.5.0-GATE — o gate de release 0.5.0: sete condições, todas medidas, nenhuma aresta aberta (20/09/2026, diretiva da mantenedora)
+
+**Contexto:** o release 0.5.0 é a pré-condição que a mantenedora definiu para
+abrir a linha 1.0 (`D-1.0-EDGES` Q1: release 0.5.0 cortado + EG-1..EG-7
+fechados). Este registro trava o **gate de release do 0.5.0** — as sete
+condições que ela declarou como prioridade para "liberar o gate 0.5.0 para
+todos os agentes". Ele refina (nunca substitui) o checklist de preparação do
+release e o gate §8: as sete são a **aceitação**; a fila que as satisfaz é o
+`roadmap.md` §24 (EG) + `release-beta-0.5.0-prep.md` + as lanes de cada item.
+
+**Decidido — as sete condições (lista da mantenedora, 20/09/2026):**
+
+1. **Paridade 100% entre os alvos** — o mesmo programa produz o mesmo
+   resultado observável em todo alvo da superfície 0.5.0; divergência é bug
+   (regra 5 do freeze) ou gap diagnosticado `XXX00x`, nunca silencioso.
+2. **Nenhuma decisão pendente** — o `DECISIONS.md` não carrega pergunta aberta
+   que mude a superfície; nada espera por decisão.
+3. **Todos os `.md` soltos em `docs/development/` concluídos e movidos** — a
+   regra dos três estados: `docs/development/` mantém só trabalho com
+   implementação pendente; doc concluído move para `docs/`.
+4. **Estabilidade total** — suíte completa verde (0F/0E fora das guardas
+   ambientais documentadas) + matriz de conformidade 5/5 medida na candidata.
+5. **0 issues abertas que sejam bug** — nenhuma issue OPEN do GitHub que seja
+   bug.
+6. **Todas as arestas fechadas** — toda aresta aberta (as issues `1.0-blocks`
+   + os itens da fila EG que gateiam o release) fechada com prova.
+7. **Nada pendente em bugs-and-gaps** — `docs/bugs-and-gaps/known-bugs.md` e
+   `specification-gaps.md` sem entrada live/OPEN.
+
+**Ordem de execução proposta (leitura do agente — a mantenedora pode
+reordenar):** primeiro as arestas de corretude que já são `1.0-blocks` e os
+known-bugs live (condições 1/5/6/7 — compartilham as mesmas causas-raiz e
+desbloqueiam o resto), depois a higiene de docs/decisão (2/3), com a
+estabilidade (4) medida por último na candidata congelada. O script do gate
+reporta cada condição como GREEN / RED / NEEDS-MEASURE, para a lista de
+trabalho ser exata, nunca a olho.
+
+**Não-objetivos:** NÃO corta o release 0.5.0 (isso é decisão da mantenedora no
+corte, regra 6), NÃO bumpa `VERSION`, NÃO abre a linha 1.0, NÃO autoriza RC
+1.0 (EG-8 segue gateado no corte do 0.5.0).
+
+**Evidência:** diretiva da mantenedora 20/09/2026 (chat); estado inicial
+medido (20/09/2026): `scripts/check_known_bugs_status.sh` reporta 19
+known-bugs live (EN×PT consistentes); 4 issues OPEN com label `bug`
+(#561/#563/#564/#566); `scripts/check_release_blockers.sh --rc-gate` RED com 3
+`1.0-blocks` abertos (#561/#563/#564); `specification-gaps.md` 0 abertos.

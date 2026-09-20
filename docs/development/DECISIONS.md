@@ -2461,3 +2461,48 @@ JVM/Script/Native). Consequences landed the same commit:
 **Evidence:** `HeterogeneousSlotPinE2ETest` 16/16 (JVM≡Script≡JS≡Native
 byte-a-byte, goldens from JVM runs 20/09); §383 flipped in
 `known-bugs.md` EN+PT; #561 answered with the measured matrix.
+
+## D-RELEASE-0.5.0-GATE — the 0.5.0 release gate: seven conditions, every one measured, no open edge (09/20/2026, maintainer directive)
+
+**Context:** the 0.5.0 release is the precondition the maintainer set for
+opening the 1.0 line (`D-1.0-EDGES` Q1: the 0.5.0 release cut + EG-1..EG-7
+closed). This record locks the **release gate for 0.5.0** — the seven
+conditions she stated as the priority for "releasing the 0.5.0 gate to all
+agents". It refines (never replaces) the release-prep checklist and the §8
+gate: the seven are the **acceptance**; the queue that satisfies them is
+`roadmap.md` §24 (EG) + `release-beta-0.5.0-prep.md` + the per-item lanes.
+
+**Decided — the seven conditions (maintainer's list, 09/20/2026):**
+
+1. **100% parity between targets** — the same program yields the same
+   observable result on every target of the 0.5.0 surface; a divergence is a
+   bug (freeze rule 5) or a diagnosed `XXX00x` gap, never silent.
+2. **No pending decision** — `DECISIONS.md` carries no open question that
+   changes the surface; nothing waits on a decision.
+3. **All loose `.md` in `docs/development/` concluded and moved out** — the
+   three-states rule: `docs/development/` keeps only work with pending
+   implementation; a concluded doc moves to `docs/`.
+4. **Total stability** — full suite green (0F/0E outside documented
+   environmental guards) + the 5/5 conformance matrix measured on the candidate.
+5. **0 open issues that are a bug** — no OPEN GitHub issue that is a bug.
+6. **All edges closed** — every open edge (the `1.0-blocks` issues + the EG
+   queue items that gate the release) closed with proof.
+7. **Nothing pending in bugs-and-gaps** — `docs/bugs-and-gaps/known-bugs.md`
+   and `specification-gaps.md` with no live/OPEN entry.
+
+**Proposed execution order (agent reading — the maintainer may reorder):**
+first the correctness edges that are already `1.0-blocks` and the live
+known-bugs (conditions 1/5/6/7 — they share the same root causes and unblock
+the rest), then the docs/decision hygiene (2/3), with stability (4) measured
+last on the frozen candidate. The gate script reports each condition as
+GREEN / RED / NEEDS-MEASURE so the worklist is exact, never by eye.
+
+**Non-goals:** does NOT cut the 0.5.0 release (that is the maintainer's call at
+the cut, rule 6), does NOT bump `VERSION`, does NOT open the 1.0 line, does NOT
+authorize a 1.0 RC (EG-8 stays gated on the 0.5.0 cut).
+
+**Evidence:** maintainer directive 09/20/2026 (chat); measured starting state
+(09/20/2026): `scripts/check_known_bugs_status.sh` reports 19 live known-bugs
+(EN×PT consistent); 4 OPEN `bug`-labeled issues (#561/#563/#564/#566);
+`scripts/check_release_blockers.sh --rc-gate` RED with 3 open `1.0-blocks`
+(#561/#563/#564); `specification-gaps.md` 0 open.

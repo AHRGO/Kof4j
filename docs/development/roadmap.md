@@ -1031,3 +1031,11 @@ documented); the freeze (§17) starts at the first RC and freezes the surface,
 not the stabilization; RC→Stable adds no regression (§19). TIER 12's "final
 test" remains compatible: stabilization touches structure/diagnostics, never the
 core surface.
+
+**0.5.0 release gate (`D-RELEASE-0.5.0-GATE`, 09/20/2026):** the 0.5.0 release
+(precondition for opening the 1.0 line, Q1) is cut only when the maintainer's
+seven conditions hold, each measured — 100% target parity; no pending decision;
+all loose `docs/development/*.md` concluded and moved out; total stability;
+0 open bug issues; all edges closed; nothing pending in bugs-and-gaps. Queue +
+current state: `release-beta-0.5.0-prep.md` §"Release gate". Mechanized by
+`scripts/check_release_050_gate.sh`.

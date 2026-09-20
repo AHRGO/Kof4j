@@ -42,3 +42,25 @@ dos três estados).
 
 #550 (§371), #553 (§374), #554 (§378), #555 (guarda-chuva CodeQL). Avisadas
 em cada issue e pelo banner no `DOING.md`(+PT).
+
+## Gate de release (`D-RELEASE-0.5.0-GATE`, 20/09/2026, diretiva da mantenedora)
+
+O release 0.5.0 só é cortado quando **todas as sete condições** valerem, cada
+uma **medida** (nunca a olho). Este gate refina o checklist acima: o checklist
+é a fila tática, estas sete são a aceitação. A diretiva da mantenedora é a
+prioridade para "liberar o gate 0.5.0 para todos os agentes".
+
+| # | Condição | Como é medida | Estado 20/09 |
+|---|---|---|---|
+| 1 | Paridade 100% entre os alvos | matriz por alvo + paridade byte dos goldens onde o contrato exige; divergência = bug ou gap `XXX00x` | NEEDS-MEASURE |
+| 2 | Nenhuma decisão pendente | `DECISIONS.md` sem pergunta aberta que mude a superfície | NEEDS-REVIEW |
+| 3 | Todos os `docs/development/*.md` soltos concluídos e movidos | regra dos três estados; só fica trabalho com implementação pendente | RED (docs em curso) |
+| 4 | Estabilidade total | suíte completa 0F/0E + matriz 5/5 na candidata | NEEDS-MEASURE |
+| 5 | 0 issues abertas que sejam bug | issues OPEN do GitHub com label `bug` = 0 | RED (#561/#563/#564/#566) |
+| 6 | Todas as arestas fechadas | `1.0-blocks` abertos = 0 + itens da fila EG que gateiam o release fechados | RED (#561/#563/#564) |
+| 7 | Nada pendente em bugs-and-gaps | conjunto live do `check_known_bugs_status.sh` vazio + `specification-gaps.md` 0 abertos | RED (19 live) |
+
+Mecanizado por `scripts/check_release_050_gate.sh` (reporta cada condição como
+GREEN / RED / NEEDS-MEASURE; teste RED-first
+`scripts/tests/check-release-050-gate-test.sh`). RED é esperado até a fila
+fechar — o gate é o motor, não um bloqueio a contornar.
