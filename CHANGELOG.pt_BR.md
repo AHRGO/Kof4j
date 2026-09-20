@@ -14,6 +14,23 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
 ### Em desenvolvimento
+  - **known-bugs §382 CORRIGIDO — o host JS devolvia as faces BOOL do kof.io
+    como o NUMERO 0/-1** (20/09, `.18`): um `writeText/appendText/writeBytes/
+    appendBytes/writeFile` bem-sucedido saía `false` no guest (0 = falsy) com o
+    arquivo NO DISCO e rc=0 (a classe silenciosa §255); `delete/dirDelete`
+    colapsavam miss/sucesso/IOException num 0/-1 indistinguível. Fix no
+    `KofJsRunner` (host = onde os números nasciam): as cinco faces tipadas BOOL
+    devolvem o booleano real — a família delete propaga o
+    `Files.deleteIfExists` (miss = false como JVM/Script, IOException = false —
+    faces de falha MEDIDAS no JVM/Script hoje), a família write `true/false`.
+    As faces numéricas ficam números por contrato (`size`, `readText`,
+    `exitCode`, format, `db.execute` = INT, e o `writeFile(p,c)` top-level = rc
+    INT — as antigas linhas "dbExecute"/"writeFile" da Surface do entry
+    corrigidas). Prova: golden `IoBoolFacesE2ETest` 13 linhas JVM==JS
+    byte, RED no JS sem o fix; as baterias makealive fs/reconcile intactas (o
+    workaround exists() delas é legal e fica); faces de bytes provadas via
+    `new Int[n]` — o crash de coerção `listOf` é do §388 (lane JVM/codegen),
+    não daq
 
   - **#564 CORRIGIDO — `kof deps` agora baixa um pacote de uma Release REAL do GitHub** (20/09):
     o `DepsRegistry` cortava cada asset da release na primeira `}` e procurava uma chave

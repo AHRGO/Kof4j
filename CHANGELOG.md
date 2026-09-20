@@ -14,6 +14,22 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
  ### In development
+  - **known-bugs §382 FIXED — the JS host returned the BOOL faces of kof.io as
+    the NUMBER 0/-1** (20/09, `.18`): a successful `writeText/appendText/
+    writeBytes/appendBytes/writeFile` read `false` in the guest (0 = falsy) with
+    the file ON DISK and rc=0 (the §255 silent class); `delete/dirDelete`
+    collapsed miss/success/IOException into indistinguishable 0/-1. Fix in
+    `KofJsRunner` (host = where the numbers were born): the five BOOL-typed
+    faces return the real boolean — delete-family propagates
+    `Files.deleteIfExists` (miss = false like JVM/Script, IOException = false —
+    failure faces MEASURED on JVM/Script today), write-family `true/false`.
+    Numeric faces stay numbers by contract (`size`, `readText`, `exitCode`,
+    format, `db.execute` = INT, and the top-level `writeFile(p,c)` = rc INT —
+    the entry's old "dbExecute"/"writeFile" Surface lines corrected). Proof: `IoBoolFacesE2ETest`
+    13-line JVM==JS byte golden, RED on JS without the fix; makealive
+    fs/reconcile batteries untouched (their exists() workaround is legal and
+    stays); bytes faces proven via `new Int[n]` — the `listOf` coercion crash is
+    the §388 JVM/codegen lane, not th
   - .22 - #555 CodeQL (compiler cluster, 22 alertas): os E2E que disparam `javac`/`java`/
     `node` como subprocesso montavam o comando com concatenação de string ou nome relativo
     (`java/concatenated-command-line`, `java/relative-path-command`). Conserto na fonte com

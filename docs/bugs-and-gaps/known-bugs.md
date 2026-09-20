@@ -11648,12 +11648,32 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 
 ## §382 — kof.io JS bridge: `writeText/appendText/delete/writeBytes/appendBytes` return the NUMBER `0/-1` — on JS `0` is FALSY, so a SUCCESSFUL write reports `false` (JVM reports the typed `true`) — cross-runtime semantic INVERSION
 
-- **Status:** 🔴 OPEN 20/09 — found while landing the MK-1 fs-provider golden (`MakealiveFsProviderE2ETest`, which ships with the exists()-based WORKAROUND below); routed to the JS-bridge lane (runner `KofJsRunner.java:456-471` + `js/JsRuntimeIo.java:150-176` are their files; rules 2/6).
+- **Status:** ✅ FIXED 20/09 (`.18`, KofJS lane) — found while landing the MK-1 fs-provider golden (`MakealiveFsProviderE2ETest`, which ships with the exists()-based WORKAROUND below); routed to the JS-bridge lane (runner `KofJsRunner.java:456-471` + `js/JsRuntimeIo.java:150-176` are their files; rules 2/6).
 - **Measured (20/09, same program, same temp dir class):** JVM `File.writeText("...")` -> `true`; JS `... -> false` while THE FILE IS ON DISK. Root shape: `writeFileText` returns `0` (success) / `-1` (IOException) and `kofIoWriteText` returns that number verbatim; the kof-level method contract is `Bool`. In JS `0` is falsy -> every success flips to false. `exists/fileExists` returns `1/0` (truthy success) which is why the same idiom SUCCEEDS there.
 - **Surface (same `return 0/-1` shape):** `writeFile`, `writeText`, `appendText`, `writeBytes`, `appendBytes`, `delete`, `dirCreate`, `dirCreateDirs`, `dirDelete`, `dbExecute` (the last one feeds orm writes — the 3.1 db face dodged it only because `orm.save` never surfaced the boolean).
 - **Workaround (in use, semantics-preserving):** never return the bridge call directly — perform the effect, then TRUTH-TEST the world (`writeText(...)` then `return f.exists()`; `delete()` then `return !f.exists()`). Golden: `MakealiveFsProviderE2ETest` (fs provider with real files, JVM==JS byte).
 - **Fix shape (bridge lane):** `return kof_platform.writeText(p, c) === 0;` at the `JsRuntimeIo` emitters (or make the runner return real booleans via `ProxyExecutable` -> `Value.valueOf(true/false)` — the runner is shared with node, keep the numeric protocol there and convert in the emitter).
 - **Related:** §355/§376 family (compiles-green/dies-red is the same class: the JS delegate silently re-typing); D-KOF-FIRST repro = the E2E itself.
+- **Fixed 20/09 (`.18`):** the five BOOL-typed faces in `KofJsRunner`
+  (writeText/appendText, writeBytes/appendBytes, delete, dirDelete,
+  dirCreate/dirCreateDirs) now return the REAL boolean; the top-level
+  `writeFile(p, c)` handler STAYS numeric 0/-1 — its contract is INT
+  (`BuiltinCallTyper:220`, rc-style; first flip attempt wrongly made it `true`
+  and `KofJsE2ETest.execStdlibTimeAndIo` caught the JS-vs-Script divergence the
+  next morning — the Surface line below predates this measurement) — `delete`/
+  `dirDelete` propagate `Files.deleteIfExists`'s value (miss = false like JVM/
+  Script measured, instead of an indistinguishable 0/-1 where even success read
+  falsy), IOException = false matching the JVM/Script failure faces MEASURED
+  today (writeText into a nonexistent dir -> `false` rc=0, no crash). The
+  numeric faces (size, readText, exitCode, String.format, `db.execute` = INT by
+  the `KofDb` typer — the old "dbExecute" in the Surface line was too broad and
+  is corrected here) stay numbers, as declared. Proof: `IoBoolFacesE2ETest`
+  (13-line program, JVM==JS byte, RED on JS without the fix — success printed
+  false with the file on disk) + the fs/reconcile makealive batteries unchanged
+  (their exists()-based workaround is rule-legal and stays). The §388 bytes
+  coercion crash is a DIFFERENT bug (JVM/codegen lane) — bytes faces are proven
+  through `new Int[n]`, the corpus-documented form.
+
 
 ## §383 — the §126 "blessed miss" REWRITES the stored value: primitive add into a pinned heterogeneous slot boxes by the SLOT type — `listOf(1).add(true)` reads back `1` (JVM/Script/Native) but `true` (JS) — cross-target DIVERGENCE (freeze rule 5) and value rewrite on the consistent faces — ✅ FIXED 20/09 (option (a) of the dossier — DECIDED by the maintainer dispatch, `D-SLOT-PIN`)
 
@@ -11736,3 +11756,57 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 - **Repro minimo:** o proprio teste (deterministico na maquina compartilhada; visto 1/1 na base `9c0afc5c`, `ea5d4dfe` e 2/2 no tip `9c88d590`).
 - **Nao e:** mudanca de template/spawn da #555 (o vermelho existe na base sem ela — provado em `9c0afc5c`); nem o §252/§256 flake (assinatura diferente, sem assert de HB).
 - **ADENDO 20/09 (#563, lane `q561` — mecanismo que funciona com suíte importada):** `paths-ignore` provadamente não suprime queries de `- uses:` (fato medido acima), então o contrato do repo passa a ser cumprido por **pós-filtro de SARIF antes do upload** — mecanismo que vale independentemente de versão do codeql-action/CLI: `scripts/codeql-sarif-filter.py` (stdlib-only) remove todo resultado cuja localização primária aponta `**/src/test/**` (URI com `/src/test/`, começo `src/test/`, e variantes com backslash); `src/main` permanece 100% varrido. Conectado nos **três** analisadores (`codeql.yml` analyze@v4; `kof-quality-bot` e `kof-security-bot` analyze@v3): `upload: false` + `output` → filtro (com `--selftest` embutido rodando a cada job) → `upload-sarif` com a **mesma category** (`/language:java`, `/quality`, `/security` — dedupe contínuo, nenhuma análise nova nasce). `beta-0.5.0` entrou nos branches do workflow canônico (D-BRANCH-0.5.0; os bots já pegavam via `beta-*`). **Medido localmente:** selftest 5→2 (3 faces test caem, main + no-loc ficam), rc=2 honesto sem SARIF, YAML dos 3 workflows ok em `yaml.safe_load`. **Assumido (prova pendente de CI, por isso #563 continua ABERTA):** o layout exato do `output` por versão da action (o filtro aceita arquivo E diretório recursivo; `upload-sarif` aceita ambos — mitigado, não verificado sem push) e "zero instância em src/test na próxima análise" (item 1 da issue). As duas linhas de família ficam **no baseline** até essa prova (item 2 da é pós-prova, não pré); migração `TestJdk` (item 3, opcional) não feita.
+
+## §388 — kof.io bytes faces: `writeBytes(listOf(…))` compiles GREEN and dies at runtime (JVM `VerifyError: ArrayList not assignable to '[I`; Script rc=1) — and `readBytes()` returns the real `Int[]` the corpus declares but JVM/Script print it as a raw `[I@<hash>` pointer while JS prints `65,66,67` — cross-engine divergence, the §255 family — 🔴 OPEN 20/09 (`.18`, found while measuring §382)
+
+- **Repro A (measured 20/09, same program/same dirs):** `main() { val g =
+  File("b.bin"); println(g.writeBytes(listOf(65,66))) println(g.readBytes()) }`
+  → JVM compiles clean and at runtime: `VerifyError: Bad type on operand stack …
+  Type 'java/util/ArrayList' … is not assignable to '[I'` (the `Run.java`
+  reflection path — the plain launcher masks it as the JavaFX message, §149
+  rule); Script: rc=1 no output (same coercion dies in the interpreter); JS:
+  prints `false` (the §382 number-truthiness face) while the bytes ARE written.
+  The typer (`KofIo.java:59-60`) pins the param as `INT_ARRAY` and the corpus
+  (`training/language/io.md:42`) declares `writeBytes(b: Int[])` — passing
+  `List<Int>` is a contract violation, but the compiler ACCEPTS it silently and
+  the runtime crashes = R6 broken (it must be a compile-time diagnostic, the
+  §374 coercion family: `xs.add(2)` was fixed there, the io array params were
+  never bridged).
+- **Repro B (reverse parity, measured):** `val arr = new Int[2]; arr[0]=65;
+  arr[1]=66; println(File("a.bin").writeBytes(arr))` → `true` JVM/Script (the
+  documented workaround); then `println(g.readBytes())` prints `[I@65629ac6`
+  (raw Java `int[]` toString) on JVM AND Script, while JS prints `65,66,67`.
+  `readBytes` IS `Int[]` by contract (`io.md:41`) — but no corpus line declares
+  how a whole primitive array PRINTS (the container-format matrix row covers
+  List/Map/nested), so the two faces are each defensible and the divergence is
+  a §255 silent-red: either the array gets the container format (JVM/Script
+  change = contract touch, rule 6) or the format is declared and JS aligns.
+  **Do not "fix" one engine without the maintainer's format decision.**
+- **Workaround (in use, corpus-documented):** build `new Int[n]`, fill by index,
+  pass the array — never `listOf` into `writeBytes/appendBytes`.
+- **Route:** compiler/codegen lane (typer diagnostic for `List<T>` → `INT_ARRAY`
+  param = R6 at the call-site, §374 precedent `BareCollectionPrimitiveArgE2ETest`;
+  the array-print half needs a rule-6 decision before any code).
+- **Related:** §382 (the JS bool faces — same program reproduces both), §374
+  (coercion family), §255 (compiles-green/diverges-red), §149 (JavaFX masking).
+
+
+## §389 — tip `beta-0.5.0` test-compile RED: `BareCollectionPrimitiveArgE2ETest` cites `dev.kof.compiler.nat.NativeToolchainGate.present()` — the class was NEVER committed (`git log -S`/`git cat-file -e` on the tip: test-side hits only) — the whole kof-compiler test module fails to compile on a clean tip — 🔴 OPEN 20/09 (`.18`, validating §382 in an isolated clone; the `TestJdk.which/java/javac` half of the 17:5x sighting was resolved upstream by the #945 lane itself — tip compiles those files with `onPath/javaBin`, measured — the gate half persists)
+
+- **Measured (20/09, tips `94011754`→`136feea1`):** the test cites
+  `NativeToolchainGate.present()` (1 site, `assumeTrue` guard) and the class
+  does not exist in any pushed tree → `cannot find symbol` on test-compile.
+  Green full-suite numbers from the shared worktree can only mean the class is
+  present LOCALLY, uncommitted — Q5 restated: numbers from the dirty shared
+  tree are untrustworthy; every cross-lane gate runs in an isolated clone.
+- **Why not fixed here:** the gate is the #945 lane's design surface (which
+  `as`/`ld` probe, which skip semantics — `4408eb6` owns it); rule 8 —
+  catalog + route, never invent another lane's API by taste (§309 precedent).
+- **Unblock recipe (owner, surgical):** commit the real
+  `dev/kof/compiler/nat/NativeToolchainGate.java` with the single
+  `static boolean present()` the test uses + push + close this entry. Until
+  then foreign lanes validate with a local (never committed) stub — §382's
+  gate ran exactly that way (clone battery 106/0F/0E; full suite with stub,
+  1F = external mariadb guard).
+- **Related:** #945/`9c88d590` (author lineage), §382 (the fix this shadowed),
+  §309 (catalog-don't-patch), §384 (same dirty-tree-truth family).
