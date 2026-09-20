@@ -26,6 +26,7 @@ class KofDebugNativeDapTest {
     private static final String STUB = """
             #!/bin/sh
             while IFS= read -r line; do
+              printf '%s\\n' "$line" >> mi-log.txt
               tok="${line%%[!0-9]*}"
               rest="${line#"$tok"}"
               case "$rest" in
@@ -42,6 +43,9 @@ class KofDebugNativeDapTest {
                 -exec-run*)
                   echo "${tok}^running"
                   echo '*stopped,reason="breakpoint-hit",bkptnum="1",frame={level="0",func="main_kf",file="Main.kf",line="7"}' ;;
+                -exec-interrupt*)
+                  echo "${tok}^done"
+                  echo '*stopped,reason="signal-received",frame={level="0",func="main_kf",file="Main.kf",line="7"}' ;;
                 -gdb-exit*)
                   exit 0 ;;
                 *)
@@ -182,6 +186,65 @@ class KofDebugNativeDapTest {
             String bad = await(s, "\"command\":\"evaluate\"", "evaluate 2");
             assertTrue(bad.contains("\"success\":false"),
                     "sem simbolo no contexto = erro honesto do gdb repassado, nunca valor falso: " + bad);
+        } finally {
+            s.p().destroy();
+        }
+    }
+
+    @Test
+    void pauseInterruptsAndReportsReasonPause() throws Exception {
+        Path dir = Files.createTempDirectory("dap-native-pause-");
+        Session s = start(dir);
+        try {
+            send(s, 1, "initialize", "");
+            await(s, "\"command\":\"initialize\"", "initialize");
+            send(s, 2, "launch", "");
+            await(s, "\"command\":\"launch\"", "launch");
+            send(s, 3, "configurationDone", "");
+            await(s, "\"command\":\"configurationDone\"", "configurationDone");
+            await(s, "\"event\":\"stopped\"", "stopped inicial");
+
+            send(s, 4, "pause", "");
+            assertTrue(await(s, "\"command\":\"pause\"", "pause").contains("success"));
+            String stopped = await(s, "\"event\":\"stopped\"", "stopped por pause");
+            assertTrue(stopped.contains("\"reason\":\"pause\""),
+                    "o *stopped apos -exec-interrupt vira DAP stopped/pause: " + stopped);
+            assertTrue(Files.readString(dir.resolve("mi-log.txt")).contains("-exec-interrupt"),
+                    "o pedido DAP pause chega ao gdb como -exec-interrupt");
+        } finally {
+            s.p().destroy();
+        }
+    }
+
+    @Test
+    void setExceptionBreakpointsHonorsOnlyBothFacesAndNamesTheThrowChain() throws Exception {
+        Path dir = Files.createTempDirectory("dap-native-exc-");
+        Session s = start(dir);
+        try {
+            send(s, 1, "initialize", "");
+            await(s, "\"command\":\"initialize\"", "initialize");
+            send(s, 2, "launch", "");
+            await(s, "\"command\":\"launch\"", "launch");
+
+            send(s, 3, "setExceptionBreakpoints", "\"filters\":[\"caught\"]");
+            String caught = await(s, "\"command\":\"setExceptionBreakpoints\"", "setExceptionBreakpoints caught");
+            assertTrue(caught.contains("\"verified\":false"),
+                    "caught sozinho = recusa honesta (o native quebra em TODO throw, nao so nos caught): " + caught);
+            assertTrue(caught.contains("JVM-only"), caught);
+
+            send(s, 4, "setExceptionBreakpoints", "\"filters\":[\"uncaught\"]");
+            String uncaught = await(s, "\"command\":\"setExceptionBreakpoints\"", "setExceptionBreakpoints uncaught");
+            assertTrue(uncaught.contains("\"verified\":false"),
+                    "uncaught sozinho = recusa honesta (quebraria nos caught tambem): " + uncaught);
+            assertTrue(uncaught.contains("JVM-only"), uncaught);
+
+            send(s, 5, "setExceptionBreakpoints", "\"filters\":[\"caught\",\"uncaught\"]");
+            String both = await(s, "\"command\":\"setExceptionBreakpoints\"", "setExceptionBreakpoints both");
+            assertTrue(both.contains("\"verified\":true"),
+                    "as duas faces juntas = o breakpoint honesto da cadeia de throw: " + both);
+            String log = Files.readString(dir.resolve("mi-log.txt"));
+            assertTrue(log.contains("kof_throw_string"),
+                    "o breakpoint e armado na entrada de throw do runtime Kof: " + log);
         } finally {
             s.p().destroy();
         }

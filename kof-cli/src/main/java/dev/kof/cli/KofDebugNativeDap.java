@@ -157,16 +157,19 @@ final class KofDebugNativeDap {
             case "setExceptionBreakpoints" -> {
                 List<Object> result = new ArrayList<>();
                 List<?> filters = args.get("filters") instanceof List<?> l ? l : List.of();
-                boolean all = filters.isEmpty() || filters.contains("all") || filters.contains("caught");
+                boolean caught = filters.contains("caught") || filters.contains("all");
+                boolean uncaught = filters.contains("uncaught") || filters.contains("all");
+                // Native can only break on EVERY Kof throw (the runtime's own chain,
+                // not C++ exceptions; gdb's catch-throw does not apply). That is only
+                // the requested behavior when BOTH faces are asked for (empty = the
+                // DAP "all" default). A single-face request would silently over-break
+                // on the other face — honest refusal instead (R6).
+                boolean bothFaces = filters.isEmpty() || (caught && uncaught);
                 if (mi == null) {
                     fail(seq, command, "not launched");
                     return;
                 }
-                if (!all) {
-                    // Native breaks on EVERY Kof throw (the runtime's own chain, not
-                    // C++ exceptions): gdb's catch-throw does not apply and the
-                    // caught/uncaught refinement cannot be observed — honest refusal,
-                    // never a filter that silently over-breaks (R6).
+                if (!bothFaces) {
                     for (Object f : filters) {
                         result.add(Map.of("verified", false, "id", String.valueOf(f),
                                 "message", "native breaks on every Kof throw;"

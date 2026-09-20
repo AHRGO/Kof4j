@@ -62,8 +62,11 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `-exec-interrupt --all`; `setExceptionBreakpoints` = a breakpoint on
     `kof_throw_string` (the Kof runtime's own throw chain, not C++ exceptions, so
     gdb's catch-throw does not apply) with the caught/uncaught refinement an honest
-    `verified:false` (JVM-only). Proof: `KofDebugJvmExceptionTest` 2/2 +
-    `KofDebugNativeDapTest` 3/3, debug cluster 19/19. On the way, a frame without
+    `verified:false` (JVM-only; a single-face request — `caught` OR `uncaught` — is
+    refused, never a filter that silently over-breaks the other face). Proof:
+    `KofDebugJvmExceptionTest` 2/2 + `KofDebugNativeDapTest` 5/5 (pause→reason
+    `pause`; single-face refusal; both faces arm the `kof_throw_string` breakpoint,
+    proven in the stub's MI log), debug cluster 21/21. On the way, a frame without
     debug info (native `Thread.sleep`) aborted the whole `stackTrace` with
     `NATIVE_METHOD` (511) — the JVM client now reports that one frame as `?`/line -1
     and keeps the Kof frames; a discarded `Method.VariableTable` (6,2) probe in
