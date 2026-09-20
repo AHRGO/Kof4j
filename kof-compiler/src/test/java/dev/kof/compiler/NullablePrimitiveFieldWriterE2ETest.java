@@ -249,7 +249,6 @@ class NullablePrimitiveFieldWriterE2ETest {
         assertTrue(result.success(), "JVM compile failed: " + result.diagnostics().getDiagnostics());
         List<String> calls = new ArrayList<>();
         List<String> fields = new ArrayList<>();
-        List<Integer> ops = new ArrayList<>();
         try (InputStream in = Files.newInputStream(outDir.resolve("Default").resolve("Main.class"))) {
             new ClassReader(in).accept(new ClassVisitor(Opcodes.ASM9) {
                 @Override
@@ -259,21 +258,6 @@ class NullablePrimitiveFieldWriterE2ETest {
                         return null;
                     }
                     return new MethodVisitor(Opcodes.ASM9) {
-                        @Override
-                        public void visitInsn(int opcode) {
-                            ops.add(opcode);
-                        }
-
-                        @Override
-                        public void visitVarInsn(int opcode, int var) {
-                            ops.add(opcode);
-                        }
-
-                        @Override
-                        public void visitJumpInsn(int opcode, org.objectweb.asm.Label label) {
-                            ops.add(opcode);
-                        }
-
                         @Override
                         public void visitMethodInsn(int opcode, String owner, String mth,
                                 String descriptor, boolean isInterface) {

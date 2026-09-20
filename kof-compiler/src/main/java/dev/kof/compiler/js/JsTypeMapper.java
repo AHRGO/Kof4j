@@ -176,10 +176,7 @@ public final class JsTypeMapper {
         if (type instanceof Type.NullableType) {
             return new JsIr.JsNull();
         }
-        Type t = type instanceof Type.NullableType nt ? nt.inner() : type;
-        // (guard §365 acima ja intercepta Nullable; o unwrap abaixo so ve
-        // primitivos NAO-nullable — mantido p/ call-sites de colecao com T cru)
-        if (t instanceof Type.PrimitiveType pt) {
+        if (type instanceof Type.PrimitiveType pt) {
             return switch (Type.canonicalPrimitiveName(pt.name())) {
                 // §127: Bool → false (não 0). Field-default de Bool sem
                 // inicializador e o default de put/remove/poll-channel em
