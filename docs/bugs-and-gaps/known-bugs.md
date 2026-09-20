@@ -11556,3 +11556,13 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 - **Como passou:** o gate media só o build/`initialize` (respostas locais ao parser DAP), nunca uma conversa completa com a VM viva (breakpoint real → `stopped` → frames → locals). Verde sem teste = verde falso.
 - **Correção permanente:** `KofDebugJvmTest` E2E real (conversa completa contra JVM lançada pelo próprio CLI) + `KofDebugAttachTest` (attach vivo); qualquer mudança futura no `JdwpClient` é obrigada a passar pela conversa completa, não só pelo parse.
 - **Related:** §376, Q0/Q1/Q5, X7-2 (o commit false-green).
+
+## §378 — `check_known_bugs_status.sh` so cruza o CONJUNTO DE ABERTOS ENxPT: uma entrada FIXED/PARTIAL que nasce em um unico idioma passa o gate verde para sempre (prova viva: §376 e §377 do X7-5 entraram so no EN e so foram espelhadas no PT dias depois, por leitura humana; o gate nunca reclamou) — 🔴 OPEN 20/09
+
+- **Status:** 🔴 OPEN 20/09 — catalogado pela lane docs com mirror ja gravado (`b55ffc5a`); fix = lane tooling (extensao do script, nao editada aqui — regra 2).
+- **Sintoma (repro):** com `§376/§377` existindo apenas em `known-bugs.md`, `bash scripts/check_known_bugs_status.sh` → `OK: statuses consistent EN×PT, no unknowns` + `docs-lang.sh` → cobertura 100% (ambos comparam contagem/abertos, nunca o CONJUNTO de numeros por status).
+- **Causa (pointer):** o gate extrai `§NNN` com status nao-FIXED de cada lingua e compara as listas; entradas `✅ FIXED` fora da lista nao sao comparadas — assimetria de design, nao bug de parsing.
+- **Forma do fix (lane dona):** extrair `^## §NNN` com status em AMBAS as direcoes (aberto E fechado) e exigir `set(EN headings) == set(PT headings)` por numero + familia de status (FIXED↔CORRIGIDO, OPEN↔ABERTO, PARTIAL↔PARCIAL); saida aponta o numero desbalanceado. Custo: ~15 linhas no script; sem mudanca de contrato para os demais gates.
+- **Prova esperada:** teste do gate com fixture (arquivo temporario com um FIXED so-EN) → exit 1; remove o espelho → exit 0.
+- **Relacionado:** §376/§377 (os casos reais), licao preserve-both-sides do AGENTS.md (19/09) — a simetria EN×PT e regra de registro, nao opcional.
+- **GitHub:** #554
