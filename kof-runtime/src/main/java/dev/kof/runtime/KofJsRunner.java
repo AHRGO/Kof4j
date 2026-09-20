@@ -222,7 +222,7 @@ public final class KofJsRunner {
         platform.put("writeFile", (ProxyExecutable) args -> {
             try {
                 Files.writeString(Path.of(args[0].asString()), args[1].asString());
-                return 0;
+                return 0; // global kof.io writeFile = rc INT por contrato (BuiltinCallTyper:220)
             } catch (IOException e) {
                 return -1;
             }
@@ -238,10 +238,9 @@ public final class KofJsRunner {
         platform.put("appendBytes", (ProxyExecutable) args -> writeBytes(args, true));
         platform.put("delete", (ProxyExecutable) args -> {
             try {
-                Files.deleteIfExists(Path.of(args[0].asString()));
-                return 0;
+                return Files.deleteIfExists(Path.of(args[0].asString())); // §382: booleano REAL
             } catch (IOException e) {
-                return -1;
+                return false;
             }
         });
         platform.put("fileSize", (ProxyExecutable) args -> {
@@ -277,10 +276,9 @@ public final class KofJsRunner {
         platform.put("dirCreateDirs", (ProxyExecutable) args -> dirCreate(args, true));
         platform.put("dirDelete", (ProxyExecutable) args -> {
             try {
-                Files.deleteIfExists(Path.of(args[0].asString()));
-                return 0;
+                return Files.deleteIfExists(Path.of(args[0].asString()));
             } catch (IOException e) {
-                return -1;
+                return false;
             }
         });
         platform.put("dirList", (ProxyExecutable) args -> dirList(args));
@@ -462,9 +460,9 @@ public final class KofJsRunner {
             } else {
                 Files.writeString(Path.of(args[0].asString()), args[1].asString());
             }
-            return 0;
+            return true; // §382: face BOOL do host (era 0 = falsy no guest)
         } catch (IOException e) {
-            return -1;
+            return false;
         }
     }
 
@@ -492,9 +490,9 @@ public final class KofJsRunner {
             } else {
                 Files.write(p, bytes);
             }
-            return 0;
+            return true; // §382: face BOOL do host (era 0 = falsy no guest)
         } catch (IOException e) {
-            return -1;
+            return false;
         }
     }
 
@@ -505,9 +503,9 @@ public final class KofJsRunner {
             } else {
                 Files.createDirectory(Path.of(args[0].asString()));
             }
-            return 0;
+            return true; // §382: face BOOL do host (era 0 = falsy no guest)
         } catch (IOException e) {
-            return -1;
+            return false;
         }
     }
 
