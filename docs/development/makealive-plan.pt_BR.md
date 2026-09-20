@@ -110,6 +110,20 @@ if/else e while-com-índice ou `for` de elemento (travado); (iv) `record` com ca
 `String` e inicializador de campo de classe `mapOf(k, v, ...)` compilam e rodam
 idênticos (travado).
 
+**status §4 20/09 (2) — face de ESTADO MEDIDA por `MakealiveDbStateE2ETest`
+(sonda 3.1.1), 2/2 VERDE:** o frontend `.kf` resolve `orm.create/save/find/all/
+page/where` sobre `db.connect` — **`delete/count/deleteAll/saveAll` ainda NÃO
+resolvem** (o lado runtime existe em `KofOrm.functions()`; a fiação do call-site
+são as fatias F1/F2 da lane GAPS-DB, cluster `5cd078c1`). Consequências travadas
+para a fatia de estado: (i) entidades são imutáveis (SEM038) — um "update" = uma
+NOVA linha de geração, nunca um re-save da mesma chave; (ii) arquitetura do
+estado = `key = design/nome#gen` única + `all`/`where` filtrados no host (sem
+delete); (iii) paridade byte JVM==JS vale pelo delegate JDBC `kof_platform.db*`
+no mesmo host Graal (DB001, 16/09); (iv) o NATIVE recusa por nome (`ORM001`) — a
+sonda disjuntiva vira paridade stricta quando o ORM nativo da irmã pousar, e a
+fatia db do host deve ser gateada por alvo exatamente como `workflow-ckpt-host.kf`
+(+ `.native.kf` stub honesto).
+
 ## 5. Fila de passos
 
 - **3.0.0 [plano + claim — 0 superfície]** — este arquivo (EN+PT), flip da

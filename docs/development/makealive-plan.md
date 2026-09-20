@@ -105,6 +105,20 @@ no `for (i in 0..n)` range in `.kf` — if/else and while-with-index or element 
 (locked); (iv) `record` with `String` fields and `mapOf(k, v, ...)` class-field
 initializers compile and run identical (locked).
 
+**§4 status 20/09 (2) — ESTADO face MEDIDA by `MakealiveDbStateE2ETest` (sonda
+3.1.1), 2/2 GREEN:** the `.kf` frontend resolves `orm.create/save/find/all/page/
+where` on top of `db.connect` — **`delete/count/deleteAll/saveAll` do NOT resolve
+yet** (runtime-side exists in `KofOrm.functions()`; the call-site wiring is the
+GAPS-DB lane's F1/F2 slices, `5cd078c1` cluster). Consequences locked for the
+state slice: (i) entities are immutable (SEM038) — an "update" = a NEW generation
+row, never a re-save of the same key; (ii) state architecture = `key =
+design/name#gen` unique + `all`/`where` filtered in the host (no delete needed);
+(iii) JVM==JS byte parity holds through the `kof_platform.db*` JDBC delegate on
+the same Graal host (DB001, 16/09); (iv) NATIVE refuses by name (`ORM001`) — the
+disjunctive probe flips to strict parity when the sibling's native ORM lands, and
+the host db slice must be gated per target exactly like `workflow-ckpt-host.kf`
+(+`.native.kf` honest stub).
+
 ## 5. Step queue
 
 - **3.0.0 [plan + claim — 0 surface]** — this file (EN+PT), tracker Stage 3
