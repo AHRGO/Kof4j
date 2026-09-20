@@ -15,6 +15,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
+  - **#565 CORRIGIDO — fat jars JVM não embutem mais uma cópia truncada de `kof-app.jar`
+    dentro de si mesmos** (20/09): o `CmdBuild.buildFatJar` criava `classesDir/kof-app.jar` e
+    depois percorria `classesDir`, então o output — ainda em escrita — virava um dos próprios
+    inputs (e, num rebuild, o jar anterior também). Afetava `kof build --fat` e todo pacote de
+    `kof deploy --target jvm` / `--publish`. O jar agora é montado num arquivo de staging fora
+    de `classesDir`, o path final exato é excluído da varredura e só é substituído depois de
+    fechado; em falha o staging é apagado e o jar anterior fica intacto. Path público,
+    `Main-Class`, precedência app-first e recusa não-JVM inalterados. Prova: regressões
+    estruturais em `CmdBuildFatTest` (build 1, rebuild no mesmo `classesDir`, rebuild que
+    falha) e no jar distribuído do `CmdDeployTest`.
+
   - **known-bugs §380 CORRIGIDO — `if` NESTADO cujo then termina em `throw` não
     rouba mais o false-label do `if` ENVOLVENTE no JS** (20/09, `.18`): dump de IR
     confirmou que o if-IR de throw-then é LABEL-ONLY (forma do §147) — o parse do

@@ -15,6 +15,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
  ### In development
 
+  - **#565 FIXED — JVM fat jars no longer embed a truncated copy of `kof-app.jar` inside
+    themselves** (20/09): `CmdBuild.buildFatJar` created `classesDir/kof-app.jar` and then
+    walked `classesDir`, so the output — still being written — became one of its own inputs
+    (and, on a rebuild, the previous jar too). Affected `kof build --fat` and every
+    `kof deploy --target jvm` / `--publish` package. The jar is now assembled in a staging
+    file outside `classesDir`, the exact final path is excluded from the walk, and it is
+    replaced only after being closed; on failure the staging file is removed and the previous
+    jar is left intact. Public path, `Main-Class`, app-first precedence and non-JVM refusal
+    unchanged. Proof: structural regressions in `CmdBuildFatTest` (build 1, rebuild in the
+    same `classesDir`, failed rebuild) and in the distributed jar of `CmdDeployTest`.
+
   - **known-bugs §380 FIXED — nested `if` whose then-branch ends in `throw` no longer
     steals the enclosing `if`'s false-label on JS** (20/09, `.18`): IR-dump confirmed
     the throw-then if-IR is LABEL-ONLY (§147 shape) — the inner else-parse met the

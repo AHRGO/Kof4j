@@ -81,6 +81,13 @@ class CmdDeployTest {
         Path jar = releaseDir.resolve("servico-1.2.3.jar");
         assertTrue(Files.isRegularFile(jar), "jar ausente:\n" + r.out());
 
+        // #565: o artefato distribuído não embute cópia truncada de si mesmo
+        try (var zip = new java.util.zip.ZipFile(jar.toFile())) {
+            assertNull(zip.getEntry("kof-app.jar"),
+                    "deploy JVM não pode publicar cópia truncada do próprio fat jar");
+            assertNotNull(zip.getEntry("Default/Main.class"), "classes do app no jar publicado");
+        }
+
         // prova real: o artefato empacotado RODA
         Process run = new ProcessBuilder(
                 Path.of(System.getProperty("java.home"), "bin", "java").toString(),

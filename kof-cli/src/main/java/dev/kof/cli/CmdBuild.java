@@ -351,33 +351,53 @@ final class CmdBuild {
      * do app têm precedência sobre as de dependências (first-wins) e arquivos
      * de assinatura de jars deps são descartados (não fazem sentido num fat
      * jar). Retorna o caminho do jar gerado.
+     *
+     * <p>#565: o output nunca é input. O jar é montado num staging FORA de
+     * {@code classesDir} (senão o {@code Files.walk} o lia ainda incompleto e o
+     * embutia truncado), o path final exato é excluído da varredura (um
+     * {@code kof-app.jar} de build anterior também não vira input) e só é
+     * substituído depois de fechado; em falha o staging é apagado e o jar
+     * anterior fica intacto.</p>
      */
     static Path buildFatJar(Path classesDir, List<Path> deps) throws IOException {
         String mainClass = KofCliSupport.findMainClass(classesDir);
         if (mainClass == null) throw new IOException("no main class found em " + classesDir);
         Path jar = classesDir.resolve("kof-app.jar");
+        Path finalJar = jar.toAbsolutePath().normalize();
+        Path stagingDir = classesDir.toAbsolutePath().normalize().getParent();
+        if (stagingDir == null) throw new IOException("cannot stage fat jar outside " + classesDir);
+        Path tempJar = Files.createTempFile(stagingDir, ".kof-app-", ".jar");
         java.util.jar.Manifest manifest = new java.util.jar.Manifest();
         manifest.getMainAttributes().put(java.util.jar.Attributes.Name.MANIFEST_VERSION, "1.0");
         manifest.getMainAttributes().put(java.util.jar.Attributes.Name.MAIN_CLASS, mainClass);
         java.util.Set<String> seen = new java.util.HashSet<>();
-        try (java.util.jar.JarOutputStream jos =
-                     new java.util.jar.JarOutputStream(Files.newOutputStream(jar), manifest)) {
-            addClassesToJar(jos, classesDir, classesDir, seen);
-            for (Path dep : deps) {
-                if (Files.isDirectory(dep)) {
-                    addClassesToJar(jos, dep, dep, seen);
-                } else if (dep.toString().endsWith(".jar") && Files.isRegularFile(dep)) {
-                    addJarEntriesToJar(jos, dep, seen);
+        boolean moved = false;
+        try {
+            try (java.util.jar.JarOutputStream jos =
+                         new java.util.jar.JarOutputStream(Files.newOutputStream(tempJar), manifest)) {
+                addClassesToJar(jos, classesDir, classesDir, seen, finalJar);
+                for (Path dep : deps) {
+                    if (Files.isDirectory(dep)) {
+                        addClassesToJar(jos, dep, dep, seen, finalJar);
+                    } else if (dep.toString().endsWith(".jar") && Files.isRegularFile(dep)) {
+                        addJarEntriesToJar(jos, dep, seen);
+                    }
                 }
             }
+            Files.move(tempJar, finalJar, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            moved = true;
+        } finally {
+            if (!moved) Files.deleteIfExists(tempJar);
         }
         return jar;
     }
 
     private static void addClassesToJar(java.util.jar.JarOutputStream jos, Path root, Path dir,
-                                        java.util.Set<String> seen) throws IOException {
+                                        java.util.Set<String> seen, Path excludedOutput)
+            throws IOException {
         try (var s = Files.walk(dir)) {
             for (Path p : s.filter(Files::isRegularFile).sorted().toList()) {
+                if (p.toAbsolutePath().normalize().equals(excludedOutput)) continue;
                 String name = root.relativize(p).toString().replace(java.io.File.separatorChar, '/');
                 if (skipJarEntry(name) || !seen.add(name)) continue;
                 java.util.jar.JarEntry e = new java.util.jar.JarEntry(name);
