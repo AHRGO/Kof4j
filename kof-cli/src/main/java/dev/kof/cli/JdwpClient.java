@@ -47,89 +47,14 @@ final class JdwpClient {
         return frames;
     }
 
-    /**
-     * Variveis locais reais de um frame: Method.VariableTable (6,2) filtra por
-     * visibilidade no codeIndex, StackFrame.GetValues (16,1) le os valores.
-     * Formato (codigo + tam. de valor por tag) copiado de JDWP.java/PacketStream.java
-     * da propria JDK 25 (implementacao de referencia do HotSpot).
-     */
+    /** Decodificacao de valores vive em JdwpValues (split mecanico, regra 7). */
     List<Object[]> locals(FullFrame frame) throws IOException {
-        JdwpPacket vt = new JdwpPacket();
-        vt.writeReference(frame.typeId());
-        vt.writeReference(frame.methodId());
-        JdwpPacket reply = sendCommand(6, 2, vt); // Method.VariableTable
-        // JDK 25 (codigo real do JDWP.java da propria JDK): a resposta de
-        // VariableTable = {int argCnt (CONTAGEM DE PALAVRAS dos args, long/double
-        // contam 2), int slotCount, slots[]}. NAO ha lista de argumentos aqui —
-        // ler uma lista fantasma estourava o pacote. argCnt e so consumido para
-        // posicionar o cursor do pacote (o filtro de slots usa o codeIndex).
-        reply.readInt();
-        int slotCount = reply.readInt();
-        List<long[]> slotPos = new ArrayList<>();   // {slot, start, end}
-        List<String> slotName = new ArrayList<>();
-        List<String> slotSig = new ArrayList<>();
-        for (int v = 0; v < slotCount; v++) {
-            long start = reply.readLong();          // codeIndex e LONG no JDK 25 (medido)
-            String name = reply.readString();
-            String sig = reply.readString();
-            int len = reply.readInt();
-            int slot = reply.readInt();
-            if (start <= frame.codeIndex() && frame.codeIndex() < start + len) {
-                slotPos.add(new long[]{slot, start, len});
-                slotName.add(name);
-                slotSig.add(sig);
-            }
-        }
-        if (slotPos.isEmpty()) {
-            return List.of();
-        }
-        JdwpPacket gv = new JdwpPacket();
-        gv.writeReference(frame.threadId());
-        gv.writeLong(frame.frameId());
-        gv.writeInt(slotPos.size());
-        for (int i = 0; i < slotPos.size(); i++) {
-            gv.writeInt((int) slotPos.get(i)[0]);
-            gv.writeByte(sigByte(slotSig.get(i)));
-        }
-        JdwpPacket vals = sendCommand(16, 1, gv); // StackFrame.GetValues
-        int n = vals.readInt();
-        List<Object[]> out = new ArrayList<>();
-        for (int i = 0; i < n; i++) {
-            out.add(new Object[]{slotName.get(i), slotSig.get(i), readTaggedValue(vals, vals.readByte())});
-        }
-        return out;
-    }
-
-    private static int sigByte(String signature) {
-        if (signature.isEmpty()) {
-            return 'I';
-        }
-        char c = signature.charAt(0);
-        return c == 'L' ? 'l' : c;
-    }
-
-    private Object readTaggedValue(JdwpPacket p, int tag) throws IOException {
-        return switch (tag) {
-            case 'Z' -> p.readByte() != 0;                       // boolean = 1 byte
-            case 'B' -> (int) p.readByte();
-            case 'S' -> (int) p.readShort();
-            case 'C' -> (int) p.readShort();
-            case 'I', 'F' -> p.readInt();
-            case 'J', 'D' -> p.readLong();
-            case 'l', '[' -> p.readReference();
-            default -> {
-                p.readReference();
-                yield 0L;
-            }
-        };
+        return values.locals(frame);
     }
 
     /** StringReference.Value (10,1) — conteudo de um java.lang.String para exibicao. */
     String stringValue(long objectRef) throws IOException {
-        JdwpPacket req = new JdwpPacket();
-        req.writeReference(objectRef);
-        JdwpPacket reply = sendCommand(10, 1, req);
-        return reply.readString();
+        return values.stringValue(objectRef);
     }
 
     /** Type of a loaded class (1,2 era ClassesBySignature; aqui ReferenceType.Signature (2,1)). */
@@ -143,6 +68,7 @@ final class JdwpClient {
     record FrameInfo(long methodId, String methodName, int line, long codeIndex) {
     }
 
+    private final JdwpValues values = new JdwpValues(this);
     private final String host;
     private final int port;
     private Socket socket;
@@ -508,7 +434,8 @@ final class JdwpClient {
         }
     }
 
-    private JdwpPacket sendCommand(int cmdSet, int cmd, JdwpPacket data) throws IOException {
+    /** package-private: o transporte e do cliente; JdwpValues decodifica o conteudo. */
+    JdwpPacket sendCommand(int cmdSet, int cmd, JdwpPacket data) throws IOException {
         int myId = sendRaw(cmdSet, cmd, data);
         synchronized (lock) {
             long deadline = System.currentTimeMillis() + 15000;
