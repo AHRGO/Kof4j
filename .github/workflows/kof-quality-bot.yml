@@ -46,8 +46,23 @@ jobs:
         uses: github/codeql-action/autobuild@v3
 
       - name: Perform CodeQL Analysis
+        # #563/§386: paths-ignore no config NAO suprime suite importada por
+        # `- uses:` (medido 20/09) — filtro real e o pos-SARIF abaixo.
         uses: github/codeql-action/analyze@v3
         with:
+          category: "/quality"
+          upload: false
+          output: ${{ runner.temp }}/codeql-sarif-quality
+
+      - name: Filter src/test out of SARIF (#563)
+        run: |
+          python3 scripts/codeql-sarif-filter.py --selftest
+          python3 scripts/codeql-sarif-filter.py "${{ runner.temp }}/codeql-sarif-quality"
+
+      - name: Upload filtered SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ runner.temp }}/codeql-sarif-quality
           category: "/quality"
 
   security-gate:

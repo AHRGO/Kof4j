@@ -5,9 +5,9 @@ name: CodeQL
 
 on:
   push:
-    branches: [main, beta-0.4.0]
+    branches: [main, beta-0.4.0, beta-0.5.0]
   pull_request:
-    branches: [main, beta-0.4.0]
+    branches: [main, beta-0.4.0, beta-0.5.0]
   schedule:
     - cron: "0 6 * * 1"
   # Re-scan manual (Actions → CodeQL → Run workflow): atualiza os snapshots
@@ -49,12 +49,32 @@ jobs:
           # harnesses de teste invocam java/gcc/qemu com Strings proprias do
           # teste (relative-path/concatenated-command-line) e trust-all LOCAL
           # (KofWebTlsTest) — nao sao superficie de producao. Ver o config.
+          # #563/§386: o ignore NAO pega em suite importada (lição #941/#942) —
+          # o filtro real e o
+          # pos-SARIF (scripts/codeql-sarif-filter.py) no step analyze abaixo.
           config-file: .github/codeql/kof4j-config.yml
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
+        # #563/§386: paths-ignore no config NAO suprime suite importada por
+        # `- uses:` (medido 20/09 — #941/#942 nasceram com config ativo).
+        # Mecanismo que vale em qualquer versao: pos-filtrar o SARIF e subir
+        # so o resultado (src/main permanece 100% varrido).
         uses: github/codeql-action/analyze@v4
         with:
+          category: "/language:${{ matrix.language }}"
+          upload: false
+          output: ${{ runner.temp }}/codeql-sarif-${{ matrix.language }}
+
+      - name: Filter src/test out of SARIF (#563)
+        run: |
+          python3 scripts/codeql-sarif-filter.py --selftest
+          python3 scripts/codeql-sarif-filter.py "${{ runner.temp }}/codeql-sarif-${{ matrix.language }}"
+
+      - name: Upload filtered SARIF
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: ${{ runner.temp }}/codeql-sarif-${{ matrix.language }}
           category: "/language:${{ matrix.language }}"
