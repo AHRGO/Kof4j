@@ -8,9 +8,10 @@ import java.util.List;
  *
  * Sugar over kof.process: `run` lowers onto the existing kof_process_run
  * binding (JVM+JS real, Native gated PROC001 — same honest gap as process.run);
- * `pipeline` needs live pipes (process.spawn), which today exist only on the
- * JVM, so JS/Native hit PROC001 at compile time exactly like the spawn gate
- * does (never a raw call that would ReferenceError — the §235 lesson).
+ * `pipeline` needs live pipes: real on JVM and on the JS host
+ * (KofJsProcessBridge chain + pump threads, 20/09), so Native alone hits
+ * PROC001 at compile time exactly like the spawn gate does (never a raw call
+ * that would ReferenceError — the §235 lesson).
  * `cmd` is an argv builder, `ok` is pure field/compare IR on the Result.
  */
 public final class ExpressionShellCallLowerer {
@@ -43,15 +44,6 @@ public final class ExpressionShellCallLowerer {
                         "shell." + mc.methodName() + ": not supported on the Native"
                                 + " driver.target yet (JVM and JS support the shell surface;"
                                 + " Native waits for process.run)",
-                        "PROC001");
-            }
-            return localIdx;
-        }
-        if (driver.target == Target.JS && "pipeline".equals(mc.methodName())) {
-            if (driver.currentDiagnostics != null) {
-                driver.currentDiagnostics.error(posFile(mc), posLine(mc), posCol(mc), 0,
-                        "shell.pipeline: live pipes (process.spawn) are supported on the JVM"
-                                + " target only; Native and JS are honest PROC001 gaps",
                         "PROC001");
             }
             return localIdx;

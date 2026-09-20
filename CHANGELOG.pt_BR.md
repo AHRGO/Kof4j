@@ -15,7 +15,133 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
-  - **Face JS de `process.spawn` landada (19/09, lane `.18`) + §355 corrigido na raiz**
+  - **Dívida CodeQL do cluster debug/tooling fechada na raiz (sem mudança de comportamento observável)**
+    — os 11 alertas CodeQL abertos do cluster de debug da CLI foram corrigidos na fonte, não
+    suprimidos: `KofGdbMi` usa `add` nas filas ilimitadas (o retorno ignorado de `offer`), remove
+    o container `console` só-escrito e rejeita binário nulo com `IllegalArgumentException`
+    explícita (sem NPE); `JdwpClient` deixa de nomear o `argWords` não lido (o `argCnt` do
+    VariableTable é só framing); o caminho de attach do `KofDebugJvmSession` guarda `jdwp` nulo
+    (breakpoint sem cliente vivo fica `verified:false`, nunca NPE) e remove o `frameVariables`
+    nunca lido; `KofDebugNativeDap` faz o parse dos campos `line`/`level` do MI por um helper
+    com fallback, então saída malformada do gdb nunca aborta a sessão DAP; e `KofDebugNativeTest`
+    resolve executáveis pelo `PATH` (`Files.isExecutable`) em vez de spawnar um `sh` relativo.
+    Provado pelo cluster de debug **14/14** (`KofDebugNativeTest` 7, `KofDebugNativeDapTest` 3,
+    `KofDebugAttachTest` 3, `KofDebugJvmTest` 1) e compile verde do `kof-cli`.
+
+  - **#545/§362 — chamadas de construtor fantasma agora falham em tempo de compilacao (`57a0d5f0`)**
+    — `P(1, 2)` em `record P(Int x)`, `D(1)` em classe sem esse construtor e `C("s")` em
+    `constructor(Int)` compilavam "clean" e produziam `NoSuchElementException` de runtime no
+    lookup `kof_new` (ou comportamento silenciosamente errado). O caminho de construcao
+    implicita agora valida aridade e tipos dos argumentos: **SEM023** (sem construtor com N
+    argumentos) / **SEM014** (tipo do argumento), no call-site, em todo alvo (gate de frontend).
+    Formas legitimas intactas — medido: `Q(7)`, `E(9)`, `R(1, 2)` seguem compilando e rodando.
+    Provado por `ConstructorPhantomE2ETest` 7/7.
+
+  - **`kof profile --methods` — profiler de AMOSTRAGEM method-level interno (resíduo 8.3)**
+    — a face JVM de profiling agora e real e auto-contida: o JVM filho grava
+    `jdk.ExecutionSample` com o **JFR do proprio JDK** (`jdk.jfr`, sem ferramenta externa),
+    e `kof profile --methods app.kf` imprime os metodos quentes com a **linha da fonte Kof**
+    (o LineNumberTable do compilador mapeia o bytecode de volta ao `.kf`, entao o usuario ve
+    a funcao Kof quente, nunca bytecode cru). O overhead do proprio sampler
+    (`jdk.jfr.internal`) e filtrado; gravacao curta demais para uma amostra vira nota
+    honesta, nunca lista vazia silenciosa. Native/JS sao recusas honestas nomeando a
+    ferramenta deles (perf / V8-DevTools, R6/R7). Provado por `ProfileMethodsTest` 4/4
+    (funcao quente real achada por linha + as duas recusas + o controle sem a flag).
+
+  - **`kof profile --methods --target js` — a face JS do profiler de metodo interno**
+    — o modulo emitido roda sob o **`--cpu-prof`** do proprio Node (parte do Node, sem
+    ferramenta externa) e o **`.mjs.map`** emitido mapeia a linha JavaScript amostrada de
+    volta para a **linha da fonte Kof** (o equivalente JS do LineNumberTable do JVM), entao
+    o relatorio JS mostra a funcao Kof quente, nunca JS gerado. Internos do Node sao
+    filtrados; host sem Node falha honestamente (nunca um profile falso), e o Native segue
+    recusa honesta nomeando perf **e o `perf_event_paranoid` medido**. Provado por
+    `ProfileMethodsTest` 5/5.
+
+  - **#431 fatia 1 — a ABI escalar do `extern` agora VINCULA no Native x86-64 (`d946e6fa`, §369)**
+    — `extern "<lib>" f(Int, Long, Float, Double, Bool, String)` com aridade livre,
+    retornos void/String: link direto (a biblioteca entra no `ld`) + marshaling SysV
+    por classe; Kof↔Native agora roda o mesmo programa byte-a-byte com a JVM
+    (re-verificado pela lane docs com jar limpo reconstruido: `5` / `3.5` / `5` / `10`
+    nos dois alvos). o cast explicito (`fmid(4.0 as Float, 9.0 as Float)` → `13.0`) sempre funcionou; `Int`/`Double`
+    sem cast num slot Float/Double reinterpretava bits no Native (`3.0E-45`/`0.0`) —
+    CORRIGIDO na entrada #549/§370 abaixo.
+    Callback/struct/array no Native seguem honestos FFI001/FFI002. Provado por
+    `FfiNativeE2ETest` 16/16 (+ `FfiE2ETest` 16/16 regressao JVM, 38/38 total).
+
+  - **#549/§370 — argumentos de `extern` agora seguem a conversão numérica comum do Kof (CORRIGIDO 20/09)**
+    — o call-site empilhava o argumento CRU e o marshaling SysV do Native lia os bits
+    pela classe do SLOT: `fmid(1, 2)` num slot `Float` imprimia `3.0E-45`, `fmid(1.0, 2.0)`
+    imprimia `0.0` (valor errado, sem diagnóstico) e `sqrt(9)` num slot `Double` era o
+    mesmo lixo; a JVM lançava erro de cast `Double→Float`. `ExternArgumentCoercion` agora
+    converte ao slot declarado com a MESMA regra de widening/`Double→Float` de qualquer
+    chamada (`Int→Float`, `Double→Float`, `Int→Double`, `Long→Double`…), antes do
+    marshaling/box; `String`/`Bool` em slot numérico e `Double→Int` seguem `SEM014`.
+    JVM, Native e host JS imprimem igual (`FfiExternTypeConversionTest` 11/11; a bateria
+    FFI de 10 classes é 94/0/0/0 antes E depois).
+
+  - **#278/§361 — escritas de campo nullable-primitivo agora BOXAM no JVM (`e293c4a5`)**
+    — `class Box { Int? n }` + `b.n = 42` gravava o inteiro cru no slot boxado
+    (`VerifyError` na carga de classe em JVM/Script, erro de cast em execucao no
+    Native, enquanto Script/JS imprimiam `42`). O gate do escritor agora usa
+    `TypeMetrics.isNullablePrimitive` — o predicado preciso que o fix local do
+    §295(b) estabeleceu — com a segunda camada de causa (`isPrimitiveType`
+    DESEMBRECA nullables, entao o branch de widening puro precisa exclui-los ou o
+    gate vira codigo morto). Provado por `NullablePrimitiveFieldWriterE2ETest` 9/9.
+    **Status §361: FECHADO (`5cd078c1`)** — a face de escrita `Char?` nao era um bug
+    de escritor proprio: a raiz era o store de campo nunca passar pelo gate de
+    atributibilidade (§368). O gate agora rejeita `String → Char/Char?` (e todo
+    store de campo nao-atribuivel) com SEM012 em tempo de compilacao, e o idiom
+    legitimo — literal de char `y.c = 'x'` — roda verde nos 4 alvos (re-verificado
+    20/09 com jar `kof-cli` limpo reconstruido). §365 (campo nullable nunca-escrito
+    le `0` no JS vs `null` nos demais) foi corrigido a parte em `dd418419`.
+  - **#278/§368 — o store de campo agora passa pelo gate de atributibilidade (`5cd078c1`)**
+    — `x.n = "s"` em `Int n`, `y.c = "x"` em `Char`/`Char?`, `x.n = 2.5` em `Int`
+    compilavam "clean" e morriam na carga de classe (JVM/Script `VerifyError`, cast
+    no Native) ou viravam phantom-store (JS). `StatementAnalyzer.analyzeAssignmentStatement`
+    reusa o mesmo gate `TypeChecker.isAssignable` da atribuicao local — SEM012 no
+    call-site (R6, sem quebra silenciosa). Provado por
+    `FieldAssignabilityPhantomE2ETest` 8/8 (baseline RED pre-gate).
+
+  - **#551/§372 — o gate de escrita de campo do §368 nao engole mais o rio da erasure (`b321fcb1`)**
+    — `5cd078c1` disparava o SEM012 novo ANTES do rio de erasure (§355-357) nos stores de elemento de
+    array dos goldens `T[]`, virando 5 casos verdes (3F+1E + 1F) e mascarando o SEM098. O colateral da
+    pilha makealive-3.1 roteia esses stores corretamente pelo `TypeChecker`; a lane docs reverificou a
+    bateria inteira no tip limpo: `GenericFieldArrayEraseE2ETest` 5/5 + `MakealivePrimitivesE2ETest`
+    8/8 + `FieldAssignabilityPhantomE2ETest` 8/8.
+
+  - **#548/§367 — `println(result)` de um resultado de process/shell imprime por CONTEUDO, sem vazar identidade Java**
+    — `process.run("echo","x")` + `println(r)` vazava a identidade crua do runtime
+    (`dev.kof.runtime.KofRuntime$ProcessResult@<hash>`, hash diferente a cada execucao) em JVM e Script. O resultado
+    agora imprime `ProcessResult[exitCode=0, stdout=x, stderr=]` em JVM, Script e no host JS (o mesmo formato que a
+    ponte JS ja imprimia; Native recusa `process.run` com o gap honesto PROC001, intocado). Nenhum acesso a campos
+    mudou (aditivo, freeze 2). Provado por `ProcessResultContentE2ETest` 4/4 — **RED 4/4 no tip limpo antes do fix,
+    GREEN depois** — com `ProcessSpawnE2ETest` 4/4 e `ShellE2ETest` 16/16 verdes. O report irmao #547/§366 (Script
+    perdendo o stdout do filho) foi medido **nao-reproduzivel** no tip atual (`x`/`0` nos dois alvos); a paridade
+    JVM×Script byte-a-byte fica fixada como teste permanente na mesma classe.
+
+  - **#443/§373 — `List`/`Set`/`Map` bare em posicao DECLARADA agora resolve para as colecoes builtin (`d969bc3a`)**
+    — `class Box { List items }` + `items = listOf(1,2)` compilava "limpo" e morria no class load com descriptor
+    fantasma `LList;` (`NoClassDefFoundError: List`): dois resolvedores para o mesmo nome declarado, so o caminho
+    IR/`toType` normalizava. A normalizacao mudou para o UNICO ponto de convergencia — passo 2b do `qualifyDeep`
+    (mecanismo do §179, guarda de shadow do §243 preservada) mapeando os nomes bare via `BuiltinTypes.declaredCollectionType`;
+    classe homonima do usuario mantem o dono (controles provam os dois lados). Contrato congelado #139/#150/#214,
+    nao semantica nova. Prova: `BareCollectionFieldE2ETest` 8/8 (RED 6/8 pre-fix); o print verbatim da `2` em JVM,
+    Script, Native x86-64 e JS no jar limpo. A caca Q4 deste fix abriu a §374/#553 (arg primitivo em add/set de
+    colecao bare nunca boxeia) — fix ainda aberto.
+
+  - .18 - governança: **regra 11 (Lei da Simplicidade) é ABSOLUTA em AGENTS.md** + `DECISIONS.md` §D-MAKEALIVE/§D-KOF-AS-CLOUD/§D-BOOTSTRAP/§D-DB-GAPS (enquetes da mantenedora 20/09: namespace `kof.makealive`, providers genéricos completos, estado kof.db desde o dia 1, Android=paridade JVM no db, ORM no Native via asm `kof_orm_*`, MySQL no cross, bootstrapper = objetivo final).
+
+  - **`shell.pipeline` REAL no JS (20/09, lane `.18`)** — fecha o último residual
+    de pipes vivos da linha 2.2. Cadeia ProcessBuilder + threads de pump em
+    `KofJsProcessBridge.processPipeline`, contrato espelhado do `kof_shell_pipeline`
+    do JVM (primeira etapa com stdin `/dev/null`, demais PIPE, exit code do último;
+    `no stages`/`empty stage`/erro de spawn = `Result(-1)` honesto, nunca exceção do
+    host). Gate do lowerer reduzido a só-Native. **Prova:** `ShellE2ETest` 16/16 com
+    o pin JS virado golden de paridade byte — cadeia de 2 estágios (`echo|wc -w`→3) e
+    de 3 estágios multi-pump (`echo|tr|wc`→2). Linha 2.2 do tracker universal vira ✅;
+    Native mantém o `PROC001` herdado (espera o `process.run`/spawn em asm).
+
+  - **Face JS de `process.spawn` landada (19/09, lane `.18`) + §360 corrigido na raiz**
     — as ops de handle (`readLine`/`write`/`exitCode`/`kill`/`alive`) baixavam para um
     `invokevirtual java/lang/Long.readLine` cru: a branch `isHandle` morava atras de um
     dispatcher que nunca roteia receiver `Long`, entao **nenhum alvo as executou jamais**
@@ -64,7 +190,6 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     o `<T>` do decode com SEM025 — a regra sempre existiu; faltava só a tabela). O
     dispatch por tipo segue no lowerer (`JsonDispatch`) — nenhuma semântica de
     linguagem mudou.
->>>>>>> 1b4c95f8 (feat(lsp): fechamento X10 — catalogo de assinaturas 32/32 com `json` na tabela (trava comportamental ao SEM025))
   - **Bundle 2.1.3 do `kof.workflow` COMPLETO (19/09, lane `.18`)** — retry +
     deadLetter (duas faces) + schedule + checkpoint (3a) + **supervisão (3b)**:
     `runSupervised(dag, nome, maxReinicios)` roda a DAG como workers one_for_one
@@ -107,6 +232,27 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
+  - **`kof debug --dap --target native` — a ponte DAP<->GDB/MI para o editor (X7-4, roadmap §19.5 fase 7)**
+    — o editor fala um unico protocolo com todos os alvos: os pedidos DAP (setBreakpoints,
+    continue, stackTrace, variables, evaluate) são traduzidos para GDB/MI contra o ELF
+    construído com DWARF; o `source.path` de cada frame e a fonte Kof (o `Main.kf`), nunca
+    o asm. Gdb ausente = erro DAP honesto (`success:false` nomeando a ferramenta); evaluate
+    de símbolo inexistente = erro do gdb repassado, nunca valor inventado (R6). Arquivos
+    proprios pela regra 7: `KofGdbMi` (cliente MI minimo) + `KofDebugNativeDap` (sessao).
+    Prova `KofDebugNativeDapTest` 3/3 com stub-MI (a conversa completa do editor, o caminho
+    de tool ausente, as recusas honestas); gdb real exercitado na CI.
+  - **`kof debug --target native` — gdb sobre o ELF Kof (X7-3, roadmap §19.5 fase 6)**
+    — a frente de debug nativa existe sem a linguagem reinventar um debugger: o ELF é
+    construído com o DWARF Kof completo (line table + DIEs, X7-1/X7-2) e o gdb é lançado
+    com o `directory` da fonte configurado — `break Main.kf:2` vincula na fonte Kof,
+    nunca no mangle. `KOF_GDB` resolve o executável (override de teste/ambiente, mesmo
+    padrão da casa: `KOF_PUBLISH_API`/`KOF_CROSS_SYSROOT`); gdb ausente é falha honesta,
+    `--target js` é recusa honesta (o alvo JS roda no engine embutido — não há
+    node/inspector para anexar). `--break <linha>` transforma a frente em sessao BATCH
+    scriptavel (para na LINHA Kof + `bt`, amigavel a CI) e `--output <dir>` preserva o ELF
+    construido para reuso; ambos sao honestos no alvo JVM (`only apply to --target native`).
+    Provado por `KofDebugNativeTest` 7/7 (batch com gdb real parando em `Main.kf:4` +
+    backtrace, construcao com stub-gdb + caminhos de falha + estrita de flags R6).
   - **O output de ponto flutuante de `String.format` nao depende mais do locale do host (#466, §339)** —
     `String.format("%.2f", 3.14)` imprimia `3,14` num JVM `pt_BR` (o lowering emitia o overload de
     2 argumentos `String.format(String, Object[])`, locale-sensive por contrato) e a ponte do host

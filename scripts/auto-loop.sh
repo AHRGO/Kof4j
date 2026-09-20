@@ -27,6 +27,8 @@ STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/$MARKER"
 STATE="$STATE_DIR/state"
 LOG="$STATE_DIR/loop.log"
 LOCK="$STATE_DIR/lock"
+# Gate de despacho (Onda 1): decide SEM modelo se o agente deve ser chamado.
+GATE="$(dirname "$SCRIPT")/agent-dispatch-gate.sh"
 
 # Servidor TUI vivo da sessão aberta. A porta NÃO é fixa: cada sessão do TUI
 # escolhe a sua (9092 pode ser outra sessão — o heartbeat dela não é o nosso).
@@ -86,6 +88,7 @@ cmd_start() {
         echo "interval=$interval"
         echo "repo=$REPO"
         echo "prompt='$prompt_q'"
+        echo "gate_mode=${AGENT_GATE_MODE:-active}"
         [ -n "$server_q" ] && echo "server=$server_q"
         echo "started=$(date -Is)"
     } > "$STATE"
@@ -126,13 +129,19 @@ cmd_tick() {
         SERVER=$(resolve_server "$session") || SERVER="http://127.0.0.1:9093"
     fi
     local args=(run --session "$session" --dir "$repo" --attach "$SERVER" --auto "${prompt:-$DEFAULT_PROMPT}")
+    # Onda 1: estado legado (sem gate_mode) roda em SHADOW = comportamento antigo
+    # (chama todo tick) + registro do que o gate faria; `active` pula sem novidade.
+    local gmode="${gate_mode:-shadow}" gflag=()
+    [ "$gmode" = "shadow" ] && gflag=(--shadow)
     if [ "${1:-}" = "--dry-run" ]; then
         echo "[dry-run] $OPENCODE ${args[*]}"
+        echo "[dry-run] gate_mode=$gmode $("$GATE" decide auto-loop --session "$session" --repo "$repo" --dry-run 2>&1 | head -n1)"
         return 0
     fi
     # servidor TUI fora do ar → não dispara (sessão aberta não existe).
     if ! curl -s -o /dev/null -m 5 "$SERVER/global/health"; then
         echo "$(date -Is) tick pulado: servidor $SERVER fora do ar" >> "$LOG"
+        "$GATE" note auto-loop --session "$session" --decision skip --reason server_down || true
         return 0
     fi
     mkdir -p "$STATE_DIR"
@@ -167,13 +176,35 @@ cmd_tick() {
             fi
         else
             echo "$(date -Is) tick pulado: run anterior ainda ativo (${age_min}min < ${max}min)" >> "$LOG"
+            "$GATE" note auto-loop --session "$session" --decision skip --reason agent_busy || true
             return 0
         fi
     fi
     date +%s > "$LOCK.held"
-    echo "$(date -Is) tick -> $session (attach $SERVER)" >> "$LOG"
-    "$OPENCODE" "${args[@]}" >> "$LOG" 2>&1 || echo "$(date -Is) tick FALHOU (rc=$?)" >> "$LOG"
+    # Gate de despacho: decide com o lock já adquirido (sem corrida entre ticks).
+    local gout grc=0 t0 run_rc=0
+    gout=$("$GATE" decide auto-loop --session "$session" --repo "$repo" "${gflag[@]}") || grc=$?
+    if [ "$gmode" != "shadow" ] && [ "$grc" -ne 0 ]; then
+        echo "$(date -Is) tick pulado pelo gate (rc=$grc): $gout" >> "$LOG"
+        rm -f "$LOCK.held"
+        return 0
+    fi
+    echo "$(date -Is) tick -> $session (attach $SERVER) [gate=$gmode: $gout]" >> "$LOG"
+    t0=$(date +%s)
+    "$OPENCODE" "${args[@]}" >> "$LOG" 2>&1 || run_rc=$?
+    [ "$run_rc" -eq 0 ] || echo "$(date -Is) tick FALHOU (rc=$run_rc)" >> "$LOG"
+    "$GATE" record auto-loop --session "$session" --rc "$run_rc" --duration $(( $(date +%s) - t0 )) || true
     rm -f "$LOCK.held"
+}
+
+# Onda 1: liga/desliga o gate sem reiniciar o cron (rollout shadow -> active).
+cmd_set_mode() {
+    local m="${1:-}"
+    case "$m" in active|shadow) ;; *) echo "uso: $0 set-mode {active|shadow}" >&2; exit 1;; esac
+    [ -f "$STATE" ] || { echo "sem state em $STATE (rode start)" >&2; exit 1; }
+    if grep -q '^gate_mode=' "$STATE"; then sed -i "s/^gate_mode=.*/gate_mode=$m/" "$STATE"
+    else echo "gate_mode=$m" >> "$STATE"; fi
+    echo "gate_mode=$m"
 }
 
 case "${1:-}" in
@@ -181,5 +212,7 @@ case "${1:-}" in
     stop)   cmd_stop;;
     status) cmd_status;;
     tick)   shift; cmd_tick "${1:-}";;
-    *)      echo "uso: $0 {start [sessionID] [min]|stop|status|tick [--dry-run]}" >&2; exit 1;;
+    set-mode) shift; cmd_set_mode "${1:-}";;
+    stats)  shift; exec "$GATE" stats "$@";;
+    *)      echo "uso: $0 {start [sessionID] [min]|stop|status|tick [--dry-run]|set-mode {active|shadow}|stats [--since 24h]}" >&2; exit 1;;
 esac

@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * KofDebug — Debug Adapter Protocol (DAP) server for Kof.
@@ -32,289 +33,255 @@ final class KofDebug {
     private KofDebug() {
     }
 
+    private static final String USAGE =
+            "usage: kof debug [--dap] [--attach PORT|PID] [--target jvm|native] [--break <line>]... [--output <dir>] <file.kf>";
+
     public static int run(String[] args) {
         if (args.length < 2) {
-            System.err.println("usage: kof debug <file.kf>");
+            System.err.println(USAGE);
             return 1;
         }
-        if (args[1].startsWith("-")) {
-            // R6: `debug` takes no flags — a typo must not be silently ignored.
-            System.err.println("debug: unknown flag: " + args[1] + " (usage: kof debug <file.kf>)");
+        String target = "jvm";
+        boolean dap = false;
+        Path out = null;
+        List<Integer> breaks = new ArrayList<>();
+        Integer attach = null; // X7-5: porta JDWP (jvm) ou PID (gdb -p)
+        Path file = null;
+        for (int i = 1; i < args.length; i++) {
+            String a = args[i];
+            if (a.equals("--attach")) {
+                if (i + 1 >= args.length) {
+                    System.err.println("debug: --attach requires a port (jvm) or pid (native)");
+                    return 1;
+                }
+                try {
+                    attach = Integer.parseInt(args[++i]);
+                } catch (NumberFormatException bad) {
+                    System.err.println("debug: --attach wants a number, got '" + args[i] + "'");
+                    return 1;
+                }
+            } else if (a.equals("--target") || a.equals("--break") || a.equals("--output")) {
+                if (i + 1 >= args.length) {
+                    System.err.println("debug: " + a + " requires a value (" + USAGE + ")");
+                    return 1;
+                }
+                String v = args[++i];
+                switch (a) {
+                    case "--target" -> target = v;
+                    case "--output" -> out = Path.of(v);
+                    case "--break" -> {
+                        Integer line = parseBreakLine(v);
+                        if (line == null) return 1;
+                        breaks.add(line);
+                    }
+                    default -> {
+                    }
+                }
+            } else if (a.equals("--dap")) {
+                dap = true;
+            } else if (a.startsWith("-")) {
+                // R6 strictness (CliFlagStrictnessTest): a typo must not be silently ignored.
+                System.err.println("debug: unknown flag: " + a + " (" + USAGE + ")");
+                return 1;
+            } else if (file == null) {
+                file = Path.of(a);
+            } else {
+                System.err.println("debug: unexpected argument: " + a + " (" + USAGE + ")");
+                return 1;
+            }
+        }
+        if (file == null) {
+            System.err.println("debug: missing file (" + USAGE + ")");
             return 1;
         }
-        if (args.length > 2) {
-            System.err.println("debug: " + (args[2].startsWith("-") ? "unknown flag: " : "unexpected argument: ")
-                    + args[2] + " (usage: kof debug <file.kf>)");
-            return 1;
-        }
-        Path file = Path.of(args[1]);
         if (!Files.exists(file)) {
             System.err.println("file not found: " + file);
             return 1;
         }
+        if (target.equals("native")) {
+            if (dap) {
+                if (!breaks.isEmpty() || out != null) {
+                    System.err.println("debug: --break/--output only apply to the native gdb console"
+                            + " (not --dap)");
+                    return 1;
+                }
+                try {
+                    new KofDebugNativeDap(file.toAbsolutePath(), attach).run();
+                    return 0;
+                } catch (Exception e) {
+                    System.err.println("kof debug native (dap): " + e.getMessage());
+                    return 1;
+                }
+            }
+            return debugNative(file, out, breaks, attach);
+        }
+        if (!breaks.isEmpty() || out != null) {
+            System.err.println("debug: --break/--output only apply to --target native");
+            return 1;
+        }
+        if (target.equals("js")) {
+            System.err.println("debug js: honest gap — the JS target runs on the EMBEDDED engine"
+                    + " (there is no node/inspector to attach to). Roadmap §19.5 face 7 stays open.");
+            return 1;
+        }
+        if (!target.equals("jvm")) {
+            System.err.println("debug: unknown --target '" + target + "' (jvm|native; js = honest gap;"
+                    + " android = packaging, not a debug target)");
+            return 1;
+        }
         try {
-            new DebugSession(file).run();
+            new KofDebugJvmSession(file, attach).run();
             return 0;
         } catch (Exception e) {
             System.err.println("kof debug: " + e.getMessage());
+            if (System.getenv("KOF_DEBUG_TRACE") != null) {
+                e.printStackTrace(); // diagnostico cirurgico (R6): o stderr NAO e o canal DAP
+            }
             return 1;
         }
     }
 
-    private static final class DebugSession {
-        private final Path sourceFile;
-        private final CompilerDriver driver = new CompilerDriver();
-        private final List<Integer> pendingBreakpoints = new ArrayList<>();
-        private final Map<Integer, Map<String, Object>> frameVariables = new LinkedHashMap<>();
-        private Process jvmProcess;
-        private JdwpClient jdwp;
-        private Path classesDir;
-        private int nextSeq = 1;
-        private OutputStream out;
-        private volatile long stoppedThread = -1;
-        private volatile int stoppedLine = -1;
-
-        DebugSession(Path sourceFile) {
-            this.sourceFile = sourceFile;
-        }
-
-        void run() throws Exception {
-            out = System.out;
-            InputStream in = System.in;
-            while (true) {
-                int contentLength = -1;
-                while (true) {
-                    String line = readLine(in);
-                    if (line == null) return;
-                    if (line.isBlank()) break;
-                    if (line.toLowerCase().startsWith("content-length:")) {
-                        contentLength = Integer.parseInt(line.substring("content-length:".length()).trim());
-                    }
+    /**
+     * X7-3 (face NATIVE do debug, fase 6 do §19.5): o Kof NAO reimplementa um
+     * debugger — ele constrói o ELF com DWARF (line table + DIEs do X7-1/X7-2,
+     * on por default) e delega ao gdb do alvo, apontando-o para o diretório da
+     * FONTE Kof (o `.file` do DWARF é nome relativo; sem o `directory`, o gdb
+     * mostra asm). Intenção no comando, mecanismo no platform — o usuario escreve
+     * `break Main.kf:2` na fonte, nunca no mangle. O executavel do gdb e
+     * resolvido por `KOF_GDB` (override de teste/ambiente; padrao da casa:
+     * `KOF_PUBLISH_API`/`KOF_CROSS_SYSROOT`), senao `gdb`.
+     */
+    private static int debugNative(Path file, Path outDir, List<Integer> breaks, Integer attachPid) {
+        NativeBuild built = null;
+        try {
+            String gdb = firstNonEmpty(System.getenv("KOF_GDB"), "gdb");
+            if (attachPid != null) {
+                // X7-5: attach ao processo NATIVO vivo (kof servido vivo); sem build, sem kill.
+                ProcessBuilder apb = new ProcessBuilder(gdb, "-q",
+                        "-iex", "set pagination off",
+                        "-iex", "set debuginfod enabled off",
+                        "-iex", "directory " + file.toAbsolutePath().getParent(),
+                        "-p", attachPid.toString());
+                apb.inheritIO();
+                try {
+                    return apb.start().waitFor();
+                } catch (java.io.IOException spawnFail) {
+                    System.err.println("debug native: '" + gdb + "' not available — install gdb"
+                            + " (roadmap §19.5 fase 6: gdb front-end over the Kof ELF)");
+                    return 1;
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return 1;
                 }
-                if (contentLength < 0) continue;
-                byte[] body = in.readNBytes(contentLength);
-                if (body.length < contentLength) return;
-                Object parsed = Json.parse(new String(body, StandardCharsets.UTF_8));
-                if (!(parsed instanceof Map<?, ?> msg)) continue;
-                Map<String, Object> m = (Map<String, Object>) msg;
-                if (!"request".equals(String.valueOf(m.get("type")))) continue;
-                Object seq = m.get("seq");
-                String command = String.valueOf(m.get("command"));
-                Map<String, Object> args = m.get("arguments") instanceof Map<?, ?> a
-                        ? (Map<String, Object>) a : Map.of();
-                handleRequest(seq, command, args);
             }
-        }
-
-        private void handleRequest(Object seq, String command, Map<String, Object> args) throws Exception {
-            switch (command) {
-                case "initialize" -> {
-                    Map<String, Object> caps = new LinkedHashMap<>();
-                    caps.put("supportsConfigurationDoneRequest", true);
-                    caps.put("supportsTerminateRequest", true);
-                    respond(seq, command, caps);
-                }
-                case "launch" -> {
-                    String program = args.get("program") == null ? sourceFile.toString()
-                            : args.get("program").toString();
-                    launch(Path.of(program));
-                    respond(seq, command, Map.of());
-                }
-                case "setBreakpoints" -> {
-                    List<Object> bps = args.get("breakpoints") instanceof List<?> l
-                            ? new ArrayList<>(l) : List.of();
-                    List<Object> result = new ArrayList<>();
-                    pendingBreakpoints.clear();
-                    for (Object bp : bps) {
-                        if (bp instanceof Map<?, ?> bpm && bpm.get("line") instanceof Number n) {
-                            int line = n.intValue();
-                            pendingBreakpoints.add(line);
-                            Map<String, Object> brk = new LinkedHashMap<>();
-                            brk.put("verified", false);
-                            brk.put("line", line);
-                            result.add(brk);
-                        }
-                    }
-                    respond(seq, command, Map.of("breakpoints", result));
-                }
-                case "configurationDone" -> {
-                    if (jdwp != null) jdwp.resume();
-                    respond(seq, command, Map.of());
-                }
-                case "continue" -> {
-                    if (jdwp != null) jdwp.resume();
-                    stoppedThread = -1;
-                    respond(seq, command, Map.of("allThreadsContinued", true));
-                }
-                case "threads" -> {
-                    List<Object> threads = new ArrayList<>();
-                    if (jdwp != null) {
-                        for (long tid : jdwp.allThreads()) {
-                            Map<String, Object> t = new LinkedHashMap<>();
-                            t.put("id", tid);
-                            t.put("name", "kof-thread-" + tid);
-                            threads.add(t);
-                        }
-                    }
-                    respond(seq, command, Map.of("threads", threads));
-                }
-                case "stackTrace" -> {
-                    List<Object> frames = new ArrayList<>();
-                    if (jdwp != null) {
-                        long threadId = args.get("threadId") instanceof Number n
-                                ? n.longValue() : stoppedThread;
-                        int idx = 0;
-                        frameVariables.clear();
-                        for (JdwpClient.FrameInfo f : jdwp.frames(threadId, 50)) {
-                            Map<String, Object> frame = new LinkedHashMap<>();
-                            frame.put("id", idx);
-                            frame.put("name", f.methodName());
-                            Map<String, Object> src = new LinkedHashMap<>();
-                            src.put("path", sourceFile.toAbsolutePath().toString());
-                            src.put("line", f.line());
-                            frame.put("source", src);
-                            frame.put("line", f.line());
-                            frame.put("column", 1);
-                            frames.add(frame);
-                            Map<String, Object> varInfo = new LinkedHashMap<>();
-                            varInfo.put("name", f.methodName());
-                            varInfo.put("line", f.line());
-                            frameVariables.put(idx, varInfo);
-                            idx++;
-                        }
-                    }
-                    respond(seq, command, Map.of("stackFrames", frames, "totalFrames", frames.size()));
-                }
-                case "scopes" -> {
-                    List<Object> scopes = new ArrayList<>();
-                    if (args.get("frameId") instanceof Number n) {
-                        Map<String, Object> scope = new LinkedHashMap<>();
-                        scope.put("name", "Local");
-                        scope.put("variablesReference", n.intValue() + 1);
-                        scope.put("expensive", false);
-                        scopes.add(scope);
-                    }
-                    respond(seq, command, Map.of("scopes", scopes));
-                }
-                case "variables" -> {
-                    List<Object> vars = new ArrayList<>();
-                    if (args.get("variablesReference") instanceof Number n) {
-                        int ref = n.intValue();
-                        Map<String, Object> info = frameVariables.get(ref - 1);
-                        if (info != null) {
-                            Map<String, Object> v = new LinkedHashMap<>();
-                            v.put("name", info.get("name"));
-                            v.put("value", "line " + info.get("line"));
-                            v.put("type", "frame");
-                            v.put("variablesReference", 0);
-                            vars.add(v);
-                        }
-                    }
-                    respond(seq, command, Map.of("variables", vars));
-                }
-                case "disconnect", "terminate" -> {
-                    if (jdwp != null) jdwp.dispose();
-                    if (jvmProcess != null) jvmProcess.destroy();
-                    cleanup();
-                    respond(seq, command, Map.of());
-                    out.flush();
-                    System.exit(0);
-                }
-                default -> respond(seq, command, Map.of());
+            built = buildNativeElf(file, outDir);
+            if (built == null) {
+                return 1;
             }
-        }
-
-        private void launch(Path file) throws Exception {
-            classesDir = Files.createTempDirectory("kof-debug-");
-            CompilationResult result = driver.compile(file, classesDir, Target.JVM);
-            if (!result.success()) {
-                throw new IOException("compilation failed");
-            }
-            int port;
-            try (ServerSocket ss = new ServerSocket(0)) {
-                port = ss.getLocalPort();
-            }
+            Path bin = built.bin();
+            // `--break` = sessao batch (scriptavel/CI): para na LINHA Kof e imprime
+            // o backtrace. Sem ele = console interativo do gdb (o usuario dirige).
+            boolean batch = !breaks.isEmpty();
             List<String> cmd = new ArrayList<>();
-            cmd.add(javaExecutable());
-            cmd.add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=" + port);
-            cmd.add("-cp");
-            cmd.add(classesDir.toString());
-            cmd.add("Default.Main");
+            cmd.add(gdb);
+            cmd.add("-q");
+            if (batch) cmd.add("-batch");
+            cmd.add("-iex"); cmd.add("set pagination off");
+            cmd.add("-iex"); cmd.add("set debuginfod enabled off");
+            if (batch) {
+                cmd.add("-iex"); cmd.add("set confirm off");
+                cmd.add("-iex"); cmd.add("directory " + file.toAbsolutePath().getParent());
+                cmd.add("-ex"); cmd.add("file " + bin);
+                for (int line : breaks) {
+                    cmd.add("-ex"); cmd.add("break " + file.getFileName() + ":" + line);
+                }
+                cmd.add("-ex"); cmd.add("run");
+                cmd.add("-ex"); cmd.add("bt");
+            } else {
+                cmd.add("-iex"); cmd.add("directory " + file.toAbsolutePath().getParent());
+                cmd.add(bin.toString());
+            }
             ProcessBuilder pb = new ProcessBuilder(cmd);
-            pb.redirectErrorStream(true);
-            jvmProcess = pb.start();
-            Thread sink = new Thread(() -> {
-                try {
-                    byte[] buf = new byte[1024];
-                    while (jvmProcess.getInputStream().read(buf) != -1) {
-                        System.err.print(new String(buf, 0, buf.length).trim());
-                    }
-                } catch (IOException ignored) {
+            if (batch) pb.redirectErrorStream(true);
+            else pb.inheritIO();
+            try {
+                Process p = pb.start();
+                if (!batch) return p.waitFor();
+                String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                System.out.print(output);
+                System.out.flush();
+                if (!p.waitFor(120, TimeUnit.SECONDS)) {
+                    p.destroyForcibly();
+                    System.err.println("debug native: gdb did not finish in 120s");
+                    return 1;
                 }
-            }, "debuggee-sink");
-            sink.setDaemon(true);
-            sink.start();
-
-            jdwp = new JdwpClient("127.0.0.1", port);
-            jdwp.connect();
-            jdwp.setClassPrepareRequest("Default.Main", (kind, threadId, typeId) -> {
-                try {
-                    if (kind == 8) {
-                        for (Integer line : pendingBreakpoints) {
-                            jdwp.setLineBreakpoint(typeId, line);
-                        }
-                        jdwp.resume();
-                    } else if (kind == 2) {
-                        stoppedThread = threadId;
-                        for (JdwpClient.FrameInfo f : jdwp.frames(threadId, 1)) {
-                            stoppedLine = f.line();
-                        }
-                        notifyStopped();
-                    }
-                } catch (IOException e) {
-                    System.err.println("kof debug: " + e.getMessage());
-                }
-            });
-        }
-
-        private void notifyStopped() throws IOException {
-            Map<String, Object> evt = new LinkedHashMap<>();
-            evt.put("seq", nextSeq++);
-            evt.put("type", "event");
-            evt.put("event", "stopped");
-            Map<String, Object> body = new LinkedHashMap<>();
-            body.put("reason", "breakpoint");
-            body.put("threadId", stoppedThread);
-            body.put("allThreadsStopped", true);
-            evt.put("body", body);
-            writeMessage(out, Json.stringify(evt));
-        }
-
-        private void respond(Object seq, String command, Object body) throws IOException {
-            Map<String, Object> response = new LinkedHashMap<>();
-            response.put("seq", nextSeq++);
-            response.put("type", "response");
-            response.put("request_seq", seq);
-            response.put("success", true);
-            response.put("command", command);
-            response.put("body", body);
-            writeMessage(out, Json.stringify(response));
-        }
-
-        private void cleanup() {
-            if (classesDir != null) {
-                try (var s = Files.walk(classesDir)) {
-                    s.sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
-                        try {
-                            Files.deleteIfExists(p);
-                        } catch (IOException ignored) {
-                        }
-                    });
-                } catch (IOException ignored) {
-                }
+                return p.exitValue();
+            } catch (java.io.IOException spawnFail) {
+                System.err.println("debug native: '" + gdb + "' not available — install gdb"
+                        + " (roadmap §19.5 fase 6: gdb front-end over the Kof ELF; the DWARF"
+                        + " is already emitted by the compiler)");
+                return 1;
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                return 1;
+            }
+        } catch (Exception e) {
+            System.err.println("kof debug native: " + e.getMessage());
+            return 1;
+        } finally {
+            if (built != null && outDir == null) {
+                KofCliSupport.cleanup(built.dir());
             }
         }
     }
+
+    /** ELF Kof construido com DWARF em um diretorio temporario (console mode e DAP session). */
+    record NativeBuild(Path dir, Path bin) {
+    }
+
+    static NativeBuild buildNativeElf(Path file) throws IOException {
+        return buildNativeElf(file, null);
+    }
+
+    /**
+     * `outDir` != null = o ELF fica no diretorio do usuario (`--output`, reuso entre
+     * sessoes de debug); null = diretorio temporario, limpo pelo chamador.
+     */
+    static NativeBuild buildNativeElf(Path file, Path outDir) throws IOException {
+        boolean temp = outDir == null;
+        Path out = temp ? Files.createTempDirectory("kof-debug-native-") : outDir;
+        CompilerDriver driver = new CompilerDriver();
+        driver.setDebugInfoEnabled(true);
+        CompilationResult r = driver.compile(file.toAbsolutePath(), out, Target.NATIVE);
+        if (!r.success()) {
+            r.diagnostics().getDiagnostics().forEach(d -> System.err.println(d.format()));
+            if (temp) KofCliSupport.cleanup(out);
+            return null;
+        }
+        Path bin = out.resolve("Default").resolve("Main");
+        if (!Files.exists(bin)) {
+            System.err.println("debug native: no ELF produced (native toolchain missing on this host)");
+            if (temp) KofCliSupport.cleanup(out);
+            return null;
+        }
+        return new NativeBuild(out, bin);
+    }
+
+    private static Integer parseBreakLine(String value) {
+        try {
+            int line = Integer.parseInt(value.trim());
+            if (line < 1) throw new NumberFormatException();
+            return line;
+        } catch (NumberFormatException e) {
+            System.err.println("debug: --break expects a line number (got '" + value + "')");
+            return null;
+        }
+    }
+
+    private static String firstNonEmpty(String a, String b) {
+        return a != null && !a.isEmpty() ? a : b;
+    }
+
 
     static String readLine(InputStream in) throws IOException {
         StringBuilder sb = new StringBuilder();
@@ -333,7 +300,7 @@ final class KofDebug {
         out.flush();
     }
 
-    private static String javaExecutable() {
+    static String javaExecutable() { // package-private p/ KofDebugJvmSession (X7-5)
         String javaHome = System.getProperty("java.home");
         return javaHome + "/bin/java";
     }

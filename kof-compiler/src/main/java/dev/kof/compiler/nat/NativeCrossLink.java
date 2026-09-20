@@ -168,6 +168,22 @@ public final class NativeCrossLink {
      *  chamador passa {@code dynamic=true} nesse caso. */
     static String[] ldArgs(String ld, Path binFile, Path objFile, String arch,
                            boolean dynamic, String sysroot, boolean sqlite) {
+        return ldArgs(ld, binFile, objFile, arch, dynamic, sysroot, sqlite, java.util.List.of());
+    }
+
+    /** #431: arg de link p/ uma `library()` de extern no cross. Caminho
+     *  absoluto NÃO é cross-arch (é host) — só o basename vale no sysroot:
+     *  `libX.so[.N]` → `-l:libX.so.N` (igual x86), nome cru `X` → `-lX`. */
+    static String ffiLinkArg(String lib) {
+        String base = lib.startsWith("/") ? lib.substring(lib.lastIndexOf('/') + 1) : lib;
+        return base.contains(".so") ? "-l:" + base : "-l" + base;
+    }
+
+    /** Igual, mas com os `library()` dos externs (#431) apos `-lc`/sqlite —
+     *  ordem de resolucao: objeto primeiro, libs depois. */
+    static String[] ldArgs(String ld, Path binFile, Path objFile, String arch,
+                           boolean dynamic, String sysroot, boolean sqlite,
+                           java.util.Collection<String> ffiLibs) {
         List<String> a = new ArrayList<>();
         a.add(ld);
         if (arch.equals("riscv64")) a.add("--no-relax");
@@ -189,6 +205,7 @@ public final class NativeCrossLink {
         a.add(objFile.toString());
         a.add("-lc");
         if (sqlite) a.add(sqliteLinkArg(arch));
+        for (String lib : ffiLibs) a.add(ffiLinkArg(lib));
         return a.toArray(new String[0]);
     }
 }

@@ -25,7 +25,7 @@ The CLI is the central tool of the Kof platform.
 | `kof test <file.kf\|dir> [--target jvm|native|js]` | Structured suite `test "nome" { assert(...) }` on the 3 targets + whole programs by exit code |
 | `kof deploy <dir|file.kf> [--target jvm|native|js|android] [--output <dir>] [--name <n>] [--version <v>]` | Packages a self-contained release: artifact (fat jar / ELF 0755 / `Default.mjs` + runtime closure / signed APK) + `RELEASE.md` + `SHA256SUMS` + `.tar.gz`; cross riscv64/aarch64 and `--publish` refuse honestly with `DEP001` |
 | `kof bench [paths...] [--target ...] [--iterations N] [--baseline <file>] [--threshold <ratio>] [--json] [--fail-on-regression]` | Benchmark harness (compile, run, validate, metrics, baseline) |
-| `kof profile <file.kf> [--target ...]` | Execution + metrics (CPU, RSS, GC) |
+| `kof profile <file.kf> [--target ...] [--methods]` | Execution + metrics (CPU, RSS, GC); `--methods`: in-house method-level **sampling** profiler (own JDK JFR on the JVM, Node `--cpu-prof` on JS) with the hot spots mapped back to the `.kf` line |
 | `kof inspect <file.kf> [--json]` | IR statistics: ops before/after optimization |
 | `kof decompile <file.class> [--output <file.kf>]` | Structural Kof skeleton from a `.class` |
 | `kof translate <file.java> [--output <file.kf>]` | Java subset → Kof source |
@@ -33,7 +33,7 @@ The CLI is the central tool of the Kof platform.
 | `kof migrate <file.class\|java> [--output <file.kf>] [--json]` | Migration + traceable report |
 | `kof config gen <file.kf\|dir> [--output <arquivo>]` | Generates a `kof.config` template from the `config.*` keys in the code |
 | `kof fmt <file.kf\|dir> [-w]` | Real formatter via parser (`KofFormatter`), idempotent — implemented on 31/08 |
-| `kof debug <file.kf> [--target jvm]` | DAP MVP (breakpoints by Kof line, stack trace) |
+| `kof debug [--dap] <file.kf> [--target jvm\|native] [--attach <pid>]` | DAP on the JVM (breakpoints by Kof line, stack trace, real locals — raw JDWP rebuilt against JDK 25, §376); on `native` without the flag delegates to **gdb** over the Kof DWARF (X7-3 `cfa67238`), with `--dap` the editor-facing DAP↔gdb/MI bridge (X7-4 `bda631a7`); `--attach <pid>` REAL on both faces (X7-5 `81401629`: JVM disconnect does NOT kill the debuggee — `KofDebugAttachTest`); `js` refuses honestly (embedded engine has no inspector) |
 | `kof new <name>` | Project skeletons by type |
 | `kof init` | Initialize a project in the current directory |
 | `kof deps <init\|add\|remove\|list\|resolve>` | Package manager (`kofdeps`: Maven `g:a:v` + registry `owner/repo[@ver]` — GitHub Releases) |
@@ -115,7 +115,13 @@ kof config gen src/           # generates a kof.config template from the config.
   [--fail-on-regression]` — compiles, runs, validates the stdout against
   `expected.txt`, measures time (median) and RSS and compares with the baseline
   (`PERFORMANCE REGRESSION` above the threshold; CI uses `--threshold 1.20`).
-- `kof profile <file.kf>` — execution + metrics (CPU, RSS, GC).
+- `kof profile <file.kf> [--methods]` — execution + metrics (CPU, RSS, GC).
+  `--methods` is the method-level **sampling** profiler (8.3 residual, closed
+  20/09): the JVM face records `jdk.ExecutionSample` with the JDK's own JFR and
+  the JS face runs the emitted module under Node's `--cpu-prof`; the report maps
+  the hot spot back to the **Kof function with its `.kf` line** (LineNumberTable /
+  `.mjs.map` — never raw bytecode), the sampler's own `jdk.jfr.internal` overhead
+  is filtered, and a recording too short to hold a sample is an honest diagnostic.
 - `kof inspect <file.kf> [--json]` — IR statistics: ops before/after
   optimization.
 

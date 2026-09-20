@@ -5,7 +5,7 @@
 This is the **mandatory** guide for any AI agent (or human) who
 writes Kof code in this repository. Read it before generating any `.kf`.
 
-**Version:** 0.4.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + rule 9 **docs-first gate** for philosophy-violating issues (#449) (18/09) + **mechanical push via `scripts/sync-push.sh` + conflict policy "preserve both sides, redo yours on top" (19/09)** + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09) + rule 10 **KOF-first, external-second** (`D-KOF-FIRST`, DECIDED 19/09); active branch = `beta-0.4.0`)
+**Version:** 0.4.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + rule 9 **docs-first gate** for philosophy-violating issues (#449) (18/09) + **mechanical push via `scripts/sync-push.sh` + conflict policy "preserve both sides, redo yours on top" (19/09)** + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09) + rule 10 **KOF-first, external-second** (`D-KOF-FIRST`, DECIDED 19/09) + rule 11 **Simplicity Law — anything that reaches the language surface** as ABSOLUTE (20/09) + `D-MAKEALIVE`/`D-KOF-AS-CLOUD`/`D-BOOTSTRAP`/`D-DB-GAPS` (20/09); active branch = `beta-0.4.0`)
 
 > **PRIORITY No. 1: QUALITY.** Before any feature, read the
 > **Quality gate — "no bug ships"** (§ below), **universal for
@@ -200,19 +200,47 @@ scripts/auto-loop.sh status           # confirm that it's active
   continuation of the heartbeat.
 - The re-trigger arrives as a normal turn: rule 6 applies (reply with a tool
   call, not with "ok") and so does the `NEXT STEP` contract in the `DOING.md`.
-- **Issue watchers (09/12, multi-issue 09/13):** `scripts/issue-watcher.sh start <issue|all> <min>
-  <session>` watches new comments on an issue (or on **all open ones** with
-  `all` — snapshot `N=id` per issue) every N minutes and injects a turn into the
-  live session (same mandatory `--attach` as the heartbeat; `seen` only advances
-  after a successful injection; `server=` recorded in the state fixes the port for the cron
-  tick). In use: **all every 5min → session `ses_f69c2cb03ffe2zDYCqW7fesphi`
-  (port 9094)** — the `all` tick **injects at EVERY tick** (with or without a new
-  comment) with a **full sweep** prompt: list ALL open ones, read
-  body+comments, reply technically, **triage** (fix what belongs to the
-  lane / record a gap-plan rule 6 / declare non-proceeding), **fix and
-  close with `gh issue close` + commit** (only with proof; another lane's front =
-  ask the owner for review, never touch). Interacting with an issue that
-  impacts IN-PROGRESS work is part of the loop, not a distraction.
+- **Dispatch gate (20/09, Agent Worker Wave 1):** polling may stay frequent
+  (`*/5`) because it costs **zero model calls**; the model is called only when a
+  deterministic gate (`scripts/agent-dispatch-gate.sh`) finds change. The heartbeat
+  tick compares a state fingerprint (HEAD, `DOING.md`, `known-bugs.md`, the
+  `docs/development/` listing, working tree, CI state of HEAD) with the one taken
+  **before the last dispatch** — so a productive run (which changes HEAD/`DOING.md`)
+  continues on the next tick and an idle run makes the next ticks free. Agent
+  failures back off (1st retries on the next tick, 2nd waits 15 min, 3rd+ 30 min).
+  `auto-loop.sh tick --dry-run` shows the decision; every dispatch/skip is logged in
+  `~/.local/state/kof-agent/dispatch.jsonl`; `auto-loop.sh stats` / `issue-watcher.sh
+  stats` report ticks × model calls avoided (measured, no invented token costs).
+  **Rollout:** a cron started before this change has no `gate_mode` and runs in
+  `shadow` (legacy behaviour + logging of what the gate would do); flip it with
+  `set-mode active`. `flock`, watchdog and the mandatory `--attach` are unchanged.
+- **Issue watchers (09/12, multi-issue 09/13, event-driven 20/09):**
+  `scripts/issue-watcher.sh start <issue|all> <min> <session>` watches issues every
+  N minutes and injects a turn into the live session (same mandatory `--attach` as
+  the heartbeat; the snapshot only advances after a successful injection; `server=`
+  recorded in the state fixes the port for the cron tick). In use: **all every 5min →
+  session `ses_f69c2cb03ffe2zDYCqW7fesphi` (port 9094)** — the `all` tick **injects
+  ONLY on an external event** detected by the gate: a **new issue (even with no
+  comments)**, an **edited title/body**, or a **new external comment**. A comment by
+  `kof-agent-worker[bot]` itself never re-triggers; a human comment (maintainer
+  included) always does; a GitHub/API failure is a retry, never "stable". The prompt is
+  **focused on the listed events** (read them first, then `DOING.md`; widen only on
+  proven technical relation) — a global audit is a separate explicit action, no
+  longer every tick. Then **triage** (fix what belongs to the lane / record a
+  gap-plan rule 6 / declare non-proceeding); another lane's front = ask the owner
+  for review, never touch. Interacting with an issue that impacts IN-PROGRESS work
+  is part of the loop, not a distraction.
+- **Closing an issue as fixed (20/09):** the worker's official path is
+  `scripts/agent-close-issue.sh <issue> --run-id <id>`, which refuses unless the
+  evidence manifest (`scripts/agent-evidence.sh`: real commands, exit codes, tested
+  SHA; `NOT_RUN` is never `PASS`) is valid for the pushed SHA and the deterministic
+  verifier (`scripts/agent-verify.sh`) passes. Risk is classified by
+  `scripts/agent-risk.sh`; **HIGH** (FFI/ABI, Native backends, nullability,
+  generics/erasure, concurrency, GC, cross-target, security, `DECISIONS.md`,
+  `AGENTS*.md`) additionally requires an **independent** verifier verdict in a
+  different session (without one the verdict is `NEEDS_MAINTAINER` — independence is
+  never faked). LOW/MEDIUM do not pay a second model. A design request /
+  contract ambiguity is never closed as "fixed" (rule 6).
 - **Two sessions, two crons (09/13, maintainer's request):** 9093 =
   `ses_f69e2a3f7ffe9J10aWcHEUOfW8` (heartbeat auto-loop, `*/5`) and 9094 =
   `ses_f69c2cb03ffe2zDYCqW7fesphi` (watcher all, `*/5`). **Never cross them:**
@@ -653,6 +681,23 @@ Bool isQuery(String op) {
     accepts a new form is a **new language feature**, not a parser fix. Full
     pipeline (Gates 0–9) and the evidence block: `DECISIONS.md`
     §`D-KOF-FIRST`.
+11. **The Simplicity Law — anything that reaches the language surface
+    (ABSOLUTE, maintainer 20/09).** Every new code that reaches Kof's
+    frontend/syntax/semantics (new syntax, new semantics, new language
+    surface — including the stdlib surface user code calls) must be
+    **extremely simple, short, idiomatic and intent-representing**, in
+    accordance with Kof's philosophy ("Kof must be simpler than any
+    alternative"). **No boilerplate or accidental complexity may enter the
+    language surface.** The gate before landing any surface (it precedes
+    Q0–Q7, it does not replace them): would a human write exactly this in
+    Kof? Does the construct declare *intention*, not *mechanism*? Is there a
+    shorter form that says the same thing? Is there ceremony (explicit
+    repetition, manual wiring, name-for-name's-sake) that the platform
+    should absorb? If any answer is "no" → the surface is wrong even if it
+    compiles and tests are green. The law binds every front: Makealive
+    (`D-MAKEALIVE`), the DB/ORM front (`D-DB-GAPS`) and, ultimately,
+    `D-BOOTSTRAP` — the Kof-written compiler is the test: if the language
+    cannot express its own compiler simply, the language has failed.
 
 ---
 

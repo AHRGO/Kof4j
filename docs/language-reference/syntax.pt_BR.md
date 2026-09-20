@@ -195,10 +195,16 @@ Não-escalares (struct/array/ponteiro/callback) → `FFI001` em tempo de
 compilação; o **runner host** JS (GraalJS/node) liga a MESMA ABI escalar via
 `KofJsFfiBridge` — paridade JVM↔JS provada 18/09 (`FfiE2ETest` 16/16, fatia
 3.6.F2/F3 ✅) — com não-escalares → `FFI002` ali e o browser um erro honesto
-de **runtime** (R7, sem host, o mesmo degrade de `kof.io`); Native → `FFI001`
-até o §61. O caminho da lib é resolvido em **runtime** (símbolo ausente =
+de **runtime** (R7, sem host, o mesmo degrade de `kof.io`); o **Native liga a MESMA
+ABI escalar DIRETO em x86-64, riscv64 e aarch64** (#431 fatias 1–2, 20/09, §369): a
+`library()` é entrada de link-by-use no linker e a chamada é `call sym@PLT` — sem
+`dlopen` (§61 fechado). Não-escalar ou `library()` ausente → `FFI001` na linha da
+declaração no Native (R6). Argumentos numéricos seguem a regra comum de conversão do Kof em todos
+os alvos (§370/#549 corrigido 20/09): `Int`/`Double` num slot `Float`, `Int`/`Long`/`Float` num
+slot `Double` etc. são convertidos; String/Bool/`Double→Int` são `SEM014`.
+O caminho da lib é resolvido em **runtime** na JVM/JS (símbolo ausente =
 exceção `kof_ffi_*`). O alargamento era a fatia R3
-(`docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.pt_BR.md`, #431); a face JVM landou 18/09 (`.18`) — JS/Native seguem gaps honestos.
+(`docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.pt_BR.md`, #431); a face JVM landou 18/09 (`.18`), o host JS no mesmo dia, o Native x86-64 + riscv64/aarch64 em 20/09.
 
 ## Testes e lifecycle
 

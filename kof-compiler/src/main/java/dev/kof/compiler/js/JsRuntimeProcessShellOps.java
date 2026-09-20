@@ -43,6 +43,13 @@ final class JsRuntimeProcessShellOps {
             stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofShellRunWith"), args));
             return true;
         }
+        if (name.equals("kof_shell_pipeline")) {
+            // kof.shell pipeline(stages) — cadeia real no host (pump threads),
+            // espelho do kof_shell_pipeline JVM (20/09; fecha o residual 2.2)
+            p.lc.registerIoRuntime("kofShellPipeline");
+            stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofShellPipeline"), args));
+            return true;
+        }
         if (name.equals("kof_process_spawn")) {
             // F10 no JS: host KofJsProcessBridge (spawn + handle ops com o
             // contrato exato do binding JVM — paridade por construção).

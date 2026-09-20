@@ -14,14 +14,14 @@ This document is DESIGN ONLY — it changes no semantics and binds nothing.
 (`FfiSignature.java`): `i`=Int, `j`=Long, `f`=Float, `d`=Double, `b`=Boolean,
 `S`=String (`char*`), `v`=void return; a callback param is the nested token
 `(<ret><params>)`. Anything the map does not cover is a **compile-time honest
-gap**: `FFI001` (JVM/Native not bound) / `FFI002` (JS) —
+gap**: `FFI001` (JVM/Native not bindable) / `FFI002` (JS) —
 `CompilerPipeline.java:225-236`, R6 (never a silent stub).
 
 | Surface | JVM | Native | JS |
 |---|---|---|---|
-| scalar downcall/upcall | ✅ `kof_ffi` FFM (`JvmFfiRuntime.java:142+`) | ❌ `FFI001` (line 3.7) | ✅ host bridge `KofJsFfiBridge` (browser degrades honestly, R7) |
-| callbacks (3.4) | ✅ `Linker.upcallStub` | ❌ | ✅ host |
-| String = `char*` | ✅ in + out | — | ✅ |
+| scalar downcall | ✅ `kof_ffi` FFM (`JvmFfiRuntime.java:142+`) | ✅ **direct `call sym@PLT` on x86-64/riscv64/aarch64** (#431 slices 1–2, 20/09, §369 — link-by-use, no `dlopen`) | ✅ host bridge `KofJsFfiBridge` (browser degrades honestly, R7) |
+| callbacks/upcalls (3.4) | ✅ `Linker.upcallStub` | ❌ `FFI001` (no mechanism) | ✅ host |
+| String = `char*` | ✅ in + out | ✅ in (payload off 24) + out (boundary copy) | ✅ |
 | **struct / array / out-buffer / opaque** | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
 
 JVM scalar→FFM mapping (measured): `i→JAVA_INT, j→JAVA_LONG, f→JAVA_FLOAT,
@@ -59,8 +59,8 @@ Three worked examples the implementation tests must reproduce bit-exactly:
 | Kof shape | C shape | size | align | SysV classes |
 |---|---|---|---|---|
 | `Point2(Int x, Int y)` | `struct{int,int}` | 8 | 4 | INTEGER (1 eightbyte) |
-| `Mixed(Bool b, Int n, Float f)` | `struct{_Bool,int,float}` | 12 | 4 | padding after `b`; INTEGER (8B: b+n) + INTEGER (4B: f) |
-| `Time(Int64 s, Double d)` | `struct{int64_t,double}` | 16 | 8 | INTEGER + SSE (SysV), 2 eightwords (aarch64) |
+| `Mixed(Bool b, Int n, Float f)` | `struct{_Bool,int,float}` | 12 | 4 | padding after `b`; eightbyte 0 (b+n) = INTEGER, eightbyte 1 (f) = **SSE** — MEASURED (GCC 13.3, x86-64 `-O0 -S`): first eightbyte in `%rdi`, `f` in `%xmm0`; offsets n=4, f=8 (corrected 20/09: the draft said INTEGER+INTEGER) |
+| `Time(Long s, Double d)` | `struct{int64_t,double}` | 16 | 8 | INTEGER + SSE (SysV; MEASURED: `s`→`%rdi`, `d`→`%xmm0`), 2 eightwords (aarch64). Kof has no `Int64` — the 64-bit integer is `Long` (corrected 20/09) |
 
 ## 4. Design decisions for the maintainer (rule 6 — this lane proposes, never decides)
 
@@ -76,7 +76,12 @@ Three worked examples the implementation tests must reproduce bit-exactly:
   param — the C API decides), `List<T>` stays FFI001 until a boxed-unboxing
   benchmark proves otherwise.
 - **D6-3 · out-parameters.** No new syntax in v1: out-buffer = `new Byte[n]`
-  passed as `S`→`ADDRESS` and read back after the call. Pointer-in-struct
+  crossing as its OWN ABI kind — `Buffer(U8, INOUT)`, copy-in / call / copy-back —
+  **never the `S` token** (corrected 20/09: `S` = `String` = NUL-terminated UTF-8 `char*`,
+  read-only; a buffer differs in mutability, length, direction and lifetime, so it
+  cannot reuse `S`; `CString`, `Buffer`, `Pointer`, `OpaqueHandle` and `Struct` are distinct
+  ABI types even when all become an address in a register). Length stays an explicit C
+  argument. Pointer-in-struct
   fields = out of scope (opaque handles are 3.3, separate decision).
 - **D6-4 · return-by-value > 16 B.** SysV hidden-pointer (sret) / AAPCS64
   hidden-x8 / LP64 reference — the *JVM* Linker hides this; the *asm*

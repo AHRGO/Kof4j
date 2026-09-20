@@ -43,6 +43,25 @@ import java.util.Map;
  */
 final class NativeDwarf {
 
+    /** X7-2 fatia 2: o frame_base depende da ABI do alvo (rbp/x27/x29). O
+     *  resto do DIE (tags/attr/expr fbreg) e identico nos tres — so o
+     *  registrador da moldura muda, e os offsets de slot vem do chamador
+     *  (x86 `slotOffset`, cross `crossLocalOffRiscv`). */
+    enum Arch { X86_64, RISCV64, AARCH64 }
+
+    Arch arch = Arch.X86_64;
+
+    /** Expressao DWARF do frame_base por ABI: x86 DW_OP_reg6(rbp); riscv64
+     *  DW_OP_regx x27 (s11 — regs >=16 exigem regx+ULEB); aarch64
+     *  DW_OP_reg29 (fp=x29, single-byte 0x50+29). */
+    byte[] frameBaseExpr() {
+        return switch (arch) {
+            case X86_64 -> new byte[]{0x56};
+            case AARCH64 -> new byte[]{0x6D};
+            case RISCV64 -> new byte[]{(byte) 0x90, 0x1b};
+        };
+    }
+
     record Local(String name, int offset, String kind) {}
 
     record Fn(String label, String kofName, int declLine, String retKind,
@@ -142,7 +161,11 @@ final class NativeDwarf {
             sb.append("    .asciz \"").append(escape(f.kofName())).append("\"\n");
             sb.append("    .byte 1\n");
             sb.append("    .uleb128 ").append(Math.max(1, f.declLine())).append("\n");
-            sb.append("    .byte 1\n    .byte 0x56\n"); // frame_base: DW_OP_reg6=0x50+6 (rbp). 0x76 seria breg6 (pediria operando)
+            byte[] fb = frameBaseExpr();
+            sb.append("    .byte ").append(fb.length).append("\n");
+            for (byte b : fb) {
+                sb.append("    .byte 0x").append(String.format("%02x", b)).append("\n");
+            }
             sb.append("    .4byte .Lbty").append(typeIndex.get(f.retKind())).append(" - .Lkof_info\n");
             for (Local p : f.params()) {
                 emitLoc(sb, 3, p, typeIndex);

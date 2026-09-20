@@ -24,6 +24,9 @@ final class NativeArchEmitter {
         nb.labelMap.clear();
         nb.stringLiterals.clear();
         nb.stringCounter = 0;
+        // X7-2 fatia 2: registro DWARF do cross (frame_base = s11/x27).
+        nb.kofDwarf.fns.clear();
+        nb.kofDwarf.arch = NativeDwarf.Arch.RISCV64;
         nb.allClassesMap.clear();
         for (IRClass c : module.classes()) nb.allClassesMap.put(c.name(), c);
 
@@ -121,6 +124,10 @@ final class NativeArchEmitter {
                 nb.crossEmit().emitCrossMethodRiscv(sb, c, m, usesSpawn && "main".equals(m.name()));
             }
         }
+        // #431 fatia 2: helper char*→String p/ extern com retorno String —
+        // no texto do PROGRAMA (a poda só alcança o blob do runtime), em
+        // plena seção .text; o aarch64 o recebe pela tradução linha-a-linha.
+        if (nb.ffiUsesCstr) NativeFfiCall.emitRiscvCstrHelper(sb);
 
         // Ponto de entrada: chama <mainClass>_main e sai via exit_group(94).
         // O runtime é asm puro — binário estático. exit_group (não exit/93)
@@ -132,6 +139,12 @@ final class NativeArchEmitter {
         sb.append("    andi sp, sp, -16\n");
         emitClinitCallsRiscv(sb, module);
         sb.append("    call ").append(mainEntry).append("\n");
+        // #431: externs bindados → flusha o stdio da C antes do exit_group
+        // cru (sem atexit a linha do puts da lib se perde — medição 19/09).
+        if (!nb.ffiLibs.isEmpty()) {
+            sb.append("    li a0, 0\n");   // fflush(NULL) — a0 lixo = SEGV
+            sb.append("    call fflush\n");
+        }
         sb.append("    li a0, 0\n");
         sb.append("    li a7, 94\n");
         sb.append("    ecall\n");
@@ -161,6 +174,7 @@ final class NativeArchEmitter {
         Path asmFile = outputDir.resolve(className + ".s");
         Path binFile = outputDir.resolve(className);
         Files.createDirectories(asmFile.getParent());
+        if (nb.debugInfo) nb.kofDwarf.emit(sb, nb.sourceFile);
         String prunedRiscv = pruneRiscvRuntime(sb, rtStart, rtEnd, "riscv64");
         Files.writeString(asmFile, prunedRiscv);
         System.err.println("NativeBackend: generated riscv64 " + asmFile);
@@ -169,7 +183,10 @@ final class NativeArchEmitter {
         // runtime (podado) referenciar libc/libsqlite3; aí vira -lc/-lsqlite3 +
         // --dynamic-linker. DB001: o consumidor SQLite arrasta a libc junto.
         boolean sqlite = NativeCrossLink.needsSqlite(prunedRiscv);
-        boolean dynamic = sqlite || NativeCrossLink.needsLibc(prunedRiscv);
+        // #431: extern BINDA — a `library()` vira input do ld cross (link-by-use,
+        // DB001) e força o dinâmico (sem ela o `call sym` não resolve).
+        boolean ffi = !nb.ffiLibs.isEmpty();
+        boolean dynamic = sqlite || ffi || NativeCrossLink.needsLibc(prunedRiscv);
         String sysroot = NativeCrossLink.sysrootFor("riscv64");
         if (dynamic && sysroot == null) {
             // R6: sem libc-cross não há como ligar dinâmico — segue estático,
@@ -183,7 +200,7 @@ final class NativeArchEmitter {
                     "sysroot (CI installs only libc6-*-cross) — ld will abort with undefined reference");
         }
         if (dynamic) System.err.println("NativeBackend: riscv64 dynamic link (" +
-                (sqlite ? "libc+libsqlite3 detected" : "libc detected") + ")");
+                (sqlite ? "libc+libsqlite3 detected" : "libc detected") + (ffi ? " +ffi libs" : "") + ")");
 
         try {
             Path objFile = asmFile.resolveSibling("kof.o");
@@ -199,7 +216,7 @@ final class NativeArchEmitter {
             // root_start.._end; seção deletada fora do intervalo = raiz que
             // o coletor nunca vê — precisa primeiro o fim explícito).
             nb.runCommand(NativeCrossLink.ldArgs("riscv64-linux-gnu-ld", binFile, objFile,
-                    "riscv64", dynamic, sysroot, sqlite), "riscv64-ld");
+                    "riscv64", dynamic, sysroot, sqlite, nb.ffiLibs), "riscv64-ld");
             Files.deleteIfExists(objFile);
             if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);
             binFile.toFile().setExecutable(true);
@@ -218,6 +235,10 @@ final class NativeArchEmitter {
         nb.labelMap.clear();
         nb.stringLiterals.clear();
         nb.stringCounter = 0;
+        // X7-2 fatia 2: idem riscv, mas o frame_base do DIE ja sai codificado
+        // p/ fp=x29 do ARM (a traducao repassa as diretivas `.` verbatim).
+        nb.kofDwarf.fns.clear();
+        nb.kofDwarf.arch = NativeDwarf.Arch.AARCH64;
         nb.allClassesMap.clear();
         for (IRClass c : module.classes()) nb.allClassesMap.put(c.name(), c);
         IRClass mainClass = null;
@@ -296,14 +317,26 @@ final class NativeArchEmitter {
                 nb.crossEmit().emitCrossMethodRiscv(riscvSb, c, m, usesSpawnA && "main".equals(m.name()));
             }
         }
+        // #431 fatia 2: idem riscv — o helper entra ANTES da tradução p/ o
+        // ARM (linhas todas cobertas pelo tradutor: beqz/lbu/j/mv/li/sd/ld/call/ret).
+        if (nb.ffiUsesCstr) NativeFfiCall.emitRiscvCstrHelper(riscvSb);
         String mainEntry = mainClass != null ? nb.sanitizeName(mainClass.name()) + "_main" : "kof_main";
         riscvSb.append("\n.globl _start\n");
         riscvSb.append("_start:\n");
         riscvSb.append("    andi sp, sp, -16\n");
         emitClinitCallsRiscv(riscvSb, module);
         riscvSb.append("    call ").append(mainEntry).append("\n");
+        if (!nb.ffiLibs.isEmpty()) {
+            riscvSb.append("    li a0, 0\n");   // fflush(NULL) — idem riscv
+            riscvSb.append("    call fflush\n");
+        }
         riscvSb.append("    li a0, 0\n");
-        riscvSb.append("    li a7, 93\n");
+        // #431 (achado na lane do flush): exit_group (94), não exit/93 —
+        // com 93 a thread do scheduler (time.interval) ou as threads internas
+        // de uma lib C (GLFW/raylib) sobrevivem ao main e o processo NUNCA
+        // morre (hang medido sob qemu antes do fix; o x86 e o riscv já
+        // usavam 94 — M32.3). Números riscv/aarch idênticos (asm-generic).
+        riscvSb.append("    li a7, 94\n");
         riscvSb.append("    ecall\n");
         int rtStart = riscvSb.length();
         riscvSb.append(NativeRiscvAsm.RISCV_RUNTIME_ASM).append(NativeRiscvAsm.RISCV_STRN002_ASM).append(NativeRiscvAsm.RISCV_RUNTIME_ASM_B).append(NativeRiscvAsm.RISCV_MAPSET_ASM);
@@ -329,6 +362,7 @@ final class NativeArchEmitter {
         if (usesSpawnA) nb.emitRiscvSpawn(riscvSb);
 
         // traduz linha-a-linha (runtime já podado — a poda no riscv vale p/ os 2)
+        if (nb.debugInfo) nb.kofDwarf.emit(riscvSb, nb.sourceFile);
         String prunedRiscv = pruneRiscvRuntime(riscvSb, rtStart, rtEnd, "aarch64");
         StringBuilder sb = new StringBuilder();
         for (String line : prunedRiscv.split("\n", -1)) {
@@ -342,19 +376,20 @@ final class NativeArchEmitter {
         Files.writeString(asmFile, sb.toString());
         System.err.println("NativeBackend: generated aarch64 " + asmFile);
         boolean sqlite = NativeCrossLink.needsSqlite(prunedRiscv);
-        boolean dynamic = sqlite || NativeCrossLink.needsLibc(prunedRiscv);
+        boolean ffi = !nb.ffiLibs.isEmpty();
+        boolean dynamic = sqlite || ffi || NativeCrossLink.needsLibc(prunedRiscv);
         String sysroot = NativeCrossLink.sysrootFor("aarch64");
         if (sqlite && !NativeCrossLink.sqliteAvailable("aarch64")) {
             System.err.println("NativeBackend: aarch64 uses kof.db but libsqlite3.so is not in the " +
                     "sysroot (CI installs only libc6-*-cross) — ld will abort with undefined reference");
         }
         if (dynamic) System.err.println("NativeBackend: aarch64 dynamic link (" +
-                (sqlite ? "libc+libsqlite3 detected" : "libc detected") + ")");
+                (sqlite ? "libc+libsqlite3 detected" : "libc detected") + (ffi ? " +ffi libs" : "") + ")");
         try {
             Path objFile = asmFile.resolveSibling("kof.o");
             nb.runCommand(new String[]{"aarch64-linux-gnu-as", "-o", objFile.toString(), asmFile.toString()}, "aarch64-as");
             nb.runCommand(NativeCrossLink.ldArgs("aarch64-linux-gnu-ld", binFile, objFile,
-                    "aarch64", dynamic, sysroot, sqlite), "aarch64-ld");
+                    "aarch64", dynamic, sysroot, sqlite, nb.ffiLibs), "aarch64-ld");
             Files.deleteIfExists(objFile);
             if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);
             binFile.toFile().setExecutable(true);

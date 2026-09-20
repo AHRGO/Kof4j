@@ -2,8 +2,8 @@
 
 # DEBUG-ADAPTER.md — kof-debug (DAP Debug Adapter)
 
-**Status:** MVP implemented and validated (JVM; raw JDWP, without jdk.jdi)
-**Date:** August 27, 2026
+**Status:** JVM (raw JDWP, no jdk.jdi) + NATIVE (console gdb + DAP↔GDB/MI, X7-3/X7-4) implemented and validated — console gdb (X7-3, `--break`/`--output`) and `kof debug --dap --target native` bridging DAP to the real gdb/MI2 (X7-4 `bda631a7`: `KofGdbMi` + `KofDebugNativeDap`, `KofDebugNativeDapTest`); sources in `stackTrace`/breakpoints are always the `.kf`; no gdb = honest DAP error naming the tool (R6); JS = honest refusal (the target runs on the EMBEDDED engine — there is no node/inspector to attach to). **20/09 (X7-5):** attach is REAL on JVM (`--dap --attach <pid>`, raw JDWP into a live VM) and Native (`--dap --attach <pid>`, gdb `-p`); the JVM client was rebuilt against the JDK 25 wire (`known-bugs.md §376`) and the full launch/attach conversations now have E2E tests (`KofDebugJvmTest`, `KofDebugAttachTest`)`
+**Date:** August 27, 2026 (updated 20/09 with the Native faces)
 **Version:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
 
 ---
@@ -19,7 +19,7 @@ Do not create a proprietary protocol.
 ## 2. Responsibilities
 
 - launch programs (`launch`);
-- attach to processes (`attach` — future);
+- attach to processes (`attach` — ✅ 20/09: JVM `--dap --attach <pid>` and Native `--dap --attach <pid>`; JS = honest gap);
 - execution control: continue, pause, step over/into/out, restart, terminate;
 - breakpoints (source; later conditional, hit count, exception);
 - stack traces, scopes, locals, arguments, fields;
@@ -33,8 +33,11 @@ Do not create a proprietary protocol.
 kof-debug (DAP over stdio — Content-Length framing)
     ↓
 JVM: launch java -agentlib:jdwp + JDWP client (raw wire protocol)
-Native: launch binary + DWARF/frame info   (future)
-JS: launch node --inspect + Inspector protocol  (future)
+Native: build ELF with DWARF + gdb (console: `--target native` with `--break`/`--output`;
+        editor: `--dap --target native` translates DAP -> GDB/MI 2, `KofGdbMi`/`KofDebugNativeDap`)  [✅ 20/09]
+JS: honest refusal — the JS target runs on the embedded Graal engine; there is no
+    node/inspector to launch or attach (roadmap §19.5 face 7 stays open for a future
+    engine inspector, never a fake bridge)
 ```
 
 The CLI (`kof debug`) is only an interface — the logic lives in the adapter.
@@ -57,6 +60,37 @@ continue              → VM.Resume
 disconnect/terminate  → VM.Dispose + process kill + cleanup
 ```
 
+## 3.1b Implemented DAP flow (Native, via GDB/MI — `--dap --target native`)
+
+```text
+initialize            → capabilities (configurationDone, terminate)
+launch                → compiles NATIVE with debug info (DWARF: line table +
+                        DIEs — X7-1/X7-2), starts `gdb -q --interp mi2` with
+                        `directory <source dir>`; missing gdb = success:false
+                        naming the tool (never a stack mid-stream)
+setBreakpoints        → -break-insert -f -- <file.kf>:<line> (verified from
+                        the real bkpt line the DWARF resolved)
+configurationDone     → -exec-run --all
+[event] *stopped      → DAP stopped (breakpoint-hit/entry/end-stepping mapped);
+                        exit-code = exited + terminated
+stackTrace            → -stack-list-frames; source.path is ALWAYS the .kf —
+                        the whole point of the front (the editor never sees asm)
+variables             → -stack-list-variables --simple-values over the real
+                        DW_TAG_variable entries (name + DW_OP_fbreg +
+                        DW_AT_type) the compiler already emits on the 3 native
+                        arches — measured 20/09 with objdump on the ELF/.s;
+                        lowered temporaries (tmp/cap/lambda$) are filtered out
+                        of the DIEs, so the editor shows Kof names only
+evaluate              → -data-evaluate-expression; unknown symbol = the gdb
+                        error passed through, never an invented value (R6)
+disconnect/terminate  → -gdb-exit + kill + build dir cleanup
+```
+
+MI transport detail that cost a debugging session (20/09): records are
+token-PREFIXED (`2^done,...`) — the record TYPE is the first NON-digit char;
+classifying on char 0 silently drops every synchronous reply (they only
+surface as 5s timeouts).
+
 ## 3.2 JDWP (JDK 25) particularities discovered during implementation
 
 - JDK 25 event kinds: `VMStart=90`, `VMDeath=99`, `ClassPrepare=8`
@@ -70,22 +104,39 @@ disconnect/terminate  → VM.Dispose + process kill + cleanup
   entry (order long/line, not line/codeIndex);
 - `ReferenceType.Methods` returns `methodID + name + signature +
   modifiers` (4 fields);
-- `ThreadReference.Frames` is command set **11** (10 is StackFrame) and
-  HotSpot rejects `length > 5` with `INVALID_LENGTH` (504);
+- `ThreadReference` is command set **11** (`Frames`=6, `FrameCount`=7);
+  `StackFrame` is **16** (`GetValues`=1); `StringReference` is **10** (`Value`=1)
+  (measured against `jdk.jdi/.../JDWP.java` from the JDK's own `src.zip`);
+- HotSpot rejects `maxFrames` LARGER THAN THE REAL stack size in
+  `ThreadReference.Frames` with `INVALID_LENGTH` (504) — ask `FrameCount`
+  first and clamp (there is no "5 frames" limit);
 - the event handler runs outside the event loop (dispatch on a thread) —
   JDWP commands emitted by the handler need the loop to receive
   replies (without it: timeout deadlock);
-- `Composite` events have `suspendPolicy + eventCount` before the kinds.
+- `Composite` events have `suspendPolicy + eventCount` before the kinds, and
+  each event is **`[kind (byte)][requestID (int)]`** — kind FIRST (JDWP.java
+  7827; reading requestID first shifts the whole body);
+- `IDSizes` answers **5 sizes, not 6** on JDK 25+ (`argIDSize` was removed);
+  reading the 6th int steals 4 bytes of the next packet and desyncs the
+  entire stream from the handshake on (measured byte-by-byte, §376);
+- `VM.ClassesBySignature (1,2)` is BROKEN on JDK 25.0.4 (answers `count=0`
+  plus garbage, then stalls; `jdb` never uses it) — resolve classes via
+  `VM.Classes (1,3)` ([tag][ref][signature][status]);
+- `Method.VariableTable (6,2)` replies `{argWords, slotCount,
+  slots[start(long), name, sig, length, slot]}` — there is NO argument list;
+  calling it on a native frame returns `NATIVE_METHOD` (511) — handle it,
+  never swallow others.
 
-## 3.3 MVP limitations
+## 3.3 Current limits (post-X7-5)
 
-- `stackTrace` returns up to 5 frames (JDK 25 limit) and the current frame
-  shows the Kof function/line;
-- `scopes`/`variables` are placeholders (per-frame locals are left to
-  Phase 7, via `StackFrame.GetValues`);
-- breakpoints are reported as `verified: false` (the effective
-  verification via LineTable is left to Phase 7);
-- no stepping, pause, attach, exception breakpoints or evaluation.
+- `stackTrace` returns the requested depth (clamped by `FrameCount`) with
+  real method name and Kof line per frame;
+- `scopes`/`variables` return **real per-frame locals** (VariableTable +
+  `StackFrame.GetValues`, formatted by Kof type);
+- `verified: false` only until the class loads — at `ClassPrepare` the
+  breakpoint is placed through LineTable and hits fire `stopped`;
+- remaining: stepping, pause, exception breakpoints and evaluation
+  (Phase 7); JS stays an honest gap (embedded engine, no inspector).
 
 ## 4. Runtime types
 
@@ -104,4 +155,11 @@ The user always sees the Kof type.
 - Phase 3 (MVP): JVM launch + breakpoints by Kof line + stack — ✅
 - Phase 7: per-frame locals (`StackFrame.GetValues`), stepping, verified
   breakpoints, exception breakpoints, evaluation with the type system
-- Later: attach, Native (DWARF), JS (source maps)
+- ✅ 20/09: Native (DWARF) — console + DAP<->GDB/MI (X7-3/X7-4)
+- ✅ 20/09 (X7-5): attach on JVM + Native; per-frame locals and multi-frame
+  stack landed with it (ahead of Phase 7); JS stays an honest gap
+  (embedded engine, no inspector)
+- ✅ locals in DWARF: DW_TAG_variable + DW_OP_fbreg + DW_AT_type on the 3
+  native arches (pre-existing since the fatia-2 work; RE-MEASURED 20/09 with
+  objdump after this doc briefly claimed the opposite — shapes measured,
+  never assumed, including by this lane)

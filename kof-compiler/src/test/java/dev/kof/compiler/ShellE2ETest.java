@@ -24,8 +24,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * existing kof_process_run and therefore carries JVM+JS byte-for-byte parity
  * (the §239 discipline — same output, not just same code); `cmd` builds the
  * argv list; `ok` is pure field/compare IR on kof.process's Result.
- * `pipeline` needs live pipes (process.spawn): JVM real, JS/Native an honest
- * compile-time PROC001 — pinned below, like DomainGapCodesTest pins process.
+ * `pipeline` chains live pipes: real on JVM AND on the JS host (chain + pump
+ * threads in KofJsProcessBridge, 20/09 — byte-parity pinned below); Native
+ * keeps the honest compile-time PROC001, like DomainGapCodesTest pins process.
+ * `runWith` (2.2.3) adds cwd + additive env on both targets, with honest -1
+ * Results for spawn errors — never a hang, never a silent success (R6).
  */
 class ShellE2ETest {
 
@@ -162,13 +165,29 @@ class ShellE2ETest {
     }
 
     @Test
-    void pipelineOnJsIsHonestProc001() throws Exception {
-        assertGap(Target.JS, "PROC001", """
+    void pipelineChainsStdoutToStdinOnJvmAndJs() throws Exception {
+        assertJvmJsParity("""
             main() {
-                var p = shell.pipeline(listOf(listOf("echo", "hi"), listOf("wc", "-l")))
-                println(p.stdout)
+                var p = shell.pipeline(listOf(listOf("echo", "one two three"), listOf("wc", "-w")))
+                println(p.stdout.trim())
+                println(p.exitCode)
+                println(shell.ok(p))
             }
-            """);
+            """, "3", "0", "true");
+    }
+
+    @Test
+    void pipelineThreeStageChainFlowsThroughBothPumps() throws Exception {
+        assertJvmJsParity("""
+            main() {
+                var p = shell.pipeline(listOf(
+                    listOf("echo", "a b"),
+                    listOf("tr", "a-z", "A-Z"),
+                    listOf("wc", "-w")))
+                println(p.stdout.trim())
+                println(shell.ok(p))
+            }
+            """, "2", "true");
     }
 
     @Test

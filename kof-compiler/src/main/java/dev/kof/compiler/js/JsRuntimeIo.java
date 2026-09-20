@@ -57,12 +57,27 @@ public final class JsRuntimeIo {
             }
 
             export function kofProcessRun(program, args) {
-                const result = kof_platform.processRun(program, args);
-                return {
-                    stdout: result.stdout,
-                    stderr: result.stderr,
-                    exitCode: result.exitCode
+                return kofResult(kof_platform.processRun(program, args));
+            }
+
+            // §367: todo Result de process/shell e impresso por CONTEUDO
+            // ("ProcessResult[exitCode=0, stdout=x, stderr=]"). No host Graal o
+            // Map ja chega como KofJsProcessBridge$KofResult (toString do host,
+            // espelha o ProcessResult JVM); browser/objeto cru: printer local
+            // identico. Acesso a stdout/stderr/exitCode NAO muda (additive).
+            function kofResult(result) {
+                if (!result) return result;
+                if (String(result.constructor && result.constructor.name || "")
+                        .indexOf("KofResult") >= 0) {
+                    return result;
+                }
+                const trimEnd = (s) => String(s == null ? "" : s).replace(/\s+$/, "");
+                result.toString = function () {
+                    return "ProcessResult[exitCode=" + result.exitCode
+                            + ", stdout=" + trimEnd(result.stdout)
+                            + ", stderr=" + trimEnd(result.stderr) + "]";
                 };
+                return result;
             }
 
             // kof.shell (Stage 2 / 2.2): argv builder — [program] + args, sempre
@@ -79,12 +94,7 @@ public final class JsRuntimeIo {
                 if (env) {
                     env.forEach((v, k) => { o[String(k)] = String(v); });
                 }
-                const result = kof_platform.processRunWith(argv, cwd || "", o);
-                return {
-                    stdout: result.stdout,
-                    stderr: result.stderr,
-                    exitCode: result.exitCode
-                };
+                return kofResult(kof_platform.processRunWith(argv, cwd || "", o));
             }
 
             // kof.process spawn (F10) — pipes vivos no host JS (KofJsProcessBridge).
@@ -109,6 +119,12 @@ public final class JsRuntimeIo {
             }
             export function kofSpawnAlive(h) {
                 return kof_platform.spawnAlive(h) === 1;
+            }
+
+            // kof.shell pipeline(stages) — cadeia stdout→stdin real no host
+            // (KofJsProcessBridge: mesma cadeia + pump threads do binding JVM).
+            export function kofShellPipeline(stages) {
+                return kofResult(kof_platform.processPipeline(stages));
             }
 
             // §239 (JS): String.format delega ao host (java.lang.String.format ->

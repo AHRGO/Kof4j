@@ -255,13 +255,13 @@ public final class CompilerTypes {
      * DECLARADO (var/param/campo/retorno). {@code KofUi.typeByName} cobre todos
      * os tipos de UI; {@code ImageData} é o único tipo de DADO de kof.media com
      * nome próprio (Audio/Video de media são namespaces e o typer de construtor
-     * já os resolve como ui.Audio/ui.Video). Retorna null se não for builtin.
+     * já os resolve como ui.Audio/ui.Video). §373: coleções nuas (declaredCollectionType).
      */
     static Type builtinDeclaredType(String name) {
         Type ui = KofUi.typeByName(name);
         if (ui != null) return ui;
         if ("ImageData".equals(name)) return KofMedia.IMAGE_DATA;
-        return null;
+        return BuiltinTypes.declaredCollectionType(name);
     }
 
     /** O módulo (mesmo arquivo) declara classe/record/enum com este nome? */

@@ -8,14 +8,15 @@ on:
       - '!main'
 
 jobs:
-  build-and-test:
-    name: Build + Tests
+  # Gates ESTRUTURAIS (contrato de qualidade do repositório). Job PRÓPRIO e
+  # independente do funcional: uma violação estrutural (ex.: classe >=600
+  # linhas) continua vermelha e bloqueante, mas NÃO impede que o build/teste/
+  # golden/integration do MESMO SHA produzam evidência em paralelo — antes o
+  # `check_500` vermelho pulava tudo que vinha depois no mesmo job. Nada aqui é
+  # advisory: sem `continue-on-error`, sem `if: always()`, sem `needs` frouxo.
+  structural-quality:
+    name: Structural quality gates
     runs-on: ubuntu-latest
-    services:
-      mongodb:
-        image: mongo:7
-        ports:
-          - 27017:27017
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -42,6 +43,30 @@ jobs:
 
       - name: Gate R1 fronteira stdlib (D-UNIVERSAL; ledger nao cresce em silencio)
         run: scripts/check_stdlib_boundary.sh --selftest && scripts/check_stdlib_boundary.sh
+
+      - name: Gate automacao de agentes (Onda 1 — gate de despacho, watcher, auto-loop; fakes, sem rede)
+        run: bash scripts/tests/run-agent-tests.sh
+
+  # Build + testes + golden + integração. Independente de `structural-quality`
+  # (roda em paralelo no MESMO SHA); o SHA só é verde quando TODOS os jobs do
+  # workflow estão verdes.
+  build-and-test:
+    name: Build + Tests
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 25 (Tooling API baseline)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
 
       - name: Gate instalador (harness offline do scripts/install.sh — PR #457)
         run: bash scripts/tests/install-test.sh

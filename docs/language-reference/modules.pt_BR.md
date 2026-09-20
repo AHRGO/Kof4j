@@ -164,13 +164,14 @@ define as assinaturas. **Experimental** como superfície (muda entre versões).
     `fn.getMember("invoke").execute(...)`. Browser sem host → degrade honesto (R7). Ainda NÃO bound — `FFI001` honesto em
     compilação (JVM/Native), nunca stub silencioso (R6): ABI de struct/array/pointer (design D6,
     ⛔ mantenedora), variadics (3.5, ⛔) e handles
-    opacos/out-buffers (3.3, ⛔). O Native emite `FFI001` (`<target>` not supported
-    yet, §61). Lib/símbolo ausente falha em **runtime** com exceção `kof_ffi` nomeando
+    opacos/out-buffers (3.3, ⛔). **O Native liga a ABI escalar DIRETO em
+    x86-64/riscv64/aarch64 (#431 fatias 1–2, 20/09, §369)** — link-by-use da `library()` +
+    `call sym@PLT`, sem `dlopen` (§61 fechado); no Native, assinaturas não-escalares, callbacks e
+    `library()` ausente seguem `FFI001` na linha da declaração. Lib/símbolo ausente falha em **runtime** com exceção `kof_ffi` nomeando
     `lib::symbol` (stack trace, não mensagem cirúrgica). Fatias R3 restantes
-    (structs/D6, variadics, handles, paridade Native; **JVM e JS escalar+callback fechados**)
+    (structs/D6, variadics, handles, callbacks Native; **JVM e JS escalar+callback e Native escalar fechados**)
     em
-  `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431);
-  `extern "c"` no Native depende do §61.
+  `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431).
 
 - **Native/JS**: não há interop com tipos do host da mesma forma. **Unspecified.**
 - **Annotations** (`@Name`, `@JsonFormat`) são metadados de interop emitidos no

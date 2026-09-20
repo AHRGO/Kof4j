@@ -523,7 +523,7 @@ módulo externo), cloud integrations, provider adapters.
   assinatura flexível ficam para a camada P2 de identity.
 - **`new` aceito por retrocompatibilidade**, não recomendado.
 - **AI**: decisão stdlib vs módulo externo adiada até a P3.
-- **Observabilidade**: tooling (`kof bench/profile`) + `kof.log`
+- **Observabilidade**: tooling REAL 20/09 — `kof bench` + `kof profile --methods` amostragem por método (JVM: JFR próprio `jdk.ExecutionSample`, relatório na linha `.kf` via LineNumberTable; JS: `--cpu-prof` do Node + `.mjs.map` de volta à linha Kof; face nativa pendente) + `kof.log`
   (níveis, stderr — JVM); health/metrics/request IDs entram em P0-G5.
 - **Configuration**: `kof.config` (JVM) segue a precedência
   arquivo explícito > env > profile > default; typed via

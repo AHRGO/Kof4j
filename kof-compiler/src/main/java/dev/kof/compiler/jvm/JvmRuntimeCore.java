@@ -235,6 +235,24 @@ public final class JvmRuntimeCore {
                         this.stderr = stderr;
                         this.exitCode = exitCode;
                     }
+
+                    // §367: impressao por CONTEUDO (golden do corpus: record e
+                    // impresso Nome[campo=valor]). O toString cru do Object
+                    // vazava a identidade Java (FQCN + hash, diferente a cada
+                    // execucao) na superficie do usuario. stdout/stderr vao
+                    // trimados do newline FINAL; o conteudo real permanece.
+                    @Override public String toString() {
+                        return "ProcessResult[exitCode=" + exitCode
+                                + ", stdout=" + trimTrailingNewline(stdout)
+                                + ", stderr=" + trimTrailingNewline(stderr) + "]";
+                    }
+
+                    private static String trimTrailingNewline(String s) {
+                        if (s == null) return "";
+                        int end = s.length();
+                        while (end > 0 && (s.charAt(end - 1) == 10 || s.charAt(end - 1) == 13)) end--;
+                        return s.substring(0, end);
+                    }
                 }
 
                 public static void kof_process_exit(int code) {

@@ -58,6 +58,22 @@ static int lowerField(CompilerDriver driver, AssignmentExpr ae, FieldAccessExpr 
                 ops.add(new KofCall(BuiltinTypes.STRING, "kof_string_concat",
                         List.of(BuiltinTypes.STRING, BuiltinTypes.STRING),
                         BuiltinTypes.STRING, KofCallKind.FUNCTION));
+            } else if (sfaCompound && TypeMetrics.isNullablePrimitive(fld.type())
+                    && sfaValueType instanceof Type.PrimitiveType sfaRPT && !Type.isVoid(sfaRPT)
+                    && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)) {
+                // §361 (composto, estático): a pilha aqui é [cur-boxed, rhs-cru];
+                // derrama o RHS p/ slot do INNER, unbox do cur, binário no INNER,
+                // box de volta — mesma forma do composto de locais (§295(b)).
+                Type sfaCInner = ((Type.NullableType) fld.type()).inner();
+                ops.add(new KofStoreLocal(sfaCInner, localIdx));
+                locals.add(new IRLocalVariable(localIdx, "#sfarhs" + localIdx, sfaCInner));
+                int sfaRhsSlot = localIdx;
+                localIdx = localIdx + (TypeMetrics.isDoubleWidth(sfaCInner) ? 2 : 1);
+                driver.emitErasureUnbox(ops, sfaCInner);
+                ops.add(new KofLoadLocal(sfaCInner, sfaRhsSlot));
+                ExpressionAssignmentLowerer.emitCompoundRhsConv(driver, ops, sfaOp, sfaCInner, sfaValueType);
+                ops.add(new KofBinary(ExpressionAssignmentLowerer.compoundBinaryOp(sfaOp), sfaCInner));
+                driver.emitErasureBox(ops, sfaCInner);
             } else if (sfaCompound) {
                 // RHS primitivo ≠ campo (ex.: Double *= int): widening p/ o
                 // tipo do campo — o KofBinary usa fld.type() p/ o opcode e o
@@ -66,13 +82,25 @@ static int lowerField(CompilerDriver driver, AssignmentExpr ae, FieldAccessExpr 
                 ExpressionAssignmentLowerer.emitCompoundRhsConv(driver, ops, sfaOp, fld.type(), sfaValueType);
                 ops.add(new KofBinary(ExpressionAssignmentLowerer.compoundBinaryOp(sfaOp), fld.type()));
             } else if ("=".equals(sfaOp)) {
-                if (TypeMetrics.isPrimitiveType(sfaValueType) && TypeMetrics.isPrimitiveType(fld.type())) {
+                // §361: isPrimitiveType UNBOXA Nullable(p/ widening), entao o
+                // gate de widening puro NAO pode engolir um campo Int? (slot
+                // fisicamente boxed) — esses caem no box gate abaixo.
+                if (TypeMetrics.isPrimitiveType(sfaValueType) && TypeMetrics.isPrimitiveType(fld.type())
+                        && !TypeMetrics.isNullablePrimitive(fld.type())) {
                     driver.emitWideningIfNeeded(ops, sfaValueType, fld.type());
                 } else if (driver.erasesToReference(fld.type())
                         && TypeMetrics.isPrimitiveType(sfaValueType)
                         && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)) {
                     // Issue #181: campo estático Object recebendo primitivo (Holder.item = 99)
                     driver.emitErasureBox(ops, sfaValueType);
+                } else if (TypeMetrics.isNullablePrimitive(fld.type())
+                        && sfaValueType instanceof Type.PrimitiveType sfaPT && !Type.isVoid(sfaPT)
+                        && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)) {
+                    // §361: espelho do gate do §295(b) p/ locais — campo Int? e
+                    // referencia boxed; o gate de erasure (erasesToReference,
+                    // FALSE p/ NullableType) nao o conhecia e o cru caia no
+                    // putfield boxed (VerifyError no JVM / SIGSEGV no nat).
+                    boxIntoSlot(driver, ops, fld.type(), sfaValueType);
                 }
             }
             ops.add(new KofPutStatic(cs.type(), fa.fieldName(), sfaConcat ? BuiltinTypes.STRING : fld.type()));
@@ -234,26 +262,52 @@ static int lowerField(CompilerDriver driver, AssignmentExpr ae, FieldAccessExpr 
     boolean faCompound = ExpressionAssignmentLowerer.isCompoundOp(faOp);
     Type faValType = ExpressionTyper.inferExprType(driver, ae.value(), locals);
     if (faCompound) {
+        // §361 (composto): campo Int? -> o cur (slot boxed) e o RHS cru nao
+        // casam com o putfield boxed; a aritmetica roda no INNER (unbox do
+        // cur, conv do rhs p/ inner, binario, box do resultado) — espelho do
+        // composto de locais (§295(b)). RHS ja Nullable passa pelo caminho
+        // antigo (referencia fisicamente — nunca re-box, lesson §294-2a).
+        Type faCInner = TypeMetrics.isNullablePrimitive(fieldType)
+                && faValType instanceof Type.PrimitiveType faRPT && !Type.isVoid(faRPT)
+                && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)
+                ? ((Type.NullableType) fieldType).inner() : null;
+        Type faBinType = faCInner != null ? faCInner : fieldType;
         // §103.2 (#103): widening do valor p/ o tipo do campo (h.value = n,
         // Int→Long); no shift (`<<=`) a contagem é int (L2I) — regra do §167.
-        ExpressionAssignmentLowerer.emitCompoundRhsConv(driver, ops, faOp, fieldType, faValType);
+        ExpressionAssignmentLowerer.emitCompoundRhsConv(driver, ops, faOp, faBinType, faValType);
         // o binario quer [cur, rhs]; derrama o rhs e recolhe na ordem certa
         // (commutatividade NAO pode ser assumida — sub/div/shift).
-        ops.add(new KofStoreLocal(fieldType, localIdx));
-        locals.add(new IRLocalVariable(localIdx, "#fldrhs" + localIdx, fieldType));
+        ops.add(new KofStoreLocal(faBinType, localIdx));
+        locals.add(new IRLocalVariable(localIdx, "#fldrhs" + localIdx, faBinType));
         faValSlot = localIdx;
-        localIdx = localIdx + (TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1);
+        localIdx = localIdx + (TypeMetrics.isDoubleWidth(faBinType) ? 2 : 1);
         ops.add(new KofLoadLocal(fieldType, faCurSlot));
-        ops.add(new KofLoadLocal(fieldType, faValSlot));
-        ops.add(new KofBinary(ExpressionAssignmentLowerer.compoundBinaryOp(faOp), fieldType));
+        if (faCInner != null) {
+            driver.emitErasureUnbox(ops, faCInner);
+        }
+        ops.add(new KofLoadLocal(faBinType, faValSlot));
+        ops.add(new KofBinary(ExpressionAssignmentLowerer.compoundBinaryOp(faOp), faBinType));
+        if (faCInner != null) {
+            driver.emitErasureBox(ops, faCInner);
+        }
     } else if ("=".equals(faOp)) {
-        if (TypeMetrics.isPrimitiveType(fieldType)) {
+        // §361: mesmo guard do gate estatico — campo Int? (boxed fisico) nao
+        // pode ser engolido pelo widening "primitivo".
+        if (TypeMetrics.isPrimitiveType(fieldType) && !TypeMetrics.isNullablePrimitive(fieldType)) {
             driver.emitWideningIfNeeded(ops, faValType, fieldType);
         } else if (driver.erasesToReference(fieldType)
                 && TypeMetrics.isPrimitiveType(faValType)
                 && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)) {
             // Issue #181: atribuição de primitivo a campo tipo Object (h.field = 99)
             driver.emitErasureBox(ops, faValType);
+        } else if (TypeMetrics.isNullablePrimitive(fieldType)
+                && faValType instanceof Type.PrimitiveType faPT && !Type.isVoid(faPT)
+                && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)) {
+            // §361: espelho do gate do §295(b) p/ locais — campo Int? e
+            // referencia boxed; o gate de erasure (erasesToReference, FALSE
+            // p/ NullableType) nao o conhecia e o cru caia no putfield boxed
+            // (VerifyError no JVM / SIGSEGV no nat).
+            boxIntoSlot(driver, ops, fieldType, faValType);
         }
     }
     if (isStaticField) {
@@ -270,4 +324,23 @@ static int lowerField(CompilerDriver driver, AssignmentExpr ae, FieldAccessExpr 
     }
     return localIdx;
 }
+
+    /**
+     * §361: box do RHS cru para o slot boxed de um campo {@code Nullable(
+     * primitivo)} — widening até o INNER declarado do slot (lesson #259: boxar
+     * pela ORIGEM empilha um tipo e chama o boxer de outro) e
+     * {@code emitErasureBox} (auto-gamado: JVM/Native; Script/JS fluem como
+     * antes — nunca re-box de referência física, lesson §294-2a).
+     */
+    private static void boxIntoSlot(CompilerDriver driver, List<KofOperation> ops,
+            Type fieldType, Type valueType) {
+        if (!(fieldType instanceof Type.NullableType nt)
+                || !(nt.inner() instanceof Type.PrimitiveType inner)) {
+            return;
+        }
+        if (valueType instanceof Type.PrimitiveType vt && !vt.equals(inner)) {
+            driver.emitWideningIfNeeded(ops, valueType, inner);
+        }
+        driver.emitErasureBox(ops, inner);
+    }
 }

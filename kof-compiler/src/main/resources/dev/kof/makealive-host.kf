@@ -1,0 +1,448 @@
+// dev/kof/makealive-host.kf — host escrito EM KOF do pacote virtual
+// `kof.makealive` (tracker 3.1, plano §5; superfície assinada por
+// D-MAKEALIVE 20/09: Q1 nome `kof.makealive`, Q2 providers genéricos como
+// interop, Q3 estado sobre kof.db desde o dia 1, Q4 host FLAT com faces em
+// inglês `resource`/`requires`/`plan`/`apply`/`destroy`). Injetado flat no
+// `import kof.makealive` explícito — mesmo mecanismo do kof.workflow
+// (DD-OTP-01 opção A).
+//
+// Modelo (plano §2 — imperativo-tornado-dado): typed resources + builder +
+// funções puras. `plan` é diff PURO (zero efeito); `apply`/`destroy`
+// convergem o mundo via PROVIDER (function-values — o idioma Kof de
+// interface, precedente KofWfJob.corpo; campo-lambda só pode ser CHAMADO
+// via local tipado — medido 20/09, §379) e o estado só avança no sucesso
+// (plano §3: falha deixa o estado anterior intacto e nomeia o resource).
+// Ciclo é recusado com throw nomeando os membros (runtime — o compile-time
+// é a linha 3.7, ⛔ R4); duplicado é recusado no builder.
+//
+// Estado = DADO (State/StateEntry; iterado por List — Map.keys() é
+// target-dependent, recon 3.0.1). Persistir (kof.db dia-1 por Q3) é papel
+// do CALLER sobre `Report.state`: a face `dbState` é a fatia 3.4, aditiva,
+// engines por alvo. O host em si não cruza fronteira de runtime: roda em
+// JVM/ANDROID/Script/JS/Native (lição do workflow — sem gate na camada de
+// composição; gaps honestos sobem no corpo do provider).
+//
+// Idiomas travados pelas sondas 3.1.0 (MakealivePrimitivesE2ETest): record
+// String fields; class com campos Map/List inicializados; método fluente
+// `return this`; invoke de campo-lambda via local tipado; narrowing
+// POSITIVO; while-com-índice dirigindo List (sem range, sem ternário).
+
+record Resource(String kind, String name)
+
+// ── estado (dado persistido pelo caller — carga/devolução são dele) ────────
+
+class StateEntry {
+    String name = ""
+    List<String> propFlat = listOf()
+
+    public constructor(String name, List<String> propFlat) {
+        this.name = name
+        this.propFlat = propFlat
+    }
+}
+
+class State {
+    List<StateEntry> entries = listOf()
+}
+
+// ── desenho desejado (builder) ─────────────────────────────────────────────
+
+class Spec {
+    Resource res = null
+    List<String> propFlat = listOf()
+    List<String> needs = listOf()
+}
+
+class Infrastructure {
+    String nome = ""
+    List<Spec> specs = listOf()
+
+    public constructor(String nome) {
+        if (nome == "") { throw "makealive: design com nome vazio" }
+        this.nome = nome
+    }
+
+    // Q4: face `resource` — typed resource no desenho; nome vazio ou
+    // duplicado é recusado NA HORA (plano §2 "duplicates refused").
+    Infrastructure resource(String kind, String nomeRecurso) {
+        if (kind == "") { throw "makealive: resource em '" + this.nome + "' sem kind" }
+        if (nomeRecurso == "") { throw "makealive: resource de kind '" + kind + "' sem nome" }
+        if (kofMkTemNome(this, nomeRecurso)) {
+            throw "makealive: resource duplicada no design '" + this.nome + "': '" + nomeRecurso + "'"
+        }
+        var s = Spec()
+        s.res = Resource(kind, nomeRecurso)
+        this.specs.add(s)
+        return this
+    }
+
+    // props como pares k,v aditivos: a ordem declarada É a ordem do diff
+    // (mapOf não serve de ordem — keys() target-dependent, §4 row 2).
+    Infrastructure prop(String nomeRecurso, String chave, String valor) {
+        var s = kofMkSpec(this, nomeRecurso)
+        if (kofMkTemProp(s, chave)) {
+            throw "makealive: prop duplicada '" + chave + "' em '" + nomeRecurso + "'"
+        }
+        s.propFlat.add(chave)
+        s.propFlat.add(valor)
+        return this
+    }
+
+    // Q4: face `requires` — `filho` só é aplicado depois de `pai`; ciclo é
+    // recusado em plan/apply com o nome dos membros (runtime; 3.7 = R4).
+    Infrastructure requires(String filho, String pai) {
+        var s = kofMkSpec(this, filho)
+        if (filho == pai) {
+            throw "makealive: ciclo de dependencia: '" + filho + "' depende de si mesmo"
+        }
+        var i = 0
+        while (i < s.needs.size()) {
+            if (s.needs.get(i) == pai) { return this }
+            i = i + 1
+        }
+        s.needs.add(pai)
+        return this
+    }
+}
+
+// ── provider: a fronteira com o mundo (Q2 — interop fica no CORPO dele) ───
+
+class Provider {
+    // read serve ao drift/reconcile (fatia 3.3); plan/apply v1 são
+    // autoritativos no ESTADO (contrato §3: só apply toca o mundo).
+    (Resource) -> Map<String, String> read = null
+    (Resource, Map<String, String>) -> Bool set = null
+    (Resource) -> Bool delete = null
+
+    public constructor((Resource) -> Map<String, String> read,
+                       (Resource, Map<String, String>) -> Bool set,
+                       (Resource) -> Bool delete) {
+        this.read = read
+        this.set = set
+        this.delete = delete
+    }
+}
+
+// ── plano = diff puro ──────────────────────────────────────────────────────
+
+class Plan {
+    List<String> creates = listOf()
+    List<String> updates = listOf()
+    List<String> deletes = listOf()
+}
+
+class Report {
+    List<String> created = listOf()
+    List<String> updated = listOf()
+    List<String> deleted = listOf()
+    State state = null
+}
+
+Plan plan(Infrastructure desired, State current) {
+    var pl = Plan()
+    var ordem = kofMkTopo(desired)
+    var i = 0
+    while (i < ordem.size()) {
+        var n = ordem.get(i)
+        var s = kofMkSpec(desired, n)
+        var e = kofMkEstadoDe(current, n)
+        if (e.name != n) {
+            pl.creates.add(n)
+        }
+        if (e.name == n && kofMkDiffere(s, e)) {
+            pl.updates.add(n)
+        }
+        i = i + 1
+    }
+    var j = current.entries.size() - 1
+    while (j >= 0) {
+        var nome = current.entries.get(j).name
+        if (!kofMkTemNome(desired, nome)) { pl.deletes.add(nome) }
+        j = j - 1
+    }
+    return pl
+}
+
+// ── apply: convergem o mundo; o estado novo só existe se TUDO deu certo ────
+
+Report apply(Infrastructure desired, State current, Provider provider) {
+    var pl = plan(desired, current)
+    var novo = kofMkCloneState(current)
+    var rep = Report()
+    var setFn: (Resource, Map<String, String>) -> Bool = provider.set
+    var delFn: (Resource) -> Bool = provider.delete
+    var i = 0
+    while (i < pl.creates.size()) {
+        var nc = pl.creates.get(i)
+        kofMkSetNoMundo(desired, novo, setFn, nc, rep, true)
+        i = i + 1
+    }
+    var j = 0
+    while (j < pl.updates.size()) {
+        var nu = pl.updates.get(j)
+        kofMkSetNoMundo(desired, novo, setFn, nu, rep, false)
+        j = j + 1
+    }
+    var k = 0
+    while (k < pl.deletes.size()) {
+        var nd = pl.deletes.get(k)
+        kofMkDelNoMundo(novo, delFn, nd, rep)
+        k = k + 1
+    }
+    rep.state = novo
+    return rep
+}
+
+// destroy: derruba o estado em ordem topológica INVERSA do desenho
+// (dependente antes da dependência); o que não pertence ao desenho cai em
+// ordem reversa de inserção. Estado final: vazio.
+Report destroy(Infrastructure desired, State current, Provider provider) {
+    var rep = Report()
+    var delFn: (Resource) -> Bool = provider.delete
+    var ordem = kofMkOrdemDestroy(desired, current)
+    var i = 0
+    while (i < ordem.size()) {
+        var nome = ordem.get(i)
+        var res = Resource("removed", nome)
+        if (kofMkTemNome(desired, nome)) {
+            res = kofMkSpec(desired, nome).res
+        }
+        var ok = true
+        try {
+            ok = delFn(res)
+        } catch (String e) {
+            throw "makealive: destroy falhou em '" + nome + "': " + e
+        }
+        if (!ok) { throw "makealive: provider recusou delete em '" + nome + "'" }
+        rep.deleted.add(nome)
+        i = i + 1
+    }
+    rep.state = State()
+    return rep
+}
+
+// ── helpers internos (prefixo kofMk — não são superfície) ─────────────────
+
+void kofMkSetNoMundo(Infrastructure d, State novo,
+                     (Resource, Map<String, String>) -> Bool setFn,
+                     String nomeRecurso, Report rep, Bool eraNovo) {
+    var s = kofMkSpec(d, nomeRecurso)
+    var props = kofMkMapaDeProps(s)
+    var ok = true
+    try {
+        ok = setFn(s.res, props)
+    } catch (String e) {
+        throw "makealive: apply falhou em '" + nomeRecurso + "': " + e
+    }
+    if (!ok) { throw "makealive: provider recusou set em '" + nomeRecurso + "'" }
+    kofMkSetEstado(novo, nomeRecurso, kofMkCopiarFlat(s.propFlat))
+    if (eraNovo) { rep.created.add(nomeRecurso) } else { rep.updated.add(nomeRecurso) }
+}
+
+void kofMkDelNoMundo(State novo, (Resource) -> Bool delFn, String nomeRecurso, Report rep) {
+    var ok = true
+    try {
+        ok = delFn(Resource("removed", nomeRecurso))
+    } catch (String e) {
+        throw "makealive: apply falhou no delete de '" + nomeRecurso + "': " + e
+    }
+    if (!ok) { throw "makealive: provider recusou delete em '" + nomeRecurso + "'" }
+    kofMkDelEstado(novo, nomeRecurso)
+    rep.deleted.add(nomeRecurso)
+}
+
+Bool kofMkTemNome(Infrastructure d, String nomeRecurso) {
+    var i = 0
+    while (i < d.specs.size()) {
+        if (d.specs.get(i).res.name() == nomeRecurso) { return true }
+        i = i + 1
+    }
+    return false
+}
+
+// or-throw: NENHUM helper do host devolve T? — o contrato §3 torna a
+// ausência um erro nomeado, e os callers só precisam do valor presente.
+Spec kofMkSpec(Infrastructure d, String nomeRecurso) {
+    var i = 0
+    while (i < d.specs.size()) {
+        if (d.specs.get(i).res.name() == nomeRecurso) { return d.specs.get(i) }
+        i = i + 1
+    }
+    throw "makealive: '" + nomeRecurso + "' nao e uma resource do design '" + d.nome + "'"
+}
+
+Bool kofMkTemProp(Spec s, String chave) {
+    var i = 0
+    while (i < s.propFlat.size()) {
+        if (s.propFlat.get(i) == chave) { return true }
+        i = i + 2
+    }
+    return false
+}
+
+// topo por fixpoint (padrão workflow run(), §4 row 3) dirigindo por List
+// declarado; trava de progresso = ciclo → throw nomeando os membros.
+List<String> kofMkTopo(Infrastructure d) {
+    var nomes = listOf()
+    var i = 0
+    while (i < d.specs.size()) {
+        var s = d.specs.get(i)
+        nomes.add(s.res.name())
+        var j = 0
+        while (j < s.needs.size()) {
+            var dep = s.needs.get(j)
+            if (!kofMkTemNome(d, dep)) {
+                throw "makealive: '" + s.res.name() + "' depende de nome inexistente '" + dep + "'"
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+    var done = listOf()
+    var progress = true
+    while (progress) {
+        progress = false
+        var k = 0
+        while (k < nomes.size()) {
+            var n = nomes.get(k)
+            if (!done.contains(n) && kofMkPronto(d, n, done)) {
+                done.add(n)
+                progress = true
+            }
+            k = k + 1
+        }
+    }
+    if (done.size() != nomes.size()) {
+        var sobra = listOf()
+        var m = 0
+        while (m < nomes.size()) {
+            if (!done.contains(nomes.get(m))) { sobra.add(nomes.get(m)) }
+            m = m + 1
+        }
+        throw "makealive: ciclo de dependencia em '" + d.nome + "': " + kofMkJoin(sobra, ", ")
+    }
+    return done
+}
+
+Bool kofMkPronto(Infrastructure d, String nomeRecurso, List<String> done) {
+    var s = kofMkSpec(d, nomeRecurso)
+    var i = 0
+    while (i < s.needs.size()) {
+        if (!done.contains(s.needs.get(i))) { return false }
+        i = i + 1
+    }
+    return true
+}
+
+String kofMkJoin(List<String> xs, String sep) {
+    var out = ""
+    var i = 0
+    while (i < xs.size()) {
+        if (i > 0) { out = out + sep }
+        out = out + xs.get(i)
+        i = i + 1
+    }
+    return out
+}
+
+// sentinela (name="") em vez de T? — nenhum valor nullable circula no host
+StateEntry kofMkEstadoDe(State st, String nomeRecurso) {
+    var i = 0
+    while (i < st.entries.size()) {
+        if (st.entries.get(i).name == nomeRecurso) { return st.entries.get(i) }
+        i = i + 1
+    }
+    return StateEntry("", listOf())
+}
+
+// diff: cada par do desired presente no current com o MESMO valor; chaves
+// extras no estado são ignoradas no v1 (drift = reconcile 3.3, linha do
+// plano que usa provider.read).
+Bool kofMkDiffere(Spec s, StateEntry e) {
+    var i = 0
+    while (i < s.propFlat.size()) {
+        var ch = s.propFlat.get(i)
+        var va = s.propFlat.get(i + 1)
+        var achou = false
+        var j = 0
+        while (j < e.propFlat.size()) {
+            if (e.propFlat.get(j) == ch) {
+                if (e.propFlat.get(j + 1) != va) { return true }
+                achou = true
+            }
+            j = j + 2
+        }
+        if (!achou) { return true }
+        i = i + 2
+    }
+    return false
+}
+
+Map<String, String> kofMkMapaDeProps(Spec s) {
+    var m = mapOf()
+    var i = 0
+    while (i < s.propFlat.size()) {
+        m.put(s.propFlat.get(i), s.propFlat.get(i + 1))
+        i = i + 2
+    }
+    return m
+}
+
+State kofMkCloneState(State st) {
+    var novo = State()
+    var i = 0
+    while (i < st.entries.size()) {
+        var e = st.entries.get(i)
+        novo.entries.add(StateEntry(e.name, kofMkCopiarFlat(e.propFlat)))
+        i = i + 1
+    }
+    return novo
+}
+
+void kofMkSetEstado(State st, String nomeRecurso, List<String> propFlat) {
+    var e = kofMkEstadoDe(st, nomeRecurso)
+    if (e.name == nomeRecurso) {
+        e.propFlat = propFlat
+    } else {
+        st.entries.add(StateEntry(nomeRecurso, propFlat))
+    }
+}
+
+void kofMkDelEstado(State st, String nomeRecurso) {
+    var i = 0
+    while (i < st.entries.size()) {
+        if (st.entries.get(i).name == nomeRecurso) {
+            st.entries.remove(i)
+            return
+        }
+        i = i + 1
+    }
+}
+
+List<String> kofMkCopiarFlat(List<String> xs) {
+    var out = listOf()
+    var i = 0
+    while (i < xs.size()) {
+        out.add(xs.get(i))
+        i = i + 1
+    }
+    return out
+}
+
+List<String> kofMkOrdemDestroy(Infrastructure d, State current) {
+    var topo = kofMkTopo(d)
+    var out = listOf()
+    var i = topo.size() - 1
+    while (i >= 0) {
+        var n = topo.get(i)
+        if (kofMkEstadoDe(current, n).name == n) { out.add(n) }
+        i = i - 1
+    }
+    var j = current.entries.size() - 1
+    while (j >= 0) {
+        var nome = current.entries.get(j).name
+        if (!kofMkTemNome(d, nome)) { out.add(nome) }
+        j = j - 1
+    }
+    return out
+}

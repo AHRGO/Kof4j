@@ -141,7 +141,7 @@ public final class NativeRiscvAsmLookups0 {
                 beqz t0, .Llk_eq            # ambos NaN = 0 (Double.compare)
                 j    .Llk_gt                # a NaN > não-NaN
             .Llk_str:
-                j    kof_string_compare_to
+                j    String_compareTo
             .Llk_int:
                 slt  t0, a0, a1
                 bnez t0, .Llk_lt
@@ -380,6 +380,46 @@ public final class NativeRiscvAsmLookups0 {
                 ld   s0, 32(sp)
                 ld   ra, 40(sp)
                 addi sp, sp, 48
+                ret
+
+            # kof_list_add_all(a0=dst, a1=src) -> 0/1 mudou (#386/#382)
+            # espelho riscv do x86 RuntimeListLookups: copia elemento a
+            # elemento via kof_list_add; mudou = tamanho final != inicial.
+            .globl kof_list_add_all
+            kof_list_add_all:
+                addi sp, sp, -40
+                sd   ra, 32(sp)
+                sd   s0, 24(sp)          # dst
+                sd   s1, 16(sp)          # src
+                sd   s2, 8(sp)           # old size
+                sd   s3, 0(sp)           # j
+                mv   s0, a0
+                mv   s1, a1
+                lw   s2, 16(s0)
+                li   s3, 0
+            .Llaa_loop:
+                lw   t0, 16(s1)
+                bge  s3, t0, .Llaa_done
+                mv   a0, s0
+                ld   t0, 24(s1)
+                slli t1, s3, 3
+                add  t0, t0, t1
+                ld   a1, 0(t0)
+                call kof_list_add
+                addi s3, s3, 1
+                j    .Llaa_loop
+            .Llaa_done:
+                li   a0, 0
+                lw   t0, 16(s0)
+                beq  t0, s2, .Llaa_ret
+                li   a0, 1
+            .Llaa_ret:
+                ld   s3, 0(sp)
+                ld   s2, 8(sp)
+                ld   s1, 16(sp)
+                ld   s0, 24(sp)
+                ld   ra, 32(sp)
+                addi sp, sp, 40
                 ret
             """;
 }

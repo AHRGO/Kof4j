@@ -27,6 +27,9 @@ class FfiSignatureTest {
         assertEquals('d', FfiSignature.paramChar("Double"));
         assertEquals('b', FfiSignature.paramChar("Boolean"));
         assertEquals('b', FfiSignature.paramChar("bool"));
+        assertEquals('b', FfiSignature.paramChar("Bool"),
+                "#431: `Bool` is the Kof frontend spelling — missing until the "
+                        + "Native fatia; additive (what was FFI001 now binds)");
         assertEquals('S', FfiSignature.paramChar("String"));
     }
 
@@ -39,8 +42,7 @@ class FfiSignatureTest {
 
     @Test
     void returnCharAddsVoid() {
-        assertEquals('v', FfiSignature.returnChar("void"));
-        assertEquals('v', FfiSignature.returnChar(""));
+        assertEquals('v', FfiSignature.returnChar("void"));        assertEquals('v', FfiSignature.returnChar(""));
         assertEquals('v', FfiSignature.returnChar(null));
         assertEquals('j', FfiSignature.returnChar("Long"));
         assertEquals('f', FfiSignature.returnChar("Float"));
@@ -74,5 +76,26 @@ class FfiSignatureTest {
                 "non-scalar callback arg stays non-bindable");
         assertNull(FfiSignature.callbackDescriptor("(Int[]) -> Int"),
                 "array callback arg is R3 3.8, not bindable");
+    }
+
+    // #431 (Native): ponte Type→char e String→Type usada pelo call-site nativo.
+    @Test
+    void charOfTypeAndParamTypeBridgeNativeLowering() {
+        assertEquals('i', FfiSignature.charOfType(Type.PrimitiveType.INT));
+        assertEquals('j', FfiSignature.charOfType(Type.PrimitiveType.LONG));
+        assertEquals('f', FfiSignature.charOfType(Type.PrimitiveType.FLOAT));
+        assertEquals('d', FfiSignature.charOfType(Type.PrimitiveType.DOUBLE));
+        assertEquals('b', FfiSignature.charOfType(Type.PrimitiveType.BOOL));
+        assertEquals('v', FfiSignature.charOfType(Type.PrimitiveType.VOID));
+        assertEquals('S', FfiSignature.charOfType(BuiltinTypes.STRING));
+        assertNull(FfiSignature.charOfType(Type.PrimitiveType.CHAR),
+                "Char nao e do conjunto FFI — o gate nao baixa (FFI001 na declaracao)");
+        assertEquals(Type.PrimitiveType.INT, FfiSignature.paramType("Int"));
+        assertEquals(Type.PrimitiveType.LONG, FfiSignature.paramType("Long"));
+        assertEquals(Type.PrimitiveType.FLOAT, FfiSignature.paramType("Float"));
+        assertEquals(Type.PrimitiveType.DOUBLE, FfiSignature.paramType("Double"));
+        assertEquals(Type.PrimitiveType.BOOL, FfiSignature.paramType("Bool"));
+        assertSame(BuiltinTypes.STRING, FfiSignature.paramType("String"));
+        assertNull(FfiSignature.paramType("Int[]"), "array param never lowers raw");
     }
 }

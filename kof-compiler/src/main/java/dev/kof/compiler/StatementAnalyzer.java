@@ -108,6 +108,39 @@ public final class StatementAnalyzer {
                 if (wf instanceof SymbolTable.FieldSymbol wfs) {
                     MemberCallTyper.checkFieldAccess(sa, wfs);
                     MemberCallTyper.checkFinalFieldWrite(sa, wfs);
+                    // §379 (era §376; originally §363/§371): escrita de lambda em campo de tipo-funcao tem o MESMO
+                    // contrato da declaracao SC2 (`var f: (T) -> U = ...`): o lambda
+                    // e emitido com a interface da assinatura INFERIDA do corpo e o
+                    // call site despacha pela DECLARADA do campo — divergencia
+                    // (ex.: corpo `-> Map?` em campo `-> Map`) ICE em runtime.
+                    // Rejeita no compile-time com SEM021. Este gate e o dueno de
+                    // FunctionType; o gate generico §368 abaixo cobre o resto.
+                    Type fieldType = wfs.type();
+                    if (sa.diagnostics() != null && fieldType instanceof Type.FunctionType
+                            && !TypeChecker.functionTypesConform(valueType, fieldType)) {
+                        sa.diagnostics().error("", 0, 0, 0,
+                                "type mismatch: cannot assign " + valueType
+                                        + " to field '" + fa.fieldName() + ": " + fieldType + "'",
+                                "SEM021");
+                    }
+                    // §368: a store de campo deve passar pelo MESMO gate de
+                    // atributibilidade do local (:52-58) e do var-decl (:245).
+                    // Sem isto, `x.c = "x"` (Char) e `x.n = 2.5` (Int) compilam
+                    // "clean" e morrem em VerifyError na carga (JVM/Native) ou
+                    // viram phantom-store no Script/JS — R6 + regra 5. A caixa
+                    // de widening numerico (42 → Int?, 'x' → Char?) ja existe no
+                    // writer (§361); o gate so rejeita o que NENHUM backend
+                    // executa hoje — nenhum golden funcional muda (Probe4).
+                    boolean strConcatAssign = "+=".equals(ae.operator()) && BuiltinTypes.isString(wfs.type());
+                    if (sa.diagnostics() != null && !Type.isUnknown(fieldType)
+                            && !Type.isUnknown(valueType)
+                            && !strConcatAssign
+                            && !(fieldType instanceof Type.FunctionType)
+                            && !TypeChecker.isAssignable(sa, valueType, fieldType)) {
+                        sa.diagnostics().error("", 0, 0, 0,
+                                "Type mismatch: cannot assign " + valueType + " to " + fieldType,
+                                "SEM012");
+                    }
                 }
             }
         } else if (ae.target() instanceof ArrayAccessExpr aa) {
@@ -241,10 +274,11 @@ public final class StatementAnalyzer {
                 if (sa.diagnostics() != null && vds.initializer() != null
                         && !varType.equals(Type.UnknownType.UNKNOWN)) {
                     Type initType = SemExpressionTyper.inferType(sa, vds.initializer(), scope);
+                    boolean ftIssue = initType instanceof Type.FunctionType
+                            && varType instanceof Type.FunctionType;
                     if (!initType.equals(Type.UnknownType.UNKNOWN)
                             && !TypeChecker.isAssignable(sa, initType, varType)
-                            && !(initType instanceof Type.FunctionType)
-                            && !(varType instanceof Type.FunctionType)) {
+                            && !(ftIssue && TypeChecker.functionTypesConform(initType, varType))) {
                         sa.diagnostics().error("", 0, 0, 0,
                                 "type mismatch: cannot assign " + initType
                                         + " to '" + vds.name() + ": " + varType + "'",

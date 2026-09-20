@@ -425,6 +425,21 @@ final class NativeMethodEmitter {
             }
         }
         sb.append("    call ").append(nb.sanitizeName(clazz.name())).append("_main\n");
+        // #431: com externs bindados a libc flusha o stdio DA C antes do
+        // exit_group cru — puts/printf da lib ficam no buffer do processo e
+        // um _start sem atexit() perde tudo (medição 19/09: puts retornava 10
+        // e a linha nunca aparecia). Sem externs: binário não toca libc.
+        if (!nb.ffiLibs.isEmpty()) {
+            // fflush(NULL): rdi PRECISA ser 0 (lixo = SEGV, medido 19/09) e o
+            // glibc usa SSE com stack 16-align — no _start cru o %rsp não é
+            // garantido; mesma técnica do shim `pow` (guarda rbp-rsp em rbx,
+            // andq $-16, chama, restaura).
+            sb.append("    movq %rsp, %rbx\n");
+            sb.append("    andq $-16, %rsp\n");
+            sb.append("    xorl %edi, %edi\n");
+            sb.append("    call fflush@PLT\n");
+            sb.append("    movq %rbx, %rsp\n");
+        }
         // M32.3: SYS_exit_group (231) — SYS_exit (60) só mata a thread
         // chamadora; com threads do driver Vulkan o processo fica pendurado.
         sb.append("    movq $231, %rax\n");

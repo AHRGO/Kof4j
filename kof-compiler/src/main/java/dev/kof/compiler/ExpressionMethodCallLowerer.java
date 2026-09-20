@@ -55,6 +55,29 @@ if (handledStatic >= 0) return handledStatic;
 if (mc.receiver() == null && driver.externSignatures.containsKey(mc.methodName())) {
     ExternalFunctionNode ext = driver.externSignatures.get(mc.methodName());
     if (CompilerPipeline.isExternBound(driver, ext)) {
+        // #431/§61 (Native): ABI escalar DIRETA — os args ficam crus na pilha de
+        // operandos (mesma convenção push dos calls internos) e o backend emite o
+        // marshaling SysV + `call sym@PLT` (precedente: consumidor SQLite/DB001).
+        // O KofCall carrega owner=kof.ffi + methodName "lib::simbolo" como
+        // metadado — nenhum lowering de usuário gera "::" num nome de método.
+        if (driver.target.isNative()) {
+            // #431 fatia 2: o mesmo KofCall "lib::simbolo" serve as 3 archs —
+            // o backend escolhe o shim (x86 SysV / riscv LP64 / aarch AAPCS64
+            // via tradução do texto riscv).
+            List<Type> ffiParams = new java.util.ArrayList<>();
+            for (var p : ext.parameters()) ffiParams.add(FfiSignature.paramType(p.type()));
+            for (int i = 0; i < mc.arguments().size(); i++) {
+                ExpressionNode arg = mc.arguments().get(i);
+                localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
+                // #549/§370: o marshaling SysV lê os bits pela classe do SLOT — o
+                // argumento chega já convertido ao tipo declarado (regra comum).
+                ExternArgumentCoercion.coerce(driver, arg, i < ffiParams.size() ? ffiParams.get(i) : null, ops, locals);
+            }
+            ops.add(new KofCall(new Type.ClassType("kof", "ffi", List.of()),
+                    ext.library() + "::" + ext.name(), ffiParams,
+                    FfiSignature.returnType(ext.returnType()), KofCallKind.FUNCTION));
+            return localIdx;
+        }
         // FFI (R3, generalizado): kof_ffi(lib, nome, sig, Object[] args).
         Type object = new Type.ClassType("java.lang", "Object", List.of());
         Type objectArray = new Type.ArrayType(object);
@@ -72,6 +95,10 @@ if (mc.receiver() == null && driver.externSignatures.containsKey(mc.methodName()
             ExpressionNode arg = mc.arguments().get(i);
             localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
             Type argType = ExpressionTyper.inferExprType(driver, arg, locals);
+            // #549/§370: `Double→Float`/`Int→Float`… viram a conversão real ANTES do
+            // box — o `kof_ffi` faz cast pelo wrapper do slot (Float), nunca reinterpreta.
+            Type slot = i < ext.parameters().size() ? FfiSignature.paramType(ext.parameters().get(i).type()) : null;
+            if (ExternArgumentCoercion.coerce(driver, arg, slot, ops, locals)) argType = slot;
             if (argType instanceof Type.PrimitiveType) {
                 TypeEmitter.boxPrimitive(ops, argType);
             }

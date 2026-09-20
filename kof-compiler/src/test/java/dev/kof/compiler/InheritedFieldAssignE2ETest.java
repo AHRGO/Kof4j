@@ -45,8 +45,9 @@ class InheritedFieldAssignE2ETest {
     }
 
     private String runJvm(Path outDir, String tag, String expected) throws Exception {
-        Process p = new ProcessBuilder(System.getProperty("java.home") + "/bin/java",
-                "-cp", outDir.toString(), "Default.Main")
+        Path javaHome = Path.of(System.getProperty("java.home"));
+        Process p = new ProcessBuilder(javaHome.resolve("bin").resolve("java").toString(),
+                "-cp", outDir.toAbsolutePath().toString(), "Default.Main")
                 .redirectErrorStream(true).start();
         String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
                 .replace("\r\n", "\n").trim();
@@ -60,8 +61,9 @@ class InheritedFieldAssignE2ETest {
     }
 
     private String javap(Path outDir, String binaryName) throws Exception {
-        Process p = new ProcessBuilder(System.getProperty("java.home") + "/bin/javap",
-                "-c", "-p", "-l", "-cp", outDir.toString(), binaryName)
+        Path javaHome = Path.of(System.getProperty("java.home"));
+        Process p = new ProcessBuilder(javaHome.resolve("bin").resolve("javap").toString(),
+                "-c", "-p", "-l", "-cp", outDir.toAbsolutePath().toString(), binaryName)
                 .redirectErrorStream(true).start();
         String out = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
         if (!p.waitFor(30, java.util.concurrent.TimeUnit.SECONDS)) {

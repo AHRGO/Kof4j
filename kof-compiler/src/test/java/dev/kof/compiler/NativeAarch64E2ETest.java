@@ -104,6 +104,17 @@ class NativeAarch64E2ETest {
                 "aarch64 must match the JVM oracle (regra 5)");
     }
 
+    // Arestas do port §359 (add_all riscv + kof_list_cmp→String_compareTo;
+    // aarch64 herda via tradutor): addAll em dst populado/crescente e o
+    // compare-to do sort (prefixo "app"<"apple" + iguais "apple").
+    @Test
+    void aarch64CrossRuntimePortsEdges(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String out = runAarch64(tempDir, CrossRuntimePortsE2ETest.PROGRAM);
+        assertEquals(CrossRuntimePortsE2ETest.GOLDEN, out,
+                "aarch64 add_all + string_compare_to edges must match the JVM oracle (regra 5)");
+    }
+
     @Test
     void aarch64HttpGetPostStatus(@TempDir Path tempDir) throws IOException {
         assumeToolchain();
@@ -1203,6 +1214,21 @@ main() {
             }
             """);
         assertEquals("4.0\n1.0\n3.75\n1.6666666\n7.0\n3.5\n9.007199E15\n6.0\n3.5", out);
+    }
+
+    // #464 — a ISOLACAO que faltava: `Float` NU com compound-assign (a face
+    // que o tradutor rodava como double ate §342/f9119550) + matriz Q3
+    // completa (-= *= /=, local += local, for, 3x sequencial, gemeo Float?,
+    // mistura Double/Float). Golden = medicao no oraculo JVM
+    // (FloatCompoundAssignE2ETest). A trava §342 misturava os caminhos num
+    // programa so; aqui cada linha isola um — regressao em qualquer operador
+    // composto de precisao simples fica nominal.
+    @Test
+    void aarch64FloatCompoundAssignIsolation(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String out = runAarch64(tempDir, FloatCompoundAssignE2ETest.PROGRAM);
+        assertEquals(FloatCompoundAssignE2ETest.GOLDEN, out,
+                "aarch64 single-precision compound-assign must match the JVM oracle (regra 5)");
     }
 
     // §235 native face (aarch64, via translator): wrapper statics (parse*/is*).

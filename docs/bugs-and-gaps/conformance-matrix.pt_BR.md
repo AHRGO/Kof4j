@@ -92,6 +92,10 @@
 | `Char[]` out of range (`c[0]=70000`, `c[1]=-1`) in 1-D and 2-D + control `Short[] -1` — §187 | `4464` / `65535` / `4464` / `65535` / `-1` | DONE | DONE | PARTIAL (bug §185 — crash on the `Char[]` store) | PARTIAL (bug §184 — pure JS `Array` without type tag) | `charnarrow` |
 | `static` initializer of CONSTANT expression (`-1`, `2+3`, `-7L`, `-1.5`, `"a"+"b"`, `!false`) — §186 ✅ 13/09 | `-1` / `5` / `-7` / `-1.5` / `ab` / `true` / `7` | DONE | DONE | DONE | DONE | `staticinit` |
 | static field + bump | `1` / `2` / `2` | DONE | DONE (bug 41 fixed 07/09) | DONE | DONE | `staticfield` |
+| escrita de campo nullable-primitivo + leitura (`b.n = 42`) — §361 FECHADO | `42` | CONCLUIDO (`e293c4a5`) | CONCLUIDO | CONCLUIDO | CONCLUIDO | `NullablePrimitiveFieldWriterE2ETest` 9/9; face char resolvida pelo gate §368 (SEM012 em store invalido; idiom `y.c = 'x'` verde nos 4 alvos, re-verificacao 20/09 jar limpo) |
+| gate de atributibilidade no store de campo — §368 | SEM012 no call-site | CONCLUIDO (`5cd078c1`) | CONCLUIDO | CONCLUIDO | CONCLUIDO | `FieldAssignabilityPhantomE2ETest` 8/8; medido 20/09: `x.n = "s"`(Int) e `y.c = "x"`(Char?) -> SEM012 em check+build; `y.c = 'x'` imprime `x` nos 4 alvos |
+| aridade/tipo de construtor no call-site (`Class(args)` sem `new`) — §362 | `SEM023 no call-site` | CONCLUIDO (`57a0d5f0`) | CONCLUIDO | N/D (frontend compartilhado) | CONCLUIDO | `ConstructorPhantomE2ETest` 7/7 |
+| `List` bare em campo declarado (`List items = listOf(1,2)`; `b.items.size`) — §373 FECHADO | `2` | CONCLUIDO (`d969bc3a`) | CONCLUIDO | CONCLUIDO | CONCLUIDO | `BareCollectionFieldE2ETest` 8/8 (RED 6/8 pre-fix); controles gemeos: colecao tipada + classe homonima do usuario intactos; caca Q4 abriu §374/#553 |
 | static field `+=` | `2` / `4` / `4` | DONE | DONE (bug 41) | DONE | DONE | `staticpluseq` |
 | concat string+num (order) | `n=42` / `3x` / `x12` | DONE | DONE | DONE | DONE | `concat` |
 | boolean logic + comparison | `false` / `true` / `false` / `true` | DONE | DONE | DONE | DONE | `boollogic` |

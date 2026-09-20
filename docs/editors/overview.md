@@ -37,7 +37,7 @@ consumes Kof's tooling:
 | Diagnostics / completion / hover / rename / references | `kof lsp` |
 | Formatting | `kof fmt` |
 | Build / Run / Test / Check / Serve | `kof build` / `run` / `test` / `check` / `serve` |
-| Debugging | `kof debug` (DAP — **PARTIAL**) |
+| Debugging | `kof debug` (DAP: JVM ✅, Native ✅ via GDB/MI — `--dap --target native`; JS = honest gap — embedded engine) |
 
 ---
 

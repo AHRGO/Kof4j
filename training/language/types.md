@@ -124,6 +124,16 @@ String t = s            // error SEM021: String? not assignable to String withou
 
 `NullableType(inner)` in `Type.java`; `TypeChecker.isAssignable` handles `Nullable → non-null`.
 
+**Nullable FIELDS follow the same contract on ALL 4 targets** (D-NULL-INTENT, `slot ⇔
+load/store`; §295/§278 family): a field declared `Int?`/`Long?`/`Double?`/`Char?`/`Troolean`
+reads **`null` before any write** (JS fixed 20/09, §365 `dd418419`), and writing a primitive
+boxes it (`b.n = 42` works — §361 `e293c4a5`). A field store passes the SAME assignability
+gate as a local (`x.n = "s"` in `Int n` → SEM012, §368 `5cd078c1`) — and the char idiom is
+the single-quote literal everywhere: `c = 'x'` runs on the 4 targets, `c = "x"` (String
+into `Char`/`Char?`) is SEM012, field or local. Sentinel `= null` literals stay rejected (SEM048) — `null`
+reaches a `T?` field via the API or the never-written read, exactly like locals.
+
+
 ### Troolean (three-state — 0.4.0-beta, D-TROOL)
 
 `Bool` has **exactly two values**. What needs `true / false / unknown` is

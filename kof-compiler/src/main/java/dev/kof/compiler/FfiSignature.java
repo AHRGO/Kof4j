@@ -7,7 +7,7 @@ import java.util.List;
  * FFM. chars: i=Int j=Long f=Float d=Double b=Boolean S=String(char*) v=void(retorno).
  * Mantido fora de {@code CompilerPipeline} para a regra de ≤500 linhas/classe.
  */
-final class FfiSignature {
+public final class FfiSignature {
 
     private FfiSignature() {}
 
@@ -55,10 +55,44 @@ final class FfiSignature {
         return Type.PrimitiveType.INT;
     }
 
+    /** #431 (Native): char do layout FFI a partir do Type ja baixado na IR
+     *  (o KofCall nativo carrega os tipos declarados do `extern`). null = fora
+     *  do conjunto escalar (callback/array/struct — nunca alcançável no call
+     *  site nativo, o gate FFI001 filtra antes). */
+    public static Character charOfType(Type t) {
+        if (t == null) return null;
+        if (Type.isVoid(t)) return 'v';
+        if (t instanceof Type.PrimitiveType pt) {
+            switch (pt.name()) {
+                case "int": return 'i';
+                case "long": return 'j';
+                case "float": return 'f';
+                case "double": return 'd';
+                case "bool": case "boolean": return 'b';
+                default: return null;
+            }
+        }
+        if (t instanceof Type.NullableType nt) return charOfType(nt.inner());
+        if (BuiltinTypes.isString(t)) return 'S';
+        return null;
+    }
+
+    /** Type do parâmetro `extern` (o caminho nativo empurra o valor cru na
+     *  pilha de operandos com este tipo; espelha returnType). */
+    public static Type paramType(String t) {
+        if (CompilerPipeline.isIntType(t)) return Type.PrimitiveType.INT;
+        if (isLongFFI(t)) return Type.PrimitiveType.LONG;
+        if (isFloatFFI(t)) return Type.PrimitiveType.FLOAT;
+        if (isBoolFFI(t)) return Type.PrimitiveType.BOOL;
+        if (CompilerPipeline.isStringType(t)) return BuiltinTypes.STRING;
+        if (CompilerPipeline.isDoubleType(t)) return Type.PrimitiveType.DOUBLE;
+        return null;
+    }
+
     static boolean isLongFFI(String t) { return "long".equals(t) || "Long".equals(t); }
     static boolean isFloatFFI(String t) { return "float".equals(t) || "Float".equals(t); }
     static boolean isBoolFFI(String t) {
-        return "bool".equals(t) || "boolean".equals(t) || "Boolean".equals(t);
+        return "bool".equals(t) || "boolean".equals(t) || "Boolean".equals(t) || "Bool".equals(t);
     }
 
     // ---- callbacks / upcalls (R3, fatia 3.4): token C(<ret><params>) ----------------

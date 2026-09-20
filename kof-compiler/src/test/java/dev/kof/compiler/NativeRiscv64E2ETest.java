@@ -129,6 +129,17 @@ class NativeRiscv64E2ETest {
                 "riscv64 must match the JVM oracle (regra 5)");
     }
 
+    // Arestas do port §359 (add_all riscv + kof_list_cmp→String_compareTo):
+    // addAll em dst populado/crescente e o compare-to do sort
+    // (prefixo "app"<"apple" + iguais "apple").
+    @Test
+    void riscv64CrossRuntimePortsEdges(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String out = runRiscv64(tempDir, CrossRuntimePortsE2ETest.PROGRAM);
+        assertEquals(CrossRuntimePortsE2ETest.GOLDEN, out,
+                "riscv64 add_all + string_compare_to edges must match the JVM oracle (regra 5)");
+    }
+
     @Test
     void riscv64HelloWorld(@TempDir Path tempDir) throws IOException {
         assumeToolchain();
@@ -1262,6 +1273,18 @@ main() {
             }
             """);
         assertEquals("4.0\n1.0\n3.75\n1.6666666\n7.0\n3.5\n9.007199E15\n6.0\n3.5", out);
+    }
+
+    // #464 — mirror/trava de paridade: o riscv64 NUNCA deu NaN no compound
+    // assign de precisao simples (o bug era do tradutor aarch64, §342); este
+    // mesmo programa (oraculo JVM, FloatCompoundAssignE2ETest) passa aqui
+    // direto e FECHA a paridade riscv == aarch == x86 na regra 5.
+    @Test
+    void riscv64FloatCompoundAssignIsolation(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String out = runRiscv64(tempDir, FloatCompoundAssignE2ETest.PROGRAM);
+        assertEquals(FloatCompoundAssignE2ETest.GOLDEN, out,
+                "riscv64 single-precision compound-assign must match the JVM oracle (regra 5)");
     }
 
     // §235 native face (riscv64): wrapper statics (parse*/is*) — before the fix

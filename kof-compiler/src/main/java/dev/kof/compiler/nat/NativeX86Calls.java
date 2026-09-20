@@ -18,7 +18,13 @@ public final class NativeX86Calls {
 
     NativeX86Calls(NativeBackend nb) { this.nb = nb; }
 
-    void emitCall(StringBuilder sb, KofCall kc) {
+     void emitCall(StringBuilder sb, KofCall kc) {
+        if (NativeFfiCall.isExternCall(kc)) {
+            // #431: extern bound (gate CompilerPipeline.isExternBound) — ABI
+            // escalar direta p/ a .so ligada no link (ver NativeFfiCall).
+            NativeFfiCall.emitX86(nb, sb, kc);
+            return;
+        }
         if ("kof_box".equals(kc.methodName())) {
             // §284 (FIXADO): box real 24B [magic][tag][value] (RuntimeErasureBox).
             // Valor ja esta no topo da pilha de maquina (conv dos calls kof_*:

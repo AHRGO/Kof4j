@@ -89,6 +89,24 @@ public final class KofInterpreterObjects {
 
     static String kofToString(Object v) {
         if (v == null) return "null";
+        // §367: o ProcessResult do runtime gerado NAO e KofObj — sem este
+        // ramo, o Script vazava "dev.kof.runtime.KofRuntime$ProcessResult@<hash>"
+        // (Object.toString cru). A classe e carregada por URLClassLoader
+        // proprio (KofInterpreter.loadRuntimeClass), entao o teste e por
+        // nome; campos lidos por reflexao (public finals). Conteudo identico
+        // ao toString do template JVM (paridade 4-alvos).
+        if (v.getClass().getName().endsWith(".KofRuntime$ProcessResult")) {
+            try {
+                java.lang.reflect.Field ec = v.getClass().getField("exitCode");
+                java.lang.reflect.Field so = v.getClass().getField("stdout");
+                java.lang.reflect.Field se = v.getClass().getField("stderr");
+                return "ProcessResult[exitCode=" + ec.getInt(v)
+                        + ", stdout=" + trimTrailingNewline((String) so.get(v))
+                        + ", stderr=" + trimTrailingNewline((String) se.get(v)) + "]";
+            } catch (ReflectiveOperationException e) {
+                return String.valueOf(v);
+            }
+        }
         if (v instanceof KofInterpreter.KofObj ko) {
             if (ko.isRecord()) {
                 String simple = KofInterpreterValues.simpleOf(ko.internalName());
@@ -106,6 +124,12 @@ public final class KofInterpreterObjects {
         }
         if (v instanceof Integer[] arr) return java.util.Arrays.toString(arr);
         return String.valueOf(v);
+    }
+
+    private static String trimTrailingNewline(String s) {
+        int end = s.length();
+        while (end > 0 && (s.charAt(end - 1) == '\n' || s.charAt(end - 1) == '\r')) end--;
+        return s.substring(0, end);
     }
 
     private static String appendValue(Type t, Object v) {

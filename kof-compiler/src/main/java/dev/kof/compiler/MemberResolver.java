@@ -22,7 +22,7 @@ public final class MemberResolver {
             if (cs == null) continue;
             SymbolTable.Symbol s = cs.members().resolve(memberName);
             if (s != null) return s;
-            enqueueAncestors(sa, cs, visited, queue);
+            enqueueAncestors(cs, visited, queue);
         }
         return null;
     }
@@ -39,7 +39,7 @@ public final class MemberResolver {
             if (cs == null) continue;
             SymbolTable.FieldSymbol fs = cs.members().resolveField(fieldName);
             if (fs != null) return fs;
-            enqueueAncestors(sa, cs, visited, queue);
+            enqueueAncestors(cs, visited, queue);
         }
         return resolveInHierarchy(sa, className, fieldName);
     }
@@ -52,7 +52,7 @@ public final class MemberResolver {
      * qualquer uma dessas formas (SEM025/SEM011 falsos em herança
      * cross-package → lowerField perdia o tipo do campo herdado).
      */
-    private static void enqueueAncestors(SemanticAnalyzer sa, SymbolTable.ClassSymbol cs,
+    private static void enqueueAncestors(SymbolTable.ClassSymbol cs,
                                          java.util.Set<String> visited, java.util.Queue<String> queue) {
         String sup = HierarchyResolver.simpleOfStored(cs.superClass());
         if (sup != null && !sup.isEmpty() && !"Object".equals(sup) && visited.add(sup)) {

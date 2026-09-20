@@ -40,7 +40,7 @@ var build = shell.runWith(shell.cmd("make", listOf("-j4")), "/src",
 | `shell.cmd(program, args)` | builds the argv `List<String>` `[program] + args` — always a **list**, never a string; feed it to `run` via `argv.get(0)` + the rest |
 | `shell.run(program)` / `shell.run(program, args)` | runs the command, returns `kof.process.Result` (`exitCode`/`stdout`/`stderr`) |
 | `shell.ok(result)` | `exitCode == 0` as a `Bool` (pure field/compare IR — `Result` carries no methods) |
-| `shell.pipeline(listOf(argv, ...))` | chains stdout→stdin between stages, returns the last stage's `Result` (JVM: `kof_shell_pipeline`, ProcessBuilder chain + pump threads) |
+| `shell.pipeline(listOf(argv, ...))` | chains stdout→stdin between stages, returns the last stage's `Result` (JVM: `kof_shell_pipeline`; JS: `KofJsProcessBridge` chain + pump threads — same contract, byte-parity) |
 | `shell.runWith(argv, cwd, env)` | runs argv **in `cwd`** with an **additive** env (`""` cwd inherits the process dir; the map's keys override inherited ones — never a silent env wipe). Spawn errors and empty argv return an **honest** `Result` (`stderr` set, `exitCode == -1`) on JVM and JS; Native is the same compile-time `PROC001` as `run` |
 
 ## The security property (pinned by golden)
@@ -56,7 +56,7 @@ good path.
 | Face | JVM | JS | Native |
 |---|---|---|---|
 | `cmd` / `run` / `runWith` / `ok` | ✅ real (`kof_process_run`; `runWith` via `kof_shell_runwith` — cwd + additive env, honest `-1` Results) | ✅ real (byte-parity with JVM — 5 pinned cases + `runWith` cwd/env/failures) | ❌ honest `PROC001` at compile-time (inherits `process.run` Native face) |
-| `pipeline` | ✅ real (pump-thread chain, golden `echo|wc`) | ❌ honest `PROC001` (needs live `process.spawn`) | ❌ honest `PROC001` |
+| `pipeline` | ✅ real (pump-thread chain, golden `echo|wc`) | ✅ real (host chain + pump threads, 20/09 — byte-parity pinned) | ❌ honest `PROC001` (no fork/exec in asm) |
 | unknown member (`shell.foo`) | ✅ `SEM025` | — | — |
 
 A non-zero exit code is **not** an exception: `failingCommandPropagatesExitCodeNotException`
@@ -64,9 +64,9 @@ pins `Result.exitCode` as data.
 
 ## Residual faces (not debt of v1 — signed-off scope ends here)
 
-- `pipeline` on JS/Native — unblocks when `process.spawn` gets a live-pipe binding
-  (separate platform item); pins `pipelineOnJsIsHonestProc001` /
-  `pipelineOnNativeIsHonestProc001` flip to real runs at that moment.
+- `pipeline` on Native — unblocks when the native lane lands `process.run`/spawn
+  in asm; pin `pipelineOnNativeIsHonestProc001` flips then. (JS closed 20/09:
+  `pipelineChainsStdoutToStdinOnJvmAndJs` + 3-stage pump pin are real runs.)
 - v2 addons excluded by the Q3 poll: glob, `~` expansion, `>` redirection —
   **not** in v1, design-only in the plan.
 

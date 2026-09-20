@@ -164,14 +164,15 @@ Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
      (R7). Still NOT
      bound — honest `FFI001` at compile time on JVM/Native, never a silent stub (R6): struct/array/pointer
      ABI (design D6, ⛔ maintainer), variadics (3.5, ⛔) and
-     opaque handles/out-buffers (3.3, ⛔). Native emits `FFI001`
-     (`<target>` not supported yet, §61). A missing lib/symbol fails at **runtime** with
+     opaque handles/out-buffers (3.3, ⛔). **Native binds the scalar ABI DIRECT on
+     x86-64/riscv64/aarch64 (#431 slices 1–2, 20/09, §369)** — `library()` link-by-use +
+     `call sym@PLT`, no `dlopen` (§61 closed); on Native, non-scalar signatures, callbacks and a
+     missing `library()` stay `FFI001` at the declaration line. A missing lib/symbol fails at **runtime** with
      a `kof_ffi` exception naming `lib::symbol` (stack trace, not a surgical
-      message). Remaining R3 slices (structs/D6, variadics, handles, Native parity; **JVM
-      and JS scalar+callback parity closed**)
+      message). Remaining R3 slices (structs/D6, variadics, handles, Native callbacks; **JVM
+      and JS scalar+callback parity and Native scalar closed**)
     in
-   `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431);
-  `extern "c"` on Native depends on §61.
+   `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431).
 
 - **Native/JS**: there is no interop with host types the same way. **Unspecified.**
 - **Annotations** (`@Name`, `@JsonFormat`) are interop metadata emitted in the

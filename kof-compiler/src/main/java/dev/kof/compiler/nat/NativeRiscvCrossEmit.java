@@ -60,7 +60,7 @@ public final class NativeRiscvCrossEmit {
     private static final java.util.concurrent.atomic.AtomicLong SAT181_SEQ =
             new java.util.concurrent.atomic.AtomicLong();
 
-    private final NativeBackend nb;
+    final NativeBackend nb;
 
     private final NativeRiscvCrossOps other;
 
@@ -124,6 +124,7 @@ public final class NativeRiscvCrossEmit {
             sb.append("    addi sp, sp, 16\n");
             sb.append("    ret\n");
         }
+        if (nb.debugInfo) NativeDwarfCrossRegister.register(this, sb, mangled, clazz, method);
     }
 
     int crossLocalOffRiscv(int idx) { return -(idx + 1) * 8 - 16; }

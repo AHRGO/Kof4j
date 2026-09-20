@@ -105,6 +105,20 @@ no `for (i in 0..n)` range in `.kf` — if/else and while-with-index or element 
 (locked); (iv) `record` with `String` fields and `mapOf(k, v, ...)` class-field
 initializers compile and run identical (locked).
 
+**§4 status 20/09 (2) — ESTADO face MEDIDA by `MakealiveDbStateE2ETest` (sonda
+3.1.1), 2/2 GREEN:** the `.kf` frontend resolves `orm.create/save/find/all/page/
+where` on top of `db.connect` — **`delete/count/deleteAll/saveAll` do NOT resolve
+yet** (runtime-side exists in `KofOrm.functions()`; the call-site wiring is the
+GAPS-DB lane's F1/F2 slices, `5cd078c1` cluster). Consequences locked for the
+state slice: (i) entities are immutable (SEM038) — an "update" = a NEW generation
+row, never a re-save of the same key; (ii) state architecture = `key =
+design/name#gen` unique + `all`/`where` filtered in the host (no delete needed);
+(iii) JVM==JS byte parity holds through the `kof_platform.db*` JDBC delegate on
+the same Graal host (DB001, 16/09); (iv) NATIVE refuses by name (`ORM001`) — the
+disjunctive probe flips to strict parity when the sibling's native ORM lands, and
+the host db slice must be gated per target exactly like `workflow-ckpt-host.kf`
+(+`.native.kf` honest stub).
+
 ## 5. Step queue
 
 - **3.0.0 [plan + claim — 0 surface]** — this file (EN+PT), tracker Stage 3
@@ -116,19 +130,27 @@ initializers compile and run identical (locked).
   constructor+instance face (the sibling head's coordination line `c122d266` carried
   the same finding; my run clobbered their in-flight untracked file before I read it —
   the fix came from their DOING note, credited here). 🔵 next: 3.0.2 (⛔ Q1–Q4).
-- **3.0.2 [design sign-off — ⛔ rule 6]** — maintainer poll Q1–Q4 (§6). No
-  host, no compiler class, no ledger line before Q1 is answered.
-- **3.1 [core]** — virtual-namespace injector (`CompilerMakealive`) +
-  `makealive-host.kf` + ledger line (layer per Q1) + `MakealiveE2ETest`
+- **3.0.2 [design sign-off — ⛔ rule 6]** ✅ DONE 20/09 — maintainer poll
+  answered Q1–Q4 (§6, `DECISIONS.md` §D-MAKEALIVE: `kof.makealive` /
+  complete generic providers / kof.db day-1 / flat+EN). Front opened.
+- **3.1 [core]** 🔵 owner `.18` — **COMPLETE slice (MK-1, poll 20/09 — not a
+  core-only fragment)**: virtual-namespace injector (`CompilerMakealive`) +
+  `makealive-host.kf` + ledger line (layer per Q1) + the generic REST/CLI
+  providers (3.5 folded here) + the `kof.db` state surface (3.4 folded here —
+  Q3: the store is kof.db **from the first apply**) + `MakealiveE2ETest`
   (plan/apply/destroy idempotency golden, JVM==JS byte parity, Native compile
-  pin, the §3 guards).
+  pin, the §3 guards). The kof.db goldens run where `kof.db` is real (JVM/JS);
+  Native state awaits D-DB-GAPS and fails with the honest `DB001`/`ORM001`,
+  never silent (R6).
 - **3.3 [reconcile]** — `reconcile(design, provider, intervalMs)` delegating
   to `scheduler` (Native loud `CRON001` stub, same split as
   `workflow-sched-host.native.kf`).
-- **3.4 [state]** — JSON-over-`kof.io` in v1 (VISION-sanctioned); `kof.db`
-  backend as an additive follow-up (`DB001`/`ORM001` honest per target).
-- **3.5 [providers as interop]** — generic REST provider (`kof.http`) + CLI
-  provider (`kof.shell`); concrete clouds = **official packages**
+- **3.4 [state]** — **folded into 3.1 by MK-1 (20/09)**; kept as the
+  verification item: per-target `kof.db` state goldens (JVM/JS real; Native
+  honest `DB001`/`ORM001` until D-DB-GAPS closes).
+- **3.5 [providers as interop]** — **folded into 3.1 by MK-1 (20/09)**:
+  generic REST provider (`kof.http`) + CLI provider (`kof.shell`) ship with
+  the core slice; concrete clouds stay **official packages**
   (`infra-<cloud>`, R1 — never a compiler literal).
 - **3.2 [syntax `infra "prod" {}`]** — ⛔ R4 (codegen hook, tracker row R4:
   "does NOT exist at HEAD") + new parse block = rule 6. Out of v1.
@@ -139,26 +161,26 @@ initializers compile and run identical (locked).
 
 ## 6. Open questions (maintainer decisions — do NOT resolve in code)
 
-- **Q1 — namespace (the §2.1 collision).**
-  **A) `kof.makealive`** *(recommended)* — the name IS the decided domain
-  (VISION §4.2 "Kof Makealive"); passes hard-deny untouched; ships as the
+**Q1–Q4 ANSWERED 20/09 by the maintainer (chat poll — `DECISIONS.md`
+§D-MAKEALIVE; re-create via the same multiple-choice decision if ever
+revisited — rule 6):**
+
+- **Q1 — ANSWERED: `kof.makealive`** (option A) — the name IS the decided
+  domain (VISION §4.2); passes hard-deny untouched; ships as the
   workflow/shell pattern (virtual namespace + pure-Kof host + ledger
-  `platform` line).
-  B) official package from day one — the strictest R1 reading ("official
-  package only" is the gate's own message), but self-hosting the core on the
-  1.5.3 registry whose live GitHub round-trip is still a pending smoke.
-  C) edit the HARD-DENY list to scope it to `infra-*`/`cloud` — the gate
-  encodes invariant 1; only she can move it.
-- **Q2 — v1 provider:** local-FS provider only *(recommended)*, or also the
-  REST generic in the MVP? (recon+3.1 stay identical either way; only the
-  queue tail moves.)
-- **Q3 — state backend v1:** JSON over `kof.io` *(recommended; VISION §4.2
-  sanctions "or JSON in kof.io")* or `kof.db` from day one (inherits the
-  `DB001`/`ORM001` non-JVM gates into the core golden)?
-- **Q4 — surface shape:** flat injected host (workflow/supervisor idiom,
-  no `makealive.` prefix) and the English faces `resource`/`requires`/`plan`/
-  `apply`/`destroy` *(recommended — parity with `job`/`dag`/`run`)* — confirm
-  before the 3.1 golden freezes names.
+  `platform` line). The tracker literal `kof.infra` stays HARD-DENY
+  (measured, §2.1) — the tracker row is updated, never the gate.
+- **Q2 — ANSWERED: the COMPLETE generic surface** — local-FS + REST
+  (`kof.http`) + CLI (`kof.shell`) all ship in v1 as interop (R9); concrete
+  clouds stay official packages (`infra-<cloud>`, R1).
+- **Q3 — ANSWERED: `kof.db` from day one** (the non-recommended option) —
+  state persists over kof.db; wherever kof.db is gated, the state is gated
+  with it (Native = the honest `DB001`/`ORM001` gaps until the GAPS-DB front
+  closes them — D-KOF-AS-CLOUD makes that closing a path item, not a
+  permanent degrade).
+- **Q4 — ANSWERED: flat injected host + English faces** —
+  `resource`/`requires`/`plan`/`apply`/`destroy` confirmed; the 3.1 golden
+  freezes these names.
 
 ## 7. What NOT to do
 

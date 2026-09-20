@@ -110,6 +110,20 @@ if/else e while-com-índice ou `for` de elemento (travado); (iv) `record` com ca
 `String` e inicializador de campo de classe `mapOf(k, v, ...)` compilam e rodam
 idênticos (travado).
 
+**status §4 20/09 (2) — face de ESTADO MEDIDA por `MakealiveDbStateE2ETest`
+(sonda 3.1.1), 2/2 VERDE:** o frontend `.kf` resolve `orm.create/save/find/all/
+page/where` sobre `db.connect` — **`delete/count/deleteAll/saveAll` ainda NÃO
+resolvem** (o lado runtime existe em `KofOrm.functions()`; a fiação do call-site
+são as fatias F1/F2 da lane GAPS-DB, cluster `5cd078c1`). Consequências travadas
+para a fatia de estado: (i) entidades são imutáveis (SEM038) — um "update" = uma
+NOVA linha de geração, nunca um re-save da mesma chave; (ii) arquitetura do
+estado = `key = design/nome#gen` única + `all`/`where` filtrados no host (sem
+delete); (iii) paridade byte JVM==JS vale pelo delegate JDBC `kof_platform.db*`
+no mesmo host Graal (DB001, 16/09); (iv) o NATIVE recusa por nome (`ORM001`) — a
+sonda disjuntiva vira paridade stricta quando o ORM nativo da irmã pousar, e a
+fatia db do host deve ser gateada por alvo exatamente como `workflow-ckpt-host.kf`
+(+ `.native.kf` stub honesto).
+
 ## 5. Fila de passos
 
 - **3.0.0 [plano + claim — 0 superfície]** — este arquivo (EN+PT), flip da
@@ -122,20 +136,28 @@ idênticos (travado).
   do head irmão `c122d266`; minha escrita sobrescreveu o arquivo untracked deles em
   voo antes de eu ler a coordenação — o crédito do achado é da nota DOING deles.
   🔵 próximo: 3.0.2 (⛔ Q1–Q4).
-- **3.0.2 [assinatura de design — ⛔ regra 6]** — enquete da mantenedora
-  Q1–Q4 (§6). Sem host, sem classe de compilador, sem linha no ledger antes de
-  Q1 respondida.
-- **3.1 [core]** — injetor de namespace virtual (`CompilerMakealive`) +
-  `makealive-host.kf` + linha no ledger (camada conforme Q1) +
+- **3.0.2 [assinatura de design — ⛔ regra 6]** ✅ FEITO 20/09 — enquete da
+  mantenedora respondeu Q1–Q4 (§6, `DECISIONS.md` §D-MAKEALIVE:
+  `kof.makealive` / providers genéricos completos / kof.db dia-1 / flat+EN).
+  Frente aberta.
+- **3.1 [core]** 🔵 dono `.18` — **fatia COMPLETA (MK-1, enquete 20/09 — não
+  um fragmento só-núcleo)**: injetor de namespace virtual (`CompilerMakealive`) +
+  `makealive-host.kf` + linha no ledger (camada conforme Q1) + os providers
+  REST/CLI genéricos (3.5 dobrado aqui) + a face de estado `kof.db` (3.4
+  dobrado aqui — Q3: o store é kof.db **desde o primeiro apply**) +
   `MakealiveE2ETest` (golden de idempotência plan/apply/destroy, paridade byte
-  JVM==JS, pin de compilação Native, as guardas do §3).
+  JVM==JS, pin de compilação Native, as guardas do §3). Os goldens de kof.db
+  rodam onde `kof.db` é real (JVM/JS); o estado no Native espera D-DB-GAPS e
+  falha com `DB001`/`ORM001` honestos, nunca silente (R6).
 - **3.3 [reconcile]** — `reconcile(design, provider, intervalMs)` delegando ao
   `scheduler` (stub `CRON001` alto no Native, mesmo split do
   `workflow-sched-host.native.kf`).
-- **3.4 [state]** — JSON sobre `kof.io` no v1 (sancionado pela VISÃO); backend
-  `kof.db` como follow-up aditivo (`DB001`/`ORM001` honestos por target).
-- **3.5 [providers como interop]** — provider REST genérico (`kof.http`) +
-  provider CLI (`kof.shell`); clouds concretas = **pacotes oficiais**
+- **3.4 [state]** — **dobrado no 3.1 pelo MK-1 (20/09)**; mantido como item
+  de verificação: goldens de estado `kof.db` por target (JVM/JS reais; Native
+  `DB001`/`ORM001` honestos até D-DB-GAPS fechar).
+- **3.5 [providers como interop]** — **dobrado no 3.1 pelo MK-1 (20/09)**:
+  provider REST genérico (`kof.http`) + provider CLI (`kof.shell`) embarcam
+  na fatia do núcleo; clouds concretas seguem **pacotes oficiais**
   (`infra-<cloud>`, R1 — nunca literal no compilador).
 - **3.2 [sintaxe `infra "prod" {}`]** — ⛔ R4 (hook de codegen, linha R4 do
   tracker: "does NOT exist at HEAD") + bloco de parse novo = regra 6. Fora do v1.
@@ -147,26 +169,26 @@ idênticos (travado).
 
 ## 6. Perguntas abertas (decisões da mantenedora — NÃO resolver em código)
 
-- **Q1 — namespace (a colisão do §2.1).**
-  **A) `kof.makealive`** *(recomendado)* — o nome É o domínio decidido (VISÃO
-  §4.2 "Kof Makealive"); passa ileso pelo hard-deny; embarca no padrão
+**Q1–Q4 RESPONDIDAS 20/09 pela mantenedora (enquete no chat —
+`DECISIONS.md` §D-MAKEALIVE; recriar via a mesma decisão multi-escolha se
+revisitado — regra 6):**
+
+- **Q1 — RESPONDIDA: `kof.makealive`** (opção A) — o nome É o domínio
+  decidido (VISÃO §4.2); passa ileso pelo hard-deny; embarca no padrão
   workflow/shell (namespace virtual + host puro-Kof + linha `platform` no
-  ledger).
-  B) pacote oficial desde o dia 1 — a leitura mais estrita da R1 ("official
-  package only" é a mensagem do próprio gate), mas self-hosting do core no
-  registry 1.5.3 cujo round-trip live no GitHub ainda é smoke pendente.
-  C) editar a lista HARD-DENY para escopá-la em `infra-*`/`cloud` — o gate
-  codifica a invariant 1; só ela move.
-- **Q2 — provider v1:** só o local-FS *(recomendado)*, ou também o REST
-  genérico no MVP? (recon+3.1 ficam idênticos de qualquer forma; só o rabo da
-  fila muda.)
-- **Q3 — backend de estado v1:** JSON sobre `kof.io` *(recomendado; VISÃO §4.2
-  sanciona "or JSON in kof.io")* ou `kof.db` desde o início (herda os gates
-  `DB001`/`ORM001` não-JVM dentro do golden do core)?
-- **Q4 — forma da superfície:** host flat injetado (idioma
-  workflow/supervisor, sem prefixo `makealive.`) e faces em inglês
-  `resource`/`requires`/`plan`/`apply`/`destroy` *(recomendado — paridade com
-  `job`/`dag`/`run`)* — confirmar antes do golden do 3.1 congelar os nomes.
+  ledger). O literal `kof.infra` do tracker segue HARD-DENY (medido, §2.1) —
+  a linha do tracker é atualizada, nunca o gate.
+- **Q2 — RESPONDIDA: superfície genérica COMPLETA** — local-FS + REST
+  (`kof.http`) + CLI (`kof.shell`) embarcam no v1, todos como interop (R9);
+  clouds concretas continuam pacotes oficiais (`infra-<cloud>`, R1).
+- **Q3 — RESPONDIDA: `kof.db` desde o dia 1** (a opção não recomendada) — o
+  estado persiste sobre kof.db; onde o kof.db é gated, o estado é gated junto
+  (Native = os gaps honestos `DB001`/`ORM001` até a frente GAPS-DB fechá-los —
+  D-KOF-AS-CLOUD torna esse fechamento um item de caminho, não degrade
+  permanente).
+- **Q4 — RESPONDIDA: host flat injetado + faces em inglês** —
+  `resource`/`requires`/`plan`/`apply`/`destroy` confirmados; o golden do 3.1
+  congela esses nomes.
 
 ## 7. O que NÃO fazer
 

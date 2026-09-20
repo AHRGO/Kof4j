@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -234,5 +235,165 @@ class MakealivePrimitivesE2ETest {
                 }
             }
             """.formatted(state.toString()), "roundtrip", "gone");
+    }
+
+    /** 3.1.0 probe (claim D-MAKEALIVE): the provider shape is function-typed
+     *  fields over a host record + generic `Map<String,String>` — the workflow
+     *  `KofWfJob` locks `() -> Bool` and `(String, String) -> Bool`, but a
+     *  record parameter and a Map return are NOT covered by 3.0.1. MEASURED
+     *  today: direct invoke on a function-typed field (`p.read(r)`) does NOT
+     *  typecheck ("Cannot resolve method 'read' on type 'MvProvider'") — the
+     *  locked form is the workflow precedent (`var corpoFn: () -> Bool =
+     *  job.corpo`, workflow-host.kf:356): copy to a typed local, then invoke.
+     *  JVM==JS byte parity; Native compiles. */
+    @Test
+    void providerShapeFunctionTypedFieldsRunsJvmJs() throws Exception {
+        assertRunsJvmJsNativeCompiles("MAProvider", """
+            record MvRes(String kind, String name)
+
+            class MvProvider {
+                (MvRes) -> Map<String, String> read = null
+                (MvRes, Map<String, String>) -> Bool set = null
+                (MvRes) -> Bool del = null
+
+                public constructor((MvRes) -> Map<String, String> read,
+                                   (MvRes, Map<String, String>) -> Bool set,
+                                   (MvRes) -> Bool del) {
+                    this.read = read
+                    this.set = set
+                    this.del = del
+                }
+            }
+
+            main() {
+                var p = MvProvider(
+                    (r: MvRes) -> mapOf("seen", r.kind() + ":" + r.name()),
+                    (r: MvRes, props: Map<String, String>) -> props.get("seen") != null,
+                    (r: MvRes) -> true
+                )
+                var readFn: (MvRes) -> Map<String, String> = p.read
+                var setFn: (MvRes, Map<String, String>) -> Bool = p.set
+                var delFn: (MvRes) -> Bool = p.del
+                var m = readFn(MvRes("service", "web"))
+                println(m.get("seen"))
+                println(setFn(MvRes("service", "web"), m))
+                println(delFn(MvRes("service", "web")))
+            }
+            """, "service:web", "true", "true");
+    }
+
+    /** 3.1.0 probe (2): the full host grammar the `makealive-host.kf` will use
+     *  — method returning own class via `return this` (builder fluent), state
+     *  port with `List<String>`/record/Map function fields (re-confirming the
+     *  probe-1 measurement: invoke on a function field needs a typed local),
+     *  and `Map<String, Map<String,String>>` nested in a `mapOf` literal as
+     *  LOCAL + function-typed PARAM. JVM==JS byte parity; Native compiles. */
+    @Test
+    void hostGrammarBuilderAndStatePortRun() throws Exception {
+        assertRunsJvmJsNativeCompiles("MAHostGrammar", """
+            record HgRes(String kind, String name)
+
+            Bool hgTemNome(List<HgRes> xs, String nome) {
+                var i = 0
+                while (i < xs.size()) {
+                    if (xs.get(i).name() == nome) { return true }
+                    i = i + 1
+                }
+                return false
+            }
+
+            class HgDesign {
+                List<HgRes> declared = listOf()
+                HgDesign resource(String kind, String name) {
+                    declared.add(HgRes(kind, name))
+                    return this
+                }
+            }
+
+            class HgState {
+                () -> List<String> names = null
+                (String) -> Map<String, String> props = null
+                (String, Map<String, String>) -> Bool put = null
+            }
+
+            Map<String, String> hgOr(Map<String, String>? m, Map<String, String> fallback) {
+                if (m != null) { return m }
+                return fallback
+            }
+
+            HgState hgStateFrom(Map<String, Map<String, String>> data, List<String> order) {
+                var s = HgState()
+                s.names = () -> order
+                s.props = (n: String) -> hgOr(data.get(n), mapOf())
+                s.put = (n: String, p: Map<String, String>) -> true
+                return s
+            }
+
+            main() {
+                var d = HgDesign()
+                d.resource("bucket", "media")
+                d.resource("db", "main")
+                println(d.declared.size())
+                var data = mapOf("media", mapOf("acl", "private"))
+                var st = hgStateFrom(data, listOf("media"))
+                var namesFn: () -> List<String> = st.names
+                var propsFn: (String) -> Map<String, String> = st.props
+                var putFn: (String, Map<String, String>) -> Bool = st.put
+                var nm = namesFn()
+                println(nm.get(0))
+                var pr = propsFn("media")
+                println(pr.get("acl"))
+                println(putFn("main", mapOf("engine", "pg")))
+                println(hgTemNome(d.declared, "db"))
+            }
+            """, "2", "media", "private", "true", "true");
+    }
+
+    /** §379 (era §363/§371/§376; probe 2; FIXED): calling a generic-typed lambda
+     *  through a typed local crashed the JVM with
+     *  `IncompatibleClassChangeError: Class LambdaN does not implement the
+     *  requested interface kof.Function1_CString_CMap` — the lambda class was
+     *  emitted with the interface mangled from the INFERRED body return
+     *  (`data.get(n)` is `Map?` -> NCMap) while the call site dispatched by
+     *  the DECLARED type (CMap), and the SC2 conformance check skipped
+     *  FunctionType assignments silently (R6). Now rejected at compile time
+     *  with SEM021 — cases (a) no capture + Map return and (b) capture +
+     *  String return stay green (no false positives). */
+    @Test
+    void genericLambdaInvokeCases() throws Exception {
+        Path srcA = tmp.resolve("MAIfaceA.kf");
+        Files.writeString(srcA, """
+            main() {
+                var f: (String) -> Map<String, String> = (n: String) -> mapOf("k", n)
+                var m = f("x")
+                println(m.get("k"))
+            }
+            """);
+        Run a = runJvm(srcA, tmp.resolve("o-iface-a"));
+        System.err.println("CASE-A (no capture, Map return): ok=" + a.ok() + " out=[" + a.output().trim() + "]");
+        Path srcB = tmp.resolve("MAIfaceB.kf");
+        Files.writeString(srcB, """
+            main() {
+                var top = "acl"
+                var g: (String) -> String = (n: String) -> n + top
+                println(g("m"))
+            }
+            """);
+        Run b = runJvm(srcB, tmp.resolve("o-iface-b"));
+        System.err.println("CASE-B (capture, String return): ok=" + b.ok() + " out=[" + b.output().trim() + "]");
+        Path srcC = tmp.resolve("MAIfaceC.kf");
+        Files.writeString(srcC, """
+            main() {
+                var data = mapOf("m", mapOf("acl", "private"))
+                var f: (String) -> Map<String, String> = (n: String) -> data.get(n)
+                var m = f("m")
+                println(m.get("acl"))
+            }
+            """);
+        Run c = runJvm(srcC, tmp.resolve("o-iface-c"));
+        assertFalse(c.ok(), "§379: body returning Map? assigned to (String) -> Map must be a COMPILE error, got ok + out=" + c.output());
+        assertTrue(c.output().contains("SEM021") || c.output().contains("type mismatch"),
+                "§379 fix must name the mismatch: " + c.output());
+        System.err.println("CASE-C (capture, Map return): rejected at compile-time as expected");
     }
 }

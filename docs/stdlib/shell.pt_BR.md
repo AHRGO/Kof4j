@@ -41,7 +41,7 @@ var build = shell.runWith(shell.cmd("make", listOf("-j4")), "/src",
 | `shell.cmd(program, args)` | monta a `List<String>` argv `[program] + args` — sempre **lista**, nunca string; alimenta `run` via `argv.get(0)` + o resto |
 | `shell.run(program)` / `shell.run(program, args)` | roda o comando, devolve `kof.process.Result` (`exitCode`/`stdout`/`stderr`) |
 | `shell.ok(result)` | `exitCode == 0` como `Bool` (IR puro de campo/comparação — `Result` não tem métodos) |
-| `shell.pipeline(listOf(argv, ...))` | encadeia stdout→stdin entre estágios, devolve o `Result` do último (JVM: `kof_shell_pipeline`, cadeia ProcessBuilder + threads de pump) |
+| `shell.pipeline(listOf(argv, ...))` | encadeia stdout→stdin entre estágios, devolve o `Result` do último (JVM: `kof_shell_pipeline`; JS: cadeia + threads de pump em `KofJsProcessBridge` — mesmo contrato, paridade byte) |
 | `shell.runWith(argv, cwd, env)` | roda o argv **em `cwd`** com ambiente **aditivo** (`cwd` `""` herda o diretório do processo; as chaves do map sobrescrevem as herdadas — nunca uma limpeza silenciosa do ambiente). Erro de spawn e argv vazio devolvem `Result` **honesto** (`stderr` preenchido, `exitCode == -1`) no JVM e no JS; no Native é o mesmo `PROC001` de compilação do `run` |
 
 ## A propriedade de segurança (pinada por golden)
@@ -57,7 +57,7 @@ nesta API. Scripts do próprio repo que concatenam strings de comando re-limpam 
 | Face | JVM | JS | Native |
 |---|---|---|---|
 | `cmd` / `run` / `runWith` / `ok` | ✅ real (`kof_process_run`; `runWith` via `kof_shell_runwith` — cwd + ambiente aditivo, `Result` honesto com `-1`) | ✅ real (paridade byte-a-byte com JVM — 5 casos pinados + `runWith` cwd/env/falhas) | ❌ `PROC001` honesto em tempo de compilação (herda a face `process.run` do Native) |
-| `pipeline` | ✅ real (cadeia com pump-threads, golden `echo|wc`) | ❌ `PROC001` honesto (precisa de `process.spawn` vivo) | ❌ `PROC001` honesto |
+| `pipeline` | ✅ real (cadeia com pump-threads, golden `echo|wc`) | ✅ real (cadeia no host + pump-threads, 20/09 — paridade byte pinada) | ❌ `PROC001` honesto (sem fork/exec em asm) |
 | membro desconhecido (`shell.foo`) | ✅ `SEM025` | — | — |
 
 Exit code diferente de zero **não** é exceção: `failingCommandPropagatesExitCodeNotException`
@@ -65,9 +65,10 @@ pina `Result.exitCode` como dado.
 
 ## Faces residuais (não são dívida do v1 — o escopo assinado acaba aqui)
 
-- `pipeline` em JS/Native — destrava quando `process.spawn` ganhar ligação de pipes
-  vivos (item de plataforma separado); os pinos `pipelineOnJsIsHonestProc001` /
-  `pipelineOnNativeIsHonestProc001` viram execuções reais naquele momento.
+- `pipeline` no Native — destrava quando a lane nativa landar `process.run`/spawn
+  em asm; o pino `pipelineOnNativeIsHonestProc001` vira execução real então. (JS
+  fechado 20/09: `pipelineChainsStdoutToStdinOnJvmAndJs` + pin de 3 saltos são
+  execuções reais.)
 - Addons v2 excluídos pela enquete Q3: glob, expansão de `~`, redirecionamento `>` —
   **não** no v1, apenas design no plano.
 

@@ -92,6 +92,10 @@
 | `Char[]` out of range (`c[0]=70000`, `c[1]=-1`) in 1-D and 2-D + control `Short[] -1` — §187 | `4464` / `65535` / `4464` / `65535` / `-1` | DONE | DONE | PARTIAL (bug §185 — crash on the `Char[]` store) | DONE (bug §187 ✅ 15/09 JS face — `kofArraySet` kind char→`& 0xFFFF`; `c[0]=70000`→`4464`, `c[1]=-1`→`65535`) | `charnarrow` |
 | `static` initializer of CONSTANT expression (`-1`, `2+3`, `-7L`, `-1.5`, `"a"+"b"`, `!false`) — §186 ✅ 13/09 | `-1` / `5` / `-7` / `-1.5` / `ab` / `true` / `7` | DONE | DONE | DONE | DONE | `staticinit` |
 | static field + bump | `1` / `2` / `2` | DONE | DONE (bug 41 fixed 07/09) | DONE | DONE | `staticfield` |
+| nullable-primitive FIELD write + read-back (`b.n = 42`) — §361 CLOSED | `42` | DONE (`e293c4a5`) | DONE | DONE | DONE | `NullablePrimitiveFieldWriterE2ETest` 9/9; face char resolvida pelo gate §368 (SEM012 em store invalido; idiom `y.c = 'x'` verde 4 alvos, re-verification 20/09 jar limpo) |
+| field-store assignability gate — §368 | SEM012 at the call-site | DONE (`5cd078c1`) | DONE | DONE | DONE | `FieldAssignabilityPhantomE2ETest` 8/8; medido 20/09: `x.n = "s"`(Int) e `y.c = "x"`(Char?) -> SEM012 em check+build; `y.c = 'x'` imprime `x` nos 4 alvos |
+| constructor-arity/type at call site (implicit `Class(args)` no `new`) — §362 | `SEM023 no call-site` | DONE (`57a0d5f0`) | DONE | N/D (frontend compartilhado) | DONE | `ConstructorPhantomE2ETest` 7/7 |
+| bare `List` in declared field (`List items = listOf(1,2)`; `b.items.size`) — §373 CLOSED | `2` | DONE (`d969bc3a`) | DONE | DONE | DONE | `BareCollectionFieldE2ETest` 8/8 (RED 6/8 pre-fix); twin controls: typed collection + user shadow class intact; Q4 hunt opened §374/#553 |
 | static field `+=` | `2` / `4` / `4` | DONE | DONE (bug 41) | DONE | DONE | `staticpluseq` |
 | concat string+num (order) | `n=42` / `3x` / `x12` | DONE | DONE | DONE | DONE | `concat` |
 | boolean logic + comparison | `false` / `true` / `false` / `true` | DONE | DONE | DONE | DONE | `boollogic` |

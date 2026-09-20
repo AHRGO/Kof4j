@@ -125,6 +125,24 @@ unaffected.
 
 Fix 27/08: `listOf(...).get(n)` and `size` in large projects with `import a.b.C` now resolve correctly (CompilerDriver file-specific imports). A manual index workaround is not necessary.
 
+## Bare `List`/`Set`/`Map` in a declared position (0.4.0 — §373/#443)
+
+A collection name WITHOUT type arguments in a field, parameter or return type is the
+**builtin collection** — exactly what the local form has always meant (#139/#150/#214):
+
+```kof
+class Box {
+    List items                      // bare = builtin List (before §373: crashed at class load)
+    public constructor() { items = listOf(1, 2) }
+}
+count(xs: List): Int { return xs.size }     // bare in a parameter
+```
+
+Prefer the explicit element type (`List<Int> items`) when it is known — the compiler
+checks more with it. A user class with the same name (`class List { ... }` in your own
+package) keeps winning over the builtin (the §243 shadow guard, proven by controls in
+`BareCollectionFieldE2ETest` 8/8, the same print on the 4 targets).
+
 ## When to use
 
 Any problem that requires a sequence of elements:

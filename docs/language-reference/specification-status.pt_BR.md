@@ -102,7 +102,7 @@ Target-specific · Unspecified · Planned**.
 | Import ambíguo (não chuta) | Stable | `CompilerTypes:102` |
 | PKG002 (1 main) | Stable | probe |
 | Interop JVM (tipos Java) | **Target-specific** | `AndroidInteropE2ETest` |
-| FFI C (`extern "<lib>"`) | **Parcial** — JVM qualquer assinatura escalar, aridade livre, retornos `void`/`String` (18/09, `.18`); não-escalar = `FFI001`; runner host JS = MESMA ABI escalar (3.6.F2/F3 ✅ 18/09, `FfiE2ETest` 16/16 byte-for-byte JVM↔JS), não-escalar = `FFI002`, browser = runtime R7; Native = `FFI001` §61 (R6, nunca silencioso) |
+| FFI C (`extern "<lib>"`) | **Parcial** — JVM qualquer assinatura escalar, aridade livre, retornos `void`/`String` (18/09, `.18`); não-escalar = `FFI001`; runner host JS = MESMA ABI escalar (3.6.F2/F3 ✅ 18/09, `FfiE2ETest` 16/16 byte-for-byte JVM↔JS), não-escalar = `FFI002`, browser = runtime R7; **Native = ABI escalar DIRETA em x86-64/riscv64/aarch64** (#431 fatias 1–2 ✅ 20/09, §369: link-by-use + `call sym@PLT`, sem `dlopen`; `FfiNativeE2ETest` 16/16 + `FfiNativeCrossE2ETest` 6/6 qemu), não-escalar/callback/`library()` ausente = `FFI001` (R6, nunca silencioso); args numéricos são convertidos ao slot pela regra comum (§370/#549 ✅ 20/09, `FfiExternTypeConversionTest` 11/11 JVM/Native/host JS) |
 
 ### Concorrência
 | Feature | Status | Teste-evidência |

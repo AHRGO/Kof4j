@@ -44,8 +44,13 @@ The user never needs to know JVM bytecode, assembly or JavaScript.
 
 ```bash
 kof debug app.kf                 # ✅ JVM (DAP server over stdio)
-kof debug --target native app.kf # future (DWARF)
-kof debug --target js app.kf     # future (source maps + Inspector)
+kof debug --dap app.kf           # JVM DAP explicit (default is the same server)
+kof debug --dap --target native app.kf # ✅ X7-4 (`bda631a7`): DAP bridged to real gdb/MI2
+kof debug --target native app.kf # ✅ X7-3 (`cfa67238`): builds the ELF with Kof DWARF and\                                 #    delegates to the target's gdb (`-x` command file, `-iex set
+                                 #    directories` to the Kof source dir) — breakpoints on
+                                 #    `Main.kf:2`, never on the mangle
+kof debug --target js app.kf     # honest gap: the JS target runs on the EMBEDDED engine
+                                 #    (no devtools protocol yet) — diagnostic, not silence
 kof debug --attach <pid>         # future
 kof build app.kf --debug         # extra metadata (default: debug info on)
 kof build app.kf --release
@@ -70,7 +75,8 @@ The session compiles with debug metadata, launches the JVM with
 - scopes/locals per frame (`StackFrame.GetValues`)
 - exceptions (break on throw / uncaught) with Kof stack
 - expression evaluation (respecting the type system)
-- Native (DWARF — Phase 5) and JS (source maps — Phase 6)
+- ~~Native (DWARF — Phase 5)~~ ✅ **X7-3 landed 20/09** (`cfa67238`, `KofDebugNativeTest`);
+  JS (source maps — Phase 6) = honest diagnostic today (embedded engine)
 
 ## 4. Integration
 
@@ -94,4 +100,21 @@ LSP and DAP do not mix: LSP = code; DAP = execution.
     `configurationDone`, `continue`, `threads`, `stackTrace`, `disconnect`
   - `stopped` event when a Kof breakpoint is hit
   - call stack with Kof functions, file and line (via LineNumberTable)
-- Phases 4-7 — planned; see `debugger-architecture.md`
+- Phase 5 (Native) — ✅ shipped as the DAP↔gdb/MI2 bridge
+  (`kof debug --dap --target native`, `bda631a7`; guarantees measured in
+  `debug-adapter.md`). Phase 6 (JS) — honest refusal (embedded engine, no
+  node/inspector — never a fake bridge). Phase 4 (Kof Editor UI) and the
+  Phase 7 refinements — see `debugger-architecture.md`.
+
+## 6. Measuring a landed fix — the stale-jar trap (lesson 20/09)
+
+When you verify a compiler fix through the CLI jar, the jar must be **provably
+current**: an incremental `mvn package -pl kof-cli -am` can leave the shaded
+`dev/kof/compiler/*` entries pointing at an older build, so you measure the
+**old compiler and believe the fix is absent** (this happened with §368 — the
+`FieldAssignabilityPhantomE2ETest` 8/8 was right, the jar was a ghost). Rule:
+rebuild with `mvn clean package -DskipTests`, and when in doubt compare the
+class inside the jar with the module output
+(`unzip -p <cli.jar> dev/kof/compiler/Foo.class | md5sum` vs
+`md5sum kof-compiler/target/classes/.../Foo.class`) — **identical bytes or you
+are not measuring the tip.**

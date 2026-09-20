@@ -1,0 +1,29 @@
+# agent-matrix.tsv — matriz ADVERSARIAL mínima por domínio HIGH (Onda 1, seção 14 do plano).
+# Formato: dominio<TAB>label<TAB>descrição. O verifier determinístico exige, para cada label do
+# domínio alcançado pelo patch, um comando executado `agent-evidence.sh run --kind adversarial
+# --label <label>` com PASS. Falta = BLOCK. A #549 é o precedente: o gate de tipo aceitar NÃO prova
+# que o lowering materializou a conversão física.
+# Domínio cross-native é tratado à parte (cross_target x86/riscv64/aarch64: PASS ou NOT_RUN com motivo).
+ffi-abi	literal-vs-variable	argumento literal x variável
+ffi-abi	numeric-limits	0, negativo, positivo e limites
+ffi-abi	numeric-conversions	Int/Long/Float/Double: conversões permitidas
+ffi-abi	rejected-conversions	conversões rejeitadas (SEM014 no call-site)
+ffi-abi	fp-specials	NaN, +Inf, -Inf e -0.0 quando FP
+ffi-abi	arity-spill	aridade 0, 1, limite de registradores e spill
+ffi-abi	gp-fp-mixed	classes GP x FP misturadas
+ffi-abi	return-kinds	void x scalar x String quando aplicável
+ffi-abi	jvm-oracle-vs-native	oráculo JVM x Native
+ffi-abi	idempotence	repetição/idempotência
+nullability	null-path	caminho null
+nullability	non-null-path	caminho não-null
+nullability	field-param-return-local	campo, parâmetro, retorno e local
+nullability	branch-join	branch/join
+nullability	boxing-unboxing	boxing/unboxing
+nullability	cross-target	paridade entre alvos
+generics-erasure	unbounded-and-bounded	T sem bound e com bound
+generics-erasure	nested-and-array	genérico aninhado e array de T
+generics-erasure	field-param-return	campo, parâmetro e retorno
+generics-erasure	bridge	métodos bridge
+generics-erasure	primitive-vs-reference-instantiation	instanciação primitiva x referência
+generics-erasure	descriptor-javap	descritor/javap quando JVM
+generic-high	adversarial-case	ao menos 1 caso adversarial executado (concorrência, GC, otimizador, segurança)
