@@ -1003,7 +1003,7 @@ ordem. **DESPRIORIZADO 15/09 (mantenedora): TIER 3–5 não é trabalho atual.**
 FFI) · `2.2 codegen hook` → `infra`/gRPC stubs · **TIER 1 (SYSTEMS) fecha
 antes de QUALQUER Tier 6+ (R12).**
 
-## 24. KOF 1.0 EXIT GATE — estabilização dos contratos (RATIFICADO 20/09/2026, `DECISIONS.md` §D-RELEASE-1.0)
+## 24. KOF 1.0 EXIT GATE — estabilização dos contratos (RATIFICADO 20/09/2026, `DECISIONS.md` §D-RELEASE-1.0; arestas fechadas por `D-1.0-EDGES`)
 
 Meta de desenvolvimento até o primeiro RC: **nenhum bug embarca, nenhuma aresta
 fica aberta.** O texto normativo é `docs/development/PROPOSAL-1.0-EXIT-GATE.md`
@@ -1017,14 +1017,16 @@ Fila aberta (toda lane obedece; dono se declara no `DOING.md`):
 
 | # | Item (ref do doc) | Prova de aceitação |
 |---|---|---|
-| EG-1 | Definir `release-blocker` **mecanicamente** (§11; Q3) | toda issue aberta classificada em exatamente uma de BLOCKS 1.0 / OUTSIDE 1.0 SURFACE / POST-1.0 / NOT A BUG via label+ledger; script lista violações; teste RED primeiro |
+| EG-1 | Definir `release-blocker` **mecanicamente** (§11; Q3) | toda issue aberta classificada em exatamente uma de BLOCKS 1.0 / OUTSIDE 1.0 SURFACE / POST-1.0 / NOT A BUG / TRACKING (`tracking/contract`) via label+ledger; script lista violações; teste RED primeiro. **FEITO** `ea5d4dfe` + complemento da 5ª categoria |
 | EG-2 | Implementar o gate mecânico (critérios §10; passos 6–7) | gate falha em fixtures de false-green/false-red plantados; veredito amarrado ao SHA analisado; análise velha não decide commit novo; uso de `CODEQL_GATE_SKIP` vira exceção com causa registrada, e morre |
 | EG-3 | Validação ANTES/DEPOIS do gate (passo 8) | mesmo SHA medido antes/depois; nenhuma regressão nos pushes das lanes existentes |
 | EG-4 | Pacote real testado **fora do repo** (§12; passo 9) | artefato do layout publicado roda o corpus E2E em diretório limpo (a lição da #550, pinada) |
-| EG-5 | Matriz final de alvos (§13–§14; passo 10) | JVM / x86-64 / riscv64 / aarch64 / JS / Script verdes na MESMA candidata + paridade byte dos goldens onde o contrato exige |
-| EG-6 | Fechar as ARESTAS abertas que pertencem à mantenedora (§21 Q2/Q7, candidatos §35) | resposta explícita da Mel item a item — nenhum agente responde por ela; enquanto isso, site/README não podem implicar superfície não decidida |
-| EG-7 | Sincronizar VERSION / docs / metadados (§16, nota §13, linha do site §35) | VERSION, `revision` do pom, version.properties empacotado, CHANGELOG, cabeçalho AGENTS, docs de release, site público, matriz de suporte — uma única declaração consistente |
+| EG-5 | Matriz final de alvos (§13–§14; passo 10) | JVM / x86-64 / riscv64 / aarch64 / JS / Script **/ KofC / Android** verdes na MESMA candidata + paridade byte dos goldens onde o contrato exige; KofC e Android carregam cada um o seu gate (EG-9/EG-10) |
+| EG-6 | Fechar as ARESTAS abertas que pertencem à mantenedora (§21 Q2/Q7, candidatos §35) | **FEITO 20/09/2026 (`D-1.0-EDGES`)**: Q1 (linha 1.0 abre após o release 0.5.0 + EG-1..EG-7), Q2/Q7 (KofC + Android dentro da Stable 1.0, gates próprios), §35 (os nove reforços obrigatórios) |
+| EG-7 | Sincronizar VERSION / docs / metadados (§16, nota §13, linha do site §35) | VERSION, `revision` do pom, version.properties empacotado, CHANGELOG, cabeçalho AGENTS, docs de release, site público, matriz de suporte — uma única declaração consistente (drift do site: `v0.4.1-beta`, KofJS "Em desenvolvimento" enquanto JS está na superfície 1.0) |
 | EG-8 | Primeira candidata a RC 1.0 (passo 11) — SOMENTE quando EG-1…EG-7 fecharem | checklist §8 verde com evidência reproduzível no SHA da candidata + declaração explícita da Mel de que "a linha 1.0 abriu" (Q1) |
+| EG-9 | Gate do KofC (gate próprio — `D-1.0-EDGES`) | KofC verde na candidata com evidência do gate próprio |
+| EG-10 | Gate do Android (gate próprio — `D-1.0-EDGES`) | Android verde na candidata com evidência do gate próprio (o CI roda o APK) |
 
 Regras que amarram todo item: o gate §8 é um E entre todos os itens — um item em falta
 trava o RC independentemente dos demais; gaps ficam só na forma do §15 (FORA da

@@ -299,6 +299,8 @@ Contrato proposto:
 [ ] aarch64 green
 [ ] JS green
 [ ] Script green
+[ ] KofC green (gate próprio — `D-1.0-EDGES`)
+[ ] Android green (gate próprio — `D-1.0-EDGES`)
 [ ] golden byte parity onde o contrato exige
 [ ] todas as gaps restantes explicitamente fora do surface 1.0
 [ ] VERSION / docs / release metadata sincronizados
@@ -385,9 +387,19 @@ BLOCKS 1.0
 OUTSIDE 1.0 SURFACE
 POST-1.0
 NOT A BUG / CLOSE
+TRACKING (processo de release / umbrella)
 ```
 
 Nenhuma issue ambígua pode ser ignorada apenas porque não recebeu label.
+
+**Decidido (`D-1.0-EDGES`, 20/09/2026):** as categorias são **cinco** — uma
+quinta, `tracking/contract`, foi adicionada para issues de processo/umbrella
+(a thread de acompanhamento #560); é válida durante a estabilização, mas ainda
+precisa fechar antes do RC. O mecanismo está pousado (EG-1): labels +
+`scripts/release-blockers.tsv` + `scripts/check_release_blockers.sh` (RED quando
+qualquer issue OPEN tem zero ou 2+ categorias; `--rc-gate` falha enquanto
+qualquer `1.0-blocks` estiver aberto). Estado atual: #561/#563/#564/#565 =
+`1.0-blocks`; #560 = `tracking/contract`; #555 FECHADA.
 
 ---
 
@@ -464,6 +476,10 @@ Se sim, precisa de gate próprio.
 
 Se não, precisa ficar explicitamente fora do surface 1.0.
 
+**Decidido (`D-1.0-EDGES`, 20/09/2026): sim — KofC faz parte do Stable Surface
+1.0 e precisa de gate próprio.** O "Disponível" do site agora fica consistente
+com o contrato.
+
 ## Android
 
 O repositório possui Android em evolução e decisões recentes dizem, em faces específicas, que "Android é JVM" e deve compartilhar comportamento onde essa paridade foi decidida (verificado: `docs/development/DECISIONS.md`, registro das faces DB; Android também aparece em `docs/distribution/INSTALL.md`).
@@ -477,6 +493,9 @@ Android = Stable 1.0
 ou
 Android = experimental / post-1.0
 ```
+
+**Decidido (`D-1.0-EDGES`, 20/09/2026): Android = Stable 1.0, com gate próprio**
+(a opção cheia, não a parcial; o CI já roda o APK).
 
 ---
 
@@ -529,15 +548,23 @@ A autoridade dessa decisão é a Mel.
 
 # 16. VERSION / docs / metadata
 
-O repositório hoje ainda mostra em `beta-0.5.0`:
+**Antes do bump** o repositório mostrava em `beta-0.5.0`:
 
 ```text
 VERSION = 0.4.7-beta
 ```
 
-Isto é coerente com `D-BRANCH-0.5.0`, porque a própria decisão diz que o bump de versão é item de release-prep e o número é confirmado pela mantenedora no corte; nenhum agente faz bump unilateral.
+Isto era coerente com `D-BRANCH-0.5.0`, porque a própria decisão diz que o bump de versão é item de release-prep e o número é confirmado pela mantenedora no corte; nenhum agente faz bump unilateral.
 
-**Metadados já divergentes hoje (medidos em 20/09/2026, sem relação com bump):** o site público mostra `v0.4.1-beta`, enquanto `VERSION` e `pom.xml` estão em `0.4.7-beta`; e `docs/distribution/release-naming.md` ainda diz "Current version: 0.4.0-beta". São drift de documentação/site, não decisão de release.
+**Atualizado (`D-VERSION-BUMP-0.5.0`, 20/09/2026):** a mantenedora ordenou o bump, então em `beta-0.5.0`:
+
+```text
+VERSION = 0.5.0-beta
+```
+
+`scripts/bump-version.sh` sincronizou `VERSION` + `pom.xml` + `version.properties` + os stamps de versão corrente dos docs (EN+PT); o histórico ficou intacto.
+
+**Metadados ainda divergentes (medidos em 20/09/2026):** o site público mostra `v0.4.1-beta`, enquanto `VERSION` e `pom.xml` estão em `0.5.0-beta`; e `docs/distribution/release-naming.md` ainda diz "Current version: 0.4.0-beta". São drift de documentação/site, não decisão de release — itens de sincronização do EG-7.
 
 No futuro candidato 1.0, sincronizar pelo menos:
 
@@ -679,6 +706,10 @@ Os checkboxes não devem ser pré-verdejados antes de existir um candidato 1.0 r
 
 # 21. Pontos que a Mel precisa decidir antes da ratificação
 
+**Respondido (`D-1.0-EDGES`, 20/09/2026):** Q1, Q2 e Q7 abaixo agora estão
+decididas (ver a nota em cada uma). Q3–Q6 e Q8 já foram ratificadas no
+`D-RELEASE-1.0`.
+
 ## Q1 — Quando começa formalmente a linha 1.0?
 
 A preparação atual é da `beta-0.5.0`.
@@ -686,6 +717,10 @@ A preparação atual é da `beta-0.5.0`.
 ```text
 Qual evento/decisão encerra a sequência Beta e abre a preparação do primeiro RC 1.0?
 ```
+
+**Respondido:** a linha 1.0 abre **após o release 0.5.0 ser cortado e os
+EG-1..EG-7 fechados**; só então a Mel declara e a primeira candidata a RC é
+cortada (EG-8).
 
 ## Q2 — Surface de targets 1.0
 
@@ -703,6 +738,9 @@ Confirmar explicitamente:
 ```
 
 Dado para a decisão (medido em 20/09/2026): o site público marca KofC como "Disponível" e KofJS como "Em desenvolvimento"; o checklist da v3 tem o inverso (JS dentro, KofC fora, sem decisão).
+
+**Respondido:** a superfície são os seis acima **mais KofC e Android** — oito
+alvos, cada um com gate próprio. KofC e Android são alvos Stable 1.0.
 
 ## Q3 — Release blocker
 
@@ -731,6 +769,10 @@ Definir o nível de exigência:
 Decidir se são targets Stable 1.0 ou superfícies separadas/experimentais.
 
 Se KofC ou Android ficarem fora do Stable Surface 1.0, o site público, o README e os docs de arquitetura precisam deixar isso explícito (hoje o site marca KofC como "Disponível").
+
+**Respondido:** ambos são **alvos Stable 1.0 com gate próprio**. Nenhuma nota de
+"fora" no site/README é necessária; o "Disponível" do KofC no site agora fica
+consistente com o contrato.
 
 ## Q8 — Ratificação
 
@@ -1647,6 +1689,8 @@ O checklist original continua intacto:
 [ ] aarch64 green
 [ ] JS green
 [ ] Script green
+[ ] KofC green (gate próprio — `D-1.0-EDGES`)
+[ ] Android green (gate próprio — `D-1.0-EDGES`)
 [ ] golden byte parity onde o contrato exige
 [ ] todas as gaps restantes explicitamente fora do surface 1.0
 [ ] VERSION / docs / release metadata sincronizados
@@ -1655,19 +1699,22 @@ O checklist original continua intacto:
 [ ] RC → Stable sem regressão
 ```
 
-### Candidatos de reforço — NÃO RATIFICADOS
+### Candidatos de reforço — RATIFICADOS (os nove, `D-1.0-EDGES` 20/09/2026)
 
 ```text
-[? MEL] Stable Surface snapshot congelado no RC1
-[? MEL] 0 falhas obrigatórias sem classificação
-[? MEL] política de flaky tests aplicada ao candidato
-[? MEL] candidato comparado ao último baseline aceito
-[? MEL] compatibility corpus executado
-[? MEL] aplicação KOF real validada com o pacote candidato
-[? MEL] digest do pacote testado == digest do pacote publicado
-[? MEL] manifesto de evidência por target
-[? MEL] waiver de release somente explícito, documentado e aprovado
+[x] Stable Surface snapshot congelado no RC1
+[x] 0 falhas obrigatórias sem classificação
+[x] política de flaky tests aplicada ao candidato
+[x] candidato comparado ao último baseline aceito
+[x] compatibility corpus executado
+[x] aplicação KOF real validada com o pacote candidato
+[x] digest do pacote testado == digest do pacote publicado
+[x] manifesto de evidência por target
+[x] waiver de release somente explícito, documentado e aprovado
 ```
+
+**Decidido:** os nove viram gates obrigatórios — não só os quatro recomendados.
+A recomendação abaixo fica como contexto histórico e está **sobreposta**.
 
 Minha recomendação para discussão com a Mel é **não transformar todos em novos
 gates de uma vez**.

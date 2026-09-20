@@ -1001,7 +1001,7 @@ the order. **DEPRIORITIZED 15/09 (maintainer): TIER 3–5 is not current work.**
 FFI) · `2.2 codegen hook` → `infra`/gRPC stubs · **TIER 1 (SYSTEMS) closes
 before ANY Tier 6+ (R12).**
 
-## 24. KOF 1.0 EXIT GATE — contract stabilization (RATIFIED 09/20/2026, `DECISIONS.md` §D-RELEASE-1.0)
+## 24. KOF 1.0 EXIT GATE — contract stabilization (RATIFIED 09/20/2026, `DECISIONS.md` §D-RELEASE-1.0; edges closed by `D-1.0-EDGES`)
 
 Development meta until the first RC: **no bug ships, no edge stays open.** The
 normative text is `docs/development/PROPOSAL-1.0-EXIT-GATE.md` (+`.pt_BR.md`)
@@ -1014,14 +1014,16 @@ Open queue (every lane obeys; owner claims in `DOING.md`):
 
 | # | Item (doc ref) | Acceptance proof |
 |---|---|---|
-| EG-1 | Define `release-blocker` **mechanically** (§11; Q3) | every OPEN issue classified in exactly one of BLOCKS 1.0 / OUTSIDE 1.0 SURFACE / POST-1.0 / NOT A BUG via label+ledger; script lists violations; RED test first |
+| EG-1 | Define `release-blocker` **mechanically** (§11; Q3) | every OPEN issue classified in exactly one of BLOCKS 1.0 / OUTSIDE 1.0 SURFACE / POST-1.0 / NOT A BUG / TRACKING (`tracking/contract`) via label+ledger; script lists violations; RED test first. **DONE** `ea5d4dfe` + 5th-category complement |
 | EG-2 | Implement the machine gate (§10 trust criteria; steps 6–7) | gate fails on planted false-green/false-red fixtures; verdict bound to the analyzed SHA; stale analysis cannot decide a new commit; `CODEQL_GATE_SKIP` usage becomes an exception with recorded cause, then dies |
 | EG-3 | BEFORE/AFTER validation of the gate (step 8) | same SHA measured before/after; no regression in existing lanes' pushes |
 | EG-4 | Real package tested **outside the repo** (§12; step 9) | published-layout artifact runs the corpus E2E on a clean dir (the #550 lesson, pinned) |
-| EG-5 | Final target matrix (§13–§14; step 10) | JVM / x86-64 / riscv64 / aarch64 / JS / Script green on the SAME candidate + golden byte parity where the contract requires |
-| EG-6 | Close the open EDGES the maintainer owns (§21 Q2/Q7, §35 candidates) | explicit answer per item from Mel — no agent answers for her; the site/README stop implying an undecided surface meanwhile |
-| EG-7 | VERSION / docs / metadata sync (§16, §13 note, §35 site line) | VERSION, pom `revision`, package version.properties, CHANGELOG, AGENTS header, release docs, public site, support matrix — one consistent statement |
+| EG-5 | Final target matrix (§13–§14; step 10) | JVM / x86-64 / riscv64 / aarch64 / JS / Script **/ KofC / Android** green on the SAME candidate + golden byte parity where the contract requires; KofC and Android each carry their own gate (EG-9/EG-10) |
+| EG-6 | Close the open EDGES the maintainer owns (§21 Q2/Q7, §35 candidates) | **DONE 20/09/2026 (`D-1.0-EDGES`)**: Q1 (1.0 line opens after the 0.5.0 release + EG-1..EG-7), Q2/Q7 (KofC + Android inside Stable 1.0, own gates), §35 (all nine reinforcements mandatory) |
+| EG-7 | VERSION / docs / metadata sync (§16, §13 note, §35 site line) | VERSION, pom `revision`, package version.properties, CHANGELOG, AGENTS header, release docs, public site, support matrix — one consistent statement (site drift: `v0.4.1-beta`, KofJS "Em desenvolvimento" while JS is in the 1.0 surface) |
 | EG-8 | First 1.0 RC candidate (step 11) — ONLY when EG-1…EG-7 all close | the §8 checklist green with reproducible evidence on the candidate SHA + Mel's explicit "the 1.0 line is open" declaration (Q1) |
+| EG-9 | KofC gate (own gate — `D-1.0-EDGES`) | KofC green on the candidate with its own gate evidence |
+| EG-10 | Android gate (own gate — `D-1.0-EDGES`) | Android green on the candidate with its own gate evidence (CI runs the APK) |
 
 Rules binding every item: the §8 gate is AND — one unmet item blocks the RC
 regardless of the others; gaps stay only per §15 (OUTSIDE 1.0 + honest +
