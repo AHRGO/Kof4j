@@ -11521,6 +11521,7 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 - **Related:** §373 (surfaced it on the field path), bug 35 / #382 (the box-by-arg precedent, same file `JvmOpCollections`), §108 (interpreter arg-boxing on inclusion), §149 (the JavaFX mask), §357 (the descriptor-proof precedent).
 
 ## §375 — `BuiltinCallTyper.java` crossed the 600-line CRITICAL gate on the tip (541 → 612 via `57a0d5f0` §362): `check_500.sh` FALHOU for EVERY lane's push — same class of incident as §303 — 🟡 OPEN (catalogued 20/09 by lane s297; fix owner = the §362/typer lane, the file is hot today)
+- **GitHub:** #552 (mesma lacuna catalogada pela lane docs via `check_500.sh`; fix = split do BuiltinCallTyper pela lane compilador — fechar #552 junto com a virada deste registro)
 
 - **Status:** 🟡 OPEN 20/09 — measured, not introduced here: `./scripts/check_500.sh` on the bare tip (my §373 diff stashed) → `FALHOU — BuiltinCallTyper.java tinha 541 (< 600) no baseline, agora 612 (>= 600): cruzou a linha vermelha, split obrigatório`.
 - **Symptom (repro):** `git checkout 38f5591e && ./scripts/check_500.sh` → exit 1; the §344 split had deliberately brought the file to 541 (`9711e940`), and the §362 arity-gate fix (`57a0d5f0`, +71 lines) pushed it past the red line without a baseline/split step (precedent and policy: §303 — "≥600 fails CI, split remains the path; first agent with free hands claims").
