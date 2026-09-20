@@ -24,6 +24,43 @@ public final class KofJsProcessBridge {
     private KofJsProcessBridge() {
     }
 
+    /**
+     * §367: forma de dados process/shell — Map de conteudo com impressao
+     * estavel {@code ProcessResult[exitCode=0, stdout=x, stderr=]} (golden do
+     * corpus: conteudo, como record — nunca a forma crua do host). Chaves
+     * stdout/stderr/exitCode inalteradas: o acesso do JavaScript gerado e o
+     * de antes (additive, freeze 2). toString com null-seguranca (R6).
+     */
+    static final class KofResult extends LinkedHashMap<String, Object> {
+        KofResult(String stdout, String stderr, int exitCode) {
+            put("stdout", stdout);
+            put("stderr", stderr);
+            put("exitCode", exitCode);
+        }
+
+        @Override public String toString() {
+            Object code = getOrDefault("exitCode", -1);
+            Object o = getOrDefault("stdout", "");
+            Object e = getOrDefault("stderr", "");
+            return "ProcessResult[exitCode=" + code
+                    + ", stdout=" + trimTrailingNewline(String.valueOf(o))
+                    + ", stderr=" + trimTrailingNewline(String.valueOf(e)) + "]";
+        }
+
+        private static String trimTrailingNewline(String v) {
+            int end = v.length();
+            while (end > 0 && (v.charAt(end - 1) == '\n' || v.charAt(end - 1) == '\r')) end--;
+            return v.substring(0, end);
+        }
+    }
+
+    private static String trimTrailingNewline(String s) {
+        if (s == null) return "";
+        int end = s.length();
+        while (end > 0 && (s.charAt(end - 1) == '\n' || s.charAt(end - 1) == '\r')) end--;
+        return s.substring(0, end);
+    }
+
     /** Registra as faces de processo no mapa {@code kof_platform}. */
     public static void install(Map<String, Object> platform) {
         platform.put("processRun", (ProxyExecutable) args -> run(args));
@@ -50,7 +87,7 @@ public final class KofJsProcessBridge {
      * honestos como Result(-1), nunca excecao do host.
      */
     static Map<String, Object> pipeline(Value[] args) {
-        Map<String, Object> result = new LinkedHashMap<>();
+        Map<String, Object> result = new KofResult("", "", -1);
         java.util.List<Process> procs = new ArrayList<>();
         try {
             List<List<String>> stages = new ArrayList<>();
@@ -104,14 +141,11 @@ public final class KofJsProcessBridge {
             int code = last.waitFor();
             for (Thread pump : pumps) pump.join(5000);
             for (Process p : procs) if (p.isAlive()) p.destroy();
-            result.put("stdout", outTask.get());
-            result.put("stderr", errTask.get());
-            result.put("exitCode", code);
+            return new KofResult(outTask.get(), errTask.get(), code);
         } catch (Exception e) {
             for (Process p : procs) p.destroyForcibly();
             return fail(result, e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
         }
-        return result;
     }
 
     private static Map<String, Object> fail(Map<String, Object> result, String message) {
@@ -140,7 +174,7 @@ public final class KofJsProcessBridge {
             List<String> cmd = args.length > 0 && args[0].hasArrayElements()
                     ? argvOf(args[0]) : List.of();
             if (cmd.isEmpty()) {
-                Map<String, Object> result = new LinkedHashMap<>();
+                Map<String, Object> result = new KofResult("", "", -1);
                 result.put("stdout", "");
                 result.put("stderr", "kof_shell_runwith: empty argv");
                 result.put("exitCode", -1);
@@ -187,21 +221,15 @@ public final class KofJsProcessBridge {
             String errText = new String(p.getErrorStream().readAllBytes(),
                     java.nio.charset.StandardCharsets.UTF_8);
             int code = p.waitFor();
-            result.put("stdout", outText);
-            result.put("stderr", errText);
-            result.put("exitCode", code);
+            return new KofResult(outText, errText, code);
         } catch (Exception e) {
             return honestFailure(e);
         }
-        return result;
     }
 
     private static Map<String, Object> honestFailure(Exception e) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("stdout", "");
-        result.put("stderr", e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
-        result.put("exitCode", -1);
-        return result;
+        return new KofResult("", e.getMessage() == null
+                ? e.getClass().getSimpleName() : e.getMessage(), -1);
     }
 
     // ── process.spawn (F10) — stdin/stdout vivos no host JS. Espelho EXATO

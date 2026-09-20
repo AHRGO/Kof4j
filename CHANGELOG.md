@@ -123,6 +123,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     re-verified the whole battery on the clean tip: `GenericFieldArrayEraseE2ETest` 5/5 +
     `MakealivePrimitivesE2ETest` 8/8 + `FieldAssignabilityPhantomE2ETest` 8/8.
 
+  - **#548/§367 — `println(result)` of a process/shell result prints by CONTENT, no more leaked Java identity**
+    — `process.run("echo","x")` + `println(r)` leaked the raw runtime identity
+    (`dev.kof.runtime.KofRuntime$ProcessResult@<hash>`, a different hash every run) on JVM and Script. The result now
+    prints as `ProcessResult[exitCode=0, stdout=x, stderr=]` on JVM, Script and the JS host runner (the same shape the JS
+    bridge always printed; Native refuses `process.run` with the honest PROC001 gap, untouched). No field access
+    changes (additive, freeze 2). Proved by `ProcessResultContentE2ETest` 4/4 — **RED 4/4 on the clean tip before the
+    fix, GREEN after** — with `ProcessSpawnE2ETest` 4/4 and `ShellE2ETest` 16/16 staying green. The companion report
+    #547/§366 (Script losing the child's stdout) was measured **not reproducible** on the current tip (`x`/`0` on both
+    targets); its JVM×Script byte parity is now pinned permanently by the same test's `F:0|x` assertions.
+
   - **#443/§373 — bare `List`/`Set`/`Map` in a DECLARED position now resolves to the builtin collections (`d969bc3a`)**
     — `class Box { List items }` + `items = listOf(1,2)` compiled "clean" and died at class load with a phantom
     descriptor `LList;` (`NoClassDefFoundError: List`): two resolvers for the same declared name, only the IR/`toType`

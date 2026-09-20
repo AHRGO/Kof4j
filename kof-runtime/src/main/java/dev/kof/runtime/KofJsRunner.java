@@ -172,7 +172,14 @@ public final class KofJsRunner {
         platform.put("print", (ProxyExecutable) args -> {
             for (Value arg : args) {
                 try {
-                    out.write(String.valueOf(arg.isNull() ? "null" : arg).getBytes(StandardCharsets.UTF_8));
+                    // §367: um Result de process/shell (KofResult, host Map) e
+                    // impresso por CONTEUDO — o Value.toString() do Graal devolvia
+                    // "{stdout=x, ..}" cru do AbstractMap (identidade do host, nao
+                    // do Kof). Demais valores seguem o caminho de antes.
+                    Object ho = arg.isNull() ? "null" : arg.as(Object.class);
+                    String text = (ho instanceof KofJsProcessBridge.KofResult)
+                            ? ho.toString() : String.valueOf(ho);
+                    out.write(text.getBytes(StandardCharsets.UTF_8));
                 } catch (IOException e) {
                     return 0;
                 }

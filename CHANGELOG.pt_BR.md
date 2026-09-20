@@ -109,6 +109,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     bateria inteira no tip limpo: `GenericFieldArrayEraseE2ETest` 5/5 + `MakealivePrimitivesE2ETest`
     8/8 + `FieldAssignabilityPhantomE2ETest` 8/8.
 
+  - **#548/§367 — `println(result)` de um resultado de process/shell imprime por CONTEUDO, sem vazar identidade Java**
+    — `process.run("echo","x")` + `println(r)` vazava a identidade crua do runtime
+    (`dev.kof.runtime.KofRuntime$ProcessResult@<hash>`, hash diferente a cada execucao) em JVM e Script. O resultado
+    agora imprime `ProcessResult[exitCode=0, stdout=x, stderr=]` em JVM, Script e no host JS (o mesmo formato que a
+    ponte JS ja imprimia; Native recusa `process.run` com o gap honesto PROC001, intocado). Nenhum acesso a campos
+    mudou (aditivo, freeze 2). Provado por `ProcessResultContentE2ETest` 4/4 — **RED 4/4 no tip limpo antes do fix,
+    GREEN depois** — com `ProcessSpawnE2ETest` 4/4 e `ShellE2ETest` 16/16 verdes. O report irmao #547/§366 (Script
+    perdendo o stdout do filho) foi medido **nao-reproduzivel** no tip atual (`x`/`0` nos dois alvos); a paridade
+    JVM×Script byte-a-byte fica fixada como teste permanente na mesma classe.
+
   - **#443/§373 — `List`/`Set`/`Map` bare em posicao DECLARADA agora resolve para as colecoes builtin (`d969bc3a`)**
     — `class Box { List items }` + `items = listOf(1,2)` compilava "limpo" e morria no class load com descriptor
     fantasma `LList;` (`NoClassDefFoundError: List`): dois resolvedores para o mesmo nome declarado, so o caminho
