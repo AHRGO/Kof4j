@@ -110,7 +110,7 @@ a new domain. **This stage closes before any Tier 6+ (R12).**
 |---|------|--------|-------|--------------|
 | 1.5.1 | `kof deps` + Maven Central resolution | ✅ | tooling lane | — |
 | 1.5.2 | Transitive resolution + `kofdeps.lock` | ✅ 16/09 | tooling lane | `DepsTransitiveTest` 10/10 (incl. real-Maven E2E) |
-| 1.5.3 | Registry MVP | ✅ 19/09 | docs→platform lane | D2-A: **publish ✅** (`b1ea1718`-era) + **pull ✅ S2 19/09** — `DepsRegistry`: `owner/repo[@ver]` → asset `<repo>-<ver>.tar.gz` da API GitHub Releases, `SHA256SUMS` verificado ANTES de instalar, cache `~/.kof/deps/kof/`, `latest` pinna a versão no `kofdeps`; REG001–004 honestos (R6); `DepsRegistryTest` 6/6 + vizinhos `Deps*` 20/20; build/run consomem via `Deps.classpath()`; live GitHub round-trip = smoke manual pendente |
+| 1.5.3 | Registry MVP | ✅ 19/09 | docs→platform lane | D2-A: **publish ✅** (`b1ea1718`-era) + **pull ✅ S2 19/09** — `DepsRegistry`: `owner/repo[@ver]` → asset `<repo>-<ver>.tar.gz` da API GitHub Releases, `SHA256SUMS` verificado ANTES de instalar, cache `~/.kof/deps/kof/`, `latest` pinna a versão no `kofdeps`; REG001–004 honestos (R6); `DepsRegistryTest` 6/6 + vizinhos `Deps*` 20/20; build/run consomem via `Deps.classpath()`; live GitHub round-trip = smoke manual pendente (RED 20/09: publish OK, pull bloqueado por #564 — evidência `docs/audits/registry-live-roundtrip-2026-09-20.md`) |
 
 ### 1.6 Tracing / OpenTelemetry + `application{}` lifecycle
 

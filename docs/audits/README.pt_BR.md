@@ -17,6 +17,7 @@
 | `complexity-audit.md` | contagem de linhas/classe (02/09) | **snapshot** — gate vivo = `scripts/check_500.sh` (ratchet CI) |
 | `PLANNING-FUTURE-AUDIT.md` | branch `planning-future` × beta (07–08/09) | **encerrada** — R2 vive em `DECISIONS.md` §D-APP/§D-PLATFORM (ratificado 13/09), R5 no cluster migração |
 | `planning-future-reconcile.md` | merge da branch (05/09) | **encerrada** — checklist cumprido (port dos tiers) |
+| `registry-live-roundtrip-2026-09-20.pt_BR.md` | smoke real do round-trip do Registry 1.5.3 no GitHub (20/09) | **VERMELHO** — publish OK, pull bloqueado pela #564; rodar de novo as fases C–E após o fix |
 
 ## Como usar
 
