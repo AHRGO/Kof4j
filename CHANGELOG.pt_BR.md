@@ -28,7 +28,7 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `emptybin`) e com binutils/qemu reais no job cross da CI. Tracker 8.4 → ✅, X9 fatia 6.
 
   - **Dívida CodeQL do cluster debug/tooling fechada na raiz (sem mudança de comportamento observável)**
-    — os 11 alertas CodeQL abertos do cluster de debug da CLI foram corrigidos na fonte, não
+    — os 12 alertas CodeQL abertos do cluster de debug da CLI foram corrigidos na fonte, não
     suprimidos: `KofGdbMi` usa `add` nas filas ilimitadas (o retorno ignorado de `offer`), remove
     o container `console` só-escrito e rejeita binário nulo com `IllegalArgumentException`
     explícita (sem NPE); `JdwpClient` deixa de nomear o `argWords` não lido (o `argCnt` do
@@ -36,9 +36,11 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (breakpoint sem cliente vivo fica `verified:false`, nunca NPE) e remove o `frameVariables`
     nunca lido; `KofDebugNativeDap` faz o parse dos campos `line`/`level` do MI por um helper
     com fallback, então saída malformada do gdb nunca aborta a sessão DAP; e `KofDebugNativeTest`
-    resolve executáveis pelo `PATH` (`Files.isExecutable`) em vez de spawnar um `sh` relativo.
-    Provado pelo cluster de debug **14/14** (`KofDebugNativeTest` 7, `KofDebugNativeDapTest` 3,
-    `KofDebugAttachTest` 3, `KofDebugJvmTest` 1) e compile verde do `kof-cli`.
+    resolve executáveis pelo `PATH` (`Files.isExecutable`) em vez de spawnar um `sh` relativo;
+    `ProfileMethodsTest` resolve o `node` do mesmo jeito. Provado pelo cluster de debug
+    **14/14** (`KofDebugNativeTest` 7, `KofDebugNativeDapTest` 3,
+    `KofDebugAttachTest` 3, `KofDebugJvmTest` 1), `ProfileMethodsTest` **5/5** e compile
+    verde do `kof-cli`.
 
   - **#545/§362 — chamadas de construtor fantasma agora falham em tempo de compilacao (`57a0d5f0`)**
     — `P(1, 2)` em `record P(Int x)`, `D(1)` em classe sem esse construtor e `C("s")` em

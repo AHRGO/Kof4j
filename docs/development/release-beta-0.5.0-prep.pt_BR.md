@@ -14,10 +14,12 @@ dos três estados).
        docs). Cada um fecha com prova nos 4 alvos; a lane docs faz ff da
        `beta-0.5.0` após cada pouso na 0.4.0.
 2. [ ] Dívida CodeQL (#555): instâncias restantes por dono — bridge
-       #918/#919, profiler #938, s297 #932/#933, DWARF #920, testes erasure
-       #912–#917, enum/herança #904/#905/#909/#910, main #907/#908/#911,
-       legados #921/#922. Quando `scripts/codeql-gate.sh --fast` ficar
-       VERDE, as lanes abandonam o `CODEQL_GATE_SKIP` e o guarda-chuva fecha.
+       #918/#919, ~~profiler #938~~ (✅ tooling/debug 20/09), s297 #932/#933,
+       DWARF #920, testes erasure #912–#917, enum/herança #904/#905/#909/#910,
+       main #907/#908/#911, legados #921/#922. O **cluster debug/tooling está
+       LIMPO** (#925–#937 + #938, 12 alertas, `e70859bd`+este). Quando
+       `scripts/codeql-gate.sh --fast` ficar VERDE, as lanes abandonam o
+       `CODEQL_GATE_SKIP` e o guarda-chuva fecha.
 3. [ ] Bump de versão: `pom.xml` `<revision>0.4.7-beta</revision>` para o
        número que a mantenedora decidir no corte. Conferir referências à
        versão codificadas (javadoc/testes citam a versão do artefato) ANTES
