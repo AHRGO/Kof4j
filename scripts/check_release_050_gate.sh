@@ -73,7 +73,9 @@ c_parity() {
   elif [ "$provided" -eq 1 ] || grep -q "PARITY: 0%" "$report" 2>/dev/null; then
     STATE[parity]=RED; DETAIL[parity]="matrix reports a divergence — see $report"
   else
-    STATE[parity]=NEEDS-MEASURE; DETAIL[parity]="matrix could not certify (missing toolchain/qemu) — see $report"
+    STATE[parity]=NEEDS-MEASURE
+    local cause; cause="$(grep -m1 -E 'ARTEFATO VELHO|nao corresponde|SEM |sem ' "$report" 2>/dev/null | head -c 160)"
+    DETAIL[parity]="matrix could not certify${cause:+ — $cause} (see $report)"
   fi
 }
 

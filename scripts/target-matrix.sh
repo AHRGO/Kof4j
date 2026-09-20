@@ -24,7 +24,8 @@
 #   scripts/target-matrix.sh --keep          # não apaga a sandbox
 #   scripts/target-matrix.sh --selftest      # RED-first offline (sem compilar)
 #
-# rc: 0 PASS · 1 FAIL · 2 INCOMPLETE (ferramenta de execução ausente) · 3 ambiente.
+# rc: 0 PASS · 1 FAIL · 2 INCOMPLETE (ferramenta de execução ausente) · 3 ambiente
+#     (sem JDK 25, kof ausente, ou jar da árvore anterior à fonte = artefato velho).
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -74,6 +75,16 @@ qemu_ld_prefix() { # riscv64|aarch64
     return 0
 }
 
+# jar_stale <jar> <srcdir>... -> imprime a 1a fonte mais nova que o jar, ou nada.
+# Guarda de honestidade (R6): o bin/kof da arvore roda lib/kof.jar; se a fonte
+# for mais nova, o jar mede um binario que NAO corresponde ao tip — a matriz
+# tem de recusar (nunca um PARITY falso, nem 0% nem 100%). Testavel no selftest.
+jar_stale() {
+    local jar="$1"; shift
+    [ -f "$jar" ] || return 0
+    find "$@" -name '*.java' -newer "$jar" 2>/dev/null | head -1
+}
+
 # ── selftest RED-first (offline: sem compilar, sem tocar a árvore) ─────────
 if [ "$SELFTEST" = true ]; then
     ST="$(mktemp -d)"; trap 'rm -rf "$ST"' EXIT
@@ -91,7 +102,13 @@ if [ "$SELFTEST" = true ]; then
     if p="$(qemu_ld_prefix archnenhuma)" && [ -n "$p" ]; then
         echo "SELFTEST FAIL: qemu_ld_prefix inventou prefixo '$p'"; exit 1
     fi
-    echo "SELFTEST: ok — comparador reprova divergencia, aceita igualdade, sem prefixo falso"
+    # guarda de artefato velho: jar anterior a fonte = stale (nao mede); posterior = fresco
+    mkdir -p "$ST/src"
+    printf 'x\n' > "$ST/jar"; sleep 1; printf 'y\n' > "$ST/src/A.java"
+    [ -n "$(jar_stale "$ST/jar" "$ST/src")" ] || { echo "SELFTEST FAIL: jar velho nao foi detectado como stale"; exit 1; }
+    sleep 1; touch "$ST/jar"
+    [ -z "$(jar_stale "$ST/jar" "$ST/src")" ] || { echo "SELFTEST FAIL: jar fresco acusado como stale (falso vermelho)"; exit 1; }
+    echo "SELFTEST: ok — comparador reprova divergencia, aceita igualdade, sem prefixo falso, staleness detectada"
     exit 0
 fi
 
@@ -106,6 +123,23 @@ else
     KOF="$ROOT/bin/kof"
 fi
 [ -x "$KOF" ] || { echo "matrix: kof nao executavel em $KOF" >&2; exit 3; }
+
+# ── guarda de artefato velho (R6) ──────────────────────────────────────────
+# Sem --dist, o bin/kof da arvore roda lib/kof.jar. Se a fonte for mais nova, o
+# jar NAO corresponde ao tip e a matriz mediria um binario fantasma (foi assim
+# que um jar de 02:03, anterior ao fix do #550/§371, produziu PARITY 0% falso no
+# cross: prune do slice DB ausente -> -lsqlite3 forcado). Recusa com causa
+# nomeada em vez de mentir; `--dist` de uma dist fresca e o caminho correto.
+if [ -z "$DIST_DIR" ] && [ "${KOF_MATRIX_ALLOW_STALE:-0}" != "1" ]; then
+    stale="$(jar_stale "$ROOT/lib/kof.jar" "$ROOT"/kof-*/src/main 2>/dev/null)"
+    if [ -n "$stale" ]; then
+        echo "matrix: ARTEFATO VELHO — lib/kof.jar e anterior a fonte ($stale)." >&2
+        echo "matrix: o bin/kof da arvore mediria um binario que nao corresponde ao tip (PARITY falso)." >&2
+        echo "matrix: reconstrua (mvn package -DskipTests && scripts/package.sh) ou use --dist de uma dist fresca." >&2
+        echo "matrix: override consciente: KOF_MATRIX_ALLOW_STALE=1 (nao recomendado — mede artefato velho)." >&2
+        exit 3
+    fi
+fi
 
 # ── sandbox FORA do repo (regra 9: nunca /tmp) ─────────────────────────────
 SANDBOX="$(mktemp -d "$WORK_ROOT/.kof-matrix.XXXXXX")"
