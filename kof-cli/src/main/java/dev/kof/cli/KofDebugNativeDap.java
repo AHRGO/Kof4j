@@ -26,6 +26,8 @@ final class KofDebugNativeDap {
     private Path buildDir;
     private int nextSeq = 1;
     private final Map<Integer, Integer> frameLevel = new LinkedHashMap<>();
+    private volatile boolean pausePending;
+    private boolean exceptionArmed;
 
     KofDebugNativeDap(Path sourceFile, Integer attachPid) {
         this.sourceFile = sourceFile;
@@ -143,6 +145,46 @@ final class KofDebugNativeDap {
             case "next" -> exec(seq, command, "-exec-next --all", Map.of());
             case "stepIn" -> exec(seq, command, "-exec-step --all", Map.of());
             case "stepOut" -> exec(seq, command, "-exec-finish --all", Map.of());
+            case "pause" -> {
+                if (mi == null) {
+                    fail(seq, command, "not launched");
+                    return;
+                }
+                pausePending = true;
+                mi.send("-exec-interrupt --all");
+                respond(seq, command, Map.of());
+            }
+            case "setExceptionBreakpoints" -> {
+                List<Object> result = new ArrayList<>();
+                List<?> filters = args.get("filters") instanceof List<?> l ? l : List.of();
+                boolean all = filters.isEmpty() || filters.contains("all") || filters.contains("caught");
+                if (mi == null) {
+                    fail(seq, command, "not launched");
+                    return;
+                }
+                if (!all) {
+                    // Native breaks on EVERY Kof throw (the runtime's own chain, not
+                    // C++ exceptions): gdb's catch-throw does not apply and the
+                    // caught/uncaught refinement cannot be observed — honest refusal,
+                    // never a filter that silently over-breaks (R6).
+                    for (Object f : filters) {
+                        result.add(Map.of("verified", false, "id", String.valueOf(f),
+                                "message", "native breaks on every Kof throw;"
+                                        + " caught/uncaught refinement is JVM-only"));
+                    }
+                } else {
+                    // the native analogue of the exception event: break on the runtime's
+                    // own throw entry point (real symbol, `-f` = pending until loaded).
+                    if (!exceptionArmed) {
+                        mi.command("-break-insert -f -- kof_throw_string", 5000);
+                        exceptionArmed = true;
+                    }
+                    for (Object f : filters) {
+                        result.add(Map.of("verified", true, "id", String.valueOf(f)));
+                    }
+                }
+                respond(seq, command, Map.of("breakpoints", result));
+            }
             case "threads" -> respond(seq, command, Map.of("threads",
                     List.of(Map.of("id", 1, "name", "kof-native"))));
             case "stackTrace" -> {
@@ -261,12 +303,13 @@ final class KofDebugNativeDap {
                 emit("terminated", Map.of());
                 return;
             }
-            String mapped = switch (reason) {
+            String mapped = pausePending ? "pause" : switch (reason) {
                 case "entry-breakpoint" -> "entry";
                 case "end-stepping-range" -> "step";
                 case "signal-received" -> "signal";
                 default -> "breakpoint";
             };
+            pausePending = false;
             emit("stopped", Map.of("reason", mapped, "threadId", 1, "allThreadsStopped", true));
         } catch (IOException ignored) {
         }

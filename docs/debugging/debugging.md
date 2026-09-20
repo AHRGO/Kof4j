@@ -81,14 +81,18 @@ The session compiles with debug metadata, launches the JVM with
   Native (DAP↔gdb/MI) and, since 20/09, also on the **JVM** DAP (JDWP
   `SingleStep`; `evaluate` resolves a local **name** — JDWP has no expression
   evaluator, so anything else is an honest refusal)
+- `pause` and `setExceptionBreakpoints` — ✅ JVM + Native 20/09 (JVM: JDWP
+  `ThreadReference.Suspend` over the user threads — never the agent's own — and
+  the Exception event; Native: `-exec-interrupt --all` and a breakpoint on
+  `kof_throw_string`, with the caught/uncaught refinement an honest
+  `verified:false`)
 - attach (`--attach <pid>`) on JVM and Native — ✅ X7-5
 - ~~Native (DWARF — Phase 5)~~ ✅ **X7-3 landed 20/09** (`cfa67238`, `KofDebugNativeTest`);
   JS (source maps — Phase 6) = honest diagnostic today (embedded engine)
 
-**Still planned (Phase 4/7 — see `debugger-architecture.md`):**
+**Still planned (Phase 4 — see `debugger-architecture.md`):**
 
-- exceptions (break on throw / uncaught) with Kof stack
-- pause / restart
+- Phase 4: Kof Editor UI (the DAP server — JVM + Native — is ready)
 
 ## 4. Integration
 
@@ -109,7 +113,8 @@ LSP and DAP do not mix: LSP = code; DAP = execution.
 - Phase 2 (JVM: SourceFile, LineNumberTable, LocalVariableTable) — ✅
 - Phase 3 (`kof-debug` MVP: raw DAP + JDWP) — ✅
   - DAP requests: `initialize`, `launch`, `attach`, `setBreakpoints`,
-    `configurationDone`, `continue`, `next`, `stepIn`, `stepOut`, `threads`,
+    `setExceptionBreakpoints`, `configurationDone`, `continue`, `pause`,
+    `next`, `stepIn`, `stepOut`, `threads`,
     `stackTrace`, `scopes`, `variables`, `evaluate`, `disconnect`
   - `stopped` event when a Kof breakpoint is hit
   - call stack with Kof functions, file and line (via LineNumberTable)

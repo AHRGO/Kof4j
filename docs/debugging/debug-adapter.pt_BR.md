@@ -2,7 +2,7 @@
 
 # DEBUG-ADAPTER.md — kof-debug (Debug Adapter DAP)
 
-**Status:** JVM (JDWP cru, sem jdk.jdi) + NATIVE (console gdb + DAP↔GDB/MI, X7-3/X7-4) implementados e validados — `kof debug --dap --target native` faz a ponte DAP↔gdb/MI2 real (`KofGdbMi` + `KofDebugNativeDap`); `stackTrace`/breakpoints sempre mostram o `.kf`; sem gdb = erro DAP honesto nomeando a ferramenta (R6); JS = recusa honesta (o alvo roda no engine EMBUTIDO — não há node/inspector para anexar). **20/09 (X7-5):** o attach é REAL no JVM (`--dap --attach <pid>`, JDWP cru numa VM viva) e no Native (`--dap --attach <pid>`, gdb `-p`); o cliente JVM foi reconstruído contra o wire do JDK 25 (`known-bugs.md §376`) e as conversas completas de launch/attach agora têm testes E2E (`KofDebugJvmTest`, `KofDebugAttachTest`)
+**Status:** JVM (JDWP cru, sem jdk.jdi) + NATIVE (console gdb + DAP↔GDB/MI, X7-3/X7-4) implementados e validados — `kof debug --dap --target native` faz a ponte DAP↔gdb/MI2 real (`KofGdbMi` + `KofDebugNativeDap`); `stackTrace`/breakpoints sempre mostram o `.kf`; sem gdb = erro DAP honesto nomeando a ferramenta (R6); JS = recusa honesta (o alvo roda no engine EMBUTIDO — não há node/inspector para anexar). **20/09 (X7-5):** o attach é REAL no JVM (`--dap --attach <pid>`, JDWP cru numa VM viva) e no Native (`--dap --attach <pid>`, gdb `-p`); o cliente JVM foi reconstruído contra o wire do JDK 25 (`known-bugs.md §376`) e as conversas completas de launch/attach agora têm testes E2E (`KofDebugJvmTest`, `KofDebugAttachTest`). **20/09 (Fase 7):** JVM `next`/`stepIn`/`stepOut` + `evaluate` (`KofDebugJvmStepTest`) e `pause` + `setExceptionBreakpoints` (`KofDebugJvmExceptionTest`); Native `pause` + `setExceptionBreakpoints` (`KofDebugNativeDapTest`)
 **Data:** 27 de agosto de 2026 (atualizada 20/09 com as faces Native)
 **Versão:** 0.5.0-beta (7 targets; free-list + pthread spawn + FP XMM)
 
@@ -53,7 +53,13 @@ launch                → compila (JVM + debug info), porta livre,
                         suspend=y,address=<porta>, conecta e registra o
                         ClassPrepare de Default.Main (suspend ALL)
 setBreakpoints        → registra as linhas Kof (aplicadas no ClassPrepare)
+setExceptionBreakpoints → EventRequest.Set kind 4 + modificador ExceptionOnly 8
+                        (refType 0 = todas; faces caught/uncaught)
 configurationDone     → VM.Resume
+pause                 → ThreadReference.Suspend (11,2) em TODA thread de
+                        USUÁRIO — as threads do próprio agente JDWP (nome começa
+                        com "JDWP") são puladas: suspender a thread de transporte
+                        congela o protocolo (medido). `stopped` com reason `pause`
 [evento] stopped      → breakpoint atingido (thread + motivo)
 stackTrace            → frames Kof: nome da função, arquivo, linha
 continue              → VM.Resume
@@ -70,7 +76,12 @@ launch                → compila NATIVE com debug info (DWARF: line table +
                         nomeando a ferramenta (nunca stack no meio do stream)
 setBreakpoints        → -break-insert -f -- <file.kf>:<line> (verified a partir
                         da linha real que o DWARF resolveu)
+setExceptionBreakpoints → -break-insert -f -- kof_throw_string (a cadeia de throw
+                        do próprio runtime Kof, NÃO exceções C++, então o
+                        catch-throw do gdb não se aplica); o refinamento
+                        caught/uncaught é só do JVM → `verified:false` honesto (R6)
 configurationDone     → -exec-run --all
+pause                 → -exec-interrupt --all → `stopped` com reason `pause`
 [evento] *stopped     → DAP stopped (breakpoint-hit/entry/end-stepping mapeados);
                         exit-code = exited + terminated
 stackTrace            → -stack-list-frames; source.path é SEMPRE o .kf — o
@@ -126,6 +137,11 @@ resposta síncrona (elas só aparecem como timeouts de 5s).
   slots[start(long), name, sig, length, slot]}` — NÃO há lista de
   argumentos; chamá-lo num frame nativo devolve `NATIVE_METHOD` (511) —
   trate isso, nunca engula os outros.
+- `Method.LineTable (6,1)` / `Method.VariableTable (6,2)` num frame nativo ou
+  abstrato devolve `NATIVE_METHOD` (511, medido no frame do topo `Thread.sleep`
+  de uma thread pausada). Um stack trace deve reportar ESSE frame como
+  desconhecido (nome `?`, linha `-1`) e manter os frames Kof — abortar o
+  `stackTrace` inteiro porque um frame da JDK não tem debug info matava a sessão.
 
 ## 3.3 Limites atuais (pós-X7-5)
 
@@ -142,8 +158,14 @@ resposta síncrona (elas só aparecem como timeouts de 5s).
   VariableTable/GetValues; o JDWP não tem avaliador de expressão, então
   qualquer outra coisa é `success:false` honesto nomeando a limitação) e ✅
   Native desde X7-4 (o gdb avalia expressões completas);
-- o que falta: pause em todos e exception breakpoints (Fase 7); JS continua
-  gap honesto (engine embutido, sem inspector).
+- `pause` — ✅ JVM 20/09 (ThreadReference.Suspend 11,2 em toda thread de usuário,
+  nunca nas do próprio agente JDWP) e ✅ Native 20/09 (`-exec-interrupt --all`);
+- `setExceptionBreakpoints` — ✅ JVM 20/09 (evento Exception kind 4 + modificador
+  ExceptionOnly 8; faces `caught`/`uncaught`) e ✅ Native 20/09 (breakpoint em
+  `kof_throw_string`, a cadeia de throw do próprio runtime; o refinamento
+  caught/uncaught é só do JVM e vira `verified:false` honesto, nunca um filtro
+  que estoura silenciosamente — R6);
+- o que falta: JS continua gap honesto (engine embutido, sem inspector).
 
 > Uma verruga do `LocalVariableTable` afeta a leitura de locals numa linha que
 > declara variável: o backend JVM emite todo local com `Start=0`/tamanho do
@@ -170,8 +192,10 @@ O usuário sempre vê o tipo Kof.
 - Fase 7: locals por frame (`StackFrame.GetValues`), stepping, breakpoints
   verificados, exception breakpoints, avaliação com o type system
   (Native: locals/scopes/stepping/evaluate pousaram X7-4/X7-5; JVM: locals +
-  breakpoints verificados pousaram X7-5 e **stepping (`next`/`stepIn`/`stepOut`)
-  + `evaluate` pousaram 20/09**; resta: pause e exception breakpoints)
+  breakpoints verificados pousaram X7-5, **stepping (`next`/`stepIn`/`stepOut`)
+  + `evaluate` pousaram 20/09**, e **`pause` + `setExceptionBreakpoints`
+  pousaram 20/09** — as faces JVM e Native da Fase 7 estão fechadas; JS
+  permanece gap honesto)
 - ✅ 20/09: Native (DWARF) — console + DAP<->GDB/MI (X7-3/X7-4)
 - ✅ 20/09 (X7-5): attach no JVM + Native; locals por frame e stack
   multi-frame vieram junto (antes da Fase 7); JS fica gap honesto

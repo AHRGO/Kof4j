@@ -140,6 +140,53 @@ final class KofDebugJvmSession {
             case "next" -> step(seq, command, 1);
             case "stepIn" -> step(seq, command, 0);
             case "stepOut" -> step(seq, command, 2);
+            case "pause" -> {
+                if (jdwp == null) {
+                    fail2(seq, command, "not launched");
+                    return;
+                }
+                long requested = args.get("threadId") instanceof Number n ? n.longValue() : -1;
+                try {
+                    if (requested >= 0) {
+                        jdwp.suspendThread(requested);
+                        stoppedThread = requested;
+                    } else {
+                        // Suspend the user threads, NEVER the JDWP agent's own threads
+                        // (see JdwpEvents.suspendUserThreads for the measured reason).
+                        stoppedThread = jdwp.suspendUserThreads();
+                    }
+                } catch (IOException e) {
+                    fail2(seq, command, "pause failed: " + e.getMessage());
+                    return;
+                }
+                stopReason = "pause";
+                respond(seq, command, Map.of());
+                notifyStopped();
+            }
+            case "setExceptionBreakpoints" -> {
+                if (jdwp == null) {
+                    fail2(seq, command, "not launched");
+                    return;
+                }
+                List<?> filters = args.get("filters") instanceof List<?> l ? l : List.of();
+                boolean caught = false;
+                boolean uncaught = false;
+                for (Object f : filters) {
+                    if ("caught".equals(f)) caught = true;
+                    else if ("uncaught".equals(f)) uncaught = true;
+                }
+                if (filters.isEmpty()) {
+                    // no filter = the DAP "all exceptions" default
+                    caught = true;
+                    uncaught = true;
+                }
+                jdwp.setExceptionRequest(caught, uncaught);
+                List<Object> result = new ArrayList<>();
+                for (Object f : filters) {
+                    result.add(Map.of("verified", true, "id", String.valueOf(f)));
+                }
+                respond(seq, command, Map.of("breakpoints", result));
+            }
             case "threads" -> {
                 List<Object> threads = new ArrayList<>();
                 if (jdwp != null) {
@@ -269,10 +316,10 @@ final class KofDebugJvmSession {
                     jdwp.setLineBreakpoint(typeId, line);
                 }
                 jdwp.resume();
-            } else if (kind == 2 || kind == 1) {
-                // 2 = Breakpoint, 1 = SingleStep (a step landed)
+            } else if (kind == 2 || kind == 1 || kind == 4) {
+                // 2 = Breakpoint, 1 = SingleStep (a step landed), 4 = Exception
                 stoppedThread = threadId;
-                stopReason = kind == 1 ? "step" : "breakpoint";
+                stopReason = kind == 1 ? "step" : kind == 4 ? "exception" : "breakpoint";
                 for (JdwpClient.FrameInfo f : jdwp.frames(threadId, 1)) {
                     stoppedLine = f.line();
                 }

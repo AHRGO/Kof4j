@@ -105,9 +105,9 @@ Fase 6  JS: source maps + Node Inspector                          parcial
          motor GraalJS embutido, ver `debugging-js.pt_BR.md`)
 Fase 7  Avançado: locals por frame, stepping, conditional/exception
         breakpoints, avaliação, async                             parcial
-        (Native tem locals/scopes/stepping/evaluate; JVM tem
-         stackTrace/scopes/variables/stepping/evaluate — 20/09; resta:
-         pause + exception breakpoints)
+        (Native e JVM: locals/scopes/stepping/evaluate/exception
+         breakpoints + pause — 20/09; resta: breakpoints condicionais,
+         async; a face JS é gap honesto)
 ```
 
 Detalhes de implementação do `kof-debug` (Fase 3): ver `debug-adapter.md`.

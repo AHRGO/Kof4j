@@ -42,6 +42,22 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     agentes (`scripts/tests/test-package-outside-repo-test.sh`, registrada no
     `run-agent-tests.sh`); no dia do RC o re-run no mesmo candidato e um comando.
     Preflights honestos: JDK 25/node/toolchain ausentes falham alto, nunca falso-verde.
+  - **Fase 7 do DAP — `pause` + `setExceptionBreakpoints`** (20/09, lane
+    tooling/debug): o adaptador da JVM agora pausa um programa em execução (JDWP
+    `ThreadReference.Suspend` em toda thread de USUÁRIO — as threads `JDWP*` do
+    próprio agente são puladas: suspender a thread de transporte congela o
+    protocolo, medido) e arma exception breakpoints (evento Exception kind 4 +
+    modificador `ExceptionOnly` 8, `caught`/`uncaught`). O adaptador Native ganhou
+    as mesmas duas faces: `pause` = `-exec-interrupt --all`; `setExceptionBreakpoints`
+    = breakpoint em `kof_throw_string` (a cadeia de throw do próprio runtime Kof,
+    não exceções C++, então o catch-throw do gdb não se aplica) com o refinamento
+    caught/uncaught sendo `verified:false` honesto (só do JVM). Prova:
+    `KofDebugJvmExceptionTest` 2/2 + `KofDebugNativeDapTest` 3/3, cluster de debug
+    19/19. No caminho, um frame sem debug info (`Thread.sleep` nativo) abortava o
+    `stackTrace` inteiro com `NATIVE_METHOD` (511) — o cliente JVM agora reporta
+    esse frame como `?`/linha -1 e mantém os frames Kof; uma sonda
+    `Method.VariableTable` (6,2) descartada no `methodName` foi removida.
+
   - **Paridade do DAP JVM — `next`/`stepIn`/`stepOut` + `evaluate`** (20/09, lane
     tooling/debug): o adaptador de debug da JVM agora faz step (evento JDWP
     `SingleStep` kind 1 + modificador Step kind 10, size LINE, depth over/into/out)
