@@ -12,6 +12,10 @@
 #   (2) FALSO-RED: contar INSTANCIAS acusa aberto ate o que foi dismissado —
 #       quem manda e o `state` do alerta.
 #   (3) INCONCLUSIVO != verde: API fora nao pode imprimir "verdes".
+#   (4) EG-2 (§10): lista vazia legitima (API OK) e GREEN, nao INCONCLUSIVO
+#       (empty != unavailable); e o veredito e amarrado ao SHA analisado —
+#       analise velha/ausente e INCONCLUSIVO, nunca green (stale analysis
+#       cannot decide a new commit).
 #
 # Uso: scripts/tests/codeql-gate-test.sh   (exit 0 = todos os cenarios passam)
 set -uo pipefail
@@ -26,6 +30,8 @@ fail() { echo "  FAIL— $1"; FAILED=1; }
 ROW_883=$'883\topen\t-\t-\trefs/heads/main\tjava/concatenated-command-line\tkof-compiler/src/test/java/dev/kof/compiler/ClassShapeChecksTest.java:171'
 ROW_999=$'999\topen\t-\t-\trefs/heads/main\tjava/io-resource-leak\tkof-runtime/src/main/java/dev/kof/runtime/Novo.java:1'
 ROW_NULL=$'998\tnull\t-\t-\trefs/heads/beta-0.5.0\tjava/relative-path-command\texamples/ForaBaseline.java:7'
+TIP_SHA="1111111111111111111111111111111111111111"
+OLD_SHA="2222222222222222222222222222222222222222"
 
 make_fake_gh() { # $1 = dir, $2 = modo
   local dir="$1" mode="$2"
@@ -41,6 +47,9 @@ case "\$args" in
       baseline) printf '%s\n' "$ROW_883" ;;
       novo)     printf '%s\n%s\n' "$ROW_883" "$ROW_999" ;;
       nullstate) printf '%s\n' "$ROW_883" ;;
+      stale)    printf '%s\n' "$ROW_883" ;;
+      noana)    printf '%s\n' "$ROW_883" ;;
+      empty)    printf '' ;;
     esac
     ;;
   *"alerts?ref=refs/heads/main&state=open"*)
@@ -56,6 +65,17 @@ case "\$args" in
     ;;
   *"/code-scanning/alerts/998"*)
     [ "\$mode" = "nullstate" ] && printf '%s\n' "$ROW_NULL"
+    ;;
+  *"/code-scanning/analyses?ref=refs/heads/"*)
+    # EG-2: analise mais recente do branch. Modo 'stale' = SHA antigo != tip.
+    case "\$mode" in
+      stale) printf '%s\n' "$OLD_SHA" ;;
+      noana) : ;;
+      *)     printf '%s\n' "$TIP_SHA" ;;
+    esac
+    ;;
+  *"/branches/main"*|*"/branches/beta-0.4.0"*|*"/branches/beta-0.5.0"*)
+    printf '%s\n' "$TIP_SHA"
     ;;
   *)
     printf ''
@@ -120,6 +140,26 @@ make_fake_gh "$TMP" novo
 out=$(run_gate "$TMP" CODEQL_GATE_SKIP="motivo qualquer" GITHUB_ACTIONS=true); rc=$?
 printf '%s' "$out" | grep -q "ignorado em CI" && pass "CI nao respeita o skip" || { fail "skip valeu em CI"; printf '%s\n' "$out" | sed 's/^/      /'; }
 [ "$rc" = 1 ] && pass "gate avaliou em CI (rc 1)" || fail "exit=$rc (esperado 1)"
+
+echo "== cenario 8 (EG-2, criterio §10): API OK e SEM alertas != API fora => green, nao INCONCLUSIVO =="
+make_fake_gh "$TMP" empty
+out=$(run_gate "$TMP"); rc=$?
+printf '%s' "$out" | grep -q "green — main: 0 novo" && pass "lista vazia legitima = green" || { fail "lista vazia virou NAO-AVALIADO (empty confundido com unavailable)"; printf '%s\n' "$out" | sed 's/^/      /'; }
+printf '%s' "$out" | grep -q "NAO-AVALIADO" && fail "imprimiu NAO-AVALIADO com API OK" || pass "nao confundiu vazio com indisponivel"
+[ "$rc" = 0 ] && pass "exit 0 (verde de verdade)" || fail "exit=$rc (esperado 0)"
+
+echo "== cenario 9 (EG-2, criterio §10): analise VELHA != tip => INCONCLUSIVO (nao green, nao red) =="
+make_fake_gh "$TMP" stale
+out=$(run_gate "$TMP"); rc=$?
+printf '%s' "$out" | grep -q "INCONCLUSIVO — main: analise stale" && pass "analise velha sinalizada" || { fail "stale nao sinalizado"; printf '%s\n' "$out" | sed 's/^/      /'; }
+printf '%s' "$out" | grep -q "os dois gates verdes" && fail "imprimiu 'verdes' com analise velha" || pass "nao imprime 'verdes' com analise velha"
+[ "$rc" = 2 ] && pass "exit 2 (nao bloqueia, mas nao certifica)" || fail "exit=$rc (esperado 2)"
+
+echo "== cenario 10 (EG-2, criterio §10): SEM analise (analyses vazio) => INCONCLUSIVO =="
+make_fake_gh "$TMP" noana
+out=$(run_gate "$TMP"); rc=$?
+printf '%s' "$out" | grep -q "analise no-analysis" && pass "ausencia de analise sinalizada" || { fail "no-analysis nao sinalizado"; printf '%s\n' "$out" | sed 's/^/      /'; }
+[ "$rc" = 2 ] && pass "exit 2" || fail "exit=$rc (esperado 2)"
 
 rm -rf "$TMP"
 

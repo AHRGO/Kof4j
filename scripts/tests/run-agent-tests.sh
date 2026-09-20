@@ -13,7 +13,7 @@ TESTS=(
     scripts/tests/auto-loop-test.sh
 )
 # testes que existirem no disco entram (cada commit da Onda 1 acrescenta os seus)
-for extra in agent-state-fingerprint agent-dispatch-gate agent-risk agent-evidence agent-verify agent-close-issue check-release-blockers test-package-outside-repo; do
+for extra in agent-state-fingerprint agent-dispatch-gate agent-risk agent-evidence agent-verify agent-close-issue check-release-blockers test-package-outside-repo codeql-gate; do
     [ -f "scripts/tests/$extra-test.sh" ] && TESTS+=("scripts/tests/$extra-test.sh")
 done
 

@@ -16,6 +16,13 @@
 #     do baseline. Armadilha 15/09: o filtro `?state=open` da API engana —
 #     alertas recem-criados retornam `state: null` e SO aparecem na UI; o gate
 #     conta como open: state=="open" OU (state==null E sem fixed_at/dismissed_at).
+#     EG-2 (§10, 20/09): a falha de API e rastreada em `api_ok`, NUNCA inferida
+#     de lista vazia — uma lista legitimamente vazia (0 alertas) e GREEN, nao
+#     INCONCLUSIVO (criterio "empty API != unavailable API"). O veredito e
+#     AMARRADO AO SHA analisado: a analise mais recente do branch (analyses
+#     API) e comparada com o tip (branches API); analise velha/ausente vira
+#     INCONCLUSIVO (rc=2, nao bloqueia), nunca green (criterio "stale analysis
+#     cannot decide a new commit").
 #   GATE 2 (security/quality): build verde SEM stubs ECJ + check_500.sh (so
 #     sem --fast). A suite completa continua sendo porta de merge (Q1/Q2).
 #
@@ -30,6 +37,8 @@ BASELINE="${CODEQL_BASELINE_FILE:-scripts/codeql-baseline.txt}"
 BRANCHES=("main" "beta-0.4.0" "beta-0.5.0")
 FAILED=0
 GATE1_OK=1
+GATE1_STALE=0
+api_ok=1
 
 # ── CODEQL_GATE_SKIP — escapamento visivel, nunca silencioso (R6) ──────────
 # Formato novo: CODEQL_GATE_SKIP="<motivo>". Sem motivo, o skip NAO vale.
@@ -90,14 +99,15 @@ echo "== GATE 1: CodeQL alerts (security/code-scanning) — baseline: $BASELINE 
 # resolve; 1 GET individual so para os `null` que o list escondeu.
 ROWS=$(gh api "/repos/$REPO/code-scanning/alerts?per_page=100" --paginate \
   --jq '.[] | [(.number|tostring), (.state // "null"), (.dismissed_at // "-"), (.fixed_at // "-"), (.most_recent_instance.ref // "-"), (.rule.id), ((.most_recent_instance.location.path // "-") + ":" + ((.most_recent_instance.location.start_line // "-")|tostring))] | @tsv' 2>/dev/null) \
-  || { echo "  [aviso] API indisponivel (rate limit?) — GATE 1 NAO verificado; o CI (codeql.yml) continua sendo a porta real"; ROWS=""; }
+  || { echo "  [aviso] API indisponivel (rate limit?) — GATE 1 NAO verificado; o CI (codeql.yml) continua sendo a porta real"; api_ok=0; ROWS=""; }
 
 if [ -n "$ROWS" ]; then
   for br in "${BRANCHES[@]}"; do
-    for n in $(gh api "/repos/$REPO/code-scanning/alerts?ref=refs/heads/$br&state=open&per_page=100" --paginate --jq '.[].number' 2>/dev/null); do
+    nums=$(gh api "/repos/$REPO/code-scanning/alerts?ref=refs/heads/$br&state=open&per_page=100" --paginate --jq '.[].number' 2>/dev/null) || api_ok=0
+    for n in $nums; do
       printf '%s\n' "$ROWS" | cut -f1 | grep -qx "$n" && continue
       extra=$(gh api "/repos/$REPO/code-scanning/alerts/$n" \
-        --jq '[(.number|tostring), (.state // "null"), (.dismissed_at // "-"), (.fixed_at // "-"), (.most_recent_instance.ref // "-"), .rule.id, ((.most_recent_instance.location.path // "-") + ":" + ((.most_recent_instance.location.start_line // "-")|tostring))] | @tsv' 2>/dev/null)
+        --jq '[(.number|tostring), (.state // "null"), (.dismissed_at // "-"), (.fixed_at // "-"), (.most_recent_instance.ref // "-"), .rule.id, ((.most_recent_instance.location.path // "-") + ":" + ((.most_recent_instance.location.start_line // "-")|tostring))] | @tsv' 2>/dev/null) || api_ok=0
       [ -n "$extra" ] && ROWS="$ROWS
 $extra"
     done
@@ -105,7 +115,7 @@ $extra"
 fi
 
 for br in "${BRANCHES[@]}"; do
-  if [ -z "$ROWS" ]; then
+  if [ "$api_ok" = 0 ]; then
     echo "  NAO-AVALIADO — $br (API fora; nada foi verificado)"
     GATE1_OK=0
     continue
@@ -126,14 +136,31 @@ for br in "${BRANCHES[@]}"; do
 "
     fi
   done <<< "$ROWS"
+  # EG-2 (§10): bind the verdict to the ANALYZED SHA. A stale or absent
+  # analysis cannot certify the current tip — that branch is INCONCLUSIVO
+  # (rc=2, non-blocking, same contract as API-down), never green. A NEW alert
+  # above still wins as RED. The analysis SHA comes from the code-scanning
+  # analyses API; the tip from the branch API (one extra call per branch).
+  sha_api=1
+  ana=$(gh api "/repos/$REPO/code-scanning/analyses?ref=refs/heads/$br&per_page=1" \
+    --jq '.[0].commit_sha' 2>/dev/null) || { sha_api=0; ana=""; }
+  tip=$(gh api "/repos/$REPO/branches/$br" --jq '.commit.sha' 2>/dev/null) || { sha_api=0; tip=""; }
+  sha_state=current
+  if [ "$sha_api" = 0 ]; then sha_state=unavailable
+  elif [ -z "$ana" ]; then sha_state=no-analysis
+  elif [ -n "$tip" ] && [ "$ana" != "$tip" ]; then sha_state=stale
+  fi
+  [ "$sha_state" = current ] || GATE1_STALE=1
   if [ "$new_n" -gt 0 ]; then
     echo "  RED — $new_n alerta(s) NOVO(s) sem baseline na branch $br (top 25):"
     printf '%s' "$new_list" | sed 's/^/  /'
     echo '    => feche na raiz (fix, ou dismiss justificado via POST /code-scanning/alerts/<n>)'
     echo '    => ou registre a TRIAGEM feita no baseline com dono+revisao (scripts/codeql-baseline.txt)'
     FAILED=1
+  elif [ "$sha_state" != current ]; then
+    echo "  INCONCLUSIVO — $br: analise $sha_state (analyzed ${ana:-<none>} vs tip ${tip:-?}); o veredito NAO certifica o tip"
   else
-    echo "  green — $br: 0 novo (0 fora do baseline; tolerados no baseline: $tol_n)"
+    echo "  green — $br: 0 novo (0 fora do baseline; tolerados no baseline: $tol_n; analysis == tip ${tip:0:7})"
   fi
 done
 
@@ -168,6 +195,10 @@ if [ "$FAILED" = 1 ]; then
 fi
 if [ "$GATE1_OK" = 0 ]; then
   echo "== RESULTADO: INCONCLUSIVO — GATE 1 nao avaliado (API fora); os demais gates passaram =="
+  exit 2
+fi
+if [ "$GATE1_STALE" = 1 ]; then
+  echo "== RESULTADO: INCONCLUSIVO — veredito NAO amarrado ao SHA do tip (analise velha/ausente); nao e green =="
   exit 2
 fi
 echo "== RESULTADO: os dois gates verdes =="

@@ -362,24 +362,22 @@ Minimum criteria:
 
 The current state of `#555` shows this area still needs closing.
 
-**Status (EG-2, assessed 20/09/2026 against `0d2a019d`):** the security lane's
-`scripts/codeql-gate.sh` + `scripts/codeql-baseline.txt` close six of the eight
-criteria — API failure is INCONCLUSIVO (rc=2, never "green"); no routine
-`CODEQL_GATE_SKIP` (a reason is required, a banner is printed, a log is kept,
-and CI ignores it); the `state:null` false-green is handled (branch union);
-the baseline carries owner/date/reason; and the gate has automated regression
-(`scripts/tests/codeql-gate-test.sh`, 7 scenarios). **Two trust gaps remain**,
-both on the `codeql-gate.sh` front (residual #563):
-1. **SHA binding** — the verdict keys on the branch ref, never on the analyzed
-   SHA; a stale analysis can still decide a new commit (criteria 1 + 3). Binding
-   must not make every push INCONCLUSIVO while the post-push analysis is still
-   pending — the design has to say what the gate does when HEAD is newer than
-   the last analysis.
-2. **empty ≠ unavailable** — a legitimately empty alert list is reported the
-   same way as an API outage (`NAO-AVALIADO` → rc=2); the two states are not
-   distinguished (criterion 2).
-EG-2 stays open until both are fixed with a RED-first test; the file is owned by
-the security lane, so the change is coordinated, not taken unilaterally.
+**Status (EG-2, closed 20/09/2026):** the security lane's `scripts/codeql-gate.sh`
++ `scripts/codeql-baseline.txt` (`0d2a019d`) closed six of the eight criteria
+(API failure is INCONCLUSIVO; no routine `CODEQL_GATE_SKIP`; `state:null`
+handled; baseline carries owner/date/reason; automated regression). The
+stability lane closed the remaining two in the same file (coordinated,
+maintainer-approved), RED-first in `scripts/tests/codeql-gate-test.sh` (now 10
+scenarios, registered in `run-agent-tests.sh`):
+1. **empty ≠ unavailable** — an API failure is tracked in `api_ok`, never
+   inferred from an empty list; a legitimately empty alert list is GREEN, not
+   INCONCLUSIVO.
+2. **SHA binding** — the latest analysis SHA (code-scanning analyses API) is
+   compared with the branch tip (branches API); a stale or absent analysis is
+   INCONCLUSIVO (rc=2, non-blocking), never green. A new alert still wins as RED.
+Live gate 20/09 measured the mechanism working (main/beta-0.4.0 stale → rc=2;
+beta-0.5.0 flagged a new alert #945, already fixed at the source by `9c88d590`,
+awaiting re-scan).
 
 The final technical solution for the Quality Gate is its own front and must not be self-ratified by this document.
 
