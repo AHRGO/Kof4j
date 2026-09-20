@@ -103,7 +103,7 @@ println(file.readBytes().length)
   the corpus).
 - Boolean operations return `true`/`false`.
 
-## Current limitations (0.4.0-beta)
+## Current limitations (0.5.0-beta)
 
 - Native: Linux x86_64 (POSIX syscalls) + riscv64/aarch64 placeholder via qemu; the free-list GC applies to file buffers.
 - Symlinks, timestamps and permissions are future.

@@ -3,7 +3,7 @@
 # Kof Project Status
 
 **Last updated:** September 20, 2026
-**Version:** 0.4.0-beta (pom `revision`)
+**Version:** 0.5.0-beta (pom `revision`)
 
 **20/09 — CONSOLIDATION OF THE 19/09→20/09 NIGHT (docs lane, measured against `git log`/tip `1080238f`; CI `Build+Tests` green on the night tips, full-reactor tally ~3034 tests 0F/0E per `.18`'s 23:5x run).**
 >

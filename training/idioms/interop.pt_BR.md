@@ -10,7 +10,7 @@ Duas superfícies, uma regra: a plataforma já existe — não a reconstrua.
 **(a)** JVM: qualquer tipo Java no classpath por nome qualificado. **(b)** FFI C:
 `extern "<lib>" f(T): R` prende uma função nativa (JVM via `java.lang.foreign`).
 
-## API real (medida no compilador — 0.4.0-beta)
+## API real (medida no compilador — 0.5.0-beta)
 
 ```kof
 // (a) interop JVM — nome qualificado, sem wrapper

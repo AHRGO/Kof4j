@@ -131,7 +131,7 @@ Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
   when on the classpath (`ExternalClasspath.resolveMethod`, `:1535-1549`).
   **Target-specific.**
 - **C FFI (`extern "<lib>" f(T): R`)** — direct binding to native libraries
-  (JVM, `java.lang.foreign`). **Measured surface 18/09 (0.4.0-beta)**: the JVM
+  (JVM, `java.lang.foreign`). **Measured surface 18/09 (0.5.0-beta)**: the JVM
   binds **any signature composed of the scalar set** `{Int, Long, Float, Double,
   Boolean, String}` in **every parameter position (arbitrary arity, ≥0)** and any
   of those as the **return**, plus **`void` return** (via `kof_ffi_void`, result

@@ -3,7 +3,7 @@
 # Backend Parity — Kof JVM × Native × KofJS
 
 **Last updated:** September 20, 2026
-**Version:** 0.4.0-beta
+**Version:** 0.5.0-beta
 
 > Deltas since 0.1.0: `native.risc` (riscv64) and `native.arm` (aarch64) targets separated from `native` x86_64 (**full core 02-03/09** — `NativeRiscv64E2ETest 13/13` + `NativeAarch64E2ETest 13/13` in pure asm + qemu, current state in the "Native per-arch" section below + `docs/native-multiarch.md`); Native free-list (`kof_free_head`) + `kof_gc_collect` (mark-sweep implemented 03/09; **auto-collect ON 19/09 — §260/G-6(a) closed**: trigger fires `kof_gc_collect_now` once per program, gate `spawn_count==0`, §260 history honest); MySQL wire protocol in progress (`kof_db_mysql_scramble` + `user:pass@`); pattern matching `switch case String s` + record destructuring `Point(x,y)` on JVM/Native/JS; basic `String?` null safety; `KofScript` top-level `let` → `KofScriptGlobals`; `KofCcompiler` (`kof c`) native-only C subset; `List map/filter/reduce` + `Box<T>`; Windows SIGPIPE fix.
 > Deltas 30-31/08: real `spawn`/`await` on Native (pthread + trampoline + join + thread-safe allocator futex — CONC001); real FP in XMM (FLT001); JSON objects/records + FP arrays on Native (JSN001/JSN002/JSN003); WebSocket/SSE on JVM (`app.ws`/`sse.*`, RFC 6455); `kof.http` retry/circuit JVM+JS (30s window, fail-fast); `kof.cache` 3 targets (register clobber fix); UI Phase 7 Router (real JS, JVM no-op); native SQLite via direct `.so`; `kof fmt` + `kof config gen`.

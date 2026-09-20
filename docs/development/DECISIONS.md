@@ -2348,3 +2348,27 @@ is executed.
 **Evidence:** maintainer ratification 09/20/2026 (chat, quoted verbatim in the
 §22 block of the doc and in this record); doc EN+PT updated + promoted the same
 pass; `roadmap.md` §23 queue; `DOING.md` claim; #560 cross-notified.
+
+
+## D-VERSION-BUMP-0.5.0 — the revision moves to `0.5.0-beta` on the active branch (09/20/2026, maintainer order)
+
+**Decision (maintainer, chat 09/20/2026):** "faz o bump de versão em tudo no repo
+pra beta 0.5.0" — the product version is bumped `0.4.7-beta → 0.5.0-beta` on the
+active branch `beta-0.5.0` (`D-BRANCH-0.5.0`). This satisfies release-prep
+checklist item 3 (`docs/development/release-beta-0.5.0-prep.md`) and supersedes
+the "VERSION stays 0.4.7-beta" clause of `D-RELEASE-1.0` only in the sense the
+release-prep phase it reserved has now begun by order.
+
+**Mechanics:** single source `VERSION` → `scripts/bump-version.sh` syncs
+`pom.xml` `<revision>` and `dev/kof/version.properties`
+(`kof.version=0.5.0-beta`; compiler/runtime/stdlib `0.5.0`; tooling API 21
+unchanged). Docs carrying a **current-version** stamp (README, `docs/status`,
+`docs/backend-parity` header, `AGENTS.md` header, distribution/install outputs,
+training/learn headers, idiom "Updated:" stamps, artifact-name examples) were
+bumped EN+PT in the same commit. **Historical** mentions (CHANGELOG sections,
+`known-bugs.md` measurements taken on `0.4.7-beta` jars, "Introduced:",
+feature stamps like `D-TROOL 19/09`) were left intact — history is not
+rewritten (freeze rule 4).
+
+**Verification before bumping (prep item 3):** no test or script pins the
+artifact version (only a historical javadoc comment in `TrooleanLawE2ETest`).

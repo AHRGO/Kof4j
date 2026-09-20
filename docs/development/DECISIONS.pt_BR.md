@@ -2329,3 +2329,28 @@ executada.
 **Evidência:** ratificação da mantenedora 20/09/2026 (chat, verbatim no bloco
 §22 do doc e neste registro); doc EN+PT atualizado + promovido no mesmo passo;
 fila no `roadmap.md` §23; claim no `DOING.md`; #560 cross-notificada.
+
+
+## D-VERSION-BUMP-0.5.0 — a revisão passa a `0.5.0-beta` na branch ativa (20/09/2026, ordem da mantenedora)
+
+**Decisão (mantenedora, chat 20/09/2026):** "faz o bump de versão em tudo no repo
+pra beta 0.5.0" — a versão do produto sobe `0.4.7-beta → 0.5.0-beta` na branch
+ativa `beta-0.5.0` (`D-BRANCH-0.5.0`). Isso fecha o item 3 do checklist de
+release (`docs/development/release-beta-0.5.0-prep.md`) e substitui a cláusula
+"VERSION fica em 0.4.7-beta" do `D-RELEASE-1.0` apenas no sentido de que a fase
+de preparo de release que ela reservava foi iniciada por ordem.
+
+**Mecânica:** fonte única `VERSION` → `scripts/bump-version.sh` sincroniza o
+`<revision>` do `pom.xml` e `dev/kof/version.properties` (`kof.version=0.5.0-beta`;
+compiler/runtime/stdlib `0.5.0`; tooling API 21 inalterada). Docs com stamp de
+**versão corrente** (README, `docs/status`, cabeçalho do `docs/backend-parity`,
+cabeçalho do `AGENTS.md`, saídas de distribution/install, cabeçalhos
+training/learn, stamps "Updated:" dos idiomas, exemplos de nome de artefato)
+foram bumpados EN+PT no mesmo commit. Menções **históricas** (seções do
+CHANGELOG, medições do `known-bugs.md` feitas em jars `0.4.7-beta`,
+"Introduced:", stamps de feature como `D-TROOL 19/09`) foram mantidas —
+história não se reescreve (regra 4 do freeze).
+
+**Verificação antes do bump (item 3 do prep):** nenhum teste ou script fixa a
+versão do artefato (só um comentário histórico no javadoc de
+`TrooleanLawE2ETest`).

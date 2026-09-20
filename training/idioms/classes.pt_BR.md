@@ -2,7 +2,7 @@
 
 # Idioms — Classes
 
-**Status:** available · **Introduced:** 0.0.4-alpha · **Updated:**  0.4.0-beta (Sep 2026)
+**Status:** available · **Introduced:** 0.0.4-alpha · **Updated:**  0.5.0-beta (Sep 2026)
 
 ## What it is
 
@@ -151,7 +151,7 @@ class Rect extends Shape {
 }
 ```
 
-## Generics Box<T> (0.4.0-beta)
+## Generics Box<T> (0.5.0-beta)
 
 ```kof
 class Box<T>(T value) {
@@ -161,7 +161,7 @@ var b: Box<Int> = Box(42)
 println(b.get())   // erasure + substituteTypeVariable — Native OK
 ```
 
-## Sobrecarga de Métodos (0.4.0-beta, §131)
+## Sobrecarga de Métodos (0.5.0-beta, §131)
 
 ```kof
 class Calc {

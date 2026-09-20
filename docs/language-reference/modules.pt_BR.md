@@ -130,7 +130,7 @@ define as assinaturas. **Experimental** como superfície (muda entre versões).
   quando no classpath (`ExternalClasspath.resolveMethod`, `:1535-1549`).
   **Target-specific.**
 - **FFI com C (`extern "<lib>" f(T): R`)** — binding direto a bibliotecas
-  nativas (JVM, `java.lang.foreign`). **Superfície medida 18/09 (0.4.0-beta)**: a
+  nativas (JVM, `java.lang.foreign`). **Superfície medida 18/09 (0.5.0-beta)**: a
   JVM casa **qualquer assinatura composta pelo conjunto escalar** `{Int, Long,
   Float, Double, Boolean, String}` em **todas as posições de parâmetro (aridade
   arbitrária, ≥0)** e qualquer um deles como **retorno**, além de **retorno `void`**

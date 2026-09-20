@@ -5,7 +5,7 @@
 Facts about the official Kof CLI. Use it to answer questions about
 commands, tooling and editor support.
 
-**Version:** 0.4.0-beta (Sep 2026) — 2218 tests
+**Version:** 0.5.0-beta (Sep 2026) — 2218 tests
 
 ## Official commands (26)
 
@@ -25,7 +25,7 @@ commands, tooling and editor support.
 | `kof info [--json]` | Environment report (includes native.risc/arm, kofc) |
 | `kof lsp` | Language Server (stdio, LSP 3.x) — hover/completion + .ks preprocess |
 | `kof editor <list\|detect\|status\|setup\|install\|uninstall\|update>` | Editor integration (EDI001): detects VS Code/Vim/Neovim/IntelliJ/Geany/Nano/Emacs and installs the official integration (grammar + `kof lsp`), with consent. `install <editor>` writes only to HOME; `uninstall` removes only what Kof wrote. Docs: `docs/editors/` |
-| `kof version` | Platform version (0.4.0-beta) |
+| `kof version` | Platform version (0.5.0-beta) |
 | `kof bench [...]` | Benchmark harness with baselines |
 | `kof debug <file.kf>` | DAP MVP on the JVM |
 | `kof profile <file.kf> [--target ...]` | Execution + metrics (CPU, RSS, GC) |
@@ -39,7 +39,7 @@ commands, tooling and editor support.
 | `kof install <dir>` | Installs this build as a distribution (launcher + `kof.jar`) |
 
 `kof fmt` (real parser, idempotent) and `kof config gen` are implemented
-(0.4.0-beta). There is no `kof doctor` command — the official diagnostic is
+(0.5.0-beta). There is no `kof doctor` command — the official diagnostic is
 `kof info`.
 
 ## KofScript
@@ -89,7 +89,7 @@ kof c app.c
 
 ## `kof info`
 
-Reports: Kof version (0.4.0-beta), compiler/runtime/stdlib version, tooling API level, target/architecture, OS, embedded JVM, JVM
+Reports: Kof version (0.5.0-beta), compiler/runtime/stdlib version, tooling API level, target/architecture, OS, embedded JVM, JVM
 version, available targets (jvm, native, native.risc, native.arm, js, kofc) and installation location.
 Human-readable; `--json` for structured format.
 

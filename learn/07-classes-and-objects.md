@@ -2,7 +2,7 @@
 
 # 07 — Classes and Objects
 
-> **Kof 0.4.0-beta — examples verified in the compiler (02/09)**
+> **Kof 0.5.0-beta — examples verified in the compiler (02/09)**
 >
 > Kof has **two** models of "data with parameters": `record`/`class X(...)`
 > (immutable, accessors) and a class with fields + `constructor(...)` (mutable,
@@ -176,7 +176,7 @@ class Cachorro extends Animal {
 
 Override is implicit (same method name); dispatch is virtual.
 
-## Method overloading (0.4.0-beta, §131)
+## Method overloading (0.5.0-beta, §131)
 
 Methods with the same name coexist in a class when their signatures differ:
 

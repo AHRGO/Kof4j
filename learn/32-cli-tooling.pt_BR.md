@@ -2,7 +2,7 @@
 
 # 32 — CLI e Tooling
 
-> **Kof 0.4.0-beta — set 2026 — targets jvm/native/native.risc/native.arm/js/android + kofc**
+> **Kof 0.5.0-beta — set 2026 — targets jvm/native/native.risc/native.arm/js/android + kofc**
 
 A CLI é a ferramenta central da plataforma Kof.
 
@@ -50,16 +50,16 @@ Todos os comandos seguem `intention->Kof->frontend->IR->backend->runtime`.
 Diagnóstico oficial do ambiente — para usuários e suporte:
 
 ```text
-Kof 0.4.0-beta
+Kof 0.5.0-beta
 Release channel: beta
 Tooling API: 21
 OS: linux
 Arch: x86_64
 Target: linux-x86_64
 JVM: Eclipse Adoptium 25.0.4 (embedded)
-Compiler: 0.4.0-beta
-Runtime: 0.4.0-beta
-Stdlib: 0.4.0-beta
+Compiler: 0.5.0-beta
+Runtime: 0.5.0-beta
+Stdlib: 0.5.0-beta
 Targets: jvm, native, js (alpha)
 LSP: available
 Editor support: available

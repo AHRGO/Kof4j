@@ -3,7 +3,7 @@
 # stdlib config — Configuração Nativa do Kof
 
 **Última atualização:** 12 de setembro de 2026
-**Versão:** 0.4.0-beta
+**Versão:** 0.5.0-beta
 **Status:** implementado (Fase 3 do plano de independência do Spring) — 3 targets (JVM / Native asm próprio `/proc/self/environ` + free-list / JS `kof_platform`) + `required`/interpolação `${key}`/`kof config gen` (30/08)
 
 ---
@@ -80,7 +80,7 @@ main() {
 }
 ```
 
-## 5. Targets (0.4.0-beta)
+## 5. Targets (0.5.0-beta)
 
 | Target | Estado | Notas |
 |--------|--------|-------|
@@ -91,7 +91,7 @@ main() {
 
 ## 6. Testes
 
-`KofConfigE2ETest` — 11 testes E2E (0.4.0-beta): env por convenção, defaults,
+`KofConfigE2ETest` — 11 testes E2E (0.5.0-beta): env por convenção, defaults,
 arquivo explícito, profiles, arquivo padrão no diretório de trabalho, `env()`,
 precedência completa, `required` (presente em todos os targets + falha rápida
 se ausente) e interpolação `${key}` (JVM/Native/JS).
@@ -109,7 +109,7 @@ descoberto por reflection.
 
 ## 8. Onde estamos vs. o padrão ouro (Spring/Quarkus) — auditoria honesta
 
-**Última revisão:** re-synced 17/09/2026 (0.4.0-beta; auditoria base 30/08/2026)
+**Última revisão:** re-synced 17/09/2026 (0.5.0-beta; auditoria base 30/08/2026)
 
 | Capacidade | kof.config hoje | Spring Boot | Status |
 |------------|-----------------|-------------|--------|

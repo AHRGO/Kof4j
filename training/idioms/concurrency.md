@@ -2,7 +2,7 @@
 
 # Idioms — Concurrency
 
-**Status:** available (3 targets) · **Introduced:** 0.0.5-alpha · **Updated:**  0.4.0-beta (Sep 2026) (31/08: CONC001 closed; 15/09: CONC001 cross helpers) · **JS:** event-loop (CONC003 closed 03/09)
+**Status:** available (3 targets) · **Introduced:** 0.0.5-alpha · **Updated:**  0.5.0-beta (Sep 2026) (31/08: CONC001 closed; 15/09: CONC001 cross helpers) · **JS:** event-loop (CONC003 closed 03/09)
 
 ## What it is
 
@@ -21,14 +21,14 @@ main() {
     println("fim")
 }
 
-// With result (0.4.0-beta)
+// With result (0.5.0-beta)
 main() {
     val r = spawn trabalho()   // typed Handle<T>
     var v = await r            // blocks; T with primitive unboxing
     println(v)
 }
 
-// Lambda literal with return + Handle (0.4.0-beta)
+// Lambda literal with return + Handle (0.5.0-beta)
 main() {
     var n = 21
     var h = spawn { return n * 2 }   // Handle<Int>
@@ -36,7 +36,7 @@ main() {
 }
 ```
 
-## Real semantics (verified — 0.4.0-beta)
+## Real semantics (verified — 0.5.0-beta)
 
 - the task runs in parallel: JVM virtual threads; **Native `pthread_create` + trampoline + `pthread_join` (CONC001 closed 31/08)**; JS event-loop (statement and expression covered; real async = CONC003 closed 03/09);
 - the program **waits for the tasks before exiting** (implicit join: `kof_spawn_join_all` at the end of main on Native);
@@ -93,7 +93,7 @@ the job for a repeating schedule).
 `spawn` expresses intent. Thread/Runnable/Executor are platform
 mechanisms — the decision of how to execute belongs to the runtime.
 
-## Honest limitations (0.4.0-beta)
+## Honest limitations (0.5.0-beta)
 
 - ~~Native: CONC001~~ — ✅ closed 31/08 (pthread_create + trampoline + await/pthread_join + futex thread-safe allocator + implicit join);
 - JS: ~~sequential~~ → real event-loop async — `spawn`/`await` cover statement

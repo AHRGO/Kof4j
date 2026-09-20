@@ -2,7 +2,7 @@
 
 # Development — living backlog (only work in development)
 
-> **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **updated:** 16/09/2026
+> **Base:** `0.5.0-beta` · branch `beta-0.4.0` · **updated:** 16/09/2026
 > **Suite measured at this HEAD:** `2218` run (1911 kof-compiler + 38 kof-script
 > + 7 kof-c-compiler + 262 kof-cli), **0 regressions / 0 errors / 0 failures in this run**, 192 skip (the only failure the suite ever shows is the known INTERMITTENT §252 native flake `spawnWorkerThrowPropagatesThroughSelectAnyNative`, owner native lane `.18`/nat — not a regression; re-measured 16/09 ~15:54 on tip `9572949f` from a CLEAN clone; the flake stayed SILENT a 3rd straight time — fired 09:44, silent 11:38/15:09/15:54 → ~1/4)
 > (no qemu on the measuring host: the 84 cross are skipped, + the 5 external DBs

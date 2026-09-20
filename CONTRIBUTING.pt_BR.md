@@ -2,7 +2,7 @@
 
 # 30 — Contribuindo
 
-> **Kof 0.4.0-beta — 17 set 2026 — 2218 testes — targets jvm/native/native.risc/native.arm/js/kofc**
+> **Kof 0.5.0-beta — 17 set 2026 — 2218 testes — targets jvm/native/native.risc/native.arm/js/kofc**
 
 ## Estrutura do repositório
 
@@ -16,7 +16,7 @@ kof/
 ├── docs/               ← documentação interna
 ├── learn/              ← este material (intention->Kof->frontend->IR->backend->runtime)
 ├── tests/              ← testes golden (16 golden + 9 integração)
-├── pom.xml             ← build Maven (0.4.0-beta)
+├── pom.xml             ← build Maven (0.5.0-beta)
 └── README.md
 ```
 
@@ -151,7 +151,7 @@ Sempre que uma feature mudar:
 
 ## Estado atual do projeto
 
-O projeto está em 0.4.0-beta (2218 testes), funcional:
+O projeto está em 0.5.0-beta (2218 testes), funcional:
 
 **Funciona hoje:**
 - Frontend completo: lexer, parser, `SemanticAnalyzer` (type checking + nullability `String?`)

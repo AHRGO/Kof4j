@@ -3,7 +3,7 @@
 # Status do Projeto Kof
 
 **Última atualização:** 20 de setembro de 2026
-**Versão:** 0.4.0-beta (pom `revision`)
+**Versão:** 0.5.0-beta (pom `revision`)
 
 **20/09 — CONSOLIDACAO DA NOITE 19/09→20/09 (lane docs, conferida contra `git log`/tip `1080238f`; CI `Build+Tests` verde nos tips da noite, tally do reator completo ~3034 testes 0F/0E na corrida das 23:5x da `.18`).**
 >

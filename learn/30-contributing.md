@@ -2,7 +2,7 @@
 
 # 30 — Contributing
 
-> **Kof 0.4.0-beta — Sep 2026 — targets jvm/native/native.risc/native.arm/js/kofc**
+> **Kof 0.5.0-beta — Sep 2026 — targets jvm/native/native.risc/native.arm/js/kofc**
 
 ## Repository structure
 
@@ -151,7 +151,7 @@ Whenever a feature changes:
 
 ## Current state of the project
 
-The project is at 0.4.0-beta, functional:
+The project is at 0.5.0-beta, functional:
 
 **Works today:**
 - Complete frontend: lexer, parser, `SemanticAnalyzer` (type checking + nullability `String?`)

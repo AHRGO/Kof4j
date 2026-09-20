@@ -16,7 +16,7 @@ decidir por exit code, encadear pipelines — **sem jamais stringuificar um coma
 é mudança de gramática — regra 6); a forma-função é a resposta assinada (Q1–Q3,
 enquete da mantenedora 18/09).
 
-## API real (medida no compilador — 0.4.0-beta)
+## API real (medida no compilador — 0.5.0-beta)
 
 ```kof
 import kof.shell

@@ -2,7 +2,7 @@
 
 # 39 — Standard Library universal (math, strings, encoding, uuid, validation, time)
 
-> **Kof 0.4.0-beta — `intention->Kof->frontend->IR->backend->runtime`**
+> **Kof 0.5.0-beta — `intention->Kof->frontend->IR->backend->runtime`**
 
 A Standard Library do Kof existe para uma coisa: **você nunca reimplementar o
 óbvio**. Matemática de uso comum, predicados e conversores de string,

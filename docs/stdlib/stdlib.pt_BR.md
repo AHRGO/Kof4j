@@ -3,7 +3,7 @@
 # Kof Standard Library — Arquitetura
 
 **Última atualização:** 12 de setembro de 2026
-**Versão:** 0.4.0-beta
+**Versão:** 0.5.0-beta
 
 > A Standard Library do Kof é a plataforma: HTTP, REST, auth, autorização,
 > validação, serialização, database, messaging, observabilidade e testing
@@ -104,7 +104,7 @@ arquitetura, prioridade e estratégia) vive em **`docs/bugs-and-gaps/ecosystem-c
 plataforma moderna (checklist derivado do ecossistema Spring, usado como
 matriz de capacidades, não como especificação de API).
 
-Resumo executivo (0.4.0-beta, re-synced 17/09):
+Resumo executivo (0.5.0-beta, re-synced 17/09):
 
 | Categoria | Estado |
 |-----------|--------|

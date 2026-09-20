@@ -9,7 +9,7 @@
 > (what each SG requires and where it is locked); new spec gaps enter here with
 > their own status. Open bugs stay in `docs/bugs-and-gaps/known-bugs.md`.
 
-**Version:** 0.4.0-beta (pom `revision`; was 0.3.0-beta in the audit) · **Date:** 06/09/2026 · **Source:** complete audit of
+**Version:** 0.5.0-beta (pom `revision`; was 0.3.0-beta in the audit) · **Date:** 06/09/2026 · **Source:** complete audit of
 `kof-compiler` + execution probes + review of `docs/`, `training/`, `AGENTS.md`
 
 This is the report of inconsistencies found in the audit. Each item
