@@ -153,45 +153,22 @@ final class TopLevelCallTyper {
                     }
                 }
             }
-            // #568 (defeito (ii) do #566): construtor de classe EXTERNA
-            // (--classpath/--deps) chamado IMPLICITAMENTE `Greeter()` (sem
-            // `new`). A classe externa não está em allClasses, então o nome
-            // caía no resolver de funções e disparava SEM015 FALSO — embora o
-            // lowering já resolva via ExternalClasspath e o programa rode.
-            // Espelha a construção implícita de classe do módulo (o branch de
-            // `allClasses` acima) pelo classpath externo.
-            if (!found) {
-                Type extCtor = externalConstructorType(sa, mc, scope);
-                if (extCtor != null) return extCtor;
-            }
-            if (!found && sa.diagnostics() != null && !sa.allClasses().containsKey(mc.methodName())) {
-                sa.diagnostics().error("", 0, 0, 0,
-                        "Undefined function: '" + mc.methodName() + "'", "SEM015");
+            if (!found && !sa.allClasses().containsKey(mc.methodName())) {
+                // §392 (#568): nome que NAO e funcao top-level nem classe do
+                // programa pode ser construtor IMPLICITO de classe externa
+                // (--classpath/--deps, §134) — resolve pela tabela de
+                // construtores publicos do .class ANTES do SEM015, que e
+                // mentira para classe que existe la fora. Classe existente sem
+                // ctor publico compativel = SEM023 honesto (diagnosed);
+                // nem uma coisa nem outra = SEM015 de sempre (R6).
+                ExternalCtorTyper.Outcome ext = ExternalCtorTyper.infer(sa, mc, argTypes);
+                if (ext.type() != null) return ext.type();
+                if (!ext.diagnosed() && sa.diagnostics() != null) {
+                    sa.diagnostics().error("", 0, 0, 0,
+                            "Undefined function: '" + mc.methodName() + "'", "SEM015");
+                }
             }
         }
         return null;
-    }
-
-    /**
-     * #568: `Greeter()` (sem receiver, sem `new`) resolve para o construtor de
-     * uma classe EXTERNA importada? Devolve o ClassType externo (e registra o
-     * <init> resolvido para o lowering) quando há construtor com a aridade
-     * chamada; null caso contrário (segue o fluxo normal/SEM015).
-     */
-    private static Type externalConstructorType(SemanticAnalyzer sa, MethodCallExpr mc, SymbolTable scope) {
-        if (mc.receiver() != null || sa.externalTypes() == null || sa.unit() == null) return null;
-        Type q = MemberResolver.qualifyViaImports(sa.unit(), mc.methodName(), sa.externalTypes());
-        if (!(q instanceof Type.ClassType ct) || !sa.isExternal(ct)) return null;
-        ExternalClasspath.MethodSignature ctor =
-                sa.externalTypes().resolveConstructor(ct.internalName(), mc.arguments().size());
-        if (ctor == null) return null;
-        // Inferir os args registra os tipos das sub-expressões (efeito do
-        // typer) — o resultado não é lido aqui (o emit re-infere).
-        for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
-        List<Type> params = new ArrayList<>();
-        for (String d : ctor.parameterDescriptors()) params.add(ExternalClasspath.typeFromDescriptor(d));
-        sa.putResolvedMethod(mc, new SymbolTable.MethodSymbol("<init>", ct.internalName(),
-                Type.PrimitiveType.VOID, params, 1, SymbolTable.DispatchKind.STATIC));
-        return ct;
     }
 }

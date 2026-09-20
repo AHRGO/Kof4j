@@ -11867,3 +11867,63 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
   on release-gate conditions 4/7.
 - **Related:** §389 (same shape, closed by the owner), a5d87fa7/e3e98d78
   (F-series lineage), §384 (dirty-tree truth).
+## §392 — the landed #568 fix (`d05d499b`) missed 4 edges: top-level-function precedence (frozen-semantics regression), private/abstract ctors resolved, no arg-type gates, "Undefined function" when the external class DOES exist — ✅ FIXED 20/09 (compiler lane, branch `fix-568`)
+
+- **GitHub:** #568 (closed upstream by `d05d499b`/§391) · branch `fix-568`
+  off `30c804bd` — NOT pushed (maintainer order; integrator ff-lands it).
+- **Symptom (measured on origin tip `30c804bd`, probe worktree
+  `kof-work/probe568` = upstream code + ONLY the new `ExternalConstructorE2ETest`):**
+  4 of 11 cases RED while the basic faces are green:
+  (1) `topLevelFunctionBeatsExternalConstructor` — when an external class and
+  a declared top-level function share the name, §391's pass resolves the
+  CALL to the ctor (checked by `qualifyViaImports` after the function loop
+  only via `!found` of allClasses — but the function loop's void-return path
+  falls through), hijacking a call the frozen semantics (freeze regra 1/2)
+  give to the function;
+  (2) `nonPublicCtorIsRejectedHonestly` — `resolveConstructor` matches
+  name+arity WITHOUT the access flag: a package/private ctor of an external
+  class resolves and lowers → `IllegalAccessError` at runtime instead of a
+  compile diagnostic (Q7 false-green);
+  (3) `wrongArgTypeIsDiagnosedNotSilent` — args are never checked against the
+  declared formals: a wrong-type call emits `KofCall <init>` with casted
+  args the verifier rejects (VerifyError at load, R6 violation);
+  (4) `externalClassWithoutCompatibleCtorFailsHonestlyNotSEM015` — class that
+  exists on the classpath with NO compatible ctor still dies with
+  `SEM015: Undefined function: 'Locked'`, a lie about a name that resolves.
+- **Root cause:** `d05d499b` fixed the MAIN face of #568 (SEM015 for the
+  implicit external ctor) with an arity-only pass in
+  `TopLevelCallTyper.externalConstructorType` + a lowerer branch keyed on
+  `resolveConstructor` — none of the access/precedence/diagnostic gates of
+  the `extern` face (§134 statics, §134 `new`) were mirrored onto it.
+- **Fix (root, single path):** `ExternalCtorTyper` (new) takes the site —
+  resolves through a PUBLIC-ONLY table (`ExternalClasspath.resolvePublicConstructor`
+  → `ExternalCtors` ASM scan of the .class entries, ACC_PUBLIC `<init>` by
+  arity; JDK classes via reflection `getConstructors()` minus the kof-builtin
+  java.lang names, §240), mirrors the arg gates (`TypeChecker.checkArgTypes`
+  SEM014 + `checkNullArgs` SEM048), emits the honest
+  "no public constructor of 'X' with N argument(s)" [SEM023] when the class
+  exists without a compatible public ctor, and runs strictly at the `!found`
+  site so declared class/function keep precedence (freeze regra 2 — face (1)
+  restored). The §391 pass (`externalConstructorType`) and its arity-only
+  lowerer branch become dead/dangerous next to it and are REMOVED from the
+  same sites (single resolution path — Simplicity Law rule 11); the §391
+  ledger entry and its tests stand, and `ExternalClasspathE2ETest` (9) keeps
+  proving the basic faces through the new path.
+- **Proof (Q0 red-before):** `ExternalConstructorE2ETest` (new, 11 cases:
+  3 basic faces incl. real execution `hi nobody`/`yo mel`/`sup a`, the 4
+  edges above, `new` face §134, absent-name SEM015, top-level precedence) —
+  **4/11 RED measured on upstream tip `30c804bd`** (probe worktree, upstream
+  code + this test only) → **11/11 GREEN** with this delta; `ExternalClasspathE2ETest`
+  9/9 (incl. the 2 #568 cases `d05d499b` added); neighbors re-run on the
+  merged path: TopLevelOverload 7/7, ConstructorPhantom 7/7, ClassShape 8/8
+  (+ earlier waves 96/96 and 81/81 on the pre-rebase tree);
+  `mvn -o -pl kof-compiler -am compile` green.
+- **Scope honesty:** JVM/ANDROID targets only (`externalClasspath` is wired
+  there by the pipeline; Script/JS/Native keep their existing diagnostic —
+  PKG006 import gate, unchanged). The artifact-side inconsistency the
+  original #568 report mentioned ("error but valid artifact") is #569
+  (sibling) and is NOT touched here.
+- **Related:** §391 (the partial fix this completes), §134 (external classpath
+  faces), §240 (JDK `knows()` ≠ kof-builtin), §362 (SEM023 ctor-message
+  family), #566 (umbrella, CLOSED upstream), #567/#569 (siblings i/iii),
+  `D-KOF-FIRST` (measured against Kof's own entry-table contract).

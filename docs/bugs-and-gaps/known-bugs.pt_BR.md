@@ -11312,3 +11312,62 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
   verde nas condições 4/7 do gate de release.
 - **Relacionado:** §389 (mesma forma, fechada pela dona), a5d87fa7/e3e98d78
   (linhagem F), §384 (verdade da árvore suja).
+## §392 — o fix landed do #568 (`d05d499b`) deixou 4 edges de fora: precedência de função top-level (regressão de semântica congelada), ctor private/abstrato resolvendo, sem gate de tipo de arg, "Undefined function" quando a classe externa EXISTE — ✅ CORRIGIDO 20/09 (lane compilador, branch `fix-568`)
+
+- **GitHub:** #568 (fechado upstream por `d05d499b`/§391) · branch `fix-568`
+  sobre `30c804bd` — SEM push (ordem da mantenedora; o ff é do integrador).
+- **Sintoma (medido no tip `30c804bd`, worktree-sonda `kof-work/probe568` =
+  código upstream + SOMENTE o novo `ExternalConstructorE2ETest`):** 4 de 11
+  casos VERMELHOS enquanto as faces básicas estão verdes:
+  (1) `topLevelFunctionBeatsExternalConstructor` — classe externa e função
+  top-level declaradas com o mesmo nome: o caminho do §391 sequestra a
+  chamada para o construtor, contra o congelado (freeze regras 1/2) que dá a
+  chamada à função;
+  (2) `nonPublicCtorIsRejectedHonestly` — `resolveConstructor` casa
+  nome+aridade SEM olhar acesso: ctor package/private de classe externa
+  resolve e baixa → `IllegalAccessError` em runtime em vez de diagnóstico no
+  compile (falso-verde Q7);
+  (3) `wrongArgTypeIsDiagnosedNotSilent` — args nunca conferidos contra os
+  formais declarados: chamada de tipo errado emite `KofCall <init>` que o
+  verificador recusa (VerifyError no load, R6);
+  (4) `externalClassWithoutCompatibleCtorFailsHonestlyNotSEM015` — classe que
+  EXISTE no classpath sem ctor compatível ainda morre em `SEM015: Undefined
+  function: 'Locked'`, mentira sobre um nome que resolve.
+- **Causa-raiz:** o `d05d499b` corrigiu a FACE PRINCIPAL do #568 (SEM015 do
+  construtor externo implícito) com um caminho só-de-aridade em
+  `TopLevelCallTyper.externalConstructorType` + ramo no lowering ancorado em
+  `resolveConstructor` — nenhum dos gates de acesso/precedência/diagnóstico
+  da face `extern` (§134 statics, §134 `new`) foi espelhado nele.
+- **Correção (na raiz, caminho único):** `ExternalCtorTyper` (novo) assume o
+  sítio — resolve por TABELA SOMENTE-PÚBLICA
+  (`ExternalClasspath.resolvePublicConstructor` → varredura ASM `ExternalCtors`
+  dos entries do .class, `<init>` ACC_PUBLIC por aridade; classes JDK por
+  reflexão `getConstructors()` menos os builtins kof de java.lang, §240),
+  espelha os gates de arg (`TypeChecker.checkArgTypes` SEM014 +
+  `checkNullArgs` SEM048), emite o honesto "no public constructor of 'X' with
+  N argument(s)" [SEM023] quando a classe existe sem ctor público
+  compatível, e roda estritamente no sítio `!found` — precedente preservada
+  (classe/função declaradas vencem; face (1) restaurada). O caminho do §391
+  (`externalConstructorType`) e seu ramo só-aridade no lowering ficam
+  mortos/perigosos ao lado deste e são REMOVIDES dos mesmos sítios (caminho
+  único de resolução — Lei da Simplicidade regra 11); a entrada §391 e seus
+  testes permanecem, e `ExternalClasspathE2ETest` (9) continua provando as
+  faces básicas pelo caminho novo.
+- **Prova (Q0 red-antes):** `ExternalConstructorE2ETest` (novo, 11 casos: 3
+  faces básicas c/ execução real `hi nobody`/`yo mel`/`sup a`, os 4 edges
+  acima, face `new` §134, nome ausente SEM015, precedência top-level) —
+  **4/11 RED medido no tip upstream `30c804bd`** (worktree-sonda, código
+  upstream + este teste) → **11/11 VERDE** com este delta;
+  `ExternalClasspathE2ETest` 9/9 (incl. os 2 casos do #568 que o `d05d499b`
+  adicionou); vizinhos re-rodados no caminho fundido: TopLevelOverload 7/7,
+  ConstructorPhantom 7/7, ClassShape 8/8 (+ ondas anteriores 96/96 e 81/81 na
+  árvore pré-rebase); `mvn -o -pl kof-compiler -am compile` verde.
+- **Escopo honesto:** alvos JVM/ANDROID apenas (`externalClasspath` é ligado
+  pelo pipeline neles; Script/JS/Native mantêm o diagnóstico que já tinham —
+  gate de import PKG006, intacto). A inconsistência artefato×erro do relato
+  original do #568 é a #569 (irmã) e NÃO é tocada aqui.
+- **Relacionados:** §391 (o fix parcial que este completa), §134 (classpath
+  externo — faces static/`new`), §240 (JDK `knows()` ≠ kof-builtin), §362/
+  #545 (padrão SEM023 "no constructor of"), #566 (guarda-chuva), #567/#569
+  (irmãs i/iii), `D-KOF-FIRST` (resolvido contra o contrato de entries do
+  próprio Kof, não contra Java).

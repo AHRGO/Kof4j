@@ -101,6 +101,31 @@ final class JdkReflectionResolver {
         return null;
     }
 
+    /**
+     * §392 (#568): construtor PUBLICO do JDK com a aridade dada via reflexao
+     * (`getConstructors` = so publicos; classe abstrata nao entrega
+     * construtor). Retorno sempre "V" — construtor nunca tem valor.
+     */
+    static ExternalClasspath.MethodSignature resolvePublicJdkConstructor(String ownerInternalName,
+                                                                         int argumentCount) {
+        if (!isJdkClass(ownerInternalName)) return null;
+        try {
+            Class<?> cls = Class.forName(ownerInternalName.replace('/', '.'));
+            for (java.lang.reflect.Constructor<?> c : cls.getConstructors()) {
+                if (c.getParameterCount() != argumentCount) continue;
+                List<String> paramDescs = new ArrayList<>();
+                for (Class<?> p : c.getParameterTypes()) {
+                    paramDescs.add(org.objectweb.asm.Type.getDescriptor(p));
+                }
+                return new ExternalClasspath.MethodSignature(paramDescs, "V", false,
+                        cls.isInterface());
+            }
+        } catch (Throwable t) {
+            // Classe nao carregavel: sem construtor (mesma politica do resolveJdkMethod)
+        }
+        return null;
+    }
+
     private static Class<?> toJavaClass(Type type) {
         if (type == null) return null;
         if (type instanceof Type.PrimitiveType pt) {
