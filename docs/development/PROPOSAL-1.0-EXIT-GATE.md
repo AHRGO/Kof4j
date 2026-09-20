@@ -578,7 +578,12 @@ VERSION = 0.5.0-beta
 
 `scripts/bump-version.sh` synced `VERSION` + `pom.xml` + `version.properties` + the current-version doc stamps (EN+PT); history was left intact.
 
-**Metadata still diverging (measured 09/20/2026):** the public site shows `v0.4.1-beta` while `VERSION` and `pom.xml` are at `0.5.0-beta`; and `docs/distribution/release-naming.md` still says "Current version: 0.4.0-beta". These are documentation/site drift, not a release decision — EG-7 sync items.
+**Metadata drift (measured 09/20/2026):** the in-repo release docs were synced by
+the bump (`release-naming.md` and `INSTALL.md` now say "Current version:
+0.5.0-beta"). The only remaining drift is the **public site**
+(`koflang.github.io` still shows `v0.4.1-beta`, and KofJS "Em desenvolvimento"
+while JS is in the 1.0 surface) — **maintainer-owned and deferred**: she will
+update the site shortly (chat 20/09). The repository side of EG-7 is done.
 
 For the future 1.0 candidate, synchronize at least:
 
