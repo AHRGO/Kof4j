@@ -34,6 +34,13 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Closes the #462/#486 family by decision (rule 8: the foreign construct's
     replacement is now IN the language).
 
+  - **Signature catalog is now 32/32 — `json` has hover/signatureHelp** (X10 close,
+    19/09): `json.encode`/`json.decode` join the generated table
+    (`encode(value) -> String`, `decode<T>(jsonString) -> T`), bound behaviorally to
+    the typer's real arity rule (`MemberCallNamespaces` enforces 1 arg + the `<T>` on
+    decode with SEM025 — the rule always existed; only the table was missing). Type
+    dispatch stays in the lowerer (`JsonDispatch`) — no language semantics changed.
+>>>>>>> 1b4c95f8 (feat(lsp): fechamento X10 — catalogo de assinaturas 32/32 com `json` na tabela (trava comportamental ao SEM025))
   - **JS collection equality is now by content (`#518`)** — a Kof `List` or `Set`
     used as an element of another `Set`/`Map`/`List` compared by identity on the JS
     target (`add` said `true`, `contains` said `false`, `setOf(setOf(1)).size()` was

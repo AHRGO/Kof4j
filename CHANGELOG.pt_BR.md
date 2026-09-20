@@ -34,6 +34,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Fecha a familia #462/#486 por decisao (regra 8: o substituto do constructo
     estrangeiro agora esta NA lingua).
 
+  - **Catálogo de assinaturas agora é 32/32 — `json` tem hover/signatureHelp**
+    (fechamento X10, 19/09): `json.encode`/`json.decode` entram na tabela gerada
+    (`encode(value) -> String`, `decode<T>(jsonString) -> T`), travados
+    comportamentalmente na aridade real do typer (`MemberCallNamespaces` cobra 1 arg +
+    o `<T>` do decode com SEM025 — a regra sempre existiu; faltava só a tabela). O
+    dispatch por tipo segue no lowerer (`JsonDispatch`) — nenhuma semântica de
+    linguagem mudou.
+>>>>>>> 1b4c95f8 (feat(lsp): fechamento X10 — catalogo de assinaturas 32/32 com `json` na tabela (trava comportamental ao SEM025))
   - **Bundle 2.1.3 do `kof.workflow` COMPLETO (19/09, lane `.18`)** — retry +
     deadLetter (duas faces) + schedule + checkpoint (3a) + **supervisão (3b)**:
     `runSupervised(dag, nome, maxReinicios)` roda a DAG como workers one_for_one

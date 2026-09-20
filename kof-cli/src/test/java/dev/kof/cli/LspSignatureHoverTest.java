@@ -1,6 +1,7 @@
 package dev.kof.cli;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -64,9 +65,16 @@ class LspSignatureHoverTest {
 
     @Test
     void memberWithoutTableKeepsSimpleHoverNoInvention() {
-        String t = "main() { val j = json.encode(\"x\") }\n";
-        String v = LspHover.hoverFor("encode", t, t.indexOf("encode") + 3);
-        assertTrue(v.contains("member of `kof.json`"), v);
-        assertFalse(v.contains("```"), "sem tabela = sem assinatura inventada: " + v);
+        // 32/32 (fechamento X10, 19/09): todo membro do catalogo tem tabela —
+        // o caso "catalogado sem tabela" nao existe mais; a clausula de
+        // honestidade (R6: nao inventar assinatura) vale p/ membro FORA do
+        // catalogo. json.encode, que era o probe antigo, agora DEVOLVE a
+        // forma real travada (encode(value) -> String).
+        String t = "main() { val z = zzz.unknown() }\n";
+        String v = LspHover.hoverFor("unknown", t, t.indexOf("unknown") + 3);
+        assertNull(v, "fora do catalogo = null honesto (R6: nao inventar): " + v);
+        String j = "main() { val x = json.encode(\"s\") }\n";
+        String hj = LspHover.hoverFor("encode", j, j.indexOf("encode") + 3);
+        assertTrue(hj.contains("encode(value) -> String"), "json.encode agora tem tabela: " + hj);
     }
 }

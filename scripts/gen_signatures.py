@@ -337,6 +337,10 @@ EXTRA_FATIAS = {
     "Image": [("open", ["open(String path) -> ImageData"])],
     "Audio": [("openWav", ["openWav(String path) -> Audio"])],
     "Video": [("open", ["open(String path) -> Video"])],
+    "json": [
+        ("encode", ["encode(value) -> String"]),
+        ("decode", ["decode<T>(jsonString) -> T"]),
+    ],
     "Mic": [("record", ["record(Int seconds) -> Audio"]),
             ("list", ["list() -> List"])],
 }

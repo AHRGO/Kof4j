@@ -38,12 +38,18 @@ class LspSignatureHelpTest {
     }
 
     @Test
-    void untabledMemberStaysNull() {
-        String t = "main() { val j = json.encode(";
-        assertNull(LspSignatureHelp.helpFor(t, t.length()),
-                "json nao tem tabela (dispatch por tipo no lowerer) — null honesto");
+    void untabledMemberStaysNullAndJsonNowHasTable() {
         String u = "main() { val z = zzz.unknown(";
         assertNull(LspSignatureHelp.helpFor(u, u.length()), "fora do catalogo => null");
+        // fechamento X10 (19/09): `json` entrou na tabela — o dispatcher por
+        // aridade do typer (MemberCallNamespaces/SEM025) ja existia; a
+        // ausencia era so na tabela. Forma bindada na trava comportamental
+        // (StdCatalogSignaturesTest#jsonTableBindsAgainstRealTyperArities).
+        String t = "main() { val j = json.encode(";
+        Map<String, Object> r = LspSignatureHelp.helpFor(t, t.length());
+        assertNotNull(r, "json.encode agora tem tabela (32/32)");
+        assertEquals("encode(value) -> String",
+                ((Map<?, ?>) ((List<?>) r.get("signatures")).get(0)).get("label"), r.toString());
     }
 
     @Test

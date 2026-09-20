@@ -362,6 +362,9 @@ public final class StdCatalog {
                     Map.entry("openWav", List.of("openWav(String path) -> Audio")))),
             Map.entry("Video", java.util.Map.ofEntries(
                     Map.entry("open", List.of("open(String path) -> Video")))),
+            Map.entry("json", java.util.Map.ofEntries(
+                    Map.entry("encode", List.of("encode(value) -> String")),
+                    Map.entry("decode", List.of("decode<T>(jsonString) -> T")))),
             Map.entry("Mic", java.util.Map.ofEntries(
                     Map.entry("record", List.of("record(Int seconds) -> Audio")),
                     Map.entry("list", List.of("list() -> List")))));

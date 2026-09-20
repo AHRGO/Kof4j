@@ -1,12 +1,16 @@
 package dev.kof.compiler;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * LSP-A (19/09): trava COMPORTAMENTAL da tabela de assinaturas do
@@ -252,11 +256,39 @@ class StdCatalogSignaturesTest {
 
     @Test
     void untabledNamespacesStayHonestEmpty() {
-        // fatias 1-6 cobrem 31/32 ns; so `json` fica sem tabela por
-        // honestidade (dispatch por tipo no lowerer, nao por aridade
-        // travavel no typer). Inventar forma e proibido (R6).
-        assertTrue(StdCatalog.signaturesOf("json", "encode").isEmpty());
-        assertTrue(StdCatalog.signaturesOf("json", "decode").isEmpty());
+        // 32/32 ns com tabela desde 19/09 (~22h): `json` entrou na ultima
+        // fatia — o "dispatcher por aridade no typer" que faltava JA EXISTE
+        // (MemberCallNamespaces valida aridade e cobra o <T> de decode com
+        // SEM025; o dispatch POR TIPO continua no lowerer/JsonDispatch e nao
+        // entra na tabela). Inventar forma e proibido (R6).
         assertTrue(StdCatalog.signaturesOf("nope", "get").isEmpty());
+    }
+
+    @Test
+    void jsonTableBindsAgainstRealTyperArities(@TempDir Path tmp) throws Exception {
+        java.util.List<String> enc = StdCatalog.signaturesOf("json", "encode");
+        java.util.List<String> dec = StdCatalog.signaturesOf("json", "decode");
+        assertEquals(List.of("encode(value) -> String"), enc, "forma de encode na tabela");
+        assertEquals(List.of("decode<T>(jsonString) -> T"), dec, "forma de decode na tabela");
+        assertTrue(diagOf(tmp, "enc1", "main() {\n    println(json.encode(1))\n}").isEmpty(),
+                "encode(1) deve compilar limpo");
+        assertTrue(diagOf(tmp, "dec1", "record P(Int a)\nmain() {\n"
+                + "    val v = json.decode<P>(\"{\\\"a\\\":1}\")\n    println(v)\n}").isEmpty(),
+                "decode<P>(s) deve compilar limpo");
+        assertTrue(diagOf(tmp, "enc2", "main() {\n    println(json.encode(1, 2))\n}").contains("SEM025"),
+                "encode(2) NAO binda (a tabela diz 1 forma de 1 arg)");
+        assertTrue(diagOf(tmp, "enc0", "main() {\n    println(json.encode())\n}").contains("SEM025"),
+                "encode(0) NAO binda");
+        assertTrue(diagOf(tmp, "dec0", "main() {\n    val v = json.decode(\"{}\")\n    println(v)\n}").contains("SEM025"),
+                "decode sem <T> NAO binda (1 arg + type argument)");
+    }
+
+    private String diagOf(Path tmp, String tag, String src) throws Exception {
+        Path file = tmp.resolve(tag + "/Main.kf");
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, src);
+        CompilationResult r = new CompilerDriver().compile(file, tmp.resolve("out-" + tag), Target.JVM);
+        return String.join("\n", r.diagnostics().getDiagnostics().stream()
+                .map(Object::toString).toList());
     }
 }
