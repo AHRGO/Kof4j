@@ -1155,13 +1155,16 @@ allocations
 GC
 ```
 
-`kof profile` must in the future integrate appropriate tools:
+`kof profile` integrates appropriate tools per target:
 
 ### JVM
 
-* JFR;
-* async-profiler;
-* JVM tooling.
+* ✅ **JFR — implemented (`kof profile --methods`)** — the JVM's own flight recorder
+  samples `jdk.ExecutionSample` stack traces; `kof profile --methods app.kf` prints the
+  hot methods with the **Kof source line** (the LineNumberTable maps the bytecode back
+  to the `.kf`), with no external tool. Honest note when the recording is too short for
+  a sample (never a silent empty list).
+* async-profiler / JVM tooling — external, for allocation/lock/flamegraph depth.
 
 ### Native
 

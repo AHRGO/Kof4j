@@ -39,7 +39,7 @@ public final class Profile {
             args = java.util.Arrays.copyOfRange(args, 1, args.length);
         }
         if (args.length < 1) {
-            System.err.println("usage: kof profile <file.kf> [--target jvm|native|js] [args...]");
+            System.err.println("usage: kof profile <file.kf> [--target jvm|native|js] [--methods] [args...]");
             return 1;
         }
         Path file = Path.of(args[0]);
@@ -48,6 +48,7 @@ public final class Profile {
             return 1;
         }
         Target target = Target.JVM;
+        boolean methods = false;
         int argStart = 1;
         for (int i = 1; i < args.length; i++) {
             if (args[i].startsWith("--target=")) {
@@ -57,7 +58,17 @@ public final class Profile {
                 target = parseTarget(args[i + 1]);
                 argStart = i + 2;
                 i++;
+            } else if (args[i].equals("--methods")) {
+                methods = true;
+                argStart = i + 1;
             }
+        }
+        if (methods && target != Target.JVM) {
+            // R6/R7 honest gap: JFR is a JVM facility; the other targets have their own
+            // tooling (perf for Native, V8/DevTools for JS) — never a silent no-op.
+            System.err.println("kof profile --methods: method-level sampling needs JFR, a JVM"
+                    + " facility; for native use perf, for js use V8/DevTools");
+            return 1;
         }
 
         Path outDir;
@@ -69,12 +80,14 @@ public final class Profile {
         }
         try {
             CompilerDriver driver = new CompilerDriver();
-            driver.setDebugInfoEnabled(false);
+            // --methods needs the JVM LineNumberTable so the JFR sample maps back to the
+            // .kf source line; without it the profile would show bytecode positions only.
+            driver.setDebugInfoEnabled(methods);
             CompilationResult result = driver.compile(file, outDir, target);
             for (Diagnostic d : result.diagnostics().getDiagnostics()) System.err.println(d.format());
             if (!result.success()) return 1;
 
-            Map<String, Object> report = profile(target, outDir, args, argStart);
+            Map<String, Object> report = profile(target, outDir, args, argStart, methods);
             if (report == null) return 1;
             report.put("file", file.getFileName().toString());
             report.put("target", target.name().toLowerCase());
@@ -89,8 +102,8 @@ public final class Profile {
         }
     }
 
-    private static Map<String, Object> profile(Target target, Path outDir, String[] args, int argStart)
-            throws IOException, InterruptedException {
+    private static Map<String, Object> profile(Target target, Path outDir, String[] args, int argStart,
+            boolean methods) throws IOException, InterruptedException {
         Map<String, Object> report = new LinkedHashMap<>();
         long start = System.nanoTime();
 
@@ -124,6 +137,12 @@ public final class Profile {
             Path gcLog = outDir.resolve("gc.log");
             command.add(System.getProperty("java.home") + "/bin/java");
             command.add("-Xlog:gc:" + gcLog);
+            if (methods) {
+                // In-house method-level sampling: the JVM's own JFR records
+                // `jdk.ExecutionSample` stack traces (settings=profile), dumped on exit.
+                command.add("-XX:StartFlightRecording=filename=" + outDir.resolve("profile.jfr")
+                        + ",settings=profile,dumponexit=true");
+            }
             command.add("-cp");
             command.add(outDir.toString());
             String mainClass = findMainClass(outDir);
@@ -154,14 +173,70 @@ public final class Profile {
             System.err.print(text);
             return null;
         }
+        report.put("wall_ms", wallMs);
         if (canMeasure) {
-            report.put("wall_ms", wallMs);
             parseTimeVerbose(text, report);
         }
         if (target == Target.JVM) {
             parseGcLog(outDir.resolve("gc.log"), report);
+            if (methods) {
+                parseMethodSamples(outDir.resolve("profile.jfr"), report);
+            }
         }
         return report;
+    }
+
+    /** A hot method from the JFR sampling: the JVM symbol and the Kof source line it maps to. */
+    record MethodSample(String method, int samples, int line) {
+    }
+
+    /**
+     * Method-level profile from the child JVM's JFR recording: aggregate
+     * `jdk.ExecutionSample` by top frame. The line number is the `.kf` line —
+     * the compiler's LineNumberTable maps the bytecode back to the Kof source,
+     * so the user sees the hot Kof function, never raw bytecode.
+     */
+    private static void parseMethodSamples(Path jfrFile, Map<String, Object> report) {
+        if (!Files.isRegularFile(jfrFile)) {
+            report.put("methods_unavailable", "no JFR recording produced (is this a JVM with JFR?)");
+            return;
+        }
+        Map<String, Integer> byMethod = new LinkedHashMap<>();
+        Map<String, Integer> lineByMethod = new LinkedHashMap<>();
+        int total = 0;
+        try (jdk.jfr.consumer.RecordingFile rf = new jdk.jfr.consumer.RecordingFile(jfrFile)) {
+            while (rf.hasMoreEvents()) {
+                jdk.jfr.consumer.RecordedEvent event = rf.readEvent();
+                if (!"jdk.ExecutionSample".equals(event.getEventType().getName())) continue;
+                jdk.jfr.consumer.RecordedStackTrace stack = event.getStackTrace();
+                if (stack == null) continue;
+                List<jdk.jfr.consumer.RecordedFrame> frames = stack.getFrames();
+                if (frames.isEmpty()) continue;
+                jdk.jfr.consumer.RecordedFrame top = frames.get(0);
+                String type = top.getMethod().getType().getName();
+                if (type.startsWith("jdk.jfr.internal")) continue; // the sampler's own overhead
+                String method = type + "." + top.getMethod().getName();
+                byMethod.merge(method, 1, Integer::sum);
+                // keep the first POSITIVE line: a safepoint sample can carry -1
+                lineByMethod.merge(method, top.getLineNumber(), (old, now) -> old > 0 ? old : now);
+                total++;
+            }
+        } catch (IOException e) {
+            report.put("methods_unavailable", "JFR recording could not be read: " + e.getMessage());
+            return;
+        }
+        if (total == 0) {
+            report.put("methods_unavailable", "the program was too short for JFR to take a sample");
+            return;
+        }
+        List<MethodSample> top = byMethod.entrySet().stream()
+                .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+                .limit(10)
+                .map(e -> new MethodSample(e.getKey(), e.getValue(),
+                        lineByMethod.getOrDefault(e.getKey(), -1)))
+                .toList();
+        report.put("samples_total", total);
+        report.put("methods", top);
     }
 
     private static void parseTimeVerbose(String text, Map<String, Object> report) {
@@ -247,10 +322,27 @@ public final class Profile {
         if (report.containsKey("ctx_switches")) {
             System.out.println("  ctx switches:   " + Math.round((Double) report.get("ctx_switches")));
         }
+        if (report.containsKey("methods")) {
+            System.out.println();
+            System.out.println("  hot methods (" + report.get("samples_total")
+                    + " JFR samples, top " + ((List<?>) report.get("methods")).size() + "):");
+            for (Object o : (List<?>) report.get("methods")) {
+                MethodSample m = (MethodSample) o;
+                String line = m.line() > 0 ? "  (line " + m.line() + ")" : "";
+                System.out.printf("    %6d  %s%s%n", m.samples(), m.method(), line);
+            }
+        } else if (report.containsKey("methods_unavailable")) {
+            System.out.println();
+            System.out.println("  hot methods:    unavailable — " + report.get("methods_unavailable"));
+        }
         System.out.println();
-        System.out.println("jvm:      profile with JFR/async-profiler for method-level data");
-        System.out.println("native:   run under perf stat for cycle/instruction counts");
-        System.out.println("js:       profile with Node/V8 DevTools when running the emitted module");
+        if (report.containsKey("methods")) {
+            System.out.println("method-level data from the JVM's own JFR (in-house; no external tool)");
+        } else {
+            System.out.println("jvm:      profile with --methods for JFR method-level data");
+            System.out.println("native:   run under perf stat for cycle/instruction counts");
+            System.out.println("js:       profile with Node/V8 DevTools when running the emitted module");
+        }
     }
 
     private static String findMainClass(Path dir) {

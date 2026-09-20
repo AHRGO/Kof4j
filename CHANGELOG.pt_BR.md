@@ -23,6 +23,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     argumentos) / **SEM014** (tipo do argumento), no call-site, em todo alvo (gate de frontend).
     Formas legitimas intactas — medido: `Q(7)`, `E(9)`, `R(1, 2)` seguem compilando e rodando.
     Provado por `ConstructorPhantomE2ETest` 7/7.
+
+  - **`kof profile --methods` — profiler de AMOSTRAGEM method-level interno (resíduo 8.3)**
+    — a face JVM de profiling agora e real e auto-contida: o JVM filho grava
+    `jdk.ExecutionSample` com o **JFR do proprio JDK** (`jdk.jfr`, sem ferramenta externa),
+    e `kof profile --methods app.kf` imprime os metodos quentes com a **linha da fonte Kof**
+    (o LineNumberTable do compilador mapeia o bytecode de volta ao `.kf`, entao o usuario ve
+    a funcao Kof quente, nunca bytecode cru). O overhead do proprio sampler
+    (`jdk.jfr.internal`) e filtrado; gravacao curta demais para uma amostra vira nota
+    honesta, nunca lista vazia silenciosa. Native/JS sao recusas honestas nomeando a
+    ferramenta deles (perf / V8-DevTools, R6/R7). Provado por `ProfileMethodsTest` 4/4
+    (funcao quente real achada por linha + as duas recusas + o controle sem a flag).
+
   - **#431 fatia 1 — a ABI escalar do `extern` agora VINCULA no Native x86-64 (`d946e6fa`, §369)**
     — `extern "<lib>" f(Int, Long, Float, Double, Bool, String)` com aridade livre,
     retornos void/String: link direto (a biblioteca entra no `ld`) + marshaling SysV

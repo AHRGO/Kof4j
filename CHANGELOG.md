@@ -24,6 +24,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     call-site, on every target (frontend gate). Legit forms unchanged — measured:
     `Q(7)`, `E(9)`, `R(1, 2)` still compile and run. Proved by
     `ConstructorPhantomE2ETest` 7/7.
+
+  - **`kof profile --methods` — in-house method-level SAMPLING profiler (8.3 residual)**
+    — the JVM face of profiling is now real and self-contained: the child JVM records
+    `jdk.ExecutionSample` with its **own JFR** (`jdk.jfr`, part of the JDK — no external
+    tool), and `kof profile --methods app.kf` prints the hot methods with the **Kof
+    source line** (the compiler's LineNumberTable maps the bytecode back to the `.kf`,
+    so the user sees the hot Kof function, never raw bytecode). The sampler's own
+    `jdk.jfr.internal` overhead is filtered; a recording too short for a sample is an
+    honest note, never a silent empty list. Native/JS are honest refusals naming their
+    own tool (perf / V8-DevTools, R6/R7). Proved by `ProfileMethodsTest` 4/4 (a real
+    hot function found by line + both refusals + the no-flag control).
+
   - **#431 fatia 1 — the `extern` scalar ABI now BINDS on Native x86-64 (`d946e6fa`, §369)**
     — `extern "<lib>" f(Int, Long, Float, Double, Bool, String)` with free arity,
     void/String returns: direct link (the library goes to `ld`) + SysV marshaling
