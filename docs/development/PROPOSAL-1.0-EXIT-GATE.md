@@ -520,6 +520,18 @@ Android = experimental / post-1.0
 **Decided (`D-1.0-EDGES`, 20/09/2026): Android = Stable 1.0, with its own
 gate** (the full option, not the partial one; CI already runs the APK).
 
+**Gate mechanism (landed 20/09, EG-10):** `scripts/test-android-gate.sh` —
+honest preflight (JDK ≥ 25 + `jar`; `ANDROID_HOME` with a complete build-tools
+≥ 35 and a platform `android-N/android.jar`); an absent SDK is an honest SKIP
+(exit 3) **naming what is missing** — never a silent green (R6) — and the CI
+`android.yml` runs the SAME gate. With the SDK present it runs
+`kof build --target android --apk` (the standalone
+aapt2→d8→zip→zipalign→apksigner pipeline) and proves the artifact is a real
+zip carrying `AndroidManifest.xml` + `classes.dex`; the verdict is bound to the
+SHA (`ANDROID-GATE: PASS sha=…`). RED-first offline proof:
+`scripts/tests/test-android-gate-test.sh` (6 scenarios, registered in
+`run-agent-tests.sh`).
+
 ---
 
 # 14. Golden byte parity

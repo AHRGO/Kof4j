@@ -523,6 +523,17 @@ Android = experimental / post-1.0
 **Decidido (`D-1.0-EDGES`, 20/09/2026): Android = Stable 1.0, com gate próprio**
 (a opção cheia, não a parcial; o CI já roda o APK).
 
+**Mecanismo do gate (entregue 20/09, EG-10):** `scripts/test-android-gate.sh` —
+preflight honesto (JDK ≥ 25 + `jar`; `ANDROID_HOME` com build-tools COMPLETA
+≥ 35 e uma plataforma `android-N/android.jar`); SDK ausente = SKIP honesto
+(exit 3) **nomeando o que falta** — nunca verde mudo (R6) — e o CI `android.yml`
+roda o MESMO gate. Com SDK ele roda `kof build --target android --apk` (o
+pipeline standalone aapt2→d8→zip→zipalign→apksigner) e prova que o artefato é
+um zip real com `AndroidManifest.xml` + `classes.dex`; o veredito é amarrado ao
+SHA (`ANDROID-GATE: PASS sha=…`). Prova RED-first offline:
+`scripts/tests/test-android-gate-test.sh` (6 cenários, registrado no
+`run-agent-tests.sh`).
+
 ---
 
 # 14. Golden byte parity
