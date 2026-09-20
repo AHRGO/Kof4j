@@ -15,6 +15,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
  ### In development
 
+  - **X9 fatia 6 — `kof deploy` packages the cross faces (DEP001 preventive refusal gone)**
+    — `--target native.riscv64|native.aarch64` now runs the SAME release pipeline as
+    native x86: cross ELF (`Default/Main`, 0755) + `RELEASE.md` (run hint `./artifact`,
+    not `adb`) + `SHA256SUMS` + `.tar.gz`; multi-target and the partial-failure manifest
+    treat cross like any other face. Without the toolchain the deploy FAILS honestly
+    naming the tool (R6: it truly tried — the old blanket `DEP001` refusal never invoked
+    the emitter). New house-pattern override `KOF_CROSS_PREFIX` (like `KOF_GDB`)
+    redirects the `riscv64-`/`aarch64-` `as`/`ld` tools; proven on any host with stub
+    tools (`CmdDeployTest#crossReleasePackagesWithStubToolchain`,
+    `crossDeployWithoutToolchainFailsHonestly`, deterministic `emptybin` partial-failure)
+    and with the real binutils/qemu in the CI cross job. Tracker 8.4 → ✅, X9 fatia 6.
+
   - **Debug/tooling CodeQL debt closed at the root (no observable behavior change)**
     — the 11 open CodeQL alerts of the CLI's debug cluster were fixed at the source
     instead of suppressed: `KofGdbMi` uses `add` on its unbounded queues (the ignored

@@ -39,7 +39,8 @@ import java.util.List;
  * <p>D2-A (D-POLL-19, 19/09): {@code --publish} SUBLIGE a release ao host
  * oficial GitHub Releases ({@link DeployPublish}) — sem token, falha honesta
  * (R6) depois do pacote local pronto; nunca exit 0 sem artefato. Cross
- * riscv64/aarch64 continuam {@code DEP001} (faces seguintes do plano).
+ * riscv64/aarch64 empacotam desde a fatia 6 (X9, 20/09) — toolchain ausente =
+ * falha honesta nomeando a ferramenta (R6), nao recusa preventiva.
  */
 final class CmdDeploy {
 
@@ -124,19 +125,11 @@ final class CmdDeploy {
             }
         }
         if (targets.isEmpty()) targets.add(Target.JVM);
-        // X9 fatia 3: JVM (fat jar), NATIVE x86_64 (ELF), JS (Default.mjs) e
-        // ANDROID (APK assinado, reusa o pipeline --apk do build) empacotam.
-        // Cross riscv64/aarch64 (sysroot) recusa honesto (R6) — face seguinte.
-        if (targets.size() == 1) {
-            Target only = targets.iterator().next();
-            if (only == Target.NATIVE_RISCV64 || only == Target.NATIVE_AARCH64) {
-                System.err.println("deploy: target " + TargetMatrix.name(only)
-                        + " is not packaged yet (DEP001) —"
-                        + " slices so far: --target jvm|native|js|android");
-                System.exit(1);
-                return;
-            }
-        }
+        // X9 fatia 6 (20/09): o cross (riscv64/aarch64) EMPACOTA como o NATIVE x86 —
+        // mesmo pipeline do driver (as/ld via NativeArchEmitter; toolchain ausente =
+        // ToolchainMissing nomeando a ferramenta no diagnostico, R6 — nao mais a
+        // recusa generalizada DEP001, que recusava sem nem tentar). Faces empacotaveis:
+        // JVM (fat jar), NATIVE x86_64 + cross (ELF 0755), JS (.mjs), ANDROID (APK).
         // --publish (D2-A, D-POLL-19 19/09): publica a release empacotada no
         // host oficial GitHub Releases. Sem token/endpoint = falha honesta
         // (R6) DEPOIS do pacote local existir — nunca "meia publicação" falsa.
@@ -193,7 +186,7 @@ final class CmdDeploy {
      * X9 fatia 4 / linha 8.4 (IMPLEMENTATION-UNIVERSAL-PLATFORM.md): multi-target
      * da MESMA fonte (“same source → JVM/Native/JS”). Cada alvo roda o pipeline
      * completo de release no seu subdiretório; alvo que falha (ferramenta ausente,
-     * compilação, DEP001) não derruba os demais — o resumo e o
+     * compilação, toolchain ausente) não derruba os demais — o resumo e o
      * {@code .deploy-manifest.json} registram SUCCESS/FAIL com a razão honesta
      * (R6/R7) e o exit é 1 se houve falha.
      */
@@ -203,12 +196,6 @@ final class CmdDeploy {
         boolean anyFail = false;
         for (Target t : targets) {
             String tn = TargetMatrix.name(t);
-            if (t == Target.NATIVE_RISCV64 || t == Target.NATIVE_AARCH64) {
-                results.add(new Release(tn, "FAIL", null, null, null, null,
-                        "not packaged yet (DEP001)"));
-                anyFail = true;
-                continue;
-            }
             try {
                 Release r = deploy(src, out, name, version, t, "-" + tn);
                 results.add(r);
@@ -276,7 +263,10 @@ final class CmdDeploy {
                 ext = ".jar";
                 tarMode = 0644;
             }
-            case NATIVE -> {
+            case NATIVE, NATIVE_RISCV64, NATIVE_AARCH64 -> {
+                // x86_64 nativo e o cross (riscv64/aarch64) caem no MESMO ponto de
+                // saida do driver (Default/Main); so muda a ferramenta do emissor
+                // (KOF_CROSS_PREFIX pode prefixa-la p/ teste/ambiente).
                 built = classes.resolve("Default").resolve("Main");
                 if (!Files.isRegularFile(built)) {
                     throw new IOException("native binary not found: " + built);
@@ -334,8 +324,9 @@ final class CmdDeploy {
         String runCmd;
         if (target == Target.JVM) {
             runCmd = "java -jar " + artifact;
-        } else if (target == Target.NATIVE) {
-            runCmd = "./" + artifact;
+        } else if (target == Target.NATIVE || target == Target.NATIVE_RISCV64
+                || target == Target.NATIVE_AARCH64) {
+            runCmd = "./" + artifact; // cross roda no alvo (ou qemu -L sysroot)
         } else if (target == Target.JS) {
             runCmd = "node " + artifact;
         } else {

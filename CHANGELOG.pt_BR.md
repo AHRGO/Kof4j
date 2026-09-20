@@ -15,6 +15,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
+  - **X9 fatia 6 — `kof deploy` empacota as faces cross (recusa preventiva DEP001 saiu)**
+    — `--target native.riscv64|native.aarch64` roda o MESMO pipeline de release do
+    native x86: ELF cross (`Default/Main`, 0755) + `RELEASE.md` (run hint `./artefato`,
+    não `adb`) + `SHA256SUMS` + `.tar.gz`; multi-target e o manifest de falha parcial
+    tratam o cross como qualquer face. Sem toolchain o deploy FALHA honesto nomeando a
+    ferramenta (R6: ele tentou de verdade — a recusa `DEP001` antiga nunca invocava o
+    emissor). Novo override da casa `KOF_CROSS_PREFIX` (padrão `KOF_GDB`) redireciona
+    `as`/`ld` de `riscv64-`/`aarch64-`; provado em qualquer host com ferramentas stub
+    (`CmdDeployTest#crossReleasePackagesWithStubToolchain`,
+    `crossDeployWithoutToolchainFailsHonestly`, falha parcial determinística com
+    `emptybin`) e com binutils/qemu reais no job cross da CI. Tracker 8.4 → ✅, X9 fatia 6.
+
   - **Dívida CodeQL do cluster debug/tooling fechada na raiz (sem mudança de comportamento observável)**
     — os 11 alertas CodeQL abertos do cluster de debug da CLI foram corrigidos na fonte, não
     suprimidos: `KofGdbMi` usa `add` nas filas ilimitadas (o retorno ignorado de `offer`), remove

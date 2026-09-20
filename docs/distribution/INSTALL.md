@@ -255,7 +255,7 @@ Main commands already available (details in
 | `kof build <dir|file.kf> [--target ...]` | compiles to jvm / native / native.risc / native.arm / js / android |
 | `kof serve app.kf` | starts a `web.app()` app |
 | `kof test <dir>` | runs the test suite |
-| `kof deploy <dir|file.kf> [--target jvm|native|js|android[,..]|all] [--publish [<owner/repo>]]` | packages a self-contained release: artifact + `RELEASE.md` + `SHA256SUMS` + `.tar.gz` (JS ships its runtime closure, §298); comma-list/`all` deploys the SAME source to several targets with one `.deploy-manifest.json` per run (8.4); `--publish` uploads the artifact(s) to GitHub Releases (`GH_TOKEN`, D2-A); cross riscv64/aarch64 refuse with `DEP001` |
+| `kof deploy <dir|file.kf> [--target jvm|native|native.riscv64|native.aarch64|js|android[,..]|all] [--publish [<owner/repo>]]` | packages a self-contained release: artifact + `RELEASE.md` + `SHA256SUMS` + `.tar.gz` (JS ships its runtime closure, §298); comma-list/`all` deploys the SAME source to several targets with one `.deploy-manifest.json` per run (8.4); `--publish` uploads the artifact(s) to GitHub Releases (`GH_TOKEN`, D2-A); cross riscv64/aarch64 package the cross ELF too (X9 fatia 6; without the cross toolchain an honest failure names the tool — `KOF_CROSS_PREFIX` overrides the `riscv64-`/`aarch64-` tool prefix) |
 | `kof check <dir>` | type-check without emitting code |
 | `kof script <f.kf>` / `kof repl` | direct execution / REPL |
 | `kof fmt <f.kf>` | formats the code |
