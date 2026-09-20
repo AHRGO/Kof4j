@@ -951,9 +951,13 @@ class KofOrmE2ETest {
                     db.execute(db, "insert into user (name, email, age) values ('Mel', 'm@kof.dev', 30)")
                     println(orm.count<User>(db))
                     println(db.query(db, "select email from user").get(0))
+                    println(db.query(db, "select sql from sqlite_master where type='table' and name='user'").get(0))
                 }
                 """;
-        String expected = "true\ntrue\n1\n{\"email\":\"m@kof.dev\"}";
+        // o DDL gravado no sqlite_master e o TEXTO que cada engine enviou —
+        // iguala-lo prova AUTOINCREMENT/UNIQUE/VARCHAR byte a byte (bug das
+        // flags comidas pelo badtok, medido 20/09).
+        String expected = "true\ntrue\n1\n{\"email\":\"m@kof.dev\"}\n{\"sql\":\"CREATE TABLE \\\"user\\\" (\\\"id\\\" INTEGER PRIMARY KEY AUTOINCREMENT, \\\"name\\\" VARCHAR(255), \\\"email\\\" VARCHAR(255) UNIQUE, \\\"age\\\" INTEGER)\"}";
         Path jvmSource = tempDir.resolve("JvmMain.kf");
         Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
                 + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmb.db") + "\")\n")
@@ -1044,6 +1048,48 @@ class KofOrmE2ETest {
         int ec = p.waitFor();
         assertEquals(0, ec, "Native exit code, output: '" + out + "'");
         assertEquals("unknown db connection: db2", out);
+    }
+
+    @Test
+    void countWhereNativeEndToEndMatchesJvm(@TempDir Path tempDir) throws Exception {
+        // F3a: count com UM bind — SQL identico ao host (FROM "t" WHERE "f"
+        // = ?), valor via box de erasure §284. Q3: string, int, ausente,
+        // injecao (o bind nunca concatena) e negativo (sign-extension do
+        // movslq vs Integer do JDBC).
+        String body = """
+                    println(orm.create<User>(db))
+                    db.execute(db, "insert into user (name, email, age) values ('Mel', 'm@kof.dev', 30)")
+                    db.execute(db, "insert into user (name, email, age) values ('Ana', 'a@kof.dev', 41)")
+                    println(orm.count<User>(db, "name", "Mel"))
+                    println(orm.count<User>(db, "age", 30))
+                    println(orm.count<User>(db, "email", "nope@x.io"))
+                    println(orm.count<User>(db, "name", "x' OR 1=1 --"))
+                    println(orm.count<User>(db, "age", -7))
+                }
+                """;
+        String expected = "true\n1\n1\n0\n0\n0";
+        Path jvmSource = tempDir.resolve("JvmMain.kf");
+        Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmb.db") + "\")\n")
+                + body);
+        runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
+                findDriverJar("sqlite-jdbc", "SQLite"), expected);
+        Path nativeSource = tempDir.resolve("NativeMain.kf");
+        Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativeb.db") + "\")\n")
+                + body);
+        CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nativeResult.success(), "Native deve compilar count com bind: "
+                + nativeResult.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(
+                tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = p.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals(expected, out, "count_where Native deve igualar o JVM");
     }
 
     @Test
