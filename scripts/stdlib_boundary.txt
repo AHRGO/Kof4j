@@ -35,6 +35,7 @@ scheduler platform — KofScheduler.java
 security platform — ExpressionMethodCallLowerer.java (auth/JWT/rate-limit; stdlib-documented)
 supervisor platform — CompilerSupervisor.java (otp-style supervision, systems layer)
 workflow platform — CompilerWorkflow.java (pure-Kof workflow host, composition layer)
+makealive platform — CompilerMakealive.java (pure-Kof makealive host, composition layer; D-MAKEALIVE Q1)
 validation platform — ExpressionMethodCallLowerer.java
 version platform — KofVersion.java
 ui platform — ExpressionStaticCallLowerer.java (declared platform capability, not core)
