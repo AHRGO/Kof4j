@@ -101,4 +101,21 @@ LSP e DAP não se misturam: LSP = código; DAP = execução.
     `configurationDone`, `continue`, `threads`, `stackTrace`, `disconnect`
   - evento `stopped` quando um breakpoint Kof é atingido
   - call stack com funções Kof, arquivo e linha (via LineNumberTable)
-- Fases 4-7 — planejadas; ver `debugger-architecture.md`
+- Fase 5 (Native) — ✅ entregue como a ponte DAP↔gdb/MI2
+  (`kof debug --dap --target native`, `bda631a7`; garantias medidas em
+  `debug-adapter.md`). Fase 6 (JS) — recusa honesta (engine embutido, sem
+  node/inspector — nunca uma ponte falsa). Fase 4 (UI do Kof Editor) e os
+  refinamentos da Fase 7 — ver `debugger-architecture.md`.
+
+## 6. Medindo um fix pousado — a armadilha do jar obsoleto (lição 20/09)
+
+Ao verificar um fix do compilador pelo jar da CLI, o jar precisa ser
+**provavelmente atual**: um `mvn package -pl kof-cli -am` incremental pode
+deixar as entradas sombreadas `dev/kof/compiler/*` apontando para um build
+antigo, e você mede o **compilador velho e acredita que o fix não existe**
+(aconteceu com o §368 — o `FieldAssignabilityPhantomE2ETest` 8/8 estava
+certo, o jar era fantasma). Regra: reconstrua com
+`mvn clean package -DskipTests` e, na dúvida, compare a classe dentro do jar
+com o output do módulo (`unzip -p <cli.jar> dev/kof/compiler/Foo.class |
+md5sum` vs `md5sum kof-compiler/target/classes/.../Foo.class`) — **bytes
+idênticos ou você não está medindo o tip.**

@@ -100,4 +100,21 @@ LSP and DAP do not mix: LSP = code; DAP = execution.
     `configurationDone`, `continue`, `threads`, `stackTrace`, `disconnect`
   - `stopped` event when a Kof breakpoint is hit
   - call stack with Kof functions, file and line (via LineNumberTable)
-- Phases 4-7 — planned; see `debugger-architecture.md`
+- Phase 5 (Native) — ✅ shipped as the DAP↔gdb/MI2 bridge
+  (`kof debug --dap --target native`, `bda631a7`; guarantees measured in
+  `debug-adapter.md`). Phase 6 (JS) — honest refusal (embedded engine, no
+  node/inspector — never a fake bridge). Phase 4 (Kof Editor UI) and the
+  Phase 7 refinements — see `debugger-architecture.md`.
+
+## 6. Measuring a landed fix — the stale-jar trap (lesson 20/09)
+
+When you verify a compiler fix through the CLI jar, the jar must be **provably
+current**: an incremental `mvn package -pl kof-cli -am` can leave the shaded
+`dev/kof/compiler/*` entries pointing at an older build, so you measure the
+**old compiler and believe the fix is absent** (this happened with §368 — the
+`FieldAssignabilityPhantomE2ETest` 8/8 was right, the jar was a ghost). Rule:
+rebuild with `mvn clean package -DskipTests`, and when in doubt compare the
+class inside the jar with the module output
+(`unzip -p <cli.jar> dev/kof/compiler/Foo.class | md5sum` vs
+`md5sum kof-compiler/target/classes/.../Foo.class`) — **identical bytes or you
+are not measuring the tip.**
