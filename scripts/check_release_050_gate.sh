@@ -30,6 +30,8 @@
 #   R050_MATRIX_CMD       command that runs the per-target matrix (default
 #                         `bash scripts/target-matrix.sh`, §14/EG-5); set empty
 #                         to disable the auto-measure and stay NEEDS-MEASURE
+#   KOF_SUITE_LOG         path to a real suite log; when set, condition 4 is
+#                         auto-measured by scripts/stability-report.sh (0F/0E)
 #
 # Usage: scripts/check_release_050_gate.sh [--selftest]
 set -uo pipefail
@@ -115,6 +117,20 @@ c_stability() {
       STATE[stability]=GREEN; DETAIL[stability]="suite 0F/0E + 5/5 matrix recorded on the candidate"
     else
       STATE[stability]=RED; DETAIL[stability]="recorded stability report is not green"
+    fi
+    return
+  fi
+  # auto-mede do log de uma corrida REAL da suite (KOF_SUITE_LOG), sem re-rodar:
+  # scripts/stability-report.sh le a ultima linha TOTAL e exige 0F/0E.
+  if [ -n "${KOF_SUITE_LOG:-}" ] && [ -f scripts/stability-report.sh ]; then
+    local report; report="$(mktemp)"
+    bash scripts/stability-report.sh --suite-log "$KOF_SUITE_LOG" > "$report" 2>&1 || true
+    if grep -q "STABILITY: GREEN" "$report"; then
+      STATE[stability]=GREEN; DETAIL[stability]="suite log 0F/0E on the candidate ($KOF_SUITE_LOG)"
+    elif grep -q "STABILITY: RED" "$report"; then
+      STATE[stability]=RED; DETAIL[stability]="suite log has failures/errors ($KOF_SUITE_LOG)"
+    else
+      STATE[stability]=NEEDS-MEASURE; DETAIL[stability]="suite log unreadable (no TOTAL) — see $report"
     fi
     return
   fi
@@ -242,7 +258,7 @@ EOF
   printf 'EN open/partial (0):\nPT open/partial (0):\n' > "$T/kb"
   R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_LOOSE_MD_FILE="$T/loose" \
   R050_SPEC_GAPS_FILE="$T/spec" R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 \
-  R050_MATRIX_CMD=: \
+  R050_MATRIX_CMD=: KOF_SUITE_LOG= \
     bash "$0" > "$T/out3"; rc=$?
   [ "$rc" -eq 2 ] || fail "inconclusive fixture should be exit 2, got $rc"
   grep -q 'NEEDS-MEASURE' "$T/out3" || fail "inconclusive run should surface NEEDS-MEASURE"

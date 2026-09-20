@@ -55,7 +55,7 @@ prioridade para "liberar o gate 0.5.0 para todos os agentes".
 | 1 | Paridade 100% entre os alvos | matriz por alvo + paridade byte dos goldens onde o contrato exige; divergência = bug ou gap `XXX00x`. **Medida automaticamente** pelo `check_release_050_gate.sh` (roda `scripts/target-matrix.sh`, EG-5, e lê a linha `PARITY: 100%`) | GREEN (6 alvos core com paridade byte vs oráculo JVM) |
 | 2 | Nenhuma decisão pendente | `DECISIONS.md` sem pergunta aberta que mude a superfície | NEEDS-REVIEW |
 | 3 | Todos os `docs/development/*.md` soltos concluídos e movidos | regra dos três estados; só fica trabalho com implementação pendente | RED (docs em curso) |
-| 4 | Estabilidade total | suíte completa 0F/0E + matriz 5/5 na candidata | NEEDS-MEASURE |
+| 4 | Estabilidade total | suíte completa 0F/0E + matriz 5/5 na candidata. **Medida automaticamente** a partir de um log real da suíte via `scripts/stability-report.sh` (`KOF_SUITE_LOG=…`), que exige que o último `TOTAL` seja 0F/0E; os guards de conformidade fazem parte dessa suíte | NEEDS-MEASURE (sem corrida do dia do RC ainda) |
 | 5 | 0 issues abertas que sejam bug | issues OPEN do GitHub com label `bug` = 0 (inclui a #566 — mantenedora 20/09) | RED (#566) |
 | 6 | Todas as arestas fechadas | a fila EG INTEIRA (EG-1..EG-10) fechada + `1.0-blocks` abertos = 0; o 0.5.0 espera cada dono fechar/mover o próprio trabalho. **Mecanismos EG-5/EG-9/EG-10 FEITOS 20/09**; abertos: #566 + EG-8 | RED (#566 + EG-8) |
 | 7 | Nada pendente em bugs-and-gaps | conjunto live do `check_known_bugs_status.sh` vazio + `specification-gaps.md` 0 abertos | RED (19 live) |
