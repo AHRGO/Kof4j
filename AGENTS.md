@@ -210,7 +210,9 @@ scripts/auto-loop.sh status           # confirm that it's active
   failures back off (1st retries on the next tick, 2nd waits 15 min, 3rd+ 30 min).
   `auto-loop.sh tick --dry-run` shows the decision; every dispatch/skip is logged in
   `~/.local/state/kof-agent/dispatch.jsonl`; `auto-loop.sh stats` / `issue-watcher.sh
-  stats` report ticks × model calls avoided (measured, no invented token costs).
+  stats` report ticks × model calls avoided plus the **real cost measured by
+  `opencode stats`** (dollars and tokens of the machine's sessions; whole days
+  window; "unavailable" when OpenCode is missing/fails — never estimated).
   **Rollout:** a cron started before this change has no `gate_mode` and runs in
   `shadow` (legacy behaviour + logging of what the gate would do); flip it with
   `set-mode active`. `flock`, watchdog and the mandatory `--attach` are unchanged.

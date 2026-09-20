@@ -392,21 +392,13 @@ public final class RuntimeSlices {
     }
 
     /** Lê o fonte de produção; retorna [fonte, corpoDoMetodo]. A ordem das
-     *  fatias É derivada daqui — nunca transcrita à mão. */
+     *  fatias É derivada daqui — nunca transcrita à mão. §371: classpath
+     *  primeiro (funciona do jar shipped), CWD-relativo só como fallback dev. */
     private static String[] readSourceAndOrder() {
-        String src;
-        try {
-            src = java.nio.file.Files.readString(java.nio.file.Path.of(
-                    "kof-compiler/src/main/java/dev/kof/compiler/NativeRuntime.java"));
-        } catch (Exception e) {
-            try {
-                src = java.nio.file.Files.readString(java.nio.file.Path.of(
-                        "src/main/java/dev/kof/compiler/NativeRuntime.java"));
-            } catch (Exception e2) {
-                throw new IllegalStateException(
-                        "NativeRuntime.java not found (run from the kof-compiler module)", e2);
-            }
-        }
+        String src = RuntimeSourceLoader.read(RuntimeSlices.class,
+                "/dev/kof/compiler/NativeRuntime.java",
+                "kof-compiler/src/main/java/dev/kof/compiler/NativeRuntime.java",
+                "src/main/java/dev/kof/compiler/NativeRuntime.java");
         int start = src.indexOf("generateRuntimeAssembly()");
         int end = src.indexOf("return sb.toString", start);
         if (start < 0 || end < 0) throw new IllegalStateException("body not found");
