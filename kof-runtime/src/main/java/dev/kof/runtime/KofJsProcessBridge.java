@@ -26,6 +26,18 @@ public final class KofJsProcessBridge {
     public static void install(Map<String, Object> platform) {
         platform.put("processRun", (ProxyExecutable) args -> run(args));
         platform.put("processRunWith", (ProxyExecutable) args -> runWith(args));
+        platform.put("processSpawn", (ProxyExecutable) args -> spawn(args));
+        platform.put("spawnWrite", (ProxyExecutable) args -> {
+            write(args[0].asLong(), args[1].asString());
+            return 0;
+        });
+        platform.put("spawnReadLine", (ProxyExecutable) args -> readLine(args[0].asLong()));
+        platform.put("spawnExitCode", (ProxyExecutable) args -> exitCode(args[0].asLong()));
+        platform.put("spawnKill", (ProxyExecutable) args -> {
+            kill(args[0].asLong());
+            return 0;
+        });
+        platform.put("spawnAlive", (ProxyExecutable) args -> alive(args[0].asLong()) ? 1 : 0);
     }
 
     static Map<String, Object> run(Value[] args) {
@@ -109,5 +121,101 @@ public final class KofJsProcessBridge {
         result.put("stderr", e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
         result.put("exitCode", -1);
         return result;
+    }
+
+    // ── process.spawn (F10) — stdin/stdout vivos no host JS. Espelho EXATO
+    // do binding JVM medido em JvmRuntimeCore (279-350): handle = seq Long,
+    // spawn falho = -1, readLine EOF/morto = "", exitCode ainda vivo =
+    // Integer.MIN_VALUE, kill = destroyForcibly + remove. Mesma JVM do
+    // processo hospedeiro (graal), mesmo ProcessBuilder — paridade por
+    // construção, não por imitação.
+
+    private static final java.util.concurrent.ConcurrentHashMap<Long, Process> SPAWNED =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.concurrent.ConcurrentHashMap<Long, java.io.BufferedReader> SPAWN_READERS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.concurrent.ConcurrentHashMap<Long, java.io.PrintWriter> SPAWN_WRITERS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private static long spawnSeq = 0;
+
+    static long spawn(Value[] args) {
+        try {
+            String program = args[0].asString();
+            List<String> cmd = new ArrayList<>();
+            cmd.add(program);
+            if (args.length > 1 && !args[1].isNull() && args[1].hasArrayElements()) {
+                cmd.addAll(argvOf(args[1]));
+            }
+            Process p = new ProcessBuilder(cmd)
+                    .redirectErrorStream(false)
+                    .redirectInput(ProcessBuilder.Redirect.from(new java.io.File("/dev/null")))
+                    .start();
+            long id;
+            synchronized (KofJsProcessBridge.class) {
+                id = ++spawnSeq;
+            }
+            SPAWNED.put(id, p);
+            SPAWN_READERS.put(id, new java.io.BufferedReader(
+                    new java.io.InputStreamReader(p.getInputStream(),
+                            java.nio.charset.StandardCharsets.UTF_8)));
+            SPAWN_WRITERS.put(id, new java.io.PrintWriter(
+                    new java.io.OutputStreamWriter(p.getOutputStream(),
+                            java.nio.charset.StandardCharsets.UTF_8), true));
+            return id;
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    static String readLine(long handle) {
+        var r = SPAWN_READERS.get(handle);
+        if (r == null) {
+            return "";
+        }
+        try {
+            String line = r.readLine();
+            return line == null ? "" : line;
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    static void write(long handle, String data) {
+        var w = SPAWN_WRITERS.get(handle);
+        if (w == null) {
+            return;
+        }
+        w.println(data);
+        w.flush();
+    }
+
+    static int exitCode(long handle) {
+        var p = SPAWNED.get(handle);
+        if (p == null) {
+            return -1;
+        }
+        try {
+            if (p.isAlive()) {
+                return Integer.MIN_VALUE;
+            }
+            return p.exitValue();
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    static void kill(long handle) {
+        var p = SPAWNED.get(handle);
+        if (p != null) {
+            p.destroyForcibly();
+            SPAWNED.remove(handle);
+            SPAWN_WRITERS.remove(handle);
+            SPAWN_READERS.remove(handle);
+        }
+    }
+
+    static boolean alive(long handle) {
+        var p = SPAWNED.get(handle);
+        return p != null && p.isAlive();
     }
 }

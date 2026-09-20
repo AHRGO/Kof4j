@@ -16,19 +16,18 @@ public final class ExpressionProcessCallLowerer {
     for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
     KofProcess.ProcessCall procCall = KofProcess.entryCall(mc.methodName(), argTypes);
     if (procCall != null && "kof_process_spawn".equals(procCall.function())) {
-        if (driver.target.isNative() || driver.target == Target.JS) {
+        if (driver.target.isNative()) {
             // F10: process.spawn needs live stdin/stdout. Native has no
-            // fork/exec descriptors yet; JS has no kof_process_spawn/* runtime
-            // binding at all (measured 18/09: it used to codegen a raw
-            // kof_process_spawn(...) call that threw ReferenceError at run).
-            // Both stay an honest PROC001 gap; only JVM (incl. Android, which
-            // reuses JvmBackend) implements the spawn + handle ops.
+            // fork/exec descriptors yet — honest PROC001 gap. JVM (incl.
+            // Android, which reuses JvmBackend) and JS (KofJsProcessBridge
+            // host binding, 19/09) implement the spawn + handle ops with the
+            // exact same contract (handle = seq Long, failed spawn = -1).
             if (driver.currentDiagnostics != null) {
                 driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
                         mc.position() != null ? mc.position().line() : 0,
                         mc.position() != null ? mc.position().column() : 0,
                         0,
-                        "process.spawn: interactive stdin/stdout is supported on the JVM target only; Native and JS are honest PROC001 gaps",
+                        "process.spawn: interactive stdin/stdout is supported on the JVM and JS targets; Native is an honest PROC001 gap",
                         "PROC001");
             }
             return localIdx;

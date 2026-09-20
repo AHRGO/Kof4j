@@ -217,7 +217,12 @@ public final class ExpressionInstanceCallLowerer {
         return localIdx;
     }
     if (BuiltinTypes.isList(recvType) || BuiltinTypes.isChannel(recvType)
-            || BuiltinTypes.isMap(recvType) || BuiltinTypes.isSet(recvType)) {
+            || BuiltinTypes.isMap(recvType) || BuiltinTypes.isSet(recvType)
+            || KofProcess.isHandle(recvType)) {
+        // KofProcess.isHandle: F10 handle ops (write/readLine/exitCode/kill/
+        // alive) live in CollectionCallLowerer's isHandle branch — without this
+        // routing they leaked to a raw invokevirtual java.lang.Long.readLine
+        // (NoSuchMethodError at run; never executed until ProcessSpawnE2ETest).
         int handled = CollectionCallLowerer.lower(driver, recvType, mc, ops, owner, localIdx, locals);
         if (handled >= 0) return handled;
     }

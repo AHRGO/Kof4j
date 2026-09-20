@@ -54,13 +54,20 @@ class DomainGapCodesTest {
     }
 
     @Test
-    void processSpawnOnJsIsProc001(@TempDir Path tmp) throws Exception {
-        assertGap(tmp, Target.JS, "PROC001", """
+    void processSpawnOnJsHasNoGap(@TempDir Path tmp) throws Exception {
+        // JS face landed 19/09 (KofJsProcessBridge host binding, F10 parity):
+        // process.spawn must compile on JS now — the E2E parity lives in
+        // ProcessSpawnE2ETest. Native keeps the PROC001 pin above.
+        Path file = tmp.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, """
             main() {
                 val h = process.spawn("echo", "hi")
                 println(if (h.alive()) "alive" else "dead")
             }
             """);
+        CompilationResult result = driver.compile(file, tmp.resolve("out"), Target.JS);
+        assertTrue(result.success(), "JS process.spawn must compile: "
+                + result.diagnostics().getDiagnostics());
     }
 
     @Test

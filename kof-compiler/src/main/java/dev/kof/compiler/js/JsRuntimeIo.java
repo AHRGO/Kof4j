@@ -87,6 +87,30 @@ public final class JsRuntimeIo {
                 };
             }
 
+            // kof.process spawn (F10) — pipes vivos no host JS (KofJsProcessBridge).
+            // Convenção espelha o binding JVM byte-a-byte: handle = número, spawn
+            // falho = -1, readLine EOF/morto = "", exitCode vivo = MIN_VALUE,
+            // alive = 1/0. Browser sem kof_platform: o Proxy honesto acima degrada
+            // com erro alto (R7), nunca stub.
+            export function kofProcessSpawn(program, args) {
+                return kof_platform.processSpawn(program, args);
+            }
+            export function kofSpawnWrite(h, data) {
+                kof_platform.spawnWrite(h, data);
+            }
+            export function kofSpawnReadLine(h) {
+                return kof_platform.spawnReadLine(h);
+            }
+            export function kofSpawnExitCode(h) {
+                return kof_platform.spawnExitCode(h);
+            }
+            export function kofSpawnKill(h) {
+                kof_platform.spawnKill(h);
+            }
+            export function kofSpawnAlive(h) {
+                return kof_platform.spawnAlive(h) === 1;
+            }
+
             // §239 (JS): String.format delega ao host (java.lang.String.format ->
             // paridade byte-a-byte). Sem kof_platform (browser) o Proxy acima da
             // tabela lança erro honesto — nunca um resultado errado em silêncio (R6/R7).

@@ -15,6 +15,19 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
+  - **Face JS de `process.spawn` landada (19/09, lane `.18`) + §355 corrigido na raiz**
+    — as ops de handle (`readLine`/`write`/`exitCode`/`kill`/`alive`) baixavam para um
+    `invokevirtual java/lang/Long.readLine` cru: a branch `isHandle` morava atras de um
+    dispatcher que nunca roteia receiver `Long`, entao **nenhum alvo as executou jamais**
+    (os pins antigos só assertavam compilacao). Conserto de roteamento + binding de host
+    `KofJsProcessBridge` (mesmo JDK/ProcessBuilder — paridade por construção: spawn falho
+    `-1`, EOF `""`, sentinela vivo `Integer.MIN_VALUE`, kill=esquece); gate do lowerer
+    reduzido a só-Native; `DomainGapCodesTest.processSpawnOnJs` virou PROC001→no-gap;
+    prova `ProcessSpawnE2ETest` 4/4 paridade byte JVM==JS. Quirk honesto preservado: stdin
+    do filho sob `/dev/null` → `write` publico e no-op nos dois alvos (entrada viva =
+    mudanca de contrato, regra 6). `JsRuntimeOps` dividido: `JsRuntimeProcessShellOps`
+    (gate 500, 577→537).
+
   - **`Bool` nunca e nulavel — o tipo tres-estado e `Troolean` (D-TROOL,
     19/09, DECISIONS.md §D-TROOL)** — migracao da mesma classe aprovada para
     #401: `Bool?`/`Boolean?` (qualquer posicao: local, campo, parametro,
