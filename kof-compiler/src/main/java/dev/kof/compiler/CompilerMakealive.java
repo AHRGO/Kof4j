@@ -34,7 +34,8 @@ final class CompilerMakealive {
             "Resource", "StateEntry", "State", "Spec", "Infrastructure",
             "Provider", "Plan", "Report",
             "plan", "apply", "destroy", "kofMkTemNome",
-            "KofMkState", "mkSaveState", "mkLoadState");
+            "KofMkState", "mkSaveState", "mkLoadState",
+            "ReconJob", "reconcile");
 
     private static void mergeSlice(CompilerDriver driver,
                                        List<AstNode> decls,
@@ -116,6 +117,10 @@ final class CompilerMakealive {
             } else {
                 mergeSlice(driver, decls, diagnostics, "/dev/kof/makealive-db-host.native.kf");
             }
+            // fatia RECONCILE 3.3: todos os alvos — scheduler.every é real
+            // também no Native (SCHED001 fechado 05/09; o gate CRON001 é do
+            // at/cron, que reconcile NUNCA toca). Sem stub.
+            mergeSlice(driver, decls, diagnostics, "/dev/kof/makealive-recon-host.kf");
             return new CompilationUnitNode(unit.position(), unit.packageName(), imports, decls);
         } catch (IOException e) {
             diagnostics.error("", 0, 0, 0,

@@ -15,6 +15,22 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
  ### In development
 
+  - **makealive 3.3 — `reconcile(design, provider, intervalMs)`** (20/09, `.18`):
+    the convergence loop over `scheduler.every` (each tick runs `apply` inside a
+    `spawn` — same CONC003-JS-01 shape as workflow `schedule`; stop =
+    `scheduler.cancel(jobId)`, no new faces). Ticks may overlap and that is safe
+    by construction: idempotence comes from the provider's READ, `job.last` is a
+    hint only. NO Native stub — correction of the plan's guess (CRON001 gates
+    `scheduler.at`, never `every`: SCHED001 closed cross 05/09). Proven by
+    `MakealiveReconcileE2ETest` 1/1 (JVM==JS byte: guard of the interval refuses
+    `<= 0` naming `intervalMs`; the loop converges the world by itself; after
+    `cancel`+`destroy` the world stays dead across 4 intervals with the write
+    counter frozen — no cancel, the tick would recreate it) x3 serial + battery
+    Makealive* 21/21. Lesson measured on the way: the JS pump is cooperative
+    (§132) — a golden must WAIT with one long `time.sleep`, never with
+    short-sleep polling inside `while (a && b)` (competed with the pump, died
+    silently 2/3).
+
   - **FFI struct ABI slice 3.8a — `AbiLayout`, the measured layout/classification engine**
     — a pure engine (`kof-compiler` `AbiLayout`) that, given a struct's scalar
     fields and a target ABI (`SYSV_X86_64`/`AAPCS64`/`RISCV64`), returns the C

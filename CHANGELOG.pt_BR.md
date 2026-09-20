@@ -14,6 +14,21 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
 ### Em desenvolvimento
+
+  - **makealive 3.3 — `reconcile(design, provider, intervalMs)`** (20/09, `.18`):
+    o laço de convergência sobre `scheduler.every` (cada tick roda `apply` dentro
+    de um `spawn` — mesma forma CONC003-JS-01 do `schedule` do workflow; parar =
+    `scheduler.cancel(jobId)`, sem faces novas). Ticks podem se sobrepor e isso é
+    seguro por construção: a idempotência vem do READ do provedor, `job.last` é só
+    dica. SEM stub no Native — correção medida do plano (o CRON001 gateia
+    `scheduler.at`, nunca o `every`: SCHED001 fechado cross 05/09). Provado por
+    `MakealiveReconcileE2ETest` 1/1 (JVM==JS byte: o guard do intervalo recusa
+    `<= 0` nomeando `intervalMs`; o laço converge o mundo sozinho; após
+    `cancel`+`destroy` o mundo fica morto por 4 intervalos com o contador de
+    escritas congelado — sem cancel o tick recriaria) x3 serial + bateria
+    Makealive* 21/21. Lição medida no caminho: o pump JS é cooperativo (§132) —
+    um golden deve ESPERAR com um `time.sleep` longo, nunca com polling curto
+    dentro de `while (a && b)` (competia com o pump, morria silente 2/3).
   - **Fatia 3.8a da ABI de struct na FFI — `AbiLayout`, o engine de layout/classificação medido**
     — engine puro (`kof-compiler` `AbiLayout`) que, dados os campos escalares de
     um struct e uma ABI alvo (`SYSV_X86_64`/`AAPCS64`/`RISCV64`), devolve o
