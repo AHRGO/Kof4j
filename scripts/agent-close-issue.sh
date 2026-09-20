@@ -39,13 +39,6 @@ EJ="$D/evidence.json"
 
 blocks=()
 block() { blocks+=("$1"); }
-jget() { python3 -c "import json,sys
-try:
-    d=json.load(open(sys.argv[1]))
-    v=eval(sys.argv[2])
-    print('' if v is None else v)
-except Exception:
-    print('')" "$1" "$2"; }
 
 if [ -z "$run_id" ] || [ ! -f "$EJ" ]; then
     block "SEM_EVIDENCIA: run-id '$run_id' inexistente — rode agent-evidence.sh init/run antes"

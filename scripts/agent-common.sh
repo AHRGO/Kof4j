@@ -47,3 +47,12 @@ tel() {
     mkdir -p "$AGENT_STATE_ROOT"
     printf '%s}\n' "$out" >> "$AGENT_STATE_ROOT/dispatch.jsonl"
 }
+
+# jget <arquivo.json> <expressão python sobre d> — imprime o valor ('' se ausente/erro)
+jget() { python3 -c "import json,sys
+try:
+    d=json.load(open(sys.argv[1]))
+    v=eval(sys.argv[2])
+    print('' if v is None else v)
+except Exception:
+    print('')" "$1" "$2"; }

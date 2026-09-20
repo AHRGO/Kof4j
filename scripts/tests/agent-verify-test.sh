@@ -128,4 +128,100 @@ assert_eq "$(git -C "$REPO" rev-parse HEAD)" "$(python3 -c "import json;print(js
 assert_eq PASS "$(python3 -c "import json;print(json.load(open('$DJ'))['verdict'])")" "verdict gravado"
 assert_eq "" "$(git -C "$REPO" status --porcelain)" "o verifier não modificou o repositório"
 
+# --- verifier INDEPENDENTE (só HIGH) ---------------------------------------------------------
+ind() { bash "$VERIFY" independent --repo "$REPO" --run-id "$ID" "$@"; }
+vcalls() { [ -f "$FAKE_GH_DIR/verifier.calls" ] && wc -l < "$FAKE_GH_DIR/verifier.calls" || echo 0; }
+vjson() { python3 -c "import json;d=json.load(open('$XDG_STATE_HOME/kof-agent/verifier/$ID/verdict.json'));print($1)"; }
+fake_verifier() {
+    cat > "$TMP/bin/fake-verifier.sh" <<'EOF'
+#!/usr/bin/env bash
+# FAKE do verifier independente: conta chamadas e escreve verdict.json conforme o env.
+echo x >> "$FAKE_GH_DIR/verifier.calls"
+[ -n "${FAKE_MUTATE_FILE:-}" ] && echo hacked > "$FAKE_MUTATE_FILE"
+[ -n "${FAKE_NOWRITE:-}" ] && exit "${FAKE_VRC:-0}"
+python3 - <<'PY'
+import json, os
+json.dump({"sha": os.environ.get("FAKE_SHA") or os.environ["VERIFIER_SHA"], "risk": "high",
+           "verdict": os.environ.get("FAKE_VERDICT", "PASS"), "findings": [], "adversarial_commands": [],
+           "verified_at": "2026-09-20T10:00:00-03:00",
+           "verifier_session": os.environ["FAKE_SESSION"] if "FAKE_SESSION" in os.environ else "ses_verifier"},
+          open(os.environ["VERIFIER_OUTPUT"], "w"))
+PY
+exit "${FAKE_VRC:-0}"
+EOF
+    chmod +x "$TMP/bin/fake-verifier.sh"
+    export AGENT_VERIFIER_CMD="$TMP/bin/fake-verifier.sh"
+    unset FAKE_MUTATE_FILE FAKE_NOWRITE FAKE_VRC FAKE_SHA FAKE_VERDICT FAKE_SESSION
+}
+high_ready() { # HIGH/FFI com determinístico PASS
+    setup kof-compiler/src/main/java/dev/kof/compiler/FfiSignature.java
+    run_ok unit; adversarial_all ffi-abi
+    det >/dev/null 2>&1
+}
+
+echo "V10 — LOW/MEDIUM não pagam verifier independente"
+setup docs/nota.md; fake_verifier
+det >/dev/null 2>&1
+OUT="$(ind)"; RC=$?
+assert_eq 0 "$RC" "LOW: ok"
+assert_contains "$OUT" "NÃO exigido" "explica que não é exigido"
+assert_eq 0 "$(vcalls)" "nenhuma chamada ao verifier (custo de modelo = 0)"
+
+echo "V11 — sem integração configurada = NEEDS_MAINTAINER (sem fingir independência)"
+high_ready; unset AGENT_VERIFIER_CMD
+OUT="$(ind)"; RC=$?
+assert_eq 4 "$RC" "sem AGENT_VERIFIER_CMD: NEEDS_MAINTAINER (exit 4)"
+assert_eq NEEDS_MAINTAINER "$(vjson "d['verdict']")" "verdict.json = NEEDS_MAINTAINER"
+assert_eq None "$(vjson "d['verifier_session']")" "sem sessão: independência NÃO afirmada"
+PK="$XDG_STATE_HOME/kof-agent/verifier/$ID/package"
+assert_contains "$(cat "$PK/brief.md")" "hipótese incorreta" "brief traz a pergunta central"
+assert_contains "$(cat "$PK/brief.md")" "issue #549" "brief traz o requisito"
+[ -s "$PK/diff.patch" ] && pass "diff congelado presente" || fail "sem diff.patch"
+assert_eq "$(git -C "$REPO" rev-parse HEAD)" "$(cat "$PK/SHA" | tr -d '\n')" "SHA congelado"
+assert_eq "" "$(ls "$PK" | grep -iE 'notes|reason|worker' || true)" "pacote NÃO inclui raciocínio do worker"
+
+echo "V12 — verifier em sessão própria: PASS"
+high_ready; fake_verifier
+OUT="$(ind)"; RC=$?
+assert_eq 0 "$RC" "PASS independente (exit 0)"
+assert_eq PASS "$(vjson "d['verdict']")" "verdict PASS gravado"
+assert_eq 1 "$(vcalls)" "1 chamada (só HIGH paga o 2º modelo)"
+
+echo "V13 — mesma sessão do worker não é independente"
+high_ready; fake_verifier; export FAKE_SESSION=ses_w
+OUT="$(ind)"; RC=$?
+assert_eq 1 "$RC" "sessão igual à do worker: BLOCK"
+assert_contains "$(vjson "d['findings'][0]['reason']")" "NAO_INDEPENDENTE" "diagnostica a falta de independência"
+export FAKE_SESSION=""
+OUT="$(ind)"; RC=$?
+assert_eq 1 "$RC" "sem sessão registrada: BLOCK"
+
+echo "V14 — o verifier não pode tocar a produção"
+high_ready; fake_verifier; export FAKE_MUTATE_FILE="$REPO/injetado.txt"
+OUT="$(ind)"; RC=$?
+assert_eq 1 "$RC" "verifier alterou o repo: BLOCK"
+assert_contains "$OUT" "VERIFIER_MODIFICOU_PRODUCAO" "diagnostica a violação"
+
+echo "V15 — veredito com SHA errado / valor inválido"
+high_ready; fake_verifier; export FAKE_SHA=0000000000000000000000000000000000000000
+assert_eq 1 "$(ind >/dev/null 2>&1; echo $?)" "verificou outro SHA: BLOCK"
+high_ready; fake_verifier; export FAKE_VERDICT=talvez
+assert_eq 1 "$(ind >/dev/null 2>&1; echo $?)" "veredito inválido: BLOCK"
+
+echo "V16 — prova vermelha não gasta modelo"
+setup kof-compiler/src/main/java/dev/kof/compiler/FfiSignature.java
+run_ok unit; fake_verifier
+det >/dev/null 2>&1                                      # BLOCK: matriz adversarial ausente
+OUT="$(ind)"; RC=$?
+assert_eq 1 "$RC" "determinístico não-PASS: independente recusa"
+assert_eq 0 "$(vcalls)" "0 chamadas ao modelo"
+
+echo "V17 — verifier que falha / BLOCK / NEEDS_MAINTAINER"
+high_ready; fake_verifier; export FAKE_NOWRITE=1 FAKE_VRC=1
+assert_eq 4 "$(ind >/dev/null 2>&1; echo $?)" "verifier falhou sem veredito: NEEDS_MAINTAINER (4)"
+high_ready; fake_verifier; export FAKE_VERDICT=BLOCK
+assert_eq 1 "$(ind >/dev/null 2>&1; echo $?)" "verifier independente BLOCK: exit 1"
+high_ready; fake_verifier; export FAKE_VERDICT=NEEDS_MAINTAINER
+assert_eq 4 "$(ind >/dev/null 2>&1; echo $?)" "verifier NEEDS_MAINTAINER: exit 4"
+
 finish

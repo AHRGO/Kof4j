@@ -36,10 +36,106 @@ while [ $# -gt 0 ]; do
         *) echo "argumento desconhecido: $1" >&2; exit 2;;
     esac
 done
-[ "$sub" = "deterministic" ] || { echo "uso: $0 deterministic --run-id ID [--risk ...] [--repo D]" >&2; exit 2; }
+case "$sub" in deterministic|independent) ;; *)
+    echo "uso: $0 {deterministic|independent} --run-id ID [--risk ...] [--repo D]" >&2; exit 2;; esac
 D="$AGENT_STATE_ROOT/verifier/$run_id"
 EJ="$D/evidence.json"
 [ -n "$run_id" ] && [ -f "$EJ" ] || { echo "run-id inexistente: '$run_id'" >&2; exit 2; }
+
+# ============================================================================================
+# independent — verifier INDEPENDENTE, só para risk=HIGH (o único caso em que se paga um 2º
+# modelo). Não recebe o raciocínio do worker: só requisito, contrato, diff congelado, SHA,
+# manifesto e gates. Pergunta central: "que hipótese incorreta ainda poderia sobreviver a
+# estes testes?". Pode ler/executar/criar repros em $VERIFIER_REPRO_DIR e BLOQUEAR; NÃO pode
+# editar produção, decidir linguagem nem fechar issue.
+#
+# A integração com o modelo é um COMANDO configurável (AGENT_VERIFIER_CMD, roda com
+# VERIFIER_BRIEF/VERIFIER_PACKAGE_DIR/VERIFIER_REPRO_DIR/VERIFIER_OUTPUT/VERIFIER_SHA e
+# deve escrever VERIFIER_OUTPUT = verdict.json com sessão PRÓPRIA). Sem ele NÃO fingimos
+# independência: o veredito é NEEDS_MAINTAINER (a interface de sessão independente do
+# OpenCode desta instalação não foi verificada — nada de flags inventadas).
+# Exit: PASS 0 · BLOCK 1 · NEEDS_MAINTAINER 4.
+# ============================================================================================
+write_verdict() { # verdict reason [session]
+    python3 - "$D/verdict.json" "$head" "$1" "$2" "${3:-}" <<'PY'
+import json, sys, datetime
+path, sha, verdict, reason, session = sys.argv[1:6]
+json.dump({"sha": sha, "risk": "high", "verdict": verdict,
+           "findings": [{"reason": reason}] if reason else [], "adversarial_commands": [],
+           "verified_at": datetime.datetime.now().astimezone().isoformat(),
+           "verifier_session": session or None}, open(path, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+PY
+}
+cmd_independent() {
+    local DJ="$D/deterministic.json" head risk cls issue base wsession
+    head="$(jget "$EJ" "d['head_sha']")"; risk="$(jget "$EJ" "d['risk']")"; cls="$(jget "$EJ" "d['classification']")"
+    issue="$(jget "$EJ" "d['issue']")"; base="$(jget "$EJ" "d['base_sha']")"; wsession="$(jget "$EJ" "d['worker_session']")"
+    if [ -f "$DJ" ] && [ "$(jget "$DJ" "d['risk']")" = "high" ]; then risk=high; fi
+    if [ "$risk" != "high" ]; then
+        echo "verifier independente NÃO exigido (risk=$risk): sem chamada de modelo"; return 0
+    fi
+    if [ ! -f "$DJ" ] || [ "$(jget "$DJ" "d['verdict']")" != "PASS" ] || [ "$(jget "$DJ" "d['sha']")" != "$head" ]; then
+        echo "BLOCK: o verifier DETERMINÍSTICO precisa estar PASS para este SHA antes do independente (não gasta modelo em prova vermelha)"
+        return 1
+    fi
+    # pacote CONGELADO: sem o raciocínio do worker
+    local P="$D/package" R="$D/repro"; mkdir -p "$P" "$R"
+    git -C "$repo" diff "$base..$head" > "$P/diff.patch" 2>/dev/null || : > "$P/diff.patch"
+    cp "$EJ" "$P/evidence.json"; cp "$DJ" "$P/deterministic.json"; printf '%s\n' "$head" > "$P/SHA"
+    {
+        echo "# Verificação independente — issue #$issue ($cls)"
+        echo
+        echo "SHA congelado: \`$head\` · risco: high"
+        echo
+        echo "## O que você recebe (e SÓ isto)"
+        echo "- requisito: issue #$issue (leia com \`gh issue view $issue\`, somente leitura);"
+        echo "- contrato KOF relevante: AGENTS.md (D-KOF-FIRST, freeze, Q0–Q7), docs/development/DECISIONS.md, docs/language-reference/*, training/idioms/*;"
+        echo "- diff congelado: \`package/diff.patch\`; manifesto: \`package/evidence.json\`; gates: \`package/deterministic.json\`;"
+        echo "- testes adicionados pelo patch:"
+        git -C "$repo" diff --name-only "$base..$head" 2>/dev/null | grep -E 'src/test/' | sed 's/^/  - /' || true
+        echo
+        echo "## Pergunta central"
+        echo "**Que hipótese incorreta ainda poderia sobreviver a estes testes?** (o gate de tipo aceitar NÃO prova que o lowering materializou a conversão física — precedente #549)."
+        echo
+        echo "## Poderes e limites"
+        echo "- PODE: ler o contrato e o diff, executar comandos, criar repros/casos adversariais em \`$R\`, bloquear a entrega, apontar lacuna de teste, pedir nova medição."
+        echo "- NÃO PODE: editar código de produção, alterar decisão de linguagem, transformar CONTRACT AMBIGUITY em decisão, fechar issue."
+        echo
+        echo "## Saída obrigatória"
+        echo "Escreva \`$D/verdict.json\`: {\"sha\",\"risk\",\"verdict\":\"PASS|BLOCK|NEEDS_MAINTAINER\",\"findings\":[],\"adversarial_commands\":[],\"verified_at\",\"verifier_session\"} — \`verifier_session\` DIFERENTE da sessão do worker."
+    } > "$P/brief.md"
+
+    if [ -z "${AGENT_VERIFIER_CMD:-}" ]; then
+        write_verdict NEEDS_MAINTAINER "integração do verifier independente não configurada (AGENT_VERIFIER_CMD); interface de sessão independente do OpenCode não verificada nesta máquina — não fingir independência"
+        echo "verdict=NEEDS_MAINTAINER (sem AGENT_VERIFIER_CMD; pacote em $P)"; return 4
+    fi
+    rm -f "$D/verdict.json"
+    local before_head before_status vrc=0
+    before_head="$(git -C "$repo" rev-parse HEAD 2>/dev/null)"; before_status="$(git -C "$repo" status --porcelain 2>/dev/null)"
+    VERIFIER_BRIEF="$P/brief.md" VERIFIER_PACKAGE_DIR="$P" VERIFIER_REPRO_DIR="$R" \
+    VERIFIER_OUTPUT="$D/verdict.json" VERIFIER_SHA="$head" \
+        timeout "${AGENT_VERIFIER_TIMEOUT_S:-3600}" bash -c "$AGENT_VERIFIER_CMD" > "$D/logs/independent.log" 2>&1 || vrc=$?
+    # o verifier NÃO pode ter tocado a produção
+    if [ "$(git -C "$repo" rev-parse HEAD 2>/dev/null)" != "$before_head" ] || [ "$(git -C "$repo" status --porcelain 2>/dev/null)" != "$before_status" ]; then
+        write_verdict BLOCK "VERIFIER_MODIFICOU_PRODUCAO: o verifier independente alterou o repositório (proibido)"
+        echo "BLOCK: VERIFIER_MODIFICOU_PRODUCAO"; return 1
+    fi
+    if [ "$vrc" -ne 0 ] || [ ! -f "$D/verdict.json" ]; then
+        write_verdict NEEDS_MAINTAINER "verifier falhou (rc=$vrc) ou não escreveu verdict.json"
+        echo "verdict=NEEDS_MAINTAINER (verifier falhou rc=$vrc)"; return 4
+    fi
+    local v vsha vs
+    v="$(jget "$D/verdict.json" "d['verdict']")"; vsha="$(jget "$D/verdict.json" "d['sha']")"; vs="$(jget "$D/verdict.json" "d['verifier_session']")"
+    case "$v" in PASS|BLOCK|NEEDS_MAINTAINER) ;; *)
+        write_verdict BLOCK "INVALID_VERDICT: '$v' não é PASS|BLOCK|NEEDS_MAINTAINER"; echo "BLOCK: veredito inválido"; return 1;; esac
+    [ "$vsha" = "$head" ] || { write_verdict BLOCK "INVALID_VERDICT: verificou outro SHA ($vsha)"; echo "BLOCK: SHA verificado difere"; return 1; }
+    if [ -z "$vs" ] || [ "$vs" = "$wsession" ]; then
+        write_verdict BLOCK "NAO_INDEPENDENTE: verifier_session ausente ou igual à do worker ($vs)"; echo "BLOCK: verifier não independente"; return 1
+    fi
+    echo "verdict=$v (verifier_session=$vs)"
+    case "$v" in PASS) return 0;; BLOCK) return 1;; *) return 4;; esac
+}
+if [ "$sub" = "independent" ]; then cmd_independent; exit $?; fi
 
 # --- 1) validação do manifesto (STALE/DIRTY/SEM_TESTES/NOT_RUN/FAIL) ---------------------
 VAL="$(bash "$EVID" validate --repo "$repo" --run-id "$run_id" 2>&1)"; VAL_RC=$?
