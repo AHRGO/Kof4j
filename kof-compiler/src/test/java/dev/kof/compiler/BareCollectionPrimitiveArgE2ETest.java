@@ -215,12 +215,12 @@ class BareCollectionPrimitiveArgE2ETest {
         assertEquals("2\n2", s, "Native == JVM (regra 5)");
     }
 
-    // ── faces medidas e travadas pela lane #553 (verificacao 20/09): os
-    //     slots Object que a lei do §374 alcanca e que ainda nao tinham
-    //     golden ──────────────────────────────────────────────────────
+    // ── faces medidas e travadas pela lane #553 (re-trigger 20/09): os
+    //     slots Object que o fallback do §374 alcança e que ainda nao
+    //     tinham golden ────────────────────────────────────────────────
 
     /** `put(k, v)` com AMBOS os args primitivos na Map BARE (chave passa
-     *  pelo SWAP-box do put; valor pelo fallback do bug 35/§374). */
+     *  pelo SWAP-box do put; valor pelo fallback pos-§373/bug 35). */
     @Test
     void bareMapPutBothPrimitivesRunsEverywhere(@TempDir Path tmp) throws Exception {
         assertAllTargets(tmp, "B553Put", """
@@ -249,10 +249,12 @@ class BareCollectionPrimitiveArgE2ETest {
             """, "1\ntrue");
     }
 
-    /** Bool no primeiro add de lista BARE — wrapper por categoria
-     *  (Boolean.valueOf), espelhando o dispatch do helper de box. */
+    /** Bool/Char no primeiro add de lista BARE — wrapper por categoria
+     *  (Boolean.valueOf/Character.valueOf), espelhando o dispatch do helper
+     *  de box; saida medida nos 3 hosts: Bool = true/false, Char = 120 no
+     *  dispatch dinamico do get (mesmo valor nos 3 — regra 5). */
     @Test
-    void bareListBoolFirstAddRuns(@TempDir Path tmp) throws Exception {
+    void bareListBoolAndCharFirstAddRun(@TempDir Path tmp) throws Exception {
         assertAllTargets(tmp, "B553Bool", """
             main() {
               List b = listOf()
@@ -264,11 +266,10 @@ class BareCollectionPrimitiveArgE2ETest {
             """, "true\nfalse");
     }
 
-    /** Canal BARE — a face que o pouso do §374 reclamou mas NAO alcancava:
-     *  o lowerer punha o elemT do canal (Unknown) no parameterTypes, nunca
-     *  o tipo do ARG — o fallback lia Unknown de novo e o int cru morria no
-     *  LOAD do put(Object) do LinkedBlockingQueue (VerifyError atras da
-     *  mascara JavaFX, §149). */
+    /** Canal BARE (a face que o fix do §374 reclamou mas NAO alcancava: o
+     *  lowerer punha o elemT do canal (Unknown) no parameterTypes, nunca o
+     *  tipo do ARG — o fallback lia Unknown de novo e o int cru morria no
+     *  LOAD do put(Object) do LinkedBlockingQueue). */
     @Test
     void bareChannelSendPrimitiveReceivesOnJvmScriptJs(@TempDir Path tmp) throws Exception {
         assertAllTargets(tmp, "B553Chan", """
@@ -280,11 +281,10 @@ class BareCollectionPrimitiveArgE2ETest {
             """, "1");
     }
 
-    /** NAT003 (padrao honesto §352/NAT001-NAT002): a fila nativa e de
-     *  OBJETOS — primitivo cru no receive virava ponteiro (SIGSEGV 139,
-     *  medido antes do fix). A recusa em compile-time nomeia o idiom
-     *  tipado; o canal TIPADO no native nao e tocado (controle abaixo —
-     *  emissao byte-identica, freeze regra 1). */
+    /** NAT003 (padrao honesto §352): a fila nativa e de OBJETOS — primitivo
+     *  nu no receive virava ponteiro (SIGSEGV 139, medido antes do fix). A
+     *  recusa em compile-time nomeia o idiom tipado; o canal TIPADO no
+     *  native nao e tocado (controle abaixo, emissao byte-identica). */
     @Test
     void bareChannelPrimitiveNativeRefusesAndTypedStaysGreen(@TempDir Path tmp) throws Exception {
         Path bare = tmp.resolve("B553ChanBare.kf");
@@ -296,6 +296,9 @@ class BareCollectionPrimitiveArgE2ETest {
             }
             """);
         CompilationResult rn = driver.compile(bare, tmp.resolve("o-chnat"), Target.NATIVE);
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                dev.kof.compiler.nat.NativeToolchainGate.present(),
+                "Native toolchain ausente no host");
         assertFalse(rn.success(), "primitive send on bare Channel must be refused (NAT003)");
         assertTrue(rn.diagnostics().getDiagnostics().stream()
                 .anyMatch(d -> d.code().equals("NAT003")),
@@ -310,8 +313,7 @@ class BareCollectionPrimitiveArgE2ETest {
             }
             """);
         CompilationResult rt = driver.compile(typed, tmp.resolve("o-chnat2"), Target.NATIVE);
-        org.junit.jupiter.api.Assumptions.assumeTrue(rt.success(),
-                "Native toolchain ausente no host (COMP001): " + diags(rt));
+        assertTrue(rt.success(), "typed Channel<Int> must keep compiling: " + diags(rt));
         Process p = new ProcessBuilder(tmp.resolve("o-chnat2/Default/Main").toString())
                 .redirectErrorStream(true).start();
         String s = new String(p.getInputStream().readAllBytes(),

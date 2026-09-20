@@ -176,7 +176,7 @@ List<JsIr.JsStatement> parseStatement(MethodCtx ctx, int[] pos) {
      * Label(false), (else), Label(end)].
      */
 JsIr.JsStatement parseIfBody(MethodCtx ctx, int[] pos, KofConditionalJump cj,
-                                          JsIr.JsExpression condition, List<Object> stack) {
+                                          JsIr.JsExpression condition) {
         if (!(ctx.ops.get(pos[0]) instanceof KofLabel kl && kl.label().equals(cj.trueLabel()))) {
             throw new IllegalStateException("KofJS: if pattern expected Label(true)");
         }

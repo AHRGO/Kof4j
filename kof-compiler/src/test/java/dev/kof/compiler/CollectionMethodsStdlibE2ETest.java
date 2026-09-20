@@ -90,7 +90,7 @@ class CollectionMethodsStdlibE2ETest {
     void sevenMethodsRunOnJvm(@TempDir Path tempDir) throws Exception {
         CompilationResult r = compile(tempDir, "V", PROGRAM, Target.JVM);
         assertTrue(r.success(), "#386/#382 verbatim must compile: " + r.diagnostics().getDiagnostics());
-        String javaCmd = System.getProperty("java.home") + "/bin/java";
+        String javaCmd = TestJdk.javaBin();
         Process p = new ProcessBuilder(javaCmd, "-cp",
                 outDirFor(tempDir, "V", Target.JVM).toString(), "Default.Main")
                 .redirectErrorStream(true).start();
@@ -163,7 +163,7 @@ class CollectionMethodsStdlibE2ETest {
         Path outDir = tempDir.resolve("outO");
         CompilationResult r = driver.compile(src, outDir, Target.JVM);
         assertTrue(r.success(), "compile: " + r.diagnostics().getDiagnostics());
-        String javaCmd = System.getProperty("java.home") + "/bin/java";
+        String javaCmd = TestJdk.javaBin();
         Process p = new ProcessBuilder(javaCmd, "-cp", outDir.toString(), "Default.Main")
                 .redirectErrorStream(true).start();
         String out = new String(p.getInputStream().readAllBytes());
@@ -293,7 +293,7 @@ class CollectionMethodsStdlibE2ETest {
                 """;
         CompilationResult rj = compile(tempDir, "ONJ", src, Target.JVM);
         assertTrue(rj.success(), "Object containsValue works on JVM: " + rj.diagnostics().getDiagnostics());
-        String javaCmd = System.getProperty("java.home") + "/bin/java";
+        String javaCmd = TestJdk.javaBin();
         Process p = new ProcessBuilder(javaCmd, "-cp",
                 outDirFor(tempDir, "ONJ", Target.JVM).toString(), "Default.Main")
                 .redirectErrorStream(true).start();

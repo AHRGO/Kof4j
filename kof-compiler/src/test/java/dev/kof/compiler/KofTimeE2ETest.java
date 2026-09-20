@@ -39,7 +39,7 @@ class KofTimeE2ETest {
         CompilationResult result = driver.compile(source, outDir, Target.JVM);
         assertTrue(result.success(), "Compilation should succeed: " + result.diagnostics().getDiagnostics());
         try {
-            String javaCmd = System.getProperty("java.home") + "/bin/java";
+            String javaCmd = TestJdk.javaBin();
             ProcessBuilder pb = new ProcessBuilder(javaCmd, "-Dfile.encoding=UTF-8",
                     "-Dstdout.encoding=UTF-8", "-cp", outDir.toString(), "Default.Main");
             pb.redirectErrorStream(true);
@@ -1378,7 +1378,7 @@ class KofTimeE2ETest {
         CompilationResult result = driver.compile(source, outDir, Target.JVM);
         assertTrue(result.success(), "compile: " + result.diagnostics().getDiagnostics());
         try {
-            String javaCmd = System.getProperty("java.home") + "/bin/java";
+            String javaCmd = TestJdk.javaBin();
             ProcessBuilder pb = new ProcessBuilder(javaCmd, "-Dfile.encoding=UTF-8",
                     "-Dstdout.encoding=UTF-8", "-cp", outDir.toString(), "Default.Main");
             pb.redirectErrorStream(true);

@@ -346,7 +346,7 @@ class WorkflowE2ETest {
         if (h2 == null) {
             org.junit.jupiter.api.Assumptions.assumeTrue(false, "h2 jar ausente no classpath");
         }
-        ProcessBuilder pb = new ProcessBuilder(System.getProperty("java.home") + "/bin/java",
+        ProcessBuilder pb = new ProcessBuilder(TestJdk.javaBin(),
                 "-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8",
                 "-cp", tmp.resolve("c-jvm").toString() + java.io.File.pathSeparator + h2,
                 "Default.Main");
