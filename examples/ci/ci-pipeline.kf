@@ -21,7 +21,7 @@ import kof.workflow
 KofWfDag pipeline() {
     var ws = "build/ci-demo"
 
-    // NOTE (measured 19/09, cataloged §345): a lambda whose body returns an
+    // NOTE (measured 19/09, cataloged §353): a lambda whose body returns an
     // `io` method result DIRECTLY (`() -> File(p).exists()`) is rejected with
     // SEM014 — the typer does not resolve the io return type in that position.
     // Binding to an explicit `Bool` first is the idiom that compiles.
