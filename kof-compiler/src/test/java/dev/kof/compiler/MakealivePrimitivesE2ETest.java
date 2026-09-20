@@ -349,7 +349,7 @@ class MakealivePrimitivesE2ETest {
             """, "2", "media", "private", "true", "true");
     }
 
-    /** §371 (measured by probe 2; FIXED): calling a generic-typed lambda
+    /** §376 (era §363/§371; probe 2; FIXED): calling a generic-typed lambda
      *  through a typed local crashed the JVM with
      *  `IncompatibleClassChangeError: Class LambdaN does not implement the
      *  requested interface kof.Function1_CString_CMap` — the lambda class was
@@ -391,9 +391,9 @@ class MakealivePrimitivesE2ETest {
             }
             """);
         Run c = runJvm(srcC, tmp.resolve("o-iface-c"));
-        assertFalse(c.ok(), "§371: body returning Map? assigned to (String) -> Map must be a COMPILE error, got ok + out=" + c.output());
+        assertFalse(c.ok(), "§376: body returning Map? assigned to (String) -> Map must be a COMPILE error, got ok + out=" + c.output());
         assertTrue(c.output().contains("SEM021") || c.output().contains("type mismatch"),
-                "§371 fix must name the mismatch: " + c.output());
+                "§376 fix must name the mismatch: " + c.output());
         System.err.println("CASE-C (capture, Map return): rejected at compile-time as expected");
     }
 }

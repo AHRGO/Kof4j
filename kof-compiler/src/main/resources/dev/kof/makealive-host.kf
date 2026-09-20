@@ -10,7 +10,7 @@
 // funções puras. `plan` é diff PURO (zero efeito); `apply`/`destroy`
 // convergem o mundo via PROVIDER (function-values — o idioma Kof de
 // interface, precedente KofWfJob.corpo; campo-lambda só pode ser CHAMADO
-// via local tipado — medido 20/09, §371) e o estado só avança no sucesso
+// via local tipado — medido 20/09, §376) e o estado só avança no sucesso
 // (plano §3: falha deixa o estado anterior intacto e nomeia o resource).
 // Ciclo é recusado com throw nomeando os membros (runtime — o compile-time
 // é a linha 3.7, ⛔ R4); duplicado é recusado no builder.

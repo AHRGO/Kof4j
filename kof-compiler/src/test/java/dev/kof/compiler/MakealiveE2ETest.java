@@ -227,7 +227,7 @@ class MakealiveE2ETest {
 
             Bool mkSet(World w, Resource r, Bool refuse) {
                 // dois guards de nivel unico: a forma "if aninhado cujo then
-                // termina em throw com epilogue depois" e o bug §372 do JS
+                // termina em throw com epilogue depois" e o bug §377 do JS
                 if (r.name() == "bad" && refuse) { return false }
                 if (r.name() == "bad") { throw "boom do provider" }
                 w.events.add("set:" + r.name())
