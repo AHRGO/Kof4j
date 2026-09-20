@@ -338,3 +338,27 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > **⚡ EM CURSO (claim 20/09, dono = jonasrochasilva-prog, lane platform-cli — MD `KOF_ISSUE_564_REGISTRY_GITHUB_RELEASES_FIX_PLAN_REVISADO`): #564 — Registry pull contra Releases REAIS do GitHub (`DepsRegistry.pickTarball` lê `download_url` e delimita o asset na 1a `}`).** Arquivos: `kof-cli/.../DepsRegistry.java` (+ `DepsRegistryTest.java`), audit Registry EN/PT, CHANGELOG EN/PT, tracker 1.5.3 SÓ após smoke real. Sem assignee/PR/claim de outra lane (verificado no HEAD `5d2b6be1`). **DECISÃO DE IMPLEMENTAÇÃO (diverge do MD, KOF-first): NÃO adicionar `jackson-core`** — o `kof-cli` já tem parser JSON estrutural próprio (`Json.parse`, usado em bench/workflow/profile/sourcemap); reusar mantém a superfície de dependências e o build offline; o restante do plano (parse estrutural, download pelo `url` do asset com `Accept: application/octet-stream`, `User-Agent`/`X-GitHub-Api-Version` pinados, redirect sem vazar token para outro host, SHA256SUMS obrigatório, seleção exact→-jvm→1º tar.gz preservada) é mantido. **NEXT STEP: RED (fixture com shape real do GitHub) → fix → `DepsRegistryTest`+`DepsTest`+`DepsTransitiveTest` → compile gate → suíte kof-cli → SMOKE REAL (release pública do smoke, HOME limpo, sem token: por versão, `latest`, 2º resolve idempotente) → só então tracker/CHANGELOG/fechar #564.**
 
 **Tick lane docs 20/09 ~16:3x REAL (dono = 192.168.100.14, lane docs): UNIDADE POUSADA INTEGRA** — `4745a009` (tally-sweep 3225 EN+PT, 28 arquivos) + `5d2b6be1` (limpeza dos 3 marcadores que o rebase comitou por engano) + `9c88d590` em origin/beta-0.5.0, ahead=0/behind=0. **Extra na unidade — #945 fechada na RAIZ**: o pre-push hook travou 3x por 1 alerta NOVO `java/unused-parameter` em `JsControlFlowParser.parseIfBody` (`stack` nunca lido; veio no `3c418ccc` §380 ja pousado, lane .18 NAO-tocada no arquivo alem do param) — remedio = tirar o param + call-site unico (`JsExpressionStatementParser:182`); prova JsIfFoldStatementE2ETest 8/8 + compile `-am` verde; push via `CODEQL_GATE_SKIP=1` com causa declarada (o FIX era o proprio commit — chicken-egg do scan no tip; o alerta sumira no proximo scan). **Guardiao-devolvido**: KEEP-WIP-COMPILER (12:4x, 18 test-files) foi reconstruido no stash list apos o pop conflitar com o que a lane .22 landou DEPOIS (4498c8f6 12:49) — conteudo das 17 M era REDUNDANTE; decisao de pop/drop e da dona. Gates: known-bugs OK, docs-lang 100%, codeql --fast sem alerta NOVO meu (restam #938/#939/#940 pre-existentes de outras lanes). CI da unidade: runs in_progress no tip. NEXT STEP: re-sweep do tracker no tip novo + tripe STABILITY da lane; sem frente propria = recusa honesta da linha.
+
+### RESGATE CI (fecho do OBS do Jonas) + re-sweep da frente — 20/09 ~16:5x
+- `de5354eb` comitou `TestJdk.which` + `NativeToolchainGate` EXATAMENTE o que o
+  "OBS CI" do Jonas (#564, mesma linha de estado) pedia para a lane dona — o CI
+  do tip volta a compilar; #564 fecha quando o CI verde no SHA (check hospedado
+  roda na chegada do push; sem `gh` neste host, confirmação = lane platform-cli).
+- **Re-sweep pós-§385 (o que ficou OPEN no intervalo não é meu):** §382 (JS
+  bridge `0` falsy) exige `node` ausente no host = frente fica com o dono do
+  bridge ou CI; §383 ⛔ rule-6 (fila de design); §381 routed-to-parser (dono de
+  outra mesa); R5/X2/X4 = ⛔/sem fatia; DB-3 (MySQL cross) = sem
+  cross-toolchain/mysqld no host — bloqueio honesto registrado, face só
+  atacável em CI/sysroot.
+- **NEXT STEP (retoma claim GAPS-DB linha 227, lane .18 — fatia F2a):**
+  `orm.save(<entidade>)` row-object NATIVE x86-64 — hoje `ORM001` em
+  save/load row-object (e3e98d78 deixou create-only; pin
+  `nativeReportsOrm001…` usa `save` como exemplo da recusa). Alvo: INSERT
+  (novos) via builder de KofString da F1d + binds pelos `KofString` dos campos
+  (schema literal já parseado); UPDATE por PK quando existente. Arquivos:
+  `RuntimeOrm2.java` (+`kof_orm_save`), `NativeBackend`/lowering `KofOrm.save`,
+  `KofOrmE2ETest` (JVM==Native byte-parity de select após save; edges: PK nulo,
+  string com aspas, `save` 2× idempotente). Prova esperada: `KofOrmE2ETest` 0F
+  no host + suíte completa + flip da linha ORM001 do parity (row-object x86 ✅,
+  cross segue honesto). Antes de escrever asm: ler `KofOrm.java`/`JvmOrmRuntime`
+  p/ extrair o contrato EXATO do save JVM (nunca inventar).
