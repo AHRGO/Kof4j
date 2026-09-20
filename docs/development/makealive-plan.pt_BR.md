@@ -122,10 +122,11 @@ idênticos (travado).
   do head irmão `c122d266`; minha escrita sobrescreveu o arquivo untracked deles em
   voo antes de eu ler a coordenação — o crédito do achado é da nota DOING deles.
   🔵 próximo: 3.0.2 (⛔ Q1–Q4).
-- **3.0.2 [assinatura de design — ⛔ regra 6]** — enquete da mantenedora
-  Q1–Q4 (§6). Sem host, sem classe de compilador, sem linha no ledger antes de
-  Q1 respondida.
-- **3.1 [core]** — injetor de namespace virtual (`CompilerMakealive`) +
+- **3.0.2 [assinatura de design — ⛔ regra 6]** ✅ FEITO 20/09 — enquete da
+  mantenedora respondeu Q1–Q4 (§6, `DECISIONS.md` §D-MAKEALIVE:
+  `kof.makealive` / providers genéricos completos / kof.db dia-1 / flat+EN).
+  Frente aberta.
+- **3.1 [core]** 🔵 dono `.18` — injetor de namespace virtual (`CompilerMakealive`) +
   `makealive-host.kf` + linha no ledger (camada conforme Q1) +
   `MakealiveE2ETest` (golden de idempotência plan/apply/destroy, paridade byte
   JVM==JS, pin de compilação Native, as guardas do §3).
@@ -147,26 +148,26 @@ idênticos (travado).
 
 ## 6. Perguntas abertas (decisões da mantenedora — NÃO resolver em código)
 
-- **Q1 — namespace (a colisão do §2.1).**
-  **A) `kof.makealive`** *(recomendado)* — o nome É o domínio decidido (VISÃO
-  §4.2 "Kof Makealive"); passa ileso pelo hard-deny; embarca no padrão
+**Q1–Q4 RESPONDIDAS 20/09 pela mantenedora (enquete no chat —
+`DECISIONS.md` §D-MAKEALIVE; recriar via a mesma decisão multi-escolha se
+revisitado — regra 6):**
+
+- **Q1 — RESPONDIDA: `kof.makealive`** (opção A) — o nome É o domínio
+  decidido (VISÃO §4.2); passa ileso pelo hard-deny; embarca no padrão
   workflow/shell (namespace virtual + host puro-Kof + linha `platform` no
-  ledger).
-  B) pacote oficial desde o dia 1 — a leitura mais estrita da R1 ("official
-  package only" é a mensagem do próprio gate), mas self-hosting do core no
-  registry 1.5.3 cujo round-trip live no GitHub ainda é smoke pendente.
-  C) editar a lista HARD-DENY para escopá-la em `infra-*`/`cloud` — o gate
-  codifica a invariant 1; só ela move.
-- **Q2 — provider v1:** só o local-FS *(recomendado)*, ou também o REST
-  genérico no MVP? (recon+3.1 ficam idênticos de qualquer forma; só o rabo da
-  fila muda.)
-- **Q3 — backend de estado v1:** JSON sobre `kof.io` *(recomendado; VISÃO §4.2
-  sanciona "or JSON in kof.io")* ou `kof.db` desde o início (herda os gates
-  `DB001`/`ORM001` não-JVM dentro do golden do core)?
-- **Q4 — forma da superfície:** host flat injetado (idioma
-  workflow/supervisor, sem prefixo `makealive.`) e faces em inglês
-  `resource`/`requires`/`plan`/`apply`/`destroy` *(recomendado — paridade com
-  `job`/`dag`/`run`)* — confirmar antes do golden do 3.1 congelar os nomes.
+  ledger). O literal `kof.infra` do tracker segue HARD-DENY (medido, §2.1) —
+  a linha do tracker é atualizada, nunca o gate.
+- **Q2 — RESPONDIDA: superfície genérica COMPLETA** — local-FS + REST
+  (`kof.http`) + CLI (`kof.shell`) embarcam no v1, todos como interop (R9);
+  clouds concretas continuam pacotes oficiais (`infra-<cloud>`, R1).
+- **Q3 — RESPONDIDA: `kof.db` desde o dia 1** (a opção não recomendada) — o
+  estado persiste sobre kof.db; onde o kof.db é gated, o estado é gated junto
+  (Native = os gaps honestos `DB001`/`ORM001` até a frente GAPS-DB fechá-los —
+  D-KOF-AS-CLOUD torna esse fechamento um item de caminho, não degrade
+  permanente).
+- **Q4 — RESPONDIDA: host flat injetado + faces em inglês** —
+  `resource`/`requires`/`plan`/`apply`/`destroy` confirmados; o golden do 3.1
+  congela esses nomes.
 
 ## 7. O que NÃO fazer
 

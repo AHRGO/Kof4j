@@ -116,9 +116,10 @@ initializers compile and run identical (locked).
   constructor+instance face (the sibling head's coordination line `c122d266` carried
   the same finding; my run clobbered their in-flight untracked file before I read it —
   the fix came from their DOING note, credited here). 🔵 next: 3.0.2 (⛔ Q1–Q4).
-- **3.0.2 [design sign-off — ⛔ rule 6]** — maintainer poll Q1–Q4 (§6). No
-  host, no compiler class, no ledger line before Q1 is answered.
-- **3.1 [core]** — virtual-namespace injector (`CompilerMakealive`) +
+- **3.0.2 [design sign-off — ⛔ rule 6]** ✅ DONE 20/09 — maintainer poll
+  answered Q1–Q4 (§6, `DECISIONS.md` §D-MAKEALIVE: `kof.makealive` /
+  complete generic providers / kof.db day-1 / flat+EN). Front opened.
+- **3.1 [core]** 🔵 owner `.18` — virtual-namespace injector (`CompilerMakealive`) +
   `makealive-host.kf` + ledger line (layer per Q1) + `MakealiveE2ETest`
   (plan/apply/destroy idempotency golden, JVM==JS byte parity, Native compile
   pin, the §3 guards).
@@ -139,26 +140,26 @@ initializers compile and run identical (locked).
 
 ## 6. Open questions (maintainer decisions — do NOT resolve in code)
 
-- **Q1 — namespace (the §2.1 collision).**
-  **A) `kof.makealive`** *(recommended)* — the name IS the decided domain
-  (VISION §4.2 "Kof Makealive"); passes hard-deny untouched; ships as the
+**Q1–Q4 ANSWERED 20/09 by the maintainer (chat poll — `DECISIONS.md`
+§D-MAKEALIVE; re-create via the same multiple-choice decision if ever
+revisited — rule 6):**
+
+- **Q1 — ANSWERED: `kof.makealive`** (option A) — the name IS the decided
+  domain (VISION §4.2); passes hard-deny untouched; ships as the
   workflow/shell pattern (virtual namespace + pure-Kof host + ledger
-  `platform` line).
-  B) official package from day one — the strictest R1 reading ("official
-  package only" is the gate's own message), but self-hosting the core on the
-  1.5.3 registry whose live GitHub round-trip is still a pending smoke.
-  C) edit the HARD-DENY list to scope it to `infra-*`/`cloud` — the gate
-  encodes invariant 1; only she can move it.
-- **Q2 — v1 provider:** local-FS provider only *(recommended)*, or also the
-  REST generic in the MVP? (recon+3.1 stay identical either way; only the
-  queue tail moves.)
-- **Q3 — state backend v1:** JSON over `kof.io` *(recommended; VISION §4.2
-  sanctions "or JSON in kof.io")* or `kof.db` from day one (inherits the
-  `DB001`/`ORM001` non-JVM gates into the core golden)?
-- **Q4 — surface shape:** flat injected host (workflow/supervisor idiom,
-  no `makealive.` prefix) and the English faces `resource`/`requires`/`plan`/
-  `apply`/`destroy` *(recommended — parity with `job`/`dag`/`run`)* — confirm
-  before the 3.1 golden freezes names.
+  `platform` line). The tracker literal `kof.infra` stays HARD-DENY
+  (measured, §2.1) — the tracker row is updated, never the gate.
+- **Q2 — ANSWERED: the COMPLETE generic surface** — local-FS + REST
+  (`kof.http`) + CLI (`kof.shell`) all ship in v1 as interop (R9); concrete
+  clouds stay official packages (`infra-<cloud>`, R1).
+- **Q3 — ANSWERED: `kof.db` from day one** (the non-recommended option) —
+  state persists over kof.db; wherever kof.db is gated, the state is gated
+  with it (Native = the honest `DB001`/`ORM001` gaps until the GAPS-DB front
+  closes them — D-KOF-AS-CLOUD makes that closing a path item, not a
+  permanent degrade).
+- **Q4 — ANSWERED: flat injected host + English faces** —
+  `resource`/`requires`/`plan`/`apply`/`destroy` confirmed; the 3.1 golden
+  freezes these names.
 
 ## 7. What NOT to do
 

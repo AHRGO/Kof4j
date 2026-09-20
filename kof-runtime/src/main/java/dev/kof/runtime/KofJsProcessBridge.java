@@ -1,5 +1,7 @@
 package dev.kof.runtime;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +40,85 @@ public final class KofJsProcessBridge {
             return 0;
         });
         platform.put("spawnAlive", (ProxyExecutable) args -> alive(args[0].asLong()) ? 1 : 0);
+        platform.put("processPipeline", (ProxyExecutable) args -> pipeline(args));
+    }
+
+    /**
+     * shell.pipeline(stages) — cadeia stdout→stdin com threads de pump,
+     * espelho do `kof_shell_pipeline` JVM (JvmRuntimeCore 396+): stdin da
+     * primeira etapa = /dev/null, demais = PIPE; ultimo exit code; erros
+     * honestos como Result(-1), nunca excecao do host.
+     */
+    static Map<String, Object> pipeline(Value[] args) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        java.util.List<Process> procs = new ArrayList<>();
+        try {
+            List<List<String>> stages = new ArrayList<>();
+            if (args.length > 0 && !args[0].isNull() && args[0].hasArrayElements()) {
+                long n = args[0].getArraySize();
+                for (long i = 0; i < n; i++) {
+                    Value stage = args[0].getArrayElement(i);
+                    stages.add(stage.hasArrayElements() ? argvOf(stage) : List.of());
+                }
+            }
+            if (stages.isEmpty()) {
+                return fail(result, "kof_shell_pipeline: no stages");
+            }
+            for (List<String> argv : stages) {
+                if (argv.isEmpty()) {
+                    return fail(result, "kof_shell_pipeline: empty stage");
+                }
+                ProcessBuilder pb = new ProcessBuilder(argv).redirectErrorStream(false);
+                pb.redirectInput(procs.isEmpty()
+                        ? ProcessBuilder.Redirect.from(new java.io.File("/dev/null"))
+                        : ProcessBuilder.Redirect.PIPE);
+                procs.add(pb.start());
+            }
+            List<Thread> pumps = new ArrayList<>();
+            for (int i = 1; i < procs.size(); i++) {
+                final InputStream in = procs.get(i - 1).getInputStream();
+                final OutputStream out = procs.get(i).getOutputStream();
+                Thread pump = new Thread(() -> {
+                    try (InputStream i2 = in; OutputStream o2 = out) {
+                        i2.transferTo(o2);
+                    } catch (Exception ignored) {
+                    }
+                });
+                pump.setDaemon(true);
+                pumps.add(pump);
+                pump.start();
+            }
+            final Process last = procs.get(procs.size() - 1);
+            java.util.concurrent.FutureTask<String> outTask = new java.util.concurrent.FutureTask<>(
+                    () -> new String(last.getInputStream().readAllBytes(),
+                            java.nio.charset.StandardCharsets.UTF_8));
+            java.util.concurrent.FutureTask<String> errTask = new java.util.concurrent.FutureTask<>(
+                    () -> new String(last.getErrorStream().readAllBytes(),
+                            java.nio.charset.StandardCharsets.UTF_8));
+            Thread ot = new Thread(outTask);
+            Thread et = new Thread(errTask);
+            ot.setDaemon(true);
+            et.setDaemon(true);
+            ot.start();
+            et.start();
+            int code = last.waitFor();
+            for (Thread pump : pumps) pump.join(5000);
+            for (Process p : procs) if (p.isAlive()) p.destroy();
+            result.put("stdout", outTask.get());
+            result.put("stderr", errTask.get());
+            result.put("exitCode", code);
+        } catch (Exception e) {
+            for (Process p : procs) p.destroyForcibly();
+            return fail(result, e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+        }
+        return result;
+    }
+
+    private static Map<String, Object> fail(Map<String, Object> result, String message) {
+        result.put("stdout", "");
+        result.put("stderr", message);
+        result.put("exitCode", -1);
+        return result;
     }
 
     static Map<String, Object> run(Value[] args) {

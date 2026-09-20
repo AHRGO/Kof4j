@@ -111,6 +111,17 @@ public final class JsRuntimeIo {
                 return kof_platform.spawnAlive(h) === 1;
             }
 
+            // kof.shell pipeline(stages) — cadeia stdout→stdin real no host
+            // (KofJsProcessBridge: mesma cadeia + pump threads do binding JVM).
+            export function kofShellPipeline(stages) {
+                const result = kof_platform.processPipeline(stages);
+                return {
+                    stdout: result.stdout,
+                    stderr: result.stderr,
+                    exitCode: result.exitCode
+                };
+            }
+
             // §239 (JS): String.format delega ao host (java.lang.String.format ->
             // paridade byte-a-byte). Sem kof_platform (browser) o Proxy acima da
             // tabela lança erro honesto — nunca um resultado errado em silêncio (R6/R7).

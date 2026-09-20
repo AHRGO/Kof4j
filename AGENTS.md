@@ -5,7 +5,7 @@
 This is the **mandatory** guide for any AI agent (or human) who
 writes Kof code in this repository. Read it before generating any `.kf`.
 
-**Version:** 0.4.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + rule 9 **docs-first gate** for philosophy-violating issues (#449) (18/09) + **mechanical push via `scripts/sync-push.sh` + conflict policy "preserve both sides, redo yours on top" (19/09)** + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09) + rule 10 **KOF-first, external-second** (`D-KOF-FIRST`, DECIDED 19/09); active branch = `beta-0.4.0`)
+**Version:** 0.4.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + rule 9 **docs-first gate** for philosophy-violating issues (#449) (18/09) + **mechanical push via `scripts/sync-push.sh` + conflict policy "preserve both sides, redo yours on top" (19/09)** + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09) + rule 10 **KOF-first, external-second** (`D-KOF-FIRST`, DECIDED 19/09) + rule 11 **Simplicity Law — anything that reaches the language surface** as ABSOLUTE (20/09) + `D-MAKEALIVE`/`D-KOF-AS-CLOUD`/`D-BOOTSTRAP`/`D-DB-GAPS` (20/09); active branch = `beta-0.4.0`)
 
 > **PRIORITY No. 1: QUALITY.** Before any feature, read the
 > **Quality gate — "no bug ships"** (§ below), **universal for
@@ -653,6 +653,23 @@ Bool isQuery(String op) {
     accepts a new form is a **new language feature**, not a parser fix. Full
     pipeline (Gates 0–9) and the evidence block: `DECISIONS.md`
     §`D-KOF-FIRST`.
+11. **The Simplicity Law — anything that reaches the language surface
+    (ABSOLUTE, maintainer 20/09).** Every new code that reaches Kof's
+    frontend/syntax/semantics (new syntax, new semantics, new language
+    surface — including the stdlib surface user code calls) must be
+    **extremely simple, short, idiomatic and intent-representing**, in
+    accordance with Kof's philosophy ("Kof must be simpler than any
+    alternative"). **No boilerplate or accidental complexity may enter the
+    language surface.** The gate before landing any surface (it precedes
+    Q0–Q7, it does not replace them): would a human write exactly this in
+    Kof? Does the construct declare *intention*, not *mechanism*? Is there a
+    shorter form that says the same thing? Is there ceremony (explicit
+    repetition, manual wiring, name-for-name's-sake) that the platform
+    should absorb? If any answer is "no" → the surface is wrong even if it
+    compiles and tests are green. The law binds every front: Makealive
+    (`D-MAKEALIVE`), the DB/ORM front (`D-DB-GAPS`) and, ultimately,
+    `D-BOOTSTRAP` — the Kof-written compiler is the test: if the language
+    cannot express its own compiler simply, the language has failed.
 
 ---
 

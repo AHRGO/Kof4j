@@ -15,7 +15,21 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Em desenvolvimento
 
+<<<<<<< Updated upstream
   - **Face JS de `process.spawn` landada (19/09, lane `.18`) + §360 corrigido na raiz**
+=======
+  - **`shell.pipeline` REAL no JS (20/09, lane `.18`)** — fecha o último residual
+    de pipes vivos da linha 2.2. Cadeia ProcessBuilder + threads de pump em
+    `KofJsProcessBridge.processPipeline`, contrato espelhado do `kof_shell_pipeline`
+    do JVM (primeira etapa com stdin `/dev/null`, demais PIPE, exit code do último;
+    `no stages`/`empty stage`/erro de spawn = `Result(-1)` honesto, nunca exceção do
+    host). Gate do lowerer reduzido a só-Native. **Prova:** `ShellE2ETest` 16/16 com
+    o pin JS virado golden de paridade byte — cadeia de 2 estágios (`echo|wc -w`→3) e
+    de 3 estágios multi-pump (`echo|tr|wc`→2). Linha 2.2 do tracker universal vira ✅;
+    Native mantém o `PROC001` herdado (espera o `process.run`/spawn em asm).
+
+  - **Face JS de `process.spawn` landada (19/09, lane `.18`) + §355 corrigido na raiz**
+>>>>>>> Stashed changes
     — as ops de handle (`readLine`/`write`/`exitCode`/`kill`/`alive`) baixavam para um
     `invokevirtual java/lang/Long.readLine` cru: a branch `isHandle` morava atras de um
     dispatcher que nunca roteia receiver `Long`, entao **nenhum alvo as executou jamais**

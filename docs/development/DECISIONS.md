@@ -2147,3 +2147,88 @@ alias over `kof run`:
 `pipeline()` convention / **full introspection** / plan-only). VISION
 `UNIVERSAL-PLATFORM-VISION.md:1137`; `workflow-plan.md` (2.1 signed 19/09);
 X9 `kof deploy` precedent for tooling slices.
+
+## D-MAKEALIVE — Kof Makealive (Stage 3): namespace, providers, state, surface
+
+**Date:** 2026-09-20 · **State:** `DECIDED` (maintainer, chat poll this
+session — answers to the Q1–Q4 of `makealive-plan.md` §6)
+
+**Decision (additive, freeze rule 2):**
+
+* **Q1 — namespace = `kof.makealive`** (option A). The tracker literal
+  `kof.infra` is HARD-DENY by the R1 machine gate (measured:
+  `check_stdlib_boundary.sh` rc=1, "official package only"; plan §2.1) — the
+  name is the decided domain (VISION §4.2). Ships as a pure-Kof host of a
+  virtual namespace (workflow/supervisor pattern, DD-OTP-01 A) + a
+  `platform` line in `scripts/stdlib_boundary.txt`.
+* **Q2 — v1 providers = the COMPLETE generic surface**: local-FS (idempotency
+  measurable end-to-end with zero cloud credentials) + REST via `kof.http` +
+  CLI via `kof.shell` — all as interop (R9). Concrete clouds stay official
+  packages (`infra-<cloud>`, R1 — never a compiler literal).
+* **Q3 — state = `kof.db` from day one** (maintainer chose the
+  non-recommended option over JSON/kof.io). Consequence: wherever kof.db is
+  gated, the Makealive state is gated with it (Native = the honest
+  `DB001`/`ORM001` gaps until the DB-gap front closes them — see
+  D-KOF-AS-CLOUD: closing those gaps is on the Kof-as-cloud path, not a
+  permanent degrade).
+* **Q4 — flat injected host, English surface**: `resource`/`requires`/
+  `plan`/`apply`/`destroy` (no `makealive.` prefix; parity with
+  `job`/`dag`/`run`). The 3.1 golden freezes these names.
+
+**Evidence:** maintainer chat poll 19/09–20/09 (answers: A / "completo" /
+"kof.db desde o dia 1" / "confirmar flat + inglês"). R1 collision measured
+19/09 (plan §2.1). **Unblocks tracker 3.1** (owner .18): next = 3.1 core
+host + `MakealiveE2ETest`; 3.2/3.7 still ⛔ R4; 3.8 (the `kof infra` CLI
+contract) stays an open question (rule 6).
+
+## D-KOF-AS-CLOUD — Kof must be ready to BE the cloud itself
+
+**Date:** 2026-09-20 · **State:** `DECIDED` (strategic direction — not a
+work order)
+
+**Decision:** the endgame of the universal platform is Kof **hosting Kof**:
+the language provisions the infra it runs on (Makealive, Stage 3), runs on
+it (Native bare-metal/bootable, 1.7 + D3), and self-hosts its own packages
+(registry 1.5.3 + D2). Concrete consequence for the queue: cross-target
+DB/ORM parity (the `DB001`/`ORM001` faces — Native and Android) is no
+longer "honest gap, forever" — it is a **path item** for Kof-as-cloud: a
+platform that runs on its own provisioned infra needs its own state layer on
+every target it provisions. This does NOT override the stage order (R12),
+the freeze, or the quality gate — it re-prioritizes the DB-gap front within
+the existing lanes.
+
+**Evidence:** maintainer message 20/09 ("kof tem que estar pronto pra ser a
+própria nuvem depois"), immediately after choosing kof.db-from-day-1 for the
+Makealive state (D-MAKEALIVE Q3).
+
+## D-BOOTSTRAP — final objective: the bootstrapper — Kof written in Kof
+
+**Date:** 2026-09-20 · **State:** `DECIDED` (maintainer — the FINAL
+OBJECTIVE of the project; reached as the last stage of the platform;
+extends D-KOF-AS-CLOUD)
+
+**Decision:** the **final objective** (north star) of Kof is the
+**bootstrapper**: the Kof compiler **written in Kof** (`kof feito em kof`).
+The Java implementation is the bootstrap that produces the self-hosting
+implementation; after it, the toolchain runs on the language itself, and the
+"Kof as its own cloud" direction closes end-to-end: the compiler compiles
+itself, provisions its infra (Makealive), runs on that infra (Native/
+bootable) and self-hosts its packages (registry).
+
+Consequences for the queue (scheduling only — R12 still governs execution):
+
+* a **design plan** is authorized (D3 bare-metal precedent: plan drafted,
+  maintainer reviews, execution waits the stage order);
+* this decision does NOT open the bootstrapper front before the existing
+  stages close — only the *planning* is pulled forward (the D-UNIVERSAL
+  override pattern);
+* the Java core stays the reference (frozen semantics); the bootstrap
+  compiler is proven **byte-for-byte against the same golden E2E corpus**
+  (the corpus is the oracle — Q0–Q7 apply to the bootstrap too, zero
+  hallucination);
+* it is a **platform** goal, not a domain: no language feature is justified
+  "for the bootstrapper"; any escape hatch the bootstrap needs is a design
+  decision (rule 6), never a silent addition.
+
+**Evidence:** maintainer message 20/09 ("o final stage de tudo é
+bootstrapper. kof feito em kof").

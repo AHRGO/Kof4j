@@ -5,7 +5,7 @@
 Este é o guia **obrigatório** para qualquer agente de IA (ou humano) que
 escreva código Kof neste repositório. Leia antes de gerar qualquer `.kf`.
 
-**Versão:** 0.4.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + regra 9 **portão docs-first** para issues fora da filosofia (#449) (18/09) + **push mecânico via `scripts/sync-push.sh` + política de conflito "preserve os dois lados, refaça o seu em cima" (19/09)** + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09) + regra 10 **KOF-primeiro, externo-depois** (`D-KOF-FIRST`, DECIDED 19/09); branch ativa = `beta-0.4.0`)
+**Versão:** 0.4.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + regra 9 **portão docs-first** para issues fora da filosofia (#449) (18/09) + **push mecânico via `scripts/sync-push.sh` + política de conflito "preserve os dois lados, refaça o seu em cima" (19/09)** + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09) + regra 10 **KOF-primeiro, externo-depois** (`D-KOF-FIRST`, DECIDED 19/09) + regra 11 **Lei da Simplicidade — tudo que chega à superfície da linguagem** como ABSOLUTO (20/09) + `D-MAKEALIVE`/`D-KOF-AS-CLOUD`/`D-BOOTSTRAP`/`D-DB-GAPS` (20/09); branch ativa = `beta-0.4.0`)
 
 > **PRIORIDADE Nº 1: QUALIDADE.** Antes de qualquer feature, leia o
 > **Portão de qualidade — "nenhum bug sobe"** (§ abaixo), **universal para
@@ -653,6 +653,24 @@ Bool isQuery(String op) {
     forma nova é **feature nova de linguagem**, não conserto de parser.
     Pipeline completo (Gates 0–9) e o bloco de evidência: `DECISIONS.md`
     §`D-KOF-FIRST`.
+11. **A Lei da Simplicidade — tudo que chega à superfície da linguagem
+    (ABSOLUTO, mantenedora 20/09).** Todo novo código que chega ao
+    frontend/sintaxe/semântica do Kof (nova sintaxe, nova semântica, nova
+    superfície da linguagem — incluindo a superfície de stdlib que o código
+    do usuário chama) deve ser **extremamente simples, curto, idiomático e
+    representar intenção**, de acordo com a filosofia do Kof ("Kof deve ser
+    mais simples que qualquer alternativa"). **Nenhum boilerplate ou
+    complexidade acidental pode entrar na superfície da linguagem.** O portão
+    antes de landar qualquer superfície (ele antecede os Q0–Q7, não os
+    substitui): um humano escreveria exatamente isto em Kof? O construto
+    declara *intenção*, não *mecanismo*? Existe uma forma mais curta que diz
+    o mesmo? Há cerimônia (repetição explícita, wiring manual, nome por nome
+    mesmo) que a plataforma deveria absorver? Se alguma resposta for "não" →
+    a superfície está errada mesmo que compile e os testes estejam verdes. A
+    lei amarra todas as frentes: Makealive (`D-MAKEALIVE`), a frente DB/ORM
+    (`D-DB-GAPS`) e, por fim, o `D-BOOTSTRAP` — o compilador escrito em Kof é
+    o teste: se a linguagem não consegue expressar o próprio compilador com
+    simplicidade, a linguagem falhou.
 
 ---
 
