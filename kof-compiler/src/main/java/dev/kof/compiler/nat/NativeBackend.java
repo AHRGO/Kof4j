@@ -195,6 +195,7 @@ public class NativeBackend implements Backend {
         labelCounter = 0;
         labelMap.clear();
         kofDwarf.fns.clear();
+        kofDwarf.arch = NativeDwarf.Arch.X86_64;
         stringLiterals.clear();
         stringCounter = 0;
         printDescriptorCounter = 0;

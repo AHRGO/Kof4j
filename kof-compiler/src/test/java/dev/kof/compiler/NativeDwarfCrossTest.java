@@ -113,6 +113,45 @@ class NativeDwarfCrossTest {
                 "debugInfo off: ELF nao pode ter .debug_line da fonte Kof; got: " + head(lines));
     }
 
+    // ---- fatia 2 (X7-2): DIEs CU/subprogram no cross --------------------------
+
+    @Test
+    void riscv64EmitsSubprogramDiesWithOwnFrameBase(@TempDir Path tmp) throws Exception {
+        String asm = Files.readString(compileToAsm(tmp, Target.NATIVE_RISCV64, true));
+        assertTrue(asm.contains(".section .debug_abbrev"), "riscv deve emitir a tabela de abreviacoes");
+        assertTrue(asm.contains(".section .debug_info"), "riscv deve emitir o CU/subprogram DIE");
+        assertTrue(asm.contains(".asciz \"main\""), "DW_AT_name da funcao Kof (gdb `info functions` / breakpoint por nome)");
+        assertTrue(asm.contains(".Lfe_"), "rotulo de fim de funcao p/ DW_AT_high_pc (offset)");
+        // frame_base riscv = DW_OP_regx x27 (s11): 0x90 0x1b — NUNCA o 0x56 do
+        // rbp. Negativas restritas ao bloco .debug_* (o blob de runtime do .s
+        // contem hex arbitrario — varrer o arquivo inteiro seria falso-positivo).
+        String dbgRv = asm.substring(asm.indexOf(".debug_abbrev"));
+        assertTrue(dbgRv.contains("0x90") && !dbgRv.contains("0x56"),
+                "frame_base do DIE riscv deve ser regx-x27 (0x90,0x1b), nao o reg6 x86");
+        // fbreg do slot 0 = -(0+1)*8-16 = -24 => SLEB 0x68 (com sinal)
+        assertTrue(asm.contains("0x91"), "locals/params com DW_OP_fbreg");
+    }
+
+    @Test
+    void aarch64DiesCarryArmFrameBaseNotRiscv(@TempDir Path tmp) throws Exception {
+        String asm = Files.readString(compileToAsm(tmp, Target.NATIVE_AARCH64, true));
+        assertTrue(asm.contains(".section .debug_info"), "aarch deve herdar os DIEs (diretivas verbatim)");
+        assertTrue(asm.contains(".asciz \"main\""), "nome Kof no DIE aarch");
+        // frame_base aarch64 = DW_OP_reg29 (fp=x29) = 0x6D — nem 0x56 (rbp) nem 0x90 (regx riscv)
+        String dbgAa = asm.substring(asm.indexOf(".debug_abbrev"));
+        assertTrue(dbgAa.contains("0x6d") || dbgAa.contains("0x6D"),
+                "frame_base do DIE aarch deve ser DW_OP_reg29 (0x6d)");
+        assertFalse(dbgAa.contains("0x56"), "nao pode carregar o rbp do x86");
+        assertFalse(dbgAa.contains("0x90"), "nao pode carregar o regx riscv no ELF ARM");
+    }
+
+    @Test
+    void debugInfoOffStripsCrossDiesToo(@TempDir Path tmp) throws Exception {
+        String asm = Files.readString(compileToAsm(tmp, Target.NATIVE_AARCH64, false));
+        assertFalse(asm.contains(".debug_abbrev"), "debugInfo off: sem tabela de abreviacoes");
+        assertFalse(asm.contains(".debug_info"), "debugInfo off: sem DIEs");
+    }
+
     @Test
     void crossElfCarriesDebugLineWhenToolchainPresent(@TempDir Path tmp) throws Exception {
         Path outDir = compile(tmp, Target.NATIVE_RISCV64, true);
@@ -124,6 +163,9 @@ class NativeDwarfCrossTest {
                 "ELF riscv deve ter .debug_line apontando p/ a fonte Kof; got: " + head(lines));
         assertTrue(lines.matches("(?s).*Main\\.kf\\s+2\\s.*") || lines.matches("(?s).*Main\\.kf\\s+3\\s.*"),
                 "linha do corpo do main mapeada no .debug_line riscv; got: " + head(lines));
+        String info = runCmd("objdump", "--dwarf=info", bin.toString());
+        assertTrue(info.contains("DW_TAG_subprogram") && info.contains("main"),
+                "ELF riscv deve conter o DIE subprogram de main; got: " + head(info));
     }
 
     private static String locLines(String text) {

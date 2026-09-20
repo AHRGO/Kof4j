@@ -24,6 +24,9 @@ final class NativeArchEmitter {
         nb.labelMap.clear();
         nb.stringLiterals.clear();
         nb.stringCounter = 0;
+        // X7-2 fatia 2: registro DWARF do cross (frame_base = s11/x27).
+        nb.kofDwarf.fns.clear();
+        nb.kofDwarf.arch = NativeDwarf.Arch.RISCV64;
         nb.allClassesMap.clear();
         for (IRClass c : module.classes()) nb.allClassesMap.put(c.name(), c);
 
@@ -161,6 +164,7 @@ final class NativeArchEmitter {
         Path asmFile = outputDir.resolve(className + ".s");
         Path binFile = outputDir.resolve(className);
         Files.createDirectories(asmFile.getParent());
+        if (nb.debugInfo) nb.kofDwarf.emit(sb, nb.sourceFile);
         String prunedRiscv = pruneRiscvRuntime(sb, rtStart, rtEnd, "riscv64");
         Files.writeString(asmFile, prunedRiscv);
         System.err.println("NativeBackend: generated riscv64 " + asmFile);
@@ -218,6 +222,10 @@ final class NativeArchEmitter {
         nb.labelMap.clear();
         nb.stringLiterals.clear();
         nb.stringCounter = 0;
+        // X7-2 fatia 2: idem riscv, mas o frame_base do DIE ja sai codificado
+        // p/ fp=x29 do ARM (a traducao repassa as diretivas `.` verbatim).
+        nb.kofDwarf.fns.clear();
+        nb.kofDwarf.arch = NativeDwarf.Arch.AARCH64;
         nb.allClassesMap.clear();
         for (IRClass c : module.classes()) nb.allClassesMap.put(c.name(), c);
         IRClass mainClass = null;
@@ -329,6 +337,7 @@ final class NativeArchEmitter {
         if (usesSpawnA) nb.emitRiscvSpawn(riscvSb);
 
         // traduz linha-a-linha (runtime já podado — a poda no riscv vale p/ os 2)
+        if (nb.debugInfo) nb.kofDwarf.emit(riscvSb, nb.sourceFile);
         String prunedRiscv = pruneRiscvRuntime(riscvSb, rtStart, rtEnd, "aarch64");
         StringBuilder sb = new StringBuilder();
         for (String line : prunedRiscv.split("\n", -1)) {
