@@ -174,6 +174,7 @@ this corpus/docs and the compiler *disagrees with its own docs*.
 | `let` / `const` / `async fn` | `var`/`val`; `spawn`/`await` |
 | `Map.Entry` destructured `for ((k, v) in map)` | `map.keys()` then `map.get(k)` |
 | `s[0]` indexing a `String` | `s.charAt(0)` |
+| `Char c = "x"` / `obj.charField = "x"` (String into `Char`) | char literal `Char c = 'x'` — from 20/09 SEM012 rejects the String store everywhere (local and field, §368 `5cd078c1`) |
 | `"x${n}"` string interpolation (Kotlin/GString) | `"x" + n` — `${…}` inside a Kof string is **literal text** (no diagnostic, by contract — `lexical-structure.md` §4.1, probe) |
 | `class Foo: A, B` (Kotlin interface list via `:`) | `class Foo implements A, B { }` |
 | `val name: String` property in an `interface` | a method accessor: `interface I { String name() }` |

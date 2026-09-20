@@ -127,8 +127,10 @@ String t = s            // error SEM021: String? not assignable to String withou
 **Nullable FIELDS follow the same contract on ALL 4 targets** (D-NULL-INTENT, `slot ⇔
 load/store`; §295/§278 family): a field declared `Int?`/`Long?`/`Double?`/`Char?`/`Troolean`
 reads **`null` before any write** (JS fixed 20/09, §365 `dd418419`), and writing a primitive
-boxes it (`b.n = 42` works — §361 `e293c4a5`; the `Char?` write face is a known open gap,
-§368 — do not advertise it). Sentinel `= null` literals stay rejected (SEM048) — `null`
+boxes it (`b.n = 42` works — §361 `e293c4a5`). A field store passes the SAME assignability
+gate as a local (`x.n = "s"` in `Int n` → SEM012, §368 `5cd078c1`) — and the char idiom is
+the single-quote literal everywhere: `c = 'x'` runs on the 4 targets, `c = "x"` (String
+into `Char`/`Char?`) is SEM012, field or local. Sentinel `= null` literals stay rejected (SEM048) — `null`
 reaches a `T?` field via the API or the never-written read, exactly like locals.
 
 

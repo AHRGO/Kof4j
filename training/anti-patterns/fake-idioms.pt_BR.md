@@ -175,6 +175,7 @@ construto neste corpus/docs e o compilador *discorda da própria doc*.
 | `let` / `const` / `async fn` | `var`/`val`; `spawn`/`await` |
 | destructuring `for ((k, v) in map)` | `map.keys()` e depois `map.get(k)` |
 | indexar String com `s[0]` | `s.charAt(0)` |
+| `Char c = "x"` / `obj.campoChar = "x"` (String em `Char`) | literal de char `Char c = 'x'` — desde 20/09 SEM012 rejeita o store String em char em todo lugar (local e campo, §368 `5cd078c1`) |
 | interpolação `"x${n}"` (Kotlin/GString) | `"x" + n` — `${…}` dentro de string Kof é **texto literal** (sem diagnóstico, por contrato — `lexical-structure.md` §4.1, sonda) |
 | lista de interfaces com `:` (`class Foo: A, B`) | `class Foo implements A, B { }` |
 | propriedade `val name: String` num `interface` | acessor-método: `interface I { String name() }` |
