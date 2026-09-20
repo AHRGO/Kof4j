@@ -44,8 +44,11 @@ The user never needs to know JVM bytecode, assembly or JavaScript.
 
 ```bash
 kof debug app.kf                 # ✅ JVM (DAP server over stdio)
-kof debug --target native app.kf # future (DWARF)
-kof debug --target js app.kf     # future (source maps + Inspector)
+kof debug --target native app.kf # ✅ X7-3 (`cfa67238`): builds the ELF with Kof DWARF and\                                 #    delegates to the target's gdb (`-x` command file, `-iex set
+                                 #    directories` to the Kof source dir) — breakpoints on
+                                 #    `Main.kf:2`, never on the mangle
+kof debug --target js app.kf     # honest gap: the JS target runs on the EMBEDDED engine
+                                 #    (no devtools protocol yet) — diagnostic, not silence
 kof debug --attach <pid>         # future
 kof build app.kf --debug         # extra metadata (default: debug info on)
 kof build app.kf --release
@@ -70,7 +73,8 @@ The session compiles with debug metadata, launches the JVM with
 - scopes/locals per frame (`StackFrame.GetValues`)
 - exceptions (break on throw / uncaught) with Kof stack
 - expression evaluation (respecting the type system)
-- Native (DWARF — Phase 5) and JS (source maps — Phase 6)
+- ~~Native (DWARF — Phase 5)~~ ✅ **X7-3 landed 20/09** (`cfa67238`, `KofDebugNativeTest`);
+  JS (source maps — Phase 6) = honest diagnostic today (embedded engine)
 
 ## 4. Integration
 

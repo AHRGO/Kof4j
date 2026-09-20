@@ -14,6 +14,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
 ### Em desenvolvimento
+
+  - **#278/§361 — escritas de campo nullable-primitivo agora BOXAM no JVM (`e293c4a5`)**
+    — `class Box { Int? n }` + `b.n = 42` gravava o inteiro cru no slot boxado
+    (`VerifyError` na carga de classe em JVM/Script, erro de cast em execucao no
+    Native, enquanto Script/JS imprimiam `42`). O gate do escritor agora usa
+    `TypeMetrics.isNullablePrimitive` — o predicado preciso que o fix local do
+    §295(b) estabeleceu — com a segunda camada de causa (`isPrimitiveType`
+    DESEMBRECA nullables, entao o branch de widening puro precisa exclui-los ou o
+    gate vira codigo morto). Provado por `NullablePrimitiveFieldWriterE2ETest` 9/9.
+    **Status §361: PARCIAL** — a face de escrita `Char?` segue quebrada (JVM/Script
+    `VerifyError` String→Character; cast em execucao no Native na leitura; JS ok) —
+    adendo no ledger, roteada ao cluster. Aberto relacionado: §365 (campo nullable
+    nunca-escrito le `0` no JS vs `null` nos demais — pre-existente, face
+    independente da mesma familia).
   - .18 - governança: **regra 11 (Lei da Simplicidade) é ABSOLUTA em AGENTS.md** + `DECISIONS.md` §D-MAKEALIVE/§D-KOF-AS-CLOUD/§D-BOOTSTRAP/§D-DB-GAPS (enquetes da mantenedora 20/09: namespace `kof.makealive`, providers genéricos completos, estado kof.db desde o dia 1, Android=paridade JVM no db, ORM no Native via asm `kof_orm_*`, MySQL no cross, bootstrapper = objetivo final).
 
   - **`shell.pipeline` REAL no JS (20/09, lane `.18`)** — fecha o último residual

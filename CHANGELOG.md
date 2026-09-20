@@ -15,6 +15,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
  ### In development
 
+  - **#278/§361 — nullable-primitive FIELD writes now BOX on the JVM (`e293c4a5`)**
+    — `class Box { Int? n }` + `b.n = 42` stored the raw int into the boxed slot
+    (`VerifyError` at class load on JVM/Script, SIGSEGV-era cast error on Native,
+    while Script/JS printed `42`). The writer gate now uses `TypeMetrics.isNullablePrimitive`
+    — the precise predicate the §295(b) local fix established — with the second
+    root layer ( `isPrimitiveType` UNWRAPS nullables, so the plain-widening branch
+    must exclude them or the gate is dead code). Proved by
+    `NullablePrimitiveFieldWriterE2ETest` 9/9. **Status §361: PARTIAL** — the
+    `Char?` write face remains broken (JVM/Script `VerifyError` String→Character;
+    Native runtime cast at the read; JS green) — addendum in the ledger, routed
+    to the cluster. Related open: §365 (never-written nullable field reads `0`
+    on JS vs `null` elsewhere — pre-existing, independent face of the same family).
+
+
   - **`kof debug --target native` — gdb over the Kof ELF (X7-3, roadmap §19.5 phase 6)**
     — the native debug front-end now exists without the language reinventing a
     debugger: the ELF is built with the full Kof DWARF (line table + DIEs, X7-1/X7-2)
