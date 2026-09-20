@@ -484,3 +484,315 @@ do checker validado green e **REVERTIDO** (trocar SEM014 alto por crash silencio
 
 > **Tick docs 19/09 ~22:20 (dono = 192.168.100.22, sessao 9093 — docs lane, pedido da mantenedora): 5 planos FUTURE registrados em `docs/development/future/` como pares EN+PT (plan only, zero codigo — registro NAO abre fila): `kof-file-plan` (core→Data→Document→Archives; codecs pesados = pacotes oficiais R1; pontes existentes `kof.json`/`kof.db`/`kof.http`), `image-vision-plan` (pixels/filtros→codecs→OCR/QR→pipeline visao→ML; R9 imageio/PDFBox/ZXing/Tess4J/OpenCV/ONNX), `qrcode-wasm-plan` (estrategia frontend: kofqrcode file/camera/writer + `KofWasm` como par de KofJS), `wasm-wasi-plan` (SPEC TECNICA fundo: backend direto de primeira classe rejeitando Kof→JS→WASM e Kof→C→WASM; mapeamento Type/Function/Memory/Table/Import/Export/Code/Data; memoria linear/GC/strings/records/closures com riscos; WASI versao TBD; browser host + bridge JS = capability, nao dependencia; capabilities no sistema CURRENT `supportedOn`+gap codes; fases 0–7 com DoD; release gates; registro D-WASM-01..10 — tudo TBD/DECISION REQUIRED onde aberto, regra 6), e `test-architecture-plan` (camadas L0–L5, perfis fast/integration/full/stress, harness/golden/determinismo — pura infra de testes, nao toca o compilador, R12). âncoras CURRENT medidas e gravadas na spec: `Target.java` SEM WASM (JVM/NATIVE/RISCV64/AARCH64/JS/ANDROID/SCRIPT); `TargetMatrix` ja rejeita `wasm`/`kofwebasm` com **WASM001** honesto ("planejado Fase 6"); GC mark-sweep em desenvolvimento (G-0 riscv ✅, G-1..G-5) = dependencia do Phase 2; D-UI-SCOPE (kof.ui = KofJS + Kof WebASM futuro); host sem wasmtime/wat2wasm (guardas honestas). README EN+PT com 5 linhas novas; `scripts/docs-lang.sh` 100% (237/237). **Varredura issues abertos (tick de hoje):** "comentarios novos" de #464/#443/#278 = minhas proprias respostas via melmonfre — zero input de donos; triagem mantida (#464 rota lane nat sem qemu-aarch64 no host; #443 review pendente do dono .17; #278 fechamento aguarda §304; #431/#275 = plano/decisao gravados, regra 6). **Suíte:** reator isolado `/tmp/opencode/suite-tip4` (copia `git archive HEAD` de `a8a647a2`+docs) — tip3 MORREU 21:16 no `ArrayBoundsDeepStressTest` (child `Main` de 12GB levou OOM-kill; host 31GB com builds alheios concorrentes); tip4 vivo 22:16 (Native assembling). **NEXT STEP:** tally de `suite-tip4.log` (`grep -E "^\[INFO\] BUILD|Tests run:.*Failures: [1-9]|FAILURE \[" | tail`) quando sair `BUILD`; se 0F/0E, gravar aqui "SUITE TIP-4: N/0/0" + confirmar que nenhum dos 4 planos virou trabalho; se o stress OOM-denovar, registrar como limitacao do host (prova fica nos gates por modulo + docs-lang) e NAO relancar em loop. NAO TOCAR: `M` alheios na arvore (typer/hierarchy WIP de outra sessao), §352+fila coll-386 (dono = sessao irma), `lib/` nao-rastreado, DECISIONS.md (.17).
 > **Complemento tick docs (19/09 ~22:58, mesma lane .22):** suíte isolada tip4 **travada 58min em ** com o LAÇo OOM do host girando fora da lane: processo  (cwd , wrapper ) cresceu 9–10GB e levou oom-kill do kernel às ~22:2x (vítima anterior  12GB às 21:12 = mesma causa da morte do tip3 — não é regressão do tip, é o loop de stress de outra sessão consumindo os 31GB). Estado dos gates da entrega docs:  100% (237/237), commit  SYNCED ahead=0; reator do tip mantém-se **vivo** — se o ciclo de 25min do  alheio folgar, o tally sai sozinho; DO NOT kill processos alheios, DO NOT relançar em loop. **Prova de qualidade da lane neste tip:** #468 CONFIRMADA CLOSED (21:12, dono  paralelo — nada a fazer); #443 sem input novo do dono  (comentário 22:54 = resposta própria da lane). **Próxima ação de código da  ao voltar:** fila #386 fatias 2/3 (sub-lane coll-386 — conferir §351/§352 no remoto antes; NÃO duplicar trabalho deles).
+> **Complemento 2 (19/09 ~22:45, lane .22):** tip4 CONFIRMADO MORTO pelo mesmo laço OOM (log congelado 22:16:48 no ; nenhum java com cwd  restante; host agora com 3 builds CONCORRENTES de outras lanes + loop  de 10GB). Regra da própria lane cumprida: SEM terceiro relançamento. **Tally da suíte: não obtido neste host hoje — limitação ambiental declarada, não-fake-green (Q5); a prova do tip fica com o job Build+Tests da CI no push +próximos.** Entrega desta sessão é docs-only e passou seus gates reais:  100% (237/237), zero .java/.kf alterados, sync-push ahead=0. **NEXT STEP (re-trigger lê isto):** rodar o reator isolado UMA vez quando a máquina estiver ociosa (910045
+910090
+910169
+2341769
+2345045
+2361345 vazio de builds alheias):  do tip novo + [INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] Kof                                                                [pom]
+[INFO] Kof Runtime                                                        [jar]
+[INFO] Kof Compiler                                                       [jar]
+[INFO] Kof Script                                                         [jar]
+[INFO] KofCcompiler                                                       [jar]
+[INFO] Kof CLI                                                            [jar]
+[INFO] 
+[INFO] -------------------------< dev.kof:kof-parent >-------------------------
+[INFO] Building Kof 0.4.7-beta                                            [1/6]
+[INFO]   from pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] ------------------------< dev.kof:kof-runtime >-------------------------
+[INFO] Building Kof Runtime 0.4.7-beta                                    [2/6]
+[INFO]   from kof-runtime/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ kof-runtime ---
+[INFO] skip non existing resourceDirectory /home/mel/Documentos/Kof4j/kof-runtime/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.16.0:compile (default-compile) @ kof-runtime ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ kof-runtime ---
+[INFO] skip non existing resourceDirectory /home/mel/Documentos/Kof4j/kof-runtime/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.16.0:testCompile (default-testCompile) @ kof-runtime ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- surefire:3.6.0:test (default-test) @ kof-runtime ---
+[INFO] No tests to run.
+[INFO] 
+[INFO] ------------------------< dev.kof:kof-compiler >------------------------
+[INFO] Building Kof Compiler 0.4.7-beta                                   [3/6]
+[INFO]   from kof-compiler/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ kof-compiler ---
+[INFO] Copying 9 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.16.0:compile (default-compile) @ kof-compiler ---
+[INFO] Compiling 3 source files with javac [debug release 25] to target/classes
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ kof-compiler ---
+[INFO] Copying 1 resource from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.16.0:testCompile (default-testCompile) @ kof-compiler ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.6.0:test (default-test) @ kof-compiler ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[ERROR] TestEngine with ID 'junit-jupiter' encountered a critical issue during test discovery:
+
+(1) [ERROR] ClassSelector [className = 'dev.kof.runtime.KofJsFfiCallbackBridgeTest', classLoader = null] resolution failed
+    Source: ClassSource [className = 'dev.kof.runtime.KofJsFfiCallbackBridgeTest', filePosition = null]
+            at dev.kof.runtime.KofJsFfiCallbackBridgeTest.<no-method>(SourceFile:0)
+    Cause: java.lang.NoClassDefFoundError: Value
+	at java.base/java.lang.Class.getDeclaredMethods0(Native Method)
+	at java.base/java.lang.Class.privateGetDeclaredMethods(Class.java:3010)
+	at java.base/java.lang.Class.getDeclaredMethods(Class.java:2329)
+	at org.junit.platform.commons.util.ReflectionUtils.getDeclaredMethods(ReflectionUtils.java:1687)
+	at org.junit.platform.commons.util.ReflectionUtils.findMethod(ReflectionUtils.java:1534)
+	at org.junit.platform.commons.util.ReflectionUtils.isMethodPresent(ReflectionUtils.java:1402)
+	at org.junit.jupiter.engine.discovery.predicates.TestClassPredicates.hasTestOrTestFactoryOrTestTemplateMethods(TestClassPredicates.java:107)
+	at org.junit.jupiter.engine.discovery.predicates.TestClassPredicates.looksLikeIntendedTestClass(TestClassPredicates.java:82)
+	at org.junit.jupiter.engine.discovery.predicates.TestClassPredicates.looksLikeIntendedTestClass(TestClassPredicates.java:76)
+	at org.junit.jupiter.engine.discovery.ClassSelectorResolver.isAcceptedStandaloneTestClass(ClassSelectorResolver.java:114)
+	at org.junit.jupiter.engine.discovery.ClassSelectorResolver.resolveStandaloneTestClass(ClassSelectorResolver.java:105)
+	at org.junit.jupiter.engine.discovery.ClassSelectorResolver.resolve(ClassSelectorResolver.java:101)
+	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolution.lambda$resolve$0(EngineDiscoveryRequestResolution.java:137)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.tryAdvance(ArrayList.java:1693)
+	at java.base/java.util.stream.ReferencePipeline.forEachWithCancel(ReferencePipeline.java:147)
+	at java.base/java.util.stream.AbstractPipeline.copyIntoWithCancel(AbstractPipeline.java:588)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:574)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:560)
+	at java.base/java.util.stream.FindOps$FindOp.evaluateSequential(FindOps.java:150)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:265)
+	at java.base/java.util.stream.ReferencePipeline.findFirst(ReferencePipeline.java:683)
+	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolution.resolve(EngineDiscoveryRequestResolution.java:191)
+	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolution.resolve(EngineDiscoveryRequestResolution.java:128)
+	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolution.resolveCompletely(EngineDiscoveryRequestResolution.java:94)
+	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolution.run(EngineDiscoveryRequestResolution.java:85)
+	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolver.resolve(EngineDiscoveryRequestResolver.java:150)
+	at org.junit.jupiter.engine.discovery.DiscoverySelectorResolver.resolveSelectors(DiscoverySelectorResolver.java:62)
+	at org.junit.jupiter.engine.JupiterTestEngine.discover(JupiterTestEngine.java:75)
+	at org.junit.platform.launcher.core.EngineDiscoveryOrchestrator.discoverEngineRoot(EngineDiscoveryOrchestrator.java:195)
+	at org.junit.platform.launcher.core.EngineDiscoveryOrchestrator.discoverSafely(EngineDiscoveryOrchestrator.java:174)
+	at org.junit.platform.launcher.core.EngineDiscoveryOrchestrator.discover(EngineDiscoveryOrchestrator.java:119)
+	at org.junit.platform.launcher.core.EngineDiscoveryOrchestrator.discover(EngineDiscoveryOrchestrator.java:84)
+	at org.junit.platform.launcher.core.DefaultLauncher.discover(DefaultLauncher.java:131)
+	at org.junit.platform.launcher.core.DefaultLauncher.discover(DefaultLauncher.java:89)
+	at org.junit.platform.launcher.core.DelegatingLauncher.discover(DelegatingLauncher.java:49)
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$discover$0(InterceptingLauncher.java:37)
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25)
+	at org.junit.platform.launcher.core.InterceptingLauncher.discover(InterceptingLauncher.java:37)
+	at org.junit.platform.launcher.core.DelegatingLauncher.discover(DelegatingLauncher.java:49)
+	at org.apache.maven.surefire.junitplatform.LauncherAdapter.discover(LauncherAdapter.java:47)
+	at org.apache.maven.surefire.junitplatform.TestPlanScannerFilter.accept(TestPlanScannerFilter.java:51)
+	at org.apache.maven.surefire.api.util.DefaultScanResult.applyFilter(DefaultScanResult.java:87)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.scanClasspath(JUnitPlatformProvider.java:241)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:221)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:394)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:181)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:530)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:518)
+Caused by: java.lang.ClassNotFoundException: Value
+	at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:580)
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:490)
+	... 49 more
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for Kof 0.4.7-beta:
+[INFO] 
+[INFO] Kof ................................................ SUCCESS [  0.023 s]
+[INFO] Kof Runtime ........................................ SUCCESS [  4.432 s]
+[INFO] Kof Compiler ....................................... FAILURE [ 10.007 s]
+[INFO] Kof Script ......................................... SKIPPED
+[INFO] KofCcompiler ....................................... SKIPPED
+[INFO] Kof CLI ............................................ SKIPPED
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  15.566 s
+[INFO] Finished at: 2026-09-19T22:37:21-03:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.6.0:test (default-test) on project kof-compiler: 
+[ERROR] 
+[ERROR] See /home/mel/Documentos/Kof4j/kof-compiler/target/surefire-reports for the individual test results.
+[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] There was an error in the forked process
+[ERROR] TestEngine with ID 'junit-jupiter' encountered a critical issue during test discovery:
+[ERROR] 
+[ERROR] (1) [ERROR] ClassSelector [className = 'dev.kof.runtime.KofJsFfiCallbackBridgeTest', classLoader = null] resolution failed
+[ERROR]     Source: ClassSource [className = 'dev.kof.runtime.KofJsFfiCallbackBridgeTest', filePosition = null]
+[ERROR]             at dev.kof.runtime.KofJsFfiCallbackBridgeTest.<no-method>(SourceFile:0)
+[ERROR]     Cause: java.lang.NoClassDefFoundError: Value
+[ERROR] 	at java.base/java.lang.Class.getDeclaredMethods0(Native Method)
+[ERROR] 	at java.base/java.lang.Class.privateGetDeclaredMethods(Class.java:3010)
+[ERROR] 	at java.base/java.lang.Class.getDeclaredMethods(Class.java:2329)
+[ERROR] 	at org.junit.platform.commons.util.ReflectionUtils.getDeclaredMethods(ReflectionUtils.java:1687)
+[ERROR] 	at org.junit.platform.commons.util.ReflectionUtils.findMethod(ReflectionUtils.java:1534)
+[ERROR] 	at org.junit.platform.commons.util.ReflectionUtils.isMethodPresent(ReflectionUtils.java:1402)
+[ERROR] 	at org.junit.jupiter.engine.discovery.predicates.TestClassPredicates.hasTestOrTestFactoryOrTestTemplateMethods(TestClassPredicates.java:107)
+[ERROR] 	at org.junit.jupiter.engine.discovery.predicates.TestClassPredicates.looksLikeIntendedTestClass(TestClassPredicates.java:82)
+[ERROR] 	at org.junit.jupiter.engine.discovery.predicates.TestClassPredicates.looksLikeIntendedTestClass(TestClassPredicates.java:76)
+[ERROR] 	at org.junit.jupiter.engine.discovery.ClassSelectorResolver.isAcceptedStandaloneTestClass(ClassSelectorResolver.java:114)
+[ERROR] 	at org.junit.jupiter.engine.discovery.ClassSelectorResolver.resolveStandaloneTestClass(ClassSelectorResolver.java:105)
+[ERROR] 	at org.junit.jupiter.engine.discovery.ClassSelectorResolver.resolve(ClassSelectorResolver.java:101)
+[ERROR] 	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolution.lambda$resolve$0(EngineDiscoveryRequestResolution.java:137)
+[ERROR] 	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+[ERROR] 	at java.base/java.util.ArrayList$ArrayListSpliterator.tryAdvance(ArrayList.java:1693)
+[ERROR] 	at java.base/java.util.stream.ReferencePipeline.forEachWithCancel(ReferencePipeline.java:147)
+[ERROR] 	at java.base/java.util.stream.AbstractPipeline.copyIntoWithCancel(AbstractPipeline.java:588)
+[ERROR] 	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:574)
+[ERROR] 	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:560)
+[ERROR] 	at java.base/java.util.stream.FindOps$FindOp.evaluateSequential(FindOps.java:150)
+[ERROR] 	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:265)
+[ERROR] 	at java.base/java.util.stream.ReferencePipeline.findFirst(ReferencePipeline.java:683)
+[ERROR] 	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolution.resolve(EngineDiscoveryRequestResolution.java:191)
+[ERROR] 	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolution.resolve(EngineDiscoveryRequestResolution.java:128)
+[ERROR] 	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolution.resolveCompletely(EngineDiscoveryRequestResolution.java:94)
+[ERROR] 	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolution.run(EngineDiscoveryRequestResolution.java:85)
+[ERROR] 	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolver.resolve(EngineDiscoveryRequestResolver.java:150)
+[ERROR] 	at org.junit.jupiter.engine.discovery.DiscoverySelectorResolver.resolveSelectors(DiscoverySelectorResolver.java:62)
+[ERROR] 	at org.junit.jupiter.engine.JupiterTestEngine.discover(JupiterTestEngine.java:75)
+[ERROR] 	at org.junit.platform.launcher.core.EngineDiscoveryOrchestrator.discoverEngineRoot(EngineDiscoveryOrchestrator.java:195)
+[ERROR] 	at org.junit.platform.launcher.core.EngineDiscoveryOrchestrator.discoverSafely(EngineDiscoveryOrchestrator.java:174)
+[ERROR] 	at org.junit.platform.launcher.core.EngineDiscoveryOrchestrator.discover(EngineDiscoveryOrchestrator.java:119)
+[ERROR] 	at org.junit.platform.launcher.core.EngineDiscoveryOrchestrator.discover(EngineDiscoveryOrchestrator.java:84)
+[ERROR] 	at org.junit.platform.launcher.core.DefaultLauncher.discover(DefaultLauncher.java:131)
+[ERROR] 	at org.junit.platform.launcher.core.DefaultLauncher.discover(DefaultLauncher.java:89)
+[ERROR] 	at org.junit.platform.launcher.core.DelegatingLauncher.discover(DelegatingLauncher.java:49)
+[ERROR] 	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$discover$0(InterceptingLauncher.java:37)
+[ERROR] 	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25)
+[ERROR] 	at org.junit.platform.launcher.core.InterceptingLauncher.discover(InterceptingLauncher.java:37)
+[ERROR] 	at org.junit.platform.launcher.core.DelegatingLauncher.discover(DelegatingLauncher.java:49)
+[ERROR] 	at org.apache.maven.surefire.junitplatform.LauncherAdapter.discover(LauncherAdapter.java:47)
+[ERROR] 	at org.apache.maven.surefire.junitplatform.TestPlanScannerFilter.accept(TestPlanScannerFilter.java:51)
+[ERROR] 	at org.apache.maven.surefire.api.util.DefaultScanResult.applyFilter(DefaultScanResult.java:87)
+[ERROR] 	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.scanClasspath(JUnitPlatformProvider.java:241)
+[ERROR] 	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:221)
+[ERROR] 	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:394)
+[ERROR] 	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:181)
+[ERROR] 	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:530)
+[ERROR] 	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:518)
+[ERROR] Caused by: java.lang.ClassNotFoundException: Value
+[ERROR] 	at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:580)
+[ERROR] 	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:490)
+[ERROR] 	... 49 more
+[ERROR] 
+[ERROR] org.apache.maven.surefire.booter.SurefireBooterForkException: There was an error in the forked process
+[ERROR] TestEngine with ID 'junit-jupiter' encountered a critical issue during test discovery:
+[ERROR] 
+[ERROR] (1) [ERROR] ClassSelector [className = 'dev.kof.runtime.KofJsFfiCallbackBridgeTest', classLoader = null] resolution failed
+[ERROR]     Source: ClassSource [className = 'dev.kof.runtime.KofJsFfiCallbackBridgeTest', filePosition = null]
+[ERROR]             at dev.kof.runtime.KofJsFfiCallbackBridgeTest.<no-method>(SourceFile:0)
+[ERROR]     Cause: java.lang.NoClassDefFoundError: Value
+[ERROR] 	at java.base/java.lang.Class.getDeclaredMethods0(Native Method)
+[ERROR] 	at java.base/java.lang.Class.privateGetDeclaredMethods(Class.java:3010)
+[ERROR] 	at java.base/java.lang.Class.getDeclaredMethods(Class.java:2329)
+[ERROR] 	at org.junit.platform.commons.util.ReflectionUtils.getDeclaredMethods(ReflectionUtils.java:1687)
+[ERROR] 	at org.junit.platform.commons.util.ReflectionUtils.findMethod(ReflectionUtils.java:1534)
+[ERROR] 	at org.junit.platform.commons.util.ReflectionUtils.isMethodPresent(ReflectionUtils.java:1402)
+[ERROR] 	at org.junit.jupiter.engine.discovery.predicates.TestClassPredicates.hasTestOrTestFactoryOrTestTemplateMethods(TestClassPredicates.java:107)
+[ERROR] 	at org.junit.jupiter.engine.discovery.predicates.TestClassPredicates.looksLikeIntendedTestClass(TestClassPredicates.java:82)
+[ERROR] 	at org.junit.jupiter.engine.discovery.predicates.TestClassPredicates.looksLikeIntendedTestClass(TestClassPredicates.java:76)
+[ERROR] 	at org.junit.jupiter.engine.discovery.ClassSelectorResolver.isAcceptedStandaloneTestClass(ClassSelectorResolver.java:114)
+[ERROR] 	at org.junit.jupiter.engine.discovery.ClassSelectorResolver.resolveStandaloneTestClass(ClassSelectorResolver.java:105)
+[ERROR] 	at org.junit.jupiter.engine.discovery.ClassSelectorResolver.resolve(ClassSelectorResolver.java:101)
+[ERROR] 	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolution.lambda$resolve$0(EngineDiscoveryRequestResolution.java:137)
+[ERROR] 	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+[ERROR] 	at java.base/java.util.ArrayList$ArrayListSpliterator.tryAdvance(ArrayList.java:1693)
+[ERROR] 	at java.base/java.util.stream.ReferencePipeline.forEachWithCancel(ReferencePipeline.java:147)
+[ERROR] 	at java.base/java.util.stream.AbstractPipeline.copyIntoWithCancel(AbstractPipeline.java:588)
+[ERROR] 	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:574)
+[ERROR] 	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:560)
+[ERROR] 	at java.base/java.util.stream.FindOps$FindOp.evaluateSequential(FindOps.java:150)
+[ERROR] 	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:265)
+[ERROR] 	at java.base/java.util.stream.ReferencePipeline.findFirst(ReferencePipeline.java:683)
+[ERROR] 	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolution.resolve(EngineDiscoveryRequestResolution.java:191)
+[ERROR] 	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolution.resolve(EngineDiscoveryRequestResolution.java:128)
+[ERROR] 	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolution.resolveCompletely(EngineDiscoveryRequestResolution.java:94)
+[ERROR] 	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolution.run(EngineDiscoveryRequestResolution.java:85)
+[ERROR] 	at org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolver.resolve(EngineDiscoveryRequestResolver.java:150)
+[ERROR] 	at org.junit.jupiter.engine.discovery.DiscoverySelectorResolver.resolveSelectors(DiscoverySelectorResolver.java:62)
+[ERROR] 	at org.junit.jupiter.engine.JupiterTestEngine.discover(JupiterTestEngine.java:75)
+[ERROR] 	at org.junit.platform.launcher.core.EngineDiscoveryOrchestrator.discoverEngineRoot(EngineDiscoveryOrchestrator.java:195)
+[ERROR] 	at org.junit.platform.launcher.core.EngineDiscoveryOrchestrator.discoverSafely(EngineDiscoveryOrchestrator.java:174)
+[ERROR] 	at org.junit.platform.launcher.core.EngineDiscoveryOrchestrator.discover(EngineDiscoveryOrchestrator.java:119)
+[ERROR] 	at org.junit.platform.launcher.core.EngineDiscoveryOrchestrator.discover(EngineDiscoveryOrchestrator.java:84)
+[ERROR] 	at org.junit.platform.launcher.core.DefaultLauncher.discover(DefaultLauncher.java:131)
+[ERROR] 	at org.junit.platform.launcher.core.DefaultLauncher.discover(DefaultLauncher.java:89)
+[ERROR] 	at org.junit.platform.launcher.core.DelegatingLauncher.discover(DelegatingLauncher.java:49)
+[ERROR] 	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$discover$0(InterceptingLauncher.java:37)
+[ERROR] 	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25)
+[ERROR] 	at org.junit.platform.launcher.core.InterceptingLauncher.discover(InterceptingLauncher.java:37)
+[ERROR] 	at org.junit.platform.launcher.core.DelegatingLauncher.discover(DelegatingLauncher.java:49)
+[ERROR] 	at org.apache.maven.surefire.junitplatform.LauncherAdapter.discover(LauncherAdapter.java:47)
+[ERROR] 	at org.apache.maven.surefire.junitplatform.TestPlanScannerFilter.accept(TestPlanScannerFilter.java:51)
+[ERROR] 	at org.apache.maven.surefire.api.util.DefaultScanResult.applyFilter(DefaultScanResult.java:87)
+[ERROR] 	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.scanClasspath(JUnitPlatformProvider.java:241)
+[ERROR] 	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:221)
+[ERROR] 	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:394)
+[ERROR] 	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:181)
+[ERROR] 	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:530)
+[ERROR] 	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:518)
+[ERROR] Caused by: java.lang.ClassNotFoundException: Value
+[ERROR] 	at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:580)
+[ERROR] 	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:490)
+[ERROR] 	... 49 more
+[ERROR] 
+[ERROR] 	at org.apache.maven.plugin.surefire.booterclient.ForkStarter.fork(ForkStarter.java:708)
+[ERROR] 	at org.apache.maven.plugin.surefire.booterclient.ForkStarter.fork(ForkStarter.java:523)
+[ERROR] 	at org.apache.maven.plugin.surefire.booterclient.ForkStarter.run(ForkStarter.java:323)
+[ERROR] 	at org.apache.maven.plugin.surefire.booterclient.ForkStarter.run(ForkStarter.java:287)
+[ERROR] 	at org.apache.maven.plugin.surefire.AbstractSurefireMojo.executeProvider(AbstractSurefireMojo.java:1474)
+[ERROR] 	at org.apache.maven.plugin.surefire.AbstractSurefireMojo.executeAfterPreconditionsChecked(AbstractSurefireMojo.java:1246)
+[ERROR] 	at org.apache.maven.plugin.surefire.AbstractSurefireMojo.execute(AbstractSurefireMojo.java:1082)
+[ERROR] 	at org.apache.maven.plugin.DefaultBuildPluginManager.executeMojo(DefaultBuildPluginManager.java:126)
+[ERROR] 	at org.apache.maven.lifecycle.internal.MojoExecutor.doExecute2(MojoExecutor.java:328)
+[ERROR] 	at org.apache.maven.lifecycle.internal.MojoExecutor.doExecute(MojoExecutor.java:316)
+[ERROR] 	at org.apache.maven.lifecycle.internal.MojoExecutor.execute(MojoExecutor.java:212)
+[ERROR] 	at org.apache.maven.lifecycle.internal.MojoExecutor.execute(MojoExecutor.java:174)
+[ERROR] 	at org.apache.maven.lifecycle.internal.MojoExecutor.access$000(MojoExecutor.java:75)
+[ERROR] 	at org.apache.maven.lifecycle.internal.MojoExecutor$1.run(MojoExecutor.java:162)
+[ERROR] 	at org.apache.maven.plugin.DefaultMojosExecutionStrategy.execute(DefaultMojosExecutionStrategy.java:39)
+[ERROR] 	at org.apache.maven.lifecycle.internal.MojoExecutor.execute(MojoExecutor.java:159)
+[ERROR] 	at org.apache.maven.lifecycle.internal.LifecycleModuleBuilder.buildProject(LifecycleModuleBuilder.java:105)
+[ERROR] 	at org.apache.maven.lifecycle.internal.LifecycleModuleBuilder.buildProject(LifecycleModuleBuilder.java:73)
+[ERROR] 	at org.apache.maven.lifecycle.internal.builder.singlethreaded.SingleThreadedBuilder.build(SingleThreadedBuilder.java:53)
+[ERROR] 	at org.apache.maven.lifecycle.internal.LifecycleStarter.execute(LifecycleStarter.java:118)
+[ERROR] 	at org.apache.maven.DefaultMaven.doExecute(DefaultMaven.java:261)
+[ERROR] 	at org.apache.maven.DefaultMaven.doExecute(DefaultMaven.java:173)
+[ERROR] 	at org.apache.maven.DefaultMaven.execute(DefaultMaven.java:101)
+[ERROR] 	at org.apache.maven.cli.MavenCli.execute(MavenCli.java:919)
+[ERROR] 	at org.apache.maven.cli.MavenCli.doMain(MavenCli.java:285)
+[ERROR] 	at org.apache.maven.cli.MavenCli.main(MavenCli.java:207)
+[ERROR] 	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+[ERROR] 	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+[ERROR] 	at org.codehaus.plexus.classworlds.launcher.Launcher.launchEnhanced(Launcher.java:255)
+[ERROR] 	at org.codehaus.plexus.classworlds.launcher.Launcher.launch(Launcher.java:201)
+[ERROR] 	at org.codehaus.plexus.classworlds.launcher.Launcher.mainWithExitCode(Launcher.java:362)
+[ERROR] 	at org.codehaus.plexus.classworlds.launcher.Launcher.main(Launcher.java:314)
+[ERROR] 
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :kof-compiler e gravar o tally aqui; fila de código da .22 = re-verificar §351/§352/#386 no remoto (sub-lane coll-386) antes de escolher item; #468 já CLOSED por paralelo.
