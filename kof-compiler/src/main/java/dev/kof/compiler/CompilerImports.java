@@ -29,8 +29,28 @@ public final class CompilerImports {
                                             DiagnosticCollector currentDiagnostics,
                                             java.util.Map<AstNode, String> declarationPackages,
                                             ExternalClasspath externalClasspath) {
+        return expandKofImports(unit, moduleRoot, currentDiagnostics, declarationPackages,
+                externalClasspath, List.of());
+    }
+
+    static CompilationUnitNode expandKofImports(CompilationUnitNode unit,
+                                            Path moduleRoot,
+                                            DiagnosticCollector currentDiagnostics,
+                                            java.util.Map<AstNode, String> declarationPackages,
+                                            ExternalClasspath externalClasspath,
+                                            List<Path> dependencySourceRoots) {
         java.util.Set<String> visitedDirs = new java.util.HashSet<>();
+        // Raízes de biblioteca depois do módulo local: stdlib oficial PRIMEIRO, depois as fontes
+        // de dependências (#566 opção b) — uma dependência nunca sombreia a stdlib.
+        List<Path> libraryRoots = new ArrayList<>();
         Path officialLibraryRoot = officialLibraryRoot();
+        if (officialLibraryRoot != null) libraryRoots.add(officialLibraryRoot);
+        if (dependencySourceRoots != null) {
+            for (Path r : dependencySourceRoots) {
+                Path root = r.toAbsolutePath().normalize();
+                if (Files.isDirectory(root) && !libraryRoots.contains(root)) libraryRoots.add(root);
+            }
+        }
         // Fase 1 (PKG007): grafo import → imports do arquivo (fechado após
         // a expansão; ciclos detectados globalmente ao fim do loop).
         java.util.Map<String, java.util.Set<String>> graph = new java.util.HashMap<>();
@@ -48,11 +68,14 @@ public final class CompilerImports {
             Path pkgDir = moduleRoot != null
                     ? moduleRoot.resolve(imp.replace('.', '/'))
                     : Path.of(imp.replace('.', '/'));
-            if (!Files.isDirectory(pkgDir) && officialLibraryRoot != null) {
-                Path officialPackage = officialLibraryRoot.resolve(imp.replace('.', '/'));
-                if (Files.isDirectory(officialPackage)) {
-                    pkgDir = officialPackage;
-                    resolutionRoot = officialLibraryRoot;
+            if (!Files.isDirectory(pkgDir)) {
+                for (Path libRoot : libraryRoots) {
+                    Path libPackage = libRoot.resolve(imp.replace('.', '/'));
+                    if (Files.isDirectory(libPackage)) {
+                        pkgDir = libPackage;
+                        resolutionRoot = libRoot;
+                        break;
+                    }
                 }
             }
             // Try directory import first (import a.b -> whole package a/b)
@@ -120,9 +143,12 @@ public final class CompilerImports {
                 String filePart = imp.substring(lastDot + 1);
                 Path pkgPath = moduleRoot != null ? moduleRoot.resolve(pkgPart.replace('.', '/')) : Path.of(pkgPart.replace('.', '/'));
                 Path kfFile = pkgPath.resolve(filePart + ".kf");
-                if (!Files.isRegularFile(kfFile) && officialLibraryRoot != null) {
-                    kfFile = officialLibraryRoot.resolve(pkgPart.replace('.', '/'))
-                            .resolve(filePart + ".kf");
+                if (!Files.isRegularFile(kfFile)) {
+                    for (Path libRoot : libraryRoots) {
+                        Path candidate = libRoot.resolve(pkgPart.replace('.', '/'))
+                                .resolve(filePart + ".kf");
+                        if (Files.isRegularFile(candidate)) { kfFile = candidate; break; }
+                    }
                 }
                 if (Files.isRegularFile(kfFile)) {
                     String pkgKey = kfFile.toAbsolutePath().normalize().toString();

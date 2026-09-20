@@ -74,6 +74,9 @@ IRModule currentModule;
      */
     final ExternalClasspath externalClasspath = new ExternalClasspath();
 
+    /** Raízes de FONTE de dependências (#566, opção b): onde o `import` procura depois do módulo e da stdlib. */
+    final List<Path> dependencySourceRoots = new ArrayList<>();
+
     final List<String> pendingClasspathWarnings = new ArrayList<>();
 
     /**
@@ -393,6 +396,17 @@ IRModule currentModule;
     /** Observes IR statistics (public API for tooling; no IR types exposed). */
     public CompilerDriver setIRObserver(IRObserver observer) {
         this.irStatsObserver = observer;
+        return (CompilerDriver) this;
+    }
+
+    /**
+     * #566 (opção b): pacotes publicados são consumidos como MÓDULO-FONTE. Cada raiz é o
+     * diretório-fonte de uma dependência instalada (`regsmoke/Greeter.kf` sob a raiz);
+     * o `import` a procura DEPOIS do módulo local e da stdlib oficial, em todos os alvos.
+     */
+    public CompilerDriver setDependencySourceRoots(java.util.List<Path> roots) {
+        dependencySourceRoots.clear();
+        if (roots != null) dependencySourceRoots.addAll(roots);
         return (CompilerDriver) this;
     }
 
