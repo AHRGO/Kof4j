@@ -810,10 +810,7 @@ class KofOrmE2ETest {
 
     @Test
     void deleteAllNativeEndToEndMatchesJvm(@TempDir Path tempDir) throws Exception {
-        Path source = tempDir.resolve("Main.kf");
-        Files.writeString(source, ENTITY_SRC + """
-                main() {
-                    var db = db.connect("sqlite:%s/f1a.db")
+        String body = """
                     db.execute(db, "create table if not exists user (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, age INTEGER)")
                     db.execute(db, "delete from user")
                     db.execute(db, "insert into user (name, email, age) values ('Mel', 'm@kof.dev', 30)")
@@ -823,10 +820,19 @@ class KofOrmE2ETest {
                         println(r)
                     }
                 }
-                """.formatted(tempDir));
+                """;
         String expected = "true\n{\"n\":0}";
-        runJvm(source, tempDir.resolve("jvm-out"), expected);
-        CompilationResult nativeResult = driver.compile(source, tempDir.resolve("native-out"), Target.NATIVE);
+        Path jvmSource = tempDir.resolve("JvmMain.kf");
+        Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvma.db") + "\")\n")
+                + body);
+        runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
+                findDriverJar("sqlite-jdbc", "SQLite"), expected);
+        Path nativeSource = tempDir.resolve("NativeMain.kf");
+        Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativea.db") + "\")\n")
+                + body);
+        CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
         assertTrue(nativeResult.success(), "Native deve compilar orm.deleteAll: "
                 + nativeResult.diagnostics().getDiagnostics());
         ProcessBuilder pb = new ProcessBuilder(
@@ -847,16 +853,16 @@ class KofOrmE2ETest {
         Files.writeString(source, ENTITY_SRC + """
                 main() {
                     try {
-                        println(orm.deleteAll<User>("db:2"))
+                        println(orm.deleteAll<User>("db2"))
                     } catch (String e) {
                         println(e)
                     }
                 }
                 """);
-        String expected = "unknown db connection: db:2";
+        String expected = "unknown db connection: db2";
         runJvm(source, tempDir.resolve("jvm-out"), expected);
         CompilationResult nativeResult = driver.compile(source, tempDir.resolve("native-out"), Target.NATIVE);
-        assertTrue(nativeResult.success(), "Native deve compilar: "
+        assertTrue(nativeResult.success(), "Native deve compilar (usesOrm liga sqlite): "
                 + nativeResult.diagnostics().getDiagnostics());
         ProcessBuilder pb = new ProcessBuilder(
                 tempDir.resolve("native-out/Default/Main").toString());
