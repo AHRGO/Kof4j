@@ -44,6 +44,8 @@ The user never needs to know JVM bytecode, assembly or JavaScript.
 
 ```bash
 kof debug app.kf                 # ✅ JVM (DAP server over stdio)
+kof debug --dap app.kf           # JVM DAP explicit (default is the same server)
+kof debug --dap --target native app.kf # ✅ X7-4 (`bda631a7`): DAP bridged to real gdb/MI2
 kof debug --target native app.kf # ✅ X7-3 (`cfa67238`): builds the ELF with Kof DWARF and\                                 #    delegates to the target's gdb (`-x` command file, `-iex set
                                  #    directories` to the Kof source dir) — breakpoints on
                                  #    `Main.kf:2`, never on the mangle

@@ -2,7 +2,7 @@
 
 # DEBUG-ADAPTER.md — kof-debug (Debug Adapter DAP)
 
-**Status:** MVP implementado e validado (JVM; JDWP cru, sem jdk.jdi)
+**Status:** MVP implementado e validado (JVM; JDWP cru, sem jdk.jdi) + **face Native pousada 20/09 (X7-4 `bda631a7`)** — `kof debug --dap --target native` faz a ponte DAP↔gdb/MI2 real (`KofGdbMi` + `KofDebugNativeDap`, `KofDebugNativeDapTest` 204 linhas); fontes em `stackTrace`/breakpoints sao sempre o `.kf`; sem gdb = erro DAP honesto nomeando a ferramenta (R6)
 **Data:** 27 de agosto de 2026
 **Versão:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
 
@@ -33,7 +33,7 @@ Não criar protocolo proprietário.
 kof-debug (DAP over stdio — Content-Length framing)
     ↓
 JVM: launch java -agentlib:jdwp + JDWP client (raw wire protocol)
-Native: launch binary + DWARF/frame info   (futuro)
+Native: launch binary + DWARF/frame info   (X7-4 POUSOU 20/09 — ponte DAP↔gdb/MI)
 JS: launch node --inspect + Inspector protocol  (futuro)
 ```
 
