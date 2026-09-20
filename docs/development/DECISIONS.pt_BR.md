@@ -2354,3 +2354,55 @@ história não se reescreve (regra 4 do freeze).
 **Verificação antes do bump (item 3 do prep):** nenhum teste ou script fixa a
 versão do artefato (só um comentário histórico no javadoc de
 `TrooleanLawE2ETest`).
+
+
+## D-1.0-EDGES — as arestas abertas estão fechadas: 5ª categoria, #564/#565 como `1.0-blocks`, KofC + Android dentro da superfície 1.0, os nove reforços da §35 obrigatórios, e a linha 1.0 abre após o release 0.5.0 + EG-1..EG-7 (20/09/2026, respostas da mantenedora às sete perguntas abertas)
+
+**Contexto:** a ratificação do `D-RELEASE-1.0` deixou sete arestas abertas (as
+perguntas `[? MEL]` da §35 do `PROPOSAL-1.0-EXIT-GATE.md`, a classificação de
+#560/#564/#565 e a Q1). A mantenedora respondeu todas as sete (enquete,
+20/09/2026). Este registro trava as respostas; os não-objetivos do
+`D-RELEASE-1.0` (sem corte 1.0, sem tag, #560 segue aberta) continuam valendo.
+
+**Decidido (as sete):**
+
+1. **#560 — 5ª categoria.** O guarda-chuva de acompanhamento do gate não é
+   defeito e não cabe nas quatro categorias da §11; a §11 agora tem **cinco**.
+   O label foi criado como `release-tracking` e renomeado para
+   **`tracking/contract`** ("Tracks an already-ratified contract; valid in
+   stabilization, must close before RC"); a #560 o carrega. O gate mecânico
+   (`scripts/check_release_blockers.sh`) o reconhece; uma issue nessa categoria
+   é válida durante a estabilização, mas ainda precisa fechar antes do RC.
+2. **#564 — `1.0-blocks`.** `kof deps resolve <owner>/<repo>@<ver>` sempre falha
+   com REG002 contra os GitHub Releases reais (pickTarball corta o objeto do
+   asset no "uploader" aninhado) — o contrato de pacote/deps está quebrado
+   ponta a ponta.
+3. **#565 — `1.0-blocks`.** Todo fat jar JVM construído pelo `kof deploy`
+   embute uma cópia truncada de si mesmo como entrada `kof-app.jar` (zip
+   inválido) — integridade do artefato de deploy.
+4. **Q1 — quando a linha 1.0 abre.** Depois do **release 0.5.0 cortado** e dos
+   **EG-1..EG-7 fechados**; só então ela declara e a primeira candidata a RC é
+   cortada (EG-8).
+5. **KofC — dentro da Stable 1.0, com gate próprio.** O "Disponível" do site
+   fica consistente; KofC é alvo pleno da superfície 1.0 com gate próprio, não
+   item fora/opcional.
+6. **Android — dentro da 1.0, com gate próprio** (a opção cheia, não a parcial
+   recomendada; o CI já roda o APK). Android é alvo pleno da superfície 1.0 com
+   gate próprio.
+7. **§35 — os nove candidatos viram gates obrigatórios** (não só os quatro
+   recomendados): app real com o pacote; baseline/sem regressão; política de
+   falha/flake sem false-green; snapshot da Stable Surface no RC1; identidade
+   do artefato (SHA256/provenance); manifesto de evidência por alvo; corpus de
+   compatibilidade; waiver formal (+ os demais itens do doc).
+
+**Consequência — superfície Stable 1.0 = 8 alvos:** JVM, Native x86-64,
+riscv64, aarch64, JS, Script, **KofC**, **Android**, cada um com gate próprio
+onde aplicável.
+
+**Não-objetivos:** NÃO autoriza o corte 1.0 (isso é o EG-8, condicionado a
+EG-1..EG-7 + o release 0.5.0), NÃO muda a VERSION, NÃO fecha a #560.
+
+**Evidência:** respostas da mantenedora 20/09/2026 (enquete); label
+`tracking/contract` na #560; #564/#565 rotuladas `1.0-blocks`; ledger
+`scripts/release-blockers.tsv`; gate `scripts/check_release_blockers.sh` (cinco
+categorias; `--rc-gate` RED com 4 `1.0-blocks` abertos).

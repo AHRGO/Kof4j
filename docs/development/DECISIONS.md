@@ -2372,3 +2372,54 @@ rewritten (freeze rule 4).
 
 **Verification before bumping (prep item 3):** no test or script pins the
 artifact version (only a historical javadoc comment in `TrooleanLawE2ETest`).
+
+
+## D-1.0-EDGES — the open edges are closed: 5th category, #564/#565 as `1.0-blocks`, KofC + Android inside the 1.0 surface, all nine §35 reinforcements mandatory, and the 1.0 line opens after the 0.5.0 release + EG-1..EG-7 (09/20/2026, maintainer answers to the seven open questions)
+
+**Context:** the `D-RELEASE-1.0` ratification left seven edges open (the
+`[? MEL]` questions of `PROPOSAL-1.0-EXIT-GATE.md` §35, the #560/#564/#565
+classification and Q1). The maintainer answered all seven (question poll,
+09/20/2026). This record locks the answers; the `D-RELEASE-1.0` non-goals (no
+1.0 cut, no tag, #560 stays open) still hold.
+
+**Decided (all seven):**
+
+1. **#560 — 5th category.** The tracking umbrella of the gate is not a defect
+   and fits none of the four §11 categories; §11 now has **five**. The label
+   was created as `release-tracking` and renamed to **`tracking/contract`**
+   ("Tracks an already-ratified contract; valid in stabilization, must close
+   before RC"); #560 carries it. The machine gate
+   (`scripts/check_release_blockers.sh`) recognizes it; an issue in this
+   category is valid during stabilization but must still close before the RC.
+2. **#564 — `1.0-blocks`.** `kof deps resolve <owner>/<repo>@<ver>` always
+   fails REG002 against real GitHub Releases (pickTarball cuts the asset object
+   at the nested "uploader") — the package/deps contract is broken end-to-end.
+3. **#565 — `1.0-blocks`.** Every JVM fat jar built by `kof deploy` embeds a
+   truncated copy of itself as entry `kof-app.jar` (invalid zip) — deploy
+   artifact integrity.
+4. **Q1 — when the 1.0 line opens.** After the **0.5.0 release is cut** and
+   **EG-1..EG-7 are closed**; only then does she declare it and the first RC
+   candidate is cut (EG-8).
+5. **KofC — inside Stable 1.0, with its own gate.** The site's "Disponível" is
+   now consistent; KofC is a full 1.0 surface target with its own gate, not an
+   outside/optional item.
+6. **Android — inside 1.0, with its own gate** (the full option, not the
+   recommended partial one; CI already runs the APK). Android is a full 1.0
+   surface target with its own gate.
+7. **§35 — all nine candidates become mandatory gates** (not only the four
+   recommended): real app with the package; baseline/no-regression; failure/
+   flake policy without false-green; Stable Surface snapshot at RC1; artifact
+   identity (SHA256/provenance); per-target evidence manifest; compatibility
+   corpus; formal waiver (+ the remaining doc items).
+
+**Consequence — Stable 1.0 surface = 8 targets:** JVM, Native x86-64, riscv64,
+aarch64, JS, Script, **KofC**, **Android**, each with its own gate where
+applicable.
+
+**Non-goals:** does NOT authorize the 1.0 cut (that is EG-8, gated on
+EG-1..EG-7 + the 0.5.0 release), does NOT change VERSION, does NOT close #560.
+
+**Evidence:** maintainer answers 09/20/2026 (question poll); label
+`tracking/contract` on #560; #564/#565 labeled `1.0-blocks`; ledger
+`scripts/release-blockers.tsv`; gate `scripts/check_release_blockers.sh`
+(five categories; `--rc-gate` RED with 4 open `1.0-blocks`).
