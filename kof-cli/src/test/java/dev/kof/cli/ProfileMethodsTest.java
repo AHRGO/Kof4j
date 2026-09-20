@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -18,13 +19,19 @@ import static org.junit.jupiter.api.Assertions.*;
  * profiler of the JVM, built on the JVM's own JFR (`jdk.jfr`, part of the JDK —
  * no external tool). The compiler's LineNumberTable maps the bytecode back to
  * the `.kf`, so the hot Kof function and its source line are shown, never raw
- * bytecode. Native/JS are honest refusals naming their own tool (perf/V8).
+ * bytecode. The JS face uses the Node CPU profiler (`--cpu-prof`, part of
+ * Node) with the emitted `.mjs.map` mapping the sampled JS line back to the
+ * `.kf`; Native is an honest refusal naming perf (R6/R7).
  */
 class ProfileMethodsTest {
 
     private record Cli(int exit, String out) {}
 
     private static Cli cli(Path workDir, String... args) throws Exception {
+        return cli(workDir, Map.of(), args);
+    }
+
+    private static Cli cli(Path workDir, Map<String, String> env, String... args) throws Exception {
         List<String> cmd = new ArrayList<>();
         cmd.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
         cmd.add("-cp");
@@ -32,6 +39,7 @@ class ProfileMethodsTest {
         cmd.add("dev.kof.cli.Main");
         cmd.addAll(List.of(args));
         ProcessBuilder pb = new ProcessBuilder(cmd).directory(workDir.toFile());
+        pb.environment().putAll(env);
         pb.redirectErrorStream(true);
         Process p = pb.start();
         String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -100,11 +108,38 @@ class ProfileMethodsTest {
     }
 
     @Test
-    void methodsOnJsIsAnHonestRefusal(@TempDir Path dir) throws Exception {
+    void hotKofFunctionAppearsInTheNodeCpuProfile(@TempDir Path dir) throws Exception {
+        Assumptions.assumeTrue(nodeAvailable(), "node not on PATH — the JS face is host-gated");
+        Files.writeString(dir.resolve("Hot.kf"), hotProgram());
+        Cli r = cli(dir, "profile", "Hot.kf", "--target", "js", "--methods");
+        assertEquals(0, r.exit(), "profile --methods js exit:\n" + r.out());
+        assertTrue(r.out().contains("hot methods"), "Node CPU-profile section missing:\n" + r.out());
+        assertTrue(r.out().contains("spin"),
+                "the hot Kof function must appear in the JS method profile:\n" + r.out());
+        assertTrue(r.out().contains("(line "),
+                "the sampled JS line must map back to the .kf source line:\n" + r.out());
+        assertTrue(r.out().contains("Node samples"),
+                "the sample count must name the Node profiler, not JFR:\n" + r.out());
+        assertTrue(r.out().contains("Node CPU profiler"),
+                "the footer must name the in-house JS profiler:\n" + r.out());
+    }
+
+    @Test
+    void methodsOnJsWithoutNodeFailsHonestly(@TempDir Path dir) throws Exception {
         Files.writeString(dir.resolve("Main.kf"), "main() { println(\"ok\") }\n");
-        Cli r = cli(dir, "profile", "Main.kf", "--target", "js", "--methods");
-        assertEquals(1, r.exit(), r.out());
-        assertTrue(r.out().contains("DevTools"),
-                "js refusal must name V8/DevTools (R6/R7):\n" + r.out());
+        Cli r = cli(dir, Map.of("PATH", "/nonexistent"), "profile", "Main.kf", "--target", "js", "--methods");
+        assertEquals(1, r.exit(), "a missing Node must fail, not fake a profile:\n" + r.out());
+        assertTrue(r.out().contains("node was not found"),
+                "the failure must name the missing Node (R6):\n" + r.out());
+    }
+
+    private static boolean nodeAvailable() {
+        try {
+            Process p = new ProcessBuilder("node", "--version").redirectErrorStream(true).start();
+            p.getInputStream().readAllBytes();
+            return p.waitFor() == 0;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

@@ -36,6 +36,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     own tool (perf / V8-DevTools, R6/R7). Proved by `ProfileMethodsTest` 4/4 (a real
     hot function found by line + both refusals + the no-flag control).
 
+  - **`kof profile --methods --target js` — the JS face of the in-house method profiler**
+    — the emitted module runs under Node's own **`--cpu-prof`** (part of Node, no external
+    tool) and the emitted **`.mjs.map`** maps the sampled JavaScript line back to the **Kof
+    source line** (the JS counterpart of the JVM LineNumberTable), so the JS report shows
+    the hot Kof function, never generated JS. Node internals are filtered; a host without
+    Node fails honestly (never a fake profile), and Native stays an honest refusal naming
+    perf **and the measured `perf_event_paranoid`**. Proved by `ProfileMethodsTest` 5/5.
+
   - **#431 fatia 1 — the `extern` scalar ABI now BINDS on Native x86-64 (`d946e6fa`, §369)**
     — `extern "<lib>" f(Int, Long, Float, Double, Bool, String)` with free arity,
     void/String returns: direct link (the library goes to `ld`) + SysV marshaling

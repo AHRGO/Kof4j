@@ -63,11 +63,13 @@ public final class Profile {
                 argStart = i + 1;
             }
         }
-        if (methods && target != Target.JVM) {
-            // R6/R7 honest gap: JFR is a JVM facility; the other targets have their own
-            // tooling (perf for Native, V8/DevTools for JS) — never a silent no-op.
-            System.err.println("kof profile --methods: method-level sampling needs JFR, a JVM"
-                    + " facility; for native use perf, for js use V8/DevTools");
+        if (methods && target == Target.NATIVE) {
+            // R6/R7 honest gap: method-level sampling on native needs `perf record`, whose
+            // kernel perf_event access is gated by perf_event_paranoid; on hosts where the
+            // sysctl forbids it there is no in-house substitute — never a silent no-op.
+            System.err.println("kof profile --methods: method-level sampling on native needs perf"
+                    + " (perf record); /proc/sys/kernel/perf_event_paranoid must allow it"
+                    + perfParanoidNote());
             return 1;
         }
 
@@ -112,6 +114,19 @@ public final class Profile {
             if (entry == null) {
                 System.err.println("kof profile: no JS entry point");
                 return null;
+            }
+            if (methods) {
+                // In-house method-level sampling for the JS face: the emitted module runs
+                // under the Node CPU profiler (`--cpu-prof`, part of Node — no external
+                // tool), and the `.mjs.map` source map maps the sampled JS line back to
+                // the `.kf` source line, the JS counterpart of the JVM LineNumberTable.
+                List<String> programArgs = new ArrayList<>();
+                for (int i = argStart; i < args.length; i++) programArgs.add(args[i]);
+                Map<String, Object> jsReport = JsMethodProfile.sample(entry, outDir, programArgs);
+                if (jsReport == null) return null;
+                report.putAll(jsReport);
+                report.put("wall_ms", (System.nanoTime() - start) / 1_000_000);
+                return report;
             }
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             ByteArrayOutputStream err = new ByteArrayOutputStream();
@@ -186,7 +201,10 @@ public final class Profile {
         return report;
     }
 
-    /** A hot method from the JFR sampling: the JVM symbol and the Kof source line it maps to. */
+    /**
+     * A hot method from a method-level sampling run: the reported symbol
+     * (JVM class/method or JS function) and the Kof source line it maps to.
+     */
     record MethodSample(String method, int samples, int line) {
     }
 
@@ -323,9 +341,10 @@ public final class Profile {
             System.out.println("  ctx switches:   " + Math.round((Double) report.get("ctx_switches")));
         }
         if (report.containsKey("methods")) {
+            String kind = "js".equals(report.get("target")) ? "Node samples" : "JFR samples";
             System.out.println();
             System.out.println("  hot methods (" + report.get("samples_total")
-                    + " JFR samples, top " + ((List<?>) report.get("methods")).size() + "):");
+                    + " " + kind + ", top " + ((List<?>) report.get("methods")).size() + "):");
             for (Object o : (List<?>) report.get("methods")) {
                 MethodSample m = (MethodSample) o;
                 String line = m.line() > 0 ? "  (line " + m.line() + ")" : "";
@@ -337,11 +356,14 @@ public final class Profile {
         }
         System.out.println();
         if (report.containsKey("methods")) {
-            System.out.println("method-level data from the JVM's own JFR (in-house; no external tool)");
+            String source = "js".equals(report.get("target"))
+                    ? "the Node CPU profiler (--cpu-prof, part of Node; no external tool)"
+                    : "the JVM's own JFR (in-house; no external tool)";
+            System.out.println("method-level data from " + source);
         } else {
             System.out.println("jvm:      profile with --methods for JFR method-level data");
             System.out.println("native:   run under perf stat for cycle/instruction counts");
-            System.out.println("js:       profile with Node/V8 DevTools when running the emitted module");
+            System.out.println("js:       profile with --methods for Node CPU-profiler method-level data");
         }
     }
 
@@ -369,6 +391,22 @@ public final class Profile {
                     .findFirst().orElse(null);
         } catch (IOException e) {
             return null;
+        }
+    }
+
+    /**
+     * The measured `perf_event_paranoid` level, when the host exposes it: an
+     * actionable note instead of a generic "use perf" that the user cannot act on.
+     */
+    private static String perfParanoidNote() {
+        Path paranoid = Path.of("/proc/sys/kernel/perf_event_paranoid");
+        if (!Files.isRegularFile(paranoid)) return "";
+        try {
+            String level = Files.readString(paranoid).trim();
+            return " (measured on this host: perf_event_paranoid=" + level
+                    + "; levels above 2 forbid unprivileged sampling — lower it or run as root)";
+        } catch (IOException e) {
+            return "";
         }
     }
 

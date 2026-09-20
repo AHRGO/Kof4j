@@ -35,6 +35,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     ferramenta deles (perf / V8-DevTools, R6/R7). Provado por `ProfileMethodsTest` 4/4
     (funcao quente real achada por linha + as duas recusas + o controle sem a flag).
 
+  - **`kof profile --methods --target js` — a face JS do profiler de metodo interno**
+    — o modulo emitido roda sob o **`--cpu-prof`** do proprio Node (parte do Node, sem
+    ferramenta externa) e o **`.mjs.map`** emitido mapeia a linha JavaScript amostrada de
+    volta para a **linha da fonte Kof** (o equivalente JS do LineNumberTable do JVM), entao
+    o relatorio JS mostra a funcao Kof quente, nunca JS gerado. Internos do Node sao
+    filtrados; host sem Node falha honestamente (nunca um profile falso), e o Native segue
+    recusa honesta nomeando perf **e o `perf_event_paranoid` medido**. Provado por
+    `ProfileMethodsTest` 5/5.
+
   - **#431 fatia 1 — a ABI escalar do `extern` agora VINCULA no Native x86-64 (`d946e6fa`, §369)**
     — `extern "<lib>" f(Int, Long, Float, Double, Bool, String)` com aridade livre,
     retornos void/String: link direto (a biblioteca entra no `ld`) + marshaling SysV

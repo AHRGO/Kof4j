@@ -1168,14 +1168,21 @@ GC
 
 ### Native
 
-* perf;
-* sampling profiler;
-* ferramentas nativas.
+* ✅ **gap honesto (`kof profile --methods --target native`)** — amostragem method-level no
+  native precisa de `perf record`, cujo acesso a `perf_event` no kernel é controlado por
+  `/proc/sys/kernel/perf_event_paranoid`; onde o sysctl proíbe (medido `=4` no host da
+  mantenedora) não há substituto interno, então a CLI recusa nomeando o perf **e o sysctl
+  medido** (R6) em vez de fingir amostrar.
+* perf / sampling profiler / ferramentas nativas (externos).
 
 ### JS
 
-* Node profiler;
-* V8/DevTools.
+* ✅ **Node CPU profiler — implementado (`kof profile --methods --target js`)** — o módulo
+  emitido roda sob o `--cpu-prof` do próprio Node (parte do Node, sem ferramenta externa) e o
+  `.mjs.map` emitido mapeia a linha JavaScript amostrada de volta para a **linha da fonte Kof**
+  (o equivalente JS do LineNumberTable do JVM). Internos do Node são filtrados; host sem Node
+  é falha honesta, nunca um profile falso.
+* V8/DevTools — externos, para profundidade de alocação/flamegraph.
 
 O objetivo é permitir descobrir **por que** o Kof está lento, e não apenas saber que está lento.
 
