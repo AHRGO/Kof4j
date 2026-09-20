@@ -75,10 +75,12 @@ configurationDone     → -exec-run --all
                         exit-code = exited + terminated
 stackTrace            → -stack-list-frames; source.path is ALWAYS the .kf —
                         the whole point of the front (the editor never sees asm)
-variables             → -stack-list-variables --simple-values — the list is
-                        only as rich as the DWARF: locals need DW_TAG_variable,
-                        which the compiler does not emit yet (face catalogued
-                        in the tracker line X7); empty ≠ fake
+variables             → -stack-list-variables --simple-values over the real
+                        DW_TAG_variable entries (name + DW_OP_fbreg +
+                        DW_AT_type) the compiler already emits on the 3 native
+                        arches — measured 20/09 with objdump on the ELF/.s;
+                        lowered temporaries (tmp/cap/lambda$) are filtered out
+                        of the DIEs, so the editor shows Kof names only
 evaluate              → -data-evaluate-expression; unknown symbol = the gdb
                         error passed through, never an invented value (R6)
 disconnect/terminate  → -gdb-exit + kill + build dir cleanup
@@ -137,5 +139,8 @@ The user always sees the Kof type.
 - Phase 7: per-frame locals (`StackFrame.GetValues`), stepping, verified
   breakpoints, exception breakpoints, evaluation with the type system
 - ✅ 20/09: Native (DWARF) — console + DAP<->GDB/MI (X7-3/X7-4)
-- Later: attach; JS stays an honest gap (embedded engine, no inspector); open face
-  catalogued in tracker X7: DW_TAG_variable for locals (gdb `info locals` needs it)
+- Later: attach; JS stays an honest gap (embedded engine, no inspector)
+- ✅ locals in DWARF: DW_TAG_variable + DW_OP_fbreg + DW_AT_type on the 3
+  native arches (pre-existing since the fatia-2 work; RE-MEASURED 20/09 with
+  objdump after this doc briefly claimed the opposite — shapes measured,
+  never assumed, including by this lane)

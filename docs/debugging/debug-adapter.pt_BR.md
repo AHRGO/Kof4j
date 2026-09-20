@@ -75,10 +75,12 @@ configurationDone     → -exec-run --all
                         exit-code = exited + terminated
 stackTrace            → -stack-list-frames; source.path é SEMPRE o .kf — o
                         ponto inteiro da frente (o editor nunca vê asm)
-variables             → -stack-list-variables --simple-values — a lista é só
-                        tão rica quanto o DWARF: locals exigem DW_TAG_variable,
-                        que o compilador ainda não emite (face catalogada na
-                        linha X7 do tracker); vazio ≠ inventado
+variables             → -stack-list-variables --simple-values sobre os DIEs
+                        DW_TAG_variable reais (nome + DW_OP_fbreg + DW_AT_type)
+                        que o compilador já emite nos 3 arquiteturas nativas —
+                        medido 20/09 com objdump no ELF/.s; temporários do
+                        lowering (tmp/cap/lambda$) ficam FORA das DIEs, o
+                        editor só vê nome Kof
 evaluate              → -data-evaluate-expression; símbolo inexistente = o erro
                         do gdb repassado, nunca valor inventado (R6)
 disconnect/terminate  → -gdb-exit + kill + limpeza do build dir
@@ -137,6 +139,8 @@ O usuário sempre vê o tipo Kof.
 - Fase 7: locals por frame (`StackFrame.GetValues`), stepping, breakpoints
   verificados, exception breakpoints, avaliação com o type system
 - ✅ 20/09: Native (DWARF) — console + DAP<->GDB/MI (X7-3/X7-4)
-- Depois: attach; JS fica gap honesto (engine embutido, sem inspector); face
-  aberta catalogada no tracker X7: DW_TAG_variable para locals (`info locals`
-  do gdb precisa dele)
+- Depois: attach; JS fica gap honesto (engine embutido, sem inspector)
+- ✅ locals no DWARF: DW_TAG_variable + DW_OP_fbreg + DW_AT_type nos 3
+  arquétipos nativos (já existiam desde o trabalho da fatia-2; RE-MEDIDO
+  20/09 com objdump depois que esta doc afirmou o contrário por um turno —
+  shapes measured, never assumed, vale até contra a própria lane)
