@@ -108,6 +108,24 @@ public final class StatementAnalyzer {
                 if (wf instanceof SymbolTable.FieldSymbol wfs) {
                     MemberCallTyper.checkFieldAccess(sa, wfs);
                     MemberCallTyper.checkFinalFieldWrite(sa, wfs);
+                    // §368: a store de campo deve passar pelo MESMO gate de
+                    // atributibilidade do local (:52-58) e do var-decl (:245).
+                    // Sem isto, `x.c = "x"` (Char) e `x.n = 2.5` (Int) compilam
+                    // "clean" e morrem em VerifyError na carga (JVM/Native) ou
+                    // viram phantom-store no Script/JS — R6 + regra 5. A caixa
+                    // de widening numerico (42 → Int?, 'x' → Char?) ja existe no
+                    // writer (§361); o gate so rejeita o que NENHUM backend
+                    // executa hoje — nenhum golden funcional muda (Probe4).
+                    boolean strConcatAssign = "+=".equals(ae.operator()) && BuiltinTypes.isString(wfs.type());
+                    Type fieldType = wfs.type();
+                    if (sa.diagnostics() != null && !Type.isUnknown(fieldType)
+                            && !Type.isUnknown(valueType)
+                            && !strConcatAssign
+                            && !TypeChecker.isAssignable(sa, valueType, fieldType)) {
+                        sa.diagnostics().error("", 0, 0, 0,
+                                "Type mismatch: cannot assign " + valueType + " to " + fieldType,
+                                "SEM012");
+                    }
                 }
             }
         } else if (ae.target() instanceof ArrayAccessExpr aa) {
