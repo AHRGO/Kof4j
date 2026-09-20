@@ -54,12 +54,12 @@ agents".
 
 | # | Condition | How it is measured | State 09/20 |
 |---|---|---|---|
-| 1 | 100% parity between targets | per-target matrix + golden byte parity where the contract requires; divergence = bug or diagnosed `XXX00x` | NEEDS-MEASURE |
+| 1 | 100% parity between targets | per-target matrix + golden byte parity where the contract requires; divergence = bug or diagnosed `XXX00x`. **Auto-measured** by `check_release_050_gate.sh` (runs `scripts/target-matrix.sh`, EG-5, and reads its `PARITY: 100%` line) | GREEN (6 core targets byte-parity vs JVM oracle) |
 | 2 | No pending decision | `DECISIONS.md` has no open question changing the surface | NEEDS-REVIEW |
 | 3 | All loose `docs/development/*.md` concluded and moved out | three-states rule; only work with pending implementation stays | RED (in-flight docs) |
 | 4 | Total stability | full suite 0F/0E + 5/5 conformance matrix on the candidate | NEEDS-MEASURE |
-| 5 | 0 open issues that are a bug | GitHub OPEN issues with a `bug` label = 0 (includes #566 — maintainer 09/20) | RED (#561/#563/#564/#566) |
-| 6 | All edges closed | the FULL EG queue (EG-1..EG-10) closed + open `1.0-blocks` = 0; the 0.5.0 waits until each owner closes/moves their own work | RED (#561/#563/#564/#566 + EG-5/EG-8/EG-9/EG-10) |
+| 5 | 0 open issues that are a bug | GitHub OPEN issues with a `bug` label = 0 (includes #566 — maintainer 09/20) | RED (#566) |
+| 6 | All edges closed | the FULL EG queue (EG-1..EG-10) closed + open `1.0-blocks` = 0; the 0.5.0 waits until each owner closes/moves their own work. **EG-5/EG-9/EG-10 mechanisms DONE 20/09**; open: #566 + EG-8 | RED (#566 + EG-8) |
 | 7 | Nothing pending in bugs-and-gaps | `check_known_bugs_status.sh` live set empty + `specification-gaps.md` 0 open | RED (19 live) |
 
 Mechanized by `scripts/check_release_050_gate.sh` (reports each condition as
