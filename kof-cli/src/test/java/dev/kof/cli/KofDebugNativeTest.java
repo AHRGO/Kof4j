@@ -87,13 +87,25 @@ class KofDebugNativeTest {
     }
 
     private static boolean has(String... executables) {
+        String path = System.getenv("PATH");
+        if (path == null) {
+            return false;
+        }
+        List<Path> dirs = new ArrayList<>();
+        for (String d : path.split(java.io.File.pathSeparator)) {
+            if (!d.isEmpty()) {
+                dirs.add(Path.of(d));
+            }
+        }
         for (String e : executables) {
-            try {
-                Process p = new ProcessBuilder("sh", "-c", "command -v " + e)
-                        .redirectErrorStream(true).start();
-                p.getInputStream().readAllBytes();
-                if (!p.waitFor(20, TimeUnit.SECONDS) || p.exitValue() != 0) return false;
-            } catch (Exception ex) {
+            boolean found = false;
+            for (Path d : dirs) {
+                if (Files.isExecutable(d.resolve(e))) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
                 return false;
             }
         }

@@ -39,7 +39,6 @@ final class KofGdbMi {
     private final AtomicInteger token = new AtomicInteger(1);
     private final Map<Integer, LinkedBlockingQueue<String>> waiting = new ConcurrentHashMap<>();
     private final LinkedBlockingQueue<String> events = new LinkedBlockingQueue<>();
-    private final List<String> console = new ArrayList<>();
     private volatile BiConsumer<String, String> onEvent;
     private volatile Runnable onExit;
 
@@ -64,8 +63,10 @@ final class KofGdbMi {
                 "--interp", "mi2"));
         if (pid > 0) {
             argv.addAll(List.of("-p", String.valueOf(pid)));
-        } else {
+        } else if (bin != null) {
             argv.add(bin.toString());
+        } else {
+            throw new IllegalArgumentException("KofGdbMi.spawn: either bin or pid is required");
         }
         ProcessBuilder pb = new ProcessBuilder(argv);
         pb.redirectErrorStream(true);
@@ -104,8 +105,6 @@ final class KofGdbMi {
                 char kind = k < line.length() ? line.charAt(k) : ' ';
                 if (kind == '^' || kind == '*' || kind == '=') {
                     dispatch(line);
-                } else {
-                    console.add(line);
                 }
             }
         } catch (IOException ignored) {
@@ -127,10 +126,10 @@ final class KofGdbMi {
         if (kind == '^') {
             LinkedBlockingQueue<String> q = waiting.remove(tok);
             if (q != null) {
-                q.offer(rest);
+                q.add(rest);
             }
         } else {
-            events.offer(rest);
+            events.add(rest);
             BiConsumer<String, String> h = onEvent;
             if (h != null) {
                 h.accept(String.valueOf(kind), rest);

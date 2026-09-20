@@ -29,7 +29,6 @@ final class KofDebugJvmSession {
     private final Path sourceFile;
     private final CompilerDriver driver = new CompilerDriver();
     private final List<Integer> pendingBreakpoints = new ArrayList<>();
-    private final Map<Integer, Map<String, Object>> frameVariables = new LinkedHashMap<>();
     private final List<JdwpClient.FullFrame> lastFrames = new ArrayList<>();
     private final Integer attachPort;
     private boolean attached;
@@ -109,7 +108,7 @@ final class KofDebugJvmSession {
                         Map<String, Object> brk = new LinkedHashMap<>();
                         brk.put("line", line);
                         boolean ok = false;
-                        if (attached) {
+                        if (attached && jdwp != null) {
                             // classe ja carregada no alvo vivo: resolve agora (ClassesBySignature)
                             try {
                                 jdwp.setLineBreakpoint("Default.Main", line);

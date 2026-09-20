@@ -15,6 +15,21 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
  ### In development
 
+  - **Debug/tooling CodeQL debt closed at the root (no observable behavior change)**
+    — the 11 open CodeQL alerts of the CLI's debug cluster were fixed at the source
+    instead of suppressed: `KofGdbMi` uses `add` on its unbounded queues (the ignored
+    `offer` return), drops the write-only `console` container and rejects a null
+    binary with an explicit `IllegalArgumentException` (no NPE); `JdwpClient` stops
+    naming the unused `argWords` (the VariableTable `argCnt` is framing only); the
+    `KofDebugJvmSession` attach path guards a null `jdwp` (a breakpoint without a live
+    client stays `verified:false`, never an NPE) and drops the never-read
+    `frameVariables`; `KofDebugNativeDap` parses the MI `line`/`level` through a
+    fallback helper, so malformed gdb output can never abort the DAP session; and
+    `KofDebugNativeTest` resolves executables via `PATH` (`Files.isExecutable`)
+    instead of spawning a relative `sh`. Proved by the debug cluster **14/14**
+    (`KofDebugNativeTest` 7, `KofDebugNativeDapTest` 3, `KofDebugAttachTest` 3,
+    `KofDebugJvmTest` 1) and a green `kof-cli` compile.
+
   - **#545/§362 — phantom constructor calls now fail at compile time (`57a0d5f0`)**
     — `P(1, 2)` in `record P(Int x)`, `D(1)` in a class without that ctor, and
     `C("s")` in `constructor(Int)` compiled "clean" and produced a runtime

@@ -125,7 +125,7 @@ final class KofDebugNativeDap {
                             String real = KofGdbMi.field(d.payload(), "line");
                             Map<String, Object> brk = new LinkedHashMap<>();
                             brk.put("verified", real != null && !d.isError());
-                            brk.put("line", real != null ? Integer.parseInt(real) : line);
+                            brk.put("line", intOr(real, line));
                             result.add(brk);
                         }
                     }
@@ -166,11 +166,10 @@ final class KofDebugNativeDap {
                         frame.put("id", id);
                         frame.put("name", func == null ? "?" : func);
                         frame.put("source", Map.of("path", sourceFile.toAbsolutePath().toString()));
-                        frame.put("line", line == null ? 0 : Integer.parseInt(line));
+                        frame.put("line", intOr(line, 0));
                         frame.put("column", 1);
                         frames.add(frame);
-                        frameLevel.put(id, KofGdbMi.field(f, "level") == null ? id
-                                : Integer.parseInt(KofGdbMi.field(f, "level")));
+                        frameLevel.put(id, intOr(KofGdbMi.field(f, "level"), id));
                     }
                 }
                 respond(seq, command, Map.of("stackFrames", frames, "totalFrames", frames.size()));
@@ -302,6 +301,18 @@ final class KofDebugNativeDap {
         response.put("message", message);
         response.put("command", command);
         KofDebug.writeMessage(out, Json.stringify(response));
+    }
+
+    /** Campo numerico do MI: numero valido ou o fallback — lixo do gdb nunca derruba a sessao DAP. */
+    private static int intOr(String value, int fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 
     private void cleanup() {

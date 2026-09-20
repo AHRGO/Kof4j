@@ -61,9 +61,9 @@ final class JdwpClient {
         // JDK 25 (codigo real do JDWP.java da propria JDK): a resposta de
         // VariableTable = {int argCnt (CONTAGEM DE PALAVRAS dos args, long/double
         // contam 2), int slotCount, slots[]}. NAO ha lista de argumentos aqui —
-        // ler uma lista fantasma estourava o pacote. argCnt so serve de corte:
-        // slots com indice < argCnt sao os parametros.
-        int argWords = reply.readInt();
+        // ler uma lista fantasma estourava o pacote. argCnt e so consumido para
+        // posicionar o cursor do pacote (o filtro de slots usa o codeIndex).
+        reply.readInt();
         int slotCount = reply.readInt();
         List<long[]> slotPos = new ArrayList<>();   // {slot, start, end}
         List<String> slotName = new ArrayList<>();
