@@ -42,6 +42,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Makealive* 21/21. Lição medida no caminho: o pump JS é cooperativo (§132) —
     um golden deve ESPERAR com um `time.sleep` longo, nunca com polling curto
     dentro de `while (a && b)` (competia com o pump, morria silente 2/3).
+
+  - **R2 fatia 1 — `libm` agora é linkado POR USO no Native x86 (capability/link-by-use generalizado)**
+    — programas plain carregavam um NEEDED `libm.so.6` por causa do shim `call pow`
+    do monolito, mesmo sem usar pow; o shim agora se declara `.weak pow`
+    (RuntimeMath), o link fecha sem libm, e `-lm` só entra no ld quando a fonte
+    realmente chama `math.pow` (scan `usesPow`, o mesmo padrão de
+    `usesDb`/`usesMysql`/`usesConcurrency`; kof_math_pow` é o único caminho ao
+    shim). Ternário morto no `NativeAssembler` (sqlite igual nos dois ramos)
+    removido junto. Prova no artefato real: `LinkByUseTest` 3/3 com
+    `readelf --dynamic` — plain liga SÓ libc (sem libm/libsqlite3/libmariadb/
+    libpthread); sqlite/pthread/libm continuam ligados por uso; a saída do
+    binário pow bate byte a byte com o oráculo JVM (golden medido). Faces
+    cross/JS/JVM já eram by-use (scan `needsSqlite` #431, delegação ao host,
+    class-loading lazy) — a linha R2 do tracker vira ✅.
   - **Fatia 3.8a da ABI de struct na FFI — `AbiLayout`, o engine de layout/classificação medido**
     — engine puro (`kof-compiler` `AbiLayout`) que, dados os campos escalares de
     um struct e uma ABI alvo (`SYSV_X86_64`/`AAPCS64`/`RISCV64`), devolve o

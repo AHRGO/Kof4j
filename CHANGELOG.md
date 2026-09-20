@@ -43,6 +43,19 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (§132) — a golden must WAIT with one long `time.sleep`, never with
     short-sleep polling inside `while (a && b)` (competed with the pump, died
     silently 2/3).
+  - **R2 fatia 1 — `libm` is now linked BY USE on Native x86 (capability/link-by-use generalized)**
+    — plain programs used to carry a `libm.so.6` NEEDED entry for the unused
+    `call pow` shim of the monolith; the shim is now declared `.weak pow`
+    (RuntimeMath) so the link closes without libm, and `-lm` enters the ld
+    command only when the source actually calls `math.pow` (scan `usesPow`,
+    the same pattern as `usesDb`/`usesMysql`/`usesConcurrency`; `kof_math_pow`
+    is the only call path to the shim). Dead ternary in `NativeAssembler`
+    (sqlite identical on both branches) removed alongside. Proved on the real
+    artifact: `LinkByUseTest` 3/3 with `readelf --dynamic` — plain links libc
+    ONLY (no libm/libsqlite3/libmariadb/libpthread); sqlite/pthread/libm still
+    link when used; the pow binary output byte-matches the JVM oracle (golden
+    measured, never memorized). Cross/JS/JVM faces already by-use (`needsSqlite`
+    #431, host delegation, lazy class-load) — the tracker row R2 flips ✅.
 
   - **FFI struct ABI slice 3.8a — `AbiLayout`, the measured layout/classification engine**
     — a pure engine (`kof-compiler` `AbiLayout`) that, given a struct's scalar

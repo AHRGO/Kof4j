@@ -92,6 +92,7 @@ public class NativeBackend implements Backend {
     boolean usesHttp = false;
     boolean usesMysql = false;
     boolean usesConcurrency = false;
+    boolean usesPow = false;
     /** #431: bibliotecas dos `extern` bound (ligadas no ld, link-by-use). */
     final Set<String> ffiLibs = new LinkedHashSet<>();
     boolean ffiUsesCstr = false;
@@ -255,6 +256,9 @@ public class NativeBackend implements Backend {
                         KofOperation op = ops.get(i);
                         if (op instanceof KofCall kc && kc.methodName().startsWith("kof_http_")) {
                             usesHttp = true;
+                        }
+                        if (op instanceof KofCall kc && kc.methodName().equals("kof_math_pow")) {
+                            usesPow = true; // R2: unico caminho ao shim (KofMath.pow; recusado no cross)
                         }
                         if (op instanceof KofCall kc && kc.methodName().startsWith("kof_db_")) {
                             usesDb = true;
@@ -429,12 +433,13 @@ public class NativeBackend implements Backend {
     }
 
     void assemble(Path asmFile, Path binFile) throws IOException {
-        // 7f174a6f passou `usesPow` (campo nunca declarado) + 6º arg (a
-        // assinatura de NativeAssembler.assemble é 4). A -lm é INCONDICIONAL lá
-        // (pow shim sempre presente — ver comentário do commit), então o arg é
-        // morto: chamo com os 4 reais. pow segue linkando.
+        // R2 fatia 1 (20/09): -lm AGORA é by-use como sqlite/mariadb/pthread —
+        // o shim `call pow` do monolito virou WEAK (RuntimeMath `.weak pow`),
+        // então linkar sem libm fecha; usaPow só quando a fonte chama
+        // kof_math_pow (scan acima — único caminho ao shim). A história do
+        // 7f174a6f (arg morto, link incondicional) mora aqui.
         NativeAssembler.assemble(asmFile, binFile, usesDb || usesOrm, usesMysql,
-                usesConcurrency, ffiLibs);
+                usesConcurrency, ffiLibs, usesPow);
     }
 
     // ---------------------------------------------------------------------

@@ -23,7 +23,8 @@ public final class NativeAssembler {
      *  caminho (contém '/') entra como input posicional do ld; um soname vira
      *  `-l:<nome>` — exatamente o padrão do SQLite (DB001), sem dlopen. */
     static void assemble(Path asmFile, Path binFile, boolean usesDb, boolean usesMysql,
-                   boolean usesConcurrency, java.util.Collection<String> ffiLibs) throws IOException {
+                   boolean usesConcurrency, java.util.Collection<String> ffiLibs,
+                   boolean usesPow) throws IOException {
         Path objFile = asmFile.resolveSibling(asmFile.getFileName() + ".o");
         System.err.println("NativeBackend: assembling " + asmFile);
         try {
@@ -41,16 +42,18 @@ public final class NativeAssembler {
                     "ld", "-o", binFile.toString(), objFile.toString(),
                     "-dynamic-linker", "/lib64/ld-linux-x86-64.so.2", "-lc"));
             if (usesDb) {
-                cmdL.add(usesMysql ? "-l:libsqlite3.so.0" : "-l:libsqlite3.so.0");
+                cmdL.add("-l:libsqlite3.so.0");
                 if (usesMysql) cmdL.add("-l:libmariadb.so.3");
             }
             if (usesConcurrency) cmdL.add("-l:libpthread.so.0");
-            // STDLIB S1b.2 (decisão 7a da mantenedora): pow → libm. O runtime
-            // x86 é emitido inteiro (fatia byte-a-byte do RuntimeSlices — o
-            // shim kof_math_pow com `call pow` está sempre presente), então
-            // -lm é sempre ligado, como -lc (dyn). Recusa em riscv/aarch =
-            // KofMath.supportedOn (MATH001) — lá o link é estático sem libc.
-            cmdL.add("-lm");
+            // R2 fatia 1 (20/09): pow → libm só POR USO (decisão 7a mantida;
+            // o EAGER "sempre ligado" caducou — o shim `call pow` do monolito
+            // é FRACO desde aqui: `.weak pow` em RuntimeMath, então linka sem
+            // libm e o simbolo nunca e alcancado quando usesPow=false, porque
+            // o unicos call-sites nascem do scan usesPow no NativeBackend).
+            // Recusa em riscv/aarch = KofMath.supportedOn (MATH001) — la o
+            // link e estatico sem libc. Prova: LinkByUseTest (readelf medido).
+            if (usesPow) cmdL.add("-lm");
             // #431: as libs dos `extern` bound entram no link (posicional se é
             // caminho, `-l:` se é soname). Arquivo ausente → erro honesto do ld
             // (nunca um binário que resolve em runtime pra faltar).
