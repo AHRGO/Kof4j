@@ -1,0 +1,79 @@
+[English](supply-chain-trust-boundary-2026-09-20.md) | [Português](supply-chain-trust-boundary-2026-09-20.pt_BR.md)
+
+# KOF supply-chain trust boundary v1 — baseline (20/09/2026)
+
+> **Read-only measurement.** No workflow, script or production file was changed to produce this
+> document, and **no decision is taken here**: it maps what is true today so the maintainer can
+> answer the contract questions in §5. Sources: repository files at the tip, the GitHub API
+> (read-only, as `jonasrochasilva-prog`), and the ratified contract (`D-RELEASE-1.0`,
+> `D-1.0-EDGES`, `PROPOSAL-1.0-EXIT-GATE` §32.6/§32.7). Facts are re-verifiable with the commands
+> named in each row.
+
+## 1. What the contract already says (ratified) — and what it leaves undefined
+
+| Already ratified | Where |
+|---|---|
+| the tested package must have the **same digest** as the artifact that will be published | `PROPOSAL-1.0-EXIT-GATE` §32.6 `[RATIFIED]` |
+| **artifact identity (SHA256/provenance)** is a mandatory gate; **per-target evidence manifest** | `D-1.0-EDGES` Q7 (§35 gates) |
+| Registry = GitHub Releases + `SHA256SUMS` verified before install | `D2-A` |
+
+**Undefined:** the trust root, the builder identity, the minimum provenance format, who verifies, where the policy is enforced, and what happens when proof is missing/invalid. Classification of the front: **CONTRACT AMBIGUITY** (the requirement exists; its content does not).
+
+## 2. Measured baseline
+
+| # | Measurement | Result | How to re-check |
+|---|---|---|---|
+| M1 | **Tested SHA vs published SHA** (real release `0.4.9-beta`) | tested = `e790137ee1` (merge of #558); published = `22a186b9bf` (bump commit by `kof-release-bot`, **unsigned**). The trees differ in exactly `CHANGELOG.md`, `VERSION`, `version.properties`, `pom.xml`. | `git log --grep 'bump version to 0.4.9-beta'`; `git diff <parent> <bump> --name-only` |
+| M2 | Release workflow shape | `release.yml`: full tests (`mvn clean package` + golden + integration) run in job 1 on the **trigger SHA**; job 1 then commits the version bump and pushes; job 2 checks out the **bump SHA** and rebuilds with `-DskipTests` in a 3-OS matrix (linux/windows/macos), then publishes. Inside the release workflow the windows/macos archives are built once and only sanity-checked (`kof version`/`kof info`); the full suite runs there on Linux only (the separate `CI` workflow has a multi-OS `kof.io` job, which is a different run). | `.github/workflows/release.yml` |
+| M3 | Token scope of the release workflow | `permissions: contents: write` at **workflow level** (both jobs), and job 1 does a direct `git push` to `main`. | `release.yml` lines 14–15, 94 |
+| M4 | Third-party action references | **56** `uses:` references, **0** pinned by full commit SHA (all by tag/branch, e.g. `actions/checkout@v7`, `softprops/action-gh-release@v3`, `docker://…gitleaks:v8.28.0`). Repository setting `sha_pinning_required=false`, `allowed_actions=all`. | `grep -h 'uses:' .github/workflows/*.yml`; `gh api repos/KofLang/Kof4j/actions/permissions` |
+| M5 | Default token / approvals | default workflow permissions = `read`; `can_approve_pull_request_reviews=false`. 3 workflows declare no top-level `permissions:` (they inherit the `read` default). | `gh api repos/KofLang/Kof4j/actions/permissions/workflow` |
+| M6 | Source governance | `main` and `beta-0.5.0`: `protected=false`, **0 rulesets**, no required status checks visible. (This is what the API shows for the visible repository settings; collaborator permissions and org policy are separate dimensions and were not measured.) | `gh api repos/KofLang/Kof4j/branches/<b>/protection`, `.../rulesets` |
+| M7 | Provenance / attestations | none found: the attestations API returns 404 for the digest of a real release asset. Releases are published by `github-actions[bot]`; assets = archive + `kof-cli-*.jar` + `SHA256SUMS` (the checksum file is produced and published by the same job as the artifact). GitHub itself records a server-side `digest` per asset. | `gh api repos/KofLang/Kof4j/attestations/sha256:<digest>` |
+| M8 | Consumer verification (Registry) | `kof deps resolve` verifies `SHA256SUMS` **before installing**, and now each source file (`REG002/REG004`); the checksum file travels **inside the same tarball**. | `DepsRegistry`, `DepsSources` |
+| M9 | Already in place (do not redesign) | CodeQL, Gitleaks, Dependabot (`maven` + `github-actions`, weekly), `SECURITY.md` (private vulnerability reporting), path-traversal guard on extraction, honest `REG00x` failures, #564/#565/#563 closed with hosted-CI evidence. | repo files |
+
+## 3. Classification of the findings
+
+| Finding | Class | Note |
+|---|---|---|
+| M1/M2 same-candidate discontinuity | **release-readiness gap already covered by the ratified §32.6** | belongs to the release/EXIT-GATE lane; not a claim that a past release was tampered — only that, unchanged, this design would not satisfy the 1.0 evidence contract |
+| M3, M4 | **security hardening finding / release-trust gap** | not a `BUG REAL`; needs the workflow owner's decision (Q7) |
+| M6 | **source-governance ambiguity** | build provenance proves "commit X, workflow Y", not "commit X was authorized" (Q8) |
+| M7/M8 | **contract ambiguity** | SHA256 gives integrity, not authenticity: if artifact **and** checksum are replaced by the same actor, the hash still matches (T3) |
+
+## 4. Threat model (what each layer can and cannot say)
+
+| ID | Threat | SHA256SUMS today | Build provenance | Workflow/source hardening |
+|---|---|---|---|---|
+| T1/T2 | corruption / package changed without its hash | detects | detects | — |
+| T3 | package **and** checksum replaced together | **insufficient alone** | helps if the proof comes from an independent root | helps |
+| T4/T5 | artifact from another commit / rebuilt after the tests | no | **strong** if the attested subject digest is the tested one | pipeline shape (M2) is essential |
+| T6 | compromised workflow/action | no | can attest a compromised build | **essential** (M3/M4) |
+| T7 | leaked publish credential | no | helps detect divergent origin | least privilege / short-lived credentials |
+| T8 | unauthorized commit | no | still valid provenance | **source governance** (M6) |
+| T9/T10 | rollback/replay; signing-key compromise | no | not alone | TUF-class designs address these (post-1.0 unless decided otherwise) |
+| T11/T12 | malicious legitimate dependency; false-green CI | no | proves origin, not safety | trustworthy gates (`EG-2`) |
+
+There is no single tool that covers all of it; the chain is **source trust → trusted build policy → test the exact artifact → digest → provenance → publish the same bytes → verify by policy**.
+
+## 5. Questions that only the maintainer can decide (none is decided here)
+
+1. **Mandatory property for 1.0:** integrity, authenticity, build provenance, source/change-control provenance, or a combination?
+2. **Trusted identity** that may attest an official release (the official workflow, a reusable trusted workflow, a maintainer identity, a Sigstore identity, other).
+3. **Source policy:** is provenance of *any* commit enough, or must the revision also have passed a policy (review/required checks)?
+4. **Exact-artifact invariant** (build once → test → attest → publish the same bytes): formal rule? (§32.6 already ratifies the digest equality.)
+5. **Where verification is mandatory:** release gate only, plus download docs, also in `kof deps resolve`, only for official packages?
+6. **Failure policy:** missing/invalid evidence blocks the release, blocks consumption, warns, or differs official vs community?
+7. **Workflow trust:** SHA-pinned actions, job-level least privilege, a trusted/reusable build workflow, all, or hardening outside the contract?
+8. **Source protection:** branch protection/rulesets, required checks, review, signed commits, none?
+9. **SBOM:** 1.0 gate, complementary evidence, or post-1.0?
+10. **Rollback/freshness:** are GitHub Releases + provenance enough for 1.0, or is explicit rollback/replay protection required?
+11. **Vendor neutrality:** name "GitHub Artifact Attestation" in the contract, or state neutral properties and allow equivalent implementations? (Research favours the second.)
+12. **Consumer object (follows #566(b)):** since packages are now consumed as source modules, the artifact that receives the digest/attestation for a *library* is the sources tarball — confirm.
+
+## 6. Not done here / next steps
+
+- **Lab (outside Kof4j):** validate empirically, in a repository of my own, what GitHub Artifact Attestations deliver (verify online/offline; tamper, wrong digest and wrong repository must be RED; permissions, cost, lock-in; SHA-pinned actions and job-level tokens). Results will be appended here.
+- **Design issue** (`[Design/Contract][Security]`) with §5, only after the lab and a duplicate check (none found today for provenance/attestation/SLSA/Sigstore).
+- **Hard stop:** no production change (workflow, gate, `kof deps`) until the maintainer records a decision; and no file `IN PROGRESS` of another lane is touched.
