@@ -220,6 +220,23 @@ Resultado: **nenhum código-fantasma não documentado** — a disciplina de
 gap-codes se sustenta (o drift §259 já tem guarda mecânica, `DomainGapCodesTest`).
 Só o `MEDIA002` carecia da ressalva "label, não código emitido"; adicionada inline.
 
+## Passada 4 — fecho da frente (21/09)
+
+Spot-check final do mandato: o `ConformanceMatrixTest` — a classe que a matriz
+diz travar cada célula ✅ — rodou **12/12 verde** no tip
+(`mvn -o -pl kof-compiler -am -Dtest=ConformanceMatrixTest test`, 111,5s), logo
+a cadeia doc → teste citado → golden se sustenta.
+
+**Frente concluída.** Ao longo de cinco fatias e quatro passadas a varredura
+não achou **nenhum stub / desenvolvimento incompleto não documentado**:
+0 `TODO` abandonado, 0 teste desabilitado, a invariante de paridade está
+travada mecanicamente, 2 referências-fantasma de *prova* foram catalogadas e
+anotadas, contagens/códigos stale corrigidos, e os dois candidatos (UI-JS-1,
+MEDIA002) são por desenho/documentados. Artefatos duráveis: este ledger, o
+ratchet `StdParityGapAuditTest` e `scripts/audit-stubs.sh`. Novos re-triggers
+desta frente devem ser recusados (estabilidade AGENTS); trabalho novo aguarda
+regressão ou decisão da mantenedora.
+
 ## Próximas passadas (planejadas — ainda não executadas)
 
 1. **Checagem de assimetria de paridade** — **FEITA (fatia 2b,

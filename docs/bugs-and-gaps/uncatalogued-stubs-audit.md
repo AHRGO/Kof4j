@@ -215,6 +215,22 @@ Result: **no undocumented phantom code** — the gap-code discipline holds (the
 §259 drift already has a machine guard, `DomainGapCodesTest`). Only `MEDIA002`
 lacked the "label, not an emitted code" caveat; added inline.
 
+## Pass 4 — front closure (21/09)
+
+Final spot-check of the mandate: `ConformanceMatrixTest` — the class the matrix
+says locks every ✅ cell — ran **12/12 green** on the tip
+(`mvn -o -pl kof-compiler -am -Dtest=ConformanceMatrixTest test`, 111.5s), so
+the doc → cited test → golden chain holds.
+
+**Front concluded.** Across five slices and four passes the sweep found **no
+undocumented stub / silent incomplete development**: 0 abandoned `TODO`, 0
+disabled tests, the parity invariant is machine-locked, 2 phantom *proof*
+references were catalogued and annotated, stale counts/codes were corrected,
+and the two candidate items (UI-JS-1, MEDIA002) are by-design/documented. The
+durable artifacts are this ledger, the `StdParityGapAuditTest` ratchet and
+`scripts/audit-stubs.sh`. Further re-triggers of this front should be refused
+(AGENTS stability); new work waits for a regression or a maintainer decision.
+
 ## Next passes (planned — not yet executed)
 
 1. **Parity asymmetry check** — **DONE (slice 2b, `StdParityGapAuditTest`
