@@ -11861,4 +11861,12 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Fix (rule 7, mínimo):** adicionadas `secrets.of(String literal) -> Secret` e `secrets.secret(String name) -> Secret` ao bloco `secrets` de `kof-compiler/src/main/java/dev/kof/compiler/StdCatalog.java`, casando as aridades/tipos do dispatcher. Sem mudança de comportamento no resto.
 - **Prova:** `StdCatalogSignaturesTest` 12/12, `StdCatalogTest` 11/11, `StdlibIdiomsCompileTest` 20/20; consumidores LSP `LspSignatureHelpTest` 7/7, `LspServerTest` 38/38, `LspSignatureHoverTest` 6/6.
 
+## §437 — `check_500` vermelho: `JvmOpCollections.java` cruzou 600 linhas (baseline 584 -> 604) após o fix §432 do boxing de coleções — 🟡 ABERTO (catalogado 21/09; split pendente da lane JVM, não corrigido aqui)
+
+- **Medido (21/09, árvore no tip `20a3158b` + pouso F2d3a, após o re-pouso do §432):** `./scripts/check_500.sh` -> `FALHOU — kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java tinha 584 (< 600) no baseline, agora 604 (>= 600): cruzou a linha vermelha, split obrigatório.` (rc!=0); `wc -l` = 604.
+- **Origem (diagnosticada, não corrigida):** o fix do §432 da própria lane JVM (`c6a8520d` — VerifyError do `Map<_,Object>.getOrDefault(k,<prim>)`) cresceu o arquivo já tolerado para além da linha crítica. >= 600 é gate de merge (AGENTS §"Lição aprendida").
+- **Dono:** a lane JVM. NÃO tocado aqui — regra 8.
+- **Repro mínimo:** `./scripts/check_500.sh` -> rc!=0; `wc -l kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java` = 604.
+- **Caminho do fix:** split por responsabilidade (extrair uma fatia) e então `--update-baseline` com o arquivo < 600; o baseline nunca legitima >= 600.
+
 <!-- en-switch --> **EN:** [§436 (en)](known-bugs.md)

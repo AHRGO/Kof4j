@@ -14328,4 +14328,12 @@ p
 - **Fix (rule 7, minimal):** added `secrets.of(String literal) -> Secret` and `secrets.secret(String name) -> Secret` to the `secrets` block of `kof-compiler/src/main/java/dev/kof/compiler/StdCatalog.java`, matching the dispatcher arities/types. No behavior change elsewhere.
 - **Proof:** `StdCatalogSignaturesTest` 12/12, `StdCatalogTest` 11/11, `StdlibIdiomsCompileTest` 20/20; LSP consumers `LspSignatureHelpTest` 7/7, `LspServerTest` 38/38, `LspSignatureHoverTest` 6/6.
 
+## §437 — `check_500` red: `JvmOpCollections.java` crossed 600 lines (584 baseline -> 604) after the §432 collection-boxing fix — 🟡 OPEN (catalogued 21/09; JVM lane split pending, not fixed here)
+
+- **Measured (21/09, tree at tip `20a3158b` + the F2d3a landing, after the §432 re-land):** `./scripts/check_500.sh` -> `FALHOU — kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java tinha 584 (< 600) no baseline, agora 604 (>= 600): cruzou a linha vermelha, split obrigatório.` (rc!=0); `wc -l` = 604.
+- **Origin (diagnosed, not fixed):** the JVM lane's own §432 fix (`c6a8520d` — `Map<_,Object>.getOrDefault(k,<prim>)` VerifyError) grew the already-tolerated file past the critical line. >= 600 is a merge gate (AGENTS §"Lesson learned").
+- **Owner:** the JVM lane. NOT touched here — rule 8.
+- **Minimal repro:** `./scripts/check_500.sh` -> rc!=0; `wc -l kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java` = 604.
+- **Fix path:** split by responsibility (extract a slice) and then `--update-baseline` with the file < 600; the baseline never legitimizes >= 600.
+
 <!-- pt-switch --> **PT:** [§436 (pt_BR)](known-bugs.pt_BR.md)
