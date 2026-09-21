@@ -48,7 +48,10 @@ nova**).
   `future/secrets-plan.md`) ·
   `db-parity-plan.md` (+PT — **adendo `D-DB-GAPS` 21/09**: paridade total de DB,
   todo alvo aceita mariadb/mysql/sqlite/mongodb; a S0 limpa o aceite silencioso
-  do §421; dono frente DB/ORM a nomear).
+  do §421; dono frente DB/ORM a nomear) ·
+  `codegen-step-2.2.3-assessment.md` (+PT — **proposta, regra 6**: o roadmap 2.2.3
+  "migrar DDL/runner ao `CodegenStep`" é descompasso de fase; opções A/B pendentes
+  da mantenedora; sem código).
   Autoridade: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Registros vivos aqui (não são backlog):** `DECISIONS.md`,
   `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.

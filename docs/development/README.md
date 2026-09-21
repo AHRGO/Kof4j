@@ -47,7 +47,10 @@ surface**).
   `kof.security`, Stage 5/security lane, `future/secrets-plan.md`) ·
   `db-parity-plan.md` (+PT — **`D-DB-GAPS` addendum 21/09**: total DB parity,
   every target accepts mariadb/mysql/sqlite/mongodb; S0 clears §421's silent
-  accept; owner DB/ORM front to be named).
+  accept; owner DB/ORM front to be named) ·
+  `codegen-step-2.2.3-assessment.md` (+PT — **proposal, rule 6**: roadmap 2.2.3
+  "migrate DDL/runner to `CodegenStep`" is a phase mismatch; options A/B pending
+  the maintainer; no code).
   Authority: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Living records here (not backlog):** `DECISIONS.md`,
   `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.
