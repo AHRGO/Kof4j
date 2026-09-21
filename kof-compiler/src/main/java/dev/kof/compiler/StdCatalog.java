@@ -331,7 +331,9 @@ public final class StdCatalog {
                     Map.entry("secret", List.of("secret() -> String")))),
             Map.entry("secrets", java.util.Map.ofEntries(
                     Map.entry("get", List.of("get(String key) -> String", "get(String key, String d) -> String")),
-                    Map.entry("redact", List.of("redact(String s) -> String")))),
+                    Map.entry("redact", List.of("redact(String s) -> String")),
+                    Map.entry("of", List.of("of(String literal) -> Secret")),
+                    Map.entry("secret", List.of("secret(String name) -> Secret")))),
             Map.entry("security", java.util.Map.ofEntries(
                     Map.entry("constantTimeEquals", List.of("constantTimeEquals(String a, String b) -> Bool")),
                     Map.entry("randomHex", List.of("randomHex(Int n) -> String")),

@@ -14317,3 +14317,12 @@ p
 - **Catalogued by the gaps-db lane (21/09, tip `32285136`) while the fix was in flight:** same `601 >= 600` red; that same gate run also flagged this lane's `RuntimeOrm1` 637, split in `205e60de` (`RuntimeOrmMysql`; `RuntimeOrm1` 508). The cli lane closed §435 in the interval (resolution above).
 
 <!-- pt-switch --> **PT:** [§435 (pt_BR)](known-bugs.pt_BR.md#435--gate-check_500-vermelho-kof-clilspserverjava-cruzou-600-linhas-baseline-584--601-apos-o-fix-429-do-lsp---corrigido-2109-lane-18-split-em-lspjsonrpc-lspserver-601582)
+
+## §436 — `StdCatalog` out of sync with `KofSecurity`: `secrets.of`/`secrets.secret` (D-SECRETS face 1) bind in the dispatcher but are missing from the signature table — ✅ FIXED 21/09 (lane .18 / session 9093; catalog entries added, `fatiaSix` lock green)
+
+- **Symptom (measured 21/09 on tip `32b022d0`):** `mvn -pl kof-compiler -am test` → `StdCatalogSignaturesTest.fatiaSixSecurityAndMediaBindAgainstRealDispatchers` RED: `tabela sem secrets.of ==> expected: <false> but was: <true>` (2944 tests, 1 failure, 0 errors). The `secrets` namespace advertises `get,redact,of,secret` via `KofSecurity`, but `StdCatalog` only carried `get`/`redact`.
+- **Origin:** `32285136` (`feat(security): D-SECRETS face 1 — tipo Secret (JVM-first, SECN008 nos demais)`) added the `of`/`secret` dispatcher arms (`kof_sec_secret_of`/`kof_sec_secret`, nominal type `Secret`) plus the namespace member list, but not the matching `StdCatalog` signatures — the LSP `signatureHelp`/`completion` catalog drifted from the real dispatcher. The lane's own ratchet caught it at the tip.
+- **Fix (rule 7, minimal):** added `secrets.of(String literal) -> Secret` and `secrets.secret(String name) -> Secret` to the `secrets` block of `kof-compiler/src/main/java/dev/kof/compiler/StdCatalog.java`, matching the dispatcher arities/types. No behavior change elsewhere.
+- **Proof:** `StdCatalogSignaturesTest` 12/12, `StdCatalogTest` 11/11, `StdlibIdiomsCompileTest` 20/20; LSP consumers `LspSignatureHelpTest` 7/7, `LspServerTest` 38/38, `LspSignatureHoverTest` 6/6.
+
+<!-- pt-switch --> **PT:** [§436 (pt_BR)](known-bugs.pt_BR.md)

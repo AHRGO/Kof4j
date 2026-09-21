@@ -13,6 +13,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§436 FIXED — `StdCatalog` missing `secrets.of`/`secrets.secret`**
+    (21/09, session 9093): the D-SECRETS face-1 landing (`32285136`) added the
+    `secrets.of`/`secrets.secret` dispatcher arms (nominal `Secret`) and the
+    namespace member list, but not the `StdCatalog` signatures — the
+    `StdCatalogSignaturesTest.fatiaSix…` ratchet then failed at the tip
+    (`tabela sem secrets.of`). Added the two catalog entries so the LSP
+    `signatureHelp`/completion table matches the dispatcher. Proof:
+    `StdCatalogSignaturesTest` 12/12, `StdCatalogTest` 11/11,
+    `StdlibIdiomsCompileTest` 20/20, `LspServerTest` 38/38.
+
   - **§432 FIXED — JVM `VerifyError` on `Map<_,Object>.getOrDefault(k, <primitive>)`**
     (21/09, session 9093): `JvmOpCollections.emitMapCall` resolved the owner's V
     then overwrote it with `parameterTypes[1]` (the written arg), so for an

@@ -11850,3 +11850,12 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Catalogado pela lane gaps-db (21/09, tip `32285136`) com o fix em voo:** mesmo vermelho `601 >= 600`; o mesmo run do gate também acusou o `RuntimeOrm1` 637 desta lane, splitado em `205e60de` (`RuntimeOrmMysql`; `RuntimeOrm1` 508). A lane cli fechou o §435 no intervalo (resolução acima).
 
 <!-- en-switch --> **EN:** [§435 (en)](known-bugs.md#435--check_500-gate-red-kof-clilspserverjava-crossed-600-lines-584-baseline--601-after-the-429-lsp-fix---fixed-2109-lane-18-split-into-lspjsonrpc-lspserver-601582)
+
+## §436 — `StdCatalog` dessincronizado de `KofSecurity`: `secrets.of`/`secrets.secret` (D-SECRETS face 1) bindam no dispatcher mas faltam na tabela de assinaturas — ✅ CORRIGIDO 21/09 (lane .18 / sessão 9093; entradas de catálogo adicionadas, lock `fatiaSix` verde)
+
+- **Sintoma (medido 21/09 no tip `32b022d0`):** `mvn -pl kof-compiler -am test` → `StdCatalogSignaturesTest.fatiaSixSecurityAndMediaBindAgainstRealDispatchers` VERMELHO: `tabela sem secrets.of ==> expected: <false> but was: <true>` (2944 testes, 1 falha, 0 erros). O namespace `secrets` anuncia `get,redact,of,secret` via `KofSecurity`, mas o `StdCatalog` só tinha `get`/`redact`.
+- **Origem:** `32285136` (`feat(security): D-SECRETS face 1 — tipo Secret (JVM-first, SECN008 nos demais)`) adicionou os braços `of`/`secret` do dispatcher (`kof_sec_secret_of`/`kof_sec_secret`, tipo nominal `Secret`) e a lista de membros do namespace, mas não as assinaturas correspondentes no `StdCatalog` — o catálogo de `signatureHelp`/`completion` do LSP ficou dessincronizado do dispatcher real. O próprio ratchet da lane pegou no tip.
+- **Fix (rule 7, mínimo):** adicionadas `secrets.of(String literal) -> Secret` e `secrets.secret(String name) -> Secret` ao bloco `secrets` de `kof-compiler/src/main/java/dev/kof/compiler/StdCatalog.java`, casando as aridades/tipos do dispatcher. Sem mudança de comportamento no resto.
+- **Prova:** `StdCatalogSignaturesTest` 12/12, `StdCatalogTest` 11/11, `StdlibIdiomsCompileTest` 20/20; consumidores LSP `LspSignatureHelpTest` 7/7, `LspServerTest` 38/38, `LspSignatureHoverTest` 6/6.
+
+<!-- en-switch --> **EN:** [§436 (en)](known-bugs.md)

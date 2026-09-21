@@ -13,6 +13,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§436 CORRIGIDO — `StdCatalog` sem `secrets.of`/`secrets.secret`**
+    (21/09, sessão 9093): o pouso da D-SECRETS face 1 (`32285136`) adicionou os
+    braços `secrets.of`/`secrets.secret` do dispatcher (nominal `Secret`) e a
+    lista de membros do namespace, mas não as assinaturas no `StdCatalog` — o
+    ratchet `StdCatalogSignaturesTest.fatiaSix…` então falhou no tip
+    (`tabela sem secrets.of`). Adicionadas as duas entradas de catálogo para o
+    `signatureHelp`/completion do LSP casar com o dispatcher. Prova:
+    `StdCatalogSignaturesTest` 12/12, `StdCatalogTest` 11/11,
+    `StdlibIdiomsCompileTest` 20/20, `LspServerTest` 38/38.
+
   - **§432 CORRIGIDO — `VerifyError` do JVM em `Map<_,Object>.getOrDefault(k, <primitivo>)`**
     (21/09, sessão 9093): o `JvmOpCollections.emitMapCall` resolvia o V do owner
     e o sobrescrevia com `parameterTypes[1]` (o arg escrito), então num mapa de
