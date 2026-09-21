@@ -105,6 +105,6 @@ Run in a **personal public smoke repository** (nothing in Kof4j was touched). Tw
 ## 7. Not done here / next steps
 
 - **Lab:** done — see §6 (results, including the flaw found in my first run).
-- **Design issue** (`[Design/Contract][Security]`) with §5, only after the lab and a duplicate check (none found today for provenance/attestation/SLSA/Sigstore).
+- **Design issue filed: #571** (`[Design/Contract][Security]`, the §5 questions + the lab evidence); duplicate check found none. Awaiting the maintainer; it carries no `1.0-*` category yet (the gate/lane classifies, not the author).
 - **Hard stop:** no production change (workflow, gate, `kof deps`) until the maintainer records a decision; and no file `IN PROGRESS` of another lane is touched.
 - **Side effect of this research:** while listing the workflow runs of the published commit, a real defect in an unrelated bot workflow was found and filed as **#570**; the maintainer's lane fixed it first (`known-bugs.md` §394) and this work added the regression test and a real-GitHub proof. It is not part of the trust contract.

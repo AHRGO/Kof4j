@@ -105,6 +105,6 @@ Executado num **repositório de smoke público pessoal** (nada do Kof4j foi toca
 ## 7. Não feito aqui / próximos passos
 
 - **Laboratório:** feito — ver §6 (resultados, inclusive o defeito da minha primeira rodada).
-- **Issue de design** (`[Design/Contract][Security]`) com a §5, só depois do laboratório e de checar duplicatas (nenhuma encontrada hoje para proveniência/attestation/SLSA/Sigstore).
+- **Issue de design aberta: #571** (`[Design/Contract][Security]`, as perguntas da §5 + a evidência do laboratório); a checagem de duplicatas não achou nenhuma. Aguarda a mantenedora; ainda não tem categoria `1.0-*` (quem classifica é o gate/lane, não o autor).
 - **Parada dura:** nenhuma mudança de produção (workflow, gate, `kof deps`) até a mantenedora registrar uma decisão; e nenhum arquivo `EM CURSO` de outra lane é tocado.
 - **Efeito colateral desta pesquisa:** ao listar os workflow runs do commit publicado, foi achado um defeito real num workflow de bot não relacionado, registrado como **#570**; a lane da mantenedora o corrigiu primeiro (`known-bugs.md` §394) e este trabalho acrescentou o teste de regressão e uma prova em GitHub real. Não faz parte do contrato de confiança.
