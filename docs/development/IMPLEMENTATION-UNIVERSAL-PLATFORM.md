@@ -171,8 +171,7 @@ R4**; R4 gates only the declarative rows (3.2, 3.7).
 | 3.5 | Providers via FFI/REST/CLI (AWS/Azure/GCP — interop) | ✅ 20/09 | — | R3; v1 = the generic providers measured and green (fs/CLI/REST goldens 20/09, JVM==JS); concrete clouds are OFFICIAL PACKAGES (`infra-<cloud>`, D-MAKEALIVE Q2), not compiler surface |
 | 3.6 | Secrets via `kof.security` | 🟡 | security lane | `kof.security` exists; `Secret`/`KeyHandle` pending (Stage 5) |
 | 3.7 | Cycle detection in the `infra` graph at compile-time | 🔵 | — | 3.1 |
-| 3.8 | Tooling: `kof infra plan/apply/destroy` | 🔵 | — | 3.1 |
-
+| 3.8 | Tooling: `kof makealive plan/apply/destroy` | ✅ 20/09 | `.18` | **DONE (D-MAKEALIVE-CLI, contrato decidido 20/09 por delegação do maintainer)**: verbo segue o nome decidido no Q1 (`makealive`, não `infra`); `design()`+`provider()` convenção D-WORKFLOW-RUN; MARK `@@KOF_MAKEALIVE@@ `; estado h2 `--state` com gen=max+1 + MARCA de estado vazio no destroy (bug de geração invisivel achado pelo E2E; `mkMaxGen` landed); JVM==JS byte parity, script/native refusals (R7). Prova: `CmdMakealiveTest` 7/7 + `MakealiveMaxGenE2ETest` 4/4 + Makealive battery 14/14. |
 ---
 
 # Stage 4 — DATA (data engineering / science / ML)

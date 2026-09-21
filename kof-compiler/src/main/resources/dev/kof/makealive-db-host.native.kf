@@ -20,6 +20,15 @@ Bool mkSaveState(String dbConn, String design, Int gen, State st) {
     return false
 }
 
+Int mkMaxGen(String dbConn, String design) {
+    if (dbConn == null || dbConn == "") { throw "makealive: mkMaxGen sem conexão de db" }
+    if (design == null || design == "") { throw "makealive: mkMaxGen sem nome de design" }
+    if (true) {
+        throw "makealive: mkMaxGen não disponível no NATIVE — ORM001 (stub)"
+    }
+    return -1
+}
+
 State mkLoadState(String dbConn, String design) {
     if (dbConn == null || dbConn == "") { throw "makealive: mkLoadState sem conexão db" }
     if (design == null || design == "") { throw "makealive: mkLoadState sem nome de design" }

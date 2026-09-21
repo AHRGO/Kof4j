@@ -138,5 +138,18 @@ signing API. Nothing in `kof.makealive` knows a cloud exists.
   still what the goldens use.
 - **§382** (open, bridge): kof.io JS numeric codes (above).
 - Rows 3.3 (reconcile via `scheduler`), 3.6 (`kof.security` secrets —
-  security lane), 3.8 (`kof infra` CLI — maintainer decision) are the rest
+  security lane), 3.8 is now the `kof makealive` CLI (D-MAKEALIVE-CLI, 20/09); the rest of
   of Stage 3; 3.2/3.7 are ⛔R4.
+
+## CLI (3.8 — landed 20/09, D-MAKEALIVE-CLI)
+
+`kof makealive <plan|apply|destroy> file.kf [--state PATH] [--json] [--target jvm|js]` —
+the file stays pure Kof (`import kof.makealive`, `design(): Infrastructure`,
+`provider(): Provider`, no `main()`); the tool synthesizes the runner's main() over the
+same host faces and reads/writes the h2 state file via `mkLoadState`/`mkSaveState`/
+`mkMaxGen` (gen = max+1 always; destroy saves an empty-state marker so the generation is
+visible). `plan` never writes rows; the marked line decides exit codes; JVM and JS are
+byte-identical (`CmdMakealiveTest` 7/7). script/native remain honest refusals (R7), and
+on Native the state faces keep the `ORM001` stub at the call site.
+
+

@@ -216,14 +216,7 @@ final class CmdWorkflow {
             return 0;
         }
         printReport(obj, json, jsonLine);
-        return truthy(obj.get("allOk")) ? 0 : 1;
-    }
-
-    /** Bool JS é numérico (contrato §382); JVM emite true/false. Mesma decisão. */
-    private static boolean truthy(Object v) {
-        if (v instanceof Boolean b) { return b; }
-        if (v instanceof Number n) { return n.longValue() != 0; }
-        return false;
+        return KofCliSupport.truthy(obj.get("allOk")) ? 0 : 1;
     }
 
     /** main() sintetizado (texto Kof) — a única convenção nova do runner. */

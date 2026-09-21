@@ -173,7 +173,9 @@ fatia db do host deve ser gateada por alvo exatamente como `workflow-ckpt-host.k
   embarca no 3.1 enquanto isso).
 - **3.8 [CLI `kof infra`]** — contrato do comando = decisão da mantenedora
   (regra 6, a postura da 2.6): `kof run infra.kf` já é o runner quando o 3.1
-  landar.
+  landar. ✅ DECIDIDO + ENTREGUE 20/09 (D-MAKEALIVE-CLI): verbo `makealive` (Q1),
+  convenção `design()`+`provider()`, protocolo MARK, estado h2 via `--state`
+  (gen=max+1, `mkMaxGen`); recusas honestas script/native (R7).
 
 ## 6. Perguntas abertas (decisões da mantenedora — NÃO resolver em código)
 

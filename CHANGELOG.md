@@ -35,6 +35,23 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     alterado chega ao bind e ao banco — antes o UPDATE era salvo com valores
     idênticos e não provinha writeback). Prova medida: KofOrmE2ETest
     42/0F/3skip, paridade byte JVM==Native (10 linhas).
+  - **3.8 landed — `kof makealive plan|apply|destroy` (D-MAKEALIVE-CLI)** (20/09, `.18`):
+    the Stage 3 tooling row closes with the maintainer-delegated contract. Verb follows
+    the Q1 namespace decision (`makealive`, not the R1-denied `infra` literal); the file
+    stays pure Kof — `import kof.makealive`, `design(): Infrastructure`,
+    `provider(): Provider`, no main() — and the tool synthesizes a main() over the host
+    faces, speaking the `@@KOF_MAKEALIVE@@ {json}` marked line (human/JSON formatting in
+    the CLI, exit decided by `allOk` via the tolerant truthy; a throw = raw passthrough,
+    rc 1, the §255 anti-pattern stays closed). State is an h2 file (`--state PATH`,
+    default `<file>.makealive`) saved at gen = max+1 via the new `mkMaxGen` face; the
+    destroy E2E found and fixed a REAL host bug — an empty state saved ZERO rows, so
+    the generation was invisible and plan still saw the old world (marker row `res ""`
+    now persists the empty generation; `MakealiveDbHost/DbState` goldens unaffected).
+    JVM==JS byte parity (in-process KofJsRunner + tee, same as 2.6 js); script/native
+    honest refusals; JDBC-driver contract unchanged (runner brings the driver; h2 is a
+    TEST dependency of kof-cli exactly like kof-compiler). Proof: `CmdMakealiveTest` 7/7
+    + `MakealiveMaxGenE2ETest` 4/4 + Makealive battery 14/14.
+
   - **known-bugs §381 FIXED — an `entity` field named with a RESERVED keyword OOMed the
     compiler** (20/09, `.18` via maintainer decision — clean error, no grammar change):
     `parseEntityDeclaration`'s field loop called `expectId` which reports WITHOUT

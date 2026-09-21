@@ -51,6 +51,7 @@ Auxílio de navegação, não é uma decisão por si só. Ordenado como neste ar
 - **D-SCHED-DURATION** — durações idiomáticas no `scheduler.at`
 - **D-WORKFLOW-RUN** — `kof workflow run`
 - **D-MAKEALIVE** — Kof Makealive (Estágio 3)
+- **D-MAKEALIVE-CLI** — contrato da 3.8: `kof makealive plan|apply|destroy` (20/09)
 - **D-KOF-AS-CLOUD** — Kof tem que SER a nuvem
 - **D-BOOTSTRAP** — o bootstrapper (Kof em Kof)
 - **D-DB-GAPS** — gaps órfãos de DB/ORM
@@ -2783,3 +2784,24 @@ Kof também precisa de um **pipeline de som** (reprodução, streams, volume/mix
 ### Adendo 3 D-GRAPHICS-GAMING (20/09/2026, mantenedora — CORREÇÃO ao adendo 2) — Kof nunca usou e nunca vai usar JavaFX; toda mensagem de JavaFX em Kof é erro disfarçado
 
 A mantenedora revoga o enquadramento "kof.ui-JVM é legado JavaFX que continua funcionando": **Kof NUNCA usou JavaFX e NUNCA vai usar** — coerente com a regra da casa de 12/09 (`AGENTS.md`, "regra JavaFX"): a mensagem "componentes de runtime do JavaFX não foram encontrados" NUNCA é benigna, é o launcher engolindo um `VerifyError`/`ExceptionInInitializer` real — erro disfarçado, sempre com causa raiz, nunca acomodado. Logo: (a) o item (3) do adendo 2 passa a valer: qualquer ligação `javafx.*` encontrada na árvore do Kof NÃO é face legada — é DEFEITO a remover pelo pipeline normal de bug (regra 4 do freeze: corrigir o código até o comportamento documentado, nunca documentar em volta dele); (b) `kof.ui` no JVM era, é e será servido pela pilha portátil de paridade desde o início — a seção "migração" do plano vira seção de ERRADICAÇÃO: medir toda referência `javafx` em src/docs/std-lib (`grep -rn "javafx" kof-*/src` etc.), classificar cada uma (erro-disfarçado do tipo exceção engolida vs. alegação errada de doc) e abrir como itens com repro; (c) compatibilidade retroativa NÃO protege caminho JavaFX — código Kof de usuário nunca nomeou JavaFX, removê-lo não pode quebrar nenhum programa Kof válido (a promessa de compat é aos programas Kof, não aos internos).
+## D-MAKEALIVE-CLI — contrato da 3.8: `kof makealive plan|apply|destroy` (tooling sobre o host)
+
+Decidido 20/09 por delegação do maintainer à `.18` ("propor o contrato + implementar") — a
+linha 3.8 exigia decisão de contrato de comando (regra 6). **(1) Verbo:** `kof makealive
+<plan|apply|destroy> <file.kf>` — NÃO `kof infra`: o Q1 do D-MAKEALIVE decidiu que o namespace
+É o nome (`kof.makealive`) e o literal `infra` segue HARD-DENY no ledger do stdlib (R1); o
+CLI segue o nome decidido. **(2) Convenção de programa (a postura D-WORKFLOW-RUN da 2.6):** o
+arquivo é Kof puro — `import kof.makealive`, `design(): Infrastructure`,
+`provider(): Provider`, sem `main()`; o tool síntetiza um main() sobre as faces do próprio
+host (`plan`/`apply`/`destroy`/`mkLoadState`/`mkSaveState`/`mkMaxGen`) e conversa pela linha
+marcada `@@KOF_MAKEALIVE@@ {json}`; a formatação humana/JSON mora no CLI, nunca no host.
+**(3) Estado:** arquivo h2 via `--state PATH` (default `<file>.makealive`); o contrato "quem
+traz o driver JDBC é o runner" segue intacto (KofJsDbBridge); apply/destroy SEMPRE salvam
+`gen = max+1` — e o destroy persiste uma MARCA de estado vazio (`res ""`) para que a geracao
+vazia fique visível a `mkMaxGen`/`mkLoadState` (bug achado pelo E2E desta própria decisão;
+golden `emptyGenerationIsVisibleAndLoadsEmpty`). **(4) Alvos:** JVM+JS paridade de bytes (R7);
+script/native recusa honesta (igual 2.6) — o stub Native do host mantém `ORM001` no call-site.
+**(5) rc:** a linha marcada decide (`allOk`); throw (provider recusou set/delete, guardas de
+argumento) = sem linha marcada, a saída crua É o diagnóstico, rc 1. Prova:
+`CmdMakealiveTest` 7/7 + `MakealiveMaxGenE2ETest` 4/4 + bateria Makealive 14/14.
+

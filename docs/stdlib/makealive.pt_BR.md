@@ -141,5 +141,18 @@ de assinatura. Nada em `kof.makealive` sabe que uma nuvem existe.
   false; if (bad) throw …`) continua legal e é o que os goldens usam.
 - **§382** (aberto, ponte): códigos numéricos do kof.io JS (acima).
 - Linhas 3.3 (reconcile via `scheduler`), 3.6 (secrets `kof.security` — lane
-  security) e 3.8 (CLI `kof infra` — decisão do mantenedor) são o resto do
+  security) e 3.8 agora é o CLI `kof makealive` (D-MAKEALIVE-CLI, 20/09); o resto é do
   Estágio 3; 3.2/3.7 são ⛔R4.
+
+## CLI (3.8 — landed 20/09, D-MAKEALIVE-CLI)
+
+`kof makealive <plan|apply|destroy> file.kf [--state PATH] [--json] [--target jvm|js]` —
+o arquivo segue Kof puro (`import kof.makealive`, `design(): Infrastructure`,
+`provider(): Provider`, sem `main()`); o tool síntetiza o main() do runner sobre as MESMAS
+faces do host e lê/escreve o estado h2 via `mkLoadState`/`mkSaveState`/`mkMaxGen`
+(gen = max+1 sempre; destroy salva uma MARCA de estado vazio para que a geracao vazia fique
+visível). `plan` nunca grava linhas; a linha marcada decide o exit code; JVM e JS são
+idênticos byte a byte (`CmdMakealiveTest` 7/7). script/native seguem recusa honesta (R7), e
+no Native as faces de estado mantêm o stub `ORM001` no call-site.
+
+

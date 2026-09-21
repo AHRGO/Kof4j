@@ -165,6 +165,8 @@ the host db slice must be gated per target exactly like `workflow-ckpt-host.kf`
   3.1 meanwhile).
 - **3.8 [`kof infra` CLI]** — command contract = maintainer decision (rule 6,
   the 2.6 posture): `kof run infra.kf` is already the runner once 3.1 lands.
+✅ DECIDED + SHIPPED 20/09 (D-MAKEALIVE-CLI): `kof makealive plan|apply|destroy` landed: verb `makealive` (Q1), `design()`+`provider()` convention, MARK protocol,
+  h2 state via `--state` (gen=max+1, `mkMaxGen`); script/native honest refusals (R7).
 
 ## 6. Open questions (maintainer decisions — do NOT resolve in code)
 

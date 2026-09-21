@@ -34,7 +34,7 @@ final class CompilerMakealive {
             "Resource", "StateEntry", "State", "Spec", "Infrastructure",
             "Provider", "Plan", "Report",
             "plan", "apply", "destroy", "kofMkTemNome",
-            "KofMkState", "mkSaveState", "mkLoadState",
+            "KofMkState", "mkSaveState", "mkLoadState", "mkMaxGen",
             "ReconJob", "reconcile");
 
     private static void mergeSlice(CompilerDriver driver,

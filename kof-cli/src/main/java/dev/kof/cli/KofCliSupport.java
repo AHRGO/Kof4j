@@ -26,6 +26,13 @@ import java.util.Map;
  */
 final class KofCliSupport {
 
+    /** Bool JS é numérico (contrato §382); JVM emite true/false. Mesma decisão. */
+    static boolean truthy(Object v) {
+        if (v instanceof Boolean b) { return b; }
+        if (v instanceof Number n) { return n.longValue() != 0; }
+        return false;
+    }
+
     static java.io.OutputStream tee(java.io.OutputStream a, java.io.OutputStream b) {
         return new java.io.OutputStream() {
             @Override public void write(int n) throws java.io.IOException { a.write(n); b.write(n); }

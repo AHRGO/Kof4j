@@ -38,6 +38,14 @@ Bool mkSaveState(String dbConn, String design, Int gen, State st) {
     if (st == null) { throw "makealive: mkSaveState com state nulo" }
     var db = db.connect(dbConn)
     orm.create<KofMkState>(db)
+    if (st.entries.size() == 0) {
+        // 3.8: estado VAZIO (destroy) tambem precisa de linha — sem uma MARCA
+        // de design a geracao fica invisivel e mkMaxGen/mkLoadState continuariam
+        // na geracao antiga. res "" e o marcador em nivel de design; o loop de
+        // nomes do load o ignora (best continua contando a geracao).
+        orm.save(db, KofMkState(0, design, gen, "", -1, ""))
+        return true
+    }
     var i = 0
     while (i < st.entries.size()) {
         var e = st.entries.get(i)
@@ -51,6 +59,27 @@ Bool mkSaveState(String dbConn, String design, Int gen, State st) {
         i = i + 1
     }
     return true
+}
+
+Int mkMaxGen(String dbConn, String design) {
+    // 3.8: o CLI `kof makealive` precisa de gen > atual p/ gravar a nova
+    // geração; o máximo já é calculado dentro de mkLoadState mas nunca
+    // foi exposto. Sem estado = -1 (o primeiro apply salva em gen 0).
+    if (dbConn == null || dbConn == "") { throw "makealive: mkMaxGen sem conexão de db" }
+    if (design == null || design == "") { throw "makealive: mkMaxGen sem nome de design" }
+    var db = db.connect(dbConn)
+    orm.create<KofMkState>(db)
+    var rows = orm.all<KofMkState>(db)
+    var best = -1
+    var i = 0
+    while (i < rows.size) {
+        var r = rows.get(i)
+        if (r.design == design) {
+            if (r.gen > best) { best = r.gen }
+        }
+        i = i + 1
+    }
+    return best
 }
 
 State mkLoadState(String dbConn, String design) {
@@ -75,7 +104,7 @@ State mkLoadState(String dbConn, String design) {
     i = 0
     while (i < rows.size) {
         var r = rows.get(i)
-        if (r.design == design && r.gen == best) {
+        if (r.design == design && r.gen == best && r.res != "") {
             var seen = false
             var k = 0
             while (k < names.size) {
