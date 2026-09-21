@@ -115,6 +115,12 @@ passe livre (anti-neutering: mudar a prosa obriga a atualizar o gate junto). O f
 provado funcionalmente — `agent-verify-wiring-test.sh` executa o esqueleto real dos blocos e pega
 um regex certo preso num `if` mal aninhado (bug que esta lane plantou e corrigiu na mesma hora).
 
+O mesmo gate também exige paridade EN↔PT dos IDs de decisão do `DECISIONS.md` e da numeração/
+nível das seções, e — acrescentado 21/09 — que a **lista `Pendentes (condição 3)` da §0 seja
+igual ao conjunto loose que o gate de release de fato marca** (`ls docs/development/*.md` menos
+o `ALLOWLIST` dele). O registro humano não pode discordar da medição: nem listar menos, nem
+listar a mais (um loose extra plantado foi pego nos dois idiomas).
+
 **19 itens na fila aberta** (ressincronizado 21/09 ~08:5x — 20→19
 quando **§380** (codegen JS de `if` aninhado com `throw`) foi formalizado ✅
 `9f383bcf`, re-medido 16/0F no tip; 19→18 quando **§381** (OOM do keyword

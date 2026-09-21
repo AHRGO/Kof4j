@@ -138,6 +138,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **The gate now closes the loop in both directions** (21/09, docs lane): besides CHANGELOG-claims-closed-without-ledger-backing, an id CLOSED in the ledger at or after section 400 with no CHANGELOG entry now fails the gate. The floor is an epoch rule, not amnesty: measured 21/09, 25 closed ids below 400 lack entries while ZERO above it do — practice solidified, so the rule starts where the practice does. Mutation-verified: a planted closed section in the ledger with no changelog line is named by the gate; real state stays green. (A companion no-ghost idea — forbidding changelog refs to ids absent from the ledger — was measured and REJECTED: the hits are ancient cross-references, a wrong rule for the history, refused per the round-11 lesson.)
+  - **`check_live_records.sh` part D: README §0 pending list == the gate's loose set** (21/09,
+    docs lane): the gate already checked the live count (A), the `DECISIONS.md` EN<->PT decision-ID
+    parity (B) and the section numbering/level (C); now it also requires that the `Pending
+    (condition 3)` list in the lane README §0 equals the loose set the release gate actually flags
+    (`ls docs/development/*.md` minus its `ALLOWLIST`), in both languages. This closes a silent
+    divergence where the human registry lists a doc the measurement no longer flags (or omits one
+    it does) — record and measurement may not disagree. Red-first: the selftest plants a divergent
+    list, and a planted extra loose doc in the real tree was caught in EN and PT.
   - **Release condition 5 (bug_issues) measured on a host without `gh`** (21/09, docs lane):
     the gate reads `UNKNOWN` when `gh` is unavailable — fail-closed by design, so a query failure
     never reads as "0 bugs". That hid the real state on this host. New

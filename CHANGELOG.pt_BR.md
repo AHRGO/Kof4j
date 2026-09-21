@@ -125,6 +125,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **O gate agora fecha o ciclo nas duas direções** (21/09, lane docs): além de afirmação de fechamento sem respaldo no ledger, um id FECHADO no ledger a partir da seção 400 sem entrada no CHANGELOG agora derruba o gate. O piso é regra de época, não anistia: medido em 21/09, 25 ids abaixo de 400 não têm entrada enquanto ZERO acima têm — a prática consolidou, a regra começa onde a prática começa. Verificado por mutação: uma seção fechada plantada no ledger sem linha no changelog é nomeada pelo gate; estado real segue verde. (Uma ideia companheira — proibir referências do changelog a ids fora do ledger — foi medida e REJEITADA: os achados são remissões antigas de outro espaço de ids, regra errada para a história, recusada pela lição da rodada 11.)
+  - **`check_live_records.sh` parte D: lista pendente da §0 do README == conjunto loose do gate**
+    (21/09, lane docs): o gate já verificava a contagem viva (A), a paridade EN<->PT dos IDs de
+    decisão do `DECISIONS.md` (B) e a numeração/nível das seções (C); agora também exige que a lista
+    `Pendentes (condição 3)` da §0 do README da lane seja igual ao conjunto loose que o gate de
+    release de fato marca (`ls docs/development/*.md` menos o `ALLOWLIST` dele), nos dois idiomas.
+    Isso fecha uma divergência silenciosa em que o registro humano lista um doc que a medição não
+    marca mais (ou omite um que marca) — registro e medição não podem discordar. Red-first: o
+    selftest planta lista divergente, e um loose extra plantado na árvore real foi pego em EN e PT.
   - **Condição 5 (bug_issues) medida num host sem `gh`** (21/09, lane docs): o gate lê
     `UNKNOWN` quando o `gh` não está disponível — fail-closed por desenho, então falha de consulta
     nunca vira "0 bugs". Isso escondia o estado real neste host. Novo

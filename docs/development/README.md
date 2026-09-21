@@ -114,6 +114,12 @@ proven functionally — `agent-verify-wiring-test.sh` executes the real block sk
 correctly-written regex trapped in a mis-nested `if` (a bug this lane planted and then fixed the
 same hour).
 
+The same gate also enforces EN↔PT parity of the `DECISIONS.md` decision IDs and of the section
+numbering/level, and — added 21/09 — that the **`Pending (condition 3)` list in §0 equals the
+loose set the release gate actually flags** (`ls docs/development/*.md` minus its `ALLOWLIST`).
+The human registry may not disagree with the measurement: neither listing less nor more (a
+planted extra loose doc was caught in both languages).
+
 **19 items in the open queue** (resynced 21/09 ~08:5x — 20→19 when
 **§380** (JS nested-`if`/`throw` codegen) was formalized ✅ `9f383bcf`,
 re-measured 16/0F at the tip; 19→18 when **§381** (entity-field keyword
