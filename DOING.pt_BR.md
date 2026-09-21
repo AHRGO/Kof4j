@@ -634,3 +634,29 @@ MAGIC/tag, `RuntimeList.kof_list_add` layout):
 > **✅ FEITO (20/09, dono = jonasrochasilva-prog, lane platform-cli/segurança — ordem do Jonas "o que não depender da decisão da mantenedora no #571 pode executar"): TUDO do MD V6 que independe da #571, executado (fora do que a #571 decide).** Dentro do que já está RATIFICADO (§32.6 "digest testado == publicado", §32.7/§35 "manifesto de evidência por alvo") ou é medição: **(1) `scripts/verify-release-identity.sh`** (`--release <tag>`/`--dir`; SHA256SUMS × digest do servidor GitHub; cobertura do arquivo; `--tested <sha256>` = a igualdade ratificada, `NOT_RUN` (nunca PASS) sem ele, `--require-tested` a torna falha) — teste RED→GREEN 12 cenários offline; rodado nas releases REAIS 0.4.9: arquivo PASS, jar avulso WARN (M10), testado==publicado NOT_RUN (hoje NÃO VERIFICÁVEL), `--tested` errado FAIL. **(2) `scripts/release-evidence.sh`** (manifesto TSV por alvo: `add`/`check`/`digest`; 8 alvos Stable GREEN na MESMA SHA; RED/SKIP/NOT_RUN nunca verde; SHA antiga recusada; digest obrigatório exceto Script; RED→GREEN na mesma SHA passa COM WARN) — teste RED→GREEN, 9 grupos. Ambos registrados em `run-agent-tests.sh` (suíte que o CI roda); NÃO ligados a nenhum gate (encaixe no EG-8 é da lane EG/release). **(3) Build reprodutível:** medi que o jar do `kof-cli` NÃO era byte-reprodutível (3 builds limpos = 3 sha256, 0 arquivos com conteúdo diferente — só metadados) e que `project.build.outputTimestamp` resolve; `scripts/check-reproducible-build.sh` (2 clones limpos em caminhos diferentes, nunca veredito falso: build que falha = exit 2) deu **RED em `a29650bb` (`992ab012…` × `0f9d8fc4…`) e GREEN em `8a8137a1` (`30e2bca1207bc74a…` nos dois)**; pom.xml raiz ganhou a propriedade (o bump edita só `<revision>`); compile gate rc=0; lacuna restante: os arquivos de distribuição (`package.sh`, com JDK embutido) NÃO foram medidos. **(4) Medição de rollback (T9):** attestation de artefato ANTIGO verifica VERDE com versões novas — proveniência não dá frescor. **(5) Bookkeeping:** a linha #568 (issue fechada) já foi removida pela lane EG (`3087e1f5`); minha edição paralela foi descartada no rebase. **Registro de honestidade:** minha 1ª medição de reprodutibilidade foi INVÁLIDA (`mvn clean` falhou no mount do Windows, os "builds" eram o mesmo jar velho) — pega ao ler o `rc=1`, guardada e refeita em filesystem nativo (documentado em §8 da auditoria). **AINDA BLOQUEADO PELA #571 (nada feito):** pin de actions/menor privilégio (Q7), proteção de branch (Q8), gerar/atestar proveniência no `release.yml` e reescrita do pipeline p/ mesmo candidato (Q1–Q4), verificação no `kof deps resolve` (Q5/Q6), SBOM (Q9), frescor (Q10), redação neutra (Q11), objeto p/ biblioteca (Q12). **NEXT STEP: aguardar a Mel na #571; a lane EG/release decide se liga `verify-release-identity`/`release-evidence` ao gate do RC.**
 
 > **✅ FEITO (21/09, sessão 9093 — HOTFIX de sincronia): push normal estava BLOQUEADO por alerta CodeQL novo (#951).** Medido: `scripts/sync-push.sh` falhava 3x — o pre-push (`scripts/codeql-gate.sh --fast`) retornava RED `1 alerta(s) NOVO(s) sem baseline` → `#951 [java/unused-parameter] kof-cli/.../ProvenanceVerifier.java:25`. É a raiz de os agentes caírem em plumbing/`--no-verify` e a árvore compartilhada dessincronizar ('trabalho parece não-pushado'). **Conserto na raiz:** `ProvenanceVerifier.NONE` (única impl do contrato) passa a nomear artefato/sha/bundle na mensagem de `Unavailable` — `artifact` deixa de ser morto (R6: a mensagem agora diz O QUE não deu para verificar); triagem `#951` no `scripts/codeql-baseline.txt` (fix pousado, aguarda re-scan; dono D-ARTIFACT-TRUST + #555). **Prova:** `TrustGateTest` 14/14 + `TrustPolicyTest` 24/24; `compile` kof-cli OK; `codeql-gate.sh --fast` saiu de RED para INCONCLUSIVO → push normal liberado; selftest do gate CodeQL OK. **NEXT STEP:** commit + `sync-push.sh` normal (prova da sincronia restaurada).
+
+## 🔀 AVISO AOS AGENTES — TROCA DE ROTEADOR / IDENTIDADE POR IP (21/09, mantenedora)
+
+A mantenedora **trocou o roteador** e os IPv4 mudaram. Como as lanes eram rastreadas por
+IPv4, **o MESMO host passou a aparecer com dono diferente** e itens foram mal-atribuídos a
+"outro agente". Evidência no próprio DOING: a frente KOF MAKEALIVE dizia
+`dono = 192.168.100.18 (este host, IP atual 192.168.15.101)`.
+
+**Mapa medido:**
+- `192.168.100.18` == `192.168.15.101` == **ESTE host / sessão 9093** — lanes: development/
+  universal-platform, **makealive**, estabilização/EXIT GATE. **NÃO** trate `.18` como agente separado.
+- **Regra nova:** identifique o dono pelo **conteúdo/commit (SHA), pela `sessão` e pela lane** —
+  NUNCA só pelo IPv4 (muda com roteador/DHCP). Antes de "não tocar" por colisão de IP, reconfira.
+
+### Reclamações / fechamentos de stale (>24h, verificados 21/09 ~09:4x)
+- **KOF MAKEALIVE — RECLAIMADO por esta sessão (9093).** Sempre foi deste host desde 19/09
+  (`192.168.100.18 (este host, IP atual 192.168.15.101)`); a troca de IP fez parecer lane `.18`
+  alheia. Estado real **medido**: 3.1 MK-1 (cli+rest+fs+db) + 3.3 reconcile + 3.8 CLI FEITOS;
+  último toque `21be6dec` (21/09 04:01). Residual 3.2/3.7/3.8 = decisão da mantenedora (rule 6).
+- **Erasure river (claim 19/09 ~23:10, linha ~757) — CONCLUÍDO, claim stale:** §355/§356/§357
+  estão **✅ FIXED** no ledger (famílias 1/2/3). Nada a fazer além de fechar o claim.
+- **D-KOF-FIRST (linha ~43, claim 19/09) — stale:** decisão em `DECISIONS.md` §D-KOF-FIRST +
+  `AGENTS.md` regra 10 (pousada) → claim encerrável.
+- **Candidatos stale a re-verificar pelo conteúdo (dono por IP, não confirmado):** ISSUE-LANE
+  `.22` (claim 18/09 ~22:15, linha ~584), ISSUE-SWEEP `.14` (19/09, linha ~280), `jonas` #278
+  (18/09, linhas ~565/568 — jonas segue ativo em 20/09, provável duplicata antiga).
