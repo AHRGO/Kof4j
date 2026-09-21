@@ -188,7 +188,11 @@ Ints).
 
 ## Canvas 2D
 
-Canvas permite desenho 2D livre — gráficos, visualizações, jogos.
+Canvas permite desenho 2D livre — gráficos, visualizações. Uma superfície
+completa de jogo (loop de frame, sprites, som, vídeo) é **engine própria da
+Kof**, ainda só plano — `docs/development/future/graphics-gaming-plan.md`
+(`DECISIONS.md` §D-GRAPHICS-GAMING + adendos); nada dessa superfície compila
+hoje.
 Renderiza em `<canvas>` no DOM (KofJS). JVM/Native são no-ops.
 
 ```kof
