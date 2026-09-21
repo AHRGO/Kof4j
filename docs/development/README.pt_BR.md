@@ -37,9 +37,10 @@ pedidos sem decisão).
 
 ## 0. O que está vivo aqui (leia primeiro)
 
-- **Pendentes (condição 3 do gate de release):** `ffi-abi-structs.md` (regra
-  6 — D6-1..D6-5) · `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (dono: sessão 9093,
-  frente de plataforma) · `makealive-plan.md` (residual 3.2/3.7/3.8, regra 6).
+- **Pendentes (condição 3 do gate de release):** `ffi-abi-structs.md`
+  (**D6 DECIDIDO 20/09** — implementação em curso, dono `jonas`) ·
+  `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (dono: sessão 9093, frente de
+  plataforma) · `makealive-plan.md` (residual 3.2/3.7/3.8, regra 6).
   Autoridade: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Registros vivos aqui (não são backlog):** `DECISIONS.md`,
   `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.
@@ -68,7 +69,7 @@ pedidos sem decisão).
 | 9 | ~~`workflow-plan.md`~~ + ~~`shell-plan.md`~~ (+PT) → `docs/workflow-plan.md` / `docs/shell-plan.md` | ✅ **CONCLUÍDOS 19/09** — workflow: as cinco faces landaram (`WorkflowE2ETest` 20/20, paridade byte JVM==JS, Native real); shell: 2.2.0–2.2.4 landados (`ShellE2ETest` 15/15; único residual = `pipeline` JS com pipes vivos, item de plataforma na linha 2.2 do tracker, não fatia do plano) | movidos para `docs/` (regra dos 3 estados — plano concluído não pode ficar em `development/`) | — |
 | 10 | `D-WORKFLOW-RUN` (Stage 2 linhas 2.5/2.6) — runner completo `kof workflow run` + exemplo de pipeline de CI/CD | ✅ **ATERROU 19/09** (dono lane plataforma, sessão 19/09-3/9093): convenção `pipeline(): KofWfDag`; `list`/`run --job`/`--dry-run`/`--json`; host `order()`/`runJob()` + `CmdWorkflow`; `examples/ci/ci-pipeline.kf` golden E2E (`CmdWorkflowTest` 9/9) | decisão travada em `DECISIONS.md` §D-WORKFLOW-RUN; implementado direto (fatias de tooling, precedente X9 `kof deploy`) | residual: faces JS/Native do runner são fatias seguintes honestas (R7) |
 | 11 | `makealive-plan.md` (+PT) — D-MAKEALIVE (ratificado 20/09, `DECISIONS.md`): infraestrutura como código tipado — **core MK-1 COMPLETO 20/09** (3.1: namespace virtual `kof.makealive` + providers genéricos REST/CLI + estado `kof.db`; bateria E2E makealive verde, 8 classes, paridade byte JVM==JS — plano §3.1) + **3.3 reconcile landado** (delega ao `scheduler.every`; `MakealiveReconcileE2ETest` 1/1 ×3) | `EM DESENVOLVIMENTO` | residual 3.2 (sintaxe `infra "prod" {}`) / 3.7 (ciclo em compile-time) / 3.8 (CLI `kof infra`) são decisões regra 6/R4 — fora da v1 até a mantenedora decidir |
-| — | `ffi-abi-structs.md` (+PT) — spec D6-A: ABI de struct/array da FFI (design primeiro) | `RASCUNHO — em revisão` (D6-A ratificada 19/09; escrita 19/09 — design puro: sem semântica, sem binding) | exec = compiler lane (3.8a/3.8b) + native (3.7) + decisão JS; D6-1..D6-5 precisam de verbete em `DECISIONS.md` antes de QUALQUER código | a verruga medida §1 (leak `Arena.global` em strings FFI) entra como candidata a fix com a spec, não bug silenciado |
+| — | `ffi-abi-structs.md` (+PT) — ABI de struct/array da FFI (D6) | `EM DESENVOLVIMENTO` — **D6 DECIDIDO 20/09** (`DECISIONS.md` §D-FFI-STRUCT: **D6-1 = A+B**, D6-2 só `new T[n]`, D6-3 `Buffer(U8,INOUT)`, D6-4 sret completo, D6-5 arena confinada); spec §4 = DECIDIDA; 3.8a `AbiLayout` landou; **3.8b fatia 1 landou 20/09** (`e79ea4e6` — record por valor como struct C no JVM, D6-1) | exec = dono **`jonas`** (frente FFI pós-#431) + compiler/native + decisão JS; **a lane docs só mantém o registro** | a verruga medida §1 (leak `Arena.global` em strings FFI) entra como candidata a fix com a spec (D6-5), não bug silenciado |
 | — | registros vivos: `conformance-matrix.md`, `ecosystem-coverage.md`, `KOFUI-AUDIT.md`, `known-bugs.md` (em `docs/bugs-and-gaps/`); `roadmap.md` (aqui); `roadmap-audit.md`/`complexity-audit.md` (em `docs/audits/`) | `VIVA` | **não são backlog** — matriz/auditoria/fila que se atualizam junto com cada fechamento | atualizar célula/seção no MESMO commit que fecha o gap |
 
 **Regra R12 (AGENTS.md):** nada de `future/` (RAII, package-compiler,

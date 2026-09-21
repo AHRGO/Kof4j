@@ -37,9 +37,10 @@ requests with no decision).
 
 ## 0. What is live here (read first)
 
-- **Pending (the release gate's condition 3):** `ffi-abi-structs.md` (rule 6 —
-  D6-1..D6-5) · `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (owner: session 9093,
-  platform front) · `makealive-plan.md` (residual 3.2/3.7/3.8, rule 6).
+- **Pending (the release gate's condition 3):** `ffi-abi-structs.md`
+  (**D6 DECIDED 20/09** — implementation in progress, owner `jonas`) ·
+  `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (owner: session 9093, platform front) ·
+  `makealive-plan.md` (residual 3.2/3.7/3.8, rule 6).
   Authority: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Living records here (not backlog):** `DECISIONS.md`,
   `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.
@@ -68,7 +69,7 @@ requests with no decision).
 | 9 | ~~`workflow-plan.md`~~ + ~~`shell-plan.md`~~ (+PT) → `docs/workflow-plan.md` / `docs/shell-plan.md` | ✅ **CONCLUDED 19/09** — workflow: all five faces landed (`WorkflowE2ETest` 20/20, byte-parity JVM==JS, Native real); shell: 2.2.0–2.2.4 landed (`ShellE2ETest` 15/15; only residual = JS live-pipe `pipeline`, a platform item on tracker row 2.2, not a plan slice) | moved to `docs/` (3-state rule — a concluded plan may not stay in `development/`) | — |
 | 10 | `D-WORKFLOW-RUN` (Stage 2 rows 2.5/2.6) — `kof workflow run` full runner + CI/CD pipeline example | ✅ **LANDED 19/09** (owner platform lane, sessão 19/09-3/9093): convention `pipeline(): KofWfDag`; `list`/`run --job`/`--dry-run`/`--json`; host `order()`/`runJob()` + `CmdWorkflow`; `examples/ci/ci-pipeline.kf` E2E golden (`CmdWorkflowTest` 9/9) | decision locked in `DECISIONS.md` §D-WORKFLOW-RUN; implemented directly (tooling slices, X9 `kof deploy` precedent) | residual: JS/Native runner faces are honest follow-up slices (R7) |
 | 11 | `makealive-plan.md` (+PT) — D-MAKEALIVE (ratified 20/09, `DECISIONS.md`): infrastructure as typed code — **MK-1 core COMPLETE 20/09** (3.1: virtual namespace `kof.makealive` + generic REST/CLI providers + `kof.db` state; makealive E2E battery green, 8 classes, JVM==JS byte parity — plan §3.1) + **3.3 reconcile landed** (delegates to `scheduler.every`; `MakealiveReconcileE2ETest` 1/1 ×3) | `IN DEVELOPMENT` | residual 3.2 (`infra "prod" {}` syntax) / 3.7 (compile-time cycle) / 3.8 (`kof infra` CLI) are rule-6/R4 decisions — out of v1 until the maintainer decides |
-| — | `ffi-abi-structs.md` (+PT) — D6-A spec: FFI struct/array ABI (design-first) | `DRAFT — under review` (ratified D6-A 19/09; drafted 19/09 — pure design: no semantics, no binding) | exec = compiler lane (3.8a/3.8b) + native (3.7) + JS decision; D6-1..D6-5 need `DECISIONS.md` entries before ANY code | the measured wart §1 (`Arena.global` leak on FFI strings) ships as fix-candidate with the spec, not a silent bug |
+| — | `ffi-abi-structs.md` (+PT) — FFI struct/array ABI (D6) | `IN DEVELOPMENT` — **D6 DECIDED 20/09** (`DECISIONS.md` §D-FFI-STRUCT: **D6-1 = A+B**, D6-2 only `new T[n]`, D6-3 `Buffer(U8,INOUT)`, D6-4 full sret, D6-5 confined arena); spec §4 = DECIDED; 3.8a `AbiLayout` landed; **3.8b fatia 1 landed 20/09** (`e79ea4e6` — record by value as C struct on the JVM, D6-1) | exec = owner **`jonas`** (post-#431 FFI front) + compiler/native + JS decision; **the docs lane only keeps the record** | the measured wart §1 (`Arena.global` leak on FFI strings) ships as a fix-candidate with the spec (D6-5), not a silent bug |
 | — | living records: `conformance-matrix.md`, `ecosystem-coverage.md`, `KOFUI-AUDIT.md`, `known-bugs.md` (in `docs/bugs-and-gaps/`); `roadmap.md` (here); `roadmap-audit.md`/`complexity-audit.md` (in `docs/audits/`) | `LIVE` | **they are not backlog** — matrix/audit/queue that update together with each closure | update the cell/section in the SAME commit that closes the gap |
 
 **R12 rule (AGENTS.md):** nothing from `future/` (RAII, package-compiler,
