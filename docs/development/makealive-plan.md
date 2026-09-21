@@ -2,9 +2,12 @@
 
 # `Kof Makealive` — infrastructure as typed code (design plan · Stage 3 · rows 3.1–3.8)
 
-**Type:** design plan — **Q1–Q4 ANSWERED 20/09 (§6)**; the core (3.1), 3.3 and 3.8
-shipped, **3.2 DECIDED 21/09 (`D-MAKEALIVE-SYNTAX`, in implementation) and 3.7
-unblocked** — the rule-6 items are resolved (see §5).
+**Type:** design plan — **Q1–Q4 ANSWERED 20/09 (§6)**; the core (3.1), 3.2, 3.3
+and 3.8 shipped (**3.2 LANDED 21/09 `966c86a4`** — `D-MAKEALIVE-SYNTAX`, pure
+sugar over `design()`), **3.7 CLOSED 21/09 as runtime-only** — the rule-6 items
+are resolved (see §5). **Only 3.6 remains** (secrets via `kof.security`),
+delegated to Stage 5 (security lane; design in `future/secrets-plan.md`, zero
+code) — that is why this plan is still in `development/` (three-states rule).
 **Tracker:** [`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`](IMPLEMENTATION-UNIVERSAL-PLATFORM.md)
 Stage 3 (rows 3.1–3.8). **Companion (vision):**
 [`docs/architecture/UNIVERSAL-PLATFORM-VISION.md`](../architecture/UNIVERSAL-PLATFORM-VISION.md)
