@@ -72,6 +72,15 @@ out="$(R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_PARITY_FILE="$T
 printf '%s' "$out" | grep -q 'bugs_gaps .*GREEN' && fail "ledger de bugs falhou mas bugs_gaps ficou GREEN (falso-verde)"
 printf '%s' "$out" | grep -q 'bugs_gaps .*UNKNOWN' && pass "ledger falho -> bugs_gaps UNKNOWN (nao GREEN)" || fail "ledger falho nao virou UNKNOWN"
 
+# ── cenario RED-first: tabela EG VAZIA/ilegivel nao pode virar "sem aresta" GREEN ─
+: > "$T/egempty"
+out="$(R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/egempty" R050_PARITY_FILE="$T/parity" \
+  R050_STABILITY_FILE="$T/stab" R050_PENDING_FILE="$T/pending" R050_LOOSE_MD_FILE="$T/loose" \
+  R050_SPEC_GAPS_FILE="$T/spec" R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 \
+  bash "$GATE" 2>&1)"
+printf '%s' "$out" | grep -q 'edges .*GREEN' && fail "tabela EG vazia mas edges ficou GREEN (falso-verde)"
+printf '%s' "$out" | grep -q 'edges .*UNKNOWN' && pass "EG vazia -> edges UNKNOWN (nao GREEN)" || fail "EG vazia nao virou UNKNOWN"
+
 if [ "$FAILED" = 1 ]; then
   echo "== check-release-050-gate: VERMELHA =="
   exit 1

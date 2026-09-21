@@ -172,15 +172,27 @@ c_edges() {
   # Criterion 6 counts the FULL edge queue (maintainer 09/20/2026): every open
   # EG item, EG-1 through EG-10 (no 1.0-phase exemption), plus the open
   # `1.0-blocks` issues.
-  local eg_open="" blocks=0
+  local eg_open="" blocks=0 eg_rows=0
   if [ -n "$EG_TSV" ]; then
+    [ -r "$EG_TSV" ] || { STATE[edges]=UNKNOWN; DETAIL[edges]="EG table unreadable: $EG_TSV"; return; }
     while IFS=$'\t' read -r eg st; do
       [ -z "$eg" ] && continue
+      eg_rows=$((eg_rows+1))
       case "$st" in *DONE*|*FEITO*) : ;; *) eg_open="$eg_open $eg" ;; esac
     done < "$EG_TSV"
+    # tabela vazia/nao-lida NAO pode virar "sem aresta aberta" verde — UNKNOWN (R6/Q5).
+    if [ "$eg_rows" -eq 0 ]; then
+      STATE[edges]=UNKNOWN; DETAIL[edges]="EG table empty/unparsed: $EG_TSV"; return
+    fi
     blocks="${R050_OPEN_BLOCKS:-0}"
   else
-    eg_open="$(awk -F'|' '/^\| *EG-[0-9]+ /{ id=$2; gsub(/ /,"",id); if ($0 !~ /DONE|FEITO/) print id }' docs/development/roadmap.md 2>/dev/null | tr '\n' ' ')"
+    local eg_all
+    eg_all="$(awk -F'|' '/^\| *EG-[0-9]+ /{print}' docs/development/roadmap.md 2>/dev/null)"
+    eg_rows="$(printf '%s\n' "$eg_all" | grep -c 'EG-[0-9]' || true)"
+    if [ "${eg_rows:-0}" -eq 0 ]; then
+      STATE[edges]=UNKNOWN; DETAIL[edges]="roadmap EG table unreadable (no EG rows in docs/development/roadmap.md)"; return
+    fi
+    eg_open="$(printf '%s\n' "$eg_all" | awk -F'|' '{ id=$2; gsub(/ /,"",id); if ($0 !~ /DONE|FEITO/) print id }' | tr '\n' ' ')"
     eval "$(scripts/gh-as-agent.sh token 2>/dev/null)" || true
     local out; out="$(bash scripts/check_release_blockers.sh --rc-gate 2>&1)"
     blocks="$(printf '%s\n' "$out" | sed -n 's/.*-- \([0-9]*\) open 1.0-blocks.*/\1/p' | head -1)"
