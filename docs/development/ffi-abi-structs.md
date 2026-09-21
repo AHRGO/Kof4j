@@ -2,13 +2,15 @@
 
 [English](ffi-abi-structs.md) | [Português](ffi-abi-structs.pt_BR.md)
 
-**Status:** DRAFT for maintainer review (D6-A, `docs/development/DECISIONS.md`
-D-POLL-19: "written spec first, review, then code").
+**Status:** **D6 DECIDED (maintainer 09/20/2026)** — `docs/development/DECISIONS.md`
+§D-FFI-STRUCT. D6-1 = A+B (`record` by-value + a new mutable `struct` by-ref) ·
+D6-2 = only `new T[n]` · D6-3 = `Buffer(U8, INOUT)`, no new syntax · D6-4 =
+implement the full sret · D6-5 = confined arena per downcall. The §4 proposal
+text is kept for its measured reasoning. This document stays DESIGN-ONLY.
 **Execution after approval:** compiler lane (tracker line 3.8) + native lane (3.7).
-This document is DESIGN ONLY — it changes no semantics and binds nothing.
 **Landed 20/09 (decision-free slice):** 3.8a `AbiLayout` — the layout/
 classification substrate, with golden measured on the three ABIs (§6.1). The
-binding (3.8b/3.7) and D6-1..D6-5 still wait for the maintainer.
+binding (3.8b/3.7) proceeds under the D6 decisions above.
 
 
 ## 1. What exists today (measured 19/09, not remembered)
@@ -65,7 +67,14 @@ Three worked examples the implementation tests must reproduce bit-exactly:
 | `Mixed(Bool b, Int n, Float f)` | `struct{_Bool,int,float}` | 12 | 4 | padding after `b`; eightbyte 0 (b+n) = INTEGER, eightbyte 1 (f) = **SSE** — MEASURED (GCC 13.3, x86-64 `-O0 -S`): first eightbyte in `%rdi`, `f` in `%xmm0`; offsets n=4, f=8 (corrected 20/09: the draft said INTEGER+INTEGER) |
 | `Time(Long s, Double d)` | `struct{int64_t,double}` | 16 | 8 | INTEGER + SSE (SysV; MEASURED: `s`→`%rdi`, `d`→`%xmm0`), 2 eightwords (aarch64). Kof has no `Int64` — the 64-bit integer is `Long` (corrected 20/09) |
 
-## 4. Design decisions for the maintainer (rule 6 — this lane proposes, never decides)
+## 4. Design decisions — **DECIDED** (D-FFI-STRUCT, maintainer 09/20/2026; rule 6)
+
+> **Decided:** D6-1 = **A+B** (`record` by-value read-only + a new mutable
+> `struct` by-ref) · D6-2 = **only `new T[n]`** binds to `ptr` · D6-3 =
+> **`Buffer(U8, INOUT)` with no new syntax** · D6-4 = **implement the full
+> sret** · D6-5 = **confined arena per downcall**. Authority:
+> `docs/development/DECISIONS.md` §D-FFI-STRUCT. The proposal text below is kept
+> for its measured reasoning.
 
 - **D6-1 · which Kof value maps to a C struct?**
   A) `record` (structural, immutable, already zero-ceremony — recommended default);

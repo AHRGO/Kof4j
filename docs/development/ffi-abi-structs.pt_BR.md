@@ -2,12 +2,14 @@
 
 [English](ffi-abi-structs.md) | [Português](ffi-abi-structs.pt_BR.md)
 
-**Status:** RASCUNHO para revisão da mantenedora (D6-A,
-`docs/development/DECISIONS.md` D-POLL-19: "especificação escrita primeiro,
-revisão, depois código").
+**Status:** **D6 DECIDIDO (mantenedora 20/09/2026)** — `docs/development/DECISIONS.md`
+§D-FFI-STRUCT. D6-1 = A+B (`record` por valor + novo `struct` mutável por
+referência) · D6-2 = só `new T[n]` · D6-3 = `Buffer(U8, INOUT)`, sem sintaxe
+nova · D6-4 = implementar o sret completo · D6-5 = arena confinada por downcall.
+O texto-proposta da §4 fica pelo raciocínio medido. Este documento segue
+SOMENTE DESIGN.
 **Execução após aprovação:** compiler lane (linha 3.8 do tracker) + native
-lane (3.7). Este documento é SOMENTE DESIGN — não muda semântica nem binda
-nada.
+lane (3.7).
 **Pousou 20/09 (fatia sem decisão):** 3.8a `AbiLayout` — o substrato de
 layout/classificação, com golden medido nas três ABIs (§6.1). O binding
 (3.8b/3.7) e D6-1..D6-5 seguem aguardando a mantenedora.
@@ -66,7 +68,14 @@ Três exemplos resolvidos que os testes de implementação devem reproduzir bit 
 | `Mixed(Bool b, Int n, Float f)` | `struct{_Bool,int,float}` | 12 | 4 | padding após `b`; eightbyte 0 (b+n) = INTEGER, eightbyte 1 (f) = **SSE** — MEDIDO (GCC 13.3, x86-64 `-O0 -S`): primeiro eightbyte em `%rdi`, `f` em `%xmm0`; offsets n=4, f=8 (corrigido 20/09: o rascunho dizia INTEGER+INTEGER) |
 | `Time(Long s, Double d)` | `struct{int64_t,double}` | 16 | 8 | INTEGER + SSE (SysV; MEDIDO: `s`→`%rdi`, `d`→`%xmm0`), 2 eightwords (aarch64). O Kof não tem `Int64` — o inteiro de 64 bits é `Long` (corrigido 20/09) |
 
-## 4. Decisões de design para a mantenedora (rule 6 — esta lane propõe, nunca decide)
+## 4. Decisões de design — **DECIDIDO** (D-FFI-STRUCT, mantenedora 20/09/2026; rule 6)
+
+> **Decidido:** D6-1 = **A+B** (`record` por valor read-only + novo `struct`
+> mutável por referência) · D6-2 = **só `new T[n]`** binda a `ptr` · D6-3 =
+> **`Buffer(U8, INOUT)` sem sintaxe nova** · D6-4 = **implementar o sret
+> completo** · D6-5 = **arena confinada por downcall**. Autoridade:
+> `docs/development/DECISIONS.md` §D-FFI-STRUCT. O texto-proposta abaixo fica
+> pelo raciocínio medido.
 
 - **D6-1 · qual valor Kof mapeia para struct C?**
   A) `record` (estrutural, imutável, zero-ceremonia — default recomendado);
