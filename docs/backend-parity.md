@@ -75,6 +75,8 @@
 | Virtual dispatch | ✅ | ✅ | ✅ | |
 | Interfaces | ✅ | ✅ | ✅ | |
 | Generics (erasure) — `Box<T>` primitive `T` | ✅ | ✅ | ✅ | 25/08 `substituteTypeVariable` + `kof_int_to_string` |
+| `sealed` types + exhaustive `switch` (X5.1/X5.2, `SEM080`/`SEM081`) | ✅ | ✅ | ✅ | 0.5.0-beta — modifier erased in codegen; same-file closed set; `switch`-expr must cover direct subtypes. `SealedTypeE2ETest` 9/9 + matrix `sealedswitch` |
+| variance `out`/`in` (declaration-site) + use-site projection `List<out T>`/`List<in T>` (X5.3/X5.4, `SEM082`) | ✅ | ✅ | ✅ | 0.5.0-beta — compile-time only (erases to `WildcardType`); `TypeVarianceE2ETest` 9/9 · `UseSiteVarianceE2ETest` 5/5 · matrix `variance`/`useproj` |
 | Lambdas `(x: Int) -> expr` | ✅ | ✅ | ✅ | with captures (box `BoxN`) |
 | Exceptions (throw "msg", try/catch/finally) | ✅ | ✅ | ✅ | Native: own unwinding |
 | `assert(cond[, msg])` | ✅ | ✅ | ✅ | |

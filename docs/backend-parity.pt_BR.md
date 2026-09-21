@@ -72,6 +72,8 @@
 | Virtual dispatch | ✅ | ✅ | ✅ | |
 | Interfaces | ✅ | ✅ | ✅ | |
 | Generics (erasure) — `Box<T>` `T` primitivo | ✅ | ✅ | ✅ | 25/08 `substituteTypeVariable` + `kof_int_to_string` |
+| Tipos `sealed` + `switch` exaustivo (X5.1/X5.2, `SEM080`/`SEM081`) | ✅ | ✅ | ✅ | 0.5.0-beta — modificador apagado na emissão; conjunto fechado por mesmo arquivo; `switch`-expr precisa cobrir os subtipos diretos. `SealedTypeE2ETest` 9/9 + matriz `sealedswitch` |
+| variância `out`/`in` (declaration-site) + projeção no sítio de uso `List<out T>`/`List<in T>` (X5.3/X5.4, `SEM082`) | ✅ | ✅ | ✅ | 0.5.0-beta — só compile-time (vira `WildcardType` na erosão); `TypeVarianceE2ETest` 9/9 · `UseSiteVarianceE2ETest` 5/5 · matriz `variance`/`useproj` |
 | Lambdas `(x: Int) -> expr` | ✅ | ✅ | ✅ | com capturas (box `BoxN`) |
 | Exceptions (throw "msg", try/catch/finally) | ✅ | ✅ | ✅ | Native: unwinding próprio |
 | `assert(cond[, msg])` | ✅ | ✅ | ✅ | |
