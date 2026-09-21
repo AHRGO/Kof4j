@@ -326,6 +326,10 @@ public final class CompilerPipeline {
             irModule = Optimizer.optimize(irModule);
             driver.currentModule = irModule;
         }
+        // R4 (D-CODEGEN-STEP): internal codegen hooks on the optimized IR,
+        // before emit/interpret. Empty registry = identity.
+        irModule = CodegenStepPipeline.run(driver.codegenSteps, irModule, driver);
+        driver.currentModule = irModule;
         if (driver.irObserver != null) {
             driver.irObserver.accept(unoptimized, irModule);
         }

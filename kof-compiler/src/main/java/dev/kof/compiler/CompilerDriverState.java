@@ -93,6 +93,13 @@ IRModule currentModule;
     final List<IRClass> syntheticClasses = new ArrayList<>();
 
     /**
+     * R4 (`DECISIONS.md` §D-CODEGEN-STEP, 21/09): internal compile-time codegen
+     * hooks, run in registration order on the OPTIMIZED IR before emit/interpret.
+     * Empty by default = identity (zero behavior change).
+     */
+    final List<CodegenStep> codegenSteps = new ArrayList<>();
+
+    /**
      * G6: desugar `test "nome" { }` para função void `kof_test_N` logo
      * após o parse — semântica, resolução e lowering tratam os testes como
      * funções comuns (zero casos especiais). Com o harness ativo, o main
