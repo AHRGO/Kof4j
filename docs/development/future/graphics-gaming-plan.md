@@ -73,11 +73,12 @@ scene "Pong" {
   platform, never to user code.
 - `dt` is the seconds since the previous frame — the deterministic
   game-time idiom; frame rate is a platform detail.
-- Candidate alternative (same intent, expression instead of block):
-  `run onFrame { dt -> ... }` — **which form is a rule-6 decision**
-  (§9 Q2); the *concept* (platform-owned loop, user-owned step) is not up
-  for renegotiation because every game library in every language forces the
-  user to wire the loop — Kof absorbs the mechanism (primary guideline).
+- Candidate alternative (same intent, **zero new syntax** — the existing
+  HOF/lambda idiom): `Scene("Pong") { dt -> ... }` — **which form enters the
+  language is a rule-6 decision** (§9 Q2); the *concept* (platform-owned
+  loop, user-owned step) is not up for renegotiation, because every game
+  library in every language forces the user to wire the loop — Kof absorbs
+  the mechanism (primary guideline).
 
 ### 1.2 2D — sprites and tiles
 

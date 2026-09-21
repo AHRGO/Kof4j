@@ -74,11 +74,12 @@ scene "Pong" {
   pertencem à plataforma, nunca ao código do usuário.
 - `dt` é o tempo desde o frame anterior — o idioma determinístico de
   tempo de jogo; a taxa de frames é detalhe da plataforma.
-- Alternativa candidata (mesma intenção, expressão em vez de bloco):
-  `run onFrame { dt -> ... }` — **qual forma entra é decisão de regra 6**
-  (§9 Q2); o *conceito* (loop da plataforma, passo do usuário) não está em
-  renegociação, porque toda biblioteca de jogo de toda língua obriga o
-  usuário a fiar o loop — o Kof absorve o mecanismo (diretriz primária).
+- Alternativa candidata (mesma intenção, **zero sintaxe nova** — o idioma
+  HOF/lambda existente): `Scene("Pong") { dt -> ... }` — **qual forma entra é
+  decisão de regra 6** (§9 Q2); o *conceito* (loop da plataforma, passo do
+  usuário) não está em renegociação, porque toda biblioteca de jogo de toda
+  língua obriga o usuário a fiar o loop — o Kof absorve o mecanismo
+  (diretriz primária).
 
 ### 1.2 2D — sprites e tiles
 
