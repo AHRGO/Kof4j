@@ -106,6 +106,15 @@ Medido 21/09: 11 de 26 hrefs eram abreviações à mão apontando para lugar nen
 moram na suíte de agentes da CI (`run-agent-tests.sh`) e disparam por mudança via
 `agent-verify.sh`.
 
+**Contagem viva tem de bater com a autoridade**: `scripts/check_live_records.sh` extrai toda
+declaração `N itens`/`N vivos` dos dois READMEs desta lane e exige que ela seja igual à contagem
+viva do classificador. A classe driftou duas vezes em 21/09 — um resync de frase deixou uma linha
+de tabela em `18`, e o resync seguinte esqueceu a mesma linha de novo, achada pela lane irmã em
+`5a80625c`. Número cravado em dois lugares é promessa de drift; declaração *ausente* é falha, não
+passe livre (anti-neutering: mudar a prosa obriga a atualizar o gate junto). O fio do hook é
+provado funcionalmente — `agent-verify-wiring-test.sh` executa o esqueleto real dos blocos e pega
+um regex certo preso num `if` mal aninhado (bug que esta lane plantou e corrigiu na mesma hora).
+
 **19 itens na fila aberta** (ressincronizado 21/09 ~08:5x — 20→19
 quando **§380** (codegen JS de `if` aninhado com `throw`) foi formalizado ✅
 `9f383bcf`, re-medido 16/0F no tip; 19→18 quando **§381** (OOM do keyword

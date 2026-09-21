@@ -2,10 +2,13 @@
 #
 # agent-verify-wiring-test.sh — prova de que os hooks dos gates CHANGELOG/ledger
 # no agent-verify DISPARAM de verdade. O suite-test dos gates prova o detector;
-# aqui prova o fio: um regex `touches` quebrado = gate que nunca roda = classe
-# falso-verde que a lane combate desde a 419 e que o mutation-testing pegou duas
-# vezes. Extração literal do agent-verify.sh (sem fixture de manifesto: o
-# verifier real executa exatamente `grep -qE <pat>` sobre a lista changed).
+# aqui prova o fio em DOIS niveis:
+#   (1) regex  — o `touches` de cada hook casa exatamente as familias de arquivos;
+#   (2) funcional — extrai o esqueleto real dos blocos do dispatcher e o executa
+#       com uma lista `changed` sintetica, exigindo a chamada certa. Um regex
+#       perfeito dentro de um bloco aninhado errado = gate morto em silencio, e
+#       so o nivel 1 NAO veria — foi exatamente o bug que a lane plantou ao
+#       inserir `live_records` e que motivou este segundo nivel.
 #
 # Uso: scripts/tests/agent-verify-wiring-test.sh   (exit 0 = fios ligados)
 set -uo pipefail
@@ -29,15 +32,43 @@ for_each_pat() { # $1=pat $2=tipo(yes|no) $3..=caminhos
         fi
     done
 }
+skeleton_calls() { # $1 = caminho changed -> nomes dos gates que o dispatcher real chamaria
+    local sk; sk="$(sed -n '/^if touches/,/^DIST=/p' "$AV" | grep -E '^(if touches|fi|    run_gate)')"
+    ( changed="$1"
+      touches() { printf '%s\n' "$changed" | grep -qE "$1"; }
+      run_gate() { echo "$1"; }
+      eval "$sk" )
+}
+want_called() { # $1=caminho $2=gate  (captura antes: grep -q + pipefail + SIGPIPE
+    local calls; calls="$(skeleton_calls "$1")"   # dariam falso-negativo — ver DOING)
+    printf '%s\n' "$calls" | grep -qx "$2" || {
+        echo "FIO MORTO: '$1' deveria chamar '$2' e nao chamou (bloco aninhado/morto?)"; fail=1; }
+}
+want_not() { # $1=caminho $2=gate
+    local calls; calls="$(skeleton_calls "$1")"
+    if printf '%s\n' "$calls" | grep -qx "$2"; then
+        echo "FIO LARGO: '$1' nao deveria chamar '$2'"; fail=1
+    fi
+}
 CHG="$(hook_pat changelog_ledger)" || exit 1
 ANC="$(hook_pat ledger_anchors)" || exit 1
+LRC="$(hook_pat live_records)" || exit 1
 for_each_pat "$CHG" yes CHANGELOG.md CHANGELOG.pt_BR.md \
     docs/bugs-and-gaps/known-bugs.md docs/bugs-and-gaps/known-bugs.pt_BR.md \
     scripts/changelog-ledger-waivers.txt
 for_each_pat "$CHG" no docs/development/README.md kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java
 for_each_pat "$ANC" yes docs/bugs-and-gaps/known-bugs.md docs/bugs-and-gaps/known-bugs.pt_BR.md
 for_each_pat "$ANC" no CHANGELOG.md scripts/changelog-ledger-waivers.txt
+for_each_pat "$LRC" yes docs/development/README.md docs/development/README.pt_BR.md
+for_each_pat "$LRC" no CHANGELOG.md docs/bugs-and-gaps/known-bugs.md
+want_called docs/development/README.md live_records
+want_not   docs/development/README.md ledger_anchors
+want_called docs/bugs-and-gaps/known-bugs.md ledger_anchors
+want_not   docs/bugs-and-gaps/known-bugs.md live_records
+want_called docs/bugs-and-gaps/known-bugs.md changelog_ledger
+want_called CHANGELOG.md changelog_ledger
+want_called docs/qualquer.md docs_lang
 # mutacao do proprio teste: trocar o regex real por um impossivel deve derrubar
 if printf 'CHANGELOG.md\n' | grep -qE "^CHANGELOG\\.NUNCA$"; then echo "MUTACAO INVALIDA"; exit 1; fi
-[ "$fail" -eq 0 ] && echo "ok  — fios changelog_ledger/ledger_anchors batendo"
+[ "$fail" -eq 0 ] && echo "ok  — fios changelog_ledger/ledger_anchors/live_records batendo (regex + funcional)"
 exit $fail

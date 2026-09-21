@@ -104,6 +104,16 @@ nothing (including two this lane shipped the same morning). All regenerated to z
 `--selftest` plants a truncated slug so the class cannot silently return. Both gates sit
 in the CI agent suite (`run-agent-tests.sh`) and fire per-change via `agent-verify.sh`.
 
+**Living counts must match the authority**: `scripts/check_live_records.sh` extracts every
+`N items`/`N live` declaration from this lane's two READMEs and requires it to equal the
+classifier's live count. The class drifted twice on 21/09 — a phrase resync left a table row at
+`18`, and the next resync missed the same row again, caught by the sister lane in `5a80625c`. A
+number hard-coded in two places is a promise to drift; a *missing* declaration is a failure, not
+a free pass (anti-neutering: a wording change must update the gate too). The hook wiring is
+proven functionally — `agent-verify-wiring-test.sh` executes the real block skeleton, catching a
+correctly-written regex trapped in a mis-nested `if` (a bug this lane planted and then fixed the
+same hour).
+
 **19 items in the open queue** (resynced 21/09 ~08:5x — 20→19 when
 **§380** (JS nested-`if`/`throw` codegen) was formalized ✅ `9f383bcf`,
 re-measured 16/0F at the tip; 19→18 when **§381** (entity-field keyword
