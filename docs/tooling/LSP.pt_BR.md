@@ -84,6 +84,7 @@ cliente LSP (`cmd: ["kof", "lsp"]`).
 - A varredura cross-file do projeto (`definition`/`references`/`hover`/`workspace.symbol`) é **convenção textual** (`LspSymbols` — a mesma da navegação de arquivo único), não índice tipado/semântico: nunca mente sobre uma posição que não leu, mas não desambigua nomes iguais entre arquivos (primeiro hit, ordem determinística);
 - `rename` é textual, não tipado: como os `references`, renomeia TODA ocorrência por fronteira de palavra no projeto — identificadores homônimos em arquivos sem relação entram na mesma edição (o cliente previewa antes de aplicar; índice tipado não existe por opção). Renomear keyword ou namespace da stdlib devolve null (R6);
 - sincronização completa do documento (incremental planejada).
+- Uma **request** JSON-RPC cujo `method` não tem handler é respondida com `-32601 MethodNotFound` (o cliente nunca trava numa method não anunciada); uma **notificação** (sem `id`) é ignorada por desenho (§429).
 
 O caminho de evolução é sempre o mesmo: **novas capacidades do LSP
 alimentam-se do frontend oficial**, nunca de um parser paralelo.

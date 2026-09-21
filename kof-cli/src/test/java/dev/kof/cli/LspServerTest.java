@@ -92,6 +92,24 @@ class LspServerTest {
         assertEquals(Boolean.TRUE, caps.get("renameProvider"));
     }
 
+    /** §429: an unknown REQUEST (has `id`) is answered -32601 MethodNotFound;
+     *  an unknown NOTIFICATION (no `id`) stays silent. */
+    @SuppressWarnings("unchecked")
+    @Test
+    void unknownRequestAnswersMethodNotFoundAndNotificationStaysSilent() throws Exception {
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"textDocument/inlayHint\",\"params\":{}}";
+        String notif = "{\"jsonrpc\":\"2.0\",\"method\":\"$/unknownNotification\",\"params\":{}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(req), frame(notif))), out).run();
+        List<Map<String, Object>> msgs = messages(out.toString(StandardCharsets.UTF_8));
+        assertEquals(1, msgs.size(), "só o request vira resposta; a notificação é silenciosa: " + msgs);
+        Map<String, Object> resp = byId(msgs, 7);
+        assertNull(resp.get("result"), "erro não carrega result: " + resp);
+        Map<String, Object> err = (Map<String, Object>) resp.get("error");
+        assertNotNull(err, "request desconhecido deve responder error: " + resp);
+        assertEquals(-32601, ((Number) err.get("code")).intValue(), "código MethodNotFound: " + err);
+    }
+
     @SuppressWarnings("unchecked")
     @Test
     void referencesReturnsAllWordBoundaries() throws Exception {

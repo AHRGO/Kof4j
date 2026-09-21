@@ -11778,13 +11778,13 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 
 <!-- en-switch --> **EN:** [§428 (en)](known-bugs.md#428-as-sess-es-dap-jvm-e-native-respondem-toda-requisi-o-n-o-implementada-com-success-true-e-corpo-vazio-fachada-silenciosa-q7-aberto)
 
-## §429 — o servidor LSP NÃO responde a uma REQUEST JSON-RPC desconhecida (o cliente trava; deveria ser `-32601 MethodNotFound`) — 🔴 ABERTO
+## §429 — o servidor LSP NÃO responde a uma REQUEST JSON-RPC desconhecida (o cliente trava; deveria ser `-32601 MethodNotFound`) — ✅ CORRIGIDO 21/09 (lane docs/plataforma, sessão 9093: o ramo `default` do `LspServer` responde `-32601 MethodNotFound` a requests; notificações seguem silenciosas — `LspServerTest`)
 
 - `kof-cli/.../LspServer.java:132` `default -> { }`. Uma request JSON-RPC carrega um `id` e DEVE ser respondida; ignorá-la faz um cliente conforme bloquear até o timeout. Notificações sem `id` (ex.: `$/cancelRequest`) podem ser ignoradas, mas o mesmo ramo engole requests também.
 - As capabilities anunciadas têm todas handler, então um cliente conforme raramente cai nisso, mas qualquer request não anunciada (`textDocument/inlayHint`, `semanticTokens/*`, `willSaveWaitUntil`, ...) recebe silêncio. `docs/tooling/LSP.md` §"Current limitations" (linhas 82-89) não menciona.
-- **O que falta:** responder requests com erro `-32601` (seguir ignorando notificações) + documentar.
+- **Fix (21/09):** o `LspServer` responde a uma request (`id != null`) com o erro JSON-RPC `-32601 MethodNotFound` via `respondError` (sem campo `result`); uma notificação (sem `id`) segue ignorada. Documentado em `docs/tooling/LSP.md` §"Current limitations". **Prova (Q0 RED→GREEN):** `LspServerTest.unknownRequestAnswersMethodNotFoundAndNotificationStaysSilent` envia uma request desconhecida + uma notificação desconhecida e afirma exatamente UMA resposta com `error.code == -32601` — falha no antigo `default -> { }` (0 respostas).
 
-<!-- en-switch --> **EN:** [§429 (en)](known-bugs.md#429-o-servidor-lsp-n-o-responde-a-uma-request-json-rpc-desconhecida-o-cliente-trava-deveria-ser-32601-methodnotfound-aberto)
+<!-- en-switch --> **EN:** [§429 (en)](known-bugs.md#429--the-lsp-server-sends-no-response-to-an-unknown-json-rpc-request-client-hangs-should-be--32601-methodnotfound---fixed-2109-lane-docsplataforma-sessao-9093-the-lspserver-default-branch-answers-a-request-with--32601-methodnotfound-notifications-stay-silent--lspservertest)
 
 ## §430 — testes false-green: um `@Test` sem assert, cinco `NativeDebugTest*` só-print, um `assertTrue(true)` literal e um `assumeTrue(compileSuccess)` que transforma regressão de codegen nativo em SKIP — 🔴 ABERTO (Q5/Q1)
 

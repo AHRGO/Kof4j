@@ -129,7 +129,12 @@ final class LspServer {
             case "textDocument/documentSymbol" -> documentSymbol(id, params);
                 case "workspace/symbol" -> workspaceSymbol(id, params);
             case "textDocument/codeAction" -> codeAction(id, params);
-            default -> {  }
+            default -> {
+                // A request carries an `id` and MUST be answered (JSON-RPC 2.0):
+                // silence makes a compliant client block until timeout. A
+                // notification (no `id`, e.g. $/setTrace) stays ignored.
+                if (id != null) respondError(id, -32601, "Method not found: " + method);
+            }
         }
     }
 
@@ -153,6 +158,18 @@ final class LspServer {
         response.put("jsonrpc", "2.0");
         response.put("id", id);
         response.put("result", result);
+        writeMessage(Json.stringify(response));
+    }
+
+    /** JSON-RPC 2.0 error response (no `result` field). */
+    private void respondError(Object id, int code, String message) {
+        Map<String, Object> error = new LinkedHashMap<>();
+        error.put("code", code);
+        error.put("message", message);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("jsonrpc", "2.0");
+        response.put("id", id);
+        response.put("error", error);
         writeMessage(Json.stringify(response));
     }
 

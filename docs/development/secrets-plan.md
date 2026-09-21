@@ -1,4 +1,4 @@
-[Português](secrets-plan.pt_BR.md)
+[English](secrets-plan.md) | [Português](secrets-plan.pt_BR.md)
 
 # Secrets — `Secret`, `KeyHandle` and enforced redaction (design plan · Stage 5 / tracker 3.6)
 

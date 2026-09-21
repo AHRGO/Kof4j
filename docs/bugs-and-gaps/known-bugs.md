@@ -14245,13 +14245,13 @@ p
 
 <!-- pt-switch --> **PT:** [§428 (pt_BR)](known-bugs.pt_BR.md#428-the-jvm-and-native-dap-sessions-answer-every-unimplemented-request-with-success-true-and-an-empty-body-silent-fa-ade-q7-open)
 
-## §429 — the LSP server sends NO response to an unknown JSON-RPC REQUEST (client hangs; should be `-32601 MethodNotFound`) — 🔴 OPEN
+## §429 — the LSP server sends NO response to an unknown JSON-RPC REQUEST (client hangs; should be `-32601 MethodNotFound`) — ✅ FIXED 21/09 (lane docs/plataforma, sessão 9093: the `LspServer` default branch answers a request with `-32601 MethodNotFound`; notifications stay silent — `LspServerTest`)
 
 - `kof-cli/.../LspServer.java:132` `default -> { }`. A JSON-RPC request carries an `id` and MUST be answered; ignoring it makes a conforming client block until timeout. Notifications without `id` (e.g. `$/cancelRequest`) may be ignored, but the same branch swallows requests too.
 - Advertised capabilities all have handlers, so a compliant client rarely hits it, but any non-advertised request (`textDocument/inlayHint`, `semanticTokens/*`, `willSaveWaitUntil`, ...) gets silence. `docs/tooling/LSP.md` §"Current limitations" (lines 82-89) does not mention it.
-- **What is missing:** answer requests with error `-32601` (keep ignoring notifications) + document it.
+- **Fix (21/09):** `LspServer` answers a request (`id != null`) with the JSON-RPC error `-32601 MethodNotFound` via `respondError` (no `result` field); a notification (no `id`) stays ignored. Documented in `docs/tooling/LSP.md` §"Current limitations". **Proof (Q0 RED→GREEN):** `LspServerTest.unknownRequestAnswersMethodNotFoundAndNotificationStaysSilent` drives an unknown request + an unknown notification and asserts exactly one response with `error.code == -32601` — it fails on the old `default -> { }` (0 responses).
 
-<!-- pt-switch --> **PT:** [§429 (pt_BR)](known-bugs.pt_BR.md#429-the-lsp-server-sends-no-response-to-an-unknown-json-rpc-request-client-hangs-should-be-32601-methodnotfound-open)
+<!-- pt-switch --> **PT:** [§429 (pt_BR)](known-bugs.pt_BR.md#429--o-servidor-lsp-nao-responde-a-uma-request-json-rpc-desconhecida-o-cliente-trava-deveria-ser--32601-methodnotfound---corrigido-2109-lane-docsplataforma-sessao-9093-o-ramo-default-do-lspserver-responde--32601-methodnotfound-a-requests-notificacoes-seguem-silenciosas--lspservertest)
 
 ## §430 — false-green tests: a zero-assertion `@Test`, five print-only `NativeDebugTest*`, a literal `assertTrue(true)`, and an `assumeTrue(compileSuccess)` that turns a native codegen regression into a SKIP — 🔴 OPEN (Q5/Q1)
 
