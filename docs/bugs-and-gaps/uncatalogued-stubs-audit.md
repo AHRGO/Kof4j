@@ -194,6 +194,27 @@ counts frozen at their landing and now grown:
 The historical snapshot is preserved and the current reading corrected. The
 dated **deltas** themselves are snapshots by design (not rewritten).
 
+### Pass 3 (cont. II) — gap codes cited without a Java occurrence (21/09)
+
+Extracted every `[A-Z]{2,7}\d{3}` token from the five live ledgers (174 codes)
+and checked each against every `.java` in the tree. 11 absent, **all accounted
+for**:
+
+| Code | Where | Verdict |
+|---|---|---|
+| `HTTP003` | §259 | already catalogued **phantom** (compiler never emits it) |
+| `UUID002` | conformance-matrix | matrix explicitly states it does not exist |
+| `SEM094` | known-bugs | **reserved** to the switch-return gate (DECISIONS §D-TROOL) |
+| `MEDIA002` | status.md | documented **camera gap label**, never an emitted code (`KofMedia` emits MEDIA001/MEDIA003) — caveat added |
+| `COL001`, `STR002`, `CANVAS001`, `SEM063` | parity/ledger | **historical/closed** (explicitly "was"/"renamed"/"closed") |
+| `APP002` | matrix APP001–003 | documented **residual** (`kof.toml` `[server] port` not consumed) |
+| `AND003` | training reference | documented **caveat, not a compile-time gate** |
+| `UIW008` | roadmap | roadmap **item ID**, not a gap code |
+
+Result: **no undocumented phantom code** — the gap-code discipline holds (the
+§259 drift already has a machine guard, `DomainGapCodesTest`). Only `MEDIA002`
+lacked the "label, not an emitted code" caveat; added inline.
+
 ## Next passes (planned — not yet executed)
 
 1. **Parity asymmetry check** — **DONE (slice 2b, `StdParityGapAuditTest`

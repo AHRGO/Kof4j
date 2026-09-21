@@ -200,6 +200,26 @@ carregavam contagens congeladas no pouso e já crescidas:
 O snapshot histórico é preservado e a leitura atual corrigida. Os **deltas**
 datados são snapshots por desenho (não são reescritos).
 
+### Passada 3 (cont. II) — códigos de gap citados sem ocorrência em Java (21/09)
+
+Extraído todo token `[A-Z]{2,7}\d{3}` dos cinco ledgers vivos (174 códigos) e
+conferido contra todo `.java` da árvore. 11 ausentes, **todos contabilizados**:
+
+| Código | Onde | Veredito |
+|---|---|---|
+| `HTTP003` | §259 | já catalogado **fantasma** (o compilador nunca emite) |
+| `UUID002` | conformance-matrix | a matriz declara explicitamente que não existe |
+| `SEM094` | known-bugs | **reservado** ao gate de switch-return (DECISIONS §D-TROOL) |
+| `MEDIA002` | status.md | **label** do gap de câmera documentado, nunca código emitido (o `KofMedia` emite MEDIA001/MEDIA003) — ressalva adicionada |
+| `COL001`, `STR002`, `CANVAS001`, `SEM063` | paridade/ledger | **históricos/fechados** ("era"/"renumerado"/"fechado") |
+| `APP002` | matriz APP001–003 | **residual** documentado (`[server] port` do `kof.toml` não consumido) |
+| `AND003` | training reference | **caveat documentado, não gate de compile-time** |
+| `UIW008` | roadmap | **ID de item** do roadmap, não código de gap |
+
+Resultado: **nenhum código-fantasma não documentado** — a disciplina de
+gap-codes se sustenta (o drift §259 já tem guarda mecânica, `DomainGapCodesTest`).
+Só o `MEDIA002` carecia da ressalva "label, não código emitido"; adicionada inline.
+
 ## Próximas passadas (planejadas — ainda não executadas)
 
 1. **Checagem de assimetria de paridade** — **FEITA (fatia 2b,
