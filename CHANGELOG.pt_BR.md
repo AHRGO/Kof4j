@@ -13,6 +13,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **linhas do tracker sincronizadas com as decisões de 21/09 (superfície X5/X6,
+    5.1 Secrets)** (21/09, lane docs/.18): a linha X5 de
+    `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (+PT) não trazia a aprovação nem o
+    congelamento `D-X5-SURFACE` (superfície v1: `out`/`in`, `sealed` class/record
+    + interface, projeção no sítio de uso na v1, `SEM0xx`); X6 não trazia a
+    aprovação; a linha 5.1 (tipo `Secret`) seguia 🔵 sem `D-SECRETS` embora a face
+    1 esteja autorizada (a linha 3.6 já a carregava) — agora 🟡 com a decisão.
+    Só aditivo; a prosa do mantenedor é preservada. Só docs.
+
   - **2.2.3 concluído: opção B verificada implementada + assessment movido para
     docs/architecture/** (21/09, lane docs/.18): os quatro desugars de fonte já
     rodam pelo registry `DesugarStep` de AST (`85779f20`: `DesugarSteps.defaults()`

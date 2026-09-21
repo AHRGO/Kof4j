@@ -13,6 +13,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **tracker rows synced with the 21/09 decisions (X5/X6 surface, 5.1 Secrets)**
+    (21/09, lane docs/.18): `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (+PT) row X5
+    lacked the approval and the `D-X5-SURFACE` freeze (v1 surface: `out`/`in`,
+    `sealed` class/record + interface, use-site projection in v1, `SEM0xx`); X6
+    lacked the approval; row 5.1 (`Secret` type) was still 🔵 with no `D-SECRETS`
+    even though face 1 is authorized (row 3.6 already carried it) — now 🟡 with
+    the decision. Additive only; the maintainer's wording is kept. Docs only.
+
   - **2.2.3 concluded: option B verified implemented + assessment moved to
     docs/architecture/** (21/09, lane docs/.18): the four source desugars already
     run through the AST `DesugarStep` registry (`85779f20`: `DesugarSteps.defaults()`
