@@ -48,7 +48,7 @@ nova**).
   `secrets-plan.md` — **promovido 21/09**, face 1 autorizada) ·
   `db-parity-plan.md` (+PT — **adendo `D-DB-GAPS` 21/09**: paridade total de DB,
   todo alvo aceita mariadb/mysql/sqlite/mongodb; a S0 limpa o aceite silencioso
-  do §421; **dono lane docs/plataforma**, S0/S1 autorizadas 21/09) ·
+  do §421; **dono lane `gaps-db`** (repassada 21/09), S0/S1 autorizadas — S0 ✅ limpa o §421, S1 em andamento) ·
   `type-system-extensions-plan.md` (+PT — **X5/X6 APROVADOS 21/09**
   (`D-TYPE-VARIANCE`/`D-INTEROP-REFLECT`), promovido de `future/`; fatias
   incrementais com prova, cada uma com prova própria).

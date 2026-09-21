@@ -48,7 +48,7 @@ surface**).
   face 1 authorized) ·
   `db-parity-plan.md` (+PT — **`D-DB-GAPS` addendum 21/09**: total DB parity,
   every target accepts mariadb/mysql/sqlite/mongodb; S0 clears §421's silent
-  accept; **owner docs/plataforma lane**, S0/S1 authorized 21/09) ·
+  accept; **owner `gaps-db` lane** (handed over 21/09), S0/S1 authorized — S0 ✅ clears §421, S1 in progress) ·
   `type-system-extensions-plan.md` (+PT — **X5/X6 APPROVED 21/09**
   (`D-TYPE-VARIANCE`/`D-INTEROP-REFLECT`), promoted from `future/`; incremental
   slices with proof, each its own proof).
