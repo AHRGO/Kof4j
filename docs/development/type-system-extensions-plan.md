@@ -61,7 +61,7 @@ non-exhaustive `switch` and variance violations.
 | # | Slice | Scope | Proof |
 |---|-------|-------|-------|
 | X5.0 | **spec + cells** | surface **frozen 21/09** (`D-X5-SURFACE` answered a–d); write conformance cells `sealed`/`variance` + `training/idioms` draft | ✅ frozen; no code |
-| X5.1 | **`sealed` declaration** | parser + typer: closed subtype set; a subtype outside it is a diagnostic | red-first typer test; compiles on JVM/Native/JS |
+| X5.1 | **`sealed` declaration** | parser + typer: closed subtype set; a subtype outside it is a diagnostic | ✅ **DONE 21/09** — contextual keyword (`sealed` before `class`/`record`/`interface`) + `SEM080` (direct subtype outside the sealed type's compilation unit); `SealedTypeE2ETest` 6 tests (JVM/Script run, JS/Native compile, red-first SEM080, identifier retro-compat) |
 | X5.2 | **exhaustive `switch`** | typer proves all cases covered for a sealed subject; missing case = diagnostic | red-first (missing case fails), green (complete); cross-target E2E |
 | X5.3 | **declaration-site variance** | `out`/`in` on generic params; assignment compatibility check | assignability tests; erasure byte-parity across targets |
 | X5.4 | **use-site projection** | **in v1** (`List<out T>`) — `D-X5-SURFACE` overrode the "deferred" default | assignability tests; erasure byte-parity across targets |

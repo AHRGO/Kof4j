@@ -42,6 +42,10 @@ public class SemanticAnalyzer {
     private final java.util.Set<String> abstractClasses = new java.util.HashSet<>();
     /** #339 (SEM070): classes declaradas `final` — `class D extends F` vira erro compile-time. */
     private final java.util.Set<String> finalClasses = new java.util.HashSet<>();
+    /** X5.1 (D-X5-SURFACE): tipos `sealed` — nome simples → unidade de
+     *  compilação (arquivo) que os declara. O conjunto de subtipos é fechado:
+     *  um subtipo declarado fora dessa unidade é SEM080. */
+    private final Map<String, String> sealedTypes = new HashMap<>();
     private final Map<ExpressionNode, Type> expressionTypes = new IdentityHashMap<>();
     private final Map<MethodCallExpr, SymbolTable.MethodSymbol> resolvedMethods = new IdentityHashMap<>();
     private final Map<NewExpr, SymbolTable.ConstructorSymbol> resolvedConstructors = new IdentityHashMap<>();
@@ -331,6 +335,15 @@ public class SemanticAnalyzer {
     void addInterface(String name) { interfaceNames.add(name); }
     void addAbstractClass(String name) { abstractClasses.add(name); }
     void addFinalClass(String name) { finalClasses.add(name); }
+
+    /** X5.1: registra um tipo `sealed` com a unidade de compilação que o declara. */
+    void addSealedType(String name, String file) { sealedTypes.put(name, file); }
+
+    /** X5.1: o tipo (nome simples) foi declarado `sealed`? */
+    boolean isSealedType(String name) { return sealedTypes.containsKey(name); }
+
+    /** X5.1: unidade de compilação (arquivo) do tipo `sealed`, ou {@code null}. */
+    String sealedTypeUnit(String name) { return sealedTypes.get(name); }
     // REFACTOR-500 (split p/ SemDeclarationAnalyzer): mutadores de ESTADO DE
     // CONTEXTO — a mutacao acontece no dono do estado (mesmo padrao da fase 6);
     // os satellites dirigem via estes setters.

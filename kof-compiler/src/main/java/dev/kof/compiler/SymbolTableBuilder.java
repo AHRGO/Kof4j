@@ -113,6 +113,16 @@ public final class SymbolTableBuilder {
         if (decl instanceof RecordDeclarationNode rec) {
             sa.addFinalClass(rec.name());
         }
+        // X5.1 (D-X5-SURFACE): registra os tipos `sealed` (class/record/
+        // interface) com a unidade de compilação que os declara — o conjunto
+        // de subtipos é fechado e SEM080 barra um subtipo de fora.
+        if (decl instanceof ClassDeclarationNode sc && sc.modifiers().contains("sealed")) {
+            sa.addSealedType(sc.name(), sc.position().file());
+        } else if (decl instanceof RecordDeclarationNode sr && sr.modifiers().contains("sealed")) {
+            sa.addSealedType(sr.name(), sr.position().file());
+        } else if (decl instanceof InterfaceDeclarationNode si && si.modifiers().contains("sealed")) {
+            sa.addSealedType(si.name(), si.position().file());
+        }
     }
 
     static void defineMembers(SemanticAnalyzer sa, AstNode decl) {

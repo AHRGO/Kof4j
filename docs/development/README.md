@@ -51,7 +51,7 @@ surface**).
   accept; **owner `gaps-db` lane** (handed over 21/09), S0/S1 authorized — S0 ✅ clears §421, S1 in progress) ·
   `type-system-extensions-plan.md` (+PT — **X5/X6 APPROVED 21/09**
   (`D-TYPE-VARIANCE`/`D-INTEROP-REFLECT`), promoted from `future/`; incremental
-  slices with proof, each its own proof).
+  slices with proof, each its own proof; **X5.1 ✅ DONE 21/09** — `sealed` + `SEM080`).
   Authority: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Living records here (not backlog):** `DECISIONS.md`,
   `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.

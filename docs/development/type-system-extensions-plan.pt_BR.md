@@ -63,7 +63,7 @@ para `switch` não-exaustivo e violação de variance.
 | # | Fatia | Escopo | Prova |
 |---|-------|--------|-------|
 | X5.0 | **spec + células** | superfície **congelada 21/09** (`D-X5-SURFACE` respondeu a–d); escreve células de conformidade `sealed`/`variance` + rascunho em `training/idioms` | ✅ congelada; sem código |
-| X5.1 | **declaração `sealed`** | parser + typer: conjunto de subtipos fechado; subtipo fora dele = diagnóstico | teste de typer red-first; compila em JVM/Native/JS |
+| X5.1 | **declaração `sealed`** | parser + typer: conjunto de subtipos fechado; subtipo fora dele = diagnóstico | ✅ **FEITO 21/09** — keyword contextual (`sealed` antes de `class`/`record`/`interface`) + `SEM080` (subtipo direto fora da unidade de compilação do tipo selado); `SealedTypeE2ETest` 6 testes (JVM/Script rodando, JS/Native compilando, SEM080 red-first, retrocompat de identificador) |
 | X5.2 | **`switch` exaustivo** | typer prova que todos os casos de um sujeito sealed estão cobertos; caso faltando = diagnóstico | red-first (falta caso → falha), green (completo); E2E cross-target |
 | X5.3 | **variance no sítio de declaração** | `out`/`in` em params genéricos; checagem de compatibilidade de atribuição | testes de atribuibilidade; paridade de bytes da erasure entre alvos |
 | X5.4 | **projeção no sítio de uso** | **na v1** (`List<out T>`) — `D-X5-SURFACE` sobrepôs o padrão "adiada" | testes de atribuibilidade; paridade byte da erosão por alvo |

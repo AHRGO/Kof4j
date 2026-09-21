@@ -70,6 +70,11 @@ public class Parser {
                 declarations.add(TypeDeclarations.parseTypeDeclaration(ctx, annos));
             } else if (ctx.check(TokenType.EXTERN)) {
                 declarations.add(parseExternDeclaration(ctx));
+            } else if (ctx.sealedModifierAhead()) {
+                // X5.1 (D-X5-SURFACE): `sealed class/record/interface` — keyword
+                // contextual; sem este ramo o IDENTIFIER `sealed` cairia no ramo
+                // de função (PARSE010).
+                declarations.add(TypeDeclarations.parseTypeDeclaration(ctx, annos));
             } else if (ctx.check(TokenType.IDENTIFIER) || ctx.check(TokenType.VOID) || TypeParser.isPrimitiveType(ctx)
                     || ctx.check(TokenType.LPAREN)) {
                 declarations.add(parseFunctionDeclaration(ctx, List.of(), annos));

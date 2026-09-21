@@ -46,10 +46,20 @@ final class TypeDeclarations {
 
     static List<String> parseModifiers(ParseContext ctx) {
         List<String> mods = new ArrayList<>();
-        while (ctx.check(TokenType.PUBLIC, TokenType.PRIVATE, TokenType.PROTECTED, TokenType.STATIC,
-                TokenType.FINAL, TokenType.ABSTRACT, TokenType.TRANSIENT, TokenType.VOLATILE,
-                TokenType.SYNCHRONIZED, TokenType.NATIVE, TokenType.DEFAULT, TokenType.OVERRIDE)) {
-            mods.add(ctx.advance().value());
+        while (true) {
+            if (ctx.check(TokenType.PUBLIC, TokenType.PRIVATE, TokenType.PROTECTED, TokenType.STATIC,
+                    TokenType.FINAL, TokenType.ABSTRACT, TokenType.TRANSIENT, TokenType.VOLATILE,
+                    TokenType.SYNCHRONIZED, TokenType.NATIVE, TokenType.DEFAULT, TokenType.OVERRIDE)) {
+                mods.add(ctx.advance().value());
+                continue;
+            }
+            // X5.1 (D-X5-SURFACE): `sealed` contextual antes de class/record/
+            // interface — vira modificador; fora desse contexto segue IDENTIFIER.
+            if (ctx.sealedModifierAhead()) {
+                mods.add(ctx.advance().value());
+                continue;
+            }
+            break;
         }
         return mods;
     }

@@ -217,6 +217,15 @@ collection element type (`SEM056`) — all enforced at compile time:
 - `abstract class A; new A()`/`A()` → `SEM041` at compile time.
 - `l.add("x")` on a `List<Int>` → `SEM056`.
 
+**`sealed` (X5.1 — `D-X5-SURFACE`, 21/09):** `sealed class`/`record`/`interface`
+closes its subtype set at compile time — the set is the declarations of the
+**same compilation unit** (file). A direct subtype (`extends`/`implements`)
+declared elsewhere is **`SEM080`** (the compiler cannot know it), never a silent
+open set. `sealed` is a **compile-time-only** modifier (erased in codegen:
+identical bytes on JVM/Native/JS) and a **contextual** keyword — `sealed` stays a
+valid identifier outside a type declaration. Exhaustive `switch` over a sealed
+subject is X5.2.
+
 **Guarantee of the type checker:** a function/method **that does not exist on a
 known type** is an error (`SEM015`/`SEM025`); argument/constructor arity is
 checked (`SEM013`/`SEM023`); an incompatible return type is an error (`SEM010`);
@@ -378,6 +387,7 @@ the lambda's return (*probe*: map/filter/reduce correct).
 | `SEM077` | `Style("<declarations>")` malformed declaration, or a non-literal argument | `KofStyleParser` (D-UI-STYLE/UI007) |
 | `SEM078` | `Style("<declarations>")` with an invalid value for a known property | `KofStyleParser` (D-UI-STYLE/UI007) |
 | `SEM079` | design-system token misuse: unknown member of `Spacing`/`Radius`/`Border`/`Elevation`/`Typography`, or a method call on a token namespace | `KofUiTokens` (Fase 10) |
+| `SEM080` | subtype (`extends`/`implements`) of a `sealed` type declared outside its compilation unit (the sealed subtype set is closed) | `SealedTypeChecks` (X5.1/D-X5-SURFACE) |
 | `ARITH001` | division/remainder by a **constant** zero | `ExpressionBinaryLowerer` (constant-zero guard) |
 
 Division by a **non-constant** zero (`7 / z` with `z=0`) → **runtime**

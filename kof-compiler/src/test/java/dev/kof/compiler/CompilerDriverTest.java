@@ -4759,9 +4759,10 @@ class CompilerDriverTest {
                 "should be SEM047, got: " + result.diagnostics().getDiagnostics());
     }
 
-    // SG-002 — tokens mortos removidos: `~`, `=>`, `|>`, `::`, `...`, `_`,
-    // `sealed`/`permits` não são mais reconhecidos pelo lexer (erro limpo
-    // LEX005 — a gramática nunca os usou).
+    // SG-002 — tokens mortos removidos: `~`, `=>`, `|>`, `::`, `...`, `_`
+    // não são mais reconhecidos pelo lexer (erro limpo LEX005 — a gramática
+    // nunca os usou). `sealed` deixou de ser identificador morto: virou
+    // keyword CONTEXTUAL (X5.1/D-X5-SURFACE, ver SealedTypeE2ETest).
     @Test
     void deadTokensGiveCleanLexerError(@TempDir Path tempDir) throws IOException {
         String[][] cases = {
@@ -4769,8 +4770,6 @@ class CompilerDriverTest {
             {"main() { val f = (x) => x }", "PARSE041"},
             {"main() { var y = xs |> f }", "PARSE041"},
             {"main() { var z = A::b }", "PARSE041"},
-            // sealed agora é IDENTIFIER comum: falha no parse como função
-            {"sealed class S { }", "PARSE010"},
         };
         for (int i = 0; i < cases.length; i++) {
             Path source = tempDir.resolve("T" + i + ".kf");
