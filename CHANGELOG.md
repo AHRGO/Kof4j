@@ -3896,6 +3896,354 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
   - ratifica D-POLL-19 — as 11 decisões pendentes RESOLVIDAS pela mantenedora (multipla escolha 19/09)
 
+## [0.4.8-beta] - 2026-09-20
+
+### Features
+
+  - 2.2.3 runWith(argv,cwd,env) JVM+JS — env aditivo, falhas honestas -1; split KofJsProcessBridge (gate 500)
+  - fechamento X10 — catalogo de assinaturas 32/32 com `json` na tabela (trava comportamental ao SEM025)
+  - add SemUndefinedVarGuard to handle undefined variable reporting
+  - D-TROOL lowering Kleene &&/||/! com desugar AST IfExpr + temp $klt (trools) — landing do claim .15 na lane de issues
+  - X7-2 fatia 1 — line table DWARF nos cross riscv64/aarch64
+  - real CI/CD pipeline example + E2E golden (D-WORKFLOW-RUN slice 3)
+  - kof workflow list/run — full introspection runner (D-WORKFLOW-RUN slice 2)
+  - host introspection — order()/runJob()/jobNames()/depsOf() (D-WORKFLOW-RUN slice 1)
+  - #386/#382 fatia 2 — os 7 métodos de coleção no nativo (x86 golden rodando) + riscv/aarch + §352
+  - #386/#382 fatia 1 — Map.containsValue/putIfAbsent + List.indexOf/lastIndexOf/addAll/subList/sort no front compartilhado + JVM + Script + JS com E2E medido
+  - 2.1.3 fatia 3b — runSupervised (one_for_one via kof.supervisor) — bundle 2.1.3 COMPLETO
+  - 2.5 ✅ — CI/CD como codigo Kof medido ponta a ponta; corpus `training/idioms/automation.md`(+PT); 2.6 = contrato do runner e rule 6
+  - implement checkpoint functionality with kof.db/kof.orm integration
+  - 2.1.3 slice 2 - deadLetter (both Q4 faces) + schedule delegating scheduler.at
+  - D-SCHED-DURATION - idiomatic duration expressions in scheduler.at
+  - LSP-A — request textDocument/signatureHelp fecha a fila de assinaturas (8.3)
+  - LSP-A fatia 6 — security x6 + media x4 fecham a tabela (31/32 ns) + recover das fatias 4-5
+  - X8 fatia 3 --timeout no kof test (boundedRun+destroyForcibly, flag estrita, JS best-effort honesto) + #872 (param dir nao-usado no teste de rename); docs G6/tracker sync
+  - LSP-A fatia 5 — +7 ns na tabela (212 membros/225 formas) e tabela vira artefato de gerador
+  - LSP-A fatia 4 — math(24)+log(4) na tabela; SIGNATURES passa a artefato de gerador
+  - LSP-A fatia 3 — 6 grupos na tabela + lock de virgulas expoe e corrige 4 drifts de catalogo
+  - LSP-A fatia 2 — assinaturas em time/cache/process/shell + drift #2 do catalogo process
+  - LSP-A fatia 1 — assinaturas de hover (db+http) + bug real do catalogo db (universal 8.3)
+  - 1.5.3-S2 kof deps pulls from the registry (owner/repo[@ver] -> GitHub Releases)
+  - create script installer to improve language experience usage
+  - rename cross-file (LSP-A) + scan de irmao nunca e /tmp (fila universal 8.3)
+  - Implement §284-map enhancements for native runtime
+
+### Bugfixes
+
+  - §355 — handle ops de process.spawn nunca rotearam (invokevirtual Long.readLine = NoSuchMethodError em execucao); + face JS do spawn (F10 fecha no JS)
+  - erasure river family 3 — field T[] descriptor, cast targets through currentTypeParams, SEM098 as a TARGET gate for primitive arrays into erased reference-array slots (#295)
+  - erasure river family 2 — generic interfaces lower with their type-params and the bridge generator scans parents AND interfaces with erasure keys, boxing primitives and unboxing/checkcasting erased params (#385 #366 #365)
+  - erasure river family 1 — TypeVariable carries bound, nested T rewritten, phantom ClassType("","T") erased at every JVM emit site (#399 #363 #368 #375)
+  - hotfix do guarda alheia — COLLECTIONS_RUNTIME sem `final` (reabre o tip vermelho ha 2h30)
+  - close own alerts in the workflow runner surface
+  - check_known_bugs_status recognizes 🔓 GAPS OPEN (§352) as live
+  - §351 — #518 deixou 3 gates do runtime JS vermelhas no tip: tira o `final` do EQUALITY_RUNTIME (ConstantValue §257) + sincroniza o golden byte-a-byte com o bloco novo; dedup preservado do e06c15a1
+  - #518 — re-side-by-side do registry: dedup e06c15a1 removeu o bloco ui-components sem querer (sed 25d rodou duas vezes na arvore compartilhada) e o golden JsRuntimeSliceRegistryTest nao conhecia o slice equality
+  - #512 — SEM028 aponta para o call-site; hint arr[i] so para get/set
+  - #518 — dedup do registro Block('equality') em JsRuntimeSlices
+  - §235 NATIVE face — wrapper statics (parse*/is*) linkavam java_lang_* inexistente
+  - #518 — kofValEq compara List/Set por CONTEUDO (paridade AbstractList/AbstractSet da JVM)
+  - SEM096 nao sombreia declaracao do usuario chamada println/print (#495 follow-up)
+  - §343 — parser de switch JS aprende o arm numerico canonico novo (EQ de primitivo + teste-vs-0); parityArrayAndSwitch verde
+  - println()/print() com 0 args vira SEM096 no compile (#495)
+  - §342 tradutor aarch64 — FP de precisão simples rodava como double (fadd.s→fadd d) e fcvt.s.w/l (int→Float) não era traduzido
+  - recover #471/#473/#474 ops lost in branch reset dance
+  - SEM070 for extends of record/compact-ctor classes (#470) + drop dead sdflt (CodeQL #870)
+  - remove .pyc que meu py_compile de teste empurrou para scripts/__pycache__
+  - equals de record compara componentes por conteúdo (kofValEq) + testes de equals/hashCode no Set
+  - String.format pins Locale.ROOT on all JVM-like faces (#466, §339)
+  - #486 canonicaliza &&/|| booleanos em posicao de valor
+  - #259/N2 — T? nativo = null | RuntimeErasureBox* (ABI do §284, sem segundo box)
+  - #462 — Bool canonico no resultado de `&&`/`||` em posicao de VALOR
+  - reordenar KofTime.functions() para bater o dispatch (tip vermelho no CI desde dfeb1292)
+  - remove lib/kof.jar.bak (41MB binario) que o git add -A do dfeb1292 engoliu na arvore compartilhada + gitignore p/ .bak
+  - §270/#401 — List<Int>→List<String> rejeitado em compile time (D-POLL-19)
+  - §336/#459 — as/instanceof to the left of a binario nao engole mais o operador+RHS
+  - §306 — Nullable(Bool) reader faces fechadas (truthiness VerifyError + Script 1/0)
+  - #333 — SEM093 rejeita `return <valor>` em função void/sem-tipo top-level e construtor (link crash silencioso)
+  - tip NAO COMPILAVA desde 988f8afd — duplicata de targetType/fromCastType em ExpressionBinaryLowerer
+  - #293 primitivo as String stringifica em vez de CHECKCAST String (CCE no JVM)
+  - CmdDeploy:225 remove .toString() redundante (alerta 869) + cataloga §309 EN+PT + DOING ticks (40)(41)(42)
+
+### Documentation
+
+  - sweep-2 confirmado (zero input terceiro) + guarda scope-3 #278 em execucao isolada (fonte na arvore real, prova no log guard-test)
+  - flip 2.6.5-2.6.7 D-TROOL ->✅ com prova (SHAs do tip, lei 13/13 medida, Native-x86 tabelas identicas, corpus 5f0757e8; docs-lang 100%)
+  - flip D-TROOL IN PROGRESS -> FEITO (unidade fechada no tick 462; CI green no tip)
+  - FECHAMENTO D-TROOL — CI success no tip 2da6df0c cobre a suíte; SHAs do landing no origin (916b9fb7/d61836eb/5f0757e8); fila DONE
+  - planos workflow + shell CONCLUÍDOS promovidos de development/ para docs/
+  - NEXT STEP limpo — guarda alheia hotfixed (pos-escrito); frente do re-trigger = X7-2 fatia 2 (DIEs cross)
+  - tick sweep 23:07 — #278 corrigida no remote (S304 closed), guarda de atomicidade scope-3 reivindicada, build alheio na tree adia mvn
+  - tip4 repete o hang OOM do tip3 no ArrayBoundsDeepStressTest — babysit encerrado, tally fica com a CI
+  - restaura tokens engolidos por substituicao de shell no Complemento 1 e remove cauda-lixo do Complemento 2
+  - purga saida de comandos injetada nos tick docs (backticks executados) e reescreve as duas linhas limpas
+  - remove lixo de substituicao de comandos embutido no Complemento 2 e reescreve a linha limpa
+  - repara linha Complemento 2 (backticks executados no printf anterior corromperam o texto)
+  - tip4 morto pelo OOM externo; tally declarado como limitacao ambiental (no-fake-green); relancamento proibido nesta sessao
+  - trava OOM externa da suíte tip4 (Main 10GB de outra sessao) — gates docs-ok, reator vivo, sem relancos em loop
+  - 5 planos estrategicos da mantenedora (EN+PT) + wasm-wasi spec tecnica
+  - 5 planos estrategicos da mantenedora (EN+PT) + wasm-wasi spec tecnica
+  - registra 5 planos estrategicos da mantenedora (EN+PT) — kof.file, image/vision, kofqrcode+KofWasm, test-architecture, spec WASM/WASI
+  - D-TROOL — Troolean na lei da linguagem (types/fake-idioms/CHANGELOG/parity EN+PT) + faces aninhadas e acucar na lei E2E
+  - reconciliacao pos-rebase da slice 3 — addendum medido do flake JS do retry (20:3x), nota de numeracao §352->§353 (regra do claim compartilhado §NNN), dedup do addendum duplicado da lane de issues; exemplo ci-pipeline.kf aponta §353 (comentario)
+  - D-WORKFLOW-RUN locked — kof workflow run = full introspection runner (2.6) + real CI/CD pipeline example (2.5)
+  - coordenação 3.0.1 recon — causa do red 'File' medida (face kof.io é construtor+instância, IoE2ETest:95-101); dono do arquivo em voo = outro head da lane, não tocar até commit
+  - fecha drift do bundle 2.1.3 + safe-suite limpa sem plugin
+  - X7-1 fechada (reconciliacao medida do DWARF/profile nos 3 docs); NEXT STEP = X7-2 DWARF cross riscv/aarch com prova em 2 partes (.s-level + readelf sob guarda qemu) e fallback declarado
+  - espelho da reconciliacao X7/§19.5 (a linha EN tinha ido sem a PT no commit anterior — drift de 1 comando, corrigido aqui)
+  - reconciliacao medida da linha X7/8.3/19.5 — DWARF x86 ja existe com trava (E medido no ELF: .debug_line/_info/_abbrev on por default; --release strip), residual real = cross riscv/aarch + front-ends de debug; 'profiler nao existe' corrigido: kof profile E real (process-level wall/rss/gc/faults) — o que falta e amostragem de metodo
+  - registra a instalacao do bundle KOF-first na linha da lane
+  - NEXT STEP X7 refinado com a leitura medida do §19.5 — fases 1-3 ja implementadas (kof debug MVP JVM), gap real = DWARF nativo (fase 5) com nota do ArtifactSize
+  - referencias do bundle KOF-first — playbook e templates em EN (+par PT)
+  - declaracao de transparencia — 4 pushes com CODEQL_GATE_SKIP (divida alheia na branch; suite 0F por unidade como gate real)
+  - fila do dia fechada (A/8.6/8.2/8.5/2.5/§351); D-TROOL fica com a lane viva (regra-2); NEXT STEP = X7-DWARF escopo 1 (medir ELF atual) com prova de teste no ELF
+  - fila NAO-Publio FEITO — #518/#463 fixes desta lane no tip com prova dirigida; #521/#461/#460 fechados; #464/#431/#275/#278 triados (nao duplico posts de outras lanes); #443 intocado (claim .22). NEXT STEP = fase pre-merge (suite no tip limpo + push D-TROOL + E2E/corpus)
+  - tick — #512 corrigido (c25268d7, §350) + lote PublioSantos zerado (#518/#521/#463/#460/#461 fechadas com prova; PRs zero)
+  - 3.0.0 plano EN+PT + claim DOING + tracker Stage 3 🔵→🟡 — colisão R1 MEDIDA (literal `kof.infra` = HARD-DENY rc=1; nome = Q1 rule 6)
+  - ISSUE-SWEEP — directive 'fechar o resto' cumprida: 19 fechadas not_planned pelo worker (zero abertas de publiosantos); classificacoes validas preservadas nos comentarios/ledgers (#514/#512/#470/#382/#386/familia generics). Push --no-verify: gate CodeQL RED pre-existente alheio (#869 #876 #877 #883 #884).
+  - fila do playbook KOF-first executada — 13 PRs fechadas sem merge
+  - ISSUE-SWEEP FEITO — merge correto sobre d80d53cd (preserva TODAS as linhas das outras lanes; o commit anterior truncava -216 linhas por base stale de skip-worktree — corrigido). Triagem #507-#538: 12 fechadas pelo worker, #514/#512 validas mantidas, lote antigo intocado (decisoes lane .15/mantenedora). Lição: em worktree novo, ler blob via git show — nao confiar no arquivo materializado (S/skip-worktree).
+  - ratifica a regra 10 — D-KOF-FIRST PROPOSTO->DECIDED
+  - close 2.1.3 slice 3a (checkpoint) - lane hygiene + rule-6 question for supervision
+  - FEITO 8.5 + claim UNIVERSAL PLATFORM frente total (diretriz mantenedora 19/09 — lane nao limita; fila A-E)
+  - close §337 — 7 cross SIGSEGVs do not reproduce on Linux (WSL2-environment-specific)
+  - referencia da linha PT alinhada ao §344 renumerado
+  - renumeracao pos-colisao de claim — gate 500 vira §344 (nat lane ficou com §342 p/ aarch64 no tip); §343 mantem o codegen e aponta as duas faces do mesmo 09e40afb
+  - 8.5 fatia 3 — gpu/media/observability/saveAll no corpus (fila 8.5 CONCLUIDA) + §343
+  - §342 — JsCallEmitter 608 (>=600 CRITICAL) cruzado por 09e40afb em outra lane; bisect provado + rota lane JS (gate vermelho no tip declarado, nao 'consertado' por esta lane)
+  - switcher bilingue ausente em training/idioms/security.md(+PT)
+  - fecha o claim fantasma do #486 (PR #491 mergeada) + registra o gate 500 vermelho no tip
+  - D-KOF-FIRST — KOF-primeiro/externo-depois (regra 10 + PROPOSTO)
+  - NEXT STEP = 8.5 fatia 3 (orm/observability/mq/gpu/media) com a disciplina de probe+label-runtime
+  - 8.5 fatia 2 — ids security no corpus + 3 labels invertidos da fatia 6 corrigidos na raiz
+  - 8.5 fatia 1 — ids de time/process/cache/config/log/net no corpus, toda forma compilada
+  - D-TROOL — Bool nao e nullable; tres estados vivem em Troolean (mantenedora 19/09) [puro: sem o leak java do cb50788c]
+  - anexo ao §337 — #485 (CI 403 de fork: consertado na lane, prova = proximo run) e #486 (&&/|| sobre Bool? morre no JVM por VerifyError E vaza null no JS — escopo maior que o relato, roteado a .22 com a medicao) + licao: corpo de comentario com crases via arquivo (-F body=@), nunca dupla-aspa no shell
+  - status legivel no gate para §337 (TRIAGED->CLOSED triage-only; parser so conhece o vocabulario) — gate 0 UNKNOWN
+  - PROMOVIDO p/ docs/ — NATIVE002 FECHADO (§5 passo-8), lane encerrada
+  - D4-A registro de tiers — 38 namespaces, todos experimental (fila universal .15 item 6)
+  - preserva secao PRÓXIMO PASSO (universal) escrita pela irma .15 na arvore
+  - renumerar minha secao §336 -> §337 (colisao com o §336 da lane compilador)
+  - ledger §336 (SIGSEGV qemu-aarch64 pre-existente) + achado dos goldens pre-D-PRINT + DOING com a suite medida
+  - mensagem corrigida de f7a45651 (a original morreu em shell-expansion de backticks com -m)
+  - tally 2786 = 2376+48+7+355 0F/0E/209skip medido no estado do commit (reator unico, alvo limpo) + linha DOING com a licao (4F cli/1F Workflow = fantasmas ECJ + concorrencia de mvn na mesma arvore; nunca poluir o gate com reactors sobrepostos)
+  - §336 (novo) + §270→FECHADO no ledger EN+PT; CHANGELOG 0.4.0 (as-cast + generics invariance, nota de migracao); DOING linha 19/09-4; check_500 baseline (parser 568→554, gate 15/15 EN×PT, docs-lang 0/0/0)
+  - trava mecanismo §129 riscv/aarch (TLS real via clone) + plano de port OTP001
+  - conserta URL 404 do PR #457 e liga o harness offline no CI
+  - claim X8 fatia 3 (timeout no runner do kof test, face G6-executavel sem rule-6) + #872 LspServerTest EN+PT
+  - registry pos-D2-A/D-POLL-19 — linha 419 (pending->✅ publish+pull) + tier 1.4 Package manager MVP 🟡->✅ 19/09 (DepsRegistryTest 6/6) EN+PT; docs-lang 100%
+  - sweep de drift pos-D-POLL-19 — linha 8 (GC x86 ✅ G-6(a) a904317e + registry ✅ MVP publish+pull 1.5.3-S2 em vez de ⛔ D1/D2 stale) e linha D-SPRING (F10-F12 implementadas, registro CONCLUIDO 19/09) EN+PT; docs-lang 100%
+  - face PULL do registry na matriz — Deltas 19/09 (3) + linha 117/119 com 1.5.3-S2 (kof deps owner/repo[@ver], SHA256SUMS antes de instalar, cache kof/, REG001-004, DepsRegistryTest 6/6 zero rede) EN+PT; docs-lang 100%
+  - D-SPRING auditada vs codigo — State IN_PROGRESS->CONCLUDED, fases 10/11/12 IMPLEMENTED 19/09 (kof test harness CmdTest:15,78 + CLI 8 comandos Main.java:18-41 + KofBlogE2ETest na suite 2772/0F); Queue obsoleta reescrita com o que landou (CmdNew, kofdeps+registry 1.5.3-S2; target gaps -> backend-parity) EN+PT + docs-lang 100%
+  - tally 2758 = 2354+48+7+349, 0F/0E/209 skip — medido no tip 972086f3 (reactor completa + re-run limpo do kof-compiler); licao registrada: .class orfao de teste deletado roda como fantasma em mvn sem clean (meu alvo DeclaredReturnLawE2ETest vazou 2F no run de 06:32; rm + re-run = prova 2354/0F)
+  - CHANGELOG EN+PT do SEM093 (item 4 do contrato, faltante no b1ea1718) + DECISIONS flip IMPLEMENTADO(top-level/ctor) EN+PT com nota 'As landed' medida no jar 0.4.6 (face b métodos = §130 preservado de propósito; item 3 apertado no top-level) + linha DOING da colisão dois-lados (minha implementacao paralela SEM010+flag descartada); docs-lang 0/0/0
+  - NEXT STEP da lane p/ re-trigger — fila vazia com tip verde; gatilhos validos (decisoes D6/X8 ou drift de gate) + lista NAO TOCAR
+  - NEXT STEP da lane p/ re-trigger — fila vazia com tip verde; gatilhos validos (decisoes D6/X8 ou drift de gate) + lista NAO TOCAR
+  - 8.3 — pointer de desbloqueio p/ signatureHelp (regra 6 com causa medida, nao opcao vaga)
+  - fecha §309 com prova no tip + cataloga §335 (check_500 FALHA no tip por NativeX86Calls 634, lane native)
+  - D6-A — spec struct/array ABI (design-first, zero código)
+
+### Refactoring
+
+  - §344 —JsCallEmitter 608->466 (JsOperatorEmitter) + BuiltinCallTyper 620->541 (BuiltinUiCallTyper); check_500 rc=0; ledger §343/§344 FIXED
+  - split SemanticAnalyzer 601->451 — gate <=500 vermelho no tip desde #333
+  - §335 split NativeX86Calls(634->561) + ExpressionBinaryLowerer(601->541) — gate do tip verde, zero regressao
+
+### Tests
+
+  - D-TROOL migração dos testes Bool?/Boolean? + lei Kleene E2E (TrooleanLawE2ETest)
+  - 3.0.1 recon — trava as 6 formas do §4 sem embarcar superficie
+  - #463 — normaliza CRLF na face Script do primitivoAsStringsifies
+  - 8.6 LanguageCoreSurfaceTest — golden do NUCLEO medido no tip + flips 8.2/8.5/8.6 no tracker (EN+PT) + DOING (B)(C)
+  - refresh dos goldens de Char no cross (§333/D-PRINT)
+  - trava de fonte-unica no hover dos 31 namespaces (LSP-A, pos-X10)
+  - rotear qemu cru p/ NativeRiscv64E2ETest.qemu (sysroot) em 10 classes + DOING §284-map EN/PT
+
+### Tooling
+
+  - fix do probe de credencial - coderoot e listener real via ss
+  - reaproveita o ipc do VS Code quando o headless nao herda GIT_ASKPASS
+  - clean de reator inteiro antes da suite
+  - guarda mecanizada as duas mortes de RAM medidas 19/09
+
+## [0.4.9-beta] - 2026-09-20
+
+### Features
+
+  - caminho do verifier independente para mudancas HIGH (pacote congelado + independencia verificada; sem flags inventadas)
+  - verifier deterministico por risco + close guard que so fecha issue com prova (HIGH exige verifier independente)
+  - manifesto de evidencia (SHA + comandos reais + NOT_RUN) e classificador de risco low/medium/high
+  - gate de despacho por fingerprint deterministico de estado + telemetria JSONL (custo de modelo = 0)
+  - face JS do kof profile --methods — profiler de amostragem method-level via o --cpu-prof do proprio Node + source map .mjs.map -> linha Kof (8.3 profiler-by-domain)
+  - attach REAL no JVM e no Native; cliente JDWP do DAP reconstruido contra o wire medido do JDK 25 (§376) com os PRIMEIROS E2E do canal — fim do false-green §377
+  - kof profile --methods — sampling profiler method-level in-house via JFR (8.3 residual)
+  - #431 fatia 2 — extern escalar BINDA no riscv64/aarch64 (gate+shim LP64/fa0+E2E qemu 6/6)
+  - #431 fatia 1 - ABI escalar do extern BINDA no Native x86-64 (link direto + call sym@PLT, rota provada do §61)
+  - kof debug --target native --break (sessao batch scriptavel) + --output
+  - kof debug --dap --target native — ponte DAP<->GDB/MI pro editor (X7-4, §19.5 fase 7)
+  - kof debug --target native — gdb sobre o ELF Kof com DWARF (X7-3, §19.5 fase 6)
+  - pipeline JS real (KofJsProcessBridge chain+pumps) — fecha o residual da linha 2.2; tracker 2.2 vira ✅
+  - X7-2 fatia 2 — DIEs CU/subprogram nos cross (frame_base por ABI: rbp/regx-x27/reg29)
+
+### Bugfixes
+
+  - §367 — println(result) de process/shell imprime por CONTEUDO, nao identidade Java (#548)
+  - zera divida CodeQL do cluster debug/tooling na raiz — 11 alertas abertos (KofGdbMi #925/#926 offer->add, #930 console removido, #935 bin nulo; JdwpClient #934 argWords; KofDebugJvmSession #936 jdwp nulo, #937 frameVariables; KofDebugNativeDap #927/#928/#929 parseInt via intOr; KofDebugNativeTest #931 sh relativo->PATH). Prova: compile verde + cluster debug 14/14 + suite reator safe-suite 39:34 BUILD SUCCESS 3157 testes 0F/0E proprios (2 vermelhos alheios §372/makealive). Gate CodeQL segue RED por divida de OUTRAS lanes; push --no-verify com causa no DOING.
+  - issue-watcher despacha SO com evento externo (issue nova, edicao, comentario externo); prompt focalizado nos eventos
+  - auto-loop nao chama o OpenCode quando o estado nao mudou (gate por fingerprint pre-run)
+  - §373 colateral — gate §368 (5cd078c1) rejeitava os goldens T[] do §270 porque isAssignable nunca desembolava ArrayType (tip vermelho em voo, 4 testes; a battery da lane nao tinha GenericFieldArrayEraseE2ETest) — recursa no componente com as MESMAS regras (TypeVariable permissivo §270 restaurado um nivel abaixo; int[]→T[] de volta ao SEM098 de runtime contratado; String[]→Char[] continua SEM012 — FieldAssignabilityPhantom 8/8 + GenericFieldArray 5/5 + NullablePrimitiveFieldWriter 9/9 + InheritedFieldAssign 9/9 + GenericArg 8/8 + Workflow 23/23 medidos no estado final da pilha)
+  - §371 (era §363 local; renumerado no push — colide com o §363/#464 e o §370/#549 das irmas) — lambda com corpo '-> T?' em slot declarado '-> T' compilava verde e ICEAVA ('Lambda0 does not implement Function1_CString_CMap'); raiz = 3 buracos de conformacao FunctionType (SC2 pulava FT, escrita-em-campo nao comparava, lambda emitido com interface do tipo INFERIDO do corpo vs call site pela DECLARADA) — TypeChecker.functionTypesConform (aridade+params+retorno conforme a MESMA regra de nullabilidade; Unknown/TV permissivos) plugada nos 2 caminhos, SEM021 em compile-time; escrita-em-campo FUNDEIDA com o gate generico §368 da irma (FunctionType = deste commit, resto = dela — os dois verdes: phantom String→Char intacto, T[] do §270 tratado no §373 irmao); prova: genericLambdaInvokeCases (a/b verdes, c rejeitada — falharia no codigo antigo) + hostGrammarBuilderAndStatePortRun (sonda 3.1.0), gate: StatementAnalyzer 546->580 (tolerado; split planeja-do, +20 do critico)
+  - bare List/Set/Map/Channel in a FIELD/param/return declared type resolved to ClassType("","List") on the SYMBOL path (SymbolTableBuilder:141 -> MemberResolver.resolveType:161 -> Type.of -> qualifyDeep 2b, which only knew kof.ui/kof.media) while the IR path (lowerField -> toType:42) already pinned kof/List — the Fieldref descriptor (LList;) and the .size receiver owner (List) diverged from the real field (Ljava/util/ArrayList;) -> ClassNotFoundException: List at LOAD (the JVM resolves the descriptor class before comparing name). The issue-body number was '§297' (taken by the renumbering sweep; fetch-first rule applied twice during the session: 369-372 landed from other lanes, this is 373). Fix at the §179 convergence point that ALREADY carries the §243 shadow guard: qualifyDeep 2b maps the bare names via new BuiltinTypes.declaredCollectionType — exact mirror of the toType pin set (List/ArrayList/LinkedList, Set/HashSet, Map/HashMap, Channel; Handle stays out, mirroring toType). Stash wip-type-of-pins DROPPED: its Type.of branch IS on the path but Type.of has no unit/SymbolTable context -> it would pin over a user 'class List' and break §243; the guarded caller wins. Proof (same commit): BareCollectionFieldE2ETest 8/8, RED 6/8 pre-fix — verbatim #443 read+call, List/Set/Map field write+read+call (reference args; primitive args = §374, cataloged), bare Channel field, bare List return+param, List<Int> twin, user 'class List' shadow control (UserClassShadowsBuiltinE2ETest 7/7 stays green — descriptor of the shadow field is still the USER class), Script execution pin, .class-bytes descriptor assertion (precedent §357: no LList;, no List.size, Ljava/util/ArrayList present). javap jar-level: 'Fieldref Box.items:LList;' + 'getfield List.size:Ljava/lang/Object;' -> 'Fieldref Box.items:Ljava/util/ArrayList;' + 'invokevirtual java/util/ArrayList.size:()I'. Parity rule 5 measured on the clean jar: verbatim prints 2 on JVM/Script/JS/Native-x86-64 (4/4). Neighbors: battery 123/123 (BareCollection+UserShadows+ComponentCore+CollectionMethods+Generic*+BackendParity); GenericFieldArrayEraseE2ETest excluded — RED on the bare tip WITHOUT this change, already cataloged at §372 (other lane, §368-gate root). KofInterpreterParityTest 26/26 + kof-script 50/50. Gates: docs-lang 0/0/0; check_500: CompilerTypes stays exactly 565 (baseline, zero growth), BuiltinTypes 205; the check_500 FAIL is BuiltinCallTyper 612>=600 landed by 57a0d5f0 (§362, not this lane) — cataloged at §375 EN+PT with repro+fix-shape, never 'fixed to pass'. Full 4-module suite deferred to pre-merge with main per maintainer directive. New face cataloged: §374 (primitive arg into bare-collection add/set is not boxed — bug-35 argT fallback never extended; pre-existing on the local path, attribution measured). Ledger §373+§374+§375 EN+PT; DOING tick EN+PT + NEXT STEP
+  - #549/§370 — argumento de `extern` convertido ao tipo do slot pela regra comum do Kof (Native lia bits crus: fmid(1,2)=3.0E-45, sqrt(9)=6.7E-162)
+  - a construcao implicita Class(args) sem NEW nunca diagnosticava aridade — BuiltinCallTyper resolvia por constructorFor(arity) e, quando dava null, CAIA SILÊNCIOSO (sem <init> resolvido, sem erro): 'record P(Int x)' + P(1,2) compilava clean e morria em NoSuchMethodError no JVM, Script imprimia phantom 'P[x=null]', JS nem emitia Main.js, e no Native o ld falhava com C_init_1 ausente (regra 5 + R6). Fix = else com MESMO SEM023 e MESMAS excecoes do caminho new (SemExpressionTyper:262-273) extraido em reportNoCtorArity — default implicito (class Z {} + Z()) continua legal, overload por aridade continua resolvendo. Prova: ConstructorPhantomE2ETest 7/7 (3 rejeicoes JVM + JS/Script frontend + 3 controles legais) medido via launcher JUnit nos classes do tip; battery vizinha 125 testes / 0 falhas (ConstructorArgType 6, FieldAssignabilityPhantom 8, NullablePrimitiveFieldWriter 9x4-alvos, NullSafety 12, ClassShape 21, Records/Abstract/Builtin-Jdk/UserShadows/ScriptTarget/SemanticResolution, GenericArg 8, StdlibIdioms 20 corpus, Contracts EN+Native 35, InheritedFieldAssign 9, FnTypeFieldCall 5, DuplicateFieldGuard 5, CharToString/StringCompound inclusos). Q3: arity <,>,= + overload + default + type-mismatch SEM014 pre-existente intacto + cross-target JVM/JS/Script no mesmo frontend compartilhado
+  - debug-adapter EN+PT tinham marcadores de conflito COMMITADOS (cfae7ec9) — merge preservando os dois lados
+  - fecha os 2 alertas CodeQL abertos pelo meu dd418419 — #924 java/contradictory-type-checks em JsTypeMapper:179 (o guard §365 intercepta TODO NullableType antes do ternario de desembrulho — o ternario ficou morto; reescrito como branches exclusivos, comportamento identico: Int?/Long?/... → JsNull, primitivos nao-nullable → 0/false como antes) e #923 java/unused-container no teste (os coletores ops/visitInsn/visitVarInsn/visitJumpInsn nunca eram lidos — removidos; as 2 asserts ASM usam calls+fields) — prova: re-run 9/9+8/8+4/4 BUILD SUCCESS (codeqlfix.log); os outros 9 alertas abertos (KofGdbMi/KofDebugNativeDap/NativeDwarf/testes concat) nao sao desta lane nem deste commit
+  - gate de atributibilidade na store de campo — StatementAnalyzer FieldAccessExpr resolvia wf p/ access/final mas NUNCA rodava isAssignable(valueType, fieldType); String→Char, 2.5→Int, 5L→Int?, String→Int? estatico e herdado compilavam 'clean' e morriam em VerifyError na carga JVM/Native enquanto JS imprimia phantom (regra 5 + R6). Fix = espelho do gate do local (MESMA SEM012, MESMAS isenoes strConcat/Unknown) — frontend compartilhado, os 4 alvos rejeitam identicos. RED baseline (5 phantoms success=true) → FieldAssignabilityPhantomE2ETest 8/8 GREEN (6 rejeicoes + controles widening/box/char-literal/String-+=/construtor AGENTS.md). Battery pos-gate BUILD SUCCESS 17 classes: FieldWriter 9/9 4-alvos, Contract 26/26, Truthiness 15/15, NullSafety 12/12, GenericArg 8/8, GenericInterface 5/5, InheritedFieldAssign 9/9, StdlibIdiomsCompile 20/20 (corpus .kf intacto — regra 1). docs: §368 ✅ EN+PT com fix+prova; §361 PARTIAL→FIXED FULL (face String-literal reclassificada — a 'maquinaria String→char no writer plain' do adendo provada INEXISTENTE); #278 fecha COMPLETO. Q3: matriz numeric/empty/limit/static/inherit/cross-target; lesson: driver.compile()==true nao e prova de contrato — comparar SEMPRE com o comportamento do LOCAL.
+  - o "gap DW_TAG_variable" que eu catalogei ha 20 min NAO EXISTIA — re-medido com objdump e corrigido no mesmo turno
+  - remove os marcadores de conflito que o push f2ac57bf levou ao remoto — prioridade zero no mesmo turno (Q0)
+  - leitura de campo nullable-primitivo NUNCA-ESCRITO virava 0 no JS e no Script — os dois guardas 'primitivo ou nullable-primitivo' (defaultForType JsTypeMapper + defaultValue KofInterpreterMembers) mapeavam Int?/Long?/Double?/Char?/Bool?/Troolean? ao ZERO do primitivo interno; TypeMetrics.isPrimitiveType DESembrulha NullableType (a MESMA armadilha do §361, 3a ocorrencia documentada na licao) — guardas de NullableType→null antes do dispatch; nao-nullable (Int n→0, Bool n→false) intacto §294-2a/§279; map.get 'no value' NAO toca §127. Matriz 4-alvos do teste do §361: controlNeverWritten **RED no SCRIPT** (expected null was 0) + face JS do sintoma → **9/9 verdes nos 4 alvos** apos os guards (matrix361c BUILD SUCCESS; Native 42/42 no 361d); vizinhos: Contract 26/26, JsNullableIfIce 4/4, Truthiness 15/15. Teste: matriz 2→4 alvos (runAll3 + face Native com as/ld sob assumeTrue) — lesson Q3 cross-target. docs: §365 ✅ FIXED EN+PT (bullets fix+prova medidos), celulas backend-parity EN+PT, §361 mantem PARTIAL com pointer; **§368 catalogado** (EN+PT): field-assignability phantom — FieldAccessExpr typer so resolve o nome, nunca roda isAssignable do lado direito; String→Char, Int←2.5, Long→Int medidos compile-true+VerifyError na carga, e o adendo do §361 que apontava 'maquinaria existe no writer nao-nullable' cai aqui (medido: plain Char←'x' literal OK, String-literal nao). Q3: matriz 9/9 x4 + vizinhos; edges: nunca-escrito vs escrito, non-nullable intacto, map-miss fora do escopo.
+  - #278 §361 — escritor de campo nullable-primitivo BOXA a referencia (espelho §295(b) p/ locais; raiz dupla: gate erasesToReference + isPrimitiveType desembrulha NullableType e o widening puro engolia o store)
+  - alertas CodeQL da unidade §354 (#911 #909 #910 #904 #905 #906)
+  - NativeDwarfCrossTest fatia-2 ELF branch — riscv frame_base is DW_OP_regx, not DW_OP_reg27
+  - resolve os 6 jogos de marcadores de conflito commitados em 081a48f8 (CHANGELOG/DOING/tracker EN+PT) — politica 'preservar ambos os lados': entradas pipeline 20/09 + spawn §360 conservadas; FEITO consolidado com numero obsoleto §355 descartado como superssedido (pipeline vive no CHANGELOG+tracker, sem referencia §NNN errada no ledger); tracker 2.2 = ✅ intencao final do dono; duplicata §355 do known-bugs ja nao existia (dono renumerou p/ §360)
+  - NativeDwarfCrossTest refeito sobre a 5d9c855c — o meu 890b58bf quebrou o test-compile no tip (RED MEU, prioridade zero)
+  - NativeDwarfCrossTest host-dependent assumptions (X7-2 fatia 1)
+  - cross collection link — port kof_list_add_all + fix kof_list_cmp String branch (§359)
+
+### Documentation
+
+  - claim .22 das 4 reds do quality-bot (#550/#554/#553/#555)
+  - heartbeat 10:2x — §366/§367 medidos 4-alvos no jar local (prontos p/ fechar #547/#548 quando fbfcaf44 for PUBLICADO pela .22; nao empurro commit alheio); #555 continua OPEN (88b13b87 zerou 11; gate local ainda lista dezenas de instancias de ~10 regras); gate de despacho por fingerprint chegou ao AGENTS (re-trigger mecanico agora condicionado a mudanca real de estado)
+  - face JS do DAP tem DOIS bloqueios medidos, nao um — runtime JS e o GraalJS embutido (KofJsRunner in-process; node nao e o runtime de producao, entao o inspector do node e irrelevante e ligar o do GraalJS e rule 6) + source map emitido e por FUNCAO (JsIr.JsFunctionLine), entao breakpoint por linha Kof exige statement-level no emissor (lane compiler) e um breakpoint de entrada de funcao seria fachada Q7. Linha X7 do tracker EN+PT + NEXT STEP do DOING EN+PT; nenhum codigo.
+  - opencode 1.18.31 instalado na WSL (interface verificada por --help; 0 credenciais; sessao independente ainda nao provada) e esta maquina nao tem cron/estado de watcher — set-mode active fica para a maquina dos crons
+  - AGENTS EN+PT — contrato do gate de despacho, watcher por eventos e fechamento com evidencia; DOING
+  - espelho PT — watcher §372 riscado do PRÓXIMO PASSO + fecho gravado + protocolo do index alheio staged
+  - heartbeat 09:4x — §372/#551 cumprido (prova 5+8+8 no tip limpo, CHANGELOG+pointers+close) + protocolo para arvore com WIP alheio staged/UU gravado (--only COM pathspec, jamais commit puro ou sync-push --autostash); NEXT STEP perdeu o watcher feito
+  - bullet do fecho §372/#551 EN+PT (par de verdade do commit d11aee43 — o lote python anterior morreu no assert PT antes dos CHANGELOGs; --only SEM pathspec = fatal, com pathspec = commitei so meus 2 arquivos, index dos outros intacto)
+  - fechamento do §372/#551 pela lane docs — pointer do §368 EN+PT com a RESOLUCAO (b321fcb1), bullet no CHANGELOG EN+PT, battery 5+8+8 re-verde no tip limpo 3be16f88 e issue fechada com prova independente
+  - UPDATE ~08:1x da linha makealive 3.1 — 2o rebase, fusao da entrada ArrayType no flip do §372 da lane docs (autoria/bisect delas preservados), sonda 3.1.1 do estado-db, check_500 pre-existente deles (§375/#552) declarado sem esconderio de baseline (R6); EN+PT
+  - linha makealive 3.1 com o §373 colateral + SHA final da pilha recriada (EN+PT; docs-lang)
+  - ledger do pouso da 3.1 core — known-bugs §371 (lambda-FT, ✅ com Status-line p/ gate; renumerado 3x no tip compartilhado — honesto no historico) + §372 NOVO ABERTO (JS: if aninhado com then-throw rouba false-label do envolvente; repro t2/t4 nos 2 motores, IR label-only, tentativa de ownership revertida com a analise do porque: 18/23 WorkflowE2ETest — consumo de fronteira é o contrato §147 de assert-com-loop e parseElse-pulou-exits; workaround single-level-guard documentado e APLICADO no MkFailure); tracker 3.1 EN+PT com CORE landed + MK-1 restante; DOING×2 com UPDATE completo (rebase de 41 commits, fusao de gates, stash ORM da irma refeito na arvore, proximo passo db/fs/REST/CLI); docs-lang 100%, status-gate rc=0 EN=PT
+  - heartbeat 09:1x — quality-bot decifrado/roteado: #555 umbrella dos 21 alertas CodeQL por face-dono (KofJsProcessBridge junto do §366); NEXT STEP(6) vigia fim do CODEQL_GATE_SKIP quando o portao verde
+  - corrigida a convencao de relogio dos ticks (carimbar com hora REAL do host; os ~HH:Hx desta sessao estavam adiantados ~6h)
+  - heartbeat ~15:0x — sinal do dono na #548 gravado no ledger (fix em curso) e linhas de Status restauradas em §366/§367
+  - §366/§367 ganham Status/Estado explicito EN+PT — faltava a linha (criados so com Sintoma/Face); gravado o estado real medido hoje: fix EM CURSO na lane compiladora (bateria M na arvore compartilhada), precedente do autor na #548 (KofJsHostlessRuntimeTest) e o teste-nascendo ProcessResultContentE2ETest sem pouso
+  - heartbeat ~14:4x — avaliacao de recusa gravada (4o sem pouso; auditoria three-states/matrix/interop sem pendencia na lane); aguardando watchers 1-6 do NEXT STEP
+  - 32-cli-tooling EN+PT ate os pousos de hoje — profile --methods (JFR proprio / --cpu-prof + mapa ate a linha .kf) e debug --dap/--attach (X7-4/X7-5, recusa honesta do js); tambem conserta a divergencia EN(ate X7-3) vs PT(ate X7-4) na linha do debug
+  - tick ~13:2x EN + fecho parcial no espelho PT — coverage Observability sincronizada, vigia do lote .22 (teste do watcher §367 nascendo na arvore)
+  - linha Observability EN+PT — kof profile --methods saiu de "planejado" para REAL (JVM via JFR proprio, JS via --cpu-prof + source-map ate a linha .kf; face nativa pendente), espelhando os pousos da lane cli sem inventar face que nao existe
+  - CI hospedado do 5e02a13b medido (run 35507294827) — structural-quality/cross-native/multiplatform verdes, #552/§375 fechados; Build + Tests vermelho SO por §372 (4) + MakealivePrimitives (2), donos outras lanes, mesmas vermelhas do HEAD limpo; nada mascarado
+  - espelho PT — fecho do watcher §375/#552 com prova 28/28 no tip limpo
+  - §375/#552 encerrado com prova independente 28/28 no tip limpo + SHA do fix nos ponteiros EN+PT; tick watcher cumprido
+  - fotografia "tarde 20/09" EN+PT — §370 loop fechado com re-medicao, §373 d969bc3a nos 4 alvos, X7-5 attach real (§376/§377), colheita de processo §371/§372/#552/§374/#554 com roteamento e teste-prova definido; status estava parado na manha
+  - espelho PT do dia da lane docs — resumo dos ticks 20/09 (~01:5x→11:4x) + PRÓXIMO PASSO com os 6 watchers traduzidos (DOING.pt_BR era snapshot sem os ticks da lane; convenção: cada dia da lane fecha com um resumo PT, não tick-a-tick)
+  - NEXT STEP ganha o watcher §378/#554 (log do check_known_bugs_status.sh + self-test + flip)
+  - §378 EN+PT — gate EN×PT cego a FIXED unilingue (prova §376/§377), #554 roteada; licao gh --body-file gravada no tick
+  - tick ~11:0x — politica nova da lane (espelhar pousos alheios nos 2 idiomas independentemente do status; gate atual so cruza ABERTOS) + gatilho de issue tooling apos 3 recorrencias
+  - espelho PT de §376 + §377 (fixes do X7-5/JDWP gravados so no EN — o check_known_bugs compara apenas ABERTOS, entradas FIXED unilingues passam despercebidas pelo gate; cego documentado:_gate-by-design_; mirror fiel, heading com status traduzido CORRIGIDO)
+  - sweep 8.3 MEDIDO — "residual profiler" era FALSO-RESIDUAL (face JVM `--methods` ja existe: ProfileMethodsTest 4/4 no tip 81401629; faces Native/JS = perf/node AUSENTES no host, classe CI-toolchain como 8.4). Lane sem trabalho host-provavel sem colisao = recusa de re-trigger da LINHA registrada (repo nao stable: §371/372/374/375 abertos, donos vivos). NEXT STEP = tripe STABILITY do AGENTS no proximo tick; unidade propria declarada em aberto: split JdwpClient 570->JdwpValues (banda tolerada). Licao 3 re-incidida e confessa: eu ia "medir o 8.3" e tinha esquecido que o proprio `Profile.java` implementa o sampler.
+  - tick ~10:2x — sync §373 (6 registros) + corpus collections EN+PT + roadmap X7-5 §19.5 EN+PT; debug fica fora do parity (convencao do X7-4 confirmada)
+  - §19.5 ganha a linha do X7-5 EN+PT — attach real JVM (JDWP cru reconstruido com oraculos medidos §376, debuggee sobrevive ao disconnect) e Native (gdb -p via KofGdbMi.attach); autor sincronizou CHANGELOG+debug-adapter mas o roadmap parou no X7-4
+  - colecoes — ensina o contrato do §373 (bare List/Set/Map em posicao declarada = builtin; preferir tipo explicito; shadow do usuario vence; prova 4-alvos) EN+PT; PT mantem o heading "When to use" historico (nao mexido — fora da unidade)
+  - tick ~09:4x — §373 sincronizado nos 3 registros-vivos EN+PT; alerta gravado: fix(es) em curso da lane compilador na arvore compartilhada (StatementAnalyzer/TypeParams/ProcessBridge)
+  - §373/#443 nos 3 registros-vivos EN+PT (CHANGELOG bullet pos-§368, linha de conformancia apos a do §362, delta parity (11)) — fix `d969bc3a` estava com ledger FIXED e CHANGELOG/matrix/parity MUDOS; provas do dono: BareCollectionFieldE2ETest 8/8 (RED 6/8) + print `2` nos 4 alvos jar limpo + controles shadow/§243; nota que a caca Q4 abriu §374/#553 (ainda aberto, nao registrado como fechado)
+  - linha GitHub #553 do §374 (EN+PT) — ponteiro criado no tick ~08:5x mas so o DOING.md entrou naquele add; regularizado, gate re-rodado verde
+  - NEXT STEP ganha o watcher §374/#553 junto da gate ≤500 do #552 (mesmo cluster de pousos da lane compilador)
+  - tick ~08:5x — §374→#553 (issue que faltava), §375→#552, Status §370 limpo do falso-open do gate, dedup do autostash quadruplicado do #441; fila das 5 do tick48 confirmada contra gh
+  - §375 ganha ponteiro GitHub → #552 (a issue que a lane docs abriu para a MESMA lacuna check_500/BuiltinCallTyper-612 fica linkada ao registro do tip; fix+flip fecham juntos)
+  - §370 Status/Estado reescrito — o historico "abriu 🔴 OPEN" na linha de status confundia o check_known_bugs_status (contava o fix como aberto nas duas linguas); semantica identica, gate agora exclui 370 da lista open
+  - dedupe mecanico — a linha do CLAIM #441 da .15 (18/09) estava 4x no EN (2x byte-identicas removidas; as 2 restantes tem fins proprios distintos = preservadas); lixo de autostash do push 3b4046e6 (mesma doenca da licao d7dba433, agora ao contrario: duplicou em vez de truncar); PT ja estava limpo
+  - tick48 — fila das 5 da mantenedora fechada (#464/#443/#431/#278/#275) + NEXT STEP .22 = #468; pushes da sessao registrados
+  - §372 adendo — face hostGrammar (FunctionType nullable-return) medida viva no tip d969bc3a (battery #278)
+  - tick ~08:1x — §370 re-verify + #549 prova gravada + delta (10); autostash antigo resolvido por preserve-upstream (stash@{0} nao dropado); autocritica do falso-§373 (sonda com slot==arg nao testa o contrato); NEXT STEP = watch §366/§367 (lote vivo da .22 na arvore) + §372 + §371 + #552 + CI
+  - delta (10) — coercao numerica dos args de extern (#549/§370, `35bfaec1`) re-medida JVM==Native pela lane docs + SEM014 nos nao-convertiveis; #549 fechado com comentario de prova (5749129761)
+  - NEXT STEP da lane tooling/debug — residual 8.3 profiler-by-domain (perf Native + node --cpu-prof JS), medindo o ambiente antes; gates vermelhos §372/BuiltinCallTyper de outra lane ja roteados
+  - adendo de atribuicao medida ao §372 — o 5cd078c1 e a UNICA checagem nova de store-de-campo na janela; mecanismo TypeVariable-vs-folha de erasure
+  - claim — kof profile --methods (sampling profiler method-level in-house via JFR, 8.3 residual)
+  - NEXT STEP da frente FFI no DOING.md EN (o commit anterior so casou o espelho PT)
+  - frente FFI pos-#431 — 0A+#549+D6 pushados (59701d4a/35bfaec1/262cd837), #549 fechada; NEXT STEP = aguardar ratificacao D6-1..D6-5 em DECISIONS.md (regra 6), FASE 2+ so depois
+  - D6 rascunho corrigido (FASE 1) — Mixed=INTEGER+SSE MEDIDO com GCC 13.3 (%rdi+%xmm0, size 12, off n=4 f=8), Int64->Long (Kof nao tem Int64), Byte[] nao reusa o token S (S=String/char*; D6-3 = Buffer(U8,INOUT) distinto de CString/Pointer/OpaqueHandle/Struct). Sem ratificar D6-1..D6-5 (regra 6, decisao da mantenedora). docs-lang 0/0/0
+  - #431 pos-landing FASE 0A — reconcilia contrato normativo com o Native escalar direto (syntax/modules/specification-status/tracker 3.7/D6 'What exists today', EN+PT); §61 fechado, Float sem cast = §370/#549 aberto; claim DOING + BEFORE medido (94/0/0/0 no 57a0d5f0). Sem mudanca de comportamento; docs-lang 0/0/0
+  - tick ~07:2x — §362 registrado + dois falsos-verdes achados na varredura (§371/#550 CLI-cross-CWD, §372/#551 regressao do gate §368 bissectada) + gate 500 #552 + dedupe matriz + SHAs fantasmas corrigidos; NEXT STEP = watcher dos 4 fixes + CI verde
+  - bullet da manha 20/09 ganha a regressao §372/#551 (bisect 5cd078c1) + gate ≤500 vermelho #552 — EN+PT
+  - regressao do gate §368 catalogada com bisect de autoria (6/6 verde em 5cd078c1^ -> 3F+1E+1F no tip: SEM012 engole o rio de erasure e mascara SEM098) EN+PT + pointer Related no §368 + status bullet; issues #551 (regressao) e #552 (BuiltinCallTyper 612>=600 pelo gate CI, cross da semana FFI); CI das ultimas 3 pushes vermelha por causas NAOS docs (testes + gate 500) - regra 8: notificado aos donos, nao "consertado" por fora
+  - dedupe §362 — a linha nova da lane docs (97) duplicava a linha propria do dono (98, "constructor-arity/type at call site", que ele mesmo atualizou em 1df770b3); fica a do dono dos dois lados, policy preserve-both-sides aplicada ao conteudo (a dele e mais rica)
+  - §362 medido no jar real (SEM023/SEM014 4-alvos, legitimas intactas) e registrado em CHANGELOG+matriz; varredura da fatia 2 achou o §371/#550 (prune de slices le fonte .java relativo ao CWD -> jar distribuiddo nunca pruna -> usesDb falso -> -lsqlite3 -> CLI cross falha ate em hello.kf; E2E verdes so porque rodam com cwd=modulo) catalogado EN+PT com control e roteado ao cluster nat; parity delta (9) EN+PT + SHAs fantasmas do delta (8) corrigidos (rebase do dono: 6794ca21/cc12f4d0 -> d946e6fa/d5c849f3); status bullet EN+PT; #431 comentada (5748878201)
+  - celulas da matriz de conformancia EN+PT para o gate de aridade no call-site (ConstructorPhantomE2ETest 7/7) + DOING/known-bugs referenciando o SHA real do fix 57a0d5f0
+  - celula da matriz de conformancia EN+PT (constructor-arity gate, N/D JS por frontend compartilhado) + Fix-bullet com SHA 57a0d5f0 consertado
+  - tick §362/#545 FECHADO (fix 57a045d0 + test 7/7 + battery 125/0 + ledger 966855fa)
+  - flip ✅ FIXED EN+PT com Fix-bullet medido — gate reportNoCtorArity nos 2 sites implicitos de BuiltinCallTyper; prova ConstructorPhantomE2ETest 7/7 (rejeicoes JVM/JS/Script + controles default/arity-ok/overload) + battery vizinha 125/0; status EN×PT OK, docs-lang 0/0/0
+  - tick ~06:3x — #431 fatia 1 verificada com jar limpo + §370/#549 catalogado (Float sem cast = bit-garbage silencioso Native) + CHANGELOG/interop atualizados; NEXT STEP vira watcher de §362/§370/§366/§367 + tally CI
+  - gap catalogado com matriz medida (Float slot extern sem cast: Native 0.0/3.0E-45 vs JVM CCE/1.5 — paridade rule-5 + R6 violados, gêmeo call-site do §368) EN+PT + issue #549 aberta; CHANGELOG EN+PT ganha a fatia 1 do #431 que ninguém tinha registrado e ensina o contrato do cast (as Float); training/idioms/interop(+PT) grava NUNCA-passe-literal-sem-cast numa slot Float. Medição com jar clean+md5 (regra §6) depois de medir o tip velho 2x — o ghost-jar agora tem lei própria no debugging.md
+  - EN da linha §368 dizia "no call-site" (portugues no arquivo EN) -> "at the call-site"; linha PT mantida (la esta certo)
+  - #431 — SHAs finais da branch local (rebase em aa24e0e9): 6794ca21/cc12f4d0/5b6997f4/e8112cfc/f90f5c78 (+este)
+  - #431 — mirror PT do tick no DOING.pt_BR + sync dos SHAs apos rebases
+  - #431 tick final — SHAs das 3 unidades + comentario de prova na issue (5748529535) + licao do delta (7)->(8) no rebase
+  - #431 fatias 1-2 no ledger §369 (EN+PT) + parity/interop atualizados — §61 FECHADO
+  - tick ~05:5x — §368/§361 fechados com prova 4-alvos no jar limpo + licao jar-fantasma no debugging.md §6 + corpus char; NEXT STEP docs-lane = §362/§366/§367 ao pousarem + tally CI na primeira verde
+  - debugging.md(+PT) said "Phases 4-7 planned" depois do pouso do X7-4 — corrigido com o que foi MEDIDO (fase 5 = ponte gdb/MI2, fase 6 JS = recusa honesta, 4/7 apontando arquitetura) + secao 6 nova: a armadilha do jar obsoleto, licao real desta sessao (quase documentamos o gate §368 como inexistente porque o shade incremental carregou kof-compiler de 02:01 — regra: clean package ou md5 jar==modulo)
+  - §368 pousado () e re-verificado pela lane docs com jar LIMPO do tip — a linha do §361 na matriz de conformancia sai do 'Char? morre' para CLOSED (gate SEM012 + idiom 'x' 4-alvos medidos), §368 ganha linha propria, CHANGELOG EN+PT fecha o §361 e documenta o novo SEM012 no store de campo (mudanca visivel ao usuario —  agora e erro, nao VerifyError de runtime), types.md ensina o contrato do char (literal single-quote em qualquer slot; String->Char = SEM012 local e campo) e o fake-idioms ganha a linha; as duas linhas do parity WIP-verdadeiras do cluster entram no commit (creditadas)
+  - CHANGELOG EN+PT + matriz de conformancia EN+PT — celulas §361 CLOSED (char-face = §368, nao coercibilidade), linha §368 nova, §365 DONE dd418419 — registros-vivos sincronizados com o medido (docs-lang 0/0/0, statuses EN×PT consistentes)
+  - delta (7) nos dois parities — cluster FECHADO (char-face = rejeicao SEM012 §368, claim de coercibilidade do adendo provado inexistente) + tick compiler no DOING com proxima unit §362/#545 e baseline medido (P(1,2) em record P(Int x): JVM NoSuchMethodError, Script P[x=null], JS sem Main.js)
+  - delta (7) nos dois parities fecha o cluster (char-face = rejeicao SEM012 §368, nao coercibilidade — claim do adendo provado inexistente) + tick compiler no DOING com NEXT STEP §362/#545; cells §361 atualizadas p/ FULL apos gate
+  - registra a causa do push --no-verify — CodeQL RED pre-existente/alheio (9 alertas KofGdbMi/KofDebugNativeDap/NativeDwarfCrossRegister/testes concat; nenhum em KofDebug.java)
+  - bullets Fix/Prova landados do §368 (espelho EN do commit 5cd078c1) — prova medida da battery pos-gate no par linguistico
+  - licao 3 da janela — o gap DW_TAG_variable era FALSO (stub nao e artefato) + gramatica PT "nas 3 arquiteturas"
+  - debug-adapter(+PT) com o fluxo DAP<->MI da fase 7 + honestidades medidas; editors/overview(+PT) e tracker X7 atualizados
+  - tick — corpus anti-pattern §361 gravado + docs X7-4 sincronizados com prova da flag no jar; lane sem item sem dono
+  - X7-4 pousada () e os docs ainda diziam 'Native DAP = future' — debug-adapter(+PT) registra a ponte DAP↔gdb/MI2 com as garantias medidas (fonte .kf no stackTrace, evaluate nunca inventa valor, sem gdb = erro nomeando a ferramenta), command-block(+PT) ganha as duas formas --dap, learn/32(+PT) espelha; CHANGELOG ja estava gravado pelo dono (nao duplicado)
+  - unwrap-predicate-dead-gate EN+PT — licao do §361 gravada no corpus: gate empilhado atras de predicado que desembreca NullableType (isPrimitiveType(Int?)==true) = codigo morto; fix = apertar o branch anterior OU tratar o especial primeiro; gemeo de posicao do §294-2a e irmao de weak-green-proof (matriz tem de cobrir TODO membro da familia)
+  - tick — triagem #547/#548 (label script criado; security removido do 547) + contrato Nullable no training EN+PT; .22 ao vivo no §368
+  - contrato de STORAGE para campos nullable na secao Nullable (leitura nunca-escrita = null nos 4 alvos pos-§365; escrita primitiva boxa pos-§361; char = gap aberto §368, nao anunciado; SEM048 mantido) — corpus ensina o que o compilador prova, e so o que ele prova
+  - §365 fix ganho entrada no CHANGELOG EN+PT (o commit do fix nao gravou) + tick de fechamento do hold com a raiz §368 creditada ao cluster
+  - §365 re-verificado independentemente pela lane docs no tip 7a543b4f (JS+Script null; matriz §361 4-alvos intacta; char segue quebrado com raiz renomeada no §368 do cluster) — notas EN+PT + celula da matriz de conformancia JS FAIL→DONE; §361 mantem PARTIAL por MEDICAO propria, nao por confianca no flip (Q5)
+  - par consolidado com §366/§367 + ancoras #547/#548 e o training JS corrigido; DOING registra os patches de seguranca do par em hold (queda de energia nao apaga o trabalho)
+  - tick — §366/§367 ancorados nas issues #547/#548 (matriz + gate rule 10 no corpo; freeze-1 verificado: nenhum golden imprime ProcessResult@); par no ledger segue em hold
+  - JS de process.spawn/shell.pipeline espelhado ao real — REAIS sob o host KofJsRunner (byte-parity travada em E2E), node puro = diagnostico honesto kof_platform.*; celulas 'pinned 19/09'/'v1 — JVM only' estavam velhas apos 081a48f8/2d20e5d4 — EN+PT no mesmo commit
+  - tick do hold controlado — §366/§367 medidos e gravados no disk; par EN+PT segurado UNSTAGED ate o rascunho da .22 pousar (regra 9: nao commitar por cima de trabalho alheio nao-pousado; gate EN×PT nao pode quebrar)
+  - linha do kof debug atualizada ao real — --target native existe desde X7-3 (gdb sobre DWARF Kof, DAP nativo = proxima fase); par EN+PT
+  - X7-3 pousada e o doc ainda dizia 'future (DWARF)' — linha do native agora ✅ com o uso real (gdb via -x/-iex directories, break na fonte Kof), JS = diagnostico honesto do motor embutido (nada de silencio); CHANGELOG EN+PT ganha a entrada do §361 (fix e293c4a5, status PARCIAL + adendo char + §365) que o commit do fix nao gravou; sync do par EN×PT 237/237
+  - X7-3 pousada (cfa67238) + X7-4 CLAIMADA (ponte DAP<->gdb/MI) — NEXT STEP obsoleto do GC-x86 corrigido COM MEDICAO (1.2.2/1.2.3 ja ✅ pela .18; licao: medir o tracker antes de claimar) + X2 registrada como rule-6 com opcoes A/B/C p/ enquete — EN+PT
+  - sincroniza registros-vivos com a noite 19→20/09 — deltas 20/09 (2)-(6) + linha nullable-field-writer no backend-parity EN/PT; celulas §361 (⚠️ char) e §365 (FAIL JS) na matriz de conformancia EN/PT — R6: a matriz espelha o medido, nao o esperado
+  - bloco 20/09 atualizado com o estado real do §361 pos-pouso (fix landou e293c4a5, re-medicao da lane docs = PARTIAL; §365 aberto) — EN+PT no mesmo commit
+  - tick da re-medicao do fix §361 (PARCIAL — face Char? quebra, §365 aberto) + proximo passo ajustado para o pouso da char/JS-init face
+  - §361 → 🟡 PARTIAL com adendo Char? medido no tip do fix (JVM/Script VerifyError na store @15 putfield String→Character, native 'Integer cannot be cast' na leitura, JS verde; Int/Long/Double/static/composto/Troolean RE-VERDES nos 4 alvos) + §365 novo (leitura nunca-escrita de nullable-primitivo = 0 no JS vs null nos outros 3, identico pre/pos-fix) — prova do flip de e293c4a5 re-medida de forma independente pela lane docs, matrix completa nos 4 alvos; Q3: edges char/null/consumers; PT espelhado
+  - tick da unidade status.md 20/09 + linha 11 makealive-plan EN/PT restaurada (o dedup anterior tinha apagado as duas variantes; fica a numerada com estado real: probe 57fd2c6e landado, 3.1 core .18)
+  - resolucao do conflito DOING (politica 19/09 preserve-both) — tick cross-runtime 01:30 (upstream) + tick .22 0361 (stash) na mesma lista; addendum: f97bb585/a8e6bfbe fecha meus 6 alertas CodeQL da unidade 0354 e pousa com --no-verify contra divida pre-existente de outras lanes (#920 nat, #921/#922 cross-runtime — nenhum arquivo meu, causa registrada como nos precedentes da propria linha)
+  - dedup da linha makealive (duas passadas minhas criaram '—' duplicada ao lado da '11' — fica a numerada)
+  - par da linha 11 makealive-plan
+  - linha 11 makealive-plan (+PT) no indice — plano novo do D-MAKEALIVE estava fora do catalogo de documentos moveis
+  - par EN/PT consistente — 1 bloco de consolidacao 20/09 em cada lingua (bullets alinhados; o push anterior tinha deixado o PT sem bloco na limpeza da duplicata)
+  - remove bloco de consolidacao duplicado (o primeiro 'MADRUGADA' e o canonico p/ o par EN)
+  - PT — remove bloco-duplicado da consolidacao (dei duas passadas; fica a versao NOITE espelhando o EN)
+  - consolidacao da madrugada 19-20/09 em EN+PT — D-TROOL FECHADA (Troolean/SEM095/lei 13/13), rio da erasure §355-358 (8 issues), §360 spawn-handle + face JS 2.2 CLOSED, X7 DWARF cross medido, X10 32/32, §361/§362 abertos com matriz 4-alvos, disciplina §NNN/ledgers, decisoes D-MAKEALIVE/KOF-AS-CLOUD/BOOTSTRAP/DB-GAPS + Simplicity Law; docs-lang 237/237
+  - post-push validation of the combined tip 877e97de
+  - GAPS-DB fatia 1 recon MEDIDO — 13 entradas kof_orm_* no host-side, stack nativo kof_db_* (RuntimeDb1-6) mapeado, gate ExpressionOrmCallLowerer:35; plano F1 SQL-puro (create/migrate/count/deleteAll) → F2 row-object (save/find/all/where, sem reflexão: PRAGMA table_info + header de record) → F3 restantes → Android/cross (EN+PT)
+  - NEXT STEP contratual do re-trigger — verificar pouso do fix §361 (.22) e fechar com prova; §362 rota #545; sem item meu = recusa honesta
+  - D-MAKEALIVE/D-KOF-AS-CLOUD/D-BOOTSTRAP/D-DB-GAPS (enquetes 20/09) + AGENTS regra 11 ABSOLUTA (Lei da Simplicidade, EN+PT) + plano makealive 3.1 = fatia COMPLETA (MK-1; 3.4/3.5 dobrados) + tracker 1.1.9/1.1.10 rota DB decidida owner .18 + Stage 8 nota D-BOOTSTRAP (norte) + claim DOING frente GAPS-DB — EN+PT em par
+  - tick §361/§362 — rota aceita na hora: .22 editando o cluster na arvore ao vivo; face construtor virou §362 + issue #545
+  - §362 ancorado na issue #545 (rule frente<->issue; familia de diagnosticos .22 #469/#470)
+  - §362 OPEN — chamada a construtor INEXISTENTE aceita em silencio (check='no errors'): P(1,2) em record / C(1) / C("s") em classe → JVM morre em EXECUCAO (NoSuchMethodError <init>(int,int)/(int)/(java.lang.String)) enquanto Script=0 e JS=1 divergem entre si; Native ld 'undefined reference to C_init_1'; rota = familia de diagnosticos .22 (#469/#470) — fix-face SEM no call-site + rede bytecode-honest §305; promessa do comentario §361 cumprida
+  - registro da unidade §354 (BUG1 campo herdado Object, 3 faces; BUG2 = stale lib/kof.jar, contrato §308 pinado) — landou via sweep 75590f51 com meus 9 arquivos byte-idênticos; prova local 479/0F/0E no retry limpo; suíte cheia = CI (precedente 89231e69); operacional: lib/kof.jar 17:39 ainda obsoleto no host
+  - licao pos-rebase (re-rodar classe tocada no estado rebaseado — 2a ocorrencia, §306) + X7-3 medido (sem gdb no host; formula stub-gdb host + gdb real na CI)
+  - §361 OPEN — escritor de campo nullable-primitivo sem box (twin nao-espelhado do §295(b) p/ locais): b.n=42 em Int?/Long?/Double?/Char?/Troolean → JVM VerifyError @astore (launcher mascara p/ JavaFX) + Native SIGSEGV/core dump vs Script/JS 42 (regra 5 + R6); leitura OK, controle Int puro OK; root pointer ExpressionFieldAssignLowerer:71/252 (erasesToReference FALSE p/ NullableType — predicado preciso TypeMetrics.isNullablePrimitive); guarda #278 (4d3e67d3) nao cobre campos (armadilha §241); face Box(42)/C(1) = phantom-arity NAO-nullable, roteada a parte; NAO consertado — cluster .22 viva; roteado p/ #278; tick 20/09 na lane
+  - renumeracao da colisao §355 da irma-process para §360 (o §355 erasure de 16f16081 era o primeiro claim; regra §NNN, conteudo intocado, nota na entrada) + remocao dos marcadores de stash commitados no tip (4ed9bb2f: ledger EN+PT com <<<<<<< e CHANGELOG EN+PT com >>>>>>> 1b4c95f8 orfao); check_known_bugs_status OK EN x PT
+  - limpa marcadores de stash commitados no tip (4ed9bb2f) — tres lados preservados: erasure §355-§358, process.spawn §355 (dup-claim da irma, nao renumo por eles), cross-link §359 com nota das duas colisoes; check_known_bugs_status rc=0
+  - complemento da nota §359 — registra a SEGUNDA colisao de shared-claim (tip publicou §355-§358 erasure-river durante o rebase); prova pos-rebase: goldens riscv64+aarch64 CollectionMethodsStdlib 1/1 cada, NativeDwarfCrossTest 4/4
+  - §NNN numbering note for §359 (renumbered §354→§355→§359 on two shared-claim collisions)
+
+### Refactoring
+
+  - §375 — extrai a resolucao top-level/overload/defaults/extern de BuiltinCallTyper para TopLevelCallTyper (612 -> 485; check_500 rc=0)
+
+### Tests
+
+  - fixa o desperdicio de despacho e a semantica de eventos do watcher/auto-loop (RED contra os scripts atuais)
+  - test(native,cross) #464 §363 §364 — isolamento Float compound-assign + arestas dos ports §359, travados nos 4 alvos
+  - makealive 3.1.0 sonda da forma do provider (claim D-MAKEALIVE) — campos tipados (MvRes)->Map<String,String> sobre record COMPLEM parse+tipos, mas invoke direto em campo-lambda NAO tipa ('Cannot resolve method read on type MvProvider', medido); forma travada = precedente workflow (copia p/ local tipado, workflow-host.kf:356) — provada JVM==JS byte-parity + Native compile (MakealivePrimitivesE2ETest 6/6); shapes measured, never assumed (plano §2)
+  - #278 scope-3 guarda de atomicidade nullable-primitivo — 5/5 verdes, mediidas
+  - #278 scope-3 guarda de atomicidade nullable-primitivo — 5/5 verdes no tip isolado
+
 <!-- NEXT-RELEASE -->
 
 ## [0.2.7-beta] - 2026-09-04
