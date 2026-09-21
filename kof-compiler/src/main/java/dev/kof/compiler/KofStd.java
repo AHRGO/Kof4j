@@ -80,7 +80,7 @@ public final class KofStd {
         if ("kof.net".equals(call.ownerPackage())) return KofNet.supportedOn(call.function(), target);
         if ("kof.random".equals(call.ownerPackage())) return KofRandom.supportedOn(call.function(), target);
         if ("kof.rng".equals(call.ownerPackage())) return KofRng.supportedOn(call.function(), target);
-        if ("kof".equals(call.ownerPackage())) return KofBuffer.supportedOn(call.function(), target);
+        if ("kof".equals(call.ownerPackage())) return KofBuffer.supportedOn(target);
         return true;
     }
 
@@ -96,7 +96,7 @@ public final class KofStd {
         if ("kof.net".equals(call.ownerPackage())) return KofNet.gapCode(call.function());
         if ("kof.random".equals(call.ownerPackage())) return KofRandom.gapCode(call.function());
         if ("kof.rng".equals(call.ownerPackage())) return KofRng.gapCode(call.function());
-        if ("kof".equals(call.ownerPackage())) return KofBuffer.gapCode(call.function(), target);
+        if ("kof".equals(call.ownerPackage())) return KofBuffer.gapCode(target);
         return "STD001";
     }
 }

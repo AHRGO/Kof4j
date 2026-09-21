@@ -50,11 +50,11 @@ public final class KofBuffer {
         };
     }
 
-    static boolean supportedOn(String function, Target target) {
+    static boolean supportedOn(Target target) {
         return target == Target.JVM; // JVM-first; Native/JS honest gap (R6/R7)
     }
 
-    static String gapCode(String function, Target target) {
+    static String gapCode(Target target) {
         return target == Target.JS ? "FFI002" : "FFI001";
     }
 }
