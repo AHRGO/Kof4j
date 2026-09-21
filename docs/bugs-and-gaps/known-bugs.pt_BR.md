@@ -11836,3 +11836,14 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Fix + prova (21/09):** o mesmo `29198ea8` reconciliou o catálogo de gates com a lista esperada da auditoria: `StdParityGapAuditTest` 15 run / 0F.
 
 <!-- en-switch --> **EN:** [§434 (en)](known-bugs.md#-434--remote-tip-red-stdparitygapaudittestbuffergatestojvmwithfficodes--js-missing-from-the-audited-buffer-gate-list---open-another-lanes-front-catalogued-not-fixed-here)
+
+## §435 — gate `check_500` VERMELHO: `kof-cli/.../LspServer.java` cruzou 600 linhas (baseline 584 → 601) após o fix §429 do LSP — 🟡 ABERTO 21/09 (dono: lane CLI/plataforma)
+
+- **Medido (21/09, árvore limpa no tip `be688562`):** `scripts/check_500.sh` → `FALHOU — kof-cli/src/main/java/dev/kof/cli/LspServer.java tinha 584 (< 600) no baseline, agora 601 (>= 600): cruzou a linha vermelha, split obrigatório.` Isto é um **gate de merge** (AGENTS §"Lição aprendida" — ≥600 é CRÍTICO; a dívida do baseline nunca cresce).
+- **Origem (diagnosticada, não corrigida):** o fix do §429 (linha do DOING, sessão 9093 docs/plataforma: o ramo `default -> { }` do dispatch JSON-RPC agora responde `-32601 MethodNotFound` via um novo helper `respondError`) cresceu o arquivo já tolerado para além da linha crítica. A própria lane é a dona natural (seu próximo passo no DOING é "avançar o Exit Gate").
+- **Dono:** lane CLI/plataforma (autora do pouso do §429). NÃO tocado aqui — regra 8 (frente de outra lane); a lane de auditoria apenas cataloga.
+- **Repro mínimo:** `bash scripts/check_500.sh` → exit não-zero com a linha acima (nenhuma outra classe crítica neste run).
+- **Fix sugerido:** extrair os helpers de erro/resposta JSON-RPC (ex.: `respondError` + o default do dispatch) para uma classe irmã nomeada pela responsabilidade (regra 7: `LspErrors`/`LspJsonRpc`), preservando comportamento (regra 3) — mesma suíte, depois `./scripts/check_500.sh --update-baseline` para remover a linha stale do LspServer.
+- **Estado:** ABERTO — registrado para não-silêncio (condição de parada 3 do AGENTS: gate vermelho não introduzido por quem registra). A fechar pela lane dona com o split + prova, ou por eles re-baselinando COM causa registrada se a equipe decidir assim.
+
+<!-- en-switch --> **EN:** [§435 (en)](known-bugs.md#435-check-500-gate-red-kof-cli-lspserver-java-crossed-600-lines-584-baseline-601-after-the-429-lsp-fix-open-21-09-owner-cli-plataforma-lane)

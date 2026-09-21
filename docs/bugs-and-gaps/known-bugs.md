@@ -14303,3 +14303,14 @@ p
 - **Fix + proof (21/09):** same `29198ea8` reconciled the gate catalog with the audit's expected list: `StdParityGapAuditTest` 15 run / 0F.
 
 <!-- pt-switch --> **PT:** [§434 (pt_BR)](known-bugs.pt_BR.md#-434--vermelho-do-tip-remoto-stdparitygapaudittestbuffergatestojvmwithfficodes--js-ausente-da-lista-auditada-de-gates-de-buffer---aberto-frente-de-outra-lane-catalogado-nao-corrigido-aqui)
+
+## §435 — `check_500` gate RED: `kof-cli/.../LspServer.java` crossed 600 lines (584 baseline → 601) after the §429 LSP fix — 🟡 OPEN 21/09 (owner: CLI/plataforma lane)
+
+- **Measured (21/09, clean tree on tip `be688562`):** `scripts/check_500.sh` → `FALHOU — kof-cli/src/main/java/dev/kof/cli/LspServer.java tinha 584 (< 600) no baseline, agora 601 (>= 600): cruzou a linha vermelha, split obrigatório.` This is a **merge gate** (AGENTS §"Lesson learned" — ≥600 is CRITICAL; the baseline debt never grows).
+- **Origin (diagnosed, not fixed):** the §429 fix (DOING line, session 9093 docs/plataforma: `default -> { }` of the JSON-RPC dispatch now answers `-32601 MethodNotFound` via a new `respondError` helper) grew the already-tolerated file past the critical line. The same lane is the natural owner (its own DOING next-step is "advance the Exit Gate").
+- **Owner:** CLI/plataforma lane (author of the §429 landing). NOT touched here — rule 8 (another lane's front); the audit lane only catalogues.
+- **Minimal repro:** `bash scripts/check_500.sh` → exit non-zero with the line above (no other critical class in this run).
+- **Suggested fix:** extract the JSON-RPC error/response helpers (e.g. `respondError` + the dispatch default) into a sibling class named for the responsibility (rule 7: `LspErrors`/`LspJsonRpc`), preserving behavior (rule 3) — same suite, then `./scripts/check_500.sh --update-baseline` to drop the stale LspServer line.
+- **Status:** OPEN — recorded for non-silence (AGENTS stop condition 3: a gate red not introduced by the recorder). To be closed by the owning lane with the split + proof, or by them re-baselining WITH recorded cause if the team decides otherwise.
+
+<!-- pt-switch --> **PT:** [§435 (pt_BR)](known-bugs.pt_BR.md#435-gate-check-500-vermelho-kof-cli-lspserver-java-cruzou-600-linhas-baseline-584-601-ap-s-o-fix-429-do-lsp-aberto-21-09-dono-lane-cli-plataforma)
