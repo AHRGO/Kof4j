@@ -278,6 +278,8 @@ public class NativeBackend implements Backend {
                                         && kc.parameterTypes().size() == 4)
                                     || (kc.methodName().equals("kof_orm_where")
                                         && kc.parameterTypes().size() == 6)
+                                    || (kc.methodName().equals("kof_orm_page")
+                                        && kc.parameterTypes().size() == 6)
                                     || (kc.methodName().equals("kof_orm_where_op")
                                         && kc.parameterTypes().size() == 7)) {
                                 // 5º arg = className literal (KofLoadLiteral STRING
@@ -306,38 +308,8 @@ public class NativeBackend implements Backend {
                 }
             }
         }
-        if (usesDb || usesOrm) {
-            RuntimeDb1.emit(sb);
-            RuntimeDb2.emit(sb);
-            RuntimeDb3.emit(sb);
-            RuntimeDb4.emit(sb);
-            RuntimeDb5.emit(sb);
-            RuntimeDb6.emit(sb);
-            NativeDbPrepared.emitMysqlPrepared(sb);
-        }
-        if (usesOrm) {
-            dev.kof.compiler.runtime.RuntimeOrm1.emit(sb);
-            dev.kof.compiler.runtime.RuntimeOrm2.emit(sb);
-            StringBuilder o3 = new StringBuilder();
-            dev.kof.compiler.runtime.RuntimeOrm3.emit(o3);
-            sb.append(o3.toString().replace("@@MAGIC@@",
-                    dev.kof.compiler.runtime.RuntimeErasureBox.MAGIC));
-            dev.kof.compiler.runtime.RuntimeOrmSchema.emit(sb);
-            dev.kof.compiler.runtime.RuntimeOrmBind.emit(sb);
-            dev.kof.compiler.runtime.RuntimeOrm4.emit(sb);
-            if (!ormCtorClasses.isEmpty()) {
-                StringBuilder o5 = new StringBuilder();
-                dev.kof.compiler.runtime.RuntimeOrm5.emit(o5);
-                sb.append(o5.toString().replace("@@MAGIC@@",
-                        dev.kof.compiler.runtime.RuntimeErasureBox.MAGIC));
-                dev.kof.compiler.runtime.RuntimeOrm6.emit(sb);
-                StringBuilder o7 = new StringBuilder();
-                dev.kof.compiler.runtime.RuntimeOrm7.emit(o7);
-                sb.append(o7.toString().replace("@@MAGIC@@",
-                        dev.kof.compiler.runtime.RuntimeErasureBox.MAGIC));
-                NativeOrmCtors.emit(this, sb, ormCtorClasses);
-            }
-        }
+        NativeOrmEmit.emitRuntimeSlices(this, sb);
+
         if (usesHttp) {
             NativeHttpRuntime.emitHttpFunctions(sb);
         }

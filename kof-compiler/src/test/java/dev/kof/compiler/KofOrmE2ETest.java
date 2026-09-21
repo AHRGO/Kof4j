@@ -1354,16 +1354,138 @@ class KofOrmE2ETest {
     }
 
     @Test
-    void pageFacesRestantesNativeAindaOrm001(@TempDir Path tempDir) throws IOException {
+    void pageDeleteSaveAllNativeEndToEndMatchesJvm(@TempDir Path tempDir) throws Exception {
+        // F2c3: kof_orm_page/kof_orm_delete/kof_orm_save_all no Native - oracle
+        // MEDIDO no JVM (C3Jvm.kf): saveAll em batch, page com LIMIT/OFFSET
+        // (bind 1/2), pagina vazio por offset, delete hit E miss (true sempre,
+        // como execute1 >= 0 do host), leitura de volta por where/count.
+        String body = """
+                    db.execute(db, "create table if not exists user (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, age INTEGER)")
+                    db.execute(db, "delete from user")
+                    var batch = listOf(User(0, "Mel", "m@kof.dev", 30), User(0, "Ana", "a@kof.dev", 25))
+                    println(orm.saveAll<User>(db, batch))
+                    println(orm.count<User>(db))
+                    var p1 = orm.page<User>(db, 1, 0)
+                    println(p1.size())
+                    for (var u in p1) { println(u.name) }
+                    var p2 = orm.page<User>(db, 2, 1)
+                    println(p2.size())
+                    for (var u in p2) { println(u.name) }
+                    var p3 = orm.page<User>(db, 0, 0)
+                    println(p3.size())
+                    var p4 = orm.page<User>(db, 10, 99)
+                    println(p4.size())
+                    var w = orm.where<User>(db, "name", "Mel")
+                    println(orm.delete<User>(db, w.get(0).id))
+                    println(orm.count<User>(db))
+                    var w2 = orm.where<User>(db, "name", "Mel")
+                    println(w2.size())
+                    println(orm.delete<User>(db, 999))
+                    println(orm.count<User>(db))
+                    var all = orm.all<User>(db)
+                    for (var u in all) { println(u.name) }
+                }
+                """;
+        String expected = "true\n2\n1\nMel\n1\nAna\n0\n0\ntrue\n1\n0\ntrue\n1\nAna";
+        Path jvmSource = tempDir.resolve("JvmMain.kf");
+        Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmc3.db") + "\")\n")
+                + body);
+        runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
+                findDriverJar("sqlite-jdbc", "SQLite"), expected);
+        Path nativeSource = tempDir.resolve("NativeMain.kf");
+        Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativec3.db") + "\")\n")
+                + body);
+        CompilationResult nr = driver.compile(nativeSource,
+                tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nr.success(), "Native deve compilar page/delete/saveAll (F2c3): "
+                + nr.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(
+                tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = p.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals(expected, out,
+                "paridade byte JVM==Native (F2c3: saveAll batch, page LIMIT/OFFSET, delete hit/miss=true)");
+    }
+
+    @Test
+    void pageEdgesDeleteMissSaveAllEmptyNativeMatchesJvm(@TempDir Path tempDir) throws Exception {
+        // F2c3 edges (Q3): saveAll de lista VAZIA (true, count 0), pagina com
+        // offset para alem do fim (vazia), page(1,1) = segunda linha, delete
+        // repetido do MESMO id: hit=true/count-1, miss=true/count intacto
+        // (execute1 >= 0 do host). Oracle MEDIDO no JVM (C3bJvm.kf).
+        String body = """
+                    db.execute(db, "create table if not exists user (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, age INTEGER)")
+                    db.execute(db, "delete from user")
+                    println(orm.saveAll<User>(db, listOf()))
+                    println(orm.count<User>(db))
+                    println(orm.saveAll<User>(db, listOf(User(0, "Mel", "m@kof.dev", 30), User(0, "Ana", "a@kof.dev", 25))))
+                    println(orm.count<User>(db))
+                    var p = orm.page<User>(db, 5, 0)
+                    println(p.size())
+                    for (var u in p) { println(u.name) }
+                    var pf = orm.page<User>(db, 5, 2)
+                    println(pf.size())
+                    var p1 = orm.page<User>(db, 1, 1)
+                    println(p1.size())
+                    println(p1.get(0).name)
+                    var w = orm.where<User>(db, "name", "Mel")
+                    println(orm.delete<User>(db, w.get(0).id))
+                    println(orm.count<User>(db))
+                    println(orm.delete<User>(db, w.get(0).id))
+                    println(orm.count<User>(db))
+                }
+                """;
+        String expected = "true\n0\ntrue\n2\n2\nMel\nAna\n0\n1\nAna\ntrue\n1\ntrue\n1";
+        Path jvmSource = tempDir.resolve("JvmMain.kf");
+        Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmc3b.db") + "\")\n")
+                + body);
+        runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
+                findDriverJar("sqlite-jdbc", "SQLite"), expected);
+        Path nativeSource = tempDir.resolve("NativeMain.kf");
+        Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativec3b.db") + "\")\n")
+                + body);
+        CompilationResult nr = driver.compile(nativeSource,
+                tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nr.success(), "Native deve compilar edges F2c3: "
+                + nr.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(
+                tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = p.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals(expected, out,
+                "paridade byte JVM==Native (F2c3 edges: batch vazio, offset alem, miss=true)");
+    }
+
+    @Test
+    void rowObjectFechadoNoX86CrossAindaOrm001(@TempDir Path tempDir) throws IOException {
+        // F2c3 FECHOU o row-object no x86-64 (os dois testes acima provam por
+        // execucao). O pin honesto migrou para o que ainda e ORM001 em ORM:
+        // cross riscv64/aarch64 (compile-time) - o gate da frente recusa a
+        // face REAL, nunca silent (R6/R7). MySQL (runtime) segue pending no
+        // backend via .Lorm_conn (coberto pelo pin existente de dialect).
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, ENTITY_SRC + """
                 main() {
-                    var db = db.connect("sqlite:/tmp/f2c3-gate.db")
+                    var db = db.connect("sqlite:/tmp/f2c3-pin.db")
                     var p = orm.page<User>(db, 1, 0)
+                    var ok = orm.delete<User>(db, 1)
+                    println(orm.saveAll<User>(db, listOf(User(0, "Mel", "m@kof.dev", 30))))
                 }
                 """);
-        CompilationResult r = driver.compile(source, tempDir.resolve("out"), Target.NATIVE);
-        assertFalse(r.success(), "page (row-object com LIMIT/OFFSET) ainda e ORM001 no Native ate F2c3");
+        CompilationResult r = driver.compile(source, tempDir.resolve("out"), Target.NATIVE_RISCV64);
+        assertFalse(r.success(), "row-object REAL so no x86-64; riscv64 ainda ORM001 ate a frente cross");
         assertTrue(r.diagnostics().getDiagnostics().toString().contains("ORM001"),
                 "gate honesto (nunca silent): " + r.diagnostics().getDiagnostics());
     }

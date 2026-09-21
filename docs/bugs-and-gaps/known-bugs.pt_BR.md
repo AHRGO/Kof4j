@@ -11587,3 +11587,56 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
   desta lane), §419 (lição de re-pouso: todo SHA/mensagem aqui foi re-medido).
 
 <!-- en-switch --> **EN:** [§420 (en)](known-bugs.md#420--kofjsrunnerwritebytes-kept-the-last-raw-int-cast-over-a-guest-getarraysize-same-258773-family---fixed-2109)
+
+
+## §421 — `db.connect` nativo ACEITA qualquer scheme silenciosamente (ex.: `jdbc:h2:mem:`); a recusa só aparece depois no `kof_orm_*`, como `unknown db connection: ` sem código de gap — 🟡 ABERTO (exposto pelo F2c3 21/09; raiz pre-existente)
+
+- **Encontrado (medido 21/09, lane gaps-db, na suíte completa do F2c3):**
+  `MakealiveDbStateE2ETest.stateSurfaceNativeNeverSilent` ficou vermelho no
+  meu commit — a PRIMEIRA vez que a face ORM da sonda makealive rodou no
+  nativo (antes do F2c3 a recusa em tempo de compilação do `page`
+  (`ORM001`) a atalhava). A sonda usa `db.connect("jdbc:h2:mem:mkn;
+  DB_CLOSE_DELAY=-1")` porque as pernas JVM/JS compartilham H2 in-process.
+  No nativo o `kof_db_connect` NÃO rejeita o scheme não suportado: devolve um
+  handle com cara de id, e a primeira face ORM morre dentro de
+  `.Lorm_conn` (`RuntimeOrm1`) com a mensagem alta mas anônima
+  `unknown db connection: ` (id vazio) — rc=1, sem `DB001`/`XXX00x` em lugar
+  nenhum. R6: a recusa é alta mas sem nome — uma sonda disjuntiva ("roda
+  idêntico OU nomeia o gap") não distingue "H2 está fora do contrato de db do
+  nativo (só sqlite + mysql-wire)" de "o runtime ORM está quebrado" —
+  exatamente a máscara que esta suíte carregava.
+- **Repro (mínimo, 21/09, verificado no driver):** `import kof.db; import
+  kof.orm` + entidade `St(id: Long generated, design: String, key: String
+  unique, value: String)` + `main() { var db = db.connect("jdbc:h2:mem:mkn")
+  orm.create<St>(db) }` compilado com `Target.NATIVE` → compila, o binário
+  roda, sai 1 imprimindo `unknown db connection: ` (medido identicamente neste HEAD
+  e no `40503422` — pre-existente e independente de quais faces existem).
+  Trocando a URL para
+  `sqlite:/tmp/x.db` no MESMO commit → as faces rodam com paridade byte-JVM
+  (medido: `3|...|1|2|...|0|3|`) — prova de que o ORM está correto e a
+  aceitação do scheme inexistente na camada DB é o bug.
+- **Candidatos de causa raiz (não triados — encosta em design, regra 6):**
+  (a) o lowerer nativo de `kof_db_connect`/`kof_db_connect2` deve recusar
+  qualquer URL fora de `sqlite:` / `mysql://` / `jdbc:mysql://` no momento do
+  connect, com gap nomeado (`DB001` é do JS; o nativo pode merecer código
+  próprio — decisão da mantenedora; a string da mensagem é diagnóstico, não
+  contrato congelado); (b) a mensagem de `.Lorm_conn` pode ganhar o código
+  para o caminho tardio. Qualquer um dos dois devolve a sonda makealive ao
+  verde SEM tocar o teste (o ramo disjuntivo `out=` confere a string do
+  runtime ✓).
+- **Relacionados:** DB001 (delegate JS — mesma família "fora do contrato"),
+  F2c3 (expositor), §419 (lição do re-land: o vermelho aqui é real, não drift
+  de ledger).
+- **Disposition (medido 21/09, lane gaps-db):** a escolha de H2 é do próprio
+  teste — o `stateSurfaceRoundTripJvmJsByteParity` da mesma suíte afirma
+  JVM==JS **com H2**, então trocar para `sqlite:` mudaria a medida da lane
+  makealive (tocar = teste de outra lane). A mensagem de `.Lorm_bad_conn` é
+  **paridade por construção** com o host JVM (`RuntimeOrm1.java:8` documenta)
+  — renomeá-la diverge do host (regra 5 do freeze). É um design pré-exposto
+  da camada DB: precisa decisão da mantenedora (estratégia de código de gap
+  para ids de conexão inválidos no nativo, ou contrato DB multi-perna). A
+  lane gaps-db entrega o F2c3 (row-object x86-64 correto, provado byte
+  JVM==Native em sqlite) e NÃO mascara o vermelho (Q5: sem enfraquecer, sem
+  editar teste alheio).
+
+<!-- en-switch --> **EN:** [§421 (en)](known-bugs.md#421--native-dbconnect-accepts-any-scheme-silently-eg-jdbch2mem-the-refusal-only-surfaces-later-at-kof_orm_-as-unknown-db-connection--with-no-gap-code---open-exposed-by-f2c3-2109-root-pre-existing)

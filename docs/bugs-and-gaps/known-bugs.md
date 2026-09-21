@@ -14057,3 +14057,52 @@ p
   lane), §419 (re-land lesson: every SHA/message here re-measured).
 
 <!-- pt-switch --> **PT:** [§420 (pt_BR)](known-bugs.pt_BR.md#420--kofjsrunnerwritebytes-manteve-o-ultimo-cast-bruto-int-sobre-um-getarraysize-do-guest-mesma-familia-258773---corrigido-2109)
+
+## §421 — native `db.connect` ACCEPTS any scheme silently (e.g. `jdbc:h2:mem:`); the refusal only surfaces later at `kof_orm_*` as `unknown db connection: ` with no gap code — 🟡 OPEN (exposed by F2c3 21/09; root pre-existing)
+
+- **Found (measured 21/09, gaps-db lane, during F2c3 full suite):**
+  `MakealiveDbStateE2ETest.stateSurfaceNativeNeverSilent` went red on my
+  commit — the FIRST time the ORM face of the makealive probe ever ran on
+  native (before F2c3 the compile-time `ORM001` refusal of `page` short-circuited
+  it). The probe uses `db.connect("jdbc:h2:mem:mkn;DB_CLOSE_DELAY=-1")` because
+  the JVM/JS legs share H2 in-process. On native `kof_db_connect` does NOT
+  reject the unsupported scheme: it returns an id-like handle, and the first
+  ORM face dies inside `.Lorm_conn` (`RuntimeOrm1`) with the loud-but-anonymous
+  message `unknown db connection: ` (empty id) — rc=1, no `DB001`/`XXX00x`
+  code anywhere. R6: the refusal is loud but unnamed, so a disjunctive probe
+  ("runs identical OR names the gap") cannot tell "H2 is out of the native db
+  contract (sqlite + mysql-wire only)" from "the ORM runtime is broken" —
+  exactly the mask this suite carries.
+- **Repro (minimal, 21/09, driver-verified):** `import kof.db; import kof.orm`
+  + entity `St(id: Long generated, design: String, key: String unique,
+  value: String)` + `main() { var db = db.connect("jdbc:h2:mem:mkn")
+  orm.create<St>(db) }` compiled with `Target.NATIVE` → compiles, binary runs,
+  exits 1 printing `unknown db connection: ` (measured identically on THIS
+  HEAD and on `40503422` — pre-existing and independent of which faces exist).
+  Swap the URL to
+  `sqlite:/tmp/x.db` on the SAME commit → full face-suite runs with JVM
+  byte-parity (measured: `3|...|1|2|...|0|3|`) — proof the ORM is fine and the
+  DB-layer acceptance of the bogus scheme is the bug.
+- **Root cause candidates (not yet triaged — design-adjacent, rule 6):**
+  (a) `kof_db_connect`/`kof_db_connect2` native lowerer should reject any URL
+  outside `sqlite:` / `mysql://` / `jdbc:mysql://` at connect time with a
+  named gap (`DB001` is JS's; the native one may deserve its own code —
+  maintainer decision, message string is diagnostic, not frozen contract);
+  (b) `.Lorm_conn`'s message may gain the code for the late path. Either fix
+  flips the makealive probe back to green WITHOUT touching the test (its
+  `out=` disjunct checks the runtime string ✓).
+- **Related:** DB001 (JS delegate — same "out of contract" family), F2c3
+  (exposer), §419 (re-land lesson: the red here is real, not ledger drift).
+- **Disposition (measured 21/09, gaps-db lane):** the test's H2 pick is its
+  own choice — the same suite's `stateSurfaceRoundTripJvmJsByteParity`
+  asserts JVM==JS **with H2**, so swapping to `sqlite:` would change the
+  makealive lane's measurement (touching it = another lane's test).
+  `.Lorm_bad_conn`'s message is **construction-parity** with the JVM host
+  (`RuntimeOrm1.java:8` documents it) — renaming it diverges from the host
+  (freeze rule 5). This is an exposed, pre-existing DB-layer design issue:
+  it needs a maintainer decision (gap-code strategy for native-invalid
+  connection ids, or a cross-leg DB contract). The gaps-db lane ships F2c3
+  (row-object x86-64 correct, proven byte JVM==Native on sqlite) and does
+  NOT mask the red (Q5: no weakening, no foreign test edits).
+
+<!-- pt-switch --> **PT:** [§421 (pt_BR)](known-bugs.pt_BR.md#421--dbconnect-nativo-aceita-qualquer-scheme-silenciosamente-ex-jdbch2mem-a-recusa-so-aparece-depois-no-kof_orm_-como-unknown-db-connection--sem-codigo-de-gap---aberto-exposto-pelo-f2c3-2109-raiz-pre-existente)

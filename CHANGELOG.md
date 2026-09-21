@@ -63,6 +63,38 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (`WorkflowE2ETest`, `KofJsE2ETest`, `IoBoolFacesE2ETest`, pump).
 
 ### In development
+  - **F2c3 — `orm.page`/`delete`/`saveAll` REAL no Native x86-64; row-object
+    x86 fechado (gaps-db lane)** (21/09): `RuntimeOrm8` (`kof_orm_page`) = SQL
+    do host `SELECT * FROM "t" LIMIT ? OFFSET ?` com os DOIS params bindados e
+    semantica do `((Number) x).intValue()` replicada no parse (box int/long/
+    dbl/flt truncam p/ int32; KofString do coerce do call-site = atoi com
+    sinal — fora do contrato Number, superset honesto documentado; null/
+    desconhecido = 0); frame 184 (mod 16 = 8 como a familia), loop de linhas =
+    Orm7 verbatim. `RuntimeOrm9` (`kof_orm_delete`) = `DELETE FROM "t" WHERE
+    "pk" = ?` com PK resolvida pelo `parse_schema` (r8=pkIndex, criterio do
+    host) e bind do key pelo classificador do Orm7; retorna SEMPRE true no
+    DONE — o `execute1 >= 0` do host faz do miss um true (medido no oracle:
+    delete de PK inexistente = true, count intacto). `RuntimeOrm10`
+    (`kof_orm_save_all`) = loop `kof_list_size`/`kof_list_get` →
+    `kof_orm_save`, instancia patchada DESCARTADA como no host (leitura de
+    volta prova), `true` no fim; GC-safe por alcancabilidade da List no slot.
+    Orm8 emitido no bloco dos ctors (className no r9, 6 args — scan estendido
+    p/ `kof_orm_page`); Orm9/Orm10 unconditional no `usesOrm` (sem className).
+    Design-first: oracles JVM medidos ANTES da asm (corpo de 14 linhas
+    `true/2/1/Mel/.../1/throw-less` + edges `true/0/true/2/.../true/1/true/1`:
+    batch vazio, offset alem do fim, miss=true). Provas:
+    `KofOrmE2ETest#pageDeleteSaveAllNativeEndToEndMatchesJvm` +
+    `#pageEdgesDeleteMissSaveAllEmptyNativeMatchesJvm` byte-a-byte
+    JVM==Native — classe 48/0F/3skip; pin ORM001 migrou p/ cross riscv64
+    (`#rowObjectFechadoNoX86CrossAindaOrm001` — o que restou: runtime-MySQL e
+    espelhos cross, nunca silent). Docs EN+PT: parity, tracker 1.1.9, DOING
+    (claim no mesmo commit). O suíte trouxe 1 vermelho de
+    outra camada exposto pela abertura do gate: §421 catalogado (native
+    `db.connect` aceita scheme fora do contrato — H2 — sem recusa nomeada; raiz
+    pre-existente, ORMs ok com sqlite medido). Obs: o `stash@{0}` local (autostash da era F2a,
+    nao empurrado por ninguem) foi INSPECIONADO e deixado intacto — todo o
+    conteudo ja pousou em forma diversa (`RuntimeOrm4`/`NATIVE_F1`); nao
+    popssem-lo cegamente.
   - **F2c2 — `orm.where`/`whereOp` row-object→List REAL no Native x86-64
     (gaps-db lane)** (21/09): `RuntimeOrm7` — UM corpo, dois globls. O `where`
     do Kof é polimórfico por aridade (3 args → `kof_orm_where`; 4 args →
