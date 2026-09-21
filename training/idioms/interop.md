@@ -24,7 +24,8 @@ extern "/lib/x86_64-linux-gnu/libm.so.6" fmod(Double a, Double b): Double  // ok
 extern "/lib/x86_64-linux-gnu/libc.so.6" puts(String s): void     // ok — void binds
 extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — String return, "mel" measured
 // The Kof function NAME is the C symbol (no alias syntax) — kof_fmod failed lookup, fmod works.
-// Non-scalar types (objects, generics) -> FFI001 compile-time diagnostic.
+// Non-scalar types -> FFI001 compile-time diagnostic (JVM exception, 3.8b ✅ 20-21/09: a `record`
+//   by value as arg/return and a scalar `T[]`->`ptr` BIND — FfiStructE2ETest 10/10, FfiArrayE2ETest 5/5).
 // JS runner  -> SAME scalar ABI via KofJsFfiBridge (F2/F3 ✅ 18/09; FfiE2ETest 16/16); browser -> honest runtime error (R7, no host); non-scalar -> FFI002
 // Native (x86-64/riscv64/aarch64) -> SAME scalar ABI binds DIRECT since #431 20/09 (§61 CLOSED, §369):
 //   no dlopen — link-by-use of library() + call sym@PLT; String<->char* = UTF-8 payload at offset 24

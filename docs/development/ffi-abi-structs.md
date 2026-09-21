@@ -126,7 +126,7 @@ Three worked examples the implementation tests must reproduce bit-exactly:
 
 bitfields; anonymous unions; `#pragma pack`/`alignas`; `long double`
 (x87 80-bit — its own gap code if ever); `wchar_t`/UTF-16; struct-typed
-callbacks (nested fn-ptr in struct); variadics (3.5, separate ⛔);
+callbacks (nested fn-ptr in struct); variadics (3.5 — `D-R3-3.5` ✅ decided 21/09: **no general variadics**, documented gap);
 C++ name mangling; COMDAT/section rules. Each stays an honest FFI001/002
 until decided — no silent partial binding.
 
