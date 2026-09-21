@@ -2685,3 +2685,89 @@ Decidido via multi-escolha da lane de issues (20/09). **(1) Propriedades obrigat
 ## D-1.0-STABILITY-100 — o critério de estabilidade total para fechar o 1.0.0: TODO item de `docs/development/`, `docs/development/future/` e `docs/bugs-and-gaps/` 100% resolvido, com paridade total entre alvos comprovada (20/09/2026, regra da mantenedora)
 
 Regra (ABSOLUTA, refina `D-RELEASE-1.0`): nenhum release KOF 1.0.0 enquanto QUALQUER item permanecer aberto/não entregue nos três registros — `docs/development/` (planos com implementação pendente), `docs/development/future/` (features promovidas têm de ser DESENVOLVIDAS, não adiadas para depois do 1.0), `docs/bugs-and-gaps/` (bugs, gaps de spec, matrizes de paridade) — e paridade significa a matriz multi-alvo MEDIDA (regra 5 do freeze), provada por testes/goldens, nunca por alegação. "Estável" é um ESTADO A VERIFICAR (AGENTS §Estabilidade), e o 1.0.0 é a formalização desse estado; a fila EG, o `release-blockers.tsv` e esta regra têm de concordar — fechar uma issue sem a entrega não quita o bloqueio: só a prova landed quita.
+
+---
+
+## D-R3-3.3 — handles e out-buffers da FFI (múltipla escolha, mantenedora 21/09/2026)
+
+**Data:** 2026-09-21 · **Estado:** `DECIDIDO` · **Opção escolhida:** **A** (de A/B/C).
+
+`void*` / `T*` / out-buffers são representados por um **`Handle` opaco
+nominal** (não-aritmético, nunca um inteiro) mais **`Buffer(U8, INOUT)`** para
+buffers de bytes por referência — consistente com a **D6-3** (`Buffer(U8,
+INOUT)`, sem sintaxe nova de buffer). Sem aritmética de ponteiro.
+`Pointer`/`OpaqueHandle`/`Buffer`/`Struct` continuam tipos de ABI distintos
+mesmo quando um registrador carrega um endereço (R6: nunca silencioso).
+
+- **Destrava:** R3-3.3 → aberta; a fatia de out-buffer/buffer da R3
+  (pré-requisito dos Estágios 4–7, todos atrás da R3).
+- **Evidência:** D6-3; `docs/development/ffi-abi-structs.md`.
+- **Relações:** `Depends on: D-POLL-19/D6 · Related: R3, R6, R9`.
+
+---
+
+## D-R3-3.5 — variadics da FFI (múltipla escolha, mantenedora 21/09/2026)
+
+**Data:** 2026-09-21 · **Estado:** `DECIDIDO` · **Opção escolhida:** **A**.
+
+**Sem variadics gerais em Kof.** O caller da FFI passa `List`/`Array`/`Buffer`;
+chamadas estilo `printf` são cobertas por overloads de aridade fixa. Razão: o
+`Linker` do FFM/JVM **não tem downcall variádico**, então um marcador `...`
+divergiria por alvo — mentira silenciosa (R6/R7). Uma chamada libc variádica
+sem forma fixa fica como gap documentado explícito.
+
+- **Destrava:** R3-3.5 fechada como "sem variadics" (documentado).
+- **Relações:** `Depends on: D-POLL-19/D6 · Related: R3, R6, R7`.
+
+---
+
+## D-TYPE-VARIANCE — variance + sealed types (múltipla escolha, mantenedora 21/09/2026)
+
+**Data:** 2026-09-21 · **Estado:** `ABERTO — spec/plano primeiro` · **Opção escolhida:** **C** (variance + sealed).
+
+A mantenedora **abre** variance + sealed types como frente de núcleo do sistema
+de tipos (coleções científicas + `switch` exaustivo). É **mudança de núcleo
+congelado (regra 6)** e segue a disciplina **spec-first** da D6: um plano de
+design escrito é rascunhado e revisado **antes de qualquer diff** de
+parser/typer — nada pousa em silêncio. Type-classes seguem rejeitadas
+(não-objetivo permanente).
+
+- **Destrava:** X5 → aberta (spec-first).
+- **Próxima entrega:** um plano de implementação incremental (fatias + prova
+  por fatia) rascunhado pelo agente, revisado pela mantenedora antes do código.
+- **Relações:** `Related: regra 6, regra 11, R10, não-objetivos permanentes, D-KOF-FIRST`.
+
+---
+
+## D-INTEROP-REFLECT — reflexão de interop (múltipla escolha, mantenedora 21/09/2026)
+
+**Data:** 2026-09-21 · **Estado:** `ABERTO — spec/plano primeiro` · **Opção escolhida:** aberta (completa); **plano incremental exigido**.
+
+A reflexão é autorizada **somente na fronteira de interop** (nunca fundação da
+linguagem). A mantenedora pediu um **plano de implementação incremental**
+rascunhado primeiro (fatias com prova por fatia), revisado antes do código — o
+mesmo portão spec-first da D6/X5.
+
+- **Destrava:** X6 → aberta (spec-first).
+- **Próxima entrega:** o plano incremental (agente rascunha, mantenedora revisa).
+- **Relações:** `Related: regra 6, R9, X5, D-KOF-FIRST`.
+
+---
+
+## D-CODEGEN-STEP — hook de codegen em compile-time (múltipla escolha, mantenedora 21/09/2026)
+
+**Data:** 2026-09-21 · **Estado:** `DECIDIDO` · **Opção escolhida:** **A**.
+
+Implementar **`CodegenStep`** como **hook interno do compilador** (sem sintaxe
+de usuário) — R4 (`🔵`). É o bloqueador declarado do Estágio 3 (desugar de
+`infra "prod" {}`, 3.2) e da migração DDL/runner. Não adiciona **superfície de
+linguagem**; qualquer forma de usuário (3.2) é decisão própria posterior
+(portão da regra 11).
+
+- **Destrava:** R4 → em curso; 3.2 destravada **atrás da R4**.
+- **Evidência:** `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` R4 + caminho crítico.
+- **Relações:** `Related: R4, R8 (mesmo frontend), 3.2, regra 11`.
+
+## D-GRAPHICS-GAMING — gráficos além de formulários: um plano future para a superfície 2D/3D/jogos é OBRIGATÓRIO (20/09/2026, pedido da mantenedora)
+
+A mantenedora pergunta como Kof lida com 2D, 3D e gráficos não-web ("como alguém desenvolve um jogo em Kof?") e dirige: abrir o plano em `docs/development/future/`. Estado real hoje: `kof.ui` é superfície de formulário/intenção (JVM=JavaFX, JS=DOM, Android=APK); o corpus NÃO tem abstração de jogo (frame loop, sprites, malhas, input-por-frame, áudio, GPU) — jogo hoje seria interop, não idioma (fronteira regra 8/11: a forma de API estrangeira não é a resposta; o plano deve definir a INTENÇÃO Kof que os backends abaixam, gaps por-alvo honestos R6/XXX001, interop-first R9 para engines/libs — nunca renderizador caseiro, e KofC/wasm são future). DOC-PLANO: `docs/development/future/graphics-gaming-plan.md` — skeleton na próxima sessão; perguntas que o plano DEVE responder: primitiva de game-loop (idioma `scene`/`frame`?), superfície 2D sprite/tilface, escopo 3D (mesh/camera/material como intenção vs. FFI para GPU nativa), áudio, modelo de input, honestidade por-alvo (JVM/Native/JS/web + KofC depois) e a guarda de non-goals (sem canvas/HTML vazando para código de usuário). Prioridade: future/ — NÃO compete com o 1.0 (R12 + D-1.0-STABILITY-100: só entra na superfície 1.0 por promoção explícita dela).

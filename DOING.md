@@ -858,3 +858,5 @@ MAGIC/tag, `RuntimeList.kof_list_add` layout):
 **Tick development 20/09 ~00:2x REAL (dono = .18, lane parser sob decis\u00e3o da maintainer pedida hoje): \u00a7381 FECHADO \u2014 panic-recovery + trava de progresso no field loop de `parseEntityDeclaration` (nome de campo keyword-reporta-1x-consome; gram\u00e1tica intacta, p.ex. campo real `error` preservado). Prova: `EntityKeywordFieldE2ETest` 3/3 em subprocesso -Xmx256m (RED=OOM do filho, GREEN=limitado) + bateria 272/0F; flip EN+PT + CHANGELOG.**
 
 > **NEXT STEP (lane .22):** D-1.0-STABILITY-100 landed (44d362f8 + PT espelho). Bloqueiro ativo: implementar slice 3.8b (JVM, D-FFI-STRUCT — worktree fix-572, teste RED-antes com struct by-value hoje; despacho cancelado precisa ser re-rodado). Inventariar os 3 ledgers contra a regra (varredura development+future+bugs-and-gaps → fila por item) na próxima sessão.
+
+> **NEXT STEP extra (20/09):** D-GRAPHICS-GAMING registered EN+PT — criar skeleton `docs/development/future/graphics-gaming-plan.md` (responder as 7 perguntas da decisão) ANTES de qualquer código; 3.8b FFI continua o bloqueiro na frente.
