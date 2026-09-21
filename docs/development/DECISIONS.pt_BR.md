@@ -3042,3 +3042,20 @@ Adendo ao `D-DB-GAPS`.
 A condição 2 reporta `NEEDS-REVIEW` — **não RED** — enquanto uma frente aprovada
 `State: OPEN` não pousou; não bloqueia o corte 0.5.0 por si só. Uma entrada
 `OPEN` nunca é "nada espera".
+
+## D-X5-SURFACE — congelamento da superfície X5 (mantenedora 21/09/2026)
+
+**Data:** 2026-09-21 · **Estado:** `DECIDED`.
+
+Respostas da mantenedora às perguntas a–d do plano:
+- **(a) keyword de variance = `out`/`in`** — declaration-site, 1 char (passa a regra 11).
+- **(b) `sealed` aplica-se a `class`/`record` + `interface`.**
+- **(c) projeção use-site (`List<out T>`) ESTÁ no v1** (sobrepõe o default "deferred" do plano; X5.4 vira fatia do v1).
+- **(d) diagnósticos ficam na família existente `SEM0xx`** (sem família nova).
+
+Superfície: `sealed class/record/interface`; subtipos fora do conjunto = diagnóstico;
+`switch` exaustivo sobre sujeito sealed; `out`/`in` em params genéricos com checagem
+de sonoridade de atribuição. Só compiler/frontend; sem superfície de runtime.
+Fila: `roadmap.md` §2.8.4; fatias X5.0→X5.5 (X5.4 agora no v1).
+
+- **Relações:** `Relacionado: D-TYPE-VARIANCE, regra 6, regra 11, R10`.

@@ -124,3 +124,10 @@ Stage 1 (SYSTEMS) or R3/R4 work; they are a queue, not current work.
 - Queue: `roadmap.md` §2.8.4/§2.8.5; `IMPLEMENTATION-UNIVERSAL-PLATFORM.md`
   rows X5/X6.
 - Non-goals: `docs/philosophy.md`, `training/anti-patterns/fake-idioms.md`.
+
+## Surface decisions (RESOLVED 21/09/2026)
+
+`DECISIONS.md` §D-X5-SURFACE fixes the questions above: (a) `out`/`in`;
+(b) `class`/`record` + `interface`; (c) use-site projection **in v1** (X5.4 is no
+longer deferred); (d) `SEM0xx`. The "FOR REVIEW — not decided" heading above is
+historical; the surface is frozen.

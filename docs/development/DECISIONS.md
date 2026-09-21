@@ -3030,3 +3030,20 @@ Addendum to `D-DB-GAPS`.
 Condition 2 reports `NEEDS-REVIEW` — **not RED** — while an approved `State:
 OPEN` front has not landed; it does not block the 0.5.0 cut by itself. An
 `OPEN` entry is never "nothing waits".
+
+## D-X5-SURFACE — X5 surface freeze (maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `DECIDED`.
+
+Maintainer answers to the plan's open questions a–d:
+- **(a) variance keyword = `out`/`in`** — declaration-site, single-char (passes rule 11).
+- **(b) `sealed` applies to `class`/`record` + `interface`.**
+- **(c) use-site projection (`List<out T>`) IS in v1** (overrides the plan's "deferred" default; X5.4 becomes a v1 slice).
+- **(d) diagnostics stay in the existing `SEM0xx` family** (no new family).
+
+Surface: `sealed class/record/interface`; subtypes outside the set = diagnostic;
+exhaustive `switch` over a sealed subject; `out`/`in` on generic params with an
+assignment-soundness check. Compiler/frontend only; no runtime surface.
+Queue: `roadmap.md` §2.8.4; slices X5.0→X5.5 (X5.4 now in v1).
+
+- **Relationships:** `Related: D-TYPE-VARIANCE, rule 6, rule 11, R10`.

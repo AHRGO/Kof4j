@@ -129,3 +129,10 @@ Estágio 1 (SYSTEMS) nem o trabalho R3/R4; são fila, não trabalho atual.
 - Fila: `roadmap.md` §2.8.4/§2.8.5; `IMPLEMENTATION-UNIVERSAL-PLATFORM.md`
   linhas X5/X6.
 - Não-objetivos: `docs/philosophy.md`, `training/anti-patterns/fake-idioms.md`.
+
+## Decisões de superfície (RESOLVIDAS 21/09/2026)
+
+O `DECISIONS.md` §D-X5-SURFACE fixa as perguntas acima: (a) `out`/`in`;
+(b) `class`/`record` + `interface`; (c) projeção use-site **no v1** (a X5.4 não é
+mais adiada); (d) `SEM0xx`. O cabeçalho "FOR REVIEW — not decided" acima é
+histórico; a superfície está congelada.
