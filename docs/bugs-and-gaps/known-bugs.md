@@ -11851,22 +11851,36 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 - **Proof (RED-first):** `ExternalClasspathE2ETest` 9/9 — the new `implicitConstructorOnExternalClassFromJarCompilesAndRuns` was RED (`Undefined function: 'Greeter'`) before the fix; the reporter's case `implicitConstructorWithArgsAndInstanceCallOnExternalClass` (`Greeter("producer").greet("consumer")` → `hi consumer from producer`) proves the `<init>` WITH arguments + the chained instance method; the negative `implicitConstructorOnUnknownExternalClassStillFailsNotSilent` (R6) keeps SEM015 for a name outside the entries. Neighbors 101/0F (`ConstructorArgType`/`ConstructorPhantom`/`TopLevelCallTyper`/`TopLevelOverload`/`UserClassShadowsBuiltin`/`ClassNameInstanceCall`/`JdkInteropCall`/`WrapperStaticCalls`/`SemanticResolution`/`RecordImplements`/`CompilerImportsNullDiagnostics`).
 - **Related:** #566 (mother contract question; defect (ii)), §134 (external classpath), #567/#569 (siblings), D-KOF-FIRST (internal contract before the external one).
 
-## §392 — tip `beta-0.5.0` (9884b4a0) carries KofOrmE2ETest RED 2/41: `createNativeEndToEndMatchesJvm` + `countWhereNativeEndToEndMatchesJvm` — `Native deve compilar <face>` (severity=ERROR diags on `NativeMain.kf`): F3a/F2a landed the SUPPORTED-set/typer side, the native runtime compile side does not pass on a clean tree — 🔴 OPEN 20/09 (found by `.18` running the §387 full suite; PROVEN base-red with the pump fix stashed — 2/2F identical without any foreign diff; routed to gaps-db/.22 lane)
+## §392 — tip `beta-0.5.0` carried `KofOrmE2ETest` RED 2/41 (`createNativeEndToEndMatchesJvm` + `countWhereNativeEndToEndMatchesJvm`) — ROOT CAUSE CORRECTED: `0793aea4` (§387 pump fix) REVERTED the whole F3a landing (`a5d87fa7`) in a rebase resolution, so the "dirty shared tree/WIP" reading was WRONG — ✅ FIXED 20/09 (stabilization lane)
 
-- **Measured (20/09, wt387 @`9884b4a0`, zero foreign files):** `mvn -o test
-  -pl kof-compiler -am -Dtest='KofOrmE2ETest'` → `Tests run: 41, Failures: 2`
-  (same 2F with AND without the §387 pump fix — isolation proved by stash).
-  Green numbers from the shared worktree mean the native runtime pieces are
-  present LOCALLY, not committed (the §384/§389 dirty-tree family again).
-- **Why not fixed here:** files = `KofOrm.java`, `NativeBackend.java`,
-  `RuntimeOrm2/3.java` (the lane's WIP, rule 8: don't touch other lanes'
-  unfinished work; the §389 precedent is exactly this shape).
-- **Route:** gaps-db/.22 — finish landing the native faces (RuntimeOrm3
-  `count_where`/`create` on the compile path + resources) or reopen the
-  F3a/F2a support flags until they do; then flip this entry and CI goes green
-  on release-gate conditions 4/7.
-- **Related:** §389 (same shape, closed by the owner), a5d87fa7/e3e98d78
-  (F-series lineage), §384 (dirty-tree truth).
+- **Real root cause (measured 20/09, stabilization lane, clean tree):** commit
+  `0793aea4` ("fix(kofjs) §387 …") touched 3 ORM files it had no reason to
+  touch and reverted exactly the F3a hunks of `a5d87fa7`:
+  (1) `KofOrm.NATIVE_F1` lost `"kof_orm_count_where"` → `orm.count(t,"f",v)`
+  re-gated `ORM001` on Native;
+  (2) `NativeBackend` stopped emitting `RuntimeOrm3` → the `count_where`
+  runtime was never linked into the native image;
+  (3) `RuntimeOrm2` lost the F1d retro-fix (space before `(` + `tok_next`
+  reload: the `:generated`/`:unique` flags were eaten letter-by-letter, so the
+  Native DDL lacked AUTOINCREMENT/UNIQUE and the create byte-parity golden
+  failed). `git log a5d87fa7..HEAD -- <3 files>` = ONLY `0793aea4`; the NEW
+  file `RuntimeOrm3.java` survived → the landing was PARTIALLY clobbered, the
+  exact rebase-truncation shape the conflict policy (AGENTS `d7dba433`
+  warning) exists to prevent. The §387 message's "PROVEN base-red by stashing
+  this fix" was misled: stashing `0793aea4` also un-clobbers F3a on that
+  candidate, so the 2F were the clobber, not a pre-existing base-red.
+- **Fix (no new code):** re-applied `a5d87fa7`'s COMMITTED content for the 3
+  files — `git checkout a5d87fa7 -- KofOrm.java NativeBackend.java
+  RuntimeOrm2.java`. **Proof:** `mvn -o -pl kof-compiler -am test
+  -Dtest='KofOrmE2ETest'` → `Tests run: 41, Failures: 0, Errors: 0, Skipped: 3`
+  (was `41 / 2F` on the CI of `4d8ea616`; the CI Build+Tests of `4d8ea616` was
+  RED on exactly these 2, `KofOrmE2ETest.createNativeEndToEndMatchesJvm:982`
+  and `countWhereNativeEndToEndMatchesJvm:1082`).
+- **Route/owner:** gaps-db/.22 (F3a author, `a5d87fa7`) — the fix restored the
+  owner's committed landing, not their WIP; ledger flipped by the
+  stabilization lane. Corrects the earlier "WIP dirty tree" hypothesis.
+- **Related:** §393 (compiler #568 edges), §389/§384 (dirty-tree family — NOT
+  this shape), a5d87fa7 (F3a, restored), 0793aea4 (the clobber).
 ## §393 — the landed #568 fix (`d05d499b`) missed 4 edges: top-level-function precedence (frozen-semantics regression), private/abstract ctors resolved, no arg-type gates, "Undefined function" when the external class DOES exist — ✅ FIXED 20/09 (compiler lane, branch `fix-568`)
 
 - **GitHub:** #568 (closed upstream by `d05d499b`/§391) · branch `fix-568`
