@@ -127,9 +127,10 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
   - **O gate agora fecha o ciclo nas duas direções** (21/09, lane docs): além de afirmação de fechamento sem respaldo no ledger, um id FECHADO no ledger a partir da seção 400 sem entrada no CHANGELOG agora derruba o gate. O piso é regra de época, não anistia: medido em 21/09, 25 ids abaixo de 400 não têm entrada enquanto ZERO acima têm — a prática consolidou, a regra começa onde a prática começa. Verificado por mutação: uma seção fechada plantada no ledger sem linha no changelog é nomeada pelo gate; estado real segue verde. (Uma ideia companheira — proibir referências do changelog a ids fora do ledger — foi medida e REJEITADA: os achados são remissões antigas de outro espaço de ids, regra errada para a história, recusada pela lição da rodada 11.)
   - **Gate de registros vivos ampliado; paridade EN/PT do DECISIONS reparada** (21/09, lane docs):
     auditar o pouso da lane irmã achou três decisões da mantenedora registradas só no EN (`R6-SCOPE`,
-    `D-R3-BUFFER`, `D-R3-HANDLE-LIFETIME`) e uma seção PT corrompida (um heading EN órfão mais uma
-    cópia byte-idêntica do adendo de gráficos). Ambos corrigidos: as três seções espelhadas ao PT
-    (só tradução, sem mudança de conteúdo) e a duplicata removida. O `check_live_records.sh` agora
+    `D-R3-BUFFER`, `D-R3-HANDLE-LIFETIME`) — a lane irmã então as espelhou ao PT em `097ff924`;
+    CORREÇÃO desta entrada como escrita primeiro: esta mudança NÃO as traduziu, remove uma
+    corrupção remanescente no DECISIONS PT (um heading EN órfão mais uma cópia byte-idêntica do
+    adendo de gráficos, ambas deletadas sem perda) e adiciona o gate. O `check_live_records.sh` agora
     também exige paridade EN<->PT dos IDs de decisão (template `D-XXXX` excluído) e zero heading de
     seção repetido — provado por mutação (duplicata replantada e seção PT removida são nomeadas;
     restaurado verde). O fio no agent-verify agora dispara para todo `docs/development/`.
