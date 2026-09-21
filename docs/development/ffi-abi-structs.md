@@ -115,9 +115,11 @@ Three worked examples the implementation tests must reproduce bit-exactly:
   **Landed 21/09 (D-R3-BUFFER/D-R3-HANDLE-LIFETIME):** the nominal spelling is
   **`Buffer(U8)`** (not a reuse of `Byte[]`), created with
   **`buffer.alloc(Int) : Buffer(U8)`** — the programmer never allocates/frees
-  (lifetime language-managed; `Handle` follows the same automatic rule). Slice 1
-  (JVM): `buffer.alloc` + `Buffer.bytes() : Byte[]` (`BufferE2ETest` 4/4);
-  extern copy-in/call/copy-back is the next slice. Native/JS stay `FFI001`/
+  (lifetime language-managed; `Handle` follows the same automatic rule). Slices
+  (JVM): `buffer.alloc` + `Buffer.bytes() : Byte[]` (`BufferE2ETest` 4/4) and
+  `Buffer(U8)` as an `extern` INOUT parameter — **copy-in / call / copy-back**
+  (`BufferFfiE2ETest` 4/4 with a real C shim: writes accumulate across calls,
+  proving copy-in reads and copy-back writes). Native/JS stay `FFI001`/
   `FFI002` (R6-SCOPE: incremental, declared gaps).
 - **D6-4 · return-by-value > 16 B.** SysV hidden-pointer (sret) / AAPCS64
   hidden-x8 / LP64 reference — the *JVM* Linker hides this; the *asm*

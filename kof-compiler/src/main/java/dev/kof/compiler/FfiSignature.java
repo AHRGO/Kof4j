@@ -59,6 +59,10 @@ public final class FfiSignature {
                 // D6-2 / 3.8b fatia 3: `T[]` primitivo vira `ptr` C — token `p` +
                 // o char do ELEMENTO (o runtime faz copy-in por chamada).
                 sb.append('p').append(arrayElemChar(p.type()).charValue());
+            } else if (isBufferParam(p.type())) {
+                // D6-3 / D-R3-BUFFER: `Buffer(U8)` (INOUT) — token `B`; o runtime
+                // faz copy-in (arena da chamada), chama e copia de volta.
+                sb.append('B');
             } else {
                 // inalcançável: isExternBound filtra antes; nunca silencioso (R6).
                 sb.append('?');
@@ -154,6 +158,17 @@ public final class FfiSignature {
         String base = typeName.substring(0, typeName.length() - 2);
         Character c = paramChar(base);
         return (c == null || c.charValue() == 'S') ? null : c;
+    }
+
+    /** D6-3 / D-R3-BUFFER: `Buffer(U8)` como parâmetro `extern` (INOUT). Aceita
+     *  `Buffer`, `Buffer(U8)` e `Buffer<Byte>` (o parser normaliza `Buffer(U8)`→
+     *  `Buffer`); o runtime faz copy-in / chamada / copy-back. */
+    static boolean isBufferParam(String typeName) {
+        if (typeName == null) return false;
+        String s = simpleName(typeName);
+        if (!s.startsWith("Buffer")) return false;
+        String rest = s.substring("Buffer".length());
+        return rest.isEmpty() || rest.startsWith("(") || rest.startsWith("<");
     }
 
     static Type returnType(String r) {

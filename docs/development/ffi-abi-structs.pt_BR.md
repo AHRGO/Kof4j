@@ -119,8 +119,11 @@ Três exemplos resolvidos que os testes de implementação devem reproduzir bit 
   **`Buffer(U8)`** (não um reuso de `Byte[]`), criado com
   **`buffer.alloc(Int) : Buffer(U8)`** — o programador nunca aloca/libera
   (vida gerenciada pela linguagem; `Handle` segue a mesma regra automática).
-  Fatia 1 (JVM): `buffer.alloc` + `Buffer.bytes() : Byte[]` (`BufferE2ETest`
-  4/4); copy-in/chamada/copy-back no extern é a próxima fatia. Native/JS
+  Fatias
+  (JVM): `buffer.alloc` + `Buffer.bytes() : Byte[]` (`BufferE2ETest`
+  4/4) e `Buffer(U8)` como parâmetro INOUT de `extern` — **copy-in / chamada /
+  copy-back** (`BufferFfiE2ETest` 4/4 com shim C real: as escritas acumulam
+  entre chamadas, provando que o copy-in lê e o copy-back escreve). Native/JS
   seguem `FFI001`/`FFI002` (R6-SCOPE: incremental, gaps declarados).
 - **D6-4 · retorno by-value > 16 B.** SysV hidden-pointer (sret) /
   AAPCS64 hidden-x8 / LP64 referência — o Linker do *JVM* esconde isso; o

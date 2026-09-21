@@ -481,6 +481,10 @@ public final class CompilerPipeline {
                 // no JVM; Native/JS ficam nos seus gap codes (R6).
                 if (driver.target == Target.JVM
                         && FfiSignature.arrayElemChar(param.type()) != null) continue;
+                // D6-3 / D-R3-BUFFER: `Buffer(U8)` como param INOUT binda no JVM
+                // (copy-in/chamada/copy-back); Native/JS ficam nos gap codes (R6).
+                if (driver.target == Target.JVM
+                        && FfiSignature.isBufferParam(param.type())) continue;
                 return false;
             }
             return true;
