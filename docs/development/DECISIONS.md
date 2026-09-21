@@ -2540,128 +2540,39 @@ settles the Registry consumption contract only. It does NOT cut 0.5.0 nor open
 
 ---
 
-## D6-FFI-ABI — struct/array ABI: `record` + new `struct`, `new T[n]`, INOUT buffer without syntax, full sret, downcall-confined arena (maintainer 21/09)
+## D-FFI-STRUCT — FFI struct/array ABI: the D6 decisions (maintainer 09/20/2026)
 
-**Date:** 2026-09-21 · **State:** `DECIDED` · **Resolves:** the five design
-questions D6-1..D6-5 of `docs/development/ffi-abi-structs.md` §4 (spec D6-A,
-`D-POLL-19`). **Execution:** compiler lane (3.8b then 3.7).
-
-**Context:** `D-POLL-19` D6-A ordered a written, reviewed spec before code; the
-spec (docs→platform lane 19/09) fixed §4 as five questions the lane **proposes
-but never decides** (rule 6). The maintainer answered all five (multiple-choice,
-21/09/2026). The decision-free slice 3.8a `AbiLayout` already landed 20/09; with
-these answers 3.8b (JVM binding) and 3.7 (native asm) unblock.
-
-**Decided (maintainer's answers):**
-
-| # | Question | Decision |
-|---|---|---|
-| D6-1 | which Kof value maps to a C struct? | **A+B** — `record` maps **by-value** (read-only, zero ceremony, already exists) **and** a new mutable `struct` maps **by-reference** (enables in/out buffers). |
-| D6-2 | array → pointer | **only `new T[n]`** — a primitive array crosses as `ptr` with no implicit length (the C API decides); `List<T>` stays `FFI001` until a boxed-unboxing benchmark proves the copy is worth it. |
-| D6-3 | out-parameters | **`Buffer(U8, INOUT)` with NO new syntax** — `new Byte[n]` crosses as its own ABI kind (copy-in → call → copy-back); length stays an explicit C argument. The `S` token is **never reused** (Simplicity Law, rule 11). |
-| D6-4 | return-by-value > 16 B | **implement the full sret** — SysV hidden-pointer / AAPCS64 hidden `x8` / LP64 reference per target, isolated by the §6 slices. |
-| D6-5 | String/arena ownership | **arena confined per downcall** — an arena created and closed per call; a returned `char*` is **copied and never owned** by Kof unless the C API documents transfer (that is the 3.3 `free()` story). Fixes the measured `Arena.global()` leak (§1 wart: every String FFI arg leaked in a long-running process). |
-
-**Consequences / queue:** `ffi-abi-structs.md` §4 flips from *proposal* to
-*decision* and §5/§6 become the execution plan; 3.8b (JVM, free via FFM) then
-3.7 (native asm, sret = the biggest cost) are unblocked. The new `struct` keyword
-is a **new language surface** and must pass the Simplicity Law gate (rule 11)
-before landing. The doc stays in `docs/development/` until 3.8b/3.7 land
-(three-states: it still has pending implementation), moving to `docs/` only when
-concluded.
-
-**Non-goals:** does NOT implement anything (rule 6: the decision opens the queue,
-the compiler lane executes); does NOT change frozen semantics (`record` keeps its
-contract); does NOT decide the opaque-handle/`free()` surface (3.3, separate).
-
-**Evidence:** maintainer's multiple-choice answers 21/09/2026 (chat); spec
-`docs/development/ffi-abi-structs.md` §4; measured arena wart in §1 (19/09).
-
----
-
-## D6-FFI-ABI — the five struct/array ABI decisions: `record` + `struct`, `new T[n]`, INOUT buffer without syntax, full sret, per-downcall arena (09/20/2026, maintainer's multiple choice)
-
-**Context:** `D-POLL-19` (D6-A) ordered a written spec, reviewed before code —
-`docs/development/ffi-abi-structs.md`. Its §4 left five questions open for the
-maintainer (rule 6: that lane proposes, never decides); 3.8a `AbiLayout` already
-landed as the decision-free substrate. The maintainer answered all five in one
-multiple-choice (chat, 09/20/2026), each = the recommended option; this record
-locks them and unblocks 3.8b (JVM) + 3.7 (native).
-
-**Decided (the maintainer's answers):**
-
-| # | Question | Decision |
-|---|---|---|
-| **D6-1** | which Kof value maps to a C struct? | **A+B** — `record` maps by-value (structural, read-only, already zero-ceremony) **and** a new mutable `struct` maps by-reference (the shape that enables in/out buffers). |
-| **D6-2** | what binds as a pointer (array)? | **only `new T[n]`** (the primitive array already exists) crosses as `ptr`, with **no implicit length** — the C API decides; `List<T>` stays `FFI001` until a benchmark proves the copy+unbox per call is worth it. |
-| **D6-3** | out-parameters (output buffer) | **`Buffer(U8, INOUT)` with NO new surface syntax** — `new Byte[n]` crosses as its own ABI kind (copy-in → call → copy-back); length is an explicit C argument, never implicit. The `S` token is never reused (call 20/09: `S` = `String` = read-only NUL-terminated `char*`; a buffer differs in mutability/direction/lifetime). The Simplicity Law (rule 11) is satisfied: no `out` keyword enters the language. |
-| **D6-4** | return-by-value > 16 B | **implement full sret** — SysV hidden-pointer, AAPCS64 hidden `x8`, LP64 reference, per target, isolated by the §6 slices. (The JVM Linker hides it; the asm backend must do it by hand.) |
-| **D6-5** | `String`/arena ownership (fixes the §1 measured wart) | **confined arena per downcall, closed after the call** — a returned `char*` is **copied and never owned** by Kof unless the C API documents transfer (that is the `free()`/3.3 story). Fixes the measured `Arena.global()` leak (every String FFI argument leaked in a long-running process). |
-
-**Queue / consequences:** `ffi-abi-structs.md` §4 flips from proposal to
-`DECIDED` (the spec updates in the same push); 3.8b (JVM binding) and 3.7
-(native asm + sret) move from ⛔→open — implementation = **compiler lane**,
-tracked in `roadmap.md` §23 (3.8/3.7) and this doc's §6. The new `struct`
-keyword is a **new language surface**: it enters only through the Simplicity
-Law gate (rule 11) before landing (would a human write this in Kof? does it
-declare intention?). The doc stays in `docs/development/` until 3.8b/3.7 land
-(three-states: pending implementation); promoted to `docs/` on conclusion.
-
-**Non-goals:** does NOT implement anything here (rule 6: the decision opens the
-queue); does NOT change frozen semantics (`record` keeps its contract); does NOT
-decide opaque handles / `free()` (3.3, separate); does NOT promise JS parity
-(R7 — wasm/host boundary is its own call).
-
-**Evidence:** maintainer's multiple-choice answers 09/20/2026 (chat); the five
-candidate options in `ffi-abi-structs.md` §4 (D6-1..D6-5); the arena-leak wart
-measured in §1 (19/09); 3.8a `AbiLayout` landed (golden vs the three ABIs).
-
----
-
-## D-FFI-STRUCT — FFI struct/array ABI: the D6 decisions (records by value)
-
-**Date:** 2026-09-20
-
-**State:** DECIDED (implementation opened: 3.8b JVM binding)
+**Date:** 2026-09-20 · **State:** `DECIDED` · **Revision (09/20/2026):** the
+maintainer's multiple-choice answer set **D6-1 = A+B** (lane `.14`/`.22` had
+recorded option A) and confirmed D6-2..D6-5. This is the canonical record; the
+earlier option-A text is preserved under *Superseded* (conflict policy: both
+sides kept). Issues **#572/#573** (slice 3.8b) must align to A+B.
 
 **Scope:** closes the `D6-1..D6-5` questions of
 `docs/development/ffi-abi-structs.md` (§4) — the spec that gates the FFI
-struct/array ABI (tracker 3.8a/3.8b/3.7). 3.8a (`AbiLayout`) already landed
-20/09. Maintainer authorized the front in session 20/09 ("implemente
-ffi-abi-structs 3.8b"); the options below adopt the spec's measured
-recommendations, keeping the **language surface minimal** (rule 11).
-
-### Context
-
-The FFI (R3) binds only the scalar set `{Int, Long, Float, Double, Boolean,
-String}` + callbacks (`FfiSignature`); struct/array/out-buffer/opaque are the
-honest `FFI001`/`FFI002` gaps (`CompilerPipeline.isExternBound`). The spec
-`ffi-abi-structs.md` measured the cost split: the JVM side is nearly free (FFM
-classifies), the native asm is the expensive half (3.7). Five decisions gated
-any code.
+struct/array ABI (tracker 3.8a/3.8b/3.7). 3.8a (`AbiLayout`) landed 20/09.
 
 ### Decision
 
-- **D6-1 = option A: a Kof `record` maps to a C struct, by value, read-only.**
-  `record Point(Int x, Int y)` binds a C `struct { int x; int y; }`. A new
-  mutable `struct` declaration (option B) is **NOT added in v1** — rule 11:
-  the out-buffer need is covered by D6-3 without new syntax; B is deferred
-  until a real *in/out struct field* need is proven.
-- **D6-2 = primitive arrays bind; `List<T>` does not.** `new Int[n]`/
-  `new Byte[n]` (existing syntax) cross as `ptr` with **no implicit length**
-  (the C API takes length explicitly). `List<T>` stays `FFI001` (boxed copy
-  per call is unproven against a benchmark).
-- **D6-3 = out-buffers are their own ABI kind, not `String`.** An out-buffer
-  is `new Byte[n]` crossing as `Buffer(U8, INOUT)` (copy-in / call /
-  copy-back), **never the `S` token** (`S` = NUL-terminated UTF-8 `char*`,
-  read-only). Length stays an explicit C argument.
-- **D6-4 = return-by-value > 16 B.** The JVM FFM `Linker` hides sret; the
+- **D6-1 = A+B** — a Kof `record` maps to a C struct **by value** (read-only,
+  scalar fields, already zero-ceremony) **and** a new mutable `struct`
+  declaration maps **by reference** (the shape that enables in/out buffers).
+  The `struct` keyword is new language surface: it enters only through the
+  Simplicity Law gate (rule 11) before landing.
+- **D6-2 = only `new T[n]` binds to `ptr`** with **no implicit length** (the C
+  API takes the length explicitly); `List<T>` stays `FFI001` until a
+  boxed-unboxing benchmark proves the copy is worth it. (Own slice, after 3.8b.)
+- **D6-3 = out-buffers are their own ABI kind** — `new Byte[n]` crossing as
+  `Buffer(U8, INOUT)` (copy-in / call / copy-back), **never the `S` token**
+  (`S` = NUL-terminated UTF-8 `char*`, read-only). Length stays an explicit C
+  argument; no new syntax (rule 11).
+- **D6-4 = implement the full sret** — the JVM FFM `Linker` hides it; the
   **native asm** backend implements it per ABI (SysV hidden pointer / AAPCS64
-  hidden `x8` / LP64 reference) — 3.7, native lane.
-- **D6-5 = confined arena per downcall.** `Arena.ofConfined()` opened at the
-  downcall and closed after it; a returned `char*` is copied then never owned
-  (Kof `String` is immutable). The measured wart (a `Arena.global()` on the
-  string-argument path) is fixed in the same front — no leak left to drift.
+  hidden `x8` / LP64 reference) — slice 3.7, native lane.
+- **D6-5 = confined arena per downcall** (`Arena.ofConfined()`, closed after
+  the call); a returned `char*` is copied then never owned (Kof `String` is
+  immutable). The measured wart (§1: `Arena.global()` on the FFI path) is fixed
+  in this front, not left to drift.
 
 **Encoding:** the `FfiSignature` token grammar gains a struct token
 `@<fieldchars>` (e.g. `div(Int,Int):Div` → `@ii`), reusing the scalar chars
@@ -2670,120 +2581,42 @@ outside the decided set stays `FFI001`/`FFI002` (R6), never silent.
 
 ### Invariants
 
-- Zero regression on the scalar/callback FFI (existing `FfiE2ETest` /
+- Zero regression on the scalar/callback FFI (`FfiE2ETest`,
   `JvmFfiCallbackE2ETest` stay green).
 - Native/JS keep `FFI001`/`FFI002` for struct until 3.7/JS land — never a
   silent partial binding (R6).
-- Only scalar fields bind in v1; a record with a non-scalar field is
-  `FFI001` on JVM (honest).
+- Only scalar fields bind in v1; a record with a non-scalar field is `FFI001`
+  on JVM (honest). `CString`, `Buffer`, `Pointer`, `OpaqueHandle` and `Struct`
+  remain distinct ABI types even when all lower to an address in a register.
 
-### Rejected alternatives
+### Superseded (preserved — the earlier option-A record, lane `.14`/`.22`, 20/09)
 
-- **B (new `struct` syntax) for v1** — rejected: adds language surface
-  (rule 11) before a proven need; D6-3 covers out-buffers.
-- **`S` for out-buffers** — rejected (measured 20/09): `String` ≠ mutable
-  buffer (mutability, length, direction, lifetime).
-- **`Arena.global()`** — rejected: leaks every string argument in a
-  long-running process.
+> The lane had recorded **D6-1 = option A** (a `record` only, by value,
+> read-only; no new `struct`) and treated D6-2/3/4 as deferred with owner. The
+> maintainer's 09/20 answer (A+B; all five decided) supersedes it. Kept for
+> traceability.
 
 ### Implementation
 
-`docs/development/ffi-abi-structs.md` §6: 3.8a ✅ (landed), **3.8b = JVM
-binding (this front)** — `compile lane`; 3.7 = native asm (native lane); JS
-boundary = its own decision. Claim in `DOING.md` before code (this commit).
+`docs/development/ffi-abi-structs.md` §6: 3.8a ✅ (landed); **3.8b = JVM
+binding (this front)** — compile lane (#572/#573, align to A+B); 3.7 = native
+asm (native lane, includes sret); JS boundary = its own decision. The doc is
+promoted to `docs/` only when 3.8 lands (three-states rule).
 
 ### Evidence
 
 - Spec + measured layout: `docs/development/ffi-abi-structs.md` §1–§3;
   `AbiLayoutTest` (14 shapes × 3 ABIs, GCC 13.3 golden).
-- E2E proof for 3.8b: `FfiStructE2ETest` (JVM: record arg + record return via
-  a real C `.so`, byte-for-byte vs the C oracle; Native/JS pinned `FFI001`/
+- E2E proof for 3.8b: `FfiStructE2ETest` (JVM: record arg + record return via a
+  real C `.so`, byte-for-byte vs the C oracle; Native/JS pinned `FFI001`/
   `FFI002`).
 
 ### Relationships
 
-- `Supersedes: none`
-- `Depends on: D-POLL-19 (spec-first), AbiLayout 3.8a`
-- `Related: R3 (FFI), R6 (never silent), R9 (interop-first), D-KOF-FIRST`
+- `Supersedes: the 20/09 option-A D6-1 record (same heading, lane .14/.22)`
+- `Depends on: D-POLL-19 (spec-first), AbiLayout 3.8a, D-KOF-FIRST`
+- `Related: R3 (FFI), R6 (never silent), R9 (interop-first), rule 11 (struct keyword gate), D-1.0-EDGES`
 
----
-
-## D-FFI-STRUCT — FFI struct/array ABI: the D6 decisions
-
-**Date:** 2026-09-20
-
-**State:** DECIDED (front opened: slice 3.8b, JVM binding)
-
-**Scope:** closes D6-1..D6-5 of `docs/development/ffi-abi-structs.md` (§4),
-which gated slice 3.8 (FFI struct/array ABI, tracker line 3.8). 3.8a
-(`AbiLayout`) landed 20/09.
-
-**### Context**
-
-The FFI (R3) binds the scalar set `{Int, Long, Float, Double, Boolean, String}`
-plus callbacks; struct/array/out-buffer/opaque are the honest `FFI001`/`FFI002`
-gaps. The spec (`ffi-abi-structs.md`) measured that the JVM side is nearly free
-(FFM classifies) while the native asm is the real cost (slice 3.7). Five
-decisions (D6-1..D6-5) had to be recorded before any binding code (rule 6).
-
-**### Decision**
-
-- **D6-1 = option A: a Kof `record` maps to a C struct, by value, read-only.**
-  A new mutable `struct` declaration (option B) is **deferred** — needed only
-  for in/out buffers, which D6-3 covers without new syntax; C (both) is not
-  adopted in v1 (rule 11: no new language surface without proven need). Scalar
-  fields only in v1.
-- **D6-2 = primitive arrays (`new Int[n]`) bind to `ptr`** with **no implicit
-  length** (the C API takes the length explicitly); `List<T>` stays `FFI001`
-  until a boxed-unboxing benchmark proves otherwise. (Own slice, after 3.8b.)
-- **D6-3 = out-buffers are their own ABI kind** — `new Byte[n]` crossing as
-  `Buffer(U8, INOUT)` (copy-in / call / copy-back), **never the `S` token**
-  (`S` = NUL-terminated UTF-8 `char*`, read-only). Length stays an explicit C
-  argument. Pointer-in-struct fields = out of scope. (Own slice.)
-- **D6-4 = return-by-value > 16 B:** the JVM FFM `Linker` hides sret; the
-  **native asm** backend implements it explicitly (SysV hidden pointer /
-  AAPCS64 hidden `x8` / LP64 reference) — slice 3.7, native lane.
-- **D6-5 = confined arena per downcall** (`Arena.ofConfined()`, closed after
-  the call); a returned `char*` is copied then never owned (Kof `String` is
-  immutable). The measured wart (§1: `Arena.global()` on the FFI path) is fixed
-  in this front, not left to drift.
-
-**### Invariants**
-
-- Zero regression: the scalar/callback FFI (`FfiSignature`, `FfiE2ETest`,
-  `JvmFfiCallbackE2ETest`) keeps its behavior.
-- Native/JS keep `FFI001`/`FFI002` for struct until 3.7/JS land — never a
-  silent partial binding (R6).
-- `CString`, `Buffer`, `Pointer`, `OpaqueHandle` and `Struct` remain distinct
-  ABI types even when all lower to an address in a register.
-
-**### Rejected alternatives**
-
-- **B (new `struct` syntax) in v1** — adds surface before need; D6-3 covers
-  out-buffers.
-- **Reusing `S` for out-buffers** — mutability, length, direction and lifetime
-  differ (corrected 20/09).
-- **`List<T>`** — boxed copy per call, unproven against a benchmark.
-
-**### Implementation**
-
-Slice 3.8b opens now (compiler lane): record→`StructLayout` on the JVM via FFM
-(param + return, scalar fields), D6-5 arena. Native 3.7 follows the same
-`AbiLayout` golden; the JS boundary is its own decision. Queue: DOING.md. The
-doc is promoted to `docs/` only when 3.8 lands (three-states rule).
-
-**### Evidence**
-
-- Spec (measured): `docs/development/ffi-abi-structs.md` §1–§6.
-- Layout substrate: `AbiLayout` + `AbiLayoutTest` (14 shapes × 3 ABIs, GCC 13.3
-  golden), 3.8a, 20/09.
-- Binding proof: `FfiStructE2ETest` (JVM struct param + return vs the C oracle;
-  Native/JS pinned FFI001/FFI002).
-
-**### Relationships**
-
-- `Depends on: D-KOF-FIRST, AbiLayout (3.8a)`
-- `Related: R3 (FFI), R6 (never silent), R9 (interop-first), D-1.0-EDGES`
 
 ## D-ARTIFACT-TRUST — 1.0 trust contract for release artifacts: integrity + exact-artifact + neutral build provenance, attested by the official workflow; verification mandatory at the release gate and in `kof deps resolve` for official packages (09/20/2026, maintainer answers to #571)
 

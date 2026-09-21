@@ -2531,14 +2531,16 @@ apenas fecha o contrato de consumo do Registry. NÃO corta o 0.5.0 nem abre a 1.
 
 **Data:** 2026-09-20
 
-**Estado:** DECIDIDO (implementação aberta: 3.8b binding JVM)
+**Estado:** DECIDIDO · **Revisão (20/09/2026):** a resposta de múltipla escolha
+da mantenedora fixou **D6-1 = A+B** (lane `.14`/`.22` havia gravado a opção A)
+e confirmou D6-2..D6-5. Este é o registro canônico; o texto antigo (opção A)
+fica preservado em *Superseded* logo abaixo. Issues **#572/#573** (3.8b) alinham
+a A+B.
 
 **Escopo:** fecha as questões `D6-1..D6-5` de
 `docs/development/ffi-abi-structs.md` (§4) — a spec que gateia a ABI de
 struct/array da FFI (tracker 3.8a/3.8b/3.7). O 3.8a (`AbiLayout`) já pousou
-20/09. A mantenedora autorizou a frente em sessão 20/09 ("implemente
-ffi-abi-structs 3.8b"); as opções abaixo adotam as recomendações medidas da
-spec, mantendo a **superfície de linguagem mínima** (regra 11).
+20/09.
 
 ### Contexto
 
@@ -2551,12 +2553,10 @@ gateavam qualquer código.
 
 ### Decisão
 
-- **D6-1 = opção A: um `record` de Kof mapeia um struct C, por valor,
-  read-only.** `record Point(Int x, Int y)` binda um C
-  `struct { int x; int y; }`. Uma nova declaração mutável `struct` (opção B)
-  **NÃO é adicionada na v1** — regra 11: a necessidade de out-buffer é coberta
-  pelo D6-3 sem sintaxe nova; B fica adiada até uma necessidade real de
-  *campo in/out em struct* ser provada.
+- **D6-1 = A+B: `record` de Kof mapeia um struct C por valor (read-only, campos
+  escalares) MAIS uma nova declaração mutável `struct` por referência** — a
+  forma que habilita buffers in/out. O keyword `struct` é superfície nova de
+  linguagem: entra só pelo gate da Simplicidade (regra 11) antes de landar.
 - **D6-2 = arrays primitivos bindam; `List<T>` não.** `new Int[n]`/
   `new Byte[n]` (sintaxe existente) cruzam como `ptr` com **nenhum length
   implícito** (a API C recebe o length explicitamente). `List<T>` continua
@@ -2573,6 +2573,13 @@ gateavam qualquer código.
   possuído (`String` de Kof é imutável). A wart medida (um `Arena.global()`
   no caminho de argumento string) é corrigida na mesma frente — nenhum vazamento
   deixado à deriva.
+
+### Superseded (preservado — o registro antigo de opção A, lane `.14`/`.22`, 20/09)
+
+> A lane havia gravado **D6-1 = opção A** (só `record`, por valor, read-only,
+> sem `struct` novo) e tratava D6-2/3/4 como adiados com dono. A resposta da
+> mantenedora em 20/09 (A+B; os cinco decididos) a supera. Mantido para
+> rastreabilidade.
 
 **Codificação:** a gramática de tokens do `FfiSignature` ganha um token de
 struct `@<fieldchars>` (ex.: `div(Int,Int):Div` → `@ii`), reusando os chars
