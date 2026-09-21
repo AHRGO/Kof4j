@@ -3,7 +3,8 @@
 [English](ffi-abi-structs.md) | [Português](ffi-abi-structs.pt_BR.md)
 
 **Status:** **D6 DECIDED (maintainer 09/20/2026)** — `docs/development/DECISIONS.md`
-§D-FFI-STRUCT. D6-1 = A+B (`record` by-value + a new mutable `struct` by-ref) ·
+§D-FFI-STRUCT. D6-1 = B (`D-FFI-STRUCT-B`, 21/09: new mutable `struct` by-ref;
+`record`s stay by-value read-only, `Buffer(U8)` already covers the out-buffer) ·
 D6-2 = only `new T[n]` · D6-3 = `Buffer(U8, INOUT)`, no new syntax · D6-4 =
 implement the full sret · D6-5 = confined arena per downcall. **D6-1 B approved
 spec-first 21/09 (`D-FFI-STRUCT-B`)**: the mutable `struct` surface is designed

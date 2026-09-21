@@ -2,12 +2,12 @@
 
 # Type-system extensions — incremental plan (X5 variance + sealed · X6 interop reflection)
 
-> **Status: DRAFT for maintainer review — spec-first, NO CODE** (rule 6). A core
-> type-system change and a reflection surface only land after this plan is
-> reviewed. Authority: `DECISIONS.md` §D-TYPE-VARIANCE (X5 = option C, open) and
-> §D-INTEROP-REFLECT (X6 = open, incremental plan required). Queue:
-> `roadmap.md` §2.8.4/§2.8.5. Governing rules: rule 6 (maintainer decides),
-> rule 11 (Simplicity Law on any surface), `D-KOF-FIRST`.
+> **Status: APPROVED 21/09 — implementing in slices with proof** (exec =
+> compiler lane). The maintainer voted X5 = option C and X6 (incremental) and
+> answered the X5 surface questions (`DECISIONS.md` §D-TYPE-VARIANCE,
+> §D-INTEROP-REFLECT, §D-X5-SURFACE); the text below is kept as the measured
+> spec. Queue: `roadmap.md` §2.8.4/§2.8.5. Governing rules: rule 6 (maintainer
+> decides), rule 11 (Simplicity Law on any surface), `D-KOF-FIRST`.
 
 ## Why spec-first
 

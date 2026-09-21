@@ -3,8 +3,9 @@
 [English](ffi-abi-structs.md) | [Português](ffi-abi-structs.pt_BR.md)
 
 **Status:** **D6 DECIDIDO (mantenedora 20/09/2026)** — `docs/development/DECISIONS.md`
-§D-FFI-STRUCT. D6-1 = A+B (`record` por valor + novo `struct` mutável por
-referência) · D6-2 = só `new T[n]` · D6-3 = `Buffer(U8, INOUT)`, sem sintaxe
+§D-FFI-STRUCT. D6-1 = B (`D-FFI-STRUCT-B`, 21/09: novo `struct` mutável por
+referência; `record`s ficam por valor read-only, `Buffer(U8)` já cobre o
+out-buffer) · D6-2 = só `new T[n]` · D6-3 = `Buffer(U8, INOUT)`, sem sintaxe
 nova · D6-4 = implementar o sret completo · D6-5 = arena confinada por downcall.
 **D6-1 B aprovado spec-first 21/09 (`D-FFI-STRUCT-B`)**: a superfície `struct`
 mutável é desenhada aqui (§4/§6) e revisada antes de qualquer diff de

@@ -2,13 +2,12 @@
 
 # Extensões do sistema de tipos — plano incremental (X5 variance + sealed · X6 reflexão de interop)
 
-> **Estado: RASCUNHO para revisão da mantenedora — spec-first, SEM CÓDIGO**
-> (regra 6). Uma mudança de núcleo do sistema de tipos e uma superfície de
-> reflexão só pousam depois deste plano revisado. Autoridade: `DECISIONS.md`
-> §D-TYPE-VARIANCE (X5 = opção C, aberta) e §D-INTEROP-REFLECT (X6 = aberta,
-> plano incremental exigido). Fila: `roadmap.md` §2.8.4/§2.8.5. Regras
-> regentes: regra 6 (a mantenedora decide), regra 11 (Lei da Simplicidade em
-> qualquer superfície), `D-KOF-FIRST`.
+> **Estado: APROVADO 21/09 — implementando em fatias com prova** (exec = lane
+> compiler). A mantenedora votou X5 = opção C e X6 (incremental) e respondeu as
+> perguntas de superfície do X5 (`DECISIONS.md` §D-TYPE-VARIANCE,
+> §D-INTEROP-REFLECT, §D-X5-SURFACE); o texto abaixo fica como a spec medida.
+> Fila: `roadmap.md` §2.8.4/§2.8.5. Regras regentes: regra 6 (a mantenedora
+> decide), regra 11 (Lei da Simplicidade em qualquer superfície), `D-KOF-FIRST`.
 
 ## Por que spec-first
 
