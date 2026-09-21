@@ -1980,7 +1980,7 @@ silencioso (regra 6 do freeze / R6).
    sobre a leitura de 3 estados).
 2. Face Native (medir; diagnóstico-ou-funciona — nada inventado).
 3. Corpus: `training/idioms/` (errors/control-flow) + `fake-idioms.md` (linha
-   `Bool?` → Troolean), `docs/language/types.md`, nota de revisão no
+   `Bool?` → Troolean), `docs/language-reference/types.md`, nota de revisão no
    D-NULL-INTENT, entrada de migração no CHANGELOG (linha 0.4.0), célula da
    matriz em `backend-parity.md`.
 

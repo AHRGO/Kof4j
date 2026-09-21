@@ -13,6 +13,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **release-prep conditions 2/3 de-staled + two dangling doc paths fixed**
+    (21/09, lane docs/.18): prep condition 2 read GREEN, but the maintainer's
+    `D-RELEASE-0.5.0-GATE` condition 2 fixes it as NEEDS-REVIEW (3 approved
+    `State: OPEN` fronts: X5/X6/secrets) — never RED, never "nothing waits"; and
+    condition 3 ("3 owned docs") was stale after the 21/09 promotions (now 6:
+    +`db-parity-plan`, `secrets-plan`, `type-system-extensions-plan`). Also fixed
+    two dangling paths: `docs/development/native-multiarch.md` ->
+    `docs/native-multiarch.md` (tracker 1.2.2) and `docs/language/types.md` ->
+    `docs/language-reference/types.md` (roadmap 2.6.7 + DECISIONS PT). Docs only.
+
   - **tracker rows synced with the 21/09 decisions (X5/X6 surface, 5.1 Secrets)**
     (21/09, lane docs/.18): `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (+PT) row X5
     lacked the approval and the `D-X5-SURFACE` freeze (v1 surface: `out`/`in`,

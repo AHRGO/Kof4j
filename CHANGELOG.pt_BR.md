@@ -13,6 +13,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **condições 2/3 da prep de release de-staled + dois caminhos de doc quebrados
+    corrigidos** (21/09, lane docs/.18): a condição 2 da prep dizia GREEN, mas a
+    condição 2 de `D-RELEASE-0.5.0-GATE` da mantenedora a fixa como NEEDS-REVIEW
+    (3 frentes aprovadas `State: OPEN`: X5/X6/secrets) — nunca RED, nunca "nada
+    espera"; e a condição 3 ("3 docs com dono") estava stale após as promoções de
+    21/09 (agora 6: +`db-parity-plan`, `secrets-plan`,
+    `type-system-extensions-plan`). Também corrigidos dois caminhos quebrados:
+    `docs/development/native-multiarch.md` -> `docs/native-multiarch.md` (tracker
+    1.2.2) e `docs/language/types.md` -> `docs/language-reference/types.md`
+    (roadmap 2.6.7 + DECISIONS PT). Só docs.
+
   - **linhas do tracker sincronizadas com as decisões de 21/09 (superfície X5/X6,
     5.1 Secrets)** (21/09, lane docs/.18): a linha X5 de
     `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (+PT) não trazia a aprovação nem o

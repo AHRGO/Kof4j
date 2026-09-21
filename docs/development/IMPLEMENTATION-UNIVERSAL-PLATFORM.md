@@ -88,7 +88,7 @@ a new domain. **This stage closes before any Tier 6+ (R12).**
 | # | Item | Status | Owner | Proof / note |
 |---|------|--------|-------|--------------|
 | 1.2.1 | GC on riscv64 | ✅ | native lane | `356f33b9` |
-| 1.2.2 | GC on x86_64 — decomposed G-1..G-5 + G-6 | ✅ | native lane; exec landed by `.18` under maintainer order | `docs/development/native-multiarch.md`; **auto-collect ON (G-6(a) 19/09, option D1-A)**: the free-list-exhaustion trigger fires `collect_now` once per program (blanket-spill 15 GPRs; gate `spawn_count==0` with `incq` hoisted to `kof_spawn_handle_new` entry); §260 CLOSED; in-repo cap-test `gcAutoCollectFitsUnderMemoryCap`; `KofGcE2ETest` 4/4; MT worker-stack face catalogued; hello 44→84 syms re-baselined with cause (bytes within the gate) |
+| 1.2.2 | GC on x86_64 — decomposed G-1..G-5 + G-6 | ✅ | native lane; exec landed by `.18` under maintainer order | `docs/native-multiarch.md`; **auto-collect ON (G-6(a) 19/09, option D1-A)**: the free-list-exhaustion trigger fires `collect_now` once per program (blanket-spill 15 GPRs; gate `spawn_count==0` with `incq` hoisted to `kof_spawn_handle_new` entry); §260 CLOSED; in-repo cap-test `gcAutoCollectFitsUnderMemoryCap`; `KofGcE2ETest` 4/4; MT worker-stack face catalogued; hello 44→84 syms re-baselined with cause (bytes within the gate) |
 | 1.2.3 | Re-baseline sign-off for x86 auto-collect | ✅ | maintainer | D1-A DECIDIDO 19/09; EXECUTADO 19/09 (`.18`, ordem da mantenedora): hello 44→84 syms re-baselined COM causa no comentário, bytes dentro do gate +5%; §260 CLOSED; trigger ligado (G-6(a)) com MT = comportamento antigo |
 
 ### 1.3 Event-loop / real JS async
