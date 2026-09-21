@@ -150,10 +150,12 @@ c_bug_issues() {
     rows="$(cat "$OPEN_ISSUES_TSV" 2>/dev/null)"
   else
     eval "$(scripts/gh-as-agent.sh token 2>/dev/null)" || true
-    rows="$(gh issue list --repo KofLang/Kof4j --state open --limit 200 \
-      --json number,labels --jq '.[] | "\(.number)\t\([.labels[].name]|join(","))"' 2>/dev/null)" || rows=""
-    if [ -z "$rows" ] && ! gh auth status >/dev/null 2>&1; then
-      STATE[bug_issues]=UNKNOWN; DETAIL[bug_issues]="gh unavailable — cannot enumerate open issues"
+    # O rc da CONSULTA manda: uma falha transitoria de API (gh autenticado mas a
+    # query morre) NAO pode virar "0 bugs" verde — UNKNOWN (R6/Q5). Lista vazia
+    # legitima (rc=0, 0 issues) segue GREEN.
+    if ! rows="$(gh issue list --repo KofLang/Kof4j --state open --limit 200 \
+        --json number,labels --jq '.[] | "\(.number)\t\([.labels[].name]|join(","))"' 2>/dev/null)"; then
+      STATE[bug_issues]=UNKNOWN; DETAIL[bug_issues]="gh unavailable/query failed — cannot enumerate open issues"
       return
     fi
   fi
