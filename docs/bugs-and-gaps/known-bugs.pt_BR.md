@@ -11502,3 +11502,31 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
   `kof-debug-native-*` (`1 → 0`), RED antes do hook.
 - **Relacionado:** §394 (mesma família de vazamento — processo vs diretório),
   `KofDebugNativeDap.java`, `KofCliSupport.cleanup`.
+
+## §399 — `kof debug` DAP na JVM: `step`/`continue` limpavam `stoppedThread` DEPOIS do `resume()`, então a corrida com o evento SingleStep zerava o id novo para `-1` → o `stackTrace` seguinte enviava `FrameCount(-1)` (comando JDWP 11,7) → erro 20 (`INVALID_OBJECT`) matava a sessão ("fluxo DAP fechou") — flake do `KofDebugJvmStepTest` ~1/5 das execuções de classe — ✅ CORRIGIDO 21/09 (`62206c6d`; lane estabilização)
+
+- **Sintoma (medido 21/09, host compartilhado):** o `KofDebugJvmStepTest`
+  falhava em cerca de **1/5 a 1/3 das execuções de classe** (isolado 6/6
+  verde), sempre terminando com o canal DAP fechando em vez do stop esperado;
+  o texto reportado era o genérico "fluxo DAP fechou", nunca o erro JDWP.
+- **Causa raiz:** o `KofDebugJvmSession.step()` e o handler do `continue`
+  executavam `jdwp.resume()` e só **depois** `stoppedThread = -1`. O evento
+  SingleStep chega na thread leitora do JDWP e define o **novo id válido**;
+  sob carga o evento vencia a corrida e o `stoppedThread = -1` final o apagava.
+  O `stackTrace` seguinte (sem `threadId` explícito) usava `-1` →
+  `FrameCount(-1)` (comando `11,7`) → **erro 20 (`INVALID_OBJECT`)** do JDWP →
+  uma `IOException` fatal escapava do `handleRequest` → a CLI saía e o editor
+  via o canal DAP fechar.
+- **Conserto (esta lane):** limpar `stoppedThread` **antes** do `resume()` nos
+  dois sítios (`step()` e `continue`); fazer o `stackTrace` e o fallback do
+  `evaluate` reportarem um erro DAP honesto (R6) em vez de deixar a exceção
+  matar a sessão.
+- **Prova (RED-first, Q0):** teste novo
+  `stepThenImmediateStackTraceNeverLosesTheStoppedThread`
+  (`KofDebugJvmStepTest`, 12 sessões novas de
+  `stepIn → stackTrace → stepOut → stackTrace`) — **RED no código antigo**
+  (fix em stash) com o sintoma exato "fluxo DAP fechou", **GREEN no fix**;
+  classe + vizinhas (`Step`/`Jvm`/`Attach`/`NativeDap`) rodadas **4×** =
+  **22/0F/0E** cada.
+- **Relacionado:** §398 (mesmo harness DAP), `KofDebugJvmSession.java`,
+  `KofDebugJvmStepTest.java`.

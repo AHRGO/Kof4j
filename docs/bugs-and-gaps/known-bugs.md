@@ -13973,3 +13973,31 @@ p
 - **Related:** §394 (same leak family — process vs dir), `KofDebugNativeDap.java`,
   `KofCliSupport.cleanup`.
 
+## §399 — `kof debug` DAP on the JVM: `step`/`continue` cleared `stoppedThread` AFTER `resume()`, so the race with the SingleStep event wiped the new thread id to `-1` → the next `stackTrace` sent `FrameCount(-1)` (JDWP command 11,7) → error 20 (`INVALID_OBJECT`) killed the session ("fluxo DAP fechou") — flake `KofDebugJvmStepTest` ~1/5 of class runs — ✅ FIXED 21/09 (`62206c6d`; stabilization lane)
+
+- **Symptom (measured 21/09, shared host):** `KofDebugJvmStepTest` failed
+  roughly **1/5 to 1/3 of class-level runs** (isolated 6/6 green), always
+  ending with the DAP channel closing instead of the expected stop; the
+  reported text was the generic "fluxo DAP fechou", never the JDWP error.
+- **Root cause:** `KofDebugJvmSession.step()` and the `continue` handler ran
+  `jdwp.resume()` and only **then** `stoppedThread = -1`. The SingleStep event
+  is delivered on the JDWP reader thread and sets the **new valid** thread id;
+  under load the event won the race and the trailing `stoppedThread = -1`
+  clobbered it. The next `stackTrace` (no explicit `threadId`) then used `-1`
+  → `FrameCount(-1)` (command `11,7`) → JDWP **error 20 (`INVALID_OBJECT`)** →
+  a fatal `IOException` escaped `handleRequest` → the CLI exited and the
+  editor saw the DAP channel close.
+- **Fix landed (this lane):** clear `stoppedThread` **before** `resume()` in
+  both `step()` and `continue`; make `stackTrace` and the `evaluate` fallback
+  surface an honest DAP error (R6) instead of letting the exception kill the
+  session.
+- **Proof (RED-first, Q0):** new test
+  `stepThenImmediateStackTraceNeverLosesTheStoppedThread`
+  (`KofDebugJvmStepTest`, 12 fresh sessions of
+  `stepIn → stackTrace → stepOut → stackTrace`) — **RED on the old code** (fix
+  stashed) with the exact "fluxo DAP fechou" symptom, **GREEN on the fix**;
+  class + neighbours (`Step`/`Jvm`/`Attach`/`NativeDap`) run **4×** =
+  **22/0F/0E** each.
+- **Related:** §398 (same DAP harness), `KofDebugJvmSession.java`,
+  `KofDebugJvmStepTest.java`.
+
