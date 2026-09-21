@@ -158,6 +158,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (+ typo da irmã `F2a find`→F2b sincronizado com a linha do §397), DOING
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
+  - **Release-prep checklist de-staled + `check_live_records.sh` part H** (21/09, docs lane): the
+    prep's item 1 still said "land in flight" for §374/#553, §371/#550 and §378/#554, and the
+    "open issues that travel" list still named #550/#553/#554 — but all three section ids were
+    **✅ FIXED on 20/09**, so the queue was behind the ledger. Item 1 is now `[x]` with the proofs
+    (`BareCollectionFieldE2ETest` 8/8, `ShippedCliCrossSmokeTest` 2/2 + `RuntimeSourceLoaderTest`
+    6/6, §378 EN×PT cross-check) and only #555 (CodeQL umbrella) travels. The class is mechanized:
+    part H requires every `§NNN` named in the prep's "issues that travel" section to be in the
+    classifier's OPEN set — a prep that sends a closed § travelling now fails (red-first: the
+    selftest plants a `§999` that is not open).
   - **`check_live_records.sh` part G: release-prep condition-7 count == the classifier** (21/09, docs
     lane): the release-prep table (`release-beta-0.5.0-prep.md` + PT) is the acceptance record, so its
     condition-7 number may not drift from the authority — and it had: the row read `17 live` while

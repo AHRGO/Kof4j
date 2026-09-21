@@ -9,10 +9,13 @@ the release is cut (three-states rule).
 
 ## Checklist (ordered — version number and tag are the maintainer's call, rule 6)
 
-1. [ ] Land what is in flight: §374/#553 (`.22` — WIP in
+1. [x] Land what is in flight: §374/#553 (`.22` — WIP in
        `JvmOpCollections`), §371/#550 (CLI cross build), §378/#554 (docs
-       gate). Each closes with 4-target proof; docs lane ff `beta-0.5.0`
-       after every landing on `beta-0.4.0`.
+       gate). **ALL THREE LANDED 20/09 — ✅ FIXED** (`§374` box-if-primitive at
+       class load, `BareCollectionFieldE2ETest` 8/8; `§371` shipped-CLI cross,
+       `ShippedCliCrossSmokeTest` 2/2 + `RuntimeSourceLoaderTest` 6/6; `§378`
+       EN×PT open-set cross-check — proofs in `known-bugs.md`). Docs lane ff
+       `beta-0.5.0` after every landing on `beta-0.4.0`.
 2. [ ] CodeQL debt (#555): **TRIAGE CLOSED 20/09 (unit I, §385)** — the 40
        in the window: 13 fixed in code with targeted tests, 26 dismissed with
        a real reason (25 test-harness `used in tests` + FP JEP 443 #876),
@@ -49,8 +52,9 @@ the release is cut (three-states rule).
 
 ## Open issues that travel to `beta-0.5.0`
 
-#550 (§371), #553 (§374), #554 (§378), #555 (CodeQL umbrella). Announced on
-each issue and via the `DOING.md`(+PT) banner.
+#555 (CodeQL umbrella — the only one still open; **#550/#553/#554 landed
+20/09** with their sections ✅ FIXED). Announced on each issue and via the
+`DOING.md`(+PT) banner.
 
 ## Release gate (`D-RELEASE-0.5.0-GATE`, 09/20/2026, maintainer directive)
 

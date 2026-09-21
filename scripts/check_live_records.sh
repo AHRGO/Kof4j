@@ -18,6 +18,9 @@
 #      DECISIONS): um doc EN com secao H1 e o PT com H2 e drift de leitura.
 #   G) prep do release: a contagem "N live" da condicao 7 (bugs-and-gaps) == autoridade
 #      (mesmo numero do classificador; o registro de aceitacao nao pode cravar outro).
+#   H) prep do release: toda §NNN citada na secao "issues que viajam" tem de estar no
+#      conjunto ABERTO — a prep nao pode mandar viajar um § ja FECHADO (a classe do item 1
+#      stale: §371/§374/§378 pousaram e a lista seguia mandando-os viajar).
 #
 # A classe (A) ja driftou duas vezes em 21/09; a classe (B) apareceu quando a lane
 # irma adicionou 3 decisoes so no EN e um merge deixou um heading orfao + duplicado
@@ -55,6 +58,12 @@ if [ "${LR_COUNT:-}" != "" ]; then
 else
     COUNT="$(bash scripts/check_known_bugs_status.sh \
         | sed -nE 's/^EN open[^(]*\(([0-9]+)\).*/\1/p' | head -1)"
+fi
+# conjunto de ids vivos (para a parte H: a prep nao pode mandar viajar uma § ja fechada)
+OPEN_IDS="${LR_OPEN_IDS:-}"
+if [ -z "$OPEN_IDS" ]; then
+    OPEN_IDS="$(bash scripts/check_known_bugs_status.sh \
+        | sed -nE 's/^EN open[^(]*\([0-9]+\): (.*)/\1/p' | head -1)"
 fi
 
 if [ "${1:-}" = "--selftest" ]; then
@@ -138,31 +147,39 @@ EOF
     if LR_EN="$T/r_en.md" LR_PT="$T/r_pt.md" DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" \
          LR_COUNT=19 LR_MDPAIRS="$D2" bash "$0" >/dev/null 2>&1; then
         echo "SELFTEST FALHOU: nivel de secao divergente entre pares passou"; exit 1; fi
-    # G) prep do release: contagem "N live" da cond.7 == autoridade
-    mk prep_en.md '| 7 | x | RED (19 live at the tip; ledger ilegivel = UNKNOWN) |'
-    mk prep_pt.md '| 7 | x | RED (19 live no tip; ledger ilegivel = UNKNOWN) |'
+    # G) prep: contagem "N live" da cond.7 == autoridade
+    # H) prep: § citada na secao "issues que viajam" tem de estar aberta
+    PHE='## Open issues that travel to `beta-0.5.0`'
+    PHP='## Issues abertas que viajam para `beta-0.5.0`'
+    printf '| 7 | x | RED (19 live at the tip) |\n%s\n#550 (§371).\n' "$PHE" > "$T/prep_en.md"
+    printf '| 7 | x | RED (19 live no tip) |\n%s\n#550 (§371).\n' "$PHP" > "$T/prep_pt.md"
     if ! LR_EN="$T/r_en.md" LR_PT="$T/r_pt.md" DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" \
          LR_COUNT=19 LR_PREP_EN="$T/prep_en.md" LR_PREP_PT="$T/prep_pt.md" LR_PREP_ON=1 \
-         bash "$0" >/dev/null 2>&1; then
-        echo "SELFTEST FALHOU: prep cond.7 == autoridade devia passar"; exit 1; fi
-    mk prep_pt.md '| 7 | x | RED (18 live no tip; ledger ilegivel = UNKNOWN) |'
+         LR_OPEN_IDS="371" bash "$0" >/dev/null 2>&1; then
+        echo "SELFTEST FALHOU: prep cond.7 == autoridade + travel § aberta deviam passar"; exit 1; fi
+    printf '| 7 | x | RED (18 live no tip) |\n%s\n#550 (§371).\n' "$PHP" > "$T/prep_pt.md"
     if LR_EN="$T/r_en.md" LR_PT="$T/r_pt.md" DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" \
          LR_COUNT=19 LR_PREP_EN="$T/prep_en.md" LR_PREP_PT="$T/prep_pt.md" LR_PREP_ON=1 \
-         bash "$0" >/dev/null 2>&1; then
+         LR_OPEN_IDS="371" bash "$0" >/dev/null 2>&1; then
         echo "SELFTEST FALHOU: prep cond.7 divergente da autoridade passou"; exit 1; fi
+    printf '| 7 | x | RED (19 live no tip) |\n%s\n#550 (§999).\n' "$PHP" > "$T/prep_pt.md"
+    if LR_EN="$T/r_en.md" LR_PT="$T/r_pt.md" DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" \
+         LR_COUNT=19 LR_PREP_EN="$T/prep_en.md" LR_PREP_PT="$T/prep_pt.md" LR_PREP_ON=1 \
+         LR_OPEN_IDS="371" bash "$0" >/dev/null 2>&1; then
+        echo "SELFTEST FALHOU: prep mandando viajar § fechada passou"; exit 1; fi
     mk prep_en.md 'sem contagem de live'
     if LR_EN="$T/r_en.md" LR_PT="$T/r_pt.md" DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" \
          LR_COUNT=19 LR_PREP_EN="$T/prep_en.md" LR_PREP_PT="$T/prep_pt.md" LR_PREP_ON=1 \
-         bash "$0" >/dev/null 2>&1; then
+         LR_OPEN_IDS="371" bash "$0" >/dev/null 2>&1; then
         echo "SELFTEST FALHOU: prep sem contagem passou (neutering)"; exit 1; fi
-    echo "SELFTEST OK: contagem + paridade + duplicata + numeracao + pending<->gate + EG + pares + prep"
+    echo "SELFTEST OK: contagem + paridade + duplicata + numeracao + pending<->gate + EG + pares + prep(G/H)"
     exit 0
 fi
 
 [ -n "${COUNT:-}" ] || { echo "FALHA: nao extrai a contagem da autoridade (formato mudou?)"; exit 1; }
 
 python3 - "$EN" "$PT" "$COUNT" "$DEN" "$DPT" "$GATE" "$DOCDIR" "$RM_EN" "$RM_PT" "$RM_ON" "$MDP" \
-          "$PREP_EN" "$PREP_PT" "$PREP_ON" << 'PYEOF'
+          "$PREP_EN" "$PREP_PT" "$PREP_ON" "$OPEN_IDS" << 'PYEOF'
 import re, sys, os, glob
 en, pt, count, den, dpt, gate, docdir = sys.argv[1:8]
 rme, rmpt, rmon = sys.argv[8:11]
@@ -170,6 +187,7 @@ mdp = sys.argv[11] if len(sys.argv) > 11 else ""
 prep_en = sys.argv[12] if len(sys.argv) > 12 else ""
 prep_pt = sys.argv[13] if len(sys.argv) > 13 else ""
 prep_on = sys.argv[14] if len(sys.argv) > 14 else ""
+open_ids = set((sys.argv[15].split() if len(sys.argv) > 15 else []))
 bad = 0
 
 # ---- A) contagem viva x autoridade -----------------------------------------
@@ -344,6 +362,28 @@ if prep_on:
                 print(f"DRIFT ({lang}): prep declara '{n} live' mas a autoridade conta '{count}'")
                 bad = 1
 
+# ---- H) prep: § da secao "issues que viajam" tem de estar ABERTA -----------
+if prep_on:
+    HDR = re.compile(r"(?m)^##+ .*(?:travel to|viajam para).*$")
+    for lang, path in (("EN", prep_en), ("PT", prep_pt)):
+        try:
+            text = open(path, encoding="utf-8").read()
+        except OSError:
+            print(f"FALHA: nao consigo ler a prep do release ({lang}) {path}")
+            bad = 1; continue
+        m = HDR.search(text)
+        if not m:
+            print(f"FALHA: prep {lang} sem a secao 'issues que viajam' "
+                  "(header mudou? atualize o gate junto com a prosa)")
+            bad = 1; continue
+        rest = text[m.end():]
+        nxt = re.search(r"(?m)^## ", rest)
+        section = rest[:nxt.start()] if nxt else rest
+        for n in re.findall(r"§([0-9]+)", section):
+            if n not in open_ids:
+                print(f"DRIFT ({lang}): prep manda viajar §{n}, que NAO esta no conjunto aberto")
+                bad = 1
+
 if not bad:
     print(f"OK: contagem viva {count} consistente ({seen} declaracoes); "
           f"DECISIONS EN<->PT com {len(sets.get('EN', ()))} IDs em paridade, 0 duplicatas, "
@@ -351,6 +391,6 @@ if not bad:
           + ("; pendentes sec.0 == loose do gate" if docdir else "")
           + ("; roadmap EG EN<->PT em paridade" if rmon else "")
           + ("; numeracao/nivel de todos os pares EN<->PT" if mdp else "")
-          + ("; prep cond.7 == autoridade" if prep_on else ""))
+          + ("; prep cond.7 == autoridade + travel § aberta" if prep_on else ""))
 sys.exit(1 if bad else 0)
 PYEOF

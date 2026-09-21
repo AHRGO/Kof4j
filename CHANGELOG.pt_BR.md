@@ -145,6 +145,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (+ typo da irmã `F2a find`→F2b sincronizado com a linha do §397), DOING
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
+  - **Checklist da prep de-staled + `check_live_records.sh` parte H** (21/09, lane docs): o item 1 da
+    prep ainda dizia "pousar o que está em voo" para §374/#553, §371/#550 e §378/#554, e a lista
+    "issues abertas que viajam" ainda nomeava #550/#553/#554 — mas os três § já estavam **✅ FIXED em
+    20/09**, então a fila estava atrás do ledger. O item 1 virou `[x]` com as provas
+    (`BareCollectionFieldE2ETest` 8/8, `ShippedCliCrossSmokeTest` 2/2 + `RuntimeSourceLoaderTest`
+    6/6, cruzamento EN×PT do §378) e só o #555 (guarda-chuva CodeQL) viaja. A classe virou
+    mecanizada: a parte H exige que todo `§NNN` citado na seção "issues que viajam" da prep esteja no
+    conjunto ABERTO do classificador — prep que manda viajar um § fechado agora falha (red-first: o
+    selftest planta um `§999` que não está aberto).
   - **`check_live_records.sh` parte G: contagem da cond.7 da prep == o classificador** (21/09, lane
     docs): a tabela da prep de release (`release-beta-0.5.0-prep.md` + PT) é o registro de aceitação,
     então o número da condição 7 não pode divergir da autoridade — e divergia: a linha dizia `17 live`

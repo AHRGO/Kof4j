@@ -9,10 +9,13 @@ dos três estados).
 
 ## Checklist (ordenado — número da versão e tag são decisão da mantenedora, regra 6)
 
-1. [ ] Pousar o que está em voo: §374/#553 (`.22` — WIP em
+1. [x] Pousar o que está em voo: §374/#553 (`.22` — WIP em
        `JvmOpCollections`), §371/#550 (CLI cross build), §378/#554 (gate
-       docs). Cada um fecha com prova nos 4 alvos; a lane docs faz ff da
-       `beta-0.5.0` após cada pouso na 0.4.0.
+       docs). **TODOS OS TRÊS POUSARAM 20/09 — ✅ FIXED** (`§374` box-if-primitive
+       no class load, `BareCollectionFieldE2ETest` 8/8; `§371` CLI embarcada cross,
+       `ShippedCliCrossSmokeTest` 2/2 + `RuntimeSourceLoaderTest` 6/6; `§378`
+       cruzamento EN×PT do conjunto aberto — provas no `known-bugs.md`). A lane
+       docs faz ff da `beta-0.5.0` após cada pouso na 0.4.0.
 2. [ ] Dívida CodeQL (#555): **TRIAGEM FECHADA 20/09 (unidade I, §385)** —
        os 40 da janela: 13 fixados no código com teste alvo, 26 descartados
        com motivo (25 harness `src/test` + FP JEP 443 #876), #938 da tooling
@@ -50,8 +53,9 @@ dos três estados).
 
 ## Issues abertas que viajam para `beta-0.5.0`
 
-#550 (§371), #553 (§374), #554 (§378), #555 (guarda-chuva CodeQL). Avisadas
-em cada issue e pelo banner no `DOING.md`(+PT).
+#555 (guarda-chuva CodeQL — o único ainda aberto; **#550/#553/#554 pousaram
+20/09** com suas seções ✅ FIXED). Avisadas em cada issue e pelo banner no
+`DOING.md`(+PT).
 
 ## Gate de release (`D-RELEASE-0.5.0-GATE`, 20/09/2026, diretiva da mantenedora)
 
