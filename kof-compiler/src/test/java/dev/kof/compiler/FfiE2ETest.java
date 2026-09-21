@@ -44,12 +44,13 @@ class FfiE2ETest {
     void jsUnboundAbiEmitsFfi002(@TempDir Path dir) throws IOException {
         // R3 fatia 3.6: o target JS agora BIND a ABI escalar (runner GraalJS tem
         // java.lang.foreign no host) — ver ffiJs* abaixo — e, desde 21/09, também
-        // `T[]` escalar (copy-in, D6-2/3.8b fatia 3). O que ainda está fora do v1
-        // no JS (Buffer, struct return, ponteiro) segue FFI002 honesto na
-        // compilação (D6/3.8 pendentes) — nunca stub silencioso (R6).
-        Path src = dir.resolve("ffi-js-buffer.kf");
+        // `T[]` escalar (copy-in, D6-2) e `Buffer(U8)` INOUT (D6-3). O que ainda
+        // está fora do v1 no JS (array de ponteiros `String[]`, struct return,
+        // Handle) segue FFI002 honesto na compilação (D6/3.8 pendentes) — nunca
+        // stub silencioso (R6).
+        Path src = dir.resolve("ffi-js-strarray.kf");
         Files.writeString(src, """
-                extern "libc.so.6" sum(Buffer(U8) buf, Int n): Int
+                extern "libc.so.6" sum(String[] xs): Int
 
                 main() {
                     println("hi")

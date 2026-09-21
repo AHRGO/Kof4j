@@ -30,21 +30,30 @@ final class KofJsFfiMarshal {
     private KofJsFfiMarshal() {
     }
 
+    /** Buffer INOUT: liga o `Uint8Array` do guest ao segmento da chamada. */
+    private record OutBuf(Value data, MemorySegment seg, int len) {}
+
     /** Downcall com retorno: abre a arena confined dos stubs e chama o bridge. */
     static Object ffi(String lib, String name, String sig, Value jsArgs) {
         try (Arena stubArena = Arena.ofConfined()) {
-            return KofJsFfiBridge.call(lib, name, sig, args(sig, jsArgs, stubArena));
+            java.util.List<OutBuf> outs = new java.util.ArrayList<>();
+            Object r = KofJsFfiBridge.call(lib, name, sig, args(sig, jsArgs, stubArena, outs));
+            copyBack(outs);
+            return r;
         }
     }
 
     /** Downcall void (statement): idem, descarta o retorno. */
     static void ffiVoid(String lib, String name, String sig, Value jsArgs) {
         try (Arena stubArena = Arena.ofConfined()) {
-            KofJsFfiBridge.callVoid(lib, name, sig, args(sig, jsArgs, stubArena));
+            java.util.List<OutBuf> outs = new java.util.ArrayList<>();
+            KofJsFfiBridge.callVoid(lib, name, sig, args(sig, jsArgs, stubArena, outs));
+            copyBack(outs);
         }
     }
 
-    private static Object[] args(String sig, Value jsArgs, Arena stubArena) {
+    private static Object[] args(String sig, Value jsArgs, Arena stubArena,
+                                 java.util.List<OutBuf> outs) {
         int n = countParams(sig);   // tokens de 1º nível (callback "(..)" conta 1)
         Object[] real = new Object[n];
         int[] curRef = { 1 };
@@ -68,6 +77,12 @@ final class KofJsFfiMarshal {
                 char elem = sig.charAt(cur + 1);
                 cur += 2;
                 real[i] = packArray(elem, v, stubArena);
+            } else if (c == 'B') {
+                // D6-3/D-R3-BUFFER (bridge JS 21/09): `Buffer(U8)` INOUT — copia os
+                // bytes do `Uint8Array` do guest para a arena da chamada e registra
+                // o par para o copy-back pós-downcall (espelha kof_ffi_buffer_in/out).
+                cur++;
+                real[i] = packBuffer(v, stubArena, outs);
             } else if (c == '(') {
                 int j = cur + 1;
                 int depth = 1;
@@ -166,6 +181,39 @@ final class KofJsFfiMarshal {
             }
         }
         return seg;
+    }
+
+    /**
+     * D6-3/D-R3-BUFFER (bridge JS 21/09): empacota o out-buffer `Buffer(U8)` —
+     * lê o `Uint8Array` `data` do `KofBufferBox` do guest para a arena da
+     * chamada e registra o par para o copy-back. Espelha `kof_ffi_buffer_in` do
+     * JVM (a vida é gerenciada pela linguagem; D-R3-HANDLE-LIFETIME).
+     */
+    private static MemorySegment packBuffer(Value v, Arena arena, java.util.List<OutBuf> outs) {
+        if (v == null || v.isNull()) {
+            throw new IllegalArgumentException("ffi: buffer argument is null");
+        }
+        Value data = v.getMember("data");
+        if (data == null || !data.hasArrayElements()) {
+            throw new IllegalArgumentException("ffi: buffer argument has no byte storage");
+        }
+        int n = (int) data.getArraySize();
+        MemorySegment seg = arena.allocate(ValueLayout.JAVA_BYTE, n);
+        for (int k = 0; k < n; k++) {
+            seg.setAtIndex(ValueLayout.JAVA_BYTE, k, (byte) data.getArrayElement(k).asInt());
+        }
+        outs.add(new OutBuf(data, seg, n));
+        return seg;
+    }
+
+    /** Copy-back do out-buffer: o C escreveu no segmento; devolve ao guest. */
+    private static void copyBack(java.util.List<OutBuf> outs) {
+        for (OutBuf ob : outs) {
+            for (int k = 0; k < ob.len(); k++) {
+                ob.data().setArrayElement(k,
+                        (int) (ob.seg().getAtIndex(ValueLayout.JAVA_BYTE, k) & 0xFF));
+            }
+        }
     }
 
     /** Nº de tokens de parâmetro de 1º nível (um callback `(..)` conta como 1). */

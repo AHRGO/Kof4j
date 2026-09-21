@@ -29,8 +29,10 @@ import java.lang.invoke.MethodHandle;
  * o {@code KofJsFfiMarshal} empacota os campos (via {@code __kof_ffi_fields} do
  * record) num {@code MemorySegment} da arena da chamada (D6-5) e aqui o
  * {@code StructLayout} entra no descriptor, idêntico ao caminho reflexivo do
- * {@code JvmFfiRuntime}. Struct de RETORNO e array/buffer seguem {@code FFI002}
- * (R6, nunca stub silencioso).
+ * {@code JvmFfiRuntime}. Desde 21/09 o array escalar {@code T[]} (token
+ * {@code p<elem>}, D6-2) e o out-buffer {@code Buffer(U8)} INOUT (token
+ * {@code B}, D6-3) também entram por ponteiro {@code ADDRESS}; só o struct de
+ * RETORNO segue {@code FFI002} (R6, nunca stub silencioso).
  */
 public final class KofJsFfiBridge {
 
@@ -68,6 +70,13 @@ public final class KofJsFfiBridge {
                     // D6-2/3.8b fatia 3 (bridge JS): array escalar -> `ptr` C; o
                     // Marshal já copiou os elementos para a arena da chamada.
                     cur += 2;
+                    pl[i] = ValueLayout.ADDRESS;
+                    real[i] = args[i];
+                } else if (c == 'B') {
+                    // D6-3/D-R3-BUFFER (bridge JS 21/09): `Buffer(U8)` INOUT -> `ptr`
+                    // C; o Marshal copiou os bytes para a arena da chamada e faz o
+                    // copy-back depois do downcall (espelho de kof_ffi_buffer_in/out).
+                    cur++;
                     pl[i] = ValueLayout.ADDRESS;
                     real[i] = args[i];
                 } else if (c == '@') {

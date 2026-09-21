@@ -14,7 +14,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * FFI out-buffer (D6-3 / D-R3-BUFFER, slice B2): the nominal {@code Buffer(U8)}
  * crosses an {@code extern} as an INOUT pointer — copy-in / call / copy-back on
- * the JVM (D-FFI-STRUCT). Proven with a real C shim; Native/JS keep honest gaps.
+ * the JVM and (21/09) on the JS target. Proven with a real C shim; Native keeps
+ * the honest gap.
  */
 class BufferFfiE2ETest {
 
@@ -89,19 +90,39 @@ class BufferFfiE2ETest {
     }
 
     @Test
-    void bufferParamJsStaysFfi002(@TempDir Path dir) throws IOException {
-        Path src = dir.resolve("bufjs.kf");
-        Files.writeString(src, """
-                extern "libc.so.6" f(Buffer(U8) buf, Int n): Int
+    void bufferInoutCopyInCopyBackJsParity(@TempDir Path dir) throws Exception {
+        // D6-3 no JS (bridge 21/09): `Buffer(U8)` INOUT — o Marshal copia os bytes
+        // do `Uint8Array` do guest para a arena, chama, e devolve o resultado via
+        // copy-back. Mesma semântica do JVM (acumula +10 a cada chamada).
+        String so = compileHostLib(dir);
+        String kof = """
+                extern "%s" bump(Buffer(U8) buf, Int n): Int
 
                 main() {
-                    println("hi")
+                    var b = buffer.alloc(2)
+                    println(bump(b, 2))
+                    println(b.bytes())
+                    println(bump(b, 2))
+                    println(b.bytes())
                 }
-                """);
-        CompilationResult r = driver.compile(src, dir.resolve("out-buf-fjs"), Target.JS);
-        assertFalse(r.success(), "JS buffer bridge not landed → must stay unbound");
-        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI002"),
-                "expected FFI002 on JS, got: " + r.diagnostics().getDiagnostics());
+                """.formatted(so);
+        String expected = "20\n[10, 10]\n40\n[20, 20]";
+
+        Path jvmSrc = dir.resolve("bufinout-jvm.kf");
+        Files.writeString(jvmSrc, kof);
+        CompilationResult rj = driver.compile(jvmSrc, dir.resolve("out-bufinout-jvm"), Target.JVM);
+        assertTrue(rj.success(), "JVM compile: " + rj.diagnostics().getDiagnostics());
+        String jvm = runJvm(dir.resolve("out-bufinout-jvm"));
+        assertEquals(expected, jvm, "JVM golden (buffer INOUT)");
+
+        Path jsSrc = dir.resolve("bufinout-js.kf");
+        Files.writeString(jsSrc, kof);
+        CompilationResult rjs = driver.compile(jsSrc, dir.resolve("out-bufinout-js"), Target.JS);
+        assertTrue(rjs.success(), "JS Buffer INOUT must bind (bridge 21/09): "
+                + rjs.diagnostics().getDiagnostics());
+        String js = runJs(dir.resolve("out-bufinout-js"));
+        assertEquals(expected, js, "JS golden (buffer INOUT, copy-back)");
+        assertEquals(jvm, js, "JVM==JS byte-for-byte parity (buffer INOUT)");
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -133,6 +154,14 @@ class BufferFfiE2ETest {
             }
         }
         return null;
+    }
+
+    private String runJs(Path outDir) throws IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int ec = dev.kof.runtime.KofJsRunner.run(outDir.resolve("Default.mjs"), out,
+                new java.io.ByteArrayInputStream(new byte[0]), out);
+        assertEquals(0, ec, "JS exit code, output: " + out);
+        return out.toString(java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
     }
 
     private String runJvm(Path outDir) throws IOException {

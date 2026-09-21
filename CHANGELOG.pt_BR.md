@@ -13,6 +13,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **FFI: `Buffer(U8)` INOUT no target JS (bridge, D6-3/3.8b fatia 4)**
+    (21/09): `extern` com param `Buffer(U8)` agora binda no JS — o gate de
+    compilação admite e o `KofJsFfiMarshal.packBuffer` copia os bytes do
+    `Uint8Array` do guest para a arena da chamada (token `B` → `ADDRESS`), com o
+    copy-back após o downcall devolvendo o resultado do C ao buffer do guest
+    (paridade com `kof_ffi_buffer_in`/`_out`). Prova:
+    `bufferInoutCopyInCopyBackJsParity` (`20/[10, 10]/40/[20, 20]`, o +10
+    acumulando entre chamadas) byte-a-byte JVM==JS. O
+    `FfiE2ETest.jsUnboundAbiEmitsFfi002` agora usa `String[]` como superfície
+    ainda honesta de não-bind. Resta no JS: **retorno** de struct (`FFI002`).
+
   - **`kof.buffer` no target JS (`Buffer(U8)`, D-R3-BUFFER)** (21/09): o
     namespace `kof.buffer` agora binda também no JS — `buffer.alloc(Int)` e
     `Buffer.bytes()`, com o mesmo contrato do JVM (`KofRuntime$Buffer`):

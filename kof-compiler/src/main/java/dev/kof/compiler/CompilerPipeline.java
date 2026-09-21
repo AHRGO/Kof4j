@@ -481,10 +481,12 @@ public final class CompilerPipeline {
                 // no JVM E no runner JS (copy-in 21/09: o Marshal lê o array JS e
                 // copia para a arena da chamada). Native fica no gap code (R6).
                 if (FfiSignature.arrayElemChar(param.type()) != null) continue;
-                // D6-3 / D-R3-BUFFER: `Buffer(U8)` como param INOUT binda no JVM
-                // (copy-in/chamada/copy-back); Native/JS ficam nos gap codes (R6).
-                if (driver.target == Target.JVM
-                        && FfiSignature.isBufferParam(param.type())) continue;
+                // D6-3 / D-R3-BUFFER: `Buffer(U8)` como param INOUT binda no JVM E
+                // no runner JS (bridge de buffer 21/09: `packBuffer` copia in e o
+                // copy-back pós-chamada devolve ao `Uint8Array` do guest, paridade
+                // com o `kof_ffi_buffer_in/out` do JVM). Native fica no gap (R6).
+                if (FfiSignature.isBufferParam(param.type())
+                        && (driver.target == Target.JVM || driver.target == Target.JS)) continue;
                 return false;
             }
             return true;
