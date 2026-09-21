@@ -2,7 +2,7 @@
 
 # Idiomas — Interop (tipos JVM e FFI C)
 
-**Status:** parcial (whitelist) · **Introduzido:** 0.3.x (TIER 2.1) · **Atualizado:** 18/09 (R3 JVM generalizado — ABI escalar + void + retorno String; **callbacks C2 — gate da JVM ABERTO**; ver `IMPLEMENTATION-UNIVERSAL-PLATFORM.pt_BR.md` 3.6/3.4) · **Atualizado:** 17/09
+**Status:** parcial (whitelist) · **Introduzido:** 0.3.x (TIER 2.1) · **Atualizado:** 21/09 (formas D6 struct/array/out-buffer LIGAM na JVM — record por valor in/out, `T[]` escalar→`ptr` copy-in, `Buffer(U8)` INOUT; ver a frente FFI em `IMPLEMENTATION-UNIVERSAL-PLATFORM.pt_BR.md` 3.8b)
 
 ## O que é
 
@@ -51,6 +51,26 @@ kof_cb_slen("hello", (x: String) -> x.length())  // char* -> arg String (C3.4)
 // jvmAndJsCallbacksMatchByteForByte 42/42/6.0/7.5; stringCallbackArgsBindAndMatchJvmJs 5/104/2026); browser -> degrade honesto
 // em runtime (R7, sem host); struct/ponteiro-no-callback, retorno `String` e
 // callback-como-retorno -> FFI001/FFI002 — nunca um stub silencioso.
+
+// (d) STRUCT / ARRAY / OUT-BUFFER (D6, JVM — 3.8b fatias 1–4, 20–21/09):
+//   um `record` de campos escalares atravessa POR VALOR (arg e retorno), um
+//   `T[]` escalar atravessa como `ptr` com COPY-IN por chamada (somente-leitura),
+//   e um out-buffer e o tipo nominal `Buffer(U8)` atravessando INOUT (copia-para-
+//   dentro / chamada / copia-de-volta). Um buffer NUNCA e um reuso de
+//   `String`/`Byte[]` — tipos ABI distintos (comprimento, direcao, mutabilidade).
+record Pt(Int x, Int y)
+extern "libshapes.so" mkpt(Int x, Int y): Pt          // record por valor (retorno; registrador ou sret)
+extern "libshapes.so" ptlen(Pt p): Int                // record por valor (argumento)
+extern "libshapes.so" sumn(Int[] xs, Int n): Int      // array escalar -> ptr (copy-in; o C nunca devolve)
+extern "libshapes.so" fill(Buffer(U8) b, Int n): Int  // out-buffer INOUT (copy-back apos a chamada)
+// call site:
+var xs = new Int[3]                                   // `new Int[n]` e a surface de array (nao `[...]`)
+var b = buffer.alloc(4)                               // Buffer(U8) — vida automatica (sem malloc/free)
+fill(b, 4)                                            // o C escreve no buffer
+println(b.bytes())                                    // clone Byte[] (le de volta)
+println(ptlen(Pt(1, 2)))                              // 2 (record passado por valor)
+// Native: extern com record/array/buffer = FFI001; JS = FFI002 (gaps honestos, R6).
+// A ABI escalar binda em todo target; estas formas D6 sao JVM-first (R7).
 ```
 
 ## RUIM → BOM
@@ -62,9 +82,11 @@ kof_cb_slen("hello", (x: String) -> x.length())  // char* -> arg String (C3.4)
 | guardar o ponteiro do callback para chamar DEPOIS (atexit/signal/async) | mantenha callbacks síncronos e não-escapantes | escapantes exigem política de vida/GC-rooting (R12) — ficam `FFI001`, nunca stub pendurado |
 | reimplementar sin/cos/strcmp em Kof | prenda a lib do sistema (qualquer forma escalar desde 18/09) | complexidade é da plataforma (regra de ferro 2) |
 | assumir que `library()` significa o mesmo em todo target | no JVM/JS e o caminho do dlopen; no **Native** resolve **por basename em LINK-time pelo sysroot** (`libc.so.6` → `-l:libc.so.6`; caminho absoluto do HOST e arch-errado no cross) | o Native nao tem FFM: um `extern` casado e um `call sym@PLT` + link-by-use (#431 20/09, §369) |
+| reusar `Byte[]`/`String` para um out-buffer da C | declare o tipo nominal **`Buffer(U8)`** no `extern` e crie com `buffer.alloc(n)` (D-R3-BUFFER/D6-3) | um out-buffer e mutavel e bidirecional (copy-in + copy-back); `T[]` e copy-in somente-leitura e `String`/`char*` e somente-leitura — tipos ABI distintos |
+| emitir bytecode na mao para um call de struct/array/out-buffer | declare o `record`/`new T[n]`/`Buffer(U8)` no `extern`; o compilador classifica a ABI (`AbiLayout`) | complexidade e do compilador (regra de ferro 2); uma ABI na mao vira bug silencioso no proximo target |
 
 ## Veja também
 
 `docs/language-reference/syntax.md` (§FFI com C), `grammar.md`
 (`extern-declaration`), `modules.md` §6; gaps `FFI001`/`FFI002`;
-R3 landado: JVM escalar arbitrario (aridade/void/retorno String, 18/09) + paridade JS host (3.6.F2/F3 ✅ 18/09) + **callbacks ligam na JVM E no host runner JS, paridade byte-for-byte (C2 ✅ + C3.2/C3.3/C3.4 ✅ 18/09 — callbacks primitivos + com argumento `String`; `JvmFfiCallbackE2ETest` incl. `jvmAndJsCallbacksMatchByteForByte` e `stringCallbackArgsBindAndMatchJvmJs`)**; restantes: opaque handles (3.3), variadics (3.5, ⛔ decisao de surface), ABI struct/array (D6 ⛔), callbacks/upcalls no Native (sem mecanismo — `FFI001`); **a ABI escalar do Native BINA nos 3 archs (fatias 1–2 ✅ 20/09 — §369, §61 FECHADO: `FfiNativeE2ETest` 16/16 x86-64 + `FfiNativeCrossE2ETest` 6/6 riscv64×aarch64 byte-identicos sob qemu)**.
+R3 landado: JVM escalar arbitrario (aridade/void/retorno String, 18/09) + paridade JS host (3.6.F2/F3 ✅ 18/09) + **callbacks ligam na JVM E no host runner JS, paridade byte-for-byte (C2 ✅ + C3.2/C3.3/C3.4 ✅ 18/09 — callbacks primitivos + com argumento `String`; `JvmFfiCallbackE2ETest` incl. `jvmAndJsCallbacksMatchByteForByte` e `stringCallbackArgsBindAndMatchJvmJs`)** + **formas D6 struct/array/out-buffer na JVM (3.8b fatias 1–4 ✅ 20–21/09: record por valor in/out, `T[]` escalar→`ptr` copy-in, `Buffer(U8)` INOUT; `FfiStructE2ETest` 10/10, `FfiArrayE2ETest` 5/5, `BufferE2ETest` 4/4, `BufferFfiE2ETest` 4/4)** + **a ABI escalar do Native bina nos 3 archs (fatias 1–2 ✅ 20/09 — §369, §61 FECHADO: `FfiNativeE2ETest` 16/16 x86-64 + `FfiNativeCrossE2ETest` 6/6 riscv64×aarch64 byte-identicos sob qemu)**; **decididos 21/09:** variadics = nenhum (`D-R3-3.5`), `Handle` opaco + `Buffer(U8,INOUT)` (`D-R3-3.3` — Buffer landou, `Handle` aguarda a frente RAII). Restantes (cross-lane/posterior): bridge de struct no JS, struct/sret no Native (3.7), callbacks/upcalls no Native (sem mecanismo — `FFI001`), tempos de vida do `Handle` (`future/scoped-resources-plan.md`).
