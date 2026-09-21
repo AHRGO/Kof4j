@@ -165,7 +165,7 @@ class KofDebugNativeDapTest {
             send(s, 8, "disconnect", "");
             assertTrue(s.p().waitFor(30, TimeUnit.SECONDS), "disconnect deve encerrar a sessao");
         } finally {
-            s.p().destroy();
+            CliProcessTree.terminate(s.p());
         }
     }
 
@@ -185,7 +185,7 @@ class KofDebugNativeDapTest {
             assertTrue(bad.contains("\"success\":false"),
                     "sem simbolo no contexto = erro honesto do gdb repassado, nunca valor falso: " + bad);
         } finally {
-            s.p().destroy();
+            CliProcessTree.terminate(s.p());
         }
     }
 
@@ -209,7 +209,7 @@ class KofDebugNativeDapTest {
             assertTrue(Files.readString(dir.resolve("mi-log.txt")).contains("-exec-interrupt"),
                     "o pedido DAP pause chega ao gdb como -exec-interrupt");
         } finally {
-            s.p().destroy();
+            CliProcessTree.terminate(s.p());
         }
     }
 
@@ -242,7 +242,7 @@ class KofDebugNativeDapTest {
             assertTrue(log.contains("kof_throw_string"),
                     "o breakpoint e armado na entrada de throw do runtime Kof: " + log);
         } finally {
-            s.p().destroy();
+            CliProcessTree.terminate(s.p());
         }
     }
 
@@ -256,7 +256,7 @@ class KofDebugNativeDapTest {
                     "erro DAP honesto nomeando o gdb, nunca stack no stream: " + r);
             assertTrue(r.contains("gdb"), r);
         } finally {
-            s.p().destroy();
+            CliProcessTree.terminate(s.p());
         }
     }
 
@@ -278,7 +278,7 @@ class KofDebugNativeDapTest {
                 assertFalse(r.contains("\"success\":true"), r);
             }
         } finally {
-            s.p().destroy();
+            CliProcessTree.terminate(s.p());
         }
     }
 }

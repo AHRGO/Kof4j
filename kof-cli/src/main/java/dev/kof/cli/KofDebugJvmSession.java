@@ -49,6 +49,12 @@ final class KofDebugJvmSession {
     void run() throws Exception {
         out = System.out;
         InputStream in = System.in;
+        // §438: SIGTERM (editor que fecha / host que derruba) nao passa pelo EOF
+        // do stdin. Sem o hook, o debuggee JVM (`-agentlib:jdwp=...,suspend=y`)
+        // e o diretorio temporario `kof-debug-*` ficavam orfaos, segurando o
+        // espaco ate esgotar o tmpfs e matar suites seguintes (mesmo hook do
+        // KofDebugNativeDap).
+        Runtime.getRuntime().addShutdownHook(new Thread(this::cleanupOnExit, "kof-dap-cleanup"));
         if (attachPort != null) {
             // X7-5 (doc §2 "attach — future"): anexa a um Kof JVM JA VIVO
             // (`java -agentlib:jdwp=...,server=y,suspend=n ...` + `kof debug --attach <porta>`).
@@ -480,6 +486,18 @@ final class KofDebugJvmSession {
         response.put("command", command);
         response.put("body", body);
         KofDebug.writeMessage(out, Json.stringify(response));
+    }
+
+    /**
+     * §438: encerra o debuggee lançado por este processo e remove o diretório
+     * temporário. Chamado pelo shutdown hook (SIGTERM/System.exit); nunca toca
+     * um alvo ATTACH (processo do usuário).
+     */
+    private void cleanupOnExit() {
+        if (!attached && jvmProcess != null && jvmProcess.isAlive()) {
+            jvmProcess.destroyForcibly();
+        }
+        cleanup();
     }
 
     private void cleanup() {

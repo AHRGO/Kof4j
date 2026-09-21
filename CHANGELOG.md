@@ -13,6 +13,22 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§438 FIXED — `kof debug` no longer leaks the debuggee JVM / temp dir**
+    (21/09, lane .18): `KofDebugJvmSession` had no shutdown hook (unlike
+    `KofDebugNativeDap`), so SIGTERM/editor-close killed the CLI without
+    killing the launched `-agentlib:jdwp=...,suspend=y` debuggee or deleting
+    `/tmp/kof-debug-*`; repeated suites accumulated orphans until the tmpfs
+    died (`Cota da disco excedida`). Added `addShutdownHook(this::cleanupOnExit)`
+    in `run()` (destroys the launched `jvmProcess`, never an ATTACH target,
+    then the existing `cleanup()`). Test teardown now goes through the new
+    `CliProcessTree.terminate(Process)` (SIGTERM first so the hook runs, then
+    force-kill the CLI + surviving descendants), replacing bare `p.destroy()`
+    in the debug tests. RED-first
+    `CliDebugProcessLeakTest.killingTheSessionLeavesNoOrphanDebuggeeNorTempDir`
+    (measured RED with the hook disabled: the `kof-debug-*` dir leaked).
+    Cluster `CliDebugProcessLeakTest`+`KofDebug*`+`ServePortTest` 27/0F.
+    Live 15→14.
+
   - **§437 FIXED — `check_500` red on `JvmOpCollections` closed (604→594)**
     (21/09, lane .18): the ``+20`` lines came from the **duplicate** §432 fix
     (`c6a8520d`), whose extra block in `emitMapCall` was dead code

@@ -13,6 +13,22 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§438 CORRIGIDO — `kof debug` não vaza mais a JVM debuggee / dir temporário**
+    (21/09, lane .18): o `KofDebugJvmSession` não tinha shutdown hook (ao
+    contrário do `KofDebugNativeDap`), então SIGTERM/fechar o editor matava o
+    CLI sem matar o debuggee `-agentlib:jdwp=...,suspend=y` lançado nem apagar
+    o `/tmp/kof-debug-*`; suítes repetidas acumulavam órfãos até o tmpfs morrer
+    (`Cota da disco excedida`). Adicionado `addShutdownHook(this::cleanupOnExit)`
+    no `run()` (destrói o `jvmProcess` lançado, nunca um alvo ATTACH, e roda o
+    `cleanup()` existente). O teardown dos testes agora passa pelo novo
+    `CliProcessTree.terminate(Process)` (SIGTERM primeiro para o hook rodar,
+    depois mata à força o CLI + descendentes sobreviventes), substituindo o
+    `p.destroy()` cru nos testes de debug. RED-first
+    `CliDebugProcessLeakTest.killingTheSessionLeavesNoOrphanDebuggeeNorTempDir`
+    (RED medido com o hook desabilitado: o dir `kof-debug-*` vazou).
+    Cluster `CliDebugProcessLeakTest`+`KofDebug*`+`ServePortTest` 27/0F.
+    Contagem viva 15→14.
+
   - **§437 CORRIGIDO — `check_500` vermelho em `JvmOpCollections` fechado (604→594)**
     (21/09, lane .18): as ``+20`` linhas vieram do fix §432 **duplicado**
     (`c6a8520d`), cujo bloco extra em `emitMapCall` era código morto

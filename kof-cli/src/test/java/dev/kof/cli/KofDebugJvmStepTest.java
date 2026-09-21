@@ -147,7 +147,7 @@ class KofDebugJvmStepTest {
             assertTrue(trace.contains("\"line\":8"),
                     "next em `var z = add(x, y)` (linha 7) para em `println(z)` (linha 8): " + trace);
         } finally {
-            c.p().destroy();
+            CliProcessTree.terminate(c.p());
         }
     }
 
@@ -172,7 +172,7 @@ class KofDebugJvmStepTest {
             assertFalse(back.contains("\"name\":\"add\""),
                     "stepOut sai de add de volta para main: " + back);
         } finally {
-            c.p().destroy();
+            CliProcessTree.terminate(c.p());
         }
     }
 
@@ -186,7 +186,7 @@ class KofDebugJvmStepTest {
             assertTrue(ev.contains("\"success\":false") && ev.contains("local variable name"),
                     "JDWP nao tem avaliador de expressao: recusa honesta, nunca valor inventado: " + ev);
         } finally {
-            c.p().destroy();
+            CliProcessTree.terminate(c.p());
         }
     }
 
@@ -222,7 +222,7 @@ class KofDebugJvmStepTest {
                 assertTrue(back.contains("\"success\":true"),
                         "stackTrace apos stepOut #" + i + ": " + back);
             } finally {
-                c.p().destroy();
+                CliProcessTree.terminate(c.p());
             }
         }
     }

@@ -117,7 +117,7 @@ class KofDebugJvmTest {
             assertTrue(c.p().waitFor(30, TimeUnit.SECONDS));
             assertEquals(0, c.p().exitValue());
         } finally {
-            c.p().destroy();
+            CliProcessTree.terminate(c.p());
         }
     }
 
@@ -137,7 +137,7 @@ class KofDebugJvmTest {
             await(c, "\"command\":\"disconnect\"", "disconnect");
             assertTrue(c.p().waitFor(30, TimeUnit.SECONDS));
         } finally {
-            c.p().destroy();
+            CliProcessTree.terminate(c.p());
         }
     }
 }

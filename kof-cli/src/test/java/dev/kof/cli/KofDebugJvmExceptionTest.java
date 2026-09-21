@@ -112,7 +112,7 @@ class KofDebugJvmExceptionTest {
             assertTrue(stopped.contains("\"reason\":\"exception\""),
                     "o throw para o debuggee com reason exception: " + stopped);
         } finally {
-            c.p().destroy();
+            CliProcessTree.terminate(c.p());
         }
     }
 
@@ -138,7 +138,7 @@ class KofDebugJvmExceptionTest {
             String trace = await(c, "\"command\":\"stackTrace\"", "stackTrace apos pause");
             assertTrue(trace.contains("Main.kf"), "o frame parado aponta para a fonte Kof: " + trace);
         } finally {
-            c.p().destroy();
+            CliProcessTree.terminate(c.p());
         }
     }
 }
