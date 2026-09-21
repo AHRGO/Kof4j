@@ -14033,3 +14033,27 @@ p
 - **Related:** §400 (the true named-function item), §418 (the true harness item), CHANGELOG `d7dba433`-class restore history (same tree, same disease).
 
 <!-- pt-switch --> **PT:** [§419 (pt_BR)](known-bugs.pt_BR.md#419--retracao-tres-catalogacoes-re-pousadas-de-memoria-erradas--licao)
+
+## §420 — `KofJsRunner.writeBytes` kept the last raw `(int)` cast over a guest `getArraySize()` (same §258/#773 family) — ✅ FIXED 21/09
+
+- **Found (measured 21/09, docs lane sweep of §258):** while routing §258 the
+  ledger turned out honest (#775 face still `.22`) but `grep
+  "(int) .*getArraySize" kof-runtime/src/main/java/dev/kof/runtime/` returned
+  exactly ONE raw cast left in the whole runtime — `KofJsRunner.java:480`,
+  `writeBytes`: `new byte[(int) args[1].getArraySize()]`. Guest array over
+  2^31 → truncation or negative wrap with no diagnostic (the R6 violation
+  §258's own text names) → a silent wrong-length file write.
+- **Fix (same commit, house precedent):** bound check copied from the two
+  already-fixed neighbors in the same file (`:202`, `listValues` from
+  `c2300df6`), message identical; `(int)` cast now provably in-range.
+- **Proof (host):** `IoE2ETest` 24/24 GREEN 0 skipped — the JS bridge runs
+  in-process via embedded Graal (no external node needed on this host), so the
+  `writeBytes` faces (`io.md` roundtrip tests at :157/:308) execute the changed
+  line on every run; the guard itself is unreproducible without a 2^31-element
+  guest array (same honest face §258 shipped — CI CodeQL scan is the
+  behavioral pin). Last commit touching the file before this fix: `0793aea4`
+  (§387) — no other lane in flight here (rule 8 clean).
+- **Related:** §258 (the batch this closes), §388 (the io bytes family, this
+  lane), §419 (re-land lesson: every SHA/message here re-measured).
+
+<!-- pt-switch --> **PT:** [§420 (pt_BR)](known-bugs.pt_BR.md#420--kofjsrunnerwritebytes-manteve-o-ultimo-cast-bruto-int-sobre-um-getarraysize-do-guest-mesma-família-§258773---corrigido)

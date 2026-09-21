@@ -11561,3 +11561,29 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Relacionado:** §400 (o item verdadeiro da função nomeada), §418 (o item verdadeiro do harness), histórico do restore `d7dba433` no CHANGELOG (mesma árvore, mesma doença).
 
 <!-- en-switch --> **EN:** [§419 (en)](known-bugs.md#419--retracted-three-catalog-entries-re-landed-from-memory-after-the-2109-shared-tree-reset-were-mis-attributed)
+
+## §420 — `KofJsRunner.writeBytes` manteve o último cast bruto `(int)` sobre um `getArraySize()` do guest (mesma família §258/#773) — ✅ CORRIGIDO 21/09
+
+- **Achado (medido 21/09, varredura da lane docs sobre o §258):** ao rotear o
+  §258 o ledger mostrou-se honesto (a face #775 segue com a `.22`), mas
+  `grep "(int) .*getArraySize" kof-runtime/src/main/java/dev/kof/runtime/`
+  devolveu exatamente UM cast bruto vivo em todo o runtime — `KofJsRunner.java:480`,
+  em `writeBytes`: `new byte[(int) args[1].getArraySize()]`. Array do guest com
+  mais de 2^31 → truncamento ou wrap negativo sem diagnóstico (a violação R6
+  que o próprio texto do §258 nomeia) → escrita de arquivo com tamanho errado
+  em silêncio.
+- **Correção (mesmo commit, precedente da casa):** bound check copiado dos dois
+  vizinhos já corrigidos no mesmo arquivo (`:202`, `listValues` do `c2300df6`),
+  mensagem idêntica; o cast `(int)` agora está comprovadamente em faixa.
+- **Prova (host):** `IoE2ETest` 24/24 VERDE 0 pulados — a ponte JS roda
+  in-process via Graal embutido (não precisa de node externo neste host), então
+  as faces de `writeBytes` (roundtrips do `io.md` em :157/:308) executam a linha
+  alterada em toda rodada; o guard em si é impraticável de reproduzir sem um
+  array guest de 2^31 elementos (a mesma face honesta que o §258 pousou — o
+  scan CodeQL da CI é o pin comportamental). Último commit a tocar o arquivo
+  antes desta correção: `0793aea4` (§387) — nenhuma outra lane em voo aqui
+  (regra 8 limpa).
+- **Relacionado:** §258 (o batch que isto fecha), §388 (a família io bytes,
+  desta lane), §419 (lição de re-pouso: todo SHA/mensagem aqui foi re-medido).
+
+<!-- en-switch --> **EN:** [§420 (en)](known-bugs.md#420--kofjsrunnerwritebytes-kept-the-last-raw-int-cast-over-a-guest-getarraysize-same-258773-family--fixed-2109)

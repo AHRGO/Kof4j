@@ -477,7 +477,14 @@ public final class KofJsRunner {
 
     private static Object writeBytes(Value[] args, boolean append) {
         try {
-            byte[] bytes = new byte[(int) args[1].getArraySize()];
+            // §420 (familia §258/#773): era o ultimo cast bruto (int) sobre
+            // getArraySize() em kof-runtime — guest array > 2^31 truncaria sem
+            // diagnostico (R6). Bound check no precedente da mesma casa.
+            long n = args[1].getArraySize();
+            if (n > Integer.MAX_VALUE) {
+                throw new RuntimeException("lista excede o limite da ponte JS (" + n + ")");
+            }
+            byte[] bytes = new byte[(int) n];
             for (int i = 0; i < bytes.length; i++) {
                 bytes[i] = (byte) (args[1].getArrayElement(i).asInt() & 0xFF);
             }
