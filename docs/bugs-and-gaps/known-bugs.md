@@ -11995,3 +11995,12 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 - **Regression test + real-GitHub proof (added 20/09, platform-cli, follow-up to this fix):** `scripts/tests/kof-issues-agent-script-test.sh` extracts the REAL script from the YAML and runs it with the github-script shape (no `github.event`): RED on the pre-fix workflow (`Cannot read properties of undefined (reading 'action')`), GREEN on the current one; registered in `run-agent-tests.sh` (CI structural job). A replica in a personal smoke repo confirmed on real GitHub that the ORIGINAL job fails on a human comment and the corrected one passes. The runtime effect still depends on the fix reaching `main` (`issue_comment` workflows run from the default branch).
 
 <!-- pt-switch --> **PT:** [§395 (pt_BR)](known-bugs.pt_BR.md#395--job-respond-do-kof-issues-agent-quebrava-em-todo-respond-crashava)
+
+## §396 — `println` cru de um RECORD NULL é SIGSEGV no Native x86-64 (a JVM imprime "null") — 🟡 OPEN (20/09)
+> **Descoberto 20/09 (lane GAPS-DB, F2b `orm.find`):** no oráculo JVM, `orm.find<User>(db, 999)` com miss devolve `null` e `println(g)` imprime a string "null" (conversão toString de referência nula). No Native o mesmo programa SEGVa (exit 139) — o emissor de `println(record)` desreferencia o ponteiro (vtable/toString path) sem guard de null. O narrowing idiomático `if (g == null) { println("null") } else { println("hit") }` funciona byte-paridade nos 2 alvos — é o println CRU que diverge.
+- **Repro mínimo (compila nos 2, diverge no runtime):** entity User { id: Long generated ... } + `var g = orm.find<User>(db, 999)` + `println(g)` — JVM: imprime "null" (ou o formato de record); Native: SIGSEGV.
+- **Raiz (a confirmar no emissor):** `NativeRuntime.emitPrint`/path de record chama a vtable/toString sem o guard `testq %rdi,%rdi; jz` que os primitivos-KofString têm (precedente: null-check de String no println funciona — o gap é o formato de record não-KofString).
+- **Roteamento:** lane codegen/native (emissor, não ORM — o find devolve 0 correto; o §396 é o println). Workaround do corpus (usado no golden do F2b): narrowing antes de imprimir.
+- **Q4/Q5:** não é regressão do F2b (o slice devolve `null` correto — medido por gdb: miss → rax=0); é uma divergência preexistente da superfície println×record.
+
+<!-- pt-switch --> **PT:** [§396 (pt_BR)](known-bugs.pt_BR.md#396--println-cru-de-um-record-null-e-sigsegv-no-native-x86-64-a-jvm-imprime-null--open-2009)
