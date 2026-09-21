@@ -165,10 +165,16 @@ class StdParityGapAuditTest {
     }
 
     @Test
+    @DisplayName("kof.config: riscv64/aarch64 gated (CONF001); x86/JS/JVM reais (§425)")
+    void configGatedOnCross() {
+        assertEquals(Set.of(Target.NATIVE_RISCV64, Target.NATIVE_AARCH64),
+                unsupported(t -> KofConfig.supportedOn(t)));
+    }
+
+    @Test
     @DisplayName("namespaces sem gate: supportedOn true em todo alvo")
     void alwaysTrueNamespacesHaveNoSilentGate() {
         assertTrue(unsupported(KofCache::supportedOn).isEmpty(), "cache");
-        assertTrue(unsupported(KofConfig::supportedOn).isEmpty(), "config");
         assertTrue(unsupported(KofHttp::supportedOn).isEmpty(), "http");
         assertTrue(unsupported(KofMq::supportedOn).isEmpty(), "mq");
         assertTrue(unsupported(t -> KofEncoding.supportedOn("x", t)).isEmpty(), "encoding");

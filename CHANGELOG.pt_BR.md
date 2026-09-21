@@ -13,6 +13,23 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§424 CORRIGIDO — cinco métodos `String` recusam no JS/Native com `STR003`**
+    (21/09, lane .18): `matches`/`replaceAll`/`replaceFirst`/`toCharArray`/
+    `compareToIgnoreCase` são aceitos pelo typer e implementados no JVM, mas o
+    JS emitia uma chamada direta `receiver.<m>(...)` (membro inexistente de
+    `String.prototype` -> `TypeError` em runtime; `replaceAll` era literal vs
+    a regex do Kof/JVM) e o Native transformava a chamada em
+    `java_lang_String_<m>` (falha críptica de `ld`). Novo `StringTargetGaps`
+    (fonte única da verdade) é consultado no topo do ramo `String` em
+    `ExpressionInstanceCallLowerer`; em `Target.JS`/qualquer `isNative()` ele
+    emite o `STR003` honesto e aborta o lowering, de modo que nada errado é
+    emitido. JVM intacto. `StringGapMeasuredTest` virado de caracterização
+    para correção (JS e Native agora FALHAM em compile com `STR003`). Docs:
+    `backend-parity.md` Documented Gaps. Prova:
+    `DomainGapCodesTest.stringIncompleteMethodsOnJsAndNativeAreStr003`
+    + `stringIncompleteOnJvmHasNoGap` (24/24, incl. o guarda de matriz R6),
+    `StdParityGapAuditTest` 16/16.
+
   - **§427 CORRIGIDO — `kof.io`/web-T1 no riscv64/aarch64 agora recusam com `NAT006`/`NAT007`**
     (21/09, lane .18): o cross baixava File/Path/Directory (`kof_io_file_*`)
     e o servidor T1 (`kof_web_listen`/`route`) cujos símbolos só existem no

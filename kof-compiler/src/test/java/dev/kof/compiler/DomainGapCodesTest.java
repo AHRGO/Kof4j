@@ -228,6 +228,42 @@ class DomainGapCodesTest {
     }
 
     @Test
+    void stringIncompleteMethodsOnJsAndNativeAreStr003(@TempDir Path tmp) throws Exception {
+        // §424: matches/replaceAll/replaceFirst/toCharArray/compareToIgnoreCase
+        // are JVM-only; JS/Native refuse honestly instead of a TypeError/link-fail.
+        for (Target t : new Target[]{Target.JS, Target.NATIVE,
+                Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            assertGap(tmp, t, "STR003", """
+                main() {
+                    println("abc".matches("a.*"))
+                }
+                """);
+        }
+        for (String src : new String[]{
+                "main() { println(\"a1b\".replaceAll(\"b\", \"x\")) }",
+                "main() { println(\"a1b\".replaceFirst(\"b\", \"x\")) }",
+                "main() { val c = \"ab\".toCharArray(); println(c[0]) }",
+                "main() { println(\"ab\".compareToIgnoreCase(\"AB\")) }"}) {
+            assertGap(tmp, Target.JS, "STR003", src);
+        }
+    }
+
+    @Test
+    void stringIncompleteOnJvmHasNoGap(@TempDir Path tmp) throws Exception {
+        Path file = tmp.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, """
+            main() {
+                println("abc".matches("a.*"))
+                println("a1b".replaceAll("b", "x"))
+                println("ab".compareToIgnoreCase("AB"))
+            }
+            """);
+        CompilationResult r = driver.compile(file, tmp.resolve("out-jvm"), Target.JVM);
+        assertTrue(r.success(), "JVM implements all five String methods: "
+                + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
     void exportSpansOnNativeIsObs003(@TempDir Path tmp) throws Exception {
         assertGap(tmp, Target.NATIVE, "OBS003", """
             main() {

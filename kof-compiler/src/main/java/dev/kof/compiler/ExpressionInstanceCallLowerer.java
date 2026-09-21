@@ -279,6 +279,11 @@ public final class ExpressionInstanceCallLowerer {
                 return localIdx;
             }
         }
+        // §424: five String methods have no JS/Native lowering — refuse with an
+        // honest STR003 instead of a JS TypeError / Native ld link-fail (R6).
+        if (StringTargetGaps.refuse(driver, mc)) {
+            return localIdx;
+        }
         // Guardas de diagnóstico em receptor String (SEM052/SEM066/SEM051) —
         // extraídos p/ StringReceiverGuards (gate ≤600 REFACTOR-500; são puros:
         // só emitem diagnostics, não mexem na pilha/ops).
