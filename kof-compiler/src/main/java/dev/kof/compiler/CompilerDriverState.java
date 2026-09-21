@@ -100,6 +100,14 @@ IRModule currentModule;
     final List<CodegenStep> codegenSteps = new ArrayList<>();
 
     /**
+     * 2.2.3 (`DECISIONS.md` §D-DESUGAR-STEP, 21/09): internal AST-phase desugar
+     * steps, run in registration order after parse and before analysis. Default
+     * = the four built-in desugars in their historical order, so behavior is
+     * unchanged (freeze rule 3).
+     */
+    final List<DesugarStep> desugarSteps = new ArrayList<>(DesugarSteps.defaults());
+
+    /**
      * G6: desugar `test "nome" { }` para função void `kof_test_N` logo
      * após o parse — semântica, resolução e lowering tratam os testes como
      * funções comuns (zero casos especiais). Com o harness ativo, o main

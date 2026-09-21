@@ -298,10 +298,9 @@ public final class CompilerPipeline {
         for (AstNode d : unit.declarations()) {
             if (d instanceof EnumDeclarationNode en) BuiltinTypes.registerEnum(en.name());
         }
-        unit = CompilerDesugar.desugarTests(unit, driver.discoveredTests, driver.testHarnessMode, driver.currentSourceName);
-        unit = CompilerDesugar.desugarApplication(unit);
-        unit = CompilerDesugar.desugarInfra(unit);
-        unit = CompilerDesugar.desugarNestedFunctions(unit);
+        // 2.2.3 (D-DESUGAR-STEP): the four source desugars run through the AST
+        // registry (default order: tests, application, infra, nested functions).
+        unit = DesugarStepPipeline.run(driver.desugarSteps, unit, driver);
         driver.discoveredConfigKeys.clear();
         if (driver.target == Target.ANDROID) {
             unit = CompilerPipeline.appendAndroidHostIfNeeded(driver, unit);
