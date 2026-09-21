@@ -285,7 +285,9 @@ Each namespace/package carries a tier:
   `experimental`; promotion to `stable` is per-namespace, only with the full R5 DoD
   (never in bulk, never by age).
 
-**Registry (D4-A; medido 19/09; camadas = `scripts/stdlib_boundary.txt`).
+**Registry (D4-A; measured 19/09; layers = `scripts/stdlib_boundary.txt`; tiers
+machine-gated by `scripts/check_stdlib_boundary.sh` since 21/09 — a missing/invalid
+tier, or a `stable` not pinned in the gate's `STABLE_ALLOWLIST`, fails the build).
 Every namespace is `experimental` — **zero promotions**: the R5 DoD closes per
 namespace, never in bulk, never by age, and a promotion gets a row HERE (with the
 test + target matrix that proves it) before the tier word changes anywhere:

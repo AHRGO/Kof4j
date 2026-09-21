@@ -284,7 +284,9 @@ Cada namespace/pacote carrega um tier:
   `experimental`; a promoção a `stable` é por-namespace, só com o DoD completo do R5
   (nunca em lote, nunca por idade).
 
-**Registro (D4-A; medido 19/09; camadas = `scripts/stdlib_boundary.txt`).
+**Registro (D4-A; medido 19/09; camadas = `scripts/stdlib_boundary.txt`; tiers
+com gate de máquina por `scripts/check_stdlib_boundary.sh` desde 21/09 — tier
+ausente/inválido, ou `stable` sem pin no `STABLE_ALLOWLIST` do gate, quebra o build).
 Todo namespace é `experimental` — **zero promoções**: o DoD do R5 fecha por
 namespace, nunca em lote, nunca por idade, e uma promoção ganha uma linha AQUI
 (com o teste + matriz de targets que a prova) antes da palavra do tier mudar em

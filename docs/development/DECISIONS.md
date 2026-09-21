@@ -1925,7 +1925,7 @@ different from `List<String>`" (= option A, compile-time rejection) · X8-A · L
 | D1 (A) | GC x86 auto-collect re-baseline **approved now** | 1.2.2/1.2.3 proceed; Stage 6 gate open — execution = native lane |
 | D2 (A) | registry MVP = **local + GitHub Releases as official host** (publish = Release with artifact + SHA256SUMS) | 1.5.3 ⛔→open; `kof deploy --publish` face (docs→platform lane); 8.2 package manager |
 | D3 (A) | bare-metal/bootable **design plan authorized** | 1.7: plan doc in `docs/development/` (native lane drafts, maintainer reviews) |
-| D4 (A) | **conservative default**: every namespace is born `experimental`; promotion per-namespace with the R5 DoD | R5; `docs/backend-parity.md` §Stability (default line added 19/09) |
+| D4 (A) | **conservative default**: every namespace is born `experimental`; promotion per-namespace with the R5 DoD | R5; `docs/backend-parity.md` §Stability (default line added 19/09); **machine-gated 21/09** — tier in `scripts/stdlib_boundary.txt` + `scripts/check_stdlib_boundary.sh` (denies missing/invalid tier and unpinned `stable`) |
 | D5 (B) | **no new syntax** — scoped resources = `close()` + `try/finally`; `using` is OFF | 6.5 ships as pattern, not grammar; `future/scoped-resources` stays design-only |
 | D6 (A) | R3 struct/array ABI: **written spec first, review, then code** | spec doc `docs/development/ffi-abi-structs.md` (drafted by docs→platform lane 19/09, design-only); implementation = compiler lane |
 | D7 (A) | value records (TIER 2.7) **front opened now** | roadmap §23 2.7.1+ queue active — compiler lane (needs coordination with Cluster A) |
