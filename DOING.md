@@ -860,3 +860,5 @@ MAGIC/tag, `RuntimeList.kof_list_add` layout):
 > **NEXT STEP (lane .22):** D-1.0-STABILITY-100 landed (44d362f8 + PT espelho). Bloqueiro ativo: implementar slice 3.8b (JVM, D-FFI-STRUCT — worktree fix-572, teste RED-antes com struct by-value hoje; despacho cancelado precisa ser re-rodado). Inventariar os 3 ledgers contra a regra (varredura development+future+bugs-and-gaps → fila por item) na próxima sessão.
 
 > **NEXT STEP extra (20/09):** D-GRAPHICS-GAMING registered EN+PT — criar skeleton `docs/development/future/graphics-gaming-plan.md` (responder as 7 perguntas da decisão) ANTES de qualquer código; 3.8b FFI continua o bloqueiro na frente.
+
+> **NEXT STEP extra2:** plano graphics-gaming agora inclui MÍDIA (som pipeline + vídeo) por ordem da mantenedora — doc future responde áudio E vídeo como first-class (addendum D-GRAPHICS-GAMING EN+PT landed junto).
