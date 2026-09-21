@@ -126,7 +126,7 @@ fechado/aberto em EN e PT, pela regra `DONE|FEITO` do próprio gate (divergênci
 agora cobre **todos os pares EN↔PT** deste diretório — um `## 1.` no EN casado com um `# 1.` no PT
 é nomeado (um deslize de nível plantado no README PT foi pego).
 
-**19 itens na fila aberta** (ressincronizado 21/09 ~08:5x — 20→19
+**18 itens na fila aberta** (ressincronizado 21/09 ~11:3x — 20→19
 quando **§380** (codegen JS de `if` aninhado com `throw`) foi formalizado ✅
 `9f383bcf`, re-medido 16/0F no tip; 19→18 quando **§381** (OOM do keyword
 entity-field no parser) foi corrigido ✅ `576a1dcb`; 18→17 quando **§394**
@@ -135,7 +135,7 @@ entity-field no parser) foi corrigido ✅ `576a1dcb`; 18→17 quando **§394**
 pela lane do compilador; 17→18 quando **§418** (harness de single-step do debug riscv64) foi RE-PUBLICADO pela lane nativa no mesmo dia, com nova prova, após a perda de árvore que a retração §419 dela registra — a contagem desceu (correções) e subiu (um gap real reapareceu) num só dia, exatamente por isso a autoridade é o script, não a prosa; 18→19 quando a própria lane db/orm ABRIU a
 §421 (`db.connect` nativo aceita qualquer scheme em silêncio; a recusa só aparece no
 `kof_orm_*`) como catálogo honesto do seu F2c3 — contagem subir porque lanes continuam
-catalogando contra si mesmas é o ledger funcionando, não apodrecendo; por
+catalogando contra si mesmas é o ledger funcionando, não apodrecendo; 19→18 quando **§396** (println de RECORD null no Native x86-64) foi corrigido ✅ `461a07e2` pela lane nativa no mesmo dia; por
 `scripts/check_known_bugs_status.sh`; o número é um snapshot datado — a
 autoridade é o script). Os **32** contados em 14/09 e a lista de 13/09
 abaixo são o snapshot HISTÓRICO, preservado para o registro (tirado ANTES da
@@ -236,7 +236,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `roadmap.md` | §§8–11 ❌ (frontend same-project, monólito→micro) | longo prazo |
 | ~~`roadmap-audit.md`~~ → `docs/audits/roadmap-audit.md` | matriz 06/09 + fila P0→P5 (P0 FECHADO 09/09) | re-audit quando algo fecha |
 | ~~`KOFUI-AUDIT.md`~~ → `docs/bugs-and-gaps/` | UI001-Native (face R6: no-op silencioso) ABERTO | lane UI |
-| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | **19 vivos** (contagem viva — autoridade é `scripts/check_known_bugs_status.sh`; ressincronizado 21/09; era 20 — §380 `9f383bcf`, §381 `576a1dcb`, §394 `d0464385` e §353 21/09 fechados; §400/§418/§421 catalogados/re-publicados; a fila viva do §2 é a autoridade; a contagem histórica de 14/09 era 32; §81/§163/§127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
+| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | **18 vivos** (contagem viva — autoridade é `scripts/check_known_bugs_status.sh`; ressincronizado 21/09; era 20 — §380 `9f383bcf`, §381 `576a1dcb`, §394 `d0464385` e §353 21/09 fechados; §400/§418/§421 catalogados/re-publicados; a fila viva do §2 é a autoridade; a contagem histórica de 14/09 era 32; §81/§163/§127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
 | ~~`refactoring/PLAN-SOLID-500.md`~~ → `docs/architecture/PLAN-SOLID-500.md` | ✅ **FEITO + MOVIDO 13/09** (F1–F9 todas fechadas — F3: NativeBackend 498 ≤500 medido, bloqueio da lane GC caducou/regra do dono-morto); ratchet `check_500-baseline.txt` (dívidas travadas — nº autoritativo = `wc -l` do arquivo) no CI | plano FECHADO (regra dos 3 estados) |
 | `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` | **EM DESENVOLVIMENTO 17/09** — promovido de `future/` por decisão da mantenedora, que **sobrepõe o portão R12** (`DECISIONS.md` §D-UNIVERSAL); ponto de entrada = Estágio 1 (consolidação SYSTEMS) + R1–R12 | arquitetura dos Tiers 6–12; visão/design congelados, só as claims de estado são sincronizadas com o código |
 | `PROPOSAL-1.0-EXIT-GATE.md` (+par PT) | **KOF 1.0 EXIT GATE — RATIFICADO 20/09/2026** pela mantenedora (`DECISIONS.md` §D-RELEASE-1.0); promovido de `future/`: o gate (§8) + a fila (§23) são a meta vinculante de estabilização — **Kof RC 1.0 / release 1.0 só existem quando todos os pontos corresponderem e nenhuma aresta estiver aberta** | ordem de execução = o §23 do próprio PROPOSAL, rastreada no `roadmap.md` §24 (EG-1..EG-10); **as sete arestas `[? MEL]` FECHADAS 20/09 por `DECISIONS.md` §D-1.0-EDGES** — KofC + Android dentro da Stable 1.0 de 8 alvos com gates próprios (EG-9/EG-10), os nove candidatos de reforço da §35 são gates obrigatórios, a linha 1.0 abre após o corte 0.5.0 + EG-1..EG-7; a única aresta restante é a declaração da mantenedora que abre o RC (EG-8) |
