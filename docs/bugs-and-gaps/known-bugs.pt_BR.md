@@ -11541,3 +11541,41 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Relacionado:** §353 (isto nasceu da caca de edges Q4 dele), `LambdaE2ETest.castToFunctionType` (o rio `as ()->T`, posicao diferente), os chavlocks `() -> Bool` do workflow-host.
 
 <!-- en-switch --> **EN:** [§400 (en)](known-bugs.md#400--a-named-top-level-function-passed-as-a-value-is-rejected-with-sem011)
+
+
+## §418 — o handshake DAP da JVM vaza o socket quando o handshake falha ANTES da thread do servidor — família `kof debug` (21/09) — 🟡 ABERTO 21/09 (fila de fix; RE-LANÇADO: o reset da árvore compartilhada 21/09 ~12:0x engoliu o bloco §401–§417 não commitado — este era o antigo §408)
+
+- **Sintoma (achado na caça Q4 do harness do §406 — o leak NÃO dispara em nenhum dos 3 testes, mas não há `close()` nenhum no código):** `KofDebugJvm.debug()` cria o socket e roda `awaitConnection()`, `handshake()`, `waitForVmReady()`; qualquer um pode lançar (timeout, VM não encontrada, handshake errado) e o socket nunca é fechado — mesma família §406/§407, lado JVM.
+- **Repro (leitura de código):** `KofDebugJvm.java` — entre o `new ServerSocket()` e o `finally` da thread não há close().
+- **Fix:** fechar o serverSocket (idempotente) no catch do handshake — 1–2 linhas, sem mudança de contrato.
+- **Status:** 🟡 ABERTO (fila de fix desta lane; nada bloqueia release, higiene da família debug).
+- **Relacionado:** §406 (harness vazava ELF dir no timeout), §407 (riscv64 FP — outra lane), §419 (mesma família de buracos no harness riscv).
+
+<!-- en-switch --> **EN:** [§418 (en)](known-bugs.md#418--the-jvm-dap-handshake-leaks-its-socket-when-the-handshake-fails-before-the-server-thread)
+
+## §419 — o harness `kof debug` riscv64 (single-step sob qemu) trava ou perde o inferior — mesma família §406–§418 (21/09) — 🟡 ABERTO 21/09 (roteado à lane native-debug; RE-LANÇADO do bloco perdido no reset da árvore — antigo §409)
+
+- **Sintoma (medido 21/09, segunda rodada das re-execuções do §406):** o teste falha com o binário ainda no diretório e "Nenhum ELF gerado" — `timeout` mata o grupo de processos inteiro, incluindo `qemu-riscv64 -g`; o `waitFor(15s)` retorna sem `kill()`.
+- **Causa raiz (medido; 3 buracos independentes):** (a) `Process.waitFor(timeout)` não destrói o processo — no timeout o qemu fica vivo e é morto pelo SIGKILL do `timeout` junto com o teste; (b) `waitFor()` sem timeout na thread de saída pode pendurar 30s; (c) a linha "ready" do qemu perde-se na corrida `start`/`continue` — o primeiro `waitFor(ready,30s)` estoura (flake: `testNativeRiscv64RunUnderQemuGdb` morre de vez em quando, medido na 2ª rodada); (d) um único `continue` para no entry, não no breakpoint — o 5º teste precisa de `continue` após `break main` (semântica §405).
+- **Fix (para o dono do harness):** `destroy()` no finally do harness (matar o qemu ANTES do `rm -rf`), esperar o ready após o primeiro `continue` (ou `step` até o primeiro evento), e `kill()` após todo `waitFor` com timeout.
+- **Status:** 🟡 ABERTO 21/09 — rota = lane native-debug (dono do harness). NÃO é causado pelo §406 — os buracos preexistem (o flake apareceu na segunda rodada, antes do §406).
+- **Relacionado:** §406 (mesma classe — corrigido), §418 (mesma família).
+
+<!-- en-switch --> **EN:** [§419 (en)](known-bugs.md#419--the-kof-debug-riscv64-harness-single-step-under-qemu-hangs-or-loses-the-inferior)
+
+## §420 — a stdlib `kof.http` não está implementada no alvo JS (gap honesto HTTP003); a issue #415 é duplicata verbatim da #414 — 🟡 ABERTO 21/09 (roteado à lane backend-JS; RE-LANÇADO do bloco perdido no reset da árvore — antigo §415)
+
+- **Estado:** `HTTP003` é o código de gap que a matriz de paridade já carrega; o alvo JS responde com o diagnóstico honesto — R6 satisfeito, sem stub silencioso. Implementar de verdade (binding de fetch via interop, R9) é trabalho da lane backend-JS, não correção de bug.
+- **Triagem 21/09 (issue lane, regra 8):** #415 (`http.get` no JS) = **duplicata verbatim de #414** — mesmo corpo, aberta da conversa; fechada com `--duplicate-of #414` (comentário do bot). O gap real vive aqui (§420) e na matriz; #416 (função nomeada como valor) = regra 8 → §421.
+- **Relacionado:** §421 (o outro pé da mesma varredura de issues), docs `stdlib/http` (HTTP003), linha http/JS do `backend-parity`.
+
+<!-- en-switch --> **EN:** [§420 (en)](known-bugs.md#420--stdlib-kofhttp-is-not-implemented-on-the-js-target-honest-gap-http003--issue-415-is-a-verbatim-duplicate-of-414)
+
+## §421 — função top-level NOMEADA passada como VALOR (sintaxe Java/Kotlin de referência de função) NÃO É BUG (regra 8) — issue #416 fechada com o idioma Kof; o item do diagnóstico continua no §400 — ✅ FECHADO 21/09 (RE-LANÇADO do bloco perdido no reset da árvore — antigo §416)
+
+- **Triagem (21/09):** o repro da #416 é `job("e", probe)` com `Bool probe()` — **sintaxe verbatim Kotlin/Java** (reference de função). Regra 8: a forma documentada do Kof para argumento de função é a LAMBDA literal (`() -> probe()`); nenhum texto do corpus promete `probe`-como-valor; a rejeição é comportamento correto. A issue foi fechada pelo bot com o idioma + ponteiro para `training/anti-patterns/fake-idioms.md`.
+- **O que fica aberto é só o DIAGNÓSTICO** (diz "Undefined variable or type", nomeando o universo errado — R6): registrado no §400, roteado à mantenedora (regra 6). Esta entrada não duplica essa decisão.
+- **Medido:** idêntico no jar 0.4.7 e no tip 0.5.0-beta — preexistente, não regressão da família §353.
+- **Relacionado:** §400 (o que sobra aberto), §420 (varredura de issues do mesmo tick).
+
+<!-- en-switch --> **EN:** [§421 (en)](known-bugs.md#421--a-top-level-named-function-passed-as-a-value-javakotlin-function-reference-syntax-is-not-a-bug-rule-8)
