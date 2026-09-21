@@ -13,6 +13,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **FFI: `record` by value as ARGUMENT on the JS target (bridge, D6-1/3.8b)**
+    (21/09, lane docs/.18, FFI front): the JS runner shared only the
+    scalar/callback ABI — struct params stayed `FFI002`. The host cannot reflect
+    `RecordComponent` of a GraalJS object, so the wire token now carries the
+    field layout (`@<n><chars>`, length-prefixed to stay unambiguous next to a
+    following scalar), each JS record exposes `__kof_ffi_fields()` in declaration
+    order, and `KofJsFfiMarshal` packs the `StructLayout` — same offsets and tail
+    padding as the JVM's `kof_ffi_struct_layout_of` — in the per-call arena
+    (D6-5). Proof: `structParamByValueJsParity` with a real C shim —
+    `sumpoint(Point(3,4))=7`, `scale(Point(2,3),2.0)=10.0`,
+    `parammix(ParamMix(3,2.5,4))=9.5` (j/d/i layout) byte-for-byte JVM==JS.
+    JS struct return and JS array/buffer stay `FFI002` (no silent partial
+    binding). FFI battery: 118 run, 0F.
+
   - **release gate: `decisions` counted a combined `D-A / D-B` heading twice**
     (21/09, lane docs/.18): `check_release_050_gate.sh` read `$2` of each `## `
     heading, so `## D-TYPE-VARIANCE / D-INTEROP-REFLECT` reported D-TYPE-VARIANCE

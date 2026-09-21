@@ -13,6 +13,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **FFI: `record` por valor como ARGUMENTO no target JS (bridge, D6-1/3.8b)**
+    (21/09, lane docs/.18, frente FFI): o runner JS só compartilhava a ABI
+    escalar/callbacks — struct como parâmetro ficava `FFI002`. O host não
+    consegue refletir `RecordComponent` de um objeto GraalJS, então o token do
+    fio agora carrega o layout dos campos (`@<n><chars>`, com prefixo de tamanho
+    para não ambiguar com o escalar seguinte), cada record JS expõe
+    `__kof_ffi_fields()` na ordem de declaração, e o `KofJsFfiMarshal` empacota o
+    `StructLayout` — mesmos offsets e padding de cauda do
+    `kof_ffi_struct_layout_of` do JVM — na arena da chamada (D6-5). Prova:
+    `structParamByValueJsParity` com shim C real — `sumpoint(Point(3,4))=7`,
+    `scale(Point(2,3),2.0)=10.0`, `parammix(ParamMix(3,2.5,4))=9.5` (layout j/d/i)
+    byte-a-byte JVM==JS. Retorno de struct e array/buffer no JS seguem `FFI002`
+    (nenhum binding parcial silencioso). Bateria FFI: 118 run, 0F.
+
   - **portão de release: `decisions` contava um heading combinado `D-A / D-B`
     duas vezes** (21/09, lane docs/.18): o `check_release_050_gate.sh` lia `$2` de
     cada heading `## `, então `## D-TYPE-VARIANCE / D-INTEROP-REFLECT` reportava

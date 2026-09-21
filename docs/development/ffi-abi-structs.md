@@ -17,8 +17,15 @@ binding (3.8b/3.7) proceeds under the D6 decisions above.
 argument** (`@` token; `FfiStructE2ETest` 6/6).
 **Landed 21/09 (3.8b fatia 2):** JVM `record` **return by value** (register
 and sret paths; `@`+`:`-encoded binary name, canonical-constructor
-reconstruction; `FfiStructE2ETest` 10/10). Native struct = 3.7; JS bridge =
-follow-up.
+reconstruction; `FfiStructE2ETest` 10/10). Native struct = 3.7.
+**Landed 21/09 (3.8b bridge JS · D6-1):** the JS runner now binds a `record`
+**by value as ARGUMENT** — token `@<n><chars>` carries the field layout on the
+wire (the host cannot reflect `RecordComponent` of a GraalJS object), the record
+exposes `__kof_ffi_fields()` in declaration order, and `KofJsFfiMarshal` packs
+the `StructLayout` (same offsets/tail-padding as the JVM) in the call arena
+(D6-5). Proof: `structParamByValueJsParity` — `sumpoint(Point(3,4))=7`,
+`scale(Point(2,3),2.0)=10.0` and `parammix(ParamMix(3,2.5,4))=9.5` (j/d/i layout)
+byte-for-byte JVM==JS. JS struct **return** and JS array/buffer stay `FFI002`.
 **Landed 21/09 (3.8b fatia 3 · D6-2):** JVM scalar array **`T[]`→C `ptr`**,
 **copy-in per call** (token `p`+element char; `new Int[n]` crossing as
 `int*`). The Java array is not pinned nor aliased — the callee cannot write
@@ -41,7 +48,7 @@ the nested token `(<ret><params>)`. Anything the map does not cover is a
 | scalar downcall | ✅ `kof_ffi` FFM (`JvmFfiRuntime.java:142+`) | ✅ **direct `call sym@PLT` on x86-64/riscv64/aarch64** (#431 slices 1–2, 20/09, §369 — link-by-use, no `dlopen`) | ✅ host bridge `KofJsFfiBridge` (browser degrades honestly, R7) |
 | callbacks/upcalls (3.4) | ✅ `Linker.upcallStub` | ❌ `FFI001` (no mechanism) | ✅ host |
 | String = `char*` | ✅ in + out | ✅ in (payload off 24) + out (boundary copy) | ✅ |
-| **struct (record, scalar fields)** | ✅ **by value in + out** (`@` token, 3.8b fatias 1–2, 20–21/09) | ❌ FFI001 (3.7) | ❌ FFI002 |
+| **struct (record, scalar fields)** | ✅ **by value in + out** (`@` token, 3.8b fatias 1–2, 20–21/09) | ❌ FFI001 (3.7) | ✅ **by value IN** (`@<n><chars>` + `__kof_ffi_fields`, bridge 21/09); ❌ FFI002 out |
 | **scalar array `T[]`→`ptr`** | ✅ **copy-in per call** (`p<elem>` token, 3.8b fatia 3, 21/09; no write-back) | ❌ FFI001 | ❌ FFI002 |
 | **out-buffer `Buffer(U8)` INOUT** | ✅ **copy-in / call / copy-back** (`B` token + `buffer.alloc`/`Buffer.bytes()`, D6-3, 21/09) | ❌ FFI001 | ❌ FFI002 |
 | non-scalar array / opaque (e.g. `String[]`/`List<T>`/`Handle`) | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
@@ -159,7 +166,8 @@ until decided — no silent partial binding.
    LANDED** — only the
    scalar-field subset; `struct` mutable (D6-1 B) is a new language surface
    under the Simplicity Law (rule 11), a separate decision. Remaining: the JS
-   struct bridge (D6-5 host pack/unpack), a follow-up.
+   struct **return** and JS array/buffer (D6-2/D6-3 on JS) — the JS struct
+   **param** bridge (D6-5 host pack) landed 21/09.
 3. **3.7** native asm: classification by hand per target (x86-64 now;
    aarch64/riscv64 follow the same AbiLayout golden) + sret (D6-4).
 4. **JS**: decide wasm/ffi boundary (node host already binds scalars;

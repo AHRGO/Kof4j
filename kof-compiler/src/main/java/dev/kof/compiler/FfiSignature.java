@@ -51,10 +51,18 @@ public final class FfiSignature {
                 sb.append('(').append(callbackDescriptor(p.type())).append(')');
             } else if (structFieldChars(p.type(), driver) != null) {
                 // D6-1 (A) / 3.8b: um `record` de campos escalares atravessa por
-                // valor como struct C. O runtime deriva o layout e os valores da
-                // própria classe do argumento (reflexão em RecordComponent) — o
-                // token `@` basta (sem carregar nome de classe no fio).
-                sb.append('@');
+                // valor como struct C. No JVM o runtime deriva o layout e os
+                // valores da própria classe (reflexão em RecordComponent) — o
+                // token `@` basta. No JS o host não reflete um objeto GraalJS:
+                // o token carrega os chars do layout com prefixo de TAMANHO
+                // (`@2ij`) — sem ambiguidade com o escalar seguinte — e o
+                // `__kof_ffi_fields` do record entrega os valores no fio.
+                String fields = structFieldChars(p.type(), driver);
+                if (driver.target == Target.JS) {
+                    sb.append('@').append(fields.length()).append(fields);
+                } else {
+                    sb.append('@');
+                }
             } else if (arrayElemChar(p.type()) != null) {
                 // D6-2 / 3.8b fatia 3: `T[]` primitivo vira `ptr` C — token `p` +
                 // o char do ELEMENTO (o runtime faz copy-in por chamada).

@@ -7,6 +7,7 @@ import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
 import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
+import java.lang.foreign.StructLayout;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -46,12 +47,21 @@ final class KofJsFfiMarshal {
     private static Object[] args(String sig, Value jsArgs, Arena stubArena) {
         int n = countParams(sig);   // tokens de 1º nível (callback "(..)" conta 1)
         Object[] real = new Object[n];
+        int[] curRef = { 1 };
         int cur = 1;
         for (int i = 0; i < n; i++) {
             char c = sig.charAt(cur);
             Value v = (jsArgs != null && jsArgs.hasArrayElements() && i < jsArgs.getArraySize())
                     ? jsArgs.getArrayElement(i) : null;
-            if (c == '(') {
+            if (c == '@') {
+                // D6-1/3.8b (bridge JS): struct por valor. O record do guest expõe
+                // `__kof_ffi_fields()` (ordem de declaração); empacotamos na arena
+                // da chamada com o MESMO StructLayout do JVM (D6-5).
+                curRef[0] = cur;
+                String chars = KofJsFfiBridge.structCharsAt(sig, curRef);
+                cur = curRef[0];
+                real[i] = packStruct(chars, v, stubArena);
+            } else if (c == '(') {
                 int j = cur + 1;
                 int depth = 1;
                 StringBuilder inner = new StringBuilder();
@@ -87,12 +97,55 @@ final class KofJsFfiMarshal {
         return real;
     }
 
+    /**
+     * D6-1/3.8b (bridge JS): empacota um `record` do guest num struct C por valor.
+     * O helper sintético {@code __kof_ffi_fields()} devolve os campos na ordem de
+     * declaração (o host não reflete `RecordComponent` de um objeto GraalJS), e o
+     * {@code StructLayout} vem dos chars do token — mesmo layout/offsets do
+     * {@code kof_ffi_write_struct} reflexivo do JVM. A memória é da arena da
+     * chamada (D6-5), fechada após o downcall.
+     */
+    private static MemorySegment packStruct(String chars, Value v, Arena arena) {
+        if (v == null || v.isNull()) {
+            throw new IllegalArgumentException("ffi: struct argument is null");
+        }
+        Value fields = v.invokeMember("__kof_ffi_fields");
+        if (!fields.hasArrayElements() || fields.getArraySize() < chars.length()) {
+            throw new IllegalArgumentException(
+                    "ffi: struct field helper mismatch (got "
+                            + (fields.hasArrayElements() ? fields.getArraySize() : -1)
+                            + ", want " + chars.length() + ")");
+        }
+        StructLayout sl = KofJsFfiBridge.structLayout(chars);
+        MemorySegment seg = arena.allocate(sl);
+        for (int k = 0; k < chars.length(); k++) {
+            long off = sl.byteOffset(MemoryLayout.PathElement.groupElement(k));
+            Value f = fields.getArrayElement(k);
+            switch (chars.charAt(k)) {
+                case 'i' -> seg.set(ValueLayout.JAVA_INT, off, f.asInt());
+                case 'j' -> seg.set(ValueLayout.JAVA_LONG, off, f.asLong());
+                case 'f' -> seg.set(ValueLayout.JAVA_FLOAT, off, f.asFloat());
+                case 'd' -> seg.set(ValueLayout.JAVA_DOUBLE, off, f.asDouble());
+                case 'b' -> seg.set(ValueLayout.JAVA_BOOLEAN, off, f.asBoolean());
+                default -> throw new IllegalArgumentException(
+                        "ffi: bad struct field char: " + chars.charAt(k));
+            }
+        }
+        return seg;
+    }
+
     /** Nº de tokens de parâmetro de 1º nível (um callback `(..)` conta como 1). */
     private static int countParams(String sig) {
         int n = 0, cur = 1;
         while (cur < sig.length()) {
             char c = sig.charAt(cur);
-            if (c == '(') {
+            if (c == '@') {
+                // struct por valor: `@` + tamanho decimal + chars (conta 1).
+                n++;
+                int[] ref = { cur };
+                KofJsFfiBridge.structCharsAt(sig, ref);
+                cur = ref[0];
+            } else if (c == '(') {
                 n++;
                 int j = cur + 1, depth = 1;
                 while (depth > 0) {

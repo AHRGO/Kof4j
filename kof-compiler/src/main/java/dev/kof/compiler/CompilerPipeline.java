@@ -472,11 +472,11 @@ public final class CompilerPipeline {
                 if (FfiSignature.paramChar(param.type()) != null) continue;
                 if (FfiSignature.callbackDescriptor(param.type()) != null) continue;
                 // D6-1(A)/3.8b: um `record` de campos escalares binda por valor no
-                // JVM (FFM classifica o struct). O runner JS ainda NÃO tem o bridge
-                // de struct → segue FFI002 honesto lá (R6). Retorno de struct segue
-                // fora do conjunto nesta fatia.
-                if (driver.target == Target.JVM
-                        && FfiSignature.structFieldChars(param.type(), driver) != null) continue;
+                // JVM (FFM classifica o struct) E no runner JS (bridge de struct
+                // 21/09: token `@<n><chars>` + `__kof_ffi_fields` + pack no host,
+                // paridade com o `kof_ffi_write_struct` reflexivo do JVM). Retorno
+                // de struct segue fora do conjunto nesta fatia (FFI002 no JS).
+                if (FfiSignature.structFieldChars(param.type(), driver) != null) continue;
                 // D6-2 / 3.8b fatia 3: `T[]` escalar binda por valor (ptr + copies)
                 // no JVM; Native/JS ficam nos seus gap codes (R6).
                 if (driver.target == Target.JVM

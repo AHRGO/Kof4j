@@ -5,6 +5,7 @@ import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
 import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
+import java.lang.foreign.StructLayout;
 import java.lang.foreign.SymbolLookup;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
@@ -22,13 +23,14 @@ import java.lang.invoke.MethodHandle;
  * ({@code getString} após {@code reinterpret} com guard de NULL). Uma String
  * retornada é lida do ponteiro nativo; {@code void} devolve {@code null}.
  *
- * <p><b>FATIA F1 — gate AINDA FECHADO.</b> Nada no compilador roteia {@code extern}
- * para este bridge ainda: um {@code extern} no target JS continua emitindo
- * {@code FFI002} em compilação (R6, nunca stub silencioso). Este bridge e o
- * {@code KofJsFfiBridgeTest} provam o downcall ponta-a-ponta no host ANTES de
- * (F2) abrir o {@code isExternBound} do JS + rotear o lowering para um
- * {@code ProxyExecutable} sobre esta classe e (F3) afirmar paridade byte-a-byte
- * JVM↔JS. Zero risco ao backend JS até aqui — nada aqui é alcançável pelo compilador.
+ * <p><b>Estado 21/09:</b> o gate do JS está aberto para escalares + callbacks
+ * (3.4-C3) e, desde o bridge de struct (D6-1/3.8b), para {@code record} de campos
+ * escalares passado POR VALOR — token {@code @<n><chars>} ({@link #structCharsAt}):
+ * o {@code KofJsFfiMarshal} empacota os campos (via {@code __kof_ffi_fields} do
+ * record) num {@code MemorySegment} da arena da chamada (D6-5) e aqui o
+ * {@code StructLayout} entra no descriptor, idêntico ao caminho reflexivo do
+ * {@code JvmFfiRuntime}. Struct de RETORNO e array/buffer seguem {@code FFI002}
+ * (R6, nunca stub silencioso).
  */
 public final class KofJsFfiBridge {
 
@@ -61,6 +63,16 @@ public final class KofJsFfiBridge {
                     }
                     cur = j;
                     pl[i] = ValueLayout.ADDRESS;
+                    real[i] = args[i];
+                } else if (c == '@') {
+                    // D6-1/3.8b (bridge JS 21/09): `record` Kof -> struct C por
+                    // valor. O Marshal JÁ empacotou os campos num MemorySegment
+                    // da arena da chamada (D6-5); aqui só o layout entra no
+                    // descriptor — espelho do `pl[i] = sl` do JvmFfiRuntime.
+                    int[] ref = { cur };
+                    String chars = structCharsAt(sig, ref);
+                    cur = ref[0];
+                    pl[i] = structLayout(chars);
                     real[i] = args[i];
                 } else {
                     cur++;
@@ -108,5 +120,48 @@ public final class KofJsFfiBridge {
             case 'S' -> ValueLayout.ADDRESS;
             default -> throw new IllegalArgumentException("bad ffi layout char: " + c);
         };
+    }
+
+    /**
+     * Token de struct por valor no sig do JS: {@code '@'} + TAMANHO decimal +
+     * chars do layout (ex. {@code @2ij}) — o prefixo de tamanho elimina a
+     * ambiguidade com o escalar seguinte. Avança {@code cur[0]} para depois do
+     * token. O retorno {@code @:Nome} nunca chega aqui (o gate do JS mantém
+     * struct de retorno em {@code FFI002}).
+     */
+    static String structCharsAt(String sig, int[] cur) {
+        int j = cur[0] + 1;
+        int len = 0;
+        while (j < sig.length() && Character.isDigit(sig.charAt(j))) {
+            len = len * 10 + (sig.charAt(j) - '0');
+            j++;
+        }
+        if (len <= 0 || j + len > sig.length()) {
+            throw new IllegalArgumentException("bad ffi struct token at " + cur[0] + ": " + sig);
+        }
+        cur[0] = j + len;
+        return sig.substring(j, j + len);
+    }
+
+    /**
+     * StructLayout C a partir dos chars dos campos — mesmos ValueLayout do JVM,
+     * inclusive o padding de cauda: a ABI C arredonda o struct até o alinhamento
+     * do maior membro e o FFM exige esse tamanho exato (ex. {long,double,int} =
+     * 24, não 20) — espelho de {@code kof_ffi_struct_layout_of} do JVM.
+     */
+    static StructLayout structLayout(String chars) {
+        MemoryLayout[] members = new MemoryLayout[chars.length()];
+        for (int k = 0; k < chars.length(); k++) {
+            members[k] = layout(chars.charAt(k));
+        }
+        StructLayout sl = MemoryLayout.structLayout(members);
+        long align = sl.byteAlignment();
+        long size = sl.byteSize();
+        long padded = (size + align - 1) / align * align;
+        if (padded == size) return sl;
+        MemoryLayout[] withPad = new MemoryLayout[members.length + 1];
+        System.arraycopy(members, 0, withPad, 0, members.length);
+        withPad[members.length] = MemoryLayout.paddingLayout(padded - size);
+        return MemoryLayout.structLayout(withPad);
     }
 }

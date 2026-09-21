@@ -69,6 +69,7 @@ public final class JsClassEmitter {
         if (isRecord) {
             methods.add(lowerRecordToString(clazz));
             methods.add(lowerRecordToJson(clazz));
+            methods.add(lowerRecordFfiFields(clazz));
             methods.add(lowerRecordEquals(clazz));
             methods.add(lowerRecordHashCode(clazz));
         }
@@ -169,6 +170,23 @@ public final class JsClassEmitter {
         }
         return new JsIr.JsFunction("toJSON", List.of(),
                 List.of(new JsIr.JsReturn(new JsIr.JsObjectLiteral(entries))), false, false, false);
+    }
+
+    /**
+     * D6-1/3.8b (bridge JS): o host não reflete {@code RecordComponent} num objeto
+     * GraalJS, então o record expõe os campos na ordem de declaração para o
+     * {@code KofJsFfiMarshal} empacotar o struct C por valor — paridade com o
+     * {@code kof_ffi_write_struct} reflexivo do JVM. Só records são bindáveis
+     * como struct (o gate de {@code isExternBound} fecha o resto).
+     */
+    JsIr.JsFunction lowerRecordFfiFields(IRClass clazz) {
+        List<JsIr.JsExpression> values = new ArrayList<>();
+        for (IRField field : clazz.fields()) {
+            values.add(new JsIr.JsMember(new JsIr.JsThis(),
+                    "_" + JsTypeMapper.sanitizeName(field.name())));
+        }
+        return new JsIr.JsFunction("__kof_ffi_fields", List.of(),
+                List.of(new JsIr.JsReturn(new JsIr.JsArrayLiteral(values))), false, false, false);
     }
 
     /**

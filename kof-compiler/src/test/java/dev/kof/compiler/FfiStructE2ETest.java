@@ -31,6 +31,8 @@ class FfiStructE2ETest {
             struct Big bigret(int a, int b, int c) { struct Big g; g.a = a; g.b = b; g.c = c; return g; }
             struct Mix { double d; int i; };
             struct Mix mixret(double d, int i) { struct Mix m; m.d = d; m.i = i; return m; }
+            struct ParamMix { long l; double d; int i; };
+            double parammix(struct ParamMix m) { return m.l + m.d + m.i; }
             """;
 
     private final CompilerDriver driver = new CompilerDriver();
@@ -165,7 +167,7 @@ class FfiStructE2ETest {
                 }
                 """);
         CompilationResult r = driver.compile(src, dir.resolve("out-retjs"), Target.JS);
-        assertFalse(r.success(), "JS struct bridge not landed → must stay unbound");
+        assertFalse(r.success(), "JS struct RETURN stays unbound (FFI002) in this slice");
         assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI002"),
                 "expected FFI002 on JS, got: " + r.diagnostics().getDiagnostics());
     }
@@ -226,23 +228,45 @@ class FfiStructE2ETest {
     }
 
     @Test
-    void structParamJsStaysFfi002(@TempDir Path dir) throws IOException {
-        // O runner JS compartilha o bridge escalar, mas ainda não o de struct →
-        // FFI002 honesto (R6), nunca um downcall que quebraria em runtime.
-        Path src = dir.resolve("js.kf");
-        Files.writeString(src, """
+    void structParamByValueJsParity(@TempDir Path dir) throws Exception {
+        // Bridge de struct no JS (D6-1/3.8b, 21/09): o record vira struct C por
+        // valor no host GraalJS — MESMO StructLayout/offsets do JVM, provado
+        // byte-a-byte contra o shim C real. `Mixed` exercita o alinhamento de
+        // `long`/`double`/`int` (j/d/i) num layout misto.
+        String so = compileHostLib(dir);
+        String kof = """
                 record Point(Int x, Int y)
+                record ParamMix(Long l, Double d, Int i)
 
-                extern "libc.so.6" sumpoint(Point p): Int
+                extern "%s" sumpoint(Point p): Int
+                extern "%s" scale(Point p, Double f): Double
+                extern "%s" parammix(ParamMix m): Double
 
                 main() {
-                    println("hi")
+                    println(sumpoint(Point(3, 4)))
+                    println(scale(Point(2, 3), 2.0))
+                    println(parammix(ParamMix(3, 2.5, 4)))
                 }
-                """);
-        CompilationResult r = driver.compile(src, dir.resolve("out-js"), Target.JS);
-        assertFalse(r.success(), "JS struct ABI not landed → must stay unbound");
-        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI002"),
-                "expected FFI002 on JS, got: " + r.diagnostics().getDiagnostics());
+                """.formatted(so, so, so);
+        String expected = "7\n10.0\n9.5";
+
+        Path jvmSrc = dir.resolve("jsstruct-jvm.kf");
+        Files.writeString(jvmSrc, kof);
+        Path jvmOut = dir.resolve("out-jsstruct-jvm");
+        CompilationResult rj = driver.compile(jvmSrc, jvmOut, Target.JVM);
+        assertTrue(rj.success(), "JVM compile: " + rj.diagnostics().getDiagnostics());
+        String jvm = runJvm(jvmOut);
+        assertEquals(expected, jvm, "JVM golden (struct param)");
+
+        Path jsSrc = dir.resolve("jsstruct-js.kf");
+        Files.writeString(jsSrc, kof);
+        Path jsOut = dir.resolve("out-jsstruct-js");
+        CompilationResult rjs = driver.compile(jsSrc, jsOut, Target.JS);
+        assertTrue(rjs.success(), "JS struct param must bind (bridge 21/09): "
+                + rjs.diagnostics().getDiagnostics());
+        String js = runJs(jsOut);
+        assertEquals(expected, js, "JS golden (struct param)");
+        assertEquals(jvm, js, "JVM==JS byte-for-byte parity (struct param)");
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -274,6 +298,14 @@ class FfiStructE2ETest {
             }
         }
         return null;
+    }
+
+    private String runJs(Path outDir) throws IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int ec = dev.kof.runtime.KofJsRunner.run(outDir.resolve("Default.mjs"), out,
+                new java.io.ByteArrayInputStream(new byte[0]), out);
+        assertEquals(0, ec, "JS exit code, output: " + out);
+        return out.toString(java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
     }
 
     private String runJvm(Path outDir) throws IOException {
