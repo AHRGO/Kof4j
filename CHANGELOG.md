@@ -25,11 +25,11 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     the documented `!= null &&` idiom), and `MakealiveFsProviderE2ETest.fsRead`
     uses **early-return narrowing** (`if (t == null) { return }` then `t.split`) —
     completed in `StatementAnalyzer`: after an exit-only `if` without else the
-    else-side narrowing applies to the enclosing scope. Proof:
-    `WorkflowE2ETest#lambdaBodyWithIoBoolCompilesAndRuns` (RED with the fix in
-    stash / GREEN with it, JVM==JS on real disk) + `NullSafetyE2ETest` 14/14
+    else-side narrowing applies to the enclosing scope (`Narrowing.thenBranchExits`).
+    Proof: `WorkflowE2ETest#lambdaBodyWithIoBoolCompilesAndRuns` (RED with the fix
+    in stash / GREEN with it, JVM==JS on real disk) + `NullSafetyE2ETest` 14/14
     (positive + negative twin — SEM049 still fires without a guaranteed exit).
-    Related: §399 catalogued (named function as a value → SEM011; pre-existing,
+    Related: §400 catalogued (named function as a value -> SEM011; pre-existing,
     measured identical on 0.4.7; routed to the maintainer, rule 6).
 
 
@@ -46,14 +46,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (`WorkflowE2ETest`, `KofJsE2ETest`, `IoBoolFacesE2ETest`, pump).
 
 ### In development
-  - **§388-B closed — `println(Int[])` is the §107 container format** (21/09, maintainer
-    vote `D-ARRAY-PRINT`): printing a whole primitive array now gives `[65, 66]` on every
-    target — JVM/Script through the new `kof_array_to_string` (JvmRuntimeCore; interpreter
-    by reflection), JS by re-routing `valueOf(ArrayType)` into `kofFormat`, x86 native by
-    its own asm twin (riscv64/aarch64 goldens CI-verified). The identity `[I@…` and the
-    bracket-less JS face are both gone; `io.md` declares the format and the `SEM099`
-    bytes-param contract. Pinned by `arrayprint` (ConformanceMatrixTest, all four targets
-    incl. native) + `ArrayPrintFormatE2ETest` 7/7; §388 flips ✅.
+  - **F2c — `orm.all` row-object→List REAL no Native x86-64 (gaps-db lane)**
+    (21/09): `kof_orm_all` em asm (`RuntimeOrm6`) — loop de campos do find
+    (casamento por NOME, leitura por typeCode + tipo dinâmico da coluna com o
+    §397) + `kof_list_new`/`kof_list_add` por linha; ctor resolvido UMA vez
+    (resolver `kof_orm_ctors` da irmã, agora alimentado por find E all —
+    set renomeado `ormCtorClasses`); lista VAZIA != null (host devolve
+    ArrayList sempre). Design-first: oracle JVM medido ANTES da asm (corpo
+    `2/Mel/Ana/0/empty=0`). Prova: `KofOrmE2ETest#allNativeEndToEndMatchesJvm`
+    byte-a-byte JVM==Native (2 linhas por nome+size, `for-in`, vazio pós-
+    delete, segunda chamada sem leak) — KofOrmE2ETest 45/0F/3skip; pin
+    ORM001 migrou p/ `where` (F2c2). Docs EN+PT: parity, tracker 1.1.9
+    (+ typo da irmã `F2a find`→F2b sincronizado com a linha do §397), DOING
+    (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
+    (padrão da casa), o loop é o MESMO código já provado no §397.
   - **3.6 design landed — `docs/development/future/secrets-plan.md` (+PT)** (21/09): the
     Stage-5 answer to "Secrets in logs: NO PROTECTION" — value type `Secret` (reveal-gated,
     constant-time equals, fixed `Secret(*** )` print format declared up front), three-layer
@@ -81,6 +87,12 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `KofOrmE2ETest#findPreservesSavedBoolTrueRegression397`,
     `JsonCompleteE2ETest#jvmDecodeIntFieldIntoBoolRecordBindsTrue`).
     Contrato travado para a asm do F2b: `INTEGER != 0` no slot Bool.
+    Follow-up medido 21/09: a asm do `find` (`RuntimeOrm5`, F2b da irma) levara o
+    oracle antigo (TEXT "true", INTEGER 1 -> false) e virou divergencia JVM×Native
+    com o host consertado — patch por tipo dinamico de coluna (`!=0`) +
+    `findPreservesSavedBoolTrueRegression397` estendido p/ byte-paridade
+    Native==JVM (RED sem o patch na assert cross, GREEN com; KofOrmE2ETest 44/0F).
+
   - **F2a test-strengthening (gaps-db lane)** (20/09): a unidade F2a
     (`save` row-object, `RuntimeOrm4`+`RuntimeOrmSchema`+`RuntimeOrmBind`)
     pousou por `4316d325`; esta fatia SÓ FORTALECE A PROVA — o

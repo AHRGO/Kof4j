@@ -11361,7 +11361,7 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 - **Revealed by the fix (both landed here, same commit):** typing io correctly exposed unsound code the blind typer had swallowed. (a) `MakealivePrimitivesE2ETest.ioStateRoundTripRunsJvmJsNativeCompiles` dereferenced `readText()` (a `String?`) with NO guard — a real SEM049, fixed in the test by the documented idiom `back != null && back.length`. (b) `MakealiveFsProviderE2ETest.fsRead` uses the **early-return narrowing** shape `if (t == null) { return } ... t.split(...)` — SG-005 narrowing existed only inside branches, never AFTER a guaranteed-exit `if` without else. Completed it (additive): `StatementAnalyzer.IfStmt` now applies the else-side narrowing to the enclosing scope when the then-branch definitely exits (`thenBranchExits`: return/throw/continue/break/block-last/if-both); `NullSafetyE2ETest` 14/14 pins the positive (runs, correct output) AND the negative twin (no exit → SEM049 still fires — no false acceptance).
 - **Workaround (idiom, still valid, kept in the example):** bind the io result to an explicit `Bool` before returning — `Bool ok = File(p).exists(); return ok`. `examples/ci/ci-pipeline.kf` keeps its form (backward compatible); the direct `() -> File(p).exists()` is now legal too.
 - **Minimal repro:** `import kof.workflow` + `main() { var j = job("e", () -> File("x").exists()) }` — was SEM014, now compiles; the pre-fix jar reproduces the error (measured both sides in-session).
-- **Found by:** `CmdWorkflowTest.realCiPipelineExampleRunsEndToEnd` (2.5 E2E) — the example carries the workaround + an inline note pointing here. **Edge hunt (21/09, Q4) surfaced §399** (named top-level function as a value → SEM011, pre-existing on 0.4.7, catalogued separately).
+- **Found by:** `CmdWorkflowTest.realCiPipelineExampleRunsEndToEnd` (2.5 E2E) — the example carries the workaround + an inline note pointing here. **Edge hunt (21/09, Q4) surfaced §400** (named top-level function as a value → SEM011, pre-existing on 0.4.7, catalogued separately).
 
 ## §354 — inherited-field assignment lowered to an `Object` temporary (`Object var11 = w; this.width = var11;`, PUTFIELD descriptor `Ljava/lang/Object;` / owner `?` → `NoClassDefFoundError: "?"`) — the superclass name was not canonicalized end-to-end — ✅ FIXED 19/09 (3 faces, one family; pins `InheritedFieldAssignE2ETest` 9/9)
 
@@ -11815,20 +11815,9 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
   `IoArrayArgE2ETest` (5/5: JVM + JS + Script negatives, bound-var case,
   positive control).
 
-- **Fix B (landed 21/09, vote `DECISIONS.md` §D-ARRAY-PRINT):** rule 6 decided in
-  chat by the maintainer — printing a whole primitive array IS the §107 container
-  format (`[65, 66]`, oracle `ArrayList.toString`). JVM/Script route through
-  `kof_array_to_string` (JvmRuntimeCore template; the interpreter loads it by
-  reflection), JS re-routes `valueOf(ArrayType)` through `kofFormat`, x86 native
-  got the asm twin (`NativeRiscvAsmRtB39` + descriptor tag 11; riscv64/aarch64
-  goldens run on CI/qemu). Pinned by `arrayprint` in `ConformanceMatrixTest`,
-  `ArrayPrintFormatE2ETest` (7/7) and `nativeCollectionPrint…/nativeArrayPrint…`
-  goldens; io.md declares both halves now.
-
-> **Status:** ✅ FIXED 21/09 — Repro A: `SEM099` compile-time diagnostic on every
-  target; Repro B: container format `[65, 66]` declared and enforced (vote
-  D-ARRAY-PRINT). The reverse-parity silent-red is gone: the three scriptable
-  targets print identically, native matches on x86 with cross goldens CI-pinned.
+> **Status:** 🟡 PARTIAL 20/09 — Repro A FIXED (`SEM099`); Repro B OPEN: a rule-6
+  contract decision on how `println(Int[])` prints (JVM/Script `[I@…` vs JS
+  `65,66,67`) needs maintainer sign-off before any code.
 
 
 ## §389 — tip `beta-0.5.0` test-compile RED: `BareCollectionPrimitiveArgE2ETest` cites `dev.kof.compiler.nat.NativeToolchainGate.present()` — the class was NEVER committed (`git log -S`/`git cat-file -e` on the tip: test-side hits only) — the whole kof-compiler test module fails to compile on a clean tip — ✅ FIXED 20/09 (root cause real: `9c88d590` (#945 docs-lane) varreu por engano 17 testes WIP da lane `.22` sem o helper `NativeToolchainGate.java` — o `amend` sem `--only` durante a saga do stash. Fix landed: `de5354eb` comitou o Gate com o `static boolean present()` exato do recipe. Prova de GREEN no tip (clone ISOLADO, nao a arvore compartilhada): `git ls-tree origin/beta-0.5.0` = Gate presente desde `136feea1`; `mvn -o -pl kof-compiler -am test-compile` no tip = 0 ERROR / rc=0 (medido 20/09 ~18:5x por `192.168.100.14`, lane docs, fechando o proprio rombo). LIÇÃO para todas as lanes: medir sempre contra `origin` apos `git fetch` — o tip `94011544` citado na abertura da entrada e um SHA DANGLING (fantasma de rebase, fora de toda historia); a entrada estava desatualizada no momento em que abriu
@@ -13987,7 +13976,34 @@ p
 <!-- pt-switch --> **PT:** [§398 (pt_BR)](known-bugs.pt_BR.md#398--o-harness-de-debug-dap-native-vazava-os-diretorios-temporarios)
 
 
-## §399 — a named top-level function passed as a VALUE (e.g. `job("e", probe)` where `Bool probe()`) is rejected with SEM011 "Undefined variable or type" — the name resolves only in CALL position; the diagnostic also names the wrong universe (R6) — 🟡 OPEN 21/09 (catalogued by the §353 edge hunt; measured pre-existing)
+## §399 — `kof debug` DAP on the JVM: `step`/`continue` cleared `stoppedThread` AFTER `resume()`, so the race with the SingleStep event wiped the new thread id to `-1` → the next `stackTrace` sent `FrameCount(-1)` (JDWP command 11,7) → error 20 (`INVALID_OBJECT`) killed the session ("fluxo DAP fechou") — flake `KofDebugJvmStepTest` ~1/5 of class runs — ✅ FIXED 21/09 (`62206c6d`; stabilization lane)
+
+- **Symptom (measured 21/09, shared host):** `KofDebugJvmStepTest` failed
+  roughly **1/5 to 1/3 of class-level runs** (isolated 6/6 green), always
+  ending with the DAP channel closing instead of the expected stop; the
+  reported text was the generic "fluxo DAP fechou", never the JDWP error.
+- **Root cause:** `KofDebugJvmSession.step()` and the `continue` handler ran
+  `jdwp.resume()` and only **then** `stoppedThread = -1`. The SingleStep event
+  is delivered on the JDWP reader thread and sets the **new valid** thread id;
+  under load the event won the race and the trailing `stoppedThread = -1`
+  clobbered it. The next `stackTrace` (no explicit `threadId`) then used `-1`
+  → `FrameCount(-1)` (command `11,7`) → JDWP **error 20 (`INVALID_OBJECT`)** →
+  a fatal `IOException` escaped `handleRequest` → the CLI exited and the
+  editor saw the DAP channel close.
+- **Fix landed (this lane):** clear `stoppedThread` **before** `resume()` in
+  both `step()` and `continue`; make `stackTrace` and the `evaluate` fallback
+  surface an honest DAP error (R6) instead of letting the exception kill the
+  session.
+- **Proof (RED-first, Q0):** new test
+  `stepThenImmediateStackTraceNeverLosesTheStoppedThread`
+  (`KofDebugJvmStepTest`, 12 fresh sessions of
+  `stepIn → stackTrace → stepOut → stackTrace`) — **RED on the old code** (fix
+  stashed) with the exact "fluxo DAP fechou" symptom, **GREEN on the fix**;
+  class + neighbours (`Step`/`Jvm`/`Attach`/`NativeDap`) run **4×** =
+  **22/0F/0E** each.
+- **Related:** §398 (same DAP harness), `KofDebugJvmSession.java`,
+  `KofDebugJvmStepTest.java`.
+## §400 — a named top-level function passed as a VALUE (e.g. `job("e", probe)` where `Bool probe()`) is rejected with SEM011 "Undefined variable or type" — the name resolves only in CALL position; the diagnostic also names the wrong universe (R6) — 🟡 OPEN 21/09 (catalogued by the §353 edge hunt; measured pre-existing)
 
 - **Symptom (measured 21/09, identical on the 0.4.7 pre-§353 jar and the tip jar — NOT a §353 regression):** `import kof.workflow` + `Bool always() { return true }` + `job("e", always)` → `:0:0: error: Undefined variable or type: 'always' [SEM011]`. With a cast it is the same (SEM011 fires on the identifier before the cast matters). A lambda literal in the same slot compiles (`job("e", () -> always())` — green).
 - **Why the message is wrong twice (R6):** (a) `always` IS defined — as a function; the diagnostic's "variable or type" names a universe the symbol is not in; (b) whether named functions are first-class VALUES is a language-surface question (rule 11 Simplicity Law + rule 6): Kof's documented idiom for a function argument is the LAMBDA literal (`training/idioms/`), and no corpus text promises `probe`-as-value — so the REJECTION is plausibly correct and only the DIAGNOSTIC is a bug.
@@ -13995,4 +14011,4 @@ p
 - **Workaround (the idiom):** wrap in a lambda — `job("e", () -> always())` — byte-parity JVM/JS (measured in `WorkflowE2ETest` shapes).
 - **Related:** §353 (this was surfaced by the §353 Q4 edge hunt), `LambdaE2ETest.castToFunctionType` (the `as ()->T` river, different position), workflow-host `() -> Bool` flocks.
 
-<!-- pt-switch --> **PT:** [§399 (pt_BR)](known-bugs.pt_BR.md#399--uma-funcao-top-level-nomeada-passada-COMO-VALOR-è-rejeitada-com-sem011)
+<!-- pt-switch --> **PT:** [§400 (pt_BR)](known-bugs.pt_BR.md#400--uma-funcao-top-level-nomeada-passada-COMO-VALOR-è-rejeitada-com-sem011)
