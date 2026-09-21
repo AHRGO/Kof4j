@@ -125,6 +125,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **O gate agora fecha o ciclo nas duas direções** (21/09, lane docs): além de afirmação de fechamento sem respaldo no ledger, um id FECHADO no ledger a partir da seção 400 sem entrada no CHANGELOG agora derruba o gate. O piso é regra de época, não anistia: medido em 21/09, 25 ids abaixo de 400 não têm entrada enquanto ZERO acima têm — a prática consolidou, a regra começa onde a prática começa. Verificado por mutação: uma seção fechada plantada no ledger sem linha no changelog é nomeada pelo gate; estado real segue verde. (Uma ideia companheira — proibir referências do changelog a ids fora do ledger — foi medida e REJEITADA: os achados são remissões antigas de outro espaço de ids, regra errada para a história, recusada pela lição da rodada 11.)
+  - **Condição 1 (paridade) certificada 100% neste host** (21/09, lane docs): a matriz por alvo
+    reportava os alvos cross como RED/NEEDS-MEASURE (`sem riscv64-linux-gnu-as` /
+    `sem aarch64-linux-gnu-as`) — lacuna de ambiente, não divergência de código. Reconstruir o jar da
+    árvore (`scripts/build-kof-jar.sh`, limpa o bloqueio de artefato velho) mais um helper novo sem
+    root `scripts/setup-cross-toolchain.sh` — que extrai os `.deb`s de binutils + qemu-user-static +
+    libc-cross num prefixo local (sem apt/sudo) e imprime os exports de `KOF_CROSS_SYSROOT`/PATH —
+    leva a matriz a certificar `PARITY: 100%` em jvm/x86-64/riscv64/aarch64/JS/Script byte-a-byte,
+    então a condição 1 do release fica GREEN no host. A premissa "paridade só no CI" não resistiu à
+    medição (R6: ferramenta faltando não é verde; provê-la não é bypass).
   - **Paridade de seções numeradas adicionada; nível da seção 7 reparado** (21/09, lane docs):
     medir todos os pares EN/PT sob `docs/development/` mostrou só o `DECISIONS.md` fora, e o resíduo
     era um deslize de nível — EN `# 7. Final rule` (H1) vs PT `## 7. Regra final` (H2), o único fora
