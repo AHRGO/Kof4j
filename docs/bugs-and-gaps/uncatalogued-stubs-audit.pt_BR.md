@@ -291,6 +291,18 @@ stdlib) mais os `DomainGapCodesTest`/`StdCatalogTest` existentes; um diff
 estático de símbolos não é um e não deve ser construído. O check direcionado do
 registry `String` × alvo (a classe §424) é a mecanização acionável.
 
+### Fatia 8 — registry `String` × alvo JS, mecanizado (21/09)
+
+`StringMethodTargetCoverageTest` (3 testes, verde) é o backstop direcionado que a
+Fatia 7 concluiu ser a forma certa. Lê `StringMethodRegistry.java` (27 nomes
+aceitos) e `JsCallEmitter.java`, e afirma que todo método está classificado: **10**
+mapeiam para um membro real de `String.prototype`, **8** têm `case` explícito,
+**4** passam por `kof_string_to_*`, e **5 são o gap conhecido do §424**
+(`matches`/`replaceAll`/`replaceFirst`/`toCharArray`/`compareToIgnoreCase`). Um
+método novo no registry sem classificação quebra o teste — provado RED-first
+plantando `toTitleCase`, que deu `sem classificacao: [toTitleCase]`. O conjunto de
+gaps é fixado nos cinco documentados (cresce ou encolhe → vermelho).
+
 ## Próximas passadas (planejadas — ainda não executadas)
 
 1. **Checagem de assimetria de paridade** — **FEITA (fatia 2b,

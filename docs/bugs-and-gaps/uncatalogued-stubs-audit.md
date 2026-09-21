@@ -283,8 +283,19 @@ existing `DomainGapCodesTest`/`StdCatalogTest`; a static symbol diff is not one
 and must not be built. The targeted `String` registry × target check (the §424
 class) is the actionable mechanization.
 
-## Next passes (planned — not yet executed)
+### Fatia 8 — `String` registry × JS target coverage, mechanized (21/09)
 
+`StringMethodTargetCoverageTest` (3 tests, green) is the targeted backstop Fatia 7
+concluded was the right shape. It reads `StringMethodRegistry.java` (27 accepted
+names) and `JsCallEmitter.java`, and asserts every method is classified: **10** map
+to a real `String.prototype` member, **8** have an explicit `case`, **4** go through
+`kof_string_to_*`, and **5 are the §424 known gap** (`matches`/`replaceAll`/
+`replaceFirst`/`toCharArray`/`compareToIgnoreCase`). A new registry method without
+classification fails the test — proved RED-first by planting `toTitleCase`, which
+yielded `sem classificacao: [toTitleCase]`. The gap set is pinned to the documented
+five (grows or shrinks → red).
+
+## Next passes (planned — not yet executed)
 1. **Parity asymmetry check** — **DONE (slice 2b, `StdParityGapAuditTest`
    15/15**, including the per-function gates of `KofSecurity` and
    `KofTime`).
