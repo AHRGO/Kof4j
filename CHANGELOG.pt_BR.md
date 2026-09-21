@@ -125,6 +125,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **O gate agora fecha o ciclo nas duas direções** (21/09, lane docs): além de afirmação de fechamento sem respaldo no ledger, um id FECHADO no ledger a partir da seção 400 sem entrada no CHANGELOG agora derruba o gate. O piso é regra de época, não anistia: medido em 21/09, 25 ids abaixo de 400 não têm entrada enquanto ZERO acima têm — a prática consolidou, a regra começa onde a prática começa. Verificado por mutação: uma seção fechada plantada no ledger sem linha no changelog é nomeada pelo gate; estado real segue verde. (Uma ideia companheira — proibir referências do changelog a ids fora do ledger — foi medida e REJEITADA: os achados são remissões antigas de outro espaço de ids, regra errada para a história, recusada pela lição da rodada 11.)
+  - **Condição 5 (bug_issues) medida num host sem `gh`** (21/09, lane docs): o gate lê
+    `UNKNOWN` quando o `gh` não está disponível — fail-closed por desenho, então falha de consulta
+    nunca vira "0 bugs". Isso escondia o estado real neste host. Novo
+    `scripts/fetch-open-issues.sh` enumera as issues abertas pela API pública do GitHub (`gh`
+    autenticado ainda preferido; depois token; depois curl sem auth), no formato exato
+    `numero<TAB>labels` que o gate consome via `R050_OPEN_ISSUES_TSV`, e falha alto (sem linhas,
+    rc!=0) quando não consegue medir. Medido 21/09: **0 issues de bug abertas** (#580 é
+    documentation/enhancement) -> condição 5 GREEN. O contrato fail-closed do gate segue intacto
+    (o teste red-first ainda força falha do `gh` -> `UNKNOWN`). Parsing offline coberto por
+    `scripts/tests/fetch-open-issues-test.sh`; `scripts/tests/setup-cross-toolchain-test.sh`
+    cobre o helper de toolchain da R28 offline também.
   - **Condição 1 (paridade) certificada 100% neste host** (21/09, lane docs): a matriz por alvo
     reportava os alvos cross como RED/NEEDS-MEASURE (`sem riscv64-linux-gnu-as` /
     `sem aarch64-linux-gnu-as`) — lacuna de ambiente, não divergência de código. Reconstruir o jar da

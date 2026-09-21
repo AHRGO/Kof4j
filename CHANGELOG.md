@@ -138,6 +138,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **The gate now closes the loop in both directions** (21/09, docs lane): besides CHANGELOG-claims-closed-without-ledger-backing, an id CLOSED in the ledger at or after section 400 with no CHANGELOG entry now fails the gate. The floor is an epoch rule, not amnesty: measured 21/09, 25 closed ids below 400 lack entries while ZERO above it do — practice solidified, so the rule starts where the practice does. Mutation-verified: a planted closed section in the ledger with no changelog line is named by the gate; real state stays green. (A companion no-ghost idea — forbidding changelog refs to ids absent from the ledger — was measured and REJECTED: the hits are ancient cross-references, a wrong rule for the history, refused per the round-11 lesson.)
+  - **Release condition 5 (bug_issues) measured on a host without `gh`** (21/09, docs lane):
+    the gate reads `UNKNOWN` when `gh` is unavailable — fail-closed by design, so a query failure
+    never reads as "0 bugs". That hid the real state on this host. New
+    `scripts/fetch-open-issues.sh` enumerates open issues via the public GitHub API (authenticated
+    `gh` still preferred; then a token; then unauthenticated curl), in exactly the
+    `number<TAB>labels` shape the gate consumes through `R050_OPEN_ISSUES_TSV`, and fails loudly
+    (no rows, rc!=0) when it cannot measure. Measured 21/09: **0 open bug issues** (#580 is
+    documentation/enhancement) -> condition 5 GREEN. The gate's fail-closed contract is untouched
+    (its red-first test still forces `gh`-failure -> `UNKNOWN`). Offline parsing covered by
+    `scripts/tests/fetch-open-issues-test.sh`; `scripts/tests/setup-cross-toolchain-test.sh`
+    covers the R28 toolchain helper offline too.
   - **Release condition 1 (parity) certified 100% on this host** (21/09, docs lane): the per-target
     matrix was reporting the cross targets as RED/NEEDS-MEASURE (`sem riscv64-linux-gnu-as` /
     `sem aarch64-linux-gnu-as`) — an environment gap, not a code divergence. Rebuilding the tree jar
