@@ -91,6 +91,26 @@ o vestigial — **sem mudança de comportamento**, logo o teste da Q1 não se
 aplica (um comentário não regride); prova = `mvn -o -pl kof-compiler -am
 compile` rc=0.
 
+## Fatia 3 — mais dois comentários stale "gated/pendente" (21/09)
+
+Grep por `ainda não|pendente|gated|not yet|por ora` na stdlib `Kof*` e
+cruzamento com a matriz/código. Ambos são o mesmo drift "comentário
+append-only" (afirmação stale deixada acima da própria correção) — correções
+só de comentário, sem comportamento:
+
+- **DRIFT-UUID-1** `KofUuid.supportedOn` dizia *"Os 3 nativos ainda não têm
+  fatia asm — UUID001 os bloqueia"*, contradizendo as linhas seguintes
+  (*"S3b.2 FEITO nos 5 alvos 10/09 … Gate removido"*) e a matriz (**UUID001
+  fechado**, merge beta→main 10/09; riscv B25b + aarch tradutor). Frase stale
+  removida.
+- **DRIFT-STRN-1** o javadoc de `KofStrings` dizia que os conversores de
+  palavra (joinWords) ficam *"gated … com o bug 59 aberto"*, mas **STRN001
+  FECHADO 09/09** (riscv B15 + aarch tradutor) e `supportedOn` devolve `true`.
+  Reescrito.
+
+Prova dos dois: `mvn -o -pl kof-compiler -am compile` rc=0 (só comentário ⇒ Q1
+não se aplica).
+
 ## Próximas passadas (planejadas — ainda não executadas)
 
 1. **Checagem de assimetria de paridade** (maior rendimento): para cada

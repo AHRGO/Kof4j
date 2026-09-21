@@ -89,6 +89,25 @@ B24, aarch via translator; proof `KofNetTest.netOnCrossArch`). The
 the vestigial one — **no behaviour change**, so Q1's test does not apply (a
 comment cannot regress); proof = `mvn -o -pl kof-compiler -am compile` rc=0.
 
+## Slice 3 — two more stale "gated/pending" comments (21/09)
+
+Grep for `ainda não|pendente|gated|not yet|por ora` in the `Kof*` stdlib and
+cross-check against the matrix/code. Both findings are the same "append-only
+comment" drift (a stale claim left above its own correction) — comment-only
+fixes, no behaviour:
+
+- **DRIFT-UUID-1** `KofUuid.supportedOn` said *"Os 3 nativos ainda não têm
+  fatia asm — UUID001 os bloqueia"*, contradicting the very next lines
+  (*"S3b.2 FEITO nos 5 alvos 10/09 … Gate removido"*) and the matrix
+  (**UUID001 closed**, merge beta→main 10/09; riscv B25b + aarch tradutor).
+  Stale sentence removed.
+- **DRIFT-STRN-1** `KofStrings` javadoc said the word converters (joinWords)
+  are *"gated … com o bug 59 aberto"*, but **STRN001 CLOSED 09/09** (riscv
+  B15 + aarch tradutor) and `supportedOn` returns `true`. Rewritten.
+
+Proof for both: `mvn -o -pl kof-compiler -am compile` rc=0 (comment-only ⇒ Q1
+does not apply).
+
 ## Next passes (planned — not yet executed)
 
 1. **Parity asymmetry check** (highest yield): for every

@@ -89,11 +89,10 @@ public final class KofStrings {
 
     /**
      * S2a/S2b (predicados/count/capitalize/reverse/repeat/truncate/pad) em
-     * todos os targets. STRN001 (padrão SECN000/FLT001): os conversores de
-     * palavras (joinWords — lógica complexa de boundary) têm asm x86_64
-     * testado, mas o port riscv64/aarch64 (asm puro, sem teste de runtime
-     * com o bug 59 aberto) fica gated: diagnóstico honesto em compile-time,
-     * nunca link quebrado nem stub silencioso.
+     * todos os targets. STRN001 FECHADO 09/09: os conversores de palavras
+     * (joinWords — lógica complexa de boundary) foram portados p/ riscv64
+     * (fatia B15) e o aarch64 é o mesmo asm via tradutor — paridade
+     * byte-a-byte do golden x86 travada no qemu; nenhum caminho é gated.
      */
     private static final java.util.Set<String> WORD_FNS = java.util.Set.of(
             "kof_strings_toCamelCase", "kof_strings_toPascalCase",
