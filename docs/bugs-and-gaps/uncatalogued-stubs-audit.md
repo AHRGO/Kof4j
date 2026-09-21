@@ -183,6 +183,17 @@ Result: **2 phantom references used as proof** (both already flagged
 transiently by the q553 session, `6ce55b28`); now durably catalogued and
 annotated inline. The other 9 are legitimate plan/historical names.
 
+### Pass 3 (cont.) — stale live counts in the tracker (21/09)
+
+Sampling the dated deltas against the code: the live tracker rows carried
+counts frozen at their landing and now grown:
+- X10 row `StdCatalog` = 31 → **34** (`StdCatalogTest:91` locks 34;
+  buffer/shell/ssh landed after the X10 close) — annotated inline, dated.
+- R1 row `stdlib_boundary.txt` = 31 → **35 registered + 15 `excluded`** (50
+  namespace lines, measured 21/09) — annotated inline.
+The historical snapshot is preserved and the current reading corrected. The
+dated **deltas** themselves are snapshots by design (not rewritten).
+
 ## Next passes (planned — not yet executed)
 
 1. **Parity asymmetry check** — **DONE (slice 2b, `StdParityGapAuditTest`

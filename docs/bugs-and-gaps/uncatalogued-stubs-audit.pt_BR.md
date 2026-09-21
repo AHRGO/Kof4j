@@ -189,6 +189,17 @@ Resultado: **2 referências-fantasma usadas como prova** (ambas já sinalizadas
 transitoriamente pela sessão q553, `6ce55b28`); agora catalogadas de forma
 durável e anotadas inline. As outras 9 são nomes legítimos de plano/histórico.
 
+### Passada 3 (cont.) — contagens vivas stale no tracker (21/09)
+
+Amostragem dos deltas datados contra o código: as rows vivas do tracker
+carregavam contagens congeladas no pouso e já crescidas:
+- row X10 `StdCatalog` = 31 → **34** (`StdCatalogTest:91` trava 34;
+  buffer/shell/ssh pousaram após o fecho do X10) — anotado inline, datado.
+- row R1 `stdlib_boundary.txt` = 31 → **35 registrados + 15 `excluded`** (50
+  linhas de namespace, medido 21/09) — anotado inline.
+O snapshot histórico é preservado e a leitura atual corrigida. Os **deltas**
+datados são snapshots por desenho (não são reescritos).
+
 ## Próximas passadas (planejadas — ainda não executadas)
 
 1. **Checagem de assimetria de paridade** — **FEITA (fatia 2b,
