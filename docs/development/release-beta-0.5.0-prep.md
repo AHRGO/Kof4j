@@ -56,17 +56,30 @@ checklist is the tactical queue, these seven are the acceptance. The
 maintainer's directive is the priority for "releasing the 0.5.0 gate to all
 agents".
 
-| # | Condition | How it is measured | State 09/20 |
+| # | Condition | How it is measured | State 21/09 (measured — never by eye) |
 |---|---|---|---|
-| 1 | 100% parity between targets | per-target matrix + golden byte parity where the contract requires; divergence = bug or diagnosed `XXX00x`. **Auto-measured** by `check_release_050_gate.sh` (runs `scripts/target-matrix.sh`, EG-5, and reads its `PARITY: 100%` line) | GREEN (6 core targets byte-parity vs JVM oracle) |
-| 2 | No pending decision | `DECISIONS.md` has no open question changing the surface | GREEN (09/20: #566 model, version string and `main` freeze decided; §35 markers ratified — `D-RELEASE-0.5.0-GATE` addendum) |
-| 3 | All loose `docs/development/*.md` concluded and moved out | three-states rule; only work with pending implementation stays | RED (in-flight docs) |
-| 4 | Total stability | full suite 0F/0E + 5/5 conformance matrix on the candidate. **Auto-measured** from a real suite log via `scripts/stability-report.sh` (`KOF_SUITE_LOG=…`), which requires the last `TOTAL` to be 0F/0E; the conformance guards are part of that suite | GREEN (measured 20/09 on `f1ef7f3a`: 3260 tests, 0F/0E, 13 skip) |
-| 5 | 0 open issues that are a bug | GitHub OPEN issues with a `bug` label = 0 (includes #566 — maintainer 09/20) | GREEN (0 open bug issues, measured 20/09) |
-| 6 | All edges closed | the FULL EG queue (EG-1..EG-10) closed + open `1.0-blocks` = 0; the 0.5.0 waits until each owner closes/moves their own work. **EG-5/EG-9/EG-10 mechanisms DONE 20/09**; open: EG-8 | RED (EG-8) |
-| 7 | Nothing pending in bugs-and-gaps | `check_known_bugs_status.sh` live set empty + `specification-gaps.md` 0 open | RED (21 live) |
+| 1 | 100% parity between targets | per-target matrix + golden byte parity where the contract requires; divergence = bug or diagnosed `XXX00x`. **Auto-measured** by `check_release_050_gate.sh` (runs `scripts/target-matrix.sh`, EG-5, and reads its `PARITY: 100%` line) | GREEN (measured 21/09: `PARITY: 100%` on jvm/x86-64/riscv64/aarch64/JS/Script vs the JVM oracle; the tree jar was rebuilt with `scripts/build-kof-jar.sh`, which also stamps it so a rebase no longer fakes "stale") |
+| 2 | No pending decision | `DECISIONS.md` has no open question changing the surface | GREEN (no unresolved `[? MEL]` candidate; `decision-pending/` extinct) |
+| 3 | All loose `docs/development/*.md` concluded and moved out | three-states rule; only work with pending implementation stays | RED (3 owned docs in flight: `ffi-abi-structs` [jonas], `IMPLEMENTATION-UNIVERSAL-PLATFORM` [9093], `makealive-plan` [.18]) |
+| 4 | Total stability | full suite 0F/0E + 5/5 conformance matrix on the candidate. **Auto-measured** from a real suite log via `scripts/stability-report.sh` (`KOF_SUITE_LOG=…`); GREEN requires the `TOTAL` to be 0F/0E **and** the log **stamped** (`SUITE-SHA` == tip, `SUITE-DIRTY=0`) — a log from another commit or from a dirty tree is `unknown`, never a false GREEN | NEEDS-MEASURE (needs a stamped `safe-suite.sh` run on a *clean* tip; the shared tree carries other lanes' WIP today) |
+| 5 | 0 open issues that are a bug | GitHub OPEN issues with a `bug` label = 0 | GREEN (0 open bug issues; the condition reads the **query's exit code** — an API failure is `UNKNOWN`, never GREEN) |
+| 6 | All edges closed | the FULL EG queue (EG-1..EG-10) closed + open `1.0-blocks` = 0; the 0.5.0 waits until each owner closes/moves their own work. **EG-5/EG-9/EG-10 mechanisms DONE 20/09**; open: EG-8 | RED (EG-8; an unreadable EG table is `UNKNOWN`, never GREEN) |
+| 7 | Nothing pending in bugs-and-gaps | `check_known_bugs_status.sh` live set empty + `specification-gaps.md` 0 open | RED (17 live at the tip; an unreadable ledger is `UNKNOWN`, never GREEN) |
 
 Mechanized by `scripts/check_release_050_gate.sh` (reports each condition as
-GREEN / RED / NEEDS-MEASURE; RED-first test
-`scripts/tests/check-release-050-gate-test.sh`). RED is expected until the
-queue closes — the gate is the driver, not a blocker to work around.
+GREEN / RED / NEEDS-MEASURE / UNKNOWN; RED-first test
+`scripts/tests/check-release-050-gate-test.sh`). Every data-driven condition
+**refuses GREEN when its source is unreadable** — stale jar, a suite log from
+another commit or from a dirty tree, a failed GitHub query, an unparsable EG
+table, an unreadable bug ledger: the gate is inconclusive, never falsely green.
+RED is expected until the queue closes — the gate is the driver, not a blocker
+to work around.
+
+### Recovery — clearing the auto-measured conditions
+
+```bash
+scripts/build-kof-jar.sh                                # cond. 1: rebuild + stamp the tree jar
+scripts/target-matrix.sh                                #          -> PARITY: 100% (6 core targets)
+SAFE_SUITE_LOG="$PWD/.suite.log" scripts/safe-suite.sh  # cond. 4: run on a CLEAN tree
+KOF_SUITE_LOG="$PWD/.suite.log" scripts/check_release_050_gate.sh
+```

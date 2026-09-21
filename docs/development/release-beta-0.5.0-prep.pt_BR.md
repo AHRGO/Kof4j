@@ -56,17 +56,29 @@ uma **medida** (nunca a olho). Este gate refina o checklist acima: o checklist
 é a fila tática, estas sete são a aceitação. A diretiva da mantenedora é a
 prioridade para "liberar o gate 0.5.0 para todos os agentes".
 
-| # | Condição | Como é medida | Estado 20/09 |
+| # | Condição | Como é medida | Estado 21/09 (medido — nunca a olho) |
 |---|---|---|---|
-| 1 | Paridade 100% entre os alvos | matriz por alvo + paridade byte dos goldens onde o contrato exige; divergência = bug ou gap `XXX00x`. **Medida automaticamente** pelo `check_release_050_gate.sh` (roda `scripts/target-matrix.sh`, EG-5, e lê a linha `PARITY: 100%`) | GREEN (6 alvos core com paridade byte vs oráculo JVM) |
-| 2 | Nenhuma decisão pendente | `DECISIONS.md` sem pergunta aberta que mude a superfície | GREEN (20/09: modelo da #566, string de versão e congelamento do `main` decididos; marcadores §35 ratificados — adendo `D-RELEASE-0.5.0-GATE`) |
-| 3 | Todos os `docs/development/*.md` soltos concluídos e movidos | regra dos três estados; só fica trabalho com implementação pendente | RED (docs em curso) |
-| 4 | Estabilidade total | suíte completa 0F/0E + matriz 5/5 na candidata. **Medida automaticamente** a partir de um log real da suíte via `scripts/stability-report.sh` (`KOF_SUITE_LOG=…`), que exige que o último `TOTAL` seja 0F/0E; os guards de conformidade fazem parte dessa suíte | GREEN (medido 20/09 em `f1ef7f3a`: 3260 testes, 0F/0E, 13 skip) |
-| 5 | 0 issues abertas que sejam bug | issues OPEN do GitHub com label `bug` = 0 (inclui a #566 — mantenedora 20/09) | GREEN (0 issues de bug abertas, medido 20/09) |
-| 6 | Todas as arestas fechadas | a fila EG INTEIRA (EG-1..EG-10) fechada + `1.0-blocks` abertos = 0; o 0.5.0 espera cada dono fechar/mover o próprio trabalho. **Mecanismos EG-5/EG-9/EG-10 FEITOS 20/09**; abertos: EG-8 | RED (EG-8) |
-| 7 | Nada pendente em bugs-and-gaps | conjunto live do `check_known_bugs_status.sh` vazio + `specification-gaps.md` 0 abertos | RED (21 live) |
+| 1 | Paridade 100% entre os alvos | matriz por alvo + paridade byte dos goldens onde o contrato exige; divergência = bug ou gap `XXX00x`. **Medida automaticamente** pelo `check_release_050_gate.sh` (roda `scripts/target-matrix.sh`, EG-5, e lê a linha `PARITY: 100%`) | GREEN (medido 21/09: `PARITY: 100%` em jvm/x86-64/riscv64/aarch64/JS/Script vs o oráculo JVM; o jar da árvore foi reconstruído por `scripts/build-kof-jar.sh`, que também o estampa — um rebase não finge mais "velho") |
+| 2 | Nenhuma decisão pendente | `DECISIONS.md` sem pergunta aberta que mude a superfície | GREEN (sem candidato `[? MEL]` aberto; `decision-pending/` extinto) |
+| 3 | Todos os `docs/development/*.md` soltos concluídos e movidos | regra dos três estados; só fica trabalho com implementação pendente | RED (3 docs com dono em curso: `ffi-abi-structs` [jonas], `IMPLEMENTATION-UNIVERSAL-PLATFORM` [9093], `makealive-plan` [.18]) |
+| 4 | Estabilidade total | suíte completa 0F/0E + matriz 5/5 na candidata. **Medida automaticamente** a partir de um log real da suíte via `scripts/stability-report.sh` (`KOF_SUITE_LOG=…`); o GREEN exige o `TOTAL` 0F/0E **e** o log **estampado** (`SUITE-SHA` == tip, `SUITE-DIRTY=0`) — log de outro commit ou de árvore suja é `unknown`, nunca verde falso | NEEDS-MEASURE (exige um `safe-suite.sh` estampado em tip LIMPO; a árvore compartilhada tem WIP de outras lanes hoje) |
+| 5 | 0 issues abertas que sejam bug | issues OPEN do GitHub com label `bug` = 0 | GREEN (0 issues de bug abertas; a condição lê o **rc da consulta** — API fora = `UNKNOWN`, nunca GREEN) |
+| 6 | Todas as arestas fechadas | a fila EG INTEIRA (EG-1..EG-10) fechada + `1.0-blocks` abertos = 0; o 0.5.0 espera cada dono fechar/mover o próprio trabalho. **Mecanismos EG-5/EG-9/EG-10 FEITOS 20/09**; abertos: EG-8 | RED (EG-8; tabela EG ilegível = `UNKNOWN`, nunca GREEN) |
+| 7 | Nada pendente em bugs-and-gaps | conjunto live do `check_known_bugs_status.sh` vazio + `specification-gaps.md` 0 abertos | RED (17 live no tip; ledger ilegível = `UNKNOWN`, nunca GREEN) |
 
 Mecanizado por `scripts/check_release_050_gate.sh` (reporta cada condição como
-GREEN / RED / NEEDS-MEASURE; teste RED-first
-`scripts/tests/check-release-050-gate-test.sh`). RED é esperado até a fila
-fechar — o gate é o motor, não um bloqueio a contornar.
+GREEN / RED / NEEDS-MEASURE / UNKNOWN; teste RED-first
+`scripts/tests/check-release-050-gate-test.sh`). Toda condição data-driven
+**recusa GREEN quando a fonte não é legível** — jar velho, log da suíte de outro
+commit ou de árvore suja, consulta ao GitHub que falha, tabela EG impossível de
+parsear, ledger de bugs ilegível: o gate fica inconclusivo, nunca verde falso.
+RED é esperado até a fila fechar — o gate é o motor, não um bloqueio a contornar.
+
+### Recuperação — limpar as condições auto-medidas
+
+```bash
+scripts/build-kof-jar.sh                                # cond. 1: rebuilda + estampa o jar da árvore
+scripts/target-matrix.sh                                #          -> PARITY: 100% (6 alvos core)
+SAFE_SUITE_LOG="$PWD/.suite.log" scripts/safe-suite.sh  # cond. 4: rodar em árvore LIMPA
+KOF_SUITE_LOG="$PWD/.suite.log" scripts/check_release_050_gate.sh
+```
