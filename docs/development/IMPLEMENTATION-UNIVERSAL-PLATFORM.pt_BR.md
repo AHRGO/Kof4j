@@ -490,6 +490,11 @@ callback-como-retorno aninhado — `FFI001`/`FFI002` honestos.
 | D5 | Sintaxe `using` de scoped resources (barrada por bump) | 6.5 | `DECIDIDO (B) 19/09` |
 | D6 | Design do ABI de struct/array do R3 (nível de assinatura) | 3.5, 4.2, 5.4, 6.1 | `DECIDIDO (A) 19/09` |
 | D7 | Value records / tipos-valor first-class (fila §2.7 do `roadmap.md` §23) | TIER 2.7 — planejado, precisa de autorização para abrir | `DECIDIDO (A) 19/09 — front ABERTA` |
+| D8 | R3-3.3 handles/out-buffers da FFI | 3.3, Estágios 4–7 | `DECIDIDO (A) 21/09 — Handle + Buffer(U8,INOUT)` |
+| D9 | R3-3.5 variadics da FFI | 3.5 | `DECIDIDO (A) 21/09 — sem variadics gerais (gap documentado)` |
+| D10 | X5 variance + sealed types | núcleo do type-system | `ABERTO (C) 21/09 — spec-first, plano exigido` |
+| D11 | X6 reflexão de interop | fronteira de interop | `ABERTO 21/09 — spec-first, plano incremental exigido` |
+| D12 | Hook `CodegenStep` (R4) | Estágio 3, 3.2 | `DECIDIDO (A) 21/09 — hook interno (sem sintaxe de usuário)` |
 
 ---
 
@@ -499,7 +504,7 @@ callback-como-retorno aninhado — `FFI001`/`FFI002` honestos.
 Estágio 7 → Estágio 8.
 
 Transversal: **R3 (FFI formalizada)** é a espinha dorsal dos Estágios 3–7 e
-**R4 (hook de codegen)** barra o Estágio 3 (`infra`). Dentro do Estágio 1, os
+**R4 (hook de codegen)** — **✅ decidido 21/09 (`D-CODEGEN-STEP`), implementar hook interno** — barra o Estágio 3 (`infra`). Dentro do Estágio 1, os
 itens restantes sem decisão são os gaps de paridade das lanes web/native
 (1.1.3–1.1.10) e o redesign de escalonamento JS do §132 (1.3.2, `.18`) — **FECHADO 18/09** (`06d8b322`); o Stage 1 agora só aguarda os gaps de paridade web/native + as decisões da mantenedora D1–D3.
 

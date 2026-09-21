@@ -864,3 +864,5 @@ MAGIC/tag, `RuntimeList.kof_list_add` layout):
 > **NEXT STEP extra2:** plano graphics-gaming agora inclui MÍDIA (som pipeline + vídeo) por ordem da mantenedora — doc future responde áudio E vídeo como first-class (addendum D-GRAPHICS-GAMING EN+PT landed junto).
 
 > **NEXT STEP extra3:** addendum 2 landed — SEM JavaFX na superfície futura + paridade total como critério de aceite; plano deve medir o legado kof.ui-javafx e propor migração (regra 6).
+
+> **NEXT STEP extra4:** addendum3 corrige adendum2 — kof NUNCA usou javafx; seção do plano vira ERRADICAÇÃO (medir refs javafx na árvore, cada uma = bug com repro). Primeira varredura no próximo tick: grep javafx em kof-*/src + stdlib.
