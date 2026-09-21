@@ -121,7 +121,9 @@ The human registry may not disagree with the measurement: neither listing less n
 planted extra loose doc was caught in both languages). It also checks the roadmap's **EG table** —
 the source of release condition 6, which the gate reads in EN only — has the same EG-N rows and
 the same closed/open state in EN and PT, by the gate's own `DONE|FEITO` rule (a planted PT
-divergence is named).
+divergence is named). Finally, the section numbering/level parity that was checked for
+`DECISIONS.md` now covers **every EN↔PT doc pair** in this directory — a `## 1.` in EN matched to
+a `# 1.` in PT is named (a planted level slip in the PT README was caught).
 
 **19 items in the open queue** (resynced 21/09 ~08:5x — 20→19 when
 **§380** (JS nested-`if`/`throw` codegen) was formalized ✅ `9f383bcf`,

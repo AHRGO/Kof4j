@@ -125,6 +125,13 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **O gate agora fecha o ciclo nas duas direções** (21/09, lane docs): além de afirmação de fechamento sem respaldo no ledger, um id FECHADO no ledger a partir da seção 400 sem entrada no CHANGELOG agora derruba o gate. O piso é regra de época, não anistia: medido em 21/09, 25 ids abaixo de 400 não têm entrada enquanto ZERO acima têm — a prática consolidou, a regra começa onde a prática começa. Verificado por mutação: uma seção fechada plantada no ledger sem linha no changelog é nomeada pelo gate; estado real segue verde. (Uma ideia companheira — proibir referências do changelog a ids fora do ledger — foi medida e REJEITADA: os achados são remissões antigas de outro espaço de ids, regra errada para a história, recusada pela lição da rodada 11.)
+  - **`check_live_records.sh` parte F: paridade de numeração/nível de seções em todos os pares
+    EN<->PT** (21/09, lane docs): a parte C checava número+nível das seções numeradas só no
+    `DECISIONS.md`; a F generaliza para **todo `docs/development/*.md` que tenha gêmeo `.pt_BR.md`**
+    — um `## 1.` no EN casado com um `# 1.` no PT é drift da mesma classe que a lane já corrigiu
+    uma vez no `DECISIONS.md` (§7). Red-first: o selftest planta um deslize de nível, e um deslize
+    plantado no README PT (`## 1.` -> `# 1.`) foi nomeado na árvore real; os 8 pares estão em
+    paridade hoje.
   - **`check_live_records.sh` parte E: paridade EN<->PT do estado dos EG do roadmap** (21/09, lane
     docs): o gate de release lê a tabela EG em `docs/development/roadmap.md` (só EN); se o roadmap
     PT divergisse (um EG fechado num idioma e aberto no outro), ninguém veria — e a condição 6 do

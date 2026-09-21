@@ -122,7 +122,9 @@ o `ALLOWLIST` dele). O registro humano não pode discordar da medição: nem lis
 listar a mais (um loose extra plantado foi pego nos dois idiomas). Também confere a **tabela EG** do roadmap —
 fonte da condição 6 do release, que o gate lê só no EN —: mesmas linhas EG-N e mesmo estado
 fechado/aberto em EN e PT, pela regra `DONE|FEITO` do próprio gate (divergência plantada no PT
-é nomeada).
+é nomeada). Por fim, a paridade de numeração/nível de seções que era checada no `DECISIONS.md`
+agora cobre **todos os pares EN↔PT** deste diretório — um `## 1.` no EN casado com um `# 1.` no PT
+é nomeado (um deslize de nível plantado no README PT foi pego).
 
 **19 itens na fila aberta** (ressincronizado 21/09 ~08:5x — 20→19
 quando **§380** (codegen JS de `if` aninhado com `throw`) foi formalizado ✅

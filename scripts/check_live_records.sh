@@ -14,6 +14,8 @@
 #   E) roadmap EG: mesmo conjunto de linhas EG-N E mesmo estado fechado/aberto EN<->PT,
 #      pela MESMA regra do gate (linha contem DONE|FEITO). O gate de release so le o
 #      roadmap EN: se o PT divergir, ninguem ve — e a condicao 6 do release depende disso.
+#   F) numeracao/nivel de secoes (N.) em TODOS os pares de docs/development (nao so
+#      DECISIONS): um doc EN com secao H1 e o PT com H2 e drift de leitura.
 #
 # A classe (A) ja driftou duas vezes em 21/09; a classe (B) apareceu quando a lane
 # irma adicionou 3 decisoes so no EN e um merge deixou um heading orfao + duplicado
@@ -39,6 +41,7 @@ if [ -n "${LR_EN:-}" ]; then DOCDIR="${LR_DOCDIR-}"; else DOCDIR="${LR_DOCDIR:-d
 RM_EN="${LR_RM_EN:-docs/development/roadmap.md}"
 RM_PT="${LR_RM_PT:-docs/development/roadmap.pt_BR.md}"
 if [ -n "${LR_EN:-}" ]; then RM_ON="${LR_RM_ON-}"; else RM_ON=1; fi
+MDP="${LR_MDPAIRS-}"; [ -n "${LR_EN:-}" ] || MDP="${LR_MDPAIRS:-docs/development}"
 
 if [ "${LR_COUNT:-}" != "" ]; then
     COUNT="$LR_COUNT"
@@ -118,16 +121,27 @@ EOF
     if LR_EN="$T/r_en.md" LR_PT="$T/r_pt.md" DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" \
          LR_COUNT=19 LR_RM_EN="$T/rm_en.md" LR_RM_PT="$T/rm_pt.md" LR_RM_ON=1 bash "$0" >/dev/null 2>&1; then
         echo "SELFTEST FALHOU: EG divergente EN<->PT passou"; exit 1; fi
-    echo "SELFTEST OK: contagem + paridade + duplicata + numeracao + pending<->gate + EG"
+    # F) numeracao/nivel em todos os pares EN<->PT do dir
+    D2="$T/dp"; mkdir -p "$D2"
+    printf '## 1. X\n' > "$D2/g.md"; printf '## 1. X\n' > "$D2/g.pt_BR.md"; printf '## 2. Y\n' > "$D2/h.md"
+    if ! LR_EN="$T/r_en.md" LR_PT="$T/r_pt.md" DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" \
+         LR_COUNT=19 LR_MDPAIRS="$D2" bash "$0" >/dev/null 2>&1; then
+        echo "SELFTEST FALHOU: pares EN<->PT em paridade deviam passar"; exit 1; fi
+    printf '# 1. X\n' > "$D2/g.pt_BR.md"   # nivel divergente (H1 vs H2)
+    if LR_EN="$T/r_en.md" LR_PT="$T/r_pt.md" DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" \
+         LR_COUNT=19 LR_MDPAIRS="$D2" bash "$0" >/dev/null 2>&1; then
+        echo "SELFTEST FALHOU: nivel de secao divergente entre pares passou"; exit 1; fi
+    echo "SELFTEST OK: contagem + paridade + duplicata + numeracao + pending<->gate + EG + pares"
     exit 0
 fi
 
 [ -n "${COUNT:-}" ] || { echo "FALHA: nao extrai a contagem da autoridade (formato mudou?)"; exit 1; }
 
-python3 - "$EN" "$PT" "$COUNT" "$DEN" "$DPT" "$GATE" "$DOCDIR" "$RM_EN" "$RM_PT" "$RM_ON" << 'PYEOF'
-import re, sys, os
+python3 - "$EN" "$PT" "$COUNT" "$DEN" "$DPT" "$GATE" "$DOCDIR" "$RM_EN" "$RM_PT" "$RM_ON" "$MDP" << 'PYEOF'
+import re, sys, os, glob
 en, pt, count, den, dpt, gate, docdir = sys.argv[1:8]
 rme, rmpt, rmon = sys.argv[8:11]
+mdp = sys.argv[11] if len(sys.argv) > 11 else ""
 bad = 0
 
 # ---- A) contagem viva x autoridade -----------------------------------------
@@ -259,11 +273,36 @@ if rmon:
                 print(f"PARIDADE (EG): {k} fechado EN={a[k]} PT={b[k]} "
                       "(mesma regra DONE|FEITO do gate)"); bad = 1
 
+# ---- F) TODOS os pares EN<->PT: numeracao/nivel de secoes (N.) -------------
+if mdp:
+    NP = re.compile(r"(?m)^(#{1,6}) ([0-9]+)[.)] ")
+    def numbered(path):
+        try:
+            text = open(path, encoding="utf-8").read()
+        except OSError:
+            return None
+        return {n: len(h) for h, n in NP.findall(text)}
+    for enp in sorted(glob.glob(os.path.join(mdp, "*.md"))):
+        if enp.endswith(".pt_BR.md"):
+            continue
+        ptp = enp[:-3] + ".pt_BR.md"
+        if not os.path.exists(ptp):
+            continue
+        a, b = numbered(enp), numbered(ptp)
+        if a is None or b is None:
+            continue
+        for n in sorted(set(a) | set(b), key=int):
+            if a.get(n) != b.get(n):
+                print(f"NUMERACAO: {os.path.basename(enp)} secao {n}. "
+                      f"nivel EN={a.get(n)} PT={b.get(n)} (numeracao e nivel devem bater)")
+                bad = 1
+
 if not bad:
     print(f"OK: contagem viva {count} consistente ({seen} declaracoes); "
           f"DECISIONS EN<->PT com {len(sets.get('EN', ()))} IDs em paridade, 0 duplicatas, "
           "numeracao/nivel em paridade"
           + ("; pendentes sec.0 == loose do gate" if docdir else "")
-          + ("; roadmap EG EN<->PT em paridade" if rmon else ""))
+          + ("; roadmap EG EN<->PT em paridade" if rmon else "")
+          + ("; numeracao/nivel de todos os pares EN<->PT" if mdp else ""))
 sys.exit(1 if bad else 0)
 PYEOF

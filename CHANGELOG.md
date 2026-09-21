@@ -138,6 +138,12 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **The gate now closes the loop in both directions** (21/09, docs lane): besides CHANGELOG-claims-closed-without-ledger-backing, an id CLOSED in the ledger at or after section 400 with no CHANGELOG entry now fails the gate. The floor is an epoch rule, not amnesty: measured 21/09, 25 closed ids below 400 lack entries while ZERO above it do — practice solidified, so the rule starts where the practice does. Mutation-verified: a planted closed section in the ledger with no changelog line is named by the gate; real state stays green. (A companion no-ghost idea — forbidding changelog refs to ids absent from the ledger — was measured and REJECTED: the hits are ancient cross-references, a wrong rule for the history, refused per the round-11 lesson.)
+  - **`check_live_records.sh` part F: section numbering/level parity over every EN<->PT pair**
+    (21/09, docs lane): part C had checked the numbered-section number+level only in `DECISIONS.md`;
+    F generalises it to **every `docs/development/*.md` that has a `.pt_BR.md` twin** — a `## 1.` in
+    EN matched to a `# 1.` in PT is drift of the same class the lane already fixed once in
+    `DECISIONS.md` (§7). Red-first: the selftest plants a level slip, and a planted slip in the PT
+    README (`## 1.` -> `# 1.`) was named in the real tree; all 8 pairs are currently in parity.
   - **`check_live_records.sh` part E: roadmap EG state parity EN<->PT** (21/09, docs lane): the
     release gate reads the EG table in `docs/development/roadmap.md` (EN) only; if the PT roadmap
     drifted (an EG row marked closed in one language but open in the other), nothing would see it —
