@@ -1,3 +1,5 @@
+[English](type-system-extensions-plan.md) | [Português](type-system-extensions-plan.pt_BR.md)
+
 # Type-system extensions — incremental plan (X5 variance + sealed · X6 interop reflection)
 
 > **Status: DRAFT for maintainer review — spec-first, NO CODE** (rule 6). A core

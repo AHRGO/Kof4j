@@ -1,3 +1,5 @@
+[English](type-system-extensions-plan.md) | [Português](type-system-extensions-plan.pt_BR.md)
+
 # Extensões do sistema de tipos — plano incremental (X5 variance + sealed · X6 reflexão de interop)
 
 > **Estado: RASCUNHO para revisão da mantenedora — spec-first, SEM CÓDIGO**
