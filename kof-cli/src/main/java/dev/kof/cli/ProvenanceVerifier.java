@@ -25,6 +25,7 @@ interface ProvenanceVerifier {
     Outcome verify(Path artifact, String artifactSha256, Path evidenceBundle) throws IOException;
 
     /** Nenhum verificador ligado ainda (fila (b)/(c) do contrato): honesto, nunca aprova. */
-    ProvenanceVerifier NONE = (artifact, sha256, bundle) -> new Unavailable(
-            "no provenance verifier is wired into this kof build yet (D-ARTIFACT-TRUST)");
+    ProvenanceVerifier NONE = (artifact, artifactSha256, evidenceBundle) -> new Unavailable(
+            "no provenance verifier is wired into this kof build yet (D-ARTIFACT-TRUST): cannot verify "
+                    + artifact + " (sha256=" + artifactSha256 + ") against " + evidenceBundle);
 }
