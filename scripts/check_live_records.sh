@@ -21,6 +21,10 @@
 #   H) prep do release: toda §NNN citada na secao "issues que viajam" tem de estar no
 #      conjunto ABERTO — a prep nao pode mandar viajar um § ja FECHADO (a classe do item 1
 #      stale: §371/§374/§378 pousaram e a lista seguia mandando-os viajar).
+#   I) a fila oficial (README sec.1) tem de nomear TODO loose doc do gate: um doc
+#      promovido para docs/development/ e ausente da fila e trabalho invisivel (a
+#      sec.0 pode lista-lo como pendente, mas ninguem o poe em posicao). Achou o
+#      type-system-extensions-plan.md promovido em 21/09 fora da sec.1 em EN+PT.
 #
 # A classe (A) ja driftou duas vezes em 21/09; a classe (B) apareceu quando a lane
 # irma adicionou 3 decisoes so no EN e um merge deixou um heading orfao + duplicado
@@ -32,7 +36,8 @@
 # Uso: scripts/check_live_records.sh            # rc!=0 em drift
 #      scripts/check_live_records.sh --selftest # casos bons e ruins plantados
 # Env (teste): LR_EN, LR_PT, LR_COUNT, DEC_EN, DEC_PT, LR_DOCDIR, LR_GATE,
-#              LR_RM_EN, LR_RM_PT, LR_RM_ON, LR_MDPAIRS, LR_PREP_EN, LR_PREP_PT, LR_PREP_ON
+#              LR_RM_EN, LR_RM_PT, LR_RM_ON, LR_MDPAIRS, LR_PREP_EN, LR_PREP_PT, LR_PREP_ON,
+#              LR_QUEUE_ON
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -52,6 +57,8 @@ PREP_EN="${LR_PREP_EN:-docs/development/release-beta-0.5.0-prep.md}"
 PREP_PT="${LR_PREP_PT:-docs/development/release-beta-0.5.0-prep.pt_BR.md}"
 # Parte G so roda na corrida real (ou quando o teste a liga de proposito).
 if [ -n "${LR_EN:-}" ]; then PREP_ON="${LR_PREP_ON-}"; else PREP_ON=1; fi
+# Parte I so roda na corrida real (ou quando o teste a liga de proposito).
+if [ -n "${LR_EN:-}" ]; then LQ_ON="${LR_QUEUE_ON-}"; else LQ_ON=1; fi
 
 if [ "${LR_COUNT:-}" != "" ]; then
     COUNT="$LR_COUNT"
@@ -172,14 +179,50 @@ EOF
          LR_COUNT=19 LR_PREP_EN="$T/prep_en.md" LR_PREP_PT="$T/prep_pt.md" LR_PREP_ON=1 \
          LR_OPEN_IDS="371" bash "$0" >/dev/null 2>&1; then
         echo "SELFTEST FALHOU: prep sem contagem passou (neutering)"; exit 1; fi
-    echo "SELFTEST OK: contagem + paridade + duplicata + numeracao + pending<->gate + EG + pares + prep(G/H)"
+    # I) fila oficial sec.1 nomeia todo loose doc do gate
+    QI="$T/qi"; mkdir -p "$QI"
+    printf 'ALLOWLIST="README.md README.pt_BR.md"\n' > "$T/gate_i.sh"
+    : > "$QI/work.md"; mk d_en.md '# 1. X'; mk d_pt.md '# 1. X'
+    cat > "$QI/README.md" << 'EOF'
+x **19 items in the open queue**
+- **Pending (the release gate's condition 3):** `work.md`
+## 1. Plan execution order
+| 1 | `work.md` | IN DEV |
+EOF
+    cat > "$QI/README.pt_BR.md" << 'EOF'
+x **19 itens na fila aberta**
+- **Pendentes (condição 3 do gate de release):** `work.md`
+## 1. Ordem de execução dos planos
+| 1 | `work.md` | EM DEV |
+EOF
+    if ! LR_EN="$QI/README.md" LR_PT="$QI/README.pt_BR.md" LR_DOCDIR="$QI" LR_GATE="$T/gate_i.sh" \
+         LR_QUEUE_ON=1 DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" LR_COUNT=19 bash "$0" >/dev/null 2>&1; then
+        echo "SELFTEST FALHOU: loose doc nomeado na fila sec.1 devia passar"; exit 1; fi
+    cat > "$QI/README.pt_BR.md" << 'EOF'
+x **19 itens na fila aberta**
+- **Pendentes (condição 3 do gate de release):** `work.md`
+## 1. Ordem de execução dos planos
+| 1 | `outro.md` | EM DEV |
+EOF
+    if LR_EN="$QI/README.md" LR_PT="$QI/README.pt_BR.md" LR_DOCDIR="$QI" LR_GATE="$T/gate_i.sh" \
+         LR_QUEUE_ON=1 DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" LR_COUNT=19 bash "$0" >/dev/null 2>&1; then
+        echo "SELFTEST FALHOU: loose doc ausente da fila PT passou"; exit 1; fi
+    cat > "$QI/README.pt_BR.md" << 'EOF'
+x **19 itens na fila aberta**
+- **Pendentes (condição 3 do gate de release):** `work.md`
+sem secao 1 aqui
+EOF
+    if LR_EN="$QI/README.md" LR_PT="$QI/README.pt_BR.md" LR_DOCDIR="$QI" LR_GATE="$T/gate_i.sh" \
+         LR_QUEUE_ON=1 DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" LR_COUNT=19 bash "$0" >/dev/null 2>&1; then
+        echo "SELFTEST FALHOU: README sem a fila sec.1 passou (neutering)"; exit 1; fi
+    echo "SELFTEST OK: contagem + paridade + duplicata + numeracao + pending<->gate + EG + pares + prep(G/H) + fila(I)"
     exit 0
 fi
 
 [ -n "${COUNT:-}" ] || { echo "FALHA: nao extrai a contagem da autoridade (formato mudou?)"; exit 1; }
 
 python3 - "$EN" "$PT" "$COUNT" "$DEN" "$DPT" "$GATE" "$DOCDIR" "$RM_EN" "$RM_PT" "$RM_ON" "$MDP" \
-          "$PREP_EN" "$PREP_PT" "$PREP_ON" "$OPEN_IDS" << 'PYEOF'
+          "$PREP_EN" "$PREP_PT" "$PREP_ON" "$OPEN_IDS" "$LQ_ON" << 'PYEOF'
 import re, sys, os, glob
 en, pt, count, den, dpt, gate, docdir = sys.argv[1:8]
 rme, rmpt, rmon = sys.argv[8:11]
@@ -188,6 +231,7 @@ prep_en = sys.argv[12] if len(sys.argv) > 12 else ""
 prep_pt = sys.argv[13] if len(sys.argv) > 13 else ""
 prep_on = sys.argv[14] if len(sys.argv) > 14 else ""
 open_ids = set((sys.argv[15].split() if len(sys.argv) > 15 else []))
+lq_on = sys.argv[16] if len(sys.argv) > 16 else ""
 bad = 0
 
 # ---- A) contagem viva x autoridade -----------------------------------------
@@ -384,11 +428,49 @@ if prep_on:
                 print(f"DRIFT ({lang}): prep manda viajar §{n}, que NAO esta no conjunto aberto")
                 bad = 1
 
+# ---- I) fila oficial (README sec.1) nomeia TODO loose doc do gate -----------
+if lq_on and docdir:
+    try:
+        gtext_i = open(gate, encoding="utf-8").read()
+    except OSError:
+        print(f"FALHA: nao consigo ler o gate {gate} (parte I)"); bad = 1; gtext_i = ""
+    mi = re.search(r'ALLOWLIST="([^"]*)"', gtext_i)
+    if not mi:
+        print(f"FALHA: ALLOWLIST nao encontrado em {gate} (parte I — atualize o gate)")
+        bad = 1
+    else:
+        allow_i = set(mi.group(1).split())
+        try:
+            loose_i = sorted(f for f in os.listdir(docdir)
+                             if f.endswith(".md") and not f.endswith(".pt_BR.md")
+                             and f not in allow_i)
+        except OSError:
+            print(f"FALHA: nao consigo listar {docdir} (parte I)"); bad = 1; loose_i = []
+        QHDR = re.compile(r"^## 1[.)] ")
+        for lang, path in (("EN", en), ("PT", pt)):
+            try:
+                q = open(path, encoding="utf-8").read().splitlines()
+            except OSError:
+                print(f"FALHA: nao consigo ler {path} (parte I)"); bad = 1; continue
+            qi = next((i for i, l in enumerate(q) if QHDR.match(l)), None)
+            if qi is None:
+                print(f"FALHA: {path} sem a secao '1.' da fila oficial "
+                      "(prosa mudou — atualize o gate junto com o README)"); bad = 1; continue
+            qj = next((j for j in range(qi + 1, len(q))
+                       if q[j].startswith("## ")), len(q))
+            qsec = "\n".join(q[qi:qj])
+            missing_i = [d for d in loose_i if d not in qsec]
+            if missing_i:
+                print(f"DRIFT ({lang}): loose doc do gate ausente da fila oficial sec.1 "
+                      f"do README: {missing_i}")
+                bad = 1
+
 if not bad:
     print(f"OK: contagem viva {count} consistente ({seen} declaracoes); "
           f"DECISIONS EN<->PT com {len(sets.get('EN', ()))} IDs em paridade, 0 duplicatas, "
           "numeracao/nivel em paridade"
           + ("; pendentes sec.0 == loose do gate" if docdir else "")
+          + ("; fila sec.1 cobre todo loose doc do gate" if (lq_on and docdir) else "")
           + ("; roadmap EG EN<->PT em paridade" if rmon else "")
           + ("; numeracao/nivel de todos os pares EN<->PT" if mdp else "")
           + ("; prep cond.7 == autoridade + travel § aberta" if prep_on else ""))

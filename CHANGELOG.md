@@ -13,6 +13,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **`check_live_records.sh` part I: the official queue (§1) must name every loose
+    doc + README §1 synced with the maintainer's 21/09 decisions** (21/09, lane
+    docs/.18): a doc promoted into `docs/development/` but absent from the §1 queue
+    is invisible work — §0 can list it as pending while nobody positions it. Found
+    `type-system-extensions-plan.md` (promoted 21/09) in §0 but out of §1 in EN+PT.
+    Synced the queue rows to the decisions (`D-DESUGAR-STEP` DECIDED option B;
+    `D-TYPE-VARIANCE`/`D-INTEROP-REFLECT` OPEN-implementing; `D-SECRETS` promoted;
+    `D-FFI-STRUCT-B` D6-1=B spec-first; `D-DB-PARITY-OWNER` owner named) and
+    mechanized the guard with a RED-first selftest (loose out of §1 PT, missing §1
+    header). No production code change.
+
   - **tooling — `scripts/audit-stubs.sh` gains a RED-first fixture test + suite
     wiring** (21/09, lane docs/.18): the review front (lane 9094) shipped the stub
     inventory without a test or suite entry. `scripts/tests/audit-stubs-test.sh`

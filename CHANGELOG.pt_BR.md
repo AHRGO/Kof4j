@@ -13,6 +13,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **`check_live_records.sh` parte I: a fila oficial (§1) tem de nomear todo loose
+    doc + README §1 sincronizado com as decisões da mantenedora de 21/09** (21/09,
+    lane docs/.18): um doc promovido para `docs/development/` mas ausente da fila
+    §1 é trabalho invisível — a §0 pode listá-lo como pendente enquanto ninguém o
+    posiciona. Achado `type-system-extensions-plan.md` (promovido 21/09) na §0 mas
+    fora da §1 em EN+PT. Sincronizadas as linhas da fila com as decisões
+    (`D-DESUGAR-STEP` DECIDIDA opção B; `D-TYPE-VARIANCE`/`D-INTEROP-REFLECT`
+    ABERTO-implementando; `D-SECRETS` promovido; `D-FFI-STRUCT-B` D6-1=B
+    spec-first; `D-DB-PARITY-OWNER` dono nomeado) e mecanizada a guarda com
+    selftest RED-first (loose fora da §1 PT, §1 ausente). Sem mudança de código de
+    produção.
+
   - **tooling — `scripts/audit-stubs.sh` ganha teste RED-first de fixture +
     wiring na suíte** (21/09, lane docs/.18): a frente de revisão (lane 9094)
     entregou o inventário de stubs sem teste nem entrada na suíte.
