@@ -230,6 +230,8 @@ public final class RuntimeOrm1 {
                 .ascii "unknown db connection: "
             .Lorm_delit:
                 .ascii "DELETE FROM \\""
+            .Lorm_delmy:
+                .ascii "DELETE FROM `"
             .Lorm_mysql_msg:
                 .long 1
                 .long 0
@@ -248,8 +250,11 @@ public final class RuntimeOrm1 {
 
             # ---------------------------------------------------------------
             # kof_orm_delete_all(id*, table*, schema*) -> Bool (rax 0/1)
-            #   DELETE FROM "table"; rc==0 -> true; SQL error -> false
-            #   (espelha o host: kof_db_execute<0 -> false; nunca excecao)
+            #   SQLite: DELETE FROM "table"; rc==0 -> true; SQL error -> false
+            #   MySQL (F2d1, D-DB-GAPS DB-3): DELETE FROM `table` via
+            #   kof_db_execute(id, sql) — espelha o host
+            #   (kof_orm_q(table, dialect) + kof_db_execute >= 0; o wire
+            #   devolve 0|-1, logo >=0 == ==0). Nunca excecao no SQL error.
             # ---------------------------------------------------------------
             .globl kof_orm_delete_all
             .type kof_orm_delete_all, @function
@@ -265,6 +270,9 @@ public final class RuntimeOrm1 {
                 subq $56, %rsp
                 movq %rdi, (%rsp)               # id
                 movq %rsi, 8(%rsp)              # table
+                call kof_db_type                # eax: 1=sqlite 2=mysql 0=ruim
+                cmpl $2, %eax
+                je .Lorm_da_mysql
                 # cap = 13 + tblLen + 1 + 8 (folga)
                 movq 8(%rsp), %rax
                 movl 16(%rax), %eax
@@ -291,6 +299,32 @@ public final class RuntimeOrm1 {
                 testl %eax, %eax
                 sete %al
                 movzbl %al, %eax
+                jmp .Lorm_da_ret
+            .Lorm_da_mysql:
+                # mesmo builder, prefixo/sufixo backtick (dialect do host)
+                movq 8(%rsp), %rax
+                movl 16(%rax), %eax
+                addl $22, %eax
+                movl %eax, %edi
+                call .Lorm_bbegin
+                movq %rbx, 16(%rsp)
+                leaq .Lorm_delmy(%rip), %rsi
+                movl $13, %ecx
+                call .Lorm_bp
+                movq 8(%rsp), %r13
+                leaq 24(%r13), %rsi
+                movl 16(%r13), %ecx
+                call .Lorm_bp
+                movl $96, %r8d                  # '`'
+                call .Lorm_bh
+                call .Lorm_bfin
+                movq (%rsp), %rdi
+                movq 16(%rsp), %rsi
+                call kof_db_execute             # id malformado lanca como o host
+                testl %eax, %eax                # wire devolve affectedRows (>=0 no OK)
+                setge %al                       # host: kof_db_execute(...) >= 0
+                movzbl %al, %eax
+            .Lorm_da_ret:
                 addq $56, %rsp
                 popq %r15
                 popq %r14
