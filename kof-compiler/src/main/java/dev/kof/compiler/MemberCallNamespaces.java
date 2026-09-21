@@ -116,6 +116,20 @@ final class MemberCallNamespaces {
             }
             return Type.UnknownType.UNKNOWN;
         }
+        if (mc.receiver() instanceof IdentifierExpr rid && "ssh".equals(rid.name())
+                && !SemExpressionTyper.isLocalName(scope, rid.name())) {
+            List<Type> argTypes = new ArrayList<>();
+            for (ExpressionNode arg : mc.arguments()) argTypes.add(SemExpressionTyper.inferType(sa, arg, scope));
+            KofSsh.SshCall sshCall = KofSsh.staticCall(mc.methodName(), argTypes);
+            if (sshCall != null) return sshCall.returnType();
+            if (sa.diagnostics() != null) {
+                sa.diagnostics().error("", 0, 0, 0,
+                        "Cannot resolve method '" + mc.methodName() + "' on 'ssh' (valid: "
+                                + String.join(", ", KofSsh.functions()) + ")",
+                        "SEM025");
+            }
+            return Type.UnknownType.UNKNOWN;
+        }
         if (mc.receiver() instanceof IdentifierExpr rid && !SemExpressionTyper.isLocalName(scope, rid.name()) && KofConfig.isConfigNamespace(rid.name())) {
             List<Type> argTypes = new ArrayList<>();
             for (ExpressionNode arg : mc.arguments()) argTypes.add(SemExpressionTyper.inferType(sa, arg, scope));

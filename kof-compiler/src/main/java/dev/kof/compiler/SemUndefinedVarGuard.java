@@ -16,6 +16,7 @@ final class SemUndefinedVarGuard {
         return sa.diagnostics() != null
                 && !"this".equals(name) && !"super".equals(name)
                 && !"json".equals(name) && !"process".equals(name) && !"shell".equals(name)
+                && !"ssh".equals(name)
                 && !KofWeb.isWebNamespace(name)
                 && !KofConfig.isConfigNamespace(name)
                 && !KofCache.isCacheNamespace(name)

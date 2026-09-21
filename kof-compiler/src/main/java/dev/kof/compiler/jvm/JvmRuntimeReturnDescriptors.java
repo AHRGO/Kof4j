@@ -45,6 +45,8 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_array_to_string" -> "Ljava/lang/String;";
             case "kof_shell_pipeline" -> "Ldev/kof/runtime/KofRuntime$ProcessResult;";
             case "kof_shell_runwith" -> "Ldev/kof/runtime/KofRuntime$ProcessResult;";
+            case "kof_ssh_argv" -> "Ljava/util/ArrayList;";
+            case "kof_ssh_run" -> "Ldev/kof/runtime/KofRuntime$ProcessResult;";
             case "kof_args_list" -> "Ljava/util/ArrayList;";
             case "kof_io_read_bytes" -> "[I";
             case "kof_io_read_range", "kof_io_read_range_path" -> "[I";

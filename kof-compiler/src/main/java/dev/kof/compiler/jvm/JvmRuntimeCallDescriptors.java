@@ -68,6 +68,8 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_shell_argv" -> "(Ljava/lang/String;Ljava/util/List;)Ljava/util/ArrayList;";
             case "kof_shell_pipeline" -> "(Ljava/util/List;)Ldev/kof/runtime/KofRuntime$ProcessResult;";
             case "kof_shell_runwith" -> "(Ljava/util/List;Ljava/lang/String;Ljava/util/Map;)Ldev/kof/runtime/KofRuntime$ProcessResult;";
+            case "kof_ssh_argv" -> "(Ljava/lang/String;Ljava/lang/String;)Ljava/util/ArrayList;";
+            case "kof_ssh_run" -> "(Ljava/lang/String;Ljava/lang/String;)Ldev/kof/runtime/KofRuntime$ProcessResult;";
             case "kof_process_spawn" -> "(Ljava/lang/String;Ljava/util/List;)Ljava/lang/Long;";
             case "kof_spawn_read_line" -> "(Ljava/lang/Long;)Ljava/lang/String;";
             case "kof_spawn_write" -> "(Ljava/lang/Long;Ljava/lang/String;)V";

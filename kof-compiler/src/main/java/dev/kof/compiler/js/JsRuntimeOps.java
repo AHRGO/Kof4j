@@ -63,6 +63,7 @@ boolean isRuntimeOp(KofCall kc) {
                 || name.equals("kof_spawn_kill") || name.equals("kof_spawn_alive")
                 || name.equals("kof_shell_argv") || name.equals("kof_shell_runwith")
                 || name.equals("kof_shell_pipeline")
+                || name.equals("kof_ssh_argv") || name.equals("kof_ssh_run")
                 || name.equals("kof_args")
                 || name.equals("kof_ffi") || name.equals("kof_ffi_void")
                 || name.equals("kof_box") || name.equals("kof_unbox");

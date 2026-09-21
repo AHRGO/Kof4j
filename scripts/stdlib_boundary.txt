@@ -37,6 +37,7 @@ observability platform experimental — ExpressionMethodCallLowerer.java (metric
 trace platform experimental — ExpressionMethodCallLowerer.java (tracing/OTel seed)
 process platform experimental — KofProcess.java
 shell platform experimental — KofShell.java (sugar over kof.process; universal plan Stage 2 / 2.2)
+ssh platform experimental — KofSsh.java (sugar over kof.process; universal plan Stage 2 / 2.3)
 scheduler platform experimental — KofScheduler.java
 security platform experimental — ExpressionMethodCallLowerer.java (auth/JWT/rate-limit; stdlib-documented)
 supervisor platform experimental — CompilerSupervisor.java (otp-style supervision, systems layer)

@@ -419,6 +419,30 @@ public final class JvmRuntimeCore {
                     }
                 }
 
+                // ── kof.ssh (Stage 2 / 2.3) — sugar over the process layer ──
+                // argv-first (never a shell string): the host and the command stay
+                // ONE element each, so a host/command with spaces or metacharacters
+                // is never re-parsed (the sh -c injection class, same discipline as
+                // kof.shell). BatchMode + ConnectTimeout keep it non-interactive and
+                // bounded; a spawn/connection failure is an honest Result (never a
+                // silent success, R6).
+
+                public static java.util.ArrayList<String> kof_ssh_argv(String host, String command) {
+                    java.util.ArrayList<String> argv = new java.util.ArrayList<>();
+                    argv.add("ssh");
+                    argv.add("-o");
+                    argv.add("BatchMode=yes");
+                    argv.add("-o");
+                    argv.add("ConnectTimeout=5");
+                    argv.add(host);
+                    argv.add(command);
+                    return argv;
+                }
+
+                public static ProcessResult kof_ssh_run(String host, String command) {
+                    return kof_shell_runwith(kof_ssh_argv(host, command), "", java.util.Map.of());
+                }
+
                 public static ProcessResult kof_shell_pipeline(List<List<String>> stages) {
                     try {
                         if (stages == null || stages.isEmpty()) {

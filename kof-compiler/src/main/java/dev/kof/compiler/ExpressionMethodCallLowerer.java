@@ -274,6 +274,10 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
         && driver.findLocalVar(rid.name(), locals) == null
         && !shadowsFieldOfCurrentClass(driver, owner, rid.name())) {
     return ExpressionShellCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
+} else if (mc.receiver() instanceof IdentifierExpr rid && "ssh".equals(rid.name())
+        && driver.findLocalVar(rid.name(), locals) == null
+        && !shadowsFieldOfCurrentClass(driver, owner, rid.name())) {
+    return ExpressionSshCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
             && KofHttp.isHttpNamespace(rid.name())) {
     return ExpressionHttpCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);

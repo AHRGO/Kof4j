@@ -124,6 +124,10 @@ public final class StdCatalog {
                     Map.entry("runWith", List.of("runWith(List<String> argv, String cwd, Map<String,String> env) -> Result")),
                     Map.entry("pipeline", List.of("pipeline(List<List<String>> stages) -> Result")),
                     Map.entry("ok", List.of("ok(result) -> Bool")))),
+            Map.entry("ssh", java.util.Map.ofEntries(
+                    Map.entry("cmd", List.of("cmd(String host, String command) -> List<String>")),
+                    Map.entry("run", List.of("run(String host, String command) -> Result")),
+                    Map.entry("ok", List.of("ok(result) -> Bool")))),
             Map.entry("net", java.util.Map.ofEntries(
                     Map.entry("scheme", List.of("scheme(String url) -> String")),
                     Map.entry("host", List.of("host(String url) -> String")),

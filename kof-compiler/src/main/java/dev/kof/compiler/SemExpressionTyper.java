@@ -124,6 +124,7 @@ public final class SemExpressionTyper {
                         }
                         if (!hasField
                                 && !"json".equals(ie.name()) && !"process".equals(ie.name()) && !"shell".equals(ie.name())
+                                && !"ssh".equals(ie.name())
                                 && !KofWeb.isWebNamespace(ie.name())
                                 && !KofConfig.isConfigNamespace(ie.name())
                                 && !KofCache.isCacheNamespace(ie.name())

@@ -158,6 +158,14 @@ final class MethodCallNamespaces {
             if (shellCall != null) return shellCall.returnType();
             return Type.UnknownType.UNKNOWN;
         }
+        if (mc.receiver() instanceof IdentifierExpr rid && "ssh".equals(rid.name())
+                && driver.findLocalVar(rid.name(), locals) == null) {
+            List<Type> argTypes = new ArrayList<>();
+            for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
+            KofSsh.SshCall sshCall = KofSsh.staticCall(mc.methodName(), argTypes);
+            if (sshCall != null) return sshCall.returnType();
+            return Type.UnknownType.UNKNOWN;
+        }
         if (mc.receiver() instanceof IdentifierExpr rid && KofConfig.isConfigNamespace(rid.name())) {
             List<Type> argTypes = new ArrayList<>();
             for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
