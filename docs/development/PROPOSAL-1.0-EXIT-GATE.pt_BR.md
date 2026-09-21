@@ -61,6 +61,10 @@ Este é o **contrato ratificado do exit gate 1.0** (`D-RELEASE-1.0`). Leia:
 - **§35** — o bloco candidato do EXIT GATE v3; **§37** o registro de
   revalidação de 20/09 (v3.1).
 - **§24** — a regra de atualização deste documento.
+- **`D-1.0-STABILITY-100`** (`DECISIONS.md`, 20/09) — o refinamento do
+  fechamento: nenhum 1.0.0 enquanto QUALQUER item estiver aberto em
+  `docs/development/`, `docs/development/future/` ou `docs/bugs-and-gaps/`,
+  com a paridade cross-target MEDIDA (provada, nunca alegada).
 
 O estado vivo é medido mecanicamente por `scripts/check_release_050_gate.sh`
 (as condições do 0.5.0) e `scripts/check_release_blockers.sh` (a fila EG /
@@ -327,6 +331,9 @@ Contrato proposto:
 [ ] RC sem feature nova
 [ ] apenas fixes durante RC
 [ ] RC → Stable sem regressão
+[ ] 100% dos itens de docs/development/, docs/development/future/ e
+    docs/bugs-and-gaps/ resolvidos, com paridade cross-target total PROVADA
+    (D-1.0-STABILITY-100)
 ```
 
 ### Complemento aderente à decisão D-BRANCH-0.5.0
@@ -1632,7 +1639,8 @@ para:
 [RATIFICADO] pacote testado tem o MESMO digest do artefato que será publicado
 ```
 
-Idealmente registrar:
+Registro OBRIGATÓRIO (ratificado 20/09 por `D-ARTIFACT-TRUST` — não é mais
+"idealmente"):
 
 ```text
 SHA256
@@ -1641,6 +1649,15 @@ commit SHA
 target
 timestamp
 ```
+
+O contrato ratificado vai além do registro: **integridade + artefato exato +
+proveniência de build neutra, atestada pelo workflow oficial**; o portão de
+release **BLOQUEIA** sem evidência válida, e o `kof deps resolve`
+**BLOQUEIA DURAMENTE** pacotes oficiais sem ela (pacotes da comunidade =
+aviso honesto, nunca silêncio). Fila de execução: (a) checagem de digest no
+rc-gate + jars standalone no `SHA256SUMS`, (b) attest+verify no workflow de
+release, (c) checagem de evidência no lado do resolve — `DECISIONS.md`
+§D-ARTIFACT-TRUST.
 
 O próprio roadmap/decisões do KOF já usa `SHA256SUMS` na direção do registry,
 portanto este princípio tem aderência interna adicional.

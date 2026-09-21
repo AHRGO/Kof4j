@@ -60,6 +60,10 @@ This is the **ratified 1.0 exit-gate contract** (`D-RELEASE-1.0`). Read:
 - **§35** — the EXIT GATE v3 candidate block; **§37** the 09/20 revalidation
   record (v3.1).
 - **§24** — the rule for updating this document.
+- **`D-1.0-STABILITY-100`** (`DECISIONS.md`, 20/09) — the closure refinement:
+  no 1.0.0 while ANY item is open in `docs/development/`,
+  `docs/development/future/` or `docs/bugs-and-gaps/`, with the full
+  cross-target parity MEASURED (proven, never claimed).
 
 Live status is measured mechanically by `scripts/check_release_050_gate.sh`
 (the 0.5.0 conditions) and `scripts/check_release_blockers.sh` (the EG queue /
@@ -326,6 +330,9 @@ Proposed contract:
 [ ] RC with no new feature
 [ ] only fixes during the RC
 [ ] RC → Stable without regression
+[ ] 100% of the items in docs/development/, docs/development/future/ and
+    docs/bugs-and-gaps/ resolved, with full cross-target parity PROVEN
+    (D-1.0-STABILITY-100)
 ```
 
 ### Complement aligned with decision D-BRANCH-0.5.0
@@ -1622,7 +1629,7 @@ to:
 [RATIFIED] the tested package has the SAME digest as the artifact that will be published
 ```
 
-Ideally record:
+MANDATORY record (ratified 20/09 by `D-ARTIFACT-TRUST` — no longer "ideally"):
 
 ```text
 SHA256
@@ -1631,6 +1638,14 @@ commit SHA
 target
 timestamp
 ```
+
+The ratified contract goes further than the record: **integrity +
+exact-artifact + neutral build provenance attested by the official workflow**;
+the release gate **BLOCKS** without valid evidence, and `kof deps resolve`
+**HARD-BLOCKS** official packages without it (community packages = honest
+warning, never silent). Enforcement queue: (a) rc-gate digest check +
+standalone jars in `SHA256SUMS`, (b) attest+verify in the release workflow,
+(c) evidence check on the resolve side — `DECISIONS.md` §D-ARTIFACT-TRUST.
 
 KOF's own roadmap/decisions already use `SHA256SUMS` in the registry direction,
 so this principle has additional internal adherence.
