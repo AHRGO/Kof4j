@@ -152,6 +152,27 @@ class KofDbE2ETest {
     }
 
     @Test
+    void typedQueryBindsIntColumnToBoolField(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            record Flag(Bool ok)
+
+            main() {
+                var db = db.connect("jdbc:h2:mem:s396;DB_CLOSE_DELAY=-1")
+                db.execute(db, "create table t(ok int)")
+                db.execute(db, "insert into t values (1)")
+                db.execute(db, "insert into t values (0)")
+                db.execute(db, "insert into t values (2)")
+                var rows = db.query<Flag>(db, "select * from t")
+                for (var r in rows) {
+                    println(r.ok)
+                }
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "true\nfalse\ntrue");
+    }
+
+    @Test
     void transactionCommits(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, """

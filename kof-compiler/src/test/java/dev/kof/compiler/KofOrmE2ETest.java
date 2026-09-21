@@ -557,6 +557,32 @@ class KofOrmE2ETest {
     // ── D-DB-GAPS F2a (20/09): kof_orm_save REAL no Native x86-64 ──
 
     @Test
+    void findPreservesSavedBoolTrueRegression397(@TempDir Path tempDir) throws Exception {
+        // §397: o save gravava Bool true como 1 e o find devolvia false
+        // (rs.getObject = Integer e parseBoolean("1") = false) -- simetria
+        // gravar==ler, a unica contraparte possivel do contrato.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            entity Flag {
+                id: Long generated
+                ok: Bool
+            }
+            main() {
+                var db = db.connect("jdbc:sqlite:%s")
+                db.execute(db, "create table if not exists flag (id INTEGER PRIMARY KEY AUTOINCREMENT, ok INTEGER)")
+                var a = orm.save(db, Flag(0, true))
+                var b = orm.save(db, Flag(0, false))
+                var fa = orm.find<Flag>(db, a.id)
+                if (fa != null) { println(fa.ok) }
+                var fb = orm.find<Flag>(db, b.id)
+                if (fb != null) { println(fb.ok) }
+            }
+            """.formatted(tempDir.resolve("s396.db").toString()));
+        runJvmWithExtra(source, tempDir.resolve("out"),
+                findDriverJar("sqlite-jdbc", "SQLite"), "true\nfalse");
+    }
+
+    @Test
     void saveNativeEndToEndMatchesJvm(@TempDir Path tempDir) throws Exception {
         String body = """
                     db.execute(db, "create table if not exists user (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, age INTEGER)")
