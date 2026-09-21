@@ -2982,7 +2982,7 @@ que é o dono da estratégia de alocação. Até lá, externs com `Handle` segue
 
 **Data:** 2026-09-21 · **Estado:** `DECIDED` · **Opção escolhida:** **B**.
 
-A mantenedora escolheu a **opção B** do `codegen-step-2.2.3-assessment.md` (+PT):
+A mantenedora escolheu a **opção B** do `docs/architecture/codegen-step-2.2.3-assessment.md` (+PT) — **implementada 21/09 (`85779f20`)**:
 adicionar um **registry `DesugarStep` na fase AST** espelhando
 `CodegenStep`/`CodegenStepPipeline`, e migrar os quatro desugars de fonte
 (`desugarTests`/`desugarApplication`/`desugarInfra`/`desugarNestedFunctions`,

@@ -55,6 +55,16 @@ desugar; neither can move to the post-IR hook without changing observable behavi
 - The DDL (entity→schema) is **not** a candidate for either registry — it is
   part of lowering.
 
+## Outcome (21/09)
+
+Option **B** was chosen and landed: `DesugarStep` + `DesugarStepPipeline` +
+`DesugarSteps.defaults()` (the four desugars as ordered steps) drive the AST
+phase, and `CompilerPipeline:303` runs them instead of the four direct calls.
+Proof: `DesugarStepPipelineTest` 7/7 + the four-desugar batch 331/0F/0E, with
+`mvn -o -pl kof-compiler -am compile` green (commit `85779f20`). The post-IR
+`CodegenStep` hook remains the documented identity seam for future IR-level
+passes (none today).
+
 ## Impact if option A
 
 - `roadmap.md` line **2.2.3** → reclassified (closed/obsolete, with this rationale).

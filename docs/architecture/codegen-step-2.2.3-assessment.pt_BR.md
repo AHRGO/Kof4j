@@ -56,6 +56,16 @@ desugar de AST; nenhum pode ir ao hook pós-IR sem mudar o comportamento observ�
 - O DDL (entity→schema) **não** é candidato a nenhum dos dois registries — é parte
   do lowering.
 
+## Desfecho (21/09)
+
+A opção **B** foi escolhida e landada: `DesugarStep` + `DesugarStepPipeline` +
+`DesugarSteps.defaults()` (os quatro desugars como passos ordenados) conduzem a
+fase de AST, e `CompilerPipeline:303` os executa no lugar das quatro chamadas
+diretas. Prova: `DesugarStepPipelineTest` 7/7 + o lote dos quatro desugars
+331/0F/0E, com `mvn -o -pl kof-compiler -am compile` verde (commit `85779f20`).
+O hook pós-IR `CodegenStep` permanece a costura-identidade documentada para
+passos de IR futuros (nenhum hoje).
+
 ## Impacto se opção A
 
 - `roadmap.md` linha **2.2.3** → reclassificada (fechada/obsoleta, com esta razão).

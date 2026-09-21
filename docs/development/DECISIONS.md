@@ -2972,7 +2972,7 @@ stay honest `FFI001`/`FFI002` (R6).
 
 **Date:** 2026-09-21 · **State:** `DECIDED` · **Option chosen:** **B**.
 
-The maintainer chose **option B** of `codegen-step-2.2.3-assessment.md` (+PT):
+The maintainer chose **option B** of `docs/architecture/codegen-step-2.2.3-assessment.md` (+PT) — **implemented 21/09 (`85779f20`)**:
 add a **`DesugarStep` registry at the AST phase** mirroring
 `CodegenStep`/`CodegenStepPipeline`, and migrate the four source desugars
 (`desugarTests`/`desugarApplication`/`desugarInfra`/`desugarNestedFunctions`,
