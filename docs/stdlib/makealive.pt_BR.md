@@ -10,8 +10,9 @@
 > diff contra o `State` atual, e `apply`/`destroy` executados através de um
 > `Provider` de três function-values. O host é só composição — toda fronteira
 > de runtime (arquivos, processos, HTTP, um banco) vive no corpo do provedor,
-> escrito por você em Kof puro. Não há sintaxe nova (linha 3.2 é ⛔R4) nem
-> gate de grafo em tempo de compilação (linha 3.7 é ⛔R4; a recusa em runtime
+> escrito por você em Kof puro. Não há sintaxe nova (linha 3.2 segue decisão de
+> superfície regra 6 — R4 ✅ pousou 21/09, o bloqueio do hook de codegen sumiu) nem
+> gate de grafo em tempo de compilação (linha 3.7 precisa da superfície 3.2; a recusa em runtime
 > sai nomeada).
 
 ## O contrato (faces injetadas por `import kof.makealive`)
@@ -142,7 +143,7 @@ de assinatura. Nada em `kof.makealive` sabe que uma nuvem existe.
 - **§382** (aberto, ponte): códigos numéricos do kof.io JS (acima).
 - Linhas 3.3 (reconcile via `scheduler`), 3.6 (secrets `kof.security` — lane
   security) e 3.8 agora é o CLI `kof makealive` (D-MAKEALIVE-CLI, 20/09); o resto é do
-  Estágio 3; 3.2/3.7 são ⛔R4.
+  Estágio 3; 3.2/3.7 seguem superfícies regra 6 (R4 ✅ pousou 21/09).
 
 ## CLI (3.8 — landed 20/09, D-MAKEALIVE-CLI)
 

@@ -2202,7 +2202,7 @@ nesta sessão — respostas às Q1–Q4 do §6 de `makealive-plan.md`)
 **Evidência:** enquete da mantenedora no chat 19/09–20/09 (respostas: A /
 "completo" / "kof.db desde o dia 1" / "confirmar flat + inglês"). Colisão R1
 medida 19/09 (plano §2.1). **Destrava a linha 3.1 do tracker** (dono .18):
-próximo = 3.1 core host + `MakealiveE2ETest`; 3.2/3.7 ainda ⛔ R4; 3.8
+próximo = 3.1 core host + `MakealiveE2ETest`; 3.2/3.7 eram ⛔ R4 — **R4 ✅ pousou 21/09** (3.2 segue decisão de superfície regra 6; 3.7 depende dela); 3.8
 (contrato do CLI `kof infra`) segue pergunta aberta (regra 6).
 
 ## D-KOF-AS-CLOUD — Kof tem que estar pronto para SER a própria nuvem

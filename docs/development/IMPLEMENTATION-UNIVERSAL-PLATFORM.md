@@ -170,7 +170,7 @@ R4**; R4 gates only the declarative rows (3.2, 3.7).
 | 3.4 | State in `kof.db` | ✅ 20/09 | `.18` | **folded into 3.1 (MK-1 20/09)**; per-target verification item kept; Native state gated by §D-DB-GAPS |
 | 3.5 | Providers via FFI/REST/CLI (AWS/Azure/GCP — interop) | ✅ 20/09 | — | R3; v1 = the generic providers measured and green (fs/CLI/REST goldens 20/09, JVM==JS); concrete clouds are OFFICIAL PACKAGES (`infra-<cloud>`, D-MAKEALIVE Q2), not compiler surface |
 | 3.6 | Secrets via `kof.security` | 🟡 | security lane | `kof.security` exists; `Secret`/`KeyHandle` pending (Stage 5) — design plan EN+PT landed 21/09 (`future/secrets-plan.md`, P1/P2/P3 each awaiting a rule-6 vote; zero code) |
-| 3.7 | Cycle detection in the `infra` graph at compile-time | 🔵 | — | 3.1 |
+| 3.7 | Cycle detection in the `infra` graph at compile-time | 🔵 | — | **R4 ✅ landed 21/09**; still needs the 3.2 `infra` surface (rule 6) for a compile-time graph — the runtime refusal ships in 3.1 meanwhile |
 | 3.8 | Tooling: `kof makealive plan/apply/destroy` | ✅ 20/09 | `.18` | **DONE (D-MAKEALIVE-CLI, contrato decidido 20/09 por delegação do maintainer)**: verbo segue o nome decidido no Q1 (`makealive`, não `infra`); `design()`+`provider()` convenção D-WORKFLOW-RUN; MARK `@@KOF_MAKEALIVE@@ `; estado h2 `--state` com gen=max+1 + MARCA de estado vazio no destroy (bug de geração invisivel achado pelo E2E; `mkMaxGen` landed); JVM==JS byte parity, script/native refusals (R7). Prova: `CmdMakealiveTest` 7/7 + `MakealiveMaxGenE2ETest` 4/4 + Makealive battery 14/14. |
 ---
 

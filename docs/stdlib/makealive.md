@@ -10,8 +10,9 @@
 > current `State`, and `apply`/`destroy` executed through a `Provider` of
 > three function-values. The host is composition only — every runtime
 > boundary (files, processes, HTTP, a database) lives in the provider body,
-> written by you in plain Kof. There is no new syntax (row 3.2 is ⛔R4) and
-> no compile-time graph gate (row 3.7 is ⛔R4; runtime refusal ships named).
+> written by you in plain Kof. There is no new syntax (row 3.2 remains a rule-6
+> surface decision — R4 ✅ landed 21/09, so the codegen-hook blocker is gone) and
+> no compile-time graph gate (row 3.7 needs the 3.2 surface; runtime refusal ships named).
 
 ## The contract (faces injected by `import kof.makealive`)
 
@@ -139,7 +140,7 @@ signing API. Nothing in `kof.makealive` knows a cloud exists.
 - **§382** (open, bridge): kof.io JS numeric codes (above).
 - Rows 3.3 (reconcile via `scheduler`), 3.6 (`kof.security` secrets —
   security lane), 3.8 is now the `kof makealive` CLI (D-MAKEALIVE-CLI, 20/09); the rest of
-  of Stage 3; 3.2/3.7 are ⛔R4.
+  of Stage 3; 3.2/3.7 remain rule-6 surfaces (R4 ✅ landed 21/09).
 
 ## CLI (3.8 — landed 20/09, D-MAKEALIVE-CLI)
 

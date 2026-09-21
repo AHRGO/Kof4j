@@ -72,7 +72,8 @@ answered; a ledger line cannot override a hard-deny (measured).
 - **plan has no side effects**; only apply touches the world and the state.
 - **cycles are refused at graph-build** with an actionable `throw` naming the
   cycle (workflow run() precedent, 4/4 targets); compile-time cycle detection
-  is row 3.7 and waits for R4.
+  is row 3.7 — **R4 ✅ landed 21/09**, so the codegen-hook blocker is gone; it
+  still needs the 3.2 `infra` surface (rule 6) to have a compile-time graph.
 - **state advances only on success**: a failed apply leaves the previous state
   intact and names the resource that failed (R6, never a silent partial).
 - **secrets are references only**: v1 stores a secret *name* (resolved at
@@ -159,10 +160,11 @@ the host db slice must be gated per target exactly like `workflow-ckpt-host.kf`
   generic REST provider (`kof.http`) + CLI provider (`kof.shell`) ship with
   the core slice; concrete clouds stay **official packages**
   (`infra-<cloud>`, R1 — never a compiler literal).
-- **3.2 [syntax `infra "prod" {}`]** — ⛔ R4 (codegen hook, tracker row R4:
-  "does NOT exist at HEAD") + new parse block = rule 6. Out of v1.
-- **3.7 [compile-time cycle]** — ⛔ R4 (same reason; runtime refusal ships in
-  3.1 meanwhile).
+- **3.2 [syntax `infra "prod" {}`]** — **R4 ✅ landed 21/09** (`CodegenStep` hook,
+  `CodegenStepPipelineTest` 6/6): the codegen-hook blocker is GONE. What remains is
+  the **new user-facing parse block = rule 6** — out of v1 until the maintainer decides.
+- **3.7 [compile-time cycle]** — **R4 ✅ landed 21/09**; still needs the 3.2 surface
+  (rule 6) to have a compile-time graph. Meanwhile the **runtime refusal ships in 3.1**.
 - **3.8 [`kof infra` CLI]** — command contract = maintainer decision (rule 6,
   the 2.6 posture): `kof run infra.kf` is already the runner once 3.1 lands.
 ✅ DECIDED + SHIPPED 20/09 (D-MAKEALIVE-CLI): `kof makealive plan|apply|destroy` landed: verb `makealive` (Q1), `design()`+`provider()` convention, MARK protocol,

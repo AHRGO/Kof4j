@@ -2233,7 +2233,8 @@ session — answers to the Q1–Q4 of `makealive-plan.md` §6)
 **Evidence:** maintainer chat poll 19/09–20/09 (answers: A / "completo" /
 "kof.db desde o dia 1" / "confirmar flat + inglês"). R1 collision measured
 19/09 (plan §2.1). **Unblocks tracker 3.1** (owner .18): next = 3.1 core
-host + `MakealiveE2ETest`; 3.2/3.7 still ⛔ R4; 3.8 (the `kof infra` CLI
+host + `MakealiveE2ETest`; 3.2/3.7 were ⛔ R4 — **R4 ✅ landed 21/09** (3.2 remains
+a rule-6 surface decision; 3.7 depends on it); 3.8 (the `kof infra` CLI
 contract) stays an open question (rule 6).
 
 ## D-KOF-AS-CLOUD — Kof must be ready to BE the cloud itself
@@ -2840,3 +2841,44 @@ and Strings by the element's own content toString. Passing a `List` to a bytes
 face stays a compile error (`SEM099`, §388-A) — untouched by this decision.
 Tests: `arrayprint` cell in `ConformanceMatrixTest` (JVM/Script/JS/native),
 `ArrayPrintFormatE2ETest`, riscv64/aarch64 goldens in `Native*E2ETest` (CI/qemu).
+
+## R6-SCOPE — incremental delivery does NOT breach R6 (maintainer, 21/09/2026)
+
+**State:** `DECIDED` · ABSOLUTE clarification of R6 (never silent).
+
+R6 forbids **silence**, not **partial scope**. A delivery that is a **complete
+vertical slice for its declared scope**, with the not-yet-supported paths
+failing through **honest diagnostics** (`FFI001`/`FFI002`/`XXX00x` — which *is*
+R6), does **not** breach R6. R6 is violated only when a gap is **hidden**: a
+silent stub, a weak fallback, a divergence the user cannot see.
+
+Consequence: any undelivered capability is built **incrementally** (e.g.
+JVM-first, with Native/JS as *declared, diagnosed* gaps — R7) and each slice
+lands whole for its scope. "Can't do it all at once" is no reason to defer the
+slice; "hide the missing part" is the only forbidden move.
+
+## D-R3-BUFFER — out-buffer is the nominal `Buffer(U8)` type (maintainer, 21/09/2026)
+
+**State:** `DECIDED` · **Option chosen:** nominal type (of reuse-`Byte[]` /
+nominal `Buffer(U8)` / split).
+
+D6-3/D-R3-3.3 fixed that out-buffers exist as their own ABI kind
+(`Buffer(U8, INOUT)`, copy-in / call / copy-back, **never `S`**). This decision
+fixes the **spelling the user writes**: a **nominal `Buffer(U8)`** type in the
+`extern` signature — *not* a reuse of `Byte[]` (scalar `T[]` stays the
+read-only `ptr` of fatia 3/D6-2). `Buffer` stays a distinct ABI type even when
+a register carries an address (R6).
+
+## D-R3-HANDLE-LIFETIME — `Handle` memory is automatic (maintainer, 21/09/2026)
+
+**State:** `DECIDED` · **Direction chosen:** automatic (of single `Handle<T>`, or
+defer).
+
+D-R3-3.3 chose a nominal opaque `Handle` (never an integer, no pointer
+arithmetic). This decision fixes its **lifetime**: allocation/deallocation must
+be **automatic — the programmer never manages memory** (no manual `malloc`/
+`free`). `Handle` therefore does not land as an isolated FFI type now; it is
+delivered together with the language-managed resource/lifetime mechanism
+(scoped-resources / RAII front, `docs/development/future/scoped-resources-plan.md`),
+which is the owner of the allocation strategy. Until then `Handle`-typed externs
+stay honest `FFI001`/`FFI002` (R6).

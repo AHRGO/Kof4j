@@ -76,7 +76,9 @@ ledger NÃO sobrepõe hard-deny (medido).
 - **plan não tem efeitos colaterais**; só o apply toca o mundo e o estado.
 - **ciclos são recusados na montagem do grafo** com `throw` acionável
   nomeando o ciclo (precedente do run() do workflow, 4/4 targets); detecção de
-  ciclo em compile-time é a linha 3.7 e espera R4.
+  ciclo em compile-time é a linha 3.7 — **R4 ✅ pousou 21/09**, então o bloqueio
+  do hook de codegen sumiu; ainda precisa da superfície 3.2 `infra` (regra 6)
+  para ter um grafo em compile-time.
 - **o estado só avança no sucesso**: um apply falho deixa o estado anterior
   intacto e nomeia o recurso que falhou (R6, nunca um parcial silencioso).
 - **secrets são só referência**: o v1 guarda o *nome* do secret (resolvido no
@@ -167,10 +169,11 @@ fatia db do host deve ser gateada por alvo exatamente como `workflow-ckpt-host.k
   provider REST genérico (`kof.http`) + provider CLI (`kof.shell`) embarcam
   na fatia do núcleo; clouds concretas seguem **pacotes oficiais**
   (`infra-<cloud>`, R1 — nunca literal no compilador).
-- **3.2 [sintaxe `infra "prod" {}`]** — ⛔ R4 (hook de codegen, linha R4 do
-  tracker: "does NOT exist at HEAD") + bloco de parse novo = regra 6. Fora do v1.
-- **3.7 [ciclo em compile-time]** — ⛔ R4 (mesmo motivo; a recusa em runtime
-  embarca no 3.1 enquanto isso).
+- **3.2 [sintaxe `infra "prod" {}`]** — **R4 ✅ pousou 21/09** (`CodegenStep` hook,
+  `CodegenStepPipelineTest` 6/6): o bloqueio do hook de codegen SUMIU. O que resta é
+  o **bloco de parse novo voltado ao usuário = regra 6** — fora do v1 até a mantenedora decidir.
+- **3.7 [ciclo em compile-time]** — **R4 ✅ pousou 21/09**; ainda precisa da superfície
+  3.2 (regra 6) para ter um grafo em compile-time. Enquanto isso a **recusa em runtime embarca no 3.1**.
 - **3.8 [CLI `kof infra`]** — contrato do comando = decisão da mantenedora
   (regra 6, a postura da 2.6): `kof run infra.kf` já é o runner quando o 3.1
   landar. ✅ DECIDIDO + ENTREGUE 20/09 (D-MAKEALIVE-CLI): verbo `makealive` (Q1),
