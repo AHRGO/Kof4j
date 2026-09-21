@@ -14217,15 +14217,16 @@ p
 
 <!-- pt-switch --> **PT:** [§425 (pt_BR)](known-bugs.pt_BR.md#425--kofconfig-no-riscv64aarch64-e-um-stub-de-default-silencioso-enquanto-kofconfigsupportedon-retorna-true-e-o-javadoc-ainda-diz-conf001---corrigido-2109-lane-18-supportedon-false-no-cross--conf001-vivo-javadocmatriz-corrigidos)
 
-## §426 — `time.collect()` compiles on JS but has no runtime and no gate (silent incomplete) — 🔴 OPEN
+## §426 — `time.collect()` compiles on JS but has no runtime and no gate (silent incomplete) — ✅ FIXED 21/09 (lane .18: JS gated with `TIME004`)
 
 - `KofTime.java:42` lists `collect` in `functions()`; `:128-129` lowers it to `kof_gc_collect_now`; `supportedOn(method,target)` (`:74-102`) gates only `tzOffsetSeconds` (TIME003), so `collect` returns true on JS; `gapCode(method)` (`:104-111`) yields no code.
 - `js/JsRuntimeOps.java:428` registers it via `runtimeJsName` -> `kofGcCollectNow`, but **no such function exists anywhere under `js/`** (grep empty); `JsEmitter.java:37` imports it from `./kof-runtime.mjs`, so the artifact fails at load while compilation is clean.
 - Implemented on JVM, x86 (`RuntimeGc`) and riscv. No test covers `time.collect()`.
 - **Repro:** `main(){ time.collect() }` on JS -> undefined export/ReferenceError at run; compile clean.
 - **What is missing:** implement the JS GC-collect face, or gate it with an honest code.
+- **Resolution (21/09, lane .18):** chose the honest gate — the JS runtime has no manual-GC face and a no-op would be a silent stub (R6). `KofTime.supportedOn("collect", JS)` is now false and `gapCode("collect")` returns `TIME004`, so the compiler refuses at compile time (`time.collect: not available on the JS driver.target yet (TIME004)`) before the missing `kofGcCollectNow` import is emitted — fixing the clean-compile/load-failure. JVM/SCRIPT (JVM runtime), x86 (`RuntimeGc`) and riscv64/aarch64 (`RtB44` + translator) keep the real mark-sweep. Documented in `docs/backend-parity.md` (kof.time row + Documented Gaps). **Proof:** `DomainGapCodesTest.collectOnJsIsTime004` (JS refuses) + `collectOnJvmAndX86HasNoGap` (JVM/x86 still compile) — 19/19, incl. the R6 matrix guard that now sees `TIME004`; `KofTimeE2ETest` 42/42.
 
-<!-- pt-switch --> **PT:** [§426 (pt_BR)](known-bugs.pt_BR.md#426--timecollect-compila-no-js-mas-nao-tem-runtime-nem-gate-incompleto-silencioso---aberto)
+<!-- pt-switch --> **PT:** [§426 (pt_BR)](known-bugs.pt_BR.md#426--timecollect-compila-no-js-mas-nao-tem-runtime-nem-gate-incompleto-silencioso---corrigido-2109-lane-18-js-gateado-com-time004)
 
 ## §427 — the riscv64/aarch64 targets may lower `kof.io` and the web-T1 server, but their runtime has no such symbols (loud `ld` undefined-reference; the gate is wrong/missing) — 🔴 OPEN
 

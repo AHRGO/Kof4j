@@ -98,6 +98,14 @@ public final class KofTime {
                     || target == Target.NATIVE_AARCH64)) {
             return false;
         }
+        // §426: `collect` (GC manual) has a real runtime on JVM/SCRIPT (JVM
+        // runtime), x86 (RuntimeGc) and riscv64/aarch64 (RtB44 + translator).
+        // The JS backend registers/imports `kofGcCollectNow` but no such
+        // export exists (the JS runtime has no manual GC), so the artifact
+        // failed at load — gate it honestly (TIME004), never a silent no-op.
+        if ("collect".equals(method) && target == Target.JS) {
+            return false;
+        }
         return true;
     }
 
@@ -107,6 +115,8 @@ public final class KofTime {
         // gapCode só alimenta o gate de suporte; mantém a chave por
         // retrocompatibilidade dos diagnósticos existentes.
         if ("tzOffsetSeconds".equals(method)) return "TIME003";
+        // §426: JS has no manual-GC runtime for time.collect().
+        if ("collect".equals(method)) return "TIME004";
         return ("addDays".equals(method) || "diffDays".equals(method))
                 ? "TIME002" : "TIME001";
     }

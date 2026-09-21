@@ -148,6 +148,32 @@ class DomainGapCodesTest {
     }
 
     @Test
+    void collectOnJsIsTime004(@TempDir Path tmp) throws Exception {
+        // §426: JS runtime has no manual-GC face (kofGcCollectNow was imported
+        // but never exported -> load failure); honest compile-time refusal.
+        assertGap(tmp, Target.JS, "TIME004", """
+            main() {
+                time.collect()
+            }
+            """);
+    }
+
+    @Test
+    void collectOnJvmAndX86HasNoGap(@TempDir Path tmp) throws Exception {
+        for (Target t : new Target[]{Target.JVM, Target.NATIVE}) {
+            Path file = tmp.resolve("Main-" + t + "-" + System.nanoTime() + ".kf");
+            Files.writeString(file, """
+                main() {
+                    time.collect()
+                }
+                """);
+            CompilationResult r = driver.compile(file, tmp.resolve("out-" + t + "-" + System.nanoTime()), t);
+            assertTrue(r.success(), t + " time.collect must compile (real GC runtime): "
+                    + r.diagnostics().getDiagnostics());
+        }
+    }
+
+    @Test
     void exportSpansOnNativeIsObs003(@TempDir Path tmp) throws Exception {
         assertGap(tmp, Target.NATIVE, "OBS003", """
             main() {

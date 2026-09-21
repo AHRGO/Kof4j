@@ -13,6 +13,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§426 CORRIGIDO — `time.collect()` no JS recusa com `TIME004`**
+    (21/09, lane .18): o backend JS registrava/importava `kofGcCollectNow`
+    de `kof-runtime.mjs` mas o runtime nunca o exportava (o alvo JS não tem
+    GC manual), então `time.collect()` compilava limpo e falhava no load do
+    módulo. `KofTime.supportedOn("collect", JS)` agora é false e
+    `gapCode("collect")` devolve `TIME004` -> recusa honesta em
+    compile-time; JVM/SCRIPT/x86/riscv64/aarch64 mantêm o mark-sweep real.
+    Docs (`backend-parity.md` linha kof.time + Documented Gaps). Prova:
+    `DomainGapCodesTest.collectOnJsIsTime004` + `collectOnJvmAndX86HasNoGap`
+    (19/19, incl. o guarda R6 da matriz), `KofTimeE2ETest` 42/42.
+
   - **§425 CORRIGIDO — `kof.config` no riscv64/aarch64 agora recusa com `CONF001`**
     (21/09, lane .18): o asm cross não tinha runtime de lookup `kof_config_*`
     (os stubs ecoavam o argumento default / `0` / `false`) enquanto
