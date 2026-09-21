@@ -435,7 +435,12 @@ public class NativeBackend implements Backend {
         for (int j = callIndex - 1; j >= 0 && j >= callIndex - 8; j--) {
             if (ops.get(j) instanceof KofLoadLiteral lit && lit.value() instanceof String url) {
                 String u = url.toLowerCase();
-                return !u.startsWith("sqlite:");
+                // link-by-use: só o wire mysql exige libmariadb. Scheme literal
+                // sqlite:/jdbc:h2:/etc. não chama o wire (S0 recusa NOMEADA no
+                // runtime), então não linka a lib — desbloqueia a prova do §421
+                // em host sem libmariadb. URL dinâmica segue conservadora (true).
+                return u.startsWith("mysql://") || u.startsWith("mariadb://")
+                        || u.startsWith("jdbc:mysql://");
             }
         }
         return true;

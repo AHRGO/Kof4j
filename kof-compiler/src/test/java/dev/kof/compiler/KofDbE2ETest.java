@@ -481,6 +481,36 @@ class KofDbE2ETest {
     }
 
     @Test
+    void nativeUnsupportedSchemeNamesGapNotSilent(@TempDir Path tempDir) throws IOException {
+        assumeTrue(isLinux(), "Native exige Linux + as/ld");
+        Path source = tempDir.resolve("Pin.kf");
+        Files.writeString(source, """
+            main() {
+                var db = db.connect("jdbc:h2:mem:pin")
+                println("connected")
+            }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.NATIVE);
+        assertTrue(result.success(), "Native compile should succeed: " + result.diagnostics().getDiagnostics());
+        Path binFile = tempDir.resolve("out/Default/Main");
+        assertTrue(Files.exists(binFile), "Binary should exist");
+        try {
+            ProcessBuilder pb = new ProcessBuilder(binFile.toString());
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n");
+            int ec = p.waitFor();
+            assertNotEquals(0, ec, "Scheme fora do contrato nao pode 'conectar': " + output);
+            assertTrue(output.contains("DB001"), "Recusa deve NOMEAR o gap DB001 (R6), veio: " + output);
+            assertFalse(output.contains("unknown db connection"),
+                "Recusa deve ocorrer no connect, nao tarde no ORM: " + output);
+        } catch (InterruptedException e) {
+            throw new IOException("Interrupted while running native binary", e);
+        }
+    }
+
+    @Test
     void nativeMysqlWireProtocol(@TempDir Path tempDir) throws IOException {
         assumeTrue(isLinux(), "Native MySQL requires Linux");
         // WIP MySQL wire protocol (handshake + auth switch + COM_QUERY + resultset).

@@ -419,6 +419,12 @@ public final class RuntimeDb3 {
                 ret
             .Ldb_connect_fail:
                 addq $40, %rsp
+            # S0/§421: scheme fora do contrato nativo (sqlite:/mysql://) lanca
+            # diagnostico nomeado DB001 em vez de handle nulo silencioso (R6).
+            .Ldb_connect_unsupported:
+                leaq .Ldb_unsupported_str(%rip), %rdi
+                call kof_throw_string
+                ud2
             .Ldb_connect_bad:
                 xorl %eax, %eax
                 popq %r15

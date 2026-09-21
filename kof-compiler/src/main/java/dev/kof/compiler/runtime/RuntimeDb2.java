@@ -276,17 +276,17 @@ public final class RuntimeDb2 {
                 cmpb $'s', 24(%rbx)
                 jne .Ldb_conn_maybe_mysql
                 cmpb $'q', 25(%rbx)
-                jne .Ldb_connect_bad
+                jne .Ldb_connect_unsupported
                 cmpb $'l', 26(%rbx)
-                jne .Ldb_connect_bad
+                jne .Ldb_connect_unsupported
                 cmpb $'i', 27(%rbx)
-                jne .Ldb_connect_bad
+                jne .Ldb_connect_unsupported
                 cmpb $'t', 28(%rbx)
-                jne .Ldb_connect_bad
+                jne .Ldb_connect_unsupported
                 cmpb $'e', 29(%rbx)
-                jne .Ldb_connect_bad
+                jne .Ldb_connect_unsupported
                 cmpb $':', 30(%rbx)
-                jne .Ldb_connect_bad
+                jne .Ldb_connect_unsupported
                 leaq 31(%rbx), %rdi
                 subq $40, %rsp
                 movq %rsp, %rsi
@@ -299,21 +299,21 @@ public final class RuntimeDb2 {
                 jmp .Ldb_connect_register
             .Ldb_conn_maybe_mysql:
                 cmpb $'m', 24(%rbx)
-                jne .Ldb_connect_bad
+                jne .Ldb_connect_unsupported
                 cmpb $'y', 25(%rbx)
-                jne .Ldb_connect_bad
+                jne .Ldb_connect_unsupported
                 cmpb $'s', 26(%rbx)
-                jne .Ldb_connect_bad
+                jne .Ldb_connect_unsupported
                 cmpb $'q', 27(%rbx)
-                jne .Ldb_connect_bad
+                jne .Ldb_connect_unsupported
                 cmpb $'l', 28(%rbx)
-                jne .Ldb_connect_bad
+                jne .Ldb_connect_unsupported
                 cmpb $':', 29(%rbx)
-                jne .Ldb_connect_bad
+                jne .Ldb_connect_unsupported
                 cmpb $'/', 30(%rbx)
-                jne .Ldb_connect_bad
+                jne .Ldb_connect_unsupported
                 cmpb $'/', 31(%rbx)
-                jne .Ldb_connect_bad
+                jne .Ldb_connect_unsupported
                 # mysql:// — parse [user[:pass]@]host[:port][/db] (also supports mysql://host:port/db)
                 # Simple host:port/db parsing from after "mysql://"
                 # If URL contains '@', treat host as after last '@' (fallback)

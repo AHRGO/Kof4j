@@ -14087,7 +14087,7 @@ p
 
 <!-- pt-switch --> **PT:** [§420 (pt_BR)](known-bugs.pt_BR.md#420--kofjsrunnerwritebytes-manteve-o-ultimo-cast-bruto-int-sobre-um-getarraysize-do-guest-mesma-familia-258773---corrigido-2109)
 
-## §421 — native `db.connect` ACCEPTS any scheme silently (e.g. `jdbc:h2:mem:`); the refusal only surfaces later at `kof_orm_*` as `unknown db connection: ` with no gap code — 🟡 OPEN (exposed by F2c3 21/09; root pre-existing)
+## §421 — native `db.connect` ACCEPTS any scheme silently (e.g. `jdbc:h2:mem:`); the refusal only surfaces later at `kof_orm_*` as `unknown db connection: ` with no gap code — ✅ FIXED 21/09 (S0, sessão 9092 — frente DB/db-parity) (exposed by F2c3 21/09; root pre-existing)
 
 - **Found (measured 21/09, gaps-db lane, during F2c3 full suite):**
   `MakealiveDbStateE2ETest.stateSurfaceNativeNeverSilent` went red on my
@@ -14120,6 +14120,29 @@ p
   (b) `.Lorm_conn`'s message may gain the code for the late path. Either fix
   flips the makealive probe back to green WITHOUT touching the test (its
   `out=` disjunct checks the runtime string ✓).
+- **Fix (21/09, S0, sessão 9092 — frente DB/db-parity):** the native
+  `kof_db_connect`/`kof_db_connect2` now RECUSE a scheme outside the contract
+  (`sqlite:`/`mysql://`) with a NAMED diagnostic at connect time
+  (`DB001: unsupported db scheme (native: sqlite:, mysql://)`), thrown via
+  `kof_throw_string` — no more silent null handle that only died later at
+  `.Lorm_conn` as the anonymous `unknown db connection: `. Redefined the 14
+  scheme-prefix `jne`s in `RuntimeDb2.kof_db_connect_inner` to a new
+  `.Ldb_connect_unsupported`; kept the REAL connection failures (auth / slot
+  limit / `sqlite3_open` error) in `.Ldb_connect_bad`. Constant in
+  `RuntimeDb1`; handler in `RuntimeDb3`; riscv/aarch mirrored in
+  `NativeRiscvAsmRtB47` (aarch derives via `NativeAarch64Translator`).
+  **Also fixed the proof-blocker:** `NativeBackend.connectsToMysql` became real
+  link-by-use — only a literal `mysql://`/`mariadb://`/`jdbc:mysql://` links
+  `libmariadb`; `jdbc:h2:`/other literals no longer do (dynamic URL stays
+  conservative), so the probe can LINK and RUN on a host without libmariadb
+  instead of failing the link (which made the probe pass for the wrong reason).
+  **Proof (measured on this host, skipped=0):**
+  `MakealiveDbStateE2ETest.stateSurfaceNativeNeverSilent` green,
+  `KofDbE2ETest.nativeUnsupportedSchemeNamesGapNotSilent` (new pin: rc≠0 +
+  `DB001` + no `unknown db connection`) green,
+  `NativeDbSchemeRefusalAsmTest` (deterministic codegen) green, `LinkByUseTest`
+  3/3 green. Cross riscv/aarch: `.set`/`.asciz` pattern validated with
+  `riscv64-linux-gnu-as` (sysroot absent → cross E2E stays an honest skip).
 - **Related:** DB001 (JS delegate — same "out of contract" family), F2c3
   (exposer), §419 (re-land lesson: the red here is real, not ledger drift).
 - **Disposition (measured 21/09, gaps-db lane):** the test's H2 pick is its

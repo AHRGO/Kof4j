@@ -7,8 +7,8 @@
 > prova (Q0–Q7) e este doc só **move para `docs/stdlib/`** quando a paridade
 > estiver completa.
 
-**Dono:** lane docs/plataforma (nomeada 21/09, `D-DB-PARITY-OWNER`; S0/S1 autorizadas) · **Registros/plano:** lane docs/plataforma
-**Branch:** `beta-0.5.0` · **Estado:** fila aberta, S0 não iniciada
+**Dono:** lane `gaps-db` (repassada 21/09 por ordem da mantenedora, sob `D-DB-PARITY-OWNER`; S0/S1 autorizadas) · **Registros/plano:** lane docs/plataforma
+**Branch:** `beta-0.5.0` · **Estado:** S0 ✅ FEITO (21/09, sessão 9092) — recusa nativa honesta de scheme não suportado com o código nomeado `DB001`, mais link-by-use real (sem link de `libmariadb` para literais não-mysql); S1 em andamento (alias `mariadb://`); S2–S4 seguem
 
 ---
 
@@ -55,12 +55,20 @@ por scheme é a prova.
 
 ## Fatias
 
-- **S0 — diagnóstico interino honesto (limpa o §421).** No Native,
-  `kof_db_connect` deve **recusar** um scheme que não implementa com o código
-  documentado, em vez de registrar um handle tipo-0. Transitório: removido por
-  scheme conforme S1–S4 pousam. *Prova:*
-  `MakealiveDbStateE2ETest.stateSurfaceNativeNeverSilent` verde + um pin de que um
-  scheme não suportado dá o diagnóstico, não o crash tardio do `.Lorm_conn`.
+- **S0 — diagnóstico interino honesto (limpa o §421). ✅ FEITO 21/09 (sessão 9092).**
+  No Native, `kof_db_connect`/`kof_db_connect2` agora **recusam** scheme fora de
+  `sqlite:`/`mysql://` com o código nomeado (`DB001: unsupported db scheme …`)
+  lançado no connect, em vez de handle nulo silencioso que só morria depois no
+  `.Lorm_conn`. Falhas reais de conexão (auth / limite de slot / `sqlite3_open`)
+  ficaram em `.Ldb_connect_bad`. x86-64 + riscv/aarch (`NativeRiscvAsmRtB47`,
+  aarch pelo translator). Também tornei `NativeBackend.connectsToMysql` link-by-use
+  real (só literal `mysql://`/`mariadb://`/`jdbc:mysql://` liga `libmariadb`), para
+  a sonda linkar+rodar em host sem a lib. Transitório: removido por scheme
+  conforme S1–S4 pousam. *Prova (medida, skipped=0):*
+  `MakealiveDbStateE2ETest.stateSurfaceNativeNeverSilent` verde +
+  `KofDbE2ETest.nativeUnsupportedSchemeNamesGapNotSilent` (rc≠0, `DB001`, sem
+  `unknown db connection`) + `NativeDbSchemeRefusalAsmTest` (codegen
+  determinístico) + `LinkByUseTest` 3/3.
 - **S1 — `mariadb://` = alias mysql-wire (Native, 3 arcos).** Parsear `mariadb://`
   no mesmo caminho de `mysql://`; `kof_db_type` reporta a família mysql.
   *Prova:* E2E nativo connect + query em x86-64 (cross guardado por toolchain).

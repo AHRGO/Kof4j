@@ -139,7 +139,7 @@ fechado/aberto em EN e PT, pela regra `DONE|FEITO` do próprio gate (divergênci
 agora cobre **todos os pares EN↔PT** deste diretório — um `## 1.` no EN casado com um `# 1.` no PT
 é nomeado (um deslize de nível plantado no README PT foi pego).
 
-**24 itens na fila aberta** (ressincronizado 21/09 ~13:1x — 20→19
+**23 itens na fila aberta** (ressincronizado 21/09 — 20→19
 quando **§380** (codegen JS de `if` aninhado com `throw`) foi formalizado ✅
 `9f383bcf`, re-medido 16/0F no tip; 19→18 quando **§381** (OOM do keyword
 entity-field no parser) foi corrigido ✅ `576a1dcb`; 18→17 quando **§394**

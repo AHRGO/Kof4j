@@ -11617,7 +11617,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 <!-- en-switch --> **EN:** [§420 (en)](known-bugs.md#420--kofjsrunnerwritebytes-kept-the-last-raw-int-cast-over-a-guest-getarraysize-same-258773-family---fixed-2109)
 
 
-## §421 — `db.connect` nativo ACEITA qualquer scheme silenciosamente (ex.: `jdbc:h2:mem:`); a recusa só aparece depois no `kof_orm_*`, como `unknown db connection: ` sem código de gap — 🟡 ABERTO (exposto pelo F2c3 21/09; raiz pre-existente)
+## §421 — `db.connect` nativo ACEITA qualquer scheme silenciosamente (ex.: `jdbc:h2:mem:`); a recusa só aparece depois no `kof_orm_*`, como `unknown db connection: ` sem código de gap — ✅ FIXED 21/09 (S0, sessão 9092 — frente DB/db-parity) (exposto pelo F2c3 21/09; raiz pre-existente)
 
 - **Encontrado (medido 21/09, lane gaps-db, na suíte completa do F2c3):**
   `MakealiveDbStateE2ETest.stateSurfaceNativeNeverSilent` ficou vermelho no
@@ -11676,6 +11676,28 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
   entregam os schemes de verdade. Dono: frente DB/ORM (a nomear); plano/registros
   pela lane docs/plataforma.
 
+- **Correção (21/09, S0, sessão 9092 — frente DB/db-parity):** o
+  `kof_db_connect`/`kof_db_connect2` nativo agora RECUSA scheme fora do contrato
+  (`sqlite:`/`mysql://`) com diagnóstico NOMEADO no connect
+  (`DB001: unsupported db scheme (native: sqlite:, mysql://)`), lançado por
+  `kof_throw_string` — sem handle nulo silencioso que só morria depois no
+  `.Lorm_conn` como o anônimo `unknown db connection: `. Os 14 `jne` de prefixo
+  de scheme em `RuntimeDb2.kof_db_connect_inner` foram redirecionados para o novo
+  `.Ldb_connect_unsupported`; as falhas REAIS (auth / limite de slot / erro de
+  `sqlite3_open`) seguem em `.Ldb_connect_bad`. Constante em `RuntimeDb1`;
+  handler em `RuntimeDb3`; riscv/aarch espelhados em `NativeRiscvAsmRtB47`
+  (aarch deriva pelo `NativeAarch64Translator`). **Também corrigido o
+  bloqueador da prova:** `NativeBackend.connectsToMysql` virou link-by-use real —
+  só literal `mysql://`/`mariadb://`/`jdbc:mysql://` liga `libmariadb`;
+  `jdbc:h2:`/outros não (URL dinâmica segue conservadora), então a sonda LINK A e
+  RODA em host sem libmariadb, em vez de falhar no link (o que fazia a sonda
+  passar pelo motivo errado). **Prova (medida neste host, skipped=0):**
+  `MakealiveDbStateE2ETest.stateSurfaceNativeNeverSilent` verde,
+  `KofDbE2ETest.nativeUnsupportedSchemeNamesGapNotSilent` (pin novo: rc≠0 +
+  `DB001` + sem `unknown db connection`) verde, `NativeDbSchemeRefusalAsmTest`
+  (codegen determinístico) verde, `LinkByUseTest` 3/3 verde. Cross riscv/aarch:
+  padrão `.set`/`.asciz` validado com `riscv64-linux-gnu-as` (sysroot ausente →
+  E2E cross segue skip honesto).
 <!-- en-switch --> **EN:** [§421 (en)](known-bugs.md#421--native-dbconnect-accepts-any-scheme-silently-eg-jdbch2mem-the-refusal-only-surfaces-later-at-kof_orm_-as-unknown-db-connection--with-no-gap-code---open-exposed-by-f2c3-2109-root-pre-existing)
 
 

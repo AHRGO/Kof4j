@@ -138,7 +138,7 @@ divergence is named). Finally, the section numbering/level parity that was check
 `DECISIONS.md` now covers **every EN↔PT doc pair** in this directory — a `## 1.` in EN matched to
 a `# 1.` in PT is named (a planted level slip in the PT README was caught).
 
-**24 items in the open queue** (resynced 21/09 ~13:1x — 20→19 when
+**23 items in the open queue** (resynced 21/09 — 20→19 when
 **§380** (JS nested-`if`/`throw` codegen) was formalized ✅ `9f383bcf`,
 re-measured 16/0F at the tip; 19→18 when **§381** (entity-field keyword
 OOM in the parser) was fixed ✅ `576a1dcb`; 18→17 when **§394** (test harness

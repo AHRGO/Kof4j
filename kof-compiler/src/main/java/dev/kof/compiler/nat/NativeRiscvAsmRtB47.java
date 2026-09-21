@@ -300,25 +300,25 @@ public final class NativeRiscvAsmRtB47 {
                     # prefixo "sqlite:" em data[0..6] (offsets 24..30)
                     lbu  t0, 24(a0)
                     li   t1, 115
-                    bne  t0, t1, .Lconn_bad
+                    bne  t0, t1, .Lconn_unsupported
                     lbu  t0, 25(a0)
                     li   t1, 113
-                    bne  t0, t1, .Lconn_bad
+                    bne  t0, t1, .Lconn_unsupported
                     lbu  t0, 26(a0)
                     li   t1, 108
-                    bne  t0, t1, .Lconn_bad
+                    bne  t0, t1, .Lconn_unsupported
                     lbu  t0, 27(a0)
                     li   t1, 105
-                    bne  t0, t1, .Lconn_bad
+                    bne  t0, t1, .Lconn_unsupported
                     lbu  t0, 28(a0)
                     li   t1, 116
-                    bne  t0, t1, .Lconn_bad
+                    bne  t0, t1, .Lconn_unsupported
                     lbu  t0, 29(a0)
                     li   t1, 101
-                    bne  t0, t1, .Lconn_bad
+                    bne  t0, t1, .Lconn_unsupported
                     lbu  t0, 30(a0)
                     li   t1, 58
-                    bne  t0, t1, .Lconn_bad
+                    bne  t0, t1, .Lconn_unsupported
                     # sqlite3_open(data+7, &slot@96(sp))
                     sd   zero, 96(sp)
                     addi a0, a0, 31
@@ -387,6 +387,10 @@ public final class NativeRiscvAsmRtB47 {
                     sd   s4, 0(t0)
                     mv   a0, s4
                     j    .Lconn_out
+                .Lconn_unsupported:
+                    la   a0, .Ldb_unsupported_str
+                    call kof_throw_string
+                    j    .Lconn_bad
                 .Lconn_bad:
                     li   a0, 0
                 .Lconn_out:
@@ -561,6 +565,18 @@ public final class NativeRiscvAsmRtB47 {
                     .long 8
                     .long 0
                     .asciz "rollback"
+                # S0/§421: scheme fora do contrato cross (sqlite:) -> recusa
+                # nomeada DB001, nunca handle nulo silencioso (R6).
+                .align 2
+                .Ldb_unsupported_str:
+                    .long 1
+                    .long 0
+                    .quad 0
+                    .long .Ldb_unsupported_len
+                    .long 0
+                .Ldb_unsupported_body:
+                    .asciz "DB001: unsupported db scheme (native: sqlite:, mysql://)"
+                    .set .Ldb_unsupported_len, . - .Ldb_unsupported_body - 1
                 .section .text
 
                 """);
