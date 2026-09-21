@@ -32,24 +32,37 @@ waived() { # $1=id $2=lang — citação histórica listada no waiver file
 # na MESMA linha. Negativas ("ainda não FIXED", "ficaria ✅") só pegam se a
 # linha inteira alegar o fato — histórico citado no CHANGELOG é fato, e se o
 # ledger discorda disso É o drift que queremos ver.
-CLAIM_RE='§([0-9]+)[^§]{0,80}(✅ FIXED|FIXED [0-9]|flips? ✅|✅\(flip|flip ✅|FECHAD|✅ — |✅\(2|CORRIDO 2|✅ EN)'
+CLAIM_RE='§([0-9]+)[^§]{0,80}(✅|fixed|fechad|corrigid|closed|encerrad)'
 
-check_pair() { # $1=changelog $2=id lingua
-    local cl="$1" lang="$2" drift=0 line id live
-    local opens
-    opens="$(open_ids "$lang")"
-    [ -f "$cl" ] || { echo "FAIL: sem $cl"; return 1; }
-    while IFS= read -r line; do
-        id="$(printf '%s' "$line" | grep -oE '§[0-9]+' | head -1 | tr -d '§')"
-        [ -n "$id" ] || continue
-        waived "$id" "$lang" && continue
-        if printf '%s\n' "$opens" | grep -qx "$id"; then
-            echo "DRIFT [$lang]: $cl afirma §$id fechado mas o ledger está vivo:"
-            echo "    ${line:0:110}"
-            drift=1
-        fi
-    done < <(grep -E "$CLAIM_RE" "$cl" | grep -E "§[0-9]+")
-    return $drift
+check_pair() { # $1=changelog $2=id lingua $3=live-ids $4=waivers-file
+    python3 - "$1" "$2" "$3" "$4" << 'PYEOF'
+import re, sys
+cl, lang, opens, wfile = sys.argv[1], sys.argv[2], set(sys.argv[3].split()), sys.argv[4]
+drift = 0
+try:
+    waived = {tuple(l.split()[:2]) for l in open(wfile, encoding="utf-8")
+              if l.strip() and not l.strip().startswith("#")}
+except OSError:
+    waived = set()
+sec = re.compile("§([0-9]+)")
+tok = re.compile(r"(?i)(✅|fixed|fechad|corrigid|closed|encerrad)")
+for line in open(cl, encoding="utf-8"):
+    if "retract" in line.lower() or "retrat" in line.lower():
+        continue
+    secs = [(m.start(), int(m.group(1))) for m in sec.finditer(line)]
+    for m in tok.finditer(line):
+        prev = [s for s in secs if s[0] < m.start()]
+        if not prev:
+            continue
+        sp, sid = max(prev, key=lambda x: x[0])
+        if m.start() - sp > 80:
+            continue
+        if str(sid) in opens and (str(sid), lang) not in waived:
+            print(f"DRIFT [{lang}]: {cl} afirma \u00a7{sid} fechado mas o ledger est\u00e1 vivo:")
+            print("    " + line.strip()[:110])
+            drift = 1
+sys.exit(drift)
+PYEOF
 }
 
 if [ "${1:-}" = "--selftest" ]; then
@@ -86,10 +99,10 @@ for pair in "CHANGELOG.md:EN:docs/bugs-and-gaps/known-bugs.md" \
             "CHANGELOG.pt_BR.md:PT:docs/bugs-and-gaps/known-bugs.pt_BR.md"; do
     IFS=: read -r cl lang led <<< "$pair"
     [ -f "$led" ] || continue
-    check_pair "$cl" "$lang" || rc=1
+    check_pair "$cl" "$lang" "$(open_ids "$lang")" "$WAIVERS" || rc=1
 done
 if [ $rc -eq 0 ]; then
-    n_en="$(grep -cE "$CLAIM_RE" CHANGELOG.md 2>/dev/null || true)"
+    n_en="$(grep -ciE "§[0-9]+[^§]{0,80}(✅|fixed|fechad|corrigid|closed|encerrad)" CHANGELOG.md 2>/dev/null || true)"
     echo "OK: CHANGELOG×ledger consistent (${n_en:-0} afirmações EN conferidas)"
 fi
 exit $rc
