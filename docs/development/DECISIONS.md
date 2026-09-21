@@ -65,6 +65,9 @@ A navigation aid, not a decision by itself. Ordered as in this file.
 - **D-SLOT-PIN** — §383/#561 blessed-miss stored value
 - **D-RELEASE-0.5.0-GATE** — 0.5.0 release gate
 - **D-FFI-STRUCT** — FFI struct/array ABI (D6)
+- **R6-SCOPE** — incremental delivery does not breach R6
+- **D-R3-BUFFER** — out-buffer = nominal `Buffer(U8)`
+- **D-R3-HANDLE-LIFETIME** — `Handle` memory is automatic
 - **D-ARTIFACT-TRUST** — 1.0 artifact trust contract
 
 ---

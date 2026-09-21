@@ -63,6 +63,9 @@ Auxílio de navegação, não é uma decisão por si só. Ordenado como neste ar
 - **D-SLOT-PIN** — §383/#561 valor armazenado do "miss abençoado"
 - **D-RELEASE-0.5.0-GATE** — gate de release 0.5.0
 - **D-FFI-STRUCT** — ABI de struct/array da FFI (D6)
+- **R6-SCOPE** — entrega incremental não fere o R6
+- **D-R3-BUFFER** — out-buffer = tipo nominal `Buffer(U8)`
+- **D-R3-HANDLE-LIFETIME** — memória do `Handle` é automática
 - **D-ARTIFACT-TRUST** — contrato de confiança dos artefatos 1.0
 
 ---
@@ -2854,3 +2857,45 @@ numa bytes-face continua erro de compilação (`SEM099`, §388-A) — intocado p
 esta decisão. Testes: célula `arrayprint` em `ConformanceMatrixTest`
 (JVM/Script/JS/nativo), `ArrayPrintFormatE2ETest`, goldens riscv64/aarch64 em
 `Native*E2ETest` (CI/qemu).
+
+## R6-SCOPE — entrega incremental NÃO fere o R6 (mantenedora, 21/09/2026)
+
+**Estado:** `DECIDIDO` · esclarecimento ABSOLUTO do R6 (nunca silencioso).
+
+O R6 proíbe **silêncio**, não **escopo parcial**. Uma entrega que é uma **fatia
+vertical completa para o seu escopo declarado**, com os caminhos ainda não
+suportados falhando por **diagnóstico honesto** (`FFI001`/`FFI002`/`XXX00x` —
+que *é* o R6), **não** fere o R6. O R6 é violado só quando o gap é **escondido**:
+stub silencioso, fallback fraco, divergência que o usuário não enxerga.
+
+Consequência: toda capacidade ainda não entregue é construída
+**incrementalmente** (ex. JVM-first, com Native/JS como gaps *declarados e
+diagnosticados* — R7) e cada fatia pousa inteira para o seu escopo. "Não dá
+para fazer tudo de uma vez" não é motivo para adiar a fatia; "esconder a parte
+que falta" é o único movimento proibido.
+
+## D-R3-BUFFER — out-buffer é o tipo nominal `Buffer(U8)` (mantenedora, 21/09/2026)
+
+**Estado:** `DECIDIDO` · **Opção escolhida:** tipo nominal (de reusar `Byte[]` /
+nominal `Buffer(U8)` / separar).
+
+D6-3/D-R3-3.3 fixaram que out-buffers existem como tipo ABI próprio
+(`Buffer(U8, INOUT)`, copy-in / chamada / copy-back, **nunca `S`**). Esta
+decisão fixa a **grafia que o usuário escreve**: um tipo **nominal `Buffer(U8)`**
+na assinatura do `extern` — *não* um reuso de `Byte[]` (o `T[]` escalar segue o
+`ptr` read-only da fatia 3/D6-2). `Buffer` continua um tipo ABI distinto mesmo
+quando um registrador carrega um endereço (R6).
+
+## D-R3-HANDLE-LIFETIME — a memória do `Handle` é automática (mantenedora, 21/09/2026)
+
+**Estado:** `DECIDIDO` · **Direção escolhida:** automática (de `Handle<T>` único,
+ou adiar).
+
+D-R3-3.3 escolheu um `Handle` opaco nominal (nunca um inteiro, sem aritmética de
+ponteiro). Esta decisão fixa a sua **vida**: alocação/desalocação devem ser
+**automáticas — o programador nunca gerencia memória** (sem `malloc`/`free`
+manual). O `Handle` portanto não pousa como tipo FFI isolado agora; ele é
+entregue junto com o mecanismo de recurso/vida gerenciado pela linguagem (frente
+scoped-resources / RAII, `docs/development/future/scoped-resources-plan.md`),
+que é o dono da estratégia de alocação. Até lá, externs com `Handle` seguem
+`FFI001`/`FFI002` honestos (R6).

@@ -920,6 +920,15 @@ em jogo. São o mecanismo anti-"god language":
 4. **Nunca silencioso por domínio** (R6): todo gap de domínio tem código
    (`INFRA00x`, `DATA00x`, `SCI00x`, `BIO00x`, `SECPQ`, ...) + entrada na
    matriz de paridade. Nunca stub silencioso, nunca fallback fraco.
+   **R6 é sobre SILÊNCIO, não sobre ESCOPO (mantenedora 21/09, ABSOLUTO):** uma
+   entrega **incremental** — uma fatia vertical completa para o seu escopo
+   *declarado*, com os caminhos ainda não suportados falhando por
+   **diagnóstico honesto** (`FFI001`/`FFI002`/`XXX00x`, que é o próprio R6) —
+   **NÃO fere o R6**. O R6 é violado só quando o gap é **escondido**: stub
+   silencioso, fallback fraco, divergência que o usuário não enxerga. Entregar
+   JVM-first e deixar Native/JS como gaps *declarados e diagnosticados* **é** o
+   caminho incremental sancionado (R7); bloquear "por causa do R6" é o
+   anti-padrão.
 5. **Tiers de estabilidade** (R5): namespace/pacote é `stable` ou
    `experimental`. Camada de pacotes oficiais nasce `experimental` e só
    promove a `stable` com DoD completo (3 targets ou gap diagnosticado, E2E

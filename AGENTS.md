@@ -918,6 +918,14 @@ at stake. They are the anti-"god language" mechanism:
 4. **Never silent per domain** (R6): every domain gap has a code
    (`INFRA00x`, `DATA00x`, `SCI00x`, `BIO00x`, `SECPQ`, ...) + an entry in the
    parity matrix. Never a silent stub, never a weak fallback.
+   **R6 is about SILENCE, not about SCOPE (maintainer 21/09, ABSOLUTE):** an
+   **incremental** delivery — a complete vertical slice for its *declared*
+   scope, with the not-yet-supported paths failing through **honest
+   diagnostics** (`FFI001`/`FFI002`/`XXX00x`, which is R6 itself) — **does NOT
+   breach R6**. R6 is violated only when a gap is **hidden**: a silent stub, a
+   weak fallback, a divergence the user cannot see. Delivering JVM-first and
+   leaving Native/JS as *declared, diagnosed* gaps **is** the sanctioned
+   incremental path (R7); blocking it "because R6" is the anti-pattern.
 5. **Stability tiers** (R5): a namespace/package is `stable` or
    `experimental`. The official packages layer is born `experimental` and only
    promotes to `stable` with a complete DoD (3 targets or diagnosed gap, E2E
