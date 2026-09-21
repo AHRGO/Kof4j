@@ -46,6 +46,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (`WorkflowE2ETest`, `KofJsE2ETest`, `IoBoolFacesE2ETest`, pump).
 
 ### In development
+  - **§388-B closed — `println(Int[])` is the §107 container format** (21/09, maintainer
+    vote `D-ARRAY-PRINT`): printing a whole primitive array now gives `[65, 66]` on every
+    target — JVM/Script through the new `kof_array_to_string` (JvmRuntimeCore; interpreter
+    by reflection), JS by re-routing `valueOf(ArrayType)` into `kofFormat`, x86 native by
+    its own asm twin (riscv64/aarch64 goldens CI-verified). The identity `[I@…` and the
+    bracket-less JS face are both gone; `io.md` declares the format and the `SEM099`
+    bytes-param contract. Pinned by `arrayprint` (ConformanceMatrixTest, all four targets
+    incl. native) + `ArrayPrintFormatE2ETest` 7/7; §388 flips ✅.
   - **3.6 design landed — `docs/development/future/secrets-plan.md` (+PT)** (21/09): the
     Stage-5 answer to "Secrets in logs: NO PROTECTION" — value type `Secret` (reveal-gated,
     constant-time equals, fixed `Secret(*** )` print format declared up front), three-layer

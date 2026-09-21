@@ -306,6 +306,18 @@ public final class NativeRiscvCrossOps {
                 sb.append("    call kof_box_to_string\n");
                 other.pushRiscv(sb, "a0");
                 return;
+            } else if (vArgType instanceof Type.ArrayType vat) {
+                // §388-B-cross (voto 21/09): array cru no formato de container
+                // ([65, 66]) — kof_array_to_string espelha o x86; MESMA
+                // gramática de descritor (NativePrintDescriptors) e bloco
+                // [len@16][esz@20][data@24]. Aarch64 herda via tradutor.
+                sb.append("    pop a0\n");
+                String ld = NativePrintDescriptors.emit(sb, nb.printDescriptorCounter++,
+                        NativePrintDescriptors.node(nb, vat.componentType(), false));
+                sb.append("    la a1, ").append(ld).append("\n");
+                sb.append("    call kof_array_to_string\n");
+                other.pushRiscv(sb, "a0");
+                return;
             } else if (vArgType instanceof Type.ClassType ct && (BuiltinTypes.isList(ct)
                     || BuiltinTypes.isSet(ct) || BuiltinTypes.isMap(ct))) {
                 // §107-cross: List/Map/Set são tipos de runtime (sem vtable

@@ -52,6 +52,7 @@ Auxílio de navegação, não é uma decisão por si só. Ordenado como neste ar
 - **D-WORKFLOW-RUN** — `kof workflow run`
 - **D-MAKEALIVE** — Kof Makealive (Estágio 3)
 - **D-MAKEALIVE-CLI** — contrato da 3.8: `kof makealive plan|apply|destroy` (20/09)
+- **D-ARRAY-PRINT** — §388-B: `println(Int[])` é o formato de container §107 (21/09)
 - **D-KOF-AS-CLOUD** — Kof tem que SER a nuvem
 - **D-BOOTSTRAP** — o bootstrapper (Kof em Kof)
 - **D-DB-GAPS** — gaps órfãos de DB/ORM
@@ -2813,3 +2814,27 @@ Ordem: Kof precisa de uma engine gráfica própria para games — a recomendaç�
 ## Adendo 4 D-GRAPHICS-GAMING (20/09/2026, mantenedora) — Kof terá ENGINE GRÁFICA PRÓPRIA para jogos
 
 Ordem: Kof precisa de uma engine gráfica própria para games — a recomendação interop-first do plano (R9) está REVOGADA para este domínio (precedente tipo D-UNIVERSAL). A engine é da Kof (código Kof/platform, pilotada pela casa), exposta em idioma zero-boilerplate (regra 11: idiomatic, fácil, sem complexidade acidental); bindings FFI ficam limitados ao que não é engine (janela/GPU/device de áudio). Consequência: plano `future/graphics-gaming-plan.md` §§3–4+Q1/Q5/Q7 + README/learn/training/docs de UI-mídia precisam REESCRITA nesta direção; R9 ganha exceção nomeada no DECISIONS. Decisões de detalhe (nome da engine, primeira fatia, formatos) continuam regra 6 via Qs do plano.
+
+## D-ARRAY-PRINT — §388-B: imprimir um `Int[]` inteiro é formato de container (21/09, mantenedora)
+
+A entrada §388 registrou a paridade reversa das bytes-faces: JVM/Script
+imprimiam `[I@65629ac6` (toString cru do `int[]` Java) enquanto o KofJS imprimia
+`65,66,67` — nenhuma linha do corpus declarava como um array primitivo se
+IMPRIME (a linha de formato de container da matriz cobria só List/Map/aninhados).
+A mantenedora decidiu no chat em 21/09 (regra 6): o **formato de container
+vence** — isto é, a gramática §107 já valendo para coleções (oracle =
+`ArrayList.toString`, `[65, 66]` com colchetes e separador `, `; o JS espelha via
+`kofFormat`, os três alvos nativos via `kof_array_to_string`).
+
+Nota de calibragem: a opção do voto foi redigida "65,66,67" (a face JS da
+época), mas o que se votou contra foi a forma de IDENTIDADE; o formato de
+container da casa — declarado para coleções desde §107 e fixado em
+`conformance-matrix.pt_BR.md` — é `[65, 66]`. A implementação segue §107, não o
+texto literal da opção.
+
+Escopo: `println(new Int[n])`, `println(readBytes())`, plano/aninhado/vazio,
+records e Strings pelo toString de conteúdo do próprio elemento. Passar `List`
+numa bytes-face continua erro de compilação (`SEM099`, §388-A) — intocado por
+esta decisão. Testes: célula `arrayprint` em `ConformanceMatrixTest`
+(JVM/Script/JS/nativo), `ArrayPrintFormatE2ETest`, goldens riscv64/aarch64 em
+`Native*E2ETest` (CI/qemu).

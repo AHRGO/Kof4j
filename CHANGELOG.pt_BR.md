@@ -33,6 +33,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 
 ### Em desenvolvimento
+  - **§388-B fechado — `println(Int[])` é o formato de container §107** (21/09, voto da
+    mantenedora `D-ARRAY-PRINT`): imprimir um array primitivo inteiro agora dá `[65, 66]`
+    em todo target — JVM/Script pelo novo `kof_array_to_string` (JvmRuntimeCore; o
+    interpretador por reflexão), JS roteando `valueOf(ArrayType)` pelo `kofFormat`, e o
+    x86 nativo pelo gêmeo em asm (riscv64/aarch64 medidos na CI). A identidade `[I@…` e a
+    face JS sem colchetes morreram; o `io.md` declara o formato e o contrato `SEM099` dos
+    params de bytes. Fixado pela célula `arrayprint` (ConformanceMatrixTest, os quatro
+    targets incl. nativo) + `ArrayPrintFormatE2ETest` 7/7; §388 vira ✅.
   - **Design 3.6 pousado — `docs/development/future/secrets-plan.md` (+EN)** (21/09): a
     resposta do Estágio 5 a "Secrets em logs: SEM PROTEÇÃO" — value type `Secret`
     (reveal-gated, equals em tempo constante, formato de impressão `Secret(*** )` declarado

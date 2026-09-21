@@ -54,6 +54,7 @@ A navigation aid, not a decision by itself. Ordered as in this file.
 - **D-WORKFLOW-RUN** — `kof workflow run`
 - **D-MAKEALIVE** — Kof Makealive (Stage 3)
 - **D-MAKEALIVE-CLI** — 3.8 contract: `kof makealive plan|apply|destroy` (20/09)
+- **D-ARRAY-PRINT** — §388-B: `println(Int[])` is the §107 container format (21/09)
 - **D-KOF-AS-CLOUD** — Kof must BE the cloud
 - **D-BOOTSTRAP** — the bootstrapper (Kof in Kof)
 - **D-DB-GAPS** — DB/ORM orphan gaps
@@ -2800,3 +2801,26 @@ output IS the diagnosis, rc 1. Proof: `CmdMakealiveTest` 7/7 + `MakealiveMaxGenE
 ## D-GRAPHICS-GAMING addendum 4 (09/20/2026, maintainer) — Kof WILL HAVE ITS OWN graphics engine for games
 
 Order: Kof needs its own graphics engine for games — the plan's interop-first recommendation (R9) is REVOKED for this domain (D-UNIVERSAL-style precedent). The engine is Kof's (Kof/platform code, house-driven), exposed in zero-boilerplate idiom (rule 11: idiomatic, easy, no accidental complexity); FFI bindings stay limited to the non-engine layer (window/GPU/audio device). Consequence: the plan §§3–4 + Q1/Q5/Q7 in `future/graphics-gaming-plan.md` + README/learn/training/UI-media docs need REWRITE in this direction; R9 gains a named exception in DECISIONS. Detail choices (engine name, first slice, formats) stay rule 6 via the plan open Qs.
+
+## D-ARRAY-PRINT — §388-B: printing a whole `Int[]` is container format (21/09, maintainer)
+
+The §388 entry logged the reverse parity of the bytes faces: JVM/Script printed
+`[I@65629ac6` (raw Java toString of `int[]`) while KofJS printed `65,66,67` —
+no corpus line declared how a primitive array PRINTS (the container-format row of
+the matrix covered List/Map/nested only). The maintainer settled it in chat on
+21/09 (rule 6): the **container format wins** — i.e. the §107 grammar already in
+place for collections (oracle = `ArrayList.toString`, `[65, 66]` with brackets
+and `, ` separators; JS mirrors via `kofFormat`, the three native targets via
+`kof_array_to_string`).
+
+Calibration note: the vote option was phrased "65,66,67" (the then-current JS
+face), but what was voted against is the IDENTITY form; the house container
+format — already declared for collections since §107 and pinned in
+`conformance-matrix.md` — is `[65, 66]`. The implementation follows §107, not
+the literal text of the option.
+
+Scope: `println(new Int[n])`, `println(readBytes())`, flat/nested/empty, records
+and Strings by the element's own content toString. Passing a `List` to a bytes
+face stays a compile error (`SEM099`, §388-A) — untouched by this decision.
+Tests: `arrayprint` cell in `ConformanceMatrixTest` (JVM/Script/JS/native),
+`ArrayPrintFormatE2ETest`, riscv64/aarch64 goldens in `Native*E2ETest` (CI/qemu).

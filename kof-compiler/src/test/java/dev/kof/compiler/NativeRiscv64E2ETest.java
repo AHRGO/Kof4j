@@ -993,6 +993,42 @@ main() {
     }
 
     @Test
+    void nativeArrayPrintMatchesJvmGolden(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        // §388-B-cross (voto da mantenedora 21/09): println de array CRU usa o
+        // formato de container da casa ([65, 66]) — kof_array_to_string riscv
+        // espelha o x86 (bloco [len@16][esz@20][data@24], slot de 8B, mesma
+        // gramática de descritor; aninhado = tag 11). Antes: "A" (elem[0]
+        // como char) no x86 — paridade reversa medida do §388-B.
+        String out = runRiscv64(tempDir, """
+                main() {
+                    val b = new Int[2]
+                    b[0] = 65
+                    b[1] = 66
+                    println(b)
+                    val n = new Int[1][2]
+                    n[0][0] = 65
+                    n[0][1] = 66
+                    println(n)
+                    val e = new Int[0]
+                    println(e)
+                    val s = new String[1]
+                    s[0] = "x"
+                    println(s)
+                    val l = new Long[2]
+                    l[0] = 100000000000L
+                    l[1] = 2
+                    println(l)
+                    val t = new Bool[2]
+                    t[0] = true
+                    t[1] = false
+                    println(t)
+                }
+                """);
+        assertEquals("[65, 66]\n[[65, 66]]\n[]\n[x]\n[100000000000, 2]\n[true, false]", out);
+    }
+
+    @Test
     void nativeCollectionPrintRecordNestedMatchesJvmGolden(@TempDir Path tempDir) throws IOException {
         assumeToolchain();
         // §107 record/nested (face (4), 19/09): elementos que são RECORDS,

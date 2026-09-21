@@ -327,6 +327,27 @@ class ConformanceMatrixTest {
         // em NativeE2ETest#execCollectionPrintMatchesJvmGolden +
         // Native{Riscv64,Aarch64}E2ETest#nativeCollectionPrintMatchesJvmGolden
         // (golden = oracle JVM medido, byte-idêntico nos 3 targets nativos).
+        // §388-B (voto da mantenedora 21/09): array CRU segue a mesma gramática
+        // §107 ([65, 66]); o golden acima cobre List/Map/Set. Bool-em-array fica
+        // fora daqui pela mesma razão da linha acima (§107 face number-truthness
+        // em JS/Script quando o host guarda 1/0); cobre-se em ArrayPrintFormatE2ETest
+        // (JVM, onde o box é Boolean real).
+        matrix("arrayprint", """
+                main() {
+                    val b = new Int[2]
+                    b[0] = 65
+                    b[1] = 66
+                    println(b)
+                    val n = new Int[1][2]
+                    n[0][0] = 65
+                    n[0][1] = 66
+                    println(n)
+                    println(new Int[0])
+                    val s = new String[1]
+                    s[0] = "x"
+                    println(s)
+                }
+                """, "[65, 66]\n[[65, 66]]\n[]\n[x]", Set.of(), tempDir);
         matrix("collprint", """
                 record Point(Int x, Int y)
                 main() {

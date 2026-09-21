@@ -11255,10 +11255,21 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
   inalterado. Fixado por `IoArrayArgE2ETest` (5/5: negativos JVM + JS +
   Script, caso de var vinculada, controle positivo).
 
-> **Estado:** 🟡 PARCIAL 20/09 — Repro A CORRIGIDO (`SEM099`); Repro B ABERTO:
-  uma decisão de contrato rule-6 sobre como `println(Int[])` imprime (JVM/Script
-  `[I@…` vs JS `65,66,67`) precisa do aval da mantenedora antes de qualquer
-  código.
+- **Conserto B (pousado 21/09, voto `DECISIONS.md` §D-ARRAY-PRINT):** a regra 6
+  foi decidida no chat pela mantenedora — imprimir um array primitivo inteiro É o
+  formato de container §107 (`[65, 66]`, oracle `ArrayList.toString`). JVM/Script
+  passam por `kof_array_to_string` (template do JvmRuntimeCore; o interpretador o
+  carrega por reflexão), o JS roteia `valueOf(ArrayType)` pelo `kofFormat`, e o
+  x86 nativo ganhou o gêmeo em asm (`NativeRiscvAsmRtB39` + tag 11 no descritor;
+  os goldens riscv64/aarch64 rodam na CI/qemu). Fixado pela célula `arrayprint`
+  do `ConformanceMatrixTest`, `ArrayPrintFormatE2ETest` (7/7) e os goldens
+  `nativeCollectionPrint…/nativeArrayPrint…`; o io.md agora declara as duas metades.
+
+> **Estado:** ✅ CORRIGIDO 21/09 — Repro A: diagnóstico `SEM099` em tempo de
+  compilação em todo target; Repro B: formato de container `[65, 66]` declarado e
+  cobrado (voto D-ARRAY-PRINT). A paridade reversa compila-verde-morre-vermelho
+  acabou: os três targets scriptáveis imprimem idêntico, e o nativo casa no x86
+  com goldens CI na matriz.
 
 
 ## §389 — tip `beta-0.5.0` com test-compile VERMELHO: `BareCollectionPrimitiveArgE2ETest` cita `dev.kof.compiler.nat.NativeToolchainGate.present()` — a classe NUNCA foi commitada (`git log -S`/`git cat-file -e` no tip: só hits de teste) — o módulo de teste inteiro do kof-compiler não compila no tip limpo — ✅ FIXADO 20/09 (causa-raiz real: o `9c88d590` (#945, docs-lane) varreu por engano 17 testes WIP da lane `.22` sem o helper `NativeToolchainGate.java` — o `amend` sem `--only` durante a saga do stash. Fix landed: `de5354eb` comitou o Gate com o `static boolean present()` exato do recipe. Prova de GREEN no tip (clone ISOLADO, não a árvore compartilhada): `git ls-tree origin/beta-0.5.0` = Gate presente desde `136feea1`; `mvn -o -pl kof-compiler -am test-compile` no tip = 0 ERROR / rc=0 (medido 20/09 ~18:5x por `192.168.100.14`, lane docs, fechando o próprio rombo). LIÇÃO para todas as lanes: medir sempre contra `origin` após `git fetch` — o tip `94011544` citado na abertura da entrada é um SHA SUSPENSO (fantasma de rebase, fora de toda história); a entrada estava desatualizada no momento em que abriu)
