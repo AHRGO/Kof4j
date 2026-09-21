@@ -30,8 +30,9 @@
 **Fontes de verdade que NÃO estão aqui (não são backlog):** `docs/status.md`
 (o que funciona + gate da suíte), `docs/backend-parity.md` (matriz de
 paridade com gaps honestos), `docs/bugs-and-gaps/specification-gaps.md`
-(SG-001–022 — fila do maintainer COMPLETA, virou referência; SG-021/022 =
-pedidos sem decisão).
+(SG-001–023 — fila do maintainer COMPLETA, virou referência; SG-021/022 =
+pedidos sem decisão; **SG-023 ✅ DECIDIDO 21/09 — `D-PROPERTY`, sem superfície
+nova**).
 
 ---
 
@@ -215,7 +216,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `roadmap.md` | §§8–11 ❌ (frontend same-project, monólito→micro) | longo prazo |
 | ~~`roadmap-audit.md`~~ → `docs/audits/roadmap-audit.md` | matriz 06/09 + fila P0→P5 (P0 FECHADO 09/09) | re-audit quando algo fecha |
 | ~~`KOFUI-AUDIT.md`~~ → `docs/bugs-and-gaps/` | UI001-Native (face R6: no-op silencioso) ABERTO | lane UI |
-| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | **18 vivos** (ressincronizado 21/09 por `scripts/check_known_bugs_status.sh`; era 20 — §380 `9f383bcf`, §381 `576a1dcb`, §394 `d0464385` e §353 21/09 fechados; a fila viva do §2 é a autoridade; a contagem histórica de 14/09 era 32; §81/§163/§127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
+| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | **19 vivos** (contagem viva — autoridade é `scripts/check_known_bugs_status.sh`; ressincronizado 21/09; era 20 — §380 `9f383bcf`, §381 `576a1dcb`, §394 `d0464385` e §353 21/09 fechados; §400/§418/§421 catalogados/re-publicados; a fila viva do §2 é a autoridade; a contagem histórica de 14/09 era 32; §81/§163/§127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
 | ~~`refactoring/PLAN-SOLID-500.md`~~ → `docs/architecture/PLAN-SOLID-500.md` | ✅ **FEITO + MOVIDO 13/09** (F1–F9 todas fechadas — F3: NativeBackend 498 ≤500 medido, bloqueio da lane GC caducou/regra do dono-morto); ratchet `check_500-baseline.txt` (dívidas travadas — nº autoritativo = `wc -l` do arquivo) no CI | plano FECHADO (regra dos 3 estados) |
 | `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` | **EM DESENVOLVIMENTO 17/09** — promovido de `future/` por decisão da mantenedora, que **sobrepõe o portão R12** (`DECISIONS.md` §D-UNIVERSAL); ponto de entrada = Estágio 1 (consolidação SYSTEMS) + R1–R12 | arquitetura dos Tiers 6–12; visão/design congelados, só as claims de estado são sincronizadas com o código |
 | `PROPOSAL-1.0-EXIT-GATE.md` (+par PT) | **KOF 1.0 EXIT GATE — RATIFICADO 20/09/2026** pela mantenedora (`DECISIONS.md` §D-RELEASE-1.0); promovido de `future/`: o gate (§8) + a fila (§23) são a meta vinculante de estabilização — **Kof RC 1.0 / release 1.0 só existem quando todos os pontos corresponderem e nenhuma aresta estiver aberta** | ordem de execução = o §23 do próprio PROPOSAL, rastreada no `roadmap.md` §24 (EG-1..EG-10); **as sete arestas `[? MEL]` FECHADAS 20/09 por `DECISIONS.md` §D-1.0-EDGES** — KofC + Android dentro da Stable 1.0 de 8 alvos com gates próprios (EG-9/EG-10), os nove candidatos de reforço da §35 são gates obrigatórios, a linha 1.0 abre após o corte 0.5.0 + EG-1..EG-7; a única aresta restante é a declaração da mantenedora que abre o RC (EG-8) |
@@ -245,7 +246,7 @@ evidência em cada linha de §4.1; snapshot SG 08/09 → `docs/history/`)*
 
 | Saiu p/ | Doc | Prova |
 |---|---|---|
-| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–022 + E1–E3 | fila do maintainer COMPLETA (resumo do próprio doc); snapshot antigo → `docs/history/specification-gaps-0.3.0-snapshot.md` |
+| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–023 + E1–E3 | fila do maintainer COMPLETA (resumo do próprio doc); snapshot antigo → `docs/history/specification-gaps-0.3.0-snapshot.md` |
 | `docs/stdlib/DATABASE_VISION.md` | níveis 0–4 | query DSL 01/09 (`KofOrmE2ETest` 32; paridade JS 18/09), MySQL prepared (`nativeMysqlPreparedBinary`), pooling ✅; DB001/DB002/ORM001 (native) vivem na matriz de paridade |
 | `docs/audits/complexity-audit.md` | snapshot 02/09 | números pré-SOLID-500; gate vivo = `scripts/check_500.sh` (ratchet) |
 | `docs/history/roadmap-gap-2026-09-03.md` | gap report datado | pendências vivem em roadmap-audit/known-bugs |
