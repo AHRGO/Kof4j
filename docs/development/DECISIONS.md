@@ -2678,3 +2678,83 @@ Decided via the issue-lane multiple-choice (20/09). **(1) Mandatory properties:*
 ## D-1.0-STABILITY-100 — the total-stability criterion for closing 1.0.0: EVERY item in `docs/development/`, `docs/development/future/` and `docs/bugs-and-gaps/` is 100% resolved, with full cross-target parity proven (09/20/2026, maintainer rule)
 
 Rule (ABSOLUTE, refines `D-RELEASE-1.0`): no KOF 1.0.0 release while ANY work item remains open/undelivered in the three ledgers — `docs/development/` (plans with pending implementation), `docs/development/future/` (promoted features must be DEVELOPED, not deferred past 1.0), `docs/bugs-and-gaps/` (bugs, spec gaps, parity matrices) — and parity means the measured cross-target matrix (rule 5 of the freeze), proven by tests/goldens, never by claim. "Stable" is a STATE TO VERIFY (AGENTS §Stability), and 1.0.0 is the formalization of that state; the EG queue, `release-blockers.tsv` and this rule must agree — a closed issue that leaves work pending does NOT discharge the blocker: only the landed proof does.
+
+---
+
+## D-R3-3.3 — FFI handles and out-buffers (multiple-choice, maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` · **Option chosen:** **A** (of A/B/C).
+
+`void*` / `T*` / out-buffers are represented by a **nominal opaque `Handle`**
+(non-arithmetic, never an integer) plus **`Buffer(U8, INOUT)`** for
+by-reference byte buffers — consistent with **D6-3** (`Buffer(U8, INOUT)`, no
+new buffer syntax). No pointer arithmetic. `Pointer`/`OpaqueHandle`/`Buffer`/
+`Struct` stay distinct ABI types even when a register carries an address (R6:
+never silent).
+
+- **Unblocks:** R3-3.3 → open; the out-buffer/buffer slice of R3 (prerequisite
+  of Stages 4–7, all behind R3).
+- **Evidence:** D6-3; `docs/development/ffi-abi-structs.md`.
+- **Relationships:** `Depends on: D-POLL-19/D6 · Related: R3, R6, R9`.
+
+---
+
+## D-R3-3.5 — FFI variadics (multiple-choice, maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` · **Option chosen:** **A**.
+
+**No general Kof variadics.** An FFI caller passes a `List`/`Array`/`Buffer`
+instead; `printf`-style calls are covered by fixed-arity overloads. Rationale:
+the JVM FFM `Linker` has **no variadic downcall**, so a `...` marker would
+diverge per target — a silent lie (R6/R7). A variadic libc call with no
+fixed-arity form stays an explicit documented gap.
+
+- **Unblocks:** R3-3.5 closed as "no variadics" (documented).
+- **Relationships:** `Depends on: D-POLL-19/D6 · Related: R3, R6, R7`.
+
+---
+
+## D-TYPE-VARIANCE — variance + sealed types (multiple-choice, maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `OPEN — spec/plan first` · **Option chosen:** **C** (variance + sealed).
+
+The maintainer **opens** variance + sealed types as a core type-system front
+(scientific collections + exhaustive `switch`). It is a **frozen-core change
+(rule 6)** and follows the **spec-first** discipline of D6: a written design
+plan is drafted and reviewed **before any parser/typer diff** — nothing lands
+silently. Type-classes remain rejected (permanent non-goal).
+
+- **Unblocks:** X5 → open (spec-first).
+- **Next deliverable:** an incremental implementation plan (slices + proof per
+  slice) drafted by the agent, reviewed by the maintainer before code.
+- **Relationships:** `Related: rule 6, rule 11, R10, permanent non-goals, D-KOF-FIRST`.
+
+---
+
+## D-INTEROP-REFLECT — interop reflection (multiple-choice, maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `OPEN — spec/plan first` · **Option chosen:** open (complete); **incremental plan required**.
+
+Reflection is authorized **only at the interop boundary** (never a language
+foundation). The maintainer asked for an **incremental implementation plan**
+drafted first (slices with proof per slice), reviewed before code — the same
+spec-first gate as D6/X5.
+
+- **Unblocks:** X6 → open (spec-first).
+- **Next deliverable:** the incremental plan (agent drafts, maintainer reviews).
+- **Relationships:** `Related: rule 6, R9, X5, D-KOF-FIRST`.
+
+---
+
+## D-CODEGEN-STEP — compile-time codegen hook (multiple-choice, maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` · **Option chosen:** **A**.
+
+Implement **`CodegenStep`** as a **compiler-internal hook** (no user syntax) —
+R4 (`🔵`). It is the declared blocker of Stage 3 (`infra "prod" {}` desugar,
+3.2) and of the DDL/runner migration. It adds **no language surface**; any
+user-facing form (3.2) is its own later decision (rule 11 gate).
+
+- **Unblocks:** R4 → in progress; 3.2 unblocked **behind R4**.
+- **Evidence:** `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` R4 + critical path.
+- **Relationships:** `Related: R4, R8 (same frontend), 3.2, rule 11`.
