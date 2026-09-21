@@ -163,6 +163,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     3/3 run in a SUBPROCESS at the original 256MB budget (RED: child OOMs; GREEN:
     bounded diagnostics, valid entities compile) + parser/makealive battery 272/0F.
   - **known-bugs §391 FIXED — #568: the IMPLICIT constructor of an EXTERNAL class
+  - **Release-identity tooling (no maintainer decision needed — already-ratified gates, `EXIT GATE` §32.6/§32.7/§35):**
+    `scripts/verify-release-identity.sh` checks a published release/dir (`SHA256SUMS` vs the digest GitHub
+    records, archive coverage; `--tested <sha256>` = the ratified "tested digest == published digest", reported
+    as `NOT_RUN` — never PASS — when not given); `scripts/release-evidence.sh` is the per-target evidence manifest
+    (8 Stable targets GREEN on the same candidate SHA; RED/SKIP/NOT_RUN never green; tested-package digest
+    required); `scripts/check-reproducible-build.sh` builds the `kof-cli` jar twice at different clean paths and
+    compares digests. **Build change:** `project.build.outputTimestamp` is now fixed in the root `pom.xml` — the
+    jar is byte-identical across clean builds and paths (RED before: two different digests; GREEN after:
+    `30e2bca1…` both). Offline tests for the first two are in the agent suite the CI already runs. Evidence:
+    `docs/audits/supply-chain-trust-boundary-2026-09-20.md` §8.
+
     (`Greeter()` without `new`) via `--classpath` raised a FALSE `SEM015`**
     (20/09, compiler lane `.22`): `kof build ... --classpath producer.jar` with
     `Greeter("producer").greet("consumer")` printed `Undefined function: 'Greeter'`

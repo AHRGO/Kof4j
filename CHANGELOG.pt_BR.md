@@ -152,6 +152,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     budget original de 256MB (RED: o filho morre em OOM; GREEN: diagnósticos limitados,
     entities válidas compilam) + bateria parser/makealive 272/0F.
   - **`kof workflow run --target js` suportado (fatia residual da 2.6 / R7)** (20/09,
+  - **Ferramentas de identidade de release (sem depender de decisão da mantenedora — gates já ratificados, `EXIT GATE` §32.6/§32.7/§35):**
+    `scripts/verify-release-identity.sh` confere uma release publicada/diretório (`SHA256SUMS` × digest que o GitHub
+    registra, cobertura do arquivo; `--tested <sha256>` = o "digest testado == digest publicado" ratificado, reportado
+    como `NOT_RUN` — nunca PASS — quando não informado); `scripts/release-evidence.sh` é o manifesto de evidência por alvo
+    (8 alvos Stable GREEN na mesma SHA candidata; RED/SKIP/NOT_RUN nunca verde; digest do pacote testado obrigatório);
+    `scripts/check-reproducible-build.sh` compila o jar do `kof-cli` duas vezes em caminhos limpos diferentes e compara os
+    digests. **Mudança de build:** `project.build.outputTimestamp` agora é fixo no `pom.xml` raiz — o jar fica byte-idêntico
+    entre builds limpos e caminhos (RED antes: dois digests diferentes; GREEN depois: `30e2bca1…` nos dois). Testes offline
+    dos dois primeiros estão na suíte de agentes que o CI já roda. Evidência:
+    `docs/audits/supply-chain-trust-boundary-2026-09-20.md` §8.
+
     `.18`): o CLI agora compila o `pipeline(): KofWfDag` para JS e roda
     **in-process** via `KofJsRunner`, com paridade de BYTES com a JVM
     (`CmdWorkflowTest.runJsTargetFacesJvmBytes`). O stdout do guest alimenta a
