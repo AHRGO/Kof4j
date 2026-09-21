@@ -22,6 +22,7 @@ is explicitly non-deliverable and outside the current scope).
 
 | Doc | Topic | Why it stays in `future/` |
 |-----|------|---------------------------|
+| `type-system-extensions-plan.md` | X5 variance + sealed types · X6 interop reflection (`DECISIONS.md` §D-TYPE-VARIANCE/§D-INTEROP-REFLECT, 21/09) — spec-first | **plan only, zero code** — core type-system change / reflection surface, awaiting maintainer review (rule 6); slices X5.0–X5.5 / X6.0–X6.3 |
 | `PLAN-MULTIPARADIGMA.md` | multiparadigm / functional pipelines and declarative queries (`users.filter{...}.map{...}`), diagnosis at HEAD 16/09 | **design only, zero code in the doc** (§8 lists no file changed); promoted only when the first functional increment ships (SYSTEMS closed, R12) |
 | `scoped-resources-plan.md` | lightweight RAII (TIER 2.4, `using`/`resource_scope`) | pure design — zero occurrences of `resource_scope`/`kof_resource`/`using` in the lexer/parser/runtime; gated by bump |
 | `value-records-plan.md` | value records / first-class value types (TIER 2.7, `value record`) — accepted 16/09 (issue #275, `DECISIONS.md` §D-VALUE-RECORD) | **zero code** — the feature does not exist in the lexer/parser/backends; design only, gated by R12 + explicit authorization to open the front |
