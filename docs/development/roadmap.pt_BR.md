@@ -947,9 +947,9 @@ tiers `stable`/`experimental` (`docs/backend-parity.md`).
 | 2.2.1 | Inventário do codegen implícito (4 pontos: runtime `.source()`, `desugarTests`, `desugarApplication`, entity→record+schema) | ✅ os 4 existem (`CompilerPipeline:295-296`) |
 | 2.2.2 | **Hook formal `CodegenStep`** | ✅ **LANDADO 21/09 (R4, `D-CODEGEN-STEP`)** — `CodegenStep`/`CodegenStepPipeline` (aditivo; registry vazio = identidade, zero mudança de comportamento; `CodegenStepPipelineTest` 6/6). O "✅" antigo de `d1c56bad` era sobre-claim da branch `planning-future`; o R4 é o landing real |
 | 2.2.3 | Migrar DDL/runner p/ o hook formal | 🔵 **destravado** — 2.2.2 ✅ (R4); a migração em si segue pendente |
-| 2.2.4 | Base de `infra "prod" {}` (codegen sobre records) | 🔵 não iniciado (zero parse de `infra`) — a superfície de parse é **regra 6** (D-MAKEALIVE/3.2) |
+| 2.2.4 | Base de `infra "prod" {}` (codegen sobre records) | ✅ **POUSOU 21/09 (`D-MAKEALIVE-SYNTAX`, `966c86a4`)**: puro açúcar sobre `design()` (sem HCL; `infra` = IDENTIFICADOR, rebaixado p/ `design(): Infrastructure`) — prova `InfraSyntaxE2ETest`; o R4 ✅ era o hook |
 | 2.3.1 | Constant-folding de constantes de domínio | ✅ `"a"+"b"→"ab"` (`OptimizerConstantFold:100`) |
-| 2.3.2 | Detecção de ciclo no grafo `infra` em compile-time | 🔵 bloqueado por 2.2.4 (superfície regra 6) — o hook R4 está ✅ disponível |
+| 2.3.2 | Detecção de ciclo no grafo `infra` em compile-time | 🔵 **DESBLOQUEADO por `D-MAKEALIVE-SYNTAX` (21/09)** — segue a superfície 2.2.4 (dono `.18`/9093); o hook R4 está ✅ disponível |
 | 2.4.1 | Scoped resources (RAII leve sobre `try/finally`) | 🟡 só design (`future/scoped-resources-plan.md`); sintaxe `using` gated por bump |
 | 2.5 | Variance / sealed | ✅ **DECIDIDO ADIAR** — `enum`+`record`/`interface` cobrem o caso; abre só com pipeline científica (bump) |
 
