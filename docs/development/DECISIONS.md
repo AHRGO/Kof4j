@@ -2999,7 +2999,7 @@ to `docs/development/` (three-states). Queue: `roadmap.md` §2.8.4/§2.8.5.
 
 ## D-SECRETS — Stage 5 / 3.6 promoted; face 1 authorized (maintainer 21/09/2026)
 
-**Date:** 2026-09-21 · **State:** `DECIDED` · face 1 (`Secret`) starts.
+**Date:** 2026-09-21 · **State:** `DECIDED` · **P1+P2+P3 LANDED.**
 
 `future/secrets-plan.md` (+PT) is **promoted to `docs/development/`**; **face 1
 (`Secret` type)** is authorized as a rule-6-voted surface, incremental with proof;
@@ -3020,6 +3020,16 @@ plan's own alternatives): `secrets.get` stays the legacy raw `String` (frozen
 `P3 KeyHandle` is pulled **forward from "after 1.0"** by the same order. Each face
 stays incremental with proof and its own honest per-target gap. Queue: tracker
 3.6 / `secrets-plan.md` §2.
+
+**ALL FACES LANDED 21/09 (`04473bbe`):** P1 remainder (`secrets.fromBytes(Int[])`,
+identity `hashCode`); **P2** enforced redaction (runtime `json.encode(Secret)` →
+`"Secret(*** )"`; compile-time lint `SECN009` when `reveal()` feeds
+`log.*`/`json.encode`); **P3 `KeyHandle`** (`secrets.keyFromHex/keyFromPem/
+keyFromKeystore`, `rotate()` revoking the old handle → later use `SECN010`,
+`KeyHandle` overloads on `crypto.hmacSha256/aesgcm/chacha20` and
+`jwt.create/verify`; raw key never exposed). JVM-first (R7), `SECN008` elsewhere
+(R6). Proof: `SecretE2ETest` 7/7 + `KeyHandleE2ETest` 5/5. The plan is closed and
+moved to `docs/architecture/secrets-plan.md` (design record).
 
 ## D-FFI-STRUCT-B — D6-1 option B (`struct` mutable): approved spec-first (maintainer 21/09/2026)
 

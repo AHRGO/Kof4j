@@ -2,10 +2,17 @@
 
 # Secrets — `Secret`, `KeyHandle` and enforced redaction (design plan · Stage 5 / tracker 3.6)
 
-**Status:** Plan (design) — **face 1 (`Secret`) LANDED 21/09** (`32285136`, JVM-first;
-`SecretE2ETest` 4/4; JS/Native/Script/Android = gap `SECN008`). P2 (enforced redaction)
-and P3 (`KeyHandle`) still need their own rule-6 vote before anything touches the
-language or the current `secrets.*` signatures (frozen semantics 0.2.6-beta).
+**Status:** **COMPLETE — all faces landed 21/09 (JVM-first, R7).** P1 `Secret`
+(`32285136` + `secrets.fromBytes`/identity `hashCode` in `04473bbe`), **P2**
+enforced redaction (runtime `json.encode(Secret)` → `"Secret(*** )"`; compile-time
+lint `SECN009` when `reveal()` feeds `log.*`/`json.encode`), **P3 `KeyHandle`**
+(`secrets.keyFromHex/keyFromPem/keyFromKeystore`, `rotate()` revoking the old →
+later use fails `SECN010`, `KeyHandle` overloads on
+`crypto.hmacSha256/aesgcm/chacha20` and `jwt.create/verify`). JS/Native/Script/
+Android stay an honest compile-time gap `SECN008` (R6). Proofs: `SecretE2ETest`
+7/7, `KeyHandleE2ETest` 5/5. `secrets.get` kept the legacy raw `String` (frozen
+0.2.6) — the typed path is `secrets.of`/`secrets.secret` (non-breaking).
+**Authorized in full** by `DECISIONS.md` §D-SECRETS (maintainer 21/09).
 **Source:** `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` line 3.6 (`Secret`/`KeyHandle`
 pending, Stage 5) · gap analysis `docs/stdlib/security.md` (rows "Secrets (env): NONEXISTENT",
 "Secrets in logs: NO PROTECTION") · `docs/bugs-and-gaps/ecosystem-coverage.md` §kof.security.

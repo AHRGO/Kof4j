@@ -3011,7 +3011,7 @@ intervalo. O plano é promovido para `docs/development/` (três estados). Fila:
 
 ## D-SECRETS — Stage 5 / 3.6 promovido; face 1 autorizada (mantenedora 21/09/2026)
 
-**Data:** 2026-09-21 · **Estado:** `DECIDED` · começa a face 1 (`Secret`).
+**Data:** 2026-09-21 · **Estado:** `DECIDED` · **P1+P2+P3 POUSADAS.**
 
 O `future/secrets-plan.md` (+PT) é **promovido para `docs/development/`**; a
 **face 1 (tipo `Secret`)** é autorizada como superfície votada por regra 6,
@@ -3032,6 +3032,16 @@ plano): `secrets.get` segue o `String` cru legado (congelado 0.2.6) e
 **P3 `KeyHandle`** é puxada **para frente do "after 1.0"** pela mesma ordem. Cada
 face segue incremental com prova e seu gap honesto por alvo. Fila: tracker 3.6 /
 `secrets-plan.md` §2.
+
+**TODAS AS FACES POUSADAS 21/09 (`04473bbe`):** resto da P1 (`secrets.fromBytes(Int[])`,
+`hashCode` de identidade); **P2** redação forçada (runtime `json.encode(Secret)` →
+`"Secret(*** )"`; compile-time lint `SECN009` quando `reveal()` alimenta
+`log.*`/`json.encode`); **P3 `KeyHandle`** (`secrets.keyFromHex/keyFromPem/
+keyFromKeystore`, `rotate()` que revoga o handle antigo → uso posterior `SECN010`,
+sobrecargas `KeyHandle` de `crypto.hmacSha256/aesgcm/chacha20` e
+`jwt.create/verify`; chave crua nunca exposta). JVM-primeiro (R7), `SECN008` nos
+demais (R6). Prova: `SecretE2ETest` 7/7 + `KeyHandleE2ETest` 5/5. O plano está
+fechado e movido para `docs/architecture/secrets-plan.md` (registro de design).
 
 ## D-FFI-STRUCT-B — D6-1 opção B (`struct` mutável): aprovada spec-first (mantenedora 21/09/2026)
 

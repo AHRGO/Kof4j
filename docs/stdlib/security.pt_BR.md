@@ -217,7 +217,8 @@ resolve a função de runtime e cada target fornece a implementação.
 | Headers/CSRF/CORS | INEXISTENTE |
 | Segredos (env) | `secrets.get(name[,fallback])` (`String` cru) + `secrets.secret(name)` → `Secret` |
 | Auth em HTTP | PARCIAL: `header("x-auth")` manual no middleware |
-| Secrets em logs | PROTEGIDO no JVM pelo tipo `Secret` (D-SECRETS face 1, Estágio 5/3.6): imprime `Secret(*** )`, o texto cru só por `reveal()`. JS/Native/Script/Android = gap honesto `SECN008` |
+| Secrets em logs | PROTEGIDO no JVM pelo tipo `Secret` (D-SECRETS, Estágio 5/3.6): imprime `Secret(*** )`, o texto cru só por `reveal()`, `json.encode(secret)` redigido em runtime (P2) e aviso `SECN009` quando `reveal()` alimenta `log.*`/`json.encode`. JS/Native/Script/Android = gap honesto `SECN008` |
+| Material de chave | `KeyHandle` (D-SECRETS P3) nunca expõe bytes crus: `secrets.keyFromHex/keyFromPem/keyFromKeystore(...)`, `rotate()` revoga o handle antigo (uso posterior `SECN010`); JS/Native/Script/Android = gap honesto `SECN008` |
 
 ---
 
@@ -230,7 +231,8 @@ kof.security
 ├── passwords        → hash/verify/needsRehash (PBKDF2-HMAC-SHA256, secure by default)
 ├── crypto           → sha256/sha512, hmacSha256, aesGcm (encrypt/decrypt), randomHex/randomInt
 ├── jwt              → create/verify (HS256, exp/iss/aud, sem confusão de algoritmo)
-├── secrets          → get (env, String cru), redact, of/secret (→ tipo valor Secret)
+├── secrets          → get (env, String cru), redact, of/secret/fromBytes (→ tipo valor Secret),
+│                      keyFromHex/keyFromPem/keyFromKeystore (→ KeyHandle, chave crua nunca exposta)
 ├── security         → constantTimeEquals, randomHex, redact, csrfToken/csrfValid, corsAllowed, headers helpers,
 │                      rateLimit, sessionCreate/sessionGet/sessionDestroy, apiKeyGenerate/apiKeyValid (G9),
 │                      cookieSet/cookieGet (C11, defaults seguros)
@@ -315,7 +317,13 @@ jwt:         RFC 7519 HS256 (alg fixado, nunca aceito do token)
 | `secrets.get(name[, fallback])` | ✅ env | ✅ `/proc/self/environ` | ✅ platform | |
 | `secrets.redact(value)` | ✅ | ✅ (asm) | ✅ | `abcd********wxyz` |
 | `secrets.of(text)` / `secrets.secret(name)` | ✅ (→ `Secret`) | ❌ `SECN008` | ❌ `SECN008` | D-SECRETS face 1 |
+| `secrets.fromBytes(bytes)` | ✅ (→ `Secret`, byte a byte Latin-1) | ❌ `SECN008` | ❌ `SECN008` | sem perda para bytes não-texto |
 | `Secret.reveal()` / `.redacted()` | ✅ | ❌ `SECN008` | ❌ `SECN008` | imprime `Secret(*** )`; `reveal()` é o único export cru |
+| `secrets.keyFromHex/keyFromPem/keyFromKeystore(...)` | ✅ (→ `KeyHandle`) | ❌ `SECN008` | ❌ `SECN008` | P3; bytes crus da chave nunca expostos |
+| `KeyHandle.rotate()` | ✅ | ❌ `SECN008` | ❌ `SECN008` | revoga o handle antigo; uso posterior falha `SECN010` |
+| `crypto.hmacSha256(KeyHandle, msg)` / `aesGcm` / `chacha20` com `KeyHandle` | ✅ | ❌ `SECN008` | ❌ `SECN008` | sobrecargas P3 |
+| `jwt.create/verify(..., KeyHandle)` | ✅ | ❌ `SECN008` | ❌ `SECN008` | sobrecargas P3 |
+| `json.encode(Secret)` | ✅ redigido `"Secret(*** )"` | n/a | n/a | P2: nunca despeja os campos de um segredo |
 | `security.constantTimeEquals(a, b)` | ✅ `MessageDigest.isEqual` | ✅ (asm) | ✅ | |
 | `security.randomHex` / `randomInt` | ✅ | ✅ | ✅ | |
 | `security.csrfToken/csrfValid` | ✅ (session-scoped) | ❌ | ❌ | |
@@ -362,6 +370,14 @@ diagnostics de target gap (SECN001/002/003). Casos adversariais incluídos (§18
   entrada explícita em `KofSecurity.supportedOn` (Native/JS reportam
   `SECN004` em compile-time em vez de link silencioso); `auth.*`/`csrf`/`cors`/
   headers agora são restritos a `Target.JVM` em `supportedOn`.
+- `SECN008` — `Secret`/`KeyHandle` são JVM-primeiro (D-SECRETS): todo outro
+  target recusa em compile-time, nunca fallback silencioso (R6/R7).
+- `SECN009` — **aviso** (não erro) quando um resultado de `reveal()` flui direto
+  para `log.*` ou `json.encode`; a redação é forçada em runtime, o aviso só
+  expõe o desmascaramento deliberado. Fluxos indiretos (atribuir a uma variável
+  e depois logar) são limitação declarada do lint.
+- `SECN010` — usar um `KeyHandle` após `rotate()` falha em runtime nomeando a
+  revogação (`IllegalStateException`), então uma chave rotacionada nunca é reusada.
 
 ## 7.6 Correções de bugs descobertas durante a implementação
 

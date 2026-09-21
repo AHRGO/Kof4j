@@ -15,6 +15,13 @@ jwt.create(claimsJson, secret)            // HS256 + iat/exp
 jwt.verify(token, secret, iss, aud)       // sig + exp + iss + aud
 secrets.get("API_KEY")                    // env, nunca logado
 secrets.redact(value)                     // para logs
+secrets.of("sk-...") / secrets.secret("API_KEY")   // Secret: imprime Secret(*** )
+secrets.fromBytes(u8)                     // Secret a partir de bytes
+secret.reveal() / secret.redacted()       // único export cru / "***"
+secret == otherSecret                     // igualdade de conteúdo constant-time
+secrets.keyFromHex(hex) / keyFromPem(path) / keyFromKeystore(path, alias, pwd)  // KeyHandle
+crypto.hmacSha256(keyHandle, data)        // sobrecarga com chave, chave crua nunca exposta
+keyHandle.rotate()                        // revoga o handle antigo (SECN010 no reuso)
 security.constantTimeEquals(a, b)         // comparação segura
 crypto.sha256(data) / crypto.hmacSha256(key, data)
 crypto.encryptAesGcm(text, keyHex) / decryptAesGcm(ct, keyHex)

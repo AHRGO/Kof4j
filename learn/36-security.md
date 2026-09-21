@@ -59,6 +59,29 @@ var apiKey = secrets.get("API_KEY", "dev")    // with fallback
 var logLine = secrets.redact(token)           // never leak secrets into logs
 ```
 
+For code you write today, prefer the typed `Secret` — it is redacted by
+construction and only `reveal()` yields the raw text:
+
+```kof
+var key = secrets.of("sk-live-...")           // or secrets.secret("API_KEY")
+println(key)                                   // Secret(*** )
+var raw = key.reveal()                         // the single raw export
+var fromBytes = secrets.fromBytes(payload)     // non-text bytes, per-byte
+```
+
+`json.encode(key)` is redacted at runtime (`"Secret(*** )"`), and feeding
+`reveal()` straight into `log.*`/`json.encode` raises the `SECN009` warning.
+Keys are handled without ever reading them through a `KeyHandle`:
+
+```kof
+val kh = secrets.keyFromHex(hex)               // or keyFromPem(path) / keyFromKeystore(path, alias, pwd)
+val tag = crypto.hmacSha256(kh, message)
+val kh2 = kh.rotate()                          // kh is revoked; reusing it is SECN010
+```
+
+`Secret`/`KeyHandle` are JVM-first: other targets reject them at compile time
+with `SECN008` (never a silent stub).
+
 ## Web auth (middleware)
 
 ```kof

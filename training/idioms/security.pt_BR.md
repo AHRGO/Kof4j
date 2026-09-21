@@ -92,6 +92,28 @@ JS/Native/Script/Android rejeitam em compile-time com `SECN008` (nunca stub
 silencioso). NÃO faça `reveal()` para comparar nem logar — `==` já é
 constant-time.
 
+A redação é forçada no JVM (D-SECRETS P2): `json.encode(key)` devolve
+`"Secret(*** )"` (nunca os campos), e `reveal()` indo direto para
+`log.*`/`json.encode` levanta o aviso `SECN009` — o desmascaramento é
+deliberado, então precisa ser visível. Bytes não-texto passam por
+`secrets.fromBytes(u8)` (byte a byte, sem perda).
+
+## `KeyHandle` — a chave que você nunca lê (D-SECRETS P3)
+
+```kof
+val kh = secrets.keyFromHex(hexKey)                  // ou keyFromPem(path)/keyFromKeystore(path, alias, pwd)
+val tag = crypto.hmacSha256(kh, message)             // sobrecarga com chave — sem chave crua no código
+val token = jwt.create(claims, kh)
+val kh2 = kh.rotate()                                // handle novo; kh fica revogado
+// crypto.hmacSha256(kh, msg)                        // SECN010 em runtime — handle rotacionado não pode ser reusado
+```
+
+PORQUÊ: passar o hex cru da chave adiante vaza para assinaturas, logs e diffs. Um
+`KeyHandle` carrega o material mas nunca o expõe; `rotate()` invalida o handle
+antigo, então uma referência roubada não assina mais. JVM-primeiro (R7): JS/
+Native/Script/Android rejeitam em compile-time com `SECN008` (nunca stub
+silencioso).
+
 ## Sessões, CSRF, rate-limit, headers
 
 ```kof

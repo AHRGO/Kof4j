@@ -91,6 +91,27 @@ redacted by construction, and the one way to the raw value is a single word
 Native/Script/Android reject it at compile time with `SECN008` (never a silent
 stub). Do NOT `reveal()` to compare or to log — `==` is already constant-time.
 
+Redaction is enforced on JVM (D-SECRETS P2): `json.encode(key)` yields
+`"Secret(*** )"` (never the fields), and `reveal()` fed straight into
+`log.*`/`json.encode` raises the `SECN009` warning — the unmasking is
+deliberate, so it must be visible. Non-text bytes go through
+`secrets.fromBytes(u8)` (per-byte, lossless).
+
+## `KeyHandle` — the key you never read (D-SECRETS P3)
+
+```kof
+val kh = secrets.keyFromHex(hexKey)                  // or keyFromPem(path)/keyFromKeystore(path, alias, pwd)
+val tag = crypto.hmacSha256(kh, message)             // keyed overload — no raw key in code
+val token = jwt.create(claims, kh)
+val kh2 = kh.rotate()                                // fresh handle; kh is now revoked
+// crypto.hmacSha256(kh, msg)                        // SECN010 at runtime — rotated handle cannot be reused
+```
+
+WHY: passing raw key hex around leaks it into signatures, logs and diffs. A
+`KeyHandle` carries the material but never exposes it; `rotate()` invalidates the
+old handle so a stolen reference can no longer sign. JVM-first (R7): JS/Native/
+Script/Android reject it at compile time with `SECN008` (never a silent stub).
+
 ## Sessions, CSRF, rate-limit, headers
 
 ```kof
