@@ -61,6 +61,14 @@ for line in open(cl, encoding="utf-8"):
             print(f"DRIFT [{lang}]: {cl} afirma \u00a7{sid} fechado mas o ledger est\u00e1 vivo:")
             print("    " + line.strip()[:110])
             drift = 1
+# higiene de waiver: id JA FECHADO no ledger nao pode seguir isentado (esconderia
+# drift futuro). Se o changelog ainda cita o id, a linha da waiver e obsoleta.
+claimed = {s for l2 in open(cl, encoding="utf-8") for s in re.findall(r"§([0-9]+)", l2)}
+for wid, wlang in sorted(waived):
+    if wlang == lang and wid not in opens and wid in claimed:
+        print(f"STALE [{lang}]: waiver §{wid} nao se justifica mais (fechado no ledger"
+              ") — remover a linha de changelog-ledger-waivers.txt")
+        drift = 1
 sys.exit(drift)
 PYEOF
 }
