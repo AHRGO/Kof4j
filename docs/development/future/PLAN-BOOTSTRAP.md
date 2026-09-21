@@ -30,7 +30,7 @@ bare-metal per `future/PLAN-BAREMETAL-BOOT.md`), and self-hosts its packages
 |---|-----------|---------------|
 | E1 | Kof 1.0 EXIT GATE green (EG-1..EG-10 on one RC candidate) | `roadmap.md` §24 |
 | E2 | Zero OPEN release-blockers (`--rc-gate` rc=0) | gate scripts |
-| E3 | §388 closed — the bootstrapper is a BYTES-heavy program (`writeBytes`/`readBytes`/`Int[]` coercion + array printing contract) | `known-bugs.md` §388 |
+| E3 | §388 closed ✅ 21/09 — the bootstrapper is a BYTES-heavy program (`writeBytes`/`readBytes`/`Int[]` coercion + array printing contract) — A: `SEM099` compile-time diagnostic; B: container format declared (`D-ARRAY-PRINT`) | `known-bugs.md` §388 |
 | E4 | FFI structs ratified (D6-1..D6-5) — the compiler needs byte-level buffer/struct control | `DECISIONS.md` §D6-*, `ffi-abi-structs.md` |
 | E5 | Native GC + multi-arch stable (1.2) — the self-hosted compiler must run on Native, not only JVM | `roadmap.md` §23 TIER 1 |
 | E6 | Language-gap inventory (BS-A below) reviewed and scheduled by the maintainer | this plan |

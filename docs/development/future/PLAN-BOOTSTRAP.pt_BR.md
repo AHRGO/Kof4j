@@ -30,7 +30,7 @@ pacotes no registry (`kof deps`, etapa 1.4).
 |---|-----------|---------------|
 | E1 | EXIT GATE 1.0 verde (EG-1..EG-10 num único candidato RC) | `roadmap.md` §24 |
 | E2 | Zero release-blockers ABERTOS (`--rc-gate` rc=0) | scripts do gate |
-| E3 | §388 fechada — o bootstrapper é um programa PESADO de bytes (`writeBytes`/`readBytes`/coerção `Int[]` + contrato de impressão de array) | `known-bugs.md` §388 |
+| E3 | §388 fechada ✅ 21/09 — o bootstrapper é um programa PESADO de bytes (`writeBytes`/`readBytes`/coerção `Int[]` + contrato de impressão de array) — A: diagnóstico `SEM099` em compile-time; B: formato de container declarado (`D-ARRAY-PRINT`) | `known-bugs.pt_BR.md` §388 |
 | E4 | FFI structs ratificadas (D6-1..D6-5) — o compilador precisa de controle byte-a-byte de buffers/structs | `DECISIONS.md` §D6-*, `ffi-abi-structs.md` |
 | E5 | GC Native + multi-arquitetura estáveis (1.2) — o compilador self-hosted precisa rodar em Native, não só JVM | `roadmap.md` §23 TIER 1 |
 | E6 | Inventário de gaps de linguagem (BS-A abaixo) revisado e escalado pela mantenedora | este plano |

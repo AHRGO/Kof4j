@@ -40,7 +40,7 @@ requests with no decision).
 - **Pending (the release gate's condition 3):** `ffi-abi-structs.md`
   (**D6 DECIDED 20/09** — implementation in progress, owner `jonas`) ·
   `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (owner: session 9093, platform front) ·
-  `makealive-plan.md` (residual 3.2/3.7/3.8, rule 6).
+  `makealive-plan.md` (residual 3.2/3.7, rule 6 — 3.8 shipped 20/09 `D-MAKEALIVE-CLI`).
   Authority: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Living records here (not backlog):** `DECISIONS.md`,
   `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.

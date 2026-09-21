@@ -40,7 +40,7 @@ pedidos sem decisão).
 - **Pendentes (condição 3 do gate de release):** `ffi-abi-structs.md`
   (**D6 DECIDIDO 20/09** — implementação em curso, dono `jonas`) ·
   `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (dono: sessão 9093, frente de
-  plataforma) · `makealive-plan.md` (residual 3.2/3.7/3.8, regra 6).
+  plataforma) · `makealive-plan.md` (resíduos 3.2/3.7, regra 6 — 3.8 pousado 20/09 `D-MAKEALIVE-CLI`).
   Autoridade: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Registros vivos aqui (não são backlog):** `DECISIONS.md`,
   `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.

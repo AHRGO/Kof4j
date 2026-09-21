@@ -60,6 +60,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (+ typo da irmã `F2a find`→F2b sincronizado com a linha do §397), DOING
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
+  - **Doc-sync after §388 (21/09)**: `makealive-plan` residuals in `development/README` fixed
+    (3.8 shipped — it still read "awaiting decision"); `PLAN-BOOTSTRAP` entry condition **E3
+    marked MET** (§388 closed both halves: `SEM099` + `D-ARRAY-PRINT`).
+  - **§388-B closed — `println(Int[])` is the §107 container format** (21/09, maintainer
+    vote `D-ARRAY-PRINT`): printing a whole primitive array now gives `[65, 66]` on every
+    target — JVM/Script through the new `kof_array_to_string` (JvmRuntimeCore; interpreter
+    by reflection), JS by re-routing `valueOf(ArrayType)` into `kofFormat`, x86 native by
+    its own asm twin (riscv64/aarch64 goldens CI-verified). The identity `[I@…` and the
+    bracket-less JS face are both gone; `io.md` declares the format and the `SEM099`
+    bytes-param contract. Pinned by `arrayprint` (ConformanceMatrixTest, all four targets
+    incl. native) + `ArrayPrintFormatE2ETest` 7/7; §388 flips ✅.
   - **3.6 design landed — `docs/development/future/secrets-plan.md` (+PT)** (21/09): the
     Stage-5 answer to "Secrets in logs: NO PROTECTION" — value type `Secret` (reveal-gated,
     constant-time equals, fixed `Secret(*** )` print format declared up front), three-layer
