@@ -162,10 +162,13 @@ the host db slice must be gated per target exactly like `workflow-ckpt-host.kf`
   generic REST provider (`kof.http`) + CLI provider (`kof.shell`) ship with
   the core slice; concrete clouds stay **official packages**
   (`infra-<cloud>`, R1 — never a compiler literal).
-- **3.2 [syntax `infra "prod" {}`]** — ✅ **DECIDED 21/09 (`D-MAKEALIVE-SYNTAX`)**:
-  ADD the block as **pure sugar over `design()`** (no keyword/token/type/runtime;
-  `infra` = IDENTIFIER dispatch, `LanguageCoreSurfaceTest` green by construction).
-  **IN IMPLEMENTATION** (owner `.18`/9093) — proof `InfraSyntaxE2ETest`.
+- **3.2 [syntax `infra "prod" {}`]** — ✅ **LANDED 21/09** (`D-MAKEALIVE-SYNTAX`):
+  pure sugar over `design()` (`InfraDeclarationNode` + parser dispatch like
+  `test`/`application` + lowering to `design(): Infrastructure`; no
+  keyword/token/type/runtime — `LanguageCoreSurfaceTest` 6/6 green by
+  construction). Proof: `InfraSyntaxE2ETest` 2/2 — the block and its hand-written
+  `design()` twin produce byte-identical `plan` output (JVM==JS), Native compiles,
+  an invalid body errors by name (R6).
 - **3.7 [compile-time cycle]** — **R4 ✅ landed 21/09**; the 3.2 surface is now
   decided (above), so the compile-time graph is unblocked and follows 3.2.
   Meanwhile the **runtime refusal ships in 3.1**.

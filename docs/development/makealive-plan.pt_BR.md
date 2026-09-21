@@ -171,10 +171,13 @@ fatia db do host deve ser gateada por alvo exatamente como `workflow-ckpt-host.k
   provider REST genérico (`kof.http`) + provider CLI (`kof.shell`) embarcam
   na fatia do núcleo; clouds concretas seguem **pacotes oficiais**
   (`infra-<cloud>`, R1 — nunca literal no compilador).
-- **3.2 [sintaxe `infra "prod" {}`]** — ✅ **DECIDIDO 21/09 (`D-MAKEALIVE-SYNTAX`)**:
-  ADICIONAR o bloco como **açúcar puro sobre `design()`** (sem keyword/token/tipo/runtime;
-  `infra` = dispatch IDENTIFIER, `LanguageCoreSurfaceTest` verde por construção).
-  **EM IMPLEMENTAÇÃO** (dono `.18`/9093) — prova `InfraSyntaxE2ETest`.
+- **3.2 [sintaxe `infra "prod" {}`]** — ✅ **POUSOU 21/09** (`D-MAKEALIVE-SYNTAX`):
+  açúcar puro sobre `design()` (`InfraDeclarationNode` + dispatch do parser como
+  `test`/`application` + lowering para `design(): Infrastructure`; sem
+  keyword/token/tipo/runtime — `LanguageCoreSurfaceTest` 6/6 verde por
+  construção). Prova: `InfraSyntaxE2ETest` 2/2 — o bloco e seu gêmeo `design()`
+  escrito à mão produzem `plan` byte-idêntico (JVM==JS), Native compila, corpo
+  inválido erra nomeado (R6).
 - **3.7 [ciclo em compile-time]** — **R4 ✅ pousou 21/09**; a superfície 3.2 agora está
   decidida (acima), então o grafo em compile-time está destravado e segue a 3.2.
   Enquanto isso a **recusa em runtime embarca no 3.1**.

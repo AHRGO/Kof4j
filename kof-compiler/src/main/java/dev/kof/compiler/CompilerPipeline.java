@@ -300,6 +300,7 @@ public final class CompilerPipeline {
         }
         unit = CompilerDesugar.desugarTests(unit, driver.discoveredTests, driver.testHarnessMode, driver.currentSourceName);
         unit = CompilerDesugar.desugarApplication(unit);
+        unit = CompilerDesugar.desugarInfra(unit);
         unit = CompilerDesugar.desugarNestedFunctions(unit);
         driver.discoveredConfigKeys.clear();
         if (driver.target == Target.ANDROID) {

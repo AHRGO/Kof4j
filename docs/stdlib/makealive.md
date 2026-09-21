@@ -10,9 +10,10 @@
 > current `State`, and `apply`/`destroy` executed through a `Provider` of
 > three function-values. The host is composition only — every runtime
 > boundary (files, processes, HTTP, a database) lives in the provider body,
-> written by you in plain Kof. There is no new syntax (row 3.2 remains a rule-6
-> surface decision — R4 ✅ landed 21/09, so the codegen-hook blocker is gone) and
-> no compile-time graph gate (row 3.7 needs the 3.2 surface; runtime refusal ships named).
+> written by you in plain Kof. The design has a declarative **sugar** (row 3.2
+> `infra "prod" { ... }`, decided 21/09 — see "The declarative design" below);
+> the compile-time graph gate (row 3.7) follows that sugar, and until then the
+> runtime refusal ships named.
 
 ## The contract (faces injected by `import kof.makealive`)
 
@@ -53,6 +54,51 @@ Hard rules (plan §3, all pinned by `MakealiveE2ETest`):
   keeps `propFlat` (alternating key, value) — iterated with `while` + index.
   `Map.keys()` works on JVM/JS but is target-dependent (Native); `plan`'s
   READ happens through YOUR provider, so your body decides the encoding.
+
+## The declarative design: `infra "prod" { ... }`
+
+Row 3.2 (`DECISIONS.md` §D-MAKEALIVE-SYNTAX, 21/09) adds ONE declarative form; it
+is **pure sugar** over the faces above — no keyword, no token, no type, no
+runtime. The block desugars to the `design(): Infrastructure` the CLI already
+expects:
+
+```kf
+import kof.makealive
+
+infra "prod" {
+    resource("file", "index")           // same faces: (type, name)
+    prop("index", "html", "<h1>hi</h1>")
+    resource("file", "style")
+    requires("style", "index")          // style created AFTER index
+}
+```
+
+Desugaring (exactly the hand-written twin):
+
+```kf
+Infrastructure design() {
+    var __infra = Infrastructure("prod")
+    __infra.resource("file", "index")
+    __infra.prop("index", "html", "<h1>hi</h1>")
+    __infra.resource("file", "style")
+    __infra.requires("style", "index")
+    return __infra
+}
+```
+
+Rules:
+
+- The body accepts **only builder calls** (`resource`/`prop`/`requires`); any
+  other statement is a named parse error — never silently ignored (R6).
+- `infra` is an **identifier**, dispatched like `test`/`application` — the
+  language core surface does not grow (`LanguageCoreSurfaceTest` stays green by
+  construction).
+- Dependencies still refuse cycles **at runtime**, naming the members; the
+  compile-time gate is row 3.7.
+
+Proof: `InfraSyntaxE2ETest` — the block and its hand-written `design()` twin
+produce byte-identical `plan` output (JVM==JS) and the block compiles for
+Native.
 
 ## The state port: persisting `State` on `kof.db`
 
@@ -140,7 +186,7 @@ signing API. Nothing in `kof.makealive` knows a cloud exists.
 - **§382** (open, bridge): kof.io JS numeric codes (above).
 - Rows 3.3 (reconcile via `scheduler`), 3.6 (`kof.security` secrets —
   security lane), 3.8 is now the `kof makealive` CLI (D-MAKEALIVE-CLI, 20/09); the rest of
-  of Stage 3; 3.2/3.7 remain rule-6 surfaces (R4 ✅ landed 21/09).
+  of Stage 3; 3.2 landed (declarative `infra` sugar), 3.7 follows it.
 
 ## CLI (3.8 — landed 20/09, D-MAKEALIVE-CLI)
 

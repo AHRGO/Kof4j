@@ -286,6 +286,52 @@ public final class CompilerDesugar {
                 java.util.Collections.unmodifiableList(wrapped));
     }
 
+    /**
+     * `infra "prod" { ... }` → `design(): Infrastructure` (§D-MAKEALIVE-SYNTAX).
+     * Açúcar puro sobre as faces do host: um local `__infra =
+     * Infrastructure("prod")`, cada chamada nua `face(args)` vira
+     * `__infra.face(args)`, e o desenho é retornado. Sem keyword/token/tipo/
+     * runtime novo — o resultado é idêntico ao `design()` escrito à mão.
+     */
+    static CompilationUnitNode desugarInfra(CompilationUnitNode unit) {
+        java.util.List<AstNode> decls = new ArrayList<>();
+        boolean any = false;
+        for (AstNode d : unit.declarations()) {
+            if (d instanceof InfraDeclarationNode infra) {
+                decls.add(buildDesignFunction(infra));
+                any = true;
+            } else {
+                decls.add(d);
+            }
+        }
+        if (!any) {
+            return unit;
+        }
+        return new CompilationUnitNode(unit.position(), unit.packageName(), unit.imports(),
+                java.util.Collections.unmodifiableList(decls));
+    }
+
+    private static FunctionDeclarationNode buildDesignFunction(InfraDeclarationNode infra) {
+        SourcePosition p = infra.position();
+        List<StatementNode> body = new ArrayList<>();
+        body.add(new VarDeclStmt(p, "Infrastructure", "__infra",
+                new NewExpr(p, "Infrastructure", List.of(),
+                        List.of(new LiteralExpr(p, ConcreteLiteralKind.STRING, infra.name())))));
+        for (StatementNode st : infra.body()) {
+            if (st instanceof ExpressionStmt es && es.expression() instanceof MethodCallExpr mc
+                    && mc.receiver() == null) {
+                body.add(new ExpressionStmt(p, new MethodCallExpr(p,
+                        new IdentifierExpr(p, "__infra"), mc.methodName(), mc.typeArguments(),
+                        mc.arguments())));
+            } else {
+                body.add(st);
+            }
+        }
+        body.add(new ReturnStmt(p, new IdentifierExpr(p, "__infra")));
+        return new FunctionDeclarationNode(p, List.of(), "Infrastructure", "design",
+                List.of(), List.of(), List.of(), body);
+    }
+
     static FunctionDeclarationNode buildTestHarnessMain(
         List<CompilerDriver.TestInfo> discoveredTests, String currentSourceName) {
         SourcePosition p = new SourcePosition(currentSourceName != null ? currentSourceName : "", 0, 0, 0, 0);

@@ -5,9 +5,12 @@ import dev.kof.compiler.AstNode;
 import dev.kof.compiler.CompilationUnitNode;
 import dev.kof.compiler.DiagnosticCollector;
 import dev.kof.compiler.ExpressionNode;
+import dev.kof.compiler.ExpressionStmt;
 import dev.kof.compiler.ExternalFunctionNode;
 import dev.kof.compiler.FormalParameterNode;
 import dev.kof.compiler.FunctionDeclarationNode;
+import dev.kof.compiler.InfraDeclarationNode;
+import dev.kof.compiler.MethodCallExpr;
 import dev.kof.compiler.ReturnStmt;
 import dev.kof.compiler.SourcePosition;
 import dev.kof.compiler.StatementNode;
@@ -59,6 +62,9 @@ public class Parser {
             } else if (ctx.check(TokenType.IDENTIFIER) && "application".equals(ctx.peek().value())
                     && ctx.checkNext(TokenType.LBRACE)) {
                 declarations.add(parseApplicationDeclaration(ctx));
+            } else if (ctx.check(TokenType.IDENTIFIER) && "infra".equals(ctx.peek().value())
+                    && ctx.checkNext(TokenType.STRING_LITERAL)) {
+                declarations.add(parseInfraDeclaration(ctx));
             } else if (!annos.isEmpty()
                     && (ctx.check(TokenType.CLASS, TokenType.INTERFACE, TokenType.RECORD, TokenType.ENTITY))) {
                 declarations.add(TypeDeclarations.parseTypeDeclaration(ctx, annos));
@@ -121,6 +127,29 @@ public class Parser {
         }
         ctx.expect(TokenType.RBRACE, "Expected '}' after application block", "PARSE051");
         return new ApplicationDeclarationNode(p, onStart, onShutdown);
+    }
+
+    /**
+     * `infra "prod" { resource("fs", "web") ... }` — bloco declarativo do
+     * Makealive (linha 3.2, {@code D-MAKEALIVE-SYNTAX} 21/09). É açúcar puro:
+     * o lowering vira `design(): Infrastructure`. O corpo só aceita CHAMADAS
+     * diretas às faces do host (`resource`/`prop`/`requires`) — qualquer outro
+     * statement é erro honesto (R6), nunca ignorado em silêncio.
+     */
+    static InfraDeclarationNode parseInfraDeclaration(ParseContext ctx) {
+        SourcePosition p = ctx.pos();
+        ctx.advance(); // consome 'infra'
+        Token nameToken = ctx.expect(TokenType.STRING_LITERAL, "Expected infra name string", "PARSE010");
+        List<StatementNode> body = StatementParser.parseBlock(ctx);
+        for (StatementNode st : body) {
+            boolean builderCall = st instanceof ExpressionStmt es
+                    && es.expression() instanceof MethodCallExpr mc && mc.receiver() == null;
+            if (!builderCall) {
+                ctx.error("infra body accepts only builder calls (resource/prop/requires)", "PARSE051");
+                break;
+            }
+        }
+        return new InfraDeclarationNode(p, nameToken.value(), body);
     }
 
     static FunctionDeclarationNode parseFunctionDeclaration(ParseContext ctx, List<String> mods, List<AnnotationNode> annos) {
