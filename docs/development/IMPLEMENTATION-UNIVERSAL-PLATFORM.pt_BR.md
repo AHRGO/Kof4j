@@ -46,7 +46,7 @@ Reivindique um item no `DOING.md` **no mesmo commit** que inicia o trabalho.
 |---------|------|--------|----------|
 | 1 | SYSTEMS (consolidação) | 🟡 em curso | gaps de paridade web/native **1.1.3–1.1.9** (donos: lanes web/native) — **D1–D3 ✅ decididos 19/09** (GC x86 ✅ D1-A; registry ✅ 19/09) |
 | 2 | AUTOMATION | 🔵 não iniciado | Estágio 1 |
-| 3 | INFRASTRUCTURE (Kof Makealive) | 🟡 planejado 19/09 — `makealive-plan.md` (.18); 3.0.0 recon pendente, **superfície ✅ decidida (Q1–Q4, `DECISIONS.md` §D-MAKEALIVE 20/09)** | Estágio 2, R3 (FFI), R4 (hook de codegen — **✅ pousou 21/09**); **colisão de nome R1 ✅ resolvida (`kof.makealive`, plano §2.1/Q1)** |
+| 3 | INFRASTRUCTURE (Kof Makealive) | 🟡 em andamento — `makealive-plan.md` (.18); **recon 3.0 ✅ 19/09** (`MakealivePrimitivesE2ETest` 5/5) + **superfície ✅ decidida (Q1–Q4, `DECISIONS.md` §D-MAKEALIVE 20/09)**; core 3.1/3.2/3.3/3.8 pousados, 3.7 fechado — **só resta 3.6 (secrets, Estágio 5)** | Estágio 2, R3 (FFI), R4 (hook de codegen — **✅ pousou 21/09**); **colisão de nome R1 ✅ resolvida (`kof.makealive`, plano §2.1/Q1)** |
 | 4 | DATA (engineering / science / ML) | 🔵 não iniciado | Estágio 3, R3 (FFI) |
 | 5 | SECURITY (expansão) | 🔵 não iniciado | Estágio 3, R3 (FFI) |
 | 6 | SCIENTIFIC COMPUTING | 🔵 não iniciado | Estágio 4, R3, GC (1.2) |
@@ -54,7 +54,7 @@ Reivindique um item no `DOING.md` **no mesmo commit** que inicia o trabalho.
 | 8 | UNIVERSAL PLATFORM | 🔵 não iniciado | todos os anteriores | — norte `DECISIONS.md` §D-BOOTSTRAP (20/09): o compilador escrito em Kof fecha este estágio de ponta a ponta (rascunho do plano BS-1 = lane `.18`) |
 
 Invariantes: **R1 ✅ · R2 ✅ 20/09 · R6 ✅ · R7 ✅ · R8 ✅ · R12 ✅ (sobreposto)** ·
-**R3 🟡 · R4 ✅ · R5 🟡 · R9 🟡 · R10 🔵 · R11 🟡**
+**R3 🟡 · R4 ✅ · R5 ✅ 21/09 (gate de máquina dos tiers; pacotes oficiais seguem no Estágio 7) · R9 🟡 · R10 🔵 · R11 🟡**
 
 Fila transversal (não é estágio): **X1–X10** — gRPC, Python/R, WASM,
 avaliação em compile-time, variance/sealed, reflexão de interop, debugger

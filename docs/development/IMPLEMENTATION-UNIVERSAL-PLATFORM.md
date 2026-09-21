@@ -45,7 +45,7 @@ Claim an item in `DOING.md` **in the same commit** that starts the work.
 |-------|------|--------|---------|
 | 1 | SYSTEMS (consolidation) | 🟡 in progress | web/native parity gaps **1.1.3–1.1.9** (owners: web/native lanes) — **D1–D3 ✅ decided 19/09** (GC x86 ✅ D1-A; registry ✅ 19/09) |
 | 2 | AUTOMATION | 🔵 not started | Stage 1 |
-| 3 | INFRASTRUCTURE (Kof Makealive) | 🟡 planned 19/09 — `makealive-plan.md` (.18); 3.0.0 recon-pending, **surface ✅ decided (Q1–Q4, `DECISIONS.md` §D-MAKEALIVE 20/09)** | Stage 2, R3 (FFI), R4 (codegen hook — **✅ landed 21/09**); **name collision R1 ✅ resolved (`kof.makealive`, plan §2.1/Q1)** |
+| 3 | INFRASTRUCTURE (Kof Makealive) | 🟡 in progress — `makealive-plan.md` (.18); **recon 3.0 ✅ 19/09** (`MakealivePrimitivesE2ETest` 5/5) + **surface ✅ decided (Q1–Q4, `DECISIONS.md` §D-MAKEALIVE 20/09)**; core 3.1/3.2/3.3/3.8 landed, 3.7 closed — **only 3.6 remains (secrets, Stage 5)** | Stage 2, R3 (FFI), R4 (codegen hook — **✅ landed 21/09**); **name collision R1 ✅ resolved (`kof.makealive`, plan §2.1/Q1)** |
 | 4 | DATA (engineering / science / ML) | 🔵 not started | Stage 3, R3 (FFI) |
 | 5 | SECURITY (expansion) | 🔵 not started | Stage 3, R3 (FFI) |
 | 6 | SCIENTIFIC COMPUTING | 🔵 not started | Stage 4, R3, GC (1.2) |
@@ -53,7 +53,7 @@ Claim an item in `DOING.md` **in the same commit** that starts the work.
 | 8 | UNIVERSAL PLATFORM | 🔵 not started | all previous | — north star `DECISIONS.md` §D-BOOTSTRAP (20/09): the compiler written in Kof closes this stage end-to-end (BS-1 design-plan draft = lane `.18`) |
 
 Invariants: **R1 ✅ · R2 ✅ 20/09 · R6 ✅ · R7 ✅ · R8 ✅ · R12 ✅ (overridden)** ·
-**R3 🟡 · R4 ✅ · R5 🟡 · R9 🟡 · R10 🔵 · R11 🟡**
+**R3 🟡 · R4 ✅ · R5 ✅ 21/09 (tier machine gate; official packages follow in Stage 7) · R9 🟡 · R10 🔵 · R11 🟡**
 
 Cross-cutting queue (not a stage): **X1–X10** — gRPC, Python/R, WASM,
 compile-time eval, variance/sealed, interop reflection, DWARF/source-map
