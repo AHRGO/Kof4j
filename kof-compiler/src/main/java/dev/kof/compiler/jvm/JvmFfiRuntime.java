@@ -105,6 +105,17 @@ final class JvmFfiRuntime {
                                 cur = j;
                                 pl[i] = java.lang.foreign.ValueLayout.ADDRESS;
                                 real[i] = kof_ffi_upcall(linker, arena, args[i], inner.toString());
+                            } else if (c == '@') {
+                                // D6-1(A)/3.8b: `record` Kof -> struct C por valor. O
+                                // layout e os valores vêm da própria classe do argumento
+                                // (RecordComponent); a arena confinada da chamada é a dona
+                                // da memória do struct (D6-5).
+                                cur++;
+                                java.lang.foreign.StructLayout sl = kof_ffi_struct_layout(args[i]);
+                                pl[i] = sl;
+                                java.lang.foreign.MemorySegment sseg = arena.allocate(sl);
+                                kof_ffi_write_struct(sl, sseg, args[i]);
+                                real[i] = sseg;
                             } else {
                                 cur++;
                                 pl[i] = kof_ffi_layout(c);
@@ -149,6 +160,51 @@ final class JvmFfiRuntime {
                         case 'S' -> java.lang.foreign.ValueLayout.ADDRESS;
                         default -> throw new IllegalArgumentException("bad ffi layout char: " + c);
                     };
+                }
+
+                // D6-1(A)/3.8b: layout FFM de um `record` Kof com campos escalares
+                // (numérico/bool). O struct atravessa POR VALOR (o Linker classifica
+                // pela StructLayout) — sem refatorar a ABI escalar.
+                static java.lang.foreign.StructLayout kof_ffi_struct_layout(Object rec) {
+                    java.lang.reflect.RecordComponent[] cs = rec.getClass().getRecordComponents();
+                    java.lang.foreign.MemoryLayout[] ls =
+                            new java.lang.foreign.MemoryLayout[cs.length];
+                    for (int k = 0; k < cs.length; k++) {
+                        ls[k] = kof_ffi_field_layout(cs[k].getType());
+                    }
+                    return java.lang.foreign.MemoryLayout.structLayout(ls);
+                }
+
+                static java.lang.foreign.MemoryLayout kof_ffi_field_layout(Class<?> t) {
+                    if (t == int.class || t == Integer.class) return java.lang.foreign.ValueLayout.JAVA_INT;
+                    if (t == long.class || t == Long.class) return java.lang.foreign.ValueLayout.JAVA_LONG;
+                    if (t == float.class || t == Float.class) return java.lang.foreign.ValueLayout.JAVA_FLOAT;
+                    if (t == double.class || t == Double.class) return java.lang.foreign.ValueLayout.JAVA_DOUBLE;
+                    if (t == boolean.class || t == Boolean.class) return java.lang.foreign.ValueLayout.JAVA_BOOLEAN;
+                    throw new IllegalArgumentException("ffi struct: unsupported field type " + t);
+                }
+
+                static void kof_ffi_write_struct(java.lang.foreign.StructLayout sl,
+                        java.lang.foreign.MemorySegment seg, Object rec) throws Throwable {
+                    java.lang.reflect.RecordComponent[] cs = rec.getClass().getRecordComponents();
+                    for (int k = 0; k < cs.length; k++) {
+                        Object v = cs[k].getAccessor().invoke(rec);
+                        long off = sl.byteOffset(java.lang.foreign.MemoryLayout.PathElement.groupElement(k));
+                        Class<?> t = cs[k].getType();
+                        if (t == int.class || t == Integer.class) {
+                            seg.set(java.lang.foreign.ValueLayout.JAVA_INT, off, ((Integer) v).intValue());
+                        } else if (t == long.class || t == Long.class) {
+                            seg.set(java.lang.foreign.ValueLayout.JAVA_LONG, off, ((Long) v).longValue());
+                        } else if (t == float.class || t == Float.class) {
+                            seg.set(java.lang.foreign.ValueLayout.JAVA_FLOAT, off, ((Float) v).floatValue());
+                        } else if (t == double.class || t == Double.class) {
+                            seg.set(java.lang.foreign.ValueLayout.JAVA_DOUBLE, off, ((Double) v).doubleValue());
+                        } else if (t == boolean.class || t == Boolean.class) {
+                            seg.set(java.lang.foreign.ValueLayout.JAVA_BOOLEAN, off, ((Boolean) v).booleanValue());
+                        } else {
+                            throw new IllegalArgumentException("ffi struct: unsupported field type " + t);
+                        }
+                    }
                 }
 
                 // Callback/upcall (R3, 3.4): um valor de função Kof (objeto que

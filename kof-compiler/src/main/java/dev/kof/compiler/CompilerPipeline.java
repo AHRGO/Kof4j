@@ -464,7 +464,14 @@ public final class CompilerPipeline {
             if (FfiSignature.returnChar(ext.returnType()) == null) return false;
             for (var param : ext.parameters()) {
                 if (FfiSignature.paramChar(param.type()) != null) continue;
-                if (FfiSignature.callbackDescriptor(param.type()) == null) return false;
+                if (FfiSignature.callbackDescriptor(param.type()) != null) continue;
+                // D6-1(A)/3.8b: um `record` de campos escalares binda por valor no
+                // JVM (FFM classifica o struct). O runner JS ainda NÃO tem o bridge
+                // de struct → segue FFI002 honesto lá (R6). Retorno de struct segue
+                // fora do conjunto nesta fatia.
+                if (driver.target == Target.JVM
+                        && FfiSignature.structFieldChars(param.type(), driver) != null) continue;
+                return false;
             }
             return true;
         }

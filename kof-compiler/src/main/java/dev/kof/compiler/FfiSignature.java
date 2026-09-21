@@ -30,19 +30,64 @@ public final class FfiSignature {
         return t == null || t.isEmpty() || "void".equals(t) || "Void".equals(t);
     }
 
-    static String signature(ExternalFunctionNode ext) {
+    static String signature(CompilerDriver driver, ExternalFunctionNode ext) {
         StringBuilder sb = new StringBuilder();
         sb.append(returnChar(ext.returnType()));
         for (var p : ext.parameters()) {
             Character c = paramChar(p.type());
             if (c != null) {
                 sb.append(c);
-            } else {
+            } else if (callbackDescriptor(p.type()) != null) {
                 // callback (R3, 3.4): token aninhado "(<retchar><paramchars>)"
                 sb.append('(').append(callbackDescriptor(p.type())).append(')');
+            } else if (structFieldChars(p.type(), driver) != null) {
+                // D6-1 (A) / 3.8b: um `record` de campos escalares atravessa por
+                // valor como struct C. O runtime deriva o layout e os valores da
+                // própria classe do argumento (reflexão em RecordComponent) — o
+                // token `@` basta (sem carregar nome de classe no fio). Retorno de
+                // struct segue não-bindável nesta fatia (FFI001 honesto).
+                sb.append('@');
+            } else {
+                // inalcançável: isExternBound filtra antes; nunca silencioso (R6).
+                sb.append('?');
             }
         }
         return sb.toString();
+    }
+
+    /** D6-1/3.8b (JVM): se {@code typeName} for um `record` do unit corrente cujos
+     *  campos são TODOS escalares não-ponteiro (i/j/f/d/b — `String`/`S` fica de
+     *  fora no v1: campo `char*` é ponteiro, outra fatia), devolve a string de
+     *  chars dos campos (ex. "ii"); senão null (o gate mantém FFI001/FFI002). */
+    static String structFieldChars(String typeName, CompilerDriver driver) {
+        if (typeName == null || driver == null || driver.currentUnit == null) return null;
+        String simple = typeName;
+        int dot = simple.lastIndexOf('.');
+        if (dot >= 0) simple = simple.substring(dot + 1);
+        int slash = simple.lastIndexOf('/');
+        if (slash >= 0) simple = simple.substring(slash + 1);
+        RecordDeclarationNode rec = null;
+        for (AstNode d : driver.currentUnit.declarations()) {
+            if (d instanceof RecordDeclarationNode r && r.name().equals(simple)) { rec = r; break; }
+        }
+        if (rec == null || rec.components().isEmpty()) return null;
+        StringBuilder sb = new StringBuilder();
+        for (RecordComponentNode comp : rec.components()) {
+            Character ch = structFieldChar(comp.type());
+            if (ch == null) return null;   // campo não-escalar/ponteiro → não-bindável
+            sb.append(ch.charValue());
+        }
+        return sb.toString();
+    }
+
+    /** char do layout de um campo de struct: só numérico/bool (sem `S`/ponteiro). */
+    static Character structFieldChar(String t) {
+        if (isLongFFI(t)) return 'j';
+        if (isFloatFFI(t)) return 'f';
+        if (isBoolFFI(t)) return 'b';
+        if (CompilerPipeline.isDoubleType(t)) return 'd';
+        if (CompilerPipeline.isIntType(t)) return 'i';
+        return null;
     }
 
     static Type returnType(String r) {
