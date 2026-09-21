@@ -12011,7 +12011,7 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 - **Fix (raiz):** o script passou a implementar a intenção viva com guard-clauses — agradece o AUTOR do issue no PRIMEIRO comentário (`login` igual + `comments <= 1`); bot retorna cedo (como antes); corpo com numeração corrigida 1–3 e sem indentação de template. Prova (harness node sobre o script extraído do YAML): author-first → 1 `createComment`; bot / não-autor / segundo-comentário → 0 cada; a expressão antiga reproduz o crash do CI (`reading 'action'`) = RED-antes. YAML parseia (`python3 -c yaml.safe_load`).
 - **Regression test + real-GitHub proof (added 20/09, platform-cli, follow-up to this fix):** `scripts/tests/kof-issues-agent-script-test.sh` extracts the REAL script from the YAML and runs it with the github-script shape (no `github.event`): RED on the pre-fix workflow (`Cannot read properties of undefined (reading 'action')`), GREEN on the current one; registered in `run-agent-tests.sh` (CI structural job). A replica in a personal smoke repo confirmed on real GitHub that the ORIGINAL job fails on a human comment and the corrected one passes. The runtime effect still depends on the fix reaching `main` (`issue_comment` workflows run from the default branch).
 
-<!-- pt-switch --> **PT:** [§395 (pt_BR)](known-bugs.pt_BR.md#395--job-respond-do-kof-issues-agent-quebrava-em-todo-respond-crashava)
+<!-- pt-switch --> **PT:** [§395 (pt_BR)](known-bugs.pt_BR.md#395--job-respond-do-kof-issues-agent-quebrava-em-todo-comentario-nao-bot-expressao-de-workflow-githubevent-misturada-dentro-do-javascript-do-actionsgithub-script-la-so-existem-contextgithub--typeerror-cannot-read-properties-of-undefined-reading-action-e-o-unico-ramo-do-passo-contextpayloadaction--opened-e-inalcancavel-num-evento-issue_comment-a-action-do-payload-e-created--codigo-morto-o-job-nunca-postou-a-mensagem---corrigido-2009-570)
 
 ## §396 — `println` cru de um RECORD NULL é SIGSEGV no Native x86-64 (a JVM imprime "null") — 🟡 OPEN (20/09)
 > **Descoberto 20/09 (lane GAPS-DB, F2b `orm.find`):** no oráculo JVM, `orm.find<User>(db, 999)` com miss devolve `null` e `println(g)` imprime a string "null" (conversão toString de referência nula). No Native o mesmo programa SEGVa (exit 139) — o emissor de `println(record)` desreferencia o ponteiro (vtable/toString path) sem guard de null. O narrowing idiomático `if (g == null) { println("null") } else { println("hit") }` funciona byte-paridade nos 2 alvos — é o println CRU que diverge.
@@ -12020,7 +12020,7 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 - **Roteamento:** lane codegen/native (emissor, não ORM — o find devolve 0 correto; o §396 é o println). Workaround do corpus (usado no golden do F2b): narrowing antes de imprimir.
 - **Q4/Q5:** não é regressão do F2b (o slice devolve `null` correto — medido por gdb: miss → rax=0); é uma divergência preexistente da superfície println×record.
 
-<!-- pt-switch --> **PT:** [§396 (pt_BR)](known-bugs.pt_BR.md#396--println-cru-de-um-record-null-e-sigsegv-no-native-x86-64-a-jvm-imprime-null--open-2009)
+<!-- pt-switch --> **PT:** [§396 (pt_BR)](known-bugs.pt_BR.md#396--println-cru-de-um-record-null-e-sigsegv-no-native-x86-64-a-jvm-imprime-null---aberto-2009)
 ## §397 — ORM/DB/JSON shared binder turned any non-zero integer into `false` for `Bool` (JVM): `rs.getObject` returns `Integer` for SQLite/H2 bool columns and `kof_json_bind` fell through to `Boolean.parseBoolean(String.valueOf(1))` → `orm.save` stored `true` (as 1) and `orm.find`/`all`/`where` and `db.query<T>` read `false` — the save↔find asymmetry measured by the F2b probe — ✅ FIXED 20/09 (gaps-db lane)
 > **Status:** ✅ FIXED — `JvmRuntimeJson.kof_json_bind` (source gerado do KofRuntime): o ramo `boolean.class` agora aceita `Number → intValue() != 0` (a mesma regra do bind de saída; String continua `parseBoolean` para `"true"/"false"` literais). Descoberto ANTES de portar `find` ao Native: o oracle JVM estava gravando certo e lendo errado — portar o host quebrado replicaria o bug no asm.
 
@@ -12029,7 +12029,7 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 - **Fix (raiz):** ramo boolean do binder aceita `Number` → `intValue() != 0` (simetria gravar==ler é o contrato do Kof: `save(true)` ⇒ `find().ok == true`); nada de `if`-mascara, o tipo faltante era o caminho numerico.
 - **Prova (Q0/Q1/Q3):** RED→GREEN medidos nas 3 vitimas, 1 teste por path: `KofDbE2ETest#typedQueryBindsIntColumnToBoolField` (int 1/0/2 → true/false/true), `KofOrmE2ETest#findPreservesSavedBoolTrueRegression397` (sqlite save(true)→find().ok==true + save(false)→false), `JsonCompleteE2ETest#jvmDecodeIntFieldIntoBoolRecordBindsTrue` (campo `\"ok\":1` → true). **3/3 RED no binder velho (stash do fix), 3/3 GREEN com o fix.**
 - **Cross-target:** Native x86-64 `find` é a fatia F2b (esta linha trava o contrato p/ a asm: `INTEGER != 0` no slot Bool — nunca `parseBoolean` de texto); JS devolve o bool nativo do host (`Boolean(1)`==true — sem o bug); riscv/aarch64 seguem aasm-fatia quando portada (ORM001 honesto até la).
-<!-- pt-switch --> **PT:** [§397 (pt_BR)](known-bugs.pt_BR.md#397--binder-compartilhado-ormdbjson-tornava-inteiros-não-zero-em-false-para-bool-jvm)
+<!-- pt-switch --> **PT:** [§397 (pt_BR)](known-bugs.pt_BR.md#397--binder-compartilhado-ormdbjson-virava-qualquer-inteiro-nao-zero-em-false-para-bool-jvm-o-rsgetobject-do-sqliteh2-devolve-integer-para-colunas-bool-e-o-kof_json_bind-caia-em-booleanparsebooleanstringvalueof1--ormsave-gravava-true-como-1-e-ormfindallwhere-e-dbqueryt-liam-false--a-assimetria-savefind-medida-pelo-probe-do-f2b---corrigido-2009-lane-gaps-db)
 
 
 -
@@ -13974,7 +13974,7 @@ p
 - **Related:** §394 (same leak family — process vs dir), `KofDebugNativeDap.java`,
   `KofCliSupport.cleanup`.
 
-<!-- pt-switch --> **PT:** [§398 (pt_BR)](known-bugs.pt_BR.md#398--o-harness-de-debug-dap-native-vazava-os-diretorios-temporarios)
+<!-- pt-switch --> **PT:** [§398 (pt_BR)](known-bugs.pt_BR.md#398--o-harness-de-debug-dap-native-vazava-os-diretorios-temporarios-o-kofdebugnativedaptest-criava-dap-native--com-filescreatetempdirectory-nunca-apagava-e-o-diretorio-do-elf-kof-debug-native--da-cli-sobrevivia-ao-sigterm-porque-o-cleanup-corria-com-o-shutdown-hook--62--30-diretorios-acumulados---corrigido-2009-lane-estabilizacao-familia-394)
 
 
 ## §399 — `kof debug` DAP on the JVM: `step`/`continue` cleared `stoppedThread` AFTER `resume()`, so the race with the SingleStep event wiped the new thread id to `-1` → the next `stackTrace` sent `FrameCount(-1)` (JDWP command 11,7) → error 20 (`INVALID_OBJECT`) killed the session ("fluxo DAP fechou") — flake `KofDebugJvmStepTest` ~1/5 of class runs — ✅ FIXED 21/09 (`62206c6d`; stabilization lane)
@@ -14012,7 +14012,7 @@ p
 - **Workaround (the idiom):** wrap in a lambda — `job("e", () -> always())` — byte-parity JVM/JS (measured in `WorkflowE2ETest` shapes).
 - **Related:** §353 (this was surfaced by the §353 Q4 edge hunt), `LambdaE2ETest.castToFunctionType` (the `as ()->T` river, different position), workflow-host `() -> Bool` flocks.
 
-<!-- pt-switch --> **PT:** [§400 (pt_BR)](known-bugs.pt_BR.md#400--uma-funcao-top-level-nomeada-passada-COMO-VALOR-è-rejeitada-com-sem011)
+<!-- pt-switch --> **PT:** [§400 (pt_BR)](known-bugs.pt_BR.md#400--uma-funcao-top-level-nomeada-passada-como-valor-ex-jobe-probe-com-bool-probe-e-rejeitada-com-sem011-undefined-variable-or-type--o-nome-so-resolve-em-posicao-de-chamada-e-o-diagnostico-aponta-o-universo-errado-r6---aberto-2109-catalogado-na-caca-de-edges-do-353-medido-pre-existente)
 
 
 ## §418 — the `kof debug` riscv64 harness (single-step under qemu) hangs or loses the inferior — no `destroy()`/`kill()` anywhere in `NativeRiscv64E2ETest` — 🟡 OPEN 21/09 (routed to the native-debug lane; re-landed from the block lost to the shared-tree reset, VERIFIED against the current file)
@@ -14023,7 +14023,7 @@ p
 - **Status:** 🟡 OPEN — rota = lane native-debug (dono do harness). Not introduced by the §406-family fix — the holes predate it.
 - **Related:** §406 (harness ELF-dir leak, fixed in the lost block — the owning lane is re-landing; number may shift).
 
-<!-- pt-switch --> **PT:** [§418 (pt_BR)](known-bugs.pt_BR.md#418--o-harness-kof-debug-riscv64-single-step-sob-qemu-trava-ou-perde-o-inferior)
+<!-- pt-switch --> **PT:** [§418 (pt_BR)](known-bugs.pt_BR.md#418--o-harness-kof-debug-riscv64-single-step-sob-qemu-trava-ou-perde-o-inferior--nenhum-destroykill-em-nativeriscv64e2etest---aberto-2109-roteado-a-lane-native-debug-re-pousado-do-bloco-perdido-no-reset-da-arvore-compartilhada-verificado-contra-o-arquivo-atual)
 
 ## §419 — RETRACTED: three catalog entries re-landed from memory after the 21/09 shared-tree reset were mis-attributed — phantom code reference and false GitHub claims — ✅ CLOSED 21/09 (this entry, retraction; lesson for all lanes)
 
@@ -14032,7 +14032,7 @@ p
 - **Lesson (binding for re-lands after a tree loss):** re-landing from context is allowed ONLY with per-entry verification against the current tip — file:line re-grepped, GitHub claims re-read via `gh issue view` — before committing; a catalog entry whose code reference does not exist gets RETRACTED, not "fixed forward". Phantom citations in the ledger are worse than the reset itself: they poison the next agent's map.
 - **Related:** §400 (the true named-function item), §418 (the true harness item), CHANGELOG `d7dba433`-class restore history (same tree, same disease).
 
-<!-- pt-switch --> **PT:** [§419 (pt_BR)](known-bugs.pt_BR.md#419--retracao-tres-catalogacoes-re-pousadas-de-memoria-erradas--licao)
+<!-- pt-switch --> **PT:** [§419 (pt_BR)](known-bugs.pt_BR.md#419--retratado-tres-catalogacoes-re-pousadas-de-memoria-apos-o-reset-da-arvore-compartilhada-de-2109-estavam-com-atribuicao-errada--referencia-de-codigo-fantasma-e-alegacoes-falsas-no-github---fechado-2109-esta-entrada-e-a-retratacao-licao-para-todas-as-lanes)
 
 ## §420 — `KofJsRunner.writeBytes` kept the last raw `(int)` cast over a guest `getArraySize()` (same §258/#773 family) — ✅ FIXED 21/09
 

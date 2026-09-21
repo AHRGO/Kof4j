@@ -11463,7 +11463,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Roteamento:** lane codegen/native (emissor, não ORM — o find devolve 0 correto; o §396 é o println). Workaround do corpus (usado no golden do F2b): narrowing antes de imprimir.
 - **Q4/Q5:** não é regressão do F2b (o slice devolve `null` correto — medido por gdb: miss → rax=0); é divergência preexistente da superfície println×record.
 
-<!-- en-switch --> **EN:** [§396 (en)](known-bugs.md#396--println-cru-de-um-record-null-e-sigsegv-no-native-x86-64-a-jvm-imprime-null--open-2009)
+<!-- en-switch --> **EN:** [§396 (en)](known-bugs.md#396--println-cru-de-um-record-null-e-sigsegv-no-native-x86-64-a-jvm-imprime-null---open-2009)
 ## §397 — binder compartilhado ORM/DB/JSON virava qualquer inteiro não-zero em `false` para `Bool` (JVM): o `rs.getObject` do SQLite/H2 devolve `Integer` para colunas bool e o `kof_json_bind` caía em `Boolean.parseBoolean(String.valueOf(1))` → `orm.save` gravava `true` (como 1) e `orm.find`/`all`/`where` e `db.query<T>` liam `false` — a assimetria save↔find medida pelo probe do F2b — ✅ CORRIGIDO 20/09 (lane gaps-db)
 > **Status:** ✅ CORRIGIDO — `JvmRuntimeJson.kof_json_bind` (source gerado do KofRuntime): o ramo `boolean.class` agora aceita `Number → intValue() != 0` (a mesma regra do bind de saída; String continua `parseBoolean` para literais `"true"/"false"`). Descoberto ANTES de portar `find` ao Native: o oracle JVM gravava certo e lia errado — portar o host quebrado replicaria o bug no asm.
 
@@ -11540,7 +11540,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Workaround (o idioma):** embrulhar em lambda — `job("e", () -> always())` — byte-parity JVM/JS (medido nas formas do `WorkflowE2ETest`).
 - **Relacionado:** §353 (isto nasceu da caca de edges Q4 dele), `LambdaE2ETest.castToFunctionType` (o rio `as ()->T`, posicao diferente), os chavlocks `() -> Bool` do workflow-host.
 
-<!-- en-switch --> **EN:** [§400 (en)](known-bugs.md#400--a-named-top-level-function-passed-as-a-value-is-rejected-with-sem011)
+<!-- en-switch --> **EN:** [§400 (en)](known-bugs.md#400--a-named-top-level-function-passed-as-a-value-eg-jobe-probe-where-bool-probe-is-rejected-with-sem011-undefined-variable-or-type--the-name-resolves-only-in-call-position-the-diagnostic-also-names-the-wrong-universe-r6---open-2109-catalogued-by-the-353-edge-hunt-measured-pre-existing)
 
 
 ## §418 — o harness `kof debug` riscv64 (single-step sob qemu) trava ou perde o inferior — nenhum `destroy()`/`kill()` em `NativeRiscv64E2ETest` — 🟡 ABERTO 21/09 (roteado à lane native-debug; re-pousado do bloco perdido no reset da árvore compartilhada, VERIFICADO contra o arquivo atual)
@@ -11551,7 +11551,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Status:** 🟡 ABERTO — rota = lane native-debug (dono do harness). Não introduzido pela correção da família §406 — os buracos preexistem.
 - **Relacionado:** §406 (vazamento de ELF dir do harness, corrigido no bloco perdido — a lane dona está re-pousando; o número pode mudar).
 
-<!-- en-switch --> **EN:** [§418 (en)](known-bugs.md#418--the-kof-debug-riscv64-harness-single-step-under-qemu-hangs-or-loses-the-inferior---no-destroykill-anywhere-in-nativeriscv64e2etest)
+<!-- en-switch --> **EN:** [§418 (en)](known-bugs.md#418--the-kof-debug-riscv64-harness-single-step-under-qemu-hangs-or-loses-the-inferior--no-destroykill-anywhere-in-nativeriscv64e2etest---open-2109-routed-to-the-native-debug-lane-re-landed-from-the-block-lost-to-the-shared-tree-reset-verified-against-the-current-file)
 
 ## §419 — RETRATADO: três catalogações re-pousadas de memória após o reset da árvore compartilhada de 21/09 estavam com atribuição errada — referência de código fantasma e alegações falsas no GitHub — ✅ FECHADO 21/09 (esta entrada é a retratação; lição para todas as lanes)
 
@@ -11560,7 +11560,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Lição (vinculante para re-pousos após perda de árvore):** re-pousar de memória SÓ com verificação entrada a entrada contra o tip atual — file:line re-grepado, alegações GitHub relidas via `gh issue view` — antes de commitar; entrada cujo endereço de código não existe é RETRATADA, não "corrigida para frente". Citações fantasma no ledger são piores que o reset: envenenam o mapa do próximo agente.
 - **Relacionado:** §400 (o item verdadeiro da função nomeada), §418 (o item verdadeiro do harness), histórico do restore `d7dba433` no CHANGELOG (mesma árvore, mesma doença).
 
-<!-- en-switch --> **EN:** [§419 (en)](known-bugs.md#419--retracted-three-catalog-entries-re-landed-from-memory-after-the-2109-shared-tree-reset-were-mis-attributed)
+<!-- en-switch --> **EN:** [§419 (en)](known-bugs.md#419--retracted-three-catalog-entries-re-landed-from-memory-after-the-2109-shared-tree-reset-were-mis-attributed--phantom-code-reference-and-false-github-claims---closed-2109-this-entry-retraction-lesson-for-all-lanes)
 
 ## §420 — `KofJsRunner.writeBytes` manteve o último cast bruto `(int)` sobre um `getArraySize()` do guest (mesma família §258/#773) — ✅ CORRIGIDO 21/09
 
