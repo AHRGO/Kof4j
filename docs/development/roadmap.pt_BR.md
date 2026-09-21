@@ -941,8 +941,8 @@ tiers `stable`/`experimental` (`docs/backend-parity.md`).
 |---|------|--------------------|
 | 2.1.1–2.1.3 | Sintaxe `extern` + type-check + gaps `FFI001`/`FFI002` (nunca drop silencioso) | ✅ `Parser.java:192` (PARSE090), `ExternalFunctionNode`, `FfiE2ETest` |
 | 2.1.4 | Binding **JVM** (FFM `java.lang.foreign`) | ✅ **generalizado 18/09 (`.18`, R3):** qualquer assinatura escalar, aridade livre, retornos `void`/`String` — medidos `fmod`→1.5, `ldexp`→12.0, `strncmp`→-1, `puts(void)`, `getenv`→String (`syntax.md`) |
-| 2.1.5 | Binding **Native** (`dlsym`) | ❌ **gap honesto `FFI001`** — `dlopen` segfaulta no binário cru (sem init glibc); NÃO é "✅ real" |
-| 2.1.6 | Marshalling struct/array | 🟡 todas as formas ESCALARES ligam (JVM+host JS desde 18/09); struct/array/ponteiro seguem `FFI001` honesto (design D6 ⛔ mantenedora) |
+| 2.1.5 | Binding **Native** | ✅ **20/09 (#431 fatias 1–2, §369)** — o binário cru liga escalares **direto** (`call sym@PLT`, link-by-use), o que **substitui `dlopen`/`dlsym`**; §61 fechado. O segfault antigo do `dlopen` foi o motivo da troca, não um gap aberto |
+| 2.1.6 | Marshalling struct/array | 🟡 **JVM ✅ 3.8b (20–21/09)**: `record` por valor como arg/retorno + `T[]` escalar→`ptr` (`FfiStructE2ETest` 10/10, `FfiArrayE2ETest` 5/5); **restam** = out-buffer D6-3 (`Buffer(U8,INOUT)`, regra 6), bridge de struct no JS, sret no Native (3.7). D6 ✅ decidido 20/09 |
 | 2.1.7 | JS: gap `FFI002` | ✅ gap honesto + **paridade escalar FECHADA 18/09 (`d3598c2d`, fatias 3.6.F1–F3):** runner host liga via `KofJsFfiBridge`, `FfiE2ETest` 16/16 byte-for-byte JVM↔JS; browser = runtime R7; nao-escalar mantem `FFI002` |
 | 2.2.1 | Inventário do codegen implícito (4 pontos: runtime `.source()`, `desugarTests`, `desugarApplication`, entity→record+schema) | ✅ os 4 existem (`CompilerPipeline:295-296`) |
 | 2.2.2 | **Hook formal `CodegenStep`** | ✅ **LANDADO 21/09 (R4, `D-CODEGEN-STEP`)** — `CodegenStep`/`CodegenStepPipeline` (aditivo; registry vazio = identidade, zero mudança de comportamento; `CodegenStepPipelineTest` 6/6). O "✅" antigo de `d1c56bad` era sobre-claim da branch `planning-future`; o R4 é o landing real |

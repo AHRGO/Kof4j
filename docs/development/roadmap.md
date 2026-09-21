@@ -939,8 +939,8 @@ domain (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + parity matrix;
 |---|------|--------------------|
 | 2.1.1–2.1.3 | `extern` syntax + type-check + gaps `FFI001`/`FFI002` (never silent drop) | ✅ `Parser.java:192` (PARSE090), `ExternalFunctionNode`, `FfiE2ETest` |
 | 2.1.4 | **JVM** binding (FFM `java.lang.foreign`) | ✅ **generalized 18/09 (`.18`, R3):** any scalar signature, arbitrary arity, `void`/`String` returns — measured `fmod`→1.5, `ldexp`→12.0, `strncmp`→-1, `puts(void)`, `getenv`→String (`syntax.md`) |
-| 2.1.5 | **Native** binding (`dlsym`) | ❌ **honest gap `FFI001`** — `dlopen` segfaults in the raw binary (no glibc init); it is NOT "✅ real" |
-| 2.1.6 | struct/array marshalling | 🟡 all SCALAR shapes bind (JVM+JS-host since 18/09); struct/array/pointer still honest `FFI001` (design D6 ⛔ maintainer) |
+| 2.1.5 | **Native** binding | ✅ **20/09 (#431 slices 1–2, §369)** — the raw binary binds scalars **direct** (`call sym@PLT`, link-by-use), which **supersedes `dlopen`/`dlsym`**; §61 closed. The old `dlopen` segfault was the reason for the switch, not an open gap |
+| 2.1.6 | struct/array marshalling | 🟡 **JVM ✅ 3.8b (20–21/09)**: `record` by value as arg/return + scalar `T[]`→`ptr` (`FfiStructE2ETest` 10/10, `FfiArrayE2ETest` 5/5); **remaining** = out-buffer D6-3 (`Buffer(U8,INOUT)`, rule 6), JS struct bridge, Native sret (3.7). D6 ✅ decided 20/09 |
 | 2.1.7 | JS: gap `FFI002` | ✅ honest gap + **scalar parity CLOSED 18/09 (`d3598c2d`, slices 3.6.F1–F3):** host runner binds via `KofJsFfiBridge`, `FfiE2ETest` 16/16 byte-for-byte JVM↔JS; browser = runtime R7; non-scalar keeps `FFI002` |
 | 2.2.1 | Inventory of implicit codegen (4 points: runtime `.source()`, `desugarTests`, `desugarApplication`, entity→record+schema) | ✅ the 4 exist (`CompilerPipeline:295-296`) |
 | 2.2.2 | **Formal `CodegenStep` hook** | ✅ **LANDED 21/09 (R4, `D-CODEGEN-STEP`)** — `CodegenStep`/`CodegenStepPipeline` (additive; empty registry = identity, zero behavior change; `CodegenStepPipelineTest` 6/6). The old `d1c56bad` "✅" was an over-claim from the `planning-future` branch; R4 is the real landing |
