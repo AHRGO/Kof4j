@@ -2642,7 +2642,9 @@ settles the Registry consumption contract only. It does NOT cut 0.5.0 nor open
 maintainer's multiple-choice answer set **D6-1 = A+B** (lane `.14`/`.22` had
 recorded option A) and confirmed D6-2..D6-5. This is the canonical record; the
 earlier option-A text is preserved under *Superseded* (conflict policy: both
-sides kept). Issues **#572/#573** (slice 3.8b) must align to A+B.
+sides kept). Issues **#572/#573** (slice 3.8b) must align to **B** — `D-FFI-STRUCT-B`
+(21/09) supersedes the A+B reading of D6-1: `record` stays by-value read-only;
+the delta is the mutable by-ref `struct` (`Buffer(U8)` covers the out-buffer).
 
 **Scope:** closes the `D6-1..D6-5` questions of
 `docs/development/ffi-abi-structs.md` (§4) — the spec that gates the FFI

@@ -2630,7 +2630,9 @@ apenas fecha o contrato de consumo do Registry. NÃO corta o 0.5.0 nem abre a 1.
 da mantenedora fixou **D6-1 = A+B** (lane `.14`/`.22` havia gravado a opção A)
 e confirmou D6-2..D6-5. Este é o registro canônico; o texto antigo (opção A)
 fica preservado em *Superseded* logo abaixo. Issues **#572/#573** (3.8b) alinham
-a A+B.
+a **B** — `D-FFI-STRUCT-B` (21/09) supersede a leitura A+B de D6-1: `record`
+fica por valor read-only; o delta é o `struct` mutável por referência
+(`Buffer(U8)` cobre o out-buffer).
 
 **Escopo:** fecha as questões `D6-1..D6-5` de
 `docs/development/ffi-abi-structs.md` (§4) — a spec que gateia a ABI de
