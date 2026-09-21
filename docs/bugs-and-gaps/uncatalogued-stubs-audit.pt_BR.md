@@ -275,6 +275,22 @@ checagens, verde; fixture limpa segue 0). Na árvore real as seções apontam
 exatamente §428/§429/§430 mais o candidato `KofDebug.java:77` agora anotado no
 §431.
 
+### Fatia 7 — backstop de símbolo de runtime: medido NÃO confiável (21/09)
+
+O objetivo era um diff mecânico de símbolo emitido × definido por alvo para
+pegar a classe §424/§427. **Medido na árvore: inviável.** 781 literais `kof_*`
+são emitidos; o diff contra todo `.globl`/definição deixa **81 candidatos,
+todos falsos positivos** — os literais são prefixos dinâmicos (`"kof_ui_"`,
+`"kof_db_"`, `"kof_static_"`), nomes despachados por igualdade de string no JS
+(`kof_args`/`kof_box`), nomes de método de desugar do Kof (`kof_app_on_start`),
+nomes de tabela SQL (`kof_migrations`) ou bindings de contexto JS
+(`kof__uiRootHtml`). O furo do §424 nem é literal `kof_*`: é um
+`java_lang_String_<método>` **sintetizado** no `NativeOpHelpers`. Conclusão: o
+backstop confiável é **comportamental** (E2E por alvo sobre um corpus de chamadas
+stdlib) mais os `DomainGapCodesTest`/`StdCatalogTest` existentes; um diff
+estático de símbolos não é um e não deve ser construído. O check direcionado do
+registry `String` × alvo (a classe §424) é a mecanização acionável.
+
 ## Próximas passadas (planejadas — ainda não executadas)
 
 1. **Checagem de assimetria de paridade** — **FEITA (fatia 2b,

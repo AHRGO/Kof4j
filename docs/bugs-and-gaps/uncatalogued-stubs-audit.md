@@ -267,6 +267,22 @@ grows RED-first fixtures for each (14 checks, green; clean fixture stays 0). On 
 real tree the sections flag exactly §428/§429/§430 plus the `KofDebug.java:77`
 candidate now noted in §431.
 
+### Fatia 7 — runtime-symbol backstop: measured NOT reliable (21/09)
+
+The aim was a mechanical emitted-symbol × defined-symbol diff per target to catch
+the §424/§427 class. **Measured on the tree: not viable.** 781 `kof_*` literals
+are emitted; diffing against every `.globl`/definition leaves **81 candidates,
+all false positives** — the literals are dynamic prefixes (`"kof_ui_"`,
+`"kof_db_"`, `"kof_static_"`), names dispatched by string equality in JS
+(`kof_args`/`kof_box`), Kof-level desugar method names (`kof_app_on_start`), SQL
+table names (`kof_migrations`), or JS context bindings (`kof__uiRootHtml`). The
+§424 hole is not even a `kof_*` literal: it is a **synthesized**
+`java_lang_String_<method>` in `NativeOpHelpers`. Conclusion: the reliable
+backstop is **behavioral** (per-target E2E over a stdlib-call corpus) plus the
+existing `DomainGapCodesTest`/`StdCatalogTest`; a static symbol diff is not one
+and must not be built. The targeted `String` registry × target check (the §424
+class) is the actionable mechanization.
+
 ## Next passes (planned — not yet executed)
 
 1. **Parity asymmetry check** — **DONE (slice 2b, `StdParityGapAuditTest`
