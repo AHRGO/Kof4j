@@ -45,7 +45,7 @@ Claim an item in `DOING.md` **in the same commit** that starts the work.
 |-------|------|--------|---------|
 | 1 | SYSTEMS (consolidation) | 🟡 in progress | web/native parity gaps **1.1.3–1.1.9** (owners: web/native lanes) — **D1–D3 ✅ decided 19/09** (GC x86 ✅ D1-A; registry ✅ 19/09) |
 | 2 | AUTOMATION | 🔵 not started | Stage 1 |
-| 3 | INFRASTRUCTURE (Kof Makealive) | 🟡 in progress — `makealive-plan.md` (.18); **recon 3.0 ✅ 19/09** (`MakealivePrimitivesE2ETest` 5/5) + **surface ✅ decided (Q1–Q4, `DECISIONS.md` §D-MAKEALIVE 20/09)**; core 3.1/3.2/3.3/3.8 landed, 3.7 closed — **only 3.6 remains (secrets, Stage 5)** | Stage 2, R3 (FFI), R4 (codegen hook — **✅ landed 21/09**); **name collision R1 ✅ resolved (`kof.makealive`, plan §2.1/Q1)** |
+| 3 | INFRASTRUCTURE (Kof Makealive) | ✅ **all rows 3.1–3.8 landed** (3.6 secrets landed 21/09 `32285136`) — `makealive-plan.md` moved to `docs/architecture/` | Stage 2, R3 (FFI), R4 (codegen hook — **✅ landed 21/09**); **name collision R1 ✅ resolved (`kof.makealive`, plan §2.1/Q1)** |
 | 4 | DATA (engineering / science / ML) | 🔵 not started | Stage 3, R3 (FFI) |
 | 5 | SECURITY (expansion) | 🔵 not started | Stage 3, R3 (FFI) |
 | 6 | SCIENTIFIC COMPUTING | 🔵 not started | Stage 4, R3, GC (1.2) |
@@ -155,7 +155,7 @@ plan/apply/state/reconciliation.
 dependency); package capabilities (1.5).
 **NOT to do:** HCL inside Kof; a provider repository for *everything*;
 coupling the core to a provider.
-**Plan (19/09, maintainer directive, lane `.18`):** [`makealive-plan.md`](makealive-plan.md).
+**Plan (19/09, maintainer directive, lane `.18`):** [`makealive-plan.md`](../architecture/makealive-plan.md).
 **R1 collision MEASURED 19/09:** the tracker literal `kof.infra` is HARD-DENY
 in `scripts/check_stdlib_boundary.sh` (rc=1; plan §2.1) — the namespace is
 maintainer question **Q1** (plan §6); no surface lands before it. The
@@ -169,7 +169,7 @@ R4**; R4 gates only the declarative rows (3.2, 3.7).
 | 3.3 | Reconciliation loop (spawn/await + channel) | ✅ 20/09 | `.18` | Stage 1 (2.1); landed as `reconcile(design, provider, intervalMs)` over `scheduler.every` (tick = `apply` inside a `spawn`, CONC003-JS-01 shape; the "channel" = the scheduler jobId — stop with `scheduler.cancel(id)`, no new faces). NO Native stub needed (measured 20/09: CRON001 gates `scheduler.at`, never `every` — SCHED001 closed cross 05/09); `MakealiveReconcileE2ETest` 1/1 x3 serial, JVM==JS byte, Native compile pin |
 | 3.4 | State in `kof.db` | ✅ 20/09 | `.18` | **folded into 3.1 (MK-1 20/09)**; per-target verification item kept; Native state gated by §D-DB-GAPS |
 | 3.5 | Providers via FFI/REST/CLI (AWS/Azure/GCP — interop) | ✅ 20/09 | — | R3; v1 = the generic providers measured and green (fs/CLI/REST goldens 20/09, JVM==JS); concrete clouds are OFFICIAL PACKAGES (`infra-<cloud>`, D-MAKEALIVE Q2), not compiler surface |
-| 3.6 | Secrets via `kof.security` | 🟡 | security lane | `kof.security` exists; `Secret`/`KeyHandle` pending (Stage 5). **DECIDED 21/09 (`D-SECRETS`)**: plan promoted to `docs/development/secrets-plan.md` (EN+PT); **face 1 (`Secret` type) authorized**, incremental with proof; `KeyHandle`/redaction face by face. |
+| 3.6 | Secrets via `kof.security` | ✅ 21/09 | security lane | `D-SECRETS` face 1 LANDED 21/09 (`32285136`): `Secret` value type — `secrets.of`/`secrets.secret`, `reveal()` (only raw export), redacted print (`Secret(*** )`), constant-time `==`; JVM-first (R7), JS/Native/Script/Android = `SECN008` (R6). Proof `SecretE2ETest` 4/4. `fromBytes`/zeroable buffer + P2 redaction/`KeyHandle` (P3) = follow-ups with their own vote (`secrets-plan.md`, EN+PT). |
 | 3.7 | Cycle detection in the `infra` graph at compile-time | ✅ | `.18`/9093 | **CLOSED 21/09 as runtime-only** (`D-MAKEALIVE-SYNTAX` addendum): with 3.2 as pure sugar the compiler sees only generic calls, so a static graph would give the block its own semantics (§7/rule 11); the runtime refusal (3.1) names the cycle members — that is the contract. |
 | 3.8 | Tooling: `kof makealive plan/apply/destroy` | ✅ 20/09 | `.18` | **DONE (D-MAKEALIVE-CLI, contrato decidido 20/09 por delegação do maintainer)**: verbo segue o nome decidido no Q1 (`makealive`, não `infra`); `design()`+`provider()` convenção D-WORKFLOW-RUN; MARK `@@KOF_MAKEALIVE@@ `; estado h2 `--state` com gen=max+1 + MARCA de estado vazio no destroy (bug de geração invisivel achado pelo E2E; `mkMaxGen` landed); JVM==JS byte parity, script/native refusals (R7). Prova: `CmdMakealiveTest` 7/7 + `MakealiveMaxGenE2ETest` 4/4 + Makealive battery 14/14. |
 ---

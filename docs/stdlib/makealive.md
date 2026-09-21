@@ -130,7 +130,7 @@ YOUR provider body in plain Kof, and each has an executable golden:
 | **CLI** | `kof.shell` `run`/`pipeline` (`exitCode`/`stdout`) | `MakealiveCliProviderE2ETest` |
 | **REST** | `kof.http` `get`/`put`/`delete` + `http.status(url)` | `MakealiveRestProviderE2ETest` |
 
-Measured shapes (20/09, these are the contracts — `docs/development/makealive-plan.md` §4):
+Measured shapes (20/09, these are the contracts — `docs/architecture/makealive-plan.md` §4):
 
 - **fs**: `writeText` returns Bool on JVM but **JS reports the raw bridge
   code `0/-1`** (§382 — `0` is falsy); the honest pattern is effect-then-

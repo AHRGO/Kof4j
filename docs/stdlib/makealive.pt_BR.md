@@ -129,7 +129,7 @@ corpo do SEU provedor em Kof puro, e cada uma tem um golden executável:
 | **CLI** | `kof.shell` `run`/`pipeline` (`exitCode`/`stdout`) | `MakealiveCliProviderE2ETest` |
 | **REST** | `kof.http` `get`/`put`/`delete` + `http.status(url)` | `MakealiveRestProviderE2ETest` |
 
-Formas medidas (20/09, estes são os contratos — `docs/development/makealive-plan.md` §4):
+Formas medidas (20/09, estes são os contratos — `docs/architecture/makealive-plan.md` §4):
 
 - **fs**: `writeText` devolve Bool no JVM mas o **JS reporta o código bruto
   da ponte `0/-1`** (§382 — `0` é falsy); o padrão honesto é

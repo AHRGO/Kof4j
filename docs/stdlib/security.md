@@ -229,9 +229,9 @@ resolves the runtime function and each target provides the implementation.
 | Secure random | NONEXISTENT (no random API) |
 | JWT | NONEXISTENT |
 | Headers/CSRF/CORS | NONEXISTENT |
-| Secrets (env) | NONEXISTENT |
+| Secrets (env) | `secrets.get(name[,fallback])` (raw `String`) + `secrets.secret(name)` → `Secret` |
 | Auth in HTTP | PARTIAL: manual `header("x-auth")` in the middleware |
-| Secrets in logs | NO PROTECTION |
+| Secrets in logs | PROTECTED on JVM via the `Secret` type (D-SECRETS face 1, Stage 5/3.6): prints `Secret(*** )`, raw text only through `reveal()`. JS/Native/Script/Android = honest gap `SECN008` |
 
 ---
 
@@ -244,7 +244,7 @@ kof.security
 ├── passwords        → hash/verify/needsRehash (PBKDF2-HMAC-SHA256, secure by default)
 ├── crypto           → sha256/sha512, hmacSha256, aesGcm (encrypt/decrypt), randomHex/randomInt
 ├── jwt              → create/verify (HS256, exp/iss/aud, no algorithm confusion)
-├── secrets          → get (env), redact
+├── secrets          → get (env, raw String), redact, of/secret (→ Secret value type)
 ├── security         → constantTimeEquals, randomHex, redact, csrfToken/csrfValid, corsAllowed, headers helpers,
 │                      rateLimit, sessionCreate/sessionGet/sessionDestroy, apiKeyGenerate/apiKeyValid (G9),
 │                      cookieSet/cookieGet (C11, secure defaults)
@@ -344,6 +344,8 @@ jwt:         RFC 7519 HS256 (alg fixed, never accepted from the token)
 | `jwt.secret()` | ✅ env `KOF_JWT_SECRET` or generated | ✅ (`/proc/self/environ`) | ✅ | 32 bytes hex |
 | `secrets.get(name[, fallback])` | ✅ env | ✅ `/proc/self/environ` | ✅ platform | |
 | `secrets.redact(value)` | ✅ | ✅ (asm) | ✅ | `abcd********wxyz` |
+| `secrets.of(text)` / `secrets.secret(name)` | ✅ (→ `Secret`) | ❌ `SECN008` | ❌ `SECN008` | D-SECRETS face 1 |
+| `Secret.reveal()` / `.redacted()` | ✅ | ❌ `SECN008` | ❌ `SECN008` | prints `Secret(*** )`; `reveal()` is the only raw export |
 | `security.constantTimeEquals(a, b)` | ✅ `MessageDigest.isEqual` | ✅ (asm) | ✅ | |
 | `security.randomHex` / `randomInt` | ✅ | ✅ | ✅ | |
 | `security.csrfToken/csrfValid` | ✅ (session-scoped) | ❌ | ❌ | |

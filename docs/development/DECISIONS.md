@@ -3006,6 +3006,13 @@ to `docs/development/` (three-states). Queue: `roadmap.md` §2.8.4/§2.8.5.
 `KeyHandle`/redaction follow face by face. Last residual of `makealive-plan`
 (3.6). Queue: tracker 3.6.
 
+**Face 1 LANDED 21/09 (`32285136`):** `Secret` value type — `secrets.of(text)` /
+`secrets.secret(name)` constructors, `reveal()` (the only raw export),
+`redacted()`, redacted printing (`Secret(*** )`), constant-time `==`. JVM-first
+(R7); JS/Native/Script/Android = honest gap `SECN008` (R6). Proof `SecretE2ETest`
+4/4. `fromBytes` and the zeroable-buffer backing (Native) remain follow-ups;
+`KeyHandle` (P3) still needs its own vote.
+
 ## D-FFI-STRUCT-B — D6-1 option B (`struct` mutable): approved spec-first (maintainer 21/09/2026)
 
 **Date:** 2026-09-21 · **State:** `DECIDED` · design-first (no code yet).

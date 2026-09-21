@@ -215,9 +215,9 @@ resolve a função de runtime e cada target fornece a implementação.
 | Random seguro | INEXISTENTE (sem API de random) |
 | JWT | INEXISTENTE |
 | Headers/CSRF/CORS | INEXISTENTE |
-| Segredos (env) | INEXISTENTE |
+| Segredos (env) | `secrets.get(name[,fallback])` (`String` cru) + `secrets.secret(name)` → `Secret` |
 | Auth em HTTP | PARCIAL: `header("x-auth")` manual no middleware |
-| Secrets em logs | SEM PROTEÇÃO |
+| Secrets em logs | PROTEGIDO no JVM pelo tipo `Secret` (D-SECRETS face 1, Estágio 5/3.6): imprime `Secret(*** )`, o texto cru só por `reveal()`. JS/Native/Script/Android = gap honesto `SECN008` |
 
 ---
 
@@ -230,7 +230,7 @@ kof.security
 ├── passwords        → hash/verify/needsRehash (PBKDF2-HMAC-SHA256, secure by default)
 ├── crypto           → sha256/sha512, hmacSha256, aesGcm (encrypt/decrypt), randomHex/randomInt
 ├── jwt              → create/verify (HS256, exp/iss/aud, sem confusão de algoritmo)
-├── secrets          → get (env), redact
+├── secrets          → get (env, String cru), redact, of/secret (→ tipo valor Secret)
 ├── security         → constantTimeEquals, randomHex, redact, csrfToken/csrfValid, corsAllowed, headers helpers,
 │                      rateLimit, sessionCreate/sessionGet/sessionDestroy, apiKeyGenerate/apiKeyValid (G9),
 │                      cookieSet/cookieGet (C11, defaults seguros)
@@ -314,6 +314,8 @@ jwt:         RFC 7519 HS256 (alg fixado, nunca aceito do token)
 | `jwt.secret()` | ✅ env `KOF_JWT_SECRET` ou gerado | ✅ (`/proc/self/environ`) | ✅ | 32 bytes hex |
 | `secrets.get(name[, fallback])` | ✅ env | ✅ `/proc/self/environ` | ✅ platform | |
 | `secrets.redact(value)` | ✅ | ✅ (asm) | ✅ | `abcd********wxyz` |
+| `secrets.of(text)` / `secrets.secret(name)` | ✅ (→ `Secret`) | ❌ `SECN008` | ❌ `SECN008` | D-SECRETS face 1 |
+| `Secret.reveal()` / `.redacted()` | ✅ | ❌ `SECN008` | ❌ `SECN008` | imprime `Secret(*** )`; `reveal()` é o único export cru |
 | `security.constantTimeEquals(a, b)` | ✅ `MessageDigest.isEqual` | ✅ (asm) | ✅ | |
 | `security.randomHex` / `randomInt` | ✅ | ✅ | ✅ | |
 | `security.csrfToken/csrfValid` | ✅ (session-scoped) | ❌ | ❌ | |

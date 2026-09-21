@@ -2,16 +2,16 @@
 
 # `Kof Makealive` — infraestrutura como código tipado (plano de design · Estágio 3 · linhas 3.1–3.8)
 
-**Tipo:** plano de design — **Q1–Q4 RESPONDIDAS 20/09 (§6)**; o núcleo (3.1), 3.2, 3.3 e 3.8
-pousaram (**3.2 POUSADA 21/09 `966c86a4`** — `D-MAKEALIVE-SYNTAX`, açúcar puro
-sobre `design()`), **3.7 FECHADA 21/09 como runtime-only** — os itens de regra 6
-estão resolvidos (ver §5). **Só resta a 3.6** (secrets via `kof.security`),
-delegada ao Estágio 5 (lane de security; design em `secrets-plan.md`,
-zero código) — por isso este plano segue em `development/` (regra dos três
-estados).
-**Tracker:** [`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`](IMPLEMENTATION-UNIVERSAL-PLATFORM.pt_BR.md)
+**Tipo:** plano de design — **COMPLETO** (todas as linhas 3.1–3.8 pousadas; fechado 21/09).
+**Q1–Q4 RESPONDIDAS 20/09 (§6)**; o núcleo (3.1), 3.2, 3.3 e 3.8 pousaram
+(**3.2 POUSADA 21/09 `966c86a4`** — `D-MAKEALIVE-SYNTAX`, açúcar puro sobre
+`design()`), **3.7 FECHADA 21/09 como runtime-only**; o último item de regra 6,
+**3.6 (secrets via `kof.security`), POUSOU 21/09 `32285136`** (`D-SECRETS` face 1,
+rastreada em `secrets-plan.md`). Movido para `docs/architecture/` pela regra dos
+três estados (nada pendente).
+**Tracker:** [`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`](../development/IMPLEMENTATION-UNIVERSAL-PLATFORM.pt_BR.md)
 Estágio 3 (linhas 3.1–3.8). **Companheiro (visão):**
-[`docs/architecture/UNIVERSAL-PLATFORM-VISION.pt_BR.md`](../architecture/UNIVERSAL-PLATFORM-VISION.pt_BR.md)
+[`docs/architecture/UNIVERSAL-PLATFORM-VISION.pt_BR.md`](UNIVERSAL-PLATFORM-VISION.pt_BR.md)
 §4.2 — o nome do domínio, o veredito imperativo-vs-declarativo e o pipeline
 estão DECIDIDOS lá; este arquivo é a decomposição executável.
 **Lane dona:** `.18` (development), diretiva da mantenedora 19/09

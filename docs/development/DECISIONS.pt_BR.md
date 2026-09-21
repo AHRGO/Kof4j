@@ -3018,6 +3018,13 @@ O `future/secrets-plan.md` (+PT) é **promovido para `docs/development/`**; a
 incremental com prova; `KeyHandle`/redação seguem face a face. Último resíduo do
 `makealive-plan` (3.6). Fila: tracker 3.6.
 
+**Face 1 POUSADA 21/09 (`32285136`):** tipo valor `Secret` — construtoras
+`secrets.of(text)` / `secrets.secret(name)`, `reveal()` (único export cru),
+`redacted()`, impressão redigida (`Secret(*** )`), `==` constant-time.
+JVM-primeiro (R7); JS/Native/Script/Android = gap honesto `SECN008` (R6). Prova
+`SecretE2ETest` 4/4. `fromBytes` e o backing de buffer zerável (Native) seguem
+como follow-ups; `KeyHandle` (P3) ainda precisa do seu próprio voto.
+
 ## D-FFI-STRUCT-B — D6-1 opção B (`struct` mutável): aprovada spec-first (mantenedora 21/09/2026)
 
 **Data:** 2026-09-21 · **Estado:** `DECIDED` · design-first (sem código ainda).

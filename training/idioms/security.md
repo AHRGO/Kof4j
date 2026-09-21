@@ -73,6 +73,24 @@ log.info("config at " + secrets.redact(apiKey))      // "sk-a********mnop" — n
 WHY: a secret that reaches a log is already exposed; `redact` keeps the shape
 (first/last chars) for debugging without the value.
 
+## `Secret` — the value that cannot leak (D-SECRETS face 1)
+
+```kof
+var key = secrets.of("sk-live-...")          // or secrets.secret("API_KEY") — env by name
+println(key)                                  // Secret(*** )   — redacted, always
+log.info("key=" + key)                        // Secret(*** )   — concat cannot leak either
+if (key == secrets.secret("API_KEY")) { }     // constant-time content equality
+var raw = key.reveal()                        // the ONLY raw export — greppable in an audit
+```
+
+WHY: `secrets.get` returns a raw `String` that flows into `println`, concat,
+JSON and logs invisibly. `Secret` makes the safe path the default — printing is
+redacted by construction, and the one way to the raw value is a single word
+(`reveal()`) you can grep for in code review. Prefer `secrets.secret`/`of` over
+`get` for new code; `get` stays for the legacy raw path. JVM-first (R7): JS/
+Native/Script/Android reject it at compile time with `SECN008` (never a silent
+stub). Do NOT `reveal()` to compare or to log — `==` is already constant-time.
+
 ## Sessions, CSRF, rate-limit, headers
 
 ```kof

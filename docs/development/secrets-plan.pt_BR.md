@@ -2,12 +2,10 @@
 
 # Secrets — `Secret`, `KeyHandle` e redação forçada (plano de design · Estágio 5 / linha 3.6 do tracker)
 
-**Estado:** Plano (design) — ZERO código pousado (21/09, lane docs/development audit, a pedido da
-mantenedora). **Promovido 21/09; face 1 (tipo `Secret`) AUTORIZADA 21/09** (`DECISIONS.md`
-§D-SECRETS) — implementação inicia, incremental com prova; cada face seguinte (P2/P3)
-ainda exige voto rule-6 próprio antes de qualquer coisa encostar na linguagem ou nas
-assinaturas atuais de `secrets.*` (semântica congelada 0.2.6-beta); `KeyHandle`/redação seguem face
-a face.
+**Estado:** Plano (design) — **face 1 (`Secret`) POUSADA 21/09** (`32285136`, JVM-primeiro;
+`SecretE2ETest` 4/4; JS/Native/Script/Android = gap `SECN008`). P2 (redação forçada) e
+P3 (`KeyHandle`) ainda exigem voto rule-6 próprio antes de qualquer coisa encostar na
+linguagem ou nas assinaturas atuais de `secrets.*` (semântica congelada 0.2.6-beta).
 **Fonte:** linha 3.6 de `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (`Secret`/`KeyHandle`
 pendentes, Estágio 5) · análise de gap `docs/stdlib/security.md` (linhas "Secrets (env):
 INEXISTENTE", "Secrets em logs: SEM PROTEÇÃO") · §kof.security de `docs/bugs-and-gaps/ecosystem-coverage.md`.

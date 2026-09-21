@@ -2,11 +2,10 @@
 
 # Secrets — `Secret`, `KeyHandle` and enforced redaction (design plan · Stage 5 / tracker 3.6)
 
-**Status:** Plan (design) — ZERO code landed (21/09, docs/development audit lane by maintainer
-request). **Promoted 21/09; face 1 (`Secret` type) AUTHORIZED 21/09** (`DECISIONS.md`
-§D-SECRETS) — implementation starts, incremental with proof; each further face (P2/P3)
-still needs its own rule-6 vote before anything touches the language or the current
-`secrets.*` signatures (frozen semantics 0.2.6-beta); `KeyHandle`/redaction follow face by face.
+**Status:** Plan (design) — **face 1 (`Secret`) LANDED 21/09** (`32285136`, JVM-first;
+`SecretE2ETest` 4/4; JS/Native/Script/Android = gap `SECN008`). P2 (enforced redaction)
+and P3 (`KeyHandle`) still need their own rule-6 vote before anything touches the
+language or the current `secrets.*` signatures (frozen semantics 0.2.6-beta).
 **Source:** `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` line 3.6 (`Secret`/`KeyHandle`
 pending, Stage 5) · gap analysis `docs/stdlib/security.md` (rows "Secrets (env): NONEXISTENT",
 "Secrets in logs: NO PROTECTION") · `docs/bugs-and-gaps/ecosystem-coverage.md` §kof.security.

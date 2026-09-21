@@ -73,6 +73,25 @@ log.info("config em " + secrets.redact(apiKey))      // "sk-a********mnop" — n
 PORQUÊ: segredo que chega ao log já foi exposto; `redact` mantém o formato
 (primeiras/últimas chars) para debug sem o valor.
 
+## `Secret` — o valor que não vaza (D-SECRETS face 1)
+
+```kof
+var key = secrets.of("sk-live-...")          // ou secrets.secret("API_KEY") — env por nome
+println(key)                                  // Secret(*** )   — redigido, sempre
+log.info("key=" + key)                        // Secret(*** )   — concat também não vaza
+if (key == secrets.secret("API_KEY")) { }     // igualdade de conteúdo constant-time
+var raw = key.reveal()                        // o ÚNICO export cru — greppable numa auditoria
+```
+
+PORQUÊ: `secrets.get` devolve um `String` cru que flui para `println`, concat,
+JSON e logs de forma invisível. `Secret` torna o caminho seguro o padrão — a
+impressão é redigida por construção, e a única via para o valor cru é uma palavra
+única (`reveal()`) que se pode grepar na revisão. Prefira `secrets.secret`/`of` a
+`get` em código novo; `get` fica para o caminho cru legado. JVM-primeiro (R7):
+JS/Native/Script/Android rejeitam em compile-time com `SECN008` (nunca stub
+silencioso). NÃO faça `reveal()` para comparar nem logar — `==` já é
+constant-time.
+
 ## Sessões, CSRF, rate-limit, headers
 
 ```kof

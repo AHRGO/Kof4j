@@ -2,15 +2,16 @@
 
 # `Kof Makealive` — infrastructure as typed code (design plan · Stage 3 · rows 3.1–3.8)
 
-**Type:** design plan — **Q1–Q4 ANSWERED 20/09 (§6)**; the core (3.1), 3.2, 3.3
-and 3.8 shipped (**3.2 LANDED 21/09 `966c86a4`** — `D-MAKEALIVE-SYNTAX`, pure
-sugar over `design()`), **3.7 CLOSED 21/09 as runtime-only** — the rule-6 items
-are resolved (see §5). **Only 3.6 remains** (secrets via `kof.security`),
-delegated to Stage 5 (security lane; design in `secrets-plan.md`, zero
-code) — that is why this plan is still in `development/` (three-states rule).
-**Tracker:** [`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`](IMPLEMENTATION-UNIVERSAL-PLATFORM.md)
+**Type:** design plan — **COMPLETE** (all rows 3.1–3.8 landed; closed 21/09). **Q1–Q4
+ANSWERED 20/09 (§6)**; the core (3.1), 3.2, 3.3 and 3.8 shipped (**3.2 LANDED
+21/09 `966c86a4`** — `D-MAKEALIVE-SYNTAX`, pure sugar over `design()`), **3.7
+CLOSED 21/09 as runtime-only**; the last rule-6 item, **3.6 (secrets via
+`kof.security`), LANDED 21/09 `32285136`** (`D-SECRETS` face 1, tracked in
+`secrets-plan.md`). Moved to `docs/architecture/` per the three-states rule
+(nothing pending).
+**Tracker:** [`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`](../development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md)
 Stage 3 (rows 3.1–3.8). **Companion (vision):**
-[`docs/architecture/UNIVERSAL-PLATFORM-VISION.md`](../architecture/UNIVERSAL-PLATFORM-VISION.md)
+[`docs/architecture/UNIVERSAL-PLATFORM-VISION.md`](UNIVERSAL-PLATFORM-VISION.md)
 §4.2 — the domain name, the imperative-vs-declarative verdict and the pipeline
 are THERE-decided; this file is the executable decomposition.
 **Owner lane:** `.18` (development), maintainer directive 19/09
