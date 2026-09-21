@@ -129,8 +129,7 @@ Três exemplos resolvidos que os testes de implementação devem reproduzir bit 
 
 bitfields; unions anônimas; `#pragma pack`/`alignas`; `long double`
 (x87 80-bit — código de gap próprio se um dia); `wchar_t`/UTF-16;
-callbacks struct-typed (fn-ptr aninhado em struct); variadics (3.5, ⛔
-separado); name mangling C++; regras de COMDAT/seção. Cada item permanece
+callbacks struct-typed (fn-ptr aninhado em struct); variadics (3.5 — `D-R3-3.5` ✅ decidido 21/09: **sem variadics gerais**, gap documentado); name mangling C++; regras de COMDAT/seção. Cada item permanece
 FFI001/002 honesto até decidido — nada de binding parcial silencioso.
 
 ## 6. Divisão de trabalho (após aprovação — não é esta lane)

@@ -25,7 +25,8 @@ extern "/lib/x86_64-linux-gnu/libm.so.6" ldexp(Double x, Int e): Double    // ok
 extern "/lib/x86_64-linux-gnu/libc.so.6" puts(String s): void     // ok — void liga
 extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — "mel" medido
 // O NOME da funcao Kof e o simbolo C (sem alias) — kof_fmod falhou no lookup, fmod funciona.
-// Tipos nao-escalares (objetos, genericos) -> FFI001 em tempo de compilacao:
+// Tipos nao-escalares -> FFI001 em tempo de compilacao (excecao JVM, 3.8b ✅ 20-21/09: um `record`
+//   por valor arg/retorno e um `T[]` escalar->`ptr` LIGAM — FfiStructE2ETest 10/10, FfiArrayE2ETest 5/5).
 // runner JS  -> MESMA ABI escalar via KofJsFfiBridge (F2/F3 ✅ 18/09; FfiE2ETest 16/16); browser -> erro honesto de runtime (R7, sem host); nao-escalar -> FFI002
 // Native (x86-64/riscv64/aarch64) -> MESMA ABI escalar binda DIRETA desde #431 20/09 (§61 FECHADO, §369):
 //   sem dlopen — link-by-use da library() + call sym@PLT; String<->char* = payload UTF-8 no offset 24
