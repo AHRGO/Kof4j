@@ -371,7 +371,7 @@ main() {
 | Target | Backend | Execução | Status |
 |--------|---------|----------|--------|
 | `jvm` | `JvmBackend` (ASM) | bytecode V21, exception table, virtual threads | estável |
-| `native` | `NativeBackend` (x86_64) | ELF x86_64, syscalls, free-list alloc + GC mark-sweep (03/09; auto-coleta pendente — §260) | estável |
+| `native` | `NativeBackend` (x86_64) | ELF x86_64, syscalls, free-list alloc + GC mark-sweep (03/09; auto-coleta ✅ pousou 19/09 — §260 FECHADO, D1-A) | estável |
 | `native.risc` | `NativeBackend` (riscv64) | ELF riscv64 via `riscv64-linux-gnu-as/ld` + qemu (core+stdlib 02-05/09, 26/26 — ver `docs/native-multiarch.md`) | estável (core) |
 | `native.arm` | `NativeBackend` (aarch64) | ELF aarch64 via `aarch64-linux-gnu-as/ld` + qemu (core+stdlib 03-05/09, 26/26 via tradução — ver `docs/native-multiarch.md`) | estável (core) |
 | `js` | `JsBackend` + `KofJsRunner` | ES Modules via GraalJS, `kof.http` via `Java HttpClient` interop | alpha |
@@ -786,9 +786,10 @@ Docs: `debugger-architecture.md`, `debugging.md`, `debug-adapter.md`,
 > superclasse fora dos entries).
 
 1. ~~GC automático no Native~~ — ✅ sweep real 03/09 (`kof_gc_sweep` fechado);
-   **auto-collect pendente**: safe-points exigidos (chamar de dentro de
-   `kof_alloc` sem mapa de raízes = double-free). `kof_gc_collect_now`
-   disponível pra uso explícito futuro
+   **auto-collect ✅ pousou 19/09** (D1-A, §260 FECHADO — o gatilho em free-list
+   exausta agora é SOUND: blanket-spill dos 15 GPRs no `kof_gc_collect_now`,
+   gate `kof_spawn_count==0`, flag one-shot; `a904317e`).
+   `kof_gc_collect_now` segue disponível pra uso explícito
 2. ~~`spawn` no Native: CONC001~~ — ✅ fechado 31/08: pthread_create + trampoline + await/pthread_join + allocator thread-safe (futex) + join implícito + `done`/`poll`/`cancel`/`cancelled`/`selectAny` (cancel cooperativo por TID + selectAny polling 1ms; `SemanticAnalyzer` desambigua `cancel(Handle<T>)→Bool` vs `scheduler.cancel(String)→VOID`)
    - ✅ ~~bug pré-existente SEPARADO: `spawn→await→spawn` SIGSEGV no 2º `pthread_create`~~ — **resolvido 01/09**: mesmo mecanismo do println-antes-do-spawn. O site do `call pthread_create` exige `rsp ≡ 0 (mod 16)` pela ABI SysV; após `pthread_join` (do `await`) a stack chegava 8 bytes desalinhada e a glibc segfaultava em `pthread_attr_copy`. Alinhamento de stack no C call (`andq $-16, %rsp` em `kof_spawn_handle_new`, preservando `r15` + frame do caller). `SpawnE2ETest.nativeSpawnAwaitSpawnDoesNotSegfault` (sem o fix: SIGSEGV 3/3; com: ok 3/3). **Nota**: alinhamento já tinha sido auditado "conforme ABI" e descartado como causa numa sessão anterior — a medição agora crava que o site do `call pthread_create` efetivamente chegava desalinhado nos casos com output/join antes do spawn.
 3. ~~JSON de objetos/records no Native: JSN002~~ — ✅ fechado (composição compile-time)
@@ -869,7 +870,7 @@ Docs: `debugger-architecture.md`, `debugging.md`, `debug-adapter.md`,
 - otimizador de IR sempre ativo; pattern matching (switch com tipos + destructuring, 3 targets); null safety básica (`String?`, 3 targets); higher-order em coleções (map/filter/reduce, 3 targets); módulos multi-arquivo (`import a.b.C`)
 - KofScript — top-level `var`/`val` (`KofScriptGlobals`, repl, `--watch`); KofC compiler — C subset → ELF x86_64 (`kof c`)
 - LSP com hover/completion + diagnostics reais; widening de return
-- Native GC — mark-sweep 03/09 ✅: `kof_gc_mark` (stack+bss conservador) + `kof_gc_sweep` (limpa morto para free-list; flag bit1 @24) + `kof_gc_collect_now` (chamada externa, explicit); **auto-collect desligado** em `kof_alloc` (necessita safe-points/mapas de raízes por frame — senão double-free detectado). `KofGcE2ETest` 3/3
+- Native GC — mark-sweep 03/09 ✅: `kof_gc_mark` (stack+bss conservador) + `kof_gc_sweep` (limpa morto para free-list; flag bit1 @24) + `kof_gc_collect_now`; **auto-collect na exaustão ✅ 19/09** (D1-A, §260 FECHADO — o gatilho agora é SOUND: blanket-spill dos 15 GPRs + gate `kof_spawn_count==0` + flag one-shot; `a904317e`). `KofGcE2ETest` 3/3
 - Ponto flutuante real no Native (FLT001 fechado 31/08 — XMM); JSON objetos/records no Native (JSN002 fechado) + arrays FP (JSN001/003)
 - releases multiplataforma (2 jobs: `test-and-bump` → `package-and-release`; linux-x86_64 / macos-arm64 / windows-x86_64)
 

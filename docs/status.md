@@ -373,7 +373,7 @@ main() {
 | Target | Backend | Execution | Status |
 |--------|---------|----------|--------|
 | `jvm` | `JvmBackend` (ASM) | V21 bytecode, exception table, virtual threads | stable |
-| `native` | `NativeBackend` (x86_64) | ELF x86_64, syscalls, free-list alloc + mark-sweep GC (03/09; auto-collect pending — §260) | stable |
+| `native` | `NativeBackend` (x86_64) | ELF x86_64, syscalls, free-list alloc + mark-sweep GC (03/09; auto-collect ✅ landed 19/09 — §260 CLOSED, D1-A) | stable |
 | `native.risc` | `NativeBackend` (riscv64) | ELF riscv64 via `riscv64-linux-gnu-as/ld` + qemu (core+stdlib 02-05/09, 26/26 — see `docs/native-multiarch.md`) | stable (core) |
 | `native.arm` | `NativeBackend` (aarch64) | ELF aarch64 via `aarch64-linux-gnu-as/ld` + qemu (core+stdlib 03-05/09, 26/26 via translation — see `docs/native-multiarch.md`) | stable (core) |
 | `js` | `JsBackend` + `KofJsRunner` | ES Modules via GraalJS, `kof.http` via `Java HttpClient` interop | alpha |
@@ -788,9 +788,10 @@ Docs: `debugger-architecture.md`, `debugging.md`, `debug-adapter.md`,
 > a superclass outside the entries).
 
 1. ~~Automatic GC on Native~~ — ✅ real sweep 03/09 (`kof_gc_sweep` closed);
-   **auto-collect pending**: safe-points required (calling from inside
-   `kof_alloc` without a root map = double-free). `kof_gc_collect_now`
-   available for explicit future use
+   **auto-collect ✅ landed 19/09** (D1-A, §260 CLOSED — the trigger on an
+   exhausted free-list is now SOUND: blanket-spill of the 15 GPRs in
+   `kof_gc_collect_now`, `kof_spawn_count==0` gate, one-shot flag; `a904317e`).
+   `kof_gc_collect_now` remains available for explicit use
 2. ~~`spawn` on Native: CONC001~~ — ✅ closed 31/08: pthread_create + trampoline + await/pthread_join + thread-safe allocator (futex) + implicit join + `done`/`poll`/`cancel`/`cancelled`/`selectAny` (cooperative cancel by TID + selectAny polling 1ms; `SemanticAnalyzer` disambiguates `cancel(Handle<T>)→Bool` vs `scheduler.cancel(String)→VOID`)
    - ✅ ~~SEPARATE pre-existing bug: `spawn→await→spawn` SIGSEGV on the 2nd `pthread_create`~~ — **resolved 01/09**: same mechanism as println-before-spawn. The `call pthread_create` site requires `rsp ≡ 0 (mod 16)` by the SysV ABI; after `pthread_join` (from `await`) the stack arrived 8 bytes misaligned and glibc segfaulted in `pthread_attr_copy`. Stack alignment at the C call (`andq $-16, %rsp` in `kof_spawn_handle_new`, preserving `r15` + caller frame). `SpawnE2ETest.nativeSpawnAwaitSpawnDoesNotSegfault` (without the fix: SIGSEGV 3/3; with it: ok 3/3). **Note**: alignment had already been audited "per the ABI" and ruled out as a cause in a previous session — the measurement now pins down that the `call pthread_create` site effectively arrived misaligned in the cases with output/join before spawn.
 3. ~~JSON of objects/records on Native: JSN002~~ — ✅ closed (compile-time composition)
@@ -871,7 +872,7 @@ Docs: `debugger-architecture.md`, `debugging.md`, `debug-adapter.md`,
 - IR optimizer always active; pattern matching (switch with types + destructuring, 3 targets); basic null safety (`String?`, 3 targets); higher-order on collections (map/filter/reduce, 3 targets); multi-file modules (`import a.b.C`)
 - KofScript — top-level `var`/`val` (`KofScriptGlobals`, repl, `--watch`); KofC compiler — C subset → ELF x86_64 (`kof c`)
 - LSP with hover/completion + real diagnostics; return widening
-- Native GC — mark-sweep 03/09 ✅: `kof_gc_mark` (conservative stack+bss) + `kof_gc_sweep` (clears dead entries to the free-list; flag bit1 @24) + `kof_gc_collect_now` (external call, explicit); **auto-collect off** in `kof_alloc` (needs safe-points/per-frame root maps — otherwise a double-free is detected). `KofGcE2ETest` 3/3
+- Native GC — mark-sweep 03/09 ✅: `kof_gc_mark` (conservative stack+bss) + `kof_gc_sweep` (clears dead entries to the free-list; flag bit1 @24) + `kof_gc_collect_now`; **auto-collect on exhaustion ✅ 19/09** (D1-A, §260 CLOSED — the trigger is now SOUND: blanket-spill of the 15 GPRs + `kof_spawn_count==0` gate + one-shot flag; `a904317e`). `KofGcE2ETest` 3/3
 - Real floating point on Native (FLT001 closed 31/08 — XMM); JSON objects/records on Native (JSN002 closed) + FP arrays (JSN001/003)
 - multiplatform releases (2 jobs: `test-and-bump` → `package-and-release`; linux-x86_64 / macos-arm64 / windows-x86_64)
 

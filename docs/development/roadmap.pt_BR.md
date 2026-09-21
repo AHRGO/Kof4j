@@ -109,7 +109,7 @@ Objetivos:
 - mesma aplicação podendo ser compilada para JVM ou Native.
 
 Estado atual: ✅ estável x86_64 (free-list `kof_free_head` com reuso mmap; GC
-mark-sweep pendente — auto-GC desativado após hang, memória devolvida só no
+mark-sweep implementado 03/09 + auto-collect sob exaustão ✅ 19/09 (D1-A, §260 FECHADO), memória devolvida no
 `munmap` fallback; `spawn`/`await` via `pthread_create` + trampoline +
 `pthread_join` com allocator thread-safe (futex) — 31/08; FP real em XMM —
 FLT001; JSON objetos/records + arrays FP — JSN001/002/003; SQLite nativo `.so`

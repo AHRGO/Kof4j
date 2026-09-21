@@ -58,7 +58,7 @@ O backend JVM delega para as facilities da JVM (java.lang.String, arrays nativos
 
 O backend Nativo gera funções de runtime em assembly durante a compilação (0.5.0-beta: free-list `kof_free_head` com reuso `mmap` + `spawn`/`await` via `pthread_create`/`pthread_join` com allocator thread-safe (futex) + FP real em XMM + JSON objetos/arrays). Essas funções são:
 
-- `kof_alloc` / `kof_free_head` — alocação com reuso `mmap` (GC mark-sweep implementado 03/09, manual `kof_gc_collect_now`; auto-collect pendente §260)
+- `kof_alloc` / `kof_free_head` — alocação com reuso `mmap` (GC mark-sweep implementado 03/09, manual `kof_gc_collect_now`; auto-collect sob exaustão ✅ 19/09 — D1-A, §260 FECHADO)
 - `kof_print`, `kof_println`, `kof_print_int`, `kof_int_to_string` — saída
 - `kof_string_*`, `kof_array_*`, `kof_list_*` (`map/filter/reduce`), `kof_map_*` — coleções
 - JSON objetos/records + arrays `Int/Long/Bool/String/Double` (31/08)

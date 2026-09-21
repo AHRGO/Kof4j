@@ -350,9 +350,9 @@ TypeTable:
 >
 > **Updated (0.2.6-beta, 31/08):** `spawn`/`await` in Native was
 > implemented (CONC001 closed — `pthread_create` + trampoline +
-> `pthread_join` + thread-safe allocator with futex). Automatic GC remains
-> out (mark-sweep implemented 03/09, manual; free-list `kof_free_head` reuses `mmap`,
-> auto-GC disabled after a hang).
+> `pthread_join` + thread-safe allocator with futex). Automatic GC on exhaustion
+> ✅ landed 19/09 (D1-A, §260 CLOSED; mark-sweep implemented 03/09 + manual
+> `kof_gc_collect_now`; free-list `kof_free_head` reuses `mmap`).
 
 ## 8. NOT included in this ABI
 
