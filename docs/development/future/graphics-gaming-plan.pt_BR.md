@@ -182,9 +182,87 @@ Window("Trailer") {
 
 ## 2. Aceite = paridade TOTAL multi-alvo
 
+**Ordem da mantenedora (adendo 2): para esta superfície o "escopo honesto
+por alvo" do R7 NÃO se aplica.** Um recurso de gráficos/mídia entra na
+superfície da linguagem somente quando **todo** alvo — JVM, KofScript,
+Native (x86-64, riscv64, aarch64), JS-Web — roda o **mesmo programa com o
+mesmo comportamento**; senão o recurso **nem é promovido** (fica como gap
+com diagnóstico, §5 — nunca uma superfície parcial).
+
+- **"Mesmo comportamento" é medido do jeito que a casa já prova
+  paridade:** golden E2E em todo alvo, byte-a-byte no observável (a família
+  `runAll3`/`runAll4` de E2ETests, os gates cross-arch, o harness da matriz
+  de 8 alvos do EG-5). Superfícies sensíveis a tempo (frame loop, áudio)
+  são testadas sob **relógio virtual** (sequência fixa de `dt`, mix de
+  áudio offline) para o golden ser determinístico.
+- **Observabilidade de pixel/áudio:** a superfície precisa expor um
+  readback determinístico para testes (render-to-buffer com hash; mix
+  offline para buffer) — o golden compara o **contrato observável**, não um
+  artefato de GPU/driver. O mecanismo exato é medido na fatia 3.1 antes de
+  qualquer promoção (§9 Q4).
+- Até a paridade valer, o alvo responde com o código de gap honesto e
+  mensagem clara (R6) — ex.: um build JS de um programa 3D diz `GFX00x` e
+  falha com diagnóstico, nunca uma tela preta silenciosa.
+
 ## 3. Stack por alvo (interop-first, medir antes de prometer)
 
+R9: a primeira pergunta é sempre "já existe fora e é melhor?" — e aqui a
+resposta é sim em toda parte. **Nenhum renderizador caseiro, nenhum codec
+caseiro, nenhum mixer caseiro** (non-goal permanente; adendo: crypto e
+codecs nunca caseiros). O plano **avalia e mede** (spike 3.0 abaixo) — não
+casa com lib por nome:
+
+| Camada | Candidatos a MEDIR (licença × cobertura × testabilidade headless) | Nota |
+|---|---|---|
+| Janela/GL/input portátil | classe **SDL3/SDL2, raylib, GLFW+GL** | a forma que o adendo 2 nomeia: uma camada portátil, bindings por alvo — não chrome de plataforma |
+| Áudio | **miniaudio** (zlib, arquivo único — cabe direto no Native), OpenAL-soft, áudio do SDL3 | mixagem/vozes da plataforma |
+| Vídeo | **ffmpeg / Libav** (demux+decode) | questão GPL/LGPL vs saída GPLv3 — medida, nunca presumida |
+| JS-Web | o browser **é** a plataforma: WebGL, WebAudio, `<video>` | a plataforma renderiza; tags nunca vazam ao usuário (§7) |
+
+Por alvo (todos pelos mesmos verbos Kof de §1):
+
+| Alvo | Veículo | Medido hoje |
+|---|---|---|
+| JVM | FFI (R3 `foreign`/Panama) para a stack portátil — **não** JavaFX/Swing/AWT | 0 JavaFX no código (§0); `kof.ui` JVM = no-op; `kof.media` JVM = só dados |
+| KofScript | mesmo veículo do JVM (in-process, runtime compartilhado) | idem |
+| Native x86-64 / riscv64 / aarch64 | link C direto da stack portátil (o backend já faz `cc`/cross-as) | sem face de áudio/vídeo hoje → gap honesto até paridade |
+| JS-Web | lowering para as APIs do browser (o padrão DOM existente de `kof.ui` KofJS) | widgets renderizam aqui; nenhum pipeline de som/vídeo na superfície stdlib ainda |
+
+**Rejeitados como backends (com motivo, não por gosto):** JavaFX/Swing/AWT
+(adendos 2+3 + medido em §0); `javax.sound` e qualquer API de mídia só-JDK
+— correta no JVM, mas é o *chrome de um alvo só*, e o adendo 2 manda o JVM
+chegar ao idioma pela **mesma stack portátil** dos demais; canvas/HTML/CSS
+(regras 8/9/10 — §7). **Alvos KofC/wasm são future:** quando landarem,
+entram no mesmo gate de paridade como linhas extras, com honestidade
+`XXX00x` no intervalo.
+
 ## 4. A fronteira R1 — `kof.sound`/`kof.media` vs pacotes oficiais
+
+O gate R1 (`scripts/check_stdlib_boundary.sh` + ledger
+`scripts/stdlib_boundary.txt`) decide a **camada do namespace**, não o peso
+do backend: stdlib-base = *"essencial à plataforma e pequeno"*;
+**domínios** pesados vão para pacotes oficiais (nascem `experimental`).
+
+- **`kof.sound` (+ `kof.media` crescendo com playback de vídeo): stdlib
+  core — recomendação.** Mídia é serviço de plataforma na mesma classe de
+  JSON/DB/HTTP/crypto: a *superfície* é pequena (verbos de §1.5/§1.6), o
+  trabalho pesado mora atrás dela na plataforma, e `kof.media` **já é core
+  hoje** (§0.3). Som sem jogo é normal; instalar pacote para
+  `sound.play("x.ogg")` seria cerimônia.
+- **`scene`/`sprite`/`tilemap`/`camera3d` (a superfície de jogo): pacote
+  oficial — recomendação** (nome de trabalho `kof.game`, `experimental`).
+  Jogos são um *domínio* (os próprios exemplos da R1), e o escopo 3D é
+  exatamente o tipo de capacidade pesada para que a camada de pacotes
+  existe. A paridade (§2) vale para o pacote igual — experimental ≠
+  isento.
+- **O bloco `scene { frame { ... } }`, se escolhido como sintaxe, é decisão
+  da LINGUAGEM independente da resposta R1** — keywords não moram em
+  pacote. A forma sem sintaxe (só builtins/funções:
+  `Scene("Pong") { dt -> ... }`) é a favorita da lei da simplicidade e fica
+  aberta com §9 Q2.
+- A ordem de registro é fixa pela R1: a linha da camada entra no ledger
+  **antes** de qualquer namespace existir (senão o gate quebra o build).
+  Decisão final: §9 Q1.
 
 ## 5. Códigos de gap honestos + a matriz de paridade
 
