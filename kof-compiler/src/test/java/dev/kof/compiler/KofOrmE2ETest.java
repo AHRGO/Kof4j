@@ -1294,16 +1294,76 @@ class KofOrmE2ETest {
     }
 
     @Test
-    void whereFacesRestantesNativeAindaOrm001(@TempDir Path tempDir) throws IOException {
+    void whereNativeEndToEndMatchesJvm(@TempDir Path tempDir) throws Exception {
+        // F2c2: kof_orm_where/where_op no Native - oracle MEDIDO no JVM
+        // (WhereJvm.kf): igualdade, vazio!=null, >, LIKE, ==, throw exato
+        // "ORM operator not allowed: <op>" e chamada repetida sem leak.
+        String body = """
+                    db.execute(db, "create table if not exists user (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, age INTEGER)")
+                    db.execute(db, "delete from user")
+                    orm.save(db, User(0, "Mel", "m@kof.dev", 30))
+                    orm.save(db, User(0, "Ana", "a@kof.dev", 25))
+                    orm.save(db, User(0, "Bia", "b@kof.dev", 40))
+                    var w1 = orm.where<User>(db, "age", 30)
+                    println(w1.size())
+                    for (var u in w1) { println(u.name) }
+                    var w2 = orm.where<User>(db, "age", 99)
+                    println(w2.size())
+                    var w3 = orm.where<User>(db, "age", ">", 25)
+                    println(w3.size())
+                    for (var u in w3) { println(u.name) }
+                    var w4 = orm.where<User>(db, "name", "LIKE", "A%")
+                    println(w4.size())
+                    var w5 = orm.where<User>(db, "age", "==", 25)
+                    println(w5.size())
+                    try {
+                        orm.where<User>(db, "age", "DROP TABLE user", 1)
+                        println("no-throw")
+                    } catch (String e) {
+                        println("throw:[" + e + "]")
+                    }
+                    var w6 = orm.where<User>(db, "age", 30)
+                    println(w6.size())
+                }
+                """;
+        String expected = "1\nMel\n0\n2\nMel\nBia\n1\n1\nthrow:[ORM operator not allowed: DROP TABLE user]\n1";
+        Path jvmSource = tempDir.resolve("JvmMain.kf");
+        Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmwhere.db") + "\")\n")
+                + body);
+        runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
+                findDriverJar("sqlite-jdbc", "SQLite"), expected);
+        Path nativeSource = tempDir.resolve("NativeMain.kf");
+        Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativewhere.db") + "\")\n")
+                + body);
+        CompilationResult nr = driver.compile(nativeSource,
+                tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nr.success(), "Native deve compilar orm.where/where_op (F2c2): "
+                + nr.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(
+                tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = p.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals(expected, out,
+                "paridade byte JVM==Native (where: =/>/LIKE/==, throw exato, vazio=0)");
+    }
+
+    @Test
+    void pageFacesRestantesNativeAindaOrm001(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, ENTITY_SRC + """
                 main() {
-                    var db = db.connect("sqlite:/tmp/f2c2-gate.db")
-                    var w = orm.where<User>(db, "age", 30)
+                    var db = db.connect("sqlite:/tmp/f2c3-gate.db")
+                    var p = orm.page<User>(db, 1, 0)
                 }
                 """);
         CompilationResult r = driver.compile(source, tempDir.resolve("out"), Target.NATIVE);
-        assertFalse(r.success(), "where (row-object leitura filtrada) ainda e ORM001 no Native ate F2c2");
+        assertFalse(r.success(), "page (row-object com LIMIT/OFFSET) ainda e ORM001 no Native ate F2c3");
         assertTrue(r.diagnostics().getDiagnostics().toString().contains("ORM001"),
                 "gate honesto (nunca silent): " + r.diagnostics().getDiagnostics());
     }

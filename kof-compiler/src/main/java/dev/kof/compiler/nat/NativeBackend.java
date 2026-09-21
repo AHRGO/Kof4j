@@ -275,7 +275,11 @@ public class NativeBackend implements Backend {
                             if ((kc.methodName().equals("kof_orm_find")
                                         && kc.parameterTypes().size() == 5)
                                     || (kc.methodName().equals("kof_orm_all")
-                                        && kc.parameterTypes().size() == 4)) {
+                                        && kc.parameterTypes().size() == 4)
+                                    || (kc.methodName().equals("kof_orm_where")
+                                        && kc.parameterTypes().size() == 6)
+                                    || (kc.methodName().equals("kof_orm_where_op")
+                                        && kc.parameterTypes().size() == 7)) {
                                 // 5º arg = className literal (KofLoadLiteral STRING
                                 // emitido logo antes do call pelo lowering ORM)
                                 for (int j = i - 1; j >= i - 2 && j >= 0; j--) {
@@ -327,6 +331,10 @@ public class NativeBackend implements Backend {
                 sb.append(o5.toString().replace("@@MAGIC@@",
                         dev.kof.compiler.runtime.RuntimeErasureBox.MAGIC));
                 dev.kof.compiler.runtime.RuntimeOrm6.emit(sb);
+                StringBuilder o7 = new StringBuilder();
+                dev.kof.compiler.runtime.RuntimeOrm7.emit(o7);
+                sb.append(o7.toString().replace("@@MAGIC@@",
+                        dev.kof.compiler.runtime.RuntimeErasureBox.MAGIC));
                 NativeOrmCtors.emit(this, sb, ormCtorClasses);
             }
         }

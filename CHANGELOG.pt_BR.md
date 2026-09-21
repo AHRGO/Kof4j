@@ -34,6 +34,25 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 
 ### Em desenvolvimento
+  - **F2c2 — `orm.where`/`whereOp` row-object→List REAL no Native x86-64
+    (gaps-db lane)** (21/09): `RuntimeOrm7` — UM corpo, dois globls. O `where`
+    do Kof é polimórfico por aridade (3 args → `kof_orm_where`; 4 args →
+    `kof_orm_where_op` com op do usuário — 7 args no host). O 7º arg
+    (`className`) é lido da stack na entry do callee (`8(%rsp)`, ANTES do
+    `andq`) — o caller S7f (13/09) já empilha arg7 no topo (SysV,
+    caller-cleanup). Whitelist do op idêntica ao host (`> < >= <= != LIKE`;
+    `==`→`=`; senão throw `ORM operator not allowed: <op>` — mensagem exata
+    medida no oracle JVM). Bind do value pelo mesmo classificador do key do
+    Orm5 (box §284 / KofString do coerce do call-site / null →
+    bind_text/int64/double/null). Três bugs pegos no caminho: `movl mem,mem`
+    (erro de sintaxe do `as`, pego por RED-first no `as`), A/B só em
+    registrador durante o alloc interno do `concat` (GC conservativo —
+    corrigido: empilhados, protegidos), e o `concat` clobberando `%rdi` via
+    `kof_memcpy` (corrigido: `movq %rax,%rdi` após o call). Prova:
+    `KofOrmE2ETest#whereNativeEndToEndMatchesJvm` byte-a-byte JVM==Native
+    (oracle de 10 linhas com op inválido + catch + re-query) — classe
+    46/0F/3skip; pin ORM001 migrou para `page` (F2c3). Docs EN+PT: parity,
+    tracker 1.1.9, DOING (claim no mesmo commit).
   - **F2c — `orm.all` row-object→List REAL no Native x86-64 (gaps-db lane)**
     (21/09): `kof_orm_all` em asm (`RuntimeOrm6`) — loop de campos do find
     (casamento por NOME, leitura por typeCode + tipo dinâmico da coluna com o

@@ -60,6 +60,8 @@ public final class KofOrm {
      *  {@code RuntimeOrmSchema}, binds em {@code RuntimeOrmBind}); F2b =
      *  {@code find} (leitura row-object em {@code RuntimeOrm5} + resolver
      *  {@code kof_orm_ctors} do backend); F2c = {@code all}
+     *  + {@code where}/{@code where_op} ({@code RuntimeOrm7}: whitelist do op
+     *  idêntica ao host, 7º arg na stack, loop do Orm6);
      *  (leitura em {@code List} no runtime — {@code RuntimeOrm6}, mesmo loop
      *  de campos do {@code RuntimeOrm5} com §397); o resto row-object
      *  (where/saveAll/page/delete) e o cross riscv/aarch64 (compile-time) seguem
@@ -67,7 +69,8 @@ public final class KofOrm {
     private static final java.util.Set<String> NATIVE_F1 = java.util.Set.of(
             "kof_orm_delete_all", "kof_orm_count", "kof_orm_migrate",
             "kof_orm_create", "kof_orm_count_where", "kof_orm_save",
-            "kof_orm_find", "kof_orm_all");
+            "kof_orm_find", "kof_orm_all",
+            "kof_orm_where", "kof_orm_where_op");
 
     static boolean fnSupportedOn(Target target, String fn) {
         if (supportedOn(target)) return true;
