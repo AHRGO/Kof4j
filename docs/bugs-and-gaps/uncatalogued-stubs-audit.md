@@ -65,6 +65,30 @@ is therefore **semantic** (parity / partial handling), not greppable.
   **Next pass:** locate the JVM/Script UI callback dispatch, build a throwing
   handler on each target and compare the observable output.
 
+## Slice 2 — parity invariant + one doc-drift finding (21/09)
+
+**Invariant checked (grep + read of all call-sites):** for every
+`Kof*.supportedOn(...) == false` there is a `gapCode(...)` **emitted at the
+same lowering site** — e.g. `ExpressionStaticCallLowerer:139/146` (db),
+`ExpressionMethodCallLowerer:411/413` (std/buffer/rng/math), `:429/432`
+(observability), `ExpressionTimeCallLowerer:19/27` and `:53/60`,
+`ExpressionDbCallLowerer:20/28`, `ExpressionLogCallLowerer:19/27`,
+`ExpressionOrmCallLowerer:35` + `CompilerOrmSupport:77/83`,
+`ExpressionSchedulerCallLowerer:19/21`. `KofGpu` has no `gapCode()` method but
+emits `GPU001` inline at `ExpressionMethodCallLowerer:356-359`. **No silent
+parity gap found** in the `Kof*` surface.
+
+**DRIFT-NET-1 (found, fixed, comment-only):** `KofNet.java` advertised the
+opposite of reality — the class comment said *"riscv/aarch ainda gated em
+compile-time"* and `supportedOn` said *"byte-scan nativo pendente"*, while
+`conformance-matrix.md` §net records **NET001 CLOSED 09/09** and
+`NativeRiscvAsmRtB24` implements `kof_net_queryEncode`/`queryDecode` (slice
+B24, aarch via translator; proof `KofNetTest.netOnCrossArch`). The
+`supportedOn` returns `true` for **all** targets (correct), making
+`gapCode()="NET001"` **vestigial**. Fixed the two stale comments and annotated
+the vestigial one — **no behaviour change**, so Q1's test does not apply (a
+comment cannot regress); proof = `mvn -o -pl kof-compiler -am compile` rc=0.
+
 ## Next passes (planned — not yet executed)
 
 1. **Parity asymmetry check** (highest yield): for every
