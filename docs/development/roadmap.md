@@ -1002,6 +1002,8 @@ rule 6).
 | 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **spec-first**: design plan drafted + reviewed BEFORE any parser/typer diff | plan |
 | 2.8.5 | **X6 interop reflection** (`D-INTEROP-REFLECT` = open) | **spec-first**: incremental plan (slices + proof per slice), interop boundary only | plan |
 
+**Spec plan (X5 + X6):** [`type-system-extensions-plan.md`](type-system-extensions-plan.md) — DRAFT for maintainer review, zero code (rule 6).
+
 ### TIER 3–5 — Legacy migration platform (Phases A–H) ✅ code+tests
 
 `kof inspect/decompile/translate/compare/migrate` in the CLI (`Main.java`);

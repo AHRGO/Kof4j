@@ -1,0 +1,124 @@
+# Type-system extensions — incremental plan (X5 variance + sealed · X6 interop reflection)
+
+> **Status: DRAFT for maintainer review — spec-first, NO CODE** (rule 6). A core
+> type-system change and a reflection surface only land after this plan is
+> reviewed. Authority: `DECISIONS.md` §D-TYPE-VARIANCE (X5 = option C, open) and
+> §D-INTEROP-REFLECT (X6 = open, incremental plan required). Queue:
+> `roadmap.md` §2.8.4/§2.8.5. Governing rules: rule 6 (maintainer decides),
+> rule 11 (Simplicity Law on any surface), `D-KOF-FIRST`.
+
+## Why spec-first
+
+Both fronts touch **frozen core** (the type system) or open a **new access path
+to program structure**. The intent is recorded and the slicing is proposed here;
+nothing is implemented until the maintainer reviews this document. Every slice
+below is additive and must carry its own proof (test/golden per target, rule 5
+of the freeze). Type-classes remain a **permanent non-goal**.
+
+## X5 — variance + sealed types
+
+### Goal
+
+- **Sealed**: a class/record whose subtype set is **closed** and **known at
+  compile time**, so the typer can prove a `switch` is **exhaustive** (no
+  `default` needed).
+- **Variance**: declare how a generic type parameter varies (`out`/`in`) so
+  `List<Dog>` is assignable to `List<Animal>` with the compiler proving safety.
+
+### Non-goals
+
+- No type-classes, no higher-kinded types, no full effect system.
+- No runtime representation change: variance is **erased**; sealed is a
+  **compile-time** property (must hold on JVM/Native/JS with identical output).
+
+### Proposed surface (FOR REVIEW — not decided)
+
+```kof
+sealed class Shape
+class Circle(Float r) : Shape
+class Square(Float s) : Shape
+
+String describe(Shape s) {
+    return switch (s) {
+        case Circle c -> "circle"
+        case Square q -> "square"
+    }   // no default: exhaustive because Shape is sealed
+}
+
+class Box<out T>(T value)   // declaration-site variance (single-char, no ceremony)
+```
+
+Open design questions for the maintainer: (a) exact keyword for variance
+(`out`/`in` vs none) — must pass rule 11; (b) does `sealed` apply to
+`class`/`record` only, or also to interfaces; (c) is **use-site** projection
+(`List<out T>`) in v1 or deferred; (d) diagnostic code family for
+non-exhaustive `switch` and variance violations.
+
+### Slices (each = one committable unit with proof)
+
+| # | Slice | Scope | Proof |
+|---|-------|-------|-------|
+| X5.0 | **spec + cells** | freeze the surface (questions a–d); write conformance cells `sealed`/`variance` + `training/idioms` draft | review; no code |
+| X5.1 | **`sealed` declaration** | parser + typer: closed subtype set; a subtype outside it is a diagnostic | red-first typer test; compiles on JVM/Native/JS |
+| X5.2 | **exhaustive `switch`** | typer proves all cases covered for a sealed subject; missing case = diagnostic | red-first (missing case fails), green (complete); cross-target E2E |
+| X5.3 | **declaration-site variance** | `out`/`in` on generic params; assignment compatibility check | assignability tests; erasure byte-parity across targets |
+| X5.4 | **use-site projection** | decide in review (default: **deferred**) | — |
+| X5.5 | **parity + docs** | conformance cells, parity matrix, `training/` + `learn/` | suite green; docs-lang 100% |
+
+### Risks / open questions
+
+- Variance soundness with mutable collections (`List<T>.add`) — the whole point
+  of `out`/`in` is to forbid the unsound assignment; the typer must reject it.
+- Exhaustiveness interacts with `when`/`else` and nullable subjects — needs
+  explicit rules before X5.2.
+- Erasure must keep the current ABI byte-identical (no accidental boxing).
+
+## X6 — interop reflection
+
+### Goal
+
+- A **read-only** view of a type's structure (field names/types) available
+  **only at the interop boundary**, so external data (Arrow/Parquet/ML schemas)
+  can bind to Kof records without hand-written mappers.
+
+### Non-goals
+
+- **Never** a language foundation: no runtime metaprogramming, no dynamic
+  dispatch, no annotations-as-framework, no reflection in user control flow.
+- No write path; no `Class.forName`-style dynamic loading in the language.
+
+### Proposed surface (FOR REVIEW)
+
+- A member of an interop namespace (e.g. `interop.schema(record)`), returning
+  an **immutable** list of field descriptors usable only by the binding layer.
+- Open questions: exact name/shape; whether it is exposed as a method or a
+  compile-time intrinsic; which target leads (JVM-first, per R7).
+
+### Slices
+
+| # | Slice | Scope | Proof |
+|---|-------|-------|-------|
+| X6.0 | **spec** | scope, surface, target posture; confirm "interop boundary only" | review; no code |
+| X6.1 | **JVM** | host-side structural read (existing `java.lang.reflect` behind the FFI layer) | E2E: schema of a record discovered and matched to a golden |
+| X6.2 | **Native/JS** | honest gap `REF001` (or minimal) — never a silent stub (R6) | pinned diagnostic on unsupported targets |
+| X6.3 | **parity + docs** | binding E2E (Arrow/Parquet-shaped), parity matrix, `training/`/`learn/` | suite green; docs-lang 100% |
+
+### Risks / open questions
+
+- Temptation to grow into general reflection — the "interop boundary only"
+  fence must be enforced and documented.
+- Performance/ABI: reflection must not leak into hot paths or change record
+  layout.
+
+## Sequencing / dependencies
+
+`X5.0 and X6.0 (specs) → maintainer review → X5.1–X5.5 and X6.1–X6.3`.
+Both depend on nothing in the current critical path and must **not** preempt
+Stage 1 (SYSTEMS) or R3/R4 work; they are a queue, not current work.
+
+## Evidence
+
+- Decisions: `DECISIONS.md` §D-TYPE-VARIANCE, §D-INTEROP-REFLECT (21/09/2026).
+- Queue: `roadmap.md` §2.8.4/§2.8.5; `IMPLEMENTATION-UNIVERSAL-PLATFORM.md`
+  rows X5/X6.
+- Non-goals: `docs/philosophy.md`, `training/anti-patterns/fake-idioms.md`.

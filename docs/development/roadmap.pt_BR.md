@@ -1003,6 +1003,8 @@ do código, regra 6).
 | 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **spec-first**: plano de design rascunhado + revisado ANTES de qualquer diff de parser/typer | plano |
 | 2.8.5 | **X6 reflexão de interop** (`D-INTEROP-REFLECT` = aberto) | **spec-first**: plano incremental (fatias + prova por fatia), só na fronteira de interop | plano |
 
+**Plano spec (X5 + X6):** [`type-system-extensions-plan.pt_BR.md`](type-system-extensions-plan.pt_BR.md) — RASCUNHO para revisão da mantenedora, zero código (regra 6).
+
 ### TIER 3–5 — Plataforma de migração legado (Fases A–H) ✅ código+testes
 
 `kof inspect/decompile/translate/compare/migrate` no CLI (`Main.java`);
