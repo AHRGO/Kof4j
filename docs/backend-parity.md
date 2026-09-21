@@ -151,7 +151,8 @@ unless a dedicated note says otherwise.
 | … record / nested collections | ✅ recursive `.rodata` descriptor 19/09 | ✅ 19/09 (face (4): same descriptor grammar in slice `B39` — 8=vtable `toString` via `jalr`, 9/10=nested, null→"null") | ✅ (translator; new `lhu`→`ldrh`) | `NativeE2ETest.execCollectionPrintRecordNestedJvmGolden` + `nativeCollectionPrintRecordNestedMatchesJvmGolden` on BOTH cross arches (46/46 each under qemu, golden = the measured JVM oracle; concat face needed a `valueOf(record)` vtable branch in `NativeRiscvCrossOps`) |
 | Map/Set + erasure boxes (§284/§284-map) | ✅ | ✅ (`RtB49`/`RtB46`) | ✅ (translator) | `NativeErasureBoxE2ETest` 6/6 (md5 equal across the 3), `KofMapSetTest` |
 | FP→string Double/Float (FLT001) | ✅ | ✅ (`RtB45`, libc on demand) | ✅ | `nativeValueOfDoubleFloatMatchesJvmGolden` both arches |
-| spawn / channel / CONC001 helpers | ✅ (pthread) | ✅ (clone 220 + futex + `RtB48`) | ✅ | `SpawnE2ETest`, `KofConcurrency2Test.crossNative*` |
+| spawn / CONC001 helpers | ✅ (pthread) | ✅ (clone 220 + futex + `RtB48`) | ✅ | `SpawnE2ETest`, `KofConcurrency2Test.crossNative*` |
+| `channel<T>` send/receive | ✅ (object queue) | 🟡 NAT005 — runtime never ported (§423; honest refusal at lowering, no `kof_channel_*` in the cross) | 🟡 NAT005 (§423) | `KofConcurrency2Test.channelNative` (x86), `BareCollectionPrimitiveArgE2ETest` 12/12 (x86 `1` + NAT005 both cross) |
 | supervisor | ✅ | ✅ (×3 — §129 cross port 19/09) | ✅ | `KofSupervisorE2ETest` |
 | scheduler `every`/`at` | ✅ | ✅ | ✅ | `KofTimeE2ETest`; `at(cron)` = CRON001 on ALL natives (not per-arch) |
 | math (MATH001 closed; `pow`) | ✅ (`pow` via libm) | ✅ FP; `pow` refuses MATH001 | ✅ FP; `pow` refuses MATH001 | `KofMathTest`, `KofMath.supportedOn` |

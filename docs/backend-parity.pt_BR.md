@@ -148,7 +148,8 @@ nota em contrário.
 | … record / coleções aninhadas | ✅ descritor recursivo `.rodata` 19/09 | ✅ 19/09 (face (4): mesma gramática de descritor na fatia `B39` — 8=toString na vtable via `jalr`, 9/10=aninhado, null→"null") | ✅ (tradutor; novo `lhu`→`ldrh`) | `NativeE2ETest.execCollectionPrintRecordNestedJvmGolden` + `nativeCollectionPrintRecordNestedMatchesJvmGolden` nos DOIS arcos cross (46/46 cada sob qemu, golden = o oracle JVM medido; a face de concat exigiu ramo `valueOf(record)` vtable no `NativeRiscvCrossOps`) |
 | Map/Set + boxes de erasure (§284/§284-map) | ✅ | ✅ (`RtB49`/`RtB46`) | ✅ (tradutor) | `NativeErasureBoxE2ETest` 6/6 (md5 igual nos 3), `KofMapSetTest` |
 | FP→string Double/Float (FLT001) | ✅ | ✅ (`RtB45`, libc sob demanda) | ✅ | `nativeValueOfDoubleFloatMatchesJvmGolden` nos dois arcos |
-| spawn / channel / helpers CONC001 | ✅ (pthread) | ✅ (clone 220 + futex + `RtB48`) | ✅ | `SpawnE2ETest`, `KofConcurrency2Test.crossNative*` |
+| spawn / helpers CONC001 | ✅ (pthread) | ✅ (clone 220 + futex + `RtB48`) | ✅ | `SpawnE2ETest`, `KofConcurrency2Test.crossNative*` |
+| `channel<T>` send/receive | ✅ (fila de objetos) | 🟡 NAT005 — runtime nunca portado (§423; recusa honesta no lowering, sem `kof_channel_*` no cross) | 🟡 NAT005 (§423) | `KofConcurrency2Test.channelNative` (x86), `BareCollectionPrimitiveArgE2ETest` 12/12 (x86 `1` + NAT005 nos dois cross) |
 | supervisor | ✅ | ✅ (×3 — §129 port cross 19/09) | ✅ | `KofSupervisorE2ETest` |
 | scheduler `every`/`at` | ✅ | ✅ | ✅ | `KofTimeE2ETest`; `at(cron)` = CRON001 em TODOS os native (não é por arco) |
 | math (MATH001 fechado; `pow`) | ✅ (`pow` via libm) | ✅ FP; `pow` recusa MATH001 | ✅ FP; `pow` recusa MATH001 | `KofMathTest`, `KofMath.supportedOn` |

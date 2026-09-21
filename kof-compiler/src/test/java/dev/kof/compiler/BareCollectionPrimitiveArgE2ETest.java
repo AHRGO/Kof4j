@@ -281,44 +281,82 @@ class BareCollectionPrimitiveArgE2ETest {
             """, "1");
     }
 
-    /** NAT003 (padrao honesto §352): a fila nativa e de OBJETOS — primitivo
-     *  nu no receive virava ponteiro (SIGSEGV 139, medido antes do fix). A
-     *  recusa em compile-time nomeia o idiom tipado; o canal TIPADO no
-     *  native nao e tocado (controle abaixo, emissao byte-identica). */
+    /** §374 FECHADO (21/09, lane nat): o canal NU + primitivo no x86_64 agora
+     *  empurra a caixa MAGIC do §284 no SEND (fila de objetos) e o println de
+     *  {@code Unknown} despacha por {@code kof_box_to_string} — mesma saida
+     *  {@code 1} dos 3 hosts (a recusa NAT003 caiu). O canal TIPADO segue
+     *  byte-identico (controle, emissao raw int). Nos arcos cross o runtime de
+     *  canal nunca foi portado → diagnóstico honesto NAT005 (R6), nunca
+     *  link-fail {@code undefined reference}. */
     @Test
-    void bareChannelPrimitiveNativeRefusesAndTypedStaysGreen(@TempDir Path tmp) throws Exception {
-        Path bare = tmp.resolve("B553ChanBare.kf");
-        Files.writeString(bare, """
+    void bareChannelPrimitiveNativeBoxesAndTypedStaysGreen(@TempDir Path tmp) throws Exception {
+        String bareSrc = """
             main() {
               val c = channel()
               c.send(1)
               println(c.receive())
             }
-            """);
-        CompilationResult rn = driver.compile(bare, tmp.resolve("o-chnat"), Target.NATIVE);
-        org.junit.jupiter.api.Assumptions.assumeTrue(
-                dev.kof.compiler.nat.NativeToolchainGate.present(),
-                "Native toolchain ausente no host");
-        assertFalse(rn.success(), "primitive send on bare Channel must be refused (NAT003)");
-        assertTrue(rn.diagnostics().getDiagnostics().stream()
-                .anyMatch(d -> d.code().equals("NAT003")),
-                "NAT003 expected: " + rn.diagnostics().getDiagnostics());
-        Path typed = tmp.resolve("B553ChanTyped.kf");
-        Files.writeString(typed, """
+            """;
+        assumeX86Toolchain();
+        Path bare = tmp.resolve("B553ChanBare-NATIVE-" + System.nanoTime() + ".kf");
+        Files.writeString(bare, bareSrc);
+        Path out = tmp.resolve("o-chnat-NATIVE-" + System.nanoTime());
+        CompilationResult rn = driver.compile(bare, out, Target.NATIVE);
+        assertTrue(rn.success(), "bare Channel + primitive must compile now: " + diags(rn));
+        assertEquals("1", runNative(out), "bare Channel<Unknown> primitive"
+                + " = caixa MAGIC no nativo (paridade JVM), nunca SIGSEGV");
+
+        String typedSrc = """
             main() {
               val c = channel<Int>()
               c.send(5)
               c.send(6)
               println(c.receive() + c.receive())
             }
-            """);
-        CompilationResult rt = driver.compile(typed, tmp.resolve("o-chnat2"), Target.NATIVE);
+            """;
+        Path typed = tmp.resolve("B553ChanTyped-NATIVE-" + System.nanoTime() + ".kf");
+        Files.writeString(typed, typedSrc);
+        Path out2 = tmp.resolve("o-chnat2-NATIVE-" + System.nanoTime());
+        CompilationResult rt = driver.compile(typed, out2, Target.NATIVE);
         assertTrue(rt.success(), "typed Channel<Int> must keep compiling: " + diags(rt));
-        Process p = new ProcessBuilder(tmp.resolve("o-chnat2/Default/Main").toString())
+        assertEquals("11", runNative(out2), "typed Channel<Int> unchanged (regra 1)");
+
+        // §374-cross: canal no riscv64/aarch64 — o runtime kof_channel_* só
+        // existe no x86_64; a recusa vira diagnóstico NAT005 no lowering
+        // (sem toolchain, sem link-fail críptico).
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            for (String src : new String[]{bareSrc, typedSrc}) {
+                Path f = tmp.resolve("B553ChanCross-" + t + "-" + System.nanoTime() + ".kf");
+                Files.writeString(f, src);
+                CompilationResult rc = driver.compile(f, tmp.resolve("o-x-" + System.nanoTime()), t);
+                assertFalse(rc.success(), t + " channel must be refused (NAT005): " + diags(rc));
+                assertTrue(diags(rc).contains("NAT005"), t + " honest diagnostic NAT005: " + diags(rc));
+            }
+        }
+    }
+
+    /** Guarda ambiental honesta: so roda onde o toolchain x86_64 existe. */
+    private static void assumeX86Toolchain() {
+        for (String c : new String[]{"as", "ld"}) {
+            try {
+                Process p = new ProcessBuilder("sh", "-c", "command -v " + c)
+                        .redirectErrorStream(true).start();
+                String out = new String(p.getInputStream().readAllBytes(),
+                        java.nio.charset.StandardCharsets.UTF_8).trim();
+                org.junit.jupiter.api.Assumptions.assumeTrue(
+                        p.waitFor() == 0 && !out.isEmpty(), "toolchain ausente: " + c);
+            } catch (Exception e) {
+                org.junit.jupiter.api.Assumptions.assumeTrue(false, "toolchain ausente: " + c);
+            }
+        }
+    }
+
+    private String runNative(Path out) throws Exception {
+        Process p = new ProcessBuilder(out.resolve("Default/Main").toString())
                 .redirectErrorStream(true).start();
         String s = new String(p.getInputStream().readAllBytes(),
                 java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
-        assertEquals(0, p.waitFor(), "typed native exit, saida: " + s);
-        assertEquals("11", s, "typed Channel<Int> native unchanged (regra 1)");
+        assertEquals(0, p.waitFor(), "native exit, saida: " + s);
+        return s;
     }
 }
