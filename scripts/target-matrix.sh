@@ -75,13 +75,43 @@ qemu_ld_prefix() { # riscv64|aarch64
     return 0
 }
 
-# jar_stale <jar> <srcdir>... -> imprime a 1a fonte mais nova que o jar, ou nada.
-# Guarda de honestidade (R6): o bin/kof da arvore roda lib/kof.jar; se a fonte
-# for mais nova, o jar mede um binario que NAO corresponde ao tip — a matriz
-# tem de recusar (nunca um PARITY falso, nem 0% nem 100%). Testavel no selftest.
+# source_hash <srcdir>... -> sha256 do CONTEUDO das fontes (independe de mtime).
+# Ordena os caminhos (-z, nome nulo) antes de hashear: o resultado nao depende
+# da ordem que o find devolve.
+source_hash() {
+    find "$@" -name '*.java' -type f -print0 2>/dev/null \
+        | LC_ALL=C sort -z \
+        | xargs -0 -r sha256sum 2>/dev/null \
+        | sha256sum | cut -d' ' -f1
+}
+
+# jar_stamp <jar> -> caminho do sidecar gravado no build (mtime do jar + hash
+# das fontes). Sem sidecar, a guarda cai na heuristica de mtime (conservadora).
+jar_stamp() { printf '%s.stamp\n' "$1"; }
+
+# jar_stale <jar> <srcdir>... -> imprime a CAUSA se o jar NAO corresponde ao
+# tip, ou nada se corresponde. Guarda de honestidade (R6): o bin/kof da arvore
+# roda lib/kof.jar; a matriz nao pode medir um binario fantasma (PARITY falso).
+#   - com `lib/kof.jar.stamp` (gravado por scripts/build-kof-jar.sh no build):
+#     certifica por CONTEUDO — hash das fontes + mtime do jar. Um rebase/checkout
+#     que so REESCREVE mtimes (conteudo igual) deixa de acusar artefato velho.
+#   - sem stamp: heuristica antiga por mtime (qualquer fonte mais nova = stale).
+# Testavel no selftest.
 jar_stale() {
     local jar="$1"; shift
     [ -f "$jar" ] || return 0
+    local stamp; stamp="$(jar_stamp "$jar")"
+    if [ -f "$stamp" ]; then
+        local s_mtime s_hash j_mtime
+        s_mtime="$(sed -n '1p' "$stamp")"
+        s_hash="$(sed -n '2p' "$stamp")"
+        j_mtime="$(stat -c %Y "$jar" 2>/dev/null || stat -f %m "$jar" 2>/dev/null)"
+        if [ -n "$s_hash" ] && [ "$s_hash" = "$(source_hash "$@")" ] && [ "$s_mtime" = "$j_mtime" ]; then
+            return 0
+        fi
+        printf 'lib/kof.jar.stamp desatualizado (hash das fontes ou mtime do jar mudou desde o build)'
+        return 0
+    fi
     find "$@" -name '*.java' -newer "$jar" 2>/dev/null | head -1
 }
 
@@ -108,7 +138,21 @@ if [ "$SELFTEST" = true ]; then
     [ -n "$(jar_stale "$ST/jar" "$ST/src")" ] || { echo "SELFTEST FAIL: jar velho nao foi detectado como stale"; exit 1; }
     sleep 1; touch "$ST/jar"
     [ -z "$(jar_stale "$ST/jar" "$ST/src")" ] || { echo "SELFTEST FAIL: jar fresco acusado como stale (falso vermelho)"; exit 1; }
-    echo "SELFTEST: ok — comparador reprova divergencia, aceita igualdade, sem prefixo falso, staleness detectada"
+    # com stamp: certifica por CONTEUDO (hash das fontes + mtime do jar)
+    stamp_w() { { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1"; source_hash "$2"; } > "$(jar_stamp "$1")"; }
+    printf 'x\n' > "$ST/jar"; printf 'y\n' > "$ST/src/A.java"; stamp_w "$ST/jar" "$ST/src"
+    [ -z "$(jar_stale "$ST/jar" "$ST/src")" ] || { echo "SELFTEST FAIL: stamp fresco acusado como stale (falso vermelho)"; exit 1; }
+    # caso real do rebase: mtime novo, CONTEUDO igual -> continua fresco
+    sleep 1; touch "$ST/src/A.java"
+    [ -z "$(jar_stale "$ST/jar" "$ST/src")" ] || { echo "SELFTEST FAIL: rebase (mtime novo, conteudo igual) virou stale"; exit 1; }
+    # fonte realmente alterada -> stale
+    printf 'z\n' > "$ST/src/A.java"
+    [ -n "$(jar_stale "$ST/jar" "$ST/src")" ] || { echo "SELFTEST FAIL: fonte alterada nao foi detectada como stale (stamp)"; exit 1; }
+    # jar reconstruido sem atualizar o stamp -> stale
+    stamp_w "$ST/jar" "$ST/src"; sleep 1; touch "$ST/jar"
+    [ -n "$(jar_stale "$ST/jar" "$ST/src")" ] || { echo "SELFTEST FAIL: jar refeito sem atualizar o stamp nao foi detectado"; exit 1; }
+    rm -f "$(jar_stamp "$ST/jar")"
+    echo "SELFTEST: ok — comparador reprova divergencia, aceita igualdade, sem prefixo falso, staleness por mtime e por stamp (rebase nao acusa falso)"
     exit 0
 fi
 
@@ -133,9 +177,9 @@ fi
 if [ -z "$DIST_DIR" ] && [ "${KOF_MATRIX_ALLOW_STALE:-0}" != "1" ]; then
     stale="$(jar_stale "$ROOT/lib/kof.jar" "$ROOT"/kof-*/src/main 2>/dev/null)"
     if [ -n "$stale" ]; then
-        echo "matrix: ARTEFATO VELHO — lib/kof.jar e anterior a fonte ($stale)." >&2
+        echo "matrix: ARTEFATO VELHO — lib/kof.jar nao corresponde a fonte: $stale" >&2
         echo "matrix: o bin/kof da arvore mediria um binario que nao corresponde ao tip (PARITY falso)." >&2
-        echo "matrix: reconstrua (mvn package -DskipTests && scripts/package.sh) ou use --dist de uma dist fresca." >&2
+        echo "matrix: reconstrua com scripts/build-kof-jar.sh (builda + copia + grava o stamp) ou use --dist de uma dist fresca." >&2
         echo "matrix: override consciente: KOF_MATRIX_ALLOW_STALE=1 (nao recomendado — mede artefato velho)." >&2
         exit 3
     fi
