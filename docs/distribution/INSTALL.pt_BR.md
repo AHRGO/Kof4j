@@ -160,7 +160,11 @@ echo 'export PATH="$HOME/<pasta>/kof-*-macos-arm64/bin:$PATH"' >> ~/.zshrc
 ```
 
 > Se o macOS avisar sobre o arquivo, é só clicar em **Abrir** uma vez nas
-> Configurações de Privacidade — o pacote é assinado pela pipeline oficial.
+> Configurações de Privacidade — o pacote **não é assinado pela Apple** (a
+> pipeline não faz codesign hoje). A confiança ancora no digest `SHA256SUMS`
+> verificado acima; proveniência de build atestada pelo workflow oficial é o
+> contrato ratificado `DECISIONS.md` §D-ARTIFACT-TRUST (fila de execução em
+> pouso), nunca uma afirmação em tempo presente.
 
 ### 🪟 Windows
 

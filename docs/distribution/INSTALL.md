@@ -159,7 +159,11 @@ echo 'export PATH="$HOME/<folder>/kof-*-macos-arm64/bin:$PATH"' >> ~/.zshrc
 ```
 
 > If macOS warns about the file, just click **Open** once in the
-> Privacy Settings — the package is signed by the official pipeline.
+> Privacy Settings — the package is **not Apple-signed** (no codesign in the
+> pipeline today). Trust anchors on the `SHA256SUMS` digest verified above;
+> build provenance attested by the official workflow is the ratified contract
+> `DECISIONS.md` §D-ARTIFACT-TRUST (enforcement queue landing), never a
+> present-tense claim.
 
 ### 🪟 Windows
 
