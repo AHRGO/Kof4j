@@ -256,11 +256,21 @@ public final class JvmOpCollections {
             keyType = ct.typeArguments().get(0);
             valueType = ct.typeArguments().get(1);
         }
-        // tipos reais dos argumentos no call-site (mapOf() nasce Unknown)
+        // Tipos REAIS dos argumentos no call-site (mapOf() nasce Unknown).
+        // §432: o V do SLOT (dono) e o tipo do valor ESCRITO podem divergir
+        // (`Map<String,Object>.put(k, 2.5)` / `.getOrDefault(k, 9.5)` — o
+        // default é `Double` mas o slot é `Object`). `writtenValueType` governa
+        // o BOX do valor/default; `valueType` (o V do dono) governa o
+        // RESULTADO. Antes os dois eram o mesmo e o V virava `Double`, então o
+        // resultado saía cru (`double`) onde o consumidor esperava `Object` →
+        // VerifyError (bad type on operand stack). Só cai no tipo do argumento
+        // quando o dono não informa V (mapOf() sem pin).
+        Type writtenValueType = valueType;
         if (!kc.parameterTypes().isEmpty()) {
             keyType = kc.parameterTypes().get(0);
             if (kc.parameterTypes().size() > 1 && !BuiltinTypes.isList(kc.parameterTypes().get(1))) {
-                valueType = kc.parameterTypes().get(1);
+                writtenValueType = kc.parameterTypes().get(1);
+                if (valueType instanceof Type.UnknownType) valueType = writtenValueType;
             }
         }
         switch (kc.methodName()) {
@@ -271,7 +281,7 @@ public final class JvmOpCollections {
             }
             case "kof_map_put" -> {
                 // stack: map, key, value — box ambos antes do put(Object,Object)
-                emitBoxIfPrimitive(mv, valueType);          // [m,k,V]
+                emitBoxIfPrimitive(mv, writtenValueType);   // [m,k,V] (§432: box pelo tipo ESCRITO)
                 if (isPrimitiveType(keyType)) {
                     mv.visitInsn(SWAP);                     // [m,V,k]
                     emitBoxIfPrimitive(mv, keyType);        // [m,V,K]
@@ -309,7 +319,7 @@ public final class JvmOpCollections {
             }
             case "kof_map_get_or_default" -> {
                 emitBoxIfPrimitive(mv, keyType);
-                emitBoxIfPrimitive(mv, valueType);
+                emitBoxIfPrimitive(mv, writtenValueType);   // §432: box do DEFAULT pelo tipo escrito
                 mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "getOrDefault",
                         "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true);
                 if (!isPrimitiveType(valueType) && !KofUi.isUiType(valueType) && !KofMedia.isHandleType(valueType) && !(valueType instanceof Type.UnknownType)) {
@@ -341,7 +351,7 @@ public final class JvmOpCollections {
             // (emitNullablyBoxedMapResult — CHECKCAST, nunca unbox: null
             // ausente tem que sobreviver, D-NULL-INTENT/I7).
             case "kof_map_put_if_absent" -> {
-                emitBoxIfPrimitive(mv, valueType);
+                emitBoxIfPrimitive(mv, writtenValueType);   // §432: box pelo tipo ESCRITO
                 if (isPrimitiveType(keyType)) {
                     mv.visitInsn(SWAP);
                     emitBoxIfPrimitive(mv, keyType);

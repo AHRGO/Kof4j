@@ -13,6 +13,21 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§432 FIXED — JVM `VerifyError` on `Map<_,Object>.getOrDefault(k, <primitive>)`**
+    (21/09, session 9093): `JvmOpCollections.emitMapCall` resolved the owner's V
+    then overwrote it with `parameterTypes[1]` (the written arg), so for an
+    Object-valued map the result path treated the value as `Double`
+    (box/checkcast/unbox) while the lowerer typed it `Object` and the printer
+    called `String.valueOf(Object)` → `VerifyError: Bad type on operand stack`.
+    The emitter now keeps the owner's **V for the RESULT** and a separate
+    **`writtenValueType`** for boxing the written value/default, falling back to
+    the arg type only when the owner's V is Unknown (as for `mapOf()`-born
+    maps). Also fixes the same-family `put`-return `checkcast`. Proof:
+    `MapGetOrDefaultTest.objectValuedMapGetOrDefaultRunsOnJvm` (hit `2.5`,
+    primitive default `9.5` on a miss, exit 0 — RED-first with the launcher/
+    VerifyError before the fix); the class 6/6, `CollectionMethodsStdlibE2ETest`
+    11/11, `NativeErasureBoxE2ETest` 6/6.
+
   - **§433 / §434 FIXED — the two remote-tip JS-FFI reds** (21/09, FFI/JS lane
     `29198ea8`): §433 `ArtifactSizeTest.helloJsRuntimeSizeWithinBaseline` was
     past the 5% JS budget — re-baselined WITH cause (the §166 precedent):

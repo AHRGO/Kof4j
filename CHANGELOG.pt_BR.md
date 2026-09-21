@@ -13,6 +13,21 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§432 CORRIGIDO — `VerifyError` do JVM em `Map<_,Object>.getOrDefault(k, <primitivo>)`**
+    (21/09, sessão 9093): o `JvmOpCollections.emitMapCall` resolvia o V do owner
+    e o sobrescrevia com `parameterTypes[1]` (o arg escrito), então num mapa de
+    valor Object o caminho do resultado tratava o valor como `Double`
+    (box/checkcast/unbox) enquanto o lowerer o tipava `Object` e o printer
+    chamava `String.valueOf(Object)` → `VerifyError: Bad type on operand stack`.
+    O emissor agora mantém o **V do owner para o RESULTADO** e um
+    **`writtenValueType`** separado para boxar o valor/default escrito, caindo no
+    tipo do argumento só quando o V do owner é Unknown (mapas nascidos de
+    `mapOf()`). Também conserta o `checkcast` do retorno do `put` (mesma
+    família). Prova: `MapGetOrDefaultTest.objectValuedMapGetOrDefaultRunsOnJvm`
+    (hit `2.5`, default primitivo `9.5` em miss, exit 0 — RED-first com o
+    launcher/VerifyError antes do fix); a classe 6/6,
+    `CollectionMethodsStdlibE2ETest` 11/11, `NativeErasureBoxE2ETest` 6/6.
+
   - **§433 / §434 CORRIGIDOS — os dois vermelhos do tip remoto da FFI/JS**
     (21/09, lane FFI/JS `29198ea8`): §433
     `ArtifactSizeTest.helloJsRuntimeSizeWithinBaseline` passava do orçamento JS

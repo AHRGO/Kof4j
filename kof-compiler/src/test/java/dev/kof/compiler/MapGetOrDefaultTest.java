@@ -104,6 +104,31 @@ class MapGetOrDefaultTest {
     }
 
     @Test
+    void objectValuedMapGetOrDefaultRunsOnJvm(@TempDir Path tempDir) throws Exception {
+        // §432: a `Map<String, Object>` with a PRIMITIVE default. The owner's V
+        // is Object but the default's arg type is Double — the JVM emitter used
+        // to overwrite the slot's V with the arg type, box/checkcast+unbox the
+        // result as Double while the printer called String.valueOf(Object),
+        // producing `VerifyError: Type double_2nd is not assignable to Object`.
+        // The default must be boxed as its own type; the RESULT is the owner's V.
+        CompilationResult r = compile(tempDir, "O", """
+                main() {
+                    val o: Map<String, Object> = mapOf()
+                    o.put("d", 2.5)
+                    println(o.getOrDefault("d", 9.5))
+                    println(o.getOrDefault("missing", 9.5))
+                }
+                """, Target.JVM);
+        assertTrue(r.success(), "object-valued map must compile: " + r.diagnostics().getDiagnostics());
+        Process p = new ProcessBuilder(TestJdk.javaBin(), "-cp",
+                tempDir.resolve("out-OJVM").toString(), "Default.Main")
+                .redirectErrorStream(true).start();
+        String out = new String(p.getInputStream().readAllBytes()).replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run must exit 0 (no VerifyError), got:\n" + out);
+        assertEquals("2.5\n9.5", out, "hit value / primitive default on a miss (V=Object)");
+    }
+
+    @Test
     void remainingTrioFlippedToWork(@TempDir Path tempDir) throws Exception {
         // #386 slice 2: containsValue landed (4 targets, slice 3). The
         // old guard asserted SEM025 here "until slice 2" — per its own
