@@ -65,7 +65,10 @@
 > the collector (G-4) is what actually reclaims; (2) the
 > DB001 cross face CLOSED 15/09 (SQLite; JS keeps DB001) and the CONC001
 > helpers (selectAny/done/poll/cancel/cancelled/awaitTimeout) CLOSED 15/09
-> — remaining refusals: SECN000/JSN004 (OTP001 removed 19/09); (3) FP-collection on cross
+> — remaining refusals: SECN000/JSN004, `channel` → **NAT005** (§423),
+> `kof.io` File/Path/Directory → **NAT006** and web-T1 `listen`/`route` →
+> **NAT007** (§427, 21/09; honest compile-time refusal — the x86_64 runtimes
+> were never ported to the cross) (OTP001 removed 19/09); (3) FP-collection on cross
 > (FLT001 CLOSED 15/09 — slice `RtB45`; §107 record/nested **CLOSED 19/09 ON
 > ALL 3 ARCHES** — x86 `.rodata` recursive descriptor (face (3) x86) + cross
 > port (face (4)): slice `B39` now interprets the SAME descriptor grammar

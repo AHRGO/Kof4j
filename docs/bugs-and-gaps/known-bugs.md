@@ -14228,15 +14228,16 @@ p
 
 <!-- pt-switch --> **PT:** [§426 (pt_BR)](known-bugs.pt_BR.md#426--timecollect-compila-no-js-mas-nao-tem-runtime-nem-gate-incompleto-silencioso---corrigido-2109-lane-18-js-gateado-com-time004)
 
-## §427 — the riscv64/aarch64 targets may lower `kof.io` and the web-T1 server, but their runtime has no such symbols (loud `ld` undefined-reference; the gate is wrong/missing) — 🔴 OPEN
+## §427 — the riscv64/aarch64 targets may lower `kof.io` and the web-T1 server, but their runtime has no such symbols (loud `ld` undefined-reference; the gate is wrong/missing) — ✅ FIXED 21/09 (lane .18: honest `NAT006` io + `NAT007` web-T1 gates)
 
 - `KofIo.java` has NO `supportedOn`/`gapCode`, and `ExpressionBuiltinInstanceCalls.lowerIo` emits unconditionally -> the cross gets `kof_io_read_text/file_exists/write_text/...` that do not exist in `nat/NativeRiscv*.java` (only `kof_io_strlen`/`kof_io_make_string`, `NativeRiscvAsmRtB46.java:16-32`, used by sqlite/JSON) -> link failure.
 - `ExpressionBuiltinInstanceCalls.java:82-98` `nativeWebT1` allows `kof_web_listen`/`kof_web_route` on NATIVE_RISCV64/NATIVE_AARCH64, but `NativeWebRuntime.emitWebFunctions` is emitted only on the x86 path (`NativeBackend.java:316`); `KofWeb.isNativeTarget` includes the cross (`KofWeb.java:224-225`).
 - Contrast: `channel` got an honest `NAT005` gate (§423); `io`/web-T1 have none. `IoE2ETest`/`KofWebNativeE2ETest` only cover JVM/`Target.NATIVE` (x86).
 - **What is missing:** the cross runtimes, or an honest gate (NAT00x) at lowering for `io`/web-T1 on riscv64/aarch64.
 - **Related:** §423, `docs/native-multiarch.md` honest-refusal list.
+- **Resolution (21/09, lane .18):** chose the honest gate (the cross runtimes are deferred to the nat lane). `ExpressionBuiltinInstanceCalls.lowerIo` now refuses any File/Path/Directory method on `NATIVE_RISCV64`/`NATIVE_AARCH64` with `NAT006` (`kof.io: not available on the riscv64/aarch64 native targets yet (NAT006)`), and `lowerWeb` refuses the T1 server (`kof_web_listen`/`kof_web_route`) on those targets with `NAT007`; `nativeWebT1` is now x86-only. The docs matrix (`docs/backend-parity.md` Documented Gaps + per-arch) carries both codes. **Proof:** `DomainGapCodesTest.ioOnCrossIsNat006` + `webT1OnCrossIsNat007` (both cross refuse) and `ioAndWebT1OnX86AndJsHaveNoGap` (x86_64 + JS still compile) — 22/22, incl. the R6 guard that now sees `NAT006`/`NAT007`; `IoE2ETest` 24/24, `KofWebNativeE2ETest` 4/4, `KofWebE2ETest` 25/25.
 
-<!-- pt-switch --> **PT:** [§427 (pt_BR)](known-bugs.pt_BR.md#427--os-alvos-riscv64aarch64-podem-baixar-kofio-e-o-servidor-web-t1-mas-o-runtime-deles-nao-tem-tais-simbolos-ld-undefined-reference-alto-o-gate-esta-erradoausente---aberto)
+<!-- pt-switch --> **PT:** [§427 (pt_BR)](known-bugs.pt_BR.md#427--os-alvos-riscv64aarch64-podem-baixar-kofio-e-o-servidor-web-t1-mas-o-runtime-deles-nao-tem-tais-simbolos-ld-undefined-reference-alto-o-gate-esta-erradoausente---corrigido-2109-lane-18-gates-honestos-nat006-io--nat007-web-t1)
 
 ## §428 — the JVM and Native DAP sessions answer every unimplemented request with `success:true` and an empty body (silent façade, Q7) — ✅ FIXED 21/09 (lane .18/CLI-cluster: `default` now `fail2`/`fail`, `unsupported request: <cmd>`)
 

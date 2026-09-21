@@ -67,7 +67,10 @@
 > o coletor (G-4) é quem de fato recupera; (2) a face cross do DB001
 > FECHADA 15/09 (SQLite; JS mantém DB001) e os helpers do CONC001
 > (selectAny/done/poll/cancel/cancelled/awaitTimeout) FECHADOS 15/09
-> — restam as recusas SECN000/JSN004 (OTP001 removido 19/09); (3) FP-coleção no cross
+> — restam as recusas SECN000/JSN004, `channel` → **NAT005** (§423),
+> `kof.io` File/Path/Directory → **NAT006** e web-T1 `listen`/`route` →
+> **NAT007** (§427, 21/09; recusa honesta em compile-time — os runtimes x86_64
+> nunca foram portados para o cross) (OTP001 removido 19/09); (3) FP-coleção no cross
 > (FLT001 FECHADO 15/09 — fatia `RtB45`; §107 record/aninhado **FECHADO 19/09
 > NAS 3 ARCOS** — x86 descritor recursivo `.rodata` (face (3) x86) + port
 > cross (face (4)): a fatia `B39` interpreta a MESMA gramática de descritor

@@ -79,11 +79,24 @@ final class ExpressionBuiltinInstanceCalls {
                         "AND002");
                 return localIdx;
             }
-            boolean nativeWebT1 = (driver.target == Target.NATIVE
-                    || driver.target == Target.NATIVE_RISCV64
-                    || driver.target == Target.NATIVE_AARCH64)
-                    && (webCall.function().equals("kof_web_listen")
-                        || webCall.function().equals("kof_web_route"));
+            boolean crossNative = driver.target == Target.NATIVE_RISCV64
+                    || driver.target == Target.NATIVE_AARCH64;
+            boolean webT1Fn = webCall.function().equals("kof_web_listen")
+                    || webCall.function().equals("kof_web_route");
+            // §427: the native HTTP server runtime (NativeWebRuntime —
+            // kof_web_listen/route) is emitted only on the x86_64 path; the
+            // riscv64/aarch64 runtime has no such symbols (loud `ld`
+            // undefined-reference). Honest compile-time refusal (NAT007),
+            // never a link break (R6).
+            if (crossNative && webT1Fn) {
+                webGap(driver, mc,
+                        "web T1 (listen/route): not available on the riscv64/aarch64"
+                                + " native targets yet (NAT007) — the native HTTP server"
+                                + " runtime is x86_64-only; use --target native",
+                        "NAT007");
+                return localIdx;
+            }
+            boolean nativeWebT1 = driver.target == Target.NATIVE && webT1Fn;
             // WEB001-T1 JS (13/09): routes HTTP + listen liberados no JS — o
             // runtime JsRuntimeUiWeb emite kofWebAppNew/Route/Listen (server
             // GraalJS HttpServer real); ws/TLS seguem WEB004/002. SSE ✅ 16/09
@@ -196,6 +209,25 @@ final class ExpressionBuiltinInstanceCalls {
         }
         KofIo.IoCall ioCall = KofIo.instanceMethod(recvType, mc.methodName(), mc.arguments().size());
         if (ioCall != null) {
+            // §427: the kof.io File/Path/Directory runtime is not ported to the
+            // riscv64/aarch64 cross — only the kof_io_strlen/make_string
+            // internals exist there (sqlite/JSON). Emitting the call is a loud
+            // `ld` undefined-reference, so refuse honestly at compile time
+            // (NAT006), never a link break (R6).
+            if (driver.target == Target.NATIVE_RISCV64 || driver.target == Target.NATIVE_AARCH64) {
+                if (driver.currentDiagnostics != null) {
+                    SourcePosition ioPos = mc.position();
+                    driver.currentDiagnostics.error(
+                            ioPos != null ? ioPos.file() : "",
+                            ioPos != null ? ioPos.line() : 0,
+                            ioPos != null ? ioPos.column() : 0, 0,
+                            "kof.io: not available on the riscv64/aarch64 native targets yet"
+                                    + " (NAT006) — the File/Path/Directory runtime is x86_64-only;"
+                                    + " use --target native or the JVM/JS/Script drivers",
+                            "NAT006");
+                }
+                return localIdx;
+            }
             // §388-A: parâmetro primitivo-array (writeBytes/appendBytes: Int[])
             // recebido um List era aceito em silêncio e morria no runtime (JVM
             // VerifyError na reflection do Run, Script rc=1 mudo, JS mismatch

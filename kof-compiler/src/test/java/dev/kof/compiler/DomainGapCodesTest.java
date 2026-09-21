@@ -174,6 +174,60 @@ class DomainGapCodesTest {
     }
 
     @Test
+    void ioOnCrossIsNat006(@TempDir Path tmp) throws Exception {
+        // §427: the File/Path/Directory runtime is x86_64-only on Native; the
+        // cross only has kof_io_strlen/make_string internals.
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            assertGap(tmp, t, "NAT006", """
+                main() {
+                    val f = File("/tmp/kof-io-probe")
+                    println(f.exists())
+                }
+                """);
+        }
+    }
+
+    @Test
+    void webT1OnCrossIsNat007(@TempDir Path tmp) throws Exception {
+        // §427: NativeWebRuntime (listen/route) is emitted on the x86_64 path
+        // only; the cross has no kof_web_* symbols.
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            assertGap(tmp, t, "NAT007", """
+                main() {
+                    val app = web.app()
+                    app.listen(8080)
+                }
+                """);
+        }
+    }
+
+    @Test
+    void ioAndWebT1OnX86AndJsHaveNoGap(@TempDir Path tmp) throws Exception {
+        Path x86 = tmp.resolve("Main-x86-" + System.nanoTime() + ".kf");
+        Files.writeString(x86, """
+            main() {
+                val f = File("/tmp/kof-io-probe")
+                println(f.exists())
+                val app = web.app()
+                app.listen(8080)
+            }
+            """);
+        CompilationResult nat = driver.compile(x86, tmp.resolve("out-x86"), Target.NATIVE);
+        assertTrue(nat.success(), "Native x86_64 io + web T1 must compile: "
+                + nat.diagnostics().getDiagnostics());
+        Path js = tmp.resolve("Main-js-" + System.nanoTime() + ".kf");
+        Files.writeString(js, """
+            main() {
+                val f = File("/tmp/kof-io-probe")
+                println(f.exists())
+            }
+            """);
+        CompilationResult jsRes = driver.compile(js, tmp.resolve("out-js"), Target.JS);
+        assertTrue(jsRes.success(), "JS kof.io must compile: "
+                + jsRes.diagnostics().getDiagnostics());
+    }
+
+    @Test
     void exportSpansOnNativeIsObs003(@TempDir Path tmp) throws Exception {
         assertGap(tmp, Target.NATIVE, "OBS003", """
             main() {

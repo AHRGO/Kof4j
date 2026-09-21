@@ -13,6 +13,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§427 CORRIGIDO — `kof.io`/web-T1 no riscv64/aarch64 agora recusam com `NAT006`/`NAT007`**
+    (21/09, lane .18): o cross baixava File/Path/Directory (`kof_io_file_*`)
+    e o servidor T1 (`kof_web_listen`/`route`) cujos símbolos só existem no
+    runtime x86_64 -> `ld` undefined-reference alto. `lowerIo` recusa
+    File/Path/Directory no cross com `NAT006` e `lowerWeb` recusa o servidor
+    T1 com `NAT007` (`nativeWebT1` agora só x86); x86_64/JVM/JS mantêm os
+    runtimes reais. Docs: backend-parity.md Documented Gaps + per-arch.
+    Prova: DomainGapCodesTest.ioOnCrossIsNat006 + webT1OnCrossIsNat007 +
+    ioAndWebT1OnX86AndJsHaveNoGap (22/22, incl. o guarda R6), IoE2ETest
+    24/24, KofWebNativeE2ETest 4/4, KofWebE2ETest 25/25.
+
   - **§426 CORRIGIDO — `time.collect()` no JS recusa com `TIME004`**
     (21/09, lane .18): o backend JS registrava/importava `kofGcCollectNow`
     de `kof-runtime.mjs` mas o runtime nunca o exportava (o alvo JS não tem
