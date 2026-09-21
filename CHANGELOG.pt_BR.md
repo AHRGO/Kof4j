@@ -13,6 +13,22 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§396-cross — a face riscv64/aarch64 do println de record null ganhou o
+    guard também** (21/09, lane compilador): a lane gaps-db corrigiu a face x86
+    (guard `NativeX86ValueOf` no dispatch do valueOf) e catalogou o resíduo
+    cross — "riscv/aarch64 carregam o MESMO dispatch sem guard". Portado: guard
+    `beqz a0` no ENTRY do call-site (`NativeVtableToStringGuard.emitRiscv`;
+    null -> `kof_string_from_literal("null",4)`, não-null byte-a-byte; aarch64
+    herda via tradutor). Pins nos 3 alvos com o golden medido na JVM
+    `null\nnull\nPoint[x=1, y=2]` (RED ec=139 em riscv/aarch antes do guard;
+    qemu cross 53/53+53/53; x86 verde pela solução da gaps-db já no tip — sem
+    duplicação de guard de impressora: os edits x86 desta lane caíram no rebase).
+    Registrado também como §422: a evidência da suíte completa achou
+    `CompilerDriverTest#externProducesHonestGapNotSilentDrop` VERMELHO no tip
+    limpo (rejeição de `extern` não-suportado desapareceu — R6), roteada à lane
+    FFI, NÃO relaxada aqui.
+
+
   - **deps — `kof deps resolve` ganha a POLÍTICA de verificação de proveniência (D-ARTIFACT-TRUST fila (c)), em modo observe**
     (21/09, lane platform-cli/segurança): antes de extrair/instalar um pacote do registry, o tar.gz baixado é conferido contra a
     identidade PEDIDA (owner/repo@versão — nunca o que a release declara): digest, repo-fonte, workflow que assinou, ref e commit

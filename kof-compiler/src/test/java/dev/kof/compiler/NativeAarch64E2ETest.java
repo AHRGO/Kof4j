@@ -987,6 +987,29 @@ main() {
     }
 
     @Test
+    void nativePrintNullRecordMatchesJvmGolden(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        // §396-cross: println CRU de record NULL (T?-API) e String? deve
+        // imprimir "null" (paridade x86/riscv — guard no call-site, herdado
+        // do riscv pelo tradutor). Golden = MESMO programa do pin x86.
+        String out = runAarch64(tempDir, """
+                record Point(Int x, Int y)
+                Point? nope() {
+                    return null
+                }
+                String? noString() {
+                    return null
+                }
+                main() {
+                    println(nope())
+                    println(noString())
+                    println(Point(1, 2))
+                }
+                """);
+        assertEquals("null\nnull\nPoint[x=1, y=2]", out);
+    }
+
+    @Test
     void nativeCollectionPrintRecordNestedMatchesJvmGolden(@TempDir Path tempDir) throws IOException {
         assumeToolchain();
         // §107 record/nested (face (4), 19/09): aarch64 herda o descritor

@@ -360,11 +360,10 @@ public final class NativeRiscvCrossOps {
                 // "rec:" + lixo (medido: `rec:` vazio no qemu). Paridade x86.
                 int tosIdx = nb.findVirtualMethodIndex(ct.name(), "toString", java.util.List.of());
                 if (tosIdx >= 0) {
-                    sb.append("    pop a0\n");
-                    sb.append("    ld t0, 8(a0)\n");
-                    sb.append("    addi t0, t0, ").append(tosIdx * 8).append("\n");
-                    sb.append("    ld t0, 0(t0)\n");
-                    sb.append("    jalr t0\n");
+                    // §396-cross: guard de null no ENTRY (paridade JVM "null";
+                    // aarch herda via tradutor). Emissão no guard extraído
+                    // (check_500): NativeVtableToStringGuard.
+                    NativeVtableToStringGuard.emitRiscv(sb, nb, tosIdx);
                     other.pushRiscv(sb, "a0");
                 }
             }

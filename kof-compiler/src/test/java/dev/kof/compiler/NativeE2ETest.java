@@ -121,6 +121,29 @@ class NativeE2ETest {
         assertTrue(result.success(), "Compilation should succeed");
     }
 
+    @Test
+    void execPrintNullRecordAndNullStringMatchesJvm(@TempDir Path tempDir) throws IOException {
+        // §396: println CRU de NULL (record via `T?`-API e String? via API) SIGSEGVava
+        // no x86-64 — o caminho generico de kof_println desreferencia (%rdi) no teste
+        // de MAGIC sem guard de null. Oraculo JVM (medido): "null\nnull\nPoint[x=1, y=2]".
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            record Point(Int x, Int y)
+            Point? nope() {
+                return null
+            }
+            String? noString() {
+                return null
+            }
+            main() {
+                println(nope())
+                println(noString())
+                println(Point(1, 2))
+            }
+            """);
+        runNative(source, tempDir.resolve("out"), "null\nnull\nPoint[x=1, y=2]");
+    }
+
 
 
 

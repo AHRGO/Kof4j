@@ -13,6 +13,22 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§396-cross — the riscv64/aarch64 side of the null-record println gained
+    the guard too** (21/09, compiler lane): the gaps-db lane fixed the x86 face
+    (`NativeX86ValueOf` guard at the valueOf dispatch) and cataloged the cross
+    residue — "riscv/aarch64 carry the SAME dispatch without guard". Ported:
+    `beqz a0` ENTRY guard on the call-site (`NativeVtableToStringGuard.emitRiscv`;
+    null -> `kof_string_from_literal("null",4)`, non-null byte-a-byte; aarch64
+    inherits via translator). 3-target pins with the JVM-measured golden
+    `null\nnull\nPoint[x=1, y=2]` (RED ec=139 on riscv/aarch pre-guard; qemu cross
+    53/53+53/53; x86 green via the gaps-db solution already in the tip — no
+    printer-guard duplication: this lane's x86 edits were dropped in the rebase).
+    Also cataloged as §422: the full-suite evidence found
+    `CompilerDriverTest#externProducesHonestGapNotSilentDrop` RED at the clean
+    tip (unsupported-`extern` rejection vanished — R6), routed to the FFI lane,
+    NOT relaxed here.
+
+
   - **deps — `kof deps resolve` gains the provenance verification POLICY (D-ARTIFACT-TRUST queue (c)), in observe mode**
     (21/09, platform-cli/security lane): before extracting/installing a registry package the downloaded tar.gz is checked against
     the REQUESTED identity (owner/repo@version — never what the release claims): digest, source repo, signing workflow, tag ref

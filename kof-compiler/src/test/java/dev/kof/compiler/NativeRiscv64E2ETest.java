@@ -1055,6 +1055,30 @@ main() {
     }
 
     @Test
+    void nativePrintNullRecordMatchesJvmGolden(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        // §396-cross: println CRU de record NULL (T?-API) e String? deve
+        // imprimir "null" — no x86 o 8(%rax) da vtable SIGSEGVava; o guard do
+        // call-site riscv vale tambem p/ o path nao-SIGSEGV nativo do riscv.
+        // Golden = MESMO programa do pin x86 (NativeE2ETest).
+        String out = runRiscv64(tempDir, """
+                record Point(Int x, Int y)
+                Point? nope() {
+                    return null
+                }
+                String? noString() {
+                    return null
+                }
+                main() {
+                    println(nope())
+                    println(noString())
+                    println(Point(1, 2))
+                }
+                """);
+        assertEquals("null\nnull\nPoint[x=1, y=2]", out);
+    }
+
+    @Test
     void nativeValueOfDoubleFloatMatchesJvmGolden(@TempDir Path tempDir) throws IOException {
         assumeToolchain();
         // FLT001 (fechado 15/09): Double/Float -> String no cross via libc
