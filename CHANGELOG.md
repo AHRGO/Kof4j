@@ -13,6 +13,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **`kof workflow run --target js` supported (residual slice of 2.6 / R7)** (20/09,
+    `.18`): the CLI now compiles the `pipeline(): KofWfDag` for JS and runs it
+    **in-process** via `KofJsRunner`, with BYTE parity with the JVM
+    (`CmdWorkflowTest.runJsTargetFacesJvmBytes`). Guest stdout feeds the
+    `@@KOF_WORKFLOW@@` protocol capture; stderr is teed to the terminal AND the
+    buffer (mirrors the JVM's merged pipe, so the report/progress faces show on
+    both targets); the exit decision uses a tolerant `truthy` because the JS host's
+    `allOk()` is numeric per the §382 bool contract — same decision, same bytes.
+    `--target native`/`script` remain refused with the follow-up message. Proof:
+    `CmdWorkflowTest` 12/12 (3 new js tests, RED-first) + battery 79/0F
+    (`WorkflowE2ETest`, `KofJsE2ETest`, `IoBoolFacesE2ETest`, pump).
+
  ### In development
   - **known-bugs §391 FIXED — #568: the IMPLICIT constructor of an EXTERNAL class
     (`Greeter()` without `new`) via `--classpath` raised a FALSE `SEM015`**

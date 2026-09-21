@@ -26,6 +26,17 @@ import java.util.Map;
  */
 final class KofCliSupport {
 
+    static java.io.OutputStream tee(java.io.OutputStream a, java.io.OutputStream b) {
+        return new java.io.OutputStream() {
+            @Override public void write(int n) throws java.io.IOException { a.write(n); b.write(n); }
+            @Override public void write(byte[] buf, int off, int len) throws java.io.IOException {
+                a.write(buf, off, len); b.write(buf, off, len);
+            }
+            @Override public void flush() throws java.io.IOException { a.flush(); b.flush(); }
+            @Override public void close() { /* dono real fecha; o tee nao fecha */ }
+        };
+    }
+
     KofCliSupport() {
     }
 
