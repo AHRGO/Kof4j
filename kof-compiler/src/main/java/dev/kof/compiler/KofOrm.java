@@ -55,13 +55,15 @@ public final class KofOrm {
      *  F1a = {@code delete_all}, F1b = {@code count}, F1c = {@code migrate}
      *  (asm em {@code RuntimeOrm1}), F1d = {@code create} (parser de schema +
      *  DDL em {@code RuntimeOrm2}); F3a = {@code count_where} (bind unico via
-     *  box de erasure §284, em {@code RuntimeOrm3}); o row-object
-     *  (save/find/all/where) entra depois. MySQL (runtime) e o
-     *  cross riscv/aarch64 (compile-time) seguem {@code ORM001} honesto
-     *  (R7, R6 — nunca silent). */
+     *  box de erasure §284, em {@code RuntimeOrm3}); F2a = {@code save}
+     *  (row-object: INSERT/UPDATE/upsert em {@code RuntimeOrm4}, schema em
+     *  {@code RuntimeOrmSchema}, binds em {@code RuntimeOrmBind}); o resto
+     *  row-object (find/all/where) e o cross riscv/aarch64 (compile-time)
+     *  seguem {@code ORM001} honesto (R7, R6 — nunca silent). MySQL
+     *  (runtime) idem. */
     private static final java.util.Set<String> NATIVE_F1 = java.util.Set.of(
             "kof_orm_delete_all", "kof_orm_count", "kof_orm_migrate",
-            "kof_orm_create", "kof_orm_count_where");
+            "kof_orm_create", "kof_orm_count_where", "kof_orm_save");
 
     static boolean fnSupportedOn(Target target, String fn) {
         if (supportedOn(target)) return true;

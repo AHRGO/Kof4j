@@ -535,7 +535,7 @@ class KofOrmE2ETest {
     }
 
     @Test
-    void nativeReportsOrm001JsSupported(@TempDir Path tempDir) throws IOException {
+    void saveCompilesOnNativeAndJs(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, ENTITY_SRC + """
                 main() {
@@ -543,15 +543,63 @@ class KofOrmE2ETest {
                     orm.save(db, User(1, "Mel", "m@kof.dev", 30))
                 }
                 """);
+        // F2a (20/09): kof_orm_save REAL no Native x86-64 — compila limpo.
         CompilationResult nativeResult = driver.compile(source, tempDir.resolve("native-out"), Target.NATIVE);
-        assertFalse(nativeResult.success());
-        assertTrue(nativeResult.diagnostics().getDiagnostics().toString().contains("ORM001"),
-                "Native should report ORM001: " + nativeResult.diagnostics().getDiagnostics());
+        assertTrue(nativeResult.success(),
+                "Native should now compile orm.save (F2a): " + nativeResult.diagnostics().getDiagnostics());
 
-        // ORM001 (18/09): JS agora suportado via KofJsOrmBridge — compila limpo.
+        // ORM001 (18/09): JS suportado via KofJsOrmBridge — compila limpo.
         CompilationResult jsResult = driver.compile(source, tempDir.resolve("js-out"), Target.JS);
         assertTrue(jsResult.success(),
                 "JS should now compile orm.* (ORM001 closed): " + jsResult.diagnostics().getDiagnostics());
+    }
+
+    // ── D-DB-GAPS F2a (20/09): kof_orm_save REAL no Native x86-64 ──
+
+    @Test
+    void saveNativeEndToEndMatchesJvm(@TempDir Path tempDir) throws Exception {
+        String body = """
+                    db.execute(db, "create table if not exists user (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, age INTEGER)")
+                    db.execute(db, "delete from user")
+                    var u1 = orm.save(db, User(0, "O'Mel", "m@kof.dev", 30))
+                    println(u1.id)
+                    println(u1.name)
+                    var u2 = orm.save(db, u1)
+                    println(u2.id)
+                    println(orm.count<User>(db))
+                    var u3 = orm.save(db, User(9, "Ana", "a@kof.dev", 25))
+                    println(u3.id)
+                    println(orm.count<User>(db))
+                    println(orm.count<User>(db, "age", 25))
+                    var rows = db.query(db, "select id, name from user order by id")
+                    for (var r in rows) {
+                        println(r)
+                    }
+                }
+                """;
+        String expected = "1\nO'Mel\n1\n1\n9\n2\n1\n{\"id\":1,\"name\":\"O'Mel\"}\n{\"id\":9,\"name\":\"Ana\"}";
+        Path jvmSource = tempDir.resolve("JvmMain.kf");
+        Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmsave.db") + "\")\n")
+                + body);
+        runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
+                findDriverJar("sqlite-jdbc", "SQLite"), expected);
+        Path nativeSource = tempDir.resolve("NativeMain.kf");
+        Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativesave.db") + "\")\n")
+                + body);
+        CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nativeResult.success(), "Native deve compilar orm.save (F2a): "
+                + nativeResult.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(
+                tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = p.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals(expected, out, "paridade byte JVM==Native (save; 3 paths: INSERT-gen, UPDATE hit, UPDATE miss -> INSERT-all)");
     }
 
     @Test
@@ -1093,16 +1141,16 @@ class KofOrmE2ETest {
     }
 
     @Test
-    void sqlFacesRestantesNativeAindaOrm001(@TempDir Path tempDir) throws IOException {
+    void rowObjectFacesRestantesNativeAindaOrm001(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, ENTITY_SRC + """
                 main() {
-                    var db = db.connect("sqlite:/tmp/f1a-gate.db")
-                    orm.save(db, User(1, "Mel", "m@kof.dev", 30))
+                    var db = db.connect("sqlite:/tmp/f2b-gate.db")
+                    var u = orm.find<User>(db, 1)
                 }
                 """);
         CompilationResult r = driver.compile(source, tempDir.resolve("out"), Target.NATIVE);
-        assertFalse(r.success(), "save (row-object) ainda e ORM001 no Native ate F2");
+        assertFalse(r.success(), "find (row-object leitura) ainda e ORM001 no Native ate F2b");
         assertTrue(r.diagnostics().getDiagnostics().toString().contains("ORM001"),
                 "gate honesto (nunca silent): " + r.diagnostics().getDiagnostics());
     }
