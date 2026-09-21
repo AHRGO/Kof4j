@@ -5,6 +5,8 @@
 #      nunca a prosa: numero cravado em dois lugares e promessa de drift);
 #   B) paridade EN<->PT dos IDs de decisao em DECISIONS.md (o registro de governanca
 #      nao pode ter secao so num idioma) e zero heading duplicado no mesmo arquivo.
+#   C) numeracao de secoes (N.) em DECISIONS.md: mesmo conjunto de numeros E mesmo
+#      nivel de heading nos dois idiomas (achou a secao 7 PT rebaixada a H2 vs H1 no EN).
 #
 # A classe (A) ja driftou duas vezes em 21/09; a classe (B) apareceu quando a lane
 # irma adicionou 3 decisoes so no EN e um merge deixou um heading orfao + duplicado
@@ -54,7 +56,10 @@ if [ "${1:-}" = "--selftest" ]; then
 ## D-DUP — a'; mk d_pt.md '## D-DUP — a'
     if LR_EN="$T/r_en.md" LR_PT="$T/r_pt.md" DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" LR_COUNT=19 bash "$0" >/dev/null 2>&1; then
         echo "SELFTEST FALHOU: heading duplicado passou"; exit 1; fi
-    echo "SELFTEST OK: contagem (ok/errada/ausente) + paridade + duplicata"
+    mk d_en.md '# 1. X'; mk d_pt.md '## 1. X'   # mesmo numero, nivel divergente
+    if LR_EN="$T/r_en.md" LR_PT="$T/r_pt.md" DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" LR_COUNT=19 bash "$0" >/dev/null 2>&1; then
+        echo "SELFTEST FALHOU: nivel de secao divergente passou"; exit 1; fi
+    echo "SELFTEST OK: contagem (ok/errada/ausente) + paridade + duplicata + numeracao"
     exit 0
 fi
 
@@ -106,8 +111,25 @@ if sets.get("EN") is not None and sets.get("PT") is not None:
     for d in only_pt:
         print(f"PARIDADE: decisao so no PT (sem espelho EN): {d}"); bad = 1
 
+# ---- C) DECISIONS: numeracao de secoes (N.) — numero E nivel iguais EN<->PT
+NUMPAT = re.compile(r"(?m)^(#{1,6}) ([0-9]+)\. ")
+lvl = {}
+for lang, path in (("EN", den), ("PT", dpt)):
+    try:
+        text = open(path, encoding="utf-8").read()
+    except OSError:
+        continue
+    lvl[lang] = {n: len(h) for h, n in NUMPAT.findall(text)}
+if "EN" in lvl and "PT" in lvl:
+    for n in sorted(set(lvl["EN"]) | set(lvl["PT"]), key=int):
+        a, b = lvl["EN"].get(n), lvl["PT"].get(n)
+        if a != b:
+            print(f"NUMERACAO: secao {n}. tem nivel EN={a} PT={b} (numeracao e nivel devem bater)")
+            bad = 1
+
 if not bad:
     print(f"OK: contagem viva {count} consistente ({seen} declaracoes); "
-          f"DECISIONS EN<->PT com {len(sets.get('EN', ()))} IDs em paridade, 0 duplicatas")
+          f"DECISIONS EN<->PT com {len(sets.get('EN', ()))} IDs em paridade, 0 duplicatas, "
+          "numeracao/nivel em paridade")
 sys.exit(1 if bad else 0)
 PYEOF

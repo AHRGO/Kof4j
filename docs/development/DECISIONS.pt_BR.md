@@ -1866,7 +1866,7 @@ Testes, commits, matriz ou documentação.
 
 ---
 
-## 7. Regra final
+# 7. Regra final
 
 **Decisões são permanentes até serem substituídas. Implementações são revisáveis.**
 

@@ -125,6 +125,13 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **O gate agora fecha o ciclo nas duas direções** (21/09, lane docs): além de afirmação de fechamento sem respaldo no ledger, um id FECHADO no ledger a partir da seção 400 sem entrada no CHANGELOG agora derruba o gate. O piso é regra de época, não anistia: medido em 21/09, 25 ids abaixo de 400 não têm entrada enquanto ZERO acima têm — a prática consolidou, a regra começa onde a prática começa. Verificado por mutação: uma seção fechada plantada no ledger sem linha no changelog é nomeada pelo gate; estado real segue verde. (Uma ideia companheira — proibir referências do changelog a ids fora do ledger — foi medida e REJEITADA: os achados são remissões antigas de outro espaço de ids, regra errada para a história, recusada pela lição da rodada 11.)
+  - **Paridade de seções numeradas adicionada; nível da seção 7 reparado** (21/09, lane docs):
+    medir todos os pares EN/PT sob `docs/development/` mostrou só o `DECISIONS.md` fora, e o resíduo
+    era um deslize de nível — EN `# 7. Final rule` (H1) vs PT `## 7. Regra final` (H2), o único fora
+    do padrão contra os irmãos H1 3–6. Corrigido e guardado: o `check_live_records.sh` agora também
+    exige que as seções numeradas (`N.`) tenham o mesmo conjunto de números E o mesmo nível de
+    heading nos dois idiomas (language-independent — os números não são traduzidos) — provado por
+    mutação (rebaixar o 7 PT para H2 o nomeia; restaurado verde).
   - **Gate de registros vivos ampliado; paridade EN/PT do DECISIONS reparada** (21/09, lane docs):
     auditar o pouso da lane irmã achou três decisões da mantenedora registradas só no EN (`R6-SCOPE`,
     `D-R3-BUFFER`, `D-R3-HANDLE-LIFETIME`) — a lane irmã então as espelhou ao PT em `097ff924`;

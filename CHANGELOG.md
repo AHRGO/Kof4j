@@ -138,6 +138,13 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **The gate now closes the loop in both directions** (21/09, docs lane): besides CHANGELOG-claims-closed-without-ledger-backing, an id CLOSED in the ledger at or after section 400 with no CHANGELOG entry now fails the gate. The floor is an epoch rule, not amnesty: measured 21/09, 25 closed ids below 400 lack entries while ZERO above it do — practice solidified, so the rule starts where the practice does. Mutation-verified: a planted closed section in the ledger with no changelog line is named by the gate; real state stays green. (A companion no-ghost idea — forbidding changelog refs to ids absent from the ledger — was measured and REJECTED: the hits are ancient cross-references, a wrong rule for the history, refused per the round-11 lesson.)
+  - **Numbered-section parity added; section 7 level repaired** (21/09, docs lane): measuring every
+    EN/PT doc pair under `docs/development/` showed only `DECISIONS.md` off, and the residual was a
+    heading-level slip — EN `# 7. Final rule` (H1) vs PT `## 7. Regra final` (H2), the odd one out
+    against its own H1 siblings 3–6. Fixed and guarded: `check_live_records.sh` now also requires the
+    numbered sections (`N.`) to share the same number set AND heading level across languages
+    (language-independent — the numbers are not translated) — mutation-proven (demoting PT 7 back to
+    H2 names it; restored green).
   - **Living-records gate widened; DECISIONS EN/PT parity repaired** (21/09, docs lane): auditing the
     sister lane's landing found three maintainer decisions recorded EN-only (`R6-SCOPE`,
     `D-R3-BUFFER`, `D-R3-HANDLE-LIFETIME`) — the sister lane then mirrored them to PT in `097ff924`;
