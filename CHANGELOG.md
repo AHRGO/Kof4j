@@ -26,6 +26,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (`WorkflowE2ETest`, `KofJsE2ETest`, `IoBoolFacesE2ETest`, pump).
 
  ### In development
+  - **known-bugs §381 FIXED — an `entity` field named with a RESERVED keyword OOMed the
+    compiler** (20/09, `.18` via maintainer decision — clean error, no grammar change):
+    `parseEntityDeclaration`'s field loop called `expectId` which reports WITHOUT
+    consuming, so `entity E { val: String }` made zero progress while allocating a
+    diagnostic + a field node every iteration until the heap died (measured:
+    -Xmx256m, ~2s). Fix: non-IDENTIFIER field name reports `Expected field name in
+    entity` (PARSE024) once and consumes the offending token (classic panic
+    recovery) + a per-iteration progress guard. Proof: new `EntityKeywordFieldE2ETest`
+    3/3 run in a SUBPROCESS at the original 256MB budget (RED: child OOMs; GREEN:
+    bounded diagnostics, valid entities compile) + parser/makealive battery 272/0F.
+
   - **known-bugs §391 FIXED — #568: the IMPLICIT constructor of an EXTERNAL class
     (`Greeter()` without `new`) via `--classpath` raised a FALSE `SEM015`**
     (20/09, compiler lane `.22`): `kof build ... --classpath producer.jar` with

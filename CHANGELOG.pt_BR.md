@@ -14,6 +14,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
 ### Em desenvolvimento
+  - **known-bugs §381 CORRIGIDO — um campo de `entity` com nome PALAVRA-RESERVADA OOMAVA
+    o compilador** (20/09, `.18` via decisão do maintainer — erro limpo, sem mudar a
+    gramática): o field loop de `parseEntityDeclaration` chamava `expectId`, que reporta
+    SEM consumir, então `entity E { val: String }` fazia progresso-zero alocando um
+    diagnóstico + um node de campo por iteração até o heap morrer (medido: -Xmx256m, ~2s).
+    Fix: nome de campo não-IDENTIFIER reporta `Expected field name in entity` (PARSE024)
+    uma vez e consome o token ofensor (recuperação de pânico clássica) + trava de progresso
+    por iteração. Prova: novo `EntityKeywordFieldE2ETest` 3/3 rodando em SUBPROCESSO no
+    budget original de 256MB (RED: o filho morre em OOM; GREEN: diagnósticos limitados,
+    entities válidas compilam) + bateria parser/makealive 272/0F.
+
   - **`kof workflow run --target js` suportado (fatia residual da 2.6 / R7)** (20/09,
     `.18`): o CLI agora compila o `pipeline(): KofWfDag` para JS e roda
     **in-process** via `KofJsRunner`, com paridade de BYTES com a JVM
