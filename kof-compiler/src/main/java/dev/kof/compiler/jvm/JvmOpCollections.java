@@ -251,7 +251,6 @@ public final class JvmOpCollections {
     static void emitMapCall(MethodVisitor mv, KofCall kc) {
         Type keyType = Type.UnknownType.UNKNOWN;
         Type valueType = Type.UnknownType.UNKNOWN;      // slot V — governa o RESULTADO
-        Type argValueType = Type.UnknownType.UNKNOWN;   // valor/arg escrito no call-site (boxing)
         if (kc.ownerType() instanceof Type.ClassType ct && ct.typeArguments().size() == 2
                 && !(ct.typeArguments().get(0) instanceof Type.UnknownType)) {
             keyType = ct.typeArguments().get(0);
@@ -274,15 +273,6 @@ public final class JvmOpCollections {
                 if (valueType instanceof Type.UnknownType) valueType = writtenValueType;
             }
         }
-        // §432 — o tipo do ARG (boxing do valor/default) não é o V do slot
-        // (tratamento do resultado): com V do owner DESCONHECIDO (mapOf() sem
-        // tipo) caímos no tipo do arg, como antes; com V conhecido (ex.:
-        // Map<String,Object>) o resultado segue V e o arg só boxeia.
-        if (valueType instanceof Type.UnknownType && !(argValueType instanceof Type.UnknownType)) {
-            valueType = argValueType;
-        }
-        // tipo usado para BOXEAR o valor/default escrito (nunca Unknown se o V é conhecido)
-        Type boxValueType = argValueType instanceof Type.UnknownType ? valueType : argValueType;
         switch (kc.methodName()) {
             case "kof_map_new" -> {
                 mv.visitTypeInsn(NEW, "java/util/HashMap");
