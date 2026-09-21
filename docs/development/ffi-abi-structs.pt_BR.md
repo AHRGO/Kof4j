@@ -19,14 +19,20 @@ argumento** no JVM (token `@`; `FfiStructE2ETest` 6/6).
 (registrador e sret; nome binário codificado em `@`+`:`, reconstrução pelo
 construtor canônico; `FfiStructE2ETest` 10/10). Struct no Native = 3.7;
 bridge JS = follow-up.
+**Pousou 21/09 (3.8b fatia 3 · D6-2):** array escalar **`T[]`→`ptr` C** no JVM,
+**copy-in por chamada** (token `p`+char do elemento; `new Int[n]` atravessa como
+`int*`). O array Java não é pinado nem aliasado — o callee não escreve de volta
+(isso é o out-buffer da D6-3, `Buffer(U8, INOUT)`). `String[]` (array de
+ponteiros) segue FFI001; Native/JS mantêm seus gap codes. `FfiArrayE2ETest` 5/5.
 
 ## 1. O que existe hoje (medido 19/09, não lembrado)
 
 `extern name[("lib")] (params): Ret` vira um token de assinatura
 (`FfiSignature.java`): `i`=Int, `j`=Long, `f`=Float, `d`=Double, `b`=Boolean,
-`S`=String (`char*`), `v`=retorno void; parâmetro callback é o token aninhado
-`(<ret><params>)`. O que o mapa não cobre é **gap honesto em tempo de
-compilação**: `FFI001` (JVM/Native não bindável) / `FFI002` (JS) —
+`S`=String (`char*`), `v`=retorno void; `@`=record por valor (fatias 1–2),
+`p<elem>`=array escalar `T[]`→`ptr` com copy-in (fatia 3); parâmetro callback é
+o token aninhado `(<ret><params>)`. O que o mapa não cobre é **gap honesto em
+tempo de compilação**: `FFI001` (JVM/Native não bindável) / `FFI002` (JS) —
 `CompilerPipeline.java:225-236`, R6 (nunca stub silencioso).
 
 | Superfície | JVM | Native | JS |
@@ -35,6 +41,7 @@ compilação**: `FFI001` (JVM/Native não bindável) / `FFI002` (JS) —
 | callbacks/upcalls (3.4) | ✅ `Linker.upcallStub` | ❌ `FFI001` (sem mecanismo) | ✅ host |
 | String = `char*` | ✅ entrada + saída | ✅ entrada (payload off 24) + saída (cópia na fronteira) | ✅ |
 | **struct (record, campos escalares)** | ✅ **por valor entrada + retorno** (token `@`, 3.8b fatias 1–2, 20–21/09) | ❌ FFI001 (3.7) | ❌ FFI002 |
+| **array escalar `T[]`→`ptr`** | ✅ **copy-in por chamada** (token `p<elem>`, 3.8b fatia 3, 21/09; sem write-back) | ❌ FFI001 | ❌ FFI002 |
 | array / out-buffer / opaco | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
 
 Mapeamento escalar JVM→FFM (medido): `i→JAVA_INT, j→JAVA_LONG, f→JAVA_FLOAT,
@@ -97,6 +104,8 @@ Três exemplos resolvidos que os testes de implementação devem reproduzir bit 
   arrays primitivos (`new Int[n]`, que já existem) bindam como `ptr` (sem
   parâmetro de comprimento implícito — quem decide é a API C); `List<T>`
   permanece FFI001 até um benchmark de unboxing provar o contrário.
+  **✅ fatia 3 POUSOU 21/09 (JVM, copy-in por chamada, token `p<elem>`) — a
+  proposta acima, exatamente; `List<T>` segue não bindado.**
 - **D6-3 · parâmetros out.** Sem sintaxe nova na v1: out-buffer =
   `new Byte[n]` cruzando como tipo ABI PRÓPRIO — `Buffer(U8, INOUT)`, copia-para-dentro /
   chamada / copia-de-volta — **nunca o token `S`** (corrigido 20/09: `S` = `String` = `char*`
@@ -135,10 +144,12 @@ FFI001/002 honesto até decidido — nada de binding parcial silencioso.
    consomem.
 2. **3.8b** binding JVM: records→`StructLayout` no `kof_ffi` (FFM faz a
    classificação); política de arena D6-5. **✅ fatia 1 (param por valor,
-   20/09) + fatia 2 (retorno por valor: registrador + sret, 21/09) POUSARAM** —
+   20/09) + fatia 2 (retorno por valor: registrador + sret, 21/09) + fatia 3
+   (D6-2: `T[]` escalar→`ptr`, copy-in por chamada, 21/09) POUSARAM** —
    só o subconjunto de campos escalares; `struct` mutável (D6-1 B) é superfície
    nova da linguagem sob a Lei da Simplicidade (regra 11), decisão separada.
-   Resta: bridge de struct no JS (pack/unpack no host, D6-5) é follow-up.
+   Restam: out-buffer da D6-3 (`Buffer(U8, INOUT)`) e o bridge de struct no JS
+   (pack/unpack no host, D6-5), ambos follow-ups.
 3. **3.7** asm native: classificação manual por target (x86-64 agora;
    aarch64/riscv64 seguem o mesmo golden de AbiLayout) + sret (D6-4).
 4. **JS**: decidir a fronteira wasm/ffi (o host node já binda escalares;

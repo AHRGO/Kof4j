@@ -55,6 +55,10 @@ public final class FfiSignature {
                 // própria classe do argumento (reflexão em RecordComponent) — o
                 // token `@` basta (sem carregar nome de classe no fio).
                 sb.append('@');
+            } else if (arrayElemChar(p.type()) != null) {
+                // D6-2 / 3.8b fatia 3: `T[]` primitivo vira `ptr` C — token `p` +
+                // o char do ELEMENTO (o runtime faz copy-in por chamada).
+                sb.append('p').append(arrayElemChar(p.type()).charValue());
             } else {
                 // inalcançável: isExternBound filtra antes; nunca silencioso (R6).
                 sb.append('?');
@@ -139,6 +143,17 @@ public final class FfiSignature {
         if (CompilerPipeline.isDoubleType(t)) return 'd';
         if (CompilerPipeline.isIntType(t)) return 'i';
         return null;
+    }
+
+    /** D6-2 (3.8b fatia 3): `T[]` de elemento escalar numérico/bool vira um `ptr`
+     *  C (copy-in por chamada). Devolve o char do ELEMENTO (i/j/f/d/b) ou null
+     *  se não for array de escalar (ex. `String[]` = array de ponteiros, fora do
+     *  v1; aninhado também). */
+    static Character arrayElemChar(String typeName) {
+        if (typeName == null || !typeName.endsWith("[]")) return null;
+        String base = typeName.substring(0, typeName.length() - 2);
+        Character c = paramChar(base);
+        return (c == null || c.charValue() == 'S') ? null : c;
     }
 
     static Type returnType(String r) {

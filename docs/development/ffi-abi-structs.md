@@ -17,16 +17,22 @@ argument** (`@` token; `FfiStructE2ETest` 6/6).
 and sret paths; `@`+`:`-encoded binary name, canonical-constructor
 reconstruction; `FfiStructE2ETest` 10/10). Native struct = 3.7; JS bridge =
 follow-up.
+**Landed 21/09 (3.8b fatia 3 · D6-2):** JVM scalar array **`T[]`→C `ptr`**,
+**copy-in per call** (token `p`+element char; `new Int[n]` crossing as
+`int*`). The Java array is not pinned nor aliased — the callee cannot write
+back (that is D6-3's out-buffer, `Buffer(U8, INOUT)`). `String[]` (array of
+pointers) stays FFI001; Native/JS keep their gap codes. `FfiArrayE2ETest` 5/5.
 
 
 ## 1. What exists today (measured 19/09, not remembered)
 
 `extern name[("lib")] (params): Ret` lowers to a signature token
 (`FfiSignature.java`): `i`=Int, `j`=Long, `f`=Float, `d`=Double, `b`=Boolean,
-`S`=String (`char*`), `v`=void return; a callback param is the nested token
-`(<ret><params>)`. Anything the map does not cover is a **compile-time honest
-gap**: `FFI001` (JVM/Native not bindable) / `FFI002` (JS) —
-`CompilerPipeline.java:225-236`, R6 (never a silent stub).
+`S`=String (`char*`), `v`=void return; `@`=record by value (fatias 1–2),
+`p<elem>`=scalar array `T[]`→`ptr` with copy-in (fatia 3); a callback param is
+the nested token `(<ret><params>)`. Anything the map does not cover is a
+**compile-time honest gap**: `FFI001` (JVM/Native not bindable) / `FFI002`
+(JS) — `CompilerPipeline.java:225-236`, R6 (never a silent stub).
 
 | Surface | JVM | Native | JS |
 |---|---|---|---|
@@ -34,6 +40,7 @@ gap**: `FFI001` (JVM/Native not bindable) / `FFI002` (JS) —
 | callbacks/upcalls (3.4) | ✅ `Linker.upcallStub` | ❌ `FFI001` (no mechanism) | ✅ host |
 | String = `char*` | ✅ in + out | ✅ in (payload off 24) + out (boundary copy) | ✅ |
 | **struct (record, scalar fields)** | ✅ **by value in + out** (`@` token, 3.8b fatias 1–2, 20–21/09) | ❌ FFI001 (3.7) | ❌ FFI002 |
+| **scalar array `T[]`→`ptr`** | ✅ **copy-in per call** (`p<elem>` token, 3.8b fatia 3, 21/09; no write-back) | ❌ FFI001 | ❌ FFI002 |
 | array / out-buffer / opaque | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
 
 JVM scalar→FFM mapping (measured): `i→JAVA_INT, j→JAVA_LONG, f→JAVA_FLOAT,
@@ -94,7 +101,9 @@ Three worked examples the implementation tests must reproduce bit-exactly:
   it means copying to native memory per call. Proposal: primitive arrays
   (`new Int[n]`, which already exist) bind to `ptr` (no implicit length
   param — the C API decides), `List<T>` stays FFI001 until a boxed-unboxing
-  benchmark proves otherwise.
+  benchmark proves otherwise. **✅ fatia 3 LANDED 21/09 (JVM, copy-in per
+  call, `p<elem>` token) — the proposal above, exactly; `List<T>` still not
+  bound.**
 - **D6-3 · out-parameters.** No new syntax in v1: out-buffer = `new Byte[n]`
   crossing as its OWN ABI kind — `Buffer(U8, INOUT)`, copy-in / call / copy-back —
   **never the `S` token** (corrected 20/09: `S` = `String` = NUL-terminated UTF-8 `char*`,
@@ -131,10 +140,12 @@ until decided — no silent partial binding.
    decides nothing of D6-1..D6-5; it is the shared substrate 3.8b/3.7 consume.
 2. **3.8b** JVM binding: records→`StructLayout` in `kof_ffi` (FFM does
    classification); D6-5 arena policy. **✅ fatia 1 (by-value param, 20/09) +
-   fatia 2 (return-by-value: register + sret, 21/09) LANDED** — only the
+   fatia 2 (return-by-value: register + sret, 21/09) + fatia 3 (D6-2: scalar
+   `T[]`→`ptr`, copy-in per call, 21/09) LANDED** — only the
    scalar-field subset; `struct` mutable (D6-1 B) is a new language surface
-   under the Simplicity Law (rule 11), a separate decision. Remaining: JS
-   struct bridge (D6-5 host pack/unpack) is a follow-up.
+   under the Simplicity Law (rule 11), a separate decision. Remaining: D6-3
+   out-buffer (`Buffer(U8, INOUT)`) and the JS struct bridge (D6-5 host
+   pack/unpack), both follow-ups.
 3. **3.7** native asm: classification by hand per target (x86-64 now;
    aarch64/riscv64 follow the same AbiLayout golden) + sret (D6-4).
 4. **JS**: decide wasm/ffi boundary (node host already binds scalars;

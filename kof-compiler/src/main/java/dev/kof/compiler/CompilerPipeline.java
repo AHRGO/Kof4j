@@ -477,6 +477,10 @@ public final class CompilerPipeline {
                 // fora do conjunto nesta fatia.
                 if (driver.target == Target.JVM
                         && FfiSignature.structFieldChars(param.type(), driver) != null) continue;
+                // D6-2 / 3.8b fatia 3: `T[]` escalar binda por valor (ptr + copies)
+                // no JVM; Native/JS ficam nos seus gap codes (R6).
+                if (driver.target == Target.JVM
+                        && FfiSignature.arrayElemChar(param.type()) != null) continue;
                 return false;
             }
             return true;

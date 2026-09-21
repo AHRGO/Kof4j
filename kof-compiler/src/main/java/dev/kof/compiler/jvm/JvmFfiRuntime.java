@@ -122,6 +122,14 @@ final class JvmFfiRuntime {
                                 java.lang.foreign.MemorySegment sseg = arena.allocate(sl);
                                 kof_ffi_write_struct(sl, sseg, args[i]);
                                 real[i] = sseg;
+                            } else if (c == 'p') {
+                                // D6-2 (3.8b fatia 3): array Kof -> ptr C. Copy-in
+                                // para memoria nativa na arena da chamada (o C nao
+                                // ve nem altera o array Java — sem pinning).
+                                char e = sig.charAt(cur + 1);
+                                cur += 2;
+                                pl[i] = java.lang.foreign.ValueLayout.ADDRESS;
+                                real[i] = kof_ffi_copy_in(arena, args[i], e);
                             } else {
                                 cur++;
                                 pl[i] = kof_ffi_layout(c);
@@ -290,6 +298,17 @@ final class JvmFfiRuntime {
                             throw new IllegalArgumentException("ffi struct: unsupported field type " + t);
                         }
                     }
+                }
+
+                // D6-2 (3.8b fatia 3): copia um array Kof (array Java primitivo)
+                // para um segmento nativo da arena da chamada e devolve o ponteiro.
+                static java.lang.foreign.MemorySegment kof_ffi_copy_in(
+                        java.lang.foreign.Arena arena, Object arr, char e) {
+                    int n = java.lang.reflect.Array.getLength(arr);
+                    java.lang.foreign.ValueLayout vl = kof_ffi_layout(e);
+                    java.lang.foreign.MemorySegment seg = arena.allocate(vl, n);
+                    java.lang.foreign.MemorySegment.copy(arr, 0, seg, vl, 0, n);
+                    return seg;
                 }
 
                 // Callback/upcall (R3, 3.4): um valor de função Kof (objeto que
