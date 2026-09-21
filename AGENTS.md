@@ -905,10 +905,13 @@ at stake. They are the anti-"god language" mechanism:
    namespace without a ledger line with its layer **fails the build**; heavy
    domains are hard-denied. Register the layer first (§3.4 decision order),
    never silently.
-2. **Interop-first** (R9). For any capability, the first question is For any capability, the first question is
+2. **Interop-first** (R9). For any capability, the first question is
    "does it already exist outside and is it better?" → FFI/interop (`kof.process`, `.so`, JVM,
    GraalJS). Never reimplement Arrow/Parquet/BLAS/LAPACK/CUDA/NumPy/
-   aligners/ML frameworks.
+   aligners/ML frameworks. **Named exception — `D-GRAPHICS-GAMING` addendum 4
+   (20/09):** the graphics/media engine for games is **Kof's own** (platform
+   code, zero-boilerplate idiom, full cross-target parity as acceptance); FFI
+   bindings stay limited to the non-engine layer (window/GPU/audio device).
 3. **Honest scope per target** (R7): heavy capabilities arrive **JVM-first**
    (interop), **Native** for systems/deploy, **JS** only web/edge. Never
    promise JS parity for heavy domains.

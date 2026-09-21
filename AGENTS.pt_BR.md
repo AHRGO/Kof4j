@@ -909,7 +909,11 @@ em jogo. São o mecanismo anti-"god language":
 2. **Interop-first** (R9). Para qualquer capacidade, a primeira pergunta é
    "já existe por fora e é melhor?" → FFI/interop (`kof.process`, `.so`, JVM,
    GraalJS). Nunca reimplementar Arrow/Parquet/BLAS/LAPACK/CUDA/NumPy/
-   alinhadores/frameworks de ML.
+   alinhadores/frameworks de ML. **Exceção nomeada — `D-GRAPHICS-GAMING`
+   adendo 4 (20/09):** o motor de gráficos/mídia de jogos é **próprio da
+   Kof** (código da plataforma, idioma zero-boilerplate, aceite por paridade
+   cross-target total); os bindings FFI ficam restritos à camada não-engine
+   (janela/GPU/dispositivo de áudio).
 3. **Escopo honesto por target** (R7): capacidades pesadas chegam **JVM-first**
    (interop), **Native** para sistemas/deploy, **JS** só web/edge. Nunca
    prometer paridade JS para domínios pesados.
