@@ -63,6 +63,15 @@ out="$(PATH="$FAKE:$PATH" R050_EG_TSV="$T/eg" R050_PARITY_FILE="$T/parity" \
 printf '%s' "$out" | grep -q 'bug_issues .*GREEN' && fail "gh issue list falhou mas bug_issues ficou GREEN (falso-verde)"
 printf '%s' "$out" | grep -q 'bug_issues .*UNKNOWN' && pass "query gh falha -> bug_issues UNKNOWN (nao GREEN)" || fail "query gh falha nao virou UNKNOWN"
 
+# ── cenario RED-first: comando do ledger de bugs FALHANDO (saida ilegivel) nao
+#    pode virar "0 known-bugs" GREEN. ───────────────────────────────────────
+out="$(R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_PARITY_FILE="$T/parity" \
+  R050_STABILITY_FILE="$T/stab" R050_PENDING_FILE="$T/pending" R050_LOOSE_MD_FILE="$T/loose" \
+  R050_SPEC_GAPS_FILE="$T/spec" R050_KNOWN_BUGS_CMD="false" R050_OPEN_BLOCKS=0 \
+  bash "$GATE" 2>&1)"
+printf '%s' "$out" | grep -q 'bugs_gaps .*GREEN' && fail "ledger de bugs falhou mas bugs_gaps ficou GREEN (falso-verde)"
+printf '%s' "$out" | grep -q 'bugs_gaps .*UNKNOWN' && pass "ledger falho -> bugs_gaps UNKNOWN (nao GREEN)" || fail "ledger falho nao virou UNKNOWN"
+
 if [ "$FAILED" = 1 ]; then
   echo "== check-release-050-gate: VERMELHA =="
   exit 1

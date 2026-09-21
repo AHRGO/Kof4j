@@ -195,10 +195,16 @@ c_edges() {
 }
 
 c_bugs_gaps() {
-  local kb_out kb_n=0 sg_n=0
+  local kb_out kb_n="" sg_n=0
   kb_out="$($KNOWN_BUGS_CMD 2>/dev/null)"
   kb_n="$(printf '%s\n' "$kb_out" | sed -n 's/^EN open\/partial (\([0-9]*\)).*/\1/p' | head -1)"
-  kb_n="${kb_n:-0}"
+  # ledger ilegivel (comando falhou / saida inesperada) NAO pode virar "0
+  # conhecidos" verde — UNKNOWN (R6/Q5), tal como a query de issues em c_bug_issues.
+  if [ -z "$kb_n" ]; then
+    STATE[bugs_gaps]=UNKNOWN
+    DETAIL[bugs_gaps]="known-bugs ledger unreadable (no 'EN open/partial (N)' line) — cmd: $KNOWN_BUGS_CMD"
+    return
+  fi
   if [ -n "$R050_SPEC_GAPS_FILE" ]; then
     sg_n="$(grep -cE '🟡|🔴' "$R050_SPEC_GAPS_FILE" 2>/dev/null | tr -d ' ')"; sg_n="${sg_n:-0}"
   else
