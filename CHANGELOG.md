@@ -138,6 +138,12 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **The gate now closes the loop in both directions** (21/09, docs lane): besides CHANGELOG-claims-closed-without-ledger-backing, an id CLOSED in the ledger at or after section 400 with no CHANGELOG entry now fails the gate. The floor is an epoch rule, not amnesty: measured 21/09, 25 closed ids below 400 lack entries while ZERO above it do — practice solidified, so the rule starts where the practice does. Mutation-verified: a planted closed section in the ledger with no changelog line is named by the gate; real state stays green. (A companion no-ghost idea — forbidding changelog refs to ids absent from the ledger — was measured and REJECTED: the hits are ancient cross-references, a wrong rule for the history, refused per the round-11 lesson.)
+  - **`check_live_records.sh` part E: roadmap EG state parity EN<->PT** (21/09, docs lane): the
+    release gate reads the EG table in `docs/development/roadmap.md` (EN) only; if the PT roadmap
+    drifted (an EG row marked closed in one language but open in the other), nothing would see it —
+    and release condition 6 depends on that table. The gate now requires the same EG-N rows and the
+    same closed/open state in EN and PT, using the gate's own `DONE|FEITO` rule. Red-first: selftest
+    plants the divergence and a planted PT EG-8 divergence in the real tree was named.
   - **`check_live_records.sh` part D: README §0 pending list == the gate's loose set** (21/09,
     docs lane): the gate already checked the live count (A), the `DECISIONS.md` EN<->PT decision-ID
     parity (B) and the section numbering/level (C); now it also requires that the `Pending

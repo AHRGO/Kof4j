@@ -11,6 +11,9 @@
 #      o gate realmente marca (`ls docs/development/*.md` menos o ALLOWLIST do gate).
 #      Fecha a divergencia silenciosa: o registro humano (README) nao pode discordar
 #      da medicao (gate) — nem listar menos, nem listar a mais.
+#   E) roadmap EG: mesmo conjunto de linhas EG-N E mesmo estado fechado/aberto EN<->PT,
+#      pela MESMA regra do gate (linha contem DONE|FEITO). O gate de release so le o
+#      roadmap EN: se o PT divergir, ninguem ve — e a condicao 6 do release depende disso.
 #
 # A classe (A) ja driftou duas vezes em 21/09; a classe (B) apareceu quando a lane
 # irma adicionou 3 decisoes so no EN e um merge deixou um heading orfao + duplicado
@@ -33,6 +36,9 @@ GATE="${LR_GATE:-scripts/check_release_050_gate.sh}"
 # Parte D so roda na corrida real (ou quando o teste aponta LR_DOCDIR de proposito):
 # fixtures antigas setam LR_EN e nao tem README/dir reais, entao DOCDIR fica vazio.
 if [ -n "${LR_EN:-}" ]; then DOCDIR="${LR_DOCDIR-}"; else DOCDIR="${LR_DOCDIR:-docs/development}"; fi
+RM_EN="${LR_RM_EN:-docs/development/roadmap.md}"
+RM_PT="${LR_RM_PT:-docs/development/roadmap.pt_BR.md}"
+if [ -n "${LR_EN:-}" ]; then RM_ON="${LR_RM_ON-}"; else RM_ON=1; fi
 
 if [ "${LR_COUNT:-}" != "" ]; then
     COUNT="$LR_COUNT"
@@ -93,15 +99,35 @@ EOF
     if LR_EN="$D/README.md" LR_PT="$D/README.pt_BR.md" LR_DOCDIR="$D" LR_GATE="$T/gate.sh" \
          DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" LR_COUNT=19 bash "$0" >/dev/null 2>&1; then
         echo "SELFTEST FALHOU: README pending divergente do gate passou"; exit 1; fi
-    echo "SELFTEST OK: contagem (ok/errada/ausente) + paridade + duplicata + numeracao + pending<->gate"
+    # E) roadmap EG: estado fechado/aberto EN<->PT (regra DONE|FEITO do gate)
+    cat > "$T/rm_en.md" << 'EOF'
+| EG-1 | x | DONE |
+| EG-2 | y | OPEN |
+EOF
+    cat > "$T/rm_pt.md" << 'EOF'
+| EG-1 | x | FEITO |
+| EG-2 | y | ABERTO |
+EOF
+    if ! LR_EN="$T/r_en.md" LR_PT="$T/r_pt.md" DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" \
+         LR_COUNT=19 LR_RM_EN="$T/rm_en.md" LR_RM_PT="$T/rm_pt.md" LR_RM_ON=1 bash "$0" >/dev/null 2>&1; then
+        echo "SELFTEST FALHOU: EG EN<->PT em paridade devia passar"; exit 1; fi
+    cat > "$T/rm_pt.md" << 'EOF'
+| EG-1 | x | ABERTO |
+| EG-2 | y | ABERTO |
+EOF
+    if LR_EN="$T/r_en.md" LR_PT="$T/r_pt.md" DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" \
+         LR_COUNT=19 LR_RM_EN="$T/rm_en.md" LR_RM_PT="$T/rm_pt.md" LR_RM_ON=1 bash "$0" >/dev/null 2>&1; then
+        echo "SELFTEST FALHOU: EG divergente EN<->PT passou"; exit 1; fi
+    echo "SELFTEST OK: contagem + paridade + duplicata + numeracao + pending<->gate + EG"
     exit 0
 fi
 
 [ -n "${COUNT:-}" ] || { echo "FALHA: nao extrai a contagem da autoridade (formato mudou?)"; exit 1; }
 
-python3 - "$EN" "$PT" "$COUNT" "$DEN" "$DPT" "$GATE" "$DOCDIR" << 'PYEOF'
+python3 - "$EN" "$PT" "$COUNT" "$DEN" "$DPT" "$GATE" "$DOCDIR" "$RM_EN" "$RM_PT" "$RM_ON" << 'PYEOF'
 import re, sys, os
 en, pt, count, den, dpt, gate, docdir = sys.argv[1:8]
+rme, rmpt, rmon = sys.argv[8:11]
 bad = 0
 
 # ---- A) contagem viva x autoridade -----------------------------------------
@@ -205,10 +231,39 @@ if docdir:
                 print(f"DRIFT ({lang}): README sec.0 lista como pendente mas o gate nao marca: {stale}")
                 bad = 1
 
+# ---- E) roadmap EG: estado fechado/aberto EN<->PT (regra do gate) -----------
+if rmon:
+    def eg_closed(path):
+        try:
+            text = open(path, encoding="utf-8").read()
+        except OSError:
+            return None
+        d = {}
+        for line in text.splitlines():
+            m = re.match(r"\|\s*(EG-[0-9]+)\s*\|", line)
+            if m:
+                d[m.group(1)] = bool(re.search(r"DONE|FEITO", line))
+        return d
+    key = lambda x: int(x.split("-")[1])
+    a, b = eg_closed(rme), eg_closed(rmpt)
+    if not a or not b:
+        print("FALHA: tabela EG ilegivel/ausente no roadmap (EN ou PT) — prosa mudou?")
+        bad = 1
+    else:
+        only_a = sorted(set(a) - set(b), key=key)
+        only_b = sorted(set(b) - set(a), key=key)
+        if only_a or only_b:
+            print(f"PARIDADE (EG): linhas so no EN={only_a} so no PT={only_b}"); bad = 1
+        for k in sorted(set(a) & set(b), key=key):
+            if a[k] != b[k]:
+                print(f"PARIDADE (EG): {k} fechado EN={a[k]} PT={b[k]} "
+                      "(mesma regra DONE|FEITO do gate)"); bad = 1
+
 if not bad:
     print(f"OK: contagem viva {count} consistente ({seen} declaracoes); "
           f"DECISIONS EN<->PT com {len(sets.get('EN', ()))} IDs em paridade, 0 duplicatas, "
           "numeracao/nivel em paridade"
-          + ("; pendentes sec.0 == loose do gate" if docdir else ""))
+          + ("; pendentes sec.0 == loose do gate" if docdir else "")
+          + ("; roadmap EG EN<->PT em paridade" if rmon else ""))
 sys.exit(1 if bad else 0)
 PYEOF

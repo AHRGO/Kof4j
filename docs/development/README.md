@@ -118,7 +118,10 @@ The same gate also enforces EN↔PT parity of the `DECISIONS.md` decision IDs an
 numbering/level, and — added 21/09 — that the **`Pending (condition 3)` list in §0 equals the
 loose set the release gate actually flags** (`ls docs/development/*.md` minus its `ALLOWLIST`).
 The human registry may not disagree with the measurement: neither listing less nor more (a
-planted extra loose doc was caught in both languages).
+planted extra loose doc was caught in both languages). It also checks the roadmap's **EG table** —
+the source of release condition 6, which the gate reads in EN only — has the same EG-N rows and
+the same closed/open state in EN and PT, by the gate's own `DONE|FEITO` rule (a planted PT
+divergence is named).
 
 **19 items in the open queue** (resynced 21/09 ~08:5x — 20→19 when
 **§380** (JS nested-`if`/`throw` codegen) was formalized ✅ `9f383bcf`,
