@@ -138,6 +138,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **The gate now closes the loop in both directions** (21/09, docs lane): besides CHANGELOG-claims-closed-without-ledger-backing, an id CLOSED in the ledger at or after section 400 with no CHANGELOG entry now fails the gate. The floor is an epoch rule, not amnesty: measured 21/09, 25 closed ids below 400 lack entries while ZERO above it do — practice solidified, so the rule starts where the practice does. Mutation-verified: a planted closed section in the ledger with no changelog line is named by the gate; real state stays green. (A companion no-ghost idea — forbidding changelog refs to ids absent from the ledger — was measured and REJECTED: the hits are ancient cross-references, a wrong rule for the history, refused per the round-11 lesson.)
+  - **Release condition 1 (parity) certified 100% on this host** (21/09, docs lane): the per-target
+    matrix was reporting the cross targets as RED/NEEDS-MEASURE (`sem riscv64-linux-gnu-as` /
+    `sem aarch64-linux-gnu-as`) — an environment gap, not a code divergence. Rebuilding the tree jar
+    (`scripts/build-kof-jar.sh`, clears the stale-artifact block) plus a new rootless helper
+    `scripts/setup-cross-toolchain.sh` — which extracts binutils + qemu-user-static + libc-cross
+    `.deb`s into a local prefix (no apt/sudo) and prints the `KOF_CROSS_SYSROOT`/PATH exports — gets
+    the matrix to certify `PARITY: 100%` on jvm/x86-64/riscv64/aarch64/JS/Script byte-for-byte, so
+    release condition 1 is GREEN on-host. The "CI-only parity" assumption did not survive
+    measurement (R6: a missing tool is not a green; providing it is not a bypass).
   - **Numbered-section parity added; section 7 level repaired** (21/09, docs lane): measuring every
     EN/PT doc pair under `docs/development/` showed only `DECISIONS.md` off, and the residual was a
     heading-level slip — EN `# 7. Final rule` (H1) vs PT `## 7. Regra final` (H2), the odd one out
