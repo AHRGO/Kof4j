@@ -108,6 +108,16 @@ public sealed interface Type {
             Type component = of(name.substring(0, name.length() - 2));
             return new ArrayType(component);
         }
+        // X5.4 (D-X5-SURFACE): projeção no sítio de uso — `List<out Animal>`
+        // (covariante) / `List<in Animal>` (contravariante). Reusa o
+        // WildcardType já existente (out→upper, in→lower); a erasure apaga a
+        // projeção (JvmTypeMapper/WildcardType).
+        if (name.startsWith("out ")) {
+            return new WildcardType(of(name.substring(4).trim()), true);
+        }
+        if (name.startsWith("in ")) {
+            return new WildcardType(of(name.substring(3).trim()), false);
+        }
         if (name.contains("<")) {
             int lt = name.indexOf('<');
             String base = name.substring(0, lt);

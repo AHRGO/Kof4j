@@ -26,6 +26,13 @@ public class TypeParser {
         while (!ctx.atEnd()) {
             Token t = ctx.advance();
             sb.append(t.value());
+            // X5.4 (D-X5-SURFACE): `out`/`in` num type-argument (`List<out Animal>`)
+            // precisa do espaço separador — os tokens são concatenados crus.
+            if (t.type() == TokenType.IDENTIFIER && ("out".equals(t.value()) || "in".equals(t.value()))
+                    && ctx.pos < ctx.tokens.size()) {
+                TokenType nt = ctx.tokens.get(ctx.pos).type();
+                if (nt == TokenType.IDENTIFIER || nt == TokenType.LPAREN) sb.append(' ');
+            }
             if (t.type() == TokenType.LESS) depth++;
             else if (t.type() == TokenType.GREATER) {
                 depth--;
@@ -207,7 +214,17 @@ public class TypeParser {
                         first = false;
                         continue;
                     }
-                    args.append(ctx.tokens.get(ctx.pos).value());
+                    String tv = ctx.tokens.get(ctx.pos).value();
+                    args.append(tv);
+                    // X5.4 (D-X5-SURFACE): projeção no sítio de uso — `out`/`in`
+                    // antes de um type-argument (`List<out Animal>`). O parser
+                    // concatena os valores dos tokens sem espaço; a variância
+                    // precisa sobreviver como palavra separada para o `Type.of`
+                    // (entrada `"out Animal"` → WildcardType).
+                    if (("out".equals(tv) || "in".equals(tv))
+                            && ctx.checkNext(TokenType.IDENTIFIER)) {
+                        args.append(' ');
+                    }
                 } else if (!first && isClose && depth > 0) {
                     args.append(ctx.tokens.get(ctx.pos).value());
                 }

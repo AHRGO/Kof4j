@@ -229,6 +229,10 @@ public final class MemberResolver {
             }
             return declaredTypeUnresolved(sa, ret, typeParams);
         }
+        // X5.4 (D-X5-SURFACE): projeção no sítio de uso — `out T`/`in T` como
+        // type-argument. Valida o BOUND (a variância não é um tipo).
+        if (t.startsWith("out ")) return declaredTypeUnresolved(sa, t.substring(4).trim(), typeParams);
+        if (t.startsWith("in ")) return declaredTypeUnresolved(sa, t.substring(3).trim(), typeParams);
         if (t.endsWith("?")) return declaredTypeUnresolved(sa, t.substring(0, t.length() - 1), typeParams);
         if (t.endsWith("[]")) return declaredTypeUnresolved(sa, t.substring(0, t.length() - 2), typeParams);
         int lt = t.indexOf('<');

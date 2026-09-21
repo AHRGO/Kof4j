@@ -255,6 +255,23 @@ Record components and interface fields are read-only, so `out T` is allowed
 there. Restriction to v1: variance in **inheritance** positions
 (`extends`/`implements` type arguments) is not cross-checked yet (X5.3b).
 
+**Use-site projection `List<out T>` / `List<in T>` (X5.4 — `D-X5-SURFACE`,
+21/09):** even a type declared **invariant** accepts a projection at the use
+site, exactly like Java wildcards but with Kof's `out`/`in` spelling:
+
+```kof
+List<out Animal> up(List<Dog> xs) { return xs }   // OK: covariant use
+List<in Dog> down(List<Animal> xs) { return xs }  // OK: contravariant use
+List<Animal> same(List<Dog> xs) { return xs }     // SEM021: invariant, rejected
+```
+
+`List<out T>` accepts any `List<S>` with `S <: T`; `List<in T>` accepts any
+`List<S>` with `S >: T`. This is the same compile-time-only information as
+declaration-site variance — codegen erases it (the projection becomes the
+existing `WildcardType`, which all four targets already erase), so descriptors
+and execution bytes are unchanged. `out`/`in` in a type-argument remain
+contextual (still valid identifiers).
+
 **Guarantee of the type checker:** a function/method **that does not exist on a
 known type** is an error (`SEM015`/`SEM025`); argument/constructor arity is
 checked (`SEM013`/`SEM023`); an incompatible return type is an error (`SEM010`);

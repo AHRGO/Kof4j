@@ -219,6 +219,13 @@ public final class CompilerTypes {
             if (!ch) return ft;
             return new Type.FunctionType(ps, qr, ft.className());
         }
+        // X5.4: projeção no sítio de uso — qualifica o BOUND do WildcardType
+        // (`List<out NodeUI>` → bound NodeUI precisa de pacote no descritor).
+        if (t instanceof Type.WildcardType wt) {
+            if (wt.bound() == null) return wt;
+            Type qb = qualifyDeep(wt.bound(), unit, sa);
+            return qb.equals(wt.bound()) ? wt : new Type.WildcardType(qb, wt.upper());
+        }
         return t;
     }
 

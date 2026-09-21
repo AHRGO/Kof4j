@@ -362,15 +362,29 @@ public final class TypeChecker {
      */
     static boolean genericArgsCompatible(SemanticAnalyzer sa, List<Type> from, List<Type> to,
                                          List<String> variance) {
-        if (variance == null || variance.isEmpty()) return !argsIncompatible(from, to);
         if (from.isEmpty() || to.isEmpty() || from.size() != to.size()) return true;
         for (int i = 0; i < from.size(); i++) {
             Type a = from.get(i), b = to.get(i);
-            if (Type.isUnknown(a) || Type.isUnknown(b)
-                    || a instanceof Type.TypeVariable || b instanceof Type.TypeVariable) {
+            // X5.4 (D-X5-SURFACE): projeção no sítio de uso no lado DECLARADO —
+            // `List<out Animal>` aceita `List<Dog>`; `List<in Dog>` aceita
+            // `List<Animal>` (espelha a variância declaration-site, aplicada
+            // por USO). A projeção é apagada na emissão (WildcardType).
+            if (b instanceof Type.WildcardType wb) {
+                if (wb.bound() == null) continue;
+                if (Type.isUnknown(a) || a instanceof Type.TypeVariable
+                        || a instanceof Type.WildcardType) return true;
+                if (wb.upper() ? !isAssignable(sa, a, wb.bound())
+                               : !isAssignable(sa, wb.bound(), a)) {
+                    return false;
+                }
                 continue;
             }
-            String v = i < variance.size() ? variance.get(i) : "";
+            if (a instanceof Type.WildcardType) return true; // projeção na origem: conservador
+            if (Type.isUnknown(a) || Type.isUnknown(b)
+                    || a instanceof Type.TypeVariable || b instanceof Type.TypeVariable) {
+                return true;
+            }
+            String v = (variance != null && i < variance.size()) ? variance.get(i) : "";
             switch (v) {
                 case "out" -> { if (!isAssignable(sa, a, b)) return false; }
                 case "in" -> { if (!isAssignable(sa, b, a)) return false; }

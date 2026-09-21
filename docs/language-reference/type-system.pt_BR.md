@@ -257,6 +257,23 @@ interface são somente-leitura, então `out T` é permitido neles. Restrição d
 variância em posição de **herança** (type-args de `extends`/`implements`) ainda não
 é cruzada (X5.3b).
 
+**Projeção no sítio de uso `List<out T>` / `List<in T>` (X5.4 — `D-X5-SURFACE`,
+21/09):** mesmo um tipo declarado **invariante** aceita uma projeção no sítio de
+uso, exatamente como wildcards de Java, mas com a grafia `out`/`in` de Kof:
+
+```kof
+List<out Animal> up(List<Dog> xs) { return xs }   // OK: uso covariante
+List<in Dog> down(List<Animal> xs) { return xs }  // OK: uso contravariante
+List<Animal> same(List<Dog> xs) { return xs }     // SEM021: invariante, rejeitado
+```
+
+`List<out T>` aceita qualquer `List<S>` com `S <: T`; `List<in T>` aceita
+qualquer `List<S>` com `S >: T`. É a mesma informação só de compile-time da
+variância no sítio de declaração — a emissão a apaga (a projeção vira o
+`WildcardType` já existente, que os quatro alvos já apagam), então descritores e
+bytes de execução não mudam. `out`/`in` num type-argument continuam contextuais
+(seguem identificadores válidos).
+
 **Garantia do type checker:** chamada a função/método **inexistente em tipo
 conhecido** é erro (`SEM015`/`SEM025`); aridade de argumentos/construtores é
 checada (`SEM013`/`SEM023`); tipo de retorno incompatível é erro (`SEM010`);
