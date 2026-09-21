@@ -117,7 +117,7 @@ não se aplica).
 ## Fatia 2b — invariante travada como teste (21/09)
 
 Novo `kof-compiler/src/test/java/dev/kof/compiler/StdParityGapAuditTest.java`
-(**13/13 verde**) transforma a matriz de suporte auditada num catraca: para
+(**15/15 verde**) transforma a matriz de suporte auditada num catraca: para
 cada namespace com gate afirma o conjunto exato de alvos `unsupported` e o gap
 code exato (buffer FFI001/FFI002, db DB001, log LOG001, orm ORM001, rng RNG001,
 gpu, tetris EGG001, scheduler SCHED001/CRON001, math.pow MATH001, observability
@@ -130,7 +130,9 @@ O teste **corrigiu um palpite meu**: `security.sha512` é gated não só em
 riscv/aarch, mas também em **ANDROID e SCRIPT** (`JVM || JS || isNative`), logo
 o gap code `SECN003` dispara em quatro alvos. Medido, não lembrado (Q3).
 
-Prova: `mvn -o -pl kof-compiler -am -Dtest=StdParityGapAuditTest test` → 13/13.
+Prova: `mvn -o -pl kof-compiler -am -Dtest=StdParityGapAuditTest test` →
+**15/15** (13 core + 2 por função: `KofSecurity`
+chacha/cookie/auth/resource-server e `KofTime.addDays/diffDays` sem gate).
 
 ## Fatia 4 — UI-JS-1 fechado + duas varreduras negativas (21/09)
 
@@ -148,12 +150,32 @@ Prova: `mvn -o -pl kof-compiler -am -Dtest=StdParityGapAuditTest test` → 13/13
   (`JvmRuntimeCore:196`, `JvmTimeRuntime:270`, `CmdEditor:276`,
   `KofScriptExecutor:162`). **0 fachadas silenciosas encontradas.**
 
+## Fatia 5 — conclusão da varredura (21/09)
+
+A varredura do código inteiro **convergiu para um negativo**: pelo inventário
+de marcadores, pela invariante de paridade, pela varredura de fachada Q7, pelos
+12 arquivos `.kf` host e pelo candidato de UI, **nenhum stub não documentado /
+desenvolvimento silenciosamente incompleto foi encontrado**. O que a frente
+*de fato* produziu é real e está commitado:
+
+- **3 drifts de documentação corrigidos** (só comentário): DRIFT-NET-1,
+  DRIFT-UUID-1, DRIFT-STRN-1 — todos afirmações stale "gated/pendente"
+  contradizendo a matriz e o código.
+- **1 invariante travada**: `StdParityGapAuditTest` **15/15** (conjunto de alvos
+  unsupported + gap code por namespace com gate; um gate novo num namespace
+  always-true quebra de propósito).
+- **1 candidato fechado por medição**: UI-JS-1 — por design (`D-UI-SCOPE`).
+- **2 varreduras negativas registradas**: hosts `.kf` e fachadas Q7.
+
+Restante (opcional, não é fila): a passada ampla de deriva doc/código sobre
+toda afirmação de `docs/` (item 3 das próximas passadas); até então a frente
+está **convergida**.
+
 ## Próximas passadas (planejadas — ainda não executadas)
 
 1. **Checagem de assimetria de paridade** — **FEITA (fatia 2b,
-   `StdParityGapAuditTest` 13/13)**. Próximo: estendê-la aos gates por função
-   do `KofSecurity` (chacha/auth/cookie) e do `KofTime` além dos casos
-   representativos.
+   `StdParityGapAuditTest` 15/15**, incluindo os gates por função de
+   `KofSecurity` e `KofTime`).
 2. **Varredura de fachada Q7** — **FEITA (fatia 4, negativa): 0 fachadas silenciosas.**
 3. **Deriva doc/código:** features marcadas como prontas em `docs/` cujo código
    é parcial (cruzar as matrizes de paridade e o tracker contra o código). —

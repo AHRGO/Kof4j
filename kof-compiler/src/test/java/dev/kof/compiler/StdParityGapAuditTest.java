@@ -135,6 +135,34 @@ class StdParityGapAuditTest {
     }
 
     @Test
+    @DisplayName("security por função: chacha/cookie (JVM+JS) e auth/resource-server (JVM-only)")
+    void securityPerFunctionGates() {
+        var jvmJsOnly = Set.of(Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64,
+                Target.ANDROID, Target.SCRIPT);
+        var jvmOnly = Set.of(Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64,
+                Target.JS, Target.ANDROID, Target.SCRIPT);
+        assertEquals(jvmJsOnly,
+                unsupported(t -> KofSecurity.supportedOn("kof_sec_chacha20_encrypt", t)));
+        assertEquals("SECN002", KofSecurity.gapCode("kof_sec_chacha20_encrypt"));
+        assertEquals(jvmJsOnly,
+                unsupported(t -> KofSecurity.supportedOn("kof_sec_cookie_set", t)));
+        assertEquals("SECN006", KofSecurity.gapCode("kof_sec_cookie_set"));
+        assertEquals(jvmOnly,
+                unsupported(t -> KofSecurity.supportedOn("kof_sec_auth_token", t)));
+        assertEquals("SECN000", KofSecurity.gapCode("kof_sec_auth_token"));
+        assertEquals(jvmOnly,
+                unsupported(t -> KofSecurity.supportedOn("kof_sec_auth_resource_server", t)));
+        assertEquals("SECN007", KofSecurity.gapCode("kof_sec_auth_resource_server"));
+    }
+
+    @Test
+    @DisplayName("time.addDays/diffDays: TIME002 fechado — sem gate em nenhum alvo")
+    void timeAddDaysDiffDaysUngated() {
+        assertTrue(unsupported(t -> KofTime.supportedOn("addDays", t)).isEmpty());
+        assertTrue(unsupported(t -> KofTime.supportedOn("diffDays", t)).isEmpty());
+    }
+
+    @Test
     @DisplayName("namespaces sem gate: supportedOn true em todo alvo")
     void alwaysTrueNamespacesHaveNoSilentGate() {
         assertTrue(unsupported(KofCache::supportedOn).isEmpty(), "cache");

@@ -114,7 +114,7 @@ does not apply).
 ## Slice 2b — invariant locked as a test (21/09)
 
 New `kof-compiler/src/test/java/dev/kof/compiler/StdParityGapAuditTest.java`
-(**13/13 green**) turns the audited support matrix into a ratchet: for each
+(**15/15 green**) turns the audited support matrix into a ratchet: for each
 gated namespace it asserts the exact `unsupported` target set and the exact gap
 code (buffer FFI001/FFI002, db DB001, log LOG001, orm ORM001, rng RNG001, gpu,
 tetris EGG001, scheduler SCHED001/CRON001, math.pow MATH001, observability
@@ -126,7 +126,9 @@ The test **corrected a guess of mine**: `security.sha512` is gated not only on
 riscv/aarch but also on **ANDROID and SCRIPT** (`JVM || JS || isNative`), so its
 gap code `SECN003` fires on four targets. Measured, not remembered (Q3).
 
-Proof: `mvn -o -pl kof-compiler -am -Dtest=StdParityGapAuditTest test` → 13/13.
+Proof: `mvn -o -pl kof-compiler -am -Dtest=StdParityGapAuditTest test` →
+**15/15** (13 core + 2 per-function: `KofSecurity`
+chacha/cookie/auth/resource-server and `KofTime.addDays/diffDays` ungated).
 
 ## Slice 4 — UI-JS-1 closed + two negative sweeps (21/09)
 
@@ -144,11 +146,30 @@ Proof: `mvn -o -pl kof-compiler -am -Dtest=StdParityGapAuditTest test` → 13/13
   (`JvmRuntimeCore:196`, `JvmTimeRuntime:270`, `CmdEditor:276`,
   `KofScriptExecutor:162`). **0 silent facades found.**
 
+## Slice 5 — sweep conclusion (21/09)
+
+The whole-codebase sweep **converged to a negative**: across the marker
+inventory, the parity invariant, the Q7 facade sweep, the 12 `.kf` host files
+and the UI candidate, **no undocumented stub / silent incomplete development
+was found**. What the front *did* produce is real and committed:
+
+- **3 documentation drifts fixed** (comment-only): DRIFT-NET-1, DRIFT-UUID-1,
+  DRIFT-STRN-1 — all were stale "gated/pending" claims contradicting the matrix
+  and the code.
+- **1 invariant locked**: `StdParityGapAuditTest` **15/15** (unsupported target
+  set + gap code per gated namespace; a new gate in an always-true namespace
+  breaks it on purpose).
+- **1 candidate closed by measurement**: UI-JS-1 — by design (`D-UI-SCOPE`).
+- **2 negative sweeps recorded**: `.kf` hosts and Q7 facades.
+
+Remaining (optional, not a queue): the broad doc/code drift pass across every
+`docs/` claim (item 3 of next passes); until then the front is **converged**.
+
 ## Next passes (planned — not yet executed)
 
 1. **Parity asymmetry check** — **DONE (slice 2b, `StdParityGapAuditTest`
-   13/13)**. Next: extend it to the per-function gates of `KofSecurity`
-   (chacha/auth/cookie) and `KofTime` beyond the representative cases.
+   15/15**, including the per-function gates of `KofSecurity` and
+   `KofTime`).
 2. **Q7 facade sweep** — **DONE (slice 4, negative): 0 silent facades.**
 3. **Doc/code drift:** features marked done in `docs/` whose code is partial
    (cross-check the parity matrices and the tracker against the code). —
