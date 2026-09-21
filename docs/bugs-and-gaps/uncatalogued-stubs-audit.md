@@ -310,6 +310,19 @@ lowering, and neither target lowers `matches`/`replaceAll`/`replaceFirst`/
 JS and Native; the only open question is the fix (a diagnostic instead of a
 link-fail), which is a rule-6 decision, not an agent edit.
 
+### Fatia 10 — collection symbols × targets, mechanized (21/09)
+
+`CollectionSymbolTargetCoverageTest` (1 test, green) parses the collection
+lowering (`CollectionCallLowerer`/`CollectionMethodGates`/`CollectionValueOps`,
+**31** emitted `kof_list_*`/`kof_map_*`/`kof_set_*` symbols) and asserts every
+symbol is present in each backend — JVM (`JvmOpCollections` inline cases +
+runtime), JS runtime and Native x86/riscv. **Measured: 31/31 on all three
+targets.** Unlike §424 the collection lowering is an explicit name→symbol map (no
+synthesized `java_lang_*` names), so presence is mechanizable. This is a presence
+ratchet, not a semantic proof, with a vacuous-pass guard (≥25 parsed symbols).
+RED-first proved by renaming `kof_list_sort`→`kof_list_sortx` →
+`JVM: ... SEM handler: [kof_list_sortx]`.
+
 ## Next passes (planned — not yet executed)
 1. **Parity asymmetry check** — **DONE (slice 2b, `StdParityGapAuditTest`
    15/15**, including the per-function gates of `KofSecurity` and

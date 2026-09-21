@@ -318,6 +318,19 @@ handler x86 de `split` → `sem lowering x86/riscv: [split]`. Logo o §424 é
 simétrico entre JS e Native; a única questão aberta é a correção (um diagnóstico
 em vez do link-fail), que é decisão rule-6, não edição de agente.
 
+### Fatia 10 — símbolos de coleção × alvos, mecanizado (21/09)
+
+`CollectionSymbolTargetCoverageTest` (1 teste, verde) lê o lowering de coleção
+(`CollectionCallLowerer`/`CollectionMethodGates`/`CollectionValueOps`, **31**
+símbolos `kof_list_*`/`kof_map_*`/`kof_set_*` emitidos) e afirma que todo símbolo
+existe em cada backend — JVM (`case`s inline do `JvmOpCollections` + runtime), JS
+e Native x86/riscv. **Medido: 31/31 nos três alvos.** Diferente do §424, o
+lowering de coleção é um mapa explícito nome→símbolo (sem nomes sintetizados
+`java_lang_*`), então a presença é mecanizável. É um ratchet de PRESENÇA, não uma
+prova semântica, com guarda anti-vácuo (≥25 símbolos parseados). RED-first
+provado renomeando `kof_list_sort`→`kof_list_sortx` →
+`JVM: ... SEM handler: [kof_list_sortx]`.
+
 ## Próximas passadas (planejadas — ainda não executadas)
 
 1. **Checagem de assimetria de paridade** — **FEITA (fatia 2b,
