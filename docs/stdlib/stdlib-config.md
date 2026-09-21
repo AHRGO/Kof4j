@@ -86,8 +86,8 @@ main() {
 |--------|--------|-------|
 | JVM | ✅ complete | `KofRuntime` generated |
 | Native x86_64 | ✅ complete (own asm, 27/08) | `/proc/self/environ` scan, trim, comments, free-list `kof_free_head`, interpolation `kof_config_interpolate` |
-| Native riscv64/aarch64 | ✅/placeholder | riscv64 `li a7` syscalls; aarch64 placeholder |
-| JS | ✅ complete | `kof_platform` (`kofConfigLookup`/`kofConfigStr/Int/Bool/Long/Required` + `kofConfigInterpolate`); `KofConfig.supportedOn` = all targets (CONF001 closed) |
+| Native riscv64/aarch64 | **CONF001** (honest gap) | no `kof_config_*` lookup runtime on the cross (the asm stub echoed the default); `KofConfig.supportedOn` is false → compile-time `CONF001` since §425 (21/09), never wrong values |
+| JS | ✅ complete | `kof_platform` (`kofConfigLookup`/`kofConfigStr/Int/Bool/Long/Required` + `kofConfigInterpolate`); `KofConfig.supportedOn` = JVM/x86_64/JS (real); riscv64/aarch64 = CONF001 honest gap (§425) |
 
 ## 6. Tests
 

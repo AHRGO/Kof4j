@@ -112,6 +112,42 @@ class DomainGapCodesTest {
     }
 
     @Test
+    void configOnCrossIsConf001(@TempDir Path tmp) throws Exception {
+        // §425: riscv64/aarch64 have no kof_config_* runtime (the asm stub
+        // echoes the default) — honest compile-time refusal, never wrong
+        // values on the cross; JVM/x86/JS keep the real implementation.
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            assertGap(tmp, t, "CONF001", """
+                main() {
+                    println(config.str("server.port", "8080"))
+                }
+                """);
+        }
+    }
+
+    @Test
+    void configOnJsAndX86HasNoGap(@TempDir Path tmp) throws Exception {
+        Path jsv = tmp.resolve("Main-js-" + System.nanoTime() + ".kf");
+        Files.writeString(jsv, """
+            main() {
+                println(config.str("server.port", "8080"))
+            }
+            """);
+        CompilationResult js = driver.compile(jsv, tmp.resolve("out-js"), Target.JS);
+        assertTrue(js.success(), "JS config.str must compile (kof_platform): "
+                + js.diagnostics().getDiagnostics());
+        Path x86 = tmp.resolve("Main-x86-" + System.nanoTime() + ".kf");
+        Files.writeString(x86, """
+            main() {
+                println(config.str("server.port", "8080"))
+            }
+            """);
+        CompilationResult nat = driver.compile(x86, tmp.resolve("out-x86"), Target.NATIVE);
+        assertTrue(nat.success(), "Native x86_64 config.str must compile (own asm): "
+                + nat.diagnostics().getDiagnostics());
+    }
+
+    @Test
     void exportSpansOnNativeIsObs003(@TempDir Path tmp) throws Exception {
         assertGap(tmp, Target.NATIVE, "OBS003", """
             main() {

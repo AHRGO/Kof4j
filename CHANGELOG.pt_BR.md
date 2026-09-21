@@ -13,6 +13,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§425 CORRIGIDO — `kof.config` no riscv64/aarch64 agora recusa com `CONF001`**
+    (21/09, lane .18): o asm cross não tinha runtime de lookup `kof_config_*`
+    (os stubs ecoavam o argumento default / `0` / `false`) enquanto
+    `KofConfig.supportedOn` retornava `true` para todo alvo, deixando o ramo
+    `CONF001` morto — valores errados silenciosos no cross. `supportedOn` agora
+    é false para `NATIVE_RISCV64`/`NATIVE_AARCH64`, então
+    `ExpressionConfigCallLowerer` emite o `CONF001` honesto em compile-time;
+    JVM/Native x86_64/JS mantêm a implementação real. Javadoc e a matriz de
+    docs (`stdlib-config.md`+PT, `backend-parity.md`) corrigidos. Prova:
+    `DomainGapCodesTest.configOnCrossIsConf001` + `configOnJsAndX86HasNoGap`
+    (17/17, incl. o guarda R6 da matriz), `NativeConfigE2ETest` 8/8.
+
   - **§428 CORRIGIDO — requests não implementadas do DAP agora falham honestamente**
     (21/09, lane .18): as sessões DAP JVM e Native respondiam toda request não
     tratada com `success:true` e corpo vazio (fachada silenciosa, Q7). Os dois

@@ -13,6 +13,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§425 FIXED — riscv64/aarch64 `kof.config` now refuses with `CONF001`**
+    (21/09, lane .18): the cross asm had no `kof_config_*` lookup runtime (the
+    stubs echoed the default argument / `0` / `false`) while
+    `KofConfig.supportedOn` returned `true` for every target, leaving the
+    `CONF001` branch dead — silently wrong values on the cross. `supportedOn`
+    is now false for `NATIVE_RISCV64`/`NATIVE_AARCH64`, so
+    `ExpressionConfigCallLowerer` emits the honest compile-time `CONF001`;
+    JVM/Native x86_64/JS keep the real implementation. Javadoc and the docs
+    matrix (`stdlib-config.md`+PT, `backend-parity.md`) corrected. Proof:
+    `DomainGapCodesTest.configOnCrossIsConf001` + `configOnJsAndX86HasNoGap`
+    (17/17, incl. the R6 matrix guard), `NativeConfigE2ETest` 8/8.
+
   - **§428 FIXED — DAP unimplemented requests now fail honestly**
     (21/09, lane .18): the JVM and Native DAP sessions answered every
     unhandled request with `success:true` and an empty body (a silent façade,

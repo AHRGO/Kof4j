@@ -11738,7 +11738,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 
 <!-- en-switch --> **EN:** [§424 (en)](known-bugs.md#424--five-accepted-string-methods-are-silently-incomplete-on-js-and-link-fail-on-native-with-no-gap-code-matchesreplaceallreplacefirsttochararraycomparetoignorecase---open-r6-jvm-works-the-other-targets-diverge-with-no-diagnostic)
 
-## §425 — `kof.config` no riscv64/aarch64 é um stub de default silencioso, enquanto `KofConfig.supportedOn` retorna true e o javadoc ainda diz `CONF001` — 🔴 ABERTO (R6: valores errados no cross, sem diagnóstico)
+## §425 — `kof.config` no riscv64/aarch64 é um stub de default silencioso, enquanto `KofConfig.supportedOn` retorna true e o javadoc ainda diz `CONF001` — ✅ CORRIGIDO 21/09 (lane .18: `supportedOn` false no cross → `CONF001` vivo; javadoc/matriz corrigidos)
 
 - **Stub (medido):** `nat/NativeRiscvAsmRtB0.java:295-327` (`# ---- kof.config (minimal — retorna default / 0 / false) ----`): `kof_config_get/env/has` -> `li a0, 0`; `kof_config_str/int/long/bool` -> `mv a0, a1` (devolve o argumento default); `kof_config_required` devolve a CHAVE (ou `kof_null_error`). Não há lookup real no cross.
 - **Gate errado:** `KofConfig.java:43-44` `supportedOn(Target)` retorna `true` para todo alvo, então o ramo `CONF001` de `ExpressionConfigCallLowerer.java:19-31` está morto; `KofConfig.java:25` ainda diz "Native and JS targets report CONF001 at compile time" (stale, contradito pelo stub).
@@ -11746,8 +11746,9 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Docs moles:** `docs/stdlib/stdlib-config.md:89` marca riscv/aarch "✅/placeholder"; `docs/backend-parity.md:105` marca `kof.config` ✅ Native. O `NativeConfigE2ETest` só roda `Target.NATIVE` (x86).
 - **O que falta:** runtime real de config no cross, ou gatear o cross com código honesto (espelhando `NAT005`/§423) e corrigir o javadoc/matriz stale.
 - **Relacionado:** §423 (precedente NAT005 de "declarar o gap"), `NativeRiscvAsmRtB0.java:332-333` (`kof_time_now` era o mesmo stub, corrigido sob R6).
+- **Resolução (21/09, lane .18):** escolhido o gate honesto (o runtime real de lookup no cross fica adiado). `KofConfig.supportedOn` agora retorna `false` para `NATIVE_RISCV64`/`NATIVE_AARCH64`, tornando vivo o ramo `CONF001` dormente em `ExpressionConfigCallLowerer` — o cross recusa em compile-time (`config.<m>: not available on the NATIVE_RISCV64 driver.target yet (CONF001)`), nunca valores errados. O javadoc stale ("Native and JS report CONF001") foi corrigido para nomear JVM/Native x86_64/JS como reais e o cross como o gap; a matriz de docs (`docs/stdlib/stdlib-config.md` +PT, `docs/backend-parity.md` per-arch + Documented Gaps) agora carrega `CONF001`. **Prova:** `DomainGapCodesTest.configOnCrossIsConf001` prende os dois alvos cross e `configOnJsAndX86HasNoGap` mantém os três alvos reais compilando (17/17, incl. o guarda R6 `everyPinnedGapIsDocumentedInTheParityMatrix` que agora vê `CONF001` na matriz); `NativeConfigE2ETest` 8/8 (x86 inalterado).
 
-<!-- en-switch --> **EN:** [§425 (en)](known-bugs.md#425--riscv64aarch64-kofconfig-is-a-silent-default-stub-while-kofconfigsupportedon-returns-true-and-the-javadoc-still-claims-conf001---open-r6-wrong-values-on-the-cross-no-diagnostic)
+<!-- en-switch --> **EN:** [§425 (en)](known-bugs.md#425--riscv64aarch64-kofconfig-is-a-silent-default-stub-while-kofconfigsupportedon-returns-true-and-the-javadoc-still-claims-conf001---fixed-2109-lane-18-supportedon-false-for-the-cross--live-conf001-javadocmatrix-corrected)
 
 ## §426 — `time.collect()` compila no JS mas não tem runtime nem gate (incompleto silencioso) — 🔴 ABERTO
 
