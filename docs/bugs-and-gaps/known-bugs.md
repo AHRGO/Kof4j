@@ -11815,9 +11815,10 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
   `IoArrayArgE2ETest` (5/5: JVM + JS + Script negatives, bound-var case,
   positive control).
 
-> **Status:** 🟡 PARTIAL 20/09 — Repro A FIXED (`SEM099`); Repro B OPEN: a rule-6
-  contract decision on how `println(Int[])` prints (JVM/Script `[I@…` vs JS
-  `65,66,67`) needs maintainer sign-off before any code.
+> **Status:** ✅ FIXED 21/09 — Repro A: `SEM099` compile-time diagnostic on every
+  target; Repro B: container format `[65, 66]` declared and enforced (vote
+  D-ARRAY-PRINT). The reverse-parity silent-red is gone: the three scriptable
+  targets print identically, native matches on x86 with cross goldens CI-pinned.
 
 
 ## §389 — tip `beta-0.5.0` test-compile RED: `BareCollectionPrimitiveArgE2ETest` cites `dev.kof.compiler.nat.NativeToolchainGate.present()` — the class was NEVER committed (`git log -S`/`git cat-file -e` on the tip: test-side hits only) — the whole kof-compiler test module fails to compile on a clean tip — ✅ FIXED 20/09 (root cause real: `9c88d590` (#945 docs-lane) varreu por engano 17 testes WIP da lane `.22` sem o helper `NativeToolchainGate.java` — o `amend` sem `--only` durante a saga do stash. Fix landed: `de5354eb` comitou o Gate com o `static boolean present()` exato do recipe. Prova de GREEN no tip (clone ISOLADO, nao a arvore compartilhada): `git ls-tree origin/beta-0.5.0` = Gate presente desde `136feea1`; `mvn -o -pl kof-compiler -am test-compile` no tip = 0 ERROR / rc=0 (medido 20/09 ~18:5x por `192.168.100.14`, lane docs, fechando o proprio rombo). LIÇÃO para todas as lanes: medir sempre contra `origin` apos `git fetch` — o tip `94011544` citado na abertura da entrada e um SHA DANGLING (fantasma de rebase, fora de toda historia); a entrada estava desatualizada no momento em que abriu

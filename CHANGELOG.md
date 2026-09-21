@@ -60,6 +60,7 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (+ typo da irmã `F2a find`→F2b sincronizado com a linha do §397), DOING
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
+  - **Ledger fix-forward — §388 flip restored** (21/09): the tick rebase of the sister lane (tip `d9384a5b`) silently rolled §388's status back to `🟡 PARTIAL` in both languages — the same stale-base accident that erased the DOING note — because the flip had landed one commit earlier (`69b49b3a`) outside the conflict zone that rebase saw. The two status blocks are now the original `✅ FIXED 21/09` text (Repro A `SEM099`, Repro B `D-ARRAY-PRINT`), ledger gate green, open count back to 17.
   - **Doc-sync after §388 (21/09)**: `makealive-plan` residuals in `development/README` fixed
     (3.8 shipped — it still read "awaiting decision"); `PLAN-BOOTSTRAP` entry condition **E3
     marked MET** (§388 closed both halves: `SEM099` + `D-ARRAY-PRINT`).
