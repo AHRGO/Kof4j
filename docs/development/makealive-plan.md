@@ -2,8 +2,9 @@
 
 # `Kof Makealive` — infrastructure as typed code (design plan · Stage 3 · rows 3.1–3.8)
 
-**Type:** design plan — **awaiting sign-off (§6 poll)**; nothing in §2 ships
-before the maintainer answers Q1–Q4 (rule 6).
+**Type:** design plan — **Q1–Q4 ANSWERED 20/09 (§6)**; the core (3.1), 3.3 and 3.8
+shipped, **3.2 DECIDED 21/09 (`D-MAKEALIVE-SYNTAX`, in implementation) and 3.7
+unblocked** — the rule-6 items are resolved (see §5).
 **Tracker:** [`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`](IMPLEMENTATION-UNIVERSAL-PLATFORM.md)
 Stage 3 (rows 3.1–3.8). **Companion (vision):**
 [`docs/architecture/UNIVERSAL-PLATFORM-VISION.md`](../architecture/UNIVERSAL-PLATFORM-VISION.md)
@@ -30,8 +31,9 @@ already shipped: records/classes (data), `Map`/`List` (the graph), `throw`
 The **canonical model is imperative-turned-data** (the VISION §4.2 verdict,
 "A/B — and it is where the language shines"): typed resources + a builder +
 normal functions. The declarative block `infra "prod" { ... }` is row **3.2**
-— a new parse block gated by **rule 6** (**R4 ✅ landed 21/09**, so the
-codegen-hook blocker is gone) — it is NOT in this plan's queue, and v1 does not wait for it.
+— **DECIDED 21/09 (`D-MAKEALIVE-SYNTAX`) as pure sugar over `design()`** (R4 ✅
+landed 21/09 removed the codegen-hook blocker; `infra` stays an identifier) — it
+is IN IMPLEMENTATION by `.18`/9093, and v1 does not wait for it.
 
 Surface sketch (flat host idiom, like `kof.workflow`/`kof.supervisor —
 DD-OTP-01 option A`; **shapes to be measured by the 3.0 recon before they
@@ -71,9 +73,9 @@ answered; a ledger line cannot override a hard-deny (measured).
   no-op (the plan is empty) — the acceptance golden, not a slogan.
 - **plan has no side effects**; only apply touches the world and the state.
 - **cycles are refused at graph-build** with an actionable `throw` naming the
-  cycle (workflow run() precedent, 4/4 targets); compile-time cycle detection
-  is row 3.7 — **R4 ✅ landed 21/09**, so the codegen-hook blocker is gone; it
-  still needs the 3.2 `infra` surface (rule 6) to have a compile-time graph.
+cycle (workflow run() precedent, 4/4 targets); compile-time cycle detection
+is row 3.7 — **R4 ✅ landed 21/09**; **UNBLOCKED by `D-MAKEALIVE-SYNTAX` 21/09**
+(the 3.2 `infra` surface is decided), so the compile-time graph follows 3.2.
 - **state advances only on success**: a failed apply leaves the previous state
   intact and names the resource that failed (R6, never a silent partial).
 - **secrets are references only**: v1 stores a secret *name* (resolved at

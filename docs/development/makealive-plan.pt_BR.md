@@ -2,8 +2,9 @@
 
 # `Kof Makealive` — infraestrutura como código tipado (plano de design · Estágio 3 · linhas 3.1–3.8)
 
-**Tipo:** plano de design — **aguardando assinatura (enquete §6)**; nada do §2
-embarca antes da mantenedora responder Q1–Q4 (regra 6).
+**Tipo:** plano de design — **Q1–Q4 RESPONDIDAS 20/09 (§6)**; o núcleo (3.1), 3.3 e 3.8
+pousaram, **3.2 DECIDIDA 21/09 (`D-MAKEALIVE-SYNTAX`, em implementação) e 3.7
+destravada** — os itens de regra 6 estão resolvidos (ver §5).
 **Tracker:** [`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`](IMPLEMENTATION-UNIVERSAL-PLATFORM.pt_BR.md)
 Estágio 3 (linhas 3.1–3.8). **Companheiro (visão):**
 [`docs/architecture/UNIVERSAL-PLATFORM-VISION.pt_BR.md`](../architecture/UNIVERSAL-PLATFORM-VISION.pt_BR.md)
@@ -30,8 +31,9 @@ faz o core crescer (golden 8.6).
 **O modelo canônico é imperativo-transformado-em-dados** (o veredito da
 VISÃO §4.2, "A/B — e é onde a linguagem brilha"): recursos tipados + builder
 + funções normais. O bloco declarativo `infra "prod" { ... }` é a linha **3.2**
-— bloco de parse novo gated pela **regra 6** (**R4 ✅ pousou 21/09**, então o
-bloqueio do hook de codegen sumiu) — NÃO está na fila deste plano, e o v1 não espera por ele.
+— **DECIDIDA 21/09 (`D-MAKEALIVE-SYNTAX`) como açúcar puro sobre `design()`** (R4 ✅
+pousou 21/09 e o bloqueio do hook de codegen sumiu; `infra` segue identificador) —
+está EM IMPLEMENTAÇÃO por `.18`/9093, e o v1 não espera por ele.
 
 Esboço de superfície (idioma de host flat, como `kof.workflow`/`kof.supervisor`
 — DD-OTP-01 opção A; **formas a serem MEDIDAS pela recon 3.0 antes de virarem
@@ -76,9 +78,9 @@ ledger NÃO sobrepõe hard-deny (medido).
 - **plan não tem efeitos colaterais**; só o apply toca o mundo e o estado.
 - **ciclos são recusados na montagem do grafo** com `throw` acionável
   nomeando o ciclo (precedente do run() do workflow, 4/4 targets); detecção de
-  ciclo em compile-time é a linha 3.7 — **R4 ✅ pousou 21/09**, então o bloqueio
-  do hook de codegen sumiu; ainda precisa da superfície 3.2 `infra` (regra 6)
-  para ter um grafo em compile-time.
+  ciclo em compile-time é a linha 3.7 — **R4 ✅ pousou 21/09**; **DESTRAVADA por
+  `D-MAKEALIVE-SYNTAX` 21/09** (a superfície 3.2 `infra` está decidida), então o
+  grafo em compile-time segue a 3.2.
 - **o estado só avança no sucesso**: um apply falho deixa o estado anterior
   intacto e nomeia o recurso que falhou (R6, nunca um parcial silencioso).
 - **secrets são só referência**: o v1 guarda o *nome* do secret (resolvido no
