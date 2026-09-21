@@ -347,13 +347,17 @@ class CollectionMethodsStdlibE2ETest {
                     z.put("n", -0.0)
                     println(z.containsValue(0.0))
                     println(z.containsValue(-0.0))
+                    println(o.getOrDefault("d", 9.5))
+                    println(o.getOrDefault("nope", 9.5))
                 }
                 """;
         // Golden medido no oráculo JVM (java.util): hits Int/Double/Bool/String,
         // misses de família distinta, print boxed (2.5/true/7), a 2ª entrada
-        // Double do local Object e -0.0 ≠ 0.0 (Double.equals é bit-a-bit).
+        // Double do local Object, -0.0 ≠ 0.0 (Double.equals é bit-a-bit) e o
+        // getOrDefault com default Double (§432 — arg boxa pelo tipo DELE,
+        // resultado pelo V=Object do slot).
         String golden = "true\ntrue\ntrue\nfalse\nfalse\n2.5\ntrue\n7\n"
-                + "true\ntrue\nfalse\nfalse\nfalse\nfalse\ntrue";
+                + "true\ntrue\nfalse\nfalse\nfalse\nfalse\ntrue\n2.5\n9.5";
         CompilationResult rj = compile(tempDir, "OJ", src, Target.JVM);
         assertTrue(rj.success(), "Object containsValue works on JVM: " + rj.diagnostics().getDiagnostics());
         Process p = new ProcessBuilder(TestJdk.javaBin(), "-cp",
