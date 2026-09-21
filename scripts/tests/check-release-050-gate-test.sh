@@ -81,6 +81,22 @@ out="$(R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/egempty" R050_PARITY_FIL
 printf '%s' "$out" | grep -q 'edges .*GREEN' && fail "tabela EG vazia mas edges ficou GREEN (falso-verde)"
 printf '%s' "$out" | grep -q 'edges .*UNKNOWN' && pass "EG vazia -> edges UNKNOWN (nao GREEN)" || fail "EG vazia nao virou UNKNOWN"
 
+# ── cenario RED-first: fonte de decisao ILEGIVEL nao pode virar decisions GREEN ─
+out="$(R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_PARITY_FILE="$T/parity" \
+  R050_STABILITY_FILE="$T/stab" R050_PENDING_FILE="$T/nao-existe" R050_LOOSE_MD_FILE="$T/loose" \
+  R050_SPEC_GAPS_FILE="$T/spec" R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 \
+  bash "$GATE" 2>&1)"
+printf '%s' "$out" | grep -q 'decisions .*GREEN' && fail "fonte de decisao ilegivel mas decisions ficou GREEN (falso-verde)"
+printf '%s' "$out" | grep -q 'decisions .*UNKNOWN' && pass "decisao ilegivel -> decisions UNKNOWN (nao GREEN)" || fail "decisao ilegivel nao virou UNKNOWN"
+
+# ── cenario RED-first: lista de docs soltos ILEGIVEL nao pode virar loose_docs GREEN ─
+out="$(R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_PARITY_FILE="$T/parity" \
+  R050_STABILITY_FILE="$T/stab" R050_PENDING_FILE="$T/pending" R050_LOOSE_MD_FILE="$T/nao-existe" \
+  R050_SPEC_GAPS_FILE="$T/spec" R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 \
+  bash "$GATE" 2>&1)"
+printf '%s' "$out" | grep -q 'loose_docs .*GREEN' && fail "lista de docs ilegivel mas loose_docs ficou GREEN (falso-verde)"
+printf '%s' "$out" | grep -q 'loose_docs .*UNKNOWN' && pass "lista ilegivel -> loose_docs UNKNOWN (nao GREEN)" || fail "lista ilegivel nao virou UNKNOWN"
+
 if [ "$FAILED" = 1 ]; then
   echo "== check-release-050-gate: VERMELHA =="
   exit 1

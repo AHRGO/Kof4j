@@ -75,7 +75,8 @@ GREEN / RED / NEEDS-MEASURE / UNKNOWN; RED-first test
 `scripts/tests/check-release-050-gate-test.sh`). Every data-driven condition
 **refuses GREEN when its source is unreadable** — stale jar, a suite log from
 another commit or from a dirty tree, a failed GitHub query, an unparsable EG
-table, an unreadable bug ledger: the gate is inconclusive, never falsely green.
+table, an unreadable bug ledger, a missing decision source or loose-doc list:
+all seven conditions are inconclusive, never falsely green.
 RED is expected until the queue closes — the gate is the driver, not a blocker
 to work around.
 

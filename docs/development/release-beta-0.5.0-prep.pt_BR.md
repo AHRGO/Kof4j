@@ -75,7 +75,8 @@ GREEN / RED / NEEDS-MEASURE / UNKNOWN; teste RED-first
 `scripts/tests/check-release-050-gate-test.sh`). Toda condição data-driven
 **recusa GREEN quando a fonte não é legível** — jar velho, log da suíte de outro
 commit ou de árvore suja, consulta ao GitHub que falha, tabela EG impossível de
-parsear, ledger de bugs ilegível: o gate fica inconclusivo, nunca verde falso.
+parsear, ledger de bugs ilegível, fonte de decisão ou lista de docs soltos
+ausente: as sete condições ficam inconclusivas, nunca verde falso.
 RED é esperado até a fila fechar — o gate é o motor, não um bloqueio a contornar.
 
 ### Recuperação — limpar as condições auto-medidas

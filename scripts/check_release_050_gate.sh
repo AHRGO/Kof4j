@@ -81,7 +81,14 @@ c_parity() {
 
 c_decisions() {
   if [ -n "$PENDING_FILE" ]; then
-    local n; n="$(head -1 "$PENDING_FILE" 2>/dev/null | tr -dc '0-9')"; n="${n:-0}"
+    # fonte ilegivel/sem linha de contagem NAO pode virar "0 decisoes" verde — UNKNOWN (R6/Q5).
+    [ -r "$PENDING_FILE" ] || { STATE[decisions]=UNKNOWN; DETAIL[decisions]="pending-decision source unreadable: $PENDING_FILE"; return; }
+    local head1; head1="$(head -1 "$PENDING_FILE" 2>/dev/null)"
+    case "$head1" in
+      *[0-9]*) : ;;
+      *) STATE[decisions]=UNKNOWN; DETAIL[decisions]="pending-decision source has no count line: $PENDING_FILE"; return ;;
+    esac
+    local n; n="$(printf '%s' "$head1" | tr -dc '0-9')"; n="${n:-0}"
     if [ "$n" -eq 0 ]; then STATE[decisions]=GREEN; DETAIL[decisions]="no pending decision"
     else STATE[decisions]=RED; DETAIL[decisions]="$n pending decision(s)"; fi
     return
@@ -89,8 +96,11 @@ c_decisions() {
   if [ -d docs/development/decision-pending ]; then
     STATE[decisions]=RED; DETAIL[decisions]="decision-pending/ folder exists"
   else
+    local prop=docs/development/PROPOSAL-1.0-EXIT-GATE.md
+    # PROPOSAL ausente/ilegivel NAO pode virar "sem [? MEL]" verde — UNKNOWN (R6/Q5).
+    [ -r "$prop" ] || { STATE[decisions]=UNKNOWN; DETAIL[decisions]="decision source unreadable: $prop"; return; }
     local open
-    open="$(grep -rhoE '^\[[?] *MEL *\]' docs/development/PROPOSAL-1.0-EXIT-GATE.md 2>/dev/null | wc -l | tr -d ' ')"
+    open="$(grep -rhoE '^\[[?] *MEL *\]' "$prop" 2>/dev/null | wc -l | tr -d ' ')"
     if [ "${open:-0}" -eq 0 ]; then
       STATE[decisions]=GREEN; DETAIL[decisions]="no pending decision (decision-pending/ extinct; no unresolved [? MEL] candidate)"
     else
@@ -103,8 +113,12 @@ c_decisions() {
 c_loose_docs() {
   local list extra
   if [ -n "$LOOSE_MD_FILE" ]; then
+    # fonte ilegivel NAO pode virar "nenhum doc" verde — UNKNOWN (R6/Q5).
+    [ -r "$LOOSE_MD_FILE" ] || { STATE[loose_docs]=UNKNOWN; DETAIL[loose_docs]="loose-doc list unreadable: $LOOSE_MD_FILE"; return; }
     list="$(cat "$LOOSE_MD_FILE" 2>/dev/null)"
   else
+    # docs/development/ ausente NAO pode virar "nada a concluir" verde — UNKNOWN (R6/Q5).
+    [ -d docs/development ] || { STATE[loose_docs]=UNKNOWN; DETAIL[loose_docs]="docs/development/ unreadable"; return; }
     list="$(cd docs/development 2>/dev/null && ls *.md 2>/dev/null)"
   fi
   extra=""
