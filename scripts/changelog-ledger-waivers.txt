@@ -8,14 +8,6 @@
 # §278 PT: over-gating Android (face db/orm do §278) FECHADO 20/09 pela lane
 #          db/orm; §278 segue vivo pelas demais faces — meia-frase, não flip.
 278 PT face db/orm fechada, §278 vivo p/ as outras
-# §258 EN+PT: o batch CodeQL nomeado em citacoes de sub-issue (#774/#777/#794/#809
-#            CLOSED) e na frase "fixed neighbors" do corpo do §420; o §258 segue
-#            vivo pela face #775 (lane .22) — meias-frases, nao flips.
-258 EN batch sub-issues fechadas; face #775 viva com .22
-258 PT idem, espelho da linha EN
-# §192 EN: "§192's ✅→REOPENED is a real reopen" — o ✅ descreve a reabertura,
-#          nao um fechamento; o gate nao le prosa, a linha fica aqui.
-192 EN ✅ pertence ao REOPENED, fechamento nunca alegado
 # §278 EN: meia-face db/orm do over-gating Android FECHADA 20/09 (D-DB-GAPS
 #          DB-2); §278 segue vivo pelas demais faces — mesmo caso ja isento PT.
 278 EN face db/orm fechada; demais faces vivas

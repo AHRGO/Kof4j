@@ -13,6 +13,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§258 — o guarda-chuva CodeQL fechado: #775 + #776 corrigidos no próprio
+    arquivo** (21/09, lane development/`.18`): `NumericFormatterE2ETest.runJvm()`
+    não spawna mais o token relativo `"java"` (#775 `java/relative-path-command`)
+    — passa a usar o helper CodeQL-safe do harness `TestJdk.javaBin()`
+    (`Path.of(System.getProperty("java.home"), "bin", "java")`, já adotado pelos
+    E2E irmãos), 3/3; `KofHttp.supportedOn(Target)` (#776 `java/unused-parameter`)
+    removeu o parâmetro morto `@SuppressWarnings("unused")` e lê `target` via
+    `switch` exaustivo sobre `Target`, igual ao irmão `KofDb.supportedOn` —
+    comportamento inalterado (`true` para todo target que embarca),
+    `KofHttpServerTest`+`StdCatalogTest` 19/19. Fila viva 16→15 (a varredura nat
+    já levara 18→16 com §192/§358); o waiver do §258
+    no ledger do CHANGELOG é removido. Re-run do gate CodeQL = INCONCLUSIVO (API
+    em rate limit, como nas rodadas anteriores); o CI `codeql.yml` é a porta real.
+
   - **§396-cross — a face riscv64/aarch64 do println de record null ganhou o
     guard também** (21/09, lane compilador): a lane gaps-db corrigiu a face x86
     (guard `NativeX86ValueOf` no dispatch do valueOf) e catalogou o resíduo

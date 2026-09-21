@@ -13,6 +13,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§258 — the CodeQL umbrella closed: #775 + #776 fixed in-file** (21/09,
+    lane development/`.18`): `NumericFormatterE2ETest.runJvm()` no longer spawns
+    the relative token `"java"` (#775 `java/relative-path-command`) — it uses the
+    CodeQL-safe harness helper `TestJdk.javaBin()`
+    (`Path.of(System.getProperty("java.home"), "bin", "java")`, already adopted by
+    the sibling E2E files), 3/3; `KofHttp.supportedOn(Target)` (#776
+    `java/unused-parameter`) dropped the `@SuppressWarnings("unused")` dead
+    parameter and reads `target` via an exhaustive `switch` over `Target`, matching
+    `KofDb.supportedOn` — behavior unchanged (`true` for every shipping target),
+    `KofHttpServerTest`+`StdCatalogTest` 19/19. Live queue 16→15 (the nat orphan
+    sweep had already taken 18→16 with §192/§358); the §258 waiver
+    of the CHANGELOG ledger is removed. CodeQL gate re-run = INCONCLUSIVO (API
+    rate-limited, as prior rounds); CI `codeql.yml` is the real port.
+
   - **§396-cross — the riscv64/aarch64 side of the null-record println gained
     the guard too** (21/09, compiler lane): the gaps-db lane fixed the x86 face
     (`NativeX86ValueOf` guard at the valueOf dispatch) and cataloged the cross
