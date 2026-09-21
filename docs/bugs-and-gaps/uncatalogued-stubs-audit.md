@@ -245,13 +245,19 @@ before cataloguing. Batch 1 (code/parity, catalogued as §424–§426, EN+PT):
   returns true (stale `CONF001` javadoc).
 - **§426** — JS `time.collect()` compiles with no runtime and no gate.
 
-Batch 2 (verified, cataloguing next): cross `kof.io`/web-T1 runtime absent with a
-wrong gate; DAP `default -> respond(success:true, {})` façade (JVM+Native) +
-`debug-adapter.md` `restart` claim; LSP `default -> {}` (no JSON-RPC reply);
-false-green tests (`RouterE2ETest#debugConc001` zero-assert, 5 `NativeDebugTest*`
-print-only, `KofWebNativeE2ETest#nativeServerAcceptsAndResponds200` `assertTrue(true)`,
-`BareCollectionPrimitiveArgE2ETest#bareListAddPrimitiveNativeRuns`
-`assumeTrue(compileSuccess)` masking native regressions).
+Batch 2/3 (verified, catalogued as §427–§431, EN+PT): cross `kof.io`/web-T1
+runtime absent with a wrong gate (§427); DAP `default -> respond(success:true, {})`
+façade + `debug-adapter.md` `restart` claim (§428); LSP `default -> {}` with no
+JSON-RPC reply (§429); false-green tests — `RouterE2ETest#debugConc001`
+zero-assert, 5 `NativeDebugTest*` print-only, `KofWebNativeE2ETest`
+`assertTrue(true)`, `BareCollectionPrimitiveArgE2ETest` `assumeTrue(compileSuccess)`
+masking native regressions (§430); minor tooling drift — dead `serveStatic` with
+false javadoc, unreachable DAP branch, `Compare` unknown options, stale `.class`
+(§431).
+
+The mechanizable subset of these checks (empty-response `default`, weak-green
+patterns) is the next unit: `scripts/audit-stubs.sh` gains the sections so the
+finding class is reproducible, not a one-off read.
 
 ## Next passes (planned — not yet executed)
 

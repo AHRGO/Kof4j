@@ -11700,34 +11700,82 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 
 <!-- en-switch --> **EN:** [§423 (en)](known-bugs.md#423--channels-on-the-riscv64aarch64-native-targets-were-never-ported-any-channelchannel-program-link-failed-with-a-cryptic-undefined-reference-to-kof_channel_newsendreceive-surfaced-2109-while-closing-374s-native-face--removing-the-nat003-refusal-exposed-that-the-cross-never-had-the-runtime--open-with-honest-diagnostic-nat005-r6-the-gap-is-declared-at-lowering-the-port-is-the-work)
 
-## §424 — five accepted `String` methods are silently incomplete on JS and link-fail on Native with no gap code (`matches`/`replaceAll`/`replaceFirst`/`toCharArray`/`compareToIgnoreCase`) — 🔴 OPEN (R6: JVM works, the other targets diverge with no diagnostic)
+## §424 — cinco métodos `String` aceitos ficam silenciosamente incompletos no JS e falham no link do Native sem gap code (`matches`/`replaceAll`/`replaceFirst`/`toCharArray`/`compareToIgnoreCase`) — 🔴 ABERTO (R6: o JVM funciona, os outros alvos divergem sem diagnóstico)
 
-- **Green surface (source of truth):** `StringMethodRegistry.java:81-85` gives real signatures to `replaceAll`/`replaceFirst` (String), `matches` (Bool), `toCharArray` (Char[]), `compareToIgnoreCase` (Int); `CollectionMethodTyper.java:94-109` types them too; `BuiltinCallTyper` takes the return type from the registry. So the typer accepts all five on every target.
-- **JS (static, verified):** `js/JsCallEmitter.java:461-468` `handleStringOp` has no case for any of the five, so the `default` emits `receiver.<name>(...)`. JS `String.prototype` has no `matches`/`toCharArray`/`replaceFirst`/`compareToIgnoreCase` -> runtime `TypeError`; `replaceAll` EXISTS but with **literal** semantics vs Kof/JVM **regex** (`"a1b".replaceAll("\\d","x")` -> JVM `"axb"`, JS `"a1b"` silently wrong). Compilation is clean — an R6 violation.
-- **Native (static, verified):** none of the five is cased in `nat/NativeX86StringCalls.java`; the call falls to `NativeOpHelpers.java:184-189`, which mangles any unhandled String instance call into `java_lang_String_<method>` -> undefined symbol at link, surfaced only as a cryptic `as`/`ld` failure (`NativeArchEmitter.java:240`) with no Kof gap code. Same for riscv64/aarch64.
-- **Repro:** compile+run `println("123".matches("\\d+"))` / `var c = "ab".toCharArray(); println(c[0])` on JS -> `TypeError`/wrong output; on Native -> link failure; on JVM -> correct. No `ConformanceMatrixTest`/`BackendParityTest` case covers the five.
-- **What is missing:** per-target cases (JS mirrors the JDK contract — regex for `replaceAll`/`replaceFirst`/`matches`, a real char array for `toCharArray`, case-insensitive compare) or an honest `gapCode` backstop; the codegen has no "unhandled String method -> honest gap" fallback.
-- **Related:** §259 (phantom gap-code discipline), `D-KOF-FIRST`, `training/idioms/strings.md`.
+- **Superfície verde (fonte da verdade):** `StringMethodRegistry.java:81-85` dá assinaturas reais a `replaceAll`/`replaceFirst` (String), `matches` (Bool), `toCharArray` (Char[]), `compareToIgnoreCase` (Int); `CollectionMethodTyper.java:94-109` também os tipa; o `BuiltinCallTyper` pega o tipo de retorno do registry. Logo o typer aceita os cinco em todo alvo.
+- **JS (estático, verificado):** `js/JsCallEmitter.java:461-468` `handleStringOp` não tem `case` para nenhum dos cinco, então o `default` emite `receiver.<nome>(...)`. O `String.prototype` do JS não tem `matches`/`toCharArray`/`replaceFirst`/`compareToIgnoreCase` -> `TypeError` em runtime; `replaceAll` EXISTE mas com semântica **literal** vs **regex** do Kof/JVM (`"a1b".replaceAll("\\d","x")` -> JVM `"axb"`, JS `"a1b"` silenciosamente errado). A compilação fica limpa — violação de R6.
+- **Native (estático, verificado):** nenhum dos cinco tem `case` em `nat/NativeX86StringCalls.java`; a chamada cai em `NativeOpHelpers.java:184-189`, que transforma qualquer chamada de instância String não tratada em `java_lang_String_<método>` -> símbolo indefinido no link, aparecendo só como falha críptica de `as`/`ld` (`NativeArchEmitter.java:240`) sem código de gap do Kof. Idem riscv64/aarch64.
+- **Repro:** compilar+rodar `println("123".matches("\\d+"))` / `var c = "ab".toCharArray(); println(c[0])` no JS -> `TypeError`/saída errada; no Native -> falha de link; no JVM -> correto. Nenhum caso de `ConformanceMatrixTest`/`BackendParityTest` cobre os cinco.
+- **O que falta:** casos por alvo (o JS espelha o contrato do JDK — regex para `replaceAll`/`replaceFirst`/`matches`, array de char real para `toCharArray`, comparação case-insensitive) ou um backstop de `gapCode` honesto; o codegen não tem fallback de "método String não tratado -> gap honesto".
+- **Relacionado:** §259 (disciplina de gap-code fantasma), `D-KOF-FIRST`, `training/idioms/strings.md`.
 
-<!-- en-switch --> **EN:** [§424 (en)](known-bugs.md#424-five-accepted-string-methods-are-silently-incomplete-on-js-and-link-fail-on-native-with-no-gap-code-matches-replaceall-replacefirst-tochararray-comparetoignorecase-open-r6-jvm-works-the-other-targets-diverge-with-no-diagnostic)
+<!-- en-switch --> **EN:** [§424 (en)](known-bugs.md#424-cinco-m-todos-string-aceitos-ficam-silenciosamente-incompletos-no-js-e-falham-no-link-do-native-sem-gap-code-matches-replaceall-replacefirst-tochararray-comparetoignorecase-aberto-r6-o-jvm-funciona-os-outros-alvos-divergem-sem-diagn-stico)
 
-## §425 — riscv64/aarch64 `kof.config` is a silent-default stub while `KofConfig.supportedOn` returns true and the javadoc still claims `CONF001` — 🔴 OPEN (R6: wrong values on the cross, no diagnostic)
+## §425 — `kof.config` no riscv64/aarch64 é um stub de default silencioso, enquanto `KofConfig.supportedOn` retorna true e o javadoc ainda diz `CONF001` — 🔴 ABERTO (R6: valores errados no cross, sem diagnóstico)
 
-- **Stub (measured):** `nat/NativeRiscvAsmRtB0.java:295-327` (`# ---- kof.config (minimal — retorna default / 0 / false) ----`): `kof_config_get/env/has` -> `li a0, 0`; `kof_config_str/int/long/bool` -> `mv a0, a1` (echoes the default argument); `kof_config_required` returns the KEY (or `kof_null_error`). There is no real lookup on the cross.
-- **Gate wrong:** `KofConfig.java:43-44` `supportedOn(Target)` returns `true` for every target, so the `CONF001` branch in `ExpressionConfigCallLowerer.java:19-31` is dead; `KofConfig.java:25` javadoc still says "Native and JS targets report CONF001 at compile time" (stale, contradicted by the stub).
-- **x86/JVM are real:** `runtime/RuntimeConfig1.java`+`RuntimeConfig2.java` (x86; `kof_config_required` panics `CONF002` at `RuntimeConfig2.java:97`); JVM has a real implementation. This is a cross parity divergence, not intended scope.
-- **Docs soft:** `docs/stdlib/stdlib-config.md:89` marks riscv/aarch "✅/placeholder"; `docs/backend-parity.md:105` marks `kof.config` ✅ Native. `NativeConfigE2ETest` only runs `Target.NATIVE` (x86).
-- **What is missing:** a real config runtime on the cross, or gate the cross with an honest code (mirror `NAT005`/§423) plus fix the stale javadoc/matrix.
-- **Related:** §423 (NAT005 "declare the gap" precedent), `NativeRiscvAsmRtB0.java:332-333` (`kof_time_now` was the same stub, fixed under R6).
+- **Stub (medido):** `nat/NativeRiscvAsmRtB0.java:295-327` (`# ---- kof.config (minimal — retorna default / 0 / false) ----`): `kof_config_get/env/has` -> `li a0, 0`; `kof_config_str/int/long/bool` -> `mv a0, a1` (devolve o argumento default); `kof_config_required` devolve a CHAVE (ou `kof_null_error`). Não há lookup real no cross.
+- **Gate errado:** `KofConfig.java:43-44` `supportedOn(Target)` retorna `true` para todo alvo, então o ramo `CONF001` de `ExpressionConfigCallLowerer.java:19-31` está morto; `KofConfig.java:25` ainda diz "Native and JS targets report CONF001 at compile time" (stale, contradito pelo stub).
+- **x86/JVM são reais:** `runtime/RuntimeConfig1.java`+`RuntimeConfig2.java` (x86; `kof_config_required` dá panic `CONF002` em `RuntimeConfig2.java:97`); o JVM tem implementação real. É divergência de paridade do cross, não escopo pretendido.
+- **Docs moles:** `docs/stdlib/stdlib-config.md:89` marca riscv/aarch "✅/placeholder"; `docs/backend-parity.md:105` marca `kof.config` ✅ Native. O `NativeConfigE2ETest` só roda `Target.NATIVE` (x86).
+- **O que falta:** runtime real de config no cross, ou gatear o cross com código honesto (espelhando `NAT005`/§423) e corrigir o javadoc/matriz stale.
+- **Relacionado:** §423 (precedente NAT005 de "declarar o gap"), `NativeRiscvAsmRtB0.java:332-333` (`kof_time_now` era o mesmo stub, corrigido sob R6).
 
-<!-- en-switch --> **EN:** [§425 (en)](known-bugs.md#425-riscv64-aarch64-kof-config-is-a-silent-default-stub-while-kofconfig-supportedon-returns-true-and-the-javadoc-still-claims-conf001-open-r6-wrong-values-on-the-cross-no-diagnostic)
+<!-- en-switch --> **EN:** [§425 (en)](known-bugs.md#425-kof-config-no-riscv64-aarch64-um-stub-de-default-silencioso-enquanto-kofconfig-supportedon-retorna-true-e-o-javadoc-ainda-diz-conf001-aberto-r6-valores-errados-no-cross-sem-diagn-stico)
 
-## §426 — `time.collect()` compiles on JS but has no runtime and no gate (silent incomplete) — 🔴 OPEN
+## §426 — `time.collect()` compila no JS mas não tem runtime nem gate (incompleto silencioso) — 🔴 ABERTO
 
-- `KofTime.java:42` lists `collect` in `functions()`; `:128-129` lowers it to `kof_gc_collect_now`; `supportedOn(method,target)` (`:74-102`) gates only `tzOffsetSeconds` (TIME003), so `collect` returns true on JS; `gapCode(method)` (`:104-111`) yields no code.
-- `js/JsRuntimeOps.java:428` registers it via `runtimeJsName` -> `kofGcCollectNow`, but **no such function exists anywhere under `js/`** (grep empty); `JsEmitter.java:37` imports it from `./kof-runtime.mjs`, so the artifact fails at load while compilation is clean.
-- Implemented on JVM, x86 (`RuntimeGc`) and riscv. No test covers `time.collect()`.
-- **Repro:** `main(){ time.collect() }` on JS -> undefined export/ReferenceError at run; compile clean.
-- **What is missing:** implement the JS GC-collect face, or gate it with an honest code.
+- `KofTime.java:42` lista `collect` em `functions()`; `:128-129` o baixa para `kof_gc_collect_now`; `supportedOn(method,target)` (`:74-102`) só gateia `tzOffsetSeconds` (TIME003), então `collect` retorna true no JS; `gapCode(method)` (`:104-111`) não devolve código.
+- `js/JsRuntimeOps.java:428` o registra via `runtimeJsName` -> `kofGcCollectNow`, mas **não existe tal função em lugar nenhum sob `js/`** (grep vazio); `JsEmitter.java:37` a importa de `./kof-runtime.mjs`, então o artefato falha no load enquanto a compilação fica limpa.
+- Implementado no JVM, x86 (`RuntimeGc`) e riscv. Nenhum teste cobre `time.collect()`.
+- **Repro:** `main(){ time.collect() }` no JS -> export indefinido/ReferenceError na execução; compilação limpa.
+- **O que falta:** implementar a face de GC-collect no JS, ou gateá-la com código honesto.
 
-<!-- en-switch --> **EN:** [§426 (en)](known-bugs.md#426-time-collect-compiles-on-js-but-has-no-runtime-and-no-gate-silent-incomplete-open)
+<!-- en-switch --> **EN:** [§426 (en)](known-bugs.md#426-time-collect-compila-no-js-mas-n-o-tem-runtime-nem-gate-incompleto-silencioso-aberto)
+
+## §427 — os alvos riscv64/aarch64 podem baixar `kof.io` e o servidor web-T1, mas o runtime deles não tem tais símbolos (`ld` undefined-reference alto; o gate está errado/ausente) — 🔴 ABERTO
+
+- `KofIo.java` NÃO tem `supportedOn`/`gapCode`, e `ExpressionBuiltinInstanceCalls.lowerIo` emite incondicionalmente -> o cross recebe `kof_io_read_text/file_exists/write_text/...` que não existem em `nat/NativeRiscv*.java` (só `kof_io_strlen`/`kof_io_make_string`, `NativeRiscvAsmRtB46.java:16-32`, usados por sqlite/JSON) -> falha de link.
+- `ExpressionBuiltinInstanceCalls.java:82-98` `nativeWebT1` permite `kof_web_listen`/`kof_web_route` em NATIVE_RISCV64/NATIVE_AARCH64, mas `NativeWebRuntime.emitWebFunctions` só é emitido no caminho x86 (`NativeBackend.java:316`); `KofWeb.isNativeTarget` inclui o cross (`KofWeb.java:224-225`).
+- Contraste: o `channel` ganhou gate honesto `NAT005` (§423); `io`/web-T1 não têm nenhum. `IoE2ETest`/`KofWebNativeE2ETest` só cobrem JVM/`Target.NATIVE` (x86).
+- **O que falta:** os runtimes do cross, ou um gate honesto (NAT00x) no lowering para `io`/web-T1 em riscv64/aarch64.
+- **Relacionado:** §423, lista de recusa honesta em `docs/native-multiarch.md`.
+
+<!-- en-switch --> **EN:** [§427 (en)](known-bugs.md#427-os-alvos-riscv64-aarch64-podem-baixar-kof-io-e-o-servidor-web-t1-mas-o-runtime-deles-n-o-tem-tais-s-mbolos-ld-undefined-reference-alto-o-gate-est-errado-ausente-aberto)
+
+## §428 — as sessões DAP JVM e Native respondem toda requisição não implementada com `success:true` e corpo vazio (fachada silenciosa, Q7) — 🔴 ABERTO
+
+- `kof-cli/.../KofDebugJvmSession.java:323` e `KofDebugNativeDap.java:283`: `default -> respond(seq, command, Map.of());` — todo outro ramo não-atendível usa `fail`/`fail2` (`success:false` honesto); o default faz o oposto.
+- Faces alcançáveis: `exceptionInfo` (a sessão JVM EMITE um stop com motivo `exception` em `KofDebugJvmSession.java:337`, então o cliente pede `exceptionInfo` e recebe `success:true`+`{}` em vez de `exceptionId`/`description`), `restart`, `setVariable`, `completions`, `disassemble`, `readMemory`, entre outros.
+- Contradição de doc: `docs/debugging/debug-adapter.md:23` lista `restart` como responsabilidade, mas não há `case "restart"` (`grep '"restart"' kof-cli/src` vazio) e a §3.3 "Current limits" não o declara.
+- **O que falta:** um `fail` honesto para requisições não implementadas (ou handlers explícitos); documentar `restart` como limite se não implementado.
+
+<!-- en-switch --> **EN:** [§428 (en)](known-bugs.md#428-as-sess-es-dap-jvm-e-native-respondem-toda-requisi-o-n-o-implementada-com-success-true-e-corpo-vazio-fachada-silenciosa-q7-aberto)
+
+## §429 — o servidor LSP NÃO responde a uma REQUEST JSON-RPC desconhecida (o cliente trava; deveria ser `-32601 MethodNotFound`) — 🔴 ABERTO
+
+- `kof-cli/.../LspServer.java:132` `default -> { }`. Uma request JSON-RPC carrega um `id` e DEVE ser respondida; ignorá-la faz um cliente conforme bloquear até o timeout. Notificações sem `id` (ex.: `$/cancelRequest`) podem ser ignoradas, mas o mesmo ramo engole requests também.
+- As capabilities anunciadas têm todas handler, então um cliente conforme raramente cai nisso, mas qualquer request não anunciada (`textDocument/inlayHint`, `semanticTokens/*`, `willSaveWaitUntil`, ...) recebe silêncio. `docs/tooling/LSP.md` §"Current limitations" (linhas 82-89) não menciona.
+- **O que falta:** responder requests com erro `-32601` (seguir ignorando notificações) + documentar.
+
+<!-- en-switch --> **EN:** [§429 (en)](known-bugs.md#429-o-servidor-lsp-n-o-responde-a-uma-request-json-rpc-desconhecida-o-cliente-trava-deveria-ser-32601-methodnotfound-aberto)
+
+## §430 — testes false-green: um `@Test` sem assert, cinco `NativeDebugTest*` só-print, um `assertTrue(true)` literal e um `assumeTrue(compileSuccess)` que transforma regressão de codegen nativo em SKIP — 🔴 ABERTO (Q5/Q1)
+
+- **Sem asserts:** `kof-compiler/.../RouterE2ETest.java:39` `debugConc001` compila para Native e só faz `System.err.println` — passa quer a compilação funcione ou não (sonda de debug deixada para trás).
+- **Classes só-print:** `NativeDebugTest.java:9` e `NativeDebugTest2..5` `debugNativeCompilation` só fazem `System.out.println` do resultado; passam mesmo quando a compilação `Target.NATIVE` FALHA, e cada uma contribui com um teste sempre-verde para a suíte (`<includes>*Test*.java</includes>`).
+- **`assertTrue(true)`:** `KofWebNativeE2ETest.java:106` `nativeServerAcceptsAndResponds200` afirma uma tautologia — nunca envia requisição HTTP, então o claim "200" (e o comentário da classe) fica não provado.
+- **Skip que esconde regressão:** `BareCollectionPrimitiveArgE2ETest.java:196-215` `bareListAddPrimitiveNativeRuns` usa `assumeTrue(r.success(), "Native toolchain ausente (COMP001)")` — o predicado é SUCESSO DE COMPILAÇÃO, então uma regressão do emitter nativo (o próprio bug §374 que o teste guarda) vira SKIP em vez de falha. O mesmo arquivo já usa o `NativeToolchainGate.present()` correto em ~:299.
+- **O que falta:** asserts reais / o gate de ambiente correto. O cluster redundante de `CompilerDriverTest` com só-success (~151 métodos) é fraco pelo critério (a) mas coberto por comportamento em outro lugar, então é anotado, não catalogado.
+- **Relacionado:** §149 (precedente weak-green), §374 (o bug que o teste mascarador guarda).
+
+<!-- en-switch --> **EN:** [§430 (en)](known-bugs.md#430-testes-false-green-um-test-sem-assert-cinco-nativedebugtest-s-print-um-asserttrue-true-literal-e-um-assumetrue-compilesuccess-que-transforma-regress-o-de-codegen-nativo-em-skip-aberto-q5-q1)
+
+## §431 — drifts menores de tooling achados pela auditoria profunda: `serveStatic` morto com javadoc falso, ramo inalcançável do DAP, opção não-fatal do `Compare` e `.class` stale na árvore de código — 🟡 ABERTO (baixa severidade)
+
+- **`serveStatic` morto + doc falso:** `kof-cli/.../KofCliSupport.java:218` `serveStatic(...)` (helper `contentType` em `:255` usado só por ele) NÃO tem chamador de produção — só `ServeStaticTest`. Os estáticos full-stack são servidos pelo mecanismo do app (`CmdServe.java:200`/`CmdRun.java:198-199` + `app.serveDir`); seu javadoc (`:216-219`) ainda diz que existe "para `run` e `serve` full-stack" (F3-step-2a superado por F3-step-2b). O `ServeStaticTest` verde dá a ilusão de que a feature está viva.
+- **Ramo inalcançável do DAP:** `KofDebugNativeDap.java:91-94` retorna quando `attachPid != null`, então o mesmo teste em `:98-100` está morto.
+- **`Compare` ignora opções desconhecidas:** `Compare.java:98` imprime "unknown option" mas não faz `return 1`; o comando prossegue e pode sair com 0 (a migração legada está despriorizada).
+- **Artefatos stale (higiene):** seis arquivos `.class` não rastreados e gitignorados ficam em `kof-cli/src/main/java/dev/kof/cli/` (`AppManifest*.class`, `CmdBuild*.class`, `CmdServe.class`, `KofCliSupport.class`) — não rastreados, não embarcam, mas são saída de build stale dentro da árvore de código.
+- **O que falta:** ligar ou apagar `serveStatic`; remover o ramo morto; fazer o `Compare` falhar em opção desconhecida; limpar os `.class` perdidos.
+
+<!-- en-switch --> **EN:** [§431 (en)](known-bugs.md#431-drifts-menores-de-tooling-achados-pela-auditoria-profunda-servestatic-morto-com-javadoc-falso-ramo-inalcan-vel-do-dap-op-o-n-o-fatal-do-compare-e-class-stale-na-rvore-de-c-digo-aberto-baixa-severidade)

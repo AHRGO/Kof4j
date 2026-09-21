@@ -252,14 +252,19 @@ candidatos; cada um foi verificado no código antes de catalogar. Batch 1
   enquanto `supportedOn` retorna true (javadoc `CONF001` stale).
 - **§426** — `time.collect()` no JS compila sem runtime e sem gate.
 
-Batch 2 (verificado, catalogação a seguir): runtime `kof.io`/web-T1 do cross
-ausente com gate errado; fachada do DAP `default -> respond(success:true, {})`
-(JVM+Native) + claim de `restart` no `debug-adapter.md`; LSP `default -> {}`
-(sem resposta JSON-RPC); testes false-green (`RouterE2ETest#debugConc001`
-zero-assert, 5 `NativeDebugTest*` só-print,
-`KofWebNativeE2ETest#nativeServerAcceptsAndResponds200` `assertTrue(true)`,
-`BareCollectionPrimitiveArgE2ETest#bareListAddPrimitiveNativeRuns`
-`assumeTrue(compileSuccess)` mascarando regressões nativas).
+Batch 2/3 (verificado, catalogado como §427–§431, EN+PT): runtime `kof.io`/web-T1
+do cross ausente com gate errado (§427); fachada do DAP
+`default -> respond(success:true, {})` + claim de `restart` no `debug-adapter.md`
+(§428); LSP `default -> {}` sem resposta JSON-RPC (§429); testes false-green —
+`RouterE2ETest#debugConc001` zero-assert, 5 `NativeDebugTest*` só-print,
+`KofWebNativeE2ETest` `assertTrue(true)`, `BareCollectionPrimitiveArgE2ETest`
+`assumeTrue(compileSuccess)` mascarando regressões nativas (§430); drift menor de
+tooling — `serveStatic` morto com javadoc falso, ramo inalcançável do DAP,
+opções desconhecidas do `Compare`, `.class` stale (§431).
+
+O subconjunto mecanizável destes checks (`default` de resposta vazia, padrões
+weak-green) é a próxima unidade: o `scripts/audit-stubs.sh` ganha as seções para
+a classe de achado ser reprodutível, não uma leitura única.
 
 ## Próximas passadas (planejadas — ainda não executadas)
 

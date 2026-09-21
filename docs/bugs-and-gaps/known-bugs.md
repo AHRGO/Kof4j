@@ -14197,3 +14197,51 @@ p
 - **What is missing:** implement the JS GC-collect face, or gate it with an honest code.
 
 <!-- pt-switch --> **PT:** [§426 (pt_BR)](known-bugs.pt_BR.md#426-time-collect-compiles-on-js-but-has-no-runtime-and-no-gate-silent-incomplete-open)
+
+## §427 — the riscv64/aarch64 targets may lower `kof.io` and the web-T1 server, but their runtime has no such symbols (loud `ld` undefined-reference; the gate is wrong/missing) — 🔴 OPEN
+
+- `KofIo.java` has NO `supportedOn`/`gapCode`, and `ExpressionBuiltinInstanceCalls.lowerIo` emits unconditionally -> the cross gets `kof_io_read_text/file_exists/write_text/...` that do not exist in `nat/NativeRiscv*.java` (only `kof_io_strlen`/`kof_io_make_string`, `NativeRiscvAsmRtB46.java:16-32`, used by sqlite/JSON) -> link failure.
+- `ExpressionBuiltinInstanceCalls.java:82-98` `nativeWebT1` allows `kof_web_listen`/`kof_web_route` on NATIVE_RISCV64/NATIVE_AARCH64, but `NativeWebRuntime.emitWebFunctions` is emitted only on the x86 path (`NativeBackend.java:316`); `KofWeb.isNativeTarget` includes the cross (`KofWeb.java:224-225`).
+- Contrast: `channel` got an honest `NAT005` gate (§423); `io`/web-T1 have none. `IoE2ETest`/`KofWebNativeE2ETest` only cover JVM/`Target.NATIVE` (x86).
+- **What is missing:** the cross runtimes, or an honest gate (NAT00x) at lowering for `io`/web-T1 on riscv64/aarch64.
+- **Related:** §423, `docs/native-multiarch.md` honest-refusal list.
+
+<!-- pt-switch --> **PT:** [§427 (pt_BR)](known-bugs.pt_BR.md#427-the-riscv64-aarch64-targets-may-lower-kof-io-and-the-web-t1-server-but-their-runtime-has-no-such-symbols-loud-ld-undefined-reference-the-gate-is-wrong-missing-open)
+
+## §428 — the JVM and Native DAP sessions answer every unimplemented request with `success:true` and an empty body (silent façade, Q7) — 🔴 OPEN
+
+- `kof-cli/.../KofDebugJvmSession.java:323` and `KofDebugNativeDap.java:283`: `default -> respond(seq, command, Map.of());` — every other unservable branch uses `fail`/`fail2` (honest `success:false`); the default does the opposite.
+- Reachable faces: `exceptionInfo` (the JVM session EMITS a stop with reason `exception` at `KofDebugJvmSession.java:337`, so a client asks for `exceptionInfo` and gets `success:true`+`{}` instead of `exceptionId`/`description`), `restart`, `setVariable`, `completions`, `disassemble`, `readMemory`, and more.
+- Doc contradiction: `docs/debugging/debug-adapter.md:23` lists `restart` as a responsibility, but there is NO `case "restart"` (`grep '"restart"' kof-cli/src` empty) and §3.3 "Current limits" does not declare it.
+- **What is missing:** an honest `fail` for unimplemented requests (or explicit handlers); document `restart` as a limit if not implemented.
+
+<!-- pt-switch --> **PT:** [§428 (pt_BR)](known-bugs.pt_BR.md#428-the-jvm-and-native-dap-sessions-answer-every-unimplemented-request-with-success-true-and-an-empty-body-silent-fa-ade-q7-open)
+
+## §429 — the LSP server sends NO response to an unknown JSON-RPC REQUEST (client hangs; should be `-32601 MethodNotFound`) — 🔴 OPEN
+
+- `kof-cli/.../LspServer.java:132` `default -> { }`. A JSON-RPC request carries an `id` and MUST be answered; ignoring it makes a conforming client block until timeout. Notifications without `id` (e.g. `$/cancelRequest`) may be ignored, but the same branch swallows requests too.
+- Advertised capabilities all have handlers, so a compliant client rarely hits it, but any non-advertised request (`textDocument/inlayHint`, `semanticTokens/*`, `willSaveWaitUntil`, ...) gets silence. `docs/tooling/LSP.md` §"Current limitations" (lines 82-89) does not mention it.
+- **What is missing:** answer requests with error `-32601` (keep ignoring notifications) + document it.
+
+<!-- pt-switch --> **PT:** [§429 (pt_BR)](known-bugs.pt_BR.md#429-the-lsp-server-sends-no-response-to-an-unknown-json-rpc-request-client-hangs-should-be-32601-methodnotfound-open)
+
+## §430 — false-green tests: a zero-assertion `@Test`, five print-only `NativeDebugTest*`, a literal `assertTrue(true)`, and an `assumeTrue(compileSuccess)` that turns a native codegen regression into a SKIP — 🔴 OPEN (Q5/Q1)
+
+- **Zero assertions:** `kof-compiler/.../RouterE2ETest.java:39` `debugConc001` compiles to Native and only `System.err.println`s — it passes whether the compilation works or not (leftover debug probe).
+- **Print-only classes:** `NativeDebugTest.java:9` and `NativeDebugTest2..5` `debugNativeCompilation` only `System.out.println` the result; they pass even when `Target.NATIVE` compilation FAILS, and each contributes one always-green test to the suite (`<includes>*Test*.java</includes>`).
+- **`assertTrue(true)`:** `KofWebNativeE2ETest.java:106` `nativeServerAcceptsAndResponds200` asserts a tautology — it never sends an HTTP request, so the "200" claim (and the class comment) is unproven.
+- **Regression-hiding skip:** `BareCollectionPrimitiveArgE2ETest.java:196-215` `bareListAddPrimitiveNativeRuns` uses `assumeTrue(r.success(), "Native toolchain ausente (COMP001)")` — the predicate is COMPILATION SUCCESS, so a native emitter regression (the very §374 bug the test guards) SKIPS instead of failing. The same file already uses the correct `NativeToolchainGate.present()` at ~:299.
+- **What is missing:** real assertions / the correct environment gate. The redundant success-only `CompilerDriverTest` cluster (~151 methods) is weak by criterion (a) but behavior-covered elsewhere, so it is noted, not catalogued.
+- **Related:** §149 (weak-green precedent), §374 (the bug the masking test guards).
+
+<!-- pt-switch --> **PT:** [§430 (pt_BR)](known-bugs.pt_BR.md#430-false-green-tests-a-zero-assertion-test-five-print-only-nativedebugtest-a-literal-asserttrue-true-and-an-assumetrue-compilesuccess-that-turns-a-native-codegen-regression-into-a-skip-open-q5-q1)
+
+## §431 — minor tooling drift found by the deep audit: dead `serveStatic` with a false javadoc, an unreachable DAP branch, a non-fatal `Compare` option, and stale `.class` files in the source tree — 🟡 OPEN (low severity)
+
+- **`serveStatic` dead + false doc:** `kof-cli/.../KofCliSupport.java:218` `serveStatic(...)` (helper `contentType` at `:255` used only by it) has NO production caller — only `ServeStaticTest`. Full-stack statics are served by the app-level mechanism (`CmdServe.java:200`/`CmdRun.java:198-199` + `app.serveDir`); its javadoc (`:216-219`) still claims it exists "para `run` e `serve` full-stack" (F3-step-2a superseded by F3-step-2b). The green `ServeStaticTest` gives the illusion the feature is live.
+- **Unreachable DAP branch:** `KofDebugNativeDap.java:91-94` returns when `attachPid != null`, so the same test at `:98-100` is dead.
+- **`Compare` ignores unknown options:** `Compare.java:98` prints "unknown option" but does not `return 1`; the command proceeds and may exit 0 (legacy migration is deprioritized).
+- **Stale artifacts (hygiene):** six untracked, gitignored `.class` files sit in `kof-cli/src/main/java/dev/kof/cli/` (`AppManifest*.class`, `CmdBuild*.class`, `CmdServe.class`, `KofCliSupport.class`) — not tracked, do not ship, but stale build output inside the source tree.
+- **What is missing:** wire or delete `serveStatic`; remove the dead branch; make `Compare` fail on unknown options; clean the stray `.class` files.
+
+<!-- pt-switch --> **PT:** [§431 (pt_BR)](known-bugs.pt_BR.md#431-minor-tooling-drift-found-by-the-deep-audit-dead-servestatic-with-a-false-javadoc-an-unreachable-dap-branch-a-non-fatal-compare-option-and-stale-class-files-in-the-source-tree-open-low-severity)
