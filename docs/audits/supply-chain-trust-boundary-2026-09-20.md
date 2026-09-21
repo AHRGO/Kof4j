@@ -32,6 +32,8 @@
 | M7 | Provenance / attestations | none found: the attestations API returns 404 for the digest of a real release asset. Releases are published by `github-actions[bot]`; assets = archive + `kof-cli-*.jar` + `SHA256SUMS` (the checksum file is produced and published by the same job as the artifact). GitHub itself records a server-side `digest` per asset. | `gh api repos/KofLang/Kof4j/attestations/sha256:<digest>` |
 | M8 | Consumer verification (Registry) | `kof deps resolve` verifies `SHA256SUMS` **before installing**, and now each source file (`REG002/REG004`); the checksum file travels **inside the same tarball**. | `DepsRegistry`, `DepsSources` |
 | M9 | Already in place (do not redesign) | CodeQL, Gitleaks, Dependabot (`maven` + `github-actions`, weekly), `SECURITY.md` (private vulnerability reporting), path-traversal guard on extraction, honest `REG00x` failures, #564/#565/#563 closed with hosted-CI evidence. | repo files |
+| M10 | Published assets vs `SHA256SUMS` | `SHA256SUMS` (1 line) covers **only the archive**; the standalone `kof-cli-0.4.9-beta.jar` published next to it is covered by no checksum, and the same-named jar has **different bytes per OS** (42,090,580 B linux × 42,090,623 B windows — the builds are not reproducible). | `gh api repos/KofLang/Kof4j/releases/tags/<tag>`; download the `SHA256SUMS` asset |
+| M11 | Verdict on the exact published commit | tested commit `e790137ee1`: CodeQL, Benchmark, Release and Code Quality runs succeeded. Published commit `22a186b9bf` (`[skip ci]`): only `Code Quality: Push on main` (plus issue-triggered bot runs) — **no CodeQL, Release or Benchmark run**; the `CI` workflow excludes `main` from `push` (`'!main'`). | `gh api 'repos/KofLang/Kof4j/actions/runs?head_sha=<sha>'`; `ci.yml` lines 3–8 |
 
 ## 3. Classification of the findings
 
@@ -41,6 +43,7 @@
 | M3, M4 | **security hardening finding / release-trust gap** | not a `BUG REAL`; needs the workflow owner's decision (Q7) |
 | M6 | **source-governance ambiguity** | build provenance proves "commit X, workflow Y", not "commit X was authorized" (Q8) |
 | M7/M8 | **contract ambiguity** | SHA256 gives integrity, not authenticity: if artifact **and** checksum are replaced by the same actor, the hash still matches (T3) |
+| M10, M11 | **hardening / same-candidate gap** | a checksum that covers only part of the published assets, non-reproducible per-OS jars, and no CodeQL/Release verdict on the exact published commit — evidence for the §32.6 gap, not a bug against a KOF contract |
 
 ## 4. Threat model (what each layer can and cannot say)
 
@@ -72,8 +75,36 @@ There is no single tool that covers all of it; the chain is **source trust → t
 11. **Vendor neutrality:** name "GitHub Artifact Attestation" in the contract, or state neutral properties and allow equivalent implementations? (Research favours the second.)
 12. **Consumer object (follows #566(b)):** since packages are now consumed as source modules, the artifact that receives the digest/attestation for a *library* is the sources tarball — confirm.
 
-## 6. Not done here / next steps
+## 6. Lab results — GitHub Artifact Attestations (Onda 2, 20/09/2026)
 
-- **Lab (outside Kof4j):** validate empirically, in a repository of my own, what GitHub Artifact Attestations deliver (verify online/offline; tamper, wrong digest and wrong repository must be RED; permissions, cost, lock-in; SHA-pinned actions and job-level tokens). Results will be appended here.
+Run in a **personal public smoke repository** (nothing in Kof4j was touched). Two workflows publish the same kind of artifact: **`lab-broad`** mirrors `release.yml` (workflow-level `contents: write`, actions by tag) and **`lab-pinned`** follows the ideal flow (actions pinned by full SHA resolved through the API, job-level permissions, **build once → attest → upload → publish the same bytes**). Verification is done by a consumer with `gh` 2.98.
+
+| Experiment | Result (measured) |
+|---|---|
+| both pipelines | success in 18 s / 22 s; the asset digest GitHub records server-side equals the local sha256 |
+| online `gh attestation verify` (both) | **GREEN**; verification took ≈6.2 s (includes fetching the trust root) |
+| N1 artifact with 1 byte changed | **RED** — no attestation exists for the new digest |
+| N2 attestation bundle of artifact A used for artifact B | **RED** |
+| N3 wrong repository / N4 wrong owner | **RED** |
+| N5 signer workflow pinned to the *other* workflow | **RED** |
+| N6 wrong `--source-ref` / N7 wrong predicate type | **RED** |
+| P1/P2 policy: signer = `lab-pinned.yml`, ref = `refs/heads/main` | **GREEN** |
+| **offline** (bundle + local trusted root, network forced to fail via a dead proxy) | **GREEN**; the same command without the bundle is **RED** (needs the network); tampered file and wrong-digest bundle are **RED** offline too |
+| what the attestation states | predicate `slsa.dev/provenance/v1`; builder = `<repo>/.github/workflows/<file>@<ref>`; issuer = GitHub OIDC; source repo/ref/commit; `github-hosted` runner; 1 verified timestamp (transparency log); bundle ≈11.7 KB, trusted root ≈34.6 KB |
+| least-privilege probe (build job has `contents: read`; tries `gh release create`) | **`HTTP 403 Resource not accessible by integration`**, no release created — scoping per job really prevents the action |
+| repository setting `sha_pinning_required=true` | the tag-based workflow **fails at "Set up job"** ("all actions must be pinned to a full-length commit SHA"); the SHA-pinned one passes. The setting was restored to `false`. |
+
+**What the lab teaches (measured, not decided):**
+
+- Verification is only as strong as the **policy** given to it: `--repo`/`--owner` alone accept any workflow of that repository; pinning `--signer-workflow` (and `--source-ref`) is what makes the builder identity a real property (N5/P1).
+- **A flaw in my first lab run**, kept here on purpose: the two workflows produced **byte-identical** tarballs (same commit, same run number, deterministic `tar`), so one digest carried two attestations and the "wrong digest" and "wrong workflow" negatives came out GREEN legitimately. It was fixed by making the content differ per workflow. Lesson: negative tests must use genuinely distinct subjects.
+- Offline verification works, but only with a **locally stored trusted root**; the trust root has to be distributed/refreshed by someone.
+- The `sha_pinning_required` repository setting is a **mechanical** gate (no workflow change needed to enforce it) — but for Kof4j it would block all 56 tag references at once.
+- Cost/lock-in: free for a public repository; the certificate/log infrastructure is GitHub-OIDC + Sigstore public good, so the *evidence format* (SLSA provenance in-toto statement) is portable while the *issuer* is GitHub-specific — the basis of the vendor-neutrality question (Q11).
+
+## 7. Not done here / next steps
+
+- **Lab:** done — see §6 (results, including the flaw found in my first run).
 - **Design issue** (`[Design/Contract][Security]`) with §5, only after the lab and a duplicate check (none found today for provenance/attestation/SLSA/Sigstore).
 - **Hard stop:** no production change (workflow, gate, `kof deps`) until the maintainer records a decision; and no file `IN PROGRESS` of another lane is touched.
+- **Side effect of this research:** while listing the workflow runs of the published commit, a real defect in an unrelated bot workflow was found and filed as **#570**; the maintainer's lane fixed it first (`known-bugs.md` §394) and this work added the regression test and a real-GitHub proof. It is not part of the trust contract.
