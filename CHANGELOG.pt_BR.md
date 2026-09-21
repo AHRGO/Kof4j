@@ -145,6 +145,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (+ typo da irmã `F2a find`→F2b sincronizado com a linha do §397), DOING
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
+  - **`check_live_records.sh` parte G: contagem da cond.7 da prep == o classificador** (21/09, lane
+    docs): a tabela da prep de release (`release-beta-0.5.0-prep.md` + PT) é o registro de aceitação,
+    então o número da condição 7 não pode divergir da autoridade — e divergia: a linha dizia `17 live`
+    enquanto `check_known_bugs_status.sh` contava **18** (a rodada do teste stale do §422 moveu a
+    contagem e só o README foi ressincronizado). Os dois idiomas estão sincronizados e a classe virou
+    mecanizada: a parte G exige que todo `N live at the tip` / `N live no tip` da prep bata com a
+    contagem do classificador, e a ausência de contagem é falha (anti-neutering), então prosa trocada
+    nunca passa em silêncio. Red-first: o selftest planta contagem divergente e prep sem contagem; a
+    árvore real agora lê `18` em EN e PT.
   - **O gate agora fecha o ciclo nas duas direções** (21/09, lane docs): além de afirmação de fechamento sem respaldo no ledger, um id FECHADO no ledger a partir da seção 400 sem entrada no CHANGELOG agora derruba o gate. O piso é regra de época, não anistia: medido em 21/09, 25 ids abaixo de 400 não têm entrada enquanto ZERO acima têm — a prática consolidou, a regra começa onde a prática começa. Verificado por mutação: uma seção fechada plantada no ledger sem linha no changelog é nomeada pelo gate; estado real segue verde. (Uma ideia companheira — proibir referências do changelog a ids fora do ledger — foi medida e REJEITADA: os achados são remissões antigas de outro espaço de ids, regra errada para a história, recusada pela lição da rodada 11.)
   - **Passos de "Recuperação" da prep completados para host sem root / sem `gh`** (21/09, lane
     docs): os comandos documentados para limpar as condições auto-medidas assumiam toolchain cross

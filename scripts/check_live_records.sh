@@ -16,6 +16,8 @@
 #      roadmap EN: se o PT divergir, ninguem ve — e a condicao 6 do release depende disso.
 #   F) numeracao/nivel de secoes (N.) em TODOS os pares de docs/development (nao so
 #      DECISIONS): um doc EN com secao H1 e o PT com H2 e drift de leitura.
+#   G) prep do release: a contagem "N live" da condicao 7 (bugs-and-gaps) == autoridade
+#      (mesmo numero do classificador; o registro de aceitacao nao pode cravar outro).
 #
 # A classe (A) ja driftou duas vezes em 21/09; a classe (B) apareceu quando a lane
 # irma adicionou 3 decisoes so no EN e um merge deixou um heading orfao + duplicado
@@ -26,7 +28,8 @@
 #
 # Uso: scripts/check_live_records.sh            # rc!=0 em drift
 #      scripts/check_live_records.sh --selftest # casos bons e ruins plantados
-# Env (teste): LR_EN, LR_PT, LR_COUNT, DEC_EN, DEC_PT, LR_DOCDIR, LR_GATE
+# Env (teste): LR_EN, LR_PT, LR_COUNT, DEC_EN, DEC_PT, LR_DOCDIR, LR_GATE,
+#              LR_RM_EN, LR_RM_PT, LR_RM_ON, LR_MDPAIRS, LR_PREP_EN, LR_PREP_PT, LR_PREP_ON
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -42,6 +45,10 @@ RM_EN="${LR_RM_EN:-docs/development/roadmap.md}"
 RM_PT="${LR_RM_PT:-docs/development/roadmap.pt_BR.md}"
 if [ -n "${LR_EN:-}" ]; then RM_ON="${LR_RM_ON-}"; else RM_ON=1; fi
 MDP="${LR_MDPAIRS-}"; [ -n "${LR_EN:-}" ] || MDP="${LR_MDPAIRS:-docs/development}"
+PREP_EN="${LR_PREP_EN:-docs/development/release-beta-0.5.0-prep.md}"
+PREP_PT="${LR_PREP_PT:-docs/development/release-beta-0.5.0-prep.pt_BR.md}"
+# Parte G so roda na corrida real (ou quando o teste a liga de proposito).
+if [ -n "${LR_EN:-}" ]; then PREP_ON="${LR_PREP_ON-}"; else PREP_ON=1; fi
 
 if [ "${LR_COUNT:-}" != "" ]; then
     COUNT="$LR_COUNT"
@@ -131,17 +138,38 @@ EOF
     if LR_EN="$T/r_en.md" LR_PT="$T/r_pt.md" DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" \
          LR_COUNT=19 LR_MDPAIRS="$D2" bash "$0" >/dev/null 2>&1; then
         echo "SELFTEST FALHOU: nivel de secao divergente entre pares passou"; exit 1; fi
-    echo "SELFTEST OK: contagem + paridade + duplicata + numeracao + pending<->gate + EG + pares"
+    # G) prep do release: contagem "N live" da cond.7 == autoridade
+    mk prep_en.md '| 7 | x | RED (19 live at the tip; ledger ilegivel = UNKNOWN) |'
+    mk prep_pt.md '| 7 | x | RED (19 live no tip; ledger ilegivel = UNKNOWN) |'
+    if ! LR_EN="$T/r_en.md" LR_PT="$T/r_pt.md" DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" \
+         LR_COUNT=19 LR_PREP_EN="$T/prep_en.md" LR_PREP_PT="$T/prep_pt.md" LR_PREP_ON=1 \
+         bash "$0" >/dev/null 2>&1; then
+        echo "SELFTEST FALHOU: prep cond.7 == autoridade devia passar"; exit 1; fi
+    mk prep_pt.md '| 7 | x | RED (18 live no tip; ledger ilegivel = UNKNOWN) |'
+    if LR_EN="$T/r_en.md" LR_PT="$T/r_pt.md" DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" \
+         LR_COUNT=19 LR_PREP_EN="$T/prep_en.md" LR_PREP_PT="$T/prep_pt.md" LR_PREP_ON=1 \
+         bash "$0" >/dev/null 2>&1; then
+        echo "SELFTEST FALHOU: prep cond.7 divergente da autoridade passou"; exit 1; fi
+    mk prep_en.md 'sem contagem de live'
+    if LR_EN="$T/r_en.md" LR_PT="$T/r_pt.md" DEC_EN="$T/d_en.md" DEC_PT="$T/d_pt.md" \
+         LR_COUNT=19 LR_PREP_EN="$T/prep_en.md" LR_PREP_PT="$T/prep_pt.md" LR_PREP_ON=1 \
+         bash "$0" >/dev/null 2>&1; then
+        echo "SELFTEST FALHOU: prep sem contagem passou (neutering)"; exit 1; fi
+    echo "SELFTEST OK: contagem + paridade + duplicata + numeracao + pending<->gate + EG + pares + prep"
     exit 0
 fi
 
 [ -n "${COUNT:-}" ] || { echo "FALHA: nao extrai a contagem da autoridade (formato mudou?)"; exit 1; }
 
-python3 - "$EN" "$PT" "$COUNT" "$DEN" "$DPT" "$GATE" "$DOCDIR" "$RM_EN" "$RM_PT" "$RM_ON" "$MDP" << 'PYEOF'
+python3 - "$EN" "$PT" "$COUNT" "$DEN" "$DPT" "$GATE" "$DOCDIR" "$RM_EN" "$RM_PT" "$RM_ON" "$MDP" \
+          "$PREP_EN" "$PREP_PT" "$PREP_ON" << 'PYEOF'
 import re, sys, os, glob
 en, pt, count, den, dpt, gate, docdir = sys.argv[1:8]
 rme, rmpt, rmon = sys.argv[8:11]
 mdp = sys.argv[11] if len(sys.argv) > 11 else ""
+prep_en = sys.argv[12] if len(sys.argv) > 12 else ""
+prep_pt = sys.argv[13] if len(sys.argv) > 13 else ""
+prep_on = sys.argv[14] if len(sys.argv) > 14 else ""
 bad = 0
 
 # ---- A) contagem viva x autoridade -----------------------------------------
@@ -297,12 +325,32 @@ if mdp:
                       f"nivel EN={a.get(n)} PT={b.get(n)} (numeracao e nivel devem bater)")
                 bad = 1
 
+# ---- G) prep do release: contagem "N live" da cond.7 == autoridade ----------
+if prep_on:
+    PP = re.compile(r"([0-9]+) live (?:at the tip|no tip)")
+    for lang, path in (("EN", prep_en), ("PT", prep_pt)):
+        try:
+            text = open(path, encoding="utf-8").read()
+        except OSError:
+            print(f"FALHA: nao consigo ler a prep do release ({lang}) {path}")
+            bad = 1; continue
+        hits = PP.findall(text)
+        if not hits:
+            print(f"FALHA: prep {lang} sem a contagem 'N live ... tip' "
+                  "(regex nao casa mais — atualize o gate junto com a prosa)")
+            bad = 1; continue
+        for n in hits:
+            if n != count:
+                print(f"DRIFT ({lang}): prep declara '{n} live' mas a autoridade conta '{count}'")
+                bad = 1
+
 if not bad:
     print(f"OK: contagem viva {count} consistente ({seen} declaracoes); "
           f"DECISIONS EN<->PT com {len(sets.get('EN', ()))} IDs em paridade, 0 duplicatas, "
           "numeracao/nivel em paridade"
           + ("; pendentes sec.0 == loose do gate" if docdir else "")
           + ("; roadmap EG EN<->PT em paridade" if rmon else "")
-          + ("; numeracao/nivel de todos os pares EN<->PT" if mdp else ""))
+          + ("; numeracao/nivel de todos os pares EN<->PT" if mdp else "")
+          + ("; prep cond.7 == autoridade" if prep_on else ""))
 sys.exit(1 if bad else 0)
 PYEOF

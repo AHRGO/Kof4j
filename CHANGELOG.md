@@ -158,6 +158,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (+ typo da irmã `F2a find`→F2b sincronizado com a linha do §397), DOING
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
+  - **`check_live_records.sh` part G: release-prep condition-7 count == the classifier** (21/09, docs
+    lane): the release-prep table (`release-beta-0.5.0-prep.md` + PT) is the acceptance record, so its
+    condition-7 number may not drift from the authority — and it had: the row read `17 live` while
+    `check_known_bugs_status.sh` counted **18** (the §422 stale-test round moved the count and only the
+    README was resynced). Both languages are synced and the class is mechanized: part G requires every
+    `N live at the tip` / `N live no tip` in the prep to equal the classifier's count, and a missing
+    count is a failure (anti-neutering), so a changed phrase can never pass silently. Red-first: the
+    selftest plants a divergent count and a count-less prep; the real tree now reads `18` in EN and PT.
   - **The gate now closes the loop in both directions** (21/09, docs lane): besides CHANGELOG-claims-closed-without-ledger-backing, an id CLOSED in the ledger at or after section 400 with no CHANGELOG entry now fails the gate. The floor is an epoch rule, not amnesty: measured 21/09, 25 closed ids below 400 lack entries while ZERO above it do — practice solidified, so the rule starts where the practice does. Mutation-verified: a planted closed section in the ledger with no changelog line is named by the gate; real state stays green. (A companion no-ghost idea — forbidding changelog refs to ids absent from the ledger — was measured and REJECTED: the hits are ancient cross-references, a wrong rule for the history, refused per the round-11 lesson.)
   - **Release-prep "Recovery" steps completed for a rootless / gh-less host** (21/09, docs lane): the
     documented commands to clear the auto-measured conditions assumed an installed cross toolchain
