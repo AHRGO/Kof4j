@@ -41,11 +41,13 @@ Mapeamento escalar JVM→FFM (medido): `i→JAVA_INT, j→JAVA_LONG, f→JAVA_FL
 d→JAVA_DOUBLE, b→JAVA_BOOLEAN, S→ADDRESS`; token não-escalar cai em
 `ADDRESS` só no caminho de callback (`JvmFfiRuntime.java:88-106,144-145`).
 
-**Verruga medida (candidata a fix, não é gap novo):** parâmetros `String` do
-downcall são alocados com `Arena.global()` (`JvmFfiRuntime.java:24,63`) —
-arena global nunca libera; num processo longo, todo argumento FFI vira
-vazamento. A spec deve decidir a política de arena (§4 D6-5), não deixar o
-código derivando.
+**Verruga medida (CORRIGIDA 21/09 — 3.8b fatia 2, D6-5):** a política de arena
+do downcall agora é **confinada por chamada, fechada no `finally`** nos helpers
+escalares (`kof_ffi_i`/`kof_ffi_si`/`kof_ffi_dd`) e no `kof_ffi`. Antes, `i`/`dd`
+usavam `Arena.global()` (o handle do `libraryLookup` nunca era liberado →
+vazamento por chamada) e `si` abria arena confinada sem fechar. Prova:
+`FfiE2ETest` 17/17 (`scalarHelpersRepeatStableUnderConfinedArena`: 300× cada
+helper, idempotente).
 
 ## 2. Por que "struct" é mais duro do que parece (o custo real)
 

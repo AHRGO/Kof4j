@@ -40,11 +40,12 @@ JVM scalar→FFM mapping (measured): `i→JAVA_INT, j→JAVA_LONG, f→JAVA_FLOA
 d→JAVA_DOUBLE, b→JAVA_BOOLEAN, S→ADDRESS`, non-scalar token falls back to
 `ADDRESS` only inside the callback path (`JvmFfiRuntime.java:88-106,144-145`).
 
-**Measured wart (fix candidate, not a new gap):** downcall `String`
-parameters are allocated with `Arena.global()`
-(`JvmFfiRuntime.java:24,63`) — a global arena never frees; in a
-long-running process every FFI string argument leaks. The spec should
-decide the arena policy (§4 D6-5), not leave it to code drift.
+**Measured wart (FIXED 21/09 — 3.8b fatia 2, D6-5):** downcall arena policy is
+now **confined per call, closed in `finally`** for the scalar helpers
+(`kof_ffi_i`/`kof_ffi_si`/`kof_ffi_dd`) and for `kof_ffi`. Before, `i`/`dd` used
+`Arena.global()` (the `libraryLookup` handle never freed → leak per call) and
+`si` opened a confined arena without closing it. Proof: `FfiE2ETest` 17/17
+(`scalarHelpersRepeatStableUnderConfinedArena`: 300× each helper, idempotent).
 
 ## 2. Why "struct" is harder than it looks (the real cost)
 
