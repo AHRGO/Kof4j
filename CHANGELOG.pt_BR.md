@@ -14,6 +14,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
 ### Em desenvolvimento
+  - **F2c — `orm.all` row-object→List REAL no Native x86-64 (gaps-db lane)**
+    (21/09): `kof_orm_all` em asm (`RuntimeOrm6`) — loop de campos do find
+    (casamento por NOME, leitura por typeCode + tipo dinâmico da coluna com o
+    §397) + `kof_list_new`/`kof_list_add` por linha; ctor resolvido UMA vez
+    (resolver `kof_orm_ctors` da irmã, agora alimentado por find E all —
+    set renomeado `ormCtorClasses`); lista VAZIA != null (host devolve
+    ArrayList sempre). Design-first: oracle JVM medido ANTES da asm (corpo
+    `2/Mel/Ana/0/empty=0`). Prova: `KofOrmE2ETest#allNativeEndToEndMatchesJvm`
+    byte-a-byte JVM==Native (2 linhas por nome+size, `for-in`, vazio pós-
+    delete, segunda chamada sem leak) — KofOrmE2ETest 45/0F/3skip; pin
+    ORM001 migrou p/ `where` (F2c2). Docs EN+PT: parity, tracker 1.1.9
+    (+ typo da irmã `F2a find`→F2b sincronizado com a linha do §397), DOING
+    (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
+    (padrão da casa), o loop é o MESMO código já provado no §397.
   - **Design 3.6 pousado — `docs/development/future/secrets-plan.md` (+EN)** (21/09): a
     resposta do Estágio 5 a "Secrets em logs: SEM PROTEÇÃO" — value type `Secret`
     (reveal-gated, equals em tempo constante, formato de impressão `Secret(*** )` declarado

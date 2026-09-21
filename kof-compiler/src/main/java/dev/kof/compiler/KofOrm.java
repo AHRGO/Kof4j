@@ -59,13 +59,15 @@ public final class KofOrm {
      *  (row-object: INSERT/UPDATE/upsert em {@code RuntimeOrm4}, schema em
      *  {@code RuntimeOrmSchema}, binds em {@code RuntimeOrmBind}); F2b =
      *  {@code find} (leitura row-object em {@code RuntimeOrm5} + resolver
-     *  {@code kof_orm_ctors} do backend); o resto row-object (all/where/
-     *  saveAll/page/delete) e o cross riscv/aarch64 (compile-time) seguem
+     *  {@code kof_orm_ctors} do backend); F2c = {@code all}
+     *  (leitura em {@code List} no runtime — {@code RuntimeOrm6}, mesmo loop
+     *  de campos do {@code RuntimeOrm5} com §397); o resto row-object
+     *  (where/saveAll/page/delete) e o cross riscv/aarch64 (compile-time) seguem
      *  {@code ORM001} honesto (R7, R6 — nunca silent). MySQL (runtime) idem. */
     private static final java.util.Set<String> NATIVE_F1 = java.util.Set.of(
             "kof_orm_delete_all", "kof_orm_count", "kof_orm_migrate",
             "kof_orm_create", "kof_orm_count_where", "kof_orm_save",
-            "kof_orm_find");
+            "kof_orm_find", "kof_orm_all");
 
     static boolean fnSupportedOn(Target target, String fn) {
         if (supportedOn(target)) return true;

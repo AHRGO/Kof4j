@@ -91,7 +91,7 @@ public class NativeBackend implements Backend {
     boolean usesOrm = false;
     /** F2b: className das entidades usadas com {@code orm.find} (para o
      *  resolver {@code kof_orm_ctors} que constrói o record no runtime). */
-    final Set<String> ormFindClasses = new LinkedHashSet<>();
+    final Set<String> ormCtorClasses = new LinkedHashSet<>();
     boolean usesHttp = false;
     boolean usesMysql = false;
     boolean usesConcurrency = false;
@@ -272,14 +272,16 @@ public class NativeBackend implements Backend {
                         }
                         if (op instanceof KofCall kc && kc.methodName().startsWith("kof_orm_")) {
                             usesOrm = true;
-                            if (kc.methodName().equals("kof_orm_find")
-                                    && kc.parameterTypes().size() == 5) {
+                            if ((kc.methodName().equals("kof_orm_find")
+                                        && kc.parameterTypes().size() == 5)
+                                    || (kc.methodName().equals("kof_orm_all")
+                                        && kc.parameterTypes().size() == 4)) {
                                 // 5º arg = className literal (KofLoadLiteral STRING
                                 // emitido logo antes do call pelo lowering ORM)
                                 for (int j = i - 1; j >= i - 2 && j >= 0; j--) {
                                     if (ops.get(j) instanceof KofLoadLiteral lit
                                             && lit.value() instanceof String s) {
-                                        ormFindClasses.add(s);
+                                        ormCtorClasses.add(s);
                                         break;
                                     }
                                 }
@@ -319,12 +321,13 @@ public class NativeBackend implements Backend {
             dev.kof.compiler.runtime.RuntimeOrmSchema.emit(sb);
             dev.kof.compiler.runtime.RuntimeOrmBind.emit(sb);
             dev.kof.compiler.runtime.RuntimeOrm4.emit(sb);
-            if (!ormFindClasses.isEmpty()) {
+            if (!ormCtorClasses.isEmpty()) {
                 StringBuilder o5 = new StringBuilder();
                 dev.kof.compiler.runtime.RuntimeOrm5.emit(o5);
                 sb.append(o5.toString().replace("@@MAGIC@@",
                         dev.kof.compiler.runtime.RuntimeErasureBox.MAGIC));
-                NativeOrmCtors.emit(this, sb, ormFindClasses);
+                dev.kof.compiler.runtime.RuntimeOrm6.emit(sb);
+                NativeOrmCtors.emit(this, sb, ormCtorClasses);
             }
         }
         if (usesHttp) {
