@@ -429,7 +429,7 @@ future recommendations (rule 14 of the task: do not change behavior).
   JS would box. Any implementation must state the honest per-target behavior
   (R6/R7), never promise stack allocation.
 
-### SG-023 — Property-based testing runner + suite fixtures in `kof test` — REQUESTED, no decision
+### SG-023 — Property-based testing runner + suite fixtures in `kof test` — ✅ DECIDED 21/09 (no new surface: option C + iii)
 
 - **Origin:** tracker **X8** slice 3 remainder (`ecosystem-coverage.md` G6 "next"):
   after `rng` (slices 1–2 ✅ 18/09, `KofRngTest` 11/11) and `kof test` fatia 3
@@ -456,8 +456,13 @@ future recommendations (rule 14 of the task: do not change behavior).
   4. per-target parity JVM/Native-x86/JS (`RNG001` honest on cross/Android);
   5. E2E per target + corpus (`training/`, `learn/23-testing`); 6. complete or
   diagnosed gap — no stub (Q7/R6).
-- **Until decided:** only the landed faces ship; neither face is implemented nor
-  stubbed.
+- **Decided (21/09, maintainer-delegated, `D-PROPERTY`):** option **C** + option **iii** —
+  **no new syntax**; the property runner is the existing `test "name" { }` +
+  `kof.rng` + `assert` idiom, and fixtures are the `close()` + `try/finally` pattern
+  (`D5-B`). Proof: `PropertyTestIdiomE2ETest` **7/7** (seeded reuse, `checksum`
+  bit-identical JVM==JS and JVM==Native-x86, falsifiable property FAILs with exit 1,
+  zero-iteration property PASSes vacuously). Documented in `training/idioms/stdlib.md`
+  + `learn/23-testing.md`. No parser/typer/codegen touched.
 
 ---
 
@@ -526,8 +531,9 @@ Not duplicated here — see [known-bugs.md](known-bugs.md):
 ## Summary
 
 - **23 SG-00x gaps** (A: doc/code contradictions; B: unspecified
-  behavior; SG-021 json pretty-print, SG-022 value records and SG-023 property
-  runner + fixtures = requests with no decision). **Maintainer queue (2nd round, 10/09) COMPLETE:**
+  behavior; SG-021 json pretty-print and SG-022 value records = requests with no
+  decision; **SG-023 property runner + fixtures ✅ DECIDED 21/09 — no new surface,
+  `D-PROPERTY`**). **Maintainer queue (2nd round, 10/09) COMPLETE:**
   SG-008 ✅, SG-005 ✅, SG-009 ✅, SG-020 ✅ — see the history in each section.
 - **8 target divergences** (C).
 - **3 outdated docs** (E) — **all ✅** (E1 residual 10/09, E2

@@ -430,7 +430,7 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   JS boxearia. Qualquer implementação deve declarar o comportamento honesto
   por alvo (R6/R7), nunca prometer alocação na pilha.
 
-### SG-023 — Runner de property-based testing + fixtures de suíte no `kof test` — PEDIDO, sem decisão
+### SG-023 — Runner de property-based testing + fixtures de suíte no `kof test` — ✅ DECIDIDO 21/09 (sem superfície nova: opção C + iii)
 
 - **Origem:** restante da fatia 3 do tracker **X8** (`ecosystem-coverage.md` G6
   "next"): depois do `rng` (fatias 1–2 ✅ 18/09, `KofRngTest` 11/11) e da fatia 3
@@ -460,8 +460,14 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   determinístico; 4. paridade por alvo JVM/Native-x86/JS (`RNG001` honesto em
   cross/Android); 5. E2E por alvo + corpus (`training/`, `learn/23-testing`);
   6. implementação completa ou gap diagnosticado — sem stub (Q7/R6).
-- **Até a decisão:** só as faces pousadas embarcam; nenhuma das duas faces é
-  implementada nem stub.
+- **Decidido (21/09, delegado pela mantenedora, `D-PROPERTY`):** opção **C** + opção
+  **iii** — **sem sintaxe nova**; o runner de property é o idioma existente
+  `test "name" { }` + `kof.rng` + `assert`, e as fixtures são o padrão
+  `close()` + `try/finally` (`D5-B`). Prova: `PropertyTestIdiomE2ETest` **7/7**
+  (reuso semeado, `checksum` idêntico byte a byte JVM==JS e JVM==Native-x86,
+  property falsificável FALHA com exit 1, property de zero iterações PASSA
+  vacuousamente). Documentado em `training/idioms/stdlib.md` + `learn/23-testing.md`.
+  Nenhum parser/typer/codegen tocado.
 
 ---
 
@@ -530,9 +536,9 @@ Não duplicados aqui — ver [known-bugs.md](known-bugs.md):
 ## Resumo
 
 - **23 gaps SG-00x** (A: contradições doc/código; B: comportamento não
-  especificado; SG-021 json pretty-print, SG-022 value records e SG-023 property
-  runner + fixtures = pedidos sem
-  decisão). **Fila do maintainer (2ª rodada, 10/09) COMPLETA:**
+  especificado; SG-021 json pretty-print e SG-022 value records = pedidos sem
+  decisão; **SG-023 property runner + fixtures ✅ DECIDIDO 21/09 — sem superfície
+  nova, `D-PROPERTY`**). **Fila da mantenedora (2ª rodada, 10/09) COMPLETA:**
   SG-008 ✅, SG-005 ✅, SG-009 ✅, SG-020 ✅ — ver histórico em cada seção.
 - **8 divergências de target** (C).
 - **3 docs desatualizados** (E) — **todos ✅** (E1 residual 10/09, E2

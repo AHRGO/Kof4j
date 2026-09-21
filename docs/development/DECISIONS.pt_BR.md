@@ -2815,6 +2815,22 @@ Ordem: Kof precisa de uma engine gráfica própria para games — a recomendaç�
 
 Ordem: Kof precisa de uma engine gráfica própria para games — a recomendação interop-first do plano (R9) está REVOGADA para este domínio (precedente tipo D-UNIVERSAL). A engine é da Kof (código Kof/platform, pilotada pela casa), exposta em idioma zero-boilerplate (regra 11: idiomatic, fácil, sem complexidade acidental); bindings FFI ficam limitados ao que não é engine (janela/GPU/device de áudio). Consequência: plano `future/graphics-gaming-plan.md` §§3–4+Q1/Q5/Q7 + README/learn/training/docs de UI-mídia precisam REESCRITA nesta direção; R9 ganha exceção nomeada no DECISIONS. Decisões de detalhe (nome da engine, primeira fatia, formatos) continuam regra 6 via Qs do plano.
 
+## D-PROPERTY — property-based testing: SEM sintaxe nova — a superfície é o idioma existente `test` + `kof.rng` + `assert` (21/09/2026, delegado pela mantenedora)
+
+**Data:** 2026-09-21 · **Estado:** `DECIDED` · **Decide:** `SG-023` (opção **C** + opção **iii**) · **Fecha:** o restante do X8 (G6 "next").
+
+**Contexto:** a frente X8 pousou `rng` (fatias 1–2), `kof test --timeout` e suítes nomeadas por diretório. As duas faces restantes — runner de property e fixtures de suíte — foram registradas como **`SG-023`** ("PEDIDO, sem decisão") porque ambas *sugeriam* superfície nova voltada ao usuário (regra 6). Questionada para decidir, a mantenedora delegou a escolha da superfície ("Decide SG-023 surface").
+
+**Decisão (regra 11, Lei da Simplicidade): SEM sintaxe nova.** O mecanismo já existe e está documentado:
+- **property** = **opção C** — um `test "name" { }` cujo corpo semeia o `rng` e faz o loop, usando `assert(cond, msg)`. **REJEITADAS** a opção A (keyword `property`/`forAll`) e a opção B (modo implícito `kof test --props`): cerimônia sobre um mecanismo que a linguagem já tem.
+- **fixtures** = **opção iii** — nada novo; o padrão `D5-B` (`close()` + `try/finally`) já expressa setup/teardown por teste. **REJEITADAS** a opção i (blocos `setup`/`teardown`) e a opção ii (arquivo de convenção `_suite.kf`).
+
+**Por quê:** "Kof tem que ser mais simples que qualquer alternativa" — `rng.seed(42)` + loop + `assert` é mais curto e declara melhor a intenção do que keyword + inferência de geradores + maquinário de shrinking; o compilador fica menor e o idioma roda em todo alvo com `rng`. Respeita o `D-KOF-FIRST` (nenhum empréstimo de QuickCheck/Hypothesis antes de um contrato Kof).
+
+**Prova:** `PropertyTestIdiomE2ETest` **7/7** (kof-compiler) — uma property semeada de 200 iterações PASSA e é reprodutível entre execuções, seu `checksum` é idêntico byte a byte **JVM==JS** e **JVM==Native-x86** (paridade do `rng`), uma property falsificável FALHA deterministicamente com a mensagem derivada da seed e exit 1 (JVM+JS), e uma property de zero iterações PASSA vacuousamente. Documentado em `training/idioms/stdlib.md` + `learn/23-testing.md`.
+
+**Não é mudança de linguagem:** nenhum parser/typer/codegen tocado; a superfície do `kof test` não muda.
+
 ## D-ARRAY-PRINT — §388-B: imprimir um `Int[]` inteiro é formato de container (21/09, mantenedora)
 
 A entrada §388 registrou a paridade reversa das bytes-faces: JVM/Script

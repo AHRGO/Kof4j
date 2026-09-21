@@ -2802,6 +2802,22 @@ output IS the diagnosis, rc 1. Proof: `CmdMakealiveTest` 7/7 + `MakealiveMaxGenE
 
 Order: Kof needs its own graphics engine for games — the plan's interop-first recommendation (R9) is REVOKED for this domain (D-UNIVERSAL-style precedent). The engine is Kof's (Kof/platform code, house-driven), exposed in zero-boilerplate idiom (rule 11: idiomatic, easy, no accidental complexity); FFI bindings stay limited to the non-engine layer (window/GPU/audio device). Consequence: the plan §§3–4 + Q1/Q5/Q7 in `future/graphics-gaming-plan.md` + README/learn/training/UI-media docs need REWRITE in this direction; R9 gains a named exception in DECISIONS. Detail choices (engine name, first slice, formats) stay rule 6 via the plan open Qs.
 
+## D-PROPERTY — property-based testing: NO new syntax — the surface is the existing `test` + `kof.rng` + `assert` idiom (21/09/2026, maintainer-delegated)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` · **Decides:** `SG-023` (option **C** + option **iii**) · **Closes:** the X8 remainder (G6 "next").
+
+**Context:** the X8 front landed `rng` (slices 1–2), `kof test --timeout` and named suites by directory. The two remaining faces — a property runner and suite fixtures — were registered as **`SG-023`** ("REQUESTED, no decision") because both *suggested* new user-facing surface (rule 6). Asked to decide, the maintainer delegated the choice ("Decide SG-023 surface").
+
+**Decision (rule 11, Simplicity Law): NO new syntax.** The mechanism already exists and is documented:
+- **property** = **option C** — a `test "name" { }` whose body seeds `rng` and loops, using `assert(cond, msg)`. **REJECTED** option A (`property`/`forAll` keyword) and option B (`kof test --props` implicit mode): ceremony over a mechanism the language already has.
+- **fixtures** = **option iii** — nothing new; the `D5-B` pattern (`close()` + `try/finally`) already expresses per-test setup/teardown. **REJECTED** option i (`setup`/`teardown` blocks) and option ii (`_suite.kf` convention file).
+
+**Why:** "Kof must be simpler than any alternative" — `rng.seed(42)` + loop + `assert` is shorter and more intent-revealing than a keyword + generator inference + shrinking machinery; the compiler stays smaller and the idiom works on every `rng` target. It respects `D-KOF-FIRST` (no QuickCheck/Hypothesis borrowing before a Kof contract).
+
+**Proof:** `PropertyTestIdiomE2ETest` **7/7** (kof-compiler) — a seeded 200-iteration property PASSes and is reproducible across runs, its `checksum` is bit-identical **JVM==JS** and **JVM==Native-x86** (`rng` parity), a falsifiable property FAILs deterministically with the seed-derived message and exit 1 (JVM+JS), and a zero-iteration property PASSes vacuously. Documented in `training/idioms/stdlib.md` + `learn/23-testing.md`.
+
+**Not a language change:** no parser/typer/codegen touched; the `kof test` surface is unchanged.
+
 ## D-ARRAY-PRINT — §388-B: printing a whole `Int[]` is container format (21/09, maintainer)
 
 The §388 entry logged the reverse parity of the bytes faces: JVM/Script printed

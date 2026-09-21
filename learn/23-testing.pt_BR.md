@@ -53,6 +53,41 @@ main() {
 }
 ```
 
+## Testes estilo property (semeados, reprodutíveis)
+
+Não existe uma superfície separada de property-runner: um *teste de property* é um
+bloco `test` que semeia o `rng` e faz o loop, usando `assert(cond, msg)`. Mesma
+seed ⇒ mesma sequência em todo backend, então uma falha é reprodutível.
+
+```kof
+test "addition commutes on random pairs" {
+    rng.seed(42)
+    var i = 0
+    while (i < 200) {
+        var a = rng.int(10000) - 5000
+        var b = rng.int(10000) - 5000
+        assert(a + b == b + a, "commutativity broke")
+        i = i + 1
+    }
+}
+```
+
+Fixtures usam `close()` + `try/finally` — não há keyword `setup`/`teardown`:
+
+```kof
+test "writes then reads back" {
+    var conn = db.connect(url)
+    try {
+        store(conn, record)
+        assert(load(conn, record.id) != null)
+    } finally {
+        conn.close()
+    }
+}
+```
+
+Ver também `training/idioms/stdlib.md` (`rng`); prova: `PropertyTestIdiomE2ETest`.
+
 ## kof test (programas inteiros)
 
 Arquivos `.kf` **sem** blocos `test` mantêm o contrato anterior: o arquivo é
