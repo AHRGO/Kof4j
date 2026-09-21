@@ -13,6 +13,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§428 CORRIGIDO — requests não implementadas do DAP agora falham honestamente**
+    (21/09, lane .18): as sessões DAP JVM e Native respondiam toda request não
+    tratada com `success:true` e corpo vazio (fachada silenciosa, Q7). Os dois
+    ramos `default` agora usam o helper honesto que todo outro ramo
+    não-atendível já usava — `KofDebugJvmSession` `fail2(...)` e
+    `KofDebugNativeDap` `fail(...)` com `unsupported request: <command>`.
+    `restart` documentado como limite (EN+PT). Prova (Q0 RED→GREEN):
+    `KofDebugNativeDapTest.unimplementedRequestsFailHonestlyInsteadOfSilentSuccess`
+    e `KofDebugJvmTest.unimplementedRequestFailsHonestlyNotSilentSuccess` falham
+    no antigo `success:true,"body":{}`; cluster debug 24/0F.
+
   - **§436 CORRIGIDO — `StdCatalog` sem `secrets.of`/`secrets.secret`**
     (21/09, sessão 9093): o pouso da D-SECRETS face 1 (`32285136`) adicionou os
     braços `secrets.of`/`secrets.secret` do dispatcher (nominal `Secret`) e a

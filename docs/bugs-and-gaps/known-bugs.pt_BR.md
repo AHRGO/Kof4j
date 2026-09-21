@@ -11769,14 +11769,15 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 
 <!-- en-switch --> **EN:** [§427 (en)](known-bugs.md#427--the-riscv64aarch64-targets-may-lower-kofio-and-the-web-t1-server-but-their-runtime-has-no-such-symbols-loud-ld-undefined-reference-the-gate-is-wrongmissing---open)
 
-## §428 — as sessões DAP JVM e Native respondem toda requisição não implementada com `success:true` e corpo vazio (fachada silenciosa, Q7) — 🔴 ABERTO
+## §428 — as sessões DAP JVM e Native respondem toda requisição não implementada com `success:true` e corpo vazio (fachada silenciosa, Q7) — ✅ CORRIGIDO 21/09 (lane .18/cluster-CLI: `default` agora `fail2`/`fail`, `unsupported request: <cmd>`)
 
 - `kof-cli/.../KofDebugJvmSession.java:323` e `KofDebugNativeDap.java:283`: `default -> respond(seq, command, Map.of());` — todo outro ramo não-atendível usa `fail`/`fail2` (`success:false` honesto); o default faz o oposto.
 - Faces alcançáveis: `exceptionInfo` (a sessão JVM EMITE um stop com motivo `exception` em `KofDebugJvmSession.java:337`, então o cliente pede `exceptionInfo` e recebe `success:true`+`{}` em vez de `exceptionId`/`description`), `restart`, `setVariable`, `completions`, `disassemble`, `readMemory`, entre outros.
 - Contradição de doc: `docs/debugging/debug-adapter.md:23` lista `restart` como responsabilidade, mas não há `case "restart"` (`grep '"restart"' kof-cli/src` vazio) e a §3.3 "Current limits" não o declara.
 - **O que falta:** um `fail` honesto para requisições não implementadas (ou handlers explícitos); documentar `restart` como limite se não implementado.
+- **Resolução (21/09, lane .18/CLI):** os dois ramos default respondem agora `success:false` honesto nomeando o comando — `KofDebugJvmSession` `default -> fail2(seq, command, "unsupported request: " + command)`, `KofDebugNativeDap` `default -> fail(seq, command, "unsupported request: " + command)` (o helper que todo outro ramo não-atendível já usava). `docs/debugging/debug-adapter.md` declara `restart` como limite (§2 tirou-o da lista de responsabilidades, §3.3 documenta o balde honesto incl. `exceptionInfo`/`setVariable`/`completions`/`disassemble`/`readMemory`), EN+PT. **Prova (Q0 RED→GREEN):** `KofDebugNativeDapTest.unimplementedRequestsFailHonestlyInsteadOfSilentSuccess` (restart/exceptionInfo/completions sobre stub-gdb) e `KofDebugJvmTest.unimplementedRequestFailsHonestlyNotSilentSuccess` (restart em JVM real) falham no antigo `success:true,"body":{}` e passam agora; cluster debug `24/0F` (JVM/NativeDap/Attach/JvmException/JvmStep/Native).
 
-<!-- en-switch --> **EN:** [§428 (en)](known-bugs.md#428--the-jvm-and-native-dap-sessions-answer-every-unimplemented-request-with-successtrue-and-an-empty-body-silent-facade-q7---open)
+<!-- en-switch --> **EN:** [§428 (en)](known-bugs.md#428--the-jvm-and-native-dap-sessions-answer-every-unimplemented-request-with-successtrue-and-an-empty-body-silent-facade-q7---fixed-2109-lane-18cli-cluster-default-now-fail2fail-unsupported-request-cmd)
 
 ## §429 — o servidor LSP NÃO responde a uma REQUEST JSON-RPC desconhecida (o cliente trava; deveria ser `-32601 MethodNotFound`) — ✅ CORRIGIDO 21/09 (lane docs/plataforma, sessão 9093: o ramo `default` do `LspServer` responde `-32601 MethodNotFound` a requests; notificações seguem silenciosas — `LspServerTest`)
 

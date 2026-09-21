@@ -259,4 +259,26 @@ class KofDebugNativeDapTest {
             s.p().destroy();
         }
     }
+
+    @Test
+    void unimplementedRequestsFailHonestlyInsteadOfSilentSuccess(@TempDir Path dir) throws Exception {
+        Session s = start(dir);
+        try {
+            send(s, 1, "initialize", "");
+            await(s, "\"command\":\"initialize\"", "initialize");
+            send(s, 2, "launch", "");
+            await(s, "\"command\":\"launch\"", "launch");
+
+            String[] unknown = {"restart", "exceptionInfo", "completions"};
+            for (int i = 0; i < unknown.length; i++) {
+                send(s, 3 + i, unknown[i], "");
+                String r = await(s, "\"command\":\"" + unknown[i] + "\"", unknown[i]);
+                assertTrue(r.contains("\"success\":false"),
+                        "§428: request nao implementado precisa success:false honesto, nunca fachada: " + r);
+                assertFalse(r.contains("\"success\":true"), r);
+            }
+        } finally {
+            s.p().destroy();
+        }
+    }
 }

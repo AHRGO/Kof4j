@@ -20,7 +20,7 @@ Do not create a proprietary protocol.
 
 - launch programs (`launch`);
 - attach to processes (`attach` — ✅ 20/09: JVM `--dap --attach <pid>` and Native `--dap --attach <pid>`; JS = honest gap);
-- execution control: continue, pause, step over/into/out, restart, terminate;
+- execution control: continue, pause, step over/into/out, terminate (`restart` is **not** implemented — see §3.3);
 - breakpoints (source; later conditional, hit count, exception);
 - stack traces, scopes, locals, arguments, fields;
 - exception events;
@@ -165,6 +165,12 @@ surface as 5s timeouts).
   `kof_throw_string`, the runtime's own throw chain; the caught/uncaught
   refinement is JVM-only and is an honest `verified:false`, never a filter that
   silently over-breaks — R6);
+- `restart` (and any other unimplemented request) — ✅ 21/09 (§428): the
+  session answers an **honest `success:false`** naming the command
+  (`unsupported request: <command>`), never `success:true` with an empty body
+  (Q7). JVM (`KofDebugJvmSession`) and Native (`KofDebugNativeDap`). `restart`
+  is a declared limit; `exceptionInfo`/`setVariable`/`completions`/
+  `disassemble`/`readMemory` fall in the same honest bucket until implemented;
 - remaining: JS stays an honest gap (embedded engine, no inspector).
 
 > A `LocalVariableTable` wart affects local reads on a line that declares a

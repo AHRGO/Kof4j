@@ -320,7 +320,9 @@ final class KofDebugJvmSession {
                 out.flush();
                 System.exit(0);
             }
-            default -> respond(seq, command, Map.of());
+            // §428: request nao implementada responde erro HONESTO (nunca
+            // success:true + corpo vazio = fachada silenciosa, Q7).
+            default -> fail2(seq, command, "unsupported request: " + command);
         }
     }
 

@@ -20,7 +20,7 @@ Não criar protocolo proprietário.
 
 - iniciar programas (`launch`);
 - anexar a processos (`attach` — ✅ 20/09: JVM `--dap --attach <pid>` e Native `--dap --attach <pid>`; JS = gap honesto);
-- controle de execução: continue, pause, step over/into/out, restart, terminate;
+- controle de execução: continue, pause, step over/into/out, terminate (`restart` **não** é implementado — ver §3.3);
 - breakpoints (source; depois conditional, hit count, exception);
 - stack traces, scopes, locals, arguments, campos;
 - eventos de exceção;
@@ -165,6 +165,12 @@ resposta síncrona (elas só aparecem como timeouts de 5s).
   `kof_throw_string`, a cadeia de throw do próprio runtime; o refinamento
   caught/uncaught é só do JVM e vira `verified:false` honesto, nunca um filtro
   que estoura silenciosamente — R6);
+- `restart` (e qualquer outra request não implementada) — ✅ 21/09 (§428): a
+  sessão responde **`success:false` honesto** nomeando o comando
+  (`unsupported request: <command>`), nunca `success:true` com corpo vazio (Q7).
+  JVM (`KofDebugJvmSession`) e Native (`KofDebugNativeDap`). `restart` é limite
+  declarado; `exceptionInfo`/`setVariable`/`completions`/`disassemble`/
+  `readMemory` caem no mesmo balde honesto enquanto não implementados;
 - o que falta: JS continua gap honesto (engine embutido, sem inspector).
 
 > Uma verruga do `LocalVariableTable` afeta a leitura de locals numa linha que

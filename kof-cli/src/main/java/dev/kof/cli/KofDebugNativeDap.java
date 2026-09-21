@@ -277,7 +277,9 @@ final class KofDebugNativeDap {
                 out.flush();
                 Runtime.getRuntime().halt(0);
             }
-            default -> respond(seq, command, Map.of());
+            // §428: request nao implementada responde erro HONESTO (nunca
+            // success:true + corpo vazio = fachada silenciosa, Q7).
+            default -> fail(seq, command, "unsupported request: " + command);
         }
     }
 

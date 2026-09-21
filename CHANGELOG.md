@@ -13,6 +13,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§428 FIXED — DAP unimplemented requests now fail honestly**
+    (21/09, lane .18): the JVM and Native DAP sessions answered every
+    unhandled request with `success:true` and an empty body (a silent façade,
+    Q7). Both `default` branches now use the honest helper every other
+    unservable branch already used — `KofDebugJvmSession` `fail2(...)` and
+    `KofDebugNativeDap` `fail(...)` with `unsupported request: <command>`.
+    `restart` is documented as a limit (EN+PT). Proof (Q0 RED→GREEN):
+    `KofDebugNativeDapTest.unimplementedRequestsFailHonestlyInsteadOfSilentSuccess`
+    and `KofDebugJvmTest.unimplementedRequestFailsHonestlyNotSilentSuccess`
+    fail on the old `success:true,"body":{}`; debug cluster 24/0F.
+
   - **§436 FIXED — `StdCatalog` missing `secrets.of`/`secrets.secret`**
     (21/09, session 9093): the D-SECRETS face-1 landing (`32285136`) added the
     `secrets.of`/`secrets.secret` dispatcher arms (nominal `Secret`) and the
