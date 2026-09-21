@@ -11698,7 +11698,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
   (codegen determinístico) verde, `LinkByUseTest` 3/3 verde. Cross riscv/aarch:
   padrão `.set`/`.asciz` validado com `riscv64-linux-gnu-as` (sysroot ausente →
   E2E cross segue skip honesto).
-<!-- en-switch --> **EN:** [§421 (en)](known-bugs.md#421--native-dbconnect-accepts-any-scheme-silently-eg-jdbch2mem-the-refusal-only-surfaces-later-at-kof_orm_-as-unknown-db-connection--with-no-gap-code---open-exposed-by-f2c3-2109-root-pre-existing)
+<!-- en-switch --> **EN:** [§421 (en)](known-bugs.md#421--native-dbconnect-accepts-any-scheme-silently-eg-jdbch2mem-the-refusal-only-surfaces-later-at-kof_orm_-as-unknown-db-connection--with-no-gap-code---fixed-2109-s0-sessao-9092--frente-dbdb-parity-exposed-by-f2c3-2109-root-pre-existing)
 
 
 ## §422 — um `extern` com assinatura NÃO-SUPORTADA agora compila LIMPO — a rejeição com gap honesto desapareceu (R6): `CompilerDriverTest.externProducesHonestGapNotSilentDrop` VERMELHO no tip — ✅ RESOLVIDO 21/09 (NÃO É BUG: teste stale — `Int[]` binda por desenho desde o D6-2; o ramo de rejeição está intacto, medido)
@@ -11795,13 +11795,13 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 
 <!-- en-switch --> **EN:** [§430 (en)](known-bugs.md#430-testes-false-green-um-test-sem-assert-cinco-nativedebugtest-s-print-um-asserttrue-true-literal-e-um-assumetrue-compilesuccess-que-transforma-regress-o-de-codegen-nativo-em-skip-aberto-q5-q1)
 
-## §431 — drifts menores de tooling achados pela auditoria profunda: `serveStatic` morto com javadoc falso, ramo inalcançável do DAP, opção não-fatal do `Compare` e `.class` stale na árvore de código — 🟡 ABERTO (baixa severidade)
+## §431 — drifts menores de tooling achados pela auditoria profunda: `serveStatic` morto com javadoc falso, ramo inalcançável do DAP, opção não-fatal do `Compare` e `.class` stale na árvore de código — ✅ CORRIGIDO 21/09 (lane `.18` tooling)
 
 - **`serveStatic` morto + doc falso:** `kof-cli/.../KofCliSupport.java:218` `serveStatic(...)` (helper `contentType` em `:255` usado só por ele) NÃO tem chamador de produção — só `ServeStaticTest`. Os estáticos full-stack são servidos pelo mecanismo do app (`CmdServe.java:200`/`CmdRun.java:198-199` + `app.serveDir`); seu javadoc (`:216-219`) ainda diz que existe "para `run` e `serve` full-stack" (F3-step-2a superado por F3-step-2b). O `ServeStaticTest` verde dá a ilusão de que a feature está viva.
 - **Ramo inalcançável do DAP:** `KofDebugNativeDap.java:91-94` retorna quando `attachPid != null`, então o mesmo teste em `:98-100` está morto.
 - **`Compare` ignora opções desconhecidas:** `Compare.java:98` imprime "unknown option" mas não faz `return 1`; o comando prossegue e pode sair com 0 (a migração legada está despriorizada).
 - **Switch de opções do `KofDebug` (candidato do scanner, mesma família):** `KofDebug.java:77` `default -> { }` dentro do switch de parsing de opções descarta em silêncio um argumento sem match — mesma classe do `Compare`; triagem pendente.
 - **Artefatos stale (higiene):** seis arquivos `.class` não rastreados e gitignorados ficam em `kof-cli/src/main/java/dev/kof/cli/` (`AppManifest*.class`, `CmdBuild*.class`, `CmdServe.class`, `KofCliSupport.class`) — não rastreados, não embarcam, mas são saída de build stale dentro da árvore de código.
-- **O que falta:** ligar ou apagar `serveStatic`; remover o ramo morto; fazer o `Compare` falhar em opção desconhecida; limpar os `.class` perdidos.
+- **Resolução (21/09):** apagados o `serveStatic`+`contentType` mortos (e o ilusório `ServeStaticTest`) — o F3-step-2b é dono dos estáticos full-stack; removido o ramo inalcançável de attach do DAP (`attachPid` é tratado UMA vez em `run()`, então `launch` é no-op ali); o `Compare` agora retorna 1 em QUALQUER opção desconhecida, fail-closed (`CompareTest.unknownOptionIsFatalNotSilentlyRun`); `KofDebug` re-triado NÃO é bug — o chain externo já retorna 1 para flags desconhecidas e posicionais extras, o `default` interno é inalcançável; nenhum `.class` perdido na árvore no tip.
 
 <!-- en-switch --> **EN:** [§431 (en)](known-bugs.md#431-drifts-menores-de-tooling-achados-pela-auditoria-profunda-servestatic-morto-com-javadoc-falso-ramo-inalcan-vel-do-dap-op-o-n-o-fatal-do-compare-e-class-stale-na-rvore-de-c-digo-aberto-baixa-severidade)

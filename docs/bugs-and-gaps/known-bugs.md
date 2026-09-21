@@ -14165,7 +14165,7 @@ p
   (`mariadb://` = mysql-wire alias) and the following slices deliver the schemes
   for real. Owner: DB/ORM front (to be named); plan/records by the docs/plataforma lane.
 
-<!-- pt-switch --> **PT:** [§421 (pt_BR)](known-bugs.pt_BR.md#421--dbconnect-nativo-aceita-qualquer-scheme-silenciosamente-ex-jdbch2mem-a-recusa-so-aparece-depois-no-kof_orm_-como-unknown-db-connection--sem-codigo-de-gap---aberto-exposto-pelo-f2c3-2109-raiz-pre-existente)
+<!-- pt-switch --> **PT:** [§421 (pt_BR)](known-bugs.pt_BR.md#421--dbconnect-nativo-aceita-qualquer-scheme-silenciosamente-ex-jdbch2mem-a-recusa-so-aparece-depois-no-kof_orm_-como-unknown-db-connection--sem-codigo-de-gap---fixed-2109-s0-sessao-9092--frente-dbdb-parity-exposto-pelo-f2c3-2109-raiz-pre-existente)
 
 
 ## §422 — an `extern` with an UNSUPPORTED signature now compiles CLEAN — the honest-gap rejection vanished (R6): `CompilerDriverTest.externProducesHonestGapNotSilentDrop` RED at tip — ✅ RESOLVED 21/09 (NOT A BUG: stale test — `Int[]` binds by design since D6-2; the rejection branch is intact, measured)
@@ -14262,13 +14262,13 @@ p
 
 <!-- pt-switch --> **PT:** [§430 (pt_BR)](known-bugs.pt_BR.md#430-false-green-tests-a-zero-assertion-test-five-print-only-nativedebugtest-a-literal-asserttrue-true-and-an-assumetrue-compilesuccess-that-turns-a-native-codegen-regression-into-a-skip-open-q5-q1)
 
-## §431 — minor tooling drift found by the deep audit: dead `serveStatic` with a false javadoc, an unreachable DAP branch, a non-fatal `Compare` option, and stale `.class` files in the source tree — 🟡 OPEN (low severity)
+## §431 — minor tooling drift found by the deep audit: dead `serveStatic` with a false javadoc, an unreachable DAP branch, a non-fatal `Compare` option, and stale `.class` files in the source tree — ✅ FIXED 21/09 (`.18` tooling lane)
 
 - **`serveStatic` dead + false doc:** `kof-cli/.../KofCliSupport.java:218` `serveStatic(...)` (helper `contentType` at `:255` used only by it) has NO production caller — only `ServeStaticTest`. Full-stack statics are served by the app-level mechanism (`CmdServe.java:200`/`CmdRun.java:198-199` + `app.serveDir`); its javadoc (`:216-219`) still claims it exists "para `run` e `serve` full-stack" (F3-step-2a superseded by F3-step-2b). The green `ServeStaticTest` gives the illusion the feature is live.
 - **Unreachable DAP branch:** `KofDebugNativeDap.java:91-94` returns when `attachPid != null`, so the same test at `:98-100` is dead.
 - **`Compare` ignores unknown options:** `Compare.java:98` prints "unknown option" but does not `return 1`; the command proceeds and may exit 0 (legacy migration is deprioritized).
 - **`KofDebug` option switch (scanner candidate, same family):** `KofDebug.java:77` `default -> { }` inside the option-parsing switch silently drops an unmatched argument — same class as `Compare`; triage pending.
 - **Stale artifacts (hygiene):** six untracked, gitignored `.class` files sit in `kof-cli/src/main/java/dev/kof/cli/` (`AppManifest*.class`, `CmdBuild*.class`, `CmdServe.class`, `KofCliSupport.class`) — not tracked, do not ship, but stale build output inside the source tree.
-- **What is missing:** wire or delete `serveStatic`; remove the dead branch; make `Compare` fail on unknown options; clean the stray `.class` files.
+- **Resolution (21/09):** deleted the dead `serveStatic`+`contentType` (and the illusionary `ServeStaticTest`) — F3-step-2b owns full-stack statics; removed the unreachable DAP attach branch (`attachPid` is handled once in `run()`, so `launch` is a no-op there); `Compare` now returns 1 on ANY unknown option, fail-closed (`CompareTest.unknownOptionIsFatalNotSilentlyRun`); `KofDebug` re-triaged NOT a bug — the outer chain already returns 1 for unknown flags and extra positionals, the inner `default` is unreachable; no stray `.class` in the tree at tip.
 
 <!-- pt-switch --> **PT:** [§431 (pt_BR)](known-bugs.pt_BR.md#431-minor-tooling-drift-found-by-the-deep-audit-dead-servestatic-with-a-false-javadoc-an-unreachable-dap-branch-a-non-fatal-compare-option-and-stale-class-files-in-the-source-tree-open-low-severity)

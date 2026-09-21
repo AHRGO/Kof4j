@@ -13,6 +13,19 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§431 CORRIGIDO — drift de tooling da auditoria profunda** (21/09, lane
+    `.18`): apagados o `serveStatic`+`contentType` mortos em `KofCliSupport` (e
+    o ilusório `ServeStaticTest`) — o mecanismo app-level `serveDir` é dono dos
+    estáticos full-stack desde o F3-step-2b; removido o ramo inalcançável de
+    attach do DAP em `KofDebugNativeDap.launch` (`attachPid` já é tratado UMA vez
+    em `run()`, então `launch` é no-op ali); o `Compare` agora retorna 1 em
+    QUALQUER opção desconhecida, em vez de imprimir e possivelmente sair com 0
+    (prova `CompareTest.unknownOptionIsFatalNotSilentlyRun`); `KofDebug`
+    re-triado NÃO é bug — o chain externo já retorna 1 para flags desconhecidas e
+    posicionais extras. Também reparados os cross-anchors EN↔PT do §421
+    pré-existentes (o fix S0 `b1a5373b` mudou o slug do heading mas não os
+    hrefs). Contagem viva 23→22; `check_ledger_anchors` 0 quebradas.
+
   - **FFI: retorno de `record` por valor no target JS (bridge, D6-1/3.8b fatia
     2)** (21/09): o gate de compilação admite retorno de struct no JS e a
     assinatura carrega o layout (`@<n><chars>` no índice 0); o `KofJsFfiBridge`

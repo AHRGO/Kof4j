@@ -95,18 +95,15 @@ final class KofDebugNativeDap {
                 String gdb = System.getenv("KOF_GDB");
                 String gdbExe = gdb == null || gdb.isEmpty() ? "gdb" : gdb;
                 try {
-                    if (attachPid != null) {
-                        // X7-5: gdb -p PID no processo NATIVO vivo — sem build, sem launch.
-                        mi = KofGdbMi.attach(gdbExe, sourceFile.toAbsolutePath().getParent(), attachPid);
-                    } else {
-                        KofDebug.NativeBuild built = KofDebug.buildNativeElf(sourceFile);
-                        if (built == null) {
-                            fail(seq, command, "native build failed (toolchain or source error — see stderr)");
-                            return;
-                        }
-                        buildDir = built.dir();
-                        mi = new KofGdbMi(gdbExe, sourceFile.toAbsolutePath().getParent(), built.bin());
+                    // attachPid != null já retornou acima (mi já veio de run()) —
+                    // aqui só resta o caminho de build+launch.
+                    KofDebug.NativeBuild built = KofDebug.buildNativeElf(sourceFile);
+                    if (built == null) {
+                        fail(seq, command, "native build failed (toolchain or source error — see stderr)");
+                        return;
                     }
+                    buildDir = built.dir();
+                    mi = new KofGdbMi(gdbExe, sourceFile.toAbsolutePath().getParent(), built.bin());
                 } catch (IOException spawnFail) {
                     mi = null;
                     KofCliSupport.cleanup(buildDir);
