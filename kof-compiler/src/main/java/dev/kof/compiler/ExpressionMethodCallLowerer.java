@@ -106,14 +106,9 @@ if (mc.receiver() == null && driver.externSignatures.containsKey(mc.methodName()
         }
         String ffiHelper = FfiSignature.isVoidFFI(ext.returnType())
                 ? "kof_ffi_void" : "kof_ffi";
-        // 3.8b fatia 2: retorno struct → o call devolve `Object` (o record
-        // reconstruído); o type do KofCall vira a classe do record para o backend
-        // JVM emitir o CHECKCAST (JvmOpCollections) e o `areturn` casar.
-        Type ffiRet = FfiSignature.structReturnType(ext.returnType(), driver);
-        if (ffiRet == null) ffiRet = FfiSignature.returnType(ext.returnType());
         ops.add(new KofCall(new Type.ClassType("kof", "ffi", List.of()), ffiHelper,
                 List.of(BuiltinTypes.STRING, BuiltinTypes.STRING, BuiltinTypes.STRING, objectArray),
-                ffiRet, KofCallKind.FUNCTION));
+                FfiSignature.callReturnType(driver, ext), KofCallKind.FUNCTION));
         return localIdx;
     }
 }

@@ -96,6 +96,20 @@ public final class FfiSignature {
         return new Type.ClassType(bin.substring(0, dot), bin.substring(dot + 1), List.of());
     }
 
+    /** Retorno bindável SÓ no JVM (JS/Native ficam FFI002/FFI001) — gate do
+     *  `isExternBound`, fora do `CompilerPipeline` p/ manter a classe ≤500. */
+    static boolean structReturnBindable(CompilerDriver driver, ExternalFunctionNode ext) {
+        return driver.target == Target.JVM
+                && structReturnType(ext.returnType(), driver) != null;
+    }
+
+    /** Type do `KofCall` de retorno do `kof_ffi`: o ClassType do record se for
+     *  struct bindável, senão o escalar de sempre (lowerer ≤500). */
+    static Type callReturnType(CompilerDriver driver, ExternalFunctionNode ext) {
+        Type st = structReturnType(ext.returnType(), driver);
+        return st != null ? st : returnType(ext.returnType());
+    }
+
     /** D6-1/3.8b (JVM): se {@code typeName} for um `record` do unit corrente cujos
      *  campos são TODOS escalares não-ponteiro (i/j/f/d/b — `String`/`S` fica de
      *  fora no v1: campo `char*` é ponteiro, outra fatia), devolve a string de
