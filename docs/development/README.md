@@ -54,7 +54,7 @@ requests with no decision).
 | 8 | `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (+ vision companion `docs/architecture/UNIVERSAL-PLATFORM-VISION.md`) | `IN PROGRESS` — **promoted from `future/` 17/09** (`DECISIONS.md` §D-UNIVERSAL, R12 overridden); split 17/09 into executable steps + vision companion | maintainer directive 17/09: promote and implement | **Stages 1–8 + R1–R12 as executable items** (status ✅/🟡/🔵/⛔ + owner lane + proof) — live state: **R1 ✅ DONE** (`5f1422c6` boundary gate+ledger+CI); **R6 ✅ machine gate** (`DomainGapCodesTest…` `19a740f2` + ledger sweep `c5897cd5`); **1.5 ✅ OTel export landed** (`435b7013`; Native `OBS003`); 1.1 MEDIA = `MEDIA001/003` documented, queued behind the `.22` HTTP facades; 1.2 GC x86 = ✅ G-6(a) auto-collect landed 19/09 (`a904317e`, §260 CLOSED, D1-A); 1.4 registry = **✅ MVP 19/09** (D2-A: publish + pull 1.5.3-S2). Claim in `DOING.md` before code |
 | 9 | ~~`workflow-plan.md`~~ + ~~`shell-plan.md`~~ (+PT) → `docs/workflow-plan.md` / `docs/shell-plan.md` | ✅ **CONCLUDED 19/09** — workflow: all five faces landed (`WorkflowE2ETest` 20/20, byte-parity JVM==JS, Native real); shell: 2.2.0–2.2.4 landed (`ShellE2ETest` 15/15; only residual = JS live-pipe `pipeline`, a platform item on tracker row 2.2, not a plan slice) | moved to `docs/` (3-state rule — a concluded plan may not stay in `development/`) | — |
 | 10 | `D-WORKFLOW-RUN` (Stage 2 rows 2.5/2.6) — `kof workflow run` full runner + CI/CD pipeline example | ✅ **LANDED 19/09** (owner platform lane, sessão 19/09-3/9093): convention `pipeline(): KofWfDag`; `list`/`run --job`/`--dry-run`/`--json`; host `order()`/`runJob()` + `CmdWorkflow`; `examples/ci/ci-pipeline.kf` E2E golden (`CmdWorkflowTest` 9/9) | decision locked in `DECISIONS.md` §D-WORKFLOW-RUN; implemented directly (tooling slices, X9 `kof deploy` precedent) | residual: JS/Native runner faces are honest follow-up slices (R7) |
-| 11 | `makealive-plan.md` (+PT) — D-MAKEALIVE (ratified 20/09, `DECISIONS.md`): the compiler that compiles itself — provider-shape probe landed (`57fd2c6e`, 3.1.0), 3.1 core IN PROGRESS lane `.18` | `IN DEVELOPMENT` | `docs/development/makealive-plan.md` |
+| 11 | `makealive-plan.md` (+PT) — D-MAKEALIVE (ratified 20/09, `DECISIONS.md`): infrastructure as typed code — **MK-1 core COMPLETE 20/09** (3.1: virtual namespace `kof.makealive` + generic REST/CLI providers + `kof.db` state; makealive E2E battery green, 8 classes, JVM==JS byte parity — plan §3.1) + **3.3 reconcile landed** (delegates to `scheduler.every`; `MakealiveReconcileE2ETest` 1/1 ×3) | `IN DEVELOPMENT` | residual 3.2 (`infra "prod" {}` syntax) / 3.7 (compile-time cycle) / 3.8 (`kof infra` CLI) are rule-6/R4 decisions — out of v1 until the maintainer decides |
 | — | `ffi-abi-structs.md` (+PT) — D6-A spec: FFI struct/array ABI (design-first) | `DRAFT — under review` (ratified D6-A 19/09; drafted 19/09 — pure design: no semantics, no binding) | exec = compiler lane (3.8a/3.8b) + native (3.7) + JS decision; D6-1..D6-5 need `DECISIONS.md` entries before ANY code | the measured wart §1 (`Arena.global` leak on FFI strings) ships as fix-candidate with the spec, not a silent bug |
 | — | living records: `conformance-matrix.md`, `ecosystem-coverage.md`, `KOFUI-AUDIT.md`, `known-bugs.md` (in `docs/bugs-and-gaps/`); `roadmap.md` (here); `roadmap-audit.md`/`complexity-audit.md` (in `docs/audits/`) | `LIVE` | **they are not backlog** — matrix/audit/queue that update together with each closure | update the cell/section in the SAME commit that closes the gap |
 
@@ -176,11 +176,16 @@ scalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 
 ### 4.3 `future/` — plan only, zero code (not current work)
 
+> The **full, authoritative index** of this folder (every plan + its trigger)
+> is `future/README.md` — the rows below are the ones that most often gate
+> current work; when in doubt, read that index, not this table.
+
 | File | Trigger to fall in here |
 |---|---|
 | `PLAN-MULTIPARADIGMA.md` (multiparadigm / functional pipelines + declarative queries; 16/09, design only) | first functional increment begins (SYSTEMS closed, R12) |
 | `scoped-resources-plan.md` (RAII TIER 2.4) | bump with `using`/`resource_scope` decided |
 | `PLAN-BAREMETAL-BOOT.md` (native → bare-metal/bootable; 15/09 maintainer directive) | SYSTEMS closed (R12) + first face (HAL seam) authorized |
+| `PLAN-BOOTSTRAP.md` (the Bootstrapper: Kof written in Kof — **north star**, `DECISIONS.md` §D-BOOTSTRAP, 20/09) | 1.0 EXIT GATE closed + entry conditions E1–E6 (`roadmap.md` §24) |
 | `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_MIGRATION.md` (legacy migration platform) | **back here 15/09 — DEPRIORITIZED by the maintainer**; promotion needs her explicit decision |
 
 *(DD-STDLIB-01 `planning-stdlib-array-returns.md` **left `future/` 13/09** — decision 6a ratified, implemented and moved to `docs/stdlib/DD-STDLIB-01-array-returns.md`.)*

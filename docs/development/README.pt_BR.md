@@ -54,7 +54,7 @@ pedidos sem decisão).
 | 8 | `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (+ companion de visão `docs/architecture/UNIVERSAL-PLATFORM-VISION.pt_BR.md`) | `EM CURSO` — **promovido de `future/` 17/09** (`DECISIONS.md` §D-UNIVERSAL, R12 sobreposto); dividido 17/09 em passos executáveis + companion de visão | diretriz da mantenedora 17/09: promover e implementar | **Estágios 1–8 + R1–R12 como itens executáveis** (status ✅/🟡/🔵/⛔ + lane dona + prova) — estado vivo: **R1 ✅ FEITO** (`5f1422c6` gate+ledger+CI da fronteira); **R6 ✅ gate de máquina** (`DomainGapCodesTest…` `19a740f2` + varredura do ledger `c5897cd5`); **1.5 ✅ export OTel landado** (`435b7013`; Native `OBS003`); 1.1 MEDIA = `MEDIA001/003` documentados, na fila atrás das facades HTTP da `.22`; 1.2 GC x86 = ✅ G-6(a) auto-collect landado 19/09 (`a904317e`, §260 FECHADO, D1-A); 1.4 registry = **✅ MVP 19/09** (D2-A: publish + pull 1.5.3-S2). Reivindicar em `DOING.md` antes do código |
 | 9 | ~~`workflow-plan.md`~~ + ~~`shell-plan.md`~~ (+PT) → `docs/workflow-plan.md` / `docs/shell-plan.md` | ✅ **CONCLUÍDOS 19/09** — workflow: as cinco faces landaram (`WorkflowE2ETest` 20/20, paridade byte JVM==JS, Native real); shell: 2.2.0–2.2.4 landados (`ShellE2ETest` 15/15; único residual = `pipeline` JS com pipes vivos, item de plataforma na linha 2.2 do tracker, não fatia do plano) | movidos para `docs/` (regra dos 3 estados — plano concluído não pode ficar em `development/`) | — |
 | 10 | `D-WORKFLOW-RUN` (Stage 2 linhas 2.5/2.6) — runner completo `kof workflow run` + exemplo de pipeline de CI/CD | ✅ **ATERROU 19/09** (dono lane plataforma, sessão 19/09-3/9093): convenção `pipeline(): KofWfDag`; `list`/`run --job`/`--dry-run`/`--json`; host `order()`/`runJob()` + `CmdWorkflow`; `examples/ci/ci-pipeline.kf` golden E2E (`CmdWorkflowTest` 9/9) | decisão travada em `DECISIONS.md` §D-WORKFLOW-RUN; implementado direto (fatias de tooling, precedente X9 `kof deploy`) | residual: faces JS/Native do runner são fatias seguintes honestas (R7) |
-| 11 | `makealive-plan.md` (+PT) — D-MAKEALIVE (ratificado 20/09, `DECISIONS.md`): o compilador que compila a si mesmo — sonda da forma do provider landada (`57fd2c6e`, 3.1.0), 3.1 core EM CURSO lane `.18` | `EM DESENVOLVIMENTO` | `docs/development/makealive-plan.md` |
+| 11 | `makealive-plan.md` (+PT) — D-MAKEALIVE (ratificado 20/09, `DECISIONS.md`): infraestrutura como código tipado — **core MK-1 COMPLETO 20/09** (3.1: namespace virtual `kof.makealive` + providers genéricos REST/CLI + estado `kof.db`; bateria E2E makealive verde, 8 classes, paridade byte JVM==JS — plano §3.1) + **3.3 reconcile landado** (delega ao `scheduler.every`; `MakealiveReconcileE2ETest` 1/1 ×3) | `EM DESENVOLVIMENTO` | residual 3.2 (sintaxe `infra "prod" {}`) / 3.7 (ciclo em compile-time) / 3.8 (CLI `kof infra`) são decisões regra 6/R4 — fora da v1 até a mantenedora decidir |
 | — | `ffi-abi-structs.md` (+PT) — spec D6-A: ABI de struct/array da FFI (design primeiro) | `RASCUNHO — em revisão` (D6-A ratificada 19/09; escrita 19/09 — design puro: sem semântica, sem binding) | exec = compiler lane (3.8a/3.8b) + native (3.7) + decisão JS; D6-1..D6-5 precisam de verbete em `DECISIONS.md` antes de QUALQUER código | a verruga medida §1 (leak `Arena.global` em strings FFI) entra como candidata a fix com a spec, não bug silenciado |
 | — | registros vivos: `conformance-matrix.md`, `ecosystem-coverage.md`, `KOFUI-AUDIT.md`, `known-bugs.md` (em `docs/bugs-and-gaps/`); `roadmap.md` (aqui); `roadmap-audit.md`/`complexity-audit.md` (em `docs/audits/`) | `VIVA` | **não são backlog** — matriz/auditoria/fila que se atualizam junto com cada fechamento | atualizar célula/seção no MESMO commit que fecha o gap |
 
@@ -177,11 +177,16 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 
 ### 4.3 `future/` — só plano, zero código (não é trabalho atual)
 
+> O índice **completo e autoritativo** desta pasta (todo plano + seu gatilho)
+> é `future/README.md` — as linhas abaixo são as que mais costumam barrar o
+> trabalho atual; em dúvida, leia aquele índice, não esta tabela.
+
 | Arquivo | Gatilho p/ cair p/ cá |
 |---|---|
 | `PLAN-MULTIPARADIGMA.md` (multiparadigma / pipelines funcionais + queries declarativas; 16/09, só design) | primeiro incremento funcional começa (SYSTEMS fechado, R12) |
 | `scoped-resources-plan.md` (RAII TIER 2.4) | bump com `using`/`resource_scope` decidido |
 | `PLAN-BAREMETAL-BOOT.md` (nativo → bare-metal/bootável; diretiva da mantenedora 15/09) | SYSTEMS fechado (R12) + primeira face (costura HAL) autorizada |
+| `PLAN-BOOTSTRAP.md` (o Bootstrapper: Kof escrito em Kof — **estrela-guia**, `DECISIONS.md` §D-BOOTSTRAP, 20/09) | EXIT GATE 1.0 fechado + condições de entrada E1–E6 (`roadmap.md` §24) |
 | `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_MIGRATION.md` (plataforma de migração legado) | **de volta p/ cá 15/09 — DESPRIORIZADO pela mantenedora**; promoção exige decisão explícita dela |
 
 *(DD-STDLIB-01 `planning-stdlib-array-returns.md` **saiu de `future/` 13/09** — decisão 6a ratificada, implementado e movido p/ `docs/stdlib/DD-STDLIB-01-array-returns.md`.)*
