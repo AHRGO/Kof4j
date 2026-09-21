@@ -2,14 +2,34 @@
 
 # Kof — Long-Term Roadmap
 
-**Last updated:** September 15, 2026 (§23 gains 2.6 = D-NULL-INTENT queue
-N1→N4 [compiler lane, maintainer decision 15/09]; TIER 3–5 marked
-DEPRIORITIZED by the maintainer 15/09 — trio back to `future/`).
+**Last updated:** September 20, 2026 (§0 "read first" index added; active branch
+corrected to `beta-0.5.0`/`D-BRANCH-0.5.0`). (older: September 15, 2026 — §23
+gains 2.6 = D-NULL-INTENT queue N1→N4 [compiler lane, maintainer decision 15/09];
+TIER 3–5 marked DEPRIORITIZED by the maintainer 15/09 — trio back to `future/`).
 (older: plan merger: §23 = the SINGLE
-implementation plan (ex-`ACTION_PLAN`+`IMPLEMENTATION_PLAN`); migration
-cluster consolidated — `LEGACY_IR`+`DIFFERENTIAL_TESTING` merged into
+implementation plan (ex-`ACTION_PLAN`+`IMPLEMENTATION_PLAN`);
+migration cluster consolidated — `LEGACY_IR`+`DIFFERENTIAL_TESTING` merged into
 `LEGACY_MIGRATION.md`)
-**Version:** 0.5.0-beta (active branch `beta-0.4.0`)
+**Version:** 0.5.0-beta (active branch `beta-0.5.0`)
+
+---
+
+## 0. Read first
+
+This document is the **long-term narrative + the ordered plan**. What is LIVE
+(act on this):
+
+- **§23 — Consolidated Implementation Plan (Tiers 0–12)**: the single queue.
+- **§24 — KOF 1.0 EXIT GATE (EG-1..EG-10)**: the release-gate queue (authority:
+  `DECISIONS.md` §D-RELEASE-1.0 / §D-1.0-EDGES; detail in
+  `PROPOSAL-1.0-EXIT-GATE.md`).
+- **§22 — Universal Platform** (under development) and **§18 — Kof Written in
+  Kof (self-hosting / NORTH STAR)**.
+
+Sections **§1–§15 are the long-term narrative** (design direction, not a
+queue); **§8/§9/§10/§11 have no owner** and are not current work. Three-states
+rule: implemented/decided → `docs/`; pending → `docs/development/`; plan only →
+`docs/development/future/`.
 
 ---
 

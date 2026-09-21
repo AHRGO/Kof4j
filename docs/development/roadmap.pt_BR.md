@@ -2,14 +2,34 @@
 
 # Kof — Roadmap de Longo Prazo
 
-**Última atualização:** 15 de setembro de 2026 (§23 ganha 2.6 = fila
-D-NULL-INTENT N1→N4 [lane compiler, decisão da mantenedora 15/09]; TIER 3–5
-marcado DESPRIORIZADO pela mantenedora 15/09 — trio de volta a `future/`).
-(antes: fusão de planos: §23 = plano
-de implementação ÚNICO (ex-`ACTION_PLAN`+`IMPLEMENTATION_PLAN`); cluster de
+**Última atualização:** 20 de setembro de 2026 (índice §0 "leia primeiro"
+adicionado; branch ativa corrigida para `beta-0.5.0`/`D-BRANCH-0.5.0`). (antes:
+15 de setembro de 2026 — §23 ganha 2.6 = fila D-NULL-INTENT N1→N4 [lane
+compiler, decisão da mantenedora 15/09]; TIER 3–5 marcado DESPRIORIZADO pela
+mantenedora 15/09 — trio de volta a `future/`). (antes: fusão de planos: §23 =
+plano de implementação ÚNICO (ex-`ACTION_PLAN`+`IMPLEMENTATION_PLAN`); cluster de
 migração consolidado — `LEGACY_IR`+`DIFFERENTIAL_TESTING` fundidos em
 `LEGACY_MIGRATION.md`)
-**Versão:** 0.5.0-beta (branch ativa `beta-0.4.0`)
+**Versão:** 0.5.0-beta (branch ativa `beta-0.5.0`)
+
+---
+
+## 0. Leia primeiro
+
+Este documento é a **narrativa de longo prazo + o plano ordenado**. O que está
+VIVO (agi sobre isto):
+
+- **§23 — Plano de Implementação Consolidado (Tiers 0–12)**: a fila única.
+- **§24 — KOF 1.0 EXIT GATE (EG-1..EG-10)**: a fila do gate de release
+  (autoridade: `DECISIONS.md` §D-RELEASE-1.0 / §D-1.0-EDGES; detalhe em
+  `PROPOSAL-1.0-EXIT-GATE.md`).
+- **§22 — Universal Platform** (em desenvolvimento) e **§18 — Kof escrito em Kof
+  (auto-hospedagem / NORTH STAR)**.
+
+As seções **§1–§15 são a narrativa de longo prazo** (direção de design, não
+fila); **§8/§9/§10/§11 não têm dono** e não são trabalho atual. Regra dos três
+estados: implementado/decidido → `docs/`; pendente → `docs/development/`; só
+plano → `docs/development/future/`.
 
 ---
 
