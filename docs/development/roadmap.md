@@ -986,6 +986,22 @@ lanes must not attack without new authorization).
 | 2.7.3 | **Native ABI** | pass-by-value (struct by value / registers) | 2.7.1 |
 | 2.7.4 | **JS ABI** | plain frozen object (no identity) | 2.7.1 |
 | 2.7.5 | **parity + docs** | conformance cells `valuerecord` + parity matrix + `training/` + `learn/` | 2.7.1–2.7.4 |
+
+#### 2.8 — Queue opened 21/09 (`DECISIONS.md` §D-CODEGEN-STEP/§D-R3-3.3/§D-R3-3.5/§D-TYPE-VARIANCE/§D-INTEROP-REFLECT)
+
+**Decided by the maintainer 21/09** (multiple-choice). D8–D12 of
+`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`. Additive; nothing lands without proof.
+The two core type-system fronts are **spec-first** (plan reviewed before code,
+rule 6).
+
+| # | Step | Scope (one line) | Depends on |
+|---|------|------------------|------------|
+| 2.8.1 | **R4 `CodegenStep`** (`D-CODEGEN-STEP` = A) | compiler-INTERNAL codegen hook, no user syntax; unblocks `infra "prod" {}` (3.2) + DDL/runner migration | — |
+| 2.8.2 | **R3-3.3 handles/out-buffers** (`D-R3-3.3` = A) | nominal opaque `Handle` (non-arithmetic) + `Buffer(U8, INOUT)` (== D6-3); prerequisite of Stages 4–7 | R3 (2.1) |
+| 2.8.3 | **R3-3.5 variadics** (`D-R3-3.5` = A) | NO general variadics — caller passes `List`/`Array`/`Buffer`; documented gap (R6/R7) | R3 (2.1) |
+| 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **spec-first**: design plan drafted + reviewed BEFORE any parser/typer diff | plan |
+| 2.8.5 | **X6 interop reflection** (`D-INTEROP-REFLECT` = open) | **spec-first**: incremental plan (slices + proof per slice), interop boundary only | plan |
+
 ### TIER 3–5 — Legacy migration platform (Phases A–H) ✅ code+tests
 
 `kof inspect/decompile/translate/compare/migrate` in the CLI (`Main.java`);

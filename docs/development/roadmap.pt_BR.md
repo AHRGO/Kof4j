@@ -987,6 +987,22 @@ fechar; lanes não devem atacar sem nova autorização).
 | 2.7.3 | **ABI Native** | passagem por valor (struct por valor / registradores) | 2.7.1 |
 | 2.7.4 | **ABI JS** | objeto congelado comum (sem identidade) | 2.7.1 |
 | 2.7.5 | **paridade + docs** | células de conformidade `valuerecord` + matriz de paridade + `training/` + `learn/` | 2.7.1–2.7.4 |
+
+#### 2.8 — Fila aberta 21/09 (`DECISIONS.md` §D-CODEGEN-STEP/§D-R3-3.3/§D-R3-3.5/§D-TYPE-VARIANCE/§D-INTEROP-REFLECT)
+
+**Decidido pela mantenedora 21/09** (múltipla escolha). D8–D12 do
+`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`. Aditivo; nada pousa sem prova. As duas
+frentes de núcleo do sistema de tipos são **spec-first** (plano revisado antes
+do código, regra 6).
+
+| # | Passo | Escopo (uma linha) | Depende de |
+|---|-------|--------------------|------------|
+| 2.8.1 | **R4 `CodegenStep`** (`D-CODEGEN-STEP` = A) | hook de codegen INTERNO do compilador, sem sintaxe de usuário; destrava `infra "prod" {}` (3.2) + migração DDL/runner | — |
+| 2.8.2 | **R3-3.3 handles/out-buffers** (`D-R3-3.3` = A) | `Handle` opaco nominal (não-aritmético) + `Buffer(U8, INOUT)` (== D6-3); pré-requisito dos Estágios 4–7 | R3 (2.1) |
+| 2.8.3 | **R3-3.5 variadics** (`D-R3-3.5` = A) | SEM variadics gerais — caller passa `List`/`Array`/`Buffer`; gap documentado (R6/R7) | R3 (2.1) |
+| 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **spec-first**: plano de design rascunhado + revisado ANTES de qualquer diff de parser/typer | plano |
+| 2.8.5 | **X6 reflexão de interop** (`D-INTEROP-REFLECT` = aberto) | **spec-first**: plano incremental (fatias + prova por fatia), só na fronteira de interop | plano |
+
 ### TIER 3–5 — Plataforma de migração legado (Fases A–H) ✅ código+testes
 
 `kof inspect/decompile/translate/compare/migrate` no CLI (`Main.java`);
