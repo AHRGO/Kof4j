@@ -13,6 +13,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **novo gate `check_doc_refs.sh`: refs `docs/*.md` quebradas + SHAs fantasma
+    nos docs da lane** (21/09, lane docs/.18): mecaniza as duas classes de drift
+    achadas à mão hoje — um doc movido deixando o path antigo para trás
+    (native-multiarch, language/types) e um SHA de prova sem objeto (o repair de
+    git de 21/09 reescreveu o histórico, orfanando 11 citações). Varre
+    `docs/development/*.md`, remove URLs e exige que todo `docs/**/*.md` exista e
+    que todo SHA hex 8-40 entre crases resolva (`git cat-file -e`). Os 7 paths +
+    11 SHAs conhecidos são waivers explícitos e datados em
+    `scripts/doc-refs-waivers.txt`. Selftest RED-first +
+    `scripts/tests/doc-refs-test.sh` ligados na suíte de agentes. Rodada real hoje:
+    177 refs de path + 247 SHAs conferidos. Só docs/tooling.
+
   - **condições 2/3 da prep de release de-staled + dois caminhos de doc quebrados
     corrigidos** (21/09, lane docs/.18): a condição 2 da prep dizia GREEN, mas a
     condição 2 de `D-RELEASE-0.5.0-GATE` da mantenedora a fixa como NEEDS-REVIEW

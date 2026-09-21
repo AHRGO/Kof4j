@@ -13,6 +13,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **new gate `check_doc_refs.sh`: dangling `docs/*.md` refs + phantom SHAs in
+    the lane docs** (21/09, lane docs/.18): mechanizes the two drift classes found
+    by hand today — a moved doc leaving the old path behind (native-multiarch,
+    language/types) and a proof SHA with no object (the 21/09 git repair rewrote
+    history, orphaning 11 citations). It scans `docs/development/*.md`, strips
+    URLs, and requires every `docs/**/*.md` to exist and every backticked 8-40 hex
+    SHA to resolve (`git cat-file -e`). The 7 known paths + 11 SHAs are explicit,
+    dated waivers in `scripts/doc-refs-waivers.txt`. RED-first selftest +
+    `scripts/tests/doc-refs-test.sh` wired into the agent suite. Real run today:
+    177 path refs + 247 SHAs checked. Docs/tooling only.
+
   - **release-prep conditions 2/3 de-staled + two dangling doc paths fixed**
     (21/09, lane docs/.18): prep condition 2 read GREEN, but the maintainer's
     `D-RELEASE-0.5.0-GATE` condition 2 fixes it as NEEDS-REVIEW (3 approved

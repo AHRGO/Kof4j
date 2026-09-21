@@ -1,0 +1,22 @@
+# doc-refs waivers — referencias conhecidas que NAO resolvem (mantidas pela lane docs).
+# Formato: <kind>\t<token>\t<motivo>   (kind = path | sha)
+# Toda linha aqui e divida tecnica explicita; ausencia de path/sha SEM waiver e falha
+# (check_doc_refs.sh, regra anti-neutering). Nao ampliar sem data/commit no motivo.
+path	docs/08-restricoes-kof.md	outro repo (Kof Editor); citado no PROPOSAL-1.0-EXIT-GATE
+path	docs/architecture/application-model.md	referencia pendente em DECISIONS (D-APP): retarget e decisao da mantenedora
+path	docs/development/PLAN-UNIVERSAL-PLATFORM.md	nota historica de rename (nome antigo -> IMPLEMENTATION-UNIVERSAL-PLATFORM)
+path	docs/development/future/PLAN-UNIVERSAL-PLATFORM.md	nota historica de rename
+path	docs/development/future/PLAN-UNIVERSAL-PLATFORM.pt_BR.md	nota historica de rename
+path	docs/development/future/PROPOSAL-1.0-EXIT-GATE.md	nota historica de rename (promovido)
+path	docs/stdlib/time.md	referencia pendente em DECISIONS (D-STDLIB): retarget e decisao da mantenedora
+sha	154ea1a4	pre-repair git (21/09, historico reescrito): prova nao verificavel
+sha	1ff54c6e	pre-repair git (21/09): prova nao verificavel
+sha	20aa73d7	pre-repair git (21/09): prova nao verificavel
+sha	2372f6d4	pre-repair git (21/09): prova nao verificavel
+sha	367af29d	pre-repair git (21/09): prova nao verificavel
+sha	6794ca21	pre-repair git (21/09): prova nao verificavel
+sha	73ca2d58	pre-repair git (21/09): prova nao verificavel
+sha	7c9f9e59	pre-repair git (21/09): prova nao verificavel
+sha	a71f761c	pre-repair git (21/09): prova nao verificavel
+sha	bfdd452a	pre-repair git (21/09): prova nao verificavel
+sha	cc12f4d0	pre-repair git (21/09): prova nao verificavel
