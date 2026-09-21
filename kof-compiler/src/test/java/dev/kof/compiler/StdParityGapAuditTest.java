@@ -1,0 +1,151 @@
+package dev.kof.compiler;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.function.Predicate;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+/**
+ * Auditoria de paridade (frente de revisão, 21/09) — trava a invariante R6:
+ * um caminho não-suportado num alvo carrega um gap code honesto, nunca cai em
+ * silêncio nem no link quebrado. O golden é MEDIDO do código (Q3), não de
+ * memória; espelha {@code docs/bugs-and-gaps/uncatalogued-stubs-audit.md}.
+ *
+ * <p>Escopo: os namespaces com gate real + os always-true que a varredura
+ * mediu. {@code KofStd} (delegador) e {@code KofMedia} (sem
+ * {@code supportedOn}) ficam fora; um gate novo num namespace always-true
+ * quebra aqui de propósito (a matriz é lei e tem de ser atualizada junto).
+ */
+class StdParityGapAuditTest {
+
+    private static Set<Target> unsupported(Predicate<Target> supported) {
+        var s = new LinkedHashSet<Target>();
+        for (var t : Target.values()) {
+            if (!supported.test(t)) {
+                s.add(t);
+            }
+        }
+        return s;
+    }
+
+    @Test
+    @DisplayName("buffer: gate JVM-only + FFI001/FFI002")
+    void bufferGatesToJvmWithFfiCodes() {
+        assertEquals(Set.of(Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64,
+                Target.JS, Target.ANDROID, Target.SCRIPT), unsupported(KofBuffer::supportedOn));
+        assertEquals("FFI002", KofBuffer.gapCode(Target.JS));
+        assertEquals("FFI001", KofBuffer.gapCode(Target.NATIVE));
+    }
+
+    @Test
+    @DisplayName("db: só SCRIPT é gated (DB001)")
+    void dbGatesOnlyScript() {
+        assertEquals(Set.of(Target.SCRIPT), unsupported(KofDb::supportedOn));
+        assertEquals("DB001", KofDb.gapCode());
+    }
+
+    @Test
+    @DisplayName("log: SCRIPT + ANDROID gated (LOG001)")
+    void logGatesScriptAndAndroid() {
+        assertEquals(Set.of(Target.ANDROID, Target.SCRIPT), unsupported(KofLog::supportedOn));
+        assertEquals("LOG001", KofLog.gapCode());
+    }
+
+    @Test
+    @DisplayName("orm: 3 nativos + SCRIPT gated (ORM001)")
+    void ormGatesNativesAndScript() {
+        assertEquals(Set.of(Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64,
+                Target.SCRIPT), unsupported(KofOrm::supportedOn));
+        assertEquals("ORM001", KofOrm.gapCode());
+    }
+
+    @Test
+    @DisplayName("rng: cross + ANDROID + SCRIPT gated (RNG001)")
+    void rngGatesCrossAndroidScript() {
+        assertEquals(Set.of(Target.NATIVE_RISCV64, Target.NATIVE_AARCH64,
+                Target.ANDROID, Target.SCRIPT),
+                unsupported(t -> KofRng.supportedOn("kof_rng_int", t)));
+        assertEquals("RNG001", KofRng.gapCode("kof_rng_int"));
+    }
+
+    @Test
+    @DisplayName("gpu: JS + ANDROID + SCRIPT gated (GPU001 emitido no call-site)")
+    void gpuGatesJsAndroidScript() {
+        assertEquals(Set.of(Target.JS, Target.ANDROID, Target.SCRIPT),
+                unsupported(KofGpu::supportedOn));
+    }
+
+    @Test
+    @DisplayName("tetris: JVM-only (EGG001)")
+    void tetrisGatesToJvm() {
+        assertEquals(Set.of(Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64,
+                Target.JS, Target.ANDROID, Target.SCRIPT), unsupported(KofTetris::supportedOn));
+        assertEquals("EGG001", KofTetris.gapCode());
+    }
+
+    @Test
+    @DisplayName("scheduler: SCRIPT gated (SCHED001) + at() nativo gated (CRON001)")
+    void schedulerGates() {
+        assertEquals(Set.of(Target.SCRIPT),
+                unsupported(t -> KofScheduler.supportedOn("kof_scheduler_every", t)));
+        assertFalse(KofScheduler.supportedOn("kof_scheduler_at", Target.NATIVE));
+        assertFalse(KofScheduler.supportedOn("kof_scheduler_at", Target.NATIVE_RISCV64));
+        assertTrue(KofScheduler.supportedOn("kof_scheduler_at", Target.JVM));
+        assertEquals("CRON001", KofScheduler.gapCode("kof_scheduler_at"));
+        assertEquals("SCHED001", KofScheduler.gapCode("kof_scheduler_every"));
+    }
+
+    @Test
+    @DisplayName("math.pow: cross riscv/aarch gated (MATH001)")
+    void mathPowGatesCross() {
+        assertTrue(KofMath.supportedOn("kof_math_pow", Target.JVM));
+        assertEquals(Set.of(Target.NATIVE_RISCV64, Target.NATIVE_AARCH64),
+                unsupported(t -> KofMath.supportedOn("kof_math_pow", t)));
+        assertEquals("MATH001", KofMath.gapCode("kof_math_pow"));
+    }
+
+    @Test
+    @DisplayName("observability.export_spans: 3 nativos gated (OBS003)")
+    void observabilityExportSpansGatedOnNative() {
+        assertEquals(Set.of(Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64),
+                unsupported(t -> KofObservability.supportedOn("kof_observability_export_spans", t)));
+        assertEquals("OBS003", KofObservability.gapCode("kof_observability_export_spans"));
+    }
+
+    @Test
+    @DisplayName("time.tzOffsetSeconds: 3 nativos gated (TIME003)")
+    void timeTzOffsetGatedOnNative() {
+        assertEquals(Set.of(Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64),
+                unsupported(t -> KofTime.supportedOn("tzOffsetSeconds", t)));
+        assertEquals("TIME003", KofTime.gapCode("tzOffsetSeconds"));
+    }
+
+    @Test
+    @DisplayName("security.sha512: riscv/aarch + ANDROID/SCRIPT gated (SECN003)")
+    void securitySha512GatedOnCross() {
+        assertEquals(Set.of(Target.NATIVE_RISCV64, Target.NATIVE_AARCH64,
+                Target.ANDROID, Target.SCRIPT),
+                unsupported(t -> KofSecurity.supportedOn("kof_sec_sha512", t)));
+        assertEquals("SECN003", KofSecurity.gapCode("kof_sec_sha512"));
+    }
+
+    @Test
+    @DisplayName("namespaces sem gate: supportedOn true em todo alvo")
+    void alwaysTrueNamespacesHaveNoSilentGate() {
+        assertTrue(unsupported(KofCache::supportedOn).isEmpty(), "cache");
+        assertTrue(unsupported(KofConfig::supportedOn).isEmpty(), "config");
+        assertTrue(unsupported(KofHttp::supportedOn).isEmpty(), "http");
+        assertTrue(unsupported(KofMq::supportedOn).isEmpty(), "mq");
+        assertTrue(unsupported(t -> KofEncoding.supportedOn("x", t)).isEmpty(), "encoding");
+        assertTrue(unsupported(t -> KofRandom.supportedOn("x", t)).isEmpty(), "random");
+        assertTrue(unsupported(t -> KofNet.supportedOn("x", t)).isEmpty(), "net");
+        assertTrue(unsupported(t -> KofStrings.supportedOn("x", t)).isEmpty(), "strings");
+        assertTrue(unsupported(t -> KofUuid.supportedOn("x", t)).isEmpty(), "uuid");
+        assertTrue(unsupported(t -> KofValidation.supportedOn("x", t)).isEmpty(), "validation");
+    }
+}

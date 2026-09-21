@@ -111,15 +111,30 @@ só de comentário, sem comportamento:
 Prova dos dois: `mvn -o -pl kof-compiler -am compile` rc=0 (só comentário ⇒ Q1
 não se aplica).
 
+## Fatia 2b — invariante travada como teste (21/09)
+
+Novo `kof-compiler/src/test/java/dev/kof/compiler/StdParityGapAuditTest.java`
+(**13/13 verde**) transforma a matriz de suporte auditada num catraca: para
+cada namespace com gate afirma o conjunto exato de alvos `unsupported` e o gap
+code exato (buffer FFI001/FFI002, db DB001, log LOG001, orm ORM001, rng RNG001,
+gpu, tetris EGG001, scheduler SCHED001/CRON001, math.pow MATH001, observability
+OBS003, time.tzOffsetSeconds TIME003, security.sha512 SECN003), além dos
+namespaces always-true permanecerem sem gate. Um gate novo num namespace
+always-true agora quebra o teste de propósito — a matriz é lei e tem de ser
+atualizada junto.
+
+O teste **corrigiu um palpite meu**: `security.sha512` é gated não só em
+riscv/aarch, mas também em **ANDROID e SCRIPT** (`JVM || JS || isNative`), logo
+o gap code `SECN003` dispara em quatro alvos. Medido, não lembrado (Q3).
+
+Prova: `mvn -o -pl kof-compiler -am -Dtest=StdParityGapAuditTest test` → 13/13.
+
 ## Próximas passadas (planejadas — ainda não executadas)
 
-1. **Checagem de assimetria de paridade** (maior rendimento): para cada
-   `Kof*.supportedOn(function, target)` × `Target`, afirmar que o caminho não
-   suportado carrega um `gapCode()` não-nulo. Um caminho suportado num alvo e
-   ausente noutro **sem gap code é a incompletude silenciosa** que esta frente
-   caça. Assinaturas mistas (`supportedOn(Target)` de namespace inteiro vs
-   `supportedOn(String, Target)` por função) ⇒ implementada como teste JUnit
-   (`StdParityGapAuditTest`), para que a prova seja verde/vermelho, não grep.
+1. **Checagem de assimetria de paridade** — **FEITA (fatia 2b,
+   `StdParityGapAuditTest` 13/13)**. Próximo: estendê-la aos gates por função
+   do `KofSecurity` (chacha/auth/cookie) e do `KofTime` além dos casos
+   representativos.
 2. **Varredura de fachada Q7:** métodos que devolvem `null`/`0`/`""` num
    caminho que deveria computar, ramos `default:` que escondem caso não
    tratado, emissores que devolvem vazio sem diagnóstico.

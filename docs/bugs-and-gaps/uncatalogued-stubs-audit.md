@@ -108,15 +108,28 @@ fixes, no behaviour:
 Proof for both: `mvn -o -pl kof-compiler -am compile` rc=0 (comment-only ⇒ Q1
 does not apply).
 
+## Slice 2b — invariant locked as a test (21/09)
+
+New `kof-compiler/src/test/java/dev/kof/compiler/StdParityGapAuditTest.java`
+(**13/13 green**) turns the audited support matrix into a ratchet: for each
+gated namespace it asserts the exact `unsupported` target set and the exact gap
+code (buffer FFI001/FFI002, db DB001, log LOG001, orm ORM001, rng RNG001, gpu,
+tetris EGG001, scheduler SCHED001/CRON001, math.pow MATH001, observability
+OBS003, time.tzOffsetSeconds TIME003, security.sha512 SECN003), plus the
+always-true namespaces stay gate-free. A new gate in an always-true namespace
+now breaks the test on purpose — the matrix is law and must be updated with it.
+
+The test **corrected a guess of mine**: `security.sha512` is gated not only on
+riscv/aarch but also on **ANDROID and SCRIPT** (`JVM || JS || isNative`), so its
+gap code `SECN003` fires on four targets. Measured, not remembered (Q3).
+
+Proof: `mvn -o -pl kof-compiler -am -Dtest=StdParityGapAuditTest test` → 13/13.
+
 ## Next passes (planned — not yet executed)
 
-1. **Parity asymmetry check** (highest yield): for every
-   `Kof*.supportedOn(function, target)` × `Target`, assert an unsupported path
-   carries a non-null `gapCode()`. A supported-on-one-target/absent-on-another
-   path **without a gap code is the silent incompleteness** this front hunts.
-   Assinaturas mistas (`supportedOn(Target)` whole-namespace vs
-   `supportedOn(String, Target)` per-function) ⇒ implemented as a JUnit test
-   (`StdParityGapAuditTest`) so the proof is a green/red, not a grep.
+1. **Parity asymmetry check** — **DONE (slice 2b, `StdParityGapAuditTest`
+   13/13)**. Next: extend it to the per-function gates of `KofSecurity`
+   (chacha/auth/cookie) and `KofTime` beyond the representative cases.
 2. **Q7 facade sweep:** methods returning `null`/`0`/`""` on a path that should
    compute, `default:` branches that hide an unhandled case, emitters that
    return empty without a diagnostic.
