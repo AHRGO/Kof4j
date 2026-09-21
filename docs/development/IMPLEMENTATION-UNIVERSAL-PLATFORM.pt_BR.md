@@ -371,7 +371,7 @@ argumento `String`****
 Kof; um `.kf` real computa `42/42/6.0/7.5` em ABIs Int/Long/Double/mistas e `5/104/2026`
 em args `String`, byte-a-byte JVM↔JS em `JvmFfiCallbackE2ETest`; a ponte JS chama o método `invoke` do objeto `Lambda`
 compilado, lendo o `char*` de um arg callback a `String` Kof na fronteira — design completo + a descoberta objeto-vs-arrow da C3.2 em §R3-3.4 abaixo).
-De resto, o próximo trabalho da R3 são as decisões da mantenedora (3.3/3.5) mais a 3.8 em curso (D6 decidido 20/09; 3.8b fatia 1 landed); a ABI escalar Native (3.7) landou 20/09 e o §370/#549 (conversão de argumento de extern) fechou no mesmo dia.
+De resto, o próximo trabalho da R3 é **implementar o 3.3/3.5 decididos** (`D-R3-3.3`/`D-R3-3.5`, 21/09) mais a 3.8 em curso (D6 decidido 20/09; 3.8b fatia 1 landed); a ABI escalar Native (3.7) landou 20/09 e o §370/#549 (conversão de argumento de extern) fechou no mesmo dia.
 
 ### §R3-3.4 — callbacks / upcalls (função Kof entregue a C)
 
@@ -479,7 +479,7 @@ callback-como-retorno aninhado — `FFI001`/`FFI002` honestos.
 
 ---
 
-# Decisões — ✅ TODAS RESOLVIDAS 19/09 (D-POLL-19 — ver `DECISIONS.md`)
+# Decisões — D1–D7 resolvidas 19/09 (D-POLL-19) + D8–D12 resolvidas 21/09 (ver `DECISIONS.md`)
 
 | # | Decisão | Estado | Destrava |
 |---|---|---|---|

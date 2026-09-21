@@ -862,3 +862,5 @@ MAGIC/tag, `RuntimeList.kof_list_add` layout):
 > **NEXT STEP extra (20/09):** D-GRAPHICS-GAMING registered EN+PT — criar skeleton `docs/development/future/graphics-gaming-plan.md` (responder as 7 perguntas da decisão) ANTES de qualquer código; 3.8b FFI continua o bloqueiro na frente.
 
 > **NEXT STEP extra2:** plano graphics-gaming agora inclui MÍDIA (som pipeline + vídeo) por ordem da mantenedora — doc future responde áudio E vídeo como first-class (addendum D-GRAPHICS-GAMING EN+PT landed junto).
+
+> **NEXT STEP extra3:** addendum 2 landed — SEM JavaFX na superfície futura + paridade total como critério de aceite; plano deve medir o legado kof.ui-javafx e propor migração (regra 6).
