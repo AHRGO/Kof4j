@@ -331,6 +331,22 @@ prova semântica, com guarda anti-vácuo (≥25 símbolos parseados). RED-first
 provado renomeando `kof_list_sort`→`kof_list_sortx` →
 `JVM: ... SEM handler: [kof_list_sortx]`.
 
+### Fatia 11 — §424 medido comportamentalmente; frente convergida (21/09)
+
+O `StringGapMeasuredTest` (2 testes, verde) compila `"abc".matches("a.*")` por
+alvo em vez de ler fontes. **Medido:** o JS emite a chamada direta ao membro (sem
+helper) — compila limpo, a falha é só em runtime, que é a face genuinamente
+**silenciosa**; o Native roda o `ld` *durante o compile* e falha com `undefined
+reference to 'java_lang_String_matches'` como `COMP001` — **visível em tempo de
+compilação**, não um break silencioso de runtime. Isso corrige o corte de
+severidade do §424 (JS silencioso > Native visível) e fica registrado na entrada
+do bug (EN+PT). Com os backstops mecânicos (Fatia 8 String×JS, Fatia 9
+String×Native, Fatia 10 símbolos de coleção) mais esta medição, nenhum gap novo
+apareceu — a frente de revisão está **convergida**. Novos re-triggers devem ser
+recusados (estabilidade AGENTS) até regressão medida ou decisão da mantenedora; a
+correção do §424 (um gap code honesto do Kof em vez do mapeamento direto no JS /
+`COMP001` cru) é decisão **rule-6**, não edição de agente.
+
 ## Próximas passadas (planejadas — ainda não executadas)
 
 1. **Checagem de assimetria de paridade** — **FEITA (fatia 2b,

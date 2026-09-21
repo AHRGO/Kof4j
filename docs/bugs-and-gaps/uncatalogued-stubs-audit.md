@@ -323,6 +323,22 @@ ratchet, not a semantic proof, with a vacuous-pass guard (≥25 parsed symbols).
 RED-first proved by renaming `kof_list_sort`→`kof_list_sortx` →
 `JVM: ... SEM handler: [kof_list_sortx]`.
 
+### Fatia 11 — §424 measured behaviorally; front converged (21/09)
+
+`StringGapMeasuredTest` (2 tests, green) compiles `"abc".matches("a.*")` per target
+instead of reading sources. **Measured:** JS emits the direct member call (no
+helper) — compiles clean, failure is runtime-only, which is the genuinely **silent**
+face; Native runs `ld` *during compile* and fails with `undefined reference to
+'java_lang_String_matches'` as `COMP001` — **compile-time visible**, not a silent
+runtime break. This corrects the §424 severity split (JS silent > Native visible)
+and is recorded in the bug entry (EN+PT). With the mechanical backstops (Fatia 8
+String×JS, Fatia 9 String×Native, Fatia 10 collection symbols) plus this
+measurement, no new gap surfaced — the review front is **converged**. Further
+re-triggers should be refused (AGENTS stability) until a measured regression or a
+maintainer decision; the §424 fix (an honest Kof gap code instead of the JS
+`default` member mapping / raw `COMP001`) is a **rule-6** decision, not an agent
+edit.
+
 ## Next passes (planned — not yet executed)
 1. **Parity asymmetry check** — **DONE (slice 2b, `StdParityGapAuditTest`
    15/15**, including the per-function gates of `KofSecurity` and
