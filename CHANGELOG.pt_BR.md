@@ -13,6 +13,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **sync da contagem viva 16→24 + reparo da âncora do §423** (21/09, lane
+    docs/.18): a passada 5 da frente de revisão catalogou §424–§431, então a
+    narrativa/linha da fila no README (contagem viva de `known-bugs.md`) e a
+    condição 7 da prep do release agora leem **24 live** (a autoridade segue
+    sendo `check_known_bugs_status.sh`); e os cross-links do §423 apontavam para
+    slugs de headings pré-reescrita — os dois hrefs (EN→PT/PT→EN) agora batem com
+    o `gh_slug` exato dos headings atuais (`check_ledger_anchors` 0 quebradas;
+    `check_live_records` OK). Só docs.
+
   - **FFI: `record` por valor como ARGUMENTO no target JS (bridge, D6-1/3.8b)**
     (21/09, lane docs/.18, frente FFI): o runner JS só compartilhava a ABI
     escalar/callbacks — struct como parâmetro ficava `FFI002`. O host não

@@ -13,6 +13,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **live-count sync 16→24 + §423 anchor repair** (21/09, lane docs/.18): the
+    review front's pass 5 catalogued §424–§431, so the README queue narrative and
+    row (`known-bugs.md` live count) and the release-prep condition 7 now read
+    **24 live** (authority remains `check_known_bugs_status.sh`); and the §423
+    cross-links pointed at pre-rewrite heading slugs — both hrefs (EN→PT/PT→EN)
+    now match the exact `gh_slug` of the current headings
+    (`check_ledger_anchors` 0 broken; `check_live_records` OK). Docs only.
+
   - **FFI: `record` by value as ARGUMENT on the JS target (bridge, D6-1/3.8b)**
     (21/09, lane docs/.18, FFI front): the JS runner shared only the
     scalar/callback ABI — struct params stayed `FFI002`. The host cannot reflect

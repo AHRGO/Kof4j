@@ -14166,7 +14166,7 @@ p
 - **Proof (same commit):** `BareCollectionPrimitiveArgE2ETest` 12/12 — x86 `1` (parity JVM≡Script≡JS) + typed `11`, and `NAT005` refusal for bare+typed on riscv64/aarch64 (no toolchain needed, no link-fail).
 - **Related:** §374 (the native face that exposed it), §50 (channel+spawn history), §352 (NAT001/NAT002 honest-diagnostic pattern), `D-GC-B44` (cross clone/futex precedent).
 
-<!-- pt-switch --> **PT:** [§423 (pt_BR)](known-bugs.pt_BR.md#423--canais-nos-alvos-nativos-riscv64aarch64-nunca-foram-portados-qualquer-programa-com-channelchannel-só-falhava-no-link-com-o-críptico-undefined-reference-to-kof_channel_newsendreceive-exposto-2109-ao-fechar-a-face-nativa-do-374--aberto-🟡-com-diagnóstico-honesto-nat005-r6-o-gap-é-declarado-no-lowering-o-port-é-o-trabalho)
+<!-- pt-switch --> **PT:** [§423 (pt_BR)](known-bugs.pt_BR.md#423--canais-nos-alvos-nativos-riscv64aarch64-nunca-foram-portados-qualquer-programa-com-channelchannelt-so-falhava-no-link-com-o-criptico-undefined-reference-to-kof_channel_newsendreceive-exposto-2109-ao-fechar-a-face-nativa-do-374--remover-a-recusa-nat003-revelou-que-o-cross-nunca-teve-o-runtime---aberto-com-diagnostico-honesto-nat005-r6-o-gap-e-declarado-no-lowering-o-port-e-o-trabalho)
 
 ## §424 — five accepted `String` methods are silently incomplete on JS and link-fail on Native with no gap code (`matches`/`replaceAll`/`replaceFirst`/`toCharArray`/`compareToIgnoreCase`) — 🔴 OPEN (R6: JVM works, the other targets diverge with no diagnostic)
 

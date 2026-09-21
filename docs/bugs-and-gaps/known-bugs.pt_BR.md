@@ -11700,7 +11700,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Prova (mesmo commit):** `BareCollectionPrimitiveArgE2ETest` 12/12 — x86 `1` (paridade JVM≡Script≡JS) + tipado `11`, e a recusa `NAT005` para nu+tipado em riscv64/aarch64 (sem toolchain, sem link-fail).
 - **Relacionado:** §374 (a face nativa que o expôs), §50 (história de canal+spawn), §352 (padrão de diagnóstico honesto NAT001/NAT002), `D-GC-B44` (precedente clone/futex do cross).
 
-<!-- en-switch --> **EN:** [§423 (en)](known-bugs.md#423--channels-on-the-riscv64aarch64-native-targets-were-never-ported-any-channelchannel-program-link-failed-with-a-cryptic-undefined-reference-to-kof_channel_newsendreceive-surfaced-2109-while-closing-374s-native-face--removing-the-nat003-refusal-exposed-that-the-cross-never-had-the-runtime--open-with-honest-diagnostic-nat005-r6-the-gap-is-declared-at-lowering-the-port-is-the-work)
+<!-- en-switch --> **EN:** [§423 (en)](known-bugs.md#423--channels-on-the-riscv64aarch64-native-targets-were-never-ported-any-channelchannelt-program-link-failed-with-a-cryptic-undefined-reference-to-kof_channel_newsendreceive-surfaced-2109-while-closing-374s-native-face--removing-the-nat003-refusal-exposed-that-the-cross-never-had-the-runtime---open-with-honest-diagnostic-nat005-r6-the-gap-is-declared-at-lowering-the-port-is-the-work)
 
 ## §424 — cinco métodos `String` aceitos ficam silenciosamente incompletos no JS e falham no link do Native sem gap code (`matches`/`replaceAll`/`replaceFirst`/`toCharArray`/`compareToIgnoreCase`) — 🔴 ABERTO (R6: o JVM funciona, os outros alvos divergem sem diagnóstico)
 
