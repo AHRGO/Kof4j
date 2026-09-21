@@ -1,0 +1,298 @@
+package dev.kof.compiler;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+/**
+ * FFI struct ABI (D6-1(A) / slice 3.8b): um `record` Kof de campos escalares
+ * atravessa POR VALOR como struct C no target JVM (FFM classifica pela
+ * StructLayout derivada do RecordComponent). Prova com um shim C real; campos
+ * não-escalares seguem FFI001 honesto (R6), e Native/JS ficam nos seus gap
+ * codes — nunca um binding parcial silencioso. A fatia 2 cobre o RETORNO
+ * struct (registradores p/ struct pequeno e sret p/ struct maior), reconstruído
+ * pelo construtor canônico do `record`.
+ */
+class FfiStructE2ETest {
+
+    private static final String C_SRC = """
+            struct Point { int x; int y; };
+            int sumpoint(struct Point p) { return p.x + p.y; }
+            double scale(struct Point p, double f) { return (p.x + p.y) * f; }
+            struct Point mkpoint(int x, int y) { struct Point p; p.x = x; p.y = y; return p; }
+            struct Big { int a; int b; int c; };
+            struct Big bigret(int a, int b, int c) { struct Big g; g.a = a; g.b = b; g.c = c; return g; }
+            struct Mix { double d; int i; };
+            struct Mix mixret(double d, int i) { struct Mix m; m.d = d; m.i = i; return m; }
+            """;
+
+    private final CompilerDriver driver = new CompilerDriver();
+
+    @Test
+    void structParamByValueJvm(@TempDir Path dir) throws Exception {
+        String so = compileHostLib(dir);
+        Path src = dir.resolve("point.kf");
+        Files.writeString(src, """
+                record Point(Int x, Int y)
+
+                extern "%s" sumpoint(Point p): Int
+                extern "%s" scale(Point p, Double f): Double
+
+                main() {
+                    println(sumpoint(Point(3, 4)))
+                    println(scale(Point(2, 3), 2.0))
+                }
+                """.formatted(so, so));
+
+        Path out = dir.resolve("out-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM struct param must bind (3.8b): "
+                + r.diagnostics().getDiagnostics());
+        assertEquals("7\n10.0", runJvm(out),
+                "record-by-value: sumpoint(Point(3,4))=7, scale(Point(2,3),2.0)=10.0");
+    }
+
+    @Test
+    void structReturnByValueJvm(@TempDir Path dir) throws Exception {
+        String so = compileHostLib(dir);
+        Path src = dir.resolve("ret.kf");
+        Files.writeString(src, """
+                record Point(Int x, Int y)
+                record Big(Int a, Int b, Int c)
+                record Mix(Double d, Int i)
+
+                extern "%s" mkpoint(Int x, Int y): Point
+                extern "%s" bigret(Int a, Int b, Int c): Big
+                extern "%s" mixret(Double d, Int i): Mix
+
+                main() {
+                    val p = mkpoint(3, 4)
+                    println(p.x())
+                    println(p.y())
+                    val g = bigret(10, 20, 30)
+                    println(g.a())
+                    println(g.b())
+                    println(g.c())
+                    val m = mixret(2.5, 7)
+                    println(m.d())
+                    println(m.i())
+                }
+                """.formatted(so, so, so));
+
+        Path out = dir.resolve("out-jvm-ret");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM struct return must bind (3.8b fatia 2): "
+                + r.diagnostics().getDiagnostics());
+        assertEquals("3\n4\n10\n20\n30\n2.5\n7", runJvm(out),
+                "record reconstructed from the returned struct (register + sret paths)");
+    }
+
+    @Test
+    void structReturnViaLibcDivJvm(@TempDir Path dir) throws Exception {
+        // div() da libc devolve `div_t { int quot; int rem; }` por valor.
+        Path src = dir.resolve("divret.kf");
+        Files.writeString(src, """
+                record Div(Int quot, Int rem)
+
+                extern "libc.so.6" div(Int a, Int b): Div
+
+                main() {
+                    val d = div(7, 2)
+                    println(d.quot())
+                    println(d.rem())
+                }
+                """);
+        Path out = dir.resolve("out-div");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "libc div struct return must bind on JVM: "
+                + r.diagnostics().getDiagnostics());
+        assertEquals("3\n1", runJvm(out), "div(7,2) = { quot 3, rem 1 }");
+    }
+
+    @Test
+    void structReturnStringFieldStaysFfi001(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("retstr.kf");
+        Files.writeString(src, """
+                record Named(String name, Int n)
+
+                extern "libc.so.6" mk(): Named
+
+                main() {
+                    println("hi")
+                }
+                """);
+        CompilationResult r = driver.compile(src, dir.resolve("out-retstr"), Target.JVM);
+        assertFalse(r.success(), "record with a String field must not bind as a return");
+        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI001"),
+                "expected FFI001, got: " + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void structReturnNativeStaysFfi001(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("retnat.kf");
+        Files.writeString(src, """
+                record Point(Int x, Int y)
+
+                extern "libc.so.6" mkpoint(Int x, Int y): Point
+
+                main() {
+                    println("hi")
+                }
+                """);
+        CompilationResult r = driver.compile(src, dir.resolve("out-retnat"), Target.NATIVE);
+        assertFalse(r.success(), "Native struct ABI is slice 3.7 — return must stay unbound");
+        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI001"),
+                "expected FFI001 on Native, got: " + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void structReturnJsStaysFfi002(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("retjs.kf");
+        Files.writeString(src, """
+                record Point(Int x, Int y)
+
+                extern "libc.so.6" mkpoint(Int x, Int y): Point
+
+                main() {
+                    println("hi")
+                }
+                """);
+        CompilationResult r = driver.compile(src, dir.resolve("out-retjs"), Target.JS);
+        assertFalse(r.success(), "JS struct bridge not landed → must stay unbound");
+        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI002"),
+                "expected FFI002 on JS, got: " + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void structParamStringFieldStaysFfi001(@TempDir Path dir) throws IOException {
+        // Campo `String`/`char*` é ponteiro (não-escalar no v1) → FFI001 honesto.
+        Path src = dir.resolve("strfield.kf");
+        Files.writeString(src, """
+                record Named(String name, Int n)
+
+                extern "libc.so.6" abs(Named p): Int
+
+                main() {
+                    println("hi")
+                }
+                """);
+        CompilationResult r = driver.compile(src, dir.resolve("out-strfield"), Target.JVM);
+        assertFalse(r.success(), "record with a String field must not bind in v1");
+        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI001"),
+                "expected FFI001, got: " + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void structParamEmptyRecordStaysFfi001(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("empty.kf");
+        Files.writeString(src, """
+                record E()
+
+                extern "libc.so.6" abs(E p): Int
+
+                main() {
+                    println("hi")
+                }
+                """);
+        CompilationResult r = driver.compile(src, dir.resolve("out-empty"), Target.JVM);
+        assertFalse(r.success(), "empty record is not a bindable struct");
+        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI001"),
+                "expected FFI001, got: " + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void structParamNativeStaysFfi001(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("nat.kf");
+        Files.writeString(src, """
+                record Point(Int x, Int y)
+
+                extern "libc.so.6" sumpoint(Point p): Int
+
+                main() {
+                    println("hi")
+                }
+                """);
+        CompilationResult r = driver.compile(src, dir.resolve("out-native"), Target.NATIVE);
+        assertFalse(r.success(), "Native struct ABI is slice 3.7 — must stay unbound");
+        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI001"),
+                "expected FFI001 on Native, got: " + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void structParamJsStaysFfi002(@TempDir Path dir) throws IOException {
+        // O runner JS compartilha o bridge escalar, mas ainda não o de struct →
+        // FFI002 honesto (R6), nunca um downcall que quebraria em runtime.
+        Path src = dir.resolve("js.kf");
+        Files.writeString(src, """
+                record Point(Int x, Int y)
+
+                extern "libc.so.6" sumpoint(Point p): Int
+
+                main() {
+                    println("hi")
+                }
+                """);
+        CompilationResult r = driver.compile(src, dir.resolve("out-js"), Target.JS);
+        assertFalse(r.success(), "JS struct ABI not landed → must stay unbound");
+        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI002"),
+                "expected FFI002 on JS, got: " + r.diagnostics().getDiagnostics());
+    }
+
+    // ── helpers ──────────────────────────────────────────────────────────────
+
+    private static String compileHostLib(Path dir) throws IOException, InterruptedException {
+        assumeTrue(System.getProperty("os.name", "").toLowerCase().contains("linux"),
+                "struct host lib usa um .so nativo (Linux)");
+        Path c = dir.resolve("libkofpoint.c");
+        Files.writeString(c, C_SRC);
+        Path so = dir.resolve("libkofpoint.so");
+        String cc = firstPresent("/usr/bin/cc", "/usr/bin/gcc", "cc", "gcc");
+        assumeTrue(cc != null, "sem toolchain C (cc/gcc) para o host de struct");
+        Process p = new ProcessBuilder(cc, "-shared", "-fPIC", "-O2",
+                "-o", so.toString(), c.toString()).redirectErrorStream(true).start();
+        String out = new String(p.getInputStream().readAllBytes());
+        assumeTrue(p.waitFor(60, TimeUnit.SECONDS) && p.exitValue() == 0,
+                "cc/gcc falhou ao compilar o host de struct: " + out);
+        return so.toString();
+    }
+
+    private static String firstPresent(String... candidates) {
+        for (String c : candidates) {
+            try {
+                Process p = new ProcessBuilder(c, "--version").redirectErrorStream(true).start();
+                p.getInputStream().readAllBytes();
+                if (p.waitFor(15, TimeUnit.SECONDS) && p.exitValue() == 0) return c;
+            } catch (Exception ignored) {
+                // tenta o próximo candidato
+            }
+        }
+        return null;
+    }
+
+    private String runJvm(Path outDir) throws IOException {
+        try {
+            String javaHome = System.getProperty("java.home");
+            ProcessBuilder pb = new ProcessBuilder(
+                    Path.of(javaHome, "bin", "java").toString(),
+                    "--enable-native-access=ALL-UNNAMED",
+                    "-cp", outDir.toString(),
+                    "Default.Main");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String output = new String(p.getInputStream().readAllBytes(),
+                    java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+            assertEquals(0, p.waitFor(), "JVM exit code, output: " + output);
+            return output;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("interrupted", e);
+        }
+    }
+}

@@ -327,6 +327,27 @@ class ConformanceMatrixTest {
         // em NativeE2ETest#execCollectionPrintMatchesJvmGolden +
         // Native{Riscv64,Aarch64}E2ETest#nativeCollectionPrintMatchesJvmGolden
         // (golden = oracle JVM medido, byte-idêntico nos 3 targets nativos).
+        // §388-B (voto da mantenedora 21/09): array CRU segue a mesma gramática
+        // §107 ([65, 66]); o golden acima cobre List/Map/Set. Bool-em-array fica
+        // fora daqui pela mesma razão da linha acima (§107 face number-truthness
+        // em JS/Script quando o host guarda 1/0); cobre-se em ArrayPrintFormatE2ETest
+        // (JVM, onde o box é Boolean real).
+        matrix("arrayprint", """
+                main() {
+                    val b = new Int[2]
+                    b[0] = 65
+                    b[1] = 66
+                    println(b)
+                    val n = new Int[1][2]
+                    n[0][0] = 65
+                    n[0][1] = 66
+                    println(n)
+                    println(new Int[0])
+                    val s = new String[1]
+                    s[0] = "x"
+                    println(s)
+                }
+                """, "[65, 66]\n[[65, 66]]\n[]\n[x]", Set.of(), tempDir);
         matrix("collprint", """
                 record Point(Int x, Int y)
                 main() {
@@ -1954,6 +1975,42 @@ class ConformanceMatrixTest {
                     println("after")
                 }
                 """, "else\nafter", Set.of(), tempDir);
+    }
+
+    // known-bugs §380 (20/09): `if` NESTADO cujo then termina em saída
+    // incondicional (throw/return, sem else) — o parse do else interno
+    // (JsIfThrowElse.parseElse) consumia QUALQUER label à frente, roubando o
+    // falseLabel do `if` ENVOLVENTE: o epílogo externo era absorvido no ramo e
+    // o caminho não-throw devolvia undefined (JS divergia de JVM/Native).
+    // O fix = pilha de falseLabels ativos (MethodCtx.enclosingIfFalses): label
+    // de estrutura envolvente é devolvido sem consumir. Guarda preserva
+    // §147/§149 (loop/try-check primeiro) e §174 (try-end-check primeiro).
+    @Test
+    void conformanceNestedIfThrowStealsFalseLabel(@TempDir Path tempDir) throws IOException {
+        matrix("nestedifthrow", """
+                String t2(String n, Bool b) {
+                    if (n == "x") {
+                        if (b) { throw "yb" }
+                        throw "bx"
+                    }
+                    return "p:" + n
+                }
+                String t4(String n, Bool b) {
+                    if (n == "x") {
+                        if (b) { throw "in" }
+                        return "mid"
+                    }
+                    return "out:" + n
+                }
+                main() {
+                    println(t2("y", false))
+                    try { println(t2("x", true)) } catch (String e) { println("c:" + e) }
+                    try { println(t2("x", false)) } catch (String e) { println("c:" + e) }
+                    println(t4("y", false))
+                    println(t4("x", false))
+                    try { println(t4("x", true)) } catch (String e) { println("c:" + e) }
+                }
+                """, "p:y\nc:yb\nc:bx\nout:y\nmid\nc:in", Set.of(), tempDir);
     }
 
     @Test

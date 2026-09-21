@@ -30,8 +30,8 @@ faz o core crescer (golden 8.6).
 **O modelo canônico é imperativo-transformado-em-dados** (o veredito da
 VISÃO §4.2, "A/B — e é onde a linguagem brilha"): recursos tipados + builder
 + funções normais. O bloco declarativo `infra "prod" { ... }` é a linha **3.2**
-— bloco de parse novo gated por **R4** (o hook de codegen NÃO existe no HEAD)
-e pela regra 6 — NÃO está na fila deste plano, e o v1 não espera por ele.
+— bloco de parse novo gated pela **regra 6** (**R4 ✅ pousou 21/09**, então o
+bloqueio do hook de codegen sumiu) — NÃO está na fila deste plano, e o v1 não espera por ele.
 
 Esboço de superfície (idioma de host flat, como `kof.workflow`/`kof.supervisor`
 — DD-OTP-01 opção A; **formas a serem MEDIDAS pela recon 3.0 antes de virarem
@@ -76,7 +76,9 @@ ledger NÃO sobrepõe hard-deny (medido).
 - **plan não tem efeitos colaterais**; só o apply toca o mundo e o estado.
 - **ciclos são recusados na montagem do grafo** com `throw` acionável
   nomeando o ciclo (precedente do run() do workflow, 4/4 targets); detecção de
-  ciclo em compile-time é a linha 3.7 e espera R4.
+  ciclo em compile-time é a linha 3.7 — **R4 ✅ pousou 21/09**, então o bloqueio
+  do hook de codegen sumiu; ainda precisa da superfície 3.2 `infra` (regra 6)
+  para ter um grafo em compile-time.
 - **o estado só avança no sucesso**: um apply falho deixa o estado anterior
   intacto e nomeia o recurso que falhou (R6, nunca um parcial silencioso).
 - **secrets são só referência**: o v1 guarda o *nome* do secret (resolvido no
@@ -140,7 +142,7 @@ fatia db do host deve ser gateada por alvo exatamente como `workflow-ckpt-host.k
   mantenedora respondeu Q1–Q4 (§6, `DECISIONS.md` §D-MAKEALIVE:
   `kof.makealive` / providers genéricos completos / kof.db dia-1 / flat+EN).
   Frente aberta.
-- **3.1 [core]** 🔵 dono `.18` — **fatia COMPLETA (MK-1, enquete 20/09 — não
+- **3.1 [core]** ✅ 20/09 dono `.18` — **fatia COMPLETA (MK-1, enquete 20/09 — não
   um fragmento só-núcleo)**: injetor de namespace virtual (`CompilerMakealive`) +
   `makealive-host.kf` + linha no ledger (camada conforme Q1) + os providers
   REST/CLI genéricos (3.5 dobrado aqui) + a face de estado `kof.db` (3.4
@@ -149,9 +151,17 @@ fatia db do host deve ser gateada por alvo exatamente como `workflow-ckpt-host.k
   JVM==JS, pin de compilação Native, as guardas do §3). Os goldens de kof.db
   rodam onde `kof.db` é real (JVM/JS); o estado no Native espera D-DB-GAPS e
   falha com `DB001`/`ORM001` honestos, nunca silente (R6).
-- **3.3 [reconcile]** — `reconcile(design, provider, intervalMs)` delegando ao
-  `scheduler` (stub `CRON001` alto no Native, mesmo split do
-  `workflow-sched-host.native.kf`).
+  **POUSOU 20/09 — MK-1 completo:** core `9e8be985`+`f5256f8f` (→ origin
+  `3be16f88`), face de estado db `c2850373`, provedor fs `4ee3a5c9`(0.4.0)/`f62206e0`(0.5.0),
+  provedores CLI+REST `13b44c6c`, docs stdlib `docs/stdlib/makealive.md` EN+PT; bateria Makealive
+  20/20 no tip (paridade byte JVM==JS incl. goldens cross-engine de mundo compartilhado).
+  🔵 próximo nesta fila: **3.3 reconcile**.
+- **3.3 [reconcile]** ✅ 20/09 — `reconcile(design, provider, intervalMs)` delegando ao
+  `scheduler.every` (tick = `apply` dentro de um `spawn`; parar = `scheduler.cancel(jobId)`).
+  **Correção medida no pouso:** o stub `CRON001` no Native planejado era DESNECESSÁRIO —
+  CRON001 gateia `scheduler.at` (expressão cron); `every` é real em TODOS os alvos desde
+  SCHED001 (05/09). A fatia `makealive-recon-host.kf` vai para todo alvo; Native ganha o
+  pin de compilação (`MakealiveReconcileE2ETest` 1/1 x3, JVM==JS byte).
 - **3.4 [state]** — **dobrado no 3.1 pelo MK-1 (20/09)**; mantido como item
   de verificação: goldens de estado `kof.db` por target (JVM/JS reais; Native
   `DB001`/`ORM001` honestos até D-DB-GAPS fechar).
@@ -159,13 +169,16 @@ fatia db do host deve ser gateada por alvo exatamente como `workflow-ckpt-host.k
   provider REST genérico (`kof.http`) + provider CLI (`kof.shell`) embarcam
   na fatia do núcleo; clouds concretas seguem **pacotes oficiais**
   (`infra-<cloud>`, R1 — nunca literal no compilador).
-- **3.2 [sintaxe `infra "prod" {}`]** — ⛔ R4 (hook de codegen, linha R4 do
-  tracker: "does NOT exist at HEAD") + bloco de parse novo = regra 6. Fora do v1.
-- **3.7 [ciclo em compile-time]** — ⛔ R4 (mesmo motivo; a recusa em runtime
-  embarca no 3.1 enquanto isso).
+- **3.2 [sintaxe `infra "prod" {}`]** — **R4 ✅ pousou 21/09** (`CodegenStep` hook,
+  `CodegenStepPipelineTest` 6/6): o bloqueio do hook de codegen SUMIU. O que resta é
+  o **bloco de parse novo voltado ao usuário = regra 6** — fora do v1 até a mantenedora decidir.
+- **3.7 [ciclo em compile-time]** — **R4 ✅ pousou 21/09**; ainda precisa da superfície
+  3.2 (regra 6) para ter um grafo em compile-time. Enquanto isso a **recusa em runtime embarca no 3.1**.
 - **3.8 [CLI `kof infra`]** — contrato do comando = decisão da mantenedora
   (regra 6, a postura da 2.6): `kof run infra.kf` já é o runner quando o 3.1
-  landar.
+  landar. ✅ DECIDIDO + ENTREGUE 20/09 (D-MAKEALIVE-CLI): verbo `makealive` (Q1),
+  convenção `design()`+`provider()`, protocolo MARK, estado h2 via `--state`
+  (gen=max+1, `mkMaxGen`); recusas honestas script/native (R7).
 
 ## 6. Perguntas abertas (decisões da mantenedora — NÃO resolver em código)
 

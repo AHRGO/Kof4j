@@ -427,6 +427,9 @@ final class Deps {
                 if (ver == null) continue;                  // latest sem resolve previo: honesto
                 jar = DepsRegistry.jarPath(DepsRegistry.ownerOf(spec),
                         DepsRegistry.repoOf(spec), ver);
+                // #566 (b): pacote com fontes e consumido como MODULO-FONTE (DepsSources.roots), nao
+                // pelo jar — o jar no classpath duplicaria as classes que o compilador ja emite.
+                if (DepsSources.hasSources(jar.getParent())) continue;
             } else {
                 String[] ga = l.trim().split(":");
                 if (ga.length != 3) continue;

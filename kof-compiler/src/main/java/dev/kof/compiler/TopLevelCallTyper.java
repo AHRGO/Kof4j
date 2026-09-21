@@ -153,9 +153,20 @@ final class TopLevelCallTyper {
                     }
                 }
             }
-            if (!found && sa.diagnostics() != null && !sa.allClasses().containsKey(mc.methodName())) {
-                sa.diagnostics().error("", 0, 0, 0,
-                        "Undefined function: '" + mc.methodName() + "'", "SEM015");
+            if (!found && !sa.allClasses().containsKey(mc.methodName())) {
+                // §393 (#568): nome que NAO e funcao top-level nem classe do
+                // programa pode ser construtor IMPLICITO de classe externa
+                // (--classpath/--deps, §134) — resolve pela tabela de
+                // construtores publicos do .class ANTES do SEM015, que e
+                // mentira para classe que existe la fora. Classe existente sem
+                // ctor publico compativel = SEM023 honesto (diagnosed);
+                // nem uma coisa nem outra = SEM015 de sempre (R6).
+                ExternalCtorTyper.Outcome ext = ExternalCtorTyper.infer(sa, mc, argTypes);
+                if (ext.type() != null) return ext.type();
+                if (!ext.diagnosed() && sa.diagnostics() != null) {
+                    sa.diagnostics().error("", 0, 0, 0,
+                            "Undefined function: '" + mc.methodName() + "'", "SEM015");
+                }
             }
         }
         return null;

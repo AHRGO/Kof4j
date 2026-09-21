@@ -13,10 +13,506 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **deps — `kof deps resolve` ganha a POLÍTICA de verificação de proveniência (D-ARTIFACT-TRUST fila (c)), em modo observe**
+    (21/09, lane platform-cli/segurança): antes de extrair/instalar um pacote do registry, o tar.gz baixado é conferido contra a
+    identidade PEDIDA (owner/repo@versão — nunca o que a release declara): digest, repo-fonte, workflow que assinou, ref e commit
+    da tag. Pacote oficial sem evidência válida = bloqueado (`REG005` ausente · `REG006` inválida · `REG007` sem como verificar ·
+    `REG008` commit da tag não resolvido), nada instalado; comunitário = aviso visível. O modo padrão é OBSERVE (nunca bloqueia,
+    imprime `would block under enforcement`) até o pipeline de release publicar atestações; `KOF_DEPS_TRUST=enforce` aperta, nada
+    afrouxa. Pega o que o `SHA256SUMS` embutido não pega: jar E soma trocados de forma consistente dentro do tarball. O verificador
+    real (delegado a ferramenta auditada) e o E2E esperam o attest+verify do workflow de release.
+
+  - **tooling — least privilege por job nos workflows fora do release**
+    (21/09, lane platform-cli/segurança, hardening de D-ARTIFACT-TRUST §5): 19 grants `write` no nível do
+    workflow → 0 (a escrita agora é escopo de job: 11, cada uma justificada em `scripts/workflow-permissions.txt`);
+    os 3 workflows que herdavam o default do repo agora declaram `contents: read`. Writes sem uso removidos
+    (`kof-bots` só precisa de `actions: write` p/ `createWorkflowDispatch`; `kof-warning-bot` de nenhum;
+    `checks`/`issues` saíram dos bots de quality/security). Gate novo `scripts/check_workflow_permissions.py`
+    (+ `--selftest`, suíte de agentes / `structural-quality` da CI): `write` de job sem linha no ledger falha;
+    linha obsoleta é drift. `release.yml` segue como a isenção declarada.
+
+  - **tooling — toda Action de terceiros dos workflows fora do release agora é pinada por SHA de commit completo**
+    (21/09, lane platform-cli/segurança, hardening de D-ARTIFACT-TRUST §5): 51 referências `uses:`
+    (`owner/repo@<sha40> # vN`, gitleaks como `@sha256:<digest> # v8.28.0`) — nenhuma versão foi trocada, só
+    tornada imutável. Gate novo `scripts/check_workflow_pins.sh` (+ `--selftest`, na suíte de agentes / job
+    `structural-quality` da CI) exige o SHA completo **e** o comentário `# vN` (o que o Dependabot usa p/ subir o pin).
+    `release.yml` é a única isenção declarada (`scripts/workflow-pins-exempt.txt`) — o pin dele entra com a
+    reescrita attest+verify; o gate acusa drift quando a isenção ficar obsoleta.
+
+  - **§353 corrigido — lambda cujo corpo retorna DIRETAMENTE um resultado `io` agora tipa**
+    (21/09, lane bugs-and-gaps): `job("e", () -> File("x").exists())` era rejeitado com
+    SEM014 ("expected 'function' but got 'function'") porque o typer SEMÂNTICO
+    (`SemMethodCallTyper`) não tinha ramo `KofIo` enquanto o do emit tinha — o corpo da
+    lambda inferia `Unknown`/Void. O lado SEM agora espelha a tabela do emit (aditivo:
+    só programas antes rejeitados passam a compilar). A tipagem correta de io expôs duas
+    formas insalubres que o typer cego engolia, ambas na mesma unidade:
+    `MakealivePrimitivesE2ETest.ioStateRoundTrip` dereferenciava `readText()` (`String?`)
+    sem guarda (SEM049 real — consertado no teste com o idioma `!= null &&`), e
+    `MakealiveFsProviderE2ETest.fsRead` usa **early-return narrowing**
+    (`if (t == null) { return }` e depois `t.split`) — completado no `StatementAnalyzer`:
+    depois de um `if` sem else com saída garantida, o narrowing do lado ELSE vale no
+    escopo externo (`Narrowing.thenBranchExits`). Prova:
+    `WorkflowE2ETest#lambdaBodyWithIoBoolCompilesAndRuns` (RED com a correção em stash /
+    GREEN com ela, JVM==JS em disco real) + `NullSafetyE2ETest` 14/14 (positivo + gêmeo
+    negativo — SEM049 continua disparando sem saída garantida). Relacionado: §400
+    catalogada (função nomeada como valor -> SEM011; pre-existente, medido idêntico no
+    0.4.7; roteado à mantenedora, regra 6).
+
+
 ### Em desenvolvimento
+  - **F2c3 — `orm.page`/`delete`/`saveAll` REAIS no Native x86-64; row-object
+    x86 fechado (lane gaps-db)** (21/09): `RuntimeOrm8` (`kof_orm_page`) = SQL
+    do host `SELECT * FROM "t" LIMIT ? OFFSET ?` com os DOIS params bindados e
+    a semantica do `((Number) x).intValue()` replicada no parse (box int/long/
+    dbl/flt truncam p/ int32; KofString do coerce do call-site = atoi com
+    sinal — fora do contrato Number, superset honesto documentado; null/
+    desconhecido = 0); frame 184 (mod 16 = 8 como a familia), loop de linhas =
+    Orm7 verbatim. `RuntimeOrm9` (`kof_orm_delete`) = `DELETE FROM "t" WHERE
+    "pk" = ?` com PK resolvida pelo `parse_schema` (r8=pkIndex, criterio do
+    host) e bind do key pelo classificador do Orm7; retorna SEMPRE true no
+    DONE — o `execute1 >= 0` do host faz do miss um true (medido no oraculo:
+    delete de PK inexistente = true, count intacto). `RuntimeOrm10`
+    (`kof_orm_save_all`) = loop `kof_list_size`/`kof_list_get` →
+    `kof_orm_save`, instancia remendada DESCARTADA como no host (leitura de
+    volta prova), `true` no fim; GC-safe por alcanca-bilidade da List no slot.
+    Orm8 emitido no bloco dos ctors (className no r9, 6 args — scan estendido
+    p/ `kof_orm_page`); Orm9/Orm10 incondicionais no `usesOrm` (sem
+    className). Design-first: oraculos JVM medidos ANTES da asm (corpo de 14
+    linhas + edges: batch vazio, offset alem do fim, miss=true). Provas:
+    `KofOrmE2ETest#pageDeleteSaveAllNativeEndToEndMatchesJvm` +
+    `#pageEdgesDeleteMissSaveAllEmptyNativeMatchesJvm` byte a byte
+    JVM==Native — classe 48/0F/3skip; pino ORM001 migrou p/ cross riscv64
+    (`#rowObjectFechadoNoX86CrossAindaOrm001` — o que restou: runtime-MySQL e
+    espelhos cross, nunca silent). Docs EN+PT: parity, tracker 1.1.9, DOING
+    (claim no mesmo commit). O suíte trouxe 1 vermelho de
+    outra camada exposto pela abertura do gate: §421 catalogado (native
+    `db.connect` aceita scheme fora do contrato — H2 — sem recusa nomeada; raiz
+    pre-existente, ORMs ok com sqlite medido). Obs: o `stash@{0}` local (autostash da era F2a,
+    nao empurrado por ninguem) foi INSPECIONADO e deixado intacto — todo o
+    conteudo ja pousou em forma diversa (`RuntimeOrm4`/`NATIVE_F1`); nao
+    pessem-lo as cegas.
+  - **F2c2 — `orm.where`/`whereOp` row-object→List REAL no Native x86-64
+    (gaps-db lane)** (21/09): `RuntimeOrm7` — UM corpo, dois globls. O `where`
+    do Kof é polimórfico por aridade (3 args → `kof_orm_where`; 4 args →
+    `kof_orm_where_op` com op do usuário — 7 args no host). O 7º arg
+    (`className`) é lido da stack na entry do callee (`8(%rsp)`, ANTES do
+    `andq`) — o caller S7f (13/09) já empilha arg7 no topo (SysV,
+    caller-cleanup). Whitelist do op idêntica ao host (`> < >= <= != LIKE`;
+    `==`→`=`; senão throw `ORM operator not allowed: <op>` — mensagem exata
+    medida no oracle JVM). Bind do value pelo mesmo classificador do key do
+    Orm5 (box §284 / KofString do coerce do call-site / null →
+    bind_text/int64/double/null). Três bugs pegos no caminho: `movl mem,mem`
+    (erro de sintaxe do `as`, pego por RED-first no `as`), A/B só em
+    registrador durante o alloc interno do `concat` (GC conservativo —
+    corrigido: empilhados, protegidos), e o `concat` clobberando `%rdi` via
+    `kof_memcpy` (corrigido: `movq %rax,%rdi` após o call). Prova:
+    `KofOrmE2ETest#whereNativeEndToEndMatchesJvm` byte-a-byte JVM==Native
+    (oracle de 10 linhas com op inválido + catch + re-query) — classe
+    46/0F/3skip; pin ORM001 migrou para `page` (F2c3). Docs EN+PT: parity,
+    tracker 1.1.9, DOING (claim no mesmo commit).
+  - **F2c — `orm.all` row-object→List REAL no Native x86-64 (gaps-db lane)**
+    (21/09): `kof_orm_all` em asm (`RuntimeOrm6`) — loop de campos do find
+    (casamento por NOME, leitura por typeCode + tipo dinâmico da coluna com o
+    §397) + `kof_list_new`/`kof_list_add` por linha; ctor resolvido UMA vez
+    (resolver `kof_orm_ctors` da irmã, agora alimentado por find E all —
+    set renomeado `ormCtorClasses`); lista VAZIA != null (host devolve
+    ArrayList sempre). Design-first: oracle JVM medido ANTES da asm (corpo
+    `2/Mel/Ana/0/empty=0`). Prova: `KofOrmE2ETest#allNativeEndToEndMatchesJvm`
+    byte-a-byte JVM==Native (2 linhas por nome+size, `for-in`, vazio pós-
+    delete, segunda chamada sem leak) — KofOrmE2ETest 45/0F/3skip; pin
+    ORM001 migrou p/ `where` (F2c2). Docs EN+PT: parity, tracker 1.1.9
+    (+ typo da irmã `F2a find`→F2b sincronizado com a linha do §397), DOING
+    (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
+    (padrão da casa), o loop é o MESMO código já provado no §397.
+  - **O gate agora fecha o ciclo nas duas direções** (21/09, lane docs): além de afirmação de fechamento sem respaldo no ledger, um id FECHADO no ledger a partir da seção 400 sem entrada no CHANGELOG agora derruba o gate. O piso é regra de época, não anistia: medido em 21/09, 25 ids abaixo de 400 não têm entrada enquanto ZERO acima têm — a prática consolidou, a regra começa onde a prática começa. Verificado por mutação: uma seção fechada plantada no ledger sem linha no changelog é nomeada pelo gate; estado real segue verde. (Uma ideia companheira — proibir referências do changelog a ids fora do ledger — foi medida e REJEITADA: os achados são remissões antigas de outro espaço de ids, regra errada para a história, recusada pela lição da rodada 11.)
+  - **Paridade de seções numeradas adicionada; nível da seção 7 reparado** (21/09, lane docs):
+    medir todos os pares EN/PT sob `docs/development/` mostrou só o `DECISIONS.md` fora, e o resíduo
+    era um deslize de nível — EN `# 7. Final rule` (H1) vs PT `## 7. Regra final` (H2), o único fora
+    do padrão contra os irmãos H1 3–6. Corrigido e guardado: o `check_live_records.sh` agora também
+    exige que as seções numeradas (`N.`) tenham o mesmo conjunto de números E o mesmo nível de
+    heading nos dois idiomas (language-independent — os números não são traduzidos) — provado por
+    mutação (rebaixar o 7 PT para H2 o nomeia; restaurado verde).
+  - **Gate de registros vivos ampliado; paridade EN/PT do DECISIONS reparada** (21/09, lane docs):
+    auditar o pouso da lane irmã achou três decisões da mantenedora registradas só no EN (`R6-SCOPE`,
+    `D-R3-BUFFER`, `D-R3-HANDLE-LIFETIME`) — a lane irmã então as espelhou ao PT em `097ff924`;
+    CORREÇÃO desta entrada como escrita primeiro: esta mudança NÃO as traduziu, remove uma
+    corrupção remanescente no DECISIONS PT (um heading EN órfão mais uma cópia byte-idêntica do
+    adendo de gráficos, ambas deletadas sem perda) e adiciona o gate. O `check_live_records.sh` agora
+    também exige paridade EN<->PT dos IDs de decisão (template `D-XXXX` excluído) e zero heading de
+    seção repetido — provado por mutação (duplicata replantada e seção PT removida são nomeadas;
+    restaurado verde). O fio no agent-verify agora dispara para todo `docs/development/`.
+  - **Registros vivos ganharam gate próprio — e o teste de fio ganhou dentes** (21/09, lane docs):
+    `scripts/check_live_records.sh` exige que toda declaração `N itens`/`N vivos` nos dois READMEs
+    desta lane bata com a contagem viva do classificador — a classe que driftou duas vezes hoje (um
+    resync de frase deixou uma linha de tabela velha em `18`; o resync seguinte esqueceu a mesma
+    linha, achada pela lane irmã em `5a80625c`). Declaração ausente é falha, não passe livre
+    (anti-neutering). Construí-lo expôs dois bugs no ferramental da PRÓPRIA lane na mesma hora:
+    (1) o hook novo foi inserido primeiro aninhado dentro de outro `if` — fio morto que o teste de
+    wiring nível-regex não via, então o teste ganhou um nível funcional que executa o esqueleto real
+    dos blocos; (2) esse nível novo falhou antes por falso-negativo de `pipefail`+SIGPIPE (`grep -q`
+    fechando o pipe), corrigido capturando a saída primeiro. Provado por mutação ponta a ponta:
+    contagem errada e bloco mal aninhado são ambos nomeados; estado real segue verde.
+  - **Os fios agora estão sob teste** (21/09, lane docs): os gates changelog-ledger e ledger-anchors tinham detector testado mas hook NÃO provado dentro do `agent-verify.sh` — erro de digitação num regex `touches` = gate que nunca roda em silêncio (classe falso-verde, lição da rodada 12 aplicada ao wiring). Novo teste da suíte extrai os padrões vivos do dispatcher e confere que cada um dispara exatamente nas suas famílias de arquivos; verificado por mutação (quebrar `^CHANGELOG\.` deixou o teste vermelho nomeando os arquivos; restaurar voltou verde).
+  - **Higiene de waiver agora é imposta, não prometida** (21/09, lane docs): uma waiver cujo id FECHOU no ledger enquanto o CHANGELOG ainda o cita passa a derrubar o gate (`STALE`, rc≠0) — fechar um item corretamente exige apagar a linha da waiver, então uma desculpa velha nunca pode abrigar uma mentira futura. Verificado por mutação ponta a ponta: virar a linha de status do item 268 no worktree fez o gate nomeá-la; restaurar voltou verde.
+  - **`check_changelog_ledger` reconstruído por mutation-testing — era um falso-verde duas vezes** (21/09, lane docs): mutações realistas no worktree (virar o §420 para OPEN; truncar uma âncora viva) expuseram que (1) a lista de tokens não conhecia a prosa "§NNN closed/closes" da casa e (2) um bug de tipo int-vs-set tornava a checagem INTEIRAMENTE VACUA. O detector agora é um passe python que casa cada token de fechamento ao `§NNN` PRECEDENTE MAIS PRÓXIMO (conserta a atribuição em linhas multi-§: "§248 … §209 JVM ✅" não culpa mais o §248). Colheita honesta na primeira rodada real: 13 achados — 5 menções legítimas de meia-face/retração/citação histórica isentadas com justificativa (incl. o "Closes §268" de 17/09 do próprio CHANGELOG, superado pela reabertura PARTIAL do ledger em 18/09 — CHANGELOG é história, o ledger vence), 142 afirmações EN conferidas, 0 drift. Teste de suíte + selftest re-rodados verdes; a mutação do §420 agora é garantida de pegar.
+  - **Gate de âncoras do ledger, `check_ledger_anchors.sh`** (21/09, lane docs): cada href de `pt-switch`/`en-switch` entre línguas tem que ser igual ao slug GitHub do heading de destino (diacríticos dobrados, pontuação removida, `_` preservado) — medidos HOJE 11 hrefs QUEBRADOS (era §395–§419 da irmã: prefixos abreviados à mão, `retracao` contra o `RETRATADO` do heading, deriva de contagem de hífens), todos regenerados mecanicamente até zero. `--selftest` planta um slug truncado; ligado no `agent-verify.sh` (dispara em `known-bugs*`) e na suíte de agentes da CI via `ledger-anchors-test.sh`. O bug exato de âncora do §420 que esta lane pousou uma hora antes é o caso motivador — agora guardado para toda lane. RETRATAÇÃO de uma afirmação falsa da mesma rodada (lição §419 aplicada a mim): a entrada acima declarava `test-kofc-gate-test` e `test-android-gate-test` VERMELHOS no tip limpo como dano pré-existente de outras lanes — remedido com o JDK que o repo exige (25) no PATH: **os dois verdes, todos os cenários OK**, e a suíte completa de agentes fecha 21/21 VERDE. O fantasma veio desta lane rodar a suíte sob o java 21 do sistema antes de exportar o toolchain na mesma linha do shell; o próprio `test-android-gate.sh` se recusou com honestidade no java velho (`SKIP — java 21 no PATH (kof exige 25)`). Não havia dano algum em EG-9/EG-10; o ping à dona na DOING é retratado no mesmo commit. Obs.: a entrada de correção do §420 acima foi escrita antes deste gate existir — corrigiu 2 hrefs à mão; este commit corrige a classe.
+  - **Âncoras cross-lingue do §420 corrigidas no mesmo dia em que a retração §419 avisa** (21/09, lane docs): os links de troca EN↔PT foram escritos à mão com letras acentuadas e um `§` cru — o slug do GitHub dobra diacríticos e apaga pontuação, então as âncoras não apontavam para lugar nenhum. Os dois lados foram re-slugados com o algoritmo da casa (precedente `retracao` do §419) e verificados por igualdade de string contra os headings.
+  - **Registro vivo ressincronizado 21/09 ~07:2x**: a contagem da fila em `development/README`(+PT) foi de 17 para **18** — a cadeia do dia agora registra os dois sentidos: correções derrubaram a contagem (§380/§381/§394/§353) e a re-publicação honesta da **§418** pela lane nativa (harness de debug riscv64, reprovada após a perda de árvore que a própria retração **§419** documenta) a subiu de volta. Snapshot da prosa atualizado; a autoridade segue sendo o script, por construção.
+  - **`check_changelog_ledger` entra na suíte de agentes da CI** (21/09): `scripts/tests/changelog-ledger-test.sh` envolve o gate pelos dois lados — flip falso plantado tem que ser capturado (red-first) e o repo real tem que seguir consistente — registrado no `run-agent-tests.sh`; suíte completa de agentes 21/21 VERDE neste host.
+  - **Bug de mecanismo do gate de release achado pela primeira corrida estampada — o `safe-suite.sh` nunca entregava o `TOTAL` ao log** (21/09, lane docs): o `stability-report.sh` certifica um log de suíte pela linha `TOTAL` + `SUITE-SHA`, mas o `safe-suite.sh` imprimia o `TOTAL` só no console — toda corrida estampada em qualquer host era permanentemente `unknown` e a condição 4 do release nunca podia ser medida. Um `tee -a` de uma linha; a primeira corrida completa estampada em `8f459b8e` agora lê **STABILITY: GREEN — 3355 testes / 0F / 0E / 223 pulados** no `check_release_050_gate.sh`, e a linha da condição 4 registra a medição (re-roda obrigatória na hora do corte, pela condição 6). A suíte red-first `check-release-050-gate-test` da irmã segue verde com a mudança.
+  - **§420 fechado — morre o último cast bruto `(int)` sobre um `getArraySize()` do guest, com o precedente do §258** (21/09, varredura da lane docs): `KofJsRunner.writeBytes` (`:480`) truncava em silêncio em arrays do guest acima de 2^31 — exatamente a violação R6 que o texto do §258 nomeia. Bound check copiado dos vizinhos já corrigidos do próprio arquivo; `IoE2ETest` 24/24 verde neste host (Graal embutido — a linha da ponte roda em toda rodada). A varredura também re-mediu o próprio batch do §258: honesto (face #775 com a `.22`), e o ✅→REOPENED do §192 é reabertura real, não drift — o gate do ledger segurou.
+  - **Gate novo `check_changelog_ledger.sh` — o CHANGELOG não pode mentir sobre o ledger** (21/09, lane docs): cada afirmação `§NNN ✅ FIXED` do `CHANGELOG.md` é conferida contra a fila viva que o `check_known_bugs_status.sh` imprime (mesmo classificador), e o mesmo pro PT. Ele VERMELHA exatamente o acidente que o motivou: o tick `d9384a5b` virou o §388 de `✅→🟡` sem um único conflito de rebase para avisar ninguém. Citação histórica de meia-face fechada só se isenta por linha nomeada em `scripts/changelog-ledger-waivers.txt` (2 hoje: §205-EN gate-red, §278-PT face db/orm). Ligado no `agent-verify.sh` (dispara quando a mudança toca CHANGELOG, known-bugs ou o waivers); `--selftest` planta um flip falso e exige que o gate pegue. Docs EN+PT no `development/README` §2.
+  - **Fix-forward do ledger — flip do §388 restaurado** (21/09): o rebase do tick da irmã (tip `d9384a5b`) retrocedeu silenciosamente o status do §388 para `🟡 PARCIAL` nas duas línguas — o mesmo acidente de base velha que apagou a nota da DOING — porque o flip havia pousado um commit antes (`69b49b3a`), fora da zona de conflito que aquele rebase viu. Os dois blocos de status voltam ao texto original `✅ CORRIGIDO 21/09` (Repro A `SEM099`, Repro B `D-ARRAY-PRINT`), gate do ledger verde, contagem de abertos de volta a 17.
+  - **Doc-sync pós-§388 (21/09)**: corrigido o `development/README` que ainda listava 3.8 como
+    residual "à espera de decisão" (3.8 pousou); condição de entrada **E3 do `PLAN-BOOTSTRAP`
+    marcada como cumprida** (§388 fechou as duas metades: `SEM099` + `D-ARRAY-PRINT`).
+  - **§388-B fechado — `println(Int[])` é o formato de container §107** (21/09, voto da
+    mantenedora `D-ARRAY-PRINT`): imprimir um array primitivo inteiro agora dá `[65, 66]`
+    em todo target — JVM/Script pelo novo `kof_array_to_string` (JvmRuntimeCore; o
+    interpretador por reflexão), JS roteando `valueOf(ArrayType)` pelo `kofFormat`, e o
+    x86 nativo pelo gêmeo em asm (riscv64/aarch64 medidos na CI). A identidade `[I@…` e a
+    face JS sem colchetes morreram; o `io.md` declara o formato e o contrato `SEM099` dos
+    params de bytes. Fixado pela célula `arrayprint` (ConformanceMatrixTest, os quatro
+    targets incl. nativo) + `ArrayPrintFormatE2ETest` 7/7; §388 vira ✅.
+  - **Design 3.6 pousado — `docs/development/future/secrets-plan.md` (+EN)** (21/09): a
+    resposta do Estágio 5 a "Secrets em logs: SEM PROTEÇÃO" — value type `Secret`
+    (reveal-gated, equals em tempo constante, formato de impressão `Secret(*** )` declarado
+    logo de saída), redação forçada em três camadas (compile/runtime/corpus) e `KeyHandle`
+    (material de chave nunca chega ao guest; rotate() revoga). Zero código: P1/P2/P3 cada um
+    espera seu próprio voto rule-6; a superfície crua `secrets.get`/`jwt` segue intacta.
+    Linha 3.6 do tracker anotada, linha no `future/README` adicionada EN+PT.
+  - **§388-A — `writeBytes`/`appendBytes` com `listOf(...)` compilava VERDE e
+    morria em runtime** (20/09): o `lowerIo` agora reporta `SEM099` quando um
+    argumento de tipo List encontra um parâmetro ArrayType — o contrato `Int[]`
+    declarado no io.md passa a ser cobrado em tempo de compilação em todo target
+    (JVM `VerifyError`, Script rc=1 mudo e mismatch JS morrem juntos; o caminho
+    `new Int[n]` fica intacto). `IoArrayArgE2ETest` 5/5. A Repro B (imprimir o
+    `Int[]` inteiro: JVM/Script `[I@…` vs JS `65,66,67`) segue aberta — decisão
+    de contrato rule-6 pendente.
+  - **§397 — binder compartilhado int→Bool virava `false` em silencio (JVM)**
+    (20/09): descoberto PELO PROBE do F2b antes de escrever qualquer asm —
+    `orm.save(Item(0, true))` gravava 1 e `orm.find<Item>(...).active` lia
+    `false` (`rs.getObject` = `Integer`; `kof_json_bind` caia em
+    `parseBoolean("1")`). Vitimas: `orm.find/all/where/page` JDBC,
+    `db.query<T>` e `json.decode<T>` com campo numerico. Fix na raiz: ramo
+    boolean aceita `Number -> intValue() != 0` (simetria gravar==ler; String
+    segue `parseBoolean`). Prova Q0 medida RED->GREEN: 3/3 RED no binder
+    velho, 3/3 GREEN com o fix — 1 teste por vitima
+    (`KofDbE2ETest#typedQueryBindsIntColumnToBoolField`,
+    `KofOrmE2ETest#findPreservesSavedBoolTrueRegression397`,
+    `JsonCompleteE2ETest#jvmDecodeIntFieldIntoBoolRecordBindsTrue`).
+    Contrato travado para a asm do F2b: `INTEGER != 0` no slot Bool.
+    Follow-up medido 21/09: a asm do `find` (`RuntimeOrm5`, F2b da irma) levara o
+    oracle antigo (TEXT "true", INTEGER 1 -> false) e virou divergencia JVM×Native
+    com o host consertado — patch por tipo dinamico de coluna (`!=0`) +
+    `findPreservesSavedBoolTrueRegression397` estendido p/ byte-paridade
+    Native==JVM (RED sem o patch na assert cross, GREEN com; KofOrmE2ETest 44/0F).
+    Lacuna de registro consertada no mesmo dia: o gate agora tem parágrafo no `development/README`(+PT) §2 ao lado do gate de língua.
+
+  - **Fortalecimento de teste F2a (lane gaps-db)** (20/09): a unidade F2a
+    (`save` row-object, `RuntimeOrm4`+`RuntimeOrmSchema`+`RuntimeOrmBind`)
+    pousou por `4316d325`; esta fatia SÓ FORTALECE A PROVA — o
+    `saveNativeEndToEndMatchesJvm` agora exercita o caminho UPDATE com VALOR
+    ALTERADO (`User(1, "Mel-2", ...)` — record imutável, construtor novo com
+    a mesma pk; o golden lê o nome de volta via `db.query`, provando que o
+    slot alterado chega ao bind e ao banco — antes o UPDATE era salvo com
+    valores idênticos e não provinha writeback). Prova medida: KofOrmE2ETest
+    42/0F/3skip, paridade byte JVM==Native (10 linhas).
+  - **3.8 entregue — `kof makealive plan|apply|destroy` (D-MAKEALIVE-CLI)** (20/09,
+    `.18`): a linha de tooling do Stage 3 fecha com contrato delegado pelo maintainer. O
+    verbo segue a decisão Q1 do namespace (`makealive`, não o literal `infra` negado pela
+    R1); o arquivo segue Kof puro — `import kof.makealive`, `design(): Infrastructure`,
+    `provider(): Provider`, sem main() — e o tool síntetiza um main() sobre as faces do
+    host, falando pela linha marcada `@@KOF_MAKEALIVE@@ {json}` (formatação humana/JSON no
+    CLI, exit decidido por `allOk` via truthy tolerante; throw = passthrough cru, rc 1, o
+    anti-padrão da §255 segue fechado). O estado é um arquivo h2 (`--state PATH`, default
+    `<file>.makealive`) salvo em gen = max+1 pela face nova `mkMaxGen`; o E2E do destroy
+    achou e corrigiu um BUG REAL no host — um estado vazio salvo gravava ZERO linhas, a
+    geração ficava invisível e o plan ainda via o mundo antigo (a MARCA `res ""` agora
+    persiste a geração vazia; os goldens `MakealiveDbHost/DbState` intactos). Paridade de
+    bytes JVM==JS (KofJsRunner in-process + tee, igual à 2.6 js); recusas honestas
+    script/native; contrato do driver JDBC inalterado (o runner traz o driver; h2 é
+    dependência de TESTE do kof-cli exatamente como no kof-compiler). Prova:
+    `CmdMakealiveTest` 7/7 + `MakealiveMaxGenE2ETest` 4/4 + bateria Makealive 14/14.
+
+  - **known-bugs §381 CORRIGIDO — um campo de `entity` com nome PALAVRA-RESERVADA OOMAVA
+    o compilador** (20/09, `.18` via decisão do maintainer — erro limpo, sem mudar a
+    gramática): o field loop de `parseEntityDeclaration` chamava `expectId`, que reporta
+    SEM consumir, então `entity E { val: String }` fazia progresso-zero alocando um
+    diagnóstico + um node de campo por iteração até o heap morrer (medido: -Xmx256m, ~2s).
+    Fix: nome de campo não-IDENTIFIER reporta `Expected field name in entity` (PARSE024)
+    uma vez e consome o token ofensor (recuperação de pânico clássica) + trava de progresso
+    por iteração. Prova: novo `EntityKeywordFieldE2ETest` 3/3 rodando em SUBPROCESSO no
+    budget original de 256MB (RED: o filho morre em OOM; GREEN: diagnósticos limitados,
+    entities válidas compilam) + bateria parser/makealive 272/0F.
+  - **`kof workflow run --target js` suportado (fatia residual da 2.6 / R7)** (20/09,
+  - **Ferramentas de identidade de release (sem depender de decisão da mantenedora — gates já ratificados, `EXIT GATE` §32.6/§32.7/§35):**
+    `scripts/verify-release-identity.sh` confere uma release publicada/diretório (`SHA256SUMS` × digest que o GitHub
+    registra, cobertura do arquivo; `--tested <sha256>` = o "digest testado == digest publicado" ratificado, reportado
+    como `NOT_RUN` — nunca PASS — quando não informado); `scripts/release-evidence.sh` é o manifesto de evidência por alvo
+    (8 alvos Stable GREEN na mesma SHA candidata; RED/SKIP/NOT_RUN nunca verde; digest do pacote testado obrigatório);
+    `scripts/check-reproducible-build.sh` compila o jar do `kof-cli` duas vezes em caminhos limpos diferentes e compara os
+    digests. **Mudança de build:** `project.build.outputTimestamp` agora é fixo no `pom.xml` raiz — o jar fica byte-idêntico
+    entre builds limpos e caminhos (RED antes: dois digests diferentes; GREEN depois: `30e2bca1…` nos dois). Testes offline
+    dos dois primeiros estão na suíte de agentes que o CI já roda. Evidência:
+    `docs/audits/supply-chain-trust-boundary-2026-09-20.md` §8.
+
+    `.18`): o CLI agora compila o `pipeline(): KofWfDag` para JS e roda
+    **in-process** via `KofJsRunner`, com paridade de BYTES com a JVM
+    (`CmdWorkflowTest.runJsTargetFacesJvmBytes`). O stdout do guest alimenta a
+    captura do protocolo `@@KOF_WORKFLOW@@`; o stderr vai em tee para o terminal E
+    para o buffer (espelha o pipe mesclado da JVM, entao as faces de
+    relato/progresso aparecem nos dois targets); a decisao de exit usa `truthy`
+    tolerante porque o `allOk()` host do JS e numerico pelo contrato de bool da
+    §382 — mesma decisao, mesmos bytes. `--target native`/`script` seguem recusados
+    com a mensagem de follow-up. Prova: `CmdWorkflowTest` 12/12 (3 testes js novos,
+    RED-first) + bateria 79/0F (`WorkflowE2ETest`, `KofJsE2ETest`,
+    `IoBoolFacesE2ETest`, pump).
+
+  - **known-bugs §391 CORRIGIDO — #568: o construtor IMPLÍCITO de classe EXTERNA
+    (`Greeter()` sem `new`) via `--classpath` disparava `SEM015` FALSO**
+    (20/09, lane compilador `.22`): `kof build ... --classpath producer.jar` com
+    `Greeter("producer").greet("consumer")` imprimia `Undefined function: 'Greeter'`
+    embora o artefato saísse correto e rodasse. O §134 cobria só a chamada estática
+    e o `new Greeter()`; o `Greeter()` puro caía no resolver de funções e nunca
+    consultava o `ExternalClasspath`. Fix nos dois lados: o `TopLevelCallTyper`
+    resolve o `<init>` externo (sem SEM015 falso) e o `ExpressionBareCallLowerer`
+    emite `new` + `<init>` com o descritor REAL do classpath. Prova:
+    `ExternalClasspathE2ETest` 9/9 (RED-first; caso do relator + negativo R6) e
+    vizinhança 101/0F. Defeito (ii) do #566 (`1.0-blocks`).
+  - **known-bugs §387 CORRIGIDO — o pump JS do host declarava quietude com a
+    promise do top-level-await do módulo ainda pendurada** (20/09, `.18`): um
+    `async main` pendurado num `await` simples (sem sleeper registrado ainda —
+    a janela que o makealive-3.3 abriu ao assíncronizar o dispatch do job)
+    devolvia rc=0 com stdout VAZIO, a classe silenciosa §255; deterministic
+    1/1 no método isolado. Fix em `KofJsAsyncPump`: quietude exige TAMBÉM o
+    promise do módulo settled (callback host via `then`; namespaces sem TLA
+    seguem settled, rejects do guest continuam estourando no eval — medido);
+    30s de starvation sem timer vira falha ALTA, nunca rc=0 vazio. Prova:
+    `retryFacesBothOutcomes` GREEN 6,9s, bateria 132/0F/0E (workflow/KofJS/
+    Makealive/async/sleep/cron/timer/io).
+  - **known-bugs §382 CORRIGIDO — o host JS devolvia as faces BOOL do kof.io
+  - **#566 — pacotes publicados com `kof deploy --publish` agora são consumidos como módulos-FONTE**
+    (opção (b), decisão da mantenedora 20/09, adendo do `D-RELEASE-0.5.0-GATE`; sem mudança de
+    sintaxe nem de semântica): (1) o compilador resolve `import` também nas raízes de fonte das
+    dependências instaladas (`CompilerDriver.setDependencySourceRoots`), depois do módulo local e
+    das bibliotecas oficiais — uma dependência nunca sombreia a biblioteca padrão — em todo alvo;
+    (2) `kof deps resolve` instala as fontes do pacote, cada uma verificada contra o `SHA256SUMS`
+    (`REG002` se adulterada; `REG004` se não listada, listada e ausente ou que não seja
+    `.kf`/`.kof`; nada é instalado em caso de falha), e `kof run|build --deps` entregam essas
+    raízes ao compilador; (3) o `kof deploy` leva as fontes do módulo (`src/…`, sem `tests/`,
+    ocultos nem diretórios de saída) e aceita uma **biblioteca** (módulo só com árvore de pacotes e
+    nenhuma fonte no topo), que é compilada para validar e publicada só como fontes. **Mudança de
+    contrato de propósito:** o tar.gz do deploy deixou de ter 3 entradas — as fontes viajam entre o
+    artefato e o `RELEASE.md`. Pacotes publicados antes (só jar) continuam funcionando (jar no
+    classpath). Uma dependência com fontes é consumida por elas, então `Classe()` sem `new`
+    funciona para suas classes. Prova: `DependencySourceRootE2ETest` 7/7,
+    `DepsSourceModuleTest` 8/8, `CmdDeploySourcesTest` 5/5 (inclui o ciclo completo deploy →
+    registry → `kof run --deps`).
+
+    como o NUMERO 0/-1** (20/09, `.18`): um `writeText/appendText/writeBytes/
+    appendBytes/writeFile` bem-sucedido saía `false` no guest (0 = falsy) com o
+    arquivo NO DISCO e rc=0 (a classe silenciosa §255); `delete/dirDelete`
+    colapsavam miss/sucesso/IOException num 0/-1 indistinguível. Fix no
+    `KofJsRunner` (host = onde os números nasciam): as cinco faces tipadas BOOL
+    devolvem o booleano real — a família delete propaga o
+    `Files.deleteIfExists` (miss = false como JVM/Script, IOException = false —
+    faces de falha MEDIDAS no JVM/Script hoje), a família write `true/false`.
+    As faces numéricas ficam números por contrato (`size`, `readText`,
+    `exitCode`, format, `db.execute` = INT, e o `writeFile(p,c)` top-level = rc
+    INT — as antigas linhas "dbExecute"/"writeFile" da Surface do entry
+    corrigidas). Prova: golden `IoBoolFacesE2ETest` 13 linhas JVM==JS
+    byte, RED no JS sem o fix; as baterias makealive fs/reconcile intactas (o
+    workaround exists() delas é legal e fica); faces de bytes provadas via
+    `new Int[n]` — o crash de coerção `listOf` é do §388 (lane JVM/codegen),
+    não daq
+
+  - **#564 CORRIGIDO — `kof deps` agora baixa um pacote de uma Release REAL do GitHub** (20/09):
+    o `DepsRegistry` cortava cada asset da release na primeira `}` e procurava uma chave
+    `download_url` que a API do GitHub não tem (o asset real aninha `uploader{…}` e expõe `url` /
+    `browser_download_url`), então todo `owner/repo[@ver]` real falhava com `REG002 … has no
+    .tar.gz asset`; a suíte só ficava verde contra um mock plano. O JSON da release agora é lido
+    com o `Json.parse` estrutural do CLI; o binário sai do `url` do asset (API) com
+    `Accept: application/octet-stream`, `User-Agent: kof-cli` e `X-GitHub-Api-Version` pinada; um
+    redirect para o host de armazenamento é seguido sem enviar o token a ele. `SHA256SUMS`
+    continua obrigatório e a seleção exato → `-jvm` → primeiro `.tar.gz` não mudou. Prova:
+    `DepsRegistryTest` 13/13 no shape real do GitHub (11 estavam RED antes do fix) + round-trip
+    real contra uma release pública (sem token, HOME limpo).
+
+  - **#565 CORRIGIDO — fat jars JVM não embutem mais uma cópia truncada de `kof-app.jar`
+    dentro de si mesmos** (20/09): o `CmdBuild.buildFatJar` criava `classesDir/kof-app.jar` e
+    depois percorria `classesDir`, então o output — ainda em escrita — virava um dos próprios
+    inputs (e, num rebuild, o jar anterior também). Afetava `kof build --fat` e todo pacote de
+    `kof deploy --target jvm` / `--publish`. O jar agora é montado num arquivo de staging fora
+    de `classesDir`, o path final exato é excluído da varredura e só é substituído depois de
+    fechado; em falha o staging é apagado e o jar anterior fica intacto. Path público,
+    `Main-Class`, precedência app-first e recusa não-JVM inalterados. Prova: regressões
+    estruturais em `CmdBuildFatTest` (build 1, rebuild no mesmo `classesDir`, rebuild que
+    falha) e no jar distribuído do `CmdDeployTest`.
+
+  - **known-bugs §380 CORRIGIDO — `if` NESTADO cujo then termina em `throw` não
+    rouba mais o false-label do `if` ENVOLVENTE no JS** (20/09, `.18`): dump de IR
+    confirmou que o if-IR de throw-then é LABEL-ONLY (forma do §147) — o parse do
+    else interno encontrava o `falseLabel` ENVOLVENTE como "label final" e o
+    consumia, engolindo o epílogo externo; o caminho não-throw devolvia
+    `undefined` com node rc=0 (a classe silenciosa do §255). Fix cirúrgico: pilha
+    de parsing dos falseLabels ATIVOS (`MethodCtx.enclosingIfFalses`) — label de
+    estrutura envolvente é devolvido, nunca consumido; guardas de loop/try
+    intactas, então §147/§149/§174 (assert-dentro-de-while, end de try) seguem
+    funcionando — era exatamente o que a tentativa revertida (`∪ exits`) quebrava.
+    Prova: golden de matriz 4-motores `conformanceNestedIfThrowStealsFalseLabel`
+    (RED sem o fix, GREEN = oracle JVM byte a byte), caso de origem
+    `MakealiveE2ETest.failedApplyKeepsStateAndNamesTheResource`, baterias de
+    preservação 142/0F/0E + 61/0F/0E; suíte completa verde no push.
+
+
+  - **EXIT GATE 1.0 — EG-3: `scripts/test-package-outside-repo.sh`** (20/09, `.18`):
+    a condicao §12/§23-9 virou um comando repetivel — o tar.gz REAL extraido para
+    diretorio limpo em `$HOME` (regra 9 do repo), env do repo desexportado; `kof
+    version`/`info`/`new` + template `Hello, Kof!` rodando em **jvm, script, js e
+    native (ELF x86-64)**, cross = guarda honesta de build-only (o exec pertence a
+    matriz final, item 10), e a **lib oficial pura-Kof** (`kof.pdf` de
+    `lib/kof-libs`) resolvida FORA do repo — exatamente a classe de bug que o #550
+    expoe. PASS medido no kof-0.4.7-beta. Prova RED-first offline na suite de
+    agentes (`scripts/tests/test-package-outside-repo-test.sh`, registrada no
+    `run-agent-tests.sh`); no dia do RC o re-run no mesmo candidato e um comando.
+    Preflights honestos: JDK 25/node/toolchain ausentes falham alto, nunca falso-verde.
+  - **Fase 7 do DAP — `pause` + `setExceptionBreakpoints`** (20/09, lane
+    tooling/debug): o adaptador da JVM agora pausa um programa em execução (JDWP
+    `ThreadReference.Suspend` em toda thread de USUÁRIO — as threads `JDWP*` do
+    próprio agente são puladas: suspender a thread de transporte congela o
+    protocolo, medido) e arma exception breakpoints (evento Exception kind 4 +
+    modificador `ExceptionOnly` 8, `caught`/`uncaught`). O adaptador Native ganhou
+    as mesmas duas faces: `pause` = `-exec-interrupt --all`; `setExceptionBreakpoints`
+    = breakpoint em `kof_throw_string` (a cadeia de throw do próprio runtime Kof,
+    não exceções C++, então o catch-throw do gdb não se aplica) com o refinamento
+    caught/uncaught sendo `verified:false` honesto (só do JVM; um pedido de uma
+    face só — `caught` OU `uncaught` — é recusado, nunca um filtro que estoura
+    silenciosamente a outra face). Prova: `KofDebugJvmExceptionTest` 2/2 +
+    `KofDebugNativeDapTest` 5/5 (pause→reason `pause`; recusa de face única; as
+    duas faces armam o breakpoint em `kof_throw_string`, provado no log MI do
+    stub), cluster de debug 21/21. No caminho, um frame sem debug info (`Thread.sleep` nativo) abortava o
+    `stackTrace` inteiro com `NATIVE_METHOD` (511) — o cliente JVM agora reporta
+    esse frame como `?`/linha -1 e mantém os frames Kof; uma sonda
+    `Method.VariableTable` (6,2) descartada no `methodName` foi removida.
+
+  - **§385 corrigido — o `LocalVariableTable` do JVM agora começa cada local no
+    SEU PRIMEIRO STORE** (20/09, `LocalVariableTableScopesTest` 2/2, javap real):
+    o table carregava toda entrada com `Start=0`/`Length=<método>`, então um
+    local declarado na linha parada era "visível mas sem valor" e o
+    `StackFrame.GetValues` do JDWP derrubava o lote inteiro com `INVALID_SLOT` —
+    os locais do DAP voltavam vazios. `JvmBackend.emitMethod` agora visita um
+    label imediatamente após o primeiro store (`KofStoreLocal`/`KofCatchStart`)
+    de cada slot e emite a entrada a partir daquele pc (parâmetros — sem store —
+    mantêm `debugStart`; `Long`/2 slots verificado). Atributos só de debug:
+    semântica de execução intacta; o retry por slot em `JdwpValues.locals`
+    permanece como defesa honesta. Prova red-then-green no `javap -v` e o
+    cluster de debug 12/12 com a tabela corrigida.
+  - **Paridade do DAP JVM — `next`/`stepIn`/`stepOut` + `evaluate`** (20/09, lane
+    tooling/debug): o adaptador de debug da JVM agora faz step (evento JDWP
+    `SingleStep` kind 1 + modificador Step kind 10, size LINE, depth over/into/out)
+    e avalia, igual ao DAP Native que já tinha os dois (X7-4). O `evaluate` resolve
+    o **nome** de um local do frame; o JDWP não tem avaliador de expressão, então
+    qualquer outra expressão é `success:false` honesto nomeando a limitação —
+    nunca um valor inventado. Prova: `KofDebugJvmStepTest` 3/3 — conversa JDWP real
+    (break na linha 7 → `evaluate x` = `1` → `next` para na linha 8 → `stepIn`
+    entra em `add` → `stepOut` volta para `main`; um local recém-declarado é
+    recusado honestamente). No caminho, a verruga `Start=0` do
+    `LocalVariableTable` do backend JVM foi medida e catalogada (§385) e o
+    `JdwpValues.locals` ganhou fallback por-slot: um local ilegível é omitido,
+    nunca inventado (R6).
+
+  - **makealive 3.3 — `reconcile(design, provider, intervalMs)`** (20/09, `.18`):
+    o laço de convergência sobre `scheduler.every` (cada tick roda `apply` dentro
+    de um `spawn` — mesma forma CONC003-JS-01 do `schedule` do workflow; parar =
+    `scheduler.cancel(jobId)`, sem faces novas). Ticks podem se sobrepor e isso é
+    seguro por construção: a idempotência vem do READ do provedor, `job.last` é só
+    dica. SEM stub no Native — correção medida do plano (o CRON001 gateia
+    `scheduler.at`, nunca o `every`: SCHED001 fechado cross 05/09). Provado por
+    `MakealiveReconcileE2ETest` 1/1 (JVM==JS byte: o guard do intervalo recusa
+    `<= 0` nomeando `intervalMs`; o laço converge o mundo sozinho; após
+    `cancel`+`destroy` o mundo fica morto por 4 intervalos com o contador de
+    escritas congelado — sem cancel o tick recriaria) x3 serial + bateria
+    Makealive* 21/21. Lição medida no caminho: o pump JS é cooperativo (§132) —
+    um golden deve ESPERAR com um `time.sleep` longo, nunca com polling curto
+    dentro de `while (a && b)` (competia com o pump, morria silente 2/3).
+
+  - **R2 fatia 1 — `libm` agora é linkado POR USO no Native x86 (capability/link-by-use generalizado)**
+    — programas plain carregavam um NEEDED `libm.so.6` por causa do shim `call pow`
+    do monolito, mesmo sem usar pow; o shim agora se declara `.weak pow`
+    (RuntimeMath), o link fecha sem libm, e `-lm` só entra no ld quando a fonte
+    realmente chama `math.pow` (scan `usesPow`, o mesmo padrão de
+    `usesDb`/`usesMysql`/`usesConcurrency`; kof_math_pow` é o único caminho ao
+    shim). Ternário morto no `NativeAssembler` (sqlite igual nos dois ramos)
+    removido junto. Prova no artefato real: `LinkByUseTest` 3/3 com
+    `readelf --dynamic` — plain liga SÓ libc (sem libm/libsqlite3/libmariadb/
+    libpthread); sqlite/pthread/libm continuam ligados por uso; a saída do
+    binário pow bate byte a byte com o oráculo JVM (golden medido). Faces
+    cross/JS/JVM já eram by-use (scan `needsSqlite` #431, delegação ao host,
+    class-loading lazy) — a linha R2 do tracker vira ✅.
+  - **Fatia 3.8a da ABI de struct na FFI — `AbiLayout`, o engine de layout/classificação medido**
+    — engine puro (`kof-compiler` `AbiLayout`) que, dados os campos escalares de
+    um struct e uma ABI alvo (`SYSV_X86_64`/`AAPCS64`/`RISCV64`), devolve o
+    size/align/offsets C e as classes de registrador em que o valor é passado.
+    Não binda nada e não decide nada de D6-1..D6-5; é o substrato que 3.8b/3.7
+    vão consumir. O golden é medição real (GCC 13.3 em x86-64/aarch64/riscv64,
+    14 shapes × 3 ABIs) e é reprovado ao vivo com `_Static_assert` contra os três
+    compiladores (`AbiLayoutTest` 3/3). A medição corrigiu a prosa riscv da spec:
+    o LP64D faz *flatten* de struct ≤2 campos (FP→`fa0/fa1`, inteiros em
+    `a0/a1`), não empacota tudo em doublewords inteiros.
+
+  - **makealive 3.1 MK-1 providers — fs, CLI e REST como corpos de usuario, goldens JVM==JS**
+    (20/09, `.18`): tres formas de provedor executaveis sobre as interfaces sistemicas
+    genericas. `MakealiveFsProviderE2ETest` — mundo em disco via `File` de `kof.io`
+    (apply grava `k=v` reais, idempotencia pelo READ do provedor, destroy apaga; dirs
+    por motor; o workaround do §382 = efeito-e-verificacao: `f.writeText(x); return
+    f.exists()`). `MakealiveCliProviderE2ETest` — mundo via `run` de `kof.shell`
+    (existencia = `test -f`/`test ! -e` pela mesma interface; programa ausente =
+    `exitCode -1`, nunca throw). `MakealiveRestProviderE2ETest` — servidor HTTP KV real
+    (loopback, mesmo processo): `http.get(url)` devolve o BODY como String, 404 = corpo
+    vazio SEM throw (falha de conexao da throw nos dois motores — paridade honesta), a
+    existencia passa pela sonda separada `http.status(url)`. CLI/REST rodam JVM primeiro
+    e JS SEGUNDO contra O MESMO mundo compartilhado — idempotencia por READ cross-engine
+    provada byte a byte, e os programas identicos comparam byte (fs/CLI/REST goldens
+    1/1 cada, bateria Makealive 20/20 no tip).
+  - .18 - GAPS-DB F1b (20/09): `orm.count<User>(db)` é REAL no Native x86-64 — `kof_orm_count` monta `SELECT COUNT(*) FROM "table"` com o builder privado de KofString e roda via `sqlite3_exec`; o callback converte `argv[0]` NO LUGAR (o sqlite libera as strings do valor quando `exec` volta — ponteiro salvo lá é lixo) e o resultado sobrevive num slot estático. Dois bugs latentes morreram no caminho: (a) o epílogo do `delete_all` da F1a salvava slots sobre o `%rbx` gravado (o teste do throw passava só porque o chamador nunca relia `%rbx`); (b) o `count` novo estourava ao fazer pops na região errada da pilha após a injeção `andq $-16,%rsp` do emitter (SIGSEGV) — epílogo agora espelha `delete_all` exatamente. Prova medida: `KofOrmE2ETest` 37/0F (paridade byte JVM==Native de count, incl. três chamadas em sequência na mesma moldura); suíte 4-módulos 3185/0F/0E no clone isolado.
+  - .18 - GAPS-DB F1c (20/09): `orm.migrate(db, name, sql)` é REAL no Native x86-64 — `kof_orm_migrate` espelha o host: DDL da tabela de histórico, `SELECT name = ?` (prepare/bind/step), a sql do usuário pelo executor compartilhado e `INSERT (name, ms)` com `clock_gettime` via syscall cru (mesmo padrão dos spans de observabilidade). A fatia também normalizou o contrato de pilha da stack ORM inteira: todo call para C agora acontece com `rsp % 16 == 0` (a convenção `andq` do emitter reafirmada: entrada `≡0` + `andq` + `subq $56/$88`), `.Lorm_exec` perdeu o `subq $8` acidental e o literal do DDL virou KofString de verdade (`.Lorm_exec` recebe objetos e soma o header de 24 — um `char*` cru fazia o sqlite parsear `ts user (id INTEGER...`). Prova medida: `KofOrmE2ETest` 39/0F (idempotência do migrate + linhas do histórico + paridade do throw de id ruim, JVM==Native byte); suíte 4-módulos 3187/0F/0E no clone isolado.
+  - .18 - GAPS-DB F2b (20/09): `orm.find<T>(db, key)` row-object de LEITURA REAL no Native x86-64 — nova fatia `RuntimeOrm5`: `SELECT * FROM "t" WHERE "pk" = ?` com o key bindado (miss → `null` como o host `rows.isEmpty() ? null : rows.get(0)` — NÃO é throw) e o record CONSTRUÍDO dentro do runtime: o resolver novo do lado do programa `kof_orm_ctors` (`NativeOrmCtors`, emitido por entidade usada com find) mapeia o literal className para `(vtable, typeId, totalSize)` — constantes que um slice não conhece — e depois `kof_alloc`+`kof_init_object`+preenchimento campo a campo. Colunas casadas por NOME (comparação byte, paridade com o host) e lidas por typeCode: int via `column_int`+`movslq` (slot 8B), long via `column_int64`, string via `make_string` (SQLITE_NULL → null), double via `column_double`, float via `cvtsd2ss`+slot 4B, bool via `column_text` equalsIgnoreCase "true" — reproduzindo o oráculo MEDIDO JVM+sqlite (`kof_json_bind(boolean)` faz `Boolean.parseBoolean(String.valueOf(v))`: INTEGER 1 → "1" → false; TEXT "true" → true). Dois fatos que a prova gdb pegou: o call-site nativo coage um key primitivo para OBJ via `kof_long_to_string` — o key CHEGA como KofString (bind TEXT + affinity do sqlite casa a pk INTEGER; boxes/outras formas seguem cobertas pelo unwrap §284) — e `println(find-miss)` sobre um ponteiro de record é SEGV no Native (a JVM imprime "null"): o narrowing `if (g == null)` funciona, println cru de record null é o §397 NOVO (arquivo de outra lane, catalogado honesto, sem enfraquecer o teste). Prova: `KofOrmE2ETest` 43/0F/2skip (`findNativeEndToEndMatchesJvm` byte-parity: hit/miss-null/2a-linha/update-lido-de-volta + pin `allWhereFacesRestantesNativeAindaOrm001` migrou para `all`, F2c).
+  - .18 - GAPS-DB F2a (20/09): `orm.save(db, obj)` row-object REAL no Native x86-64 — nova fatia `RuntimeOrm4` reproduzindo o contrato do host `JvmOrmRuntime.kof_orm_save` sobre a pilha `kof_db_*`: (1) pk null/numérico-0 → `INSERT` sem a coluna pk + `SELECT last_insert_rowid()` como prepared statement (paridade com getGeneratedKeys do host) → devolve instância **NOVA**: `kof_alloc` + clone de header (typeId/vtable da origem) + `rep movsq` dos slots + rowid patchado no slot do pk; (2) UPDATE com acerto (`sqlite3_changes > 0`) → devolve a MESMA instância; (3) UPDATE sem acerto → INSERT-all (upsert). Os binds passam por `RuntimeOrmSchema.kof_orm_parse_schema` (literal de compile-time → tabela de campos: name/len/typeCode/flags + pkIndex) e pelos helpers do `RuntimeOrmBind` (`.Lorm_bfld` por typeCode; KofString `bind_text` transiente; null → `bind_null`). Dois bugs que a prova gdb pegou: o cursor do parser de schema (`addq %rcx,%r12` sobrescrevia o ponteiro do corpo com o do fim → nFields=1 → DDL vazio; corrigido com `leaq (%r12,%rcx),%r13`) e a instrução do rowid montada como `.ascii` — sem NUL, o `prepare_v2` (nByte=-1) lia `SELECT last_insert_rowid()sqlite: H1...` e falhava, o pk ficava 0 e o segundo save INSERTava (violação UNIQUE); agora `.asciz`. `NATIVE_F1` ganhou `kof_orm_save`; o pin ORM001 da era F1 virou `saveCompilesOnNativeAndJs` e um novo `saveNativeEndToEndMatchesJvm` cobre os três caminhos byte-idênticos à JVM (incl. `User(9,...)` INSERT-all aterrando id=9). O pin de faces restantes migrou para o `find` (leitura row-object, F2b). Prova: `KofOrmE2ETest` 42/0F/2skip; suíte 4-módulos 3262/0F/0E (clone isolado `/tmp/k4jgate/full-f2a.log`); docs EN+PT sincronizados (parity, tracker 1.1.9).
+  - .18 - GAPS-DB F3a + fix F1d (20/09): `orm.count<User>(db, campo, valor)` REAL no Native x86-64 — nova fatia `RuntimeOrm3`: `SELECT COUNT(*) FROM "t" WHERE "f" = ?` com o valor bindado por `prepare_v2`/`bind_*` pelo tag do box §284 (int via `movslq` — paridade de sinal com o Integer do JDBC; long/bool/double/float; KofString → `bind_text` transiente; null → `bind_null`; forma estranha → lanço honesto, nunca lixo). Dois bugs que a prova pegou: (1) esta fatia nasceu com `cmpl $101` para `SQLITE_ROW` — a API real é **100=ROW / 101=DONE** (a string de erro "another row available" entregou); (2) `sqlite3_finalize` pisa `%rax` — o count saía certo e a função devolvia 0 (resultado agora estaciona em `%r13`). Retro-fix da F1d que a mesma sessão gdb expôs: o loop de flags do `RuntimeOrm2` caía no scanner de tokens com o cursor já após o `':'`, e o `badtok` comia `:generated`/`:unique` letra a letra — o DDL emitido perdia `INTEGER PRIMARY KEY AUTOINCREMENT` e ` UNIQUE` (e o golden antigo nunca olhava o texto salvo). O golden de create agora relê a linha `sql` do `sqlite_master` e casa byte a byte com o host (incluindo o espaço antes do `(`). Prova: `KofOrmE2ETest` 41/0F (goldens count_where: acerto, numérico, ausente, injeção, negativo; create: texto do DDL); suíte 4-módulos 3261/0F/0E (clone isolado, base pós-rebase 4e71aae2).
+  - .18 - GAPS-DB DB-2 (20/09): over-gating `kof.db`/`kof.orm` do Android (§278) FECHADO — `KofDb`/`KofOrm.supportedOn` aceitam `ANDROID` ("Android É JVM": o alvo reusa o `JvmBackend`). A prova é paridade por construção: `KofDbE2ETest.androidDbEmitsTheSameBytecodeAsJvm` compila entity+create+count nos dois alvos e afirma `Main.class` byte-idêntico. O pin R6 virou (`androidCompilesDbLikeJvmAndRefusesCryptoWithTheDocumentedCode`: db limpo, `SECN003` ainda recusado). `SECN00x`/`GPU001` seguem abertos — aquelas pilhas não rodam no Android (regra 6). §278 → PARCIAL; matriz + KOFANDROID + tracker 1.1.10 atualizados no mesmo commit (EN+PT).
+  - .18 - GAPS-DB F1d (20/09): `orm.create<User>(db)` é REAL no Native x86-64 — nova fatia `RuntimeOrm2`: `kof_orm_create` faz parse byte a byte do literal de schema compilado (`name:dbType[:generated][:unique]`) e reconstrói o DDL exato do host (`"col"` VARCHAR(255)/INTEGER/BOOLEAN/DOUBLE/REAL + UNIQUE, generated → `INTEGER PRIMARY KEY AUTOINCREMENT`) pelo builder compartilhado de KofString; `CREATE IF NOT EXISTS` duas vezes devolve `true` nos dois motores. O pin de ORM001 de compilação migrou para `save` (a face row-object, F2). Prova medida: `KofOrmE2ETest` 40/0F (paridade byte JVM==Native de create, incl. um `select email from user` real provendo que UNIQUE/varchar chegaram); suíte 4-módulos 3188/0F/0E no clone isolado.
+  - .22 - #555 CodeQL (cluster do compilador, 22 alertas): os E2E que disparam `javac`/`java`/
+    `node` como subprocesso montavam o comando com concatenação de string ou nome relativo
+    (`java/concatenated-command-line`, `java/relative-path-command`). Conserto na fonte com o
+    helper `TestJdk` (caminho ABSOLUTO via `Path.of(javaHome, "bin", "java")`, sem `+`;
+    `onPath()` resolve `node` pelo PATH e ERRA honesto se não existe — nunca relativo
+    silencioso). Zera também #887/#889 (KofTimeE2ETest: local morto + @Override), #876
+    (SemanticAnalyzer: caso-`_` no-op removido, `default` já cobre — comportamento idêntico),
+    #890/#908 (parâmetro/local mortos removidos) e #907 (overload privado `isTroolean(
+    NullableType)` renomeado `isTrooleanNullable` — a overload confusa fazia display/describe
+    em :277/:309 resolverem o PRIVADO por tipo estático).
+  - .22 - #555 #918/#919/#940 + paridade JVM: `KofJsProcessBridge.kill()` removia os
+    readers/writers do mapa SEM fechá-los — o pipe do filho ficava vivo nos fds da JVM até o
+    GC (resource-leak REAL, não suprimido: close na face do kill). O espelho JVM
+    (`JvmRuntimeCore.kof_spawn_kill`, template) tinha o MESMO vazamento — corrigido junto
+    (regra 5, paridade por construção). Local morto `result` removido de `execute()` (#940).
+  - .18 - GAPS-DB F1a (20/09): `orm.deleteAll<User>(db)` é REAL no Native x86-64 — `kof_orm_delete_all` em asm sobre o stack `kof_db_*` (sqlite; MySQL lanca ORM001 honesto em runtime; id ruim lanca a string exata do host); gate por-função `fnSupportedOn` (todas as outras faces e o cross mantem `ORM001`); fix de link: programa só-ORM agora puxa `-lsqlite3`. Prova medida: `KofOrmE2ETest` 35/0F paridade byte JVM==Native; suíte 4-módulos 3183/0F/0E no clone isolado.
+
+  - **X9 fatia 6 — `kof deploy` empacota as faces cross (recusa preventiva DEP001 saiu)**
+    — `--target native.riscv64|native.aarch64` roda o MESMO pipeline de release do
+    native x86: ELF cross (`Default/Main`, 0755) + `RELEASE.md` (run hint `./artefato`,
+    não `adb`) + `SHA256SUMS` + `.tar.gz`; multi-target e o manifest de falha parcial
+    tratam o cross como qualquer face. Sem toolchain o deploy FALHA honesto nomeando a
+    ferramenta (R6: ele tentou de verdade — a recusa `DEP001` antiga nunca invocava o
+    emissor). Novo override da casa `KOF_CROSS_PREFIX` (padrão `KOF_GDB`) redireciona
+    `as`/`ld` de `riscv64-`/`aarch64-`; provado em qualquer host com ferramentas stub
+    (`CmdDeployTest#crossReleasePackagesWithStubToolchain`,
+    `crossDeployWithoutToolchainFailsHonestly`, falha parcial determinística com
+    `emptybin`) e com binutils/qemu reais no job cross da CI. Tracker 8.4 → ✅, X9 fatia 6.
 
   - **Dívida CodeQL do cluster debug/tooling fechada na raiz (sem mudança de comportamento observável)**
-    — os 11 alertas CodeQL abertos do cluster de debug da CLI foram corrigidos na fonte, não
+    — os 12 alertas CodeQL abertos do cluster de debug da CLI foram corrigidos na fonte, não
     suprimidos: `KofGdbMi` usa `add` nas filas ilimitadas (o retorno ignorado de `offer`), remove
     o container `console` só-escrito e rejeita binário nulo com `IllegalArgumentException`
     explícita (sem NPE); `JdwpClient` deixa de nomear o `argWords` não lido (o `argCnt` do
@@ -24,9 +520,11 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (breakpoint sem cliente vivo fica `verified:false`, nunca NPE) e remove o `frameVariables`
     nunca lido; `KofDebugNativeDap` faz o parse dos campos `line`/`level` do MI por um helper
     com fallback, então saída malformada do gdb nunca aborta a sessão DAP; e `KofDebugNativeTest`
-    resolve executáveis pelo `PATH` (`Files.isExecutable`) em vez de spawnar um `sh` relativo.
-    Provado pelo cluster de debug **14/14** (`KofDebugNativeTest` 7, `KofDebugNativeDapTest` 3,
-    `KofDebugAttachTest` 3, `KofDebugJvmTest` 1) e compile verde do `kof-cli`.
+    resolve executáveis pelo `PATH` (`Files.isExecutable`) em vez de spawnar um `sh` relativo;
+    `ProfileMethodsTest` resolve o `node` do mesmo jeito. Provado pelo cluster de debug
+    **14/14** (`KofDebugNativeTest` 7, `KofDebugNativeDapTest` 3,
+    `KofDebugAttachTest` 3, `KofDebugJvmTest` 1), `ProfileMethodsTest` **5/5** e compile
+    verde do `kof-cli`.
 
   - **#545/§362 — chamadas de construtor fantasma agora falham em tempo de compilacao (`57a0d5f0`)**
     — `P(1, 2)` em `record P(Int x)`, `D(1)` em classe sem esse construtor e `C("s")` em
@@ -119,6 +617,21 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     perdendo o stdout do filho) foi medido **nao-reproduzivel** no tip atual (`x`/`0` nos dois alvos); a paridade
     JVM×Script byte-a-byte fica fixada como teste permanente na mesma classe.
 
+  - **#554/§378 — `check_known_bugs_status.sh` agora cruza o CONJUNTO INTEIRO de §NNN EN×PT** —
+    o gate comparava só os ABERTOS, então um FIXED existente em UMA única língua passava
+    verde (o caso real §376/§377). Todos os headings são comparados com mapeamento de
+    família de status + self-test com fixture (FIXED so-uma-língua → exit 1).
+
+  - **#550/§371 — a CLI DISTRIBUIDA agora compila cross (riscv64/aarch64) de QUALQUER
+    diretório** — o carregador da ordem de slices lia os fontes `.java` do runtime por
+    caminho relativo ao CWD, então `kof build --target native.risc` morria em erro de
+    sysroot fora da árvore do repo (todo E2E cross rodava via surefire com CWD=raiz do
+    módulo — ponto cego). Fix: carga classpath-first das fontes dos slices
+    (`RuntimeSourceLoader`), fallback a arquivo só em árvore de desenvolvimento. Provado
+    por `RuntimeSourceLoaderTest` 6/6 + `ShippedCliCrossSmokeTest` 2/2 (CLI como
+    subprocesso de um `@TempDir` FORA da árvore); a lane docs re-mediu AMBOS no tip limpo
+    `aabd7bff` (0F/0E). O ticket §371 já pinava a raiz com o mesmo repro que o smoke roda.
+
   - **#443/§373 — `List`/`Set`/`Map` bare em posicao DECLARADA agora resolve para as colecoes builtin (`d969bc3a`)**
     — `class Box { List items }` + `items = listOf(1,2)` compilava "limpo" e morria no class load com descriptor
     fantasma `LList;` (`NoClassDefFoundError: List`): dois resolvedores para o mesmo nome declarado, so o caminho
@@ -127,7 +640,19 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     classe homonima do usuario mantem o dono (controles provam os dois lados). Contrato congelado #139/#150/#214,
     nao semantica nova. Prova: `BareCollectionFieldE2ETest` 8/8 (RED 6/8 pre-fix); o print verbatim da `2` em JVM,
     Script, Native x86-64 e JS no jar limpo. A caca Q4 deste fix abriu a §374/#553 (arg primitivo em add/set de
-    colecao bare nunca boxeia) — fix ainda aberto.
+    colecao bare nunca boxeia) — CORRIGIDA no mesmo dia (abaixo).
+
+  - **#553/§374 — argumento primitivo em `add`/`set` de colecao BARE nao morre mais no LOAD da classe no JVM**
+    — `List xs = listOf(1)` + `xs.add(2)` (local, campo ou `send` de `Channel` nu) boxeava o argumento pelo tipo de
+    elemento DECLARADO, que e `Unknown` sem type-args no receiver: o `int` cru chegava em `ArrayList.add(Object)` →
+    `VerifyError: Type integer … not assignable to 'java/lang/Object'` (o launcher do CLI mascara como a mensagem do
+    JavaFX, §149 — o bug era invisivel, nao ausente). O fix espelha o precedente do bug-35 no MESMO arquivo:
+    `emitBoxIfPrimitive` agora boxeia pelo tipo do ARGUMENTO no call-site (`parameterTypes`), guardado por
+    `elemType instanceof UnknownType` — a emissao de colecao TIPADA fica byte-identica a antes, e o diagnostico de
+    homogeneidade do runtime (regra 5) permanece intocado. Prova: `BareCollectionPrimitiveArgE2ETest` 7/7 (VERMELHO
+    4/4 no baseline limpo: add local nu, add de campo nu, set nu, largos Long/Double; controles tipado/Set/Map verdes
+    nos dois lados), mais a face Native x86-64 do mesmo programa e vizinhanca `BareCollectionFieldE2ETest` 5/5,
+    `CollectionMethodsStdlibE2ETest` 47/47, `KofChannelTest` 14/14.
 
   - .18 - governança: **regra 11 (Lei da Simplicidade) é ABSOLUTA em AGENTS.md** + `DECISIONS.md` §D-MAKEALIVE/§D-KOF-AS-CLOUD/§D-BOOTSTRAP/§D-DB-GAPS (enquetes da mantenedora 20/09: namespace `kof.makealive`, providers genéricos completos, estado kof.db desde o dia 1, Android=paridade JVM no db, ORM no Native via asm `kof_orm_*`, MySQL no cross, bootstrapper = objetivo final).
 

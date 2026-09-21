@@ -88,9 +88,14 @@ public class NativeBackend implements Backend {
     Type lastPushedType = Type.UnknownType.UNKNOWN;
     IRClass currentClass = null;
     boolean usesDb = false;
+    boolean usesOrm = false;
+    /** F2b: className das entidades usadas com {@code orm.find} (para o
+     *  resolver {@code kof_orm_ctors} que constrói o record no runtime). */
+    final Set<String> ormCtorClasses = new LinkedHashSet<>();
     boolean usesHttp = false;
     boolean usesMysql = false;
     boolean usesConcurrency = false;
+    boolean usesPow = false;
     /** #431: bibliotecas dos `extern` bound (ligadas no ld, link-by-use). */
     final Set<String> ffiLibs = new LinkedHashSet<>();
     boolean ffiUsesCstr = false;
@@ -255,11 +260,37 @@ public class NativeBackend implements Backend {
                         if (op instanceof KofCall kc && kc.methodName().startsWith("kof_http_")) {
                             usesHttp = true;
                         }
+                        if (op instanceof KofCall kc && kc.methodName().equals("kof_math_pow")) {
+                            usesPow = true; // R2: unico caminho ao shim (KofMath.pow; recusado no cross)
+                        }
                         if (op instanceof KofCall kc && kc.methodName().startsWith("kof_db_")) {
                             usesDb = true;
                             if (kc.methodName().equals("kof_db_connect")
                                     || kc.methodName().equals("kof_db_connect2")) {
                                 usesMysql |= connectsToMysql(i, ops);
+                            }
+                        }
+                        if (op instanceof KofCall kc && kc.methodName().startsWith("kof_orm_")) {
+                            usesOrm = true;
+                            if ((kc.methodName().equals("kof_orm_find")
+                                        && kc.parameterTypes().size() == 5)
+                                    || (kc.methodName().equals("kof_orm_all")
+                                        && kc.parameterTypes().size() == 4)
+                                    || (kc.methodName().equals("kof_orm_where")
+                                        && kc.parameterTypes().size() == 6)
+                                    || (kc.methodName().equals("kof_orm_page")
+                                        && kc.parameterTypes().size() == 6)
+                                    || (kc.methodName().equals("kof_orm_where_op")
+                                        && kc.parameterTypes().size() == 7)) {
+                                // 5º arg = className literal (KofLoadLiteral STRING
+                                // emitido logo antes do call pelo lowering ORM)
+                                for (int j = i - 1; j >= i - 2 && j >= 0; j--) {
+                                    if (ops.get(j) instanceof KofLoadLiteral lit
+                                            && lit.value() instanceof String s) {
+                                        ormCtorClasses.add(s);
+                                        break;
+                                    }
+                                }
                             }
                         }
                         if (op instanceof KofCall kc && (kc.methodName().equals("kof_spawn")
@@ -277,15 +308,8 @@ public class NativeBackend implements Backend {
                 }
             }
         }
-        if (usesDb) {
-            RuntimeDb1.emit(sb);
-            RuntimeDb2.emit(sb);
-            RuntimeDb3.emit(sb);
-            RuntimeDb4.emit(sb);
-            RuntimeDb5.emit(sb);
-            RuntimeDb6.emit(sb);
-            NativeDbPrepared.emitMysqlPrepared(sb);
-        }
+        NativeOrmEmit.emitRuntimeSlices(this, sb);
+
         if (usesHttp) {
             NativeHttpRuntime.emitHttpFunctions(sb);
         }
@@ -422,11 +446,13 @@ public class NativeBackend implements Backend {
     }
 
     void assemble(Path asmFile, Path binFile) throws IOException {
-        // 7f174a6f passou `usesPow` (campo nunca declarado) + 6º arg (a
-        // assinatura de NativeAssembler.assemble é 4). A -lm é INCONDICIONAL lá
-        // (pow shim sempre presente — ver comentário do commit), então o arg é
-        // morto: chamo com os 4 reais. pow segue linkando.
-        NativeAssembler.assemble(asmFile, binFile, usesDb, usesMysql, usesConcurrency, ffiLibs);
+        // R2 fatia 1 (20/09): -lm AGORA é by-use como sqlite/mariadb/pthread —
+        // o shim `call pow` do monolito virou WEAK (RuntimeMath `.weak pow`),
+        // então linkar sem libm fecha; usaPow só quando a fonte chama
+        // kof_math_pow (scan acima — único caminho ao shim). A história do
+        // 7f174a6f (arg morto, link incondicional) mora aqui.
+        NativeAssembler.assemble(asmFile, binFile, usesDb || usesOrm, usesMysql,
+                usesConcurrency, ffiLibs, usesPow);
     }
 
     // ---------------------------------------------------------------------

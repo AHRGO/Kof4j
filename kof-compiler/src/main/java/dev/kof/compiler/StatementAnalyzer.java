@@ -343,6 +343,15 @@ public final class StatementAnalyzer {
                     // COMPUTE_FRAMES). Restaurado (fix-forward, regra 8).
                     if (ifStmt.elseBranch() != null) analyzeStatement(sa, ifStmt.elseBranch(), scope, returnType);
                 }
+                // §353 revealed (makealive fsRead): `if (t == null) { return }`
+                // seguido de `t.foo()` e o MESMO narrowing de SG-005 em forma
+                // de early-return — sem else, o fluxo que continua e o ramo
+                // FALSO, onde elseNarrow vale. So quando o THEN garante saida
+                // (return/throw), senao o null pode cair aqui adiante.
+                if (ifStmt.elseBranch() == null && !elseNarrow.isEmpty()
+                        && Narrowing.thenBranchExits(ifStmt.thenBranch())) {
+                    for (SymbolTable.LocalVariableSymbol s : elseNarrow) scope.define(s);
+                }
             }
             case WhileStmt ws -> {
                 SemExpressionTyper.inferType(sa, ws.condition(), scope);

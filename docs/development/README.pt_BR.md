@@ -2,35 +2,51 @@
 
 # Development — backlog vivo (só trabalho em desenvolvimento)
 
-> **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **atualizado:** 16/09/2026
-> **Suíte medida neste HEAD:** `2218` run (1911 kof-compiler + 38 kof-script
-> + 7 kof-c-compiler + 262 kof-cli), **0 regressões / 0 erros / 0 falhas nesta corrida**, 192 skip (a única falha que a suíte já mostrou é o flake INTERMITENTE conhecido do §252 nativo `spawnWorkerThrowPropagatesThroughSelectAnyNative`, dona lane nativa `.18`/nat — não é regressão; re-medido 16/09 ~15:54 no tip `9572949f` a partir de um CLONE LIMPO; o flake ficou CALADO pela 3ª vez seguida — disparou 09:44, calou 11:38/15:09/15:54 → ~1/4) (sem
-> qemu no host da medição: os 84 cross são pulados, + os 5 DBs externos +
-> outros guardas de toolchain; `node` presente — todos os `*Js` verdes) —
-> os 262 kof-cli refletem `e5013152` (DepsTransitiveTest, +10; `2a60b426` reescreveu o guard, mesmos 10 @Test). 1911 compiler = 1899 + 3 (`78b733fa` NumericFormatterE2ETest) + 2 (`7b38d0d4` §253-face-A KofTimeE2ETest) + 3 (`7cd69a7b` SSE-JS KofWebJsE2ETest) + 1 (`4ea099b3` §261 window-bind KofJsBrowserE2ETest) + 3 (`92d11a03` G-6b NativeX86GcMarkScopeTest); +1 skip no KofDbE2ETest = o guard de sysroot do §255 (`06e77e94`). O número 2199/1902/252 foi uma contagem no meio do caminho (medida enquanto `555d2afe`/`e5013152` landavam); 16/09 ~15:54 é o nº autoritativo do clone limpo. A leitura de 16/09 ~01:45 deu 297 erros = o trap de stub ECJ velho do §257, limpo com `mvn -pl kof-runtime clean`. O número
-> anterior (1662/13-erros, 13/09) era de host sem node. **Nº autoritativo da suíte = a execução no host** (o gate
-> `mvn test ... -Dmaven.test.failure.ignore=true`; conferir por módulo com
-> `grep -rl FAILURE */target/surefire-reports/*.txt`), não esta linha — ela
-> apodrece a cada commit. Refold da concatenação do `NativeRiscvAsm` para
-> `<clinit>` (anti-pattern novo `constant-folded-runtime-asm.md`) verde no
-> gate `gate1585.log` (HEAD 54da1325).
+> **Base:** `0.5.0-beta` · branch `beta-0.5.0` · **atualizado:** 21/09/2026
+> **Suíte medida neste HEAD:** `3225` run (2762 kof-compiler + 50 kof-script
+> + 7 kof-c-compiler + 406 kof-cli), **0 falhas / 0 erros**, 221 skip (cross
+> roda no job dedicado com qemu; o resto são guardas de toolchain/DB externo +
+> sysroot §255) — job CI Build+Tests do tip `404d8be6` em 20/09 ~18:14: o
+> **primeiro verde na `beta-0.5.0`**, reator `Kof 0.5.0-beta`. O flake §252, o
+> residual cross §181 e o §256(b) seguem fechados no código (`20495e48` /
+> `c56c74a7` / `3a593734`). **Nº autoritativo da suíte = o job CI no SHA
+> pushado** (o gate `mvn test ... -Dmaven.test.failure.ignore=true`; conferir
+> por módulo com `grep -rl FAILURE */target/surefire-reports/*.txt`), não esta
+> linha — ela apodrece a cada commit. Refold da concatenação
+> `NativeRiscvAsm` para `<clinit>` (novo anti-pattern
+> `constant-folded-runtime-asm.md`) verde no gate `gate1585.log` (HEAD 54da1325).
 > **Regra dos 3 estados (`AGENTS.md`):** `docs/` = implementado/decidido ·
 > `development/` = **trabalho técnico pendente** · `development/future/` =
-> **só plano, zero código**. Concluiu → move p/ submódulo de `docs/` no mesmo
-> commit; iniciou → cai p/ cá. A varredura de 12/09 (`655afa6b`) moveu 13 docs
-> de `future/` p/ cá (todos com código) e 4 concluídos p/ `docs/`.
+> **só plano, zero código**. Concluído → move para um submódulo de `docs/` no
+> mesmo commit; iniciado → cai aqui. A varredura de 12/09 (`655afa6b`) moveu 13
+> docs de `future/` para cá (todos com código) e 4 concluídos para `docs/`.
 > **Refactor de clareza 13/09 (mantenedora):** bugs/gaps/matrizes →
 > `docs/bugs-and-gaps/` (linhas 2, 41, §2, §3, §4.2, §5); planos **parados por
 > decisão** foram **ratificados 13/09 e consolidados em `DECISIONS.md`** (a
 > pasta `decision-pending/` foi extinta — ver §3). Este README lista o que
-> **anda**; decisão tomada mora em `DECISIONS.md` (regra 6: frente sem linha
-> lá não é atacada).
+> **anda**; uma decisão tomada vive em `DECISIONS.md` (regra 6: uma frente sem
+> linha ali não é atacada).
 
 **Fontes de verdade que NÃO estão aqui (não são backlog):** `docs/status.md`
 (o que funciona + gate da suíte), `docs/backend-parity.md` (matriz de
 paridade com gaps honestos), `docs/bugs-and-gaps/specification-gaps.md`
-(SG-001–022 — fila do maintainer COMPLETA, virou referência; SG-021/022 =
-pedidos sem decisão).
+(SG-001–023 — fila do maintainer COMPLETA, virou referência; SG-021/022 =
+pedidos sem decisão; **SG-023 ✅ DECIDIDO 21/09 — `D-PROPERTY`, sem superfície
+nova**).
+
+---
+
+## 0. O que está vivo aqui (leia primeiro)
+
+- **Pendentes (condição 3 do gate de release):** `ffi-abi-structs.md`
+  (**D6 DECIDIDO 20/09** — implementação em curso, dono `jonas`) ·
+  `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (dono: sessão 9093, frente de
+  plataforma) · `makealive-plan.md` (resíduos 3.2/3.7, regra 6 — 3.8 pousado 20/09 `D-MAKEALIVE-CLI`).
+  Autoridade: `scripts/check_release_050_gate.sh` (`loose_docs`).
+- **Registros vivos aqui (não são backlog):** `DECISIONS.md`,
+  `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.
+- **§1 é a fila; §4.1/§4.2 são TRILHA DE AUDITORIA** (o que já saiu, com
+  prova) — não leia como trabalho. Como agir: §6.
 
 ---
 
@@ -50,11 +66,11 @@ pedidos sem decisão).
 | 5 | ~~`plan-editor-integration.md`~~ → `docs/tooling/PLAN-EDITOR-INTEGRATION.md` | ✅ **CONCLUÍDO 14/09** — degraus 0–13 implementados e provados (`EditorIntegrationTest` 23/23; `kof editor` completo nos 7 editores; release gate §19 verde) | movido para `docs/tooling/` (regra dos 3 estados) | — |
 | 6 | ~~`plan-stdlib-expansion.md`~~ → `docs/stdlib/PLAN-STDLIB-EXPANSION.md` | ✅ **CONCLUÍDO 14/09** — S0–S13 implementados e validados nos 5 alvos; pendências de decisão consolidadas em `DECISIONS.md` §D-STDLIB | movido para `docs/stdlib/` (regra dos 3 estados) | — |
 | 7 | fila recém-aberta de `DECISIONS.md` (13/09): ~~`time.todayIso/formatDateIso/isToday/hoursBetween/parseDateIso/tzOffsetSeconds` (D-STDLIB)~~ **✅ EXECUTADA 13/09** (S7e-S7h, matriz stdtime3-6, suíte 1772/0/0; TIME003 = fila geral) · ~~`CmdNew` (D-APP I1)~~ **✅ FEITO 14/09** (`kof new --type mono\|backend\|frontend\|full-stack`, esqueletos compiláveis, APP003 honesto, `CmdNewTest` 8/8, matriz APP em `backend-parity.md`) · ~~`chacha20Encrypt/Decrypt` (D-SEC)~~ **✅ FEITO 14/09** · ~~`security.cookies`~~ **✅ FEITO 14/09** · ~~`app.security()` (C18)~~ **✅ FEITO 14/09** (middleware composto, ordem fixa, JVM; `KofWebE2ETest` 22/22 + `appSecurityPipelineE2E`; Native/JS `WEB006`; superconjunto unificado .18×.22) · ~~`--fat` (D-APP I3)~~ **✅ FEITO 14/09** (`kof build --fat` → `kof-app.jar` executável com classes+runtime+deps; `CmdBuildFatTest` 4/4, prova `java -jar`; não-JVM recusa honesto R6) · ~~blog E2E (D-SPRING F12)~~ **✅ FEITO 14/09** (`KofBlogE2ETest` verde; expôs+corrigiu 2 bugs JVM: `readRequest` contava body em chars vs `Content-Length` em bytes — travava conexão UTF-8 multibyte; CLOB cru do JDBC no read path) | `RATIFICADO` (decisão travada 13/09) | — | ~~OAuth resource-server (D-SEC camada 16)~~ **✅ FEITO 14/09** (`auth.resourceServer(jwksUrl,issuer,aud)` + `resourceServerVerify`; RS/ES via JWKS, sem confusão de algoritmo; integra com `auth.authenticated`/`app.security`; `KofOAuthResourceServerTest` 4/4; Native/JS `SECN007`) — **FILA §7 VAZIA**; cada linha = unidade-teste-commit |
-| 8 | `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (+ companion de visão `docs/architecture/UNIVERSAL-PLATFORM-VISION.pt_BR.md`) | `EM CURSO` — **promovido de `future/` 17/09** (`DECISIONS.md` §D-UNIVERSAL, R12 sobreposto); dividido 17/09 em passos executáveis + companion de visão | diretriz da mantenedora 17/09: promover e implementar | **Estágios 1–8 + R1–R12 como itens executáveis** (status ✅/🟡/🔵/⛔ + lane dona + prova) — estado vivo: **R1 ✅ FEITO** (`5f1422c6` gate+ledger+CI da fronteira); **R6 ✅ gate de máquina** (`DomainGapCodesTest…` `19a740f2` + varredura do ledger `c5897cd5`); **1.5 ✅ export OTel landado** (`435b7013`; Native `OBS003`); 1.1 MEDIA = `MEDIA001/003` documentados, na fila atrás das facades HTTP da `.22`; 1.2 GC x86 = ✅ G-6(a) auto-collect landado 19/09 (`a904317e`, §260 FECHADO, D1-A); 1.4 registry = **✅ MVP 19/09** (D2-A: publish + pull 1.5.3-S2). Reivindicar em `DOING.md` antes do código |
+| 8 | `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (+ companion de visão `docs/architecture/UNIVERSAL-PLATFORM-VISION.pt_BR.md`) | `EM CURSO` — **promovido de `future/` 17/09** (`DECISIONS.md` §D-UNIVERSAL, R12 sobreposto); dividido 17/09 em passos executáveis + companion de visão | diretriz da mantenedora 17/09: promover e implementar | **Estágios 1–8 + R1–R12 como itens executáveis** (status ✅/🟡/🔵/⛔ + lane dona + prova) — estado vivo: **R1 ✅ FEITO** (`5f1422c6` gate+ledger+CI da fronteira); **R6 ✅ gate de máquina** (`DomainGapCodesTest…` `19a740f2` + varredura do ledger `c5897cd5`); **R5 ✅ gate de máquina 21/09** (tier em `scripts/stdlib_boundary.txt` + `check_stdlib_boundary.sh`, D4-A); **X8 ✅ 21/09** (idioma property `test`+`rng`+`assert`, `D-PROPERTY`); **1.5 ✅ export OTel landado** (`435b7013`; Native `OBS003`); 1.1 MEDIA = `MEDIA001/003` documentados, na fila atrás das facades HTTP da `.22`; 1.2 GC x86 = ✅ G-6(a) auto-collect landado 19/09 (`a904317e`, §260 FECHADO, D1-A); 1.4 registry = **✅ MVP 19/09** (D2-A: publish + pull 1.5.3-S2). Reivindicar em `DOING.md` antes do código |
 | 9 | ~~`workflow-plan.md`~~ + ~~`shell-plan.md`~~ (+PT) → `docs/workflow-plan.md` / `docs/shell-plan.md` | ✅ **CONCLUÍDOS 19/09** — workflow: as cinco faces landaram (`WorkflowE2ETest` 20/20, paridade byte JVM==JS, Native real); shell: 2.2.0–2.2.4 landados (`ShellE2ETest` 15/15; único residual = `pipeline` JS com pipes vivos, item de plataforma na linha 2.2 do tracker, não fatia do plano) | movidos para `docs/` (regra dos 3 estados — plano concluído não pode ficar em `development/`) | — |
 | 10 | `D-WORKFLOW-RUN` (Stage 2 linhas 2.5/2.6) — runner completo `kof workflow run` + exemplo de pipeline de CI/CD | ✅ **ATERROU 19/09** (dono lane plataforma, sessão 19/09-3/9093): convenção `pipeline(): KofWfDag`; `list`/`run --job`/`--dry-run`/`--json`; host `order()`/`runJob()` + `CmdWorkflow`; `examples/ci/ci-pipeline.kf` golden E2E (`CmdWorkflowTest` 9/9) | decisão travada em `DECISIONS.md` §D-WORKFLOW-RUN; implementado direto (fatias de tooling, precedente X9 `kof deploy`) | residual: faces JS/Native do runner são fatias seguintes honestas (R7) |
-| 11 | `makealive-plan.md` (+PT) — D-MAKEALIVE (ratificado 20/09, `DECISIONS.md`): o compilador que compila a si mesmo — sonda da forma do provider landada (`57fd2c6e`, 3.1.0), 3.1 core EM CURSO lane `.18` | `EM DESENVOLVIMENTO` | `docs/development/makealive-plan.md` |
-| — | `ffi-abi-structs.md` (+PT) — spec D6-A: ABI de struct/array da FFI (design primeiro) | `RASCUNHO — em revisão` (D6-A ratificada 19/09; escrita 19/09 — design puro: sem semântica, sem binding) | exec = compiler lane (3.8a/3.8b) + native (3.7) + decisão JS; D6-1..D6-5 precisam de verbete em `DECISIONS.md` antes de QUALQUER código | a verruga medida §1 (leak `Arena.global` em strings FFI) entra como candidata a fix com a spec, não bug silenciado |
+| 11 | `makealive-plan.md` (+PT) — D-MAKEALIVE (ratificado 20/09, `DECISIONS.md`): infraestrutura como código tipado — **core MK-1 COMPLETO 20/09** (3.1: namespace virtual `kof.makealive` + providers genéricos REST/CLI + estado `kof.db`; bateria E2E makealive verde, 8 classes, paridade byte JVM==JS — plano §3.1) + **3.3 reconcile landado** (delega ao `scheduler.every`; `MakealiveReconcileE2ETest` 1/1 ×3) | `EM DESENVOLVIMENTO` | residual 3.2 (sintaxe `infra "prod" {}` — **R4 ✅ pousou 21/09**, o bloqueio do hook de codegen sumiu, a superfície de parse segue regra 6) / 3.7 (ciclo em compile-time — precisa da superfície 3.2) / 3.8 (CLI `kof infra`) são decisões regra 6 — fora da v1 até a mantenedora decidir |
+| — | `ffi-abi-structs.md` (+PT) — ABI de struct/array da FFI (D6) | `EM DESENVOLVIMENTO` — **D6 DECIDIDO 20/09** (`DECISIONS.md` §D-FFI-STRUCT: **D6-1 = A+B**, D6-2 só `new T[n]`, D6-3 `Buffer(U8,INOUT)`, D6-4 sret completo, D6-5 arena confinada); spec §4 = DECIDIDA; 3.8a `AbiLayout` landou; **3.8b fatia 1 landou 20/09** (`e79ea4e6` — record por valor como struct C **argumento** no JVM, D6-1) + **fatia 2 landou 21/09** (record **devolvido** por valor: registrador + sret, reconstrução pelo construtor canônico; D6-4) + **fix de arena D6-5 landou 21/09** (helpers escalares confinados por chamada + close; `FfiStructE2ETest` 10/10, `FfiE2ETest` 17/17) + **fatia 3 landou 21/09** (D6-2: `T[]` escalar→`ptr` C, **copy-in por chamada**; `FfiArrayE2ETest` 5/5) | exec = dono **`jonas`** (frente FFI pós-#431) + compiler/native + decisão JS; **a lane docs só mantém o registro** | restam: out-buffer D6-3 (superfície, regra 6), bridge de struct no JS (cross-lane) e sret no Native (3.7); o leak `Arena.global` da §1 está **CORRIGIDO** (D6-5, não mais candidata a fix) |
 | — | registros vivos: `conformance-matrix.md`, `ecosystem-coverage.md`, `KOFUI-AUDIT.md`, `known-bugs.md` (em `docs/bugs-and-gaps/`); `roadmap.md` (aqui); `roadmap-audit.md`/`complexity-audit.md` (em `docs/audits/`) | `VIVA` | **não são backlog** — matriz/auditoria/fila que se atualizam junto com cada fechamento | atualizar célula/seção no MESMO commit que fecha o gap |
 
 **Regra R12 (AGENTS.md):** nada de `future/` (RAII, package-compiler,
@@ -68,11 +84,51 @@ fechar.
 ---
 
 ## 2. Bugs abertos (fila em `docs/bugs-and-gaps/known-bugs.md`) — triagem
-13/09, ressincronizada 14/09 ~22:15 (lane docs — registro vivo, regra §1 da
-tabela três-estados)
+13/09, ressincronizada 14/09 ~22:15, **contagem viva ressincronizada 21/09**
+(lane docs — registro vivo, regra §1 da tabela três-estados). A **autoridade**
+da fila viva é `scripts/check_known_bugs_status.sh` (EN×PT consistentes),
+nunca um número escrito à mão.
 
-**32 itens na fila aberta** (contados do arquivo em 14/09; a lista de 13/09
-abaixo foi tirada ANTES da onda §220–§239). A conclusão permanece COM
+**O CHANGELOG não pode mentir sobre o ledger**: `scripts/check_changelog_ledger.sh`
+conferiu cada afirmação `§NNN ✅ FIXED` contra essa fila viva (mesmo classificador, a
+lista de abertos que o gate imprime) e VERMELHA o caso de retrocesso silencioso que
+aconteceu de verdade em 21/09 — um rebase de base velha virou o §388 de `✅→🟡` enquanto
+o CHANGELOG seguia alegando o flip, sem um único conflito para avisar ninguém. Citação
+histórica de meia-face fechada só se isenta por linha nomeada em
+`scripts/changelog-ledger-waivers.txt`, nunca editando o gate.
+
+**Link do ledger tem que chegar**: `scripts/check_ledger_anchors.sh` recalcula o slug GitHub
+de cada heading de seção e compara — por igualdade exata — com o href `pt-switch`/
+`en-switch` da outra língua (diacríticos dobrados, pontuação removida, `_` preservado).
+Medido 21/09: 11 de 26 hrefs eram abreviações à mão apontando para lugar nenhum
+(incluindo dois que esta lane pousou na própria manhã). Todos regenerados até zero, e o
+`--selftest` planta um slug truncado para a classe nunca voltar calada. Os dois gates
+moram na suíte de agentes da CI (`run-agent-tests.sh`) e disparam por mudança via
+`agent-verify.sh`.
+
+**Contagem viva tem de bater com a autoridade**: `scripts/check_live_records.sh` extrai toda
+declaração `N itens`/`N vivos` dos dois READMEs desta lane e exige que ela seja igual à contagem
+viva do classificador. A classe driftou duas vezes em 21/09 — um resync de frase deixou uma linha
+de tabela em `18`, e o resync seguinte esqueceu a mesma linha de novo, achada pela lane irmã em
+`5a80625c`. Número cravado em dois lugares é promessa de drift; declaração *ausente* é falha, não
+passe livre (anti-neutering: mudar a prosa obriga a atualizar o gate junto). O fio do hook é
+provado funcionalmente — `agent-verify-wiring-test.sh` executa o esqueleto real dos blocos e pega
+um regex certo preso num `if` mal aninhado (bug que esta lane plantou e corrigiu na mesma hora).
+
+**19 itens na fila aberta** (ressincronizado 21/09 ~08:5x — 20→19
+quando **§380** (codegen JS de `if` aninhado com `throw`) foi formalizado ✅
+`9f383bcf`, re-medido 16/0F no tip; 19→18 quando **§381** (OOM do keyword
+entity-field no parser) foi corrigido ✅ `576a1dcb`; 18→17 quando **§394**
+(harness de teste vaza o app servido) foi corrigido ✅ `d0464385` e **§353**
+(resultado de método `io` dentro de lambda — SEM014) foi corrigido ✅ 21/09
+pela lane do compilador; 17→18 quando **§418** (harness de single-step do debug riscv64) foi RE-PUBLICADO pela lane nativa no mesmo dia, com nova prova, após a perda de árvore que a retração §419 dela registra — a contagem desceu (correções) e subiu (um gap real reapareceu) num só dia, exatamente por isso a autoridade é o script, não a prosa; 18→19 quando a própria lane db/orm ABRIU a
+§421 (`db.connect` nativo aceita qualquer scheme em silêncio; a recusa só aparece no
+`kof_orm_*`) como catálogo honesto do seu F2c3 — contagem subir porque lanes continuam
+catalogando contra si mesmas é o ledger funcionando, não apodrecendo; por
+`scripts/check_known_bugs_status.sh`; o número é um snapshot datado — a
+autoridade é o script). Os **32** contados em 14/09 e a lista de 13/09
+abaixo são o snapshot HISTÓRICO, preservado para o registro (tirado ANTES da
+onda §220–§239). A conclusão permanece COM
 correção: os itens ainda abertos têm dono/bloqueio/regra-6 — mas o "ZERO item
 código-puro" foi REFUTADO pela própria onda de 14/09: §236 (comparisonReturn
 Bool×Int) e §238 (hoist de local escapante + sipush) eram itens código-puro do
@@ -169,17 +225,23 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `roadmap.md` | §§8–11 ❌ (frontend same-project, monólito→micro) | longo prazo |
 | ~~`roadmap-audit.md`~~ → `docs/audits/roadmap-audit.md` | matriz 06/09 + fila P0→P5 (P0 FECHADO 09/09) | re-audit quando algo fecha |
 | ~~`KOFUI-AUDIT.md`~~ → `docs/bugs-and-gaps/` | UI001-Native (face R6: no-op silencioso) ABERTO | lane UI |
-| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | 32 abertos (a contagem viva e a triagem estão no §2 acima; §81/§163/§127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
+| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | **19 vivos** (contagem viva — autoridade é `scripts/check_known_bugs_status.sh`; ressincronizado 21/09; era 20 — §380 `9f383bcf`, §381 `576a1dcb`, §394 `d0464385` e §353 21/09 fechados; §400/§418/§421 catalogados/re-publicados; a fila viva do §2 é a autoridade; a contagem histórica de 14/09 era 32; §81/§163/§127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
 | ~~`refactoring/PLAN-SOLID-500.md`~~ → `docs/architecture/PLAN-SOLID-500.md` | ✅ **FEITO + MOVIDO 13/09** (F1–F9 todas fechadas — F3: NativeBackend 498 ≤500 medido, bloqueio da lane GC caducou/regra do dono-morto); ratchet `check_500-baseline.txt` (dívidas travadas — nº autoritativo = `wc -l` do arquivo) no CI | plano FECHADO (regra dos 3 estados) |
 | `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` | **EM DESENVOLVIMENTO 17/09** — promovido de `future/` por decisão da mantenedora, que **sobrepõe o portão R12** (`DECISIONS.md` §D-UNIVERSAL); ponto de entrada = Estágio 1 (consolidação SYSTEMS) + R1–R12 | arquitetura dos Tiers 6–12; visão/design congelados, só as claims de estado são sincronizadas com o código |
+| `PROPOSAL-1.0-EXIT-GATE.md` (+par PT) | **KOF 1.0 EXIT GATE — RATIFICADO 20/09/2026** pela mantenedora (`DECISIONS.md` §D-RELEASE-1.0); promovido de `future/`: o gate (§8) + a fila (§23) são a meta vinculante de estabilização — **Kof RC 1.0 / release 1.0 só existem quando todos os pontos corresponderem e nenhuma aresta estiver aberta** | ordem de execução = o §23 do próprio PROPOSAL, rastreada no `roadmap.md` §24 (EG-1..EG-10); **as sete arestas `[? MEL]` FECHADAS 20/09 por `DECISIONS.md` §D-1.0-EDGES** — KofC + Android dentro da Stable 1.0 de 8 alvos com gates próprios (EG-9/EG-10), os nove candidatos de reforço da §35 são gates obrigatórios, a linha 1.0 abre após o corte 0.5.0 + EG-1..EG-7; a única aresta restante é a declaração da mantenedora que abre o RC (EG-8) |
 
 ### 4.3 `future/` — só plano, zero código (não é trabalho atual)
+
+> O índice **completo e autoritativo** desta pasta (todo plano + seu gatilho)
+> é `future/README.md` — as linhas abaixo são as que mais costumam barrar o
+> trabalho atual; em dúvida, leia aquele índice, não esta tabela.
 
 | Arquivo | Gatilho p/ cair p/ cá |
 |---|---|
 | `PLAN-MULTIPARADIGMA.md` (multiparadigma / pipelines funcionais + queries declarativas; 16/09, só design) | primeiro incremento funcional começa (SYSTEMS fechado, R12) |
 | `scoped-resources-plan.md` (RAII TIER 2.4) | bump com `using`/`resource_scope` decidido |
 | `PLAN-BAREMETAL-BOOT.md` (nativo → bare-metal/bootável; diretiva da mantenedora 15/09) | SYSTEMS fechado (R12) + primeira face (costura HAL) autorizada |
+| `PLAN-BOOTSTRAP.md` (o Bootstrapper: Kof escrito em Kof — **estrela-guia**, `DECISIONS.md` §D-BOOTSTRAP, 20/09) | EXIT GATE 1.0 fechado + condições de entrada E1–E6 (`roadmap.md` §24) |
 | `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_MIGRATION.md` (plataforma de migração legado) | **de volta p/ cá 15/09 — DESPRIORIZADO pela mantenedora**; promoção exige decisão explícita dela |
 
 *(DD-STDLIB-01 `planning-stdlib-array-returns.md` **saiu de `future/` 13/09** — decisão 6a ratificada, implementado e movido p/ `docs/stdlib/DD-STDLIB-01-array-returns.md`.)*
@@ -193,7 +255,7 @@ evidência em cada linha de §4.1; snapshot SG 08/09 → `docs/history/`)*
 
 | Saiu p/ | Doc | Prova |
 |---|---|---|
-| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–022 + E1–E3 | fila do maintainer COMPLETA (resumo do próprio doc); snapshot antigo → `docs/history/specification-gaps-0.3.0-snapshot.md` |
+| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–023 + E1–E3 | fila do maintainer COMPLETA (resumo do próprio doc); snapshot antigo → `docs/history/specification-gaps-0.3.0-snapshot.md` |
 | `docs/stdlib/DATABASE_VISION.md` | níveis 0–4 | query DSL 01/09 (`KofOrmE2ETest` 32; paridade JS 18/09), MySQL prepared (`nativeMysqlPreparedBinary`), pooling ✅; DB001/DB002/ORM001 (native) vivem na matriz de paridade |
 | `docs/audits/complexity-audit.md` | snapshot 02/09 | números pré-SOLID-500; gate vivo = `scripts/check_500.sh` (ratchet) |
 | `docs/history/roadmap-gap-2026-09-03.md` | gap report datado | pendências vivem em roadmap-audit/known-bugs |

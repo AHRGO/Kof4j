@@ -6,7 +6,7 @@
 
 Neste capítulo você vai entender como declara variáveis, como o sistema de tipos funciona, e como a inferência de tipos opera.
 
-## Declaração de variáveis (0.4.0-beta)
+## Declaração de variáveis (0.5.0-beta)
 
 Em Kof existem duas palavras-chave para variáveis (`var`/`val`); NÃO há
 `let`/`const` (sugar JS removido do KofScript em 06/09 — ver abaixo):
@@ -182,7 +182,7 @@ String? s = mapOf("k", "abc").get("k")   // nullable básico — null via API (=
 if (s != null) { println(s.length()) }
 ```
 
-## Status atual (0.4.0-beta)
+## Status atual (0.5.0-beta)
 
 ✅ `var` e `val` funcionam
 ✅ `var`/`val` no topo do KofScript → `KofScriptGlobals` (NÃO existe `let`/`const` — sugar JS removido 06/09)

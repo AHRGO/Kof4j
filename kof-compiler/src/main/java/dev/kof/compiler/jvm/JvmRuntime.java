@@ -45,6 +45,8 @@ public static boolean hasRuntimeFn(String methodName) {
                 || methodName.equals("kof_cancel") || methodName.equals("kof_cancelled")
                 || methodName.equals("kof_await_timeout")
                 || methodName.equals("kof_select_any")
+                // §388-B: display de array cru no formato de container.
+                || methodName.equals("kof_array_to_string")
                 || methodName.equals("kof_list_map") || methodName.equals("kof_list_filter") || methodName.equals("kof_list_reduce")
                 || methodName.startsWith("kof_observability_")
                 || methodName.startsWith("kof_media_")

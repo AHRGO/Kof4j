@@ -152,6 +152,27 @@ class KofDbE2ETest {
     }
 
     @Test
+    void typedQueryBindsIntColumnToBoolField(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            record Flag(Bool ok)
+
+            main() {
+                var db = db.connect("jdbc:h2:mem:s396;DB_CLOSE_DELAY=-1")
+                db.execute(db, "create table t(ok int)")
+                db.execute(db, "insert into t values (1)")
+                db.execute(db, "insert into t values (0)")
+                db.execute(db, "insert into t values (2)")
+                var rows = db.query<Flag>(db, "select * from t")
+                for (var r in rows) {
+                    println(r.ok)
+                }
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "true\nfalse\ntrue");
+    }
+
+    @Test
     void transactionCommits(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, """
@@ -167,6 +188,34 @@ class KofDbE2ETest {
             }
             """);
         runJvm(source, tempDir.resolve("out"), "{\"n\":2}");
+    }
+
+    @Test
+    void androidDbEmitsTheSameBytecodeAsJvm(@TempDir Path tempDir) throws IOException {
+        // D-DB-GAPS DB-2 (20/09, §278): "android é JVM" nao e lema — e o
+        // bytecode. ANDROID reusa o JvmBackend; o pin abaixo trava a
+        // paridade por construcao (mesmo .class nos dois alvos) para kof.db
+        // e kof.orm, os namespaces cuja over-gating o DB-2 levantou.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+                entity User {
+                    id: Long generated
+                    name: String
+                }
+                main() {
+                    var db = db.connect("sqlite:/tmp/android-parity.db")
+                    orm.create<User>(db)
+                    println(orm.count<User>(db))
+                }
+                """);
+        CompilationResult jvm = driver.compile(source, tempDir.resolve("jvm"), Target.JVM);
+        assertTrue(jvm.success(), "JVM baseline: " + jvm.diagnostics().getDiagnostics());
+        CompilationResult android = driver.compile(source, tempDir.resolve("android"), Target.ANDROID);
+        assertTrue(android.success(), "android compila kof.db/kof.orm desde DB-2: "
+                + android.diagnostics().getDiagnostics());
+        byte[] a = Files.readAllBytes(tempDir.resolve("jvm/Default/Main.class"));
+        byte[] b = Files.readAllBytes(tempDir.resolve("android/Default/Main.class"));
+        assertArrayEquals(a, b, "Main.class ANDROID deve ser identico ao JVM (paridade por construcao)");
     }
 
     @Test

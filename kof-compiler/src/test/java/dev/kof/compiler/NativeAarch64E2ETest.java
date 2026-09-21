@@ -952,6 +952,41 @@ main() {
     }
 
     @Test
+    void nativeArrayPrintMatchesJvmGolden(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        // §388-B-cross (aarch64 herda do riscv via tradutor): println de array
+        // cru no formato de container da casa ([65, 66]) — golden idêntico ao
+        // riscv (kof_array_to_string; bloco [len@16][esz@20][data@24], slot
+        // 8B, descritor §107 com tag 11 de aninhado).
+        String out = runAarch64(tempDir, """
+                main() {
+                    val b = new Int[2]
+                    b[0] = 65
+                    b[1] = 66
+                    println(b)
+                    val n = new Int[1][2]
+                    n[0][0] = 65
+                    n[0][1] = 66
+                    println(n)
+                    val e = new Int[0]
+                    println(e)
+                    val s = new String[1]
+                    s[0] = "x"
+                    println(s)
+                    val l = new Long[2]
+                    l[0] = 100000000000L
+                    l[1] = 2
+                    println(l)
+                    val t = new Bool[2]
+                    t[0] = true
+                    t[1] = false
+                    println(t)
+                }
+                """);
+        assertEquals("[65, 66]\n[[65, 66]]\n[]\n[x]\n[100000000000, 2]\n[true, false]", out);
+    }
+
+    @Test
     void nativeCollectionPrintRecordNestedMatchesJvmGolden(@TempDir Path tempDir) throws IOException {
         assumeToolchain();
         // §107 record/nested (face (4), 19/09): aarch64 herda o descritor

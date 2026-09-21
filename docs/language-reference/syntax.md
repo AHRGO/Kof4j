@@ -7,7 +7,7 @@ construct with minimal verifiable examples. The **formal rules** are in
 [grammar.md](grammar.md); the **tokens** in [lexical-structure.md](lexical-structure.md);
 the **semantics** in the domain documents. It does not repeat — it references.
 
-> Every example here **compiles** in `kof-compiler` 0.4.0-beta (verified by
+> Every example here **compiles** in `kof-compiler` 0.5.0-beta (verified by
 > probe/suite). Examples that *look* valid but do not compile are listed
 > in [lexical-structure.md](lexical-structure.md) §5.3 and
 > [specification-gaps.md](../bugs-and-gaps/specification-gaps.md).
@@ -190,8 +190,7 @@ The JVM binds **any scalar signature** (R3 generalized 18/09) — arbitrary arit
 scalars in any position, `void` and `String` returns. Measured on tip:
 `fmod(Double,Double):Double`→`1.5`; `ldexp(Double,Int):Double`→`12.0`;
 `strncmp(String,String,Int):Int`→`-1`; `puts(String):void`; `getenv(String):String`→`mel`.
-The Kof function name IS the C symbol (no alias). Non-scalar types (struct/array/
-pointer/callback) → `FFI001` at compile time; the JS **host runner** (GraalJS/node) binds the
+The Kof function name IS the C symbol (no alias). Non-scalar types are **partially** bound: on the **JVM** a `record` by value (argument and return) and a scalar `T[]`→`ptr` (call-scoped copy-in) bind since 3.8b (20–21/09, `FfiStructE2ETest` 10/10, `FfiArrayE2ETest` 5/5), and a function-typed parameter binds as a C callback on JVM/JS (3.4); the remaining faces (out-buffer `Buffer(U8,INOUT)`, struct/array on Native, JS struct bridge, Native callbacks) → `FFI001` at compile time; the JS **host runner** (GraalJS/node) binds the
 same scalar ABI through `KofJsFfiBridge` — JVM↔JS parity proven 18/09 (`FfiE2ETest` 16/16,
 slice 3.6.F2/F3 ✅) — with non-scalars → `FFI002` there and the browser an honest **runtime**
 error (R7, no host, same degrade as `kof.io`); **Native binds the same scalar ABI DIRECT on

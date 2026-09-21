@@ -2,14 +2,34 @@
 
 # Kof — Long-Term Roadmap
 
-**Last updated:** September 15, 2026 (§23 gains 2.6 = D-NULL-INTENT queue
-N1→N4 [compiler lane, maintainer decision 15/09]; TIER 3–5 marked
-DEPRIORITIZED by the maintainer 15/09 — trio back to `future/`).
+**Last updated:** September 20, 2026 (§0 "read first" index added; active branch
+corrected to `beta-0.5.0`/`D-BRANCH-0.5.0`). (older: September 15, 2026 — §23
+gains 2.6 = D-NULL-INTENT queue N1→N4 [compiler lane, maintainer decision 15/09];
+TIER 3–5 marked DEPRIORITIZED by the maintainer 15/09 — trio back to `future/`).
 (older: plan merger: §23 = the SINGLE
-implementation plan (ex-`ACTION_PLAN`+`IMPLEMENTATION_PLAN`); migration
-cluster consolidated — `LEGACY_IR`+`DIFFERENTIAL_TESTING` merged into
+implementation plan (ex-`ACTION_PLAN`+`IMPLEMENTATION_PLAN`);
+migration cluster consolidated — `LEGACY_IR`+`DIFFERENTIAL_TESTING` merged into
 `LEGACY_MIGRATION.md`)
-**Version:** 0.4.0-beta (active branch `beta-0.4.0`)
+**Version:** 0.5.0-beta (active branch `beta-0.5.0`)
+
+---
+
+## 0. Read first
+
+This document is the **long-term narrative + the ordered plan**. What is LIVE
+(act on this):
+
+- **§23 — Consolidated Implementation Plan (Tiers 0–12)**: the single queue.
+- **§24 — KOF 1.0 EXIT GATE (EG-1..EG-10)**: the release-gate queue (authority:
+  `DECISIONS.md` §D-RELEASE-1.0 / §D-1.0-EDGES; detail in
+  `PROPOSAL-1.0-EXIT-GATE.md`).
+- **§22 — Universal Platform** (under development) and **§18 — Kof Written in
+  Kof (self-hosting / NORTH STAR)**.
+
+Sections **§1–§15 are the long-term narrative** (design direction, not a
+queue); **§8/§9/§10/§11 have no owner** and are not current work. Three-states
+rule: implemented/decided → `docs/`; pending → `docs/development/`; plan only →
+`docs/development/future/`.
 
 ---
 
@@ -753,7 +773,7 @@ Kof is a distributable platform, not just a JAR:
 
 - self-contained distribution (compiler, CLI, runtime, stdlib, tooling, editor support, embedded JDK 25);
 - OpenJDK embedded in the official package (Temurin 25, tooling API level 21);
-- centralized versioning (`VERSION` 0.4.0-beta → pom/properties via `scripts/bump-version.sh`);
+- centralized versioning (`VERSION` 0.5.0-beta → pom/properties via `scripts/bump-version.sh`);
 - releases by 2 jobs (`release.yml`: `test-and-bump` exports `bump_sha` → `package-and-release` checks the bump commit + version sanity check) on push to `main`, per platform linux-x86_64 / macos-arm64 / windows-x86_64 (tests 819 → bump → package 3 platforms → GitHub Release);
 - `scripts/package.sh` PASS (dist layout + tar.gz/zip + SHA256SUMS + jars), golden 16/16, integration 9/9;
 - official editor support: TextMate grammar + LSP (hover/completion + real diagnostics) + `kof editor install` (VS Code/Neovim/Vim/Emacs/Geany/Nano + honest step-10 IntelliJ 13/09: filetype XML + External Tools + LSP4IJ README, no plugin — issue #1);
@@ -919,15 +939,15 @@ domain (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + parity matrix;
 |---|------|--------------------|
 | 2.1.1–2.1.3 | `extern` syntax + type-check + gaps `FFI001`/`FFI002` (never silent drop) | ✅ `Parser.java:192` (PARSE090), `ExternalFunctionNode`, `FfiE2ETest` |
 | 2.1.4 | **JVM** binding (FFM `java.lang.foreign`) | ✅ **generalized 18/09 (`.18`, R3):** any scalar signature, arbitrary arity, `void`/`String` returns — measured `fmod`→1.5, `ldexp`→12.0, `strncmp`→-1, `puts(void)`, `getenv`→String (`syntax.md`) |
-| 2.1.5 | **Native** binding (`dlsym`) | ❌ **honest gap `FFI001`** — `dlopen` segfaults in the raw binary (no glibc init); it is NOT "✅ real" |
-| 2.1.6 | struct/array marshalling | 🟡 all SCALAR shapes bind (JVM+JS-host since 18/09); struct/array/pointer still honest `FFI001` (design D6 ⛔ maintainer) |
+| 2.1.5 | **Native** binding | ✅ **20/09 (#431 slices 1–2, §369)** — the raw binary binds scalars **direct** (`call sym@PLT`, link-by-use), which **supersedes `dlopen`/`dlsym`**; §61 closed. The old `dlopen` segfault was the reason for the switch, not an open gap |
+| 2.1.6 | struct/array marshalling | 🟡 **JVM ✅ 3.8b (20–21/09)**: `record` by value as arg/return + scalar `T[]`→`ptr` (`FfiStructE2ETest` 10/10, `FfiArrayE2ETest` 5/5); **remaining** = out-buffer D6-3 (`Buffer(U8,INOUT)`, rule 6), JS struct bridge, Native sret (3.7). D6 ✅ decided 20/09 |
 | 2.1.7 | JS: gap `FFI002` | ✅ honest gap + **scalar parity CLOSED 18/09 (`d3598c2d`, slices 3.6.F1–F3):** host runner binds via `KofJsFfiBridge`, `FfiE2ETest` 16/16 byte-for-byte JVM↔JS; browser = runtime R7; non-scalar keeps `FFI002` |
 | 2.2.1 | Inventory of implicit codegen (4 points: runtime `.source()`, `desugarTests`, `desugarApplication`, entity→record+schema) | ✅ the 4 exist (`CompilerPipeline:295-296`) |
-| 2.2.2 | **Formal `CodegenStep` hook** | ❌ **does NOT exist at HEAD** — `d1c56bad` added it, the pipeline went back to calling the `desugar*` directly; the old "✅" was an over-claim from the `planning-future` branch |
-| 2.2.3 | Migrate DDL/runner to the formal hook | ❌ blocked by 2.2.2 |
-| 2.2.4 | `infra "prod" {}` base (codegen over records) | ❌ not started (zero `infra` parsing) |
+| 2.2.2 | **Formal `CodegenStep` hook** | ✅ **LANDED 21/09 (R4, `D-CODEGEN-STEP`)** — `CodegenStep`/`CodegenStepPipeline` (additive; empty registry = identity, zero behavior change; `CodegenStepPipelineTest` 6/6). The old `d1c56bad` "✅" was an over-claim from the `planning-future` branch; R4 is the real landing |
+| 2.2.3 | Migrate DDL/runner to the formal hook | 🔵 **unblocked** — 2.2.2 ✅ (R4); the migration itself is pending |
+| 2.2.4 | `infra "prod" {}` base (codegen over records) | 🔵 not started (zero `infra` parsing) — the parse surface is **rule 6** (D-MAKEALIVE/3.2) |
 | 2.3.1 | Constant-folding of domain constants | ✅ `"a"+"b"→"ab"` (`OptimizerConstantFold:100`) |
-| 2.3.2 | Cycle detection in the `infra` graph at compile-time | ❌ blocked by 2.2.4 |
+| 2.3.2 | Cycle detection in the `infra` graph at compile-time | 🔵 blocked by 2.2.4 (rule-6 surface) — the R4 hook is ✅ available |
 | 2.4.1 | Scoped resources (lightweight RAII over `try/finally`) | 🟡 design only (`future/scoped-resources-plan.md`); `using` syntax gated by bump |
 
 | 2.5 | Variance / sealed | ✅ **DECIDED TO POSTPONE** — `enum`+`record`/`interface` cover the case; opens only with the scientific pipeline (bump) |
@@ -966,6 +986,24 @@ lanes must not attack without new authorization).
 | 2.7.3 | **Native ABI** | pass-by-value (struct by value / registers) | 2.7.1 |
 | 2.7.4 | **JS ABI** | plain frozen object (no identity) | 2.7.1 |
 | 2.7.5 | **parity + docs** | conformance cells `valuerecord` + parity matrix + `training/` + `learn/` | 2.7.1–2.7.4 |
+
+#### 2.8 — Queue opened 21/09 (`DECISIONS.md` §D-CODEGEN-STEP/§D-R3-3.3/§D-R3-3.5/§D-TYPE-VARIANCE/§D-INTEROP-REFLECT)
+
+**Decided by the maintainer 21/09** (multiple-choice). D8–D12 of
+`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`. Additive; nothing lands without proof.
+The two core type-system fronts are **spec-first** (plan reviewed before code,
+rule 6).
+
+| # | Step | Scope (one line) | Depends on |
+|---|------|------------------|------------|
+| 2.8.1 | **R4 `CodegenStep`** (`D-CODEGEN-STEP` = A) — ✅ **landed 21/09** | compiler-INTERNAL codegen hook, no user syntax; unblocks `infra "prod" {}` (3.2) + DDL/runner migration | — |
+| 2.8.2 | **R3-3.3 handles/out-buffers** (`D-R3-3.3` = A) | nominal opaque `Handle` (non-arithmetic) + `Buffer(U8, INOUT)` (== D6-3); prerequisite of Stages 4–7 | R3 (2.1) |
+| 2.8.3 | **R3-3.5 variadics** (`D-R3-3.5` = A) | NO general variadics — caller passes `List`/`Array`/`Buffer`; documented gap (R6/R7) | R3 (2.1) |
+| 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **spec-first**: design plan drafted + reviewed BEFORE any parser/typer diff | plan |
+| 2.8.5 | **X6 interop reflection** (`D-INTEROP-REFLECT` = open) | **spec-first**: incremental plan (slices + proof per slice), interop boundary only | plan |
+
+**Spec plan (X5 + X6):** [`future/type-system-extensions-plan.md`](future/type-system-extensions-plan.md) — DRAFT for maintainer review, zero code (rule 6; plan-only → `future/`).
+
 ### TIER 3–5 — Legacy migration platform (Phases A–H) ✅ code+tests
 
 `kof inspect/decompile/translate/compare/migrate` in the CLI (`Main.java`);
@@ -993,6 +1031,7 @@ the order. **DEPRIORITIZED 15/09 (maintainer): TIER 3–5 is not current work.**
 | 10 | SCIENTIFIC | BLAS/LAPACK/GPU/MPI **via FFI**; Native SIMD (research); deps 2.1, 2.4, 1.2 |
 | 11 | BIO | `kof-bio` (official package): FASTA/FASTQ/VCF + alignment via FFI/CLI — deps 6, 8, 10 |
 | 12 | UNIVERSAL | total integration + mature pkg manager + LSP/debug/profiler per domain; **final test: the language core barely grew** |
+| — | **NORTH STAR (post-12) — BOOTSTRAPPER** | the Kof compiler written in Kof; design-plan draft `future/PLAN-BOOTSTRAP.md` (BS-1, `DECISIONS.md` §D-BOOTSTRAP, DECIDED 20/09, draft owner `.18`); execution gated by the plan’s E1–E6 and by the 1.0 exit gate — R12 governs, no stage is skipped for it |
 
 ### Critical path (what blocks what)
 
@@ -1000,3 +1039,45 @@ the order. **DEPRIORITIZED 15/09 (maintainer): TIER 3–5 is not current work.**
 `Diff-Framework` → `Migration-Reports` · `2.1 FFI` → Tiers 8/9/10 (everything via
 FFI) · `2.2 codegen hook` → `infra`/gRPC stubs · **TIER 1 (SYSTEMS) closes
 before ANY Tier 6+ (R12).**
+
+## 24. KOF 1.0 EXIT GATE — contract stabilization (RATIFIED 09/20/2026, `DECISIONS.md` §D-RELEASE-1.0; edges closed by `D-1.0-EDGES`)
+
+Development meta until the first RC: **no bug ships, no edge stays open.** The
+normative text is `docs/development/PROPOSAL-1.0-EXIT-GATE.md` (+`.pt_BR.md`)
+§§8–20; the order of execution is its §23 queue. Done here (ratification pass):
+steps 1–4 — active branch `beta-0.5.0` confirmed, `DECISIONS.md`/`AGENTS.md`
+re-read, `D-RELEASE-1.0` recorded, EN/PT synchronized (doc promoted from
+`future/`, approval block filled as record of the maintainer's chat order).
+
+Open queue (every lane obeys; owner claims in `DOING.md`):
+
+| # | Item (doc ref) | Acceptance proof |
+|---|---|---|
+| EG-1 | Define `release-blocker` **mechanically** (§11; Q3) | every OPEN issue classified in exactly one of BLOCKS 1.0 / OUTSIDE 1.0 SURFACE / POST-1.0 / NOT A BUG / TRACKING (`tracking/contract`) via label+ledger; script lists violations; RED test first. **DONE** `ea5d4dfe` + 5th-category complement |
+| EG-2 | Implement the machine gate (§10 trust criteria; steps 6–7) | gate fails on planted false-green/false-red fixtures; verdict bound to the analyzed SHA; stale analysis cannot decide a new commit; `CODEQL_GATE_SKIP` usage becomes an exception with recorded cause, then dies. **DONE 20/09** (proposal §10): `0d2a019d` closed 6/8; the stability lane closed SHA binding + empty≠unavailable in `scripts/codeql-gate.sh`, RED-first (`scripts/tests/codeql-gate-test.sh` 10 scenarios, registered) |
+| EG-3 | Real package tested **outside the repo** (§12; step 9) | published-layout artifact runs the corpus E2E on a clean dir (the #550 lesson, pinned). **DONE 20/09** `67c503db` (`scripts/test-package-outside-repo.sh`, PASS measured) |
+| EG-4 | BEFORE/AFTER validation of the gate (step 8) | same SHA measured before/after; no regression in existing lanes' pushes. **DONE** — evidenced by EG-2 (gate verdicts bound to the analyzed SHA, deterministic; live gate measured before/after with no new false-red in the lanes) |
+| EG-5 | Final target matrix (§13–§14; step 10) | JVM / x86-64 / riscv64 / aarch64 / JS / Script **/ KofC / Android** green on the SAME candidate + golden byte parity where the contract requires; KofC and Android each carry their own gate (EG-9/EG-10). **Harness DONE 20/09**: `scripts/target-matrix.sh` (one command; core 6 targets byte-parity vs JVM oracle, cross executes under qemu when present, honest SKIP→INCOMPLETE; kofc/android = DELEGATED EG-9/EG-10), RED-first `scripts/tests/target-matrix-test.sh` registered; measured PASS on the six core targets. **Artifact-freshness guard 20/09** (`jar_stale`): without `--dist`, a tree `lib/kof.jar` older than the sources is refused with a named cause (rc=3) instead of measuring a phantom binary — the stale-jar false `PARITY: 0%` on the cross targets can no longer be read as a divergence. The RC-day run on the candidate remains |
+| EG-6 | Close the open EDGES the maintainer owns (§21 Q2/Q7, §35 candidates) | **DONE 20/09/2026 (`D-1.0-EDGES`)**: Q1 (1.0 line opens after the 0.5.0 release + EG-1..EG-7), Q2/Q7 (KofC + Android inside Stable 1.0, own gates), §35 (all nine reinforcements mandatory) |
+| EG-7 | VERSION / docs / metadata sync (§16, §13 note, §35 site line) | VERSION, pom `revision`, package version.properties, CHANGELOG, AGENTS header, release docs, public site, support matrix — one consistent statement. **Repo side DONE** (bump `404d8be6`; release docs synced). **Site side deferred — maintainer-owned** (she updates `koflang.github.io` shortly; chat 20/09) |
+| EG-8 | First 1.0 RC candidate (step 11) — ONLY when EG-1…EG-7 all close | the §8 checklist green with reproducible evidence on the candidate SHA + Mel's explicit "the 1.0 line is open" declaration (Q1) |
+| EG-9 | KofC gate (own gate — `D-1.0-EDGES`) | KofC green on the candidate with its own gate evidence. **Mechanism DONE 20/09**: `scripts/test-kofc-gate.sh` — preflight names the missing toolchain (`as`+`ld`/`gcc`, JDK ≥ 25), compiles+runs the supported corpus (5 cases, real ELF executed, stdout asserted), and rejects malformed input without emitting a binary (the #485 class, R6/Q7); verdict bound to the SHA (`KOFC-GATE: PASS sha=…`). RED-first offline: `scripts/tests/test-kofc-gate-test.sh` (5 scenarios, registered). PASS measured on `8fa39ff9` |
+| EG-10 | Android gate (own gate — `D-1.0-EDGES`) | Android green on the candidate with its own gate evidence (CI runs the APK). **Mechanism DONE 20/09**: `scripts/test-android-gate.sh` — honest preflight (JDK ≥ 25 + `jar`; `ANDROID_HOME` + complete build-tools ≥ 35 + a platform `android-N/android.jar`); absent SDK = honest SKIP exit 3 naming what is missing (never a false green, R6), and the CI `android.yml` runs the SAME gate. With the SDK it runs `kof build --target android --apk` (the standalone aapt2→d8→zip→zipalign→apksigner pipeline) and proves the artifact is a real zip carrying `AndroidManifest.xml` + `classes.dex`; verdict bound to the SHA (`ANDROID-GATE: PASS sha=…`). RED-first offline: `scripts/tests/test-android-gate-test.sh` (6 scenarios, registered) |
+
+Rules binding every item: the §8 gate is AND — one unmet item blocks the RC
+regardless of the others; per `D-1.0-STABILITY-100` (20/09) no 1.0.0 ships
+while ANY item remains open in `docs/development/`, `docs/development/future/`
+or `docs/bugs-and-gaps/` — 100% resolved, with the cross-target parity proven
+by measurement; gaps stay only per §15 (OUTSIDE 1.0 + honest +
+documented); the freeze (§17) starts at the first RC and freezes the surface,
+not the stabilization; RC→Stable adds no regression (§19). TIER 12's "final
+test" remains compatible: stabilization touches structure/diagnostics, never the
+core surface.
+
+**0.5.0 release gate (`D-RELEASE-0.5.0-GATE`, 09/20/2026):** the 0.5.0 release
+(precondition for opening the 1.0 line, Q1) is cut only when the maintainer's
+seven conditions hold, each measured — 100% target parity; no pending decision;
+all loose `docs/development/*.md` concluded and moved out; total stability;
+0 open bug issues; all edges closed; nothing pending in bugs-and-gaps. Queue +
+current state: `release-beta-0.5.0-prep.md` §"Release gate". Mechanized by
+`scripts/check_release_050_gate.sh`.

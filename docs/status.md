@@ -3,7 +3,7 @@
 # Kof Project Status
 
 **Last updated:** September 20, 2026
-**Version:** 0.4.0-beta (pom `revision`)
+**Version:** 0.5.0-beta (pom `revision`)
 
 **20/09 — CONSOLIDATION OF THE 19/09→20/09 NIGHT (docs lane, measured against `git log`/tip `1080238f`; CI `Build+Tests` green on the night tips, full-reactor tally ~3034 tests 0F/0E per `.18`'s 23:5x run).**
 >
@@ -147,7 +147,7 @@
 
 ``` 
 mvn clean package    → PASS
-mvn test             → 2411 tests (2058 kof-compiler + 38 kof-script + 7 kof-c-compiler + 308 kof-cli), 0 regressions / 0 errors, 196 skip (no qemu on host → 84 cross skip; external DB/toolchain guards + §255 sysroot guard; `node` present — all `*Js` green) — 17/09 ~15:49 clean run on tip `f276e966` (§252 native flake silent again) (previous 2218 = 16/09 ~15:54 clean clone of `9572949f`)
+mvn test             → 3225 tests (2762 kof-compiler + 50 kof-script + 7 kof-c-compiler + 406 kof-cli), 0 failures / 0 errors, 221 skip (cross runs in the dedicated qemu job; external DB/toolchain guards + §255 sysroot guard; `node` present — all `*Js` green) — CI Build+Tests job of tip `404d8be6` on 20/09 ~18:14 (first green on `beta-0.5.0`, reactor 0.5.0-beta) (previous 2411 = 17/09 ~15:49 clean run on tip `f276e966`)
 kof build            → PASS (--target jvm|native|js|native.risc|native.arm) [--release]
 kof run              → PASS (jvm|native|js|native.risc|native.arm) [--release]
 kof serve            → PASS (native web.app() + legacy handle() API)
@@ -640,7 +640,7 @@ main() { /* ignored by kof test */ }
 
 ---
 
-## Tests (2411 = 2058 kof-compiler + 38 kof-script + 7 kof-c-compiler + 308 kof-cli — full suite green, 0 regressions / 0 errors, 196 skip; measured 17/09 ~15:49 on a clean run of tip `f276e966`; §252 native flake silent again. Host without qemu: cross → honest skip)
+## Tests (3225 = 2762 kof-compiler + 50 kof-script + 7 kof-c-compiler + 406 kof-cli — full suite green, 0 failures / 0 errors, 221 skip; measured 20/09 ~18:14 by the CI Build+Tests job of tip `404d8be6`; §252 native flake silent again. Host without qemu: cross → honest skip)
 
 | Suite | Count | Coverage |
 |-------|-----------|-----------|

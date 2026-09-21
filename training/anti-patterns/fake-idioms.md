@@ -13,7 +13,7 @@ The model can invent `users.map(...)`, `Option<T>`, `async/await`,
 because they exist in other languages. Code like that **does not compile** or
 **compiles by accident** with the wrong semantics.
 
-## Real status (verified in the compiler — 0.4.0-beta, Sep 2026)
+## Real status (verified in the compiler — 0.5.0-beta, Sep 2026)
 
 | Feature | Status |
 |---|---|

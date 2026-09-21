@@ -24,7 +24,7 @@ public final class ExpressionOrmCallLowerer {
     }
     KofOrm.OrmCall ormCall = KofOrm.staticCall(mc.methodName(), argTypes, typed, entityName);
     if (ormCall != null) {
-        if (!KofOrm.supportedOn(driver.target)) {
+        if (!KofOrm.fnSupportedOn(driver.target, ormCall.function())) {
             if (driver.currentDiagnostics != null) {
                 driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
                         mc.position() != null ? mc.position().line() : 0,

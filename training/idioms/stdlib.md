@@ -334,7 +334,11 @@ WHY: `Image` in `kof.ui` is a **view widget**; `Image.open` here is **media I/O*
 (same name, different intent — do not confuse them). Everything the platform
 decodes stays in the backend; user code never touches buffers or codecs. Honest
 gates (measured 19/09): JVM ✅; **JS and Native = `MEDIA001`** at compile-time (R6);
-riscv/aarch ⏳.
+riscv/aarch ⏳. Scope note: this is today's **data face** of `kof.media`. The
+future graphics/gaming/media surface is **Kof's own engine** with FULL 4-target
+parity as its acceptance criterion (`DECISIONS.md` §D-GRAPHICS-GAMING addenda 2+4;
+plan `docs/development/future/graphics-gaming-plan.md`) — `MEDIA001` is honest for
+the legacy face, not the model for what gets promoted.
 
 ## Note per target (honest gates)
 

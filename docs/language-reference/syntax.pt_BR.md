@@ -7,7 +7,7 @@ construção com exemplos mínimos verificáveis. As **regras formais** estão e
 [grammar.md](grammar.md); os **tokens** em [lexical-structure.md](lexical-structure.md);
 a **semântica** nos documentos de domínio. Não repete — referencia.
 
-> Todo exemplo aqui **compila** no `kof-compiler` 0.4.0-beta (verificado por
+> Todo exemplo aqui **compila** no `kof-compiler` 0.5.0-beta (verificado por
 > probe/suíte). Exemplos que *parecem* válidos mas não compila estão listados
 > em [lexical-structure.md](lexical-structure.md) §5.3 e
 > [specification-gaps.md](../bugs-and-gaps/specification-gaps.md).
@@ -191,7 +191,7 @@ livre, escalares em qualquer posição, retorno `void` e `String`. Medidos no
 tip: `fmod(Double,Double):Double`→`1.5`; `ldexp(Double,Int):Double`→`12.0`;
 `strncmp(String,String,Int):Int`→`-1`; `puts(String):void`;
 `getenv(String):String`→`mel`. O nome da função Kof É o símbolo C (sem alias).
-Não-escalares (struct/array/ponteiro/callback) → `FFI001` em tempo de
+Não-escalares são **parcialmente** ligados: na **JVM** um `record` por valor (argumento e retorno) e um `T[]` escalar→`ptr` (copy-in por chamada) ligam desde a 3.8b (20–21/09, `FfiStructE2ETest` 10/10, `FfiArrayE2ETest` 5/5), e um parâmetro de tipo função liga como callback C em JVM/JS (3.4); as faces restantes (out-buffer `Buffer(U8,INOUT)`, struct/array no Native, bridge de struct no JS, callbacks no Native) → `FFI001` em tempo de
 compilação; o **runner host** JS (GraalJS/node) liga a MESMA ABI escalar via
 `KofJsFfiBridge` — paridade JVM↔JS provada 18/09 (`FfiE2ETest` 16/16, fatia
 3.6.F2/F3 ✅) — com não-escalares → `FFI002` ali e o browser um erro honesto

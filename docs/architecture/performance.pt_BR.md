@@ -3,7 +3,7 @@
 # KOF — PERFORMANCE, BENCHMARKS, RESOURCE SAFETY E GUIDELINES ARQUITETURAIS
 
 **Última atualização:** 12 de setembro de 2026
-**Versão:** 0.4.0-beta (37 benchmarks; `kof bench` + `benchmark.yml` threshold 1.20)
+**Versão:** 0.5.0-beta (37 benchmarks; `kof bench` + `benchmark.yml` threshold 1.20)
 
 > Este documento define princípios arquiteturais permanentes do Kof.
 >
@@ -198,7 +198,7 @@ No Native o Kof possui controle ainda maior sobre a execução.
 
 Portanto, a expectativa de eficiência deve ser ainda mais agressiva.
 
-> **Estado (0.4.0-beta, re-synced 17/09; base 31/08):** alocação via free-list `kof_free_head`
+> **Estado (0.5.0-beta, re-synced 17/09; base 31/08):** alocação via free-list `kof_free_head`
 > (reuso `mmap` — reduz o custo de mmap por alocação); FP em XMM
 > (`vcvtsi2sd`/`mulsd`) em vez de fallback em int; dtoa via `snprintf`;
 > `spawn` em threads reais (`pthread`) — sobrecarga de contexto documentada

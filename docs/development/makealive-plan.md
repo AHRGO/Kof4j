@@ -30,8 +30,8 @@ already shipped: records/classes (data), `Map`/`List` (the graph), `throw`
 The **canonical model is imperative-turned-data** (the VISION §4.2 verdict,
 "A/B — and it is where the language shines"): typed resources + a builder +
 normal functions. The declarative block `infra "prod" { ... }` is row **3.2**
-— a new parse block gated by **R4** (the codegen hook does not exist at HEAD)
-and by rule 6 — it is NOT in this plan's queue, and v1 does not wait for it.
+— a new parse block gated by **rule 6** (**R4 ✅ landed 21/09**, so the
+codegen-hook blocker is gone) — it is NOT in this plan's queue, and v1 does not wait for it.
 
 Surface sketch (flat host idiom, like `kof.workflow`/`kof.supervisor —
 DD-OTP-01 option A`; **shapes to be measured by the 3.0 recon before they
@@ -72,7 +72,8 @@ answered; a ledger line cannot override a hard-deny (measured).
 - **plan has no side effects**; only apply touches the world and the state.
 - **cycles are refused at graph-build** with an actionable `throw` naming the
   cycle (workflow run() precedent, 4/4 targets); compile-time cycle detection
-  is row 3.7 and waits for R4.
+  is row 3.7 — **R4 ✅ landed 21/09**, so the codegen-hook blocker is gone; it
+  still needs the 3.2 `infra` surface (rule 6) to have a compile-time graph.
 - **state advances only on success**: a failed apply leaves the previous state
   intact and names the resource that failed (R6, never a silent partial).
 - **secrets are references only**: v1 stores a secret *name* (resolved at
@@ -133,7 +134,7 @@ the host db slice must be gated per target exactly like `workflow-ckpt-host.kf`
 - **3.0.2 [design sign-off — ⛔ rule 6]** ✅ DONE 20/09 — maintainer poll
   answered Q1–Q4 (§6, `DECISIONS.md` §D-MAKEALIVE: `kof.makealive` /
   complete generic providers / kof.db day-1 / flat+EN). Front opened.
-- **3.1 [core]** 🔵 owner `.18` — **COMPLETE slice (MK-1, poll 20/09 — not a
+- **3.1 [core]** ✅ 20/09 owner `.18` — **COMPLETE slice (MK-1, poll 20/09 — not a
   core-only fragment)**: virtual-namespace injector (`CompilerMakealive`) +
   `makealive-host.kf` + ledger line (layer per Q1) + the generic REST/CLI
   providers (3.5 folded here) + the `kof.db` state surface (3.4 folded here —
@@ -141,10 +142,17 @@ the host db slice must be gated per target exactly like `workflow-ckpt-host.kf`
   (plan/apply/destroy idempotency golden, JVM==JS byte parity, Native compile
   pin, the §3 guards). The kof.db goldens run where `kof.db` is real (JVM/JS);
   Native state awaits D-DB-GAPS and fails with the honest `DB001`/`ORM001`,
-  never silent (R6).
-- **3.3 [reconcile]** — `reconcile(design, provider, intervalMs)` delegating
-  to `scheduler` (Native loud `CRON001` stub, same split as
-  `workflow-sched-host.native.kf`).
+  never silent (R6). **LANDED 20/09 — MK-1 complete:** core `9e8be985`+`f5256f8f`
+  (→ origin `3be16f88`), db state face `c2850373`, fs provider `4ee3a5c9`(0.4.0)/`f62206e0`(0.5.0),
+  CLI+REST providers `13b44c6c`, stdlib docs `docs/stdlib/makealive.md` EN+PT; Makealive battery
+  20/20 on the tip (JVM==JS byte parity incl. cross-engine shared-world goldens). 🔵 next in
+  this plan's queue: **3.3 reconcile**.
+- **3.3 [reconcile]** ✅ 20/09 — `reconcile(design, provider, intervalMs)` delegating
+  to `scheduler.every` (tick = `apply` inside a `spawn`; stop = `scheduler.cancel(jobId)`).
+  **Correction measured while landing:** the planned `CRON001` Native stub was UNNECESSARY —
+  CRON001 gates `scheduler.at` (cron expression); `every` is real on ALL targets since
+  SCHED001 (05/09). Slice `makealive-recon-host.kf` ships to every target; Native gets the
+  compile pin (`MakealiveReconcileE2ETest` 1/1 x3, JVM==JS byte).
 - **3.4 [state]** — **folded into 3.1 by MK-1 (20/09)**; kept as the
   verification item: per-target `kof.db` state goldens (JVM/JS real; Native
   honest `DB001`/`ORM001` until D-DB-GAPS closes).
@@ -152,12 +160,15 @@ the host db slice must be gated per target exactly like `workflow-ckpt-host.kf`
   generic REST provider (`kof.http`) + CLI provider (`kof.shell`) ship with
   the core slice; concrete clouds stay **official packages**
   (`infra-<cloud>`, R1 — never a compiler literal).
-- **3.2 [syntax `infra "prod" {}`]** — ⛔ R4 (codegen hook, tracker row R4:
-  "does NOT exist at HEAD") + new parse block = rule 6. Out of v1.
-- **3.7 [compile-time cycle]** — ⛔ R4 (same reason; runtime refusal ships in
-  3.1 meanwhile).
+- **3.2 [syntax `infra "prod" {}`]** — **R4 ✅ landed 21/09** (`CodegenStep` hook,
+  `CodegenStepPipelineTest` 6/6): the codegen-hook blocker is GONE. What remains is
+  the **new user-facing parse block = rule 6** — out of v1 until the maintainer decides.
+- **3.7 [compile-time cycle]** — **R4 ✅ landed 21/09**; still needs the 3.2 surface
+  (rule 6) to have a compile-time graph. Meanwhile the **runtime refusal ships in 3.1**.
 - **3.8 [`kof infra` CLI]** — command contract = maintainer decision (rule 6,
   the 2.6 posture): `kof run infra.kf` is already the runner once 3.1 lands.
+✅ DECIDED + SHIPPED 20/09 (D-MAKEALIVE-CLI): `kof makealive plan|apply|destroy` landed: verb `makealive` (Q1), `design()`+`provider()` convention, MARK protocol,
+  h2 state via `--state` (gen=max+1, `mkMaxGen`); script/native honest refusals (R7).
 
 ## 6. Open questions (maintainer decisions — do NOT resolve in code)
 

@@ -356,8 +356,16 @@ public final class JvmRuntimeCore {
                     if (p != null) {
                         p.destroyForcibly();
                         SPAWNED.remove(handle);
-                        SPAWN_WRITERS.remove(handle);
-                        SPAWN_READERS.remove(handle);
+                        try {
+                            var w = SPAWN_WRITERS.remove(handle);
+                            if (w != null) w.close();
+                        } catch (Exception ignored) {
+                        }
+                        try {
+                            var r = SPAWN_READERS.remove(handle);
+                            if (r != null) r.close();
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
 
@@ -459,6 +467,30 @@ public final class JvmRuntimeCore {
                         return new ProcessResult("", e.getMessage() == null
                                 ? e.getClass().getSimpleName() : e.getMessage(), -1);
                     }
+                }
+
+                // ── §388-B: display de arrays primitivos ───────────
+                // println de um array cru nao e identidade Java ([I@hash):
+                // o formato de container da casa e "[a, b]" (§107 — oracle =
+                // ArrayList.toString; o JS espelha via kofFormat, o nativo via
+                // kof_list_to_string). Elemento primitivo vem pelo box (mesma
+                // saida do valueOf de colecoes), aninhado recursa, e objeto/
+                // record usa o toString de conteudo que ja existe.
+
+                public static String kof_array_to_string(Object a) {
+                    return kof_array_join(a);
+                }
+
+                private static String kof_array_join(Object a) {
+                    if (a == null) return "null";
+                    if (!a.getClass().isArray()) return String.valueOf(a);
+                    int n = java.lang.reflect.Array.getLength(a);
+                    StringBuilder sb = new StringBuilder("[");
+                    for (int i = 0; i < n; i++) {
+                        if (i > 0) sb.append(", ");
+                        sb.append(kof_array_join(java.lang.reflect.Array.get(a, i)));
+                    }
+                    return sb.append(']').toString();
                 }
 
 """;

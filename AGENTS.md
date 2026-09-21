@@ -5,7 +5,7 @@
 This is the **mandatory** guide for any AI agent (or human) who
 writes Kof code in this repository. Read it before generating any `.kf`.
 
-**Version:** 0.4.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + rule 9 **docs-first gate** for philosophy-violating issues (#449) (18/09) + **mechanical push via `scripts/sync-push.sh` + conflict policy "preserve both sides, redo yours on top" (19/09)** + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09) + rule 10 **KOF-first, external-second** (`D-KOF-FIRST`, DECIDED 19/09) + rule 11 **Simplicity Law — anything that reaches the language surface** as ABSOLUTE (20/09) + `D-MAKEALIVE`/`D-KOF-AS-CLOUD`/`D-BOOTSTRAP`/`D-DB-GAPS` (20/09); active branch = `beta-0.4.0`)
+**Version:** 0.5.0-beta · Last update: 09/18/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships** + rule 8 **Kof is not Java** as ABSOLUTE (18/09) + rule 9 **docs-first gate** for philosophy-violating issues (#449) (18/09) + **mechanical push via `scripts/sync-push.sh` + conflict policy "preserve both sides, redo yours on top" (19/09)** + R1 stdlib-boundary machine gate (17/09) + §NNN shared-claim rule for multi-agent ledgers (18/09) + rule 10 **KOF-first, external-second** (`D-KOF-FIRST`, DECIDED 19/09) + rule 11 **Simplicity Law — anything that reaches the language surface** as ABSOLUTE (20/09) + `D-MAKEALIVE`/`D-KOF-AS-CLOUD`/`D-BOOTSTRAP`/`D-DB-GAPS` (20/09); active branch = **`beta-0.5.0`** (`D-BRANCH-0.5.0`, 09/20 — `beta-0.4.0` only for in-flight landings + release prep); see rule 9)
 
 > **PRIORITY No. 1: QUALITY.** Before any feature, read the
 > **Quality gate — "no bug ships"** (§ below), **universal for
@@ -210,7 +210,9 @@ scripts/auto-loop.sh status           # confirm that it's active
   failures back off (1st retries on the next tick, 2nd waits 15 min, 3rd+ 30 min).
   `auto-loop.sh tick --dry-run` shows the decision; every dispatch/skip is logged in
   `~/.local/state/kof-agent/dispatch.jsonl`; `auto-loop.sh stats` / `issue-watcher.sh
-  stats` report ticks × model calls avoided (measured, no invented token costs).
+  stats` report ticks × model calls avoided plus the **real cost measured by
+  `opencode stats`** (dollars and tokens of the machine's sessions; whole days
+  window; "unavailable" when OpenCode is missing/fails — never estimated).
   **Rollout:** a cron started before this change has no `gate_mode` and runs in
   `shadow` (legacy behaviour + logging of what the gate would do); flip it with
   `set-mode active`. `flock`, watchdog and the mandatory `--attach` are unchanged.
@@ -295,7 +297,7 @@ conceptual engineering nor decide architecture/direction. Practical consequences
 9. **Work in the real repo tree on the active branch — NEVER a `/tmp` clone/worktree.**
    This host loses power frequently ("cai a luz"); everything under `/tmp` evaporates and
    in-flight work/commits get lost. Edit directly in the working tree of `/home/mel/Kof4j`
-   on the active branch (`beta-0.4.0` unless the maintainer says otherwise), **commit locally**
+   on the active branch (`beta-0.5.0`, per `D-BRANCH-0.5.0` 09/20, unless the maintainer says otherwise), **commit locally**
    so the work persists on disk immediately, and only then fetch/rebase/push. Do not create
    `/tmp` scratch worktrees to do the actual work. (Made an explicit rule by the maintainer
    09/18 after a `/tmp` worktree holding a verified fix was wiped by a power loss.)
@@ -903,16 +905,27 @@ at stake. They are the anti-"god language" mechanism:
    namespace without a ledger line with its layer **fails the build**; heavy
    domains are hard-denied. Register the layer first (§3.4 decision order),
    never silently.
-2. **Interop-first** (R9). For any capability, the first question is For any capability, the first question is
+2. **Interop-first** (R9). For any capability, the first question is
    "does it already exist outside and is it better?" → FFI/interop (`kof.process`, `.so`, JVM,
    GraalJS). Never reimplement Arrow/Parquet/BLAS/LAPACK/CUDA/NumPy/
-   aligners/ML frameworks.
+   aligners/ML frameworks. **Named exception — `D-GRAPHICS-GAMING` addendum 4
+   (20/09):** the graphics/media engine for games is **Kof's own** (platform
+   code, zero-boilerplate idiom, full cross-target parity as acceptance); FFI
+   bindings stay limited to the non-engine layer (window/GPU/audio device).
 3. **Honest scope per target** (R7): heavy capabilities arrive **JVM-first**
    (interop), **Native** for systems/deploy, **JS** only web/edge. Never
    promise JS parity for heavy domains.
 4. **Never silent per domain** (R6): every domain gap has a code
    (`INFRA00x`, `DATA00x`, `SCI00x`, `BIO00x`, `SECPQ`, ...) + an entry in the
    parity matrix. Never a silent stub, never a weak fallback.
+   **R6 is about SILENCE, not about SCOPE (maintainer 21/09, ABSOLUTE):** an
+   **incremental** delivery — a complete vertical slice for its *declared*
+   scope, with the not-yet-supported paths failing through **honest
+   diagnostics** (`FFI001`/`FFI002`/`XXX00x`, which is R6 itself) — **does NOT
+   breach R6**. R6 is violated only when a gap is **hidden**: a silent stub, a
+   weak fallback, a divergence the user cannot see. Delivering JVM-first and
+   leaving Native/JS as *declared, diagnosed* gaps **is** the sanctioned
+   incremental path (R7); blocking it "because R6" is the anti-pattern.
 5. **Stability tiers** (R5): a namespace/package is `stable` or
    `experimental`. The official packages layer is born `experimental` and only
    promotes to `stable` with a complete DoD (3 targets or diagnosed gap, E2E
@@ -943,7 +956,7 @@ target per domain; no SQL/Arrow/ML engine of its own.
 
 ---
 
-## Real syntax (verified in the compiler — 0.4.0-beta)
+## Real syntax (verified in the compiler — 0.5.0-beta)
 
 ### Functions (there is no `fun` nor `func`)
 

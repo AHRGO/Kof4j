@@ -10,7 +10,7 @@ Two surfaces, one rule: the platform already exists — do not rebuild it.
 **(a)** JVM: any Java type on the classpath by qualified name. **(b)** C FFI:
 `extern "<lib>" f(T): R` binds a native function (JVM via `java.lang.foreign`).
 
-## Real API (measured in the compiler — 0.4.0-beta)
+## Real API (measured in the compiler — 0.5.0-beta)
 
 ```kof
 // (a) JVM interop — qualified name, no wrapper

@@ -5,7 +5,7 @@
 Este é o guia **obrigatório** para qualquer agente de IA (ou humano) que
 escreva código Kof neste repositório. Leia antes de gerar qualquer `.kf`.
 
-**Versão:** 0.4.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + regra 9 **portão docs-first** para issues fora da filosofia (#449) (18/09) + **push mecânico via `scripts/sync-push.sh` + política de conflito "preserve os dois lados, refaça o seu em cima" (19/09)** + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09) + regra 10 **KOF-primeiro, externo-depois** (`D-KOF-FIRST`, DECIDED 19/09) + regra 11 **Lei da Simplicidade — tudo que chega à superfície da linguagem** como ABSOLUTO (20/09) + `D-MAKEALIVE`/`D-KOF-AS-CLOUD`/`D-BOOTSTRAP`/`D-DB-GAPS` (20/09); branch ativa = `beta-0.4.0`)
+**Versão:** 0.5.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + regra 9 **portão docs-first** para issues fora da filosofia (#449) (18/09) + **push mecânico via `scripts/sync-push.sh` + política de conflito "preserve os dois lados, refaça o seu em cima" (19/09)** + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09) + regra 10 **KOF-primeiro, externo-depois** (`D-KOF-FIRST`, DECIDED 19/09) + regra 11 **Lei da Simplicidade — tudo que chega à superfície da linguagem** como ABSOLUTO (20/09) + `D-MAKEALIVE`/`D-KOF-AS-CLOUD`/`D-BOOTSTRAP`/`D-DB-GAPS` (20/09); branch ativa = **`beta-0.5.0`** (`D-BRANCH-0.5.0`, 20/09 — `beta-0.4.0` só para pousos em voo + preparo de release); veja a regra 9)
 
 > **PRIORIDADE Nº 1: QUALIDADE.** Antes de qualquer feature, leia o
 > **Portão de qualidade — "nenhum bug sobe"** (§ abaixo), **universal para
@@ -211,7 +211,9 @@ scripts/auto-loop.sh status           # confirmar que está ativo
   15 min, 3ª+ 30 min). `auto-loop.sh tick --dry-run` mostra a decisão; todo
   dispatch/skip é registrado em `~/.local/state/kof-agent/dispatch.jsonl`;
   `auto-loop.sh stats` / `issue-watcher.sh stats` reportam ticks × chamadas de modelo
-  evitadas (medido, sem custo de token inventado). **Rollout:** cron iniciado antes
+  evitadas e o **custo real medido pelo `opencode stats`** (dólares e tokens das
+  sessões da máquina; janela em dias inteiros; "indisponível" quando o OpenCode
+  falta/falha — nunca estimado). **Rollout:** cron iniciado antes
   desta mudança não tem `gate_mode` e roda em `shadow` (comportamento legado + registro
   do que o gate faria); vire com `set-mode active`. `flock`, watchdog e o `--attach`
   obrigatório não mudam.
@@ -296,7 +298,7 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
 9. **Trabalhe na árvore real do repo, na branch ativa — NUNCA num clone/worktree em `/tmp`.**
    Esta máquina perde energia com frequência ("cai a luz"); tudo em `/tmp` evapora e o
    trabalho/commits em andamento se perdem. Edite direto no working tree de `/home/mel/Kof4j`
-   na branch ativa (`beta-0.4.0`, salvo ordem contrária da mantenedora), **faça commit local**
+   na branch ativa (`beta-0.5.0`, desde `D-BRANCH-0.5.0` (20/09), salvo ordem contrária da mantenedora), **faça commit local**
    pra o trabalho persistir em disco na hora, e só então fetch/rebase/push. Não crie worktree
    de scratch em `/tmp` pro trabalho real. (Regra explícita da mantenedora em 18/09 depois que
    um worktree em `/tmp` com um fix já verificado foi apagado por queda de energia.)
@@ -907,13 +909,26 @@ em jogo. São o mecanismo anti-"god language":
 2. **Interop-first** (R9). Para qualquer capacidade, a primeira pergunta é
    "já existe por fora e é melhor?" → FFI/interop (`kof.process`, `.so`, JVM,
    GraalJS). Nunca reimplementar Arrow/Parquet/BLAS/LAPACK/CUDA/NumPy/
-   alinhadores/frameworks de ML.
+   alinhadores/frameworks de ML. **Exceção nomeada — `D-GRAPHICS-GAMING`
+   adendo 4 (20/09):** o motor de gráficos/mídia de jogos é **próprio da
+   Kof** (código da plataforma, idioma zero-boilerplate, aceite por paridade
+   cross-target total); os bindings FFI ficam restritos à camada não-engine
+   (janela/GPU/dispositivo de áudio).
 3. **Escopo honesto por target** (R7): capacidades pesadas chegam **JVM-first**
    (interop), **Native** para sistemas/deploy, **JS** só web/edge. Nunca
    prometer paridade JS para domínios pesados.
 4. **Nunca silencioso por domínio** (R6): todo gap de domínio tem código
    (`INFRA00x`, `DATA00x`, `SCI00x`, `BIO00x`, `SECPQ`, ...) + entrada na
    matriz de paridade. Nunca stub silencioso, nunca fallback fraco.
+   **R6 é sobre SILÊNCIO, não sobre ESCOPO (mantenedora 21/09, ABSOLUTO):** uma
+   entrega **incremental** — uma fatia vertical completa para o seu escopo
+   *declarado*, com os caminhos ainda não suportados falhando por
+   **diagnóstico honesto** (`FFI001`/`FFI002`/`XXX00x`, que é o próprio R6) —
+   **NÃO fere o R6**. O R6 é violado só quando o gap é **escondido**: stub
+   silencioso, fallback fraco, divergência que o usuário não enxerga. Entregar
+   JVM-first e deixar Native/JS como gaps *declarados e diagnosticados* **é** o
+   caminho incremental sancionado (R7); bloquear "por causa do R6" é o
+   anti-padrão.
 5. **Tiers de estabilidade** (R5): namespace/pacote é `stable` ou
    `experimental`. Camada de pacotes oficiais nasce `experimental` e só
    promove a `stable` com DoD completo (3 targets ou gap diagnosticado, E2E
@@ -944,7 +959,7 @@ target por domínio; sem motor SQL/Arrow/ML próprio.
 
 ---
 
-## Sintaxe real (verificada no compilador — 0.4.0-beta)
+## Sintaxe real (verificada no compilador — 0.5.0-beta)
 
 ### Funções (não existe `fun` nem `func`)
 

@@ -128,7 +128,7 @@ Kof does not depend on Java as an intermediate language.
 
 # Current State
 
-Kof is in active development — **0.4.0-beta**.
+Kof is in active development — **0.5.0-beta**.
 
 The compiler has its own frontend, type system, Kof IR and **three backends
 over the IR**, which produce **six targets**: JVM (V21 via ASM), Native x86_64
@@ -171,7 +171,7 @@ sequential on JS (CONC003). See [docs/language-reference/concurrency.md](docs/la
 **Null safety**: `String?`/`Int?` + `if (x != null)` narrowing on the 3 targets
 (JVM fix 02/09). `Map.get` returns `V?` for reference values.
 
-**Tests**: `test "name" { }` + `assert(cond, "msg")` + `kof test` — 2218 tests
+**Tests**: `test "name" { }` + `assert(cond, "msg")` + `kof test` — 3225 tests
 (1907 kof-compiler + 38 kof-script + 7 kof-c-compiler + 262 kof-cli). See
 [learn/23-testing.md](learn/23-testing.md).
 

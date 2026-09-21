@@ -356,19 +356,12 @@ public final class RiscvSlices {
      *  {@code NativeRiscvAsm.java} (campos agregadores + cadeia B). Uma
      *  constante por (classe,campo) — repetições são dedupadas (não há hoje). */
     private static List<String[]> readOrderFromSource() {
-        String src;
-        try {
-            src = java.nio.file.Files.readString(java.nio.file.Path.of(
-                    "kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsm.java"));
-        } catch (Exception e) {
-            try {
-                src = java.nio.file.Files.readString(java.nio.file.Path.of(
-                        "src/main/java/dev/kof/compiler/nat/NativeRiscvAsm.java"));
-            } catch (Exception e2) {
-                throw new IllegalStateException(
-                        "NativeRiscvAsm.java not found (run from the kof-compiler module)", e2);
-            }
-        }
+        // §371: classpath primeiro (funciona do jar shipped), CWD-relativo só
+        // como fallback dev.
+        String src = RuntimeSourceLoader.read(RiscvSlices.class,
+                "/dev/kof/compiler/nat/NativeRiscvAsm.java",
+                "kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsm.java",
+                "src/main/java/dev/kof/compiler/nat/NativeRiscvAsm.java");
         List<String[]> pairs = new ArrayList<>();
         java.util.Set<String> seen = new java.util.LinkedHashSet();
         Matcher m = PIECE_REF.matcher(src);

@@ -39,7 +39,7 @@ class KofTimeE2ETest {
         CompilationResult result = driver.compile(source, outDir, Target.JVM);
         assertTrue(result.success(), "Compilation should succeed: " + result.diagnostics().getDiagnostics());
         try {
-            String javaCmd = System.getProperty("java.home") + "/bin/java";
+            String javaCmd = TestJdk.javaBin();
             ProcessBuilder pb = new ProcessBuilder(javaCmd, "-Dfile.encoding=UTF-8",
                     "-Dstdout.encoding=UTF-8", "-cp", outDir.toString(), "Default.Main");
             pb.redirectErrorStream(true);
@@ -1277,7 +1277,6 @@ class KofTimeE2ETest {
             Class<?> rt = cl.loadClass("dev.kof.runtime.KofRuntime");
             java.lang.reflect.Method at = rt.getMethod("kof_scheduler_at", String.class, Object.class);
             java.lang.reflect.Method cancel = rt.getMethod("kof_scheduler_cancel", String.class);
-            int[] n = {0};
             TickCounter fn = new TickCounter();
             Object id = at.invoke(null, "20ms", fn);
             Thread.sleep(150);
@@ -1298,6 +1297,7 @@ class KofTimeE2ETest {
      *  e lambdas Java são package-private/hidden (IllegalAccessException). */
     public static class TickCounter implements Tick {
         public int n = 0;
+        @Override
         public void invoke() { n++; }
     }
 
@@ -1378,7 +1378,7 @@ class KofTimeE2ETest {
         CompilationResult result = driver.compile(source, outDir, Target.JVM);
         assertTrue(result.success(), "compile: " + result.diagnostics().getDiagnostics());
         try {
-            String javaCmd = System.getProperty("java.home") + "/bin/java";
+            String javaCmd = TestJdk.javaBin();
             ProcessBuilder pb = new ProcessBuilder(javaCmd, "-Dfile.encoding=UTF-8",
                     "-Dstdout.encoding=UTF-8", "-cp", outDir.toString(), "Default.Main");
             pb.redirectErrorStream(true);

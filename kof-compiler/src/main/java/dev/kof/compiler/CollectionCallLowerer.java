@@ -74,29 +74,10 @@ public final class CollectionCallLowerer {
         }
     }
     if (BuiltinTypes.isChannel(recvType)) {
-        // Canais tipados: c.send(v) enfileira; c.receive() retira.
-        // O receiver (Channel) está empilhado; o elemento vai
-        // após — o backend faz a ordem (send: chan,elem; receive: chan).
-        Type elemT = BuiltinTypes.channelElement(recvType);
-        if ("send".equals(mc.methodName()) && mc.arguments().size() == 1) {
-            localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(0), ops, owner, localIdx, locals);
-            ops.add(new KofCall(recvType, "kof_channel_send", List.of(elemT),
-                    Type.PrimitiveType.VOID, KofCallKind.INSTANCE));
-            return localIdx;
-        }
-        if ("receive".equals(mc.methodName()) && mc.arguments().isEmpty()) {
-            ops.add(new KofCall(recvType, "kof_channel_receive", List.of(),
-                    elemT, KofCallKind.INSTANCE));
-            return localIdx;
-        }
-        if (driver.currentDiagnostics != null) {
-            driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
-                    mc.position() != null ? mc.position().line() : 0,
-                    mc.position() != null ? mc.position().column() : 0, 0,
-                    "Cannot resolve method '" + mc.methodName() + "' on type 'Channel' (valid: send, receive)",
-                    "SEM025");
-            return localIdx;
-        }
+        // send/receive lowering em ChannelWrites (regra 7; §374 residual do
+        // canal: box-by-ARG no bare — lá a lei única mora).
+        int chIdx = ChannelWrites.lower(driver, recvType, mc, ops, owner, localIdx, locals);
+        if (chIdx >= 0) return chIdx;
     }
     if (BuiltinTypes.isList(recvType)) {
         String listFn = switch (mc.methodName()) {
@@ -209,7 +190,18 @@ public final class CollectionCallLowerer {
                 // List<Unknown> não é poluição — é a definição do tipo).
                 // set: o VALOR é o arg 1 (o índice já foi checado em SEM055).
                 int valIdx = "kof_list_set".equals(listFn) ? 1 : 0;
-                if (argTypes.size() > valIdx && CollectionWrites.pollutesPinned(elemType, argTypes.get(valIdx))
+                if (argTypes.size() > valIdx
+                        && (CollectionWrites.pollutesPinned(elemType, argTypes.get(valIdx))
+                            // §383/#561: escrita de primitivo em slot de
+                            // REFERENCIA pinado (ex.: listOf(listOf(1))
+                            // .add(true)) e seu espelho (objeto em slot
+                            // primitivo) NAO sao "miss abençoado" — quebram
+                            // de verdade nos dois alvos compilados (JVM
+                            // VerifyError no load, Native SIGSEGV — medidos
+                            // 20/09, faces F9/X3). Rejeicao universal com o
+                            // mesmo SEM056 (doutina do §126: rejeitar so o
+                            // que quebra; aqui quebra nos 4).
+                            || CollectionWrites.breaksPinnedList(elemType, argTypes.get(valIdx)))
                         && driver.currentDiagnostics != null) {
                     var pos = mc.position();
                     driver.currentDiagnostics.error(pos != null ? pos.file() : "",
@@ -252,7 +244,10 @@ public final class CollectionCallLowerer {
             int storeValIdx = "kof_list_set".equals(listFn) ? 1 : 0;
             localIdx = CompilerEmissionHelpers.emitArgsCoercingValue(driver, mc, ops, owner,
                     localIdx, locals, argTypes, elemType,
-                    ("kof_list_add".equals(listFn) || "kof_list_set".equals(listFn)) ? storeValIdx : -1);
+                    ("kof_list_add".equals(listFn) || "kof_list_set".equals(listFn)) ? storeValIdx : -1,
+                    // §383: bool→long e conversao de store SO no site de List
+                    // (Map/Set toleram heterogeneidade pelo consenso 3/4).
+                    "kof_list_add".equals(listFn) || "kof_list_set".equals(listFn));
             Type retType = switch (listFn) {
                 case "kof_list_add", "kof_list_set", "kof_list_clear", "kof_list_sort" -> Type.PrimitiveType.VOID;
                 case "kof_list_contains", "kof_list_is_empty", "kof_list_add_all" -> Type.PrimitiveType.BOOL;

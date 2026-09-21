@@ -45,7 +45,7 @@ class MapGetOrDefaultTest {
     void getOrDefaultRunsOnJvm(@TempDir Path tempDir) throws Exception {
         CompilationResult r = compile(tempDir, "V", PROGRAM, Target.JVM);
         assertTrue(r.success(), "#386 verbatim must compile: " + r.diagnostics().getDiagnostics());
-        String javaCmd = System.getProperty("java.home") + "/bin/java";
+        String javaCmd = TestJdk.javaBin();
         Process p = new ProcessBuilder(javaCmd, "-cp", tempDir.resolve("out-VJVM").toString(), "Default.Main")
                 .redirectErrorStream(true).start();
         String out = new String(p.getInputStream().readAllBytes()).replace("\r\n", "\n").trim();
@@ -118,7 +118,7 @@ class MapGetOrDefaultTest {
                 }
                 """, Target.JVM);
         assertTrue(r.success(), "containsValue must compile now: " + r.diagnostics().getDiagnostics());
-        String javaCmd = System.getProperty("java.home") + "/bin/java";
+        String javaCmd = TestJdk.javaBin();
         Process p = new ProcessBuilder(javaCmd, "-cp", tempDir.resolve("out-RJVM").toString(), "Default.Main")
                 .redirectErrorStream(true).start();
         String out = new String(p.getInputStream().readAllBytes()).replace("\r\n", "\n").trim();

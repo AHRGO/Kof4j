@@ -14,6 +14,64 @@
 
 ---
 
+## 0. Decision index
+
+A navigation aid, not a decision by itself. Ordered as in this file.
+
+- **1.** Authority and change rules
+- **2.** Global invariants
+- **D-STDLIB** — time and calendar
+- **D-SEC** — security
+- **D-APP** — application model
+- **D-SPRING** — framework independence
+- **D-RELEASE** — patch evaluation criterion
+- **D-ASM-GATE** — riscv/aarch ASM gate
+- **D-BACKEND-SEMANTICS** — backend semantics
+- **D-BASELINE** — toolchain baseline
+- **D-NULL** — nullability and primitives
+- **D-NULL-INTENT** — explicit nullability intent
+- **D-PRINT** — implicit Char conversion
+- **D-NARROW-WHILE** — flow narrowing
+- **D-ENUM207** — enum identity
+- **D-VALUE-RECORD** — value records / first-class value types
+- **D-DEV-PRIORITY** — "Em desenvolvimento" is the absolute priority
+- **D-DIAG-EN** — tooling/diagnostics in English; docs EN+PT
+- **D-DECL-RETURN** — declared return type is law (#333)
+- **D-NOT-JAVA** — Kof is not Java/Kotlin
+- **D-UI-STYLE** — declarative `style` (UI007)
+- **D-UI-TOKENS** — design-system tokens
+- **D-UI-APPSTATE** — `AppState(initial)` root store
+- **D-UI-DIFF** — node reuse
+- **D-UI-AUTOUNSUB** — component-scoped subscriptions
+- **D-UI-CANCELLED** — `cancelled()` in async UI actions
+- **D-UI-SCOPE** — `kof.ui` rule updates
+- **D-UNIVERSAL** — universal-platform promotion
+- **D-TRIAGE** — philosophy check precedes the issue
+- **D-POLL-19** — every pending decision resolved (poll 19/09)
+- **D-TROOL** — `Bool` never nullable; `Troolean`
+- **D-KOF-FIRST** — internal contract before external comparison
+- **D-SCHED-DURATION** — idiomatic durations in `scheduler.at`
+- **D-WORKFLOW-RUN** — `kof workflow run`
+- **D-MAKEALIVE** — Kof Makealive (Stage 3)
+- **D-MAKEALIVE-CLI** — 3.8 contract: `kof makealive plan|apply|destroy` (20/09)
+- **D-ARRAY-PRINT** — §388-B: `println(Int[])` is the §107 container format (21/09)
+- **D-KOF-AS-CLOUD** — Kof must BE the cloud
+- **D-BOOTSTRAP** — the bootstrapper (Kof in Kof)
+- **D-DB-GAPS** — DB/ORM orphan gaps
+- **D-BRANCH-0.5.0** — work moves to `beta-0.5.0`
+- **D-RELEASE-1.0** — KOF 1.0 EXIT GATE
+- **D-VERSION-BUMP-0.5.0** — revision to `0.5.0-beta`
+- **D-1.0-EDGES** — open edges closed
+- **D-SLOT-PIN** — §383/#561 blessed-miss stored value
+- **D-RELEASE-0.5.0-GATE** — 0.5.0 release gate
+- **D-FFI-STRUCT** — FFI struct/array ABI (D6)
+- **R6-SCOPE** — incremental delivery does not breach R6
+- **D-R3-BUFFER** — out-buffer = nominal `Buffer(U8)`
+- **D-R3-HANDLE-LIFETIME** — `Handle` memory is automatic
+- **D-ARTIFACT-TRUST** — 1.0 artifact trust contract
+
+---
+
 ## 1. Authority and change rules
 
 ### 1.1 Who decides
@@ -1871,7 +1929,7 @@ different from `List<String>`" (= option A, compile-time rejection) · X8-A · L
 | D1 (A) | GC x86 auto-collect re-baseline **approved now** | 1.2.2/1.2.3 proceed; Stage 6 gate open — execution = native lane |
 | D2 (A) | registry MVP = **local + GitHub Releases as official host** (publish = Release with artifact + SHA256SUMS) | 1.5.3 ⛔→open; `kof deploy --publish` face (docs→platform lane); 8.2 package manager |
 | D3 (A) | bare-metal/bootable **design plan authorized** | 1.7: plan doc in `docs/development/` (native lane drafts, maintainer reviews) |
-| D4 (A) | **conservative default**: every namespace is born `experimental`; promotion per-namespace with the R5 DoD | R5; `docs/backend-parity.md` §Stability (default line added 19/09) |
+| D4 (A) | **conservative default**: every namespace is born `experimental`; promotion per-namespace with the R5 DoD | R5; `docs/backend-parity.md` §Stability (default line added 19/09); **machine-gated 21/09** — tier in `scripts/stdlib_boundary.txt` + `scripts/check_stdlib_boundary.sh` (denies missing/invalid tier and unpinned `stable`) |
 | D5 (B) | **no new syntax** — scoped resources = `close()` + `try/finally`; `using` is OFF | 6.5 ships as pattern, not grammar; `future/scoped-resources` stays design-only |
 | D6 (A) | R3 struct/array ABI: **written spec first, review, then code** | spec doc `docs/development/ffi-abi-structs.md` (drafted by docs→platform lane 19/09, design-only); implementation = compiler lane |
 | D7 (A) | value records (TIER 2.7) **front opened now** | roadmap §23 2.7.1+ queue active — compiler lane (needs coordination with Cluster A) |
@@ -2178,7 +2236,8 @@ session — answers to the Q1–Q4 of `makealive-plan.md` §6)
 **Evidence:** maintainer chat poll 19/09–20/09 (answers: A / "completo" /
 "kof.db desde o dia 1" / "confirmar flat + inglês"). R1 collision measured
 19/09 (plan §2.1). **Unblocks tracker 3.1** (owner .18): next = 3.1 core
-host + `MakealiveE2ETest`; 3.2/3.7 still ⛔ R4; 3.8 (the `kof infra` CLI
+host + `MakealiveE2ETest`; 3.2/3.7 were ⛔ R4 — **R4 ✅ landed 21/09** (3.2 remains
+a rule-6 surface decision; 3.7 depends on it); 3.8 (the `kof infra` CLI
 contract) stays an open question (rule 6).
 
 ## D-KOF-AS-CLOUD — Kof must be ready to BE the cloud itself
@@ -2249,7 +2308,11 @@ nas gaps de db. agente morto")
   per R7. No JVM-embedding shortcut, no silent fallback (R6).
 * **DB-2 — Android refuses `kof.db` (§278, row 1.1.10):** **implement
   correctly — Android IS the JVM**, so it must have the **same behavior as
-  the JVM**. The `DB001` refusal on the Android target is lifted; the
+  the JVM**. **IMPLEMENTED 20/09**: `KofDb`/`KofOrm` `supportedOn` include
+  `ANDROID`; pinned by `KofDbE2ETest.androidDbEmitsTheSameBytecodeAsJvm`
+  (byte-identical `Main.class`) and the flipped
+  `DomainGapCodesTest.androidCompilesDbLikeJvmAndRefusesCryptoWithTheDocumentedCode`;
+  §278 is now PARTIAL (SECN/GPU open). The `DB001` refusal on the Android target is lifted; the
   `DomainGapCodesTest.androidRefusesDbAndCryptoWithTheDocumentedCodes` pin
   flips to parity for the DB face. `SECN00x`/`GPU001` refusals stay honest
   until those stacks themselves run on Android (different lanes; same
@@ -2270,3 +2333,555 @@ already have real `kof.db`).
 **Evidence:** maintainer answers 20/09 — DB-1 "A) kof_orm_* em asm sobre
 os kof_db_* existentes", DB-2 "implementa corretamente… android é jvm",
 DB-3 "B) estender MySQL p/ riscv/aarch", MK-1 "B) completo de uma vez".
+
+## D-BRANCH-0.5.0 — work moves to `beta-0.5.0`; `beta-0.4.0` stays for in-flight landings + release prep (09/20/2026, maintainer order)
+
+**Order (chat 09/20/2026):** "avise os outros agentes, vamos mover todo trabalho
+pra branch beta-0.5.0 e começar a preparar a nova release".
+
+**Decided:**
+- New active branch: `beta-0.5.0`, cut from the tip of `beta-0.4.0`. All new
+  commits (code and docs, every lane) land there.
+- `beta-0.4.0` still receives work already in flight (e.g. §374/#553 WIP of
+  `.22`); every landing there is fast-forwarded into `beta-0.5.0` by the docs
+  lane, so the two branches never diverge in content.
+- Version bump (`pom.xml` `<revision>0.4.7-beta</revision>` → new release
+  number), CHANGELOG cut and tag are **release-prep items** — the maintainer
+  confirms the number at the cut; no unilateral bump by an agent.
+- Release-prep queue lives in
+  `docs/development/release-beta-0.5.0-prep.md` (+ `release-beta-0.5.0-prep.pt_BR.md`).
+
+**Evidence:** maintainer order 09/20/2026 (chat); `AGENTS.md`/`AGENTS.pt_BR.md`
+active-branch lines and this record land in the same pass; open issues
+#550/#553/#554/#555 notified by comment; `DOING.md` banner for all lanes.
+
+## D-RELEASE-1.0 — KOF 1.0 EXIT GATE: contract stabilization is the development meta; no RC/release 1.0 with any item unmet or any edge open (09/20/2026, maintainer ratification)
+
+**Order (chat 09/20/2026):** "decisão de `docs/development/future/PROPOSAL-1.0-EXIT-GATE.md`
+ratificada. concordo com o planejamento. setar como meta de desenvolvimento a
+estabilização dos contratos seguindo o planejamento existente nessa issue. kof
+RC 1.0.0 e kof release 1.0.0 só existem QUANDO todos os pontos estiverem
+correspondentes e não houver nenhuma aresta aberta".
+
+**Decided:**
+- The proposal becomes the normative contract, recorded here as
+  `D-RELEASE-1.0`. The document was promoted from `future/` to
+  `docs/development/PROPOSAL-1.0-EXIT-GATE.md` (+`.pt_BR.md`), its §22
+  approval block filled as the mechanical record of this chat approval (her
+  words quoted as evidence), and the header status switched to RATIFIED.
+- **The EXIT GATE (§8 + the D-BRANCH-0.5.0 complement) is binding**: a build
+  may be declared Kof RC 1.0.0 only with every mandatory item satisfied by
+  reproducible evidence on the same candidate, and RC may become Stable 1.0.0
+  only with the gate still green and no RC→Stable regression. No cut, tag or
+  publication of "1.0" exists while ANY item is unmet or ANY edge is open —
+  this is the definition of "all points matching and no open edge", and it is
+  the responsibility of every lane, not of a release-day ceremony.
+- **Development meta (immediate)**: contract stabilization per the §23 queue —
+  define `release-blocker` mechanically (§11 four-category classification of
+  every open issue), implement the machine gate with RED tests written before
+  any gate logic (§10 trust criteria: same-SHA verdict, no stale analysis, no
+  known false-green, end of routine `CODEQL_GATE_SKIP`), validate
+  BEFORE/AFTER, test the real package outside the repo, run the final target
+  matrix. Only then may the first RC candidate exist. Queue opened in
+  `docs/development/roadmap.md` §23 and claimed in `DOING.md`.
+- **Q1 (when the 1.0 line starts)**: as proposed — when Mel explicitly declares
+  the 1.0 line/candidate open (gate complement item); nothing before that.
+- **Q2/Q7 (surface — STILL OPEN, these are the first "arestas" to close)**: the
+  ratification approves the contract and the plan; it does not fabricate
+  answers she did not give. KofC and Android inside the Stable 1.0 surface, and
+  the §35 `[? MEL]` reinforcement candidates, remain maintainer decisions that
+  block only the first RC — a question not answered is an edge not closed.
+  Meanwhile the site/README MUST stop implying a decision that does not exist
+  (site marks KofC "Disponível" today — docs/site sync is a queue item).
+- **Q3**: mechanism = the §11 classification is normative (every open issue in
+  exactly one of BLOCKS 1.0 / OUTSIDE 1.0 SURFACE / POST-1.0 / NOT A BUG), made
+  mechanical by labels + ledger + the machine gate — never by absence of label.
+- **Q4**: freeze as proposed — the public surface freezes from the first
+  Mel-approved RC; stabilization, fixes, tests, docs and CI keep moving.
+- **Q5**: gaps may remain only explicitly OUTSIDE the 1.0 surface with known
+  target, honest diagnostic, docs updated and the scope decision recorded.
+- **Q6**: gate trust criteria (§10) are binding acceptance, not aspiration; the
+  Quality-Gate technical solution stays its own front (§23 steps 5–8).
+
+**Non-goals of this record:** it does NOT authorize a 1.0 cut, does NOT bump
+VERSION (0.4.7-beta stays until release-prep per D-BRANCH-0.5.0), and does NOT
+close #560 — the issue stays as the tracking thread until the queue it opened
+is executed.
+
+**Evidence:** maintainer ratification 09/20/2026 (chat, quoted verbatim in the
+§22 block of the doc and in this record); doc EN+PT updated + promoted the same
+pass; `roadmap.md` §23 queue; `DOING.md` claim; #560 cross-notified.
+
+
+## D-VERSION-BUMP-0.5.0 — the revision moves to `0.5.0-beta` on the active branch (09/20/2026, maintainer order)
+
+**Decision (maintainer, chat 09/20/2026):** "faz o bump de versão em tudo no repo
+pra beta 0.5.0" — the product version is bumped `0.4.7-beta → 0.5.0-beta` on the
+active branch `beta-0.5.0` (`D-BRANCH-0.5.0`). This satisfies release-prep
+checklist item 3 (`docs/development/release-beta-0.5.0-prep.md`) and supersedes
+the "VERSION stays 0.4.7-beta" clause of `D-RELEASE-1.0` only in the sense the
+release-prep phase it reserved has now begun by order.
+
+**Mechanics:** single source `VERSION` → `scripts/bump-version.sh` syncs
+`pom.xml` `<revision>` and `dev/kof/version.properties`
+(`kof.version=0.5.0-beta`; compiler/runtime/stdlib `0.5.0`; tooling API 21
+unchanged). Docs carrying a **current-version** stamp (README, `docs/status`,
+`docs/backend-parity` header, `AGENTS.md` header, distribution/install outputs,
+training/learn headers, idiom "Updated:" stamps, artifact-name examples) were
+bumped EN+PT in the same commit. **Historical** mentions (CHANGELOG sections,
+`known-bugs.md` measurements taken on `0.4.7-beta` jars, "Introduced:",
+feature stamps like `D-TROOL 19/09`) were left intact — history is not
+rewritten (freeze rule 4).
+
+**Verification before bumping (prep item 3):** no test or script pins the
+artifact version (only a historical javadoc comment in `TrooleanLawE2ETest`).
+
+
+## D-1.0-EDGES — the open edges are closed: 5th category, #564/#565 as `1.0-blocks`, KofC + Android inside the 1.0 surface, all nine §35 reinforcements mandatory, and the 1.0 line opens after the 0.5.0 release + EG-1..EG-7 (09/20/2026, maintainer answers to the seven open questions)
+
+**Context:** the `D-RELEASE-1.0` ratification left seven edges open (the
+`[? MEL]` questions of `PROPOSAL-1.0-EXIT-GATE.md` §35, the #560/#564/#565
+classification and Q1). The maintainer answered all seven (question poll,
+09/20/2026). This record locks the answers; the `D-RELEASE-1.0` non-goals (no
+1.0 cut, no tag, #560 stays open) still hold.
+
+**Decided (all seven):**
+
+1. **#560 — 5th category.** The tracking umbrella of the gate is not a defect
+   and fits none of the four §11 categories; §11 now has **five**. The label
+   was created as `release-tracking` and renamed to **`tracking/contract`**
+   ("Tracks an already-ratified contract; valid in stabilization, must close
+   before RC"); #560 carries it. The machine gate
+   (`scripts/check_release_blockers.sh`) recognizes it; an issue in this
+   category is valid during stabilization but must still close before the RC.
+2. **#564 — `1.0-blocks`.** `kof deps resolve <owner>/<repo>@<ver>` always
+   fails REG002 against real GitHub Releases (pickTarball cuts the asset object
+   at the nested "uploader") — the package/deps contract is broken end-to-end.
+3. **#565 — `1.0-blocks`.** Every JVM fat jar built by `kof deploy` embeds a
+   truncated copy of itself as entry `kof-app.jar` (invalid zip) — deploy
+   artifact integrity.
+4. **Q1 — when the 1.0 line opens.** After the **0.5.0 release is cut** and
+   **EG-1..EG-7 are closed**; only then does she declare it and the first RC
+   candidate is cut (EG-8).
+5. **KofC — inside Stable 1.0, with its own gate.** The site's "Disponível" is
+   now consistent; KofC is a full 1.0 surface target with its own gate, not an
+   outside/optional item.
+6. **Android — inside 1.0, with its own gate** (the full option, not the
+   recommended partial one; CI already runs the APK). Android is a full 1.0
+   surface target with its own gate.
+7. **§35 — all nine candidates become mandatory gates** (not only the four
+   recommended): real app with the package; baseline/no-regression; failure/
+   flake policy without false-green; Stable Surface snapshot at RC1; artifact
+   identity (SHA256/provenance); per-target evidence manifest; compatibility
+   corpus; formal waiver (+ the remaining doc items).
+
+**Consequence — Stable 1.0 surface = 8 targets:** JVM, Native x86-64, riscv64,
+aarch64, JS, Script, **KofC**, **Android**, each with its own gate where
+applicable.
+
+**Non-goals:** does NOT authorize the 1.0 cut (that is EG-8, gated on
+EG-1..EG-7 + the 0.5.0 release), does NOT change VERSION, does NOT close #560.
+
+**Evidence:** maintainer answers 09/20/2026 (question poll); label
+`tracking/contract` on #560; #564/#565 labeled `1.0-blocks`; ledger
+`scripts/release-blockers.tsv`; gate `scripts/check_release_blockers.sh`
+(five categories; `--rc-gate` RED with 4 open `1.0-blocks`).
+## D-SLOT-PIN — §383/#561 blessed-miss stored value: the pinned slot wins; JS coerces at store (option (a)) (09/20/2026, maintainer dispatch)
+
+**Date:** 2026-09-20 · **State:** `DECIDED` (maintainer dispatch of the
+#561 unit, 20/09 — "the slot's pinned type wins, value rewritten at store;
+JS MUST match the 3-target majority")
+
+**Decision:** the §383 dossier (three measured options) is resolved with
+**option (a) — coerce JS to the slot**. Grounds, all pre-existing law (the
+question is CLOSED by the contract, not re-opened): freeze rule 5 (JVM/Native/JS
+divergence on the same program is a parity bug — never a silent divergence),
+the "golden = JVM oracle" measurement law, and the §126 blessed-miss contract
+as IMPLEMENTED (box-by-slot at store — `listOf(1).add(true)` stores `1` on
+JVM/Script/Native). Consequences landed the same commit:
+
+- **JS** (`JsCollectionOps.slotStoreCoerce`): at the pinned List add/set store,
+  numeric-slot + Bool arg → `v ? 1 : 0`; Bool-slot + numeric/char arg →
+  truthiness — the SAME coercion point the other targets use (the store).
+- **JVM** (`CompilerEmissionHelpers.coerceStoreWiden`, List sites only): the
+  blessed bool→Long miss now emits `I2L` before the slot box — the face used
+  to die in `Long.valueOf(J)` over `ICONST_1` (COMP002 frame crash, measured
+  20/09); Script/Native already stored `1` and keep byte-identical results.
+- **Category-cross pairs are NOT blessed misses** (`CollectionWrites.breaksPinnedList`,
+  List add/set + `listOf` literal sites): primitive into a pinned REFERENCE
+  slot (`listOf(listOf(1)).add(true)`) and the mirror (object into a pinned
+  primitive slot) break on BOTH compiled targets (JVM VerifyError at load,
+  Native SIGSEGV/garbage) and diverge on the two tolerated ones — §126's own
+  doctrine ("reject only what truly breaks") makes them SEM056 on all four.
+- **Map/Set stay untouched**: there the neighboring-category heterogeneity is
+  tolerated by the 3/4 consensus (faces S2/M1 measured 20/09 — coercing would
+  move JS to the Native-minority side).
+
+**Evidence:** `HeterogeneousSlotPinE2ETest` 16/16 (JVM≡Script≡JS≡Native
+byte-a-byte, goldens from JVM runs 20/09); §383 flipped in
+`known-bugs.md` EN+PT; #561 answered with the measured matrix.
+
+## D-RELEASE-0.5.0-GATE — the 0.5.0 release gate: seven conditions, every one measured, no open edge (09/20/2026, maintainer directive)
+
+**Context:** the 0.5.0 release is the precondition the maintainer set for
+opening the 1.0 line (`D-1.0-EDGES` Q1: the 0.5.0 release cut + EG-1..EG-7
+closed). This record locks the **release gate for 0.5.0** — the seven
+conditions she stated as the priority for "releasing the 0.5.0 gate to all
+agents". It refines (never replaces) the release-prep checklist and the §8
+gate: the seven are the **acceptance**; the queue that satisfies them is
+`roadmap.md` §24 (EG) + `release-beta-0.5.0-prep.md` + the per-item lanes.
+
+**Decided — the seven conditions (maintainer's list, 09/20/2026):**
+
+1. **100% parity between targets** — the same program yields the same
+   observable result on every target of the 0.5.0 surface; a divergence is a
+   bug (freeze rule 5) or a diagnosed `XXX00x` gap, never silent.
+2. **No pending decision** — `DECISIONS.md` carries no open question that
+   changes the surface; nothing waits on a decision.
+3. **All loose `.md` in `docs/development/` concluded and moved out** — the
+   three-states rule: `docs/development/` keeps only work with pending
+   implementation; a concluded doc moves to `docs/`.
+4. **Total stability** — full suite green (0F/0E outside documented
+   environmental guards) + the 5/5 conformance matrix measured on the candidate.
+5. **0 open issues that are a bug** — no OPEN GitHub issue that is a bug.
+   #566 enters as a blocker (maintainer 09/20/2026).
+6. **All edges closed** — every open edge closed with proof: the **full EG
+   queue (EG-1 through EG-10)** and the open `1.0-blocks` issues. The 0.5.0
+   release waits until every owner closes and moves their own work (confirmed
+   by the maintainer 09/20/2026 — the gate measures, it does not take over
+   another lane's item).
+7. **Nothing pending in bugs-and-gaps** — `docs/bugs-and-gaps/known-bugs.md`
+   and `specification-gaps.md` with no live/OPEN entry.
+
+**Proposed execution order (agent reading — the maintainer may reorder):**
+first the correctness edges that are already `1.0-blocks` and the live
+known-bugs (conditions 1/5/6/7 — they share the same root causes and unblock
+the rest), then the docs/decision hygiene (2/3), with stability (4) measured
+last on the frozen candidate. The gate script reports each condition as
+GREEN / RED / NEEDS-MEASURE so the worklist is exact, never by eye.
+
+**Non-goals:** does NOT cut the 0.5.0 release (that is the maintainer's call at
+the cut, rule 6), does NOT bump `VERSION`, does NOT open the 1.0 line, does NOT
+authorize a 1.0 RC (EG-8 stays gated on the 0.5.0 cut).
+
+**Evidence:** maintainer directive 09/20/2026 (chat); measured starting state
+(09/20/2026): `scripts/check_known_bugs_status.sh` reports 19 live known-bugs
+(EN×PT consistent); 4 OPEN `bug`-labeled issues (#561/#563/#564/#566);
+`scripts/check_release_blockers.sh --rc-gate` RED with 4 open `1.0-blocks`
+(#561/#563/#564/#566); `specification-gaps.md` 0 open.
+
+### Addendum (09/20/2026) — version string, `main` freeze, and the package consumption model
+
+Three maintainer answers (chat, 09/20/2026), same release scope:
+
+1. **The 0.5.0 release ships as `0.5.0-beta`** (keeps the beta suffix; no
+   codename — that is reserved for 1.0, `release-naming.md`). The lanes may
+   draft the CHANGELOG and pre-stage the tag; the cut itself still waits on the
+   seven conditions.
+2. **`main` stays frozen until the 0.5.0 release.** The 12 pre-fix CodeQL
+   alerts on `main` are not ported now; the port is a release-day action. The
+   gate's conditions 5/6 are measured on the active branch `beta-0.5.0`.
+3. **A package published by `kof deploy --publish` is consumed as a SOURCE
+   module — option (b) of #566.** The published artifact must carry the
+   sources; consumption is via the source module (`import regsmoke.Greeter`
+   resolves against the installed sources), **not** via the compiled jar.
+   Consequences opened for the cli/deps lane: `kof deploy --publish` must
+   package the library's public source surface (today it packages only classes
+   reachable from `main`), and the registry install (`kof deps resolve`) must
+   place the source module where the import gate finds it. The three concrete
+   defects split out of #566 (#567 `--classpath` silent no-op — R6, #568 SEM015
+   false positive, #569 `build` emits on error) remain defects and proceed
+   independently of the model.
+
+**Non-goals:** the model decision does NOT change Kof syntax/semantics; it
+settles the Registry consumption contract only. It does NOT cut 0.5.0 nor open
+1.0.
+
+---
+
+## D-FFI-STRUCT — FFI struct/array ABI: the D6 decisions (maintainer 09/20/2026)
+
+**Date:** 2026-09-20 · **State:** `DECIDED` · **Revision (09/20/2026):** the
+maintainer's multiple-choice answer set **D6-1 = A+B** (lane `.14`/`.22` had
+recorded option A) and confirmed D6-2..D6-5. This is the canonical record; the
+earlier option-A text is preserved under *Superseded* (conflict policy: both
+sides kept). Issues **#572/#573** (slice 3.8b) must align to A+B.
+
+**Scope:** closes the `D6-1..D6-5` questions of
+`docs/development/ffi-abi-structs.md` (§4) — the spec that gates the FFI
+struct/array ABI (tracker 3.8a/3.8b/3.7). 3.8a (`AbiLayout`) landed 20/09.
+
+### Decision
+
+- **D6-1 = A+B** — a Kof `record` maps to a C struct **by value** (read-only,
+  scalar fields, already zero-ceremony) **and** a new mutable `struct`
+  declaration maps **by reference** (the shape that enables in/out buffers).
+  The `struct` keyword is new language surface: it enters only through the
+  Simplicity Law gate (rule 11) before landing.
+- **D6-2 = only `new T[n]` binds to `ptr`** with **no implicit length** (the C
+  API takes the length explicitly); `List<T>` stays `FFI001` until a
+  boxed-unboxing benchmark proves the copy is worth it. (Own slice, after 3.8b.)
+- **D6-3 = out-buffers are their own ABI kind** — `new Byte[n]` crossing as
+  `Buffer(U8, INOUT)` (copy-in / call / copy-back), **never the `S` token**
+  (`S` = NUL-terminated UTF-8 `char*`, read-only). Length stays an explicit C
+  argument; no new syntax (rule 11).
+- **D6-4 = implement the full sret** — the JVM FFM `Linker` hides it; the
+  **native asm** backend implements it per ABI (SysV hidden pointer / AAPCS64
+  hidden `x8` / LP64 reference) — slice 3.7, native lane.
+- **D6-5 = confined arena per downcall** (`Arena.ofConfined()`, closed after
+  the call); a returned `char*` is copied then never owned (Kof `String` is
+  immutable). The measured wart (§1: `Arena.global()` on the FFI path) is fixed
+  in this front, not left to drift.
+
+**Encoding:** the `FfiSignature` token grammar gains a struct token
+`@<fieldchars>` (e.g. `div(Int,Int):Div` → `@ii`), reusing the scalar chars
+`i j f d b`; arrays/out-buffers get their tokens in their own slice. Anything
+outside the decided set stays `FFI001`/`FFI002` (R6), never silent.
+
+### Invariants
+
+- Zero regression on the scalar/callback FFI (`FfiE2ETest`,
+  `JvmFfiCallbackE2ETest` stay green).
+- Native/JS keep `FFI001`/`FFI002` for struct until 3.7/JS land — never a
+  silent partial binding (R6).
+- Only scalar fields bind in v1; a record with a non-scalar field is `FFI001`
+  on JVM (honest). `CString`, `Buffer`, `Pointer`, `OpaqueHandle` and `Struct`
+  remain distinct ABI types even when all lower to an address in a register.
+
+### Superseded (preserved — the earlier option-A record, lane `.14`/`.22`, 20/09)
+
+> The lane had recorded **D6-1 = option A** (a `record` only, by value,
+> read-only; no new `struct`) and treated D6-2/3/4 as deferred with owner. The
+> maintainer's 09/20 answer (A+B; all five decided) supersedes it. Kept for
+> traceability.
+
+### Implementation
+
+`docs/development/ffi-abi-structs.md` §6: 3.8a ✅ (landed); **3.8b = JVM
+binding (this front)** — compile lane (#572/#573, align to A+B); 3.7 = native
+asm (native lane, includes sret); JS boundary = its own decision. The doc is
+promoted to `docs/` only when 3.8 lands (three-states rule).
+
+### Evidence
+
+- Spec + measured layout: `docs/development/ffi-abi-structs.md` §1–§3;
+  `AbiLayoutTest` (14 shapes × 3 ABIs, GCC 13.3 golden).
+- E2E proof for 3.8b: `FfiStructE2ETest` (JVM: record arg + record return via a
+  real C `.so`, byte-for-byte vs the C oracle; Native/JS pinned `FFI001`/
+  `FFI002`).
+
+### Relationships
+
+- `Supersedes: the 20/09 option-A D6-1 record (same heading, lane .14/.22)`
+- `Depends on: D-POLL-19 (spec-first), AbiLayout 3.8a, D-KOF-FIRST`
+- `Related: R3 (FFI), R6 (never silent), R9 (interop-first), rule 11 (struct keyword gate), D-1.0-EDGES`
+
+
+## D-ARTIFACT-TRUST — 1.0 trust contract for release artifacts: integrity + exact-artifact + neutral build provenance, attested by the official workflow; verification mandatory at the release gate and in `kof deps resolve` for official packages (09/20/2026, maintainer answers to #571)
+
+Decided via the issue-lane multiple-choice (20/09). **(1) Mandatory properties:** `SHA256SUMS` integrity (standalone jars join the cycle) + the `§32.6` exact-artifact invariant with MECHANICAL enforcement in `--rc-gate` (tested digest == published digest) + build provenance attestation verifiable online and offline. **(2) Identity/vendor:** the official workflow under Actions is the attesting identity; the contract states NEUTRAL PROPERTIES (vendor name non-normative — `D-KOF-FIRST`/R11: no home-grown crypto, no vendor as oracle). **(3) Object:** for a library the verified artifact is the SOURCES tarball (confirms #571-Q12); each target binary carries its own digest. **(4) Where mandatory / failure policy:** release gate BLOCKS without valid evidence; `kof deps resolve`/Registry HARD-BLOCKS official packages without valid evidence; community packages = honest warning (R6, never silent). **(5) Hardening (separate queue, not part of the contract text):** SHA-pin all 59 action refs, job-level least privilege (kill workflow-level `contents:write`/direct-to-main flow), rulesets on `main`+active branch; signed commits/SBOM = post-1.0. Queue: (a) rc-gate digest enforcement + jar-in-SUMS (tooling lane), (b) attest+verify in the release workflow (CI lane), (c) resolve-side evidence check with official/community policy (cli/deps lane).
+
+## D-1.0-STABILITY-100 — the total-stability criterion for closing 1.0.0: EVERY item in `docs/development/`, `docs/development/future/` and `docs/bugs-and-gaps/` is 100% resolved, with full cross-target parity proven (09/20/2026, maintainer rule)
+
+Rule (ABSOLUTE, refines `D-RELEASE-1.0`): no KOF 1.0.0 release while ANY work item remains open/undelivered in the three ledgers — `docs/development/` (plans with pending implementation), `docs/development/future/` (promoted features must be DEVELOPED, not deferred past 1.0), `docs/bugs-and-gaps/` (bugs, spec gaps, parity matrices) — and parity means the measured cross-target matrix (rule 5 of the freeze), proven by tests/goldens, never by claim. "Stable" is a STATE TO VERIFY (AGENTS §Stability), and 1.0.0 is the formalization of that state; the EG queue, `release-blockers.tsv` and this rule must agree — a closed issue that leaves work pending does NOT discharge the blocker: only the landed proof does.
+
+---
+
+## D-R3-3.3 — FFI handles and out-buffers (multiple-choice, maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` · **Option chosen:** **A** (of A/B/C).
+
+`void*` / `T*` / out-buffers are represented by a **nominal opaque `Handle`**
+(non-arithmetic, never an integer) plus **`Buffer(U8, INOUT)`** for
+by-reference byte buffers — consistent with **D6-3** (`Buffer(U8, INOUT)`, no
+new buffer syntax). No pointer arithmetic. `Pointer`/`OpaqueHandle`/`Buffer`/
+`Struct` stay distinct ABI types even when a register carries an address (R6:
+never silent).
+
+- **Unblocks:** R3-3.3 → open; the out-buffer/buffer slice of R3 (prerequisite
+  of Stages 4–7, all behind R3).
+- **Evidence:** D6-3; `docs/development/ffi-abi-structs.md`.
+- **Relationships:** `Depends on: D-POLL-19/D6 · Related: R3, R6, R9`.
+
+---
+
+## D-R3-3.5 — FFI variadics (multiple-choice, maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` · **Option chosen:** **A**.
+
+**No general Kof variadics.** An FFI caller passes a `List`/`Array`/`Buffer`
+instead; `printf`-style calls are covered by fixed-arity overloads. Rationale:
+the JVM FFM `Linker` has **no variadic downcall**, so a `...` marker would
+diverge per target — a silent lie (R6/R7). A variadic libc call with no
+fixed-arity form stays an explicit documented gap.
+
+- **Unblocks:** R3-3.5 closed as "no variadics" (documented).
+- **Relationships:** `Depends on: D-POLL-19/D6 · Related: R3, R6, R7`.
+
+---
+
+## D-TYPE-VARIANCE — variance + sealed types (multiple-choice, maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `OPEN — spec/plan first` · **Option chosen:** **C** (variance + sealed).
+
+The maintainer **opens** variance + sealed types as a core type-system front
+(scientific collections + exhaustive `switch`). It is a **frozen-core change
+(rule 6)** and follows the **spec-first** discipline of D6: a written design
+plan is drafted and reviewed **before any parser/typer diff** — nothing lands
+silently. Type-classes remain rejected (permanent non-goal).
+
+- **Unblocks:** X5 → open (spec-first).
+- **Next deliverable:** an incremental implementation plan (slices + proof per
+  slice) drafted by the agent, reviewed by the maintainer before code.
+- **Relationships:** `Related: rule 6, rule 11, R10, permanent non-goals, D-KOF-FIRST`.
+
+---
+
+## D-INTEROP-REFLECT — interop reflection (multiple-choice, maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `OPEN — spec/plan first` · **Option chosen:** open (complete); **incremental plan required**.
+
+Reflection is authorized **only at the interop boundary** (never a language
+foundation). The maintainer asked for an **incremental implementation plan**
+drafted first (slices with proof per slice), reviewed before code — the same
+spec-first gate as D6/X5.
+
+- **Unblocks:** X6 → open (spec-first).
+- **Next deliverable:** the incremental plan (agent drafts, maintainer reviews).
+- **Relationships:** `Related: rule 6, R9, X5, D-KOF-FIRST`.
+
+---
+
+## D-CODEGEN-STEP — compile-time codegen hook (multiple-choice, maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` · **Option chosen:** **A**.
+
+Implement **`CodegenStep`** as a **compiler-internal hook** (no user syntax) —
+R4 (`🔵`). It is the declared blocker of Stage 3 (`infra "prod" {}` desugar,
+3.2) and of the DDL/runner migration. It adds **no language surface**; any
+user-facing form (3.2) is its own later decision (rule 11 gate).
+
+- **Unblocks:** R4 → in progress; 3.2 unblocked **behind R4**.
+- **Evidence:** `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` R4 + critical path.
+- **Relationships:** `Related: R4, R8 (same frontend), 3.2, rule 11`.
+
+## D-GRAPHICS-GAMING — graphics beyond forms: a future plan for the 2D/3D/game surface is MANDATORY (09/20/2026, maintainer request)
+
+Maintainer asks how Kof handles 2D, 3D and non-web graphics ("how does one make a game in Kof?") and directs: open the plan in `docs/development/future/`. Current ground truth: `kof.ui` is a form/intent surface (JVM=JavaFX, JS=DOM, Android=APK); the corpus has NO game abstraction (frame loop, sprites, meshes, input-per-frame, audio, GPU) — games today would be interop, not idiom (rule-8/11 boundary: a foreign API shape is not the answer; the plan must define the KOF INTIMATION the platform lowers, per-target honest gaps R6/XXX001-style, interop-first R9 for engines/libs — never a home-grown renderer, and KofC/wasm are future). PLAN-DOC: `docs/development/future/graphics-gaming-plan.md` — skeleton next session; design questions it must answer: game-loop primitive (a `scene`/`frame` idiom?), 2D sprite/tileface surface, 3D scope (mesh/camera/material as intent vs. FFI to native GPU libs), audio, input model, per-target honesty (JVM/Native/JS/web + KofC later), and the non-goals guard (no HTML5-canvas leakage into user code). Priority: future/ — does NOT compete with 1.0 (R12 + D-1.0-STABILITY-100: it enters the 1.0 surface only by her explicit promotion).
+
+### D-GRAPHICS-GAMING addendum (09/20/2026, maintainer, same session) — the media surface is IN SCOPE of the plan: a sound pipeline AND video support
+
+KOF also needs a **sound pipeline** (playback, streams, volume/mix, the game-audio case: low-latency SFX) and **video support** (a `video`/`VideoView` intent surface in `kof.ui`-land: file/stream playback, the player chrome belonging to the platform, never to user code). The plan doc MUST treat media as first-class: the KOF idiom (e.g. `sound.play("x.ogg")`, `video` panel component) + per-target lowering JVM (JavaFX Media/`javax.sound` exist TODAY on JVM — measure before promising), JS (browser `<video>`/WebAudio — the platform renders), Native (interop-first R9: SDL_mixer/miniaudio/OpenAL/ffmpeg — never a home-grown codec; honest `XXX001` gaps where absent, e.g. audio on riscv cross), + the non-goals guard (no HTML5 `<audio>` tags leaking into Kof code; codecs are the platform's problem). Pipeline of sound (mixing/graph) gets its OWN section in the plan answering: latency contract, formats supported per target, device enumeration, and whether `kof.sound` is core-stdlib or a stdlib package (R1 boundary).
+
+### D-GRAPHICS-GAMING addendum 2 (09/20/2026, maintainer) — NO JavaFX; the graphics/media surface requires FULL PARITY
+
+"No JavaFX. It must have full parity." Consequences recorded: (1) the graphics/media plan may NOT use JavaFX (nor any single-target toolkit) as the rendering/media backend of the KOF surface — JVM must reach the same idiom through the same portable stack as the other targets (interop-first R9: the shape the plan evaluates is an SDL/GL-class portable layer lowered to per-target bindings, not platform chrome); (2) FULL PARITY is the acceptance criterion for this surface — unlike R7's "honest scope per target", a graphics/media feature is only in the language surface when EVERY target runs the SAME program with the SAME behavior (or the feature is not promoted at all); (3) EXISTING kof.ui-JVM (JavaFX-based) keeps working unchanged (backward compatibility, freeze rule 2) but is the legacy face of the area, not the future one — its migration/retirement is a DESIGN QUESTION the plan must answer (rule 6), never an agent decision; (4) the JavaFX-removal work item lands in `docs/development/future/graphics-gaming-plan.md` §parity as its own section (measure today: which kof.ui classes bind javafx.* on the JVM target).
+
+### D-GRAPHICS-GAMING addendum 3 (09/20/2026, maintainer — CORRECTION to addendum 2) — Kof never used and never will use JavaFX; every "JavaFX" message in Kof is a bug in disguise
+
+The maintainer revokes the framing "kof.ui-JVM is JavaFX-based legacy that keeps working": **Kof has NEVER used JavaFX and NEVER will** — consistent with the house rule of 09/12 (`AGENTS.md`, "JavaFX rule"): the message "componentes de runtime do JavaFX não foram encontrados" is NEVER benign, it is the launcher swallowing a real `VerifyError`/`ExceptionInInitializer` — a disguised bug, always root-caused, never accommodated. Therefore: (a) addendum 2 item (3) reads: any `javafx.*` binding found in the Kof tree is NOT a legacy face — it is a DEFECT to be removed by a normal bug pipeline (freeze rule 4: fix the code to reach the documented behavior, never document around it); (b) `kof.ui` on the JVM was, is, and will be served by the portable parity stack from the start — the "migration" section of the plan becomes an ERADICATION section: measure every `javafx` reference in src/docs/std-lib (`grep -rn "javafx" kof-*/src` etc.), classify each (bug of the disguised-exception kind vs. wrong-doc claim) and file as items with reproduction; (c) backward compatibility does NOT protect a JavaFX path — user Kof code never named JavaFX, so removing it cannot break any valid Kof program (the compat promise is to Kof programs, not to internals).
+## D-MAKEALIVE-CLI — 3.8 contract: `kof makealive plan|apply|destroy` (tooling over the host)
+
+Decided 20/09 by maintainer delegation to `.18` ("propose the contract + implement") —
+row 3.8's rule-6 required a decision on the command contract. **(1) Verb:**
+`kof makealive <plan|apply|destroy> <file.kf>` — NOT `kof infra`: D-MAKEALIVE Q1 decided
+the namespace IS the name (`kof.makealive`) and the literal `infra` stays HARD-DENY in the
+stdlib ledger (R1); the CLI follows the decided name. **(2) Program convention (the
+D-WORKFLOW-RUN posture of 2.6):** the file is pure Kof — `import kof.makealive`,
+`design(): Infrastructure`, `provider(): Provider`, no `main()`; the tool synthesizes a
+main() over the host's own faces (`plan`/`apply`/`destroy`/`mkLoadState`/`mkSaveState`/
+`mkMaxGen`) and communicates through the marked line `@@KOF_MAKEALIVE@@ {json}`; human/JSON
+formatting lives in the CLI, never in the host. **(3) State:** h2 file via `--state PATH`
+(default `<file>.makealive`); the "the runner brings the JDBC driver" contract is unchanged
+(KofJsDbBridge); apply/destroy ALWAYS save `gen = max+1` — and destroy persists an
+empty-state marker (`res ""`) so the empty generation is visible to `mkMaxGen`/`mkLoadState`
+(bug found by this decision's own E2E; golden `emptyGenerationIsVisibleAndLoadsEmpty`).
+**(4) Targets:** JVM+JS byte parity (R7); script/native honest refusal (same as 2.6) — the
+Native host stub keeps `ORM001` at the call site. **(5) rc:** the marked line decides
+(`allOk`); a throw (provider refused set/delete, argument guards) = no marked line, the raw
+output IS the diagnosis, rc 1. Proof: `CmdMakealiveTest` 7/7 + `MakealiveMaxGenE2ETest` 4/4
++ Makealive battery 14/14.
+
+## D-GRAPHICS-GAMING addendum 4 (09/20/2026, maintainer) — Kof WILL HAVE ITS OWN graphics engine for games
+
+Order: Kof needs its own graphics engine for games — the plan's interop-first recommendation (R9) is REVOKED for this domain (D-UNIVERSAL-style precedent). The engine is Kof's (Kof/platform code, house-driven), exposed in zero-boilerplate idiom (rule 11: idiomatic, easy, no accidental complexity); FFI bindings stay limited to the non-engine layer (window/GPU/audio device). Consequence: the plan §§3–4 + Q1/Q5/Q7 in `future/graphics-gaming-plan.md` + README/learn/training/UI-media docs need REWRITE in this direction; R9 gains a named exception in DECISIONS. Detail choices (engine name, first slice, formats) stay rule 6 via the plan open Qs.
+
+## D-PROPERTY — property-based testing: NO new syntax — the surface is the existing `test` + `kof.rng` + `assert` idiom (21/09/2026, maintainer-delegated)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` · **Decides:** `SG-023` (option **C** + option **iii**) · **Closes:** the X8 remainder (G6 "next").
+
+**Context:** the X8 front landed `rng` (slices 1–2), `kof test --timeout` and named suites by directory. The two remaining faces — a property runner and suite fixtures — were registered as **`SG-023`** ("REQUESTED, no decision") because both *suggested* new user-facing surface (rule 6). Asked to decide, the maintainer delegated the choice ("Decide SG-023 surface").
+
+**Decision (rule 11, Simplicity Law): NO new syntax.** The mechanism already exists and is documented:
+- **property** = **option C** — a `test "name" { }` whose body seeds `rng` and loops, using `assert(cond, msg)`. **REJECTED** option A (`property`/`forAll` keyword) and option B (`kof test --props` implicit mode): ceremony over a mechanism the language already has.
+- **fixtures** = **option iii** — nothing new; the `D5-B` pattern (`close()` + `try/finally`) already expresses per-test setup/teardown. **REJECTED** option i (`setup`/`teardown` blocks) and option ii (`_suite.kf` convention file).
+
+**Why:** "Kof must be simpler than any alternative" — `rng.seed(42)` + loop + `assert` is shorter and more intent-revealing than a keyword + generator inference + shrinking machinery; the compiler stays smaller and the idiom works on every `rng` target. It respects `D-KOF-FIRST` (no QuickCheck/Hypothesis borrowing before a Kof contract).
+
+**Proof:** `PropertyTestIdiomE2ETest` **7/7** (kof-compiler) — a seeded 200-iteration property PASSes and is reproducible across runs, its `checksum` is bit-identical **JVM==JS** and **JVM==Native-x86** (`rng` parity), a falsifiable property FAILs deterministically with the seed-derived message and exit 1 (JVM+JS), and a zero-iteration property PASSes vacuously. Documented in `training/idioms/stdlib.md` + `learn/23-testing.md`.
+
+**Not a language change:** no parser/typer/codegen touched; the `kof test` surface is unchanged.
+
+## D-ARRAY-PRINT — §388-B: printing a whole `Int[]` is container format (21/09, maintainer)
+
+The §388 entry logged the reverse parity of the bytes faces: JVM/Script printed
+`[I@65629ac6` (raw Java toString of `int[]`) while KofJS printed `65,66,67` —
+no corpus line declared how a primitive array PRINTS (the container-format row of
+the matrix covered List/Map/nested only). The maintainer settled it in chat on
+21/09 (rule 6): the **container format wins** — i.e. the §107 grammar already in
+place for collections (oracle = `ArrayList.toString`, `[65, 66]` with brackets
+and `, ` separators; JS mirrors via `kofFormat`, the three native targets via
+`kof_array_to_string`).
+
+Calibration note: the vote option was phrased "65,66,67" (the then-current JS
+face), but what was voted against is the IDENTITY form; the house container
+format — already declared for collections since §107 and pinned in
+`conformance-matrix.md` — is `[65, 66]`. The implementation follows §107, not
+the literal text of the option.
+
+Scope: `println(new Int[n])`, `println(readBytes())`, flat/nested/empty, records
+and Strings by the element's own content toString. Passing a `List` to a bytes
+face stays a compile error (`SEM099`, §388-A) — untouched by this decision.
+Tests: `arrayprint` cell in `ConformanceMatrixTest` (JVM/Script/JS/native),
+`ArrayPrintFormatE2ETest`, riscv64/aarch64 goldens in `Native*E2ETest` (CI/qemu).
+
+## R6-SCOPE — incremental delivery does NOT breach R6 (maintainer, 21/09/2026)
+
+**State:** `DECIDED` · ABSOLUTE clarification of R6 (never silent).
+
+R6 forbids **silence**, not **partial scope**. A delivery that is a **complete
+vertical slice for its declared scope**, with the not-yet-supported paths
+failing through **honest diagnostics** (`FFI001`/`FFI002`/`XXX00x` — which *is*
+R6), does **not** breach R6. R6 is violated only when a gap is **hidden**: a
+silent stub, a weak fallback, a divergence the user cannot see.
+
+Consequence: any undelivered capability is built **incrementally** (e.g.
+JVM-first, with Native/JS as *declared, diagnosed* gaps — R7) and each slice
+lands whole for its scope. "Can't do it all at once" is no reason to defer the
+slice; "hide the missing part" is the only forbidden move.
+
+## D-R3-BUFFER — out-buffer is the nominal `Buffer(U8)` type (maintainer, 21/09/2026)
+
+**State:** `DECIDED` · **Option chosen:** nominal type (of reuse-`Byte[]` /
+nominal `Buffer(U8)` / split).
+
+D6-3/D-R3-3.3 fixed that out-buffers exist as their own ABI kind
+(`Buffer(U8, INOUT)`, copy-in / call / copy-back, **never `S`**). This decision
+fixes the **spelling the user writes**: a **nominal `Buffer(U8)`** type in the
+`extern` signature — *not* a reuse of `Byte[]` (scalar `T[]` stays the
+read-only `ptr` of fatia 3/D6-2). `Buffer` stays a distinct ABI type even when
+a register carries an address (R6).
+
+## D-R3-HANDLE-LIFETIME — `Handle` memory is automatic (maintainer, 21/09/2026)
+
+**State:** `DECIDED` · **Direction chosen:** automatic (of single `Handle<T>`, or
+defer).
+
+D-R3-3.3 chose a nominal opaque `Handle` (never an integer, no pointer
+arithmetic). This decision fixes its **lifetime**: allocation/deallocation must
+be **automatic — the programmer never manages memory** (no manual `malloc`/
+`free`). `Handle` therefore does not land as an isolated FFI type now; it is
+delivered together with the language-managed resource/lifetime mechanism
+(scoped-resources / RAII front, `docs/development/future/scoped-resources-plan.md`),
+which is the owner of the allocation strategy. Until then `Handle`-typed externs
+stay honest `FFI001`/`FFI002` (R6).

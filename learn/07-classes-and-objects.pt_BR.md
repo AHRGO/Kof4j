@@ -2,7 +2,7 @@
 
 # 07 — Classes e Objetos
 
-> **Kof 0.4.0-beta — exemplos verificados no compilador (02/09)**
+> **Kof 0.5.0-beta — exemplos verificados no compilador (02/09)**
 >
 > Kof tem **dois** modelos de "dado com parâmetros": `record`/`class X(...)`
 > (imutável, accessors) e classe com campos + `constructor(...)` (mutável,
@@ -176,7 +176,7 @@ class Cachorro extends Animal {
 
 Override é implícito (mesmo nome de método); dispatch é virtual.
 
-## Sobrecarga de métodos (0.4.0-beta, §131)
+## Sobrecarga de métodos (0.5.0-beta, §131)
 
 Métodos de mesmo nome coexistem na classe quando as assinaturas diferem:
 

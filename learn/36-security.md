@@ -2,7 +2,7 @@
 
 # 36 — Security (kof.security)
 
-> **Kof 0.4.0-beta — Sep 2026 — complete across the 3 targets (SECN00x gaps documented)**
+> **Kof 0.5.0-beta — Sep 2026 — complete across the 3 targets (SECN00x gaps documented)**
 
 `kof.security` is the Standard Library's security layer: passwords, cryptography,
 JWT, secrets and authentication for web applications — with **secure by default**.

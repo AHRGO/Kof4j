@@ -97,7 +97,17 @@ public final class JvmOpCollections {
                 mv.visitMethodInsn(INVOKESPECIAL, "java/util/ArrayList", "<init>", "()V", false);
             }
             case "kof_list_add" -> {
-                emitBoxIfPrimitive(mv, elemType);
+                // §374/#553 — coleção BARE (local `List xs = listOf(1)` ou
+                // campo `List xs` pos-§373): elemType e Unknown (receiver sem
+                // type-args) e o `int` cru do argumento chegava ao
+                // ArrayList.add(Object) → VerifyError no LOAD (mesma raiz do
+                // bug 35). MESMO fallback do contains (:139): boxear pelo
+                // tipo do ARGUMENTO; com elemType tipado o resultado e
+                // identico (typer garante compatibilidade, SEM056) — colecoes
+                // tipadas intocadas.
+                Type addT = elemType instanceof Type.UnknownType && !kc.parameterTypes().isEmpty()
+                        ? kc.parameterTypes().get(0) : elemType;
+                emitBoxIfPrimitive(mv, addT);
                 // ArrayList.add empilha boolean; o emit descarta — o IR
                 // não deve adicionar KofPop para add/set/clear
                 // (hasReturnValue = false), senão underflow no frame.
@@ -124,7 +134,12 @@ public final class JvmOpCollections {
                 emitUnboxIfPrimitive(mv, elemType);
             }
             case "kof_list_set" -> {
-                emitBoxIfPrimitive(mv, elemType);
+                // §374/#553 — box-by-arg no VALOR (ultimo parametro; o
+                // indice e sempre int). Guardado em Unknown: colecao tipada
+                // mantem exatamente o emit de antes.
+                Type setT = elemType instanceof Type.UnknownType && kc.parameterTypes().size() > 1
+                        ? kc.parameterTypes().get(1) : elemType;
+                emitBoxIfPrimitive(mv, setT);
                 mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/ArrayList", "set", "(ILjava/lang/Object;)Ljava/lang/Object;", false);
                 mv.visitInsn(POP);
             }
@@ -207,7 +222,12 @@ public final class JvmOpCollections {
                         "<init>", "()V", false);
             }
             case "kof_channel_send" -> {
-                emitBoxIfPrimitive(mv, elemType);
+                // §374/#553 — mesma familia: canal BARE (`Channel ch = ...`
+                // sem type-args) + send de primitivo = int cru no
+                // LinkedBlockingQueue.put(Object).
+                Type sendT = elemType instanceof Type.UnknownType && !kc.parameterTypes().isEmpty()
+                        ? kc.parameterTypes().get(0) : elemType;
+                emitBoxIfPrimitive(mv, sendT);
                 mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/concurrent/LinkedBlockingQueue",
                         "put", "(Ljava/lang/Object;)V", false);
             }

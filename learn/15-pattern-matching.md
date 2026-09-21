@@ -2,7 +2,7 @@
 
 # 15 — Pattern Matching
 
-> **Status: implemented (JVM / Native / JS) — 0.4.0-beta**
+> **Status: implemented (JVM / Native / JS) — 0.5.0-beta**
 >
 > `switch case String s` (type pattern) and record destructuring `case Point(x, y):` work on the three targets. Parser + Semantic + CompilerDriver with `Native rbx→rcx` fix and `JS typeof`.
 >

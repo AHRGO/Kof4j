@@ -247,6 +247,19 @@ public final class NativeX86Calls {
                 sb.append("    movq %rdi, %xmm0\n");
                 sb.append("    call kof_double_to_string\n");
                 sb.append("    pushq %rax\n");
+            } else if (dispatchType instanceof Type.ArrayType at) {
+                // §388-B (voto mantenedora 21/09): println de array cru no
+                // formato de container da casa. Antes o dispatch caía no
+                // terminal do elem e imprimia UM elemento como char ("A" —
+                // face medida 21/09). O descritor do componente é o MESMO
+                // idioma §107 (.rodata no call-site); o runtime faz o laço
+                // sobre o bloco [len@16][esz@20][data@24].
+                sb.append("    popq %rdi\n");
+                String ld = NativePrintDescriptors.emit(sb, nb.printDescriptorCounter++,
+                        NativePrintDescriptors.node(nb, at.componentType(), false));
+                sb.append("    leaq ").append(ld).append("(%rip), %rsi\n");
+                sb.append("    call kof_array_to_string\n");
+                sb.append("    pushq %rax\n");
             } else if (dispatchType instanceof Type.ClassType ct && BuiltinTypes.isList(ct)) {
                 // §107: List/Map/Set são tipos de RUNTIME (sem vtable) — o
                 // ramo genérico abaixo achava tosIdx=-1 e NÃO EMITIA NADA:

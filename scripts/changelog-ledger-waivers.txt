@@ -1,0 +1,28 @@
+# Waivers do gate CHANGELOG×ledger (uma citação histórica por linha).
+# Formato: <id> <língua> <justificativa>. O gate pula a afirmação mas a
+# mantém registrada — waiver novo exige parágrafo no CHANGELOG EN+PT, e
+# item do ledger que FECHAR deve REMOVER a linha aqui.
+# §205 EN: a linha cita o gate "1 red §205" que a fatia 1 fechou em 15/09;
+#          o §205 do ledger segue vivo por outras faces — não é flip falso.
+205 EN gate-red historico, §205 vivo por outras faces
+# §278 PT: over-gating Android (face db/orm do §278) FECHADO 20/09 pela lane
+#          db/orm; §278 segue vivo pelas demais faces — meia-frase, não flip.
+278 PT face db/orm fechada, §278 vivo p/ as outras
+# §258 EN+PT: o batch CodeQL nomeado em citacoes de sub-issue (#774/#777/#794/#809
+#            CLOSED) e na frase "fixed neighbors" do corpo do §420; o §258 segue
+#            vivo pela face #775 (lane .22) — meias-frases, nao flips.
+258 EN batch sub-issues fechadas; face #775 viva com .22
+258 PT idem, espelho da linha EN
+# §192 EN: "§192's ✅→REOPENED is a real reopen" — o ✅ descreve a reabertura,
+#          nao um fechamento; o gate nao le prosa, a linha fica aqui.
+192 EN ✅ pertence ao REOPENED, fechamento nunca alegado
+# §278 EN: meia-face db/orm do over-gating Android FECHADA 20/09 (D-DB-GAPS
+#          DB-2); §278 segue vivo pelas demais faces — mesmo caso ja isento PT.
+278 EN face db/orm fechada; demais faces vivas
+# §268 EN: "Closes §268" (17/09, #313) foi SUPERADA pela reabertura de faces
+#          em 18/09 (ledger PARTIAL vence; o CHANGELOG e historia, nao se reescreve).
+268 EN alegacao historica revertida por faces novas; ledger PARTIAL manda
+# Forma de escrever: 'item 268' e nao '§268' quando o texto so CITA a historia de um
+# id ainda vivo na MESMA linha que carrega token de fechamento — o gate pareia
+# §NNN->token por proximidade e a citação vira afirmação (21/09: ele pegou a
+# propria prosa da lane no CHANGELOG; reescrita, nao isentada).

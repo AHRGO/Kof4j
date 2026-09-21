@@ -3,7 +3,7 @@
 # Status do Projeto Kof
 
 **Última atualização:** 20 de setembro de 2026
-**Versão:** 0.4.0-beta (pom `revision`)
+**Versão:** 0.5.0-beta (pom `revision`)
 
 **20/09 — CONSOLIDACAO DA NOITE 19/09→20/09 (lane docs, conferida contra `git log`/tip `1080238f`; CI `Build+Tests` verde nos tips da noite, tally do reator completo ~3034 testes 0F/0E na corrida das 23:5x da `.18`).**
 >
@@ -147,7 +147,7 @@
 
 ``` 
 mvn clean package    → PASSA
-mvn test             → 2411 testes (2058 kof-compiler + 38 kof-script + 7 kof-c-compiler + 308 kof-cli), 0 regressões / 0 erros, 196 skip (sem qemu no host → 84 cross skip; guardas de toolchain/DB externo + guard de sysroot §255; `node` presente — todos os `*Js` verdes) — 16/09 ~15:54 clone limpo de `9572949f` (o flake §252 nativo calado de novo) (o anterior 1662/13-erros = host sem node, 13/09)
+mvn test             → 3225 testes (2762 kof-compiler + 50 kof-script + 7 kof-c-compiler + 406 kof-cli), 0 falhas / 0 erros, 221 skip (sem qemu no host → 84 cross skip; guardas de toolchain/DB externo + guard de sysroot §255; `node` presente — todos os `*Js` verdes) — 16/09 ~15:54 clone limpo de `9572949f` (o flake §252 nativo calado de novo) (o anterior 1662/13-erros = host sem node, 13/09)
 kof build            → PASS (--target jvm|native|js|native.risc|native.arm) [--release]
 kof run              → PASS (jvm|native|js|native.risc|native.arm) [--release]
 kof serve            → PASS (web.app() nativo + API legada handle())
@@ -638,7 +638,7 @@ main() { /* ignorado pelo kof test */ }
 
 ---
 
-## Testes (2411 = 2058 kof-compiler + 38 kof-script + 7 kof-c-compiler + 308 kof-cli — suíte completa verde, 0 regressões / 0 erros, 196 skip; medição 17/09 ~15:49 num run limpo do tip `f276e966`; flake §252 nativo calado de novo. Host sem qemu: cross → skip honesto)
+## Testes (3225 = 2762 kof-compiler + 50 kof-script + 7 kof-c-compiler + 406 kof-cli — suíte completa verde, 0 regressões / 0 erros, 221 skip; medição 20/09 ~18:14 pelo job CI Build+Tests do tip `404d8be6` (1º verde na `beta-0.5.0`); flake §252 nativo calado de novo. Host sem qemu: cross → skip honesto)
 
 | Suíte | Quantidade | Cobertura |
 |-------|-----------|-----------|

@@ -45,6 +45,36 @@ public final class CollectionWrites {
         return false;
     }
 
+    /**
+     * §383/#561 (opção (a), decisao da mantenedora 20/09): cruza a fronteira
+     * primitivo↔referencia num ESCRITA de List pinada — primitivo em slot de
+     * referencia (`listOf(listOf(1)).add(true)`, face F9) e referencia em slot
+     * primitivo (`listOf(1).add(Box())`, face X3). NAO e o "miss bencao" do
+     * §126 (la os dois lados sao primitivos e o box pelo slot funciona); aqui
+     * o par QUEBRA nos dois alvos compilados, medido 20/09: JVM VerifyError no
+     * load (int cru contra add(Object) / box Integer sobre referencia), Native
+     * SIGSEGV/ponteiro-lixo — e Script/JS divergem entre si (1 vs true vs
+     * "[object Object]"). Doutina §126: rejeitar so o que quebra de verdade —
+     * este par quebra nos 4, entao SEM056 universal (mesma familia dos sites
+     * de List add/set; Nao alcanca Map/Set, onde a heterogeneidade de
+     * categorias vizinhas e tolerada pelo consenso 3/4, faces S2/M1 20/09).
+     * Unknown/TypeVariable/Nullable passam/desempacotam como em pollutesPinned.
+     */
+    public static boolean breaksPinnedList(Type pinned, Type arg) {
+        if (pinned == null || arg == null) return false;
+        Type p = pinned instanceof Type.NullableType pn ? pn.inner() : pinned;
+        Type a = arg instanceof Type.NullableType an ? an.inner() : arg;
+        if (p instanceof Type.UnknownType || a instanceof Type.UnknownType) return false;
+        if (p instanceof Type.TypeVariable || a instanceof Type.TypeVariable) return false;
+        boolean pPrim = p instanceof Type.PrimitiveType;
+        boolean aPrim = a instanceof Type.PrimitiveType;
+        if (pPrim == aPrim) return false;
+        // String↔primitivo ja e do pollutesPinned (linha isString) — sair
+        // aqui mantem a mensagem/diagnostico existentes byte-identicos.
+        if (BuiltinTypes.isString(p) || BuiltinTypes.isString(a)) return false;
+        return true;
+    }
+
     /** int/long/float/double (sem bool/char — famílias de width que casam). */
     private static boolean isNumericFamily(Type.PrimitiveType pt) {
         return switch (Type.canonicalPrimitiveName(pt.name())) {

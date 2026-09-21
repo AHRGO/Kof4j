@@ -326,6 +326,10 @@ public final class CompilerPipeline {
             irModule = Optimizer.optimize(irModule);
             driver.currentModule = irModule;
         }
+        // R4 (D-CODEGEN-STEP): internal codegen hooks on the optimized IR,
+        // before emit/interpret. Empty registry = identity.
+        irModule = CodegenStepPipeline.run(driver.codegenSteps, irModule, driver);
+        driver.currentModule = irModule;
         if (driver.irObserver != null) {
             driver.irObserver.accept(unoptimized, irModule);
         }
@@ -447,7 +451,8 @@ public final class CompilerPipeline {
         if (merged == null) return null;
         ExternalClasspath extCp = (driver.target == Target.JVM || driver.target == Target.ANDROID)
                 ? driver.externalClasspath : null;
-        merged = CompilerImports.expandKofImports(merged, driver.moduleRoot, diagnostics, driver.declarationPackages, extCp);
+        merged = CompilerImports.expandKofImports(merged, driver.moduleRoot, diagnostics, driver.declarationPackages, extCp,
+                driver.dependencySourceRoots);
         if (diagnostics.hasErrors()) return null;
         return merged;
     }
@@ -460,10 +465,23 @@ public final class CompilerPipeline {
         // `KofJsFfiBridge` idêntico ao `kof_ffi` do target JVM; o browser não tem host e
         // degrada em runtime como o resto do kof_platform, R7). Android intocado (§278).
         if (driver.target == Target.JVM || driver.target == Target.JS) {
-            if (FfiSignature.returnChar(ext.returnType()) == null) return false;
+            // 3.8b fatia 2: retorno de `record` binda só no JVM (JS = FFI002, R6).
+            if (FfiSignature.returnChar(ext.returnType()) == null
+                    && !FfiSignature.structReturnBindable(driver, ext)) return false;
             for (var param : ext.parameters()) {
                 if (FfiSignature.paramChar(param.type()) != null) continue;
-                if (FfiSignature.callbackDescriptor(param.type()) == null) return false;
+                if (FfiSignature.callbackDescriptor(param.type()) != null) continue;
+                // D6-1(A)/3.8b: um `record` de campos escalares binda por valor no
+                // JVM (FFM classifica o struct). O runner JS ainda NÃO tem o bridge
+                // de struct → segue FFI002 honesto lá (R6). Retorno de struct segue
+                // fora do conjunto nesta fatia.
+                if (driver.target == Target.JVM
+                        && FfiSignature.structFieldChars(param.type(), driver) != null) continue;
+                // D6-2 / 3.8b fatia 3: `T[]` escalar binda por valor (ptr + copies)
+                // no JVM; Native/JS ficam nos seus gap codes (R6).
+                if (driver.target == Target.JVM
+                        && FfiSignature.arrayElemChar(param.type()) != null) continue;
+                return false;
             }
             return true;
         }

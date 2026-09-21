@@ -2,15 +2,16 @@
 
 # Development — living backlog (only work in development)
 
-> **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **updated:** 16/09/2026
-> **Suite measured at this HEAD:** `2218` run (1911 kof-compiler + 38 kof-script
-> + 7 kof-c-compiler + 262 kof-cli), **0 regressions / 0 errors / 0 failures in this run**, 192 skip (the only failure the suite ever shows is the known INTERMITTENT §252 native flake `spawnWorkerThrowPropagatesThroughSelectAnyNative`, owner native lane `.18`/nat — not a regression; re-measured 16/09 ~15:54 on tip `9572949f` from a CLEAN clone; the flake stayed SILENT a 3rd straight time — fired 09:44, silent 11:38/15:09/15:54 → ~1/4)
-> (no qemu on the measuring host: the 84 cross are skipped, + the 5 external DBs
-> + other toolchain guards; `node` present — all `*Js` green) — measured
-> the 262 kof-cli reflects `e5013152` (DepsTransitiveTest, +10; `2a60b426` rewrote the guard, same 10 @Test). 1911 compiler = 1899 + 3 (`78b733fa` NumericFormatterE2ETest) + 2 (`7b38d0d4` §253-face-A KofTimeE2ETest) + 3 (`7cd69a7b` SSE-JS KofWebJsE2ETest) + 1 (`4ea099b3` §261 window-bind KofJsBrowserE2ETest) + 3 (`92d11a03` G-6b NativeX86GcMarkScopeTest); +1 skip in KofDbE2ETest = the §255 sysroot guard (`06e77e94`). The 2199/1902/252 figure was a mid-flight miscount (measured while `555d2afe`/`e5013152` were landing); 16/09 ~15:54 is the clean-clone authoritative number (re-measures at 11:38 and 15:09 kept the flake silent). Earlier 16/09 ~01:45 read showed 297 errors = the §257 stale-ECJ-stub trap, cleared by `mvn -pl kof-runtime clean`.
-> The previous number (1662/13-errors, 13/09) was a node-less host. **Authoritative suite number = the run on the host** (the gate
-> `mvn test ... -Dmaven.test.failure.ignore=true`; check per module with
-> `grep -rl FAILURE */target/surefire-reports/*.txt`), not this line — it
+> **Base:** `0.5.0-beta` · branch `beta-0.5.0` · **updated:** 21/09/2026
+> **Suite measured at this HEAD:** `3225` run (2762 kof-compiler + 50 kof-script
+> + 7 kof-c-compiler + 406 kof-cli), **0 failures / 0 errors**, 221 skip (cross
+> runs in the dedicated qemu job; the rest external-DB/toolchain guards + §255
+> sysroot) — CI Build+Tests job of tip `404d8be6` on 20/09 ~18:14: the **first
+> green on `beta-0.5.0`**, reactor `Kof 0.5.0-beta`. The §252 flake, the §181
+> cross residual and §256(b) stay closed at code (`20495e48` / `c56c74a7` /
+> `3a593734`). **Authoritative suite number = the CI job on the pushed SHA**
+> (the gate `mvn test ... -Dmaven.test.failure.ignore=true`; check per module
+> with `grep -rl FAILURE */target/surefire-reports/*.txt`), not this line — it
 > rots with every commit. Refold of the `NativeRiscvAsm` concatenation to
 > `<clinit>` (new anti-pattern `constant-folded-runtime-asm.md`) green in the
 > `gate1585.log` gate (HEAD 54da1325).
@@ -29,8 +30,23 @@
 **Sources of truth that are NOT here (they are not backlog):** `docs/status.md`
 (what works + the suite gate), `docs/backend-parity.md` (parity
 matrix with honest gaps), `docs/bugs-and-gaps/specification-gaps.md`
-(SG-001–022 — maintainer queue COMPLETE, became a reference; SG-021/022 =
-requests with no decision).
+(SG-001–023 — maintainer queue COMPLETE, became a reference; SG-021/022 =
+requests with no decision; **SG-023 ✅ DECIDED 21/09 — `D-PROPERTY`, no new
+surface**).
+
+---
+
+## 0. What is live here (read first)
+
+- **Pending (the release gate's condition 3):** `ffi-abi-structs.md`
+  (**D6 DECIDED 20/09** — implementation in progress, owner `jonas`) ·
+  `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (owner: session 9093, platform front) ·
+  `makealive-plan.md` (residual 3.2/3.7, rule 6 — 3.8 shipped 20/09 `D-MAKEALIVE-CLI`).
+  Authority: `scripts/check_release_050_gate.sh` (`loose_docs`).
+- **Living records here (not backlog):** `DECISIONS.md`,
+  `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.
+- **§1 is the queue; §4.1/§4.2 are an AUDIT TRAIL** (what already left, with
+  proof) — do not read them as work. How to act: §6.
 
 ---
 
@@ -50,11 +66,11 @@ requests with no decision).
 | 5 | ~~`plan-editor-integration.md`~~ → `docs/tooling/PLAN-EDITOR-INTEGRATION.md` | ✅ **CONCLUDED 14/09** — degrees 0–13 implemented and proven (`EditorIntegrationTest` 23/23; `kof editor` complete across 7 editors; release gate §19 green) | moved to `docs/tooling/` (3-state rule) | — |
 | 6 | ~~`plan-stdlib-expansion.md`~~ → `docs/stdlib/PLAN-STDLIB-EXPANSION.md` | ✅ **CONCLUDED 14/09** — S0–S13 implemented and validated on 5 targets; pending decisions consolidated in `DECISIONS.md` §D-STDLIB | moved to `docs/stdlib/` (3-state rule) | — |
 | 7 | newly opened queue of `DECISIONS.md` (13/09): ~~`time.todayIso/formatDateIso/isToday/hoursBetween/parseDateIso/tzOffsetSeconds` (D-STDLIB)~~ **✅ EXECUTED 13/09** (S7e-S7h, stdtime3-6 matrix, suite 1772/0/0; TIME003 = general queue) · ~~`CmdNew` (D-APP I1)~~ **✅ DONE 14/09** (`kof new --type mono\|backend\|frontend\|full-stack`, compilable skeletons, honest APP003, `CmdNewTest` 8/8, APP matrix in `backend-parity.md`) · ~~`chacha20Encrypt/Decrypt` (D-SEC)~~ **✅ DONE 14/09** · ~~`security.cookies`~~ **✅ DONE 14/09** · ~~`app.security()` (C18)~~ **✅ DONE 14/09** (composite middleware, fixed order, JVM; `KofWebE2ETest` 22/22 + `appSecurityPipelineE2E`; Native/JS `WEB006`; unified superset .18×.22) · ~~`--fat` (D-APP I3)~~ **✅ DONE 14/09** (`kof build --fat` → `kof-app.jar` executable with classes+runtime+deps; `CmdBuildFatTest` 4/4, `java -jar` proof; non-JVM honest refusal R6) · ~~blog E2E (D-SPRING F12)~~ **✅ DONE 14/09** (`KofBlogE2ETest` green; exposed+fixed 2 JVM bugs: `readRequest` counted body in chars vs `Content-Length` in bytes — hung a multibyte UTF-8 connection; raw JDBC CLOB on the read path) | `RATIFIED` (decision locked 13/09) | — | ~~TLS own cert (D-SEC)~~ **✅ DONE 14/09** (`app.listenSecure(port, certPem, keyPem)`, PKCS#8 PEM, JVM; `KofWebTlsTest` 7/7; Native/JS `WEB002`) · ~~OAuth resource-server (D-SEC layer 16)~~ **✅ DONE 14/09** (`auth.resourceServer(jwksUrl,issuer,aud)` + `resourceServerVerify`; RS/ES via JWKS, no alg confusion; integrates with `auth.authenticated`/`app.security`; `KofOAuthResourceServerTest` 4/4; Native/JS `SECN007`) — **§7 QUEUE EMPTY**; each line = unit-test-commit |
-| 8 | `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (+ vision companion `docs/architecture/UNIVERSAL-PLATFORM-VISION.md`) | `IN PROGRESS` — **promoted from `future/` 17/09** (`DECISIONS.md` §D-UNIVERSAL, R12 overridden); split 17/09 into executable steps + vision companion | maintainer directive 17/09: promote and implement | **Stages 1–8 + R1–R12 as executable items** (status ✅/🟡/🔵/⛔ + owner lane + proof) — live state: **R1 ✅ DONE** (`5f1422c6` boundary gate+ledger+CI); **R6 ✅ machine gate** (`DomainGapCodesTest…` `19a740f2` + ledger sweep `c5897cd5`); **1.5 ✅ OTel export landed** (`435b7013`; Native `OBS003`); 1.1 MEDIA = `MEDIA001/003` documented, queued behind the `.22` HTTP facades; 1.2 GC x86 = ✅ G-6(a) auto-collect landed 19/09 (`a904317e`, §260 CLOSED, D1-A); 1.4 registry = **✅ MVP 19/09** (D2-A: publish + pull 1.5.3-S2). Claim in `DOING.md` before code |
+| 8 | `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (+ vision companion `docs/architecture/UNIVERSAL-PLATFORM-VISION.md`) | `IN PROGRESS` — **promoted from `future/` 17/09** (`DECISIONS.md` §D-UNIVERSAL, R12 overridden); split 17/09 into executable steps + vision companion | maintainer directive 17/09: promote and implement | **Stages 1–8 + R1–R12 as executable items** (status ✅/🟡/🔵/⛔ + owner lane + proof) — live state: **R1 ✅ DONE** (`5f1422c6` boundary gate+ledger+CI); **R6 ✅ machine gate** (`DomainGapCodesTest…` `19a740f2` + ledger sweep `c5897cd5`); **R5 ✅ machine gate 21/09** (tier in `scripts/stdlib_boundary.txt` + `check_stdlib_boundary.sh`, D4-A); **X8 ✅ 21/09** (property idiom `test`+`rng`+`assert`, `D-PROPERTY`); **1.5 ✅ OTel export landed** (`435b7013`; Native `OBS003`); 1.1 MEDIA = `MEDIA001/003` documented, queued behind the `.22` HTTP facades; 1.2 GC x86 = ✅ G-6(a) auto-collect landed 19/09 (`a904317e`, §260 CLOSED, D1-A); 1.4 registry = **✅ MVP 19/09** (D2-A: publish + pull 1.5.3-S2). Claim in `DOING.md` before code |
 | 9 | ~~`workflow-plan.md`~~ + ~~`shell-plan.md`~~ (+PT) → `docs/workflow-plan.md` / `docs/shell-plan.md` | ✅ **CONCLUDED 19/09** — workflow: all five faces landed (`WorkflowE2ETest` 20/20, byte-parity JVM==JS, Native real); shell: 2.2.0–2.2.4 landed (`ShellE2ETest` 15/15; only residual = JS live-pipe `pipeline`, a platform item on tracker row 2.2, not a plan slice) | moved to `docs/` (3-state rule — a concluded plan may not stay in `development/`) | — |
 | 10 | `D-WORKFLOW-RUN` (Stage 2 rows 2.5/2.6) — `kof workflow run` full runner + CI/CD pipeline example | ✅ **LANDED 19/09** (owner platform lane, sessão 19/09-3/9093): convention `pipeline(): KofWfDag`; `list`/`run --job`/`--dry-run`/`--json`; host `order()`/`runJob()` + `CmdWorkflow`; `examples/ci/ci-pipeline.kf` E2E golden (`CmdWorkflowTest` 9/9) | decision locked in `DECISIONS.md` §D-WORKFLOW-RUN; implemented directly (tooling slices, X9 `kof deploy` precedent) | residual: JS/Native runner faces are honest follow-up slices (R7) |
-| 11 | `makealive-plan.md` (+PT) — D-MAKEALIVE (ratified 20/09, `DECISIONS.md`): the compiler that compiles itself — provider-shape probe landed (`57fd2c6e`, 3.1.0), 3.1 core IN PROGRESS lane `.18` | `IN DEVELOPMENT` | `docs/development/makealive-plan.md` |
-| — | `ffi-abi-structs.md` (+PT) — D6-A spec: FFI struct/array ABI (design-first) | `DRAFT — under review` (ratified D6-A 19/09; drafted 19/09 — pure design: no semantics, no binding) | exec = compiler lane (3.8a/3.8b) + native (3.7) + JS decision; D6-1..D6-5 need `DECISIONS.md` entries before ANY code | the measured wart §1 (`Arena.global` leak on FFI strings) ships as fix-candidate with the spec, not a silent bug |
+| 11 | `makealive-plan.md` (+PT) — D-MAKEALIVE (ratified 20/09, `DECISIONS.md`): infrastructure as typed code — **MK-1 core COMPLETE 20/09** (3.1: virtual namespace `kof.makealive` + generic REST/CLI providers + `kof.db` state; makealive E2E battery green, 8 classes, JVM==JS byte parity — plan §3.1) + **3.3 reconcile landed** (delegates to `scheduler.every`; `MakealiveReconcileE2ETest` 1/1 ×3) | `IN DEVELOPMENT` | residual 3.2 (`infra "prod" {}` syntax — **R4 ✅ landed 21/09**, the codegen-hook blocker is gone, the parse surface remains rule 6) / 3.7 (compile-time cycle — needs the 3.2 surface) / 3.8 (`kof infra` CLI) are rule-6 decisions — out of v1 until the maintainer decides |
+| — | `ffi-abi-structs.md` (+PT) — FFI struct/array ABI (D6) | `IN DEVELOPMENT` — **D6 DECIDED 20/09** (`DECISIONS.md` §D-FFI-STRUCT: **D6-1 = A+B**, D6-2 only `new T[n]`, D6-3 `Buffer(U8,INOUT)`, D6-4 full sret, D6-5 confined arena); spec §4 = DECIDED; 3.8a `AbiLayout` landed; **3.8b fatia 1 landed 20/09** (`e79ea4e6` — record by value as C struct **argument** on the JVM, D6-1) + **fatia 2 landed 21/09** (record **return** by value: register + sret, canonical-constructor reconstruction; D6-4) + **D6-5 arena fix landed 21/09** (scalar helpers confined-per-call + close; `FfiStructE2ETest` 10/10, `FfiE2ETest` 17/17) + **fatia 3 landed 21/09** (D6-2: scalar `T[]`→C `ptr`, **copy-in per call**; `FfiArrayE2ETest` 5/5) | exec = owner **`jonas`** (post-#431 FFI front) + compiler/native + JS decision; **the docs lane only keeps the record** | remaining: out-buffer D6-3 (surface, rule 6), JS struct bridge (cross-lane) and Native sret (3.7); the §1 `Arena.global` leak is **FIXED** (D6-5, no longer a fix-candidate) |
 | — | living records: `conformance-matrix.md`, `ecosystem-coverage.md`, `KOFUI-AUDIT.md`, `known-bugs.md` (in `docs/bugs-and-gaps/`); `roadmap.md` (here); `roadmap-audit.md`/`complexity-audit.md` (in `docs/audits/`) | `LIVE` | **they are not backlog** — matrix/audit/queue that update together with each closure | update the cell/section in the SAME commit that closes the gap |
 
 **R12 rule (AGENTS.md):** nothing from `future/` (RAII, package-compiler,
@@ -67,11 +83,54 @@ so it attacks exactly the SYSTEMS items this rule requires closing.
 ---
 
 ## 2. Open bugs (queue in `docs/bugs-and-gaps/known-bugs.md`) — triage 13/09,
-resynced 14/09 ~22:15 (docs lane — living record, the rule of §1 of the
-three-states table)
+resynced 14/09 ~22:15, **live count resynced 21/09** (docs lane — living
+record, the rule of §1 of the three-states table). The **authority** for the
+live set is `scripts/check_known_bugs_status.sh` (EN×PT consistent), never a
+number written by hand.
 
-**32 items in the open queue** (counted from the file on 14/09; the 13/09 list
-below was taken BEFORE the §220–§239 wave). The conclusion holds WITH
+**The CHANGELOG cannot lie about the ledger**: `scripts/check_changelog_ledger.sh`
+cross-checks every `§NNN ✅ FIXED` claim against that live set (same classifier, the
+open list the gate prints) and REDs the silent-revert case that actually happened on
+21/09 — a stale-base rebase flipped §388 `✅→🟡` while the CHANGELOG kept claiming the
+flip, with zero conflict to warn anyone. Historical quotes of a half-closed item may
+be waived only by a named line in `scripts/changelog-ledger-waivers.txt`, never by
+editing the gate.
+
+**Ledger links must actually land**: `scripts/check_ledger_anchors.sh` recomputes the
+GitHub slug of every section heading and compares it — by exact string — to the
+`pt-switch`/`en-switch` href of the opposite language (diacritics folded, punctuation
+deleted, `_` kept). Measured 21/09: 11 of 26 hrefs were hand-abbreviations pointing at
+nothing (including two this lane shipped the same morning). All regenerated to zero, and
+`--selftest` plants a truncated slug so the class cannot silently return. Both gates sit
+in the CI agent suite (`run-agent-tests.sh`) and fire per-change via `agent-verify.sh`.
+
+**Living counts must match the authority**: `scripts/check_live_records.sh` extracts every
+`N items`/`N live` declaration from this lane's two READMEs and requires it to equal the
+classifier's live count. The class drifted twice on 21/09 — a phrase resync left a table row at
+`18`, and the next resync missed the same row again, caught by the sister lane in `5a80625c`. A
+number hard-coded in two places is a promise to drift; a *missing* declaration is a failure, not
+a free pass (anti-neutering: a wording change must update the gate too). The hook wiring is
+proven functionally — `agent-verify-wiring-test.sh` executes the real block skeleton, catching a
+correctly-written regex trapped in a mis-nested `if` (a bug this lane planted and then fixed the
+same hour).
+
+**19 items in the open queue** (resynced 21/09 ~08:5x — 20→19 when
+**§380** (JS nested-`if`/`throw` codegen) was formalized ✅ `9f383bcf`,
+re-measured 16/0F at the tip; 19→18 when **§381** (entity-field keyword
+OOM in the parser) was fixed ✅ `576a1dcb`; 18→17 when **§394** (test harness
+leaks the served app) was fixed ✅ `d0464385` and **§353** (`io` method result
+inside a lambda body — SEM014) was fixed ✅ 21/09 by the compiler lane; 17→18 when **§418** (riscv64 single-step debug
+harness) was RE-PUBLISHED by the native lane the same day with fresh grounding after the
+tree loss its §419 retraction records — count went down (fixes) and up (a real gap
+re-surfaced) in one day, which is exactly why the script, not the prose, is the
+authority; 18→19 when the db/orm lane OPENED §421 (native `db.connect` accepts any
+scheme silently, refusal only at `kof_orm_*`) as its own honest catalog in F2c3 — counts
+moving UP because lanes keep cataloguing against themselves is the ledger working, not
+rotting; by
+`scripts/check_known_bugs_status.sh`; the number is a dated snapshot — the
+script is the authority). The **32** counted on 14/09 and the 13/09 list
+below are the HISTORICAL snapshot, preserved for the record (taken BEFORE the
+§220–§239 wave). The conclusion holds WITH
 correction: the items still open are owner/blocked/rule-6 — but the "ZERO
 pure-code item" was REFUTED by the 14/09 wave itself: §236 (comparisonReturn
 Bool×Int) and §238 (hoist of escaping local + sipush) were pure-code items of
@@ -168,17 +227,23 @@ scalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `roadmap.md` | §§8–11 ❌ (frontend same-project, monolith→micro) | long term |
 | ~~`roadmap-audit.md`~~ → `docs/audits/roadmap-audit.md` | matrix 06/09 + queue P0→P5 (P0 CLOSED 09/09) | re-audit when something closes |
 | ~~`KOFUI-AUDIT.md`~~ → `docs/bugs-and-gaps/` | UI001-Native (R6 face: silent no-op) OPEN | UI lane |
-| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | 32 open (the live count and triage are in §2 above; §81/§163/§127-JVM, §155, §94, §157-160 and §65 closed/DOES-NOT-REPRODUCE 13/09) | live queue |
+| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | **19 live** (live count — authority is `scripts/check_known_bugs_status.sh`; resynced 21/09; was 20 — §380 `9f383bcf`, §381 `576a1dcb`, §394 `d0464385` and §353 21/09 closed; §400/§418/§421 catalogued/re-published; the §2 live set is the authority; the historical 14/09 count was 32; §81/§163/§127-JVM, §155, §94, §157-160 and §65 closed/DOES-NOT-REPRODUCE 13/09) | live queue |
 | ~~`refactoring/PLAN-SOLID-500.md`~~ → `docs/architecture/PLAN-SOLID-500.md` | ✅ **DONE + MOVED 13/09** (F1–F9 all closed — F3: NativeBackend 498 ≤500 measured, GC lane blocker expired/dead-owner rule); ratchet `check_500-baseline.txt` (debts locked — authoritative number = `wc -l` of the file) in CI | plan CLOSED (3-state rule) |
 | `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` | **UNDER DEVELOPMENT 17/09** — promoted from `future/` by maintainer decision, which **overrides the R12 gate** (`DECISIONS.md` §D-UNIVERSAL); entry point = Stage 1 (SYSTEMS consolidation) + R1–R12 | architecture for Tiers 6–12; vision/design frozen, only state claims synced to code |
+| `PROPOSAL-1.0-EXIT-GATE.md` (+`.pt_BR.md`) | **KOF 1.0 EXIT GATE — RATIFIED 20/09/2026** by the maintainer (`DECISIONS.md` §D-RELEASE-1.0); promoted from `future/`: the gate (§8) + the queue (§23) are the binding stabilization meta — **Kof RC 1.0 / release 1.0 exist only when every item matches and no edge is open** | order of execution = the PROPOSAL's own §23, tracked in `roadmap.md` §24 (EG-1..EG-10); **all seven `[? MEL]` edges CLOSED 20/09 by `DECISIONS.md` §D-1.0-EDGES** — KofC + Android inside the 8-target Stable 1.0 with their own gates (EG-9/EG-10), the nine §35 reinforcement candidates are mandatory gates, the 1.0 line opens after the 0.5.0 cut + EG-1..EG-7; the only remaining edge is the maintainer's RC-opening declaration (EG-8) |
 
 ### 4.3 `future/` — plan only, zero code (not current work)
+
+> The **full, authoritative index** of this folder (every plan + its trigger)
+> is `future/README.md` — the rows below are the ones that most often gate
+> current work; when in doubt, read that index, not this table.
 
 | File | Trigger to fall in here |
 |---|---|
 | `PLAN-MULTIPARADIGMA.md` (multiparadigm / functional pipelines + declarative queries; 16/09, design only) | first functional increment begins (SYSTEMS closed, R12) |
 | `scoped-resources-plan.md` (RAII TIER 2.4) | bump with `using`/`resource_scope` decided |
 | `PLAN-BAREMETAL-BOOT.md` (native → bare-metal/bootable; 15/09 maintainer directive) | SYSTEMS closed (R12) + first face (HAL seam) authorized |
+| `PLAN-BOOTSTRAP.md` (the Bootstrapper: Kof written in Kof — **north star**, `DECISIONS.md` §D-BOOTSTRAP, 20/09) | 1.0 EXIT GATE closed + entry conditions E1–E6 (`roadmap.md` §24) |
 | `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_MIGRATION.md` (legacy migration platform) | **back here 15/09 — DEPRIORITIZED by the maintainer**; promotion needs her explicit decision |
 
 *(DD-STDLIB-01 `planning-stdlib-array-returns.md` **left `future/` 13/09** — decision 6a ratified, implemented and moved to `docs/stdlib/DD-STDLIB-01-array-returns.md`.)*
@@ -192,7 +257,7 @@ evidence in each line of §4.1; SG snapshot 08/09 → `docs/history/`)*
 
 | Left for | Doc | Proof |
 |---|---|---|
-| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–022 + E1–E3 | maintainer queue COMPLETE (summary of the doc itself); old snapshot → `docs/history/specification-gaps-0.3.0-snapshot.md` |
+| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–023 + E1–E3 | maintainer queue COMPLETE (summary of the doc itself); old snapshot → `docs/history/specification-gaps-0.3.0-snapshot.md` |
 | `docs/stdlib/DATABASE_VISION.md` | levels 0–4 | query DSL 01/09 (`KofOrmE2ETest` 32; JS parity 18/09), MySQL prepared (`nativeMysqlPreparedBinary`), pooling ✅; DB001/DB002/ORM001 (native) live in the parity matrix |
 | `docs/audits/complexity-audit.md` | snapshot 02/09 | pre-SOLID-500 numbers; live gate = `scripts/check_500.sh` (ratchet) |
 | `docs/history/roadmap-gap-2026-09-03.md` | dated gap report | pending items live in roadmap-audit/known-bugs |

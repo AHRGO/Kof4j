@@ -19,4 +19,6 @@ dependency-reduced-pom.xml
 kofdeps
 kofdeps.lock
 lib/kof.jar.bak
+lib/kof.jar.stamp
+lib/kof.jar.old*
 scripts/__pycache__/

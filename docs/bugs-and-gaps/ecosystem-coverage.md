@@ -11,8 +11,8 @@
 > **Build (on the audit date):** `mvn clean package` PASS, `mvn test` 810 (793 kof-compiler +8 kof-script +5 kof-c-compiler +4 kof-cli), golden 16/16, integration 9/9, `scripts/package.sh` PASS, `release.yml` 2 jobs (`test-and-bump` → `package-and-release`) × 3 platforms, Windows SIGPIPE fix.
 >
 > **⚠️ Snapshot 09/02 — outdated numbers (09/16):** Kof is at
-> **0.4.0-beta** and the suite has **2218 tests** across the 4 modules (1911 kof-compiler
-> + 38 kof-script + 7 kof-c-compiler + 262 kof-cli; baseline measured 09/16 ~15:54, see
+> **0.5.0-beta** and the suite has **3225 tests** across the 4 modules (2762 kof-compiler
+> + 50 kof-script + 7 kof-c-compiler + 406 kof-cli; baseline measured 09/20 ~18:14, see
 > `docs/status.md`); this document is a **capability inventory**,
 > not the current gate. The status matrix (`DONE`/`PARTIAL`/
 > `PLANNED`) mostly reflects 09/02; rows re-checked against the code were
@@ -279,9 +279,9 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 
 | Capability | Kof | JVM | Native | JS | Tests | Docs |
 |-----------|-----|-----|--------|----|-------|------|
-| jobs/steps/pipelines/checkpoints | `PLANNED` | — | — | — | — | — |
-| retries / resumability / parallel | `PLANNED` | — | — | — | — | — |
-| scheduling | `PLANNED` | — | — | — | — | — |
+| jobs/steps/pipelines/checkpoints | ✅ `kof.workflow` — host puro-Kof `job`/`dag`/`after`/`run`/`Report` (2.1.2) + `checkpoint` (`ee63dc80`) | y | — (recon; compile ✅ `StdlibIdiomsCompileTest`) | y | WorkflowE2ETest 23, WorkflowPrimitivesE2ETest 6 | stdlib/workflow.md |
+| retries / resumability / parallel | ✅ `flow.retry`/`retryFixed`/`exponential` (`7db91735`) + dead-letter (`95f81747`, `Report.dead` + fs) + DAG topo-order | y | — (recon; checkpoint-over-ORM = `ORM001`) | y (byte parity §387) | WorkflowE2ETest | stdlib/workflow.md |
+| scheduling | ✅ `schedule(expr, dag)` → `scheduler.at` (`95f81747`/`d9adeb03`) | y | — (`CRON001` honesto) | y (§274 5-field UTC) | WorkflowE2ETest, StdlibIdiomsCompileTest | stdlib/workflow.md |
 
 ## 3.9 Observability
 
@@ -364,7 +364,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | G3 | ~~Configuration~~ — ✅ `kof.config` implemented (file > env > profile > default, typed `str/int/long/bool`); **native CONF001 closed** (asm `/proc/self/environ`); JS: CONF001 closed 16/09 | — | — |
 | G4 | ~~**Validation** nonexistent~~ — ✅ **implemented**: `kof.validation` (13 predicates on the 3 targets) | — | `KofValidationTest` (3/3) |
 | G5 | ~~**Partial runtime observability**~~ — ✅ **implemented**: `kof.observability` (health/readiness/liveness, counter/increment/gauge, requestId/correlationId — JVM/Native/JS; `KofObservabilityTest` 10/10 incl. OBS003) | — | `KofObservabilityTest` |
-| G6 | ~~**Structured kof.test** nonexistent~~ — ✅ **implemented**: `test "name" { }` on the 3 targets; runner synthesized at compile-time; PASS/FAIL by name + exit code (`StructuredTestE2ETest`) | tests as first-class citizens | timeouts ✅ 19/09 (`kof test --timeout <sec>` — o processo do harness é morto e o FAIL é reportado, R6; `CmdTestTimeoutTest` 3/3); next: named suites by directory, fixtures |
+| G6 | ~~**Structured kof.test** nonexistent~~ — ✅ **implemented**: `test "name" { }` on the 3 targets; runner synthesized at compile-time; PASS/FAIL by name + exit code (`StructuredTestE2ETest`) | tests as first-class citizens | timeouts ✅ 19/09 (`kof test --timeout <sec>` — the harness process is killed and the FAIL is reported, R6; `CmdTestTimeoutTest` 3/3); **named suites by directory ✅ 21/09** (`kof test <dir>` recurses and reports one named suite per directory with a per-suite summary; `CmdTestSuiteTest` 2/2); next: **`SG-023` ✅ DECIDED 21/09 (`D-PROPERTY`)** — no new surface: property = `test`+`kof.rng`+`assert` idiom, fixtures = `close()`+`try/finally` (D5-B); proof `PropertyTestIdiomE2ETest` 7/7 (JVM==JS==Native checksum) |
 | G7 | ~~**Incomplete target diagnostics in security/web**~~ — ✅ **closed**: `jwt.*` with explicit input (SECN004 on Native); `csrf/cors/auth/headers` already covered; WEB001 emitted for web.app() and app methods outside the JVM | violates "never silent" | keep: every new function enters `supportedOn` in the same PR |
 | G8 | ~~**Scheduling** nonexistent~~ — ✅ `kof.time.sleep` + `interval`/`cancel` 3 targets (`KofTimeE2ETest` 39/0/7skip; Native reuses scheduler, JS cooperative queue — TIME001 closed 09/02); **cron ✅ 17/09**: `scheduler.at(cron, fn)` = real 5-field UTC parser on JVM/JS (lists/ranges/steps, DOM∨DOW classic rule; invalid → loud throw), Native honest compile-time gap `CRON001` (§274) | periodic jobs | next: no pending item (cron closed) |
 | G9 | ~~**Rate limiting / sessions / API keys** nonexistent~~ — ✅ **implemented**: `security.rateLimit`/`sessionCreate`/`sessionGet`/`sessionDestroy`/`apiKeyGenerate`/`apiKeyValid` — JVM/Native/JS (`KofSecurityG9Test` 3/3) | — | `KofSecurityG9Test` |

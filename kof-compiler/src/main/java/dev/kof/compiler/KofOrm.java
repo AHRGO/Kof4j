@@ -43,9 +43,46 @@ public final class KofOrm {
         return "orm".equals(name);
     }
 
-    /** JVM: JDBC via kof.db. JS: KofJsOrmBridge (18/09, ORM001). Native: ORM001. */
+    /** JVM/ANDROID: JDBC via kof.db (ANDROID fecha 20/09, D-DB-GAPS DB-2 —
+     *  mesmo JvmBackend, paridade por construção). JS: KofJsOrmBridge (18/09,
+     *  ORM001). Native x86-64: SQL-puro (F1) + row-object completo (F2,
+     *  21/09) REAL; cross riscv/aarch64 (compile-time) e MySQL (runtime)
+     *  seguem ORM001 honesto. */
     static boolean supportedOn(@SuppressWarnings("unused") Target target) {
-        return target == Target.JVM || target == Target.JS;
+        return target == Target.JVM || target == Target.ANDROID || target == Target.JS;
+    }
+
+    /** D-DB-GAPS DB-1 (20/09): faces SQL-puro do Native x86-64, uma por fatia.
+     *  F1a = {@code delete_all}, F1b = {@code count}, F1c = {@code migrate}
+     *  (asm em {@code RuntimeOrm1}), F1d = {@code create} (parser de schema +
+     *  DDL em {@code RuntimeOrm2}); F3a = {@code count_where} (bind unico via
+     *  box de erasure §284, em {@code RuntimeOrm3}); F2a = {@code save}
+     *  (row-object: INSERT/UPDATE/upsert em {@code RuntimeOrm4}, schema em
+     *  {@code RuntimeOrmSchema}, binds em {@code RuntimeOrmBind}); F2b =
+     *  {@code find} (leitura row-object em {@code RuntimeOrm5} + resolver
+     *  {@code kof_orm_ctors} do backend); F2c1 = {@code all} (leitura em
+     *  {@code List} no runtime — {@code RuntimeOrm6}, mesmo loop de campos
+     *  do {@code RuntimeOrm5} com §397); F2c2 = {@code where}/{@code where_op}
+     *  ({@code RuntimeOrm7}: whitelist do op idêntica ao host, 7º arg na
+     *  stack, loop do Orm6); F2c3 = {@code page} ({@code RuntimeOrm8}: LIMIT/
+     *  OFFSET bindados, KofString do coerce = atoi superset honesto),
+     *  {@code delete} ({@code RuntimeOrm9}: PK do schema + bind do key, true
+     *  em DONE como o {@code execute1 >= 0} do host — miss deleta 0 linhas e
+     *  retorna true, medido) e {@code saveAll} ({@code RuntimeOrm10}: loop
+     *  {@code kof_list_get} → {@code kof_orm_save}, instância patchada
+     *  descartada como no host). O row-object x86-64 está FECHADO; o que
+     *  segue {@code ORM001} honesto (R7, R6 — nunca silent): cross
+     *  riscv/aarch64 (compile-time) e MySQL (runtime). */
+    private static final java.util.Set<String> NATIVE_F1 = java.util.Set.of(
+            "kof_orm_delete_all", "kof_orm_count", "kof_orm_migrate",
+            "kof_orm_create", "kof_orm_count_where", "kof_orm_save",
+            "kof_orm_find", "kof_orm_all",
+            "kof_orm_where", "kof_orm_where_op",
+            "kof_orm_page", "kof_orm_delete", "kof_orm_save_all");
+
+    static boolean fnSupportedOn(Target target, String fn) {
+        if (supportedOn(target)) return true;
+        return target == Target.NATIVE && NATIVE_F1.contains(fn);
     }
 
     static String gapCode() {

@@ -54,7 +54,7 @@ class ProcessResultContentE2ETest {
         CompilationResult r = driver.compile(src, out, Target.JVM);
         assertTrue(r.success(), "JVM compile: " + diags(r));
         String[] cp = {out.toString(), System.getProperty("user.dir") + "/../kof-runtime/target/classes"};
-        Process p = new ProcessBuilder("java", "-cp", String.join(":", cp), "Default.Main")
+        Process p = new ProcessBuilder(TestJdk.javaBin(), "-cp", String.join(":", cp), "Default.Main")
                 .redirectErrorStream(true).start();
         String s = new String(p.getInputStream().readAllBytes()).replace("\r\n", "\n").trim();
         assertEquals(0, p.waitFor(), "JVM run, output: " + s);

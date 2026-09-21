@@ -153,6 +153,17 @@ public final class SemMethodCallTyper {
                         List.of(valueType));
             }
         }
+        // §353: o SEM typer nao conhecia as faces de kof.io — o corpo de lambda
+        // `() -> File("x").exists()` inferia UNKNOWN e o call-site rejeitava com
+        // SEM014 ("expected 'function' but got 'function'"). Espelha o typer do
+        // emit (MethodCallTyper, ramo KofIo.isIoType) — mesma tabela, nenhum
+        // contrato novo.
+        if (KofIo.isIoType(recv)) {
+            for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
+            KofIo.IoCall ioCall = KofIo.instanceMethod(recv, mc.methodName(), mc.arguments().size());
+            if (ioCall != null) return ioCall.returnType();
+            if (KofIo.isIdentityMethod(mc.methodName())) return recv;
+        }
         Type builtin = BuiltinCallTyper.infer(sa, mc, scope);
         if (builtin != null) return builtin;
         if (mc.receiver() != null) {

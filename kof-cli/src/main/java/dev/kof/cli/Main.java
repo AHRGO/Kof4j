@@ -38,6 +38,7 @@ public final class Main {
             case "deps" -> System.exit(Deps.run(args));
             case "deploy" -> CmdDeploy.run(args);
             case "workflow" -> System.exit(CmdWorkflow.run(args));
+            case "makealive" -> System.exit(CmdMakealive.run(args));
             case "c" -> c(args);
             case "fmt" -> System.exit(Fmt.run(args));
             case "editor" -> System.exit(CmdEditor.run(args));

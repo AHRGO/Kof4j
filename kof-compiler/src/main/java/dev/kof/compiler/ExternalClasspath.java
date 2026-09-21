@@ -327,6 +327,24 @@ public final class ExternalClasspath {
     }
 
     /**
+     * §393 (#568): construtor PUBLICO da classe externa com a aridade dada,
+     * ou null — recusa honesta (private/abstrata/interface NAO resolvem).
+     */
+    public synchronized MethodSignature resolvePublicConstructor(String ownerInternalName,
+                                                                 int argumentCount) {
+        if (ownerInternalName == null) return null;
+        byte[] bytes = loaded ? classBytes.get(ownerInternalName) : null;
+        if (bytes != null) return ExternalCtors.publicConstructor(bytes, ownerInternalName,
+                argumentCount, loadWarnings);
+        if (JdkReflectionResolver.isJdkClass(ownerInternalName)
+                && !CompilerTypes.isKofBuiltinJavaLang(ownerInternalName)) {
+            return JdkReflectionResolver.resolvePublicJdkConstructor(ownerInternalName,
+                    argumentCount);
+        }
+        return null;
+    }
+
+    /**
      * Campo declarado (ou herdado) numa classe externa. Retorna o
      * descritor do tipo do campo, ou null se não existir.
      */

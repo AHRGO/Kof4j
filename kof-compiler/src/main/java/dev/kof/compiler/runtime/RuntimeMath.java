@@ -154,6 +154,11 @@ public final class RuntimeMath {
             # o código GERADO nunca usa rbx e pow o preserva (callee-saved
             # SysV — medido no Arith/StringCalls: só rax/rdi/rsi/rcx/rdx).
             # Retorno = bits crus em rax (pushq do genérico).
+            # R2 fatia 1 (20/09): FRACO por design — o link sem -lm fecha
+            # (link-by-use do libm); sem libm o simbolo resolve a 0 e NUNCA e
+            # chamado (call-sites so nascem quando usesPow=true, que e quando
+            # -lm entra). Com -lm, o pow forte da libm vincula normalmente.
+            .weak pow
             .globl kof_math_pow
             .type kof_math_pow, @function
             kof_math_pow:

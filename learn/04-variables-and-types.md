@@ -6,7 +6,7 @@
 
 In this chapter you will understand how to declare variables, how the type system works, and how type inference operates.
 
-## Variable declaration (0.4.0-beta)
+## Variable declaration (0.5.0-beta)
 
 In Kof there are two keywords for variables (`var`/`val`); there is **no**
 `let`/`const` (JS sugar removed from KofScript 06/09 — see below):
@@ -182,7 +182,7 @@ String? s = mapOf("k", "abc").get("k")   // basic nullable — null via API (= n
 if (s != null) { println(s.length()) }
 ```
 
-## Current status (0.4.0-beta)
+## Current status (0.5.0-beta)
 
 ✅ `var` and `val` work
 ✅ top-level `var`/`val` in KofScript → `KofScriptGlobals` (there is NO `let`/`const` — JS sugar removed 06/09)

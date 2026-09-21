@@ -15,7 +15,7 @@ never a fork), and `run` lowers verbatim onto `kof_process_run`. Kof has no back
 no `$()`, no `|`/`&&` shell-infix operators (adding them is a grammar change — rule 6);
 the function form is the signed-off answer (Q1–Q3, maintainer poll 18/09).
 
-## Real API (measured in the compiler — 0.4.0-beta)
+## Real API (measured in the compiler — 0.5.0-beta)
 
 ```kof
 import kof.shell

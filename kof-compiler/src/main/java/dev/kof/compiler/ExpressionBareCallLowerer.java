@@ -95,6 +95,13 @@ public final class ExpressionBareCallLowerer {
             return localIdx;
         }
         SymbolTable.ClassSymbol cs = driver.semanticAnalyzer != null ? driver.semanticAnalyzer.getClass(mc.methodName()) : null;
+        if (cs == null) {
+            // §393 (#568): construtor externo implicito (`Greeter()` sem `new`)
+            // — espelho do ramo `new` do ExpressionLowerer; classe/funcao
+            // declaradas venceram acima (precedencia do typer preservada).
+            int extCtor = tryLowerExternalCtor(driver, mc, ops, owner, localIdx, locals);
+            if (extCtor >= 0) return extCtor;
+        }
         if (cs != null) {
             List<Type> argTypes = new ArrayList<>();
             for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
@@ -208,5 +215,70 @@ public final class ExpressionBareCallLowerer {
             }
         }
         return localIdx;
+    }
+
+    /**
+     * §393 — #568: baixa `Classe(args)` sem `new` quando `Classe` e uma classe
+     * EXTERNA (--classpath/--deps) com construtor PUBLICO de aridade
+     * compativel: KofNewObject + DUP + args convertidos aos formais do
+     * descritor + INVOKESPECIAL <init> (MESMO plano da face `new` em
+     * ExpressionLowerer:235-253, que ja resolvia via resolveConstructor).
+     * Sentinela -1 = nao e construtor externo (segue o fluxo de sempre).
+     * Guarda de precedencia (freeze regra 2): classe do programa ou funcao
+     * top-level/`extern` homonima declara o call-site — nunca sequestra.
+     */
+    private static int tryLowerExternalCtor(CompilerDriver driver, MethodCallExpr mc,
+            List<KofOperation> ops, String owner, int localIdx, List<IRLocalVariable> locals) {
+        if (driver.externalClasspath == null) return -1;
+        String internal = null;
+        if (driver.semanticAnalyzer != null) {
+            SymbolTable.MethodSymbol m = driver.semanticAnalyzer.getResolvedMethod(mc);
+            if (m != null && "<init>".equals(m.name()) && m.ownerClass() != null
+                    && m.ownerClass().contains("/")) {
+                internal = m.ownerClass();
+            }
+        }
+        if (internal == null) {
+            // sem registro do typer (node recriado no desugar): refazer a
+            // qualificacao pelo import, com as MESMAS guardas do typer
+            if (mc.receiver() != null) return -1;
+            if (driver.isLocalVarName(mc.methodName(), locals)) return -1;
+            Type q = CompilerTypes.qualifyViaImports(mc.methodName(), driver.currentUnit,
+                    driver.externalClasspath);
+            if (!(q instanceof Type.ClassType ct) || ct.packageName().isEmpty()) return -1;
+            internal = ct.internalName();
+        }
+        if (driver.semanticAnalyzer != null
+                && driver.semanticAnalyzer.getClass(mc.methodName()) != null) return -1;
+        if (declaresTopLevelFunction(driver, mc.methodName())) return -1;
+        if (!driver.externalClasspath.knows(internal)) return -1;
+        ExternalClasspath.MethodSignature sig =
+                driver.externalClasspath.resolvePublicConstructor(internal, mc.arguments().size());
+        if (sig == null) return -1;
+        Type classType = ExternalClasspath.typeFromDescriptor("L" + internal + ";");
+        List<Type> formal = new ArrayList<>();
+        for (String d : sig.parameterDescriptors()) {
+            formal.add(ExternalClasspath.typeFromDescriptor(d));
+        }
+        List<Type> argTypes = new ArrayList<>();
+        for (ExpressionNode arg : mc.arguments()) {
+            argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
+        }
+        ops.add(new KofNewObject(classType, argTypes));
+        ops.add(new KofDup());
+        localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), formal, ops, owner,
+                localIdx, locals);
+        ops.add(new KofCall(classType, "<init>", formal, Type.PrimitiveType.VOID,
+                KofCallKind.CONSTRUCTOR));
+        return localIdx;
+    }
+
+    private static boolean declaresTopLevelFunction(CompilerDriver driver, String name) {
+        if (driver.currentUnit == null) return false;
+        for (AstNode d : driver.currentUnit.declarations()) {
+            if (d instanceof FunctionDeclarationNode fn && fn.name().equals(name)) return true;
+            if (d instanceof ExternalFunctionNode ext && ext.name().equals(name)) return true;
+        }
+        return false;
     }
 }

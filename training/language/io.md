@@ -40,6 +40,7 @@ about reading/writing files, working with paths and listing directories.
 | `File("x").writeText(s)` / `.appendText(s)` | Bool |
 | `File("x").readBytes()` | `Int[]` (0-255); `null` if it fails |
 | `File("x").writeBytes(b)` / `.appendBytes(b)` | Bool |
+| Bytes params and printing an `Int[]` (§388) | The bytes params take a **primitive array** — `writeBytes(listOf(65,66))` is a compile-time error (`SEM099`, §388-A); printing a whole array uses the §107 container format: `println(f.readBytes())` → `[65, 66]` (maintainer vote 21/09, §388-B) |
 | `File("x").size()` | Long; **throws an exception** if the file does not exist (02/09 — no `-1` sentinel) |
 | `File("x").delete()` | Bool |
 | `File("x").name()` / `.path()` | String |
@@ -103,7 +104,7 @@ println(file.readBytes().length)
   the corpus).
 - Boolean operations return `true`/`false`.
 
-## Current limitations (0.4.0-beta)
+## Current limitations (0.5.0-beta)
 
 - Native: Linux x86_64 (POSIX syscalls) + riscv64/aarch64 placeholder via qemu; the free-list GC applies to file buffers.
 - Symlinks, timestamps and permissions are future.

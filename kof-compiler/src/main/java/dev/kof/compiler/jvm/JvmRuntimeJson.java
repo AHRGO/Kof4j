@@ -333,7 +333,15 @@ public final class JvmRuntimeJson {
                         return value instanceof Number n ? n.doubleValue() : Double.parseDouble(String.valueOf(value));
                     if (type == Number.class) return value;
                     if (type == boolean.class || type == Boolean.class) {
-                        return value instanceof Boolean b ? b : Boolean.parseBoolean(String.valueOf(value));
+                        if (value instanceof Boolean b) return b;
+                        // §397: drivers SQL devolvem Integer p/ Bool no
+                        // rs.getObject (SQLite int; H2) -- parseBoolean("1")
+                        // virava false em SILENCIO em todo binder compartilhado
+                        // (orm.find/all/where, db.query<T>, json.decode<T>).
+                        // Numero !=0 -> true (regra do bind); string segue
+                        // parseBoolean ("true"/"false" explicitos).
+                        if (value instanceof Number n) return n.intValue() != 0;
+                        return Boolean.parseBoolean(String.valueOf(value));
                     }
                     if (type == char.class || type == Character.class) {
                         return value.toString().charAt(0);

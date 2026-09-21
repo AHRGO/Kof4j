@@ -118,6 +118,17 @@ if (("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc
                     "valueOf", List.of(Type.UnknownType.UNKNOWN),
                     BuiltinTypes.STRING, KofCallKind.STATIC));
         }
+    } else if (driver.target == Target.JVM && isPrimitiveArrayPrint(argType)) {
+        // §388-B (voto da mantenedora 21/09, família rule-6): println de um
+        // array cru usa o formato de container da casa ("[65, 66]" — §107,
+        // oracle ArrayList.toString), NUNCA a identidade Java `[I@hash` que
+        // vazava pelo String.valueOf(Object). O helper kof_array_to_string
+        // (JvmRuntimeCore) recursa em aninhados e deixa elemento não-array
+        // seguir o valueOf de sempre.
+        ops.add(new KofCall(
+                BuiltinTypes.STRING,
+                "kof_array_to_string", List.of(Type.UnknownType.UNKNOWN),
+                BuiltinTypes.STRING, KofCallKind.STATIC));
     } else {
         // o tipo REAL do arg só vai para o valueOf NATIVO/JS (para
         // despachar toString de records e formatar coleções). JVM usa
@@ -270,5 +281,11 @@ if (("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc
         if (TypeMetrics.isPrimitiveType(t)) return true;
         if (t instanceof Type.ClassType ct) return !"Object".equals(ct.name());
         return false;
+    }
+
+    /** §388-B: println de array cru (ou Nullable dele) — dispatch pelo INNER. */
+    private static boolean isPrimitiveArrayPrint(Type t) {
+        if (t instanceof Type.NullableType nt) t = nt.inner();
+        return t instanceof Type.ArrayType;
     }
 }

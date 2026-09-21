@@ -2,7 +2,7 @@
 
 # PLAN-MULTIPARADIGMA — Multiparadigm, Functional Pipelines and Declarative Queries
 
-**Status:** `FUTURE PLAN` · **Date:** 2026-09-16 · **Version:** 0.4.0-beta · **Tier:** 2.x (core) → 8 (data, deferred)
+**Status:** `FUTURE PLAN` · **Date:** 2026-09-16 · **Version:** 0.5.0-beta · **Tier:** 2.x (core) → 8 (data, deferred)
 **Author:** investigation at HEAD `beta-0.4.0` · **Lane:** none yet — design only, zero code in this doc
 **Depends on:** `docs/development/roadmap.md` §23 (SYSTEMS must close before Tier 6+; `DECISIONS.md` D-NULL-INTENT queue N1→N4 owned by compiler lane), `docs/architecture/compiler-architecture.md`, `docs/language-reference/*`
 

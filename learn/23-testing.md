@@ -2,7 +2,7 @@
 
 # 23 — Testing
 
-> **Status: implemented — `test "nome" { }`, `kof test` + `assert` — 0.4.0-beta**
+> **Status: implemented — `test "nome" { }`, `kof test` + `assert` — 0.5.0-beta**
 >
 > Testing Kof is writing Kof. The structured suite declares cases with
 > `test "nome" { }`; `kof test` runs each test in isolation and reports
@@ -54,22 +54,64 @@ main() {
 }
 ```
 
+## Property-style tests (seeded, reproducible)
+
+There is no separate property-runner surface: a *property test* is a `test` block
+that seeds `rng` and loops, using `assert(cond, msg)`. Same seed ⇒ same sequence
+on every backend, so a failure is reproducible.
+
+```kof
+test "addition commutes on random pairs" {
+    rng.seed(42)
+    var i = 0
+    while (i < 200) {
+        var a = rng.int(10000) - 5000
+        var b = rng.int(10000) - 5000
+        assert(a + b == b + a, "commutativity broke")
+        i = i + 1
+    }
+}
+```
+
+Fixtures use `close()` + `try/finally` — there is no `setup`/`teardown` keyword:
+
+```kof
+test "writes then reads back" {
+    var conn = db.connect(url)
+    try {
+        store(conn, record)
+        assert(load(conn, record.id) != null)
+    } finally {
+        conn.close()
+    }
+}
+```
+
+See also `training/idioms/stdlib.md` (`rng`); proof: `PropertyTestIdiomE2ETest`.
+
 ## kof test (whole programs)
 
 `.kf` files **without** `test` blocks keep the previous contract: the file is
 a program; PASS = exit code 0.
 
 ```bash
-kof test src/tests/            # directory — one program per file
+kof test src/tests/            # directory — recurses; each dir is a named suite
 kof test math.kf               # single file
 kof test src/tests --target native
 ```
+
+Given a directory, `kof test` walks its subdirectories and treats each directory
+as a **named suite** (name = path relative to the given root; `.` = the root),
+printing a `suite <name>: P passed, F failed` summary per suite. A single-file
+argument prints no suite lines.
 
 Output:
 
 ```text
 PASS src/tests/math.kf
-FAIL src/tests/broken.kf
+FAIL src/tests/integ/broken.kf
+suite .: 1 passed, 0 failed
+suite integ: 0 passed, 1 failed
 1 passed, 1 failed
 ```
 

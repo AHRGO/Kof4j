@@ -16,6 +16,19 @@ import java.util.Set;
 
 /** F3: emissão de arquivos .s riscv64/aarch64 (emitRiscv/emitAarch64). */
 final class NativeArchEmitter {
+
+    /**
+     * Resolve a ferramenta de cross (as/ld) com prefixo de diretorio via
+     * {@code KOF_CROSS_PREFIX} — override de teste/ambiente, o MESMO padrao
+     * da casa de {@code KOF_GDB}/{@code KOF_CROSS_SYSROOT}/{@code KOF_PUBLISH_API}:
+     * sem a env, os nomes Debian de PATH (comportamento inalterado); com ela,
+     * {@code <prefix>/<nome>} (stub de toolchain host-provavel; toolchain real
+     * continua o caminho de producao/CI).
+     */
+    static String crossTool(String name) {
+        String prefix = System.getenv("KOF_CROSS_PREFIX");
+        return (prefix == null || prefix.isBlank()) ? name : Path.of(prefix, name).toString();
+    }
     private final NativeBackend nb;
     NativeArchEmitter(NativeBackend nb) { this.nb = nb; }
 
@@ -207,7 +220,7 @@ final class NativeArchEmitter {
             // --no-relax (as+ld): sem gp-relaxation. Nosso _start não inicializa
             // gp (binário estático, sem C runtime); `la` relaxado vira `addi rd,gp,off`
             // e faulta (gp=0). Forçado PC-relative (auipc+addi) — sempre correto.
-            nb.runCommand(new String[]{"riscv64-linux-gnu-as", "-mno-relax", "-o", objFile.toString(), asmFile.toString()}, "riscv64-as");
+            nb.runCommand(new String[]{crossTool("riscv64-linux-gnu-as"), "-mno-relax", "-o", objFile.toString(), asmFile.toString()}, "riscv64-as");
             // S-5 (cross): --gc-sections remove as seções .text.<fn> mortas
             // criadas por sectionizeTextFunctions. Seguro aqui: NÃO existe GC
             // no asm riscv/aarch (bump-pointer, sem scan conservative) — nada
@@ -215,7 +228,7 @@ final class NativeArchEmitter {
             // gc-sections até a fase `kof_heap_root_end` (root-scan varre
             // root_start.._end; seção deletada fora do intervalo = raiz que
             // o coletor nunca vê — precisa primeiro o fim explícito).
-            nb.runCommand(NativeCrossLink.ldArgs("riscv64-linux-gnu-ld", binFile, objFile,
+            nb.runCommand(NativeCrossLink.ldArgs(crossTool("riscv64-linux-gnu-ld"), binFile, objFile,
                     "riscv64", dynamic, sysroot, sqlite, nb.ffiLibs), "riscv64-ld");
             Files.deleteIfExists(objFile);
             if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);
@@ -387,8 +400,8 @@ final class NativeArchEmitter {
                 (sqlite ? "libc+libsqlite3 detected" : "libc detected") + (ffi ? " +ffi libs" : "") + ")");
         try {
             Path objFile = asmFile.resolveSibling("kof.o");
-            nb.runCommand(new String[]{"aarch64-linux-gnu-as", "-o", objFile.toString(), asmFile.toString()}, "aarch64-as");
-            nb.runCommand(NativeCrossLink.ldArgs("aarch64-linux-gnu-ld", binFile, objFile,
+            nb.runCommand(new String[]{crossTool("aarch64-linux-gnu-as"), "-o", objFile.toString(), asmFile.toString()}, "aarch64-as");
+            nb.runCommand(NativeCrossLink.ldArgs(crossTool("aarch64-linux-gnu-ld"), binFile, objFile,
                     "aarch64", dynamic, sysroot, sqlite, nb.ffiLibs), "aarch64-ld");
             Files.deleteIfExists(objFile);
             if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);
