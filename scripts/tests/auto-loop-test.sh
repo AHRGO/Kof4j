@@ -16,6 +16,8 @@
 #   A8  estado legado (sem gate_mode)        → shadow: comportamento antigo + registro
 #   A9  árvore suja muda o fingerprint       → despacha
 #   A10 --attach continua no comando         → nunca spawna sessão concorrente
+#   A11 AUTOLOOP_NAME: dois heartbeats coexistem (estado + cron isolados)
+#   A12 telemetria encadeada: previous_fingerprint = estado PRÉ-run (≠ pós)
 #
 # Uso: scripts/tests/auto-loop-test.sh   (exit 0 = todos passam)
 set -uo pipefail
@@ -155,5 +157,18 @@ AUTOLOOP_NAME=kof-auto-loop-b bash "$LOOP" stop >/dev/null 2>&1
 assert_eq 1 "$(grep -cE '# kof-auto-loop$' "$FAKE_CRONTAB_FILE")" "parar B preserva o cron default"
 assert_eq 0 "$(grep -cE '# kof-auto-loop-b$' "$FAKE_CRONTAB_FILE")" "parar B remove só a linha de B"
 unset FAKE_CRONTAB_FILE AUTOLOOP_NAME
+
+echo "A12 — telemetria encadeada: previous_fingerprint = estado PRÉ-run"
+setup
+productive_hook
+tick                     # dispatch 1 (first_dispatch, persiste o estado A)
+tick                     # o hook mudou o estado -> dispatch 2 (estado B)
+recs="$(grep '"decision":"dispatch"' "$(telemetry_file)")"
+fp1="$(sed -n '1p' <<<"$recs" | grep -oE '"fingerprint":"[^"]*"' | head -1 | cut -d'"' -f4)"
+fp2="$(sed -n '2p' <<<"$recs" | grep -oE '"fingerprint":"[^"]*"' | head -1 | cut -d'"' -f4)"
+pfp2="$(sed -n '2p' <<<"$recs" | grep -oE '"previous_fingerprint":"[^"]*"' | head -1 | cut -d'"' -f4)"
+[ -n "$fp1" ] && [ -n "$fp2" ] && pass "dois dispatches registrados (fp1/fp2 presentes)" || fail "faltam dispatches na telemetria"
+assert_eq "$fp1" "$pfp2" "previous_fingerprint do 2º = fingerprint do 1º (estado PRÉ-run)"
+[ "$fp2" != "$pfp2" ] && pass "2º dispatch: fingerprint ≠ previous_fingerprint (a telemetria não colapsa)" || fail "previous_fingerprint colapsou no fingerprint atual"
 
 finish

@@ -35,6 +35,9 @@ FP="$HERE/agent-state-fingerprint.sh"
 
 sub="${1:-}"; shift || true
 mode=""; session="default"; repo=""; dry=0; shadow=0; rc_arg=""; dur=""; decision_arg=""; reason_arg=""; since="24h"
+# fingerprint do estado ANTERIOR, capturado ANTES de qualquer persist_last
+# sobrescrever $D/last (senão a telemetria loga previous == current no dispatch).
+PREV_FP=""
 if [ "$sub" != "stats" ] && [ "$sub" != "" ]; then mode="${1:-}"; shift || true; fi
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -75,8 +78,7 @@ val() { grep -m1 "^$1=" "$2" 2>/dev/null | cut -d= -f2-; }
 # --- decisão + telemetria -------------------------------------------------------
 # say <exit> <NOME> <dispatch|skip|retry> <razão> — imprime, registra e sai
 say() {
-    local code="$1" name="$2" kind="$3" reason="$4" pfp=""
-    [ -f "$D/last" ] && pfp="$(prev_fp)"
+    local code="$1" name="$2" kind="$3" reason="$4" pfp="$PREV_FP"
     echo "decision=$name reason=$reason fingerprint=${CUR_FP:-none}"
     if [ "$dry" -eq 0 ]; then
         if [ "$shadow" -eq 1 ]; then
@@ -120,6 +122,8 @@ cmd_decide() {
     [ -n "$mode" ] || { echo "decide exige o modo" >&2; exit 2; }
     [ "$mode" = "auto-loop" ] && [ -z "$repo" ] && { echo "auto-loop exige --repo" >&2; exit 2; }
     local rc cu now
+    # captura o fingerprint PRE-run antes que persist_last sobrescreva $D/last
+    PREV_FP=""; [ -f "$D/last" ] && PREV_FP="$(prev_fp)"
     compute; rc=$?
     if [ "$rc" -ne 0 ]; then
         [ "$rc" -eq 20 ] && say 20 RETRY_TRANSIENT_SOURCE_FAILURE retry source_failure
