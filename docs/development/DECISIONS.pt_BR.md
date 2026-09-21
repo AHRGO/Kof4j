@@ -12,6 +12,59 @@
 
 ---
 
+## 0. Índice de decisões
+
+Auxílio de navegação, não é uma decisão por si só. Ordenado como neste arquivo.
+
+- **1.** Autoridade e regras de alteração
+- **2.** Invariantes globais
+- **D-STDLIB** — tempo e calendário
+- **D-SEC** — segurança
+- **D-APP** — modelo de aplicação
+- **D-SPRING** — independência de framework
+- **D-RELEASE** — critério de avaliação de patch
+- **D-ASM-GATE** — gate de ASM riscv/aarch
+- **D-BACKEND-SEMANTICS** — semântica de backend
+- **D-BASELINE** — baseline da toolchain
+- **D-NULL** — nullabilidade e primitivos
+- **D-NULL-INTENT** — intenção explícita de nullabilidade
+- **D-PRINT** — conversão implícita de Char
+- **D-NARROW-WHILE** — narrowing de fluxo
+- **D-ENUM207** — identidade de enum
+- **D-VALUE-RECORD** — value records / tipos de valor de primeira classe
+- **D-DEV-PRIORITY** — "Em desenvolvimento" é a prioridade absoluta
+- **D-DIAG-EN** — tooling/diagnósticos em inglês; docs EN+PT
+- **D-DECL-RETURN** — o tipo de retorno declarado é lei (#333)
+- **D-NOT-JAVA** — Kof não é Java/Kotlin
+- **D-UI-STYLE** — `style` declarativo (UI007)
+- **D-UI-TOKENS** — tokens do design system
+- **D-UI-APPSTATE** — `AppState(initial)` store-raiz
+- **D-UI-DIFF** — reuso de nó
+- **D-UI-AUTOUNSUB** — inscrições com escopo por component
+- **D-UI-CANCELLED** — `cancelled()` em ações async de UI
+- **D-UI-SCOPE** — atualizações de regra do `kof.ui`
+- **D-UNIVERSAL** — promoção do universal-platform
+- **D-TRIAGE** — a checagem de filosofia precede a issue
+- **D-POLL-19** — todas as decisões pendentes resolvidas (enquete 19/09)
+- **D-TROOL** — `Bool` nunca nullable; `Troolean`
+- **D-KOF-FIRST** — contrato interno antes da comparação externa
+- **D-SCHED-DURATION** — durações idiomáticas no `scheduler.at`
+- **D-WORKFLOW-RUN** — `kof workflow run`
+- **D-MAKEALIVE** — Kof Makealive (Estágio 3)
+- **D-KOF-AS-CLOUD** — Kof tem que SER a nuvem
+- **D-BOOTSTRAP** — o bootstrapper (Kof em Kof)
+- **D-DB-GAPS** — gaps órfãos de DB/ORM
+- **D-BRANCH-0.5.0** — trabalho move para `beta-0.5.0`
+- **D-RELEASE-1.0** — KOF 1.0 EXIT GATE
+- **D-VERSION-BUMP-0.5.0** — revisão para `0.5.0-beta`
+- **D-1.0-EDGES** — arestas abertas fechadas
+- **D-SLOT-PIN** — §383/#561 valor armazenado do "miss abençoado"
+- **D-RELEASE-0.5.0-GATE** — gate de release 0.5.0
+- **D-FFI-STRUCT** — ABI de struct/array da FFI (D6)
+- **D-ARTIFACT-TRUST** — contrato de confiança dos artefatos 1.0
+
+---
+
 ## 1. Autoridade e regras de alteração
 
 ### 1.1 Quem decide

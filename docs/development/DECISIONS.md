@@ -14,6 +14,59 @@
 
 ---
 
+## 0. Decision index
+
+A navigation aid, not a decision by itself. Ordered as in this file.
+
+- **1.** Authority and change rules
+- **2.** Global invariants
+- **D-STDLIB** — time and calendar
+- **D-SEC** — security
+- **D-APP** — application model
+- **D-SPRING** — framework independence
+- **D-RELEASE** — patch evaluation criterion
+- **D-ASM-GATE** — riscv/aarch ASM gate
+- **D-BACKEND-SEMANTICS** — backend semantics
+- **D-BASELINE** — toolchain baseline
+- **D-NULL** — nullability and primitives
+- **D-NULL-INTENT** — explicit nullability intent
+- **D-PRINT** — implicit Char conversion
+- **D-NARROW-WHILE** — flow narrowing
+- **D-ENUM207** — enum identity
+- **D-VALUE-RECORD** — value records / first-class value types
+- **D-DEV-PRIORITY** — "Em desenvolvimento" is the absolute priority
+- **D-DIAG-EN** — tooling/diagnostics in English; docs EN+PT
+- **D-DECL-RETURN** — declared return type is law (#333)
+- **D-NOT-JAVA** — Kof is not Java/Kotlin
+- **D-UI-STYLE** — declarative `style` (UI007)
+- **D-UI-TOKENS** — design-system tokens
+- **D-UI-APPSTATE** — `AppState(initial)` root store
+- **D-UI-DIFF** — node reuse
+- **D-UI-AUTOUNSUB** — component-scoped subscriptions
+- **D-UI-CANCELLED** — `cancelled()` in async UI actions
+- **D-UI-SCOPE** — `kof.ui` rule updates
+- **D-UNIVERSAL** — universal-platform promotion
+- **D-TRIAGE** — philosophy check precedes the issue
+- **D-POLL-19** — every pending decision resolved (poll 19/09)
+- **D-TROOL** — `Bool` never nullable; `Troolean`
+- **D-KOF-FIRST** — internal contract before external comparison
+- **D-SCHED-DURATION** — idiomatic durations in `scheduler.at`
+- **D-WORKFLOW-RUN** — `kof workflow run`
+- **D-MAKEALIVE** — Kof Makealive (Stage 3)
+- **D-KOF-AS-CLOUD** — Kof must BE the cloud
+- **D-BOOTSTRAP** — the bootstrapper (Kof in Kof)
+- **D-DB-GAPS** — DB/ORM orphan gaps
+- **D-BRANCH-0.5.0** — work moves to `beta-0.5.0`
+- **D-RELEASE-1.0** — KOF 1.0 EXIT GATE
+- **D-VERSION-BUMP-0.5.0** — revision to `0.5.0-beta`
+- **D-1.0-EDGES** — open edges closed
+- **D-SLOT-PIN** — §383/#561 blessed-miss stored value
+- **D-RELEASE-0.5.0-GATE** — 0.5.0 release gate
+- **D-FFI-STRUCT** — FFI struct/array ABI (D6)
+- **D-ARTIFACT-TRUST** — 1.0 artifact trust contract
+
+---
+
 ## 1. Authority and change rules
 
 ### 1.1 Who decides
