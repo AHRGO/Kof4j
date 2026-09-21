@@ -68,11 +68,16 @@ so it attacks exactly the SYSTEMS items this rule requires closing.
 ---
 
 ## 2. Open bugs (queue in `docs/bugs-and-gaps/known-bugs.md`) — triage 13/09,
-resynced 14/09 ~22:15 (docs lane — living record, the rule of §1 of the
-three-states table)
+resynced 14/09 ~22:15, **live count resynced 20/09** (docs lane — living
+record, the rule of §1 of the three-states table). The **authority** for the
+live set is `scripts/check_known_bugs_status.sh` (EN×PT consistent), never a
+number written by hand.
 
-**32 items in the open queue** (counted from the file on 14/09; the 13/09 list
-below was taken BEFORE the §220–§239 wave). The conclusion holds WITH
+**20 items in the open queue** (measured 20/09 by
+`scripts/check_known_bugs_status.sh`; the number is a dated snapshot — the
+script is the authority). The **32** counted on 14/09 and the 13/09 list
+below are the HISTORICAL snapshot, preserved for the record (taken BEFORE the
+§220–§239 wave). The conclusion holds WITH
 correction: the items still open are owner/blocked/rule-6 — but the "ZERO
 pure-code item" was REFUTED by the 14/09 wave itself: §236 (comparisonReturn
 Bool×Int) and §238 (hoist of escaping local + sipush) were pure-code items of
@@ -169,7 +174,7 @@ scalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `roadmap.md` | §§8–11 ❌ (frontend same-project, monolith→micro) | long term |
 | ~~`roadmap-audit.md`~~ → `docs/audits/roadmap-audit.md` | matrix 06/09 + queue P0→P5 (P0 CLOSED 09/09) | re-audit when something closes |
 | ~~`KOFUI-AUDIT.md`~~ → `docs/bugs-and-gaps/` | UI001-Native (R6 face: silent no-op) OPEN | UI lane |
-| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | 32 open (the live count and triage are in §2 above; §81/§163/§127-JVM, §155, §94, §157-160 and §65 closed/DOES-NOT-REPRODUCE 13/09) | live queue |
+| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | **20 live** (measured 20/09 by `scripts/check_known_bugs_status.sh` — the §2 live set is the authority; the historical 14/09 count was 32; §81/§163/§127-JVM, §155, §94, §157-160 and §65 closed/DOES-NOT-REPRODUCE 13/09) | live queue |
 | ~~`refactoring/PLAN-SOLID-500.md`~~ → `docs/architecture/PLAN-SOLID-500.md` | ✅ **DONE + MOVED 13/09** (F1–F9 all closed — F3: NativeBackend 498 ≤500 measured, GC lane blocker expired/dead-owner rule); ratchet `check_500-baseline.txt` (debts locked — authoritative number = `wc -l` of the file) in CI | plan CLOSED (3-state rule) |
 | `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` | **UNDER DEVELOPMENT 17/09** — promoted from `future/` by maintainer decision, which **overrides the R12 gate** (`DECISIONS.md` §D-UNIVERSAL); entry point = Stage 1 (SYSTEMS consolidation) + R1–R12 | architecture for Tiers 6–12; vision/design frozen, only state claims synced to code |
 | `PROPOSAL-1.0-EXIT-GATE.md` (+`.pt_BR.md`) | **KOF 1.0 EXIT GATE — RATIFIED 20/09/2026** by the maintainer (`DECISIONS.md` §D-RELEASE-1.0); promoted from `future/`: the gate (§8) + the queue (§23) are the binding stabilization meta — **Kof RC 1.0 / release 1.0 exist only when every item matches and no edge is open** | order of execution = the PROPOSAL's own §23, tracked in `roadmap.md` §24 (EG-1..EG-10); **all seven `[? MEL]` edges CLOSED 20/09 by `DECISIONS.md` §D-1.0-EDGES** — KofC + Android inside the 8-target Stable 1.0 with their own gates (EG-9/EG-10), the nine §35 reinforcement candidates are mandatory gates, the 1.0 line opens after the 0.5.0 cut + EG-1..EG-7; the only remaining edge is the maintainer's RC-opening declaration (EG-8) |
