@@ -189,4 +189,41 @@ class KofDebugJvmStepTest {
             c.p().destroy();
         }
     }
+
+    /**
+     * Regressao da corrida do `step` (§397): `stepIn`/`stepOut` seguidos de
+     * `stackTrace` sem threadId. O `step()` limpava `stoppedThread` DEPOIS do
+     * `resume()`; quando o evento SingleStep chegava primeiro (outra thread, mais
+     * provavel sob carga), a limpeza sobrescrevia o id novo com -1 — e o
+     * `stackTrace` seguinte virava `FrameCount(-1)` = JDWP error 20, que matava a
+     * sessao DAP ("fluxo DAP fechou"). Sessoes frescas em loop forcama a janela:
+     * no codigo antigo alguma iteracao morre; no novo o id nunca e perdido.
+     */
+    @Test
+    void stepThenImmediateStackTraceNeverLosesTheStoppedThread(@TempDir Path parent) throws Exception {
+        for (int i = 0; i < 12; i++) {
+            Path dir = Files.createDirectory(parent.resolve("it" + i));
+            Files.writeString(dir.resolve("Main.kf"), PROGRAM);
+            Cli c = upToBreakpoint(dir);
+            try {
+                send(c, 5, "stepIn", "");
+                assertTrue(await(c, "\"command\":\"stepIn\"", "stepIn #" + i).contains("\"success\":true"));
+                await(c, "\"reason\":\"step\"", "stopped por step (stepIn #" + i + ")");
+                send(c, 6, "stackTrace", "\"startFrame\":0");
+                String trace = await(c, "\"command\":\"stackTrace\"", "stackTrace #" + i);
+                assertTrue(trace.contains("\"success\":true") && trace.contains("\"name\":\"add\""),
+                        "o thread do SingleStep foi perdido (iteracao " + i + "): " + trace);
+
+                send(c, 7, "stepOut", "");
+                assertTrue(await(c, "\"command\":\"stepOut\"", "stepOut #" + i).contains("\"success\":true"));
+                await(c, "\"reason\":\"step\"", "stopped por step (stepOut #" + i + ")");
+                send(c, 8, "stackTrace", "\"startFrame\":0");
+                String back = await(c, "\"command\":\"stackTrace\"", "stackTrace de volta #" + i);
+                assertTrue(back.contains("\"success\":true"),
+                        "stackTrace apos stepOut #" + i + ": " + back);
+            } finally {
+                c.p().destroy();
+            }
+        }
+    }
 }

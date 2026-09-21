@@ -133,8 +133,11 @@ final class KofDebugJvmSession {
                     ? "already attached (CLI --attach)"
                     : "use `kof debug --attach <porta>` — the Kof attach surface is CLI-side (X7-5)");
             case "continue" -> {
-                if (jdwp != null) jdwp.resume();
+                // limpar ANTES do resume: o evento do proximo breakpoint chega noutra
+                // thread e seta o id novo; limpar depois sobrescreveria esse id com -1
+                // (corrida medida — stackTrace seguinte virava FrameCount(-1)=error 20).
                 stoppedThread = -1;
+                if (jdwp != null) jdwp.resume();
                 respond(seq, command, Map.of("allThreadsContinued", true));
             }
             case "next" -> step(seq, command, 1);
@@ -206,19 +209,26 @@ final class KofDebugJvmSession {
                             ? n.longValue() : stoppedThread;
                     int idx = 0;
                     lastFrames.clear();
-                    for (JdwpClient.FullFrame f : jdwp.framesFull(threadId, 50)) {
-                        Map<String, Object> frame = new LinkedHashMap<>();
-                        frame.put("id", idx);
-                        frame.put("name", f.methodName());
-                        Map<String, Object> src = new LinkedHashMap<>();
-                        src.put("path", sourceFile.toAbsolutePath().toString());
-                        src.put("line", f.line());
-                        frame.put("source", src);
-                        frame.put("line", f.line());
-                        frame.put("column", 1);
-                        frames.add(frame);
-                        lastFrames.add(f);
-                        idx++;
+                    try {
+                        for (JdwpClient.FullFrame f : jdwp.framesFull(threadId, 50)) {
+                            Map<String, Object> frame = new LinkedHashMap<>();
+                            frame.put("id", idx);
+                            frame.put("name", f.methodName());
+                            Map<String, Object> src = new LinkedHashMap<>();
+                            src.put("path", sourceFile.toAbsolutePath().toString());
+                            src.put("line", f.line());
+                            frame.put("source", src);
+                            frame.put("line", f.line());
+                            frame.put("column", 1);
+                            frames.add(frame);
+                            lastFrames.add(f);
+                            idx++;
+                        }
+                    } catch (IOException e) {
+                        // erro transitorio do JDWP (ex.: thread morta) = recusa honesta
+                        // desta requisicao; a sessao do editor NAO pode morrer por isso.
+                        fail2(seq, command, "JDWP: " + e.getMessage());
+                        return;
                     }
                 }
                 respond(seq, command, Map.of("stackFrames", frames, "totalFrames", frames.size()));
@@ -269,7 +279,12 @@ final class KofDebugJvmSession {
                 }
                 if (lastFrames.isEmpty() && stoppedThread >= 0) {
                     // the client may evaluate before asking for stackTrace
-                    lastFrames.addAll(jdwp.framesFull(stoppedThread, 50));
+                    try {
+                        lastFrames.addAll(jdwp.framesFull(stoppedThread, 50));
+                    } catch (IOException e) {
+                        fail2(seq, command, "JDWP: " + e.getMessage());
+                        return;
+                    }
                 }
                 int frameId = args.get("frameId") instanceof Number n ? n.intValue() : 0;
                 if (frameId < 0 || frameId >= lastFrames.size()) {
@@ -341,8 +356,10 @@ final class KofDebugJvmSession {
             return;
         }
         jdwp.setStepRequest(stoppedThread, depth);
-        jdwp.resume();
+        // limpar ANTES do resume (mesma corrida do `continue`): o SingleStep chega
+        // noutra thread e seta stoppedThread; limpar depois o clobberava com -1.
         stoppedThread = -1;
+        jdwp.resume();
         respond(seq, command, Map.of());
     }
 
