@@ -102,12 +102,34 @@ EOF
     echo "SELFTEST FALHOU (rc=$RC):"; printf '%s\n' "$OUT"; exit 1
 fi
 
+check_reverse() { # $1=ledger $2=id lingua $3=live-ids $4=changelog $5=waivers
+    python3 - "$1" "$2" "$3" "$4" "$5" << 'PYEOF2'
+import re, sys
+led, lang, opens, cl, wfile = sys.argv[1], sys.argv[2], set(sys.argv[3].split()), sys.argv[4], sys.argv[5]
+FLOOR = 400  # pratica uniforme a partir daqui (medido 21/09: 25 ids anteriores sem entrada,
+             # ZERO apos 400). Piso = regra de epoca, nao reescreve historia nem da perdao
+             # individual; antes de 400 o CHANGELOG e historico e o ledger venceu.
+try:
+    rwaived = {t.split()[0][1:] for t in (l.split() for l in open(wfile, encoding="utf-8"))
+               if t and t[0].startswith("R") and len(t) > 1 and t[1] == lang}
+except OSError:
+    rwaived = set()
+ids = {m.group(1) for m in re.finditer(r"(?m)^#{2,4} §([0-9]+)", open(led, encoding="utf-8").read())}
+text = open(cl, encoding="utf-8").read()
+miss = [i for i in sorted(int(x) for x in ids - opens)
+        if i >= FLOOR and f"§{i}" not in text and str(i) not in rwaived]
+for i in miss:
+    print(f"MISSING [{lang}]: ledger fecha §{i} (piso {FLOOR}) e o CHANGELOG nao tem entrada")
+sys.exit(1 if miss else 0)
+PYEOF2
+}
 rc=0
 for pair in "CHANGELOG.md:EN:docs/bugs-and-gaps/known-bugs.md" \
             "CHANGELOG.pt_BR.md:PT:docs/bugs-and-gaps/known-bugs.pt_BR.md"; do
     IFS=: read -r cl lang led <<< "$pair"
     [ -f "$led" ] || continue
     check_pair "$cl" "$lang" "$(open_ids "$lang")" "$WAIVERS" || rc=1
+    check_reverse "$led" "$lang" "$(open_ids "$lang")" "$cl" "$WAIVERS" || rc=1
 done
 if [ $rc -eq 0 ]; then
     n_en="$(grep -ciE "§[0-9]+[^§]{0,80}(✅|fixed|fechad|corrigid|closed|encerrad)" CHANGELOG.md 2>/dev/null || true)"
