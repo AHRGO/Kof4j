@@ -16,9 +16,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * sobrescreve), indexOf ausente -1, lastIndexOf com duplicatas, subList
  * begin==end (vazia) e out-of-range (a mensagem que o java.util lança,
  * medida com o processo morrendo exit=1), addAll true/false, sort crescente
- * e reverso, String e Double. Os gates SEM097 (ordem natural), NAT001
- * (Float no native — diagnóstico honesto, nunca ordem errada) e SEM025 de
- * aridade são compile-time compartilhados: um gate, os 4 alvos.
+ * e reverso, String, Double e Float (§352/NAT001 FECHADO 21/09: alargamento
+ * p/ Double no runtime nativo — x86 e cross). Os gates SEM097 (ordem
+ * natural) e SEM025 de aridade são compile-time compartilhados: um gate, os
+ * 4 alvos.
  */
 class CollectionMethodsStdlibE2ETest {
 
@@ -195,31 +196,63 @@ class CollectionMethodsStdlibE2ETest {
         }
     }
 
+    /** §352/NAT001 FECHADO 21/09: o slot de Float guarda os 32 bits crus e o
+     *  runtime alarga p/ Double (cvtss2sd no x86; fmv.w.x+fcvt.d.s no cross),
+     *  reusando a semântica medida do Double.compare — ordena em paridade com
+     *  a JVM, incl. o desempate -0.0<0.0 e NaN por último (Q3). */
     @Test
-    void floatSortOnNativeIsHonestDiagnostic(@TempDir Path tempDir) throws Exception {
-        // NAT001 — o par (sort, Float, nativo) não tem compare de precisão
-        // simples tradutível no runtime cross; diagnóstico honesto no
-        // compile (R6), NUNCA ordem silenciosa errada. Funciona nos outros
-        // alvos (medido no golden JVM acima com Double).
-        CompilationResult rn = compile(tempDir, "F", """
+    void floatSortRunsOnNativeWithDoubleCompareSemantics(@TempDir Path tempDir) throws Exception {
+        String src = """
                 main() {
-                    val l: List<Float> = listOf(2.5f, -1.5f)
+                    val l: List<Float> = listOf(2.5f, -1.5f, 0.5f, 3.5f)
                     l.sort()
                     println(l.get(0))
+                    println(l.get(1))
+                    println(l.get(2))
+                    println(l.get(3))
+                    val z: List<Float> = listOf(0.0f, -0.0f)
+                    z.sort()
+                    println(z.get(0))
+                    println(z.get(1))
+                    val d: List<Double> = listOf(0.0, -0.0)
+                    d.sort()
+                    println(d.get(0))
+                    println(d.get(1))
+                    val n: List<Float> = listOf(1.5f, 0.0f / 0.0f, -2.5f)
+                    n.sort()
+                    println(n.get(0))
+                    println(n.get(1))
+                    println(n.get(2))
                 }
-                """, Target.NATIVE);
-        assertFalse(rn.success(), "Float sort on native must be rejected");
-        assertTrue(rn.diagnostics().getDiagnostics().stream()
-                .anyMatch(d -> d.code().equals("NAT001")),
-                "NAT001 expected: " + rn.diagnostics().getDiagnostics());
-        CompilationResult rj = compile(tempDir, "FJ", """
-                main() {
-                    val l: List<Float> = listOf(2.5f, -1.5f)
-                    l.sort()
-                    println(l.get(0))
-                }
-                """, Target.JVM);
-        assertTrue(rj.success(), "Float sort stays valid on JVM: " + rj.diagnostics().getDiagnostics());
+                """;
+        // oráculo JVM medido (bin/kof run): Float 4× + ±0.0 Float + ±0.0 Double + NaN último
+        String golden = "-1.5\n0.5\n2.5\n3.5\n-0.0\n0.0\n-0.0\n0.0\n-2.5\n1.5\nNaN";
+        CompilationResult rj = compile(tempDir, "FJ", src, Target.JVM);
+        assertTrue(rj.success(), "Float sort on JVM: " + rj.diagnostics().getDiagnostics());
+        String jvm = new String(new ProcessBuilder(TestJdk.javaBin(), "-cp",
+                outDirFor(tempDir, "FJ", Target.JVM).toString(), "Default.Main")
+                .redirectErrorStream(true).start().getInputStream().readAllBytes())
+                .replace("\r\n", "\n").trim();
+        assertEquals(golden, jvm, "JVM oracle do Float sort (medido)");
+
+        CompilationResult rn = compile(tempDir, "F", src, Target.NATIVE);
+        assertTrue(rn.success(), "Float sort no x86_64: " + rn.diagnostics().getDiagnostics());
+        Path bin = outDirFor(tempDir, "F", Target.NATIVE).resolve("Default/Main");
+        Process pn = new ProcessBuilder(bin.toString()).redirectErrorStream(true).start();
+        String nat = new String(pn.getInputStream().readAllBytes()).replace("\r\n", "\n").trim();
+        assertEquals(0, pn.waitFor(), "native exit, saída:\n" + nat);
+        assertEquals(golden, nat, "Float sort x86_64 = caixa crua + cvtss2sd (paridade JVM)");
+
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            org.junit.jupiter.api.Assumptions.assumeTrue(
+                    NativeRiscv64E2ETest.hasToolchain(arch), "toolchain " + arch + " ausente");
+            CompilationResult rc = compile(tempDir, "FC" + arch, src, t);
+            assertTrue(rc.success(), t + " Float sort: " + rc.diagnostics().getDiagnostics());
+            String out = NativeRiscv64E2ETest.runQemu(arch,
+                    outDirFor(tempDir, "FC" + arch, t).resolve("Default/Main"));
+            assertEquals(golden, out, t + " Float sort = fmv.w.x+fcvt.d.s (paridade JVM)");
+        }
     }
 
     @Test

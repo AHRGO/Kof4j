@@ -128,21 +128,15 @@ public final class CollectionCallLowerer {
             List<Type> argTypes = new ArrayList<>();
             for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
             Type elemType = driver.listElementType(recvType);
-            // SEM097 (domínio natural do sort) / NAT001 (Float no native) —
-            // nunca ordem silenciosa errada (par sort×Float no cross não tem
-            // compare de precisão simples tradutível; usar Double).
+            // SEM097 (domínio natural do sort) — nunca ordem silenciosa
+            // errada. Float×native era NAT001; FECHADO 21/09 (§352): o runtime
+            // alarga os 32 bits crus do slot para Double e reusa o compare.
             if ("kof_list_sort".equals(listFn) && driver.currentDiagnostics != null
-                    && (!CollectionMethodGates.naturalOrderType(elemType)
-                        || CollectionMethodGates.floatSortUnsupportedOnNative(
-                                elemType, driver.target.isNative()))) {
-                boolean natFloat = CollectionMethodGates.naturalOrderType(elemType);
+                    && !CollectionMethodGates.naturalOrderType(elemType)) {
                 var pos = mc.position();
                 driver.currentDiagnostics.error(pos != null ? pos.file() : "",
                         pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
-                        natFloat ? "List.sort on Float elements is not supported on the native target yet"
-                                + " (NAT001) — sort a Double list or insert manually"
-                                : CollectionMethodGates.sortDomainError(elemType),
-                        natFloat ? "NAT001" : "SEM097");
+                        CollectionMethodGates.sortDomainError(elemType), "SEM097");
                 return localIdx;
             }
             // §122 (opção B, família SEM051/052/053/054): o índice de

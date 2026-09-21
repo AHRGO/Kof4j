@@ -58,24 +58,18 @@ public final class CollectionMethodGates {
                 + " (Kof has no Comparator/Comparable — sort the projected key list instead)";
     }
 
-    /**
-     * Float no Native (NAT001): o runtime cross não tem compare de precisão
-     * simples tradutível (sem flw no aarch64) — diagnóstico honesto no par
-     * (sort, Float, nativo), nunca ordem errada silenciosa.
-     */
-    static boolean floatSortUnsupportedOnNative(Type elemType, boolean nativeTarget) {
-        if (!nativeTarget) return false;
-        Type inner = elemType instanceof Type.NullableType nt ? nt.inner() : elemType;
-        return inner instanceof Type.PrimitiveType pt
-                && "float".equals(Type.canonicalPrimitiveName(pt.name()));
-    }
-
-    /** Tag de comparação do sort: 0=raw signed qword, 1=String, 2=Double. */
+    /** Tag de comparação do sort: 0=raw signed qword, 1=String, 2=Double,
+     *  3=Float (§352/NAT001 fechado 21/09: o slot guarda os 32 bits crus e o
+     *  runtime alarga para Double — `cvtss2sd` no x86, `fcvt.d.s` no cross —
+     *  reusando a semântica medida do Double.compare). */
     static int sortTag(Type elemType) {
         Type inner = elemType instanceof Type.NullableType nt ? nt.inner() : elemType;
         if (BuiltinTypes.isString(inner)) return 1;
-        if (inner instanceof Type.PrimitiveType pt
-                && "double".equals(Type.canonicalPrimitiveName(pt.name()))) return 2;
+        if (inner instanceof Type.PrimitiveType pt) {
+            String n = Type.canonicalPrimitiveName(pt.name());
+            if ("double".equals(n)) return 2;
+            if ("float".equals(n)) return 3;
+        }
         return 0;
     }
 
