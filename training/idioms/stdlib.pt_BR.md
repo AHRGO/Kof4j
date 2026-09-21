@@ -337,6 +337,11 @@ PORQUE: `Image` em `kof.ui` e um **widget de visao**; `Image.open` aqui e **I/O 
 (mesmo nome, intencao diferente — nao confundir). Tudo que a plataforma decodifica fica no
 backend; o codigo do usuario nunca toca buffer nem codec. Gates honestos (medidos 19/09):
 JVM ✅; **JS e Native = `MEDIA001`** em tempo de compilacao (R6); riscv/aarch ⏳.
+Nota de escopo: esta e a **face de dados** atual de `kof.media`. A superficie futura
+de graficos/jogos/midia e **engine propria da Kof**, com paridade TOTAL nos 4 alvos
+como criterio de aceite (`DECISIONS.md` §D-GRAPHICS-GAMING adendos 2+4; plano
+`docs/development/future/graphics-gaming-plan.md`) — `MEDIA001` e honesto para a face
+legada, nao o modelo do que sera promovido.
 
 ## Nota por target (gates honestos)
 
