@@ -11861,6 +11861,8 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Fix (rule 7, mínimo):** adicionadas `secrets.of(String literal) -> Secret` e `secrets.secret(String name) -> Secret` ao bloco `secrets` de `kof-compiler/src/main/java/dev/kof/compiler/StdCatalog.java`, casando as aridades/tipos do dispatcher. Sem mudança de comportamento no resto.
 - **Prova:** `StdCatalogSignaturesTest` 12/12, `StdCatalogTest` 11/11, `StdlibIdiomsCompileTest` 20/20; consumidores LSP `LspSignatureHelpTest` 7/7, `LspServerTest` 38/38, `LspSignatureHoverTest` 6/6.
 
+<!-- en-switch --> **EN:** [§436 (en)](known-bugs.md)
+
 ## §437 — `check_500` vermelho: `JvmOpCollections.java` cruzou 600 linhas (baseline 584 -> 604) após o fix §432 do boxing de coleções — 🟡 ABERTO (catalogado 21/09; split pendente da lane JVM, não corrigido aqui)
 
 - **Medido (21/09, árvore no tip `20a3158b` + pouso F2d3a, após o re-pouso do §432):** `./scripts/check_500.sh` -> `FALHOU — kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java tinha 584 (< 600) no baseline, agora 604 (>= 600): cruzou a linha vermelha, split obrigatório.` (rc!=0); `wc -l` = 604.
@@ -11869,4 +11871,15 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Repro mínimo:** `./scripts/check_500.sh` -> rc!=0; `wc -l kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java` = 604.
 - **Caminho do fix:** split por responsabilidade (extrair uma fatia) e então `--update-baseline` com o arquivo < 600; o baseline nunca legitima >= 600.
 
-<!-- en-switch --> **EN:** [§436 (en)](known-bugs.md)
+<!-- en-switch --> **EN:** [§437 (en)](known-bugs.md#437--check_500-red-jvmopcollectionsjava-crossed-600-lines-584-baseline---604-after-the-432-collection-boxing-fix---open-catalogued-2109-jvm-lane-split-pending-not-fixed-here)
+
+## §438 — testes de debug/serve do `kof-cli` vazam JVMs suspensas (`jdwp suspend=y`) e dirs scratch em `/tmp` que podem esgotar o tmpfs e matar suítes seguintes (medido: 15 órfãos `kof-debug-*` + 6 `kof-serve-*` segurando dirs deletados; `Cota da disco excedida` na suíte do kof-compiler) — 🟡 ABERTO (catalogado 21/09; fix pendente da lane cli/debug, não corrigido aqui)
+
+- **Medido (21/09, run da suíte completa no tip `c67c3594` + F2d3a desta lane):** o módulo kof-compiler morreu no meio com `Error reading source file: Cota da disco excedida (COMP001)` em `ConformanceMatrixTest` (12 run / 8F), `CoreRegressionE2ETest`, `ConstructorPhantomE2ETest`, `CrossRuntimePortsE2ETest`, `IoArrayArgE2ETest`, `KofWebTlsTest` e classes do kof-cli — tudo ambiental (tmpfs esgotado). O `ps` mostrou 15 JVMs `/tmp/kof-debug-*` (`-agentlib:jdwp=...,suspend=y`) vivos por 1d+ e 6 servidores `/tmp/kof-serve-*`, além de 35k entradas em `/tmp`; `df -h /tmp` 6,3G/7,8G (80%).
+- **Origem (diagnosticada, não corrigida):** os testes de debug/serve do cli geram JVMs filhas que suspendem esperando debugger; quando o teste termina (ou dá timeout) sem destruir a filha, o processo sobrevive e segura seu dir deletado em `/tmp`, então o espaço nunca volta. Runs de suíte acumulam ambos.
+- **Dono:** a lane cli/debug. NÃO tocado aqui — regra 8 (esta lane só limpou o próprio host, abaixo).
+- **Repro mínimo:** `ps -eo pid,etime,args | grep -E 'kof-debug-|kof-serve-'` depois de rodar classes `KofDebug*`/`Serve*` -> filhas órfãs; então observar o uso de `/tmp` crescer run a run até suítes seguintes falharem com `Cota da disco excedida`.
+- **Limpeza do host feita por esta lane (não é o fix):** `pkill -f 'kof-debu[g]-'` / `'kof-serv[e]-'` / `'Dkof.root=/tmp/junit[-]-'` + `find /tmp -maxdepth 1 \( -name 'junit-*' -o ... \) -exec rm -rf {} +` -> tmpfs 6,3G -> 621M (8%).
+- **Caminho do fix:** `destroyForcibly()` + `waitFor` em toda filha gerada no teardown dos testes de debug/serve (e um guard de timeout), para nenhuma JVM `jdwp suspend=y` sobreviver ao teste.
+
+<!-- en-switch --> **EN:** [§438 (en)](known-bugs.md#438--kof-cli-debugserve-tests-leak-suspended-jvms-jdwp-suspendy-and-tmp-scratch-dirs-that-can-exhaust-the-tmpfs-and-kill-later-suites-measured-15-kof-debug---6-kof-serve--orphans-holding-deleted-dirs-cota-da-disco-excedida-in-the-kof-compiler-suite---open-catalogued-2109-clidebug-lane-fix-pending-not-fixed-here)

@@ -14328,6 +14328,8 @@ p
 - **Fix (rule 7, minimal):** added `secrets.of(String literal) -> Secret` and `secrets.secret(String name) -> Secret` to the `secrets` block of `kof-compiler/src/main/java/dev/kof/compiler/StdCatalog.java`, matching the dispatcher arities/types. No behavior change elsewhere.
 - **Proof:** `StdCatalogSignaturesTest` 12/12, `StdCatalogTest` 11/11, `StdlibIdiomsCompileTest` 20/20; LSP consumers `LspSignatureHelpTest` 7/7, `LspServerTest` 38/38, `LspSignatureHoverTest` 6/6.
 
+<!-- pt-switch --> **PT:** [§436 (pt_BR)](known-bugs.pt_BR.md)
+
 ## §437 — `check_500` red: `JvmOpCollections.java` crossed 600 lines (584 baseline -> 604) after the §432 collection-boxing fix — 🟡 OPEN (catalogued 21/09; JVM lane split pending, not fixed here)
 
 - **Measured (21/09, tree at tip `20a3158b` + the F2d3a landing, after the §432 re-land):** `./scripts/check_500.sh` -> `FALHOU — kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java tinha 584 (< 600) no baseline, agora 604 (>= 600): cruzou a linha vermelha, split obrigatório.` (rc!=0); `wc -l` = 604.
@@ -14336,4 +14338,15 @@ p
 - **Minimal repro:** `./scripts/check_500.sh` -> rc!=0; `wc -l kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java` = 604.
 - **Fix path:** split by responsibility (extract a slice) and then `--update-baseline` with the file < 600; the baseline never legitimizes >= 600.
 
-<!-- pt-switch --> **PT:** [§436 (pt_BR)](known-bugs.pt_BR.md)
+<!-- pt-switch --> **PT:** [§437 (pt_BR)](known-bugs.pt_BR.md#437--check_500-vermelho-jvmopcollectionsjava-cruzou-600-linhas-baseline-584---604-apos-o-fix-432-do-boxing-de-colecoes---aberto-catalogado-2109-split-pendente-da-lane-jvm-nao-corrigido-aqui)
+
+## §438 — `kof-cli` debug/serve tests leak suspended JVMs (`jdwp suspend=y`) and `/tmp` scratch dirs that can exhaust the tmpfs and kill later suites (measured: 15 `kof-debug-*` + 6 `kof-serve-*` orphans holding deleted dirs; `Cota da disco excedida` in the kof-compiler suite) — 🟡 OPEN (catalogued 21/09; cli/debug lane fix pending, not fixed here)
+
+- **Measured (21/09, full-suite run at tip `c67c3594` + this lane's F2d3a):** the kof-compiler module died mid-run with `Error reading source file: Cota da disco excedida (COMP001)` across `ConformanceMatrixTest` (12 run / 8F), `CoreRegressionE2ETest`, `ConstructorPhantomE2ETest`, `CrossRuntimePortsE2ETest`, `IoArrayArgE2ETest`, `KofWebTlsTest` and kof-cli classes — all environmental (tmpfs exhausted). `ps` showed 15 `/tmp/kof-debug-*` JVMs (`-agentlib:jdwp=...,suspend=y`) alive for 1d+ and 6 `/tmp/kof-serve-*` servers, plus 35k `/tmp` entries; `df -h /tmp` 6.3G/7.8G (80%).
+- **Origin (diagnosed, not fixed):** the cli debug/serve tests spawn child JVMs that suspend waiting for a debugger; when a test ends (or times out) without destroying the child, the process survives and holds its deleted `/tmp` dir, so the space never returns. Repeated suite runs accumulate both.
+- **Owner:** the cli/debug lane. NOT touched here — rule 8 (this lane only cleaned its own host, see below).
+- **Minimal repro:** `ps -eo pid,etime,args | grep -E 'kof-debug-|kof-serve-'` after running `KofDebug*`/`Serve*` classes -> orphan children; then watch `/tmp` usage grow run over run until later suites fail with `Cota da disco excedida`.
+- **Host cleanup done by this lane (not the fix):** `pkill -f 'kof-debu[g]-'` / `'kof-serv[e]-'` / `'Dkof.root=/tmp/junit[-]-'` + `find /tmp -maxdepth 1 \( -name 'junit-*' -o ... \) -exec rm -rf {} +` -> tmpfs 6.3G -> 621M (8%).
+- **Fix path:** `destroyForcibly()` + `waitFor` on every spawned child in the debug/serve test teardown (and a timeout guard), so no `jdwp suspend=y` JVM outlives its test.
+
+<!-- pt-switch --> **PT:** [§438 (pt_BR)](known-bugs.pt_BR.md#438--testes-de-debugserve-do-kof-cli-vazam-jvms-suspensas-jdwp-suspendy-e-dirs-scratch-em-tmp-que-podem-esgotar-o-tmpfs-e-matar-suites-seguintes-medido-15-orfaos-kof-debug---6-kof-serve--segurando-dirs-deletados-cota-da-disco-excedida-na-suite-do-kof-compiler---aberto-catalogado-2109-fix-pendente-da-lane-clidebug-nao-corrigido-aqui)
