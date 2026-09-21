@@ -1,4 +1,4 @@
-[English](PLAN-BOOTSTRAP.md)
+[English](PLAN-BOOTSTRAP.md) | [Português](PLAN-BOOTSTRAP.pt_BR.md)
 
 # Plano estratégico — o Bootstrapper: Kof escrito em Kof (BS-1)
 
