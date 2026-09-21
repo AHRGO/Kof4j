@@ -14,6 +14,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
 ### Em desenvolvimento
+  - **Fortalecimento de teste F2a (lane gaps-db)** (20/09): a unidade F2a
+    (`save` row-object, `RuntimeOrm4`+`RuntimeOrmSchema`+`RuntimeOrmBind`)
+    pousou por `4316d325`; esta fatia SÓ FORTALECE A PROVA — o
+    `saveNativeEndToEndMatchesJvm` agora exercita o caminho UPDATE com VALOR
+    ALTERADO (`User(1, "Mel-2", ...)` — record imutável, construtor novo com
+    a mesma pk; o golden lê o nome de volta via `db.query`, provando que o
+    slot alterado chega ao bind e ao banco — antes o UPDATE era salvo com
+    valores idênticos e não provinha writeback). Prova medida: KofOrmE2ETest
+    42/0F/3skip, paridade byte JVM==Native (10 linhas).
   - **known-bugs §381 CORRIGIDO — um campo de `entity` com nome PALAVRA-RESERVADA OOMAVA
     o compilador** (20/09, `.18` via decisão do maintainer — erro limpo, sem mudar a
     gramática): o field loop de `parseEntityDeclaration` chamava `expectId`, que reporta
@@ -24,7 +33,6 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     por iteração. Prova: novo `EntityKeywordFieldE2ETest` 3/3 rodando em SUBPROCESSO no
     budget original de 256MB (RED: o filho morre em OOM; GREEN: diagnósticos limitados,
     entities válidas compilam) + bateria parser/makealive 272/0F.
-
   - **`kof workflow run --target js` suportado (fatia residual da 2.6 / R7)** (20/09,
     `.18`): o CLI agora compila o `pipeline(): KofWfDag` para JS e roda
     **in-process** via `KofJsRunner`, com paridade de BYTES com a JVM

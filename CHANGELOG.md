@@ -26,6 +26,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (`WorkflowE2ETest`, `KofJsE2ETest`, `IoBoolFacesE2ETest`, pump).
 
  ### In development
+  - **F2a test-strengthening (gaps-db lane)** (20/09): a unidade F2a
+    (`save` row-object, `RuntimeOrm4`+`RuntimeOrmSchema`+`RuntimeOrmBind`)
+    pousou por `4316d325`; esta fatia SÓ FORTALECE A PROVA — o
+    `saveNativeEndToEndMatchesJvm` agora exercita o caminho UPDATE com VALOR
+    ALTERADO (`User(1, "Mel-2", ...)` — record imutável, construtor novo com
+    mesma pk; o golden lê o nome de volta via `db.query`, provando que o slot
+    alterado chega ao bind e ao banco — antes o UPDATE era salvo com valores
+    idênticos e não provinha writeback). Prova medida: KofOrmE2ETest
+    42/0F/3skip, paridade byte JVM==Native (10 linhas).
   - **known-bugs §381 FIXED — an `entity` field named with a RESERVED keyword OOMed the
     compiler** (20/09, `.18` via maintainer decision — clean error, no grammar change):
     `parseEntityDeclaration`'s field loop called `expectId` which reports WITHOUT
@@ -36,7 +45,6 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     recovery) + a per-iteration progress guard. Proof: new `EntityKeywordFieldE2ETest`
     3/3 run in a SUBPROCESS at the original 256MB budget (RED: child OOMs; GREEN:
     bounded diagnostics, valid entities compile) + parser/makealive battery 272/0F.
-
   - **known-bugs §391 FIXED — #568: the IMPLICIT constructor of an EXTERNAL class
     (`Greeter()` without `new`) via `--classpath` raised a FALSE `SEM015`**
     (20/09, compiler lane `.22`): `kof build ... --classpath producer.jar` with

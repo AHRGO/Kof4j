@@ -564,8 +564,9 @@ class KofOrmE2ETest {
                     var u1 = orm.save(db, User(0, "O'Mel", "m@kof.dev", 30))
                     println(u1.id)
                     println(u1.name)
-                    var u2 = orm.save(db, u1)
+                    var u2 = orm.save(db, User(1, "Mel-2", "m@kof.dev", 30))
                     println(u2.id)
+                    println(u2.name)
                     println(orm.count<User>(db))
                     var u3 = orm.save(db, User(9, "Ana", "a@kof.dev", 25))
                     println(u3.id)
@@ -577,7 +578,7 @@ class KofOrmE2ETest {
                     }
                 }
                 """;
-        String expected = "1\nO'Mel\n1\n1\n9\n2\n1\n{\"id\":1,\"name\":\"O'Mel\"}\n{\"id\":9,\"name\":\"Ana\"}";
+        String expected = "1\nO'Mel\n1\nMel-2\n1\n9\n2\n1\n{\"id\":1,\"name\":\"Mel-2\"}\n{\"id\":9,\"name\":\"Ana\"}";
         Path jvmSource = tempDir.resolve("JvmMain.kf");
         Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
                 + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmsave.db") + "\")\n")
@@ -599,7 +600,7 @@ class KofOrmE2ETest {
                 java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
         int ec = p.waitFor();
         assertEquals(0, ec, "Native exit code, output: '" + out + "'");
-        assertEquals(expected, out, "paridade byte JVM==Native (save; 3 paths: INSERT-gen, UPDATE hit, UPDATE miss -> INSERT-all)");
+        assertEquals(expected, out, "paridade byte JVM==Native (save; 3 paths: INSERT-gen, UPDATE hit com VALOR ALTERADO writeback-verified, UPDATE miss -> INSERT-all)");
     }
 
     @Test
