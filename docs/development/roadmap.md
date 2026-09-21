@@ -950,7 +950,7 @@ domain (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + parity matrix;
 | 2.3.2 | Cycle detection in the `infra` graph at compile-time | ✅ **CLOSED 21/09 as runtime-only** (`D-MAKEALIVE-SYNTAX` addendum, `5759b9bd`): 2.2.4 is pure sugar, so the compiler sees only generic calls — a static graph would give the block its own semantics (§7/rule 11); the 3.1 runtime refusal names the cycle members |
 | 2.4.1 | Scoped resources (lightweight RAII over `try/finally`) | 🟡 design only (`future/scoped-resources-plan.md`); `using` syntax gated by bump |
 
-| 2.5 | Variance / sealed | ✅ **DECIDED TO POSTPONE** — `enum`+`record`/`interface` cover the case; opens only with the scientific pipeline (bump) |
+| 2.5 | Variance / sealed | ⏫ **SUPERSEDED 21/09 by §2.8.4** (`D-TYPE-VARIANCE`): `sealed` + variance opened as the **X5** slices (X5.1–X5.4 ✅ DONE 21/09); the old "postpone" is void |
 
 #### 2.6 — Nullability by EXPLICIT INTENT (queue N1→N4 of DECISIONS §D-NULL-INTENT, 15/09)
 
@@ -999,7 +999,7 @@ rule 6).
 | 2.8.1 | **R4 `CodegenStep`** (`D-CODEGEN-STEP` = A) — ✅ **landed 21/09** | compiler-INTERNAL codegen hook, no user syntax; unblocks `infra "prod" {}` (3.2) + DDL/runner migration | — |
 | 2.8.2 | **R3-3.3 handles/out-buffers** (`D-R3-3.3` = A) | nominal opaque `Handle` (non-arithmetic) + `Buffer(U8, INOUT)` (== D6-3); prerequisite of Stages 4–7 | R3 (2.1) |
 | 2.8.3 | **R3-3.5 variadics** (`D-R3-3.5` = A) | NO general variadics — caller passes `List`/`Array`/`Buffer`; documented gap (R6/R7) | R3 (2.1) |
-| 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **APPROVED 21/09**: plan reviewed; **incremental slices** (proof per slice), spec-first BEFORE any parser/typer diff | 🔵 |
+| 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **APPROVED 21/09**: plan reviewed; **incremental slices** (proof per slice), spec-first BEFORE any parser/typer diff — **X5.1–X5.4 ✅ DONE 21/09** (`sealed`+`SEM080`; exhaustive `switch`+`SEM081`; declaration-site `out`/`in`+`SEM082`; use-site projection `List<out T>`/`List<in T>`); remaining X5.5 (parity+docs+training) | 🔵 |
 | 2.8.5 | **X6 interop reflection** (`D-INTEROP-REFLECT` = open) | **APPROVED 21/09**: incremental plan (slices + proof per slice), only at the interop boundary | 🔵 |
 
 **Spec plan (X5 + X6):** [`type-system-extensions-plan.md`](type-system-extensions-plan.md) — **APPROVED 21/09 (D-TYPE-VARIANCE/INTEROP-REFLECT)**, promoted to `docs/development/`; incremental slices with proof.

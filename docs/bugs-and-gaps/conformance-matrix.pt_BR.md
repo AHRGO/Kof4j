@@ -280,6 +280,21 @@ CLOSED 11/09 (riscv64/aarch64)**: `addDays`/`diffDays` run on the 5 targets —
 > link) discovered during batch 3: the test uses a fresh driver per
 > case (like the CLI — 1 process/compilation).
 
+## Matrix (batch 4 — type system X5, `D-X5-SURFACE`)
+
+| Feature | Expected output | JVM | Native | Script | KofJS | Case (ConformanceMatrixTest) |
+|---|---|---|---|---|---|---|
+| `sealed` + `switch` exaustivo sobre sujeito sealed (X5.1/X5.2, `SEM080`/`SEM081`) | `circle` / `square` | DONE | DONE | DONE | DONE | `sealedswitch` |
+| variância declaration-site `out T` (X5.3, apagada) | `rex` | DONE | DONE | DONE | DONE | `variance` |
+| projeção no sítio de uso `List<out T>` / `List<in T>` (X5.4, apagada) | `1` / `1` | DONE | DONE | DONE | DONE | `useproj` |
+
+> **X5 (`D-X5-SURFACE`, 21/09):** os três casos são features só de compile-time
+> (`sealed`, variância, projeção) — a emissão as apaga, então a célula trava que
+> os QUATRO alvos aceitam a mesma fonte e imprimem a mesma saída (paridade de
+> erosão). Os diagnósticos negativos são certificados por
+> `SealedTypeE2ETest`/`TypeVarianceE2ETest`/`UseSiteVarianceE2ETest`
+> (`SEM080`/`SEM081`/`SEM082`), não pela matriz (que é saída de runtime).
+
 ## Targets outside the matrix (Android / WebAssembly)
 
 The matrix covers the 4 program execution targets (JVM/Native/Script/KofJS).

@@ -2216,4 +2216,76 @@ class ConformanceMatrixTest {
                 }
                 """, "1\n2", Set.of(), tempDir);
     }
+
+    // ===== Lote X5 — sistema de tipos (D-X5-SURFACE, 21/09) =====
+
+    @Test
+    void conformanceTypeSystemX5(@TempDir Path tempDir) throws IOException {
+        // X5.1/X5.2: `sealed` + `switch` exaustivo (modificador é compile-time;
+        // a semântica de runtime é o switch sobre os subtipos diretos).
+        matrix("sealedswitch", """
+                sealed class Shape
+
+                class Circle extends Shape {
+                    Int r
+                    public constructor(Int r) { this.r = r }
+                }
+
+                class Square extends Shape {
+                    Int s
+                    public constructor(Int s) { this.s = s }
+                }
+
+                String describe(Shape sh) {
+                    return switch (sh) {
+                        case Circle c -> "circle"
+                        case Square q -> "square"
+                    }
+                }
+
+                main() {
+                    println(describe(Circle(1)))
+                    println(describe(Square(2)))
+                }
+                """, "circle\nsquare", Set.of(), tempDir);
+        // X5.3: variância declaration-site (`out` covariante) — erasure não
+        // muda a saída; o que o caso trava é compilar+rodar igual nos 4 alvos.
+        matrix("variance", """
+                record Source<out T>(T value)
+
+                class Animal {
+                    String name
+                    public constructor(String name) { this.name = name }
+                }
+
+                class Dog extends Animal {
+                    public constructor(String name) { super(name) }
+                }
+
+                Source<Animal> up(Source<Dog> d) { return d }
+
+                main() {
+                    println(up(Source(Dog("rex"))).value().name)
+                }
+                """, "rex", Set.of(), tempDir);
+        // X5.4: projeção no sítio de uso (`List<out T>`/`List<in T>`).
+        matrix("useproj", """
+                class Animal {
+                    String name
+                    public constructor(String name) { this.name = name }
+                }
+
+                class Dog extends Animal {
+                    public constructor(String name) { super(name) }
+                }
+
+                List<out Animal> up(List<Dog> xs) { return xs }
+                List<in Dog> down(List<Animal> xs) { return xs }
+
+                main() {
+                    println(up(listOf(Dog("rex"))).size)
+                    println(down(listOf(Animal("a"))).size)
+                }
+                """, "1\n1", Set.of(), tempDir);
+    }
 }

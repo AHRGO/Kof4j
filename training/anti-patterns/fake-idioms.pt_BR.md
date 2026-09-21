@@ -67,10 +67,10 @@ var maybe = Option.of(x)
 // NÃO COMPILA — for sem var
 for (user in users) { }
 
-// NÃO COMPILA — sealed/permits NÃO são palavras-chave (a SG-002 removeu-as
-// do lexer em 12/09). `sealed` vira um IDENTIFIER perdido → PARSE010.
-// Use `record` + `enum` + `interface` (o hábito Kotlin de sealed-class falha aqui).
-sealed class Resultado permits Sucesso, Erro { }
+// NÃO COMPILA — a cláusula `permits` NÃO existe (hábito Kotlin).
+// `sealed` em si É válido agora (modificador contextual, 0.5.0-beta X5.1): o
+// conjunto fechado é "subtipos no MESMO arquivo", não uma lista `permits`.
+sealed class Resultado permits Sucesso, Erro { }   // `permits` → erro de PARSE
 ```
 
 ## Good example — o que existe hoje

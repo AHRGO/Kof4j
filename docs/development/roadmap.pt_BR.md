@@ -951,7 +951,7 @@ tiers `stable`/`experimental` (`docs/backend-parity.md`).
 | 2.3.1 | Constant-folding de constantes de domínio | ✅ `"a"+"b"→"ab"` (`OptimizerConstantFold:100`) |
 | 2.3.2 | Detecção de ciclo no grafo `infra` em compile-time | ✅ **FECHADA 21/09 como runtime-only** (adendo a `D-MAKEALIVE-SYNTAX`, `5759b9bd`): a 2.2.4 é açúcar puro, então o compilador vê só chamadas genéricas — um grafo estático daria semântica própria ao bloco (§7/regra 11); a recusa em runtime da 3.1 nomeia os membros do ciclo |
 | 2.4.1 | Scoped resources (RAII leve sobre `try/finally`) | 🟡 só design (`future/scoped-resources-plan.md`); sintaxe `using` gated por bump |
-| 2.5 | Variance / sealed | ✅ **DECIDIDO ADIAR** — `enum`+`record`/`interface` cobrem o caso; abre só com pipeline científica (bump) |
+| 2.5 | Variance / sealed | ⏫ **SUPERSEDIDO 21/09 por §2.8.4** (`D-TYPE-VARIANCE`): `sealed` + variância abriram como as fatias **X5** (X5.1–X5.4 ✅ FEITO 21/09); o "adiar" antigo não vale mais |
 
 #### 2.6 — Nullability por INTENÇÃO EXPLÍCITA (fila N1→N4 de DECISIONS §D-NULL-INTENT, 15/09)
 
@@ -1000,7 +1000,7 @@ do código, regra 6).
 | 2.8.1 | **R4 `CodegenStep`** (`D-CODEGEN-STEP` = A) — ✅ **pousou 21/09** | hook de codegen INTERNO do compilador, sem sintaxe de usuário; destrava `infra "prod" {}` (3.2) + migração DDL/runner | — |
 | 2.8.2 | **R3-3.3 handles/out-buffers** (`D-R3-3.3` = A) | `Handle` opaco nominal (não-aritmético) + `Buffer(U8, INOUT)` (== D6-3); pré-requisito dos Estágios 4–7 | R3 (2.1) |
 | 2.8.3 | **R3-3.5 variadics** (`D-R3-3.5` = A) | SEM variadics gerais — caller passa `List`/`Array`/`Buffer`; gap documentado (R6/R7) | R3 (2.1) |
-| 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **APROVADO 21/09**: plano revisado; **fatias incrementais** (prova por fatia), spec-first ANTES de qualquer diff de parser/typer | 🔵 |
+| 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **APROVADO 21/09**: plano revisado; **fatias incrementais** (prova por fatia), spec-first ANTES de qualquer diff de parser/typer — **X5.1–X5.4 ✅ FEITO 21/09** (`sealed`+`SEM080`; `switch` exaustivo+`SEM081`; variância declaration-site `out`/`in`+`SEM082`; projeção no sítio de uso `List<out T>`/`List<in T>`); resta X5.5 (parity+docs+training) | 🔵 |
 | 2.8.5 | **X6 reflexão de interop** (`D-INTEROP-REFLECT` = aberto) | **APROVADO 21/09**: plano incremental (fatias + prova por fatia), só na fronteira de interop | 🔵 |
 
 **Plano spec (X5 + X6):** [`type-system-extensions-plan.pt_BR.md`](type-system-extensions-plan.pt_BR.md) — **APROVADO 21/09 (`D-TYPE-VARIANCE`/`D-INTEROP-REFLECT`)**, promovido para `docs/development/`; fatias incrementais com prova.
