@@ -44,17 +44,17 @@ Reivindique um item no `DOING.md` **no mesmo commit** que inicia o trabalho.
 
 | Estágio | Nome | Status | Bloqueio |
 |---------|------|--------|----------|
-| 1 | SYSTEMS (consolidação) | 🟡 em curso | sign-off GC x86 ⛔ (registry ✅ 19/09) |
+| 1 | SYSTEMS (consolidação) | 🟡 em curso | gaps de paridade web/native **1.1.3–1.1.9** (donos: lanes web/native) — **D1–D3 ✅ decididos 19/09** (GC x86 ✅ D1-A; registry ✅ 19/09) |
 | 2 | AUTOMATION | 🔵 não iniciado | Estágio 1 |
-| 3 | INFRASTRUCTURE (Kof Makealive) | 🟡 planejado 19/09 — `makealive-plan.md` (.18); 3.0.0 recon pendente, superfície ⛔ Q1–Q4 | Estágio 2, R3 (FFI), R4 (hook de codegen); **colisão de nome R1 medida → plano §2.1/Q1** |
+| 3 | INFRASTRUCTURE (Kof Makealive) | 🟡 planejado 19/09 — `makealive-plan.md` (.18); 3.0.0 recon pendente, **superfície ✅ decidida (Q1–Q4, `DECISIONS.md` §D-MAKEALIVE 20/09)** | Estágio 2, R3 (FFI), R4 (hook de codegen); **colisão de nome R1 ✅ resolvida (`kof.makealive`, plano §2.1/Q1)** |
 | 4 | DATA (engineering / science / ML) | 🔵 não iniciado | Estágio 3, R3 (FFI) |
 | 5 | SECURITY (expansão) | 🔵 não iniciado | Estágio 3, R3 (FFI) |
 | 6 | SCIENTIFIC COMPUTING | 🔵 não iniciado | Estágio 4, R3, GC (1.2) |
 | 7 | BIOINFORMATICS | 🔵 não iniciado | Estágios 2/4/6 |
 | 8 | UNIVERSAL PLATFORM | 🔵 não iniciado | todos os anteriores | — norte `DECISIONS.md` §D-BOOTSTRAP (20/09): o compilador escrito em Kof fecha este estágio de ponta a ponta (rascunho do plano BS-1 = lane `.18`) |
 
-Invariantes: **R1 ✅ · R6 ✅ · R7 ✅ · R8 ✅ · R12 ✅ (sobreposto)** ·
-**R2 🔵 · R3 🟡 · R4 🔵 · R5 🟡 · R9 🟡 · R10 🔵 · R11 🟡**
+Invariantes: **R1 ✅ · R2 ✅ 20/09 · R6 ✅ · R7 ✅ · R8 ✅ · R12 ✅ (sobreposto)** ·
+**R3 🟡 · R4 🔵 · R5 🟡 · R9 🟡 · R10 🔵 · R11 🟡**
 
 Fila transversal (não é estágio): **X1–X10** — gRPC, Python/R, WASM,
 avaliação em compile-time, variance/sealed, reflexão de interop, debugger
@@ -126,7 +126,7 @@ domínio novo. **Este estágio fecha antes de qualquer Tier 6+ (R12).**
 | # | Item | Status | Dono | Prova / nota |
 |---|------|--------|------|--------------|
 | 1.7.1 | Seam HAL `kof_plat_*` + perfil freestanding (faces B-0…B-5) | 🔵 | lane native | `docs/development/future/PLAN-BAREMETAL-BOOT.md`; **não agendado** — MCU depende de 1.2 |
-| 1.7.2 | Agendamento das faces bare-metal | ⛔ | **mantenedora** | diretriz 15/09; só plano, sem dono atribuído |
+| 1.7.2 | Agendamento das faces bare-metal | 🔵 | — (lane native rascunha) | **✅ decidido (`D3-A` 19/09): o plano de design está autorizado** (`docs/development/future/PLAN-BAREMETAL-BOOT.md`); ainda sem dono — entra quando SYSTEMS fechar (R12) |
 
 ---
 
@@ -324,7 +324,7 @@ pesados · um alvo por domínio · uma reimplementação do ecossistema científ
 | R2 | Generalizar "capability/link by use" para todos os pacotes/domínios | ✅ 20/09 | **fatia 1 (math)**: o x86 não liga mais `libm` incondicionalmente — o shim `call pow` do monolito virou FRACO (`.weak pow`, RuntimeMath) e `-lm` só entra quando a fonte realmente chama `kof_math_pow` (o único caminho ao shim, escaneado como `usesDb`/`usesMysql`). A matriz inteira agora é by-use, MEDIDA por face: x86 `LinkByUseTest` (readelf em ELF real: plain liga SÓ libc; sqlite/pthread/libm só quando usados; binário pow bate byte a byte com o oráculo JVM), cross scan `needsSqlite` + `ffiLinkArg` (#431), JS delegação ao host (require lazy), JVM class-loading lazy. Ternário morto no NativeAssembler (sqlite igual nos dois ramos) removido junto. |
 | R3 | Formalizar FFI como first-class | 🟡 | **ABI escalar da JVM + `void` 18/09 (`.18`)**: `kof_ffi`/`kof_ffi_void` casam aridade arbitrária sobre {Int,Long,Float,Double,Boolean,String} entrada/saída, `String` lê `char*`, `void` é descartado como statement. `FfiE2ETest` cobre `pow`/`strstr`/`srand`/`atol→labs` (Long) + `FfiSignatureTest` trava o mapeamento escalar→layout completo. **Paridade JS FECHADA 18/09 (3.6 F1+F2+F3, `.18`)**: a mesma ABI escalar agora binda no target JS via bridge FFM no host `KofJsFfiBridge` (`extern`→`kofFfi`→`ProxyExecutable` `kof_platform.ffi`), provada byte-a-byte JVM↔JS (`FfiE2ETest` +7 `assertJvmJsParity`); o browser não tem host → degrade honesto em runtime (R7, como `kof.io`). Ver §R3-fatias para a decomposição completa. **Callbacks/upcalls (3.4) paridade JVM+JS FECHADA 18/09 (C1→C3.4)**: `extern` com parâmetro de tipo-função binda tanto na JVM quanto no host runner JS — um valor de função Kof entregue a C como ponteiro de função real (`Linker.upcallStub`), provado byte-a-byte JVM↔JS (`42/42/6.0/7.5` em ABIs Int/Long/Double/mistas; `5/104/2026` em ABIs com `String` como argumento — `char*`->`String` na fronteira do upcall); a ponte JS chama o método `invoke` do objeto `Lambda` compilado (um valor de função Kof é um objeto, não uma arrow nativa — descoberto na C3.2); síncrono/não-escapante; ABI do callback = primitivos + `String` como arg; **retorno** `String` segue não-bindável (`FFI001`/`FFI002`); o browser degrada honesto (R7). Restam: handles opacos/out-buffers (3.3 ⛔), variadics (3.5 ⛔), ABI struct/array D6 (3.8 ⛔), callbacks Native (sem mecanismo). **ABI escalar Native FECHADA 20/09 (#431 fatias 1–2, `6794ca21`+`cc12f4d0`, §369)**: `extern` com `library()` binda DIRETO em x86-64/riscv64/aarch64 (link-by-use + `call sym@PLT`, sem `dlopen` — o escape do §61 é a rota de produção; `FfiNativeE2ETest` 16/16 + `FfiNativeCrossE2ETest` 6/6 sob qemu); o bug nessa superfície, §370/#549 (`Double`/`Int` cru num slot `Float`/`Double` = bit-garbage silencioso no Native), CORRIGIDO 20/09 pelo `ExternArgumentCoercion` (`FfiExternTypeConversionTest` 11/11). Gaps honestos por target que restam (R7): assinaturas não-escalares + callbacks Native (`FFI001`) e não-escalar no JS (`FFI002`). — **D6-A ✅ 19/09**: struct/array = spec-first (ver 3.8) |
 | R4 | Formalizar o codegen em compile-time (`CodegenStep`) | 🔵 | NÃO existe no HEAD (2.2.2); bloqueia `infra "prod" {}` (3.2) e a migração DDL/runner |
-| R5 | Tiers de estabilidade + pacotes oficiais | 🟡 | tiers definidos em `backend-parity.md` §Stability tiers; **marcação por-namespace ainda não aplicada** — decisão ⛔ |
+| R5 | Tiers de estabilidade + pacotes oficiais | 🟡 | tiers definidos em `backend-parity.md` §Stability tiers; **`D4-A` decidido** (todo namespace nasce `experimental`; promoção por-namespace com o DoD do R5) — a **aplicação** da marcação é a parte pendente, não uma decisão |
 | R6 | Manter o "nunca silencioso" para domínios novos | ✅ 17/09 | gate de máquina `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` (`19a740f2`) + varredura completa do ledger (`c5897cd5`, achou §278) |
 | R7 | Escopo honesto por alvo (JVM-first / Native systems / JS web) | ✅ | estratégia adotada; imposta pelos gaps documentados (`OBS003`, `GPU001`, `PROC001`, `SECN00x`, `MEDIA00x`) |
 | R8 | Manter o tooling no MESMO frontend | ✅ | regra atual (LSP, `kof deps`, CLI consomem o frontend do compilador; sem parser paralelo) |
@@ -363,7 +363,7 @@ via `atol`→`labs`; conjunto inteiro travado por mapeamento em `FfiSignatureTes
 JVM↔JS, +7). No target JS a **ABI escalar agora binda no host runner GraalJS/node**
 (FFM no host, sem bytecode no guest); o browser não tem host `kof_platform.ffi` e
 lança erro honesto em runtime (R7, mesmo degrade do `kof.io`); assinaturas não-
-escalares (array/struct/pointer) seguem `FFI002` em compilação (3.3/3.5/3.8 ⛔).
+escalares (array/struct/pointer) seguem `FFI002` em compilação (3.3/3.5 ⛔; 3.8 em curso — D6 decidido, 3.8a/b landed).
 **Callback/upcall (3.4): TOTALMENTE LANDADO
 18/09 (C1→C3.4) — a JVM *e* o host runner JS agora bindam callbacks primitivos **E com
 argumento `String`****
@@ -371,7 +371,7 @@ argumento `String`****
 Kof; um `.kf` real computa `42/42/6.0/7.5` em ABIs Int/Long/Double/mistas e `5/104/2026`
 em args `String`, byte-a-byte JVM↔JS em `JvmFfiCallbackE2ETest`; a ponte JS chama o método `invoke` do objeto `Lambda`
 compilado, lendo o `char*` de um arg callback a `String` Kof na fronteira — design completo + a descoberta objeto-vs-arrow da C3.2 em §R3-3.4 abaixo).
-De resto, o próximo trabalho da R3 são as decisões da mantenedora (3.3/3.5/3.8, correção da spec D6 primeiro); a ABI escalar Native (3.7) landou 20/09 e o §370/#549 (conversão de argumento de extern) fechou no mesmo dia.
+De resto, o próximo trabalho da R3 são as decisões da mantenedora (3.3/3.5) mais a 3.8 em curso (D6 decidido 20/09; 3.8b fatia 1 landed); a ABI escalar Native (3.7) landou 20/09 e o §370/#549 (conversão de argumento de extern) fechou no mesmo dia.
 
 ### §R3-3.4 — callbacks / upcalls (função Kof entregue a C)
 

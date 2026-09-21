@@ -43,17 +43,17 @@ Claim an item in `DOING.md` **in the same commit** that starts the work.
 
 | Stage | Name | Status | Blocker |
 |-------|------|--------|---------|
-| 1 | SYSTEMS (consolidation) | 🟡 in progress | GC x86 sign-off ⛔ (registry ✅ 19/09) |
+| 1 | SYSTEMS (consolidation) | 🟡 in progress | web/native parity gaps **1.1.3–1.1.9** (owners: web/native lanes) — **D1–D3 ✅ decided 19/09** (GC x86 ✅ D1-A; registry ✅ 19/09) |
 | 2 | AUTOMATION | 🔵 not started | Stage 1 |
-| 3 | INFRASTRUCTURE (Kof Makealive) | 🟡 planned 19/09 — `makealive-plan.md` (.18); 3.0.0 recon-pending, surface ⛔ Q1–Q4 | Stage 2, R3 (FFI), R4 (codegen hook); **name collision R1 measured → plan §2.1/Q1** |
+| 3 | INFRASTRUCTURE (Kof Makealive) | 🟡 planned 19/09 — `makealive-plan.md` (.18); 3.0.0 recon-pending, **surface ✅ decided (Q1–Q4, `DECISIONS.md` §D-MAKEALIVE 20/09)** | Stage 2, R3 (FFI), R4 (codegen hook); **name collision R1 ✅ resolved (`kof.makealive`, plan §2.1/Q1)** |
 | 4 | DATA (engineering / science / ML) | 🔵 not started | Stage 3, R3 (FFI) |
 | 5 | SECURITY (expansion) | 🔵 not started | Stage 3, R3 (FFI) |
 | 6 | SCIENTIFIC COMPUTING | 🔵 not started | Stage 4, R3, GC (1.2) |
 | 7 | BIOINFORMATICS | 🔵 not started | Stages 2/4/6 |
 | 8 | UNIVERSAL PLATFORM | 🔵 not started | all previous | — north star `DECISIONS.md` §D-BOOTSTRAP (20/09): the compiler written in Kof closes this stage end-to-end (BS-1 design-plan draft = lane `.18`) |
 
-Invariants: **R1 ✅ · R6 ✅ · R7 ✅ · R8 ✅ · R12 ✅ (overridden)** ·
-**R2 🔵 · R3 🟡 · R4 🔵 · R5 🟡 · R9 🟡 · R10 🔵 · R11 🟡**
+Invariants: **R1 ✅ · R2 ✅ 20/09 · R6 ✅ · R7 ✅ · R8 ✅ · R12 ✅ (overridden)** ·
+**R3 🟡 · R4 🔵 · R5 🟡 · R9 🟡 · R10 🔵 · R11 🟡**
 
 Cross-cutting queue (not a stage): **X1–X10** — gRPC, Python/R, WASM,
 compile-time eval, variance/sealed, interop reflection, DWARF/source-map
@@ -125,7 +125,7 @@ a new domain. **This stage closes before any Tier 6+ (R12).**
 | # | Item | Status | Owner | Proof / note |
 |---|------|--------|-------|--------------|
 | 1.7.1 | HAL seam `kof_plat_*` + freestanding profile (faces B-0…B-5) | 🔵 | native lane | `docs/development/future/PLAN-BAREMETAL-BOOT.md`; **not scheduled** — MCU depends on 1.2 |
-| 1.7.2 | Scheduling of the bare-metal faces | ⛔ | **maintainer** | 15/09 directive; plan only, no owner assigned |
+| 1.7.2 | Scheduling of the bare-metal faces | 🔵 | — (native lane drafts) | **✅ decided (`D3-A` 19/09): the design plan is authorized** (`docs/development/future/PLAN-BAREMETAL-BOOT.md`); no owner assigned yet — enters when SYSTEMS closes (R12) |
 
 ---
 
@@ -322,7 +322,7 @@ domain · a reimplementation of the scientific ecosystem.
 | R2 | Generalize "capability/link by use" to all packages/domains | ✅ 20/09 | **fatia 1 (math)**: x86 no longer links `libm` unconditionally — the monolith's `call pow` shim became WEAK (`.weak pow`, RuntimeMath) and `-lm` enters only when the source really calls `kof_math_pow` (the sole path to the shim, scanned like `usesDb`/`usesMysql`). The whole matrix is now by-use, MEASURED per face: x86 `LinkByUseTest` (readelf on real ELFs: plain links libc ONLY; sqlite/pthread/libm link only when used; pow binary byte-matches the JVM oracle), cross `needsSqlite` scan + `ffiLinkArg` (#431), JS host-delegated (lazy require), JVM lazy class-loading. Dead ternary in NativeAssembler (sqlite both-branches-equal) removed alongside. |
 | R3 | Formalize FFI as first-class | 🟡 | **JVM scalar ABI + `void` 18/09 (`.18`)**: `kof_ffi`/`kof_ffi_void` bind arbitrary arity over {Int,Long,Float,Double,Boolean,String} in/out, `String` reads `char*`, `void` returns discarded as statement. `FfiE2ETest` covers `pow`/`strstr`/`srand`/`atol→labs` (Long) + `FfiSignatureTest` locks the full scalar→layout mapping. **JS parity CLOSED 18/09 (3.6 F1+F2+F3, `.18`)**: the same scalar ABI now binds on the JS target via the host FFM bridge `KofJsFfiBridge` (`extern`→`kofFfi`→`kof_platform.ffi` `ProxyExecutable`), proven byte-for-byte JVM↔JS (`FfiE2ETest` +7 `assertJvmJsParity`); a browser has no host → honest runtime degrade (R7, like `kof.io`). See §R3-slices for the full decomposition. **Callbacks/upcalls (3.4) JVM+JS parity CLOSED 18/09 (C1→C3.4)**: `extern` with a function-typed param binds on both the JVM and the JS host runner — a Kof function value handed to C as a real function pointer (`Linker.upcallStub`), proven byte-for-byte JVM↔JS (`42/42/6.0/7.5` across Int/Long/Double/mixed; `5/104/2026` across `String`-arg — `char*`->`String` at the upcall boundary); the JS bridge calls the compiled `Lambda` object's `invoke` method (a Kof function value is an object, not a native arrow — discovered in C3.2); synchronous/non-escaping; callback ABI = primitives + `String` as an argument; a `String` **return** stays non-bindable (`FFI001`/`FFI002`); a browser degrades honestly (R7). **Native scalar ABI CLOSED 20/09 (#431 slices 1–2, `6794ca21`+`cc12f4d0`, §369)**: `extern` with `library()` binds DIRECT on x86-64/riscv64/aarch64 (link-by-use + `call sym@PLT`, no `dlopen` — the §61 escape is the production route; `FfiNativeE2ETest` 16/16 + `FfiNativeCrossE2ETest` 6/6 under qemu); the bug on that surface, §370/#549 (a bare `Double`/`Int` in a `Float`/`Double` slot = silent bit-garbage on Native), FIXED 20/09 by `ExternArgumentCoercion` (`FfiExternTypeConversionTest` 11/11). Remaining: opaque handles/out-buffers (3.3 ⛔), variadics (3.5 ⛔), struct/array D6 (3.8 ⛔), Native callbacks (no mechanism). Honest per-target gaps that remain (R7): non-scalar signatures + Native callbacks (`FFI001`) and non-scalar on JS (`FFI002`). — **D6-A ✅ 19/09**: struct/array = spec-first (ver 3.8) |
 | R4 | Formalize compile-time codegen (`CodegenStep`) | 🔵 | does NOT exist at HEAD (2.2.2); blocks `infra "prod" {}` (3.2) and DDL/runner migration |
-| R5 | Stability tiers + official packages | 🟡 | tiers defined in `backend-parity.md` §Stability tiers; **per-namespace tier marking not yet applied** — decision ⛔ |
+| R5 | Stability tiers + official packages | 🟡 | tiers defined in `backend-parity.md` §Stability tiers; **`D4-A` decided** (every namespace is born `experimental`; per-namespace promotion with the R5 DoD) — the **application** of the marking is the pending part, not a decision |
 | R6 | Keep "never silent" for new domains | ✅ 17/09 | machine gate `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` (`19a740f2`) + full ledger sweep (`c5897cd5`, found §278) |
 | R7 | Honest scope per target (JVM-first / Native systems / JS web) | ✅ | adopted strategy; enforced by the documented gaps (`OBS003`, `GPU001`, `PROC001`, `SECN00x`, `MEDIA00x`) |
 | R8 | Keep the tooling on the SAME frontend | ✅ | current rule (LSP, `kof deps`, CLI consume the compiler frontend; no parallel parser) |
@@ -360,7 +360,7 @@ the scalar gate) → F3 (byte-for-byte JVM↔JS parity E2E, +7). On the JS targe
 **scalar ABI now binds on the GraalJS/node host runner** (FFM on the host, no guest
 bytecode); a browser has no `kof_platform.ffi` host so it throws an honest runtime
 error (R7, same degrade as `kof.io`); non-scalar signatures (array/struct/pointer)
-still `FFI002` at compile time (3.3/3.5/3.8 ⛔). **Callback/upcall (3.4): FULLY LANDED
+still `FFI002` at compile time (3.3/3.5 ⛔; 3.8 in progress — D6 decided, 3.8a/b landed). **Callback/upcall (3.4): FULLY LANDED
 18/09 (C1→C3.4) — the JVM *and* the JS host runner now bind primitive callbacks AND
 `String`-argument callbacks**
 (`extern` with a function-typed param → `Linker.upcallStub` over the Kof function
@@ -369,7 +369,7 @@ across String args, byte-for-byte JVM↔JS in `JvmFfiCallbackE2ETest`; the JS br
 the compiled `Lambda` object's `invoke` method, reading a `char*` callback arg to a Kof
 `String` at the boundary — full design + the C3.2 object-vs-arrow discovery in §R3-3.4
 below).
-Otherwise the next R3 work is maintainer decisions (3.3/3.5/3.8, D6 spec correction first); the Native scalar ABI (3.7) landed 20/09 and §370/#549 (extern argument conversion) closed the same day.
+Otherwise the next R3 work is maintainer decisions (3.3/3.5) plus the in-flight 3.8 (D6 decided 20/09; 3.8b slice 1 landed); the Native scalar ABI (3.7) landed 20/09 and §370/#549 (extern argument conversion) closed the same day.
 
 ### §R3-3.4 — callbacks / upcalls (a Kof function handed to C)
 
