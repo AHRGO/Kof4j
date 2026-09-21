@@ -13,6 +13,7 @@ public final class ExpressionJsonCallLowerer {
     static int lower(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
                     String owner, int localIdx, List<IRLocalVariable> locals) {
     if ("encode".equals(mc.methodName()) && mc.arguments().size() == 1) {
+        SecretRevealLint.warnIfRevealed(driver, mc.arguments(), "json.encode");
         Type argType = ExpressionTyper.inferExprType(driver, mc.arguments().get(0), locals);
         if (!driver.jsonSupported(argType, false)) {
             return localIdx;

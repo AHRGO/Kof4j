@@ -222,8 +222,15 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_buffer_alloc" -> "Ldev/kof/runtime/KofRuntime$Buffer;";
             case "kof_buffer_bytes" -> "[B";
             // D-SECRETS face 1: tipo Secret.
-            case "kof_sec_secret_of", "kof_sec_secret" -> "Ldev/kof/runtime/KofRuntime$Secret;";
+            case "kof_sec_secret_of", "kof_sec_secret", "kof_sec_secret_from_bytes" -> "Ldev/kof/runtime/KofRuntime$Secret;";
             case "kof_sec_secret_reveal", "kof_sec_secret_redacted" -> "Ljava/lang/String;";
+            // D-SECRETS P3 (KeyHandle).
+            case "kof_sec_key_from_hex", "kof_sec_key_from_pem", "kof_sec_key_from_keystore",
+                    "kof_sec_key_rotate" -> "Ldev/kof/runtime/KofRuntime$KeyHandle;";
+            case "kof_sec_hmac_sha256_key", "kof_sec_aesgcm_encrypt_key", "kof_sec_aesgcm_decrypt_key",
+                    "kof_sec_chacha20_encrypt_key", "kof_sec_chacha20_decrypt_key",
+                    "kof_sec_jwt_create_key", "kof_sec_jwt_create_ttl_key",
+                    "kof_sec_jwt_verify_key", "kof_sec_jwt_verify_iss_aud_key" -> "Ljava/lang/String;";
             default -> "Ljava/lang/Object;";
         };
     }

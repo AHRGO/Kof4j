@@ -41,6 +41,7 @@ public final class KofSecurity {
     private static final Type STR = BuiltinTypes.STRING;
     private static final Type BOOL = Type.PrimitiveType.BOOL;
     private static final Type INT = Type.PrimitiveType.INT;
+    private static final Type INT_ARRAY = new Type.ArrayType(INT);
 
     /** Face 1 do D-SECRETS (Stage 5 / 3.6): tipo nominal {@code Secret}. Um
      *  valor que NÃO se imprime/serializa sem um ato explícito ({@code reveal()}).
@@ -50,6 +51,12 @@ public final class KofSecurity {
     static final Type SECRET = new Type.ClassType("kof", "Secret", List.of());
 
     static boolean isSecretType(Type t) { return SECRET.equals(t); }
+
+    /** D-SECRETS P3 (Stage 5 / 3.6): {@code KeyHandle} — chave nomeada que
+     *  nunca expoe bytes ao guest; so os algoritmos de crypto a consomem. */
+    static final Type KEY_HANDLE = new Type.ClassType("kof", "KeyHandle", List.of());
+
+    static boolean isKeyHandleType(Type t) { return KEY_HANDLE.equals(t); }
 
     static final List<String> NAMESPACES = List.of(
             "passwords", "crypto", "jwt", "secrets", "security", "auth");
@@ -67,7 +74,7 @@ public final class KofSecurity {
                 "passwords", List.of("hash", "verify", "needsRehash"),
                 "crypto", List.of("sha256", "sha512", "hmacSha256", "encryptAesGcm", "decryptAesGcm", "encryptChacha20", "decryptChacha20", "randomHex", "randomInt"),
                 "jwt", List.of("create", "verify", "secret"),
-                "secrets", List.of("get", "redact", "of", "secret"),
+                "secrets", List.of("get", "redact", "of", "secret", "fromBytes", "keyFromHex", "keyFromPem", "keyFromKeystore"),
                 "security", List.of("constantTimeEquals", "randomHex", "redact", "randomInt", "csrfToken", "csrfValid", "corsAllowed", "cspHeader", "hstsHeader", "contentTypeOptionsHeader", "frameHeader", "referrerHeader", "rateLimit", "sessionCreate", "sessionGet", "sessionDestroy", "apiKeyGenerate", "apiKeyValid", "cookieSet", "cookieGet"),
                 "auth", List.of("secret", "token", "authenticated", "claims", "user", "hasRole", "hasPermission", "resourceServer", "resourceServerVerify"));
     }
@@ -94,15 +101,20 @@ public final class KofSecurity {
                 case "sha512" -> argc == 1
                         ? new SecCall("kof_sec_sha512", STR, List.of(STR)) : null;
                 case "hmacSha256" -> argc == 2
-                        ? new SecCall("kof_sec_hmac_sha256", STR, List.of(STR, STR)) : null;
+                        ? new SecCall(isKeyHandleType(argTypes.get(0)) ? "kof_sec_hmac_sha256_key" : "kof_sec_hmac_sha256",
+                                STR, isKeyHandleType(argTypes.get(0)) ? List.of(KEY_HANDLE, STR) : List.of(STR, STR)) : null;
                 case "encryptAesGcm" -> argc == 2
-                        ? new SecCall("kof_sec_aesgcm_encrypt", STR, List.of(STR, STR)) : null;
+                        ? new SecCall(isKeyHandleType(argTypes.get(1)) ? "kof_sec_aesgcm_encrypt_key" : "kof_sec_aesgcm_encrypt",
+                                STR, isKeyHandleType(argTypes.get(1)) ? List.of(STR, KEY_HANDLE) : List.of(STR, STR)) : null;
                 case "decryptAesGcm" -> argc == 2
-                        ? new SecCall("kof_sec_aesgcm_decrypt", STR, List.of(STR, STR)) : null;
+                        ? new SecCall(isKeyHandleType(argTypes.get(1)) ? "kof_sec_aesgcm_decrypt_key" : "kof_sec_aesgcm_decrypt",
+                                STR, isKeyHandleType(argTypes.get(1)) ? List.of(STR, KEY_HANDLE) : List.of(STR, STR)) : null;
                 case "encryptChacha20" -> argc == 2
-                        ? new SecCall("kof_sec_chacha20_encrypt", STR, List.of(STR, STR)) : null;
+                        ? new SecCall(isKeyHandleType(argTypes.get(1)) ? "kof_sec_chacha20_encrypt_key" : "kof_sec_chacha20_encrypt",
+                                STR, isKeyHandleType(argTypes.get(1)) ? List.of(STR, KEY_HANDLE) : List.of(STR, STR)) : null;
                 case "decryptChacha20" -> argc == 2
-                        ? new SecCall("kof_sec_chacha20_decrypt", STR, List.of(STR, STR)) : null;
+                        ? new SecCall(isKeyHandleType(argTypes.get(1)) ? "kof_sec_chacha20_decrypt_key" : "kof_sec_chacha20_decrypt",
+                                STR, isKeyHandleType(argTypes.get(1)) ? List.of(STR, KEY_HANDLE) : List.of(STR, STR)) : null;
                 case "randomHex" -> argc == 1
                         ? new SecCall("kof_sec_random_hex", STR, List.of(INT)) : null;
                 case "randomInt" -> argc == 1
@@ -111,14 +123,22 @@ public final class KofSecurity {
             };
             case "jwt" -> switch (name) {
                 case "create" -> argc == 2
-                        ? new SecCall("kof_sec_jwt_create", STR, List.of(STR, STR))
+                        ? (isKeyHandleType(argTypes.get(1))
+                        ? new SecCall("kof_sec_jwt_create_key", STR, List.of(STR, KEY_HANDLE))
+                        : new SecCall("kof_sec_jwt_create", STR, List.of(STR, STR)))
                         : argc == 3
-                        ? new SecCall("kof_sec_jwt_create_ttl", STR, List.of(STR, STR, INT))
+                        ? (isKeyHandleType(argTypes.get(1))
+                        ? new SecCall("kof_sec_jwt_create_ttl_key", STR, List.of(STR, KEY_HANDLE, INT))
+                        : new SecCall("kof_sec_jwt_create_ttl", STR, List.of(STR, STR, INT)))
                         : null;
                 case "verify" -> argc == 2
-                        ? new SecCall("kof_sec_jwt_verify", STR, List.of(STR, STR))
+                        ? (isKeyHandleType(argTypes.get(1))
+                        ? new SecCall("kof_sec_jwt_verify_key", STR, List.of(STR, KEY_HANDLE))
+                        : new SecCall("kof_sec_jwt_verify", STR, List.of(STR, STR)))
                         : argc == 4
-                        ? new SecCall("kof_sec_jwt_verify_iss_aud", STR, List.of(STR, STR, STR, STR))
+                        ? (isKeyHandleType(argTypes.get(1))
+                        ? new SecCall("kof_sec_jwt_verify_iss_aud_key", STR, List.of(STR, KEY_HANDLE, STR, STR))
+                        : new SecCall("kof_sec_jwt_verify_iss_aud", STR, List.of(STR, STR, STR, STR)))
                         : null;
                 case "secret" -> argc == 0
                         ? new SecCall("kof_sec_jwt_secret", STR, List.of())
@@ -144,6 +164,17 @@ public final class KofSecurity {
                 case "secret" -> argc == 1
                         ? new SecCall("kof_sec_secret", SECRET, List.of(STR))
                         : null;
+                case "fromBytes" -> argc == 1
+                        ? new SecCall("kof_sec_secret_from_bytes", SECRET, List.of(INT_ARRAY))
+                        : null;
+                // D-SECRETS P3: fontes de KeyHandle (JVM-primeiro). O handle
+                // nunca expoe bytes; os algoritmos de crypto o consomem.
+                case "keyFromHex" -> argc == 1
+                        ? new SecCall("kof_sec_key_from_hex", KEY_HANDLE, List.of(STR)) : null;
+                case "keyFromPem" -> argc == 1
+                        ? new SecCall("kof_sec_key_from_pem", KEY_HANDLE, List.of(STR)) : null;
+                case "keyFromKeystore" -> argc == 3
+                        ? new SecCall("kof_sec_key_from_keystore", KEY_HANDLE, List.of(STR, STR, STR)) : null;
                 default -> null;
             };
             case "security" -> switch (name) {
@@ -229,14 +260,23 @@ public final class KofSecurity {
     /** Face 1 do D-SECRETS (Stage 5/3.6): métodos de instância do tipo
      *  {@code Secret}. Inalcançáveis onde {@code of}/{@code secret} são gated. */
     static SecCall instanceMethod(Type receiver, String name, int argCount) {
-        if (!isSecretType(receiver)) return null;
-        return switch (name) {
-            case "reveal" -> argCount == 0
-                    ? new SecCall("kof_sec_secret_reveal", STR, List.of(SECRET)) : null;
-            case "redacted" -> argCount == 0
-                    ? new SecCall("kof_sec_secret_redacted", STR, List.of(SECRET)) : null;
-            default -> null;
-        };
+        if (isSecretType(receiver)) {
+            return switch (name) {
+                case "reveal" -> argCount == 0
+                        ? new SecCall("kof_sec_secret_reveal", STR, List.of(SECRET)) : null;
+                case "redacted" -> argCount == 0
+                        ? new SecCall("kof_sec_secret_redacted", STR, List.of(SECRET)) : null;
+                default -> null;
+            };
+        }
+        if (isKeyHandleType(receiver)) {
+            return switch (name) {
+                case "rotate" -> argCount == 0
+                        ? new SecCall("kof_sec_key_rotate", KEY_HANDLE, List.of(KEY_HANDLE)) : null;
+                default -> null;
+            };
+        }
+        return null;
     }
 
     /**
@@ -285,7 +325,15 @@ public final class KofSecurity {
             // D-SECRETS face 1 (Stage 5/3.6): tipo Secret — JVM primeiro (R7);
             // JS/Native/Script/Android seguem gap honesto SECN008.
             case "kof_sec_secret_of", "kof_sec_secret", "kof_sec_secret_reveal",
-                    "kof_sec_secret_redacted" -> target == Target.JVM;
+                    "kof_sec_secret_redacted", "kof_sec_secret_from_bytes" -> target == Target.JVM;
+            // D-SECRETS P3 (KeyHandle): JVM-primeiro (R7); os demais alvos
+            // seguem gap honesto SECN008 (nunca link-break/silencioso).
+            case "kof_sec_key_from_hex", "kof_sec_key_from_pem", "kof_sec_key_from_keystore",
+                    "kof_sec_key_rotate", "kof_sec_hmac_sha256_key",
+                    "kof_sec_aesgcm_encrypt_key", "kof_sec_aesgcm_decrypt_key",
+                    "kof_sec_chacha20_encrypt_key", "kof_sec_chacha20_decrypt_key",
+                    "kof_sec_jwt_create_key", "kof_sec_jwt_create_ttl_key",
+                    "kof_sec_jwt_verify_key", "kof_sec_jwt_verify_iss_aud_key" -> target == Target.JVM;
             default -> true;
         };
     }
@@ -304,7 +352,13 @@ public final class KofSecurity {
             case "kof_sec_cookie_set", "kof_sec_cookie_set_opts", "kof_sec_cookie_get" -> "SECN006";
             case "kof_sec_auth_resource_server", "kof_sec_auth_resource_server_verify" -> "SECN007";
             case "kof_sec_secret_of", "kof_sec_secret", "kof_sec_secret_reveal",
-                    "kof_sec_secret_redacted" -> "SECN008";
+                    "kof_sec_secret_redacted", "kof_sec_secret_from_bytes",
+                    "kof_sec_key_from_hex", "kof_sec_key_from_pem", "kof_sec_key_from_keystore",
+                    "kof_sec_key_rotate", "kof_sec_hmac_sha256_key",
+                    "kof_sec_aesgcm_encrypt_key", "kof_sec_aesgcm_decrypt_key",
+                    "kof_sec_chacha20_encrypt_key", "kof_sec_chacha20_decrypt_key",
+                    "kof_sec_jwt_create_key", "kof_sec_jwt_create_ttl_key",
+                    "kof_sec_jwt_verify_key", "kof_sec_jwt_verify_iss_aud_key" -> "SECN008";
             default -> "SECN000";
         };
     }

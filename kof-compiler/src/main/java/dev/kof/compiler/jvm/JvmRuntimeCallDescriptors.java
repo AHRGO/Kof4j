@@ -465,6 +465,26 @@ public final class JvmRuntimeCallDescriptors {
             // D-SECRETS face 1: tipo Secret.
             case "kof_sec_secret_of", "kof_sec_secret"
                     -> "(Ljava/lang/String;)Ldev/kof/runtime/KofRuntime$Secret;";
+            case "kof_sec_secret_from_bytes"
+                    -> "([I)Ldev/kof/runtime/KofRuntime$Secret;";
+            // D-SECRETS P3 (KeyHandle) — JVM-primeiro.
+            case "kof_sec_key_from_hex", "kof_sec_key_from_pem"
+                    -> "(Ljava/lang/String;)Ldev/kof/runtime/KofRuntime$KeyHandle;";
+            case "kof_sec_key_from_keystore"
+                    -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ldev/kof/runtime/KofRuntime$KeyHandle;";
+            case "kof_sec_key_rotate"
+                    -> "(Ldev/kof/runtime/KofRuntime$KeyHandle;)Ldev/kof/runtime/KofRuntime$KeyHandle;";
+            case "kof_sec_hmac_sha256_key"
+                    -> "(Ldev/kof/runtime/KofRuntime$KeyHandle;Ljava/lang/String;)Ljava/lang/String;";
+            case "kof_sec_aesgcm_encrypt_key", "kof_sec_aesgcm_decrypt_key",
+                    "kof_sec_chacha20_encrypt_key", "kof_sec_chacha20_decrypt_key"
+                    -> "(Ljava/lang/String;Ldev/kof/runtime/KofRuntime$KeyHandle;)Ljava/lang/String;";
+            case "kof_sec_jwt_create_key", "kof_sec_jwt_verify_key"
+                    -> "(Ljava/lang/String;Ldev/kof/runtime/KofRuntime$KeyHandle;)Ljava/lang/String;";
+            case "kof_sec_jwt_create_ttl_key"
+                    -> "(Ljava/lang/String;Ldev/kof/runtime/KofRuntime$KeyHandle;I)Ljava/lang/String;";
+            case "kof_sec_jwt_verify_iss_aud_key"
+                    -> "(Ljava/lang/String;Ldev/kof/runtime/KofRuntime$KeyHandle;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;";
             case "kof_sec_secret_reveal", "kof_sec_secret_redacted"
                     -> "(Ldev/kof/runtime/KofRuntime$Secret;)Ljava/lang/String;";
             default -> "(Ljava/lang/String;)Ljava/lang/Object;";

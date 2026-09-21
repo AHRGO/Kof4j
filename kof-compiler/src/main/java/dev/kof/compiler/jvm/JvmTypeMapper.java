@@ -101,6 +101,11 @@ public final class JvmTypeMapper {
         if ("kof".equals(c.packageName()) && "Secret".equals(c.name())) {
             return "Ldev/kof/runtime/KofRuntime$Secret;";
         }
+        // D-SECRETS P3: `KeyHandle` apaga para KofRuntime$KeyHandle (mesmo
+        // padrao do Secret).
+        if ("kof".equals(c.packageName()) && "KeyHandle".equals(c.name())) {
+            return "Ldev/kof/runtime/KofRuntime$KeyHandle;";
+        }
         // enum: D-ENUM207 — o valor é uma INSTÂNCIA de enum (classe real
         // emitida por CompilerEnumLowering), não a String do nome. Descriptor
         // próprio L<Dir>; (antes era apagado p/ Ljava/lang/String;).

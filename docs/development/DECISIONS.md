@@ -3010,8 +3010,16 @@ to `docs/development/` (three-states). Queue: `roadmap.md` §2.8.4/§2.8.5.
 `secrets.secret(name)` constructors, `reveal()` (the only raw export),
 `redacted()`, redacted printing (`Secret(*** )`), constant-time `==`. JVM-first
 (R7); JS/Native/Script/Android = honest gap `SECN008` (R6). Proof `SecretE2ETest`
-4/4. `fromBytes` and the zeroable-buffer backing (Native) remain follow-ups;
-`KeyHandle` (P3) still needs its own vote.
+4/4.
+
+**P1 remainder + P2 + P3 AUTHORIZED (maintainer 21/09, direct order "implementa
+tudo o que falta do secrets plan … precisa fechar"):** the whole
+`secrets-plan.md` is to be implemented and the plan closed. Chosen options (the
+plan's own alternatives): `secrets.get` stays the legacy raw `String` (frozen
+0.2.6) and `secrets.secret`/`secrets.of` are the typed path — **non-breaking**;
+`P3 KeyHandle` is pulled **forward from "after 1.0"** by the same order. Each face
+stays incremental with proof and its own honest per-target gap. Queue: tracker
+3.6 / `secrets-plan.md` §2.
 
 ## D-FFI-STRUCT-B — D6-1 option B (`struct` mutable): approved spec-first (maintainer 21/09/2026)
 

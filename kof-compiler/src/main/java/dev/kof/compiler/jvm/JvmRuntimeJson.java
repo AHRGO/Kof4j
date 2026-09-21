@@ -123,6 +123,10 @@ public final class JvmRuntimeJson {
                     }
                     if (value.getClass().isArray()) return kof_json_encode_array(value);
                     if (value instanceof Map<?, ?> m) return kof_json_encode_map(m, 0);
+                    // D-SECRETS P2 (redação forçada, camada runtime): um Secret que
+                    // chega ao serializador por qualquer caminho (inclusive
+                    // reflexão/interop) vira a forma REDIGIDA — nunca os campos.
+                    if (value instanceof Secret s) return kof_json_encode_string(s.toString());
                     return kof_json_encode_object(value);
                 }
 

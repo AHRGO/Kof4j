@@ -3022,8 +3022,16 @@ incremental com prova; `KeyHandle`/redação seguem face a face. Último resídu
 `secrets.of(text)` / `secrets.secret(name)`, `reveal()` (único export cru),
 `redacted()`, impressão redigida (`Secret(*** )`), `==` constant-time.
 JVM-primeiro (R7); JS/Native/Script/Android = gap honesto `SECN008` (R6). Prova
-`SecretE2ETest` 4/4. `fromBytes` e o backing de buffer zerável (Native) seguem
-como follow-ups; `KeyHandle` (P3) ainda precisa do seu próprio voto.
+`SecretE2ETest` 4/4.
+
+**Resto da P1 + P2 + P3 AUTORIZADOS (mantenedora 21/09, ordem direta "implementa
+tudo o que falta do secrets plan … precisa fechar"):** implementar todo o
+`secrets-plan.md` e fechar o plano. Opções escolhidas (as alternativas do próprio
+plano): `secrets.get` segue o `String` cru legado (congelado 0.2.6) e
+`secrets.secret`/`secrets.of` são o caminho tipado — **não-quebrante**; a
+**P3 `KeyHandle`** é puxada **para frente do "after 1.0"** pela mesma ordem. Cada
+face segue incremental com prova e seu gap honesto por alvo. Fila: tracker 3.6 /
+`secrets-plan.md` §2.
 
 ## D-FFI-STRUCT-B — D6-1 opção B (`struct` mutável): aprovada spec-first (mantenedora 21/09/2026)
 

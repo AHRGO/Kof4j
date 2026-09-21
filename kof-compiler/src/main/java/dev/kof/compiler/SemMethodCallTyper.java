@@ -172,7 +172,7 @@ public final class SemMethodCallTyper {
             if (bufferCall != null) return bufferCall.returnType();
         }
         // D-SECRETS face 1: espelha o ramo do emit para o tipo Secret.
-        if (KofSecurity.isSecretType(recv)) {
+        if (KofSecurity.isSecretType(recv) || KofSecurity.isKeyHandleType(recv)) {
             for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
             KofSecurity.SecCall secretCall =
                     KofSecurity.instanceMethod(recv, mc.methodName(), mc.arguments().size());

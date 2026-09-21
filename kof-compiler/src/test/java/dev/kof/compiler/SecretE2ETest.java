@@ -91,6 +91,59 @@ class SecretE2ETest {
         }
     }
 
+    @Test
+    void fromBytesBuildsASecretThatStillRedactsJvm(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("sec4.kf");
+        Files.writeString(src, """
+                main() {
+                    var b = new Int[3]
+                    b[0] = 97
+                    b[1] = 98
+                    b[2] = 99
+                    val s = secrets.fromBytes(b)
+                    println(s.reveal())
+                    println(s)
+                }
+                """);
+        CompilationResult r = driver.compile(src, dir.resolve("out-sec4"), Target.JVM);
+        assertTrue(r.success(), "secrets.fromBytes(Int[]) must bind on JVM: " + r.diagnostics().getDiagnostics());
+        assertEquals("abc\nSecret(*** )", runJvm(dir.resolve("out-sec4")),
+                "bytes -> Latin-1 text; reveal() is the only raw export and println redacts");
+    }
+
+    @Test
+    void jsonEncodeOfASecretIsRedactedNotFieldDumpedJvm(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("sec5.kf");
+        Files.writeString(src, """
+                main() {
+                    val s = secrets.of("topsecret")
+                    println(json.encode(s))
+                }
+                """);
+        CompilationResult r = driver.compile(src, dir.resolve("out-sec5"), Target.JVM);
+        assertTrue(r.success(), "json.encode(Secret) must compile on JVM: " + r.diagnostics().getDiagnostics());
+        assertEquals("\"Secret(*** )\"", runJvm(dir.resolve("out-sec5")),
+                "runtime redaction (P2): the serializer must never dump the Secret field");
+    }
+
+    @Test
+    void revealingIntoLogOrJsonWarnsButStillCompilesJvm(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("sec6.kf");
+        Files.writeString(src, """
+                main() {
+                    val s = secrets.of("topsecret")
+                    log.info(s.reveal())
+                    println(json.encode(s.reveal()))
+                }
+                """);
+        CompilationResult r = driver.compile(src, dir.resolve("out-sec6"), Target.JVM);
+        assertTrue(r.success(), "lint não-fatal: deve continuar compilando: " + r.diagnostics().getDiagnostics());
+        long secn009 = r.diagnostics().getDiagnostics().stream()
+                .filter(d -> "SECN009".equals(d.code())).count();
+        assertTrue(secn009 >= 1,
+                "reveal() rumo a log/json deve emitir o warning SECN009: " + r.diagnostics().getDiagnostics());
+    }
+
     private String runJvm(Path outDir) throws IOException {
         try {
             String javaHome = System.getProperty("java.home");
