@@ -20,8 +20,8 @@ final class JvmFfiRuntime {
 
     private static final String FORMATTED = """
                 public static int kof_ffi_i(String lib, String name, int a) {
+                    java.lang.foreign.Arena arena = java.lang.foreign.Arena.ofConfined();
                     try {
-                        java.lang.foreign.Arena arena = java.lang.foreign.Arena.global();
                         java.lang.foreign.SymbolLookup lookup = lib.isEmpty()
                                 ? java.lang.foreign.SymbolLookup.loaderLookup()
                                 : java.lang.foreign.SymbolLookup.libraryLookup(lib, arena);
@@ -35,12 +35,14 @@ final class JvmFfiRuntime {
                     } catch (Throwable t) {
                         throw new RuntimeException("kof_ffi_i: " + lib + "::" + name + " failed: "
                                 + t.getMessage(), t);
+                    } finally {
+                        arena.close();
                     }
                 }
 
                 public static int kof_ffi_si(String lib, String name, String a) {
+                    java.lang.foreign.Arena arena = java.lang.foreign.Arena.ofConfined();
                     try {
-                        java.lang.foreign.Arena arena = java.lang.foreign.Arena.ofConfined();
                         java.lang.foreign.SymbolLookup lookup = lib.isEmpty()
                                 ? java.lang.foreign.SymbolLookup.loaderLookup()
                                 : java.lang.foreign.SymbolLookup.libraryLookup(lib, arena);
@@ -55,12 +57,14 @@ final class JvmFfiRuntime {
                     } catch (Throwable t) {
                         throw new RuntimeException("kof_ffi_si: " + lib + "::" + name + " failed: "
                                 + t.getMessage(), t);
+                    } finally {
+                        arena.close();
                     }
                 }
 
                 public static double kof_ffi_dd(String lib, String name, double a) {
+                    java.lang.foreign.Arena arena = java.lang.foreign.Arena.ofConfined();
                     try {
-                        java.lang.foreign.Arena arena = java.lang.foreign.Arena.global();
                         java.lang.foreign.SymbolLookup lookup = lib.isEmpty()
                                 ? java.lang.foreign.SymbolLookup.loaderLookup()
                                 : java.lang.foreign.SymbolLookup.libraryLookup(lib, arena);
@@ -74,6 +78,8 @@ final class JvmFfiRuntime {
                     } catch (Throwable t) {
                         throw new RuntimeException("kof_ffi_dd: " + lib + "::" + name + " failed: "
                                 + t.getMessage(), t);
+                    } finally {
+                        arena.close();
                     }
                 }
 

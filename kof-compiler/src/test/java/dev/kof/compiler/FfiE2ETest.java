@@ -255,6 +255,40 @@ class FfiE2ETest {
     }
 
     @Test
+    void scalarHelpersRepeatStableUnderConfinedArena(@TempDir Path dir) throws IOException {
+        // D6-5 (fatia 2, 21/09): kof_ffi_i/si/dd passam a usar arena CONFINADA por
+        // chamada, fechada no finally (antes: `Arena.global()` em i/dd = handle da
+        // biblioteca vazando, e si sem close). A repetição prova que criar/fechar a
+        // arena por chamada é estável e o valor é idempotente.
+        Path src = dir.resolve("ffi-repeat.kf");
+        Files.writeString(src, """
+                extern "libc.so.6" abs(Int x): Int
+                extern "libc.so.6" atoi(String s): Int
+                extern "libm.so.6" sqrt(Double x): Double
+
+                main() {
+                    var total = 0
+                    var dtot = 0.0
+                    var i = 0
+                    while (i < 300) {
+                        total = total + abs(-5) + atoi("7")
+                        dtot = dtot + sqrt(9.0)
+                        i = i + 1
+                    }
+                    println(total)
+                    println(dtot)
+                }
+                """);
+
+        Path out = dir.resolve("out-repeat");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "scalar externs must compile: "
+                + r.diagnostics().getDiagnostics());
+        assertEquals("3600\n900.0", runJvm(out),
+                "300x (abs+atoi)=3600 e 300x sqrt(9.0)=900.0, estável sob arena confinada");
+    }
+
+    @Test
     void libcSrandDefaultVoidBindsJVM(@TempDir Path dir) throws IOException {
         Path src = dir.resolve("ffi.kf");
         Files.writeString(src, """
