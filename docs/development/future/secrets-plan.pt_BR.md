@@ -1,4 +1,4 @@
-[English](secrets-plan.md)
+[English](secrets-plan.md) | [Português](secrets-plan.pt_BR.md)
 
 # Secrets — `Secret`, `KeyHandle` e redação forçada (plano de design · Estágio 5 / linha 3.6 do tracker)
 
