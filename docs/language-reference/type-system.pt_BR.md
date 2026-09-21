@@ -218,14 +218,16 @@ tipo de elemento de coleção (`SEM056`) — todos impostos em compile-time:
 - `abstract class A; new A()`/`A()` → `SEM041` em compile-time.
 - `l.add("x")` numa `List<Int>` → `SEM056`.
 
-**`sealed` (X5.1 — `D-X5-SURFACE`, 21/09):** `sealed class`/`record`/`interface`
+**`sealed` (X5.1/X5.2 — `D-X5-SURFACE`, 21/09):** `sealed class`/`record`/`interface`
 fecha o conjunto de subtipos em compile-time — o conjunto é o das declarações da
 **mesma unidade de compilação** (arquivo). Um subtipo direto (`extends`/
 `implements`) declarado fora dela é **`SEM080`** (o compilador não o conhece),
-nunca um conjunto aberto silencioso. `sealed` é modificador **só de
-compile-time** (apagado na emissão: bytes idênticos em JVM/Native/JS) e **keyword
-contextual** — `sealed` segue identificador válido fora de uma declaração de
-tipo. `switch` exaustivo sobre sujeito selado é X5.2.
+nunca um conjunto aberto silencioso. Um `switch` **expressão** sobre sujeito
+selado é **exaustivo sem `default`** quando cobre todo subtipo direto
+(`case Subtype v ->`); faltando um subtipo é **`SEM081`**. `sealed` é modificador
+**só de compile-time** (apagado na emissão: bytes idênticos em JVM/Native/JS) e
+**keyword contextual** — `sealed` segue identificador válido fora de uma
+declaração de tipo.
 
 **Garantia do type checker:** chamada a função/método **inexistente em tipo
 conhecido** é erro (`SEM015`/`SEM025`); aridade de argumentos/construtores é
@@ -389,6 +391,7 @@ retorno do lambda (*probe*: map/filter/reduce corretos).
 | `SEM078` | `Style("<declarações>")` com valor inválido para propriedade conhecida | `KofStyleParser` (D-UI-STYLE/UI007) |
 | `SEM079` | uso errado de token do design system: membro inexistente de `Spacing`/`Radius`/`Border`/`Elevation`/`Typography`, ou chamada de método num namespace de token | `KofUiTokens` (Fase 10) |
 | `SEM080` | subtipo (`extends`/`implements`) de tipo `sealed` declarado fora de sua unidade de compilação (o conjunto de subtipos selado é fechado) | `SealedTypeChecks` (X5.1/D-X5-SURFACE) |
+| `SEM081` | `switch` expressão sobre sujeito `sealed` sem um caso de subtipo direto (sem `default`) | `MemberResolver` (X5.2/D-X5-SURFACE) |
 | `ARITH001` | divisão/resto por zero **constante** | `ExpressionBinaryLowerer` (guarda de zero constante) |
 
 Divisão por zero **não-constante** (`7 / z` com `z=0`) → erro de **runtime**

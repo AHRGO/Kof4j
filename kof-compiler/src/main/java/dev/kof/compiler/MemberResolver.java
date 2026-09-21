@@ -351,7 +351,46 @@ public final class MemberResolver {
         return hasTrue && hasFalse;
     }
 
+    /** X5.2: subtipos DIRETOS declarados de um tipo `sealed` (nome simples). */
+    static List<String> sealedDirectSubtypes(SemanticAnalyzer sa, String sealedSimple) {
+        List<String> subs = new java.util.ArrayList<>();
+        for (SymbolTable.ClassSymbol cs : sa.allClasses().values()) {
+            if (cs.name().equals(sealedSimple)) continue;
+            boolean matches = cs.superClass() != null
+                    && sealedSimple.equals(ClassShapeChecks.simpleName(cs.superClass()));
+            if (!matches && cs.interfaces() != null) {
+                for (String iface : cs.interfaces()) {
+                    if (sealedSimple.equals(ClassShapeChecks.simpleName(iface))) {
+                        matches = true;
+                        break;
+                    }
+                }
+            }
+            if (matches) subs.add(cs.name());
+        }
+        return subs;
+    }
+
     static void checkSwitchExprExhaustiveness(SemanticAnalyzer sa, SwitchExpr se, Type subjectType) {
+        // X5.2 (D-X5-SURFACE): sujeito `sealed` — os subtipos DIRETOS são o
+        // conjunto fechado; cobrir todos os casos de pattern dispensa o
+        // `default`. Faltando caso = SEM081.
+        if (subjectType instanceof Type.ClassType sct && sa.isSealedType(sct.name())) {
+            java.util.Set<String> covered = new java.util.HashSet<>();
+            for (SwitchExprCase sc : se.cases()) {
+                if (sc.value() instanceof PatternExpr pe) {
+                    covered.add(ClassShapeChecks.simpleName(pe.typeName()));
+                }
+            }
+            List<String> subtypes = sealedDirectSubtypes(sa, sct.name());
+            List<String> missing = subtypes.stream().filter(c -> !covered.contains(c)).toList();
+            if (!missing.isEmpty()) {
+                sa.reportError(se, "switch expression on sealed type '" + sct.name()
+                        + "' does not cover: " + String.join(", ", missing)
+                        + " (add a default or the missing cases)", "SEM081");
+            }
+            return;
+        }
         if (isBooleanType(subjectType)) {
             if (!isBooleanExhaustive(se.cases())) {
                 sa.reportError(se, "switch expression on Boolean does not cover all values (true and false)", "SEM032");

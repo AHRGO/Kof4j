@@ -43,6 +43,24 @@ class SealedTypeE2ETest {
         assertEquals(expected, r.stdout().trim().replace("\r\n", "\n"), "SCRIPT output");
     }
 
+    private void runJs(Path root, List<Path> sources, String expected) throws Exception {
+        Path outDir = root.resolve("js-" + System.nanoTime());
+        CompilationResult result = driver.compileSources(sources, outDir, Target.JS, root);
+        assertTrue(result.success(), "JS compile failed: " + result.diagnostics().getDiagnostics());
+        Path entry;
+        try (var s = Files.walk(outDir)) {
+            entry = s.filter(p -> p.getFileName().toString().equals("Default.mjs")).findFirst()
+                    .orElseThrow(() -> new java.io.IOException("no Default.mjs in " + outDir));
+        }
+        try (java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream()) {
+            int ec = dev.kof.runtime.KofJsRunner.run(entry, buf,
+                    java.io.InputStream.nullInputStream(), new java.io.ByteArrayOutputStream());
+            String output = buf.toString(java.nio.charset.StandardCharsets.UTF_8).trim();
+            assertEquals(0, ec, "JS exit code, output: " + output);
+            assertEquals(expected, output, "JS output");
+        }
+    }
+
     private static Path write(Path dir, String name, String body) throws Exception {
         Path f = dir.resolve(name);
         Files.writeString(f, body);
@@ -153,5 +171,95 @@ class SealedTypeE2ETest {
         assertTrue(js.success(), "JS compile failed: " + js.diagnostics().getDiagnostics());
         CompilationResult nat = driver.compileSources(List.of(f), tmp.resolve("nat"), Target.NATIVE, tmp);
         assertTrue(nat.success(), "Native compile failed: " + nat.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void exhaustiveSwitchOverSealedRunsOnJvmScriptJs(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Solo.kf", """
+                sealed class Shape
+
+                class Circle extends Shape {
+                    Int r
+                    public constructor(Int r) { this.r = r }
+                }
+
+                class Square extends Shape {
+                    Int s
+                    public constructor(Int s) { this.s = s }
+                }
+
+                String describe(Shape sh) {
+                    return switch (sh) {
+                        case Circle c -> "circle"
+                        case Square q -> "square"
+                    }
+                }
+
+                main() {
+                    println(describe(Circle(1)))
+                    println(describe(Square(2)))
+                }
+                """);
+        String expected = "circle\nsquare";
+        runJvm(tmp, List.of(f), expected);
+        runScript(tmp, List.of(f), expected);
+        runJs(tmp, List.of(f), expected);
+    }
+
+    @Test
+    void missingCaseInSealedSwitchIsSem081(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Solo.kf", """
+                sealed class Shape
+
+                class Circle extends Shape {
+                    Int r
+                    public constructor(Int r) { this.r = r }
+                }
+
+                class Square extends Shape {
+                    Int s
+                    public constructor(Int s) { this.s = s }
+                }
+
+                String describe(Shape sh) {
+                    return switch (sh) {
+                        case Circle c -> "circle"
+                    }
+                }
+
+                main() { println(describe(Circle(1))) }
+                """);
+        CompilationResult result = driver.compileSources(List.of(f), tmp.resolve("out"), Target.JVM, tmp);
+        assertFalse(result.success(), "switch sobre sealed faltando caso deve falhar");
+        assertTrue(result.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> "SEM081".equals(d.code())),
+                "SEM081 esperado, veio: " + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void defaultAllowsSealedSwitch(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Solo.kf", """
+                sealed class Shape
+
+                class Circle extends Shape {
+                    Int r
+                    public constructor(Int r) { this.r = r }
+                }
+
+                class Square extends Shape {
+                    Int s
+                    public constructor(Int s) { this.s = s }
+                }
+
+                String describe(Shape sh) {
+                    return switch (sh) {
+                        case Circle c -> "circle"
+                        default -> "other"
+                    }
+                }
+
+                main() { println(describe(Square(2))) }
+                """);
+        runJvm(tmp, List.of(f), "other");
     }
 }

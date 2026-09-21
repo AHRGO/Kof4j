@@ -51,7 +51,7 @@ nova**).
   do §421; **dono lane `gaps-db`** (repassada 21/09), S0/S1 autorizadas — S0 ✅ limpa o §421, S1 em andamento) ·
   `type-system-extensions-plan.md` (+PT — **X5/X6 APROVADOS 21/09**
   (`D-TYPE-VARIANCE`/`D-INTEROP-REFLECT`), promovido de `future/`; fatias
-  incrementais com prova, cada uma com prova própria; **X5.1 ✅ FEITO 21/09** — `sealed` + `SEM080`).
+  incrementais com prova, cada uma com prova própria; **X5.1/X5.2 ✅ FEITO 21/09** — `sealed` + `SEM080`/`SEM081`).
   Autoridade: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Registros vivos aqui (não são backlog):** `DECISIONS.md`,
   `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.
