@@ -2557,7 +2557,10 @@ release e o gate §8: as sete são a **aceitação**; a fila que as satisfaz é 
    resultado observável em todo alvo da superfície 0.5.0; divergência é bug
    (regra 5 do freeze) ou gap diagnosticado `XXX00x`, nunca silencioso.
 2. **Nenhuma decisão pendente** — o `DECISIONS.md` não carrega pergunta aberta
-   que mude a superfície; nada espera por decisão.
+   que mude a superfície (nenhum `[? MEL]` não resolvido no PROPOSAL e nenhum
+   `Estado: OPEN`); nada espera por decisão. Um item `Estado: OPEN — spec/plano
+   primeiro` tem direção decidida mas plano pendente, então o gate reporta
+   `NEEDS-REVIEW`, nunca verde silencioso.
 3. **Todos os `.md` soltos em `docs/development/` concluídos e movidos** — a
    regra dos três estados: `docs/development/` mantém só trabalho com
    implementação pendente; doc concluído move para `docs/`.

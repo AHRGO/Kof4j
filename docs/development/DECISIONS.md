@@ -2571,7 +2571,10 @@ gate: the seven are the **acceptance**; the queue that satisfies them is
    observable result on every target of the 0.5.0 surface; a divergence is a
    bug (freeze rule 5) or a diagnosed `XXX00x` gap, never silent.
 2. **No pending decision** — `DECISIONS.md` carries no open question that
-   changes the surface; nothing waits on a decision.
+   changes the surface (no unresolved `[? MEL]` in the PROPOSAL and no
+   `State: OPEN`); nothing waits on a decision. A `State: OPEN — spec/plan
+   first` entry is direction-decided but plan-pending, so the gate reports
+   `NEEDS-REVIEW`, never a silent green.
 3. **All loose `.md` in `docs/development/` concluded and moved out** — the
    three-states rule: `docs/development/` keeps only work with pending
    implementation; a concluded doc moves to `docs/`.

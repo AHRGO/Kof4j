@@ -6,6 +6,9 @@
 #
 #   1 parity       100% parity between targets (measured per-target matrix)
 #   2 decisions    no pending decision that changes the surface
+#                  (0 unresolved `[? MEL]` in the PROPOSAL AND 0 `State: OPEN`
+#                   in DECISIONS.md — a spec/plan-first OPEN is direction-decided
+#                   but plan-pending, so it is NEEDS-REVIEW, never a silent GREEN)
 #   3 loose docs   all loose docs/development/*.md concluded and moved out
 #   4 stability    full suite 0F/0E + 5/5 conformance matrix on the candidate
 #   5 bug issues   0 OPEN GitHub issues that are a bug
@@ -49,6 +52,7 @@ EG_ROADMAP="${R050_EG_ROADMAP:-docs/development/roadmap.md}"
 BLOCKS_CMD="${R050_BLOCKS_CMD:-bash scripts/check_release_blockers.sh --rc-gate}"
 LOOSE_MD_FILE="${R050_LOOSE_MD_FILE:-}"
 PENDING_FILE="${R050_PENDING_FILE:-}"
+DECISIONS_MD="${R050_DECISIONS_MD:-docs/development/DECISIONS.md}"
 PARITY_FILE="${R050_PARITY_FILE:-}"
 R050_STABILITY_FILE="${R050_STABILITY_FILE:-}"
 R050_SPEC_GAPS_FILE="${R050_SPEC_GAPS_FILE:-}"
@@ -108,11 +112,21 @@ c_decisions() {
     [ -r "$prop" ] || { STATE[decisions]=UNKNOWN; DETAIL[decisions]="decision source unreadable: $prop"; return; }
     local open
     open="$(grep -rhoE '^\[[?] *MEL *\]' "$prop" 2>/dev/null | wc -l | tr -d ' ')"
-    if [ "${open:-0}" -eq 0 ]; then
-      STATE[decisions]=GREEN; DETAIL[decisions]="no pending decision (decision-pending/ extinct; no unresolved [? MEL] candidate)"
-    else
+    # DECISIONS.md com `State: OPEN` (spec/plan-first) NAO pode virar verde silencioso:
+    # a direcao foi escolhida, mas o plano/review e trabalho pendente que muda a
+    # superficie (condicao 2) — vira NEEDS-REVIEW, nunca GREEN (R6/Q5).
+    [ -r "$DECISIONS_MD" ] || { STATE[decisions]=UNKNOWN; DETAIL[decisions]="decision source unreadable: $DECISIONS_MD"; return; }
+    local open_state ids
+    ids="$(awk '/^## /{id=$2} /(\*\*State:\*\*|\*\*Estado:\*\*) `(OPEN|ABERTO)/{print id}' "$DECISIONS_MD" 2>/dev/null | tr '\n' ' ')"
+    open_state="$(printf '%s' "$ids" | wc -w | tr -d ' ')"
+    if [ "${open:-0}" -eq 0 ] && [ "${open_state:-0}" -eq 0 ]; then
+      STATE[decisions]=GREEN; DETAIL[decisions]="no pending decision (decision-pending/ extinct; no unresolved [? MEL] candidate; no State: OPEN)"
+    elif [ "${open:-0}" -gt 0 ]; then
       STATE[decisions]=NEEDS-REVIEW
       DETAIL[decisions]="decision-pending/ extinct; $open unresolved [? MEL] candidate(s) in the PROPOSAL"
+    else
+      STATE[decisions]=NEEDS-REVIEW
+      DETAIL[decisions]="$open_state State: OPEN decision(s) in DECISIONS.md pending plan/review (direction decided): ${ids% }"
     fi
   fi
 }
@@ -264,6 +278,9 @@ if [ "${1:-}" = "--selftest" ]; then
   T="$(mktemp -d)"
   trap 'rm -rf "$T"' EXIT
   fail() { echo "SELFTEST FAIL: $*" >&2; exit 2; }
+  # decisions fixtures (hermetic): a DECIDED-only file and one with a State: OPEN
+  printf '## D-OK — x\n\n**State:** `DECIDED`\n' > "$T/dec_ok"
+  printf '## D-OPEN — x\n\n**State:** `OPEN — spec/plan first`\n' > "$T/dec_open"
 
   # clean fixture -> every measurable condition GREEN
   printf '100\tdocumentation,post-1.0\n' > "$T/issues"
@@ -314,24 +331,40 @@ EOF
   : > "$T/spec"
   printf 'EN open/partial (0):\nPT open/partial (0):\n' > "$T/kb"
   R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_LOOSE_MD_FILE="$T/loose" \
-  R050_SPEC_GAPS_FILE="$T/spec" R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 \
+  R050_SPEC_GAPS_FILE="$T/spec" R050_DECISIONS_MD="$T/dec_ok" \
+  R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 \
   R050_MATRIX_CMD=: KOF_SUITE_LOG= \
     bash "$0" > "$T/out3"; rc=$?
   [ "$rc" -eq 2 ] || fail "inconclusive fixture should be exit 2, got $rc"
   grep -q 'NEEDS-MEASURE' "$T/out3" || fail "inconclusive run should surface NEEDS-MEASURE"
 
+  # decisions: State: OPEN (direção decidida, plano pendente) nao pode ser GREEN
+  # silencioso — vira NEEDS-REVIEW (condicao 2 mudou a superficie).
+  printf '100\tdocumentation,post-1.0\n' > "$T/issues"
+  printf 'EG-1\tDONE\n' > "$T/eg"
+  : > "$T/spec"; printf 'DECISIONS.md\n' > "$T/loose"
+  printf 'EN open/partial (0):\nPT open/partial (0):\n' > "$T/kb"
+  R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_LOOSE_MD_FILE="$T/loose" \
+  R050_SPEC_GAPS_FILE="$T/spec" R050_DECISIONS_MD="$T/dec_open" \
+  R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 \
+  R050_MATRIX_CMD=: KOF_SUITE_LOG= \
+    bash "$0" > "$T/out3b"; rc=$?
+  [ "$rc" -eq 2 ] || fail "State: OPEN fixture should be exit 2, got $rc"
+  grep -q 'decisions .*NEEDS-REVIEW' "$T/out3b" || fail "State: OPEN decisions should be NEEDS-REVIEW"
+  grep -q 'D-OPEN' "$T/out3b" || fail "State: OPEN decisions detail should name D-OPEN"
+
   # edges: todos os EG fechados, mas a query de 1.0-blocks NAO responde.
   # Nao pode virar "0 blocks" verde (mesmo falso-verde que bug_issues proibe).
   printf '| EG-1 | x | DONE |\n| EG-2 | y | FEITO |\n' > "$T/rm"
   R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_ROADMAP="$T/rm" \
-  R050_LOOSE_MD_FILE="$T/loose" R050_SPEC_GAPS_FILE="$T/spec" \
+  R050_LOOSE_MD_FILE="$T/loose" R050_SPEC_GAPS_FILE="$T/spec" R050_DECISIONS_MD="$T/dec_ok" \
   R050_KNOWN_BUGS_CMD="cat $T/kb" R050_BLOCKS_CMD="echo boom; exit 3" \
   R050_MATRIX_CMD=: KOF_SUITE_LOG= \
     bash "$0" > "$T/out4" 2>/dev/null
   grep -q 'edges .*UNKNOWN' "$T/out4" || fail "EG fechado + blocks sem resposta devia ser UNKNOWN"
   # e quando a query responde 0, edges fica GREEN
   R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_ROADMAP="$T/rm" \
-  R050_LOOSE_MD_FILE="$T/loose" R050_SPEC_GAPS_FILE="$T/spec" \
+  R050_LOOSE_MD_FILE="$T/loose" R050_SPEC_GAPS_FILE="$T/spec" R050_DECISIONS_MD="$T/dec_ok" \
   R050_KNOWN_BUGS_CMD="cat $T/kb" R050_BLOCKS_CMD='echo "-- 0 open 1.0-blocks"' \
   R050_MATRIX_CMD=: KOF_SUITE_LOG= \
     bash "$0" > "$T/out5" 2>/dev/null
