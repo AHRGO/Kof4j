@@ -11,8 +11,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Locks the code in {@code training/idioms/interop.md} section (d): the D6
- * struct/array/out-buffer shapes must compile on the JVM before they are
- * documented, and must stay honest gaps (FFI001/FFI002) on Native/JS.
+ * struct/array/out-buffer shapes must compile on the JVM and on JS (the JS FFI
+ * surface is complete since R54/R55/R57/R58/R59), and must stay an honest gap
+ * (FFI001) on Native — which still lacks the struct/array/out-buffer ABI.
  * Same discipline as {@link StdlibIdiomsCompileTest} for `stdlib.md`.
  */
 class InteropIdiomsCompileTest {
@@ -57,12 +58,14 @@ class InteropIdiomsCompileTest {
     }
 
     @Test
-    void jsShapeExamplesStayHonest(@TempDir Path dir) throws Exception {
+    void jsShapeExamplesBindByValue(@TempDir Path dir) throws Exception {
+        // R54/R55/R57/R58/R59 closed the JS FFI surface: record by value (in+out),
+        // scalar `T[]`→ptr copy-in and `Buffer(U8)` INOUT all bind on the JS target
+        // now (byte-for-byte JVM==JS). The old FFI002 honest-gap ratchet is stale.
         Path src = dir.resolve("interopjs.kf");
         Files.writeString(src, DOC_SHAPES);
         CompilationResult r = driver.compile(src, dir.resolve("out-js"), Target.JS);
-        assertFalse(r.success(), "record/array/buffer externs are not bridged on JS yet (R6)");
-        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI002"),
-                "expected FFI002 on JS, got: " + r.diagnostics().getDiagnostics());
+        assertTrue(r.success(), "D6 record/array/buffer externs must bind on JS now: "
+                + r.diagnostics().getDiagnostics());
     }
 }

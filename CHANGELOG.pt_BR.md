@@ -13,6 +13,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **Estabilidade — ratchets da FFI JS reconciliados após o fecho da superfície
+    JS** (21/09): a suíte completa (3472 testes) revelou 3 ratchets stale
+    deixados pelas fatias do bridge D6/JS — ainda afirmavam o estado pré-bridge,
+    e as baterias FFI dirigidas sozinhas não pegaram. Corrigido:
+    `KofBuffer.gapCode` não devolve mais o `FFI002` específico do JS (Buffer
+    binda no JS desde R57/R58), então `StdParityGapAuditTest` tira o JS do
+    conjunto gateado; `InteropIdiomsCompileTest.jsShapeExamplesStayHonest` →
+    `…BindByValue` (extern record/array/out-buffer agora compilam no JS);
+    `ArtifactSizeTest` `HELLO_JS_BYTES` re-medido 13.007→13.834 KB (o slice
+    `kof.buffer` + os helpers de marshal/bridge JS). `training/idioms/
+    interop.pt_BR.md` (+EN) reconciliado: o JS binda as formas D6, só o Native
+    mantém o gap honesto `FFI001`. Prova: 64/64 dirigido (bateria FFI + as 3
+    classes) e as 3 falhas da suíte eliminadas.
+
   - **§431 CORRIGIDO — drift de tooling da auditoria profunda** (21/09, lane
     `.18`): apagados o `serveStatic`+`contentType` mortos em `KofCliSupport` (e
     o ilusório `ServeStaticTest`) — o mecanismo app-level `serveDir` é dono dos

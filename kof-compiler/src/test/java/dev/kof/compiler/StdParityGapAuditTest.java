@@ -34,11 +34,13 @@ class StdParityGapAuditTest {
     }
 
     @Test
-    @DisplayName("buffer: gate JVM-only + FFI001/FFI002")
+    @DisplayName("buffer: gate JVM+JS (D-R3-BUFFER) + FFI001 nos demais")
     void bufferGatesToJvmWithFfiCodes() {
+        // R57/R58: the `kof.buffer` namespace + Buffer(U8) INOUT bind on the JS
+        // target too (KofBuffer.supportedOn = JVM||JS) — JS is no longer gated.
         assertEquals(Set.of(Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64,
-                Target.JS, Target.ANDROID, Target.SCRIPT), unsupported(KofBuffer::supportedOn));
-        assertEquals("FFI002", KofBuffer.gapCode(Target.JS));
+                Target.ANDROID, Target.SCRIPT), unsupported(KofBuffer::supportedOn));
+        assertTrue(KofBuffer.supportedOn(Target.JS));
         assertEquals("FFI001", KofBuffer.gapCode(Target.NATIVE));
     }
 

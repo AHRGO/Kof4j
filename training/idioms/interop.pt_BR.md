@@ -27,7 +27,9 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — "mel
 // O NOME da funcao Kof e o simbolo C (sem alias) — kof_fmod falhou no lookup, fmod funciona.
 // Tipos nao-escalares -> FFI001 em tempo de compilacao (excecao JVM, 3.8b ✅ 20-21/09: um `record`
 //   por valor arg/retorno e um `T[]` escalar->`ptr` LIGAM — FfiStructE2ETest 10/10, FfiArrayE2ETest 5/5).
-// runner JS  -> MESMA ABI escalar via KofJsFfiBridge (F2/F3 ✅ 18/09; FfiE2ETest 16/16); browser -> erro honesto de runtime (R7, sem host); nao-escalar -> FFI002
+// runner JS  -> MESMA ABI escalar via KofJsFfiBridge (F2/F3 ✅ 18/09; FfiE2ETest 16/16) E as formas D6
+//   record/array/out-buffer (R54/R55/R57/R58/R59 ✅ 21/09, JVM==JS); browser -> erro honesto de runtime
+//   (R7, sem host); uma forma genuinamente nao-suportada (String[]/List/Handle) -> FFI002
 // Native (x86-64/riscv64/aarch64) -> MESMA ABI escalar binda DIRETA desde #431 20/09 (§61 FECHADO, §369):
 //   sem dlopen — link-by-use da library() + call sym@PLT; String<->char* = payload UTF-8 no offset 24
 //   (NULL->NULL); >=9 args da mesma classe derramam; retorno String = copia na fronteira (buffer C nunca free'd);
@@ -69,7 +71,9 @@ var b = buffer.alloc(4)                               // Buffer(U8) — vida aut
 fill(b, 4)                                            // o C escreve no buffer
 println(b.bytes())                                    // clone Byte[] (le de volta)
 println(ptlen(Pt(1, 2)))                              // 2 (record passado por valor)
-// Native: extern com record/array/buffer = FFI001; JS = FFI002 (gaps honestos, R6).
+// Native: extern com record/array/buffer = FFI001 (gap honesto, R6 — a ABI de
+// struct/sret do Native é o 3.7). O JS binda as MESMAS formas D6 desde
+// R54/R55/R57/R58/R59 (byte-for-byte JVM==JS).
 // A ABI escalar binda em todo target; estas formas D6 sao JVM-first (R7).
 ```
 
@@ -89,4 +93,4 @@ println(ptlen(Pt(1, 2)))                              // 2 (record passado por v
 
 `docs/language-reference/syntax.md` (§FFI com C), `grammar.md`
 (`extern-declaration`), `modules.md` §6; gaps `FFI001`/`FFI002`;
-R3 landado: JVM escalar arbitrario (aridade/void/retorno String, 18/09) + paridade JS host (3.6.F2/F3 ✅ 18/09) + **callbacks ligam na JVM E no host runner JS, paridade byte-for-byte (C2 ✅ + C3.2/C3.3/C3.4 ✅ 18/09 — callbacks primitivos + com argumento `String`; `JvmFfiCallbackE2ETest` incl. `jvmAndJsCallbacksMatchByteForByte` e `stringCallbackArgsBindAndMatchJvmJs`)** + **formas D6 struct/array/out-buffer na JVM (3.8b fatias 1–4 ✅ 20–21/09: record por valor in/out, `T[]` escalar→`ptr` copy-in, `Buffer(U8)` INOUT; `FfiStructE2ETest` 10/10, `FfiArrayE2ETest` 5/5, `BufferE2ETest` 4/4, `BufferFfiE2ETest` 4/4)** + **a ABI escalar do Native bina nos 3 archs (fatias 1–2 ✅ 20/09 — §369, §61 FECHADO: `FfiNativeE2ETest` 16/16 x86-64 + `FfiNativeCrossE2ETest` 6/6 riscv64×aarch64 byte-identicos sob qemu)**; **decididos 21/09:** variadics = nenhum (`D-R3-3.5`), `Handle` opaco + `Buffer(U8,INOUT)` (`D-R3-3.3` — Buffer landou, `Handle` aguarda a frente RAII). Restantes (cross-lane/posterior): bridge de struct no JS, struct/sret no Native (3.7), callbacks/upcalls no Native (sem mecanismo — `FFI001`), tempos de vida do `Handle` (`future/scoped-resources-plan.md`).
+R3 landado: JVM escalar arbitrario (aridade/void/retorno String, 18/09) + paridade JS host (3.6.F2/F3 ✅ 18/09) + **callbacks ligam na JVM E no host runner JS, paridade byte-for-byte (C2 ✅ + C3.2/C3.3/C3.4 ✅ 18/09 — callbacks primitivos + com argumento `String`; `JvmFfiCallbackE2ETest` incl. `jvmAndJsCallbacksMatchByteForByte` e `stringCallbackArgsBindAndMatchJvmJs`)** + **formas D6 struct/array/out-buffer na JVM (3.8b fatias 1–4 ✅ 20–21/09: record por valor in/out, `T[]` escalar→`ptr` copy-in, `Buffer(U8)` INOUT; `FfiStructE2ETest` 10/10, `FfiArrayE2ETest` 5/5, `BufferE2ETest` 4/4, `BufferFfiE2ETest` 4/4)** + **as MESMAS formas D6 no alvo JS (bridge 3.8b ✅ 21/09 — R54 record como arg, R55 `T[]` escalar→ptr copy-in, R57 namespace `kof.buffer`, R58 `Buffer(U8)` INOUT, R59 retorno de record por valor; byte-for-byte JVM==JS: `FfiStructE2ETest#structReturnByValueJsParity`, `FfiArrayE2ETest#arrayParamByValueJsParity`, `BufferE2ETest#allocAndBytesJsParity`, `BufferFfiE2ETest#bufferInoutCopyInCopyBackJsParity`)** + **a ABI escalar do Native bina nos 3 archs (fatias 1–2 ✅ 20/09 — §369, §61 FECHADO: `FfiNativeE2ETest` 16/16 x86-64 + `FfiNativeCrossE2ETest` 6/6 riscv64×aarch64 byte-identicos sob qemu)**; **decididos 21/09:** variadics = nenhum (`D-R3-3.5`), `Handle` opaco + `Buffer(U8,INOUT)` (`D-R3-3.3` — Buffer landou, `Handle` aguarda a frente RAII). Restantes (cross-lane/posterior): struct/sret no Native (3.7), callbacks/upcalls no Native (sem mecanismo — `FFI001`), tempos de vida do `Handle` (`future/scoped-resources-plan.md`).

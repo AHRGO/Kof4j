@@ -13,6 +13,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **Stability — reconciled the JS-FFI ratchets after the JS surface closed**
+    (21/09): the full suite (3472 tests) surfaced 3 stale ratchets left by the
+    D6/JS bridge slices — they still asserted the pre-bridge state, and the
+    directed FFI batteries alone did not catch them. Fixed: `KofBuffer.gapCode`
+    no longer returns the JS-specific `FFI002` (Buffer binds on JS since
+    R57/R58), so `StdParityGapAuditTest` drops JS from the gated set;
+    `InteropIdiomsCompileTest.jsShapeExamplesStayHonest` → `…BindByValue`
+    (record/array/out-buffer externs now compile on JS);
+    `ArtifactSizeTest` `HELLO_JS_BYTES` re-measured 13.007→13.834 KB (the
+    `kof.buffer` slice + the JS marshal/bridge helpers). `training/idioms/
+    interop.md` (+PT) reconciled: JS binds the D6 shapes, only Native keeps the
+    `FFI001` honest gap. Proof: 64/64 directed (FFI battery + the 3 classes)
+    and the 3 suite failures gone.
+
   - **§431 FIXED — tooling drift from the deep audit** (21/09, lane `.18`):
     deleted the dead `serveStatic`+`contentType` in `KofCliSupport` (and the
     illusionary `ServeStaticTest`) — the app-level `serveDir` mechanism owns

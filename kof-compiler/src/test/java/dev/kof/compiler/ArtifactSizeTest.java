@@ -67,7 +67,11 @@ class ArtifactSizeTest {
     // _attrs) no préâmbulo always — 8.297 → 13.007 (+57% > tol; soma de TODOS
     // os .mjs: runtime 11.577 + io 1.143 + Default 287). Mesmo processo; a
     // causa é a lane JS (lane do shim), o gate é universal.
-    private static final long HELLO_JS_BYTES = 13_007L;
+    // 21/09: a frente FFI fechou a superfície do JS no alvo (D6): o slice
+    // `kof.buffer` (R57/R58, `JsRuntimeBuffer`) + os helpers de marshal/bridge
+    // (R55 array copy-in, R58 Buffer INOUT, R59 retorno de struct) somaram
+    // ~827B ao runtime JS — re-medido 13.834B (mesmo processo da suíte).
+    private static final long HELLO_JS_BYTES = 13_834L;
     // Hello riscv64 (cross — só medido onde há toolchain). Pós-S-5 (T1b,
     // 12/09): seções .text.<fn> por função do runtime + `ld --gc-sections`
     // derrubaram os irmãos mortos DENTRO das peças mantidas pela S-4:

@@ -57,6 +57,9 @@ public final class KofBuffer {
     }
 
     static String gapCode(Target target) {
-        return target == Target.JS ? "FFI002" : "FFI001";
+        // Buffer binds on JVM AND JS (D-R3-BUFFER; the JS namespace landed on the
+        // JS target in R57/R58) — the JS-specific FFI002 gap is gone. The only
+        // remaining gap is the Native family (and other non-JVM/JS targets) → FFI001.
+        return "FFI001";
     }
 }
