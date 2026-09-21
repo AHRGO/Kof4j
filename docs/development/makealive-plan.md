@@ -35,8 +35,8 @@ The **canonical model is imperative-turned-data** (the VISION §4.2 verdict,
 "A/B — and it is where the language shines"): typed resources + a builder +
 normal functions. The declarative block `infra "prod" { ... }` is row **3.2**
 — **DECIDED 21/09 (`D-MAKEALIVE-SYNTAX`) as pure sugar over `design()`** (R4 ✅
-landed 21/09 removed the codegen-hook blocker; `infra` stays an identifier) — it
-is IN IMPLEMENTATION by `.18`/9093, and v1 does not wait for it.
+landed 21/09 removed the codegen-hook blocker; `infra` stays an identifier) —
+**LANDED 21/09 (`966c86a4`, proof `InfraSyntaxE2ETest`)**; v1 did not wait for it.
 
 Surface sketch (flat host idiom, like `kof.workflow`/`kof.supervisor —
 DD-OTP-01 option A`; **shapes to be measured by the 3.0 recon before they
@@ -77,8 +77,10 @@ answered; a ledger line cannot override a hard-deny (measured).
 - **plan has no side effects**; only apply touches the world and the state.
 - **cycles are refused at graph-build** with an actionable `throw` naming the
 cycle (workflow run() precedent, 4/4 targets); compile-time cycle detection
-is row 3.7 — **R4 ✅ landed 21/09**; **UNBLOCKED by `D-MAKEALIVE-SYNTAX` 21/09**
-(the 3.2 `infra` surface is decided), so the compile-time graph follows 3.2.
+is row 3.7 — ✅ **CLOSED 21/09 as runtime-only** (addendum to
+`D-MAKEALIVE-SYNTAX`): with 3.2 as pure sugar the compiler sees only generic
+calls, so a static graph would give the block its own semantics (§7/rule 11);
+the 3.1 runtime refusal names the cycle members.
 - **state advances only on success**: a failed apply leaves the previous state
   intact and names the resource that failed (R6, never a silent partial).
 - **secrets are references only**: v1 stores a secret *name* (resolved at

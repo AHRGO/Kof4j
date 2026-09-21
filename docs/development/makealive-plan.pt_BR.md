@@ -37,7 +37,7 @@ VISÃO §4.2, "A/B — e é onde a linguagem brilha"): recursos tipados + builde
 + funções normais. O bloco declarativo `infra "prod" { ... }` é a linha **3.2**
 — **DECIDIDA 21/09 (`D-MAKEALIVE-SYNTAX`) como açúcar puro sobre `design()`** (R4 ✅
 pousou 21/09 e o bloqueio do hook de codegen sumiu; `infra` segue identificador) —
-está EM IMPLEMENTAÇÃO por `.18`/9093, e o v1 não espera por ele.
+**POUSADA 21/09 (`966c86a4`, prova `InfraSyntaxE2ETest`)**; o v1 não esperou por ela.
 
 Esboço de superfície (idioma de host flat, como `kof.workflow`/`kof.supervisor`
 — DD-OTP-01 opção A; **formas a serem MEDIDAS pela recon 3.0 antes de virarem
@@ -82,9 +82,10 @@ ledger NÃO sobrepõe hard-deny (medido).
 - **plan não tem efeitos colaterais**; só o apply toca o mundo e o estado.
 - **ciclos são recusados na montagem do grafo** com `throw` acionável
   nomeando o ciclo (precedente do run() do workflow, 4/4 targets); detecção de
-  ciclo em compile-time é a linha 3.7 — **R4 ✅ pousou 21/09**; **DESTRAVADA por
-  `D-MAKEALIVE-SYNTAX` 21/09** (a superfície 3.2 `infra` está decidida), então o
-  grafo em compile-time segue a 3.2.
+  ciclo em compile-time é a linha 3.7 — ✅ **FECHADA 21/09 como runtime-only**
+  (adendo a `D-MAKEALIVE-SYNTAX`): com a 3.2 como açúcar puro o compilador vê só
+  chamadas genéricas, então um grafo estático daria semântica própria ao bloco
+  (§7/regra 11); a recusa em runtime da 3.1 nomeia os membros do ciclo.
 - **o estado só avança no sucesso**: um apply falho deixa o estado anterior
   intacto e nomeia o recurso que falhou (R6, nunca um parcial silencioso).
 - **secrets são só referência**: o v1 guarda o *nome* do secret (resolvido no
