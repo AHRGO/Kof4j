@@ -26,7 +26,11 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Also cataloged as §422: the full-suite evidence found
     `CompilerDriverTest#externProducesHonestGapNotSilentDrop` RED at the clean
     tip (unsupported-`extern` rejection vanished — R6), routed to the FFI lane,
-    NOT relaxed here.
+    NOT relaxed here. **Resolved same day (FFI lane): NOT a bug — the test was
+    stale** (`Int[]` binds by design since D6-2, `7c6413d4`); the honest-gap
+    rejection is intact — repointed to genuinely-unsupported signatures
+    (`String[]`/`List<Int>` → `FFI001`, `Buffer(Int)` → `SEM096`), assertion not
+    relaxed; `CompilerDriverTest` 259/0F/0E.
 
 
   - **deps — `kof deps resolve` gains the provenance verification POLICY (D-ARTIFACT-TRUST queue (c)), in observe mode**

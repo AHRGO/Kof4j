@@ -135,7 +135,7 @@ entity-field no parser) foi corrigido ✅ `576a1dcb`; 18→17 quando **§394**
 pela lane do compilador; 17→18 quando **§418** (harness de single-step do debug riscv64) foi RE-PUBLICADO pela lane nativa no mesmo dia, com nova prova, após a perda de árvore que a retração §419 dela registra — a contagem desceu (correções) e subiu (um gap real reapareceu) num só dia, exatamente por isso a autoridade é o script, não a prosa; 18→19 quando a própria lane db/orm ABRIU a
 §421 (`db.connect` nativo aceita qualquer scheme em silêncio; a recusa só aparece no
 `kof_orm_*`) como catálogo honesto do seu F2c3 — contagem subir porque lanes continuam
-catalogando contra si mesmas é o ledger funcionando, não apodrecendo; 19→18 quando **§396** (println de RECORD null no Native x86-64) foi corrigido ✅ `461a07e2` pela lane nativa no mesmo dia; por
+catalogando contra si mesmas é o ledger funcionando, não apodrecendo; 19→18 quando **§396** (println de RECORD null no Native x86-64) foi corrigido ✅ `461a07e2` pela lane nativa no mesmo dia; 18→19 quando a lane do §396 ABRIU o **§422** (um `extern` de assinatura não-suportada "compila limpo") e 19→18 no MESMO dia quando a lane FFI o RESOLVEU — **NÃO é bug, é teste stale**: `Int[]` binda por desenho desde o D6-2, então a asserção foi reapontada para assinaturas genuinamente não-suportadas (`String[]`/`List<Int>` → `FFI001`, `Buffer(Int)` → `SEM096`), rejeição intacta (`CompilerDriverTest` 259/0F); por
 `scripts/check_known_bugs_status.sh`; o número é um snapshot datado — a
 autoridade é o script). Os **32** contados em 14/09 e a lista de 13/09
 abaixo são o snapshot HISTÓRICO, preservado para o registro (tirado ANTES da

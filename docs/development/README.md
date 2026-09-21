@@ -137,7 +137,7 @@ re-surfaced) in one day, which is exactly why the script, not the prose, is the
 authority; 18→19 when the db/orm lane OPENED §421 (native `db.connect` accepts any
 scheme silently, refusal only at `kof_orm_*`) as its own honest catalog in F2c3 — counts
 moving UP because lanes keep cataloguing against themselves is the ledger working, not
-rotting; 19→18 when **§396** (println of a RECORD null on Native x86-64) was fixed ✅ `461a07e2` by the native lane the same day; by
+rotting; 19→18 when **§396** (println of a RECORD null on Native x86-64) was fixed ✅ `461a07e2` by the native lane the same day; 18→19 when the §396 lane OPENED **§422** (an `extern` unsupported signature "compiles clean") and 19→18 the SAME day when the FFI lane RESOLVED it — **NOT a bug, a stale test**: `Int[]` binds by design since D6-2, so the assertion was repointed to genuinely-unsupported signatures (`String[]`/`List<Int>` → `FFI001`, `Buffer(Int)` → `SEM096`), rejection intact (`CompilerDriverTest` 259/0F); by
 `scripts/check_known_bugs_status.sh`; the number is a dated snapshot — the
 script is the authority). The **32** counted on 14/09 and the 13/09 list
 below are the HISTORICAL snapshot, preserved for the record (taken BEFORE the

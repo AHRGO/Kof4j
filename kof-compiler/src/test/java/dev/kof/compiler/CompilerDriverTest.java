@@ -31,6 +31,24 @@ class CompilerDriverTest {
     }
 
     @Test
+    void unsupportedExternSignaturesEmitHonestGap(@TempDir Path tempDir) throws IOException {
+        List<String> unsupported = List.of(
+                "extern f(String[] xs): Int",   // array of pointers (not a scalar array)
+                "extern f(List<Int> xs): Int",  // not bindable in v1
+                "extern f(Buffer(Int) b): Int"); // Buffer element other than U8/Byte
+        for (String signature : unsupported) {
+            Path source = tempDir.resolve("ffi_gap.kf");
+            Files.writeString(source, signature + "\n\nmain() {\n    println(\"hi\")\n}\n");
+            CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+            String diags = result.diagnostics().getDiagnostics().toString();
+            assertFalse(result.success(), signature + " must not silently compile: " + diags);
+            assertFalse(diags.contains("PARSE"), signature + " must fail with a gap, not a parse error: " + diags);
+            assertTrue(diags.contains("FFI001") || diags.contains("SEM096"),
+                    signature + " expected an honest gap (FFI001/SEM096), got: " + diags);
+        }
+    }
+
+    @Test
     void externParsesWithoutSyntaxError(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("ffi2.kf");
         Files.writeString(source, """

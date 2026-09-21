@@ -26,7 +26,11 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Registrado também como §422: a evidência da suíte completa achou
     `CompilerDriverTest#externProducesHonestGapNotSilentDrop` VERMELHO no tip
     limpo (rejeição de `extern` não-suportado desapareceu — R6), roteada à lane
-    FFI, NÃO relaxada aqui.
+    FFI, NÃO relaxada aqui. **Resolvido no mesmo dia (lane FFI): NÃO é bug — o
+    teste era stale** (`Int[]` binda por desenho desde o D6-2, `7c6413d4`); a
+    rejeição com gap honesto está intacta — reapontado para assinaturas
+    genuinamente não-suportadas (`String[]`/`List<Int>` → `FFI001`, `Buffer(Int)`
+    → `SEM096`), asserção não relaxada; `CompilerDriverTest` 259/0F/0E.
 
 
   - **deps — `kof deps resolve` ganha a POLÍTICA de verificação de proveniência (D-ARTIFACT-TRUST fila (c)), em modo observe**
