@@ -406,8 +406,8 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     if (sCall != null) {
         if (!KofStd.supportedOn(sCall, driver.target)) {
             gapError(driver, mc, rid.name() + "." + mc.methodName() + ": not available on the "
-                    + driver.target + " target yet (" + KofStd.gapCode(sCall) + ")",
-                    KofStd.gapCode(sCall));
+                    + driver.target + " target yet (" + KofStd.gapCode(sCall, driver.target) + ")",
+                    KofStd.gapCode(sCall, driver.target));
             return localIdx;
         }
         localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), sCall.parameterTypes(), ops, owner, localIdx, locals);

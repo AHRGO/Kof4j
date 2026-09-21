@@ -163,6 +163,17 @@ public class TypeParser {
             ctx.error("Expected type", "PARSE044");
             return "Object";
         }
+        // D-R3-BUFFER: `Buffer(U8)` — the nominal out-buffer type (maintainer 21/09).
+        if ("Buffer".equals(type.toString()) && ctx.check(TokenType.LPAREN)) {
+            ctx.advance();
+            String elem = parseTypeRef(ctx);
+            ctx.expect(TokenType.RPAREN, "Expected ')' in Buffer(...)", "PARSE045");
+            if (!("U8".equals(elem) || "u8".equals(elem)
+                    || "Byte".equals(elem) || "byte".equals(elem))) {
+                ctx.error("Buffer element must be U8 (Byte) — got '" + elem + "'", "SEM096");
+            }
+            return "Buffer";
+        }
         if (ctx.check(TokenType.LESS)) {
             StringBuilder args = new StringBuilder("<");
             int depth = 0;

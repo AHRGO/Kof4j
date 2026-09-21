@@ -153,6 +153,24 @@ final class ExpressionBuiltinInstanceCalls {
         return localIdx;
     }
 
+    static int lowerBuffer(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
+                           String owner, int localIdx, List<IRLocalVariable> locals, Type recvType) {
+        KofBuffer.BufferCall bufferCall =
+                KofBuffer.instanceMethod(recvType, mc.methodName(), mc.arguments().size());
+        if (bufferCall != null) {
+            List<Type> params = new ArrayList<>();
+            params.add(recvType); // receiver (kof.Buffer) first — JvmTypeMapper maps it
+            for (ExpressionNode arg : mc.arguments()) {
+                params.add(ExpressionTyper.inferExprType(driver, arg, locals));
+                localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
+            }
+            ops.add(new KofCall(new Type.ClassType("dev.kof.runtime", "KofRuntime", List.of()),
+                    bufferCall.function(), params,
+                    bufferCall.returnType(), KofCallKind.FUNCTION));
+        }
+        return localIdx;
+    }
+
     static int lowerIo(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
                        String owner, int localIdx, List<IRLocalVariable> locals, Type recvType) {
         if (KofIo.isIdentityMethod(mc.methodName())) {

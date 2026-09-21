@@ -217,6 +217,8 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_done", "kof_cancel", "kof_cancelled" -> "I";
             case "kof_select_any" -> "Ljava/lang/Object;";
             case "kof_tetris_run" -> "V";
+            case "kof_buffer_alloc" -> "Ldev/kof/runtime/KofRuntime$Buffer;";
+            case "kof_buffer_bytes" -> "[B";
             default -> "Ljava/lang/Object;";
         };
     }

@@ -112,6 +112,13 @@ Three worked examples the implementation tests must reproduce bit-exactly:
   ABI types even when all become an address in a register). Length stays an explicit C
   argument. Pointer-in-struct
   fields = out of scope (opaque handles are 3.3, separate decision).
+  **Landed 21/09 (D-R3-BUFFER/D-R3-HANDLE-LIFETIME):** the nominal spelling is
+  **`Buffer(U8)`** (not a reuse of `Byte[]`), created with
+  **`buffer.alloc(Int) : Buffer(U8)`** — the programmer never allocates/frees
+  (lifetime language-managed; `Handle` follows the same automatic rule). Slice 1
+  (JVM): `buffer.alloc` + `Buffer.bytes() : Byte[]` (`BufferE2ETest` 4/4);
+  extern copy-in/call/copy-back is the next slice. Native/JS stay `FFI001`/
+  `FFI002` (R6-SCOPE: incremental, declared gaps).
 - **D6-4 · return-by-value > 16 B.** SysV hidden-pointer (sret) / AAPCS64
   hidden-x8 / LP64 reference — the *JVM* Linker hides this; the *asm*
   backend must implement sret explicitly. Flag: this is the single biggest

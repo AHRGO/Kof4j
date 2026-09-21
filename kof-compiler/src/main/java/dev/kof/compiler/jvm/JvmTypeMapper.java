@@ -89,6 +89,12 @@ public final class JvmTypeMapper {
         if ("kof.process".equals(c.packageName()) && "Result".equals(c.name())) {
             return "Ldev/kof/runtime/KofRuntime$ProcessResult;";
         }
+        // D-R3-BUFFER: Buffer(U8) apaga para KofRuntime$Buffer (o runtime real do
+        // out-buffer) — sem isto, `Buffer` virava a classe inexistente `kof/Buffer`
+        // → ClassNotFoundException/NoClassDefFoundError (mesma forma do #31).
+        if ("kof".equals(c.packageName()) && "Buffer".equals(c.name())) {
+            return "Ldev/kof/runtime/KofRuntime$Buffer;";
+        }
         // enum: D-ENUM207 — o valor é uma INSTÂNCIA de enum (classe real
         // emitida por CompilerEnumLowering), não a String do nome. Descriptor
         // próprio L<Dir>; (antes era apagado p/ Ljava/lang/String;).

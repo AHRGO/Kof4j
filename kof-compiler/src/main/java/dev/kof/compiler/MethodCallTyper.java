@@ -393,6 +393,11 @@ if (mc.receiver() != null) {
                 KofMedia.handleMethod(recvType, mc.methodName(), mc.arguments().size());
         if (mediaCall != null) return mediaCall.returnType();
     }
+    if (KofBuffer.isBufferType(recvType)) {
+        KofBuffer.BufferCall bufferCall =
+                KofBuffer.instanceMethod(recvType, mc.methodName(), mc.arguments().size());
+        if (bufferCall != null) return bufferCall.returnType();
+    }
     if (KofIo.isIoType(recvType)) {
         KofIo.IoCall ioCall = KofIo.instanceMethod(recvType, mc.methodName(), mc.arguments().size());
         if (ioCall != null) return ioCall.returnType();

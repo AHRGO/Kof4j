@@ -115,6 +115,13 @@ Três exemplos resolvidos que os testes de implementação devem reproduzir bit 
   num registrador). O comprimento segue argumento explícito do C.
   Campos ponteiro-em-struct ficam fora (handles opacos são 3.3, decisão
   separada).
+  **Pousou 21/09 (D-R3-BUFFER/D-R3-HANDLE-LIFETIME):** a grafia nominal é
+  **`Buffer(U8)`** (não um reuso de `Byte[]`), criado com
+  **`buffer.alloc(Int) : Buffer(U8)`** — o programador nunca aloca/libera
+  (vida gerenciada pela linguagem; `Handle` segue a mesma regra automática).
+  Fatia 1 (JVM): `buffer.alloc` + `Buffer.bytes() : Byte[]` (`BufferE2ETest`
+  4/4); copy-in/chamada/copy-back no extern é a próxima fatia. Native/JS
+  seguem `FFI001`/`FFI002` (R6-SCOPE: incremental, gaps declarados).
 - **D6-4 · retorno by-value > 16 B.** SysV hidden-pointer (sret) /
   AAPCS64 hidden-x8 / LP64 referência — o Linker do *JVM* esconde isso; o
   backend *asm* precisa implementar sret explicitamente. Alerta: é o maior

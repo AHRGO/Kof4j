@@ -2905,6 +2905,14 @@ fixes the **spelling the user writes**: a **nominal `Buffer(U8)`** type in the
 read-only `ptr` of fatia 3/D6-2). `Buffer` stays a distinct ABI type even when
 a register carries an address (R6).
 
+**Creation/lifetime (answered 21/09):** the programmer obtains a buffer with
+**`buffer.alloc(Int n) : Buffer(U8)`** (stdlib) and its lifetime is
+**automatic** — the compiler releases it at the end of the enclosing scope; the
+programmer never allocates or frees. `Buffer(U8)` as an `extern` parameter is
+`Buffer(U8, INOUT)`: copy-in, call, copy-back; the length is an explicit C
+argument (D6-3). Inspect with `Buffer.bytes()`. Incremental slice: JVM first;
+Native/JS keep honest `FFI001`/`FFI002` (R6-SCOPE).
+
 ## D-R3-HANDLE-LIFETIME — `Handle` memory is automatic (maintainer, 21/09/2026)
 
 **State:** `DECIDED` · **Direction chosen:** automatic (of single `Handle<T>`, or

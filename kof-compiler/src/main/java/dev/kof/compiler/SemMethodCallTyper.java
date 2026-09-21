@@ -164,6 +164,13 @@ public final class SemMethodCallTyper {
             if (ioCall != null) return ioCall.returnType();
             if (KofIo.isIdentityMethod(mc.methodName())) return recv;
         }
+        // D-R3-BUFFER: espelha o ramo do emit (MethodCallTyper) para Buffer(U8).
+        if (KofBuffer.isBufferType(recv)) {
+            for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
+            KofBuffer.BufferCall bufferCall =
+                    KofBuffer.instanceMethod(recv, mc.methodName(), mc.arguments().size());
+            if (bufferCall != null) return bufferCall.returnType();
+        }
         Type builtin = BuiltinCallTyper.infer(sa, mc, scope);
         if (builtin != null) return builtin;
         if (mc.receiver() != null) {

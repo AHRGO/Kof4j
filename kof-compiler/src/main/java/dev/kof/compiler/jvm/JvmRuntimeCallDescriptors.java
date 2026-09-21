@@ -458,6 +458,8 @@ public final class JvmRuntimeCallDescriptors {
                     "kof_sec_hsts_header", "kof_sec_content_type_options_header",
                     "kof_sec_frame_header", "kof_sec_referrer_header", "kof_sec_auth_token",
                     "kof_sec_auth_claims", "kof_sec_auth_user" -> "()Ljava/lang/String;";
+            case "kof_buffer_alloc" -> "(I)Ldev/kof/runtime/KofRuntime$Buffer;";
+            case "kof_buffer_bytes" -> "(Ldev/kof/runtime/KofRuntime$Buffer;)[B";
             default -> "(Ljava/lang/String;)Ljava/lang/Object;";
         };
     }

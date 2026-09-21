@@ -2915,6 +2915,14 @@ na assinatura do `extern` — *não* um reuso de `Byte[]` (o `T[]` escalar segue
 `ptr` read-only da fatia 3/D6-2). `Buffer` continua um tipo ABI distinto mesmo
 quando um registrador carrega um endereço (R6).
 
+**Criação/vida (respondido 21/09):** o programador obtém um buffer com
+**`buffer.alloc(Int n) : Buffer(U8)`** (stdlib) e a vida é **automática** — o
+compilador libera no fim do escopo; o programador nunca aloca nem libera.
+`Buffer(U8)` como parâmetro de `extern` é `Buffer(U8, INOUT)`: copy-in, chamada,
+copy-back; o comprimento é argumento C explícito (D6-3). Inspeciona com
+`Buffer.bytes()`. Fatia incremental: JVM primeiro; Native/JS mantêm
+`FFI001`/`FFI002` honestos (R6-SCOPE).
+
 ## D-R3-HANDLE-LIFETIME — a memória do `Handle` é automática (mantenedora, 21/09/2026)
 
 **Estado:** `DECIDIDO` · **Direção escolhida:** automática (de `Handle<T>` único,
