@@ -161,12 +161,12 @@ Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
      a `String`/callback return, stays an honest `FFI001`/`FFI002`. On JS the compiled function value
      is a `Lambda…` **object** (not a native arrow), so the runner bridge calls
      `fn.getMember("invoke").execute(...)`. A browser has no host → honest runtime degrade
-     (R7). Still **partially** bound — the **JVM struct/array slice landed 20–21/09 (3.8b)**: a `record` by value as an argument **and** as a return, plus a scalar `T[]`→`ptr` with call-scoped copy-in (`FfiStructE2ETest` 10/10, `FfiArrayE2ETest` 5/5). The remaining faces stay honest `FFI001` at compile time (never a silent stub, R6): out-buffers/out-params (`Buffer(U8,INOUT)`, `D-R3-3.3` ✅ decided 21/09), struct/array on **Native** and the JS struct bridge, and Native callbacks; variadics = `D-R3-3.5` (✅ option A: no general variadics, documented gap); D6 ✅ decided 20/09. **Native binds the scalar ABI DIRECT on
+      (R7). Still **partially** bound — the **JVM struct/array/out-buffer slice landed 20–21/09 (3.8b)**: a `record` by value as an argument **and** as a return, a scalar `T[]`→`ptr` with call-scoped copy-in, and an out-buffer `Buffer(U8)` INOUT (copy-in / call / copy-back, created with `buffer.alloc`; `FfiStructE2ETest` 10/10, `FfiArrayE2ETest` 5/5, `BufferFfiE2ETest` 4/4). The remaining faces stay honest `FFI001` at compile time (never a silent stub, R6): out-buffers/out-params on **Native/JS** (`Buffer(U8,INOUT)` bound on the JVM per `D-R3-3.3` ✅ decided 21/09), struct/array on **Native** and the JS struct bridge, and Native callbacks; variadics = `D-R3-3.5` (✅ option A: no general variadics, documented gap); D6 ✅ decided 20/09. **Native binds the scalar ABI DIRECT on
      x86-64/riscv64/aarch64 (#431 slices 1–2, 20/09, §369)** — `library()` link-by-use +
      `call sym@PLT`, no `dlopen` (§61 closed); on Native, non-scalar signatures, callbacks and a
      missing `library()` stay `FFI001` at the declaration line. A missing lib/symbol fails at **runtime** with
      a `kof_ffi` exception naming `lib::symbol` (stack trace, not a surgical
-      message). Remaining R3 slices (out-buffer/handle `D-R3-3.3`, Native struct/array + callbacks, JS struct bridge; variadics closed as a documented gap; **JVM struct/array 3.8b + JVM/JS scalar+callback parity + Native scalar closed**)
+       message). Remaining R3 slices (handle lifetime `D-R3-3.3`, Native struct/array + callbacks, JS struct bridge; variadics closed as a documented gap; **JVM struct/array + out-buffer 3.8b + JVM/JS scalar+callback parity + Native scalar closed**)
     in
    `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431).
 
