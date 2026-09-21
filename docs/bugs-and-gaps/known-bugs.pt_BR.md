@@ -11296,6 +11296,8 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Relacionado:** #566 (pergunta de contrato-mãe; defeito (ii)), §134 (external classpath), #567/#569 (irmãos), D-KOF-FIRST (contrato interno antes do externo).
 
 ## §392 — o tip `beta-0.5.0` carregava `KofOrmE2ETest` VERMELHO 2/41 (`createNativeEndToEndMatchesJvm` + `countWhereNativeEndToEndMatchesJvm`) — CAUSA-RAIZ CORRIGIDA: `0793aea4` (fix do pump §387) REVERTEU o pouso F3a inteiro (`a5d87fa7`) numa resolução de rebase, então a leitura de "árvore compartilhada suja/WIP" estava ERRADA — ✅ CORRIGIDO 20/09 (lane estabilização)
+> **Estado:** ✅ CORRIGIDO — restaurado por `0f824d5c` (stabilization lane). Verificado 20/09: `KofOrmE2ETest` 41/0F (2 skip) no tip `d7dc0cf3`, medição `.18`. Causa-raiz: o rebaser do push `0793aea4` (§387) clobberou os hunks F3a de `a5d87fa7` — lição: ao resolver rebase que toca arquivos fora da própria entrada, rodar a bateria do módulo afetado ANTES do push.
+
 
 - **Causa-raiz real (medida 20/09, lane estabilização, árvore limpa):** o commit
   `0793aea4` ("fix(kofjs) §387 …") tocou 3 arquivos de ORM que não tinha por que

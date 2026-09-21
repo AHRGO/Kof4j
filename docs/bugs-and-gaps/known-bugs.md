@@ -11852,6 +11852,8 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
 - **Related:** #566 (mother contract question; defect (ii)), §134 (external classpath), #567/#569 (siblings), D-KOF-FIRST (internal contract before the external one).
 
 ## §392 — tip `beta-0.5.0` carried `KofOrmE2ETest` RED 2/41 (`createNativeEndToEndMatchesJvm` + `countWhereNativeEndToEndMatchesJvm`) — ROOT CAUSE CORRECTED: `0793aea4` (§387 pump fix) REVERTED the whole F3a landing (`a5d87fa7`) in a rebase resolution, so the "dirty shared tree/WIP" reading was WRONG — ✅ FIXED 20/09 (stabilization lane)
+> **Status:** ✅ FIXED — restaurado por `0f824d5c` (stabilization lane). Verificado 20/09: `KofOrmE2ETest` 41/0F (2 skip) no tip `d7dc0cf3`, medição `.18`. Causa-raiz foi o rebaser do push `0793aea4` (§387) que clobberou os hunks F3a de `a5d87fa7` — lição: após resolver rebase que toca arquivos de fora da própria entrada, rodar a bateria do módulo afetado ANTES do push.
+
 
 - **Real root cause (measured 20/09, stabilization lane, clean tree):** commit
   `0793aea4` ("fix(kofjs) §387 …") touched 3 ORM files it had no reason to
