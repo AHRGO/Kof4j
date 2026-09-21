@@ -22,7 +22,7 @@ A CLI é a ferramenta central da plataforma Kof.
 | `kof c <file.c> [--run] [--output <bin>]` | KofC C subset → ELF x86-64 nativo-only |
 | `kof serve <file.kf>` | Web server HTTP (`web.app()` nativo + API legada `handle()`) |
 | `kof check <file.kf\|dir> [--target <t>] [--json]` | Type-check sem emitir código (gaps por alvo, ex.: `AND002` no android) |
-| `kof test <file.kf\|dir> [--target jvm|native|js]` | Suíte estruturada `test "nome" { assert(...) }` nos 3 targets + programas inteiros por exit code |
+| `kof test <file.kf\|dir> [--target jvm|native|js]` | Suíte estruturada `test "nome" { assert(...) }` nos 3 targets + programas inteiros por exit code; um diretório desce em **suítes nomeadas** (uma por diretório) |
 | `kof deploy <dir|file.kf> [--target jvm|native|js|android] [--output <dir>] [--name <n>] [--version <v>]` | Empacota uma release autocontida: artefato (fat jar / ELF 0755 / `Default.mjs` + fecho do runtime / APK assinado) + `RELEASE.md` + `SHA256SUMS` + `.tar.gz`; cross riscv64/aarch64 e `--publish` recusam honesto com `DEP001` |
 | `kof bench [paths...] [--target ...] [--iterations N] [--baseline <file>] [--threshold <ratio>] [--json] [--fail-on-regression]` | Benchmark harness (compile, run, validate, métricas, baseline) |
 | `kof profile <file.kf> [--target ...] [--methods]` | Execução + métricas (CPU, RSS, GC); `--methods`: profiler de **amostragem** method-level próprio (JFR da própria JDK no JVM, `--cpu-prof` do Node no JS) com hot spots mapeados de volta à linha `.kf` |

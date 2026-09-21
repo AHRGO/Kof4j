@@ -59,16 +59,23 @@ Arquivos `.kf` **sem** blocos `test` mantêm o contrato anterior: o arquivo é
 um programa; PASS = exit code 0.
 
 ```bash
-kof test src/tests/            # diretório — um programa por arquivo
+kof test src/tests/            # diretório — recursivo; cada dir é uma suíte nomeada
 kof test math.kf               # arquivo único
 kof test src/tests --target native
 ```
+
+Dado um diretório, o `kof test` desce nos subdiretórios e trata cada diretório
+como uma **suíte nomeada** (nome = caminho relativo à raiz dada; `.` = a raiz),
+imprimindo um resumo `suite <nome>: P passed, F failed` por suíte. Um argumento
+de arquivo único não imprime linhas de suíte.
 
 Saída:
 
 ```text
 PASS src/tests/math.kf
-FAIL src/tests/broken.kf
+FAIL src/tests/integ/broken.kf
+suite .: 1 passed, 0 failed
+suite integ: 0 passed, 1 failed
 1 passed, 1 failed
 ```
 

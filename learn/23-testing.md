@@ -60,16 +60,23 @@ main() {
 a program; PASS = exit code 0.
 
 ```bash
-kof test src/tests/            # directory — one program per file
+kof test src/tests/            # directory — recurses; each dir is a named suite
 kof test math.kf               # single file
 kof test src/tests --target native
 ```
+
+Given a directory, `kof test` walks its subdirectories and treats each directory
+as a **named suite** (name = path relative to the given root; `.` = the root),
+printing a `suite <name>: P passed, F failed` summary per suite. A single-file
+argument prints no suite lines.
 
 Output:
 
 ```text
 PASS src/tests/math.kf
-FAIL src/tests/broken.kf
+FAIL src/tests/integ/broken.kf
+suite .: 1 passed, 0 failed
+suite integ: 0 passed, 1 failed
 1 passed, 1 failed
 ```
 
