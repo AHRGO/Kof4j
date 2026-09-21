@@ -14284,3 +14284,22 @@ p
 - **Found while:** closing §352/NAT002 (Q4 — recorded, not silently fixed; a partial `JvmOpCollections` patch was measured, did not resolve the retType/emitter mismatch, and was reverted).
 
 <!-- pt-switch --> **PT:** [§432 (pt_BR)](known-bugs.pt_BR.md#432--jvm-map_objectgetordefaultk-primitivo-morre-com-verifyerror-o-emissor-jvm-sobrescreve-o-v-do-slot-com-o-tipo-do-argumento-do-call-site---aberto-pre-existente-catalogado-2109-codegen-jvm-achado-no-endurecimento-352q4)
+
+## §433 — `ArtifactSizeTest.helloJsRuntimeSizeWithinBaseline` was red on the remote tip (JS hello bundle past the 5% budget) — ✅ FIXED 21/09 by the FFI/JS lane (`29198ea8`) the same day it was catalogued
+- **Measured (21/09, full reactor on tip `2995d0f8` + the gaps-db F2d1 unit):** `runtime JS inchou: 13834B > 13657B (baseline 13007B +5%)` — `ArtifactSizeTest.java:217`.
+- **Origin (diagnosed, not fixed):** the in-flight JS-FFI landings (`2995d0f8` "Buffer(U8) INOUT on the JS target" touches `KofJsFfiBridge`/`KofJsFfiMarshal`) grew the emitted JS runtime. Precedent for the fix format: §166 (re-baseline WITH cause recorded in the test).
+- **Owner:** the FFI/JS lane (author of `2995d0f8`/`10dbe59e`). NOT touched here — rule 8 (another lane's front); the F2d1 unit touches no JS runtime file.
+- **Minimal repro:** `KOF_MYSQL_PORT=13306 mvn -o test -pl kof-compiler -Dtest=ArtifactSizeTest` → 6 run / 1F (before the fix).
+- **Fix + proof (21/09):** the FFI/JS lane reconciled the JS-FFI ratchets in `29198ea8` ("reconcile JS-FFI ratchets after the JS surface closed") — re-baseline WITH cause, §166 precedent: `ArtifactSizeTest` 6 run / 0F / 3 skip.
+
+<!-- pt-switch --> **PT:** [§433 (pt_BR)](known-bugs.pt_BR.md#-433--vermelho-do-tip-remoto-artifactsizetesthellojsruntimesizewithinbaseline--o-bundle-js-hello-passou-do-orcamento-de-5-medido-2109-no-re-pouso-do-f2d1---aberto-frente-de-outra-lane-catalogado-nao-corrigido-aqui)
+
+## §434 — `StdParityGapAuditTest.bufferGatesToJvmWithFfiCodes` was red on the remote tip (JS missing from the audited Buffer gate list) — ✅ FIXED 21/09 by the FFI/JS lane (`29198ea8`) the same day it was catalogued
+
+- **Measured (21/09, same run):** `expected: <[ANDROID, JS, NATIVE, SCRIPT, NATIVE_AARCH64, NATIVE_RISCV64]> but was: <[NATIVE, NATIVE_RISCV64, NATIVE_AARCH64, ANDROID, SCRIPT]>` — `StdParityGapAuditTest.java:39`.
+- **Origin (diagnosed, not fixed):** same in-flight JS-FFI commit `2995d0f8` (admits the Buffer(U8) JS bridge; `CompilerPipeline.java` touched) — the gate catalog and the audit's expected list disagree on JS.
+- **Owner:** the FFI/JS lane. NOT touched here — rule 8.
+- **Minimal repro:** `mvn -o test -pl kof-compiler -Dtest=StdParityGapAuditTest` → 15 run / 1F (before the fix).
+- **Fix + proof (21/09):** same `29198ea8` reconciled the gate catalog with the audit's expected list: `StdParityGapAuditTest` 15 run / 0F.
+
+<!-- pt-switch --> **PT:** [§434 (pt_BR)](known-bugs.pt_BR.md#-434--vermelho-do-tip-remoto-stdparitygapaudittestbuffergatestojvmwithfficodes--js-ausente-da-lista-auditada-de-gates-de-buffer---aberto-frente-de-outra-lane-catalogado-nao-corrigido-aqui)
