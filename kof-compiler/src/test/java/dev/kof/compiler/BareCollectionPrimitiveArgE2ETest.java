@@ -204,9 +204,11 @@ class BareCollectionPrimitiveArgE2ETest {
             }
             """);
         Path out = tmp.resolve("o-nat");
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                dev.kof.compiler.nat.NativeToolchainGate.present(),
+                "Native toolchain (as/ld) ausente no host — pulando honesto (NATIVE002)");
         CompilationResult r = driver.compile(src, out, Target.NATIVE);
-        org.junit.jupiter.api.Assumptions.assumeTrue(r.success(),
-                "Native toolchain ausente no host (COMP001): " + diags(r));
+        assertTrue(r.success(), "compilação Native falhou (regressão, não skip): " + diags(r));
         Process p = new ProcessBuilder(out.resolve("Default/Main").toString())
                 .redirectErrorStream(true).start();
         String s = new String(p.getInputStream().readAllBytes(),
