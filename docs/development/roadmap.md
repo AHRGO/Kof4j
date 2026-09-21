@@ -1065,7 +1065,10 @@ Open queue (every lane obeys; owner claims in `DOING.md`):
 | EG-10 | Android gate (own gate — `D-1.0-EDGES`) | Android green on the candidate with its own gate evidence (CI runs the APK). **Mechanism DONE 20/09**: `scripts/test-android-gate.sh` — honest preflight (JDK ≥ 25 + `jar`; `ANDROID_HOME` + complete build-tools ≥ 35 + a platform `android-N/android.jar`); absent SDK = honest SKIP exit 3 naming what is missing (never a false green, R6), and the CI `android.yml` runs the SAME gate. With the SDK it runs `kof build --target android --apk` (the standalone aapt2→d8→zip→zipalign→apksigner pipeline) and proves the artifact is a real zip carrying `AndroidManifest.xml` + `classes.dex`; verdict bound to the SHA (`ANDROID-GATE: PASS sha=…`). RED-first offline: `scripts/tests/test-android-gate-test.sh` (6 scenarios, registered) |
 
 Rules binding every item: the §8 gate is AND — one unmet item blocks the RC
-regardless of the others; gaps stay only per §15 (OUTSIDE 1.0 + honest +
+regardless of the others; per `D-1.0-STABILITY-100` (20/09) no 1.0.0 ships
+while ANY item remains open in `docs/development/`, `docs/development/future/`
+or `docs/bugs-and-gaps/` — 100% resolved, with the cross-target parity proven
+by measurement; gaps stay only per §15 (OUTSIDE 1.0 + honest +
 documented); the freeze (§17) starts at the first RC and freezes the surface,
 not the stabilization; RC→Stable adds no regression (§19). TIER 12's "final
 test" remains compatible: stabilization touches structure/diagnostics, never the

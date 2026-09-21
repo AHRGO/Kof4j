@@ -1068,7 +1068,10 @@ Fila aberta (toda lane obedece; dono se declara no `DOING.md`):
 | EG-10 | Gate do Android (gate próprio — `D-1.0-EDGES`) | Android verde na candidata com evidência do gate próprio (o CI roda o APK). **Mecanismo FEITO 20/09**: `scripts/test-android-gate.sh` — preflight honesto (JDK ≥ 25 + `jar`; `ANDROID_HOME` + build-tools COMPLETA ≥ 35 + uma plataforma `android-N/android.jar`); SDK ausente = SKIP honesto exit 3 nomeando o que falta (nunca verde falso, R6), e o CI `android.yml` roda o MESMO gate. Com SDK roda `kof build --target android --apk` (o pipeline standalone aapt2→d8→zip→zipalign→apksigner) e prova que o artefato é um zip real com `AndroidManifest.xml` + `classes.dex`; veredito amarrado ao SHA (`ANDROID-GATE: PASS sha=…`). RED-first offline: `scripts/tests/test-android-gate-test.sh` (6 cenários, registrado) |
 
 Regras que amarram todo item: o gate §8 é um E entre todos os itens — um item em falta
-trava o RC independentemente dos demais; gaps ficam só na forma do §15 (FORA da
+trava o RC independentemente dos demais; por `D-1.0-STABILITY-100`
+(20/09) nenhum 1.0.0 embarca enquanto QUALQUER item de `docs/development/`,
+`docs/development/future/` ou `docs/bugs-and-gaps/` estiver aberto — 100%
+resolvido, com paridade cross-target provada por medição; gaps ficam só na forma do §15 (FORA da
 1.0 + honesto + documentado); o congelamento (§17) começa no primeiro RC e
 congela a superfície, não a estabilização; RC→Stable sem regressão (§19). O
 "teste final" do TIER 12 segue compatível: estabilização mexe em
