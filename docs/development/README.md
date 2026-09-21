@@ -87,6 +87,14 @@ record, the rule of §1 of the three-states table). The **authority** for the
 live set is `scripts/check_known_bugs_status.sh` (EN×PT consistent), never a
 number written by hand.
 
+**The CHANGELOG cannot lie about the ledger**: `scripts/check_changelog_ledger.sh`
+cross-checks every `§NNN ✅ FIXED` claim against that live set (same classifier, the
+open list the gate prints) and REDs the silent-revert case that actually happened on
+21/09 — a stale-base rebase flipped §388 `✅→🟡` while the CHANGELOG kept claiming the
+flip, with zero conflict to warn anyone. Historical quotes of a half-closed item may
+be waived only by a named line in `scripts/changelog-ledger-waivers.txt`, never by
+editing the gate.
+
 **17 items in the open queue** (resynced 21/09 — 20→19 when
 **§380** (JS nested-`if`/`throw` codegen) was formalized ✅ `9f383bcf`,
 re-measured 16/0F at the tip; 19→18 when **§381** (entity-field keyword

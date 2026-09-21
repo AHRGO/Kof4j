@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# check_changelog_ledger.sh — paridade CHANGELOG ↔ ledger known-bugs.
+#
+# Toda entrada de CHANGELOG que AFIRMA um flip ✅/FIXED de `§NNN` precisa
+# achar o §NNN FECHADO no último status do ledger da MESMA língua. O
+# classificador de status é o do check_known_bugs_status.sh (última linha de
+# status vence) — este gate consome a lista "open/partial" que ele imprime.
+#
+# Por que existe: 21/09 — um rebase de base velha (tick `d9384a5b`) reverteu
+# silenciosamente o §388 de ✅ FIXED para 🟡 PARTIAL nas duas línguas enquanto
+# o CHANGELOG continuava alegando o flip. Zero conflito, zero aviso: só o
+# ledger mentindo. Este gate transforma esse cenário em FAIL vermelho na hora
+# em que QUALQUER lado for tocado de novo (e no manifesto de toda lane docs).
+#
+# Uso:
+#   scripts/check_changelog_ledger.sh              # rc!=0 se houver drift
+#   scripts/check_changelog_ledger.sh --selftest   # fixture plantada deve pegar
+set -u
+cd "$(dirname "$0")/.."
+
+LEDGER_CMD="${LEDGER_CMD:-bash scripts/check_known_bugs_status.sh}"
+WAIVERS="${WAIVERS:-scripts/changelog-ledger-waivers.txt}"
+open_ids() { # $1 = "EN|PT"
+    $LEDGER_CMD 2>/dev/null | grep "^$1 open" | sed -E 's/^[^)]*\): //' \
+        | tr ' ' '\n' | grep -E '^[0-9]+$' | sort -u
+}
+waived() { # $1=id $2=lang — citação histórica listada no waiver file
+    [ -f "$WAIVERS" ] && grep -vE '^\s*#' "$WAIVERS" | awk '{print $1" "$2}' | grep -qx "$1 $2"
+}
+
+# Afirmações de flip: token FIXED/✅/FECHAD/CORRIGIDO a ≤80 chars do §NNN,
+# na MESMA linha. Negativas ("ainda não FIXED", "ficaria ✅") só pegam se a
+# linha inteira alegar o fato — histórico citado no CHANGELOG é fato, e se o
+# ledger discorda disso É o drift que queremos ver.
+CLAIM_RE='§([0-9]+)[^§]{0,80}(✅ FIXED|FIXED [0-9]|flips? ✅|✅\(flip|flip ✅|FECHAD|✅ — |✅\(2|CORRIDO 2|✅ EN)'
+
+check_pair() { # $1=changelog $2=id lingua
+    local cl="$1" lang="$2" drift=0 line id live
+    local opens
+    opens="$(open_ids "$lang")"
+    [ -f "$cl" ] || { echo "FAIL: sem $cl"; return 1; }
+    while IFS= read -r line; do
+        id="$(printf '%s' "$line" | grep -oE '§[0-9]+' | head -1 | tr -d '§')"
+        [ -n "$id" ] || continue
+        waived "$id" "$lang" && continue
+        if printf '%s\n' "$opens" | grep -qx "$id"; then
+            echo "DRIFT [$lang]: $cl afirma §$id fechado mas o ledger está vivo:"
+            echo "    ${line:0:110}"
+            drift=1
+        fi
+    done < <(grep -E "$CLAIM_RE" "$cl" | grep -E "§[0-9]+")
+    return $drift
+}
+
+if [ "${1:-}" = "--selftest" ]; then
+    T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
+    mkdir -p "$T/scripts" "$T/docs/bugs-and-gaps"
+    sed 's/^set -u/set -u/' "$0" > "$T/scripts/check_changelog_ledger.sh"
+    cat > "$T/docs/bugs-and-gaps/known-bugs.md" << 'EOF'
+# ledger fixture
+## §999 — bug plantado — 🟡 OPEN (21/09)
+## §998 — bug consertado — ✅ FIXED 21/09
+EOF
+    cp "$T/docs/bugs-and-gaps/known-bugs.md" "$T/docs/bugs-and-gaps/known-bugs.pt_BR.md"
+    cat > "$T/scripts/check_known_bugs_status.sh" << 'EOF'
+#!/usr/bin/env bash
+echo "EN open/partial (1): 999"
+echo "PT open/partial (1): 999"
+echo "OK: statuses consistent EN×PT, no unknowns"
+EOF
+    cat > "$T/CHANGELOG.md" << 'EOF'
+  - **§999 ✅ FIXED 21/09** — flip que o ledger NEGIGA (deve dar DRIFT)
+  - **§998 ✅ FIXED 21/09** — caso honesto (deve passar)
+EOF
+    cp "$T/CHANGELOG.md" "$T/CHANGELOG.pt_BR.md"
+    OUT="$(bash "$T/scripts/check_changelog_ledger.sh" 2>&1)"; RC=$?
+    if [ $RC -ne 0 ] && printf '%s' "$OUT" | grep -q "DRIFT.*§999" && ! printf '%s' "$OUT" | grep -q "DRIFT.*§998"; then
+        echo "SELFTEST OK: §999 pego, §998 limpo, rc=$RC"
+        exit 0
+    fi
+    echo "SELFTEST FALHOU (rc=$RC):"; printf '%s\n' "$OUT"; exit 1
+fi
+
+rc=0
+for pair in "CHANGELOG.md:EN:docs/bugs-and-gaps/known-bugs.md" \
+            "CHANGELOG.pt_BR.md:PT:docs/bugs-and-gaps/known-bugs.pt_BR.md"; do
+    IFS=: read -r cl lang led <<< "$pair"
+    [ -f "$led" ] || continue
+    check_pair "$cl" "$lang" || rc=1
+done
+if [ $rc -eq 0 ]; then
+    n_en="$(grep -cE "$CLAIM_RE" CHANGELOG.md 2>/dev/null || true)"
+    echo "OK: CHANGELOG×ledger consistent (${n_en:-0} afirmações EN conferidas)"
+fi
+exit $rc

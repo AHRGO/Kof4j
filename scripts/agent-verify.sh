@@ -157,6 +157,9 @@ fi
 if touches '\.md$'; then
     run_gate docs_lang "${AGENT_VERIFY_DOCSLANG:-bash scripts/docs-lang.sh check}"
 fi
+if touches '^CHANGELOG\.|^docs/bugs-and-gaps/known-bugs|^scripts/changelog-ledger-waivers'; then
+    run_gate changelog_ledger "${AGENT_VERIFY_CHGLEDGER:-bash scripts/check_changelog_ledger.sh}"
+fi
 if touches '(^|/)(kof-runtime|stdlib)/|stdlib_boundary'; then
     run_gate stdlib_boundary "${AGENT_VERIFY_STDLIB:-bash scripts/check_stdlib_boundary.sh}"
 fi

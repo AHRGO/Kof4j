@@ -88,6 +88,14 @@ fechar.
 da fila viva é `scripts/check_known_bugs_status.sh` (EN×PT consistentes),
 nunca um número escrito à mão.
 
+**O CHANGELOG não pode mentir sobre o ledger**: `scripts/check_changelog_ledger.sh`
+conferiu cada afirmação `§NNN ✅ FIXED` contra essa fila viva (mesmo classificador, a
+lista de abertos que o gate imprime) e VERMELHA o caso de retrocesso silencioso que
+aconteceu de verdade em 21/09 — um rebase de base velha virou o §388 de `✅→🟡` enquanto
+o CHANGELOG seguia alegando o flip, sem um único conflito para avisar ninguém. Citação
+histórica de meia-face fechada só se isenta por linha nomeada em
+`scripts/changelog-ledger-waivers.txt`, nunca editando o gate.
+
 **17 itens na fila aberta** (ressincronizado 21/09 — 20→19
 quando **§380** (codegen JS de `if` aninhado com `throw`) foi formalizado ✅
 `9f383bcf`, re-medido 16/0F no tip; 19→18 quando **§381** (OOM do keyword
