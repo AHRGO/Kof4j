@@ -27,13 +27,20 @@ expõe `__kof_ffi_fields()` na ordem de declaração e o `KofJsFfiMarshal` empac
 o `StructLayout` (mesmos offsets/padding de cauda do JVM) na arena da chamada
 (D6-5). Prova: `structParamByValueJsParity` — `sumpoint(Point(3,4))=7`,
 `scale(Point(2,3),2.0)=10.0` e `parammix(ParamMix(3,2.5,4))=9.5` (layout j/d/i)
-byte-a-byte JVM==JS. **Retorno** de struct no JS e array/buffer no JS seguem
+byte-a-byte JVM==JS. **Retorno** de struct no JS e `Buffer` no JS seguem
 `FFI002`.
 **Pousou 21/09 (3.8b fatia 3 · D6-2):** array escalar **`T[]`→`ptr` C** no JVM,
 **copy-in por chamada** (token `p`+char do elemento; `new Int[n]` atravessa como
 `int*`). O array Java não é pinado nem aliasado — o callee não escreve de volta
 (isso é o out-buffer da D6-3, `Buffer(U8, INOUT)`). `String[]` (array de
-ponteiros) segue FFI001; Native/JS mantêm seus gap codes. `FfiArrayE2ETest` 5/5.
+ponteiros) segue FFI001; Native mantém seu gap code. `FfiArrayE2ETest` 5/5.
+**Pousou 21/09 (3.8b fatia 3 bridge JS · D6-2):** o runner JS agora binda array
+escalar **`T[]`→`ptr` C** com a mesma semântica de **copy-in por chamada** — o
+`KofJsFfiMarshal.packArray` lê o array JS do guest e copia os elementos para a
+arena da chamada (`p`+char do elemento; o C não escreve de volta). Prova:
+`arrayParamByValueJsParity` (`sumn(Int[1,2,3])=6`, `sumd(Double[1.5,2.5])=4.0` e
+`fill` prova não-aliasamento: `11/11/5`) byte-a-byte JVM==JS. Restam no JS:
+**retorno** de struct + `Buffer` (`FFI002`).
 
 ## 1. O que existe hoje (medido 19/09, não lembrado)
 
@@ -51,7 +58,7 @@ tempo de compilação**: `FFI001` (JVM/Native não bindável) / `FFI002` (JS) �
 | callbacks/upcalls (3.4) | ✅ `Linker.upcallStub` | ❌ `FFI001` (sem mecanismo) | ✅ host |
 | String = `char*` | ✅ entrada + saída | ✅ entrada (payload off 24) + saída (cópia na fronteira) | ✅ |
 | **struct (record, campos escalares)** | ✅ **por valor entrada + retorno** (token `@`, 3.8b fatias 1–2, 20–21/09) | ❌ FFI001 (3.7) | ✅ **por valor ENTRADA** (token `@<n><chars>` + `__kof_ffi_fields`, bridge 21/09); ❌ FFI002 retorno |
-| **array escalar `T[]`→`ptr`** | ✅ **copy-in por chamada** (token `p<elem>`, 3.8b fatia 3, 21/09; sem write-back) | ❌ FFI001 | ❌ FFI002 |
+| **array escalar `T[]`→`ptr`** | ✅ **copy-in por chamada** (token `p<elem>`, 3.8b fatia 3, 21/09; sem write-back) | ❌ FFI001 | ✅ **copy-in por chamada** (`packArray` bridge, 21/09; sem write-back) |
 | **out-buffer `Buffer(U8)` INOUT** | ✅ **copy-in / chamada / copy-back** (token `B` + `buffer.alloc`/`Buffer.bytes()`, D6-3, 21/09) | ❌ FFI001 | ❌ FFI002 |
 | array não-escalar / opaco (ex. `String[]`/`List<T>`/`Handle`) | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
 
@@ -171,8 +178,9 @@ FFI001/002 honesto até decidido — nada de binding parcial silencioso.
    copy-in/copy-back, 21/09) POUSARAM** —
    só o subconjunto de campos escalares; `struct` mutável (D6-1 B) é superfície
    nova da linguagem sob a Lei da Simplicidade (regra 11), decisão separada.
-   Restam: o **retorno** de struct no JS e array/buffer no JS (D6-2/D6-3 no
-   JS) — o bridge de struct **param** no JS (pack no host, D6-5) pousou 21/09.
+   Os bridges no JS pousaram 21/09 para struct **param** (pack no host, D6-5)
+   e array escalar **`T[]`→`ptr` copy-in** (D6-2, `packArray`). Restam: o
+   **retorno** de struct no JS e o `Buffer` no JS (D6-3 no JS).
 3. **3.7** asm native: classificação manual por target (x86-64 agora;
    aarch64/riscv64 seguem o mesmo golden de AbiLayout) + sret (D6-4).
 4. **JS**: decidir a fronteira wasm/ffi (o host node já binda escalares;

@@ -13,6 +13,19 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **FFI: array escalar `T[]`→`ptr` no target JS (bridge, D6-2/3.8b fatia 3)**
+    (21/09): o runner JS agora binda `extern` com parâmetro de array escalar — o
+    gate de compilação admite `T[]` no JS e o `KofJsFfiMarshal.packArray` lê o
+    array JS do guest e copia os elementos para a arena da chamada (mesma
+    semântica de **copy-in por chamada** do JVM; o C não escreve de volta — isso
+    é o `Buffer(U8)` da D6-3). Prova: `arrayParamByValueJsParity` — `sumn=6`,
+    `sumd=4.0` e `fill` provando não-aliasamento (`11/11/5`) byte-a-byte
+    JVM==JS; `stringArrayStaysFfi001`/`arrayParamNativeStaysFfi001` inalterados;
+    os antigos `arrayParamJsStaysFfi002`/`jsUnboundAbiEmitsFfi002` agora usam
+    `Buffer`/`String[]` como superfície ainda honesta de não-bind.
+    `FfiArrayE2ETest` 5/5, `FfiE2ETest` 17/17. Restam no JS: **retorno** de
+    struct + `Buffer` (`FFI002`).
+
   - **sync da contagem viva 16→24 + reparo da âncora do §423** (21/09, lane
     docs/.18): a passada 5 da frente de revisão catalogou §424–§431, então a
     narrativa/linha da fila no README (contagem viva de `known-bugs.md`) e a

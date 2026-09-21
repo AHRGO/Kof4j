@@ -118,19 +118,54 @@ class FfiArrayE2ETest {
     }
 
     @Test
-    void arrayParamJsStaysFfi002(@TempDir Path dir) throws IOException {
-        Path src = dir.resolve("arrjs.kf");
-        Files.writeString(src, """
-                extern "libc.so.6" sumn(Int[] xs, Int n): Int
+    void arrayParamByValueJsParity(@TempDir Path dir) throws Exception {
+        // Bridge de array no JS (D6-2/3.8b fatia 3, 21/09): o Marshal lê o array
+        // JS e copia para a arena da chamada — mesma semântica copy-in do JVM
+        // (o `fill` do C NÃO altera o array JS). Provado byte-a-byte JVM==JS.
+        String so = compileHostLib(dir);
+        String kof = """
+                extern "%s" sumn(Int[] xs, Int n): Int
+                extern "%s" sumd(Double[] xs, Int n): Double
+                extern "%s" fill(Int[] xs, Int n)
 
                 main() {
-                    println("hi")
+                    var xs = new Int[3]
+                    xs[0] = 1
+                    xs[1] = 2
+                    xs[2] = 3
+                    println(sumn(xs, 3))
+                    var ds = new Double[2]
+                    ds[0] = 1.5
+                    ds[1] = 2.5
+                    println(sumd(ds, 2))
+                    var ys = new Int[2]
+                    ys[0] = 5
+                    ys[1] = 6
+                    println(sumn(ys, 2))
+                    fill(ys, 2)
+                    println(sumn(ys, 2))
+                    println(ys[0])
                 }
-                """);
-        CompilationResult r = driver.compile(src, dir.resolve("out-arrjs"), Target.JS);
-        assertFalse(r.success(), "JS array bridge not landed → must stay unbound");
-        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI002"),
-                "expected FFI002 on JS, got: " + r.diagnostics().getDiagnostics());
+                """.formatted(so, so, so);
+        String expected = "6\n4.0\n11\n11\n5";
+
+        Path jvmSrc = dir.resolve("arrjs-jvm.kf");
+        Files.writeString(jvmSrc, kof);
+        Path jvmOut = dir.resolve("out-arrjs-jvm");
+        CompilationResult rj = driver.compile(jvmSrc, jvmOut, Target.JVM);
+        assertTrue(rj.success(), "JVM compile: " + rj.diagnostics().getDiagnostics());
+        String jvm = runJvm(jvmOut);
+        assertEquals(expected, jvm, "JVM golden (array param)");
+
+        Path jsSrc = dir.resolve("arrjs-js.kf");
+        Files.writeString(jsSrc, kof);
+        Path jsOut = dir.resolve("out-arrjs-js");
+        CompilationResult rjs = driver.compile(jsSrc, jsOut, Target.JS);
+        assertTrue(rjs.success(), "JS array param must bind (bridge 21/09): "
+                + rjs.diagnostics().getDiagnostics());
+        String js = runJs(jsOut);
+        assertEquals(expected, js, "JS golden (array param, copy-in)");
+        assertEquals(jvm, js, "JVM==JS byte-for-byte parity (array param)");
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -162,6 +197,14 @@ class FfiArrayE2ETest {
             }
         }
         return null;
+    }
+
+    private String runJs(Path outDir) throws IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int ec = dev.kof.runtime.KofJsRunner.run(outDir.resolve("Default.mjs"), out,
+                new java.io.ByteArrayInputStream(new byte[0]), out);
+        assertEquals(0, ec, "JS exit code, output: " + out);
+        return out.toString(java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
     }
 
     private String runJvm(Path outDir) throws IOException {

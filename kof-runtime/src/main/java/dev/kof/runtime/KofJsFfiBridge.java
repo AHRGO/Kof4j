@@ -64,6 +64,12 @@ public final class KofJsFfiBridge {
                     cur = j;
                     pl[i] = ValueLayout.ADDRESS;
                     real[i] = args[i];
+                } else if (c == 'p') {
+                    // D6-2/3.8b fatia 3 (bridge JS): array escalar -> `ptr` C; o
+                    // Marshal já copiou os elementos para a arena da chamada.
+                    cur += 2;
+                    pl[i] = ValueLayout.ADDRESS;
+                    real[i] = args[i];
                 } else if (c == '@') {
                     // D6-1/3.8b (bridge JS 21/09): `record` Kof -> struct C por
                     // valor. O Marshal JÁ empacotou os campos num MemorySegment

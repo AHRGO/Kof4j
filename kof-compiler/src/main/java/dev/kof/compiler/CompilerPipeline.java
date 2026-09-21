@@ -478,9 +478,9 @@ public final class CompilerPipeline {
                 // de struct segue fora do conjunto nesta fatia (FFI002 no JS).
                 if (FfiSignature.structFieldChars(param.type(), driver) != null) continue;
                 // D6-2 / 3.8b fatia 3: `T[]` escalar binda por valor (ptr + copies)
-                // no JVM; Native/JS ficam nos seus gap codes (R6).
-                if (driver.target == Target.JVM
-                        && FfiSignature.arrayElemChar(param.type()) != null) continue;
+                // no JVM E no runner JS (copy-in 21/09: o Marshal lê o array JS e
+                // copia para a arena da chamada). Native fica no gap code (R6).
+                if (FfiSignature.arrayElemChar(param.type()) != null) continue;
                 // D6-3 / D-R3-BUFFER: `Buffer(U8)` como param INOUT binda no JVM
                 // (copy-in/chamada/copy-back); Native/JS ficam nos gap codes (R6).
                 if (driver.target == Target.JVM

@@ -61,6 +61,13 @@ final class KofJsFfiMarshal {
                 String chars = KofJsFfiBridge.structCharsAt(sig, curRef);
                 cur = curRef[0];
                 real[i] = packStruct(chars, v, stubArena);
+            } else if (c == 'p') {
+                // D6-2/3.8b fatia 3 (bridge JS): `T[]` escalar -> `ptr` C, com
+                // copy-in por chamada (o array JS não é pinado nem visto pelo C;
+                // espelha `kof_ffi_copy_in` do JVM).
+                char elem = sig.charAt(cur + 1);
+                cur += 2;
+                real[i] = packArray(elem, v, stubArena);
             } else if (c == '(') {
                 int j = cur + 1;
                 int depth = 1;
@@ -134,12 +141,43 @@ final class KofJsFfiMarshal {
         return seg;
     }
 
+    /**
+     * D6-2/3.8b fatia 3 (bridge JS): copia um array escalar do guest para um
+     * segmento nativo da arena da chamada e devolve o ponteiro (o C não vê nem
+     * altera o array JS — sem write-back, como no JVM). O elem é i/j/f/d/b.
+     */
+    private static MemorySegment packArray(char elem, Value v, Arena arena) {
+        if (v == null || !v.hasArrayElements()) {
+            throw new IllegalArgumentException("ffi: scalar array argument is not a JS array");
+        }
+        int n = (int) v.getArraySize();
+        MemoryLayout ml = KofJsFfiBridge.layout(elem);
+        MemorySegment seg = arena.allocate(ml, n);
+        for (int k = 0; k < n; k++) {
+            Value e = v.getArrayElement(k);
+            switch (elem) {
+                case 'i' -> seg.setAtIndex(ValueLayout.JAVA_INT, k, e.asInt());
+                case 'j' -> seg.setAtIndex(ValueLayout.JAVA_LONG, k, e.asLong());
+                case 'f' -> seg.setAtIndex(ValueLayout.JAVA_FLOAT, k, e.asFloat());
+                case 'd' -> seg.setAtIndex(ValueLayout.JAVA_DOUBLE, k, e.asDouble());
+                case 'b' -> seg.setAtIndex(ValueLayout.JAVA_BOOLEAN, k, e.asBoolean());
+                default -> throw new IllegalArgumentException(
+                        "ffi: bad scalar array element char: " + elem);
+            }
+        }
+        return seg;
+    }
+
     /** Nº de tokens de parâmetro de 1º nível (um callback `(..)` conta como 1). */
     private static int countParams(String sig) {
         int n = 0, cur = 1;
         while (cur < sig.length()) {
             char c = sig.charAt(cur);
-            if (c == '@') {
+            if (c == 'p') {
+                // array escalar: `p` + char do elemento (conta 1).
+                n++;
+                cur += 2;
+            } else if (c == '@') {
                 // struct por valor: `@` + tamanho decimal + chars (conta 1).
                 n++;
                 int[] ref = { cur };

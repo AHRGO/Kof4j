@@ -13,6 +13,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **FFI: scalar array `T[]`→`ptr` on the JS target (bridge, D6-2/3.8b
+    fatia 3)** (21/09): the JS runner now binds `extern` with a scalar-array
+    parameter — the compile gate admits `T[]` on JS and `KofJsFfiMarshal.packArray`
+    reads the guest JS array and copies the elements into the call arena
+    (same **copy-in per call** semantics as the JVM; the C cannot write back —
+    that is D6-3's `Buffer(U8)`). Proof: `arrayParamByValueJsParity` — `sumn=6`,
+    `sumd=4.0` and `fill` proving no aliasing (`11/11/5`) byte-for-byte JVM==JS;
+    `stringArrayStaysFfi001`/`arrayParamNativeStaysFfi001` unchanged; the old
+    `arrayParamJsStaysFfi002`/`jsUnboundAbiEmitsFfi002` now use `Buffer`/`String[]`
+    as their still-honest unbound surface. `FfiArrayE2ETest` 5/5, `FfiE2ETest`
+    17/17. Remaining on JS: struct **return** + `Buffer` (`FFI002`).
+
   - **live-count sync 16→24 + §423 anchor repair** (21/09, lane docs/.18): the
     review front's pass 5 catalogued §424–§431, so the README queue narrative and
     row (`known-bugs.md` live count) and the release-prep condition 7 now read
