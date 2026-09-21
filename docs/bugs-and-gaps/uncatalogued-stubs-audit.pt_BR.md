@@ -60,11 +60,14 @@ portanto, **semântico** (paridade / tratamento parcial), não greppável.
   `console.error("[kof] " + where + ": " + detail)` e relança — o runtime de UI
   do JS tem duas políticas diferentes para o mesmo caso "callback do usuário
   falhou".
-- **Estado:** não verificado. Para subir a `§`, medir a política do JVM/Script
-  para um callback de UI que lança: se eles propagam (ou logam) e o JS
-  descarta em silêncio, é divergência real R6/paridade e ganha `§NNN` + repro.
-  **Próxima passada:** localizar o dispatch de callback de UI no JVM/Script,
-  montar um handler que lança em cada alvo e comparar a saída observável.
+- **Estado: FECHADO (fatia 4) — por design, não é bug.** Medição: no JVM o
+  runtime `kof.ui` é um **no-op** documentado (`JvmRuntimeUi.kof_ui_widget_on:146`
+  e `kof_ui_component_on:180` têm corpo vazio), e as regras de
+  renderização/estado de `kof.ui` são a **única exceção nomeada** à paridade
+  (`D-UI-SCOPE`, 18/09 — `docs/backend-parity.md:225`): autoradas/efetivas no
+  KofJS, nunca no JVM/Native. Sem política JVM/Script de que divergir, o
+  `catch (e) {}` do JS é o isolamento de erro de handler do motor de UI, não um
+  stub não documentado. **Nenhum `§NNN` aberto.**
 
 ## Fatia 2 — invariante de paridade + 1 achado de drift de doc (21/09)
 
@@ -129,21 +132,35 @@ o gap code `SECN003` dispara em quatro alvos. Medido, não lembrado (Q3).
 
 Prova: `mvn -o -pl kof-compiler -am -Dtest=StdParityGapAuditTest test` → 13/13.
 
+## Fatia 4 — UI-JS-1 fechado + duas varreduras negativas (21/09)
+
+- **UI-JS-1 fechado por medição** (ver o candidato acima): o `kof.ui` no JVM é
+  no-op documentado e `D-UI-SCOPE` faz da UI a única exceção nomeada de
+  paridade — não há stub não documentado nem divergência a corrigir.
+- **Arquivos `.kf` host (12) — todos declarados:** `makealive-db-host.native.kf`,
+  `workflow-ckpt-host.native.kf` e `workflow-sched-host.native.kf` carregam
+  **stubs de falha alta citando o gap** (ORM001/CRON001, R6), e o resto não tem
+  marcador (`todo` = *todos* em português). **0 stubs não documentados.**
+- **Varredura de fachada Q7:** 133 `default -> null` nos dispatchers estilo
+  `staticMethod` são o idioma da casa para *"não é membro deste namespace"* — o
+  typer/lowerer transforma o null num diagnóstico (o caminho R6), não numa
+  fachada silenciosa; os 4 `catch { return null }` são fallback reflexivo/parse
+  (`JvmRuntimeCore:196`, `JvmTimeRuntime:270`, `CmdEditor:276`,
+  `KofScriptExecutor:162`). **0 fachadas silenciosas encontradas.**
+
 ## Próximas passadas (planejadas — ainda não executadas)
 
 1. **Checagem de assimetria de paridade** — **FEITA (fatia 2b,
    `StdParityGapAuditTest` 13/13)**. Próximo: estendê-la aos gates por função
    do `KofSecurity` (chacha/auth/cookie) e do `KofTime` além dos casos
    representativos.
-2. **Varredura de fachada Q7:** métodos que devolvem `null`/`0`/`""` num
-   caminho que deveria computar, ramos `default:` que escondem caso não
-   tratado, emissores que devolvem vazio sem diagnóstico.
+2. **Varredura de fachada Q7** — **FEITA (fatia 4, negativa): 0 fachadas silenciosas.**
 3. **Deriva doc/código:** features marcadas como prontas em `docs/` cujo código
-   é parcial (cruzar as matrizes de paridade e o tracker contra o código).
-4. **Arquivos `.kf` host:** os 12 sob `kof-compiler/src/main/resources/dev/kof/`
-   (hosts supervisor/workflow/makealive/android) — triar seus marcadores
-   explícitos de "STUB" (alguns são declarados por design).
-5. **Fechar UI-JS-1** por medição.
+   é parcial (cruzar as matrizes de paridade e o tracker contra o código). —
+   **parcialmente feita** (fatias 2 e 3 acharam 3 drifts); continuar sobre os
+   gates por função.
+4. **Arquivos `.kf` host** — **FEITA (fatia 4, negativa): 0 stubs não documentados.**
+5. **Fechar UI-JS-1** — **FEITA (fatia 4): fechado por medição, por design.**
 
 ## Proveniência
 
