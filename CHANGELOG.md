@@ -13,6 +13,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **tooling — every third-party Action in the non-release workflows is now pinned by full commit SHA**
+    (21/09, platform-cli/security lane, D-ARTIFACT-TRUST §5 hardening): 51 `uses:` references
+    (`owner/repo@<sha40> # vN`, gitleaks as `@sha256:<digest> # v8.28.0`) — no version was changed, only made
+    immutable. New gate `scripts/check_workflow_pins.sh` (+ `--selftest`, in the agent suite / CI
+    `structural-quality`) requires the full SHA **and** the `# vN` comment (what Dependabot uses to bump the pin).
+    `release.yml` is the single declared exemption (`scripts/workflow-pins-exempt.txt`) — its pin lands with the
+    attest+verify rewrite; the gate reports drift when the exemption becomes stale.
+
   - **§353 fixed — a lambda whose body DIRECTLY returns an `io` result now types**
     (21/09, bugs-and-gaps lane): `job("e", () -> File("x").exists())` was rejected
     with SEM014 ("expected 'function' but got 'function'") because the SEMANTIC

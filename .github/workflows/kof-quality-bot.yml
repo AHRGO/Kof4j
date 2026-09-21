@@ -23,18 +23,18 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: '25'
 
       - name: CodeQL Code Quality
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@3ea06614dafe36dec890db3446326e0d40ce53d4 # v3
         with:
           languages: java
           # config canônico = security-and-quality + paths-ignore (src/test).
@@ -43,12 +43,12 @@ jobs:
           config-file: .github/codeql/kof4j-config.yml
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@3ea06614dafe36dec890db3446326e0d40ce53d4 # v3
 
       - name: Perform CodeQL Analysis
         # #563/§386: paths-ignore no config NAO suprime suite importada por
         # `- uses:` (medido 20/09) — filtro real e o pos-SARIF abaixo.
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@3ea06614dafe36dec890db3446326e0d40ce53d4 # v3
         with:
           category: "/quality"
           upload: false
@@ -60,7 +60,7 @@ jobs:
           python3 scripts/codeql-sarif-filter.py "${{ runner.temp }}/codeql-sarif-quality"
 
       - name: Upload filtered SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@3ea06614dafe36dec890db3446326e0d40ce53d4 # v3
         with:
           sarif_file: ${{ runner.temp }}/codeql-sarif-quality
           category: "/quality"
@@ -71,7 +71,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # Automation da frente dev: o bot PERGUNTA ao gate (mesmo
       # scripts/codeql-gate.sh do pre-push) quais alertas estao abertos na

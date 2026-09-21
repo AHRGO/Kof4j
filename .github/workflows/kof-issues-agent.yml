@@ -22,7 +22,7 @@ jobs:
     if: github.event_name == 'issues' && (github.event.action == 'opened' || github.event.action == 'reopened')
     steps:
       - name: Auto-label by content
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const issue = context.payload.issue;
@@ -67,7 +67,7 @@ jobs:
             }
 
       - name: Assign to maintainer if security
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const issue = context.payload.issue;
@@ -88,7 +88,7 @@ jobs:
     if: github.event_name == 'issue_comment' && github.event.action == 'created'
     steps:
       - name: Auto-reply to new issues
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const comment = context.payload.comment;
@@ -131,7 +131,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Mark stale issues/PRs
-        uses: actions/stale@v9
+        uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639 # v9
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           stale-issue-message: 'Esta issue está inativa há 60 dias. Será fechada em 7 dias se não houver atividade. Comente para manter aberta.'

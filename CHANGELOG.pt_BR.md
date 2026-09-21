@@ -13,6 +13,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **tooling — toda Action de terceiros dos workflows fora do release agora é pinada por SHA de commit completo**
+    (21/09, lane platform-cli/segurança, hardening de D-ARTIFACT-TRUST §5): 51 referências `uses:`
+    (`owner/repo@<sha40> # vN`, gitleaks como `@sha256:<digest> # v8.28.0`) — nenhuma versão foi trocada, só
+    tornada imutável. Gate novo `scripts/check_workflow_pins.sh` (+ `--selftest`, na suíte de agentes / job
+    `structural-quality` da CI) exige o SHA completo **e** o comentário `# vN` (o que o Dependabot usa p/ subir o pin).
+    `release.yml` é a única isenção declarada (`scripts/workflow-pins-exempt.txt`) — o pin dele entra com a
+    reescrita attest+verify; o gate acusa drift quando a isenção ficar obsoleta.
+
   - **§353 corrigido — lambda cujo corpo retorna DIRETAMENTE um resultado `io` agora tipa**
     (21/09, lane bugs-and-gaps): `job("e", () -> File("x").exists())` era rejeitado com
     SEM014 ("expected 'function' but got 'function'") porque o typer SEMÂNTICO
