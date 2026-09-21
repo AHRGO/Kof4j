@@ -7,7 +7,7 @@
 > prova (Q0–Q7) e este doc só **move para `docs/stdlib/`** quando a paridade
 > estiver completa.
 
-**Dono:** frente DB/ORM (dono a nomear) · **Registros/plano:** lane docs/plataforma
+**Dono:** lane docs/plataforma (nomeada 21/09, `D-DB-PARITY-OWNER`; S0/S1 autorizadas) · **Registros/plano:** lane docs/plataforma
 **Branch:** `beta-0.5.0` · **Estado:** fila aberta, S0 não iniciada
 
 ---

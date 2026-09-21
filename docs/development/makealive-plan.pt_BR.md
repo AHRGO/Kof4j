@@ -6,7 +6,7 @@
 pousaram (**3.2 POUSADA 21/09 `966c86a4`** — `D-MAKEALIVE-SYNTAX`, açúcar puro
 sobre `design()`), **3.7 FECHADA 21/09 como runtime-only** — os itens de regra 6
 estão resolvidos (ver §5). **Só resta a 3.6** (secrets via `kof.security`),
-delegada ao Estágio 5 (lane de security; design em `future/secrets-plan.md`,
+delegada ao Estágio 5 (lane de security; design em `secrets-plan.md`,
 zero código) — por isso este plano segue em `development/` (regra dos três
 estados).
 **Tracker:** [`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`](IMPLEMENTATION-UNIVERSAL-PLATFORM.pt_BR.md)

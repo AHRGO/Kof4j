@@ -7,7 +7,7 @@
 > lands with proof (Q0–Q7) and this doc is **moved to `docs/stdlib/`** only
 > when parity is complete.
 
-**Owner:** DB/ORM front (owner to be named) · **Records/plan:** docs/plataforma lane
+**Owner:** docs/plataforma lane (named 21/09, `D-DB-PARITY-OWNER`; S0/S1 authorized) · **Records/plan:** docs/plataforma lane
 **Branch:** `beta-0.5.0` · **Status:** queue opened, S0 not started
 
 ---

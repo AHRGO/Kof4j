@@ -44,13 +44,17 @@ surface**).
   `makealive-plan.md` (**residual 3.6 only** — 3.2 **LANDED 21/09 `966c86a4`**
   via `D-MAKEALIVE-SYNTAX` (pure sugar over `design()`); 3.7 **CLOSED 21/09**
   as runtime-only; 3.8 shipped 20/09 `D-MAKEALIVE-CLI`; 3.6 = secrets via
-  `kof.security`, Stage 5/security lane, `future/secrets-plan.md`) ·
+  `kof.security`, Stage 5/security lane, `secrets-plan.md` — **promoted 21/09**,
+  face 1 authorized) ·
   `db-parity-plan.md` (+PT — **`D-DB-GAPS` addendum 21/09**: total DB parity,
   every target accepts mariadb/mysql/sqlite/mongodb; S0 clears §421's silent
-  accept; owner DB/ORM front to be named) ·
-  `codegen-step-2.2.3-assessment.md` (+PT — **proposal, rule 6**: roadmap 2.2.3
-  "migrate DDL/runner to `CodegenStep`" is a phase mismatch; options A/B pending
-  the maintainer; no code).
+  accept; **owner docs/plataforma lane**, S0/S1 authorized 21/09) ·
+  `type-system-extensions-plan.md` (+PT — **X5/X6 APPROVED 21/09**
+  (`D-TYPE-VARIANCE`/`D-INTEROP-REFLECT`), promoted from `future/`; incremental
+  slices with proof, each its own proof) ·
+  `codegen-step-2.2.3-assessment.md` (+PT — **DECIDED 21/09 option B
+  (`D-DESUGAR-STEP`)**: build the AST-phase `DesugarStep` registry
+  (behavior-free); no code in this doc).
   Authority: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Living records here (not backlog):** `DECISIONS.md`,
   `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.

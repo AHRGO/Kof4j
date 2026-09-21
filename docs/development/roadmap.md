@@ -944,7 +944,7 @@ domain (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + parity matrix;
 | 2.1.7 | JS: gap `FFI002` | ✅ honest gap + **scalar parity CLOSED 18/09 (`d3598c2d`, slices 3.6.F1–F3):** host runner binds via `KofJsFfiBridge`, `FfiE2ETest` 16/16 byte-for-byte JVM↔JS; browser = runtime R7; non-scalar keeps `FFI002` |
 | 2.2.1 | Inventory of implicit codegen (4 points: runtime `.source()`, `desugarTests`, `desugarApplication`, entity→record+schema) | ✅ the 4 exist (`CompilerPipeline:295-296`) |
 | 2.2.2 | **Formal `CodegenStep` hook** | ✅ **LANDED 21/09 (R4, `D-CODEGEN-STEP`)** — `CodegenStep`/`CodegenStepPipeline` (additive; empty registry = identity, zero behavior change; `CodegenStepPipelineTest` 6/6). The old `d1c56bad` "✅" was an over-claim from the `planning-future` branch; R4 is the real landing |
-| 2.2.3 | Migrate DDL/runner to the formal hook | ⛔ **PROPOSAL PENDING (rule 6)** — measured 21/09 (`codegen-step-2.2.3-assessment.md` +PT): **phase mismatch** (DDL = lowering at `ExpressionOrmCallLowerer:70`; runner = AST desugar; the hook runs on the OPTIMIZED IR, `CompilerPipeline:332`). Options A (close as obsolete — AST desugar IS the formal seam) / B (`DesugarStep` registry at the AST phase, behavior-free, code after the decision) await the maintainer |
+| 2.2.3 | Migrate DDL/runner to the formal hook | 🔵 **DECIDED 21/09 — option B (`D-DESUGAR-STEP`)** — measured 21/09 (`codegen-step-2.2.3-assessment.md` +PT): **phase mismatch** (DDL = lowering at `ExpressionOrmCallLowerer:70`; runner = AST desugar; the hook runs on the OPTIMIZED IR, `CompilerPipeline:332`). Decision: build a **`DesugarStep` registry at the AST phase** (mirroring `CodegenStep`) and migrate the four desugars — behavior-free (freeze rule 3), zero language surface (rule 11). Slices: S1 interface+pipeline+1 desugar (proof), then the rest. The ORM DDL stays in lowering. |
 | 2.2.4 | `infra "prod" {}` base (codegen over records) | ✅ **LANDED 21/09 (`D-MAKEALIVE-SYNTAX`, `966c86a4`)**: pure sugar over `design()` (no HCL; `infra` = IDENTIFIER, lowered to `design(): Infrastructure`) — proof `InfraSyntaxE2ETest`; R4 ✅ was the hook |
 | 2.3.1 | Constant-folding of domain constants | ✅ `"a"+"b"→"ab"` (`OptimizerConstantFold:100`) |
 | 2.3.2 | Cycle detection in the `infra` graph at compile-time | ✅ **CLOSED 21/09 as runtime-only** (`D-MAKEALIVE-SYNTAX` addendum, `5759b9bd`): 2.2.4 is pure sugar, so the compiler sees only generic calls — a static graph would give the block its own semantics (§7/rule 11); the 3.1 runtime refusal names the cycle members |
@@ -999,10 +999,10 @@ rule 6).
 | 2.8.1 | **R4 `CodegenStep`** (`D-CODEGEN-STEP` = A) — ✅ **landed 21/09** | compiler-INTERNAL codegen hook, no user syntax; unblocks `infra "prod" {}` (3.2) + DDL/runner migration | — |
 | 2.8.2 | **R3-3.3 handles/out-buffers** (`D-R3-3.3` = A) | nominal opaque `Handle` (non-arithmetic) + `Buffer(U8, INOUT)` (== D6-3); prerequisite of Stages 4–7 | R3 (2.1) |
 | 2.8.3 | **R3-3.5 variadics** (`D-R3-3.5` = A) | NO general variadics — caller passes `List`/`Array`/`Buffer`; documented gap (R6/R7) | R3 (2.1) |
-| 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **spec-first**: design plan drafted + reviewed BEFORE any parser/typer diff | plan |
-| 2.8.5 | **X6 interop reflection** (`D-INTEROP-REFLECT` = open) | **spec-first**: incremental plan (slices + proof per slice), interop boundary only | plan |
+| 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **APPROVED 21/09**: plan reviewed; **incremental slices** (proof per slice), spec-first BEFORE any parser/typer diff | 🔵 |
+| 2.8.5 | **X6 interop reflection** (`D-INTEROP-REFLECT` = open) | **APPROVED 21/09**: incremental plan (slices + proof per slice), only at the interop boundary | 🔵 |
 
-**Spec plan (X5 + X6):** [`future/type-system-extensions-plan.md`](future/type-system-extensions-plan.md) — DRAFT for maintainer review, zero code (rule 6; plan-only → `future/`).
+**Spec plan (X5 + X6):** [`type-system-extensions-plan.md`](type-system-extensions-plan.md) — **APPROVED 21/09 (D-TYPE-VARIANCE/INTEROP-REFLECT)**, promoted to `docs/development/`; incremental slices with proof.
 
 ### TIER 3–5 — Legacy migration platform (Phases A–H) ✅ code+tests
 

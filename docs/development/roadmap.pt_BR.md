@@ -946,7 +946,7 @@ tiers `stable`/`experimental` (`docs/backend-parity.md`).
 | 2.1.7 | JS: gap `FFI002` | ✅ gap honesto + **paridade escalar FECHADA 18/09 (`d3598c2d`, fatias 3.6.F1–F3):** runner host liga via `KofJsFfiBridge`, `FfiE2ETest` 16/16 byte-for-byte JVM↔JS; browser = runtime R7; nao-escalar mantem `FFI002` |
 | 2.2.1 | Inventário do codegen implícito (4 pontos: runtime `.source()`, `desugarTests`, `desugarApplication`, entity→record+schema) | ✅ os 4 existem (`CompilerPipeline:295-296`) |
 | 2.2.2 | **Hook formal `CodegenStep`** | ✅ **LANDADO 21/09 (R4, `D-CODEGEN-STEP`)** — `CodegenStep`/`CodegenStepPipeline` (aditivo; registry vazio = identidade, zero mudança de comportamento; `CodegenStepPipelineTest` 6/6). O "✅" antigo de `d1c56bad` era sobre-claim da branch `planning-future`; o R4 é o landing real |
-| 2.2.3 | Migrar DDL/runner p/ o hook formal | ⛔ **PROPOSTA PENDENTE (regra 6)** — medido 21/09 (`codegen-step-2.2.3-assessment.pt_BR.md` +EN): **descompasso de fase** (DDL = lowering em `ExpressionOrmCallLowerer:70`; runner = desugar de AST; o hook roda na IR OTIMIZADA, `CompilerPipeline:332`). Opções A (fechar como obsoleto — o desugar de AST É a costura formal) / B (registry `DesugarStep` na fase de AST, livre de comportamento, código após a decisão) aguardam a mantenedora |
+| 2.2.3 | Migrar DDL/runner p/ o hook formal | 🔵 **DECIDIDO 21/09 — opção B (`D-DESUGAR-STEP`)** — medido 21/09 (`codegen-step-2.2.3-assessment.pt_BR.md` +EN): **descompasso de fase** (DDL = lowering em `ExpressionOrmCallLowerer:70`; runner = desugar de AST; o hook roda na IR OTIMIZADA, `CompilerPipeline:332`). Decisão: construir um **registry `DesugarStep` na fase de AST** (espelhando `CodegenStep`) e migrar os quatro desugars — livre de comportamento (freeze regra 3), zero superfície de linguagem (regra 11). Fatias: S1 interface+pipeline+1 desugar (prova), depois o resto. O DDL do ORM permanece no lowering. |
 | 2.2.4 | Base de `infra "prod" {}` (codegen sobre records) | ✅ **POUSOU 21/09 (`D-MAKEALIVE-SYNTAX`, `966c86a4`)**: puro açúcar sobre `design()` (sem HCL; `infra` = IDENTIFICADOR, rebaixado p/ `design(): Infrastructure`) — prova `InfraSyntaxE2ETest`; o R4 ✅ era o hook |
 | 2.3.1 | Constant-folding de constantes de domínio | ✅ `"a"+"b"→"ab"` (`OptimizerConstantFold:100`) |
 | 2.3.2 | Detecção de ciclo no grafo `infra` em compile-time | ✅ **FECHADA 21/09 como runtime-only** (adendo a `D-MAKEALIVE-SYNTAX`, `5759b9bd`): a 2.2.4 é açúcar puro, então o compilador vê só chamadas genéricas — um grafo estático daria semântica própria ao bloco (§7/regra 11); a recusa em runtime da 3.1 nomeia os membros do ciclo |
@@ -1000,10 +1000,10 @@ do código, regra 6).
 | 2.8.1 | **R4 `CodegenStep`** (`D-CODEGEN-STEP` = A) — ✅ **pousou 21/09** | hook de codegen INTERNO do compilador, sem sintaxe de usuário; destrava `infra "prod" {}` (3.2) + migração DDL/runner | — |
 | 2.8.2 | **R3-3.3 handles/out-buffers** (`D-R3-3.3` = A) | `Handle` opaco nominal (não-aritmético) + `Buffer(U8, INOUT)` (== D6-3); pré-requisito dos Estágios 4–7 | R3 (2.1) |
 | 2.8.3 | **R3-3.5 variadics** (`D-R3-3.5` = A) | SEM variadics gerais — caller passa `List`/`Array`/`Buffer`; gap documentado (R6/R7) | R3 (2.1) |
-| 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **spec-first**: plano de design rascunhado + revisado ANTES de qualquer diff de parser/typer | plano |
-| 2.8.5 | **X6 reflexão de interop** (`D-INTEROP-REFLECT` = aberto) | **spec-first**: plano incremental (fatias + prova por fatia), só na fronteira de interop | plano |
+| 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **APROVADO 21/09**: plano revisado; **fatias incrementais** (prova por fatia), spec-first ANTES de qualquer diff de parser/typer | 🔵 |
+| 2.8.5 | **X6 reflexão de interop** (`D-INTEROP-REFLECT` = aberto) | **APROVADO 21/09**: plano incremental (fatias + prova por fatia), só na fronteira de interop | 🔵 |
 
-**Plano spec (X5 + X6):** [`future/type-system-extensions-plan.pt_BR.md`](future/type-system-extensions-plan.pt_BR.md) — RASCUNHO para revisão da mantenedora, zero código (regra 6; só plano → `future/`).
+**Plano spec (X5 + X6):** [`type-system-extensions-plan.pt_BR.md`](type-system-extensions-plan.pt_BR.md) — **APROVADO 21/09 (`D-TYPE-VARIANCE`/`D-INTEROP-REFLECT`)**, promovido para `docs/development/`; fatias incrementais com prova.
 
 ### TIER 3–5 — Plataforma de migração legado (Fases A–H) ✅ código+testes
 

@@ -2965,3 +2965,68 @@ delivered together with the language-managed resource/lifetime mechanism
 (scoped-resources / RAII front, `docs/development/future/scoped-resources-plan.md`),
 which is the owner of the allocation strategy. Until then `Handle`-typed externs
 stay honest `FFI001`/`FFI002` (R6).
+
+---
+
+## D-DESUGAR-STEP — 2.2.3 resolved: AST-phase desugar registry (option B) (maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` · **Option chosen:** **B**.
+
+The maintainer chose **option B** of `codegen-step-2.2.3-assessment.md` (+PT):
+add a **`DesugarStep` registry at the AST phase** mirroring
+`CodegenStep`/`CodegenStepPipeline`, and migrate the four source desugars
+(`desugarTests`/`desugarApplication`/`desugarInfra`/`desugarNestedFunctions`,
+today in `CompilerDesugar`, `CompilerPipeline.java:301-304`) into registered
+steps. **Compiler-internal, zero language surface** (rule 11: nothing reaches
+user code). **Behavior-free** (freeze rule 3): same suite + golden E2E per
+target, byte-identical output. The ORM DDL stays in lowering (not a candidate).
+Queue: `roadmap.md` §23 `2.2.3` + tracker R4.
+
+- **Unblocks:** 2.2.3 (`⛔` → open, slices).
+- **Relationships:** `Related: D-CODEGEN-STEP, freeze rule 3, rule 6, rule 11`.
+
+## D-TYPE-VARIANCE / D-INTEROP-REFLECT — plan APPROVED, slices authorized (maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `OPEN — implementing` (plan approved; surface pending).
+
+`future/type-system-extensions-plan.md` (+PT) was reviewed and **APPROVED**. X5
+(variance+sealed, option C) and X6 (interop reflection) start **incremental
+slices, each with its own proof**. The front stays `OPEN` until the surface
+lands, so gate condition 2 remains `NEEDS-REVIEW` meanwhile. The plan is promoted
+to `docs/development/` (three-states). Queue: `roadmap.md` §2.8.4/§2.8.5.
+
+## D-SECRETS — Stage 5 / 3.6 promoted; face 1 authorized (maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` · face 1 (`Secret`) starts.
+
+`future/secrets-plan.md` (+PT) is **promoted to `docs/development/`**; **face 1
+(`Secret` type)** is authorized as a rule-6-voted surface, incremental with proof;
+`KeyHandle`/redaction follow face by face. Last residual of `makealive-plan`
+(3.6). Queue: tracker 3.6.
+
+## D-FFI-STRUCT-B — D6-1 option B (`struct` mutable): approved spec-first (maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` · design-first (no code yet).
+
+The maintainer **approved D6-1 B** (new mutable `struct` declaration, by-ref, for
+in/out buffers) **spec-first**: the surface is designed/measured in
+`ffi-abi-structs.md` and reviewed **before any parser/typer diff** (rule 11).
+Records stay by-value read-only; `Buffer(U8)` already covers the out-buffer case
+landed. Queue: tracker 3.8 (`ffi-abi-structs.md` §6).
+
+## D-DB-PARITY-OWNER — db-parity owner named; S0/S1 authorized (maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `DECIDED`.
+
+`db-parity-plan.md` (+PT) gets an owner (docs/plataforma lane, the D-DB-GAPS
+author) and starts **S0** (honest interim §421 diagnosis) + **S1**
+(`mariadb://` = mysql-wire alias), each with proof; S2–S4 follow per slice.
+Addendum to `D-DB-GAPS`.
+
+## D-RELEASE-0.5.0-GATE condition 2 — stays `NEEDS-REVIEW` while a surface front is in flight (maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` (confirmation).
+
+Condition 2 reports `NEEDS-REVIEW` — **not RED** — while an approved `State:
+OPEN` front has not landed; it does not block the 0.5.0 cut by itself. An
+`OPEN` entry is never "nothing waits".

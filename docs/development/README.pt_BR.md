@@ -45,13 +45,16 @@ nova**).
   `966c86a4`** via `D-MAKEALIVE-SYNTAX` (açúcar puro sobre `design()`); 3.7
   **FECHADA 21/09** como runtime-only; 3.8 pousado 20/09 `D-MAKEALIVE-CLI`;
   3.6 = secrets via `kof.security`, Estágio 5/lane de security,
-  `future/secrets-plan.md`) ·
+  `secrets-plan.md` — **promovido 21/09**, face 1 autorizada) ·
   `db-parity-plan.md` (+PT — **adendo `D-DB-GAPS` 21/09**: paridade total de DB,
   todo alvo aceita mariadb/mysql/sqlite/mongodb; a S0 limpa o aceite silencioso
-  do §421; dono frente DB/ORM a nomear) ·
-  `codegen-step-2.2.3-assessment.md` (+PT — **proposta, regra 6**: o roadmap 2.2.3
-  "migrar DDL/runner ao `CodegenStep`" é descompasso de fase; opções A/B pendentes
-  da mantenedora; sem código).
+  do §421; **dono lane docs/plataforma**, S0/S1 autorizadas 21/09) ·
+  `type-system-extensions-plan.md` (+PT — **X5/X6 APROVADOS 21/09**
+  (`D-TYPE-VARIANCE`/`D-INTEROP-REFLECT`), promovido de `future/`; fatias
+  incrementais com prova, cada uma com prova própria) ·
+  `codegen-step-2.2.3-assessment.md` (+PT — **DECIDIDO 21/09 opção B
+  (`D-DESUGAR-STEP`)**: construir o registry `DesugarStep` na fase de AST
+  (livre de comportamento); sem código neste doc).
   Autoridade: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Registros vivos aqui (não são backlog):** `DECISIONS.md`,
   `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.

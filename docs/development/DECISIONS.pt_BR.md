@@ -2975,3 +2975,70 @@ entregue junto com o mecanismo de recurso/vida gerenciado pela linguagem (frente
 scoped-resources / RAII, `docs/development/future/scoped-resources-plan.md`),
 que é o dono da estratégia de alocação. Até lá, externs com `Handle` seguem
 `FFI001`/`FFI002` honestos (R6).
+
+---
+
+## D-DESUGAR-STEP — 2.2.3 resolvido: registry de desugar na fase AST (opção B) (mantenedora 21/09/2026)
+
+**Data:** 2026-09-21 · **Estado:** `DECIDED` · **Opção escolhida:** **B**.
+
+A mantenedora escolheu a **opção B** do `codegen-step-2.2.3-assessment.md` (+PT):
+adicionar um **registry `DesugarStep` na fase AST** espelhando
+`CodegenStep`/`CodegenStepPipeline`, e migrar os quatro desugars de fonte
+(`desugarTests`/`desugarApplication`/`desugarInfra`/`desugarNestedFunctions`,
+hoje em `CompilerDesugar`, `CompilerPipeline.java:301-304`) para steps
+registrados. **Interno ao compilador, zero superfície de linguagem** (regra 11:
+nada chega ao código do usuário). **Sem mudança de comportamento** (freeze regra
+3): mesma suíte + E2E golden por alvo, saída byte-idêntica. O DDL do ORM
+permanece no lowering (não é candidato). Fila: `roadmap.md` §23 `2.2.3` +
+tracker R4.
+
+- **Destrava:** 2.2.3 (`⛔` → aberta, fatias).
+- **Relações:** `Relacionado: D-CODEGEN-STEP, freeze regra 3, regra 6, regra 11`.
+
+## D-TYPE-VARIANCE / D-INTEROP-REFLECT — plano APROVADO, fatias autorizadas (mantenedora 21/09/2026)
+
+**Data:** 2026-09-21 · **Estado:** `OPEN — implementando` (plano aprovado; superfície pendente).
+
+O `future/type-system-extensions-plan.md` (+PT) foi revisado e **APROVADO**. X5
+(variance+sealed, opção C) e X6 (reflexão de interop) começam em **fatias
+incrementais, cada uma com prova própria**. A frente permanece `OPEN` até a
+superfície pousar, então a condição 2 do gate segue `NEEDS-REVIEW` nesse
+intervalo. O plano é promovido para `docs/development/` (três estados). Fila:
+`roadmap.md` §2.8.4/§2.8.5.
+
+## D-SECRETS — Stage 5 / 3.6 promovido; face 1 autorizada (mantenedora 21/09/2026)
+
+**Data:** 2026-09-21 · **Estado:** `DECIDED` · começa a face 1 (`Secret`).
+
+O `future/secrets-plan.md` (+PT) é **promovido para `docs/development/`**; a
+**face 1 (tipo `Secret`)** é autorizada como superfície votada por regra 6,
+incremental com prova; `KeyHandle`/redação seguem face a face. Último resíduo do
+`makealive-plan` (3.6). Fila: tracker 3.6.
+
+## D-FFI-STRUCT-B — D6-1 opção B (`struct` mutável): aprovada spec-first (mantenedora 21/09/2026)
+
+**Data:** 2026-09-21 · **Estado:** `DECIDED` · design-first (sem código ainda).
+
+A mantenedora **aprovou a D6-1 B** (nova declaração `struct` mutável, by-ref,
+para buffers in/out) **spec-first**: a superfície é desenhada/medida no
+`ffi-abi-structs.md` e revisada **antes de qualquer diff** de parser/typer (regra
+11). Records seguem by-value read-only; `Buffer(U8)` já cobre o caso out-buffer
+pousado. Fila: tracker 3.8 (`ffi-abi-structs.md` §6).
+
+## D-DB-PARITY-OWNER — dono da frente db-parity nomeado; S0/S1 autorizadas (mantenedora 21/09/2026)
+
+**Data:** 2026-09-21 · **Estado:** `DECIDED`.
+
+O `db-parity-plan.md` (+PT) ganha dono (lane docs/plataforma, autora do
+`D-DB-GAPS`) e começa **S0** (diagnóstico interino honesto do §421) + **S1**
+(`mariadb://` = alias mysql-wire), cada uma com prova; S2–S4 seguem por fatia.
+Adendo ao `D-DB-GAPS`.
+
+## D-RELEASE-0.5.0-GATE condição 2 — segue `NEEDS-REVIEW` com frente de superfície em voo (mantenedora 21/09/2026)
+
+**Data:** 2026-09-21 · **Estado:** `DECIDED` (confirmação).
+
+A condição 2 reporta `NEEDS-REVIEW` — **não RED** — enquanto uma frente aprovada
+`State: OPEN` não pousou; não bloqueia o corte 0.5.0 por si só. Uma entrada
+`OPEN` nunca é "nada espera".
