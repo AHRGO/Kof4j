@@ -95,12 +95,16 @@ flip, with zero conflict to warn anyone. Historical quotes of a half-closed item
 be waived only by a named line in `scripts/changelog-ledger-waivers.txt`, never by
 editing the gate.
 
-**17 items in the open queue** (resynced 21/09 — 20→19 when
+**18 items in the open queue** (resynced 21/09 ~07:0x — 20→19 when
 **§380** (JS nested-`if`/`throw` codegen) was formalized ✅ `9f383bcf`,
 re-measured 16/0F at the tip; 19→18 when **§381** (entity-field keyword
 OOM in the parser) was fixed ✅ `576a1dcb`; 18→17 when **§394** (test harness
 leaks the served app) was fixed ✅ `d0464385` and **§353** (`io` method result
-inside a lambda body — SEM014) was fixed ✅ 21/09 by the compiler lane; by
+inside a lambda body — SEM014) was fixed ✅ 21/09 by the compiler lane; 17→18 when **§418** (riscv64 single-step debug
+harness) was RE-PUBLISHED by the native lane the same day with fresh grounding after the
+tree loss its §419 retraction records — count went down (fixes) and up (a real gap
+re-surfaced) in one day, which is exactly why the script, not the prose, is the
+authority; by
 `scripts/check_known_bugs_status.sh`; the number is a dated snapshot — the
 script is the authority). The **32** counted on 14/09 and the 13/09 list
 below are the HISTORICAL snapshot, preserved for the record (taken BEFORE the
@@ -201,7 +205,7 @@ scalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `roadmap.md` | §§8–11 ❌ (frontend same-project, monolith→micro) | long term |
 | ~~`roadmap-audit.md`~~ → `docs/audits/roadmap-audit.md` | matrix 06/09 + queue P0→P5 (P0 CLOSED 09/09) | re-audit when something closes |
 | ~~`KOFUI-AUDIT.md`~~ → `docs/bugs-and-gaps/` | UI001-Native (R6 face: silent no-op) OPEN | UI lane |
-| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | **17 live** (resynced 21/09 by `scripts/check_known_bugs_status.sh`; was 20 — §380 `9f383bcf`, §381 `576a1dcb`, §394 `d0464385` and §353 21/09 closed; the §2 live set is the authority; the historical 14/09 count was 32; §81/§163/§127-JVM, §155, §94, §157-160 and §65 closed/DOES-NOT-REPRODUCE 13/09) | live queue |
+| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | **18 live** (resynced 21/09 by `scripts/check_known_bugs_status.sh`; was 20 — §380 `9f383bcf`, §381 `576a1dcb`, §394 `d0464385` and §353 21/09 closed; the §2 live set is the authority; the historical 14/09 count was 32; §81/§163/§127-JVM, §155, §94, §157-160 and §65 closed/DOES-NOT-REPRODUCE 13/09) | live queue |
 | ~~`refactoring/PLAN-SOLID-500.md`~~ → `docs/architecture/PLAN-SOLID-500.md` | ✅ **DONE + MOVED 13/09** (F1–F9 all closed — F3: NativeBackend 498 ≤500 measured, GC lane blocker expired/dead-owner rule); ratchet `check_500-baseline.txt` (debts locked — authoritative number = `wc -l` of the file) in CI | plan CLOSED (3-state rule) |
 | `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` | **UNDER DEVELOPMENT 17/09** — promoted from `future/` by maintainer decision, which **overrides the R12 gate** (`DECISIONS.md` §D-UNIVERSAL); entry point = Stage 1 (SYSTEMS consolidation) + R1–R12 | architecture for Tiers 6–12; vision/design frozen, only state claims synced to code |
 | `PROPOSAL-1.0-EXIT-GATE.md` (+`.pt_BR.md`) | **KOF 1.0 EXIT GATE — RATIFIED 20/09/2026** by the maintainer (`DECISIONS.md` §D-RELEASE-1.0); promoted from `future/`: the gate (§8) + the queue (§23) are the binding stabilization meta — **Kof RC 1.0 / release 1.0 exist only when every item matches and no edge is open** | order of execution = the PROPOSAL's own §23, tracked in `roadmap.md` §24 (EG-1..EG-10); **all seven `[? MEL]` edges CLOSED 20/09 by `DECISIONS.md` §D-1.0-EDGES** — KofC + Android inside the 8-target Stable 1.0 with their own gates (EG-9/EG-10), the nine §35 reinforcement candidates are mandatory gates, the 1.0 line opens after the 0.5.0 cut + EG-1..EG-7; the only remaining edge is the maintainer's RC-opening declaration (EG-8) |
