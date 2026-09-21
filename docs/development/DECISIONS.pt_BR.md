@@ -52,6 +52,7 @@ Auxílio de navegação, não é uma decisão por si só. Ordenado como neste ar
 - **D-WORKFLOW-RUN** — `kof workflow run`
 - **D-MAKEALIVE** — Kof Makealive (Estágio 3)
 - **D-MAKEALIVE-CLI** — contrato da 3.8: `kof makealive plan|apply|destroy` (20/09)
+- **D-MAKEALIVE-SYNTAX** — 3.2 `infra "prod" { }` = açúcar puro sobre `design()` (21/09)
 - **D-ARRAY-PRINT** — §388-B: `println(Int[])` é o formato de container §107 (21/09)
 - **D-KOF-AS-CLOUD** — Kof tem que SER a nuvem
 - **D-BOOTSTRAP** — o bootstrapper (Kof em Kof)
@@ -2808,6 +2809,39 @@ script/native recusa honesta (igual 2.6) — o stub Native do host mantém `ORM0
 **(5) rc:** a linha marcada decide (`allOk`); throw (provider recusou set/delete, guardas de
 argumento) = sem linha marcada, a saída crua É o diagnóstico, rc 1. Prova:
 `CmdMakealiveTest` 7/7 + `MakealiveMaxGenE2ETest` 4/4 + bateria Makealive 14/14.
+
+## D-MAKEALIVE-SYNTAX — 3.2: `infra "prod" { ... }` é AÇÚCAR PURO sobre `design()` (21/09/2026, mantenedora)
+
+**Data:** 2026-09-21 · **Estado:** `DECIDED` · **Decide:** `makealive-plan.md` §5 linha **3.2**
+(e destrava **3.7**; reitera **3.8**) · **Substitui:** nada.
+
+**Contexto:** as três linhas restantes do makealive (3.2/3.7/3.8) foram à enquete da
+mantenedora. A linha **3.2** ("sintaxe `infra "prod" {}`") exigia decisão regra 6 por ser
+**superfície de parse nova voltada ao usuário**; o bloqueio do hook de codegen já havia caído
+com **R4** (hook `CodegenStep`, pousado 21/09).
+
+**Decisão (regra 11 — Simplicity Law):** ADICIONAR o bloco, como **açúcar sintático puro** —
+ele desugara sobre os records/builder já decididos do host e **não ganha semântica própria**
+(plano §7, "no HCL inside Kof").
+
+- **(1) Forma:** declaração top-level `infra "prod" { <chamadas> }`. `infra` continua
+  **IDENTIFIER** (despachado igual a `test`/`application`), **não** é palavra reservada nem
+  token novo — logo `LanguageCoreSurfaceTest` (8.6) fica verde **por construção**.
+- **(2) Desugaring:** o bloco vira `design(): Infrastructure` — um local sintetizado
+  `__infra = Infrastructure("prod")`, cada statement `nome(args)` vira `__infra.nome(args)`
+  (as faces do host `resource`/`prop`/`requires`), e `return __infra`. A saída é idêntica ao
+  `design()` imperativo escrito à mão; o contrato do CLI (`D-MAKEALIVE-CLI`) não muda.
+- **(3) Sem HCL, sem aninhamento:** o corpo é Kof puro de chamadas — sem `chave = valor`, sem
+  sub-bloco `resource`, sem tipo novo, sem runtime novo.
+- **3.7** (detecção de ciclo em compile-time) segue esta superfície; até lá a recusa em
+  runtime pousada na 3.1 continua o contrato.
+- **3.8** — reiterada: `kof makealive plan|apply|destroy` é o **único** verbo
+  (`D-MAKEALIVE-CLI`); `kof infra` **não** é adicionado.
+
+**Prova (medida no pouso):** `InfraSyntaxE2ETest` — um arquivo `infra "prod" { ... }` e seu
+gêmeo `design()` escrito à mão produzem `plan`/`apply` byte-idênticos (JVM==JS), mais um golden
+de sintaxe (`infra` não é reservado; corpo mantido nas faces do host). Documentado em
+`docs/stdlib/makealive.md` + `learn/`.
 
 ## Adendo 4 D-GRAPHICS-GAMING (20/09/2026, mantenedora) — Kof terá ENGINE GRÁFICA PRÓPRIA para jogos
 

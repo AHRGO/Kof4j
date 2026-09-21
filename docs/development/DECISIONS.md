@@ -54,6 +54,7 @@ A navigation aid, not a decision by itself. Ordered as in this file.
 - **D-WORKFLOW-RUN** — `kof workflow run`
 - **D-MAKEALIVE** — Kof Makealive (Stage 3)
 - **D-MAKEALIVE-CLI** — 3.8 contract: `kof makealive plan|apply|destroy` (20/09)
+- **D-MAKEALIVE-SYNTAX** — 3.2 `infra "prod" { }` = pure sugar over `design()` (21/09)
 - **D-ARRAY-PRINT** — §388-B: `println(Int[])` is the §107 container format (21/09)
 - **D-KOF-AS-CLOUD** — Kof must BE the cloud
 - **D-BOOTSTRAP** — the bootstrapper (Kof in Kof)
@@ -2801,6 +2802,38 @@ Native host stub keeps `ORM001` at the call site. **(5) rc:** the marked line de
 (`allOk`); a throw (provider refused set/delete, argument guards) = no marked line, the raw
 output IS the diagnosis, rc 1. Proof: `CmdMakealiveTest` 7/7 + `MakealiveMaxGenE2ETest` 4/4
 + Makealive battery 14/14.
+
+## D-MAKEALIVE-SYNTAX — 3.2: `infra "prod" { ... }` is PURE SUGAR over `design()` (21/09/2026, maintainer)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` · **Decides:** `makealive-plan.md` §5 row **3.2** (and unblocks **3.7**; reaffirms **3.8**) · **Supersedes:** nothing.
+
+**Context:** the three remaining makealive rows (3.2/3.7/3.8) were polled to the maintainer.
+Row **3.2** ("syntax `infra "prod" {}`") needed a rule-6 decision because it is **new
+user-facing parse surface**; the earlier codegen-hook blocker had already been removed by
+**R4** (`CodegenStep` hook, landed 21/09).
+
+**Decision (rule 11 — Simplicity Law):** ADD the block, as **pure syntactic sugar** — it
+desugars over the host's already-decided records/builder and gets **no semantics of its own**
+(plan §7, "no HCL inside Kof").
+
+- **(1) Form:** a top-level declaration `infra "prod" { <calls> }`. `infra` stays an
+  **IDENTIFIER** (dispatched exactly like `test`/`application`), **not** a reserved word and
+  **not** a new token — so `LanguageCoreSurfaceTest` (8.6) stays green **by construction**.
+- **(2) Desugaring:** the block lowers to `design(): Infrastructure` — a synthesized local
+  `__infra = Infrastructure("prod")`, each statement `name(args)` becomes `__infra.name(args)`
+  (the host faces `resource`/`prop`/`requires`), then `return __infra`. Output is identical to
+  the hand-written imperative `design()`; the CLI contract (`D-MAKEALIVE-CLI`) is unchanged.
+- **(3) No HCL, no nesting:** the body is plain Kof call statements — no `key = value`, no
+  `resource` sub-block, no new type, no new runtime.
+- **3.7** (compile-time cycle detection) follows this surface; until it lands, the runtime
+  refusal shipped in 3.1 remains the contract.
+- **3.8** — reaffirmed: `kof makealive plan|apply|destroy` is the **only** verb
+  (`D-MAKEALIVE-CLI`); `kof infra` is **not** added.
+
+**Proof (measured at landing):** `InfraSyntaxE2ETest` — an `infra "prod" { ... }` file and its
+hand-written `design()` twin produce byte-identical `plan`/`apply` output (JVM==JS), plus a
+syntax golden (`infra` is not reserved; a body kept in the host faces). Documented in
+`docs/stdlib/makealive.md` + `learn/`.
 
 ## D-GRAPHICS-GAMING addendum 4 (09/20/2026, maintainer) — Kof WILL HAVE ITS OWN graphics engine for games
 

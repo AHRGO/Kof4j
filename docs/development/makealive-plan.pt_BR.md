@@ -169,14 +169,15 @@ fatia db do host deve ser gateada por alvo exatamente como `workflow-ckpt-host.k
   provider REST genérico (`kof.http`) + provider CLI (`kof.shell`) embarcam
   na fatia do núcleo; clouds concretas seguem **pacotes oficiais**
   (`infra-<cloud>`, R1 — nunca literal no compilador).
-- **3.2 [sintaxe `infra "prod" {}`]** — **R4 ✅ pousou 21/09** (`CodegenStep` hook,
-  `CodegenStepPipelineTest` 6/6): o bloqueio do hook de codegen SUMIU. O que resta é
-  o **bloco de parse novo voltado ao usuário = regra 6** — fora do v1 até a mantenedora decidir.
-- **3.7 [ciclo em compile-time]** — **R4 ✅ pousou 21/09**; ainda precisa da superfície
-  3.2 (regra 6) para ter um grafo em compile-time. Enquanto isso a **recusa em runtime embarca no 3.1**.
-- **3.8 [CLI `kof infra`]** — contrato do comando = decisão da mantenedora
-  (regra 6, a postura da 2.6): `kof run infra.kf` já é o runner quando o 3.1
-  landar. ✅ DECIDIDO + ENTREGUE 20/09 (D-MAKEALIVE-CLI): verbo `makealive` (Q1),
+- **3.2 [sintaxe `infra "prod" {}`]** — ✅ **DECIDIDO 21/09 (`D-MAKEALIVE-SYNTAX`)**:
+  ADICIONAR o bloco como **açúcar puro sobre `design()`** (sem keyword/token/tipo/runtime;
+  `infra` = dispatch IDENTIFIER, `LanguageCoreSurfaceTest` verde por construção).
+  **EM IMPLEMENTAÇÃO** (dono `.18`/9093) — prova `InfraSyntaxE2ETest`.
+- **3.7 [ciclo em compile-time]** — **R4 ✅ pousou 21/09**; a superfície 3.2 agora está
+  decidida (acima), então o grafo em compile-time está destravado e segue a 3.2.
+  Enquanto isso a **recusa em runtime embarca no 3.1**.
+- **3.8 [CLI `kof infra`]** — ✅ **REITERADO 21/09 (`D-MAKEALIVE-SYNTAX`)**: só
+  `kof makealive`; `kof infra` não é adicionado. ✅ DECIDIDO + ENTREGUE 20/09 (D-MAKEALIVE-CLI): verbo `makealive` (Q1),
   convenção `design()`+`provider()`, protocolo MARK, estado h2 via `--state`
   (gen=max+1, `mkMaxGen`); recusas honestas script/native (R7).
 

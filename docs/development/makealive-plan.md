@@ -160,13 +160,15 @@ the host db slice must be gated per target exactly like `workflow-ckpt-host.kf`
   generic REST provider (`kof.http`) + CLI provider (`kof.shell`) ship with
   the core slice; concrete clouds stay **official packages**
   (`infra-<cloud>`, R1 — never a compiler literal).
-- **3.2 [syntax `infra "prod" {}`]** — **R4 ✅ landed 21/09** (`CodegenStep` hook,
-  `CodegenStepPipelineTest` 6/6): the codegen-hook blocker is GONE. What remains is
-  the **new user-facing parse block = rule 6** — out of v1 until the maintainer decides.
-- **3.7 [compile-time cycle]** — **R4 ✅ landed 21/09**; still needs the 3.2 surface
-  (rule 6) to have a compile-time graph. Meanwhile the **runtime refusal ships in 3.1**.
-- **3.8 [`kof infra` CLI]** — command contract = maintainer decision (rule 6,
-  the 2.6 posture): `kof run infra.kf` is already the runner once 3.1 lands.
+- **3.2 [syntax `infra "prod" {}`]** — ✅ **DECIDED 21/09 (`D-MAKEALIVE-SYNTAX`)**:
+  ADD the block as **pure sugar over `design()`** (no keyword/token/type/runtime;
+  `infra` = IDENTIFIER dispatch, `LanguageCoreSurfaceTest` green by construction).
+  **IN IMPLEMENTATION** (owner `.18`/9093) — proof `InfraSyntaxE2ETest`.
+- **3.7 [compile-time cycle]** — **R4 ✅ landed 21/09**; the 3.2 surface is now
+  decided (above), so the compile-time graph is unblocked and follows 3.2.
+  Meanwhile the **runtime refusal ships in 3.1**.
+- **3.8 [`kof infra` CLI]** — ✅ **REAFFIRMED 21/09 (`D-MAKEALIVE-SYNTAX`)**: only
+  `kof makealive`; `kof infra` is not added.
 ✅ DECIDED + SHIPPED 20/09 (D-MAKEALIVE-CLI): `kof makealive plan|apply|destroy` landed: verb `makealive` (Q1), `design()`+`provider()` convention, MARK protocol,
   h2 state via `--state` (gen=max+1, `mkMaxGen`); script/native honest refusals (R7).
 
