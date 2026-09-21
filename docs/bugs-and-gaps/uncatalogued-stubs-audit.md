@@ -295,6 +295,21 @@ classification fails the test — proved RED-first by planting `toTitleCase`, wh
 yielded `sem classificacao: [toTitleCase]`. The gap set is pinned to the documented
 five (grows or shrinks → red).
 
+### Fatia 9 — same ratchet on the NATIVE targets (21/09)
+
+Extending the Fatia 8 test with `everyStringMethodHasAClassifiedNativeTarget`
+(now 4 tests, green): it parses the x86 dispatch
+(`NativeX86StringCalls.java`, `"x".equals(kc.methodName())`) and the riscv cross
+switch (`NativeRiscvCrossOps.java`, `case "x" ->`), intersects with the registry
+and asserts the remainder is exactly the known gap. **Measured result: the native
+gap is the SAME five as JS** — every other registry method has an x86+riscv
+lowering, and neither target lowers `matches`/`replaceAll`/`replaceFirst`/
+`toCharArray`/`compareToIgnoreCase`, so both fall into the synthesized
+`java_lang_String_<m>` link-fail (§424). RED-first proved by renaming the x86
+`split` handler → `sem lowering x86/riscv: [split]`. So §424 is symmetric across
+JS and Native; the only open question is the fix (a diagnostic instead of a
+link-fail), which is a rule-6 decision, not an agent edit.
+
 ## Next passes (planned — not yet executed)
 1. **Parity asymmetry check** — **DONE (slice 2b, `StdParityGapAuditTest`
    15/15**, including the per-function gates of `KofSecurity` and

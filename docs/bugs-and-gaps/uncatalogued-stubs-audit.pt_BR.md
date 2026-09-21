@@ -303,6 +303,21 @@ método novo no registry sem classificação quebra o teste — provado RED-firs
 plantando `toTitleCase`, que deu `sem classificacao: [toTitleCase]`. O conjunto de
 gaps é fixado nos cinco documentados (cresce ou encolhe → vermelho).
 
+### Fatia 9 — mesmo ratchet nos alvos NATIVOS (21/09)
+
+Estendendo o teste da Fatia 8 com `everyStringMethodHasAClassifiedNativeTarget`
+(agora 4 testes, verde): lê o dispatch x86 (`NativeX86StringCalls.java`,
+`"x".equals(kc.methodName())`) e o switch cross riscv
+(`NativeRiscvCrossOps.java`, `case "x" ->`), intersecta com o registry e afirma
+que o resto é exatamente o gap conhecido. **Resultado medido: o gap nativo é os
+MESMOS cinco do JS** — todo outro método do registry tem lowering x86+riscv, e
+nenhum dos dois alvos rebaixa `matches`/`replaceAll`/`replaceFirst`/
+`toCharArray`/`compareToIgnoreCase`, então ambos caem no link-fail do
+`java_lang_String_<m>` sintetizado (§424). RED-first provado renomeando o
+handler x86 de `split` → `sem lowering x86/riscv: [split]`. Logo o §424 é
+simétrico entre JS e Native; a única questão aberta é a correção (um diagnóstico
+em vez do link-fail), que é decisão rule-6, não edição de agente.
+
 ## Próximas passadas (planejadas — ainda não executadas)
 
 1. **Checagem de assimetria de paridade** — **FEITA (fatia 2b,

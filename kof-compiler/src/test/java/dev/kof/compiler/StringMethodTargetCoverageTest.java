@@ -56,6 +56,30 @@ class StringMethodTargetCoverageTest {
         return caseNames(src);
     }
 
+    /** Nomes de método de String tratados no x86 ({@code "x".equals(kc.methodName())}). */
+    private static Set<String> x86Handled() throws Exception {
+        String src = Files.readString(Path.of(
+                "src/main/java/dev/kof/compiler/nat/NativeX86StringCalls.java"));
+        var names = new LinkedHashSet<String>();
+        Matcher m = Pattern.compile("\"([A-Za-z]+)\"\\.equals\\(kc\\.methodName\\(\\)\\)").matcher(src);
+        while (m.find()) {
+            names.add(m.group(1));
+        }
+        return names;
+    }
+
+    /** Nomes de método de String no switch cross ({@code case "x" -> ...}). */
+    private static Set<String> riscvHandled() throws Exception {
+        String src = Files.readString(Path.of(
+                "src/main/java/dev/kof/compiler/nat/NativeRiscvCrossOps.java"));
+        var names = new LinkedHashSet<String>();
+        Matcher m = Pattern.compile("case \"([A-Za-z]+)\"\\s*[,->]").matcher(src);
+        while (m.find()) {
+            names.add(m.group(1));
+        }
+        return names;
+    }
+
     private static Set<String> caseNames(String body) {
         var names = new LinkedHashSet<String>();
         Matcher m = Pattern.compile("case\\s+((?:\"[A-Za-z]+\"\\s*,?\\s*)+)->").matcher(body);
@@ -100,6 +124,34 @@ class StringMethodTargetCoverageTest {
     void knownJsGapIsPinnedToTheDocumentedSet() throws Exception {
         assertEquals(Set.of("matches", "replaceAll", "replaceFirst", "toCharArray",
                 "compareToIgnoreCase"), JS_KNOWN_GAP);
+    }
+
+    @Test
+    @DisplayName("todo método do registry tem destino NATIVO x86/riscv classificado (§424)")
+    void everyStringMethodHasAClassifiedNativeTarget() throws Exception {
+        Set<String> registry = registryMethods();
+
+        Set<String> handled = new TreeSet<>(RUNTIME_SUFFIX);
+        for (String n : x86Handled()) {
+            if (registry.contains(n)) {
+                handled.add(n);
+            }
+        }
+        for (String n : riscvHandled()) {
+            if (registry.contains(n)) {
+                handled.add(n);
+            }
+        }
+
+        Set<String> classified = new TreeSet<>(handled);
+        classified.addAll(JS_KNOWN_GAP);
+
+        assertEquals(new TreeSet<>(registry), classified, () -> {
+            var missing = new TreeSet<>(registry);
+            missing.removeAll(classified);
+            return "registry x cobertura NATIVA divergem — sem lowering x86/riscv: " + missing
+                    + " (§424 documenta os gaps reais; o resto tem de ser tratado)";
+        });
     }
 
     @Test
