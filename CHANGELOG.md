@@ -13,6 +13,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **tooling — least privilege per job in the non-release workflows**
+    (21/09, platform-cli/security lane, D-ARTIFACT-TRUST §5 hardening): 19 workflow-level `write` grants → 0
+    (writes are now job-scoped: 11, each justified in `scripts/workflow-permissions.txt`); the 3 workflows that
+    inherited the repo default now declare `contents: read`. Unused writes removed (`kof-bots` only needs
+    `actions: write` for `createWorkflowDispatch`; `kof-warning-bot` needs none; `checks`/`issues` dropped from the
+    quality/security bots). New gate `scripts/check_workflow_permissions.py` (+ `--selftest`, agent suite / CI
+    `structural-quality`): a job-level `write` without a ledger line fails; a stale line is drift. `release.yml`
+    stays the declared exemption.
+
   - **tooling — every third-party Action in the non-release workflows is now pinned by full commit SHA**
     (21/09, platform-cli/security lane, D-ARTIFACT-TRUST §5 hardening): 51 `uses:` references
     (`owner/repo@<sha40> # vN`, gitleaks as `@sha256:<digest> # v8.28.0`) — no version was changed, only made

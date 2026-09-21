@@ -11,13 +11,13 @@ on:
 
 permissions:
   contents: read
-  issues: write
-  pull-requests: write
 
 jobs:
   triage:
     name: Triage Issue
     runs-on: ubuntu-latest
+    permissions:
+      issues: write # addLabels + addAssignees
     timeout-minutes: 5
     if: github.event_name == 'issues' && (github.event.action == 'opened' || github.event.action == 'reopened')
     steps:
@@ -84,6 +84,8 @@ jobs:
   respond:
     name: Auto-respond to comments
     runs-on: ubuntu-latest
+    permissions:
+      issues: write # createComment
     timeout-minutes: 5
     if: github.event_name == 'issue_comment' && github.event.action == 'created'
     steps:
@@ -128,6 +130,9 @@ jobs:
   stale:
     name: Stale Bot
     runs-on: ubuntu-latest
+    permissions:
+      issues: write # actions/stale: marca/fecha issues
+      pull-requests: write # actions/stale: marca/fecha PRs
     timeout-minutes: 10
     steps:
       - name: Mark stale issues/PRs

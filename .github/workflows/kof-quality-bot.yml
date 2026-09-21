@@ -11,15 +11,14 @@ on:
 
 permissions:
   contents: read
-  security-events: write
-  pull-requests: write
-  issues: write
-  checks: write
 
 jobs:
   code-quality:
     name: Code Quality Analysis
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # upload do SARIF
     timeout-minutes: 60
     steps:
       - name: Checkout
@@ -68,6 +67,10 @@ jobs:
   security-gate:
     name: CodeQL Gate (alerts API)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: read # codeql-gate.sh le alerts/analyses
+      pull-requests: write # comentario do gate no PR
     timeout-minutes: 10
     steps:
       - name: Checkout

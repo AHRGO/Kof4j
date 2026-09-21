@@ -7,6 +7,9 @@ on:
       - '**'
       - '!main'
 
+permissions:
+  contents: read
+
 jobs:
   # Gates ESTRUTURAIS (contrato de qualidade do repositório). Job PRÓPRIO e
   # independente do funcional: uma violação estrutural (ex.: classe >=600

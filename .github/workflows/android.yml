@@ -4,6 +4,9 @@ name: kof-android
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   interop:
     runs-on: ubuntu-latest

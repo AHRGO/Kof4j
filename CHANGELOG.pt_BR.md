@@ -13,6 +13,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **tooling — least privilege por job nos workflows fora do release**
+    (21/09, lane platform-cli/segurança, hardening de D-ARTIFACT-TRUST §5): 19 grants `write` no nível do
+    workflow → 0 (a escrita agora é escopo de job: 11, cada uma justificada em `scripts/workflow-permissions.txt`);
+    os 3 workflows que herdavam o default do repo agora declaram `contents: read`. Writes sem uso removidos
+    (`kof-bots` só precisa de `actions: write` p/ `createWorkflowDispatch`; `kof-warning-bot` de nenhum;
+    `checks`/`issues` saíram dos bots de quality/security). Gate novo `scripts/check_workflow_permissions.py`
+    (+ `--selftest`, suíte de agentes / `structural-quality` da CI): `write` de job sem linha no ledger falha;
+    linha obsoleta é drift. `release.yml` segue como a isenção declarada.
+
   - **tooling — toda Action de terceiros dos workflows fora do release agora é pinada por SHA de commit completo**
     (21/09, lane platform-cli/segurança, hardening de D-ARTIFACT-TRUST §5): 51 referências `uses:`
     (`owner/repo@<sha40> # vN`, gitleaks como `@sha256:<digest> # v8.28.0`) — nenhuma versão foi trocada, só
