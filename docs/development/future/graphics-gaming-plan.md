@@ -1,4 +1,4 @@
-English | Português
+[English](graphics-gaming-plan.md) | [Português](graphics-gaming-plan.pt_BR.md)
 
 # Graphics, Games and Media — Kof's Intent Surface
 
