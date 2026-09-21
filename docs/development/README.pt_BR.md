@@ -105,13 +105,16 @@ Medido 21/09: 11 de 26 hrefs eram abreviações à mão apontando para lugar nen
 moram na suíte de agentes da CI (`run-agent-tests.sh`) e disparam por mudança via
 `agent-verify.sh`.
 
-**18 itens na fila aberta** (ressincronizado 21/09 ~07:0x — 20→19
+**19 itens na fila aberta** (ressincronizado 21/09 ~08:5x — 20→19
 quando **§380** (codegen JS de `if` aninhado com `throw`) foi formalizado ✅
 `9f383bcf`, re-medido 16/0F no tip; 19→18 quando **§381** (OOM do keyword
 entity-field no parser) foi corrigido ✅ `576a1dcb`; 18→17 quando **§394**
 (harness de teste vaza o app servido) foi corrigido ✅ `d0464385` e **§353**
 (resultado de método `io` dentro de lambda — SEM014) foi corrigido ✅ 21/09
-pela lane do compilador; 17→18 quando **§418** (harness de single-step do debug riscv64) foi RE-PUBLICADO pela lane nativa no mesmo dia, com nova prova, após a perda de árvore que a retração §419 dela registra — a contagem desceu (correções) e subiu (um gap real reapareceu) num só dia, exatamente por isso a autoridade é o script, não a prosa; por
+pela lane do compilador; 17→18 quando **§418** (harness de single-step do debug riscv64) foi RE-PUBLICADO pela lane nativa no mesmo dia, com nova prova, após a perda de árvore que a retração §419 dela registra — a contagem desceu (correções) e subiu (um gap real reapareceu) num só dia, exatamente por isso a autoridade é o script, não a prosa; 18→19 quando a própria lane db/orm ABRIU a
+§421 (`db.connect` nativo aceita qualquer scheme em silêncio; a recusa só aparece no
+`kof_orm_*`) como catálogo honesto do seu F2c3 — contagem subir porque lanes continuam
+catalogando contra si mesmas é o ledger funcionando, não apodrecendo; por
 `scripts/check_known_bugs_status.sh`; o número é um snapshot datado — a
 autoridade é o script). Os **32** contados em 14/09 e a lista de 13/09
 abaixo são o snapshot HISTÓRICO, preservado para o registro (tirado ANTES da

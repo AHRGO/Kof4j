@@ -103,7 +103,7 @@ nothing (including two this lane shipped the same morning). All regenerated to z
 `--selftest` plants a truncated slug so the class cannot silently return. Both gates sit
 in the CI agent suite (`run-agent-tests.sh`) and fire per-change via `agent-verify.sh`.
 
-**18 items in the open queue** (resynced 21/09 ~07:0x — 20→19 when
+**19 items in the open queue** (resynced 21/09 ~08:5x — 20→19 when
 **§380** (JS nested-`if`/`throw` codegen) was formalized ✅ `9f383bcf`,
 re-measured 16/0F at the tip; 19→18 when **§381** (entity-field keyword
 OOM in the parser) was fixed ✅ `576a1dcb`; 18→17 when **§394** (test harness
@@ -112,7 +112,10 @@ inside a lambda body — SEM014) was fixed ✅ 21/09 by the compiler lane; 17→
 harness) was RE-PUBLISHED by the native lane the same day with fresh grounding after the
 tree loss its §419 retraction records — count went down (fixes) and up (a real gap
 re-surfaced) in one day, which is exactly why the script, not the prose, is the
-authority; by
+authority; 18→19 when the db/orm lane OPENED §421 (native `db.connect` accepts any
+scheme silently, refusal only at `kof_orm_*`) as its own honest catalog in F2c3 — counts
+moving UP because lanes keep cataloguing against themselves is the ledger working, not
+rotting; by
 `scripts/check_known_bugs_status.sh`; the number is a dated snapshot — the
 script is the authority). The **32** counted on 14/09 and the 13/09 list
 below are the HISTORICAL snapshot, preserved for the record (taken BEFORE the
