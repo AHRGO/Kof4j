@@ -97,26 +97,33 @@ jobs:
             // Don't reply to bot comments
             if (comment.user.type === 'Bot') return;
 
-            // Thank you for new issues
-            if (github.event.action === 'created' && context.payload.action === 'opened') {
-              const body = `Obrigado pelo reporte! 🤖
+            // #570: `github.event` is undefined inside actions/github-script
+            // (only `context`/`github` exist), and `context.payload.action` is
+            // 'created' in an issue_comment event — never 'opened'. The old line
+            // crashed on every non-bot comment AND its only branch was dead.
+            // Live intent: thank the ISSUE AUTHOR on the first comment.
+            if (comment.user.login !== issue.user.login) return;
+            if ((issue.comments == null ? 1 : issue.comments) > 1) return;
 
-              Este issue foi triado automaticamente pelo **kof-issues-agent**.
+            const body = [
+              'Obrigado pelo reporte! 🤖',
+              '',
+              'Este issue foi triado automaticamente pelo **kof-issues-agent**.',
+              '',
+              '**Próximos passos:**',
+              '1. A mantenedora (@aminadojava) fará a triagem completa',
+              '2. Se for bug de segurança, será priorizado',
+              '3. Se for feature request, entrará na fila de prioridades',
+              '',
+              'Enquanto isso, sinta-se à vontade para adicionar mais detalhes.',
+            ].join('\n');
 
-              **Próximos passos:**
-              1. A mantenedora (@aminadojava) fará a triagem completa
-              2. Se for bug de segurança, será priorizado
-              4. Se for feature request, entrará na fila de prioridades
-
-              Enquanto isso, sinta-se à vontade para adicionar mais detalhes.`;
-
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.issue.number,
-                body
-              });
-            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body
+            });
 
   stale:
     name: Stale Bot
