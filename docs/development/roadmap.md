@@ -943,11 +943,11 @@ domain (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + parity matrix;
 | 2.1.6 | struct/array marshalling | 🟡 all SCALAR shapes bind (JVM+JS-host since 18/09); struct/array/pointer still honest `FFI001` (design D6 ⛔ maintainer) |
 | 2.1.7 | JS: gap `FFI002` | ✅ honest gap + **scalar parity CLOSED 18/09 (`d3598c2d`, slices 3.6.F1–F3):** host runner binds via `KofJsFfiBridge`, `FfiE2ETest` 16/16 byte-for-byte JVM↔JS; browser = runtime R7; non-scalar keeps `FFI002` |
 | 2.2.1 | Inventory of implicit codegen (4 points: runtime `.source()`, `desugarTests`, `desugarApplication`, entity→record+schema) | ✅ the 4 exist (`CompilerPipeline:295-296`) |
-| 2.2.2 | **Formal `CodegenStep` hook** | ❌ **does NOT exist at HEAD** — `d1c56bad` added it, the pipeline went back to calling the `desugar*` directly; the old "✅" was an over-claim from the `planning-future` branch |
-| 2.2.3 | Migrate DDL/runner to the formal hook | ❌ blocked by 2.2.2 |
-| 2.2.4 | `infra "prod" {}` base (codegen over records) | ❌ not started (zero `infra` parsing) |
+| 2.2.2 | **Formal `CodegenStep` hook** | ✅ **LANDED 21/09 (R4, `D-CODEGEN-STEP`)** — `CodegenStep`/`CodegenStepPipeline` (additive; empty registry = identity, zero behavior change; `CodegenStepPipelineTest` 6/6). The old `d1c56bad` "✅" was an over-claim from the `planning-future` branch; R4 is the real landing |
+| 2.2.3 | Migrate DDL/runner to the formal hook | 🔵 **unblocked** — 2.2.2 ✅ (R4); the migration itself is pending |
+| 2.2.4 | `infra "prod" {}` base (codegen over records) | 🔵 not started (zero `infra` parsing) — the parse surface is **rule 6** (D-MAKEALIVE/3.2) |
 | 2.3.1 | Constant-folding of domain constants | ✅ `"a"+"b"→"ab"` (`OptimizerConstantFold:100`) |
-| 2.3.2 | Cycle detection in the `infra` graph at compile-time | ❌ blocked by 2.2.4 |
+| 2.3.2 | Cycle detection in the `infra` graph at compile-time | 🔵 blocked by 2.2.4 (rule-6 surface) — the R4 hook is ✅ available |
 | 2.4.1 | Scoped resources (lightweight RAII over `try/finally`) | 🟡 design only (`future/scoped-resources-plan.md`); `using` syntax gated by bump |
 
 | 2.5 | Variance / sealed | ✅ **DECIDED TO POSTPONE** — `enum`+`record`/`interface` cover the case; opens only with the scientific pipeline (bump) |

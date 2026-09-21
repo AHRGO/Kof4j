@@ -30,8 +30,8 @@ already shipped: records/classes (data), `Map`/`List` (the graph), `throw`
 The **canonical model is imperative-turned-data** (the VISION §4.2 verdict,
 "A/B — and it is where the language shines"): typed resources + a builder +
 normal functions. The declarative block `infra "prod" { ... }` is row **3.2**
-— a new parse block gated by **R4** (the codegen hook does not exist at HEAD)
-and by rule 6 — it is NOT in this plan's queue, and v1 does not wait for it.
+— a new parse block gated by **rule 6** (**R4 ✅ landed 21/09**, so the
+codegen-hook blocker is gone) — it is NOT in this plan's queue, and v1 does not wait for it.
 
 Surface sketch (flat host idiom, like `kof.workflow`/`kof.supervisor —
 DD-OTP-01 option A`; **shapes to be measured by the 3.0 recon before they

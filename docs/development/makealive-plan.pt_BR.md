@@ -30,8 +30,8 @@ faz o core crescer (golden 8.6).
 **O modelo canônico é imperativo-transformado-em-dados** (o veredito da
 VISÃO §4.2, "A/B — e é onde a linguagem brilha"): recursos tipados + builder
 + funções normais. O bloco declarativo `infra "prod" { ... }` é a linha **3.2**
-— bloco de parse novo gated por **R4** (o hook de codegen NÃO existe no HEAD)
-e pela regra 6 — NÃO está na fila deste plano, e o v1 não espera por ele.
+— bloco de parse novo gated pela **regra 6** (**R4 ✅ pousou 21/09**, então o
+bloqueio do hook de codegen sumiu) — NÃO está na fila deste plano, e o v1 não espera por ele.
 
 Esboço de superfície (idioma de host flat, como `kof.workflow`/`kof.supervisor`
 — DD-OTP-01 opção A; **formas a serem MEDIDAS pela recon 3.0 antes de virarem
