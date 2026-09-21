@@ -9,6 +9,14 @@ path	docs/development/future/PLAN-UNIVERSAL-PLATFORM.md	nota historica de rename
 path	docs/development/future/PLAN-UNIVERSAL-PLATFORM.pt_BR.md	nota historica de rename
 path	docs/development/future/PROPOSAL-1.0-EXIT-GATE.md	nota historica de rename (promovido)
 path	docs/stdlib/time.md	referencia pendente em DECISIONS (D-STDLIB): retarget e decisao da mantenedora
+path	docs/configuration.md	doc PROSPECTIVO: ecosystem-coverage §4 "create ... as each module takes shape" (ainda nao existe)
+path	docs/database.md	doc PROSPECTIVO: ecosystem-coverage §4 (cripto/DB nao publicado como doc)
+path	docs/messaging.md	doc PROSPECTIVO: ecosystem-coverage §4
+path	docs/platform.md	doc PROSPECTIVO: ecosystem-coverage §4
+path	docs/testing.md	doc PROSPECTIVO: ecosystem-coverage §4
+path	docs/testing/TEST-PERFORMANCE.md	referencia historica em test-architecture-plan (doc nunca criado nesse path)
+path	docs/development/planning-finally-return.md	referencia historica em known-bugs §925 (doc removido; nota de divergencia 08/09)
+path	docs/development/PLAN-MULTIPARADIGMA.md	destino de movimento FUTURO descrito em future/PLAN-MULTIPARADIGMA.md §404
 sha	154ea1a4	pre-repair git (21/09, historico reescrito): prova nao verificavel
 sha	1ff54c6e	pre-repair git (21/09): prova nao verificavel
 sha	20aa73d7	pre-repair git (21/09): prova nao verificavel

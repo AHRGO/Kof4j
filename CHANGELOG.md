@@ -17,12 +17,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     the lane docs** (21/09, lane docs/.18): mechanizes the two drift classes found
     by hand today — a moved doc leaving the old path behind (native-multiarch,
     language/types) and a proof SHA with no object (the 21/09 git repair rewrote
-    history, orphaning 11 citations). It scans `docs/development/*.md`, strips
-    URLs, and requires every `docs/**/*.md` to exist and every backticked 8-40 hex
-    SHA to resolve (`git cat-file -e`). The 7 known paths + 11 SHAs are explicit,
-    dated waivers in `scripts/doc-refs-waivers.txt`. RED-first selftest +
-    `scripts/tests/doc-refs-test.sh` wired into the agent suite. Real run today:
-    177 path refs + 247 SHAs checked. Docs/tooling only.
+    history, orphaning 11 citations). It scans every `docs/**/*.md` for path refs
+    (URLs stripped) and the `docs/development` lane for backticked 8-40 hex SHAs,
+    requiring each to resolve (`git cat-file -e`). Expanding the path scan to the
+    whole corpus (21/09) surfaced 16 more dangling refs; the moved-doc citations
+    were retargeted (workflow-plan, known-bugs, ecosystem-coverage,
+    CONFORMANCE_MATRIX and 7 `future/runtime/*` models — EN+PT). The remaining
+    known paths + 11 SHAs are explicit, dated waivers in
+    `scripts/doc-refs-waivers.txt`. RED-first selftest + `scripts/tests/doc-refs-test.sh`
+    wired into the agent suite. Real run today: 551 path refs (docs/) + 247 SHAs
+    checked. Docs/tooling only.
 
   - **release-prep conditions 2/3 de-staled + two dangling doc paths fixed**
     (21/09, lane docs/.18): prep condition 2 read GREEN, but the maintainer's

@@ -188,4 +188,4 @@ restart (flaky child restarts, neighbor untouched — counters prove both sides 
 "one"), limit-exceeded drop + transitive skip, the face's R6 guards, and the
 double-import dedup; Native compile-pinned. The shape layer is pinned by
 `WorkflowPrimitivesE2ETest` (6/6, incl. the negative syntax pins). Plan:
-`docs/docs/workflow-plan.md` §5.
+`docs/workflow-plan.md` §5.

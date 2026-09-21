@@ -193,4 +193,4 @@ caminho feliz supervisionado, one_for_one (o filho flaky reinicia, o vizinho nã
 as guardas R6 da face e o dedup do import duplo; compilação Native travada.
 A camada de formas é
 travada por `WorkflowPrimitivesE2ETest` (6/6, incl. os pins negativos de sintaxe).
-Plano: `docs/docs/workflow-plan.pt_BR.md` §5.
+Plano: `docs/workflow-plan.pt_BR.md` §5.

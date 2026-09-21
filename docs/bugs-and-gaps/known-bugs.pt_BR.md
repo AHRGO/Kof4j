@@ -4920,7 +4920,7 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
   - `KofRandomTest.randomStringJs`: `JS exit code, output:  err: ReferenceError: i is not defined` (exit 1)
   - `KofRandomTest.randomShapeJs`: `err: ReferenceError: k is not defined` (exit 1)
   - `ConformanceMatrixDocTest.matrixDocMatchesTestExclusions`: "casos na matriz ≠ casos no teste" (a matriz passou a esperar casos que o teste não tem — a célula nova de `isEmpty` não foi casada com a lista de exclusões/casos)
-- **Causa raiz (a lane dona confirma):** o commit `718ae5cf` ("feat: add 'isEmpty' method support for strings and fix related issues") mexeu em `JsCallEmitter`/`JsControlFlowParser`/`JsIfThrowElse` + `CollectionMethodTyper`/`KofInterpreterCollections` — a face JS quebrou a declaração de variável de loop/compreensão no codegen JS (sintoma `i`/`k` indefinidos) e a matriz de conformidade (`docs/CONFORMANCE_MATRIX.md` ↔ `ConformanceMatrixDocTest`) não foi atualizada no MESMO commit.
+- **Causa raiz (a lane dona confirma):** o commit `718ae5cf` ("feat: add 'isEmpty' method support for strings and fix related issues") mexeu em `JsCallEmitter`/`JsControlFlowParser`/`JsIfThrowElse` + `CollectionMethodTyper`/`KofInterpreterCollections` — a face JS quebrou a declaração de variável de loop/compreensão no codegen JS (sintoma `i`/`k` indefinidos) e a matriz de conformidade (`docs/bugs-and-gaps/conformance-matrix.md` ↔ `ConformanceMatrixDocTest`) não foi atualizada no MESMO commit.
 - **Prova de que NÃO é regressão do split-7 (§140):** mesmo conjunto de testes no HEAD limpo (stash do split aplicado) falha IGUAL (3/3) — `ExpressionMethodCallLowerer` não toca JS nem random.
 
 #### ✅ Correção medida (13/09, lane gate/paridade — FECHA o §149; supersede a previsão de locus abaixo)
@@ -4951,7 +4951,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 #### Atualização da lane development (12/09 ~22:40) — metade MATRIZ ✅ FECHADA; metade JS com causa raiz CORRIGIDA e locus do fix provado
 
 - **(a) Metade matriz RESOLVIDA por esta sessão (`0c107eb9`):** não é
-  "a célula de isEmpty" nem o caminho `docs/CONFORMANCE_MATRIX.md` (que não
+  "a célula de isEmpty" nem o caminho `docs/bugs-and-gaps/conformance-matrix.md` (que não
   existe — o real é `docs/bugs-and-gaps/conformance-matrix.md`); são **3**
   células (`doublemod`, `strisempty`, `ifthrowelse`) adicionadas ao
   `ConformanceMatrixTest` por `718ae5cf`/`440730c8` sem linha na doc. Linhas
@@ -6422,7 +6422,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   permanece — remoção catalogada como refactor (fora do escopo deste bug); a face
   JS de arrays de elemento estreito é §184 (registro separado).**
 
-### §186 — JVM/KofJS: inicializador de campo `static` com expressão não-constante é descartado silenciosamente (nenhum `<clinit>` é sintetizado) — ✅ CORRIGIDO 14/09, [issue #133](https://github.com/KofLang/Kof4j/issues/133) (colaborador Jonas Rocha, varredura KOF-SBD-001-STRESS; portado do `docs/development/known-bugs.md` do PR #130)
+### §186 — JVM/KofJS: inicializador de campo `static` com expressão não-constante é descartado silenciosamente (nenhum `<clinit>` é sintetizado) — ✅ CORRIGIDO 14/09, [issue #133](https://github.com/KofLang/Kof4j/issues/133) (colaborador Jonas Rocha, varredura KOF-SBD-001-STRESS; portado do `docs/bugs-and-gaps/known-bugs.md` do PR #130)
 
 - **Sintoma:** `static Int[] shared = new Int[3]` — `Holder.shared` é `null`
   no JVM e `undefined` no KofJS; `static Int x = compute()` imprime `0`.

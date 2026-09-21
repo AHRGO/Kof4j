@@ -17,13 +17,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     nos docs da lane** (21/09, lane docs/.18): mecaniza as duas classes de drift
     achadas à mão hoje — um doc movido deixando o path antigo para trás
     (native-multiarch, language/types) e um SHA de prova sem objeto (o repair de
-    git de 21/09 reescreveu o histórico, orfanando 11 citações). Varre
-    `docs/development/*.md`, remove URLs e exige que todo `docs/**/*.md` exista e
-    que todo SHA hex 8-40 entre crases resolva (`git cat-file -e`). Os 7 paths +
-    11 SHAs conhecidos são waivers explícitos e datados em
-    `scripts/doc-refs-waivers.txt`. Selftest RED-first +
-    `scripts/tests/doc-refs-test.sh` ligados na suíte de agentes. Rodada real hoje:
-    177 refs de path + 247 SHAs conferidos. Só docs/tooling.
+    git de 21/09 reescreveu o histórico, orfanando 11 citações). Varre todo
+    `docs/**/*.md` por refs de path (remove URLs) e a lane `docs/development` por
+    SHAs hex 8-40 entre crases, exigindo que cada um resolva (`git cat-file -e`).
+    Ampliar o scan de path para o corpus inteiro (21/09) revelou 16 refs quebradas
+    a mais; as citações de docs movidos foram retargetadas (workflow-plan,
+    known-bugs, ecosystem-coverage, CONFORMANCE_MATRIX e 7 modelos
+    `future/runtime/*` — EN+PT). Os paths conhecidos + 11 SHAs restantes são
+    waivers explícitos e datados em `scripts/doc-refs-waivers.txt`. Selftest
+    RED-first + `scripts/tests/doc-refs-test.sh` ligados na suíte de agentes.
+    Rodada real hoje: 551 refs de path (docs/) + 247 SHAs conferidos. Só
+    docs/tooling.
 
   - **condições 2/3 da prep de release de-staled + dois caminhos de doc quebrados
     corrigidos** (21/09, lane docs/.18): a condição 2 da prep dizia GREEN, mas a

@@ -4921,7 +4921,7 @@ the dev unit touched it; confirmed green in the 12/09 gate.
   ("feat: add 'isEmpty' method support for strings and fix related issues") touched
   `JsCallEmitter`/`JsControlFlowParser`/`JsIfThrowElse` + `CollectionMethodTyper`/`KofInterpreterCollections` — the JS face broke the loop/comprehension variable
   declaration in the JS codegen (symptom `i`/`k` undefined) and the conformance
-  matrix (`docs/CONFORMANCE_MATRIX.md` ↔ `ConformanceMatrixDocTest`) was not updated in the
+  matrix (`docs/bugs-and-gaps/conformance-matrix.md` ↔ `ConformanceMatrixDocTest`) was not updated in the
   SAME commit.
 - **Proof that it is NOT a regression of split-7 (§140):** the same test set on the clean
   HEAD (with the split stashed) fails the SAME way (3/3) — `ExpressionMethodCallLowerer`
@@ -4955,7 +4955,7 @@ to the label) is the correct predicate and **was already used** in `parseStateme
 #### Update from the development lane (12/09 ~22:40) — MATRIX half ✅ CLOSED; JS half with root cause FIXED and fix locus proven
 
 - **(a) Matrix half RESOLVED by this session (`0c107eb9`):** it is not
-  "the isEmpty cell" nor the `docs/CONFORMANCE_MATRIX.md` path (which does not
+  "the isEmpty cell" nor the `docs/bugs-and-gaps/conformance-matrix.md` path (which does not
   exist — the real one is `docs/bugs-and-gaps/conformance-matrix.md`); they are **3**
   cells (`doublemod`, `strisempty`, `ifthrowelse`) added to
   `ConformanceMatrixTest` by `718ae5cf`/`440730c8` without a line in the doc. Lines
@@ -6453,7 +6453,7 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   exposure remains — removal catalogued as refactor (not this bug's scope); the
   JS face of narrow-element arrays is §184 (separate record).**
 
-### §186 — JVM/KofJS: `static` field initializer with a non-constant expression is silently discarded (no `<clinit>` is synthesized) — ✅ FIXED 14/09, [issue #133](https://github.com/KofLang/Kof4j/issues/133) (contributor Jonas Rocha, KOF-SBD-001-STRESS sweep; ported from `docs/development/known-bugs.md` of PR #130)
+### §186 — JVM/KofJS: `static` field initializer with a non-constant expression is silently discarded (no `<clinit>` is synthesized) — ✅ FIXED 14/09, [issue #133](https://github.com/KofLang/Kof4j/issues/133) (contributor Jonas Rocha, KOF-SBD-001-STRESS sweep; ported from `docs/bugs-and-gaps/known-bugs.md` of PR #130)
 
 - **Symptom:** `static Int[] shared = new Int[3]` — `Holder.shared` is `null`
   on the JVM and `undefined` on KofJS; `static Int x = compute()` prints `0`.
