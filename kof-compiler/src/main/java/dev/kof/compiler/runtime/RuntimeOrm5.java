@@ -28,6 +28,11 @@ package dev.kof.compiler.runtime;
  * <p>Miss (step != SQLITE_ROW) → {@code null} (rax=0), como o host
  * {@code rows.isEmpty() ? null : rows.get(0)} — NÃO é throw.
  *
+ * <p>F2d3b (DB-3, 21/09): o tipo do handle é checado na entrada —
+ * {@code kof_db_type(id)==2} (mysql) restaura o frame e tail-chama
+ * {@code .Lorm_find_my} (RuntimeOrmMysqlFind, wire text protocol), com
+ * paridade byte JVM==Native medida. Só o sqlite segue o corpo abaixo.
+ *
  * <p>Contrato de pilha (F1c): prólogo com {@code andq}, frame 168 (8 mod 16),
  * todo {@code call} de C sai com rsp ≡ 0; stmt vive em {@code r12}
  * (callee-saved, precedentes Orm3/Orm4).
@@ -62,6 +67,10 @@ public final class RuntimeOrm5 {
                 movq %rdx, 16(%rsp)
                 movq %rcx, 24(%rsp)
                 movq %r8, 32(%rsp)
+                movq (%rsp), %rdi
+                call kof_db_type
+                cmpl $2, %eax
+                je .Lorm5_my_dispatch
                 movq (%rsp), %rdi
                 call .Lorm_conn
                 movq %rax, 40(%rsp)
@@ -452,6 +461,25 @@ public final class RuntimeOrm5 {
                 movq %rbp, %rsp
                 popq %rbp
                 ret
+
+            # F2d3b: mysql -> restaura o frame e tail-chama .Lorm_find_my
+            # (args originais nos slots; a asm do mysql vive no
+            # RuntimeOrmMysqlFind, emitido logo depois no mesmo .s).
+            .Lorm5_my_dispatch:
+                movq (%rsp), %rdi
+                movq 8(%rsp), %rsi
+                movq 16(%rsp), %rdx
+                movq 24(%rsp), %rcx
+                movq 32(%rsp), %r8
+                addq $168, %rsp
+                popq %r15
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                movq %rbp, %rsp
+                popq %rbp
+                jmp .Lorm_find_my
 
             # ---------------------- literais --------------------------------
             .Lorm5_s1:

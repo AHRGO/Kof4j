@@ -654,6 +654,71 @@ class KofOrmE2ETest {
     }
 
     @Test
+    void findMysqlNativeMatchesJvm(@TempDir Path tempDir) throws Exception {
+        // F2d3b (D-DB-GAPS DB-3): orm.find row-object sobre o wire MySQL no
+        // Native x86-64 — SELECT * FROM `t` WHERE `pk` = ? via COM_QUERY,
+        // colunas casadas por NOME e record construido por kof_orm_ctors;
+        // miss -> null. Host via JDBC; a prova e byte JVM==Native.
+        int port;
+        try { port = Integer.parseInt(System.getenv().getOrDefault("KOF_MYSQL_PORT", "13306")); }
+        catch (NumberFormatException e) { port = 13306; }
+        org.junit.jupiter.api.Assumptions.assumeTrue(tcpOpen("127.0.0.1", port),
+                "MySQL/MariaDB not reachable on 127.0.0.1:" + port);
+
+        String body = """
+                    db.execute(db, "drop table if exists `user`")
+                    db.execute(db, "create table `user` (id int, name varchar(50), email varchar(80), age int)")
+                    db.execute(db, "insert into `user` values (?, ?, ?, ?)", 1, "Mel", "m@kof.dev", 30)
+                    db.execute(db, "insert into `user` values (?, ?, ?, ?)", 2, "Ana", "a@kof.dev", 25)
+                    var mel = orm.find<User>(db, 1)
+                    println(mel.id)
+                    println(mel.name)
+                    println(mel.email)
+                    println(mel.age)
+                    var g = orm.find<User>(db, 999)
+                    if (g == null) {
+                        println("null")
+                    } else {
+                        println("hit")
+                    }
+                    var ana = orm.find<User>(db, 2)
+                    println(ana.name + "/" + ana.age)
+                    var klong: Long = 2
+                    var ana2 = orm.find<User>(db, klong)
+                    println(ana2.name + "/" + ana2.age)
+                    var esk = orm.find<User>(db, "1")
+                    println(esk.name)
+                    db.close(db)
+                }
+                """;
+        String expected = "1\nMel\nm@kof.dev\n30\nnull\nAna/25\nAna/25\nMel";
+
+        Path jvmSource = tempDir.resolve("JvmMain.kf");
+        Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"jdbc:mariadb://127.0.0.1:" + port
+                   + "/test?user=root&password=kofpass&allowMultiQueries=true\")\n")
+                + body);
+        runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
+                findDriverJar("mariadb", "MariaDB"), expected);
+
+        Path nativeSource = tempDir.resolve("NativeMain.kf");
+        Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"mysql://root:kofpass@127.0.0.1:" + port + "/test\")\n")
+                + body);
+        CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nativeResult.success(), "Native deve compilar orm.find no mysql (F2d3b): "
+                + nativeResult.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process proc = pb.start();
+        String out = new String(proc.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = proc.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals(expected, out, "paridade byte JVM==Native (find mysql; hit 4 campos, miss null, 2a linha)");
+    }
+
+    @Test
     void postgresCrud(@TempDir Path tempDir) throws Exception {
         org.junit.jupiter.api.Assumptions.assumeTrue(tcpOpen("localhost", 5432),
                 "PostgreSQL not reachable (start it: docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=kof postgres)");
