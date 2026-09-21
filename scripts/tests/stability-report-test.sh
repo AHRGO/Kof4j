@@ -4,8 +4,9 @@
 # scripts/stability-report.sh, o medidor da condicao 4 do gate 0.5.0
 # (`D-RELEASE-0.5.0-GATE`). Le logs FAKE: nenhuma suite e executada aqui.
 #
-# RED-first: GREEN so com failures=0 E errors=0; 1 failure ou 1 error reprova;
-# log sem a linha TOTAL nao certifica (exit 3).
+# RED-first: GREEN so com failures=0 E errors=0 E o log estampado pelo
+# safe-suite.sh (SUITE-SHA do tip + SUITE-DIRTY=0); failure/error reprova; log
+# de outro sha, de arvore suja, sem SUITE-SHA ou sem TOTAL nao certifica (exit 3).
 #
 # Uso: scripts/tests/stability-report-test.sh   (exit 0 = todos os cenarios passam)
 set -uo pipefail
@@ -22,10 +23,13 @@ expect "selftest embutido" 0 "$rc"
 printf '%s' "$out" | grep -q "0F/0E" && pass "verificador interno reprova" || fail "selftest nao provou a reprovacao"
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
-printf 'building...\nTOTAL: tests=3233 failures=0 errors=0 skipped=13\n' > "$TMP/green.log"
+printf 'SUITE-SHA: deadbee\nSUITE-DIRTY: 0\nbuilding...\nTOTAL: tests=3233 failures=0 errors=0 skipped=13\n' > "$TMP/green.log"
 printf 'building...\nTOTAL: tests=3233 failures=1 errors=0 skipped=13\n' > "$TMP/fail.log"
 printf 'building...\nTOTAL: tests=3233 failures=0 errors=2 skipped=13\n' > "$TMP/err.log"
 printf 'sem total\n' > "$TMP/none.log"
+printf 'building...\nTOTAL: tests=3233 failures=0 errors=0 skipped=13\n' > "$TMP/unbound.log"
+printf 'SUITE-SHA: 0000000\nSUITE-DIRTY: 0\nbuilding...\nTOTAL: tests=3233 failures=0 errors=0 skipped=13\n' > "$TMP/othersha.log"
+printf 'SUITE-SHA: deadbee\nSUITE-DIRTY: 2\nbuilding...\nTOTAL: tests=3233 failures=0 errors=0 skipped=13\n' > "$TMP/dirty.log"
 
 # ── cenario 2: log 0F/0E => GREEN ─────────────────────────────────────────
 out="$(bash "$REPORT" --suite-log "$TMP/green.log" --sha deadbee 2>&1)"; rc=$?
@@ -50,6 +54,19 @@ expect "log sem TOTAL nao certifica" 3 "$rc"
 # ── cenario 6: log ausente => nao certifica (exit 3) ──────────────────────
 out="$(bash "$REPORT" --suite-log "$TMP/naoexiste.log" 2>&1)"; rc=$?
 expect "log ausente nao certifica" 3 "$rc"
+
+# ── cenario 7: log de OUTRO sha => nao certifica (exit 3) ─────────────────
+out="$(bash "$REPORT" --suite-log "$TMP/othersha.log" --sha deadbee 2>&1)"; rc=$?
+expect "log de outro sha nao certifica" 3 "$rc"
+grep -q "STABILITY: unknown" <<<"$out" && pass "unknown emitido (outro sha)" || fail "outro sha nao deu unknown"
+
+# ── cenario 8: arvore SUJA na corrida => nao certifica (exit 3) ───────────
+out="$(bash "$REPORT" --suite-log "$TMP/dirty.log" --sha deadbee 2>&1)"; rc=$?
+expect "log de arvore suja nao certifica" 3 "$rc"
+
+# ── cenario 9: log SEM SUITE-SHA (corrida antiga) => nao certifica (exit 3) ─
+out="$(bash "$REPORT" --suite-log "$TMP/unbound.log" --sha deadbee 2>&1)"; rc=$?
+expect "log sem SUITE-SHA nao certifica" 3 "$rc"
 
 if [ "$FAILED" = 1 ]; then
   echo "== RESULTADO: FALHOU =="
