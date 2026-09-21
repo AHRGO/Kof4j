@@ -42,7 +42,8 @@ tempo de compilação**: `FFI001` (JVM/Native não bindável) / `FFI002` (JS) �
 | String = `char*` | ✅ entrada + saída | ✅ entrada (payload off 24) + saída (cópia na fronteira) | ✅ |
 | **struct (record, campos escalares)** | ✅ **por valor entrada + retorno** (token `@`, 3.8b fatias 1–2, 20–21/09) | ❌ FFI001 (3.7) | ❌ FFI002 |
 | **array escalar `T[]`→`ptr`** | ✅ **copy-in por chamada** (token `p<elem>`, 3.8b fatia 3, 21/09; sem write-back) | ❌ FFI001 | ❌ FFI002 |
-| array / out-buffer / opaco (não-escalar, ex. `String[]`/`List<T>`) | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
+| **out-buffer `Buffer(U8)` INOUT** | ✅ **copy-in / chamada / copy-back** (token `B` + `buffer.alloc`/`Buffer.bytes()`, D6-3, 21/09) | ❌ FFI001 | ❌ FFI002 |
+| array não-escalar / opaco (ex. `String[]`/`List<T>`/`Handle`) | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
 
 Mapeamento escalar JVM→FFM (medido): `i→JAVA_INT, j→JAVA_LONG, f→JAVA_FLOAT,
 d→JAVA_DOUBLE, b→JAVA_BOOLEAN, S→ADDRESS`; token não-escalar cai em
@@ -154,11 +155,12 @@ FFI001/002 honesto até decidido — nada de binding parcial silencioso.
 2. **3.8b** binding JVM: records→`StructLayout` no `kof_ffi` (FFM faz a
    classificação); política de arena D6-5. **✅ fatia 1 (param por valor,
    20/09) + fatia 2 (retorno por valor: registrador + sret, 21/09) + fatia 3
-   (D6-2: `T[]` escalar→`ptr`, copy-in por chamada, 21/09) POUSARAM** —
+   (D6-2: `T[]` escalar→`ptr`, copy-in por chamada, 21/09) + fatia 4 (D6-3:
+   out-buffer `Buffer(U8)` — `buffer.alloc`/`Buffer.bytes()` + `extern` INOUT
+   copy-in/copy-back, 21/09) POUSARAM** —
    só o subconjunto de campos escalares; `struct` mutável (D6-1 B) é superfície
    nova da linguagem sob a Lei da Simplicidade (regra 11), decisão separada.
-   Restam: out-buffer da D6-3 (`Buffer(U8, INOUT)`) e o bridge de struct no JS
-   (pack/unpack no host, D6-5), ambos follow-ups.
+   Restam: o bridge de struct no JS (pack/unpack no host, D6-5), um follow-up.
 3. **3.7** asm native: classificação manual por target (x86-64 agora;
    aarch64/riscv64 seguem o mesmo golden de AbiLayout) + sret (D6-4).
 4. **JS**: decidir a fronteira wasm/ffi (o host node já binda escalares;

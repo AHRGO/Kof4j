@@ -41,7 +41,8 @@ the nested token `(<ret><params>)`. Anything the map does not cover is a
 | String = `char*` | ✅ in + out | ✅ in (payload off 24) + out (boundary copy) | ✅ |
 | **struct (record, scalar fields)** | ✅ **by value in + out** (`@` token, 3.8b fatias 1–2, 20–21/09) | ❌ FFI001 (3.7) | ❌ FFI002 |
 | **scalar array `T[]`→`ptr`** | ✅ **copy-in per call** (`p<elem>` token, 3.8b fatia 3, 21/09; no write-back) | ❌ FFI001 | ❌ FFI002 |
-| array / out-buffer / opaque (non-scalar, e.g. `String[]`/`List<T>`) | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
+| **out-buffer `Buffer(U8)` INOUT** | ✅ **copy-in / call / copy-back** (`B` token + `buffer.alloc`/`Buffer.bytes()`, D6-3, 21/09) | ❌ FFI001 | ❌ FFI002 |
+| non-scalar array / opaque (e.g. `String[]`/`List<T>`/`Handle`) | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
 
 JVM scalar→FFM mapping (measured): `i→JAVA_INT, j→JAVA_LONG, f→JAVA_FLOAT,
 d→JAVA_DOUBLE, b→JAVA_BOOLEAN, S→ADDRESS`, non-scalar token falls back to
@@ -150,11 +151,12 @@ until decided — no silent partial binding.
 2. **3.8b** JVM binding: records→`StructLayout` in `kof_ffi` (FFM does
    classification); D6-5 arena policy. **✅ fatia 1 (by-value param, 20/09) +
    fatia 2 (return-by-value: register + sret, 21/09) + fatia 3 (D6-2: scalar
-   `T[]`→`ptr`, copy-in per call, 21/09) LANDED** — only the
+   `T[]`→`ptr`, copy-in per call, 21/09) + fatia 4 (D6-3: `Buffer(U8)` out-buffer
+   — `buffer.alloc`/`Buffer.bytes()` + `extern` INOUT copy-in/copy-back, 21/09)
+   LANDED** — only the
    scalar-field subset; `struct` mutable (D6-1 B) is a new language surface
-   under the Simplicity Law (rule 11), a separate decision. Remaining: D6-3
-   out-buffer (`Buffer(U8, INOUT)`) and the JS struct bridge (D6-5 host
-   pack/unpack), both follow-ups.
+   under the Simplicity Law (rule 11), a separate decision. Remaining: the JS
+   struct bridge (D6-5 host pack/unpack), a follow-up.
 3. **3.7** native asm: classification by hand per target (x86-64 now;
    aarch64/riscv64 follow the same AbiLayout golden) + sret (D6-4).
 4. **JS**: decide wasm/ffi boundary (node host already binds scalars;
