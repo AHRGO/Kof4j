@@ -14331,15 +14331,16 @@ p
 
 <!-- pt-switch --> **PT:** [§436 (pt_BR)](known-bugs.pt_BR.md)
 
-## §437 — `check_500` red: `JvmOpCollections.java` crossed 600 lines (584 baseline -> 604) after the §432 collection-boxing fix — 🟡 OPEN (catalogued 21/09; JVM lane split pending, not fixed here)
+## §437 — `check_500` red: `JvmOpCollections.java` crossed 600 lines (584 baseline -> 604) after the §432 collection-boxing fix — ✅ FIXED 21/09 (lane .18: dead code from the duplicate §432 fix removed, 604→594; check_500 rc=0)
 
 - **Measured (21/09, tree at tip `20a3158b` + the F2d3a landing, after the §432 re-land):** `./scripts/check_500.sh` -> `FALHOU — kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java tinha 584 (< 600) no baseline, agora 604 (>= 600): cruzou a linha vermelha, split obrigatório.` (rc!=0); `wc -l` = 604.
 - **Origin (diagnosed, not fixed):** the JVM lane's own §432 fix (`c6a8520d` — `Map<_,Object>.getOrDefault(k,<prim>)` VerifyError) grew the already-tolerated file past the critical line. >= 600 is a merge gate (AGENTS §"Lesson learned").
 - **Owner:** the JVM lane. NOT touched here — rule 8.
 - **Minimal repro:** `./scripts/check_500.sh` -> rc!=0; `wc -l kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java` = 604.
 - **Fix path:** split by responsibility (extract a slice) and then `--update-baseline` with the file < 600; the baseline never legitimizes >= 600.
+- **Resolution (21/09, lane .18):** no split was needed — the ``+20`` lines came from the **duplicate** §432 fix (`c6a8520d`), whose extra block in `emitMapCall` was **dead code** (`argValueType` never assigned; the `valueType instanceof Unknown && !(argValueType instanceof Unknown)` branch always-false; `boxValueType` never read). `a9bbdfc5` removed those 10 dead lines (rule 3), leaving `JvmOpCollections.java` at **594 (< 600)**: `./scripts/check_500.sh` → rc=0 (only the tolerated-growth warning, no `JvmOpCollections` failure) and `wc -l` = 594. Behavior unchanged (the result still comes from `writtenValueType`); proof `MapGetOrDefaultTest` 7/7 + `CollectionMethodsStdlibE2ETest` 11/11 + `NativeErasureBoxE2ETest` 6/6. The baseline stays at 584 (the tolerated debt line); this entry is closed on the gate, not by legitimizing ≥ 600.
 
-<!-- pt-switch --> **PT:** [§437 (pt_BR)](known-bugs.pt_BR.md#437--check_500-vermelho-jvmopcollectionsjava-cruzou-600-linhas-baseline-584---604-apos-o-fix-432-do-boxing-de-colecoes---aberto-catalogado-2109-split-pendente-da-lane-jvm-nao-corrigido-aqui)
+<!-- pt-switch --> **PT:** [§437 (pt_BR)](known-bugs.pt_BR.md#437--check_500-vermelho-jvmopcollectionsjava-cruzou-600-linhas-baseline-584---604-apos-o-fix-432-do-boxing-de-colecoes---corrigido-2109-lane-18-codigo-morto-do-fix-432-duplicado-removido-604594-check_500-rc0)
 
 ## §438 — `kof-cli` debug/serve tests leak suspended JVMs (`jdwp suspend=y`) and `/tmp` scratch dirs that can exhaust the tmpfs and kill later suites (measured: 15 `kof-debug-*` + 6 `kof-serve-*` orphans holding deleted dirs; `Cota da disco excedida` in the kof-compiler suite) — 🟡 OPEN (catalogued 21/09; cli/debug lane fix pending, not fixed here)
 

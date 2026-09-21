@@ -13,6 +13,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§437 FIXED — `check_500` red on `JvmOpCollections` closed (604→594)**
+    (21/09, lane .18): the ``+20`` lines came from the **duplicate** §432 fix
+    (`c6a8520d`), whose extra block in `emitMapCall` was dead code
+    (`argValueType` never assigned, the always-false `Unknown` branch,
+    `boxValueType` never read). `a9bbdfc5` already removed those 10 lines
+    (rule 3), leaving the file at 594 (< 600): `check_500` rc=0 and `wc -l`
+    = 594, no split needed. Behavior unchanged (the result still comes from
+    `writtenValueType`); proof `MapGetOrDefaultTest` 7/7 +
+    `CollectionMethodsStdlibE2ETest` 11/11 + `NativeErasureBoxE2ETest` 6/6.
+    Ledger entry closed (the baseline stays at 584; ≥ 600 is never
+    legitimized). Live 16→15.
+
   - **§424 FIXED — five `String` methods refuse on JS/Native with `STR003`**
     (21/09, lane .18): `matches`/`replaceAll`/`replaceFirst`/`toCharArray`/
     `compareToIgnoreCase` are accepted by the typer and implemented on the JVM,

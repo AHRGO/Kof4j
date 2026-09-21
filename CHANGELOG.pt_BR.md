@@ -13,6 +13,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§437 CORRIGIDO — `check_500` vermelho em `JvmOpCollections` fechado (604→594)**
+    (21/09, lane .18): as ``+20`` linhas vieram do fix §432 **duplicado**
+    (`c6a8520d`), cujo bloco extra em `emitMapCall` era código morto
+    (`argValueType` nunca atribuído, o ramo `Unknown` sempre-falso,
+    `boxValueType` nunca lido). O `a9bbdfc5` já havia removido essas 10 linhas
+    (regra 3), deixando o arquivo em 594 (< 600): `check_500` rc=0 e `wc -l`
+    = 594, sem split. Comportamento inalterado (o resultado segue vindo do
+    `writtenValueType`); prova `MapGetOrDefaultTest` 7/7 +
+    `CollectionMethodsStdlibE2ETest` 11/11 + `NativeErasureBoxE2ETest` 6/6.
+    Entrada do ledger fechada (o baseline fica em 584; ≥ 600 nunca é
+    legitimado). Contagem viva 16→15.
+
   - **§424 CORRIGIDO — cinco métodos `String` recusam no JS/Native com `STR003`**
     (21/09, lane .18): `matches`/`replaceAll`/`replaceFirst`/`toCharArray`/
     `compareToIgnoreCase` são aceitos pelo typer e implementados no JVM, mas o
