@@ -4,6 +4,7 @@ import dev.kof.compiler.IRClass;
 import dev.kof.compiler.IRField;
 import dev.kof.compiler.IRMethod;
 import dev.kof.compiler.KofLoadLiteral;
+import dev.kof.compiler.Type;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -70,6 +71,7 @@ public final class JsClassEmitter {
             methods.add(lowerRecordToString(clazz));
             methods.add(lowerRecordToJson(clazz));
             methods.add(lowerRecordFfiFields(clazz));
+            methods.add(lowerRecordFfiFrom(clazz, jsName));
             methods.add(lowerRecordEquals(clazz));
             methods.add(lowerRecordHashCode(clazz));
         }
@@ -187,6 +189,40 @@ public final class JsClassEmitter {
         }
         return new JsIr.JsFunction("__kof_ffi_fields", List.of(),
                 List.of(new JsIr.JsReturn(new JsIr.JsArrayLiteral(values))), false, false, false);
+    }
+
+    /**
+     * D6-1/3.8b (bridge JS, retorno 21/09): o host devolve os campos do struct
+     * (por valor) como um array na ordem de declaração — o host não instancia um
+     * objeto GraalJS. Este factory ESTÁTICO reconstrói o record pelo construtor
+     * canônico, paridade com o {@code kof_ffi_read_struct} reflexivo do JVM. Um
+     * campo `Long` vira `BigInt` (o JS representa Long como BigInt).
+     */
+    JsIr.JsFunction lowerRecordFfiFrom(IRClass clazz, String jsName) {
+        List<JsIr.JsExpression> args = new ArrayList<>();
+        int idx = 0;
+        for (IRField field : clazz.fields()) {
+            JsIr.JsExpression elem = new JsIr.JsIndex(
+                    new JsIr.JsIdentifier("fields"), new JsIr.JsNumber(String.valueOf(idx)));
+            // Os valores vêm do host como Java boxed (foreign GraalJS): coage ao
+            // primitivo JS do tipo do campo — Long→BigInt, bool→Boolean, o resto
+            // Number — p/ o record ficar com os mesmos tipos do caminho puro JS.
+            if (field.type() instanceof Type.PrimitiveType pt) {
+                String prim = Type.canonicalPrimitiveName(pt.name());
+                if ("long".equals(prim)) {
+                    elem = new JsIr.JsCall(new JsIr.JsIdentifier("BigInt"), List.of(elem));
+                } else if ("bool".equals(prim)) {
+                    elem = new JsIr.JsCall(new JsIr.JsIdentifier("Boolean"), List.of(elem));
+                } else {
+                    elem = new JsIr.JsCall(new JsIr.JsIdentifier("Number"), List.of(elem));
+                }
+            }
+            args.add(elem);
+            idx++;
+        }
+        return new JsIr.JsFunction("__kof_ffi_from", List.of("fields"),
+                List.of(new JsIr.JsReturn(new JsIr.JsNew(new JsIr.JsIdentifier(jsName), args))),
+                true, false, false);
     }
 
     /**

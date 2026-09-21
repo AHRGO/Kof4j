@@ -14,11 +14,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * FFI struct ABI (D6-1(A) / slice 3.8b): um `record` Kof de campos escalares
  * atravessa POR VALOR como struct C no target JVM (FFM classifica pela
- * StructLayout derivada do RecordComponent). Prova com um shim C real; campos
- * não-escalares seguem FFI001 honesto (R6), e Native/JS ficam nos seus gap
- * codes — nunca um binding parcial silencioso. A fatia 2 cobre o RETORNO
- * struct (registradores p/ struct pequeno e sret p/ struct maior), reconstruído
- * pelo construtor canônico do `record`.
+ * StructLayout derivada do RecordComponent) e no target JS (bridge: param via
+ * `__kof_ffi_fields`, retorno via `__kof_ffi_from`). Prova com um shim C real;
+ * campos não-escalares seguem FFI001 honesto (R6), e Native fica no seu gap
+ * code — nunca um binding parcial silencioso. A fatia 2 cobre o RETORNO struct
+ * (registradores p/ struct pequeno e sret p/ struct maior), reconstruído pelo
+ * construtor canônico do `record` (JVM por reflexão, JS pelo factory estático).
  */
 class FfiStructE2ETest {
 
@@ -33,6 +34,9 @@ class FfiStructE2ETest {
             struct Mix mixret(double d, int i) { struct Mix m; m.d = d; m.i = i; return m; }
             struct ParamMix { long l; double d; int i; };
             double parammix(struct ParamMix m) { return m.l + m.d + m.i; }
+            struct ParamMix parammixret(long l, double d, int i) {
+                struct ParamMix m; m.l = l; m.d = d; m.i = i; return m;
+            }
             """;
 
     private final CompilerDriver driver = new CompilerDriver();
@@ -155,21 +159,57 @@ class FfiStructE2ETest {
     }
 
     @Test
-    void structReturnJsStaysFfi002(@TempDir Path dir) throws IOException {
-        Path src = dir.resolve("retjs.kf");
-        Files.writeString(src, """
+    void structReturnByValueJsParity(@TempDir Path dir) throws Exception {
+        // Bridge de retorno no JS (D6-1/3.8b, 21/09): o host materializa o struct
+        // devolvido por valor na arena, lê os campos e o guest reconstrói o record
+        // via `__kof_ffi_from` — mesma semântica do `kof_ffi_read_struct` do JVM
+        // (registrador p/ struct pequeno, sret p/ maior). Inclui `Long` (BigInt).
+        String so = compileHostLib(dir);
+        String kof = """
                 record Point(Int x, Int y)
+                record Big(Int a, Int b, Int c)
+                record Mix(Double d, Int i)
+                record ParamMix(Long l, Double d, Int i)
 
-                extern "libc.so.6" mkpoint(Int x, Int y): Point
+                extern "%s" mkpoint(Int x, Int y): Point
+                extern "%s" bigret(Int a, Int b, Int c): Big
+                extern "%s" mixret(Double d, Int i): Mix
+                extern "%s" parammixret(Long l, Double d, Int i): ParamMix
 
                 main() {
-                    println("hi")
+                    val p = mkpoint(3, 4)
+                    println(p.x())
+                    println(p.y())
+                    val g = bigret(10, 20, 30)
+                    println(g.a())
+                    println(g.b())
+                    println(g.c())
+                    val m = mixret(2.5, 7)
+                    println(m.d())
+                    println(m.i())
+                    val pm = parammixret(9, 4.5, 2)
+                    println(pm.l())
+                    println(pm.d())
+                    println(pm.i())
                 }
-                """);
-        CompilationResult r = driver.compile(src, dir.resolve("out-retjs"), Target.JS);
-        assertFalse(r.success(), "JS struct RETURN stays unbound (FFI002) in this slice");
-        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI002"),
-                "expected FFI002 on JS, got: " + r.diagnostics().getDiagnostics());
+                """.formatted(so, so, so, so);
+        String expected = "3\n4\n10\n20\n30\n2.5\n7\n9\n4.5\n2";
+
+        Path jvmSrc = dir.resolve("retjs-jvm.kf");
+        Files.writeString(jvmSrc, kof);
+        CompilationResult rj = driver.compile(jvmSrc, dir.resolve("out-retjs-jvm"), Target.JVM);
+        assertTrue(rj.success(), "JVM compile: " + rj.diagnostics().getDiagnostics());
+        String jvm = runJvm(dir.resolve("out-retjs-jvm"));
+        assertEquals(expected, jvm, "JVM golden (struct return)");
+
+        Path jsSrc = dir.resolve("retjs-js.kf");
+        Files.writeString(jsSrc, kof);
+        CompilationResult rjs = driver.compile(jsSrc, dir.resolve("out-retjs-js"), Target.JS);
+        assertTrue(rjs.success(), "JS struct RETURN must bind (bridge 21/09): "
+                + rjs.diagnostics().getDiagnostics());
+        String js = runJs(dir.resolve("out-retjs-js"));
+        assertEquals(expected, js, "JS golden (struct return, __kof_ffi_from)");
+        assertEquals(jvm, js, "JVM==JS byte-for-byte parity (struct return)");
     }
 
     @Test

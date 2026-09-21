@@ -31,8 +31,13 @@ import java.lang.invoke.MethodHandle;
  * {@code StructLayout} entra no descriptor, idêntico ao caminho reflexivo do
  * {@code JvmFfiRuntime}. Desde 21/09 o array escalar {@code T[]} (token
  * {@code p<elem>}, D6-2) e o out-buffer {@code Buffer(U8)} INOUT (token
- * {@code B}, D6-3) também entram por ponteiro {@code ADDRESS}; só o struct de
- * RETORNO segue {@code FFI002} (R6, nunca stub silencioso).
+ * {@code B}, D6-3) também entram por ponteiro {@code ADDRESS}. Desde 21/09 o
+ * struct de RETORNO também binda: o token {@code @<n><chars>} no índice 0 traz o
+ * layout, o {@link #call} materializa o struct devolvido por valor na arena da
+ * chamada e devolve os campos (ordem de declaração) num {@code Object[]} que o
+ * guest reconstrói via {@code __kof_ffi_from} — paridade com o
+ * {@code kof_ffi_read_struct} do JVM. O gate cobre JVM+JS; Native fica
+ * {@code FFI001} (R6, nunca stub silencioso).
  */
 public final class KofJsFfiBridge {
 
@@ -47,9 +52,19 @@ public final class KofJsFfiBridge {
                     : SymbolLookup.libraryLookup(lib, arena);
             Linker linker = Linker.nativeLinker();
             char ret = sig.charAt(0);
+            StructLayout retStruct = null;
+            String retChars = null;
+            int cur = 1;
+            if (ret == '@') {
+                // Retorno struct por valor: o sig JS carrega os chars do layout
+                // (`@<n><chars>`); o cursor de params começa depois do token.
+                int[] ref = { 0 };
+                retChars = structCharsAt(sig, ref);
+                cur = ref[0];
+                retStruct = structLayout(retChars);
+            }
             MemoryLayout[] pl = new MemoryLayout[args.length];
             Object[] real = new Object[args.length];
-            int cur = 1;
             for (int i = 0; i < args.length; i++) {
                 char c = sig.charAt(cur);
                 if (c == '(') {
@@ -97,13 +112,23 @@ public final class KofJsFfiBridge {
             }
             FunctionDescriptor fd = (ret == 'v')
                     ? FunctionDescriptor.ofVoid(pl)
-                    : FunctionDescriptor.of(layout(ret), pl);
+                    : (ret == '@')
+                            ? FunctionDescriptor.of(retStruct, pl)
+                            : FunctionDescriptor.of(layout(ret), pl);
             MethodHandle handle = linker.downcallHandle(
                     lookup.find(name).orElseThrow(), fd);
+            if (ret == '@') {
+                // Struct devolvido por valor: o Linker materializa na arena da
+                // chamada (arg SegmentAllocator à frente) — lido logo abaixo.
+                handle = handle.bindTo(arena);
+            }
             handle = handle.asSpreader(Object[].class, args.length);
             Object r = handle.invoke(real);
             if (ret == 'v') {
                 return null;
+            }
+            if (ret == '@') {
+                return readStruct(retStruct, (MemorySegment) r, retChars);
             }
             if (ret == 'S') {
                 MemorySegment seg = (MemorySegment) r;
@@ -123,6 +148,29 @@ public final class KofJsFfiBridge {
 
     public static void callVoid(String lib, String name, String sig, Object[] args) {
         call(lib, name, sig, args);
+    }
+
+    /**
+     * Lê os campos do struct devolvido por valor (ordem de declaração) num
+     * {@code Object[]} — o guest reconstrói o record via {@code __kof_ffi_from}
+     * (paridade com o {@code kof_ffi_read_struct} reflexivo do JVM). Os offsets
+     * vêm do MESMO {@link #structLayout} que gerou o descriptor.
+     */
+    private static Object[] readStruct(StructLayout sl, MemorySegment seg, String chars) {
+        Object[] out = new Object[chars.length()];
+        for (int k = 0; k < chars.length(); k++) {
+            long off = sl.byteOffset(MemoryLayout.PathElement.groupElement(k));
+            out[k] = switch (chars.charAt(k)) {
+                case 'i' -> seg.get(ValueLayout.JAVA_INT, off);
+                case 'j' -> seg.get(ValueLayout.JAVA_LONG, off);
+                case 'f' -> seg.get(ValueLayout.JAVA_FLOAT, off);
+                case 'd' -> seg.get(ValueLayout.JAVA_DOUBLE, off);
+                case 'b' -> seg.get(ValueLayout.JAVA_BOOLEAN, off);
+                default -> throw new IllegalArgumentException(
+                        "ffi: bad struct return field char: " + chars.charAt(k));
+            };
+        }
+        return out;
     }
 
     static ValueLayout layout(char c) {

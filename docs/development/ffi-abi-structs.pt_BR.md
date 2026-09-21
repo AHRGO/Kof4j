@@ -47,8 +47,17 @@ bytes do `Uint8Array` do guest para a arena da chamada, o token `B` vira
 `ADDRESS`, e o copy-back após o downcall devolve o resultado do C ao buffer do
 guest (paridade com `kof_ffi_buffer_in`/`_out`). Prova:
 `bufferInoutCopyInCopyBackJsParity` (`20/[10, 10]/40/[20, 20]`, o +10
-acumulando entre chamadas) byte-a-byte JVM==JS. Resta no JS: **retorno** de
-struct (`FFI002`).
+acumulando entre chamadas) byte-a-byte JVM==JS.
+**Pousou 21/09 (3.8b fatia 2 bridge JS · retorno de struct):** o runner JS agora
+binda o **retorno** de struct também — o token de retorno é `@<n><chars>`
+(layout no fio), o bridge materializa o struct por valor na arena da chamada (o
+Linker recebe a arena como `SegmentAllocator` à frente) e lê os campos num
+`Object[]`, e o `__kof_ffi_from` estático do record reconstrói a instância pelo
+construtor canônico (coagindo `Long`→`BigInt` etc.; paridade com o
+`kof_ffi_read_struct` reflexivo). Prova: `structReturnByValueJsParity`
+(`Point`/`Big`/`Mix`/`ParamMix` — caminhos registrador e sret, mais um campo
+`Long`) byte-a-byte JVM==JS. **Toda a superfície de param + retorno do JS está
+pronta**; o único gap D6 restante é o Native (3.7).
 
 ## 1. O que existe hoje (medido 19/09, não lembrado)
 
@@ -65,7 +74,7 @@ tempo de compilação**: `FFI001` (JVM/Native não bindável) / `FFI002` (JS) �
 | downcall escalar | ✅ `kof_ffi` FFM (`JvmFfiRuntime.java:142+`) | ✅ **`call sym@PLT` direto em x86-64/riscv64/aarch64** (#431 fatias 1–2, 20/09, §369 — link-by-use, sem `dlopen`) | ✅ bridge do host `KofJsFfiBridge` (browser degrada honesto, R7) |
 | callbacks/upcalls (3.4) | ✅ `Linker.upcallStub` | ❌ `FFI001` (sem mecanismo) | ✅ host |
 | String = `char*` | ✅ entrada + saída | ✅ entrada (payload off 24) + saída (cópia na fronteira) | ✅ |
-| **struct (record, campos escalares)** | ✅ **por valor entrada + retorno** (token `@`, 3.8b fatias 1–2, 20–21/09) | ❌ FFI001 (3.7) | ✅ **por valor ENTRADA** (token `@<n><chars>` + `__kof_ffi_fields`, bridge 21/09); ❌ FFI002 retorno |
+| **struct (record, campos escalares)** | ✅ **por valor entrada + retorno** (token `@`, 3.8b fatias 1–2, 20–21/09) | ❌ FFI001 (3.7) | ✅ **por valor ENTRADA + RETORNO** (IN: `@<n><chars>` + `__kof_ffi_fields`; OUT: retorno `@<n><chars>` + `__kof_ffi_from`, bridges 21/09) |
 | **array escalar `T[]`→`ptr`** | ✅ **copy-in por chamada** (token `p<elem>`, 3.8b fatia 3, 21/09; sem write-back) | ❌ FFI001 | ✅ **copy-in por chamada** (`packArray` bridge, 21/09; sem write-back) |
 | **out-buffer `Buffer(U8)` INOUT** | ✅ **copy-in / chamada / copy-back** (token `B` + `buffer.alloc`/`Buffer.bytes()`, D6-3, 21/09) | ❌ FFI001 | ✅ **copy-in / chamada / copy-back** (token `B` + `packBuffer`/copy-back após o downcall, bridge 21/09) |
 | array não-escalar / opaco (ex. `String[]`/`List<T>`/`Handle`) | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
@@ -188,9 +197,10 @@ FFI001/002 honesto até decidido — nada de binding parcial silencioso.
    só o subconjunto de campos escalares; `struct` mutável (D6-1 B) é superfície
    nova da linguagem sob a Lei da Simplicidade (regra 11), decisão separada.
    Os bridges no JS pousaram 21/09 para struct **param** (pack no host, D6-5),
-   array escalar **`T[]`→`ptr` copy-in** (D6-2, `packArray`) e `Buffer(U8)`
-   INOUT (D6-3, `packBuffer` + copy-back). Resta o **retorno** de struct no JS
-   (todo o lado de param está pronto).
+   array escalar **`T[]`→`ptr` copy-in** (D6-2, `packArray`), `Buffer(U8)`
+   INOUT (D6-3, `packBuffer` + copy-back) e o **retorno** de struct
+   (`__kof_ffi_from`). A superfície de FFI do JS (param + retorno) está completa;
+   o único trabalho D6 restante é o Native (3.7: struct/array/sret).
 3. **3.7** asm native: classificação manual por target (x86-64 agora;
    aarch64/riscv64 seguem o mesmo golden de AbiLayout) + sret (D6-4).
 4. **JS**: decidir a fronteira wasm/ffi (o host node já binda escalares;

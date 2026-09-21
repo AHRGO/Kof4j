@@ -56,8 +56,8 @@ final class KofJsFfiMarshal {
                                  java.util.List<OutBuf> outs) {
         int n = countParams(sig);   // tokens de 1º nível (callback "(..)" conta 1)
         Object[] real = new Object[n];
-        int[] curRef = { 1 };
-        int cur = 1;
+        int[] curRef = { paramsStart(sig) };
+        int cur = paramsStart(sig);
         for (int i = 0; i < n; i++) {
             char c = sig.charAt(cur);
             Value v = (jsArgs != null && jsArgs.hasArrayElements() && i < jsArgs.getArraySize())
@@ -216,11 +216,27 @@ final class KofJsFfiMarshal {
         }
     }
 
+    /** Índice do 1º token de parâmetro: 1, ou depois do token de retorno
+     *  `@<n><chars>` quando o extern devolve um struct por valor (JS). */
+    private static int paramsStart(String sig) {
+        if (sig.charAt(0) == '@') {
+            int[] ref = { 0 };
+            KofJsFfiBridge.structCharsAt(sig, ref);
+            return ref[0];
+        }
+        return 1;
+    }
+
     /** Nº de tokens de parâmetro de 1º nível (um callback `(..)` conta como 1). */
     private static int countParams(String sig) {
-        int n = 0, cur = 1;
+        int n = 0, cur = paramsStart(sig);
         while (cur < sig.length()) {
             char c = sig.charAt(cur);
+            if (c == ':') {
+                // separador do NOME do record de retorno (`@<n><chars>` ... `:Nome`):
+                // não é parâmetro — fim da lista.
+                break;
+            }
             if (c == 'p') {
                 // array escalar: `p` + char do elemento (conta 1).
                 n++;

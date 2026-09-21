@@ -37,7 +37,15 @@ public final class FfiSignature {
         // reconstruir a instância a partir do struct devolvido por valor.
         String structRet = structReturnName(ext.returnType(), driver);
         if (structRet != null) {
-            sb.append('@');
+            // JVM: `@` basta (o runtime reflete o record pelo sufixo `:Nome`).
+            // JS: o host não reflete — o retorno carrega os chars do layout com
+            // prefixo de TAMANHO (`@2ij`), como no param, e o guest reconstrói.
+            String retFields = structFieldChars(ext.returnType(), driver);
+            if (driver.target == Target.JS) {
+                sb.append('@').append(retFields.length()).append(retFields);
+            } else {
+                sb.append('@');
+            }
         } else {
             Character rc = returnChar(ext.returnType());
             sb.append(rc != null ? rc.charValue() : '?');
@@ -112,10 +120,11 @@ public final class FfiSignature {
         return new Type.ClassType(bin.substring(0, dot), bin.substring(dot + 1), List.of());
     }
 
-    /** Retorno bindável SÓ no JVM (JS/Native ficam FFI002/FFI001) — gate do
-     *  `isExternBound`, fora do `CompilerPipeline` p/ manter a classe ≤500. */
+    /** Retorno bindável no JVM e no JS (Native fica FFI001) — gate do
+     *  `isExternBound`, fora do `CompilerPipeline` p/ manter a classe ≤500. No JS
+     *  o host devolve os campos e o guest reconstrói (`__kof_ffi_from`). */
     static boolean structReturnBindable(CompilerDriver driver, ExternalFunctionNode ext) {
-        return driver.target == Target.JVM
+        return (driver.target == Target.JVM || driver.target == Target.JS)
                 && structReturnType(ext.returnType(), driver) != null;
     }
 

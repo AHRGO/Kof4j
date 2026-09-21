@@ -449,6 +449,17 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
         }
         callArgs.addAll(args);
         JsIr.JsExpression call = new JsIr.JsCall(new JsIr.JsIdentifier(fn), callArgs);
+        if (name.equals("kof_ffi") && kc.returnType() instanceof Type.ClassType rt
+                && p.lc.recordClassNames.contains(rt.internalName())) {
+            // D6-1/3.8b (bridge JS 21/09): retorno struct por valor — o host
+            // devolve os campos do struct (array, ordem de declaração) e o
+            // factory estático `__kof_ffi_from` do record reconstrói a instância
+            // pelo construtor canônico (paridade com kof_ffi_read_struct do JVM).
+            String jsRet = JsTypeMapper.jsClassName(rt.internalName());
+            call = new JsIr.JsCall(
+                    new JsIr.JsMember(new JsIr.JsIdentifier(jsRet), "__kof_ffi_from"),
+                    List.of(call));
+        }
         if (name.startsWith("kof_db_query") && kc.returnType() instanceof Type.ClassType dbList
                 && BuiltinTypes.isList(dbList) && !dbList.typeArguments().isEmpty()
                 && dbList.typeArguments().get(0) instanceof Type.ClassType elem

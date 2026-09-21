@@ -44,8 +44,17 @@ bytes out of the guest `Uint8Array` into the call arena, the `B` token maps to
 `ADDRESS`, and the copy-back after the downcall writes the C's result back into
 the guest buffer (parity with `kof_ffi_buffer_in`/`_out`). Proof:
 `bufferInoutCopyInCopyBackJsParity` (`20/[10, 10]/40/[20, 20]`, the +10
-accumulating across calls) byte-for-byte JVM==JS. Remaining on JS: struct
-**return** (`FFI002`).
+accumulating across calls) byte-for-byte JVM==JS.
+**Landed 21/09 (3.8b fatia 2 bridge JS · struct return):** the JS runner now
+binds a struct **return** too — the return token is `@<n><chars>` (layout on
+the wire), the bridge materialises the by-value struct in the call arena (the
+Linker gets the arena as the leading `SegmentAllocator`) and reads the fields
+into an `Object[]`, and the record's static `__kof_ffi_from` reconstructs the
+instance through the canonical constructor (coercing `Long`→`BigInt` etc.;
+parity with the reflective `kof_ffi_read_struct`). Proof:
+`structReturnByValueJsParity` (`Point`/`Big`/`Mix`/`ParamMix` — register and
+sret paths, plus a `Long` field) byte-for-byte JVM==JS. **The whole JS param +
+return surface is done**; the only remaining D6 gap is Native (3.7).
 
 
 ## 1. What exists today (measured 19/09, not remembered)
@@ -63,7 +72,7 @@ the nested token `(<ret><params>)`. Anything the map does not cover is a
 | scalar downcall | ✅ `kof_ffi` FFM (`JvmFfiRuntime.java:142+`) | ✅ **direct `call sym@PLT` on x86-64/riscv64/aarch64** (#431 slices 1–2, 20/09, §369 — link-by-use, no `dlopen`) | ✅ host bridge `KofJsFfiBridge` (browser degrades honestly, R7) |
 | callbacks/upcalls (3.4) | ✅ `Linker.upcallStub` | ❌ `FFI001` (no mechanism) | ✅ host |
 | String = `char*` | ✅ in + out | ✅ in (payload off 24) + out (boundary copy) | ✅ |
-| **struct (record, scalar fields)** | ✅ **by value in + out** (`@` token, 3.8b fatias 1–2, 20–21/09) | ❌ FFI001 (3.7) | ✅ **by value IN** (`@<n><chars>` + `__kof_ffi_fields`, bridge 21/09); ❌ FFI002 out |
+| **struct (record, scalar fields)** | ✅ **by value in + out** (`@` token, 3.8b fatias 1–2, 20–21/09) | ❌ FFI001 (3.7) | ✅ **by value IN + OUT** (IN: `@<n><chars>` + `__kof_ffi_fields`; OUT: `@<n><chars>` return + `__kof_ffi_from`; bridges 21/09) |
 | **scalar array `T[]`→`ptr`** | ✅ **copy-in per call** (`p<elem>` token, 3.8b fatia 3, 21/09; no write-back) | ❌ FFI001 | ✅ **copy-in per call** (`packArray` bridge, 21/09; no write-back) |
 | **out-buffer `Buffer(U8)` INOUT** | ✅ **copy-in / call / copy-back** (`B` token + `buffer.alloc`/`Buffer.bytes()`, D6-3, 21/09) | ❌ FFI001 | ✅ **copy-in / call / copy-back** (`B` token + `packBuffer`/copy-back after the downcall, bridge 21/09) |
 | non-scalar array / opaque (e.g. `String[]`/`List<T>`/`Handle`) | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
@@ -183,9 +192,10 @@ until decided — no silent partial binding.
    scalar-field subset; `struct` mutable (D6-1 B) is a new language surface
    under the Simplicity Law (rule 11), a separate decision. The JS bridges
    landed 21/09 for struct **param** (D6-5 host pack), scalar array
-   **`T[]`→`ptr` copy-in** (D6-2, `packArray`) and `Buffer(U8)` INOUT (D6-3,
-   `packBuffer` + copy-back). Remaining: the JS struct **return** (the whole
-   param side is done).
+   **`T[]`→`ptr` copy-in** (D6-2, `packArray`), `Buffer(U8)` INOUT (D6-3,
+   `packBuffer` + copy-back) and struct **return** (`__kof_ffi_from`). The JS
+   FFI surface (param + return) is complete; the only D6 work left is Native
+   (3.7: struct/array/sret).
 3. **3.7** native asm: classification by hand per target (x86-64 now;
    aarch64/riscv64 follow the same AbiLayout golden) + sret (D6-4).
 4. **JS**: decide wasm/ffi boundary (node host already binds scalars;

@@ -13,6 +13,19 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **FFI: struct `record` RETURN by value on the JS target (bridge, D6-1/3.8b
+    fatia 2)** (21/09): the compile gate admits a struct return on JS and the
+    signature carries the layout (`@<n><chars>` at index 0); `KofJsFfiBridge`
+    materialises the by-value struct in the call arena (the Linker gets the arena
+    as the leading `SegmentAllocator`) and reads the fields into an `Object[]`,
+    and the record's new static `__kof_ffi_from` reconstructs the instance
+    through the canonical constructor (coercing `Long`→`BigInt`, `bool`→`Boolean`,
+    `Number` for the rest) — parity with the reflective `kof_ffi_read_struct`.
+    Proof: `structReturnByValueJsParity` (`Point`/`Big`/`Mix`/`ParamMix`, register
+    and sret paths, incl. a `Long`) byte-for-byte JVM==JS. `FfiStructE2ETest`
+    10/10; FFI battery 97 run/0F. The JS param+return FFI surface is now
+    complete; the only D6 gap left is Native (3.7).
+
   - **FFI: `Buffer(U8)` INOUT on the JS target (bridge, D6-3/3.8b fatia 4)**
     (21/09): `extern` with a `Buffer(U8)` param now binds on JS — the compile
     gate admits it and `KofJsFfiMarshal.packBuffer` copies the bytes out of the
