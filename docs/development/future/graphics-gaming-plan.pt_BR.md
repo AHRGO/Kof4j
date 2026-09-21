@@ -266,10 +266,133 @@ do backend: stdlib-base = *"essencial à plataforma e pequeno"*;
 
 ## 5. Códigos de gap honestos + a matriz de paridade
 
+Toda face não atendida responde com código e mensagem (R6 — nunca
+silêncio, nunca valor falso). Famílias propostas, mesmo estilo `XXX00x` de
+`MEDIA001`/`WEB005`/`WASM001`:
+
+| Família | Cobre | Primeiros códigos (exemplos da face honesta) |
+|---|---|---|
+| `GFX00x` | `scene`/janela, `sprite`, `tilemap`, `draw`, 3D | `GFX001` alvo sem veículo de gráficos (até R3/stack landar) |
+| `INP00x` | `keys`/`mouse`/`pad` por frame | `INP001` snapshot de input não atendido neste alvo |
+| `SND00x` | playback/stream/mix de som, dispositivos | `SND001` sem veículo de áudio; `SND002` formato não decodificável neste alvo (listar, nunca adivinhar) |
+| `VID00x` | componente de reprodução `video` | `VID001` sem veículo de vídeo; `VID002` codec ausente — problema da plataforma, o usuário vê o código, não a flag |
+
+A matriz a que o plano se compromete (coluna de hoje = medição do §0; uma
+célula só vira ✅ quando o golden E2E do §2 roda nela; **os quatro ✅ juntos
+ou o recurso não promove**):
+
+| Superfície | JVM | Script | Native | JS-Web |
+|---|---|---|---|---|
+| `scene`/frame loop | `GFX001` (no-op hoje, §0.2) | `GFX001` | `GFX001` | `GFX001` (o DOM tem rAF como veículo — o mais perto do verde) |
+| 2D sprite/tile | `GFX001` | `GFX001` | `GFX001` | `GFX001` |
+| 3D malha/câmera/material | `GFX001` | `GFX001` | `GFX001` | `GFX001` |
+| input por frame | `INP001` | `INP001` | `INP001` | `INP001` |
+| som play/stream/mix | `SND001` (dados WAV existem, sem playback, §0.3) | `SND001` | `SND001` | `SND001` |
+| reprodução `video` | `VID001` (só metadados, §0.3) | `VID001` | `VID001` | `VID001` |
+
 ## 6. ERRADICAÇÃO — JavaFX nunca foi Kof e nunca vai ser
+
+O adendo 3 converte "migração" em **erradicação**: inventário medido de cada
+ocorrência de `javafx` (21/09, `grep -rni`), cada uma classificada — as
+únicas que seriam "bugs a remover" são ligações reais, e não existe nenhuma:
+
+| Onde | Contagem | Classificação | Ação |
+|---|---|---|---|
+| código `kof-*/src/main` (`import javafx`, `javafx.`) | **0** | — | nada a erradicar; continua vero pelo gate §2 e pela rejeição §3 |
+| comentários em `kof-*/src/main` (6 arquivos) | 6 | comentário **sobre a regra** (VerifyError disfarçado de mensagem do launcher) | manter — uso correto |
+| comentários em `kof-*/src/test` (12 arquivos) | 12 | idem (sintoma da família de bugs §149) | manter |
+| dependências em `pom.xml` | **0** | — | — |
+| `DECISIONS.md` §D-GRAPHICS-GAMING corpo "JVM=JavaFX" | 1 | **alegação errada de doc no texto original da decisão** — já corrigida **no mesmo arquivo** pelo adendo 3 (o registro da decisão fica; a correção é o adendo) | não editar — o adendo vale |
+| `docs/philosophy.md` "WebView/JavaFX em código de UI → rejeitado" | 1 | correto: uma **rejeição**, bate com a realidade | manter |
+| `docs/status.md`, `known-bugs.md` "disfarçado de erro do launcher JavaFX" | 10+ | correto: nomeia o **sintoma** coberto pela regra de 12/09 | manter |
+| `training/language/ui.md` "sem dependência de JavaFX, AWT ou GUI" | 1 | fato correto (bater com esta medição) | manter |
+
+Regras que tornam a erradicação permanente:
+
+1. **A regra do JavaFX de 12/09 não é relaxada por nada neste plano:** a
+   mensagem de runtime `componentes de runtime do JavaFX não foram
+   encontrados` **nunca** é benigna — é o launcher engolindo um
+   `VerifyError`/`ExceptionInInitializerError` real; sempre causa raiz e
+   conserto (um caminho JavaFX nunca é "acomodado" — isso é erro
+   disfarçado).
+2. **Guarda mecânica (proposta, fatia 3.0):** um check determinístico que
+   quebra o build em qualquer `import javafx` / uso `javafx.` / dependência
+   javafx sob `kof-*/src` (mesmo formato do gate de fronteira R1 da stdlib)
+   — para que "nunca de novo" seja gate, não esperança.
+3. **Compatibilidade retroativa não protege caminho JavaFX** (adendo 3
+   (c)): código Kof de usuário nunca nomeou JavaFX; remover qualquer ligação
+   hipotética não pode quebrar um programa Kof válido.
 
 ## 7. NON-GOALS
 
+- **Nenhum vazamento de HTML, `<canvas>`, `<audio>`, `<video>`, CSS ou DOM
+  para o código do usuário** — o browser é *backend*, não linguagem.
+  Precedente: RawView #449 (regra 9): o código do usuário declara intenção;
+  a plataforma renderiza.
+- **Nenhuma transcrição de API estrangeira:** `SDL_CreateWindow`,
+  `glfwSwapBuffers`, enums de OpenGL, formas `MediaView`/`MediaPlayer` de
+  toolkit nunca chegam à superfície Kof (regras 8/10). O lowering é dono
+  delas; o usuário é dono dos verbos (§1).
+- **Nenhum renderizador, mixer, demuxer ou codec caseiro** (R9/R10; crypto
+  e codecs nunca caseiros — non-goal permanente).
+- **Nenhum "Kali in Kof"** (non-goal permanente dos invariantes da
+  plataforma).
+- **Nenhum JavaFX/Swing/AWT como backend em qualquer alvo** (§3, adendos
+  2+3).
+- **Nenhuma promoção com paridade parcial** (§2 vale sobre o R7 aqui, por
+  ordem da mantenedora).
+- **Nenhuma frente abre** deste documento: ele fica em `future/` até a
+  mantenedora promover uma fatia (regra dos três estados + R12 + regra 6).
+
 ## 8. Fila de fatias (3.x) com critérios de prova
 
+Ordem de promoção; **nenhuma fatia abre sem a mantenedora promover** (R12 +
+regra 6). Cada fatia só shipa com a prova — o padrão de paridade da casa:
+**E2E nos 4 alvos, byte-a-byte no observável (§2), mais a suíte vizinha
+completa verde**. Uma fatia que não feche o último alvo em verde deixa o
+recurso atrás do seu gap `XXX00x` e não promove — "a fila anda, a superfície
+só cresce em paridade".
+
+| # | Fatia | Escopo (uma linha) | Depende de | Prova |
+|---|---|---|---|---|
+| 3.0 | **medir + guarda** | spike classe SDL/raylib/GL + miniaudio/OpenAL + ffmpeg/Libav (licença×alvos×headless); guarda mecânica de binding javafx; `import javafx` quebra o build | R3 2.8.2 (handles) | relatório de medição escrito (o §3 deste doc ganha o veredito); teste da guarda RED-depois-GREEN |
+| 3.1 | **janela + frame loop + input** | forma `scene` (pela Q2), loop a relógio do vsync, snapshot por frame (`keys`/`mouse`), relógio virtual + mecanismo de readback | 3.0 | golden byte-a-byte nos 4 alvos; diagnóstico de gap honesto onde não |
+| 3.2 | **2D** | `sprite`/`tilemap`/`draw` + batching da plataforma | 3.1 | idem, + arestas (frame vazio, 1×1, off-screen) |
+| 3.3 | **som** | play/stream/mix/volume/dispositivos; número do contrato de latência DEFINIDO da medição (Q4) | 3.0 (veículo de áudio; paralelo à 3.1) | golden de mix offline nos 4 alvos; enumeração de dispositivos honesta por alvo |
+| 3.4 | **vídeo** | reprodução do componente `video` sobre `kof.ui`; chrome da plataforma; face de metadados existente absorvida | 3.3 + R3 | golden de readback de decodificação nos 4 alvos |
+| 3.5 | **3D (escopado)** | conjunto mínimo honesto de `mesh`/`camera3d`/`material` — promovido SOMENTE se 3.0–3.4 provarem que o veículo segura paridade | 3.1–3.4 | golden nos 4 alvos ou fica `GFX00x` para sempre (Q3) |
+| 3.6 | **corpus + promoção** | `training/idioms/graphics.md`+`audio.md`, `learn/`, `backend-parity.md`, tabela de gaps; o doc sai de `future/` | 3.1–3.5 | docs-lang 0/0/0 + células de conformance |
+
 ## 9. QUESTÕES ABERTAS para a mantenedora (regra 6)
+
+Não decididas aqui — cada uma é decisão de design (semântica congelada /
+superfície da linguagem / registro R1):
+
+1. **Q1 — fronteira R1:** `kof.sound`+`kof.media` stdlib core e a
+   superfície de jogo como pacote oficial `kof.game` (recomendação §4) —
+   ou outro corte? A linha do ledger precisa ser registrada antes de
+   qualquer namespace existir.
+2. **Q2 — a forma do `scene`/`frame`:** bloco com sintaxe nova vs.
+   builtins sem sintaxe (`Scene("Pong") { dt -> ... }` — a favorita da Lei
+   da Simplicidade: sem keyword, sem cerimônia). Qual chega à superfície.
+3. **Q3 — promoção do 3D:** o 3D entra na superfície (0.5.x/depois) ou fica
+   com gap `GFX00x` até a paridade dos 4 alvos ser provada?
+4. **Q4 — contratos mensuráveis:** o número de latência do som e o
+   mecanismo do golden byte-a-byte para pixels/áudio (render-to-buffer com
+   hash, mix offline, relógio virtual) — ratificados das medições 3.0/3.1
+   antes da primeira promoção.
+5. **Q5 — escolha da stack após 3.0:** qual camada portátil (classe SDL vs.
+   raylib vs. GL cru), qual lib de áudio, ffmpeg vs. Libav — incluindo a
+   **questão de licença** (stack GPL/LGPL sob a saída GPLv3).
+6. **Q6 — superfície de input:** snapshot por frame (`keys.down`/`pressed`)
+   vs. eventos vs. ambos; a interação exata com os eventos-lambda
+   existentes de `kof.ui` (qual fica como idioma de formulário, qual é o
+   idioma de jogo).
+7. **Q7 — timing de promoção:** quando (se) a primeira fatia sai de
+   `future/` — o R12 segura isto atrás de SYSTEMS/1.0, salvo ordem
+   expressa dela (como `D-UNIVERSAL` fez uma vez).
+8. **Q8 — a face de dados `kof.media` JVM-only existente** (imagem/WAV/
+   metadados de vídeo, §0.3): manter aditiva sobre o topo da stack de
+   paridade, ou rebaseá-la para a stack durante 3.3/3.4 — programas Kof de
+   usuário não quebram em nenhum dos caminhos (a promessa de compat é aos
+   programas, adendo 3 (c)).
