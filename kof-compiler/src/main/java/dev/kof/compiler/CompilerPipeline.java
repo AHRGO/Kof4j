@@ -465,7 +465,11 @@ public final class CompilerPipeline {
         // `KofJsFfiBridge` idêntico ao `kof_ffi` do target JVM; o browser não tem host e
         // degrada em runtime como o resto do kof_platform, R7). Android intocado (§278).
         if (driver.target == Target.JVM || driver.target == Target.JS) {
-            if (FfiSignature.returnChar(ext.returnType()) == null) return false;
+            // 3.8b fatia 2: retorno de `record` por valor binda SÓ no JVM; o runner
+            // JS ainda não tem o bridge de struct → FFI002 honesto lá (R6).
+            boolean structRet = driver.target == Target.JVM
+                    && FfiSignature.structReturnName(ext.returnType(), driver) != null;
+            if (FfiSignature.returnChar(ext.returnType()) == null && !structRet) return false;
             for (var param : ext.parameters()) {
                 if (FfiSignature.paramChar(param.type()) != null) continue;
                 if (FfiSignature.callbackDescriptor(param.type()) != null) continue;

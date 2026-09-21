@@ -122,14 +122,36 @@ final class JvmFfiRuntime {
                                 real[i] = (c == 'S') ? arena.%1$s((String) args[i]) : args[i];
                             }
                         }
+                        java.lang.foreign.StructLayout retStruct = null;
+                        Class<?> retClass = null;
+                        if (ret == '@') {
+                            // 3.8b fatia 2: retorno struct por valor — o nome binário
+                            // do record veio como sufixo `:` do sig.
+                            String cls = sig.substring(cur);
+                            if (cls.startsWith(":")) cls = cls.substring(1);
+                            retClass = Class.forName(cls);
+                            retStruct = kof_ffi_struct_layout_of(retClass);
+                        }
                         java.lang.foreign.FunctionDescriptor fd = (ret == 'v')
                                 ? java.lang.foreign.FunctionDescriptor.ofVoid(pl)
-                                : java.lang.foreign.FunctionDescriptor.of(kof_ffi_layout(ret), pl);
+                                : (ret == '@')
+                                        ? java.lang.foreign.FunctionDescriptor.of(retStruct, pl)
+                                        : java.lang.foreign.FunctionDescriptor.of(kof_ffi_layout(ret), pl);
                         java.lang.invoke.MethodHandle handle = linker.downcallHandle(
                                 lookup.find(name).orElseThrow(), fd);
+                        if (ret == '@') {
+                            // Retorno struct por valor: o handle do Linker recebe um
+                            // SegmentAllocator à frente p/ materializar o struct
+                            // devolvido (lido logo abaixo, antes de fechar a arena).
+                            handle = handle.bindTo(arena);
+                        }
                         handle = handle.asSpreader(Object[].class, args.length);
                         Object r = handle.invoke(real);
                         if (ret == 'v') return null;
+                        if (ret == '@') {
+                            return kof_ffi_read_struct(retStruct,
+                                    (java.lang.foreign.MemorySegment) r, retClass);
+                        }
                         if (ret == 'S') {
                             java.lang.foreign.MemorySegment seg = (java.lang.foreign.MemorySegment) r;
                             if (seg == null || seg.address() == 0L) {
@@ -166,13 +188,70 @@ final class JvmFfiRuntime {
                 // (numérico/bool). O struct atravessa POR VALOR (o Linker classifica
                 // pela StructLayout) — sem refatorar a ABI escalar.
                 static java.lang.foreign.StructLayout kof_ffi_struct_layout(Object rec) {
-                    java.lang.reflect.RecordComponent[] cs = rec.getClass().getRecordComponents();
+                    return kof_ffi_struct_layout_of(rec.getClass());
+                }
+
+                static java.lang.foreign.StructLayout kof_ffi_struct_layout_of(Class<?> cls) {
+                    java.lang.reflect.RecordComponent[] cs = cls.getRecordComponents();
                     java.lang.foreign.MemoryLayout[] ls =
                             new java.lang.foreign.MemoryLayout[cs.length];
                     for (int k = 0; k < cs.length; k++) {
                         ls[k] = kof_ffi_field_layout(cs[k].getType());
                     }
-                    return java.lang.foreign.MemoryLayout.structLayout(ls);
+                    java.lang.foreign.StructLayout sl =
+                            java.lang.foreign.MemoryLayout.structLayout(ls);
+                    // A ABI C paddinga o struct até o alinhamento do maior membro;
+                    // o FFM exige que o layout tenha esse tamanho exato (ex.
+                    // {double,int} = 16, não 12). Fecha com padding explícito.
+                    long align = sl.byteAlignment();
+                    long size = sl.byteSize();
+                    long padded = (size + align - 1) / align * align;
+                    if (padded == size) return sl;
+                    java.lang.foreign.MemoryLayout[] lp =
+                            new java.lang.foreign.MemoryLayout[ls.length + 1];
+                    System.arraycopy(ls, 0, lp, 0, ls.length);
+                    lp[ls.length] = java.lang.foreign.MemoryLayout.paddingLayout(padded - size);
+                    return java.lang.foreign.MemoryLayout.structLayout(lp);
+                }
+
+                // 3.8b fatia 2: lê o struct devolvido POR VALOR e reconstrói o
+                // `record` Kof pelo construtor canônico (componentes na ordem do
+                // RecordComponent — a mesma ordem do layout). Leitura imediata: o
+                // segmento devolvido pelo Linker só é válido logo após o downcall.
+                static Object kof_ffi_read_struct(java.lang.foreign.StructLayout sl,
+                        java.lang.foreign.MemorySegment seg, Class<?> cls) throws Throwable {
+                    java.lang.reflect.RecordComponent[] cs = cls.getRecordComponents();
+                    Class<?>[] types = new Class<?>[cs.length];
+                    Object[] vals = new Object[cs.length];
+                    for (int k = 0; k < cs.length; k++) {
+                        types[k] = cs[k].getType();
+                        long off = sl.byteOffset(
+                                java.lang.foreign.MemoryLayout.PathElement.groupElement(k));
+                        vals[k] = kof_ffi_read_field(seg, off, types[k]);
+                    }
+                    java.lang.reflect.Constructor<?> ctor = cls.getDeclaredConstructor(types);
+                    ctor.setAccessible(true);
+                    return ctor.newInstance(vals);
+                }
+
+                static Object kof_ffi_read_field(java.lang.foreign.MemorySegment seg,
+                        long off, Class<?> t) {
+                    if (t == int.class || t == Integer.class) {
+                        return seg.get(java.lang.foreign.ValueLayout.JAVA_INT, off);
+                    }
+                    if (t == long.class || t == Long.class) {
+                        return seg.get(java.lang.foreign.ValueLayout.JAVA_LONG, off);
+                    }
+                    if (t == float.class || t == Float.class) {
+                        return seg.get(java.lang.foreign.ValueLayout.JAVA_FLOAT, off);
+                    }
+                    if (t == double.class || t == Double.class) {
+                        return seg.get(java.lang.foreign.ValueLayout.JAVA_DOUBLE, off);
+                    }
+                    if (t == boolean.class || t == Boolean.class) {
+                        return seg.get(java.lang.foreign.ValueLayout.JAVA_BOOLEAN, off);
+                    }
+                    throw new IllegalArgumentException("ffi struct: unsupported field type " + t);
                 }
 
                 static java.lang.foreign.MemoryLayout kof_ffi_field_layout(Class<?> t) {

@@ -14,9 +14,11 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * FFI struct ABI (D6-1(A) / slice 3.8b): um `record` Kof de campos escalares
  * atravessa POR VALOR como struct C no target JVM (FFM classifica pela
- * StructLayout derivada do RecordComponent). Prova com um shim C real; struct
- * RETURN e campos não-escalares seguem FFI001 honesto (R6), e Native/JS ficam
- * nos seus gap codes — nunca um binding parcial silencioso.
+ * StructLayout derivada do RecordComponent). Prova com um shim C real; campos
+ * não-escalares seguem FFI001 honesto (R6), e Native/JS ficam nos seus gap
+ * codes — nunca um binding parcial silencioso. A fatia 2 cobre o RETORNO
+ * struct (registradores p/ struct pequeno e sret p/ struct maior), reconstruído
+ * pelo construtor canônico do `record`.
  */
 class FfiStructE2ETest {
 
@@ -24,6 +26,11 @@ class FfiStructE2ETest {
             struct Point { int x; int y; };
             int sumpoint(struct Point p) { return p.x + p.y; }
             double scale(struct Point p, double f) { return (p.x + p.y) * f; }
+            struct Point mkpoint(int x, int y) { struct Point p; p.x = x; p.y = y; return p; }
+            struct Big { int a; int b; int c; };
+            struct Big bigret(int a, int b, int c) { struct Big g; g.a = a; g.b = b; g.c = c; return g; }
+            struct Mix { double d; int i; };
+            struct Mix mixret(double d, int i) { struct Mix m; m.d = d; m.i = i; return m; }
             """;
 
     private final CompilerDriver driver = new CompilerDriver();
@@ -53,23 +60,114 @@ class FfiStructE2ETest {
     }
 
     @Test
-    void structReturnStaysFfi001(@TempDir Path dir) throws IOException {
-        // div() da libc devolve `div_t` por valor: struct RETURN ainda não é
-        // bindável nesta fatia → FFI001 honesto na declaração (nunca stub).
+    void structReturnByValueJvm(@TempDir Path dir) throws Exception {
+        String so = compileHostLib(dir);
+        Path src = dir.resolve("ret.kf");
+        Files.writeString(src, """
+                record Point(Int x, Int y)
+                record Big(Int a, Int b, Int c)
+                record Mix(Double d, Int i)
+
+                extern "%s" mkpoint(Int x, Int y): Point
+                extern "%s" bigret(Int a, Int b, Int c): Big
+                extern "%s" mixret(Double d, Int i): Mix
+
+                main() {
+                    val p = mkpoint(3, 4)
+                    println(p.x())
+                    println(p.y())
+                    val g = bigret(10, 20, 30)
+                    println(g.a())
+                    println(g.b())
+                    println(g.c())
+                    val m = mixret(2.5, 7)
+                    println(m.d())
+                    println(m.i())
+                }
+                """.formatted(so, so, so));
+
+        Path out = dir.resolve("out-jvm-ret");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM struct return must bind (3.8b fatia 2): "
+                + r.diagnostics().getDiagnostics());
+        assertEquals("3\n4\n10\n20\n30\n2.5\n7", runJvm(out),
+                "record reconstructed from the returned struct (register + sret paths)");
+    }
+
+    @Test
+    void structReturnViaLibcDivJvm(@TempDir Path dir) throws Exception {
+        // div() da libc devolve `div_t { int quot; int rem; }` por valor.
         Path src = dir.resolve("divret.kf");
         Files.writeString(src, """
-                record Div(Int q, Int r)
+                record Div(Int quot, Int rem)
 
                 extern "libc.so.6" div(Int a, Int b): Div
+
+                main() {
+                    val d = div(7, 2)
+                    println(d.quot())
+                    println(d.rem())
+                }
+                """);
+        Path out = dir.resolve("out-div");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "libc div struct return must bind on JVM: "
+                + r.diagnostics().getDiagnostics());
+        assertEquals("3\n1", runJvm(out), "div(7,2) = { quot 3, rem 1 }");
+    }
+
+    @Test
+    void structReturnStringFieldStaysFfi001(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("retstr.kf");
+        Files.writeString(src, """
+                record Named(String name, Int n)
+
+                extern "libc.so.6" mk(): Named
 
                 main() {
                     println("hi")
                 }
                 """);
-        CompilationResult r = driver.compile(src, dir.resolve("out-return"), Target.JVM);
-        assertFalse(r.success(), "struct return must not silently bind");
+        CompilationResult r = driver.compile(src, dir.resolve("out-retstr"), Target.JVM);
+        assertFalse(r.success(), "record with a String field must not bind as a return");
         assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI001"),
                 "expected FFI001, got: " + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void structReturnNativeStaysFfi001(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("retnat.kf");
+        Files.writeString(src, """
+                record Point(Int x, Int y)
+
+                extern "libc.so.6" mkpoint(Int x, Int y): Point
+
+                main() {
+                    println("hi")
+                }
+                """);
+        CompilationResult r = driver.compile(src, dir.resolve("out-retnat"), Target.NATIVE);
+        assertFalse(r.success(), "Native struct ABI is slice 3.7 — return must stay unbound");
+        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI001"),
+                "expected FFI001 on Native, got: " + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void structReturnJsStaysFfi002(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("retjs.kf");
+        Files.writeString(src, """
+                record Point(Int x, Int y)
+
+                extern "libc.so.6" mkpoint(Int x, Int y): Point
+
+                main() {
+                    println("hi")
+                }
+                """);
+        CompilationResult r = driver.compile(src, dir.resolve("out-retjs"), Target.JS);
+        assertFalse(r.success(), "JS struct bridge not landed → must stay unbound");
+        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI002"),
+                "expected FFI002 on JS, got: " + r.diagnostics().getDiagnostics());
     }
 
     @Test

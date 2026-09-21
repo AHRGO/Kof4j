@@ -32,11 +32,20 @@ public final class FfiSignature {
 
     static String signature(CompilerDriver driver, ExternalFunctionNode ext) {
         StringBuilder sb = new StringBuilder();
-        sb.append(returnChar(ext.returnType()));
+        // 3.8b fatia 2: retorno struct (record) vira o token `@`; o nome binário
+        // do record vai como sufixo `:` (após os chars dos params) para o runtime
+        // reconstruir a instância a partir do struct devolvido por valor.
+        String structRet = structReturnName(ext.returnType(), driver);
+        if (structRet != null) {
+            sb.append('@');
+        } else {
+            Character rc = returnChar(ext.returnType());
+            sb.append(rc != null ? rc.charValue() : '?');
+        }
         for (var p : ext.parameters()) {
             Character c = paramChar(p.type());
             if (c != null) {
-                sb.append(c);
+                sb.append(c.charValue());
             } else if (callbackDescriptor(p.type()) != null) {
                 // callback (R3, 3.4): token aninhado "(<retchar><paramchars>)"
                 sb.append('(').append(callbackDescriptor(p.type())).append(')');
@@ -44,15 +53,47 @@ public final class FfiSignature {
                 // D6-1 (A) / 3.8b: um `record` de campos escalares atravessa por
                 // valor como struct C. O runtime deriva o layout e os valores da
                 // própria classe do argumento (reflexão em RecordComponent) — o
-                // token `@` basta (sem carregar nome de classe no fio). Retorno de
-                // struct segue não-bindável nesta fatia (FFI001 honesto).
+                // token `@` basta (sem carregar nome de classe no fio).
                 sb.append('@');
             } else {
                 // inalcançável: isExternBound filtra antes; nunca silencioso (R6).
                 sb.append('?');
             }
         }
+        if (structRet != null) sb.append(':').append(structRet);
         return sb.toString();
+    }
+
+    /** Nome simples (sem pacote) do tipo escrito no `extern`. */
+    static String simpleName(String typeName) {
+        String simple = typeName;
+        int dot = simple.lastIndexOf('.');
+        if (dot >= 0) simple = simple.substring(dot + 1);
+        int slash = simple.lastIndexOf('/');
+        if (slash >= 0) simple = simple.substring(slash + 1);
+        return simple;
+    }
+
+    /** 3.8b fatia 2 (JVM): nome binário (dots) do `record` de RETORNO bindável
+     *  (campos escalares), ou null se o retorno não for um struct bindável. O sig
+     *  carrega esse nome para o runtime reconstruir o record devolvido por valor. */
+    static String structReturnName(String typeName, CompilerDriver driver) {
+        if (structFieldChars(typeName, driver) == null) return null;
+        String simple = simpleName(typeName);
+        if (driver.semanticAnalyzer != null) {
+            SymbolTable.ClassSymbol cs = driver.semanticAnalyzer.getClass(simple);
+            if (cs != null) return cs.internalName().replace('/', '.');
+        }
+        return simple;   // pacote default: o próprio nome
+    }
+
+    /** Type do retorno quando é um struct bindável (record), senão null. */
+    static Type structReturnType(String typeName, CompilerDriver driver) {
+        String bin = structReturnName(typeName, driver);
+        if (bin == null) return null;
+        int dot = bin.lastIndexOf('.');
+        if (dot < 0) return new Type.ClassType("", bin, List.of());
+        return new Type.ClassType(bin.substring(0, dot), bin.substring(dot + 1), List.of());
     }
 
     /** D6-1/3.8b (JVM): se {@code typeName} for um `record` do unit corrente cujos
@@ -61,11 +102,7 @@ public final class FfiSignature {
      *  chars dos campos (ex. "ii"); senão null (o gate mantém FFI001/FFI002). */
     static String structFieldChars(String typeName, CompilerDriver driver) {
         if (typeName == null || driver == null || driver.currentUnit == null) return null;
-        String simple = typeName;
-        int dot = simple.lastIndexOf('.');
-        if (dot >= 0) simple = simple.substring(dot + 1);
-        int slash = simple.lastIndexOf('/');
-        if (slash >= 0) simple = simple.substring(slash + 1);
+        String simple = simpleName(typeName);
         RecordDeclarationNode rec = null;
         for (AstNode d : driver.currentUnit.declarations()) {
             if (d instanceof RecordDeclarationNode r && r.name().equals(simple)) { rec = r; break; }
