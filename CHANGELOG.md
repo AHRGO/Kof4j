@@ -139,6 +139,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **The gate now closes the loop in both directions** (21/09, docs lane): besides CHANGELOG-claims-closed-without-ledger-backing, an id CLOSED in the ledger at or after section 400 with no CHANGELOG entry now fails the gate. The floor is an epoch rule, not amnesty: measured 21/09, 25 closed ids below 400 lack entries while ZERO above it do — practice solidified, so the rule starts where the practice does. Mutation-verified: a planted closed section in the ledger with no changelog line is named by the gate; real state stays green. (A companion no-ghost idea — forbidding changelog refs to ids absent from the ledger — was measured and REJECTED: the hits are ancient cross-references, a wrong rule for the history, refused per the round-11 lesson.)
+  - **Stability measured for the first time since the mechanism fix: RED by one stale test** (21/09,
+    docs lane): a full `safe-suite.sh` run at `96af9b63` (41 min, `SUITE-SHA`/`DIRTY=0` stamped) gave
+    `TOTAL: tests=3413 failures=1 errors=0 skipped=223`. The single failure is
+    `CompilerDriverTest.externProducesHonestGapNotSilentDrop`, which still asserts `FFI001` for an
+    `Int[]` extern that `7c6413d4` (FFI 3.8b D6-2) deliberately made bindable on the JVM — proven by
+    the dedicated `FfiArrayE2ETest` 5/5 (real C shim; `String[]`/`List<T>` remain `FFI001`). So the
+    gate is intact and the test is stale, not a silent drop. Recorded as a hand-off to the FFI front
+    (`jonas`); the test must be repointed to a still-unbound signature, not deleted. Reproduces
+    isolated (258/1/0 in `kof-compiler`). Stability stays RED until that lands.
   - **Release gate `edges`: a failed `1.0-blocks` query is no longer read as "0 blocks"** (21/09,
     docs lane): on a host without `gh` the roadmap branch of `c_edges` ran
     `check_release_blockers.sh --rc-gate` (rc=3, no summary line) and then defaulted `blocks=0` — a

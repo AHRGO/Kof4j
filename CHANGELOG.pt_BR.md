@@ -126,6 +126,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **O gate agora fecha o ciclo nas duas direções** (21/09, lane docs): além de afirmação de fechamento sem respaldo no ledger, um id FECHADO no ledger a partir da seção 400 sem entrada no CHANGELOG agora derruba o gate. O piso é regra de época, não anistia: medido em 21/09, 25 ids abaixo de 400 não têm entrada enquanto ZERO acima têm — a prática consolidou, a regra começa onde a prática começa. Verificado por mutação: uma seção fechada plantada no ledger sem linha no changelog é nomeada pelo gate; estado real segue verde. (Uma ideia companheira — proibir referências do changelog a ids fora do ledger — foi medida e REJEITADA: os achados são remissões antigas de outro espaço de ids, regra errada para a história, recusada pela lição da rodada 11.)
+  - **Estabilidade medida pela primeira vez após o conserto do mecanismo: RED por um teste stale**
+    (21/09, lane docs): uma corrida completa do `safe-suite.sh` no `96af9b63` (41 min, estampada
+    `SUITE-SHA`/`DIRTY=0`) deu `TOTAL: tests=3413 failures=1 errors=0 skipped=223`. A única falha é
+    `CompilerDriverTest.externProducesHonestGapNotSilentDrop`, que ainda exige `FFI001` para um
+    extern `Int[]` que o `7c6413d4` (FFI 3.8b D6-2) tornou bindável no JVM de propósito — provado
+    pelo `FfiArrayE2ETest` dedicado 5/5 (shim C real; `String[]`/`List<T>` seguem `FFI001`). Logo o
+    gate está intacto e o teste é stale, não um drop silencioso. Registrado como hand-off para a
+    frente FFI (`jonas`); o teste deve ser reapontado para uma assinatura não-ligada, não apagado.
+    Reproduz isolado (258/1/0 em `kof-compiler`). Estabilidade segue RED até isso pousar.
   - **Gate de release `edges`: query de `1.0-blocks` que falha não vira mais "0 blocks"** (21/09,
     lane docs): num host sem `gh`, o ramo de roadmap do `c_edges` rodava
     `check_release_blockers.sh --rc-gate` (rc=3, sem linha de resumo) e então assumia `blocks=0` —
