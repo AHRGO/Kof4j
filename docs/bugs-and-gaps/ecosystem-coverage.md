@@ -279,9 +279,9 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 
 | Capability | Kof | JVM | Native | JS | Tests | Docs |
 |-----------|-----|-----|--------|----|-------|------|
-| jobs/steps/pipelines/checkpoints | `PLANNED` | — | — | — | — | — |
-| retries / resumability / parallel | `PLANNED` | — | — | — | — | — |
-| scheduling | `PLANNED` | — | — | — | — | — |
+| jobs/steps/pipelines/checkpoints | ✅ `kof.workflow` — host puro-Kof `job`/`dag`/`after`/`run`/`Report` (2.1.2) + `checkpoint` (`ee63dc80`) | y | — (recon; compile ✅ `StdlibIdiomsCompileTest`) | y | WorkflowE2ETest 23, WorkflowPrimitivesE2ETest 6 | stdlib/workflow.md |
+| retries / resumability / parallel | ✅ `flow.retry`/`retryFixed`/`exponential` (`7db91735`) + dead-letter (`95f81747`, `Report.dead` + fs) + DAG topo-order | y | — (recon; checkpoint-over-ORM = `ORM001`) | y (byte parity §387) | WorkflowE2ETest | stdlib/workflow.md |
+| scheduling | ✅ `schedule(expr, dag)` → `scheduler.at` (`95f81747`/`d9adeb03`) | y | — (`CRON001` honesto) | y (§274 5-field UTC) | WorkflowE2ETest, StdlibIdiomsCompileTest | stdlib/workflow.md |
 
 ## 3.9 Observability
 
