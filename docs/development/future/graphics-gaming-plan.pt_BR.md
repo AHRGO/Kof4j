@@ -1,171 +1,881 @@
 [English](graphics-gaming-plan.md) | [Português](graphics-gaming-plan.pt_BR.md)
 
-# Gráficos, jogos e mídia — a superfície de intenção do Kof (plano future)
+# Gráficos, jogos e mídia — a superfície de intenção do Kof
 
-**Estado:** Plano (só design) — **zero código**; mora em `future/` até a
-mantenedora promover uma fatia (regra dos três estados + R12).
-**Fonte:** `DECISIONS.md` §D-GRAPHICS-GAMING (20/09) + adendo (mídia
-som+vídeo) + adendo 2 (sem JavaFX + paridade total) + adendo 3 (Kof nunca
-usou JavaFX — eradicação) · `AGENTS.md` regras 8/9/10/11 · regra JavaFX (12/09).
+**Estado:** Plano futuro — somente design, **zero código**
+**Local:** `docs/development/future/`
+**Natureza:** arquitetura, contratos, dependências, estratégia de implementação e critérios de promoção
+**Fonte normativa:** `DECISIONS.md` §D-GRAPHICS-GAMING + adendos registrados pela mantenedora
+**Dependências principais:** R3 / FFI-ABI, runtime, capability matrix, stdlib boundary, conformance suite
+**Status de implementação:** não iniciado
 
-> **Regra deste documento:** é um **plano para o futuro** — não muda
-> comportamento e não abre frente. Toda sintaxe abaixo é a **forma da
-> intenção**, não gramática comprometida; a superfície exata é decisão de
-> regra 6 da mantenedora. Nenhuma lane pode atacá-la sem promoção explícita.
+> **Regra fundamental:** este documento descreve uma direção arquitetural futura. Ele não altera a linguagem, não adiciona keywords, não cria namespaces e não abre uma frente de implementação.
+>
+> Toda sintaxe apresentada neste documento é **forma de intenção**. Ela serve para demonstrar como a API poderia expressar uma intenção humana. A forma definitiva da linguagem permanece sujeita à decisão da mantenedora.
 
-## 0. Estado real medido (21/09)
+---
 
-Medição real no tip da `beta-0.5.0` — não memória:
+# 0. Objetivo
 
-1. **JavaFX zero no código.** `import javafx` / uso qualificado `javafx.`
-   em todo `kof-*/src`: **0**; `javafx`/`openjfx` em qualquer `pom.xml`:
-   **0**. Os 6 arquivos de `src/main` que casam a palavra são **comentários
-   sobre a regra do JavaFX** (o launcher engolindo um `VerifyError`) — uso
-   correto, mantido. Ratificado pelo corpus: `training/language/ui.md` —
-   *"There is no JavaFX, AWT or GUI dependency in any backend."* → o
-   adendo 3 confirmado por medição: Kof nunca usou JavaFX (§6).
-2. **`kof.ui` em JVM/Native é alça no-op.** A superfície do runtime JVM
-   gerado (`jvm/JvmRuntimeUi.java`: `kof_ui_window_new` retorna `1`,
-   setters/show têm corpo vazio). A renderização de widgets é
-   **exclusiva do alvo KofJS** (DOM + webview nativo `bin/kof-webview`,
-   WebKitGTK) — `training/language/ui.md` §"Semantics across targets".
-3. **`kof.media` EXISTE hoje, só face JVM.** `KofMedia.java` +
-   `jvm/JvmMediaCoreRuntime.java` / `JvmMediaWebRuntime.java`: abrir/salvar
-   Bitmap, **metadados** de vídeo (sem decodificar frames — o app não
-   decodifica; gap honesto anotado no próprio fonte), operação de amostra
-   de áudio **WAV**, lista/gravação de microfone. Códigos de gap em uso:
-   `MEDIA001` (default) e `MEDIA003` (`mic_record`) — `KofMedia.gapCode`.
-   Não existe **pipeline de reprodução** (nenhum `play()`), nem mixagem,
-   nem face JS/Native.
-4. **Dependência dura da R3 (FFI/ABI).** Uma stack portátil de
-   áudio/gráficos em JVM e Native chega pelo front de interop
-   (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md` R3; handles/out-buffers = passo
-   2.8.2 do roadmap, `D-R3-3.3` DECIDIDO 21/09). Enquanto a R3 não landar,
-   o plano não tem veículo — fica em `future/` (R12: nenhuma frente nova
-   antes do SYSTEMS fechar).
+O objetivo deste plano é definir como o Kof poderá oferecer uma superfície nativa para:
 
-## 1. Superfície de intenção por domínio
+* gráficos 2D;
+* gráficos 3D;
+* janelas;
+* game loops;
+* input;
+* sprites;
+* tilemaps;
+* áudio;
+* reprodução de vídeo;
+* mídia;
+* integração com KofUI;
+* jogos;
+* aplicações gráficas interativas.
 
-**Cada item abaixo é a forma da intenção** — curta, declarativa, o que o
-usuário *quer dizer*; a plataforma rebaixa por alvo (§3). Nenhum é gramática
-comprometida (portão da regra 11: um humano escreveria exatamente isso em
-Kof?). Nenhum é API estrangeira transcrita (regras 8/10): não existe
-`SDL_CreateWindow`, nem `<canvas>`, nem `MediaView` de toolkit em código
-Kof — só o que um revisor Kof não acharia vergonhoso.
+A característica central dessa superfície será:
 
-### 1.1 Janela + game loop (`scene`/`frame`)
+> **o código Kof declara o que pretende fazer; o backend decide como realizar.**
 
-Hoje `spawn`/`await` expressam concorrência; um jogo é um **frame loop**: a
-plataforma é dona do relógio (vsync/tick), o usuário é dono de
-`update`+`draw`. A intenção:
+Um programa Kof não deverá precisar conhecer:
+
+* SDL;
+* OpenGL;
+* Vulkan;
+* DirectX;
+* WebGL;
+* WebAudio;
+* WASM;
+* JavaFX;
+* Swing;
+* AWT;
+* APIs proprietárias de cada sistema;
+* detalhes de device;
+* swapchain;
+* framebuffer;
+* audio buffer;
+* codec;
+* demuxer;
+* event loop da plataforma.
+
+Esses mecanismos pertencem ao backend.
+
+O objetivo não é criar uma nova linguagem de gráficos dentro do Kof.
+
+O objetivo é criar uma **superfície de intenção**.
+
+---
+
+# 1. Princípios arquiteturais
+
+## 1.1 Intenção antes de mecanismo
+
+O código deve responder:
+
+> O que quero que aconteça?
+
+e não:
+
+> Qual API gráfica preciso chamar para fazer isso?
+
+Exemplo:
 
 ```kof
-scene "Pong" {
+sprite("player.png").at(100, 80).draw()
+```
+
+é intenção.
+
+Já:
+
+```text
+createTexture(...)
+bindTexture(...)
+beginBatch(...)
+drawQuad(...)
+swapBuffers(...)
+```
+
+é mecanismo.
+
+O segundo modelo deve permanecer escondido da aplicação.
+
+---
+
+## 1.2 A plataforma é responsável pelo loop
+
+O usuário não deve precisar implementar:
+
+```text
+while (running) {
+    pollEvents()
+    update()
+    render()
+    swapBuffers()
+}
+```
+
+O loop pertence à plataforma.
+
+O usuário fornece a lógica:
+
+```kof
+frame { dt ->
+    update(dt)
+    draw()
+}
+```
+
+O backend transforma isso no modelo equivalente do target.
+
+---
+
+## 1.3 APIs estrangeiras não atravessam a fronteira
+
+A superfície Kof não deverá reproduzir APIs estrangeiras.
+
+Não:
+
+```kof
+SDL_CreateWindow(...)
+```
+
+Não:
+
+```kof
+glClear(...)
+```
+
+Não:
+
+```kof
+canvas.getContext(...)
+```
+
+Não:
+
+```kof
+MediaPlayer(...)
+```
+
+Não:
+
+```kof
+javafx.scene...
+```
+
+A existência dessas tecnologias no backend não significa que elas fazem parte da linguagem.
+
+---
+
+# 2. Estado atual medido
+
+A implementação futura deve partir do estado real do repositório na `beta-0.5.0`, e não de uma arquitetura presumida.
+
+## 2.1 JavaFX
+
+A medição de 21/09 estabelece:
+
+```text
+import javafx
+javafx.
+pom.xml → javafx/openjfx
+```
+
+como zero ocorrências de uso real.
+
+As ocorrências encontradas em código são comentários relacionados aos sintomas de erros do launcher.
+
+Portanto:
+
+> **JavaFX não é uma implementação anterior de gráficos do Kof.**
+
+Não existe uma migração JavaFX → nova stack.
+
+Existe uma decisão de nunca introduzir JavaFX.
+
+---
+
+## 2.2 `kof.ui`
+
+Atualmente:
+
+* JVM/Native possuem uma alça de runtime sem renderização real;
+* JVM possui `kof_ui_window_new`;
+* setters/show possuem implementação vazia;
+* KofJS possui a face funcional baseada em DOM/webview.
+
+Isso significa que a futura superfície gráfica precisa substituir o estado no-op por uma arquitetura real, mas sem transformar o no-op atual em falsa compatibilidade.
+
+Enquanto não houver implementação:
+
+```text
+GFX00x
+```
+
+deve representar o gap.
+
+---
+
+## 2.3 `kof.media`
+
+Já existe uma base JVM.
+
+Atualmente há suporte para:
+
+* abrir/salvar bitmap;
+* metadados de vídeo;
+* amostragem de WAV;
+* enumeração/gravação de microfone.
+
+Não existe atualmente:
+
+* playback de áudio;
+* streaming de música;
+* mixer;
+* pipeline completo de vídeo;
+* reprodução de vídeo;
+* face Native;
+* face JS equivalente.
+
+Os gaps existentes incluem:
+
+```text
+MEDIA001
+MEDIA003
+```
+
+A implementação futura deve evoluir essa superfície sem quebrar programas existentes.
+
+---
+
+# 3. Dependência estrutural: R3
+
+A futura stack gráfica depende diretamente da infraestrutura de FFI/ABI definida pela R3.
+
+O backend gráfico precisará atravessar a fronteira:
+
+```text
+Kof
+ ↓
+Kof IR
+ ↓
+backend
+ ↓
+ABI
+ ↓
+runtime/platform layer
+ ↓
+graphics/audio/video library
+ ↓
+OS/device
+```
+
+A camada de interop deverá ser capaz de representar, quando necessário:
+
+* handles;
+* ponteiros;
+* buffers;
+* structs;
+* callbacks;
+* arrays;
+* strings;
+* lifecycle;
+* ownership;
+* códigos de erro;
+* recursos nativos.
+
+A implementação gráfica **não deve criar uma FFI paralela**.
+
+Se a R3 não fornecer um mecanismo necessário, isso deve virar uma extensão da R3 antes de criar uma solução específica para gráficos.
+
+---
+
+# 4. Modelo geral da arquitetura
+
+A arquitetura futura deverá possuir cinco níveis:
+
+```text
+┌─────────────────────────────┐
+│          Kof App             │
+│   intenção gráfica/mídia     │
+└──────────────┬──────────────┘
+               │
+┌──────────────▼──────────────┐
+│     Kof Graphics API         │
+│   intenção independente      │
+│          de target           │
+└──────────────┬──────────────┘
+               │
+┌──────────────▼──────────────┐
+│       Kof Runtime ABI        │
+│ handles / buffers / events   │
+└──────────────┬──────────────┘
+               │
+      ┌────────┼─────────┐
+      │        │         │
+     JVM     Native      JS
+      │        │         │
+      ▼        ▼         ▼
+ platform   platform   browser
+```
+
+A mesma intenção deve chegar aos diferentes targets.
+
+---
+
+# 5. Modelo de recursos
+
+Recursos gráficos e de mídia são objetos de plataforma.
+
+Exemplos:
+
+```text
+Window
+Sprite
+Texture
+Tilemap
+Mesh
+Material
+Camera
+Sound
+Music
+Video
+InputDevice
+```
+
+Esses objetos não devem expor detalhes da implementação.
+
+Por exemplo, um `sprite` não deve revelar se internamente é:
+
+* textura OpenGL;
+* textura Vulkan;
+* recurso WebGL;
+* imagem HTML;
+* objeto nativo;
+* buffer GPU.
+
+A aplicação manipula uma abstração Kof.
+
+---
+
+# 6. Lifecycle
+
+Todo recurso gráfico/mídia precisa possuir lifecycle definido.
+
+Exemplo conceitual:
+
+```text
+create
+ ↓
+ready
+ ↓
+use
+ ↓
+release
+```
+
+A documentação futura de cada recurso deverá responder:
+
+* quando é criado;
+* se é lazy;
+* quando os dados são carregados;
+* quando fica disponível;
+* quem possui o recurso;
+* quando pode ser liberado;
+* se a plataforma realiza cache;
+* o que acontece quando a janela/device desaparece.
+
+A aplicação não deve ser obrigada a gerenciar manualmente detalhes de GPU se o backend puder fazer isso.
+
+---
+
+# 7. Janela
+
+A janela será responsabilidade do backend.
+
+A intenção futura poderá ser semelhante a:
+
+```kof
+Window("Pong") {
     frame { dt ->
-        ball.move(speed * dt)
-        clear(black)
-        draw(ball)
+        ...
     }
 }
 ```
 
-- `scene` declara *"este programa é uma janela interativa com loop"* —
-  título, criação de janela, fiação do loop principal e encerramento
-  pertencem à plataforma, nunca ao código do usuário.
-- `dt` é o tempo desde o frame anterior — o idioma determinístico de
-  tempo de jogo; a taxa de frames é detalhe da plataforma.
-- Alternativa candidata (mesma intenção, **zero sintaxe nova** — o idioma
-  HOF/lambda existente): `Scene("Pong") { dt -> ... }` — **qual forma entra é
-  decisão de regra 6** (§9 Q2); o *conceito* (loop da plataforma, passo do
-  usuário) não está em renegociação, porque toda biblioteca de jogo de toda
-  língua obriga o usuário a fiar o loop — o Kof absorve o mecanismo
-  (diretriz primária).
-
-### 1.2 2D — sprites e tiles
+ou:
 
 ```kof
-var ball = sprite("ball.png")
-ball.at(120, 80)
-ball.draw()
+Scene("Pong") { dt ->
+    ...
+}
+```
 
+A forma definitiva ainda não está decidida.
+
+A abstração deverá contemplar, conforme suportado:
+
+* título;
+* tamanho;
+* fullscreen;
+* resize;
+* foco;
+* fechamento;
+* DPI;
+* orientação;
+* visibilidade;
+* input.
+
+Nenhum desses requisitos deve obrigar a aplicação a conhecer APIs específicas do sistema operacional.
+
+---
+
+# 8. Frame loop
+
+O frame loop é uma abstração fundamental.
+
+O backend deve controlar:
+
+```text
+clock
+vsync
+frame scheduling
+polling
+render submission
+present
+```
+
+O programa recebe:
+
+```text
+dt
+```
+
+onde:
+
+```text
+dt = tempo desde o frame anterior
+```
+
+O contrato precisa definir posteriormente:
+
+* unidade;
+* precisão;
+* comportamento do primeiro frame;
+* comportamento após frame longo;
+* limite de `dt`;
+* pausa;
+* janela minimizada;
+* perda de foco.
+
+---
+
+# 9. Relógio virtual
+
+Para tornar testes determinísticos, a arquitetura deverá permitir substituir o relógio real por um relógio virtual.
+
+Exemplo:
+
+```text
+frame 1 → dt = 16ms
+frame 2 → dt = 16ms
+frame 3 → dt = 16ms
+frame 4 → dt = 32ms
+```
+
+Assim, o mesmo programa poderá produzir um observável determinístico.
+
+Isso é especialmente importante para:
+
+* physics;
+* animações;
+* input;
+* áudio;
+* reprodução;
+* golden tests.
+
+---
+
+# 10. Input
+
+Input de jogos deve ser tratado como snapshot.
+
+Exemplo:
+
+```kof
+frame { dt ->
+    if (keys.down("left")) {
+        player.left(dt)
+    }
+
+    if (keys.pressed("space")) {
+        player.fire()
+    }
+}
+```
+
+## 10.1 Estados
+
+A abstração deve distinguir:
+
+```text
+down
+pressed
+released
+```
+
+quando necessário.
+
+A semântica exata permanece TBD.
+
+## 10.2 Mouse
+
+Intenção:
+
+```kof
+mouse.pos
+mouse.down("left")
+mouse.pressed("left")
+```
+
+## 10.3 Gamepad
+
+Intenção:
+
+```kof
+pad.stick("left")
+pad.down("a")
+pad.pressed("start")
+```
+
+## 10.4 Teclado
+
+A aplicação não deve precisar conhecer:
+
+* scan codes;
+* virtual key codes;
+* X11 keycodes;
+* Wayland codes;
+* browser KeyboardEvent;
+* Windows virtual keys.
+
+O backend faz a tradução.
+
+---
+
+# 11. 2D
+
+O primeiro nível gráfico deve ser 2D.
+
+## 11.1 Sprite
+
+```kof
+var player = sprite("player.png")
+player.at(120, 80)
+player.draw()
+```
+
+## 11.2 Transformações
+
+A família poderá contemplar:
+
+```text
+at
+scale
+turn
+origin
+flip
+```
+
+A API final é TBD.
+
+## 11.3 Animação
+
+Conceitualmente:
+
+```kof
+player.frames("walk")
+player.animate()
+```
+
+ou equivalente.
+
+A plataforma deve cuidar de:
+
+* atlas;
+* batching;
+* upload;
+* frame selection.
+
+---
+
+# 12. Tilemaps
+
+Tilemaps devem representar intenção de mapa, e não gerenciamento manual de textura.
+
+Possível intenção:
+
+```kof
 var level = tilemap("level.png", 16)
+level.at(0, 0)
 level.draw()
 ```
 
-- `sprite(path)` carrega pela plataforma (suporte a codec/formato é
-  problema da plataforma, como `image` em `kof.media`); `at`/`draw` são
-  verbos de intenção. Animação, rotação e escala crescem da mesma família
-  de verbos (`frames(...)`, `turn(...)`, `scale(...)`) — sem "SpriteBatch",
-  sem "renderer.begin()", sem contabilidade de atlas no código do usuário
-  (a plataforma faz o batching).
+Questões futuras:
 
-### 1.3 3D — malha, câmera, material (escopo honesto)
+* tileset separado;
+* atlas;
+* layers;
+* collision metadata;
+* animated tiles;
+* infinite maps;
+* external map formats.
+
+Não incluir funcionalidades de domínio que não sejam necessárias para a primeira fatia.
+
+---
+
+# 13. Rendering 2D
+
+A aplicação declara:
+
+```text
+o que desenhar
+```
+
+O backend decide:
+
+```text
+como desenhar
+```
+
+O backend poderá realizar:
+
+* batching;
+* texture atlas;
+* command buffering;
+* draw ordering;
+* texture caching;
+* resource upload.
+
+Esses detalhes não devem aparecer na API básica.
+
+---
+
+# 14. 3D
+
+3D é deliberadamente posterior.
+
+A superfície mínima planejada é:
+
+```text
+mesh
+camera
+material
+light
+transform
+```
+
+Exemplo:
 
 ```kof
-var cam = camera3d().at(0, 2, 5).lookAt(hero.pos)
+var hero = mesh("hero.glb")
+hero.with(material.stone)
+
+var camera = camera3d()
+camera.at(0, 2, 5)
+camera.lookAt(hero.pos)
+
 draw(scene3d {
-    mesh("hero.glb").with(material.stone)
+    hero
     light.sun()
 })
 ```
 
-- `mesh`/`material`/`camera3d` declaram **o que** a cena é; upload para
-  GPU, shaders, batching e ordem de desenho são o **como**, da plataforma.
-- **Escopo honesto:** o 3D é a última fatia (§8 3.5) e pode legitimamente
-  **não ser promovido** se algum alvo não alcançar paridade (§2 vale sobre
-  o R7 aqui, por ordem da mantenedora). Carregar formatos (`glb`/`obj`) vai
-  por libs maduras — nunca parser caseiro de formato binário de cena.
+A sintaxe é apenas ilustrativa.
 
-### 1.4 Input por frame
+---
 
-Input de jogo é um **snapshot lido dentro do frame**, não fiação de eventos
-de UI:
+# 15. Formatos 3D
 
-```kof
-frame { dt ->
-    if (keys.down("left")) ship.turn(-speed * dt)
-    if (keys.pressed("space")) ship.fire()
-    aim.aimAt(mouse.pos)
-}
+O Kof não deve implementar parsers próprios para formatos complexos.
+
+Formatos candidatos:
+
+```text
+glTF / GLB
+OBJ
 ```
 
-- `keys.down` (segurada) vs `keys.pressed` (neste frame) — as duas
-  perguntas que um jogo faz; autorepeat/debounce é ruído de plataforma que
-  o idioma remove. Mouse/ponteiro: `pos`; gamepad por intenção
-  (`pad.stick()`, `pad.pressed("a")`).
-- Os eventos-lambda existentes de `kof.ui` continuam para formulários; eles
-  **não** são o idioma de jogo (§9 Q6 fixa a superfície exata).
+A decisão definitiva depende da stack selecionada.
 
-### 1.5 Som — reprodução, streams, mix, latência, dispositivos
+O backend poderá delegar parsing a bibliotecas maduras.
 
-O exemplo do canon (`sound.play("x.ogg")`) crescido para a superfície honesta
-de áudio de jogo:
+Critérios:
 
-```kof
-var boom = sound("boom.ogg")        // pré-carregado → SFX de baixa latência
-boom.play()
-var bgm = music("theme.ogg")        // em stream — nunca carrega o arquivo
-bgm.loop()
-bgm.stop()
-sound("ok.ogg").volume(0.3)
+* licença;
+* segurança;
+* cobertura;
+* manutenção;
+* testabilidade;
+* multiplataforma.
+
+---
+
+# 16. Materiais e shaders
+
+O primeiro nível de abstração deve esconder:
+
+* API gráfica;
+* pipeline state;
+* shader compilation;
+* descriptor binding;
+* uniform buffers;
+* vertex buffers.
+
+Shaders customizados são uma questão separada.
+
+Antes de expor shaders ao usuário, deverá existir decisão sobre:
+
+```text
+Kof shader language?
+SPIR-V?
+WGSL?
+GLSL?
+HLSL?
+cross compilation?
 ```
 
-- Uma família de verbos (`play`/`stop`/`pause`/`volume`) sobre dois
-  comportamentos de plataforma: amostra pré-carregada vs stream —
-  **escolhido pela plataforma pelo uso, sem cerimônia no código do
-  usuário** (nada de tipos `AudioClip` vs `AudioStream`).
-- **Contrato de latência (medido, não prometido):** `play()` de SFX vindo
-  de dentro do frame tem de ser audível sem atraso perceptível em todo
-  alvo — o número sai de medição por alvo na fatia 3.3 (§9 Q4). Mixagem e
-  orçamento de vozes são da plataforma; "canais" só como diagnóstico de
-  limite, nunca como fiação do usuário.
-- Dispositivos: `audio.devices()` + seleção `audio.device(...)` —
-  enumeração onde o alvo tem dispositivos de verdade (web = saída onde o
-  browser permite; `SND00x` honesto onde o conceito não existe — §5).
-- Formatos: a **plataforma** escolhe o decodificador (`ogg`/`mp3`/`wav`...)
-  via libs auditadas (§3) — código Kof nomeia um arquivo, nunca um codec.
+Essa decisão não faz parte da primeira fatia.
 
-### 1.6 Vídeo — componente de reprodução, chrome da plataforma
+---
+
+# 17. Áudio
+
+Áudio deve possuir duas intenções principais:
+
+```text
+sound
+music
+```
+
+Exemplo:
+
+```kof
+sound("boom.ogg").play()
+
+var music = music("theme.ogg")
+music.loop()
+music.play()
+```
+
+A distinção existe semanticamente, mas a implementação pode decidir:
+
+* preload;
+* streaming;
+* cache;
+* decoder;
+* buffer.
+
+---
+
+# 18. Contrato de áudio
+
+O backend deverá controlar:
+
+```text
+decoder
+buffer
+mixer
+output
+device
+latency
+voice management
+```
+
+A aplicação não deve precisar criar:
+
+```text
+audio channel
+audio buffer
+audio callback
+audio thread
+```
+
+manualmente.
+
+---
+
+# 19. Mixagem
+
+A plataforma deverá ser responsável pelo mixer.
+
+A API poderá futuramente oferecer:
+
+```kof
+sound("shot.wav").volume(0.5)
+music("theme.ogg").volume(0.3)
+```
+
+Possíveis capacidades futuras:
+
+```text
+volume
+pause
+resume
+stop
+loop
+fade
+pan
+```
+
+Cada uma precisa de contrato cross-target antes de promoção.
+
+---
+
+# 20. Latência
+
+"Baixa latência" não deve ser tratado como promessa vaga.
+
+A implementação deverá medir:
+
+```text
+request play
+      ↓
+audio buffer submission
+      ↓
+audible output
+```
+
+por target.
+
+O valor do contrato só será definido depois do spike 3.0/3.3.
+
+---
+
+# 21. Dispositivos de áudio
+
+Possível superfície:
+
+```kof
+audio.devices()
+audio.device(...)
+```
+
+Mas o comportamento depende do target.
+
+Browser, por exemplo, possui restrições diferentes de um processo Native.
+
+A API deve representar a capacidade comum, enquanto gaps específicos devem produzir diagnóstico honesto.
+
+---
+
+# 22. Vídeo
+
+Vídeo será integrado à superfície de mídia/UI.
+
+Intenção:
 
 ```kof
 Window("Trailer") {
@@ -173,227 +883,1303 @@ Window("Trailer") {
 }
 ```
 
-- `video` é um componente da família de painéis de `kof.ui` — mesmo nível
-  de intenção de `Label`/`Button`; o chrome do player (controles, barra de
-  seek, tela cheia) pertence à plataforma, nunca ao código do usuário.
-- Demux/decode vêm de libs maduras (§3); a face JVM atual
-  `kof_media_video_*` (metadados) cresce para reprodução na fatia 3.4.
-  Nenhuma tag `<video>` nem a forma `MediaView` de toolkit cruza para o
-  Kof (regras 8/9/10).
+A aplicação não deverá manipular:
 
-## 2. Aceite = paridade TOTAL multi-alvo
+* demuxer;
+* decoder;
+* codec;
+* frame queue;
+* hardware decoder.
 
-**Ordem da mantenedora (adendo 2): para esta superfície o "escopo honesto
-por alvo" do R7 NÃO se aplica.** Um recurso de gráficos/mídia entra na
-superfície da linguagem somente quando **todo** alvo — JVM, KofScript,
-Native (x86-64, riscv64, aarch64), JS-Web — roda o **mesmo programa com o
-mesmo comportamento**; senão o recurso **nem é promovido** (fica como gap
-com diagnóstico, §5 — nunca uma superfície parcial).
+O backend é responsável por isso.
 
-- **"Mesmo comportamento" é medido do jeito que a casa já prova
-  paridade:** golden E2E em todo alvo, byte-a-byte no observável (a família
-  `runAll3`/`runAll4` de E2ETests, os gates cross-arch, o harness da matriz
-  de 8 alvos do EG-5). Superfícies sensíveis a tempo (frame loop, áudio)
-  são testadas sob **relógio virtual** (sequência fixa de `dt`, mix de
-  áudio offline) para o golden ser determinístico.
-- **Observabilidade de pixel/áudio:** a superfície precisa expor um
-  readback determinístico para testes (render-to-buffer com hash; mix
-  offline para buffer) — o golden compara o **contrato observável**, não um
-  artefato de GPU/driver. O mecanismo exato é medido na fatia 3.1 antes de
-  qualquer promoção (§9 Q4).
-- Até a paridade valer, o alvo responde com o código de gap honesto e
-  mensagem clara (R6) — ex.: um build JS de um programa 3D diz `GFX00x` e
-  falha com diagnóstico, nunca uma tela preta silenciosa.
+---
 
-## 3. Stack por alvo (interop-first, medir antes de prometer)
+# 23. Codec
 
-R9: a primeira pergunta é sempre "já existe fora e é melhor?" — e aqui a
-resposta é sim em toda parte. **Nenhum renderizador caseiro, nenhum codec
-caseiro, nenhum mixer caseiro** (non-goal permanente; adendo: crypto e
-codecs nunca caseiros). O plano **avalia e mede** (spike 3.0 abaixo) — não
-casa com lib por nome:
+Codecs não serão implementados pelo Kof.
 
-| Camada | Candidatos a MEDIR (licença × cobertura × testabilidade headless) | Nota |
-|---|---|---|
-| Janela/GL/input portátil | classe **SDL3/SDL2, raylib, GLFW+GL** | a forma que o adendo 2 nomeia: uma camada portátil, bindings por alvo — não chrome de plataforma |
-| Áudio | **miniaudio** (zlib, arquivo único — cabe direto no Native), OpenAL-soft, áudio do SDL3 | mixagem/vozes da plataforma |
-| Vídeo | **ffmpeg / Libav** (demux+decode) | questão GPL/LGPL vs saída GPLv3 — medida, nunca presumida |
-| JS-Web | o browser **é** a plataforma: WebGL, WebAudio, `<video>` | a plataforma renderiza; tags nunca vazam ao usuário (§7) |
+A plataforma selecionará bibliotecas maduras.
 
-Por alvo (todos pelos mesmos verbos Kof de §1):
+Possíveis fontes:
 
-| Alvo | Veículo | Medido hoje |
-|---|---|---|
-| JVM | FFI (R3 `foreign`/Panama) para a stack portátil — **não** JavaFX/Swing/AWT | 0 JavaFX no código (§0); `kof.ui` JVM = no-op; `kof.media` JVM = só dados |
-| KofScript | mesmo veículo do JVM (in-process, runtime compartilhado) | idem |
-| Native x86-64 / riscv64 / aarch64 | link C direto da stack portátil (o backend já faz `cc`/cross-as) | sem face de áudio/vídeo hoje → gap honesto até paridade |
-| JS-Web | lowering para as APIs do browser (o padrão DOM existente de `kof.ui` KofJS) | widgets renderizam aqui; nenhum pipeline de som/vídeo na superfície stdlib ainda |
+```text
+FFmpeg
+Libav
+browser native codecs
+OS media frameworks
+```
 
-**Rejeitados como backends (com motivo, não por gosto):** JavaFX/Swing/AWT
-(adendos 2+3 + medido em §0); `javax.sound` e qualquer API de mídia só-JDK
-— correta no JVM, mas é o *chrome de um alvo só*, e o adendo 2 manda o JVM
-chegar ao idioma pela **mesma stack portátil** dos demais; canvas/HTML/CSS
-(regras 8/9/10 — §7). **Alvos KofC/wasm são future:** quando landarem,
-entram no mesmo gate de paridade como linhas extras, com honestidade
-`XXX00x` no intervalo.
+A decisão dependerá da análise de:
 
-## 4. A fronteira R1 — `kof.sound`/`kof.media` vs pacotes oficiais
+* licença;
+* target;
+* segurança;
+* manutenção;
+* suporte de formatos;
+* capacidade headless.
 
-O gate R1 (`scripts/check_stdlib_boundary.sh` + ledger
-`scripts/stdlib_boundary.txt`) decide a **camada do namespace**, não o peso
-do backend: stdlib-base = *"essencial à plataforma e pequeno"*;
-**domínios** pesados vão para pacotes oficiais (nascem `experimental`).
+---
 
-- **`kof.sound` (+ `kof.media` crescendo com playback de vídeo): stdlib
-  core — recomendação.** Mídia é serviço de plataforma na mesma classe de
-  JSON/DB/HTTP/crypto: a *superfície* é pequena (verbos de §1.5/§1.6), o
-  trabalho pesado mora atrás dela na plataforma, e `kof.media` **já é core
-  hoje** (§0.3). Som sem jogo é normal; instalar pacote para
-  `sound.play("x.ogg")` seria cerimônia.
-- **`scene`/`sprite`/`tilemap`/`camera3d` (a superfície de jogo): pacote
-  oficial — recomendação** (nome de trabalho `kof.game`, `experimental`).
-  Jogos são um *domínio* (os próprios exemplos da R1), e o escopo 3D é
-  exatamente o tipo de capacidade pesada para que a camada de pacotes
-  existe. A paridade (§2) vale para o pacote igual — experimental ≠
-  isento.
-- **O bloco `scene { frame { ... } }`, se escolhido como sintaxe, é decisão
-  da LINGUAGEM independente da resposta R1** — keywords não moram em
-  pacote. A forma sem sintaxe (só builtins/funções:
-  `Scene("Pong") { dt -> ... }`) é a favorita da lei da simplicidade e fica
-  aberta com §9 Q2.
-- A ordem de registro é fixa pela R1: a linha da camada entra no ledger
-  **antes** de qualquer namespace existir (senão o gate quebra o build).
-  Decisão final: §9 Q1.
+# 24. `kof.media`
 
-## 5. Códigos de gap honestos + a matriz de paridade
+A implementação futura deverá decidir como evoluir a face atual.
 
-Toda face não atendida responde com código e mensagem (R6 — nunca
-silêncio, nunca valor falso). Famílias propostas, mesmo estilo `XXX00x` de
-`MEDIA001`/`WEB005`/`WASM001`:
+Hoje:
 
-| Família | Cobre | Primeiros códigos (exemplos da face honesta) |
-|---|---|---|
-| `GFX00x` | `scene`/janela, `sprite`, `tilemap`, `draw`, 3D | `GFX001` alvo sem veículo de gráficos (até R3/stack landar) |
-| `INP00x` | `keys`/`mouse`/`pad` por frame | `INP001` snapshot de input não atendido neste alvo |
-| `SND00x` | playback/stream/mix de som, dispositivos | `SND001` sem veículo de áudio; `SND002` formato não decodificável neste alvo (listar, nunca adivinhar) |
-| `VID00x` | componente de reprodução `video` | `VID001` sem veículo de vídeo; `VID002` codec ausente — problema da plataforma, o usuário vê o código, não a flag |
+```text
+bitmap
+WAV
+video metadata
+microphone
+```
 
-A matriz a que o plano se compromete (coluna de hoje = medição do §0; uma
-célula só vira ✅ quando o golden E2E do §2 roda nela; **os quatro ✅ juntos
-ou o recurso não promove**):
+Futuro:
 
-| Superfície | JVM | Script | Native | JS-Web |
-|---|---|---|---|---|
-| `scene`/frame loop | `GFX001` (no-op hoje, §0.2) | `GFX001` | `GFX001` | `GFX001` (o DOM tem rAF como veículo — o mais perto do verde) |
-| 2D sprite/tile | `GFX001` | `GFX001` | `GFX001` | `GFX001` |
-| 3D malha/câmera/material | `GFX001` | `GFX001` | `GFX001` | `GFX001` |
-| input por frame | `INP001` | `INP001` | `INP001` | `INP001` |
-| som play/stream/mix | `SND001` (dados WAV existem, sem playback, §0.3) | `SND001` | `SND001` | `SND001` |
-| reprodução `video` | `VID001` (só metadados, §0.3) | `VID001` | `VID001` | `VID001` |
+```text
+playback
+streaming
+mixing
+video playback
+```
 
-## 6. ERRADICAÇÃO — JavaFX nunca foi Kof e nunca vai ser
+A evolução deve ser aditiva sempre que possível.
 
-O adendo 3 converte "migração" em **erradicação**: inventário medido de cada
-ocorrência de `javafx` (21/09, `grep -rni`), cada uma classificada — as
-únicas que seriam "bugs a remover" são ligações reais, e não existe nenhuma:
+Programas Kof existentes não devem quebrar simplesmente porque a implementação interna foi substituída.
 
-| Onde | Contagem | Classificação | Ação |
-|---|---|---|---|
-| código `kof-*/src/main` (`import javafx`, `javafx.`) | **0** | — | nada a erradicar; continua vero pelo gate §2 e pela rejeição §3 |
-| comentários em `kof-*/src/main` (6 arquivos) | 6 | comentário **sobre a regra** (VerifyError disfarçado de mensagem do launcher) | manter — uso correto |
-| comentários em `kof-*/src/test` (12 arquivos) | 12 | idem (sintoma da família de bugs §149) | manter |
-| dependências em `pom.xml` | **0** | — | — |
-| `DECISIONS.md` §D-GRAPHICS-GAMING corpo "JVM=JavaFX" | 1 | **alegação errada de doc no texto original da decisão** — já corrigida **no mesmo arquivo** pelo adendo 3 (o registro da decisão fica; a correção é o adendo) | não editar — o adendo vale |
-| `docs/philosophy.md` "WebView/JavaFX em código de UI → rejeitado" | 1 | correto: uma **rejeição**, bate com a realidade | manter |
-| `docs/status.md`, `known-bugs.md` "disfarçado de erro do launcher JavaFX" | 10+ | correto: nomeia o **sintoma** coberto pela regra de 12/09 | manter |
-| `training/language/ui.md` "sem dependência de JavaFX, AWT ou GUI" | 1 | fato correto (bater com esta medição) | manter |
+---
 
-Regras que tornam a erradicação permanente:
+# 25. KofUI
 
-1. **A regra do JavaFX de 12/09 não é relaxada por nada neste plano:** a
-   mensagem de runtime `componentes de runtime do JavaFX não foram
-   encontrados` **nunca** é benigna — é o launcher engolindo um
-   `VerifyError`/`ExceptionInInitializerError` real; sempre causa raiz e
-   conserto (um caminho JavaFX nunca é "acomodado" — isso é erro
-   disfarçado).
-2. **Guarda mecânica (proposta, fatia 3.0):** um check determinístico que
-   quebra o build em qualquer `import javafx` / uso `javafx.` / dependência
-   javafx sob `kof-*/src` (mesmo formato do gate de fronteira R1 da stdlib)
-   — para que "nunca de novo" seja gate, não esperança.
-3. **Compatibilidade retroativa não protege caminho JavaFX** (adendo 3
-   (c)): código Kof de usuário nunca nomeou JavaFX; remover qualquer ligação
-   hipotética não pode quebrar um programa Kof válido.
+KofUI e gráficos não devem virar duas linguagens concorrentes.
 
-## 7. NON-GOALS
+A divisão conceitual é:
 
-- **Nenhum vazamento de HTML, `<canvas>`, `<audio>`, `<video>`, CSS ou DOM
-  para o código do usuário** — o browser é *backend*, não linguagem.
-  Precedente: RawView #449 (regra 9): o código do usuário declara intenção;
-  a plataforma renderiza.
-- **Nenhuma transcrição de API estrangeira:** `SDL_CreateWindow`,
-  `glfwSwapBuffers`, enums de OpenGL, formas `MediaView`/`MediaPlayer` de
-  toolkit nunca chegam à superfície Kof (regras 8/10). O lowering é dono
-  delas; o usuário é dono dos verbos (§1).
-- **Nenhum renderizador, mixer, demuxer ou codec caseiro** (R9/R10; crypto
-  e codecs nunca caseiros — non-goal permanente).
-- **Nenhum "Kali in Kof"** (non-goal permanente dos invariantes da
-  plataforma).
-- **Nenhum JavaFX/Swing/AWT como backend em qualquer alvo** (§3, adendos
-  2+3).
-- **Nenhuma promoção com paridade parcial** (§2 vale sobre o R7 aqui, por
-  ordem da mantenedora).
-- **Nenhuma frente abre** deste documento: ele fica em `future/` até a
-  mantenedora promover uma fatia (regra dos três estados + R12 + regra 6).
+```text
+KofUI
+→ aplicações de interface
 
-## 8. Fila de fatias (3.x) com critérios de prova
+Graphics/Game
+→ aplicações interativas e jogos
+```
 
-Ordem de promoção; **nenhuma fatia abre sem a mantenedora promover** (R12 +
-regra 6). Cada fatia só shipa com a prova — o padrão de paridade da casa:
-**E2E nos 4 alvos, byte-a-byte no observável (§2), mais a suíte vizinha
-completa verde**. Uma fatia que não feche o último alvo em verde deixa o
-recurso atrás do seu gap `XXX00x` e não promove — "a fila anda, a superfície
-só cresce em paridade".
+Existe interseção em:
 
-| # | Fatia | Escopo (uma linha) | Depende de | Prova |
-|---|---|---|---|---|
-| 3.0 | **medir + guarda** | spike classe SDL/raylib/GL + miniaudio/OpenAL + ffmpeg/Libav (licença×alvos×headless); guarda mecânica de binding javafx; `import javafx` quebra o build | R3 2.8.2 (handles) | relatório de medição escrito (o §3 deste doc ganha o veredito); teste da guarda RED-depois-GREEN |
-| 3.1 | **janela + frame loop + input** | forma `scene` (pela Q2), loop a relógio do vsync, snapshot por frame (`keys`/`mouse`), relógio virtual + mecanismo de readback | 3.0 | golden byte-a-byte nos 4 alvos; diagnóstico de gap honesto onde não |
-| 3.2 | **2D** | `sprite`/`tilemap`/`draw` + batching da plataforma | 3.1 | idem, + arestas (frame vazio, 1×1, off-screen) |
-| 3.3 | **som** | play/stream/mix/volume/dispositivos; número do contrato de latência DEFINIDO da medição (Q4) | 3.0 (veículo de áudio; paralelo à 3.1) | golden de mix offline nos 4 alvos; enumeração de dispositivos honesta por alvo |
-| 3.4 | **vídeo** | reprodução do componente `video` sobre `kof.ui`; chrome da plataforma; face de metadados existente absorvida | 3.3 + R3 | golden de readback de decodificação nos 4 alvos |
-| 3.5 | **3D (escopado)** | conjunto mínimo honesto de `mesh`/`camera3d`/`material` — promovido SOMENTE se 3.0–3.4 provarem que o veículo segura paridade | 3.1–3.4 | golden nos 4 alvos ou fica `GFX00x` para sempre (Q3) |
-| 3.6 | **corpus + promoção** | `training/idioms/graphics.md`+`audio.md`, `learn/`, `backend-parity.md`, tabela de gaps; o doc sai de `future/` | 3.1–3.5 | docs-lang 0/0/0 + células de conformance |
+* janela;
+* input;
+* vídeo;
+* imagens;
+* eventos.
 
-## 9. QUESTÕES ABERTAS para a mantenedora (regra 6)
+Essas partes devem compartilhar infraestrutura quando semanticamente equivalentes.
 
-Não decididas aqui — cada uma é decisão de design (semântica congelada /
-superfície da linguagem / registro R1):
+---
 
-1. **Q1 — fronteira R1:** `kof.sound`+`kof.media` stdlib core e a
-   superfície de jogo como pacote oficial `kof.game` (recomendação §4) —
-   ou outro corte? A linha do ledger precisa ser registrada antes de
-   qualquer namespace existir.
-2. **Q2 — a forma do `scene`/`frame`:** bloco com sintaxe nova vs.
-   builtins sem sintaxe (`Scene("Pong") { dt -> ... }` — a favorita da Lei
-   da Simplicidade: sem keyword, sem cerimônia). Qual chega à superfície.
-3. **Q3 — promoção do 3D:** o 3D entra na superfície (0.5.x/depois) ou fica
-   com gap `GFX00x` até a paridade dos 4 alvos ser provada?
-4. **Q4 — contratos mensuráveis:** o número de latência do som e o
-   mecanismo do golden byte-a-byte para pixels/áudio (render-to-buffer com
-   hash, mix offline, relógio virtual) — ratificados das medições 3.0/3.1
-   antes da primeira promoção.
-5. **Q5 — escolha da stack após 3.0:** qual camada portátil (classe SDL vs.
-   raylib vs. GL cru), qual lib de áudio, ffmpeg vs. Libav — incluindo a
-   **questão de licença** (stack GPL/LGPL sob a saída GPLv3).
-6. **Q6 — superfície de input:** snapshot por frame (`keys.down`/`pressed`)
-   vs. eventos vs. ambos; a interação exata com os eventos-lambda
-   existentes de `kof.ui` (qual fica como idioma de formulário, qual é o
-   idioma de jogo).
-7. **Q7 — timing de promoção:** quando (se) a primeira fatia sai de
-   `future/` — o R12 segura isto atrás de SYSTEMS/1.0, salvo ordem
-   expressa dela (como `D-UNIVERSAL` fez uma vez).
-8. **Q8 — a face de dados `kof.media` JVM-only existente** (imagem/WAV/
-   metadados de vídeo, §0.3): manter aditiva sobre o topo da stack de
-   paridade, ou rebaseá-la para a stack durante 3.3/3.4 — programas Kof de
-   usuário não quebram em nenhum dos caminhos (a promessa de compat é aos
-   programas, adendo 3 (c)).
+# 26. KofJS
+
+No browser:
+
+```text
+Kof
+ ↓
+KofJS
+ ↓
+Browser
+```
+
+A implementação gráfica deverá usar as capacidades do browser como backend.
+
+Isso não significa que a API Kof será HTML.
+
+Por exemplo:
+
+```kof
+video("intro.mp4")
+```
+
+pode resultar internamente em um elemento HTML apropriado.
+
+Isso é detalhe de lowering.
+
+---
+
+# 27. WASM
+
+Quando o target WASM existir:
+
+```text
+Kof
+ ↓
+WASM
+ ↓
+Browser/Host
+```
+
+A mesma superfície de intenção deve permanecer válida.
+
+A integração WASM deverá ser documentada separadamente em:
+
+```text
+WASM/WASI implementation plan
+```
+
+e não duplicada aqui.
+
+---
+
+# 28. Native
+
+O backend Native deve utilizar a stack portátil selecionada.
+
+O objetivo:
+
+```text
+Kof
+ ↓
+Native
+ ↓
+graphics/audio/video platform layer
+```
+
+sem exigir que o usuário escreva bindings manualmente.
+
+Targets:
+
+```text
+x86-64
+aarch64
+riscv64
+```
+
+devem entrar na matriz individualmente.
+
+---
+
+# 29. JVM
+
+JVM não deverá utilizar:
+
+```text
+JavaFX
+Swing
+AWT
+javax.sound
+```
+
+como backend oficial da superfície.
+
+A arquitetura desejada é:
+
+```text
+Kof
+ ↓
+JVM
+ ↓
+R3 FFI/ABI
+ ↓
+portable platform stack
+```
+
+Isso mantém a semântica alinhada com Native e demais targets.
+
+---
+
+# 30. KofScript
+
+KofScript deve utilizar a mesma semântica de intenção.
+
+Não deve existir uma API gráfica exclusiva para Script.
+
+O runtime Script deverá delegar para a implementação disponível no ambiente.
+
+Caso o ambiente não possua capacidade:
+
+```text
+GFX001
+SND001
+VID001
+```
+
+ou código equivalente deverá ser produzido.
+
+---
+
+# 31. Capability Matrix
+
+Cada operação gráfica/mídia precisa declarar suas capabilities.
+
+Exemplo conceitual:
+
+```text
+Capability        JVM Native JS Script
+window             ?     ?    ✓    ?
+sprite             ?     ?    ✓    ?
+audio              ?     ?    ?    ?
+video              ?     ?    ?    ?
+3d                 ?     ?    ?    ?
+```
+
+O valor só vira `✓` após:
+
+1. implementação;
+2. testes;
+3. golden;
+4. paridade;
+5. documentação.
+
+---
+
+# 32. Gap codes
+
+Nunca esconder capability ausente.
+
+Famílias:
+
+```text
+GFX00x
+INP00x
+SND00x
+VID00x
+```
+
+Exemplo:
+
+```text
+GFX001 — graphics capability unavailable on target
+SND001 — audio playback unavailable on target
+VID001 — video playback unavailable on target
+```
+
+Os códigos definitivos precisam entrar no catálogo normativo antes da implementação.
+
+---
+
+# 33. Regra de paridade
+
+A superfície gráfica só será promovida quando todos os targets obrigatórios apresentarem comportamento equivalente.
+
+Isso significa:
+
+```text
+JVM       ┐
+Script    │
+Native    ├── mesmo contrato observável
+JS-Web    ┘
+```
+
+Não basta:
+
+```text
+compila em todos
+```
+
+É necessário:
+
+```text
+compila
++
+executa
++
+produz comportamento esperado
++
+passa conformance
+```
+
+---
+
+# 34. Observabilidade gráfica
+
+Pixels precisam ser testáveis.
+
+O sistema futuro deverá possuir uma forma determinística de:
+
+```text
+render
+ ↓
+readback
+ ↓
+buffer
+ ↓
+hash
+```
+
+O teste compara o contrato observável.
+
+Não comparar diretamente:
+
+* driver;
+* GPU;
+* framebuffer físico;
+* screenshot sujeito a diferenças de hardware.
+
+O formato exato do hash e tolerância, se houver, serão definidos durante a implementação.
+
+---
+
+# 35. Observabilidade de áudio
+
+Áudio deverá possuir modo de teste offline:
+
+```text
+program
+ ↓
+audio mixer
+ ↓
+PCM buffer
+ ↓
+hash/reference
+```
+
+Isso permite testar:
+
+* volume;
+* mix;
+* ordem;
+* loop;
+* duração;
+* canais.
+
+Sem depender de alto-falante físico.
+
+---
+
+# 36. Conformance
+
+Cada operação terá testes cross-target.
+
+Exemplo:
+
+```text
+graphics/sprite/basic.kof
+graphics/input/pressed.kof
+audio/play/basic.kof
+audio/mix/basic.kof
+media/video/basic.kof
+```
+
+O harness executa:
+
+```text
+JVM
+Script
+Native
+JS
+```
+
+e compara os observáveis.
+
+---
+
+# 37. Golden tests
+
+Golden tests devem ser utilizados para:
+
+* frame sequence;
+* input sequence;
+* sprite rendering;
+* transformations;
+* audio mixing;
+* media metadata;
+* video decoding.
+
+Para tempo:
+
+```text
+virtual clock
+```
+
+Para input:
+
+```text
+deterministic input stream
+```
+
+Para áudio:
+
+```text
+offline mixer
+```
+
+Para vídeo:
+
+```text
+deterministic frame readback
+```
+
+---
+
+# 38. Fuzzing
+
+O backend deve possuir fuzzing específico para:
+
+* transformação;
+* coordenadas;
+* tamanho;
+* textura;
+* input;
+* lifecycle;
+* asset loading;
+* malformed media;
+* audio files;
+* video containers;
+* resource release.
+
+Especial atenção para arquivos de mídia não confiáveis.
+
+---
+
+# 39. Segurança
+
+Arquivos de imagem, áudio e vídeo são dados não confiáveis.
+
+O backend deverá considerar:
+
+* malformed files;
+* integer overflow;
+* memory corruption;
+* decompression bombs;
+* decoder vulnerabilities;
+* resource exhaustion;
+* sandbox boundaries.
+
+O Kof não deve implementar codecs próprios justamente para evitar assumir responsabilidade desnecessária por esse código complexo.
+
+---
+
+# 40. Stack de terceiros
+
+A seleção da stack deve ser resultado do spike 3.0.
+
+Candidatos:
+
+### Graphics/window/input
+
+```text
+SDL3
+SDL2
+raylib
+GLFW + graphics API
+```
+
+### Audio
+
+```text
+miniaudio
+OpenAL Soft
+SDL audio
+```
+
+### Video
+
+```text
+FFmpeg
+Libav
+native browser/OS decoder
+```
+
+A seleção deverá avaliar:
+
+```text
+license
+target coverage
+maintenance
+security
+headless support
+cross compilation
+API stability
+binary size
+startup
+performance
+```
+
+Não escolher por familiaridade do desenvolvedor.
+
+---
+
+# 41. Licenciamento
+
+A licença das dependências deve ser analisada antes de qualquer integração.
+
+Especialmente:
+
+```text
+GPL
+LGPL
+zlib
+MIT
+BSD
+Apache
+```
+
+A análise deve considerar:
+
+* distribuição do Kof;
+* runtime;
+* executável final;
+* linking;
+* static linking;
+* dynamic linking;
+* Native;
+* JVM;
+* JS;
+* distribuição oficial.
+
+Nenhuma dependência será aprovada apenas porque "é open source".
+
+---
+
+# 42. Não criar wrappers gigantes
+
+A camada Kof deve permanecer pequena.
+
+O objetivo é:
+
+```text
+Kof API
+   ↓
+thin abstraction
+   ↓
+backend
+```
+
+Não:
+
+```text
+Kof API
+   ↓
+reimplementação completa da SDL
+   ↓
+reimplementação completa do renderer
+```
+
+A plataforma é responsável pela complexidade.
+
+---
+
+# 43. Performance
+
+Performance será medida.
+
+Benchmarks futuros:
+
+```text
+startup
+window creation
+frame scheduling
+sprite throughput
+texture upload
+draw calls
+input latency
+audio latency
+mix throughput
+video decode
+memory
+```
+
+Comparar targets somente quando o benchmark representar a mesma operação semântica.
+
+Não criar promessa de:
+
+```text
+"Native é X vezes mais rápido"
+```
+
+sem medição.
+
+---
+
+# 44. Memory budget
+
+A implementação deverá monitorar:
+
+```text
+runtime memory
+texture memory
+audio buffers
+video buffers
+temporary allocations
+```
+
+Especialmente em:
+
+```text
+Native
+mobile
+WASM
+embedded
+```
+
+A API não deve obrigar o usuário a administrar manualmente cada buffer.
+
+---
+
+# 45. Resource caching
+
+Assets poderão ser cacheados pela plataforma.
+
+Possíveis recursos:
+
+```text
+texture cache
+sound cache
+font cache
+mesh cache
+video cache
+```
+
+A política deve ser transparente.
+
+A aplicação deve poder solicitar liberação quando necessário, caso o contrato final determine essa necessidade.
+
+---
+
+# 46. Assets
+
+O build system deverá eventualmente reconhecer assets gráficos/mídia.
+
+Exemplo:
+
+```text
+assets/
+    sprites/
+    sounds/
+    music/
+    video/
+    models/
+```
+
+A documentação deverá definir posteriormente:
+
+* copy;
+* embed;
+* compression;
+* hashing;
+* cache;
+* path resolution;
+* packaging.
+
+Isso não deve ser implementado como parte da primeira fatia.
+
+---
+
+# 47. Packaging
+
+O futuro `kof build` deverá saber que uma aplicação gráfica possui mais que código.
+
+Possível resultado:
+
+```text
+application
+├── executable
+├── runtime
+├── assets
+└── metadata
+```
+
+No browser:
+
+```text
+application
+├── JS/WASM
+├── assets
+└── bootstrap
+```
+
+O formato final permanece TBD.
+
+---
+
+# 48. Desenvolvimento headless
+
+Todo componente possível deve possuir caminho headless.
+
+Isso é essencial para:
+
+* CI;
+* testes;
+* fuzzing;
+* servidores;
+* conformance.
+
+Exemplo:
+
+```text
+graphics backend
+    ↓
+headless renderer
+    ↓
+render buffer
+```
+
+Sem abrir janela física.
+
+---
+
+# 49. Desenvolvimento local
+
+Quando executado normalmente:
+
+```bash
+kof run
+```
+
+o backend pode utilizar janela/dispositivo real.
+
+Mas:
+
+```bash
+kof test
+```
+
+não deverá depender de:
+
+* monitor;
+* GPU específica;
+* caixa de som;
+* microfone;
+* câmera.
+
+---
+
+# 50. Android
+
+Quando KofAndroid entrar nessa superfície, ele deverá utilizar a mesma intenção.
+
+Não criar:
+
+```text
+KofAndroidGraphics
+```
+
+como uma linguagem separada.
+
+A plataforma Android deverá implementar o contrato gráfico/mídia comum.
+
+---
+
+# 51. Futuro mobile
+
+Os mesmos conceitos poderão posteriormente atender:
+
+```text
+Android
+iOS
+```
+
+se esses targets forem suportados.
+
+A arquitetura não deve bloquear isso.
+
+Porém, iOS não entra no escopo desta fase sem decisão explícita.
+
+---
+
+# 52. Debugging
+
+O debugger futuro deverá conseguir relacionar:
+
+```text
+Kof source
+ ↓
+graphics operation
+ ↓
+runtime
+```
+
+quando houver suporte.
+
+Especialmente importante para:
+
+* frame callback;
+* resource creation;
+* runtime errors;
+* asset loading.
+
+Não é necessário expor internals da GPU ao debugger inicial.
+
+---
+
+# 53. Diagnóstico
+
+Erros devem apontar para o código Kof.
+
+Exemplo ruim:
+
+```text
+SIGSEGV in libSDL...
+```
+
+Exemplo desejável:
+
+```text
+Kof graphics error GFX002
+
+Resource:
+    sprite("player.png")
+
+Reason:
+    asset could not be loaded
+
+Source:
+    game.kof:42
+```
+
+Quando possível, o backend deve traduzir falhas externas em diagnósticos Kof.
+
+---
+
+# 54. Asset errors
+
+Erros de assets devem diferenciar:
+
+```text
+file missing
+unsupported format
+decode failure
+permission denied
+resource exhausted
+```
+
+Não transformar tudo em:
+
+```text
+asset not found
+```
+
+---
+
+# 55. Threading
+
+A implementação deverá definir claramente:
+
+```text
+main thread
+render thread
+audio thread
+background loading
+```
+
+A aplicação não deve assumir um modelo específico.
+
+O runtime controla isso.
+
+Isso precisa ser compatível com:
+
+```text
+spawn
+async
+channels
+scheduler
+```
+
+do Kof.
+
+---
+
+# 56. Determinismo
+
+Jogos não precisam ser deterministicamente iguais em performance.
+
+Mas testes precisam ser determinísticos.
+
+Distinguir:
+
+```text
+runtime behavior
+```
+
+de:
+
+```text
+test behavior
+```
+
+A implementação deve evitar introduzir nondeterminismo no conformance harness.
+
+---
+
+# 57. Fases de implementação
+
+## 3.0 — Spike e infraestrutura
+
+Objetivo:
+
+* avaliar stack;
+* validar R3;
+* validar FFI;
+* medir licença;
+* validar headless;
+* validar cross-compilation;
+* implementar guarda contra JavaFX.
+
+Saída:
+
+```text
+architecture report
+```
+
+Nenhuma API Kof nova ainda.
+
+---
+
+## 3.1 — Janela, frame e input
+
+Implementar futuramente:
+
+```text
+window
+frame
+clock
+keyboard
+mouse
+basic gamepad
+```
+
+Critério:
+
+```text
+JVM ✓
+Script ✓
+Native ✓
+JS ✓
+```
+
+com conformance.
+
+---
+
+## 3.2 — 2D
+
+Implementar:
+
+```text
+sprite
+texture
+transform
+tilemap
+draw
+```
+
+Critério:
+
+* golden;
+* headless;
+* cross-target;
+* assets;
+* lifecycle.
+
+---
+
+## 3.3 — Áudio
+
+Implementar:
+
+```text
+sound
+music
+play
+pause
+stop
+loop
+volume
+```
+
+e infraestrutura de:
+
+```text
+decoder
+mixer
+device
+```
+
+Critério:
+
+```text
+offline PCM golden
+```
+
+---
+
+## 3.4 — Vídeo
+
+Evoluir `kof.media`.
+
+Implementar:
+
+```text
+video
+play
+pause
+seek
+volume
+```
+
+quando o contrato estiver definido.
+
+Critério:
+
+```text
+deterministic frame readback
+```
+
+---
+
+## 3.5 — 3D
+
+Somente iniciar se:
+
+* stack suportar;
+* targets suportarem;
+* R3 suportar;
+* runtime suportar;
+* conformance puder ser determinístico.
+
+Caso contrário:
+
+```text
+GFX00x
+```
+
+continua válido.
+
+---
+
+## 3.6 — Corpus e promoção
+
+Atualizar:
+
+```text
+training/
+learn/
+docs/
+conformance/
+backend-parity/
+```
+
+Promover somente quando os gates forem cumpridos.
+
+---
+
+# 58. Critérios de promoção
+
+Uma fatia só sai de `future/` quando:
+
+```text
+[ ] implementação concluída
+[ ] sem código experimental escondido
+[ ] runtime concluído
+[ ] todos os targets obrigatórios
+[ ] conformance
+[ ] golden
+[ ] headless
+[ ] documentação
+[ ] gaps catalogados
+[ ] performance medida
+[ ] segurança revisada
+[ ] licença revisada
+[ ] corpus atualizado
+```
+
+"Funciona no meu computador" não é critério de promoção.
+
+---
+
+# 59. Questões abertas
+
+## Q1 — R1
+
+`kof.sound` e `kof.media` permanecem stdlib core?
+
+A superfície de jogo será:
+
+```text
+kof.game
+```
+
+ou outro namespace?
+
+---
+
+## Q2 — Scene
+
+Qual forma será escolhida?
+
+```kof
+scene "Pong" {
+    frame { dt ->
+    }
+}
+```
+
+ou:
+
+```kof
+Scene("Pong") { dt ->
+}
+```
+
+A segunda mantém o princípio de evitar syntax additions quando uma função/HOF existente resolve a intenção.
+
+---
+
+## Q3 — 3D
+
+3D entra apenas após a paridade total?
+
+---
+
+## Q4 — Golden
+
+Qual será o contrato definitivo para:
+
+```text
+pixel hash
+audio hash
+video frame hash
+```
+
+---
+
+## Q5 — Stack
+
+Qual stack será escolhida após medição?
+
+```text
+SDL
+raylib
+GLFW
+ou outra
+```
+
+---
+
+## Q6 — Input
+
+A superfície terá:
+
+```text
+snapshot
+events
+ambos
+```
+
+---
+
+## Q7 — WASM
+
+Quando WASM estiver disponível, ele entra automaticamente na matriz de paridade?
+
+A resposta esperada arquiteturalmente é sim, mas a decisão formal pertence ao plano WASM/WASI.
+
+---
+
+## Q8 — Media atual
+
+A face JVM existente será:
+
+```text
+mantida e expandida
+```
+
+ou:
+
+```text
+rebased
+```
+
+sobre a nova infraestrutura?
+
+A compatibilidade dos programas existentes deve ser preservada.
+
+---
+
+# 60. Non-goals permanentes
+
+Este plano não pretende:
+
+* criar renderer próprio;
+* criar mixer próprio;
+* criar codec próprio;
+* criar demuxer próprio;
+* expor SDL;
+* expor OpenGL;
+* expor WebGL;
+* expor DOM;
+* expor HTML;
+* expor CSS;
+* expor JavaFX;
+* expor Swing;
+* expor AWT;
+* criar API específica para cada target;
+* criar uma linguagem de shaders antes da necessidade;
+* criar abstrações que apenas embrulham APIs estrangeiras;
+* aceitar paridade parcial como feature oficial;
+* esconder capability ausente;
+* abrir implementação sem promoção da mantenedora.
+
+---
+
+# 61. Regra de ouro
+
+O teste mais importante para qualquer proposta desta área é:
+
+> **Um desenvolvedor Kof precisa pensar em gráficos, áudio e mídia, ou precisa pensar na plataforma que está por baixo?**
+
+A resposta desejada é:
+
+```text
+pensar na intenção.
+```
+
+Se para escrever:
+
+```kof
+sound("shot.ogg").play()
+```
+
+o desenvolvedor precisar saber como o áudio funciona no Linux, Windows, browser ou Android, a abstração falhou.
+
+Se para desenhar um sprite precisar saber qual renderer está sendo usado, a abstração falhou.
+
+Se para criar uma janela precisar saber qual API o sistema operacional fornece, a abstração falhou.
+
+A plataforma existe para absorver essa complexidade.
+
+---
+
+# 62. Resultado arquitetural esperado
+
+Ao final deste plano, a visão do Kof é:
+
+```text
+                    Kof Application
+                           │
+            ┌──────────────┼──────────────┐
+            │              │              │
+          UI           Graphics         Media
+            │              │              │
+            └──────────────┼──────────────┘
+                           │
+                  Kof Runtime Contract
+                           │
+                     Target Backend
+                           │
+       ┌──────────┬────────┼────────┬──────────┐
+       │          │        │        │          │
+      JVM       Native   Script     JS       WASM
+       │          │        │        │          │
+       ▼          ▼        ▼        ▼          ▼
+   Platform    Platform  Runtime  Browser    Host
+```
+
+A aplicação permanece Kof.
+
+O backend absorve a plataforma.
+
+A linguagem permanece orientada à intenção.
+
+A paridade permanece um requisito de promoção.
+
+E a complexidade necessária para fazer gráficos, jogos e mídia funcionar fica onde deve ficar:
+
+> **na implementação da plataforma, não no código que o desenvolvedor Kof escreve.**
