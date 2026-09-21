@@ -13,6 +13,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **release gate: `decisions` counted a combined `D-A / D-B` heading twice**
+    (21/09, lane docs/.18): `check_release_050_gate.sh` read `$2` of each `## `
+    heading, so `## D-TYPE-VARIANCE / D-INTEROP-REFLECT` reported D-TYPE-VARIANCE
+    **2×** and omitted the second id — the gate said "3 State: OPEN" when there
+    are **2** decisions. It now extracts every `D-*` token from the heading and
+    dedupes (real run: "2 State: OPEN ... D-INTEROP-REFLECT D-TYPE-VARIANCE").
+    Regression fixture added to the gate selftest. Tooling only.
+
   - **`audit-stubs.sh` v2: structural method (maintainer order)** (21/09, lane
     docs/.18, supporting the re-opened review front 9094): the front was re-opened
     asking for a **structural** sweep, not markers. v2 adds four detectors that

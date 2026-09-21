@@ -13,6 +13,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **portão de release: `decisions` contava um heading combinado `D-A / D-B`
+    duas vezes** (21/09, lane docs/.18): o `check_release_050_gate.sh` lia `$2` de
+    cada heading `## `, então `## D-TYPE-VARIANCE / D-INTEROP-REFLECT` reportava
+    D-TYPE-VARIANCE **2×** e omitia o segundo id — o portão dizia "3 State: OPEN"
+    quando são **2** decisões. Agora extrai todo token `D-*` do heading e
+    deduplica (rodada real: "2 State: OPEN ... D-INTEROP-REFLECT D-TYPE-VARIANCE").
+    Fixture de regressão adicionada ao selftest do portão. Só tooling.
+
   - **`audit-stubs.sh` v2: método estrutural (ordem da mantenedora)** (21/09,
     lane docs/.18, apoio à frente de revisão 9094 reaberta): a frente pediu
     varredura **estrutural**, não marcadores. A v2 adiciona

@@ -117,7 +117,14 @@ c_decisions() {
     # superficie (condicao 2) — vira NEEDS-REVIEW, nunca GREEN (R6/Q5).
     [ -r "$DECISIONS_MD" ] || { STATE[decisions]=UNKNOWN; DETAIL[decisions]="decision source unreadable: $DECISIONS_MD"; return; }
     local open_state ids
-    ids="$(awk '/^## /{id=$2} /(\*\*State:\*\*|\*\*Estado:\*\*) `(OPEN|ABERTO)/{print id}' "$DECISIONS_MD" 2>/dev/null | tr '\n' ' ')"
+    # Um heading combinado (`## D-A / D-B — ...`) nomeia DUAS decisoes: extrai
+    # TODOS os tokens `D-*` do heading e deduplica (o antigo `$2` contava D-A 2x e
+    # omitia o segundo id — 21/09).
+    ids="$(awk '
+      /^## /{ cur=""; n=split($0, t, /[^A-Za-z0-9-]+/);
+              for (i=1;i<=n;i++) if (t[i] ~ /^D-[A-Za-z0-9-]+$/) cur=cur (cur?" ":"") t[i] }
+      /(\*\*State:\*\*|\*\*Estado:\*\*) `(OPEN|ABERTO)/{ if (cur!="") print cur }
+    ' "$DECISIONS_MD" 2>/dev/null | tr ' ' '\n' | grep -E '^D-[A-Za-z0-9-]+$' | sort -u | tr '\n' ' ')"
     open_state="$(printf '%s' "$ids" | wc -w | tr -d ' ')"
     if [ "${open:-0}" -eq 0 ] && [ "${open_state:-0}" -eq 0 ]; then
       STATE[decisions]=GREEN; DETAIL[decisions]="no pending decision (decision-pending/ extinct; no unresolved [? MEL] candidate; no State: OPEN)"
@@ -352,6 +359,18 @@ EOF
   [ "$rc" -eq 2 ] || fail "State: OPEN fixture should be exit 2, got $rc"
   grep -q 'decisions .*NEEDS-REVIEW' "$T/out3b" || fail "State: OPEN decisions should be NEEDS-REVIEW"
   grep -q 'D-OPEN' "$T/out3b" || fail "State: OPEN decisions detail should name D-OPEN"
+
+  # heading combinado `D-A / D-B` nomeia DUAS decisoes (regressao 21/09): o parser
+  # antigo (`$2`) contava D-A 2x num heading so e omitia D-B.
+  printf '## D-A / D-B — x\n\n**State:** `OPEN — implementing`\n' > "$T/dec_two"
+  R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_LOOSE_MD_FILE="$T/loose" \
+  R050_SPEC_GAPS_FILE="$T/spec" R050_DECISIONS_MD="$T/dec_two" \
+  R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 \
+  R050_MATRIX_CMD=: KOF_SUITE_LOG= \
+    bash "$0" > "$T/out3c"; rc=$?
+  grep -q '2 State: OPEN' "$T/out3c" || fail "combined heading should count 2 decisions"
+  grep -q 'D-A' "$T/out3c" && grep -q 'D-B' "$T/out3c" \
+    || fail "combined heading should name D-A and D-B"
 
   # edges: todos os EG fechados, mas a query de 1.0-blocks NAO responde.
   # Nao pode virar "0 blocks" verde (mesmo falso-verde que bug_issues proibe).
