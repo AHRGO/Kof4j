@@ -14113,6 +14113,14 @@ p
   connection ids, or a cross-leg DB contract). The gaps-db lane ships F2c3
   (row-object x86-64 correct, proven byte JVM==Native on sqlite) and does
   NOT mask the red (Q5: no weakening, no foreign test edits).
+- **Maintainer decision (chat 21/09, recorded as the `D-DB-GAPS` addendum):**
+  **total DB parity** — every target must ACCEPT `mariadb`, `mysql`, `sqlite`,
+  `mongodb`, … (no gap-code endpoint; the `DB001`-vs-new-code poll was answered
+  "full parity"). Route: `docs/development/db-parity-plan.md` — **S0** ships the
+  interim honest diagnostic on Native that clears this red (a named code at
+  connect time, without touching the probe or the host message), then **S1**
+  (`mariadb://` = mysql-wire alias) and the following slices deliver the schemes
+  for real. Owner: DB/ORM front (to be named); plan/records by the docs/plataforma lane.
 
 <!-- pt-switch --> **PT:** [§421 (pt_BR)](known-bugs.pt_BR.md#421--dbconnect-nativo-aceita-qualquer-scheme-silenciosamente-ex-jdbch2mem-a-recusa-so-aparece-depois-no-kof_orm_-como-unknown-db-connection--sem-codigo-de-gap---aberto-exposto-pelo-f2c3-2109-raiz-pre-existente)
 

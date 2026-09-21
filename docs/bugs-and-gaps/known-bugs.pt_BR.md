@@ -11647,6 +11647,15 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
   lane gaps-db entrega o F2c3 (row-object x86-64 correto, provado byte
   JVM==Native em sqlite) e NÃO mascara o vermelho (Q5: sem enfraquecer, sem
   editar teste alheio).
+- **Decisão da mantenedora (chat 21/09, registrada como adendo `D-DB-GAPS`):**
+  **paridade total de DB** — todo alvo deve ACEITAR `mariadb`, `mysql`, `sqlite`,
+  `mongodb`, … (sem endpoint de gap-code; a enquete `DB001`-vs-código-novo foi
+  respondida "paridade total"). Rota: `docs/development/db-parity-plan.pt_BR.md`
+  — a **S0** entrega o diagnóstico interino honesto no Native que limpa este
+  vermelho (um código nomeado no connect, sem tocar na sonda nem na mensagem do
+  host), depois a **S1** (`mariadb://` = alias mysql-wire) e as fatias seguintes
+  entregam os schemes de verdade. Dono: frente DB/ORM (a nomear); plano/registros
+  pela lane docs/plataforma.
 
 <!-- en-switch --> **EN:** [§421 (en)](known-bugs.md#421--native-dbconnect-accepts-any-scheme-silently-eg-jdbch2mem-the-refusal-only-surfaces-later-at-kof_orm_-as-unknown-db-connection--with-no-gap-code---open-exposed-by-f2c3-2109-root-pre-existing)
 

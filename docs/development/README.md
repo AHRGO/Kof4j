@@ -44,7 +44,10 @@ surface**).
   `makealive-plan.md` (**residual 3.6 only** — 3.2 **LANDED 21/09 `966c86a4`**
   via `D-MAKEALIVE-SYNTAX` (pure sugar over `design()`); 3.7 **CLOSED 21/09**
   as runtime-only; 3.8 shipped 20/09 `D-MAKEALIVE-CLI`; 3.6 = secrets via
-  `kof.security`, Stage 5/security lane, `future/secrets-plan.md`).
+  `kof.security`, Stage 5/security lane, `future/secrets-plan.md`) ·
+  `db-parity-plan.md` (+PT — **`D-DB-GAPS` addendum 21/09**: total DB parity,
+  every target accepts mariadb/mysql/sqlite/mongodb; S0 clears §421's silent
+  accept; owner DB/ORM front to be named).
   Authority: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Living records here (not backlog):** `DECISIONS.md`,
   `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.

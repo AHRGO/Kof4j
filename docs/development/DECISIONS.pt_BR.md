@@ -2309,6 +2309,37 @@ sobre os kof_db_* existentes", DB-2 "implementa corretamente… android é
 jvm", DB-3 "B) estender MySQL p/ riscv/aarch", MK-1 "B) completo de uma
 vez".
 
+### Adendo D-DB-GAPS (21/09/2026, mantenedora) — PARIDADE TOTAL de DB em todos os alvos
+
+Enquete (chat 21/09, na triagem do §421): perguntado qual gap-code nativo usar
+para a aceitação silenciosa de schemes não suportados, a mantenedora respondeu
+**paridade total — todo alvo deve ACEITAR `mariadb`, `mysql`, `sqlite`,
+`mongodb`, … (sem endpoint de gap-code)**. Isso generaliza o DB-3: a superfície
+de DB alcança o *mesmo conjunto de schemes* em JVM/Android/JS/Native, cada
+scheme **real** (R6). Um scheme não suportado é **gap interino declarado**
+apenas enquanto a fatia pousa — nunca recusa permanente, nunca aceite silencioso.
+
+**Estado medido (21/09, esta lane — medição, não memória):**
+- **JVM/Android/JS:** JDBC via host — qualquer URL JDBC com driver no
+  classpath (h2, sqlite-jdbc, mysql, mariadb, postgres); o delegate JS É o JDBC
+  do host. MongoDB **não** é JDBC (protocolo separado).
+- **Native (x86-64/riscv64/aarch64):** `sqlite:` (libsqlite3, link-by-use) +
+  `mysql://` (wire protocol em `RuntimeDb2.java`) são reais; `mariadb://`
+  (compatível mysql-wire) e `mongodb://`/`oracle://` **não** são parseados —
+  `kof_db_connect` registra um handle tipo-0 e a falha aparece tarde no
+  `.Lorm_conn` (**§421**).
+- `kof_db_type` já reserva **1=sqlite 2=mysql 3=oracle 4=mongo** → o modelo de
+  tipo antecipa esta frente.
+
+**Fatias (fila aberta em `docs/development/db-parity-plan.pt_BR.md`):** S0
+diagnóstico interino honesto (limpa o aceite silencioso do §421 enquanto os
+schemes pousam); S1 `mariadb://` = alias mysql-wire (Native, 3 arcos); S2
+paridade de schemes JDBC JVM/JS/Android (por-driver medido, diagnóstico honesto
+de driver ausente); S3 `mongodb://` interop-first (driver/wire — nunca um
+servidor caseiro, R9); S4 oracle (idem). Dono: frente DB/ORM (dono a nomear) +
+esta lane para o plano/registros. **Não é mudança de superfície congelada** —
+alarga as URLs aceitas; a API `kof.db`/`kof.orm` não muda.
+
 ## D-BRANCH-0.5.0 — trabalho move para `beta-0.5.0`; `beta-0.4.0` fica para pousos em voo + preparo da release (20/09/2026, ordem da mantenedora)
 
 **Ordem (chat 20/09/2026):** "avise os outros agentes, vamos mover todo trabalho

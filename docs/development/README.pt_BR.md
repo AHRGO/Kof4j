@@ -45,7 +45,10 @@ nova**).
   `966c86a4`** via `D-MAKEALIVE-SYNTAX` (açúcar puro sobre `design()`); 3.7
   **FECHADA 21/09** como runtime-only; 3.8 pousado 20/09 `D-MAKEALIVE-CLI`;
   3.6 = secrets via `kof.security`, Estágio 5/lane de security,
-  `future/secrets-plan.md`).
+  `future/secrets-plan.md`) ·
+  `db-parity-plan.md` (+PT — **adendo `D-DB-GAPS` 21/09**: paridade total de DB,
+  todo alvo aceita mariadb/mysql/sqlite/mongodb; a S0 limpa o aceite silencioso
+  do §421; dono frente DB/ORM a nomear).
   Autoridade: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Registros vivos aqui (não são backlog):** `DECISIONS.md`,
   `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.

@@ -2337,6 +2337,37 @@ already have real `kof.db`).
 os kof_db_* existentes", DB-2 "implementa corretamente… android é jvm",
 DB-3 "B) estender MySQL p/ riscv/aarch", MK-1 "B) completo de uma vez".
 
+### D-DB-GAPS addendum (09/21/2026, maintainer) — TOTAL DB parity across all targets
+
+Poll (chat 21/09, during the §421 triage): asked which native gap-code to use
+for the silent acceptance of unsupported schemes, the maintainer answered
+**full parity — every target must ACCEPT `mariadb`, `mysql`, `sqlite`,
+`mongodb`, … (no gap-code endpoint)**. This generalizes DB-3: the DB surface
+reaches the *same scheme set* on JVM/Android/JS/Native, each scheme **real**
+(R6). An unsupported scheme is a **declared interim gap** only while its slice
+lands — never a permanent refusal, never a silent accept.
+
+**Measured state (21/09, this lane — measurement, not memory):**
+- **JVM/Android/JS:** JDBC via the host — any JDBC URL whose driver is on the
+  classpath (h2, sqlite-jdbc, mysql, mariadb, postgres); the JS delegate IS the
+  host's JDBC. MongoDB is **not** JDBC (separate protocol).
+- **Native (x86-64/riscv64/aarch64):** `sqlite:` (libsqlite3, link-by-use) +
+  `mysql://` (wire protocol in `RuntimeDb2.java`) are real; `mariadb://`
+  (mysql-wire compatible) and `mongodb://`/`oracle://` are **not** parsed —
+  `kof_db_connect` registers a type-0 handle and the failure surfaces late at
+  `.Lorm_conn` (**§421**).
+- `kof_db_type` already reserves **1=sqlite 2=mysql 3=oracle 4=mongo** → the
+  type model anticipates this front.
+
+**Slices (queue opened in `docs/development/db-parity-plan.md`):** S0 interim
+honest diagnostic (clears §421's silent accept while the schemes land); S1
+`mariadb://` = mysql-wire alias (Native, 3 arches); S2 JDBC scheme parity
+JVM/JS/Android (per-driver measured, honest missing-driver diagnostic); S3
+`mongodb://` interop-first (driver/wire — never a home-grown server, R9); S4
+oracle (same). Ownership: DB/ORM front (owner to be named) + this lane for the
+plan/records. **Not a frozen-surface change** — it widens accepted URLs; the
+`kof.db`/`kof.orm` API is unchanged.
+
 ## D-BRANCH-0.5.0 — work moves to `beta-0.5.0`; `beta-0.4.0` stays for in-flight landings + release prep (09/20/2026, maintainer order)
 
 **Order (chat 09/20/2026):** "avise os outros agentes, vamos mover todo trabalho
