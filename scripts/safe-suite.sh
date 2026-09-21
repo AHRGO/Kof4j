@@ -96,6 +96,7 @@ kill_stale_jcmd
 echo "----- resumo (rc=$RC) -----"
 grep -hE "Tests run:.*Time elapsed" "$LOG" 2>/dev/null \
   | sed -E 's/.*Tests run: ([0-9]+), Failures: ([0-9]+), Errors: ([0-9]+), Skipped: ([0-9]+).*/\1 \2 \3 \4/' \
-  | awk '{t+=$1; f+=$2; e+=$3; s+=$4} END {printf "TOTAL: tests=%d failures=%d errors=%d skipped=%d\n", t, f, e, s}'
+  | awk '{t+=$1; f+=$2; e+=$3; s+=$4} END {printf "TOTAL: tests=%d failures=%d errors=%d skipped=%d\n", t, f, e, s}' \
+  | tee -a "$LOG"
 echo "log completo: $LOG"
 exit $RC
