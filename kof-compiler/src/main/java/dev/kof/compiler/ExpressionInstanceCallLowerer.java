@@ -173,6 +173,12 @@ public final class ExpressionInstanceCallLowerer {
     if (recvType instanceof Type.TypeVariable tvb && tvb.bound() != null) {
         recvType = tvb.bound();
     }
+    // §358 (21/09): receiver type-parameter SEM bound em alvo nativo não tem
+    // dispatch de instância no runtime cross → recusa honesta NAT004 (o gate
+    // extraído substitui o `call <método>` nu que dava link-fail críptico).
+    if (NativeGenericDispatchGate.refuse(driver, mc, recvType)) {
+        return localIdx;
+    }
     if (KofUi.isUiType(recvType)) {
         localIdx = driver.emitUiInstance(recvType, mc, ops, owner, localIdx, locals);
         return localIdx;
