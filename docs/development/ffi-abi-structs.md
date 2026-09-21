@@ -102,8 +102,9 @@ Three worked examples the implementation tests must reproduce bit-exactly:
 
 ## 4. Design decisions — **DECIDED** (D-FFI-STRUCT, maintainer 09/20/2026; rule 6)
 
-> **Decided:** D6-1 = **A+B** (`record` by-value read-only + a new mutable
-> `struct` by-ref) · D6-2 = **only `new T[n]`** binds to `ptr` · D6-3 =
+> **Decided:** D6-1 = **B** (`D-FFI-STRUCT-B`, 21/09: a new mutable `struct`
+> by-ref; `record`s stay by-value read-only; `Buffer(U8)` covers the
+> out-buffer) · D6-2 = **only `new T[n]`** binds to `ptr` · D6-3 =
 > **`Buffer(U8, INOUT)` with no new syntax** · D6-4 = **implement the full
 > sret** · D6-5 = **confined arena per downcall**. Authority:
 > `docs/development/DECISIONS.md` §D-FFI-STRUCT. The proposal text below is kept
@@ -113,9 +114,9 @@ Three worked examples the implementation tests must reproduce bit-exactly:
   A) `record` (structural, immutable, already zero-ceremony — recommended default);
   B) a new mutable `struct` declaration (needed for *in/out* buffers);
   C) both, with records = by-value read-only and `struct` = by-ref.
-  A+B is the composition; **B is approved spec-first 21/09**
-  (`D-FFI-STRUCT-B`) — the design is reviewed before any parser/typer diff
-  (rule 11).
+  **Superseded:** the decision was written — `D-FFI-STRUCT` (20/09) then
+  `D-FFI-STRUCT-B` (21/09) fixed **D6-1 = B** (the mutable `struct` by-ref;
+  `record`s stay by-value read-only).
 - **D6-2 · array mapping.** `List<Int>` is boxed (JVM `ArrayList`) — binding
   it means copying to native memory per call. Proposal: primitive arrays
   (`new Int[n]`, which already exist) bind to `ptr` (no implicit length

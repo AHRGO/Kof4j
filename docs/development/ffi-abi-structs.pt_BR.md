@@ -105,8 +105,9 @@ Três exemplos resolvidos que os testes de implementação devem reproduzir bit 
 
 ## 4. Decisões de design — **DECIDIDO** (D-FFI-STRUCT, mantenedora 20/09/2026; rule 6)
 
-> **Decidido:** D6-1 = **A+B** (`record` por valor read-only + novo `struct`
-> mutável por referência) · D6-2 = **só `new T[n]`** binda a `ptr` · D6-3 =
+> **Decidido:** D6-1 = **B** (`D-FFI-STRUCT-B`, 21/09: novo `struct` mutável
+> por referência; `record`s ficam por valor read-only; `Buffer(U8)` cobre o
+> out-buffer) · D6-2 = **só `new T[n]`** binda a `ptr` · D6-3 =
 > **`Buffer(U8, INOUT)` sem sintaxe nova** · D6-4 = **implementar o sret
 > completo** · D6-5 = **arena confinada por downcall**. Autoridade:
 > `docs/development/DECISIONS.md` §D-FFI-STRUCT. O texto-proposta abaixo fica
@@ -116,9 +117,9 @@ Três exemplos resolvidos que os testes de implementação devem reproduzir bit 
   A) `record` (estrutural, imutável, zero-ceremonia — default recomendado);
   B) um novo `struct` mutável (necessário para buffers *in/out*);
   C) ambos: records = by-value read-only, `struct` = by-ref.
-  A composição é A+B; **B está aprovado spec-first 21/09**
-  (`D-FFI-STRUCT-B`) — o desenho é revisado antes de qualquer diff de
-  parser/typer (regra 11).
+  **Superseded:** a decisão foi escrita — `D-FFI-STRUCT` (20/09) e depois
+  `D-FFI-STRUCT-B` (21/09) fixaram **D6-1 = B** (o `struct` mutável por
+  referência; `record`s ficam por valor read-only).
 - **D6-2 · mapeamento de array.** `List<Int>` é boxed (`ArrayList` no JVM) —
   bindar significa copiar para memória nativa a cada chamada. Proposta:
   arrays primitivos (`new Int[n]`, que já existem) bindam como `ptr` (sem
