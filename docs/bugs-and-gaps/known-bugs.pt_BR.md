@@ -11470,7 +11470,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Causa-raiz:** o binder compartilhado (`kof_json_bind`) tratava `Bool` só com `value instanceof Boolean` + `parseBoolean(String.valueOf(v))`; para `Integer 1` → `"1"` → `false` em silencio. Todo numeric-bool (SQLite/H2 int) lia `false` — afeta `orm.find/all/where/page` JDBC, `db.query<T>` (DB002) e `json.decode<T>` campo numerico. A gravacao (`ps.setObject` → 1) nunca esteve errada.
 - **Correção (raiz):** o ramo boolean do binder aceita `Number` → `intValue() != 0` (simetria gravar==ler e o contrato do Kof: `save(true)` ⇒ `find().ok == true`); sem `if`-mascara — faltava o caminho numerico.
 - **Prova (Q0/Q1/Q3):** RED→GREEN medidos nas 3 vitimas, 1 teste por path: `KofDbE2ETest#typedQueryBindsIntColumnToBoolField` (int 1/0/2 → true/false/true), `KofOrmE2ETest#findPreservesSavedBoolTrueRegression397` (sqlite save(true)→find().ok==true + save(false)→false), `JsonCompleteE2ETest#jvmDecodeIntFieldIntoBoolRecordBindsTrue` (campo `\"ok\":1` → true). **3/3 RED no binder velho (stash do fix), 3/3 GREEN com o fix.**
-- **Cross-target (patch follow-up medido 21/00:1x):** a asm do F2b (`RuntimeOrm5`) LIAVA o oracle antigo (TEXT "true" literal; INTEGER 1 → `false`) — com o host consertado isso virou divergencia JVM×Native no MESMO banco (regra-5 do freeze). Patch: leitura por tipo dinamico da coluna — INTEGER/FLOAT `!=0`, TEXT literal `"true"`, NULL `false` (paridade exata do binder). Prova byte-a-byte: `KofOrmE2ETest#findPreservesSavedBoolTrueRegression397` estendido p/ Native — **RED medido sem o patch (falha no assert cross @605), GREEN com (44/0F)**. JS devolve o bool nativo do host (`Boolean(1)`==true — sem o bug); riscv/aarch64 seguem a asm-fatia quando portada (ORM001 honesto ate la).
+- **Cross-target:** Native x86-64 `find` e a fatia F2b (esta linha trava o contrato para a asm: `INTEGER != 0` no slot Bool — nunca `parseBoolean` de texto); JS devolve o bool nativo do host (`Boolean(1)`==true — sem o bug); riscv/aarch64 seguem a asm-fatia quando portada (ORM001 honesto ate la).
 > **Renumerado §396→§398 (21/09, lane bugs-and-gaps):** reivindicada como §396 em voo no worktree; o tip `50599b39` ja publicou §396 (println-Native) — pela regra de claim compartilhado quem chega depois renomeia (cf. §395). Conteudo da lane de estabilizacao preservado integralmente na politica "preserve both sides" do rebase.
 
 ## §398 — o harness de debug DAP native vazava os diretórios temporários: o `KofDebugNativeDapTest` criava `dap-native-*` com `Files.createTempDirectory` (nunca apagava), e o diretório do ELF `kof-debug-native-*` da CLI sobrevivia ao SIGTERM porque o `cleanup()` corria com o shutdown hook — 62 + 30 diretórios acumulados — ✅ CORRIGIDO 20/09 (lane estabilização; família §394)
@@ -11503,30 +11503,13 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Relacionado:** §394 (mesma família de vazamento — processo vs diretório),
   `KofDebugNativeDap.java`, `KofCliSupport.cleanup`.
 
-## §399 — `kof debug` DAP na JVM: `step`/`continue` limpavam `stoppedThread` DEPOIS do `resume()`, então a corrida com o evento SingleStep zerava o id novo para `-1` → o `stackTrace` seguinte enviava `FrameCount(-1)` (comando JDWP 11,7) → erro 20 (`INVALID_OBJECT`) matava a sessão ("fluxo DAP fechou") — flake do `KofDebugJvmStepTest` ~1/5 das execuções de classe — ✅ CORRIGIDO 21/09 (`62206c6d`; lane estabilização)
 
-- **Sintoma (medido 21/09, host compartilhado):** o `KofDebugJvmStepTest`
-  falhava em cerca de **1/5 a 1/3 das execuções de classe** (isolado 6/6
-  verde), sempre terminando com o canal DAP fechando em vez do stop esperado;
-  o texto reportado era o genérico "fluxo DAP fechou", nunca o erro JDWP.
-- **Causa raiz:** o `KofDebugJvmSession.step()` e o handler do `continue`
-  executavam `jdwp.resume()` e só **depois** `stoppedThread = -1`. O evento
-  SingleStep chega na thread leitora do JDWP e define o **novo id válido**;
-  sob carga o evento vencia a corrida e o `stoppedThread = -1` final o apagava.
-  O `stackTrace` seguinte (sem `threadId` explícito) usava `-1` →
-  `FrameCount(-1)` (comando `11,7`) → **erro 20 (`INVALID_OBJECT`)** do JDWP →
-  uma `IOException` fatal escapava do `handleRequest` → a CLI saía e o editor
-  via o canal DAP fechar.
-- **Conserto (esta lane):** limpar `stoppedThread` **antes** do `resume()` nos
-  dois sítios (`step()` e `continue`); fazer o `stackTrace` e o fallback do
-  `evaluate` reportarem um erro DAP honesto (R6) em vez de deixar a exceção
-  matar a sessão.
-- **Prova (RED-first, Q0):** teste novo
-  `stepThenImmediateStackTraceNeverLosesTheStoppedThread`
-  (`KofDebugJvmStepTest`, 12 sessões novas de
-  `stepIn → stackTrace → stepOut → stackTrace`) — **RED no código antigo**
-  (fix em stash) com o sintoma exato "fluxo DAP fechou", **GREEN no fix**;
-  classe + vizinhas (`Step`/`Jvm`/`Attach`/`NativeDap`) rodadas **4×** =
-  **22/0F/0E** cada.
-- **Relacionado:** §398 (mesmo harness DAP), `KofDebugJvmSession.java`,
-  `KofDebugJvmStepTest.java`.
+## §399 — uma funcao top-level NOMEADA passada como VALOR (ex.: `job("e", probe)` com `Bool probe()`) e rejeitada com SEM011 "Undefined variable or type" — o nome so resolve em posicao de CHAMADA; e o diagnostico aponta o universo errado (R6) — 🟡 ABERTO 21/09 (catalogado na caca de edges do §353; medido pre-existente)
+
+- **Sintoma (medido 21/09, identico no jar 0.4.7 pre-§353 e no tip — NAO e regressao do §353):** `import kof.workflow` + `Bool always() { return true }` + `job("e", always)` → `:0:0: error: Undefined variable or type: 'always' [SEM011]`. Com cast e a mesma coisa. A lambda literal na mesma vaga compila (`job("e", () -> always())` — verde).
+- **Por que a mensagem erra duas vezes (R6):** (a) `always` E definida — como funcao; o diagnostico nomeia um universo ("variable or type") onde o simbolo nao esta; (b) se funcoes nomeadas sao valores de mao cheia e pergunta de superficie da linguagem (regra 11 + regra 6): o idioma documentado para argumento de funcao e a LAMBDA literal (`training/idioms/`), e nenhum texto do corpus promete `probe`-como-valor — logo a REJEICAO e plausivelmente correta e so o DIAGNOSTICO e bug.
+- **Roteamento (nao e edicao desta lane):** decisao da mantenedora (regra 6): (A) manter a rejeicao e melhorar o diagnostico para nomear a regra real ("funcoes nao sao valores em posicao de argumento; passe uma lambda — `() -> always()`") + linha em `training/anti-patterns/fake-idioms.md`; (B) tornar funcoes top-level nomeadas valores (rio tipo-nivel: overloads + conversao FunctionType). A opção A e uma frase; a B e expansao de superficie — nenhuma se decide silenciosamente por agente.
+- **Workaround (o idioma):** embrulhar em lambda — `job("e", () -> always())` — byte-parity JVM/JS (medido nas formas do `WorkflowE2ETest`).
+- **Relacionado:** §353 (isto nasceu da caca de edges Q4 dele), `LambdaE2ETest.castToFunctionType` (o rio `as ()->T`, posicao diferente), os chavlocks `() -> Bool` do workflow-host.
+
+<!-- en-switch --> **EN:** [§399 (en)](known-bugs.md#399--a-named-top-level-function-passed-as-a-value-is-rejected-with-sem011)

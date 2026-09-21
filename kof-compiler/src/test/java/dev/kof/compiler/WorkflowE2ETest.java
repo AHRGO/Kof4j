@@ -560,4 +560,27 @@ class WorkflowE2ETest {
             }
             """, "ok=a failed= skipped=");
     }
+
+    /** §353: corpo de lambda `() -> File(...).exists()` (io direto, sem
+     *  workaround de binding `Bool ok`) era rejeitado com SEM014
+     *  ("expected 'function' but got 'function'") — o typer SEMANAL não
+     *  conhecia kof.io, só o do emit. Pre-red: compilação falha nos 2 alvos;
+     *  pós-fix: JVM == JS e o dag enxerga o disco de verdade. */
+    @Test
+    void lambdaBodyWithIoBoolCompilesAndRuns() throws Exception {
+        String src = """
+            import kof.workflow
+            import kof.io
+            main() {
+                val f = File("__BASE__/s353.txt")
+                println(f.writeText("x"))
+                var probe = job("probe", () -> File("__BASE__/s353.txt").exists())
+                var gone = job("gone", () -> File("__BASE__/missing-s353.txt").exists())
+                var rep = dag(listOf(probe, gone)).run()
+                println(rep.summary())
+                println(rep.allOk())
+            }
+            """.replace("__BASE__", tmp.toString());
+        assertJvmJsParity(src, "true", "ok=probe failed=gone skipped=", "false");
+    }
 }
