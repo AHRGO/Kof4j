@@ -275,7 +275,16 @@ public final class SemExpressionTyper {
                                     "SEM023");
                         }
                     }
-                    yield new Type.ClassType(cs.packageName(), cs.name(), List.of());
+                    // X5.3 (D-TYPE-VARIANCE): o EMIT (ExpressionTyper:185)
+                    // sempre aplicou os type-args do NewExpr ao tipo do raw —
+                    // o SEMANTICO so fazia isso p/ colecoes builtin (#193/#198).
+                    // Sem alinhar, `Box<Dog>()` tipava raw (args vazios) e a
+                    // checagem de variancia nunca via args concretos (o §270
+                    // invariante virava permissivo). Aqui espelha o emit.
+                    List<Type> newArgs = ne.typeArguments().isEmpty() ? List.of()
+                            : ne.typeArguments().stream()
+                                    .map(n -> CompilerTypes.toType(n, sa.unit(), sa)).toList();
+                    yield new Type.ClassType(cs.packageName(), cs.name(), newArgs);
                 }
                 // classe EXTERNA (android.webkit.WebView etc.): qualifica pelo
                 // import e registra o construtor do classpath — sem isso a

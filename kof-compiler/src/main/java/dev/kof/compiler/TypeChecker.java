@@ -352,6 +352,35 @@ public final class TypeChecker {
     }
 
     /**
+     * X5.3 (D-TYPE-VARIANCE): compatibilidade dos args de um MESMO raw à luz
+     * da variância declaration-site do tipo. Sem variância registrada (tipo
+     * builtin/JDK ou declarado sem `out`/`in`) cai na regra §270 invariante
+     * (igualdade exata) — compatível com tudo o que já existia. Com variância:
+     * `out` aceita `from.arg -> to.arg` (covariante), `in` aceita
+     * `to.arg -> from.arg` (contravariante); UNKNOWN/TypeVariable permanecem
+     * permissivos como no §270.
+     */
+    static boolean genericArgsCompatible(SemanticAnalyzer sa, List<Type> from, List<Type> to,
+                                         List<String> variance) {
+        if (variance == null || variance.isEmpty()) return !argsIncompatible(from, to);
+        if (from.isEmpty() || to.isEmpty() || from.size() != to.size()) return true;
+        for (int i = 0; i < from.size(); i++) {
+            Type a = from.get(i), b = to.get(i);
+            if (Type.isUnknown(a) || Type.isUnknown(b)
+                    || a instanceof Type.TypeVariable || b instanceof Type.TypeVariable) {
+                continue;
+            }
+            String v = i < variance.size() ? variance.get(i) : "";
+            switch (v) {
+                case "out" -> { if (!isAssignable(sa, a, b)) return false; }
+                case "in" -> { if (!isAssignable(sa, b, a)) return false; }
+                default -> { if (!a.equals(b)) return false; }
+            }
+        }
+        return true;
+    }
+
+    /**
      * §270 (#401): os dois lados têm args CONCRETOS (mesma aridade, nenhum
      * UNKNOWN/TypeVariable) e os args não são iguais? Só então a rejeição é
      * segura — inferência (`listOf()`), raw (`List`) e type-param (`T`)
@@ -424,8 +453,9 @@ public final class TypeChecker {
         // semântica é inferência/erasure: args vazios (raw, ou classe →
         // interface do #400), UNKNOWN (`listOf()` vazio/inferido),
         // TypeVariable (`T`) e aridades diferentes ficam permissivos.
-        if (argsIncompatible(fc.typeArguments(), tc.typeArguments())
-                && rawTypeOf(fc).equals(rawTypeOf(tc))) {
+        if (rawTypeOf(fc).equals(rawTypeOf(tc))
+                && !genericArgsCompatible(sa, fc.typeArguments(), tc.typeArguments(),
+                        sa != null ? sa.varianceOf(fc.name()) : null)) {
             return false;
         }
         // tipos builtin (String, List, Map, Set...) têm relações próprias

@@ -46,6 +46,11 @@ public class SemanticAnalyzer {
      *  compilação (arquivo) que os declara. O conjunto de subtipos é fechado:
      *  um subtipo declarado fora dessa unidade é SEM080. */
     private final Map<String, String> sealedTypes = new HashMap<>();
+    /** X5.3 (D-TYPE-VARIANCE): variância declaration-site por tipo genérico —
+     *  nome simples → lista de variâncias ("out"/"in"/"") na ordem dos
+     *  type-params. Ausente = invariante (compatibilidade total com o que
+     *  já existia, §270). */
+    private final Map<String, java.util.List<String>> genericVariance = new HashMap<>();
     private final Map<ExpressionNode, Type> expressionTypes = new IdentityHashMap<>();
     private final Map<MethodCallExpr, SymbolTable.MethodSymbol> resolvedMethods = new IdentityHashMap<>();
     private final Map<NewExpr, SymbolTable.ConstructorSymbol> resolvedConstructors = new IdentityHashMap<>();
@@ -344,6 +349,17 @@ public class SemanticAnalyzer {
 
     /** X5.1: unidade de compilação (arquivo) do tipo `sealed`, ou {@code null}. */
     String sealedTypeUnit(String name) { return sealedTypes.get(name); }
+
+    /** X5.3: registra a variância declaration-site dos type-params de um tipo
+     *  genérico (entradas cruas `"out T"`/`"in T"`/`"T"`). */
+    void registerTypeParameters(String name, java.util.List<String> typeParameters) {
+        if (name == null || typeParameters == null || typeParameters.isEmpty()) return;
+        genericVariance.put(name, typeParameters.stream().map(TypeParams::variance).toList());
+    }
+
+    /** X5.3: variâncias declaradas do tipo (índice = posição do type-param),
+     *  ou {@code null} quando o tipo não declara type-params no módulo. */
+    java.util.List<String> varianceOf(String name) { return genericVariance.get(name); }
     // REFACTOR-500 (split p/ SemDeclarationAnalyzer): mutadores de ESTADO DE
     // CONTEXTO — a mutacao acontece no dono do estado (mesmo padrao da fase 6);
     // os satellites dirigem via estes setters.

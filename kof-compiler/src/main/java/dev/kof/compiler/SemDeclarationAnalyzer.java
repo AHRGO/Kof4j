@@ -91,6 +91,8 @@ final class SemDeclarationAnalyzer {
         // X5.1 (D-X5-SURFACE): interface que estende interface `sealed` só na
         // mesma unidade de compilação (SEM080).
         SealedTypeChecks.checkSubtype(sa, iface.position(), iface.name(), null, iface.interfaces());
+        // X5.3 (D-TYPE-VARIANCE): restrição de posição de `out`/`in`.
+        VarianceChecks.checkInterface(sa, iface);
         // #213: corpos de métodos default de interface precisam ser analisados
         // (resolução de `greet(name)` como this.greet, tipos de retorno) — antes
         // eram ignorados e a chamada nua virava função hoisted.

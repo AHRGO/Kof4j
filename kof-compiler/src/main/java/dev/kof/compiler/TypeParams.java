@@ -19,11 +19,31 @@ final class TypeParams {
 
     private TypeParams() {}
 
-    /** Nome limpo da entrada (`"T: Animal"` → `"T"`). */
+    /**
+     * Nome limpo da entrada (`"T: Animal"` → `"T"`; `"out T: Animal"` → `"T"`).
+     * X5.3 (D-TYPE-VARIANCE): a variância (`out`/`in`) precede o nome e é
+     * removida aqui — todo consumidor de descritor/erasure passa pelo nome.
+     */
     static String name(String entry) {
         if (entry == null) return "";
         int c = entry.indexOf(':');
-        return (c < 0 ? entry : entry.substring(0, c)).trim();
+        String n = (c < 0 ? entry : entry.substring(0, c)).trim();
+        if (n.startsWith("out ")) return n.substring(4).trim();
+        if (n.startsWith("in ")) return n.substring(3).trim();
+        return n;
+    }
+
+    /**
+     * X5.3 (D-TYPE-VARIANCE): variância declarada — `"out"`, `"in"` ou `""`
+     * (invariante; default compatível com todo tipo genérico já existente).
+     */
+    static String variance(String entry) {
+        if (entry == null) return "";
+        int c = entry.indexOf(':');
+        String n = (c < 0 ? entry : entry.substring(0, c)).trim();
+        if (n.startsWith("out ")) return "out";
+        if (n.startsWith("in ")) return "in";
+        return "";
     }
 
     /** Texto do bound (após o ':'), ou null quando não há. */

@@ -227,6 +227,34 @@ subtype is **`SEM081`**. `sealed` is a **compile-time-only** modifier (erased in
 codegen: identical bytes on JVM/Native/JS) and a **contextual** keyword — `sealed`
 stays a valid identifier outside a type declaration.
 
+**Declaration-site variance `out`/`in` (X5.3 — `D-TYPE-VARIANCE`, 21/09):**
+a generic type parameter may carry a variance prefix — `class Source<out T>` is
+**covariant**, `class Sink<in T>` is **contravariant**, and no prefix means
+**invariant** (the default, unchanged from before). The variance governs the
+compatibility of the **type arguments of the same raw type**:
+
+```kof
+record Source<out T>(T value)          // read-only component = out position
+Source<Animal> up(Source<Dog> d) { return d }   // OK: Dog <: Animal (covariant)
+
+class Sink<in T> { String consume(T v) { return "x" } }   // input position
+Sink<Dog> down(Sink<Animal> w) { return w }     // OK: Animal >: Dog (contravariant)
+
+class Box<T> { T value ... }           // invariant
+Box<Animal> f(Box<Dog> d) { return d } // SEM021: rejected (§270)
+```
+
+`out`/`in` are **contextual** keywords (still valid identifiers). Erased in
+codegen: descriptors and execution bytes are identical on JVM/Native/JS (the
+variance lives only in the typer). **Soundness guard (`SEM082`):** `out T` is
+forbidden in an input position (method/constructor parameter, writable class
+field) and `in T` is forbidden in an output position (return type, any field or
+record component), because a writable `out` / readable `in` would allow the
+covariant/contravariant alias to store or expose a value of the wrong type.
+Record components and interface fields are read-only, so `out T` is allowed
+there. Restriction to v1: variance in **inheritance** positions
+(`extends`/`implements` type arguments) is not cross-checked yet (X5.3b).
+
 **Guarantee of the type checker:** a function/method **that does not exist on a
 known type** is an error (`SEM015`/`SEM025`); argument/constructor arity is
 checked (`SEM013`/`SEM023`); an incompatible return type is an error (`SEM010`);
@@ -390,6 +418,7 @@ the lambda's return (*probe*: map/filter/reduce correct).
 | `SEM079` | design-system token misuse: unknown member of `Spacing`/`Radius`/`Border`/`Elevation`/`Typography`, or a method call on a token namespace | `KofUiTokens` (Fase 10) |
 | `SEM080` | subtype (`extends`/`implements`) of a `sealed` type declared outside its compilation unit (the sealed subtype set is closed) | `SealedTypeChecks` (X5.1/D-X5-SURFACE) |
 | `SEM081` | `switch` expression over a `sealed` subject missing a direct subtype case (no `default`) | `MemberResolver` (X5.2/D-X5-SURFACE) |
+| `SEM082` | `out` type parameter used in an input position (parameter/writable field) or `in` type parameter used in an output position (return/field/record component) — declaration-site variance soundness | `VarianceChecks` (X5.3/D-TYPE-VARIANCE) |
 | `ARITH001` | division/remainder by a **constant** zero | `ExpressionBinaryLowerer` (constant-zero guard) |
 
 Division by a **non-constant** zero (`7 / z` with `z=0`) → **runtime**

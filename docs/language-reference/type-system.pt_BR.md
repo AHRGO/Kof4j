@@ -229,6 +229,34 @@ selado é **exaustivo sem `default`** quando cobre todo subtipo direto
 **keyword contextual** — `sealed` segue identificador válido fora de uma
 declaração de tipo.
 
+**Variância no sítio de declaração `out`/`in` (X5.3 — `D-TYPE-VARIANCE`, 21/09):**
+um type-param genérico pode carregar um prefixo de variância — `class Source<out T>`
+é **covariante**, `class Sink<in T>` é **contravariante**, e sem prefixo é
+**invariante** (o padrão, inalterado). A variância governa a compatibilidade dos
+**type-args do mesmo raw**:
+
+```kof
+record Source<out T>(T value)          // componente somente-leitura = posição de saída
+Source<Animal> up(Source<Dog> d) { return d }   // OK: Dog <: Animal (covariante)
+
+class Sink<in T> { String consume(T v) { return "x" } }   // posição de entrada
+Sink<Dog> down(Sink<Animal> w) { return w }     // OK: Animal >: Dog (contravariante)
+
+class Box<T> { T value ... }           // invariante
+Box<Animal> f(Box<Dog> d) { return d } // SEM021: rejeitado (§270)
+```
+
+`out`/`in` são **keywords contextuais** (seguem identificadores válidos). Apagados
+na emissão: descritores e bytes de execução idênticos em JVM/Native/JS (a variância
+vive só no typer). **Guarda de solidez (`SEM082`):** `out T` é proibido em posição
+de entrada (parâmetro de método/construtor, campo gravável de classe) e `in T` é
+proibido em posição de saída (retorno, qualquer campo ou componente de record),
+porque um `out` gravável / `in` legível deixaria o alias covariante/contravariante
+gravar ou expor um valor do tipo errado. Componentes de record e campos de
+interface são somente-leitura, então `out T` é permitido neles. Restrição da v1:
+variância em posição de **herança** (type-args de `extends`/`implements`) ainda não
+é cruzada (X5.3b).
+
 **Garantia do type checker:** chamada a função/método **inexistente em tipo
 conhecido** é erro (`SEM015`/`SEM025`); aridade de argumentos/construtores é
 checada (`SEM013`/`SEM023`); tipo de retorno incompatível é erro (`SEM010`);
@@ -392,6 +420,7 @@ retorno do lambda (*probe*: map/filter/reduce corretos).
 | `SEM079` | uso errado de token do design system: membro inexistente de `Spacing`/`Radius`/`Border`/`Elevation`/`Typography`, ou chamada de método num namespace de token | `KofUiTokens` (Fase 10) |
 | `SEM080` | subtipo (`extends`/`implements`) de tipo `sealed` declarado fora de sua unidade de compilação (o conjunto de subtipos selado é fechado) | `SealedTypeChecks` (X5.1/D-X5-SURFACE) |
 | `SEM081` | `switch` expressão sobre sujeito `sealed` sem um caso de subtipo direto (sem `default`) | `MemberResolver` (X5.2/D-X5-SURFACE) |
+| `SEM082` | type-param `out` usado em posição de entrada (parâmetro/campo gravável) ou type-param `in` usado em posição de saída (retorno/campo/componente de record) — solidez da variância declaration-site | `VarianceChecks` (X5.3/D-TYPE-VARIANCE) |
 | `ARITH001` | divisão/resto por zero **constante** | `ExpressionBinaryLowerer` (guarda de zero constante) |
 
 Divisão por zero **não-constante** (`7 / z` com `z=0`) → erro de **runtime**

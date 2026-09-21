@@ -141,6 +141,7 @@ public final class SymbolTableBuilder {
         SymbolTable.ClassSymbol classSym = sa.allClasses().get(cls.name());
         SymbolTable classScope = classSym.members().enterScope();
         sa.putClassMemberScope(cls.name(), classScope);
+        sa.registerTypeParameters(cls.name(), cls.typeParameters()); // X5.3
         for (String tp : cls.typeParameters()) {
             // §355: entry pode trazer bound ("T: Animal") — nome limpo +
             // bound no symbol, para o TypeVariable do escopo apagar certo.
@@ -302,6 +303,7 @@ public final class SymbolTableBuilder {
         SymbolTable classScope = classSym.members().enterScope();
         sa.putClassMemberScope(rec.name(), classScope);
         List<String> typeParams = rec.typeParameters() == null ? List.of() : rec.typeParameters();
+        sa.registerTypeParameters(rec.name(), typeParams); // X5.3
         for (String tp : typeParams) {
             classScope.define(TypeParams.symbol(tp, sa)); // §355
         }
@@ -363,6 +365,7 @@ public final class SymbolTableBuilder {
         // #160: type-params de interface genérica entram no escopo ANTES dos
         // membros, igual a defineClassMembers — sem isso `map(T input)` não
         // resolve o T.
+        sa.registerTypeParameters(iface.name(), iface.typeParameters()); // X5.3
         for (String tp : iface.typeParameters()) {
             classScope.define(TypeParams.symbol(tp, sa)); // §355
         }

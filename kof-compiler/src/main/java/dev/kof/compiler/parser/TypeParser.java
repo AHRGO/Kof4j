@@ -50,6 +50,7 @@ public class TypeParser {
             ctx.advance();
             while (!ctx.check(TokenType.GREATER) && !ctx.atEnd()) {
                 String name = null;
+                String variance = null;
                 StringBuilder bound = null;
                 int depth = 0;
                 while (!ctx.atEnd() && !(depth == 0
@@ -64,12 +65,25 @@ public class TypeParser {
                     if (bound != null) {
                         bound.append(t.value());
                     } else if (name == null && t.type() == TokenType.IDENTIFIER) {
-                        name = t.value();
+                        // X5.3 (D-TYPE-VARIANCE): `out`/`in` são keywords
+                        // contextuais ANTES do nome do type-param (declaration-site
+                        // variance). Sem um identificador seguinte continuam sendo
+                        // o próprio nome (compat: `class X<in>` segue válido).
+                        if (variance == null && ("out".equals(t.value()) || "in".equals(t.value()))) {
+                            variance = t.value();
+                        } else {
+                            name = t.value();
+                        }
                     }
+                }
+                if (name == null && variance != null) {
+                    name = variance;
+                    variance = null;
                 }
                 if (name != null) {
                     String boundText = bound == null ? "" : bound.toString().trim();
-                    typeParams.add(boundText.isEmpty() ? name : name + ": " + boundText);
+                    String tp = boundText.isEmpty() ? name : name + ": " + boundText;
+                    typeParams.add(variance == null ? tp : variance + " " + tp);
                 }
                 if (ctx.check(TokenType.COMMA)) ctx.advance();
             }
