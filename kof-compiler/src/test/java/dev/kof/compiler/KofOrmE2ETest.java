@@ -558,17 +558,17 @@ class KofOrmE2ETest {
 
     @Test
     void findPreservesSavedBoolTrueRegression397(@TempDir Path tempDir) throws Exception {
-        // §397: o save gravava Bool true como 1 e o find devolvia false
-        // (rs.getObject = Integer e parseBoolean("1") = false) -- simetria
-        // gravar==ler, a unica contraparte possivel do contrato.
-        Path source = tempDir.resolve("Main.kf");
-        Files.writeString(source, """
+        // §397: gravar==ler no Bool (JVM le INTEGER !=0 apos o fix do binder;
+        // a asm de leitura do find (F2b) seguiu o oracle pre-fix e le "true"
+        // so do texto -- este teste trava a PARIDADE CROSS com o host
+        // corrigido: save(true) -> find().ok == true nos dois targets).
+        String kf = """
             entity Flag {
                 id: Long generated
                 ok: Bool
             }
             main() {
-                var db = db.connect("jdbc:sqlite:%s")
+                var db = db.connect("%s")
                 db.execute(db, "create table if not exists flag (id INTEGER PRIMARY KEY AUTOINCREMENT, ok INTEGER)")
                 var a = orm.save(db, Flag(0, true))
                 var b = orm.save(db, Flag(0, false))
@@ -576,10 +576,34 @@ class KofOrmE2ETest {
                 if (fa != null) { println(fa.ok) }
                 var fb = orm.find<Flag>(db, b.id)
                 if (fb != null) { println(fb.ok) }
+                var fm = orm.find<Flag>(db, 999L)
+                if (fm == null) { println("miss=null") }
             }
-            """.formatted(tempDir.resolve("s396.db").toString()));
-        runJvmWithExtra(source, tempDir.resolve("out"),
-                findDriverJar("sqlite-jdbc", "SQLite"), "true\nfalse");
+            """;
+        String expected = "true\nfalse\nmiss=null";
+        Path jvmSource = tempDir.resolve("JvmMain.kf");
+        Files.writeString(jvmSource,
+                kf.formatted("jdbc:sqlite:" + tempDir.resolve("jvm-flag397.db")));
+        runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
+                findDriverJar("sqlite-jdbc", "SQLite"), expected);
+        Path nativeSource = tempDir.resolve("NativeMain.kf");
+        Files.writeString(nativeSource,
+                kf.formatted("sqlite:" + tempDir.resolve("nat-flag397.db")));
+        CompilationResult nr = driver.compile(nativeSource,
+                tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nr.success(), "Native deve compilar orm.find (F2b): "
+                + nr.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(
+                tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process pr = pb.start();
+        String out = new String(pr.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        int ec = pr.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals(expected, out,
+                "§397 cross-target: save(true)->find().ok=true tambem no Native (INTEGER !=0)");
     }
 
     @Test

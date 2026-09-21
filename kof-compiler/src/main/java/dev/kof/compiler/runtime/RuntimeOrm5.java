@@ -19,10 +19,9 @@ package dev.kof.compiler.runtime;
  * column <name>"} (R6 — o host explodiria na reflexão com null). Leitura por
  * typeCode: int via {@code column_int}+{@code movslq} (8B no slot), long via
  * {@code column_int64}, string via {@code make_string} (SQLITE_NULL → null),
- * bool via {@code column_text} equalsIgnoreCase "true" — paridade MEDIDA com
- * o oráculo JVM+sqlite ({@code kof_json_bind(boolean)} faz
- * {@code Boolean.parseBoolean(String.valueOf(value))}; INTEGER 1 → "1" →
- * false, TEXT "true" → true), double via {@code column_double}+{@code movsd},
+ * bool por tipo dinâmico da coluna (§397, paridade com o binder
+ * consertado do host): INTEGER/FLOAT !=0, TEXT literal "true", NULL
+ * false; double via {@code column_double}+{@code movsd},
  * float widened→{@code cvtss2sd... cvtsd2ss}+{@code movss} 4B (slots de
  * float guardam os bits nos 4 bytes baixos, como o save/bind lêem).
  *
@@ -323,12 +322,41 @@ public final class RuntimeOrm5 {
                 movq %rax, (%r14)
                 jmp .Lorm5_fldnext
             .Lorm5_rbool:
+                # §397: paridade EXATA com o binder do host (kof_json_bind):
+                # NULL->false, INTEGER/FLOAT->numero!=0, TEXT->"true"
+                # literal. O pre-F2b copiava o oracle antigo (1->false); o
+                # host foi consertado - a asm segue o host consertado.
                 movq %r12, %rdi
                 movl %r15d, %esi
                 call sqlite3_column_type
                 cmpl $5, %eax
-                jne .Lorm5_rbool1
-                movq $0, (%r14)              # null -> parseBoolean("null")=false
+                je .Lorm5_rboolnull
+                cmpl $1, %eax
+                je .Lorm5_rboolint
+                cmpl $2, %eax
+                je .Lorm5_rbooldbl
+                jmp .Lorm5_rbool1            # TEXT/BLOB: literal "true"
+            .Lorm5_rboolnull:
+                movq $0, (%r14)              # null -> false (String.valueOf)
+                jmp .Lorm5_fldnext
+            .Lorm5_rboolint:
+                movq %r12, %rdi
+                movl %r15d, %esi
+                call sqlite3_column_int64
+                testq %rax, %rax
+                setne %al
+                movzbl %al, %eax
+                movq %rax, (%r14)
+                jmp .Lorm5_fldnext
+            .Lorm5_rbooldbl:
+                movq %r12, %rdi
+                movl %r15d, %esi
+                call sqlite3_column_double
+                cvtsd2si %xmm0, %rax         # truncate identico ao intValue() do binder
+                testq %rax, %rax
+                setne %al
+                movzbl %al, %eax
+                movq %rax, (%r14)
                 jmp .Lorm5_fldnext
             .Lorm5_rbool1:
                 movq %r12, %rdi
@@ -358,7 +386,7 @@ public final class RuntimeOrm5 {
                 movq $1, (%r14)
                 jmp .Lorm5_fldnext
             .Lorm5_rboolf:
-                movq $0, (%r14)              # parseBoolean("1")=false (oraculo)
+                movq $0, (%r14)              # texto != "true" -> false (igual ao binder)
             .Lorm5_fldnext:
                 incq 96(%rsp)
                 jmp .Lorm5_fld

@@ -42,6 +42,12 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `KofOrmE2ETest#findPreservesSavedBoolTrueRegression397`,
     `JsonCompleteE2ETest#jvmDecodeIntFieldIntoBoolRecordBindsTrue`).
     Contrato travado para a asm do F2b: `INTEGER != 0` no slot Bool.
+    Follow-up medido 21/09: a asm do `find` (`RuntimeOrm5`, F2b da irma) levara o
+    oracle antigo (TEXT "true", INTEGER 1 -> false) e virou divergencia JVM×Native
+    com o host consertado — patch por tipo dinamico de coluna (`!=0`) +
+    `findPreservesSavedBoolTrueRegression397` estendido p/ byte-paridade
+    Native==JVM (RED sem o patch na assert cross, GREEN com; KofOrmE2ETest 44/0F).
+
   - **Fortalecimento de teste F2a (lane gaps-db)** (20/09): a unidade F2a
     (`save` row-object, `RuntimeOrm4`+`RuntimeOrmSchema`+`RuntimeOrmBind`)
     pousou por `4316d325`; esta fatia SÓ FORTALECE A PROVA — o
