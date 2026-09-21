@@ -171,6 +171,24 @@ Restante (opcional, não é fila): a passada ampla de deriva doc/código sobre
 toda afirmação de `docs/` (item 3 das próximas passadas); até então a frente
 está **convergida**.
 
+## Passada 3 — referências a testes-fantasma (21/09)
+
+Método: todo token `*Test` em backticks nos `docs/` conferido contra a árvore
+(grep em todo `*/src/test` + nome de arquivo). **Ausente = referência-fantasma.**
+232 tokens nos três ledgers de paridade, 11 em todos os docs.
+
+| Token | Onde | Veredito |
+|---|---|---|
+| `KofChannelTest`, `ChannelStdlibE2ETest` | prova-vizinha do §374 em `known-bugs.md` | **evidência quebrada** — nunca existiram; anotados inline, vizinho real do canal = `KofConcurrency2Test` 48/48 |
+| `AarchSchedSmokeTest`, `GenericFieldChainE2ETest`, `NullableReceiverFieldWriteE2ETest`, `KofCharCrossE2ETest`, `ProcessRunE2ETest` | ponteiros abertos / esboços de fix | nome proposto (teste a escrever) — não é drift |
+| `NullablePrimitiveFieldsE2ETest` | nota de reversão do §243 | histórico (existiu quando a face meio-pousada foi pinada) — não é drift |
+| `SequenceE2ETest`, `ChannelE2ETest` | `future/PLAN-MULTIPARADIGMA.md` | plano futuro — não é drift |
+| `KofSemanticTest` | `decisions/planning-mutability.md` | proposto — não é drift |
+
+Resultado: **2 referências-fantasma usadas como prova** (ambas já sinalizadas
+transitoriamente pela sessão q553, `6ce55b28`); agora catalogadas de forma
+durável e anotadas inline. As outras 9 são nomes legítimos de plano/histórico.
+
 ## Próximas passadas (planejadas — ainda não executadas)
 
 1. **Checagem de assimetria de paridade** — **FEITA (fatia 2b,

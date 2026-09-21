@@ -165,6 +165,24 @@ was found**. What the front *did* produce is real and committed:
 Remaining (optional, not a queue): the broad doc/code drift pass across every
 `docs/` claim (item 3 of next passes); until then the front is **converged**.
 
+## Pass 3 — phantom test references (21/09)
+
+Method: every backticked `*Test` token in `docs/` checked against the tree
+(grep in every `*/src/test` + filename match). **Absent = phantom reference.**
+232 tokens in the three parity ledgers, 11 across all docs.
+
+| Token | Where | Verdict |
+|---|---|---|
+| `KofChannelTest`, `ChannelStdlibE2ETest` | `known-bugs.md` §374 neighbor proof | **broken evidence** — never existed; annotated inline, real channel neighbor = `KofConcurrency2Test` 48/48 |
+| `AarchSchedSmokeTest`, `GenericFieldChainE2ETest`, `NullableReceiverFieldWriteE2ETest`, `KofCharCrossE2ETest`, `ProcessRunE2ETest` | open pointers / fix sketches | proposed name (test to be written) — not drift |
+| `NullablePrimitiveFieldsE2ETest` | §243 revert note | historical (existed when the half-landed face was pinned) — not drift |
+| `SequenceE2ETest`, `ChannelE2ETest` | `future/PLAN-MULTIPARADIGMA.md` | future plan — not drift |
+| `KofSemanticTest` | `decisions/planning-mutability.md` | proposed — not drift |
+
+Result: **2 phantom references used as proof** (both already flagged
+transiently by the q553 session, `6ce55b28`); now durably catalogued and
+annotated inline. The other 9 are legitimate plan/historical names.
+
 ## Next passes (planned — not yet executed)
 
 1. **Parity asymmetry check** — **DONE (slice 2b, `StdParityGapAuditTest`
