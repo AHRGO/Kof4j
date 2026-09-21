@@ -2207,7 +2207,9 @@ nesta sessão — respostas às Q1–Q4 do §6 de `makealive-plan.md`)
 "completo" / "kof.db desde o dia 1" / "confirmar flat + inglês"). Colisão R1
 medida 19/09 (plano §2.1). **Destrava a linha 3.1 do tracker** (dono .18):
 próximo = 3.1 core host + `MakealiveE2ETest`; 3.2/3.7 eram ⛔ R4 — **R4 ✅ pousou 21/09** (3.2 segue decisão de superfície regra 6; 3.7 depende dela); 3.8
-(contrato do CLI `kof infra`) segue pergunta aberta (regra 6).
+(contrato do CLI `kof infra`) segue pergunta aberta (regra 6). **ATUALIZAÇÃO 21/09:** resolvido por
+**`D-MAKEALIVE-SYNTAX`** (abaixo) — **3.2 DECIDIDA** (açúcar puro sobre `design()`),
+que **destrava a 3.7**; **3.8 reiterada** (`kof makealive` apenas, `kof infra` não adicionado).
 
 ## D-KOF-AS-CLOUD — Kof tem que estar pronto para SER a própria nuvem
 

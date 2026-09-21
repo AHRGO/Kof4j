@@ -11,7 +11,7 @@
 > `Provider` de três function-values. O host é só composição — toda fronteira
 > de runtime (arquivos, processos, HTTP, um banco) vive no corpo do provedor,
 > escrito por você em Kof puro. O desenho tem um **açúcar** declarativo (linha 3.2
-> `infra "prod" { ... }`, decidida 21/09 — ver "O desenho declarativo" abaixo);
+> `infra "prod" { ... }`, **DECIDIDA 21/09 `D-MAKEALIVE-SYNTAX`**, pousada — ver "O desenho declarativo" abaixo);
 > o gate de grafo em tempo de compilação (linha 3.7) segue esse açúcar e, até lá,
 > a recusa em runtime sai nomeada.
 
@@ -186,7 +186,7 @@ de assinatura. Nada em `kof.makealive` sabe que uma nuvem existe.
 - **§382** (aberto, ponte): códigos numéricos do kof.io JS (acima).
 - Linhas 3.3 (reconcile via `scheduler`), 3.6 (secrets `kof.security` — lane
   security) e 3.8 agora é o CLI `kof makealive` (D-MAKEALIVE-CLI, 20/09); o resto é do
-  Estágio 3; 3.2 pousou (açúcar declarativo `infra`), 3.7 segue ela.
+  Estágio 3; **3.2 pousada 21/09** (açúcar declarativo `infra`, `D-MAKEALIVE-SYNTAX`), 3.7 segue ela.
 
 ## CLI (3.8 — landed 20/09, D-MAKEALIVE-CLI)
 

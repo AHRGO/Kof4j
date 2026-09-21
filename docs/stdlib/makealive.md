@@ -11,7 +11,7 @@
 > three function-values. The host is composition only — every runtime
 > boundary (files, processes, HTTP, a database) lives in the provider body,
 > written by you in plain Kof. The design has a declarative **sugar** (row 3.2
-> `infra "prod" { ... }`, decided 21/09 — see "The declarative design" below);
+> `infra "prod" { ... }`, **DECIDED 21/09 `D-MAKEALIVE-SYNTAX`**, landed — see "The declarative design" below);
 > the compile-time graph gate (row 3.7) follows that sugar, and until then the
 > runtime refusal ships named.
 
@@ -186,7 +186,7 @@ signing API. Nothing in `kof.makealive` knows a cloud exists.
 - **§382** (open, bridge): kof.io JS numeric codes (above).
 - Rows 3.3 (reconcile via `scheduler`), 3.6 (`kof.security` secrets —
   security lane), 3.8 is now the `kof makealive` CLI (D-MAKEALIVE-CLI, 20/09); the rest of
-  of Stage 3; 3.2 landed (declarative `infra` sugar), 3.7 follows it.
+  of Stage 3; **3.2 landed 21/09** (declarative `infra` sugar, `D-MAKEALIVE-SYNTAX`), 3.7 follows it.
 
 ## CLI (3.8 — landed 20/09, D-MAKEALIVE-CLI)
 

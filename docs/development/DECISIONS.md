@@ -2239,7 +2239,9 @@ session — answers to the Q1–Q4 of `makealive-plan.md` §6)
 19/09 (plan §2.1). **Unblocks tracker 3.1** (owner .18): next = 3.1 core
 host + `MakealiveE2ETest`; 3.2/3.7 were ⛔ R4 — **R4 ✅ landed 21/09** (3.2 remains
 a rule-6 surface decision; 3.7 depends on it); 3.8 (the `kof infra` CLI
-contract) stays an open question (rule 6).
+contract) stays an open question (rule 6). **UPDATE 21/09:** resolved by
+**`D-MAKEALIVE-SYNTAX`** (below) — **3.2 DECIDED** (pure sugar over `design()`),
+which **unblocks 3.7**; **3.8 reaffirmed** (`kof makealive` only, `kof infra` not added).
 
 ## D-KOF-AS-CLOUD — Kof must be ready to BE the cloud itself
 
