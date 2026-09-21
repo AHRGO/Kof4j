@@ -230,8 +230,6 @@ public final class RuntimeOrm1 {
                 .ascii "unknown db connection: "
             .Lorm_delit:
                 .ascii "DELETE FROM \\""
-            .Lorm_delmy:
-                .ascii "DELETE FROM `"
             .Lorm_mysql_msg:
                 .long 1
                 .long 0
@@ -301,29 +299,10 @@ public final class RuntimeOrm1 {
                 movzbl %al, %eax
                 jmp .Lorm_da_ret
             .Lorm_da_mysql:
-                # mesmo builder, prefixo/sufixo backtick (dialect do host)
-                movq 8(%rsp), %rax
-                movl 16(%rax), %eax
-                addl $22, %eax
-                movl %eax, %edi
-                call .Lorm_bbegin
-                movq %rbx, 16(%rsp)
-                leaq .Lorm_delmy(%rip), %rsi
-                movl $13, %ecx
-                call .Lorm_bp
-                movq 8(%rsp), %r13
-                leaq 24(%r13), %rsi
-                movl 16(%r13), %ecx
-                call .Lorm_bp
-                movl $96, %r8d                  # '`'
-                call .Lorm_bh
-                call .Lorm_bfin
                 movq (%rsp), %rdi
-                movq 16(%rsp), %rsi
-                call kof_db_execute             # id malformado lanca como o host
-                testl %eax, %eax                # wire devolve affectedRows (>=0 no OK)
-                setge %al                       # host: kof_db_execute(...) >= 0
-                movzbl %al, %eax
+                movq 8(%rsp), %rsi
+                call .Lorm_da_my
+                jmp .Lorm_da_ret
             .Lorm_da_ret:
                 addq $56, %rsp
                 popq %r15
@@ -337,9 +316,14 @@ public final class RuntimeOrm1 {
 
             # ---------------------------------------------------------------
             # kof_orm_count(id*, table*, schema*) -> Long (rax)
-            #   SELECT COUNT(*) FROM "table"; id invalido lanca a string do
-            #   host; mysql ORM001 (runtime). SQL error no SELECT: callback
-            #   nunca roda -> atol(0)=0 — mesmo zero-row do host (honesto).
+            #   SQLite: SELECT COUNT(*) FROM "table"; id invalido lanca a
+            #   string do host; SQL error no SELECT: callback nunca roda ->
+            #   atol(0)=0 — mesmo zero-row do host (honesto).
+            #   MySQL (F2d2, D-DB-GAPS DB-3): SELECT COUNT(*) FROM `table`
+            #   via COM_QUERY — le o resultset com os readers do stack
+            #   (kof_db_mysql_next/lenenc) e extrai o valor do 1o row com
+            #   parse bounded por len (nunca le fora do pacote); erro/NULL ->
+            #   0 (mesmo zero-row honesto do ramo sqlite).
             # ---------------------------------------------------------------
             .globl kof_orm_count
             .type kof_orm_count, @function
@@ -355,6 +339,9 @@ public final class RuntimeOrm1 {
                 subq $56, %rsp
                 movq %rdi, (%rsp)               # id
                 movq %rsi, 8(%rsp)              # table
+                call kof_db_type                # eax: 1=sqlite 2=mysql 0=ruim
+                cmpl $2, %eax
+                je .Lorm_cnt_mysql
                 movq 8(%rsp), %rax
                 movl 16(%rax), %eax
                 addl $39, %eax                  # 22 + tbl + 1 + folga
@@ -377,6 +364,15 @@ public final class RuntimeOrm1 {
                 movq 16(%rsp), %rsi
                 movq 24(%rsp), %rdi
                 call .Lorm_count_sql
+                jmp .Lorm_cnt_ret
+            .Lorm_cnt_mysql:
+                movq (%rsp), %rdi
+                movq 8(%rsp), %rsi
+                call .Lorm_cnt_my
+                jmp .Lorm_cnt_ret
+            .Lorm_cnt_zero:
+                xorl %eax, %eax
+            .Lorm_cnt_ret:
                 addq $56, %rsp                  # espelhos delete_all: pops na regiao andada, rbp so no fim
                 popq %r15
                 popq %r14
@@ -386,6 +382,7 @@ public final class RuntimeOrm1 {
                 movq %rbp, %rsp
                 popq %rbp
                 ret
+
 
 
             # ---------------------------------------------------------------

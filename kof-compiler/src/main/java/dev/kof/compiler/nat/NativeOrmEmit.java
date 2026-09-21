@@ -37,6 +37,7 @@ public final class NativeOrmEmit {
         }
         if (backend.usesOrm) {
             dev.kof.compiler.runtime.RuntimeOrm1.emit(sb);
+            dev.kof.compiler.runtime.RuntimeOrmMysql.emit(sb);
             dev.kof.compiler.runtime.RuntimeOrm2.emit(sb);
             StringBuilder o3 = new StringBuilder();
             dev.kof.compiler.runtime.RuntimeOrm3.emit(o3);
