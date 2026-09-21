@@ -46,6 +46,27 @@
 
 ---
 
+## 0. Read first
+
+This is the **ratified 1.0 exit-gate contract** (`D-RELEASE-1.0`). Read:
+
+- **§25 Executive summary** — the two-minute version.
+- **§8 EXIT GATE** — the contract; **§13** the target checklist (the 8-target
+  Stable 1.0, KofC + Android inside, per `D-1.0-EDGES`).
+- **§21 Q1–Q8** — the maintainer's decisions (all resolved; only **EG-8** — the
+  maintainer's own declaration — is still open).
+- **§23 After Mel's approval** — the **execution order** (the queue), tracked in
+  `roadmap.md` §24.
+- **§35** — the EXIT GATE v3 candidate block; **§37** the 09/20 revalidation
+  record (v3.1).
+- **§24** — the rule for updating this document.
+
+Live status is measured mechanically by `scripts/check_release_050_gate.sh`
+(the 0.5.0 conditions) and `scripts/check_release_blockers.sh` (the EG queue /
+`--rc-gate`), never by eye.
+
+---
+
 # 1. Real state that governs this review
 
 This revision replaces the earlier reading that still treated `beta-0.4.0` as the active line.
