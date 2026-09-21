@@ -13,6 +13,36 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§433 / §434 CORRIGIDOS — os dois vermelhos do tip remoto da FFI/JS**
+    (21/09, lane FFI/JS `29198ea8`): §433
+    `ArtifactSizeTest.helloJsRuntimeSizeWithinBaseline` passava do orçamento JS
+    de 5% — re-baselinado COM causa (precedente §166): `HELLO_JS_BYTES`
+    13.007→13.834 KB pelo slice `kof.buffer` + helpers de marshal/bridge JS. §434
+    `StdParityGapAuditTest.bufferGatesToJvmWithFfiCodes` esperava o JS na lista
+    auditada dos gates de Buffer — `KofBuffer.gapCode` não devolve mais o
+    `FFI002` do JS (Buffer binda no JS desde R57/R58) e o teste tira o JS do
+    conjunto gateado. Ambos catalogados pela unidade F2d1 da gaps-db em
+    `2995d0f8` e corrigidos no mesmo dia.
+
+  - **§430 CORRIGIDO — testes false-green** (21/09, lane docs/plataforma): o
+    `RouterE2ETest.debugConc001` sem assert virou teste real, os cinco
+    `NativeDebugTest*.java` só-print foram deletados, o `KofWebNativeE2ETest`
+    agora envia um `GET /` real e asserta 200, e o
+    `BareCollectionPrimitiveArgE2ETest` gateia em `NativeToolchainGate.present()`
+    para uma regressão do emissor nativo FALHAR em vez de skipar.
+
+  - **§435 CORRIGIDO + ponto cego do gate de âncoras fechado** (21/09, lane
+    `.18`): extraídos os envelopes JSON-RPC do `LspServer` para a classe irmã
+    `LspJsonRpc` (regra 7), levando o arquivo 601 → **582** (`check_500` verde)
+    depois que o fix §429 o empurrou além do crítico 600; comportamento
+    preservado (`LspServerTest` 38/38). Ao fechar, achou-se o
+    `scripts/check_ledger_anchors.sh` **cego a hrefs de hífen único** — o regex
+    exigia `NNN--`, então um `#435-gate` malformado (o slug real é
+    `#435--gate`) nunca era validado; 14 cross-links EN↔PT malformados
+    (§424–§428, §431, §435) passavam verdes desde sempre. O regex agora casa
+    `NNN-` e o `--selftest` planta um fixture de hífen único; os 14 hrefs foram
+    reescritos pelo `gh_slug` exato do heading de destino. Contagem viva 21→20.
+
   - **Estabilidade — ratchets da FFI JS reconciliados após o fecho da superfície
     JS** (21/09): a suíte completa (3472 testes) revelou 3 ratchets stale
     deixados pelas fatias do bridge D6/JS — ainda afirmavam o estado pré-bridge,

@@ -14203,7 +14203,7 @@ p
 - **What is missing:** per-target cases (JS mirrors the JDK contract — regex for `replaceAll`/`replaceFirst`/`matches`, a real char array for `toCharArray`, case-insensitive compare) or an honest `gapCode` backstop; the codegen has no "unhandled String method -> honest gap" fallback.
 - **Related:** §259 (phantom gap-code discipline), `D-KOF-FIRST`, `training/idioms/strings.md`.
 
-<!-- pt-switch --> **PT:** [§424 (pt_BR)](known-bugs.pt_BR.md#424-five-accepted-string-methods-are-silently-incomplete-on-js-and-link-fail-on-native-with-no-gap-code-matches-replaceall-replacefirst-tochararray-comparetoignorecase-open-r6-jvm-works-the-other-targets-diverge-with-no-diagnostic)
+<!-- pt-switch --> **PT:** [§424 (pt_BR)](known-bugs.pt_BR.md#424--cinco-metodos-string-aceitos-ficam-silenciosamente-incompletos-no-js-e-falham-no-link-do-native-sem-gap-code-matchesreplaceallreplacefirsttochararraycomparetoignorecase---aberto-r6-o-jvm-funciona-os-outros-alvos-divergem-sem-diagnostico)
 
 ## §425 — riscv64/aarch64 `kof.config` is a silent-default stub while `KofConfig.supportedOn` returns true and the javadoc still claims `CONF001` — 🔴 OPEN (R6: wrong values on the cross, no diagnostic)
 
@@ -14214,7 +14214,7 @@ p
 - **What is missing:** a real config runtime on the cross, or gate the cross with an honest code (mirror `NAT005`/§423) plus fix the stale javadoc/matrix.
 - **Related:** §423 (NAT005 "declare the gap" precedent), `NativeRiscvAsmRtB0.java:332-333` (`kof_time_now` was the same stub, fixed under R6).
 
-<!-- pt-switch --> **PT:** [§425 (pt_BR)](known-bugs.pt_BR.md#425-riscv64-aarch64-kof-config-is-a-silent-default-stub-while-kofconfig-supportedon-returns-true-and-the-javadoc-still-claims-conf001-open-r6-wrong-values-on-the-cross-no-diagnostic)
+<!-- pt-switch --> **PT:** [§425 (pt_BR)](known-bugs.pt_BR.md#425--kofconfig-no-riscv64aarch64-e-um-stub-de-default-silencioso-enquanto-kofconfigsupportedon-retorna-true-e-o-javadoc-ainda-diz-conf001---aberto-r6-valores-errados-no-cross-sem-diagnostico)
 
 ## §426 — `time.collect()` compiles on JS but has no runtime and no gate (silent incomplete) — 🔴 OPEN
 
@@ -14224,7 +14224,7 @@ p
 - **Repro:** `main(){ time.collect() }` on JS -> undefined export/ReferenceError at run; compile clean.
 - **What is missing:** implement the JS GC-collect face, or gate it with an honest code.
 
-<!-- pt-switch --> **PT:** [§426 (pt_BR)](known-bugs.pt_BR.md#426-time-collect-compiles-on-js-but-has-no-runtime-and-no-gate-silent-incomplete-open)
+<!-- pt-switch --> **PT:** [§426 (pt_BR)](known-bugs.pt_BR.md#426--timecollect-compila-no-js-mas-nao-tem-runtime-nem-gate-incompleto-silencioso---aberto)
 
 ## §427 — the riscv64/aarch64 targets may lower `kof.io` and the web-T1 server, but their runtime has no such symbols (loud `ld` undefined-reference; the gate is wrong/missing) — 🔴 OPEN
 
@@ -14234,7 +14234,7 @@ p
 - **What is missing:** the cross runtimes, or an honest gate (NAT00x) at lowering for `io`/web-T1 on riscv64/aarch64.
 - **Related:** §423, `docs/native-multiarch.md` honest-refusal list.
 
-<!-- pt-switch --> **PT:** [§427 (pt_BR)](known-bugs.pt_BR.md#427-the-riscv64-aarch64-targets-may-lower-kof-io-and-the-web-t1-server-but-their-runtime-has-no-such-symbols-loud-ld-undefined-reference-the-gate-is-wrong-missing-open)
+<!-- pt-switch --> **PT:** [§427 (pt_BR)](known-bugs.pt_BR.md#427--os-alvos-riscv64aarch64-podem-baixar-kofio-e-o-servidor-web-t1-mas-o-runtime-deles-nao-tem-tais-simbolos-ld-undefined-reference-alto-o-gate-esta-erradoausente---aberto)
 
 ## §428 — the JVM and Native DAP sessions answer every unimplemented request with `success:true` and an empty body (silent façade, Q7) — 🔴 OPEN
 
@@ -14243,7 +14243,7 @@ p
 - Doc contradiction: `docs/debugging/debug-adapter.md:23` lists `restart` as a responsibility, but there is NO `case "restart"` (`grep '"restart"' kof-cli/src` empty) and §3.3 "Current limits" does not declare it.
 - **What is missing:** an honest `fail` for unimplemented requests (or explicit handlers); document `restart` as a limit if not implemented.
 
-<!-- pt-switch --> **PT:** [§428 (pt_BR)](known-bugs.pt_BR.md#428-the-jvm-and-native-dap-sessions-answer-every-unimplemented-request-with-success-true-and-an-empty-body-silent-fa-ade-q7-open)
+<!-- pt-switch --> **PT:** [§428 (pt_BR)](known-bugs.pt_BR.md#428--as-sessoes-dap-jvm-e-native-respondem-toda-requisicao-nao-implementada-com-successtrue-e-corpo-vazio-fachada-silenciosa-q7---aberto)
 
 ## §429 — the LSP server sends NO response to an unknown JSON-RPC REQUEST (client hangs; should be `-32601 MethodNotFound`) — ✅ FIXED 21/09 (lane docs/plataforma, sessão 9093: the `LspServer` default branch answers a request with `-32601 MethodNotFound`; notifications stay silent — `LspServerTest`)
 
@@ -14273,7 +14273,7 @@ p
 - **Stale artifacts (hygiene):** six untracked, gitignored `.class` files sit in `kof-cli/src/main/java/dev/kof/cli/` (`AppManifest*.class`, `CmdBuild*.class`, `CmdServe.class`, `KofCliSupport.class`) — not tracked, do not ship, but stale build output inside the source tree.
 - **Resolution (21/09):** deleted the dead `serveStatic`+`contentType` (and the illusionary `ServeStaticTest`) — F3-step-2b owns full-stack statics; removed the unreachable DAP attach branch (`attachPid` is handled once in `run()`, so `launch` is a no-op there); `Compare` now returns 1 on ANY unknown option, fail-closed (`CompareTest.unknownOptionIsFatalNotSilentlyRun`); `KofDebug` re-triaged NOT a bug — the outer chain already returns 1 for unknown flags and extra positionals, the inner `default` is unreachable; no stray `.class` in the tree at tip.
 
-<!-- pt-switch --> **PT:** [§431 (pt_BR)](known-bugs.pt_BR.md#431-minor-tooling-drift-found-by-the-deep-audit-dead-servestatic-with-a-false-javadoc-an-unreachable-dap-branch-a-non-fatal-compare-option-and-stale-class-files-in-the-source-tree-open-low-severity)
+<!-- pt-switch --> **PT:** [§431 (pt_BR)](known-bugs.pt_BR.md#431--drifts-menores-de-tooling-achados-pela-auditoria-profunda-servestatic-morto-com-javadoc-falso-ramo-inalcancavel-do-dap-opcao-nao-fatal-do-compare-e-class-stale-na-arvore-de-codigo---corrigido-2109-lane-18-tooling)
 
 ## §432 — JVM: `Map<_,Object>.getOrDefault(k, <primitivo>)` dies with VerifyError (the JVM emitter overwrites the slot's V with the call-site argument type) — 🟡 OPEN (pre-existing, catalogued 21/09; JVM codegen, found in the §352/Q4 hardening)
 
@@ -14304,13 +14304,13 @@ p
 
 <!-- pt-switch --> **PT:** [§434 (pt_BR)](known-bugs.pt_BR.md#-434--vermelho-do-tip-remoto-stdparitygapaudittestbuffergatestojvmwithfficodes--js-ausente-da-lista-auditada-de-gates-de-buffer---aberto-frente-de-outra-lane-catalogado-nao-corrigido-aqui)
 
-## §435 — `check_500` gate RED: `kof-cli/.../LspServer.java` crossed 600 lines (584 baseline → 601) after the §429 LSP fix — 🟡 OPEN 21/09 (owner: CLI/plataforma lane)
+## §435 — `check_500` gate RED: `kof-cli/.../LspServer.java` crossed 600 lines (584 baseline → 601) after the §429 LSP fix — ✅ FIXED 21/09 (lane .18; split into `LspJsonRpc`, LspServer 601→582)
 
 - **Measured (21/09, clean tree on tip `be688562`):** `scripts/check_500.sh` → `FALHOU — kof-cli/src/main/java/dev/kof/cli/LspServer.java tinha 584 (< 600) no baseline, agora 601 (>= 600): cruzou a linha vermelha, split obrigatório.` This is a **merge gate** (AGENTS §"Lesson learned" — ≥600 is CRITICAL; the baseline debt never grows).
 - **Origin (diagnosed, not fixed):** the §429 fix (DOING line, session 9093 docs/plataforma: `default -> { }` of the JSON-RPC dispatch now answers `-32601 MethodNotFound` via a new `respondError` helper) grew the already-tolerated file past the critical line. The same lane is the natural owner (its own DOING next-step is "advance the Exit Gate").
 - **Owner:** CLI/plataforma lane (author of the §429 landing). NOT touched here — rule 8 (another lane's front); the audit lane only catalogues.
 - **Minimal repro:** `bash scripts/check_500.sh` → exit non-zero with the line above (no other critical class in this run).
 - **Suggested fix:** extract the JSON-RPC error/response helpers (e.g. `respondError` + the dispatch default) into a sibling class named for the responsibility (rule 7: `LspErrors`/`LspJsonRpc`), preserving behavior (rule 3) — same suite, then `./scripts/check_500.sh --update-baseline` to drop the stale LspServer line.
-- **Status:** OPEN — recorded for non-silence (AGENTS stop condition 3: a gate red not introduced by the recorder). To be closed by the owning lane with the split + proof, or by them re-baselining WITH recorded cause if the team decides otherwise.
+- **Resolution (21/09, lane .18/CLI):** extracted the JSON-RPC envelopes into a sibling `LspJsonRpc` (success/error/notification — rule 7, the wire shape single-sourced) and slimmed `respond`/`respondError` + the two `publishDiagnostics`/`clearDiagnostics` notification builders; behavior preserved (`LspServerTest` 38/38, incl. the §429 `-32601` case). `LspServer` 601 → **582**; `scripts/check_500.sh` rc=0. Only the `LspServer` line changed in `scripts/check_500-baseline.txt` (584→582) — other lanes' tolerated growth was deliberately left untouched (a blanket `--update-baseline` would ratify it).
 
-<!-- pt-switch --> **PT:** [§435 (pt_BR)](known-bugs.pt_BR.md#435-gate-check-500-vermelho-kof-cli-lspserver-java-cruzou-600-linhas-baseline-584-601-ap-s-o-fix-429-do-lsp-aberto-21-09-dono-lane-cli-plataforma)
+<!-- pt-switch --> **PT:** [§435 (pt_BR)](known-bugs.pt_BR.md#435--gate-check_500-vermelho-kof-clilspserverjava-cruzou-600-linhas-baseline-584--601-apos-o-fix-429-do-lsp---corrigido-2109-lane-18-split-em-lspjsonrpc-lspserver-601582)

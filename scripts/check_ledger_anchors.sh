@@ -8,6 +8,10 @@
 # 21/09 eram versões ABREVIADAS à mão — o leitor cai em 404 e o docs-lang
 # (que pareia arquivos, não hrefs) não vê nada. Este gate confere por
 # igualdade de string, dos dois lados, e --selftest planta slug truncado.
+# O regex casa `#NNN-` (HÍFEN ÚNICO OU DUPLO) de propósito: um href malformado
+# como `#435-gate` (faltando o 2º hífen do slug real `#435--gate`) escapava de
+# um regex `[0-9]+--` e passava verde para sempre — o mesmo ponto cego das
+# âncoras abreviadas, agora fechado (21/09, §435: 14 links estavam assim).
 #
 # Uso: scripts/check_ledger_anchors.sh            # rc!=0 com âncora quebrada
 #      scripts/check_ledger_anchors.sh --selftest
@@ -35,8 +39,8 @@ def check(en_txt, pt_txt, label):
     bad = []
     for src, dst, name in [(en_txt, pt_txt, "EN->PT"), (pt_txt, en_txt, "PT->EN")]:
         hd = heads(dst)
-        for m in re.finditer(r"\]\(known-bugs(?:\.pt_BR)?\.md#([0-9]+--[^\)]*)\)", src):
-            sec = int(m.group(1).split("--")[0])
+        for m in re.finditer(r"\]\(known-bugs(?:\.pt_BR)?\.md#([0-9]+-[^\)]*)\)", src):
+            sec = int(re.match(r"\d+", m.group(1)).group(0))
             if sec not in hd:
                 bad.append(f"{name} §{sec}: heading de destino ausente"); continue
             want = gh_slug(f"§{sec} " + hd[sec])
@@ -49,12 +53,18 @@ def check(en_txt, pt_txt, label):
 if "--selftest" in sys.argv:
     en = "## §1 — heading cheio com palavra final\n<!-- pt-switch --> **PT:** [x](known-bugs.pt_BR.md#1--heading-cheio)\n"
     pt = "## §1 — heading cheio com palavra final\n<!-- en-switch --> **EN:** [x](known-bugs.md#1--heading-cheio-com-palavra-final)\n"
-    # EN->PT truncado deve falhar; PT->EN correto deve passar
-    bad = check(en, pt, "selftest")
-    if len(bad) == 1 and "§1" in bad[0] and "EN->PT" in bad[0]:
-        print("SELFTEST OK: truncamento plantado capturado, lado correto limpo")
+    # (a) EN->PT truncado deve falhar; PT->EN correto deve passar
+    bad_a = check(en, pt, "selftest-a")
+    ok_a = len(bad_a) == 1 and "§1" in bad_a[0] and "EN->PT" in bad_a[0]
+    # (b) hífen-único malformado (#2-outro) deve ser capturado; lado correto limpo
+    en2 = "## §2 — outro heading\n<!-- pt-switch --> **PT:** [x](known-bugs.pt_BR.md#2-outro-heading)\n"
+    pt2 = "## §2 — outro heading\n<!-- en-switch --> **EN:** [x](known-bugs.md#2--outro-heading)\n"
+    bad_b = check(en2, pt2, "selftest-b")
+    ok_b = len(bad_b) == 1 and "§2" in bad_b[0] and "EN->PT" in bad_b[0]
+    if ok_a and ok_b:
+        print("SELFTEST OK: truncamento e hífen-único capturados, lado correto limpo")
         sys.exit(0)
-    print("SELFTEST FALHOU:", bad); sys.exit(1)
+    print("SELFTEST FALHOU:", bad_a, bad_b); sys.exit(1)
 
 for a, b in [("docs/bugs-and-gaps/known-bugs.md", "docs/bugs-and-gaps/known-bugs.pt_BR.md")]:
     if not (os.path.isfile(a) and os.path.isfile(b)):

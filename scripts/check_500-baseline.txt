@@ -1,5 +1,5 @@
 547	kof-cli/src/main/java/dev/kof/cli/BytecodeStatements.java
-584	kof-cli/src/main/java/dev/kof/cli/LspServer.java
+582	kof-cli/src/main/java/dev/kof/cli/LspServer.java
 506	kof-cli/src/main/java/dev/kof/cli/TranslateExpr.java
 501	kof-cli/src/main/java/dev/kof/cli/Translate.java
 580	kof-compiler/src/main/java/dev/kof/compiler/CollectionCallLowerer.java

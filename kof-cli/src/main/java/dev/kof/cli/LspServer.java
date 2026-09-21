@@ -146,31 +146,16 @@ final class LspServer {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("uri", uri);
         result.put("diagnostics", List.of());
-        Map<String, Object> notification = new LinkedHashMap<>();
-        notification.put("jsonrpc", "2.0");
-        notification.put("method", "textDocument/publishDiagnostics");
-        notification.put("params", result);
-        writeMessage(Json.stringify(notification));
+        writeMessage(LspJsonRpc.notification("textDocument/publishDiagnostics", result));
     }
 
     private void respond(Object id, Object result) {
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("jsonrpc", "2.0");
-        response.put("id", id);
-        response.put("result", result);
-        writeMessage(Json.stringify(response));
+        writeMessage(LspJsonRpc.success(id, result));
     }
 
     /** JSON-RPC 2.0 error response (no `result` field). */
     private void respondError(Object id, int code, String message) {
-        Map<String, Object> error = new LinkedHashMap<>();
-        error.put("code", code);
-        error.put("message", message);
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("jsonrpc", "2.0");
-        response.put("id", id);
-        response.put("error", error);
-        writeMessage(Json.stringify(response));
+        writeMessage(LspJsonRpc.error(id, code, message));
     }
 
     @SuppressWarnings("unchecked")
@@ -190,11 +175,7 @@ final class LspServer {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("uri", uri);
         result.put("diagnostics", diagnostics);
-        Map<String, Object> notification = new LinkedHashMap<>();
-        notification.put("jsonrpc", "2.0");
-        notification.put("method", "textDocument/publishDiagnostics");
-        notification.put("params", result);
-        writeMessage(Json.stringify(notification));
+        writeMessage(LspJsonRpc.notification("textDocument/publishDiagnostics", result));
     }
 
     private List<Object> analyze(String uri, String text) {

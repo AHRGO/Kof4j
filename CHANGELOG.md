@@ -13,6 +13,35 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§433 / §434 FIXED — the two remote-tip JS-FFI reds** (21/09, FFI/JS lane
+    `29198ea8`): §433 `ArtifactSizeTest.helloJsRuntimeSizeWithinBaseline` was
+    past the 5% JS budget — re-baselined WITH cause (the §166 precedent):
+    `HELLO_JS_BYTES` 13.007→13.834 KB for the `kof.buffer` slice + the JS
+    marshal/bridge helpers. §434 `StdParityGapAuditTest.bufferGatesToJvmWithFfiCodes`
+    expected JS in the audited Buffer gate list — `KofBuffer.gapCode` no longer
+    returns the JS `FFI002` (Buffer binds on JS since R57/R58) and the test
+    drops JS from the gated set. Both were catalogued by the gaps-db F2d1 unit
+    on `2995d0f8` and fixed the same day.
+
+  - **§430 FIXED — false-green tests** (21/09, lane docs/plataforma): the
+    zero-assertion `RouterE2ETest.debugConc001` became a real test, the five
+    print-only `NativeDebugTest*.java` were deleted, `KofWebNativeE2ETest` now
+    sends a real `GET /` and asserts 200, and
+    `BareCollectionPrimitiveArgE2ETest` gates on `NativeToolchainGate.present()`
+    so a native emitter regression FAILS instead of skipping.
+
+  - **§435 FIXED + anchor-gate blind spot closed** (21/09, lane `.18`): split
+    the JSON-RPC envelopes out of `LspServer` into a sibling `LspJsonRpc`
+    (rule 7), bringing the file 601 → **582** (`check_500` green) after the §429
+    fix pushed it past the critical 600; behavior preserved (`LspServerTest`
+    38/38). While closing it, `scripts/check_ledger_anchors.sh` was found
+    **blind to single-hyphen hrefs** — its regex required `NNN--`, so a
+    malformed `#435-gate` (the real slug is `#435--gate`) was never validated;
+    14 malformed EN↔PT cross-links (§424–§428, §431, §435) had passed green
+    forever. The regex now matches `NNN-` and the `--selftest` plants a
+    single-hyphen fixture; all 14 hrefs were rewritten to the exact `gh_slug`
+    of the destination heading. Live count 21→20.
+
   - **Stability — reconciled the JS-FFI ratchets after the JS surface closed**
     (21/09): the full suite (3472 tests) surfaced 3 stale ratchets left by the
     D6/JS bridge slices — they still asserted the pre-bridge state, and the

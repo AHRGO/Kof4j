@@ -11736,7 +11736,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **O que falta:** casos por alvo (o JS espelha o contrato do JDK — regex para `replaceAll`/`replaceFirst`/`matches`, array de char real para `toCharArray`, comparação case-insensitive) ou um backstop de `gapCode` honesto; o codegen não tem fallback de "método String não tratado -> gap honesto".
 - **Relacionado:** §259 (disciplina de gap-code fantasma), `D-KOF-FIRST`, `training/idioms/strings.md`.
 
-<!-- en-switch --> **EN:** [§424 (en)](known-bugs.md#424-cinco-m-todos-string-aceitos-ficam-silenciosamente-incompletos-no-js-e-falham-no-link-do-native-sem-gap-code-matches-replaceall-replacefirst-tochararray-comparetoignorecase-aberto-r6-o-jvm-funciona-os-outros-alvos-divergem-sem-diagn-stico)
+<!-- en-switch --> **EN:** [§424 (en)](known-bugs.md#424--five-accepted-string-methods-are-silently-incomplete-on-js-and-link-fail-on-native-with-no-gap-code-matchesreplaceallreplacefirsttochararraycomparetoignorecase---open-r6-jvm-works-the-other-targets-diverge-with-no-diagnostic)
 
 ## §425 — `kof.config` no riscv64/aarch64 é um stub de default silencioso, enquanto `KofConfig.supportedOn` retorna true e o javadoc ainda diz `CONF001` — 🔴 ABERTO (R6: valores errados no cross, sem diagnóstico)
 
@@ -11747,7 +11747,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **O que falta:** runtime real de config no cross, ou gatear o cross com código honesto (espelhando `NAT005`/§423) e corrigir o javadoc/matriz stale.
 - **Relacionado:** §423 (precedente NAT005 de "declarar o gap"), `NativeRiscvAsmRtB0.java:332-333` (`kof_time_now` era o mesmo stub, corrigido sob R6).
 
-<!-- en-switch --> **EN:** [§425 (en)](known-bugs.md#425-kof-config-no-riscv64-aarch64-um-stub-de-default-silencioso-enquanto-kofconfig-supportedon-retorna-true-e-o-javadoc-ainda-diz-conf001-aberto-r6-valores-errados-no-cross-sem-diagn-stico)
+<!-- en-switch --> **EN:** [§425 (en)](known-bugs.md#425--riscv64aarch64-kofconfig-is-a-silent-default-stub-while-kofconfigsupportedon-returns-true-and-the-javadoc-still-claims-conf001---open-r6-wrong-values-on-the-cross-no-diagnostic)
 
 ## §426 — `time.collect()` compila no JS mas não tem runtime nem gate (incompleto silencioso) — 🔴 ABERTO
 
@@ -11757,7 +11757,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Repro:** `main(){ time.collect() }` no JS -> export indefinido/ReferenceError na execução; compilação limpa.
 - **O que falta:** implementar a face de GC-collect no JS, ou gateá-la com código honesto.
 
-<!-- en-switch --> **EN:** [§426 (en)](known-bugs.md#426-time-collect-compila-no-js-mas-n-o-tem-runtime-nem-gate-incompleto-silencioso-aberto)
+<!-- en-switch --> **EN:** [§426 (en)](known-bugs.md#426--timecollect-compiles-on-js-but-has-no-runtime-and-no-gate-silent-incomplete---open)
 
 ## §427 — os alvos riscv64/aarch64 podem baixar `kof.io` e o servidor web-T1, mas o runtime deles não tem tais símbolos (`ld` undefined-reference alto; o gate está errado/ausente) — 🔴 ABERTO
 
@@ -11767,7 +11767,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **O que falta:** os runtimes do cross, ou um gate honesto (NAT00x) no lowering para `io`/web-T1 em riscv64/aarch64.
 - **Relacionado:** §423, lista de recusa honesta em `docs/native-multiarch.md`.
 
-<!-- en-switch --> **EN:** [§427 (en)](known-bugs.md#427-os-alvos-riscv64-aarch64-podem-baixar-kof-io-e-o-servidor-web-t1-mas-o-runtime-deles-n-o-tem-tais-s-mbolos-ld-undefined-reference-alto-o-gate-est-errado-ausente-aberto)
+<!-- en-switch --> **EN:** [§427 (en)](known-bugs.md#427--the-riscv64aarch64-targets-may-lower-kofio-and-the-web-t1-server-but-their-runtime-has-no-such-symbols-loud-ld-undefined-reference-the-gate-is-wrongmissing---open)
 
 ## §428 — as sessões DAP JVM e Native respondem toda requisição não implementada com `success:true` e corpo vazio (fachada silenciosa, Q7) — 🔴 ABERTO
 
@@ -11776,7 +11776,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - Contradição de doc: `docs/debugging/debug-adapter.md:23` lista `restart` como responsabilidade, mas não há `case "restart"` (`grep '"restart"' kof-cli/src` vazio) e a §3.3 "Current limits" não o declara.
 - **O que falta:** um `fail` honesto para requisições não implementadas (ou handlers explícitos); documentar `restart` como limite se não implementado.
 
-<!-- en-switch --> **EN:** [§428 (en)](known-bugs.md#428-as-sess-es-dap-jvm-e-native-respondem-toda-requisi-o-n-o-implementada-com-success-true-e-corpo-vazio-fachada-silenciosa-q7-aberto)
+<!-- en-switch --> **EN:** [§428 (en)](known-bugs.md#428--the-jvm-and-native-dap-sessions-answer-every-unimplemented-request-with-successtrue-and-an-empty-body-silent-facade-q7---open)
 
 ## §429 — o servidor LSP NÃO responde a uma REQUEST JSON-RPC desconhecida (o cliente trava; deveria ser `-32601 MethodNotFound`) — ✅ CORRIGIDO 21/09 (lane docs/plataforma, sessão 9093: o ramo `default` do `LspServer` responde `-32601 MethodNotFound` a requests; notificações seguem silenciosas — `LspServerTest`)
 
@@ -11806,7 +11806,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Artefatos stale (higiene):** seis arquivos `.class` não rastreados e gitignorados ficam em `kof-cli/src/main/java/dev/kof/cli/` (`AppManifest*.class`, `CmdBuild*.class`, `CmdServe.class`, `KofCliSupport.class`) — não rastreados, não embarcam, mas são saída de build stale dentro da árvore de código.
 - **Resolução (21/09):** apagados o `serveStatic`+`contentType` mortos (e o ilusório `ServeStaticTest`) — o F3-step-2b é dono dos estáticos full-stack; removido o ramo inalcançável de attach do DAP (`attachPid` é tratado UMA vez em `run()`, então `launch` é no-op ali); o `Compare` agora retorna 1 em QUALQUER opção desconhecida, fail-closed (`CompareTest.unknownOptionIsFatalNotSilentlyRun`); `KofDebug` re-triado NÃO é bug — o chain externo já retorna 1 para flags desconhecidas e posicionais extras, o `default` interno é inalcançável; nenhum `.class` perdido na árvore no tip.
 
-<!-- en-switch --> **EN:** [§431 (en)](known-bugs.md#431-drifts-menores-de-tooling-achados-pela-auditoria-profunda-servestatic-morto-com-javadoc-falso-ramo-inalcan-vel-do-dap-op-o-n-o-fatal-do-compare-e-class-stale-na-rvore-de-c-digo-aberto-baixa-severidade)
+<!-- en-switch --> **EN:** [§431 (en)](known-bugs.md#431--minor-tooling-drift-found-by-the-deep-audit-dead-servestatic-with-a-false-javadoc-an-unreachable-dap-branch-a-non-fatal-compare-option-and-stale-class-files-in-the-source-tree---fixed-2109-18-tooling-lane)
 
 ## §432 — JVM: `Map<_,Object>.getOrDefault(k, <primitivo>)` morre com VerifyError (o emissor JVM sobrescreve o V do slot com o tipo do argumento do call-site) — 🟡 ABERTO (pré-existente, catalogado 21/09; codegen JVM, achado no endurecimento §352/Q4)
 
@@ -11837,13 +11837,13 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 
 <!-- en-switch --> **EN:** [§434 (en)](known-bugs.md#-434--remote-tip-red-stdparitygapaudittestbuffergatestojvmwithfficodes--js-missing-from-the-audited-buffer-gate-list---open-another-lanes-front-catalogued-not-fixed-here)
 
-## §435 — gate `check_500` VERMELHO: `kof-cli/.../LspServer.java` cruzou 600 linhas (baseline 584 → 601) após o fix §429 do LSP — 🟡 ABERTO 21/09 (dono: lane CLI/plataforma)
+## §435 — gate `check_500` VERMELHO: `kof-cli/.../LspServer.java` cruzou 600 linhas (baseline 584 → 601) após o fix §429 do LSP — ✅ CORRIGIDO 21/09 (lane .18; split em `LspJsonRpc`, LspServer 601→582)
 
 - **Medido (21/09, árvore limpa no tip `be688562`):** `scripts/check_500.sh` → `FALHOU — kof-cli/src/main/java/dev/kof/cli/LspServer.java tinha 584 (< 600) no baseline, agora 601 (>= 600): cruzou a linha vermelha, split obrigatório.` Isto é um **gate de merge** (AGENTS §"Lição aprendida" — ≥600 é CRÍTICO; a dívida do baseline nunca cresce).
 - **Origem (diagnosticada, não corrigida):** o fix do §429 (linha do DOING, sessão 9093 docs/plataforma: o ramo `default -> { }` do dispatch JSON-RPC agora responde `-32601 MethodNotFound` via um novo helper `respondError`) cresceu o arquivo já tolerado para além da linha crítica. A própria lane é a dona natural (seu próximo passo no DOING é "avançar o Exit Gate").
 - **Dono:** lane CLI/plataforma (autora do pouso do §429). NÃO tocado aqui — regra 8 (frente de outra lane); a lane de auditoria apenas cataloga.
 - **Repro mínimo:** `bash scripts/check_500.sh` → exit não-zero com a linha acima (nenhuma outra classe crítica neste run).
 - **Fix sugerido:** extrair os helpers de erro/resposta JSON-RPC (ex.: `respondError` + o default do dispatch) para uma classe irmã nomeada pela responsabilidade (regra 7: `LspErrors`/`LspJsonRpc`), preservando comportamento (regra 3) — mesma suíte, depois `./scripts/check_500.sh --update-baseline` para remover a linha stale do LspServer.
-- **Estado:** ABERTO — registrado para não-silêncio (condição de parada 3 do AGENTS: gate vermelho não introduzido por quem registra). A fechar pela lane dona com o split + prova, ou por eles re-baselinando COM causa registrada se a equipe decidir assim.
+- **Resolução (21/09, lane .18/CLI):** extraídos os envelopes JSON-RPC para uma classe irmã `LspJsonRpc` (success/error/notification — regra 7, a forma do wire fonte-única) e enxugados `respond`/`respondError` + os dois builders de notificação `publishDiagnostics`/`clearDiagnostics`; comportamento preservado (`LspServerTest` 38/38, incl. o caso `-32601` do §429). `LspServer` 601 → **582**; `scripts/check_500.sh` rc=0. Só a linha do `LspServer` mudou em `scripts/check_500-baseline.txt` (584→582) — o crescimento tolerado das OUTRAS lanes foi deixado intacto de propósito (um `--update-baseline` cego o ratificaria).
 
-<!-- en-switch --> **EN:** [§435 (en)](known-bugs.md#435-check-500-gate-red-kof-cli-lspserver-java-crossed-600-lines-584-baseline-601-after-the-429-lsp-fix-open-21-09-owner-cli-plataforma-lane)
+<!-- en-switch --> **EN:** [§435 (en)](known-bugs.md#435--check_500-gate-red-kof-clilspserverjava-crossed-600-lines-584-baseline--601-after-the-429-lsp-fix---fixed-2109-lane-18-split-into-lspjsonrpc-lspserver-601582)
