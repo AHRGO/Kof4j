@@ -221,6 +221,9 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_tetris_run" -> "V";
             case "kof_buffer_alloc" -> "Ldev/kof/runtime/KofRuntime$Buffer;";
             case "kof_buffer_bytes" -> "[B";
+            // D-SECRETS face 1: tipo Secret.
+            case "kof_sec_secret_of", "kof_sec_secret" -> "Ldev/kof/runtime/KofRuntime$Secret;";
+            case "kof_sec_secret_reveal", "kof_sec_secret_redacted" -> "Ljava/lang/String;";
             default -> "Ljava/lang/Object;";
         };
     }

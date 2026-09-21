@@ -171,6 +171,13 @@ public final class SemMethodCallTyper {
                     KofBuffer.instanceMethod(recv, mc.methodName(), mc.arguments().size());
             if (bufferCall != null) return bufferCall.returnType();
         }
+        // D-SECRETS face 1: espelha o ramo do emit para o tipo Secret.
+        if (KofSecurity.isSecretType(recv)) {
+            for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
+            KofSecurity.SecCall secretCall =
+                    KofSecurity.instanceMethod(recv, mc.methodName(), mc.arguments().size());
+            if (secretCall != null) return secretCall.returnType();
+        }
         Type builtin = BuiltinCallTyper.infer(sa, mc, scope);
         if (builtin != null) return builtin;
         if (mc.receiver() != null) {

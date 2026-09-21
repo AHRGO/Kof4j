@@ -143,6 +143,7 @@ public static boolean hasRuntimeFn(String methodName) {
                 + JvmConfigRuntime.source()
                 + JvmCacheRuntime.source()
                 + JvmBufferRuntime.source()
+                + JvmSecretRuntime.source()
                 + JvmOrmRuntime.source()
                 + JvmTimeRuntime.source()
                 + JvmStringRuntime.source()

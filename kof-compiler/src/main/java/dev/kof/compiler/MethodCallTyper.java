@@ -398,6 +398,13 @@ if (mc.receiver() != null) {
                 KofBuffer.instanceMethod(recvType, mc.methodName(), mc.arguments().size());
         if (bufferCall != null) return bufferCall.returnType();
     }
+    if (KofSecurity.isSecretType(recvType)) {
+        List<Type> secretArgs = new ArrayList<>();
+        for (ExpressionNode arg : mc.arguments()) secretArgs.add(ExpressionTyper.inferExprType(driver, arg, locals));
+        KofSecurity.SecCall secretCall =
+                KofSecurity.instanceMethod(recvType, mc.methodName(), secretArgs.size());
+        if (secretCall != null) return secretCall.returnType();
+    }
     if (KofIo.isIoType(recvType)) {
         KofIo.IoCall ioCall = KofIo.instanceMethod(recvType, mc.methodName(), mc.arguments().size());
         if (ioCall != null) return ioCall.returnType();

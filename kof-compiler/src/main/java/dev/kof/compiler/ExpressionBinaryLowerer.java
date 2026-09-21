@@ -420,6 +420,9 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
     } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
             && !driver.isNullLiteral(be.left()) && !driver.isNullLiteral(be.right())
             && (ExpressionBinaryPredicates.isRecordLike(accType, driver) || ExpressionBinaryPredicates.isRecordLike(rightType, driver)
+                // D-SECRETS face 1: `Secret == Secret` é conteúdo constant-time
+                // (KofRuntime$Secret.equals) — mesmo caminho null-safe do record.
+                || KofSecurity.isSecretType(accType) || KofSecurity.isSecretType(rightType)
                 || (!driver.target.isNative()
                     && (ExpressionBinaryPredicates.isNullablePrimLike(accType) || ExpressionBinaryPredicates.isNullablePrimLike(rightType))
                     && ExpressionBinaryPredicates.isNullablePrimOrBarePrim(accType) && ExpressionBinaryPredicates.isNullablePrimOrBarePrim(rightType))

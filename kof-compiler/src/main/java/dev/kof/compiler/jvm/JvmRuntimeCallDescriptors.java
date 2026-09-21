@@ -462,6 +462,11 @@ public final class JvmRuntimeCallDescriptors {
                     "kof_sec_auth_claims", "kof_sec_auth_user" -> "()Ljava/lang/String;";
             case "kof_buffer_alloc" -> "(I)Ldev/kof/runtime/KofRuntime$Buffer;";
             case "kof_buffer_bytes" -> "(Ldev/kof/runtime/KofRuntime$Buffer;)[B";
+            // D-SECRETS face 1: tipo Secret.
+            case "kof_sec_secret_of", "kof_sec_secret"
+                    -> "(Ljava/lang/String;)Ldev/kof/runtime/KofRuntime$Secret;";
+            case "kof_sec_secret_reveal", "kof_sec_secret_redacted"
+                    -> "(Ldev/kof/runtime/KofRuntime$Secret;)Ljava/lang/String;";
             default -> "(Ljava/lang/String;)Ljava/lang/Object;";
         };
     }

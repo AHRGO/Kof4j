@@ -33,6 +33,12 @@ public final class CompilerComparisons {
                     || CompilerTypes.isRecordType(rightU, driver.currentUnit, driver.semanticAnalyzer)) {
                 return false;
             }
+            // D-SECRETS face 1: `Secret == Secret` compara CONTEÚDO
+            // constant-time (KofRuntime$Secret.equals) — desativa o shortcut de
+            // identidade (if_acmpeq), como o record.
+            if (KofSecurity.isSecretType(leftU) || KofSecurity.isSecretType(rightU)) {
+                return false;
+            }
             // enum == enum: D-ENUM207 — as constantes são INSTÂNCIAS (singletons
             // de <clinit>), então a igualdade é por IDENTIDADE (if_acmp), não por
             // conteúdo String. Deixa o caminho de referência assumir.

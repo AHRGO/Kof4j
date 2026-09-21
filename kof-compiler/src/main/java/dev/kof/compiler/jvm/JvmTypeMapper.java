@@ -95,6 +95,12 @@ public final class JvmTypeMapper {
         if ("kof".equals(c.packageName()) && "Buffer".equals(c.name())) {
             return "Ldev/kof/runtime/KofRuntime$Buffer;";
         }
+        // D-SECRETS face 1: o tipo Kof `Secret` apaga para KofRuntime$Secret
+        // (wrapper com toString redigido); sem isto virava a classe inexistente
+        // `kof/Secret` → ClassNotFoundException.
+        if ("kof".equals(c.packageName()) && "Secret".equals(c.name())) {
+            return "Ldev/kof/runtime/KofRuntime$Secret;";
+        }
         // enum: D-ENUM207 — o valor é uma INSTÂNCIA de enum (classe real
         // emitida por CompilerEnumLowering), não a String do nome. Descriptor
         // próprio L<Dir>; (antes era apagado p/ Ljava/lang/String;).

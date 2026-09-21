@@ -171,6 +171,24 @@ final class ExpressionBuiltinInstanceCalls {
         return localIdx;
     }
 
+    static int lowerSecret(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
+                           String owner, int localIdx, List<IRLocalVariable> locals, Type recvType) {
+        KofSecurity.SecCall secretCall =
+                KofSecurity.instanceMethod(recvType, mc.methodName(), mc.arguments().size());
+        if (secretCall != null) {
+            List<Type> params = new ArrayList<>();
+            params.add(recvType); // receiver (kof.Secret) first — JvmTypeMapper maps it
+            for (ExpressionNode arg : mc.arguments()) {
+                params.add(ExpressionTyper.inferExprType(driver, arg, locals));
+                localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
+            }
+            ops.add(new KofCall(new Type.ClassType("dev.kof.runtime", "KofRuntime", List.of()),
+                    secretCall.function(), params,
+                    secretCall.returnType(), KofCallKind.FUNCTION));
+        }
+        return localIdx;
+    }
+
     static int lowerIo(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
                        String owner, int localIdx, List<IRLocalVariable> locals, Type recvType) {
         if (KofIo.isIdentityMethod(mc.methodName())) {

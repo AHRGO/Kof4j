@@ -42,6 +42,15 @@ public final class KofSecurity {
     private static final Type BOOL = Type.PrimitiveType.BOOL;
     private static final Type INT = Type.PrimitiveType.INT;
 
+    /** Face 1 do D-SECRETS (Stage 5 / 3.6): tipo nominal {@code Secret}. Um
+     *  valor que NÃO se imprime/serializa sem um ato explícito ({@code reveal()}).
+     *  Obtível só por {@code secrets.of}/{@code secrets.secret} — ambos gated,
+     *  então os métodos de instância são inalcançáveis nos alvos sem suporte
+     *  (mesmo padrão do {@code Buffer}, D-R3-BUFFER). */
+    static final Type SECRET = new Type.ClassType("kof", "Secret", List.of());
+
+    static boolean isSecretType(Type t) { return SECRET.equals(t); }
+
     static final List<String> NAMESPACES = List.of(
             "passwords", "crypto", "jwt", "secrets", "security", "auth");
 
@@ -58,7 +67,7 @@ public final class KofSecurity {
                 "passwords", List.of("hash", "verify", "needsRehash"),
                 "crypto", List.of("sha256", "sha512", "hmacSha256", "encryptAesGcm", "decryptAesGcm", "encryptChacha20", "decryptChacha20", "randomHex", "randomInt"),
                 "jwt", List.of("create", "verify", "secret"),
-                "secrets", List.of("get", "redact"),
+                "secrets", List.of("get", "redact", "of", "secret"),
                 "security", List.of("constantTimeEquals", "randomHex", "redact", "randomInt", "csrfToken", "csrfValid", "corsAllowed", "cspHeader", "hstsHeader", "contentTypeOptionsHeader", "frameHeader", "referrerHeader", "rateLimit", "sessionCreate", "sessionGet", "sessionDestroy", "apiKeyGenerate", "apiKeyValid", "cookieSet", "cookieGet"),
                 "auth", List.of("secret", "token", "authenticated", "claims", "user", "hasRole", "hasPermission", "resourceServer", "resourceServerVerify"));
     }
@@ -124,6 +133,16 @@ public final class KofSecurity {
                         : null;
                 case "redact" -> argc == 1
                         ? new SecCall("kof_sec_redact", STR, List.of(STR))
+                        : null;
+                // D-SECRETS face 1: valor tipado. `of` envolve um literal;
+                // `secret` lê o ambiente por nome. Ambos devolvem `Secret`
+                // (não-exportável sem reveal()) — o `get` cru continua String
+                // (compatibilidade 0.2.6, freeze).
+                case "of" -> argc == 1
+                        ? new SecCall("kof_sec_secret_of", SECRET, List.of(STR))
+                        : null;
+                case "secret" -> argc == 1
+                        ? new SecCall("kof_sec_secret", SECRET, List.of(STR))
                         : null;
                 default -> null;
             };
@@ -207,12 +226,24 @@ public final class KofSecurity {
         };
     }
 
+    /** Face 1 do D-SECRETS (Stage 5/3.6): métodos de instância do tipo
+     *  {@code Secret}. Inalcançáveis onde {@code of}/{@code secret} são gated. */
+    static SecCall instanceMethod(Type receiver, String name, int argCount) {
+        if (!isSecretType(receiver)) return null;
+        return switch (name) {
+            case "reveal" -> argCount == 0
+                    ? new SecCall("kof_sec_secret_reveal", STR, List.of(SECRET)) : null;
+            case "redacted" -> argCount == 0
+                    ? new SecCall("kof_sec_secret_redacted", STR, List.of(SECRET)) : null;
+            default -> null;
+        };
+    }
+
     /**
      * Target support matrix. Unsupported calls produce a compile-time
      * diagnostic; never silently different behavior.
      */
-    static boolean supportedOn(@SuppressWarnings("unused") String function, @SuppressWarnings("unused") Target target) {
-        // SECN000: o runtime riscv64/aarch64 (asm puro, sem libc) não tem
+    static boolean supportedOn(@SuppressWarnings("unused") String function, @SuppressWarnings("unused") Target target) {        // SECN000: o runtime riscv64/aarch64 (asm puro, sem libc) não tem
         // NENHUMA primitiva kof_sec_* (sha/hmac/aes/random/jwt/password/
         // session/api-key). Sem gate, a chamada quebrava no link com
         // undefined-reference (R6). Diagnóstico limpo em compile-time até o
@@ -251,6 +282,10 @@ public final class KofSecurity {
             // G9: available on all targets (JVM/Native/JS)
             case "kof_sec_rate_limit", "kof_sec_session_create", "kof_sec_session_get", "kof_sec_session_destroy",
                     "kof_sec_api_key_generate", "kof_sec_api_key_valid" -> true;
+            // D-SECRETS face 1 (Stage 5/3.6): tipo Secret — JVM primeiro (R7);
+            // JS/Native/Script/Android seguem gap honesto SECN008.
+            case "kof_sec_secret_of", "kof_sec_secret", "kof_sec_secret_reveal",
+                    "kof_sec_secret_redacted" -> target == Target.JVM;
             default -> true;
         };
     }
@@ -268,6 +303,8 @@ public final class KofSecurity {
                     "kof_sec_api_key_generate", "kof_sec_api_key_valid" -> "SECN005";
             case "kof_sec_cookie_set", "kof_sec_cookie_set_opts", "kof_sec_cookie_get" -> "SECN006";
             case "kof_sec_auth_resource_server", "kof_sec_auth_resource_server_verify" -> "SECN007";
+            case "kof_sec_secret_of", "kof_sec_secret", "kof_sec_secret_reveal",
+                    "kof_sec_secret_redacted" -> "SECN008";
             default -> "SECN000";
         };
     }
