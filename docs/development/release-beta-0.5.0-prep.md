@@ -83,8 +83,11 @@ to work around.
 ### Recovery — clearing the auto-measured conditions
 
 ```bash
-scripts/build-kof-jar.sh                                # cond. 1: rebuild + stamp the tree jar
+eval "$(scripts/setup-cross-toolchain.sh --export)"     # cond. 1: cross binutils/qemu/libc (rootless host; once)
+scripts/build-kof-jar.sh                                # cond. 1: rebuild + stamp the tree jar (after the last compiler commit)
 scripts/target-matrix.sh                                #          -> PARITY: 100% (6 core targets)
+scripts/fetch-open-issues.sh > /tmp/open-issues.tsv     # cond. 5: when `gh` is unavailable (public API)
 SAFE_SUITE_LOG="$PWD/.suite.log" scripts/safe-suite.sh  # cond. 4: run on a CLEAN tree
+R050_OPEN_ISSUES_TSV=/tmp/open-issues.tsv \
 KOF_SUITE_LOG="$PWD/.suite.log" scripts/check_release_050_gate.sh
 ```

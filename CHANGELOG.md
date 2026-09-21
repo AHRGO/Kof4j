@@ -139,6 +139,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **The gate now closes the loop in both directions** (21/09, docs lane): besides CHANGELOG-claims-closed-without-ledger-backing, an id CLOSED in the ledger at or after section 400 with no CHANGELOG entry now fails the gate. The floor is an epoch rule, not amnesty: measured 21/09, 25 closed ids below 400 lack entries while ZERO above it do — practice solidified, so the rule starts where the practice does. Mutation-verified: a planted closed section in the ledger with no changelog line is named by the gate; real state stays green. (A companion no-ghost idea — forbidding changelog refs to ids absent from the ledger — was measured and REJECTED: the hits are ancient cross-references, a wrong rule for the history, refused per the round-11 lesson.)
+  - **Release-prep "Recovery" steps completed for a rootless / gh-less host** (21/09, docs lane): the
+    documented commands to clear the auto-measured conditions assumed an installed cross toolchain
+    and a working `gh`. Both are now first-class — `eval "$(scripts/setup-cross-toolchain.sh
+    --export)"` for condition 1 (R28) and `scripts/fetch-open-issues.sh > …tsv` +
+    `R050_OPEN_ISSUES_TSV=…` for condition 5 (R29) — plus the reminder that the tree jar must be
+    rebuilt after the last compiler commit. Measured this round: after the FFI front's
+    `debd39ca`/`6f0a7e8d` the jar read `ARTEFATO VELHO` (parity NEEDS-MEASURE); rebuilding restored
+    `PARITY: 100%`, so the gate reads 3 RED / 1 inconclusive with all seven rows matching the prep.
   - **Stability measured for the first time since the mechanism fix: RED by one stale test** (21/09,
     docs lane): a full `safe-suite.sh` run at `96af9b63` (41 min, `SUITE-SHA`/`DIRTY=0` stamped) gave
     `TOTAL: tests=3413 failures=1 errors=0 skipped=223`. The single failure is

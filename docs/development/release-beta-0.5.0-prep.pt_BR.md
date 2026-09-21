@@ -82,8 +82,11 @@ RED é esperado até a fila fechar — o gate é o motor, não um bloqueio a con
 ### Recuperação — limpar as condições auto-medidas
 
 ```bash
-scripts/build-kof-jar.sh                                # cond. 1: rebuilda + estampa o jar da árvore
+eval "$(scripts/setup-cross-toolchain.sh --export)"     # cond. 1: binutils/qemu/libc cross (host sem root; uma vez)
+scripts/build-kof-jar.sh                                # cond. 1: rebuilda + estampa o jar da árvore (após o último commit do compiler)
 scripts/target-matrix.sh                                #          -> PARITY: 100% (6 alvos core)
+scripts/fetch-open-issues.sh > /tmp/open-issues.tsv     # cond. 5: quando o `gh` não existe (API pública)
 SAFE_SUITE_LOG="$PWD/.suite.log" scripts/safe-suite.sh  # cond. 4: rodar em árvore LIMPA
+R050_OPEN_ISSUES_TSV=/tmp/open-issues.tsv \
 KOF_SUITE_LOG="$PWD/.suite.log" scripts/check_release_050_gate.sh
 ```

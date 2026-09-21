@@ -126,6 +126,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **O gate agora fecha o ciclo nas duas direções** (21/09, lane docs): além de afirmação de fechamento sem respaldo no ledger, um id FECHADO no ledger a partir da seção 400 sem entrada no CHANGELOG agora derruba o gate. O piso é regra de época, não anistia: medido em 21/09, 25 ids abaixo de 400 não têm entrada enquanto ZERO acima têm — a prática consolidou, a regra começa onde a prática começa. Verificado por mutação: uma seção fechada plantada no ledger sem linha no changelog é nomeada pelo gate; estado real segue verde. (Uma ideia companheira — proibir referências do changelog a ids fora do ledger — foi medida e REJEITADA: os achados são remissões antigas de outro espaço de ids, regra errada para a história, recusada pela lição da rodada 11.)
+  - **Passos de "Recuperação" da prep completados para host sem root / sem `gh`** (21/09, lane
+    docs): os comandos documentados para limpar as condições auto-medidas assumiam toolchain cross
+    instalado e `gh` funcionando. Ambos agora são de primeira classe — `eval
+    "$(scripts/setup-cross-toolchain.sh --export)"` para a cond. 1 (R28) e
+    `scripts/fetch-open-issues.sh > …tsv` + `R050_OPEN_ISSUES_TSV=…` para a cond. 5 (R29) — mais o
+    lembrete de reconstruir o jar da árvore após o último commit do compiler. Medido nesta rodada:
+    após `debd39ca`/`6f0a7e8d` da frente FFI o jar acusou `ARTEFATO VELHO` (parity NEEDS-MEASURE);
+    reconstruir restaurou `PARITY: 100%`, e o gate lê 3 RED / 1 inconclusiva com as sete linhas
+    batendo com a prep.
   - **Estabilidade medida pela primeira vez após o conserto do mecanismo: RED por um teste stale**
     (21/09, lane docs): uma corrida completa do `safe-suite.sh` no `96af9b63` (41 min, estampada
     `SUITE-SHA`/`DIRTY=0`) deu `TOTAL: tests=3413 failures=1 errors=0 skipped=223`. A única falha é
