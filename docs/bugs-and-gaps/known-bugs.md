@@ -11982,9 +11982,11 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
   (`servedProcess`), `FullStackE2ETest:185-186`, §389 (same
   dirty-shared-tree truth family).
 
-## §394 — `kof-issues-agent` job `respond` crashava em TODO comentário não-bot: expressão de workflow (`github.event`) misturada dentro do JavaScript do `actions/github-script` (lá só existem `context`/`github`) → `TypeError: Cannot read properties of undefined (reading 'action')`; e o único ramo do passo (`context.payload.action === 'opened'`) é inalcançável num evento `issue_comment` (a action do payload é `created`) — código morto; o job nunca postou a mensagem — ✅ FIXED 20/09 (#570)
+## §395 — `kof-issues-agent` job `respond` crashava em TODO comentário não-bot: expressão de workflow (`github.event`) misturada dentro do JavaScript do `actions/github-script` (lá só existem `context`/`github`) → `TypeError: Cannot read properties of undefined (reading 'action')`; e o único ramo do passo (`context.payload.action === 'opened'`) é inalcançável num evento `issue_comment` (a action do payload é `created`) — código morto; o job nunca postou a mensagem — ✅ FIXED 20/09 (#570)
+> **Renumerado §394→§395 (20/09, docs hygiene):** colidiu com §394 (ServePortTest harness, `d0464385`, landed primeiro). Protocolo de colisão: quem chega depois renomeia (cf. §388 saga).
+
 
 - **GitHub:** #570 (medido pelo autor: 21 falhas em 41 runs `issue_comment` no commit da release 0.4.9; 0 falhas nos 36 runs `issues`)
 - **Fix (raiz):** o script passou a implementar a intenção viva com guard-clauses — agradece o AUTOR do issue no PRIMEIRO comentário (`login` igual + `comments <= 1`); bot retorna cedo (como antes); corpo com numeração corrigida 1–3 e sem indentação de template. Prova (harness node sobre o script extraído do YAML): author-first → 1 `createComment`; bot / não-autor / segundo-comentário → 0 cada; a expressão antiga reproduz o crash do CI (`reading 'action'`) = RED-antes. YAML parseia (`python3 -c yaml.safe_load`).
 
-<!-- pt-switch --> **PT:** [§394 (pt_BR)](known-bugs.pt_BR.md#394--kof-issues-agent-job-respond-crashava)
+<!-- pt-switch --> **PT:** [§395 (pt_BR)](known-bugs.pt_BR.md#395--job-respond-do-kof-issues-agent-quebrava-em-todo-respond-crashava)
