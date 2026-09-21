@@ -26,6 +26,7 @@ public final class JsRuntimeOps {
 boolean isRuntimeOp(KofCall kc) {
         String name = kc.methodName();
         return name.startsWith("kof_json_") || name.startsWith("kof_io_")
+                || name.startsWith("kof_buffer_")
                 || name.startsWith("kof_ui_")
                 || name.startsWith("kof_sec_")
                 || name.startsWith("kof_validation_")
@@ -73,6 +74,14 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
                               List<JsIr.JsExpression> preambleExprs, KofCall kc,
                               JsIr.JsExpression receiver, List<JsIr.JsExpression> args) {
         String name = kc.methodName();
+        if (name.startsWith("kof_buffer_")) {
+            // kof.buffer (D-R3-BUFFER): `buffer.alloc`/`Buffer.bytes()` baixam
+            // para os helpers do runtime JS (args já trazem o receiver como 1º
+            // operando nos dois casos).
+            p.lc.registerRuntime(name);
+            stack.add(new JsIr.JsCall(new JsIr.JsIdentifier(name), args));
+            return;
+        }
         if (name.startsWith("kof_json_")) {
             // JSON encode/decode maps directly to JSON.stringify/parse; the
             // type information stays in the Kof compiler (generics erasure).

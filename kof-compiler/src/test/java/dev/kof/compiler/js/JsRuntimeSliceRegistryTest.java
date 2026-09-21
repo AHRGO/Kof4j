@@ -35,6 +35,7 @@ class JsRuntimeSliceRegistryTest {
                 .append(JsRuntimeUiRng.RNG_RUNTIME)
                 .append(JsRuntimeUiMathDouble.MATH_DOUBLE_RUNTIME)
                 .append(JsRuntimeUiNumFmt.NUM_FMT_RUNTIME)
+                .append(JsRuntimeBuffer.BUFFER_RUNTIME)
                 .append(JsRuntimeUiNet.NET_RUNTIME)
                 .append(JsRuntimeUiUuid.UUID_RUNTIME)
                 .append(JsRuntimeUiWs.WS_RUNTIME)

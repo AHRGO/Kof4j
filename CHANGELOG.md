@@ -13,6 +13,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **`kof.buffer` on the JS target (`Buffer(U8)`, D-R3-BUFFER)** (21/09): the
+    `kof.buffer` namespace now binds on JS too — `buffer.alloc(Int)` and
+    `Buffer.bytes()`, with the same contract as the JVM (`KofRuntime$Buffer`):
+    zero-filled, negative size clamps to 0, `bytes()` materialises a `Byte[]`.
+    New `JsRuntimeBuffer` slice (prune-reachable runtime block) + `kof_buffer_*`
+    routing in `JsRuntimeOps`; `KofBuffer.supportedOn` now covers JVM+JS (Native
+    stays `FFI001`). Proof: `BufferE2ETest.allocAndBytesJsParity` byte-for-byte
+    JVM==JS (`Buffer[4]`/`[0, 0, 0, 0]`/`Buffer[0]`). The FFI out-buffer INOUT
+    (token `B`) is a separate slice and still `FFI002` on JS.
+
   - **FFI: scalar array `T[]`→`ptr` on the JS target (bridge, D6-2/3.8b
     fatia 3)** (21/09): the JS runner now binds `extern` with a scalar-array
     parameter — the compile gate admits `T[]` on JS and `KofJsFfiMarshal.packArray`

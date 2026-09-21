@@ -12,7 +12,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * kof.buffer / nominal {@code Buffer(U8)} (D-R3-BUFFER, maintainer 21/09).
  * Incremental slice (R6-SCOPE): {@code buffer.alloc(Int)} + {@code Buffer.bytes()}
- * on the JVM; Native/JS stay honest gaps (never a silent stub).
+ * on the JVM and (21/09) on the JS target; Native stays an honest gap (never a
+ * silent stub).
  */
 class BufferE2ETest {
 
@@ -64,17 +65,40 @@ class BufferE2ETest {
     }
 
     @Test
-    void allocJsStaysFfi002(@TempDir Path dir) throws IOException {
-        Path src = dir.resolve("bufjs.kf");
-        Files.writeString(src, """
+    void allocAndBytesJsParity(@TempDir Path dir) throws IOException {
+        // kof.buffer no JS (D-R3-BUFFER, 21/09): mesmo contrato do JVM —
+        // zero-filled, clamp de tamanho, bytes() materializa Byte[].
+        String kof = """
                 main() {
-                    println(buffer.alloc(4))
+                    val b = buffer.alloc(4)
+                    println(b)
+                    println(b.bytes())
+                    println(buffer.alloc(0))
+                    println(buffer.alloc(-3))
                 }
-                """);
-        CompilationResult r = driver.compile(src, dir.resolve("out-bufjs"), Target.JS);
-        assertFalse(r.success(), "JS buffer bridge not landed → must stay unbound");
-        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI002"),
-                "expected FFI002 on JS, got: " + r.diagnostics().getDiagnostics());
+                """;
+        Path jvmSrc = dir.resolve("bufjs-jvm.kf");
+        Files.writeString(jvmSrc, kof);
+        CompilationResult rj = driver.compile(jvmSrc, dir.resolve("out-bufjs-jvm"), Target.JVM);
+        assertTrue(rj.success(), "JVM compile: " + rj.diagnostics().getDiagnostics());
+        String jvm = runJvm(dir.resolve("out-bufjs-jvm"));
+        assertEquals("Buffer[4]\n[0, 0, 0, 0]\nBuffer[0]\nBuffer[0]", jvm, "JVM golden");
+
+        Path jsSrc = dir.resolve("bufjs-js.kf");
+        Files.writeString(jsSrc, kof);
+        CompilationResult rjs = driver.compile(jsSrc, dir.resolve("out-bufjs-js"), Target.JS);
+        assertTrue(rjs.success(), "buffer.alloc must bind on JS (21/09): "
+                + rjs.diagnostics().getDiagnostics());
+        String js = runJs(dir.resolve("out-bufjs-js"));
+        assertEquals(jvm, js, "JVM==JS byte-for-byte parity (kof.buffer)");
+    }
+
+    private String runJs(Path outDir) throws IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int ec = dev.kof.runtime.KofJsRunner.run(outDir.resolve("Default.mjs"), out,
+                new java.io.ByteArrayInputStream(new byte[0]), out);
+        assertEquals(0, ec, "JS exit code, output: " + out);
+        return out.toString(java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
     }
 
     private String runJvm(Path outDir) throws IOException {

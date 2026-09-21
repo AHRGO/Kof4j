@@ -7,9 +7,11 @@ import java.util.List;
  * (D-R3-BUFFER / D6-3, maintainer 21/09/2026).
  *
  * <p>Incremental slice (R6-SCOPE): {@code buffer.alloc(Int) : Buffer(U8)} and
- * {@code Buffer.bytes() : Byte[]} on the JVM. The programmer never allocates or
- * frees — the lifetime is language-managed (D-R3-HANDLE-LIFETIME). Native/JS
- * stay honest gaps.
+ * {@code Buffer.bytes() : Byte[]} on the JVM and, since 21/09, also on the JS
+ * target ({@code JsRuntimeBuffer}, same contract as {@code KofRuntime$Buffer}).
+ * The programmer never allocates or frees — the lifetime is language-managed
+ * (D-R3-HANDLE-LIFETIME). Native stays an honest gap; the FFI out-buffer
+ * (token {@code B}) is a separate slice and still {@code FFI002} on JS.
  */
 public final class KofBuffer {
     private KofBuffer() {}
@@ -51,7 +53,7 @@ public final class KofBuffer {
     }
 
     static boolean supportedOn(Target target) {
-        return target == Target.JVM; // JVM-first; Native/JS honest gap (R6/R7)
+        return target == Target.JVM || target == Target.JS; // Native honest gap (R6/R7)
     }
 
     static String gapCode(Target target) {
