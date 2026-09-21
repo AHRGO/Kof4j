@@ -27,7 +27,11 @@ dos três estados).
        `D-RELEASE-0.5.0-GATE`). `VERSION`/`pom.xml` já estão em `0.5.0-beta`;
        restam só o CHANGELOG/tag. Conferir referências à versão codificadas
        (javadoc/testes citam a versão do artefato) ANTES do bump; nunca edição
-       unilateral.
+       unilateral. **Auditado 21/09 (9093): limpo** — os hits `0.4.0`
+       restantes são comentários de procedência (quando um port pousou) e
+       `beta-0.4.0` usado como *nome de branch* pelo `codeql-gate.sh`
+       (monitora as duas) e por fixtures de teste; nenhum codifica a versão do
+       artefato.
 4. [ ] Corte do CHANGELOG (EN+PT): seção `0.5.0` reunindo os bullets não
        lançados; cabeçalho `Version:` do `AGENTS.md`(+PT) atualizado no
        mesmo commit. (As lanes podem redigir já; o corte segue esperando as

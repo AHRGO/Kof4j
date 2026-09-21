@@ -29,6 +29,10 @@ the release is cut (three-states rule).
        addendum). `VERSION`/`pom.xml` are already at `0.5.0-beta`; only the
        CHANGELOG/tag remain. Check hardcoded version refs (tests/javadoc
        mention the artifact version) BEFORE bumping; never a unilateral edit.
+       **Audited 21/09 (9093): clean** — the remaining `0.4.0` hits are
+       provenance comments (when a port landed) and `beta-0.4.0` used as a
+       *branch name* by `codeql-gate.sh` (monitors both) and by test fixtures;
+       none hardcode the artifact version.
 4. [ ] CHANGELOG cut (EN+PT): a `0.5.0` section gathering the unreleased
        bullets; `AGENTS.md`(+PT) header `Version:` updated in the same
        commit. (Lanes may draft it now; the cut still waits on the seven
