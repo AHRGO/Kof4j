@@ -13,6 +13,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **release 0.5.0 condition 1 re-certified GREEN** (21/09, lane docs/.18): the
+    tree jar was stale vs source after the day's landings (condition 1's own
+    re-stale rule, condition 6 at cut). Recovered with `scripts/build-kof-jar.sh`
+    (rebuild + content stamp) and re-measured with `scripts/target-matrix.sh`
+    under the `scripts/setup-cross-toolchain.sh --export` env — `PARITY: 100%`
+    (jvm/x86_64/riscv64/aarch64/js/script byte-identical vs the JVM oracle;
+    kofc=EG-9, android=EG-10 delegated). Prep condition 1 updated EN+PT; no code
+    change.
+
   - **§258 — the CodeQL umbrella closed: #775 + #776 fixed in-file** (21/09,
     lane development/`.18`): `NumericFormatterE2ETest.runJvm()` no longer spawns
     the relative token `"java"` (#775 `java/relative-path-command`) — it uses the

@@ -13,6 +13,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **release 0.5.0 condição 1 re-certificada GREEN** (21/09, lane docs/.18): o
+    jar da árvore estava velho vs a fonte após os pousos do dia (regra de
+    re-envelhecimento da própria condição, condição 6 no corte). Recuperado com
+    `scripts/build-kof-jar.sh` (reconstrução + estampa por conteúdo) e re-medido
+    com `scripts/target-matrix.sh` sob o env do
+    `scripts/setup-cross-toolchain.sh --export` — `PARITY: 100%`
+    (jvm/x86_64/riscv64/aarch64/js/script byte-a-byte vs o oráculo JVM;
+    kofc=EG-9, android=EG-10 delegados). Condição 1 da prep atualizada EN+PT;
+    sem mudança de código.
+
   - **§258 — o guarda-chuva CodeQL fechado: #775 + #776 corrigidos no próprio
     arquivo** (21/09, lane development/`.18`): `NumericFormatterE2ETest.runJvm()`
     não spawna mais o token relativo `"java"` (#775 `java/relative-path-command`)
