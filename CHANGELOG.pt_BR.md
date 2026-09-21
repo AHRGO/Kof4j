@@ -14,6 +14,13 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
 ### Em desenvolvimento
+  - **Design 3.6 pousado — `docs/development/future/secrets-plan.md` (+EN)** (21/09): a
+    resposta do Estágio 5 a "Secrets em logs: SEM PROTEÇÃO" — value type `Secret`
+    (reveal-gated, equals em tempo constante, formato de impressão `Secret(*** )` declarado
+    logo de saída), redação forçada em três camadas (compile/runtime/corpus) e `KeyHandle`
+    (material de chave nunca chega ao guest; rotate() revoga). Zero código: P1/P2/P3 cada um
+    espera seu próprio voto rule-6; a superfície crua `secrets.get`/`jwt` segue intacta.
+    Linha 3.6 do tracker anotada, linha no `future/README` adicionada EN+PT.
   - **§388-A — `writeBytes`/`appendBytes` com `listOf(...)` compilava VERDE e
     morria em runtime** (20/09): o `lowerIo` agora reporta `SEM099` quando um
     argumento de tipo List encontra um parâmetro ArrayType — o contrato `Int[]`

@@ -26,6 +26,13 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (`WorkflowE2ETest`, `KofJsE2ETest`, `IoBoolFacesE2ETest`, pump).
 
 ### In development
+  - **3.6 design landed — `docs/development/future/secrets-plan.md` (+PT)** (21/09): the
+    Stage-5 answer to "Secrets in logs: NO PROTECTION" — value type `Secret` (reveal-gated,
+    constant-time equals, fixed `Secret(*** )` print format declared up front), three-layer
+    enforced redaction (compile/runtime/corpus) and `KeyHandle` (key material never reaches
+    the guest; rotate() revokes). Zero code: P1/P2/P3 each await their own rule-6 vote; the
+    raw `secrets.get`/`jwt` surface keeps running untouched. Tracker line 3.6 annotated,
+    `future/README` row added EN+PT.
   - **§388-A — `writeBytes`/`appendBytes` with a `listOf(...)` compiled GREEN and
     died at runtime** (20/09): `lowerIo` now reports `SEM099` when a List-typed
     actual meets an ArrayType parameter — the `Int[]` contract declared in io.md
