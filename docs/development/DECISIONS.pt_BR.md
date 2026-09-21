@@ -2524,3 +2524,100 @@ Três respostas da mantenedora (chat, 20/09/2026), mesmo escopo de release:
 
 **Não-objetivos:** a decisão do modelo NÃO muda sintaxe/semântica de Kof; ela
 apenas fecha o contrato de consumo do Registry. NÃO corta o 0.5.0 nem abre a 1.0.
+
+---
+
+## D-FFI-STRUCT — ABI de struct/array da FFI: as decisões D6 (records por valor)
+
+**Data:** 2026-09-20
+
+**Estado:** DECIDIDO (implementação aberta: 3.8b binding JVM)
+
+**Escopo:** fecha as questões `D6-1..D6-5` de
+`docs/development/ffi-abi-structs.md` (§4) — a spec que gateia a ABI de
+struct/array da FFI (tracker 3.8a/3.8b/3.7). O 3.8a (`AbiLayout`) já pousou
+20/09. A mantenedora autorizou a frente em sessão 20/09 ("implemente
+ffi-abi-structs 3.8b"); as opções abaixo adotam as recomendações medidas da
+spec, mantendo a **superfície de linguagem mínima** (regra 11).
+
+### Contexto
+
+A FFI (R3) binda só o conjunto escalar `{Int, Long, Float, Double, Boolean,
+String}` + callbacks (`FfiSignature`); struct/array/out-buffer/opaque são os
+gaps honestos `FFI001`/`FFI002` (`CompilerPipeline.isExternBound`). A spec
+`ffi-abi-structs.md` mediu a divisão de custo: o lado JVM é quase de graça (a
+FFM classifica), o asm nativo é a metade caríssima (3.7). Cinco decisões
+gateavam qualquer código.
+
+### Decisão
+
+- **D6-1 = opção A: um `record` de Kof mapeia um struct C, por valor,
+  read-only.** `record Point(Int x, Int y)` binda um C
+  `struct { int x; int y; }`. Uma nova declaração mutável `struct` (opção B)
+  **NÃO é adicionada na v1** — regra 11: a necessidade de out-buffer é coberta
+  pelo D6-3 sem sintaxe nova; B fica adiada até uma necessidade real de
+  *campo in/out em struct* ser provada.
+- **D6-2 = arrays primitivos bindam; `List<T>` não.** `new Int[n]`/
+  `new Byte[n]` (sintaxe existente) cruzam como `ptr` com **nenhum length
+  implícito** (a API C recebe o length explicitamente). `List<T>` continua
+  `FFI001` (cópia boxed por chamada é não-provada contra benchmark).
+- **D6-3 = out-buffers são um kind de ABI próprio, não `String`.** Um
+  out-buffer é `new Byte[n]` cruzando como `Buffer(U8, INOUT)` (copy-in /
+  call / copy-back), **nunca o token `S`** (`S` = `char*` UTF-8
+  NUL-terminated, read-only). O length fica argumento C explícito.
+- **D6-4 = retorno por valor > 16 B.** O `Linker` da FFM esconde o sret no
+  JVM; o backend **asm nativo** o implementa por ABI (SysV hidden pointer /
+  AAPCS64 hidden `x8` / LP64 reference) — 3.7, lane native.
+- **D6-5 = arena confinada por downcall.** `Arena.ofConfined()` aberta no
+  downcall e fechada depois; um `char*` retornado é copiado e nunca
+  possuído (`String` de Kof é imutável). A wart medida (um `Arena.global()`
+  no caminho de argumento string) é corrigida na mesma frente — nenhum vazamento
+  deixado à deriva.
+
+**Codificação:** a gramática de tokens do `FfiSignature` ganha um token de
+struct `@<fieldchars>` (ex.: `div(Int,Int):Div` → `@ii`), reusando os chars
+escalares `i j f d b`; arrays/out-buffers ganham os tokens deles na fatia
+própria. Qualquer coisa fora do conjunto decidido continua `FFI001`/`FFI002`
+(R6), nunca silenciosa.
+
+### Invariantes
+
+- Zero regressão na FFI escalar/callback (`FfiE2ETest` /
+  `JvmFfiCallbackE2ETest` continuam verdes).
+- Native/JS mantêm `FFI001`/`FFI002` para struct até 3.7/JS pousarem — nunca
+  um binding parcial silencioso (R6).
+- Só campos escalares bindam na v1; um record com campo não-escalar é
+  `FFI001` no JVM (honesto).
+
+### Alternativas rejeitadas
+
+- **B (sintaxe nova `struct`) para v1** — rejeitada: adiciona superfície de
+  linguagem (regra 11) antes de necessidade provada; D6-3 cobre out-buffers.
+- **`S` para out-buffers** — rejeitada (medido 20/09): `String` ≠ buffer
+  mutável (mutabilidade, length, direção, tempo de vida).
+- **`Arena.global()`** — rejeitada: vaza cada argumento string num processo
+  de vida longa.
+
+### Implementação
+
+`docs/development/ffi-abi-structs.md` §6: 3.8a ✅ (pousado), **3.8b = binding
+JVM (esta frente)** — lane compiler; 3.7 = asm nativo (lane native); fronteira
+JS = decisão própria. Claim no `DOING.md` antes do código (este commit).
+
+### Evidência
+
+- Spec + layout medido: `docs/development/ffi-abi-structs.md` §1–§3;
+  `AbiLayoutTest` (14 shapes × 3 ABIs, golden GCC 13.3).
+- Prova E2E do 3.8b: `FfiStructE2ETest` (JVM: struct como arg + retorno de
+  record via `.so` C real, byte-a-byte vs o oráculo C; Native/JS pinados
+  `FFI001`/`FFI002`).
+
+### Relações
+
+- `Supersedes: nenhuma`
+- `Depends on: D-POLL-19 (spec-first), AbiLayout 3.8a`
+- `Related: R3 (FFI), R6 (nunca silencioso), R9 (interop-first), D-KOF-FIRST`
+
+## D-ARTIFACT-TRUST — contrato de confiança dos artefatos de release do 1.0: integridade + artefato-exato + provenance de build neutra, atestada pelo workflow oficial; verificação obrigatória no portão de release e no `kof deps resolve` para pacotes oficiais (20/09/2026, respostas da mantenedora ao #571)
+
+Decidido via multi-escolha da lane de issues (20/09). **(1) Propriedades obrigatórias:** integridade `SHA256SUMS` (jars soltos entram no ciclo) + a invariant artefato-exato do `§32.6` com enforcement MECÂNICO no `--rc-gate` (digest testado == digest publicado) + attestation de provenance de build verificável online e offline. **(2) Identidade/vendor:** o workflow oficial sob Actions é a identidade atestante; o contrato enuncia PROPRIEDADES NEUTRAS (nome de vendor não-normativo — `D-KOF-FIRST`/R11: crypto nunca caseira, nenhum vendor é oracle). **(3) Objeto:** para biblioteca, o artefato verificado é o tarball de FONTES (confirma #571-Q12); cada binário de alvo leva o próprio digest. **(4) Onde é obrigatório / falha:** o portão de release BLOQUEIA sem evidência válida; `kof deps resolve`/Registry BLOQUEIA DUREZAMENTE pacote OFICIAL sem evidência válida; comunidade = warning honesto (R6, nunca silêncio). **(5) Hardening (fila separada, fora do texto do contrato):** pin por SHA das 59 refs de actions, least-privilege por job (fim do `contents:write` workflow-level/push direto a main), rulesets no `main`+branch ativa; commits assinados/SBOM = pós-1.0. Fila: (a) enforcement de digest no rc-gate + jar-no-SUMS (lane tooling), (b) attest+verify no workflow de release (lane CI), (c) checagem de evidência no resolve com política oficial/comunidade (lane cli/deps).
