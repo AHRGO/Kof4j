@@ -96,6 +96,15 @@ o CHANGELOG seguia alegando o flip, sem um único conflito para avisar ninguém.
 histórica de meia-face fechada só se isenta por linha nomeada em
 `scripts/changelog-ledger-waivers.txt`, nunca editando o gate.
 
+**Link do ledger tem que chegar**: `scripts/check_ledger_anchors.sh` recalcula o slug GitHub
+de cada heading de seção e compara — por igualdade exata — com o href `pt-switch`/
+`en-switch` da outra língua (diacríticos dobrados, pontuação removida, `_` preservado).
+Medido 21/09: 11 de 26 hrefs eram abreviações à mão apontando para lugar nenhum
+(incluindo dois que esta lane pousou na própria manhã). Todos regenerados até zero, e o
+`--selftest` planta um slug truncado para a classe nunca voltar calada. Os dois gates
+moram na suíte de agentes da CI (`run-agent-tests.sh`) e disparam por mudança via
+`agent-verify.sh`.
+
 **18 itens na fila aberta** (ressincronizado 21/09 ~07:0x — 20→19
 quando **§380** (codegen JS de `if` aninhado com `throw`) foi formalizado ✅
 `9f383bcf`, re-medido 16/0F no tip; 19→18 quando **§381** (OOM do keyword

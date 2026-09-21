@@ -119,6 +119,7 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     com o host consertado — patch por tipo dinamico de coluna (`!=0`) +
     `findPreservesSavedBoolTrueRegression397` estendido p/ byte-paridade
     Native==JVM (RED sem o patch na assert cross, GREEN com; KofOrmE2ETest 44/0F).
+    Lacuna de registro consertada no mesmo dia: o gate agora tem parágrafo no `development/README`(+PT) §2 ao lado do gate de língua.
 
   - **Fortalecimento de teste F2a (lane gaps-db)** (20/09): a unidade F2a
     (`save` row-object, `RuntimeOrm4`+`RuntimeOrmSchema`+`RuntimeOrmBind`)

@@ -130,6 +130,7 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     com o host consertado — patch por tipo dinamico de coluna (`!=0`) +
     `findPreservesSavedBoolTrueRegression397` estendido p/ byte-paridade
     Native==JVM (RED sem o patch na assert cross, GREEN com; KofOrmE2ETest 44/0F).
+    Registry gap fixed the same day: the gate now carries its paragraph in `development/README`(+PT) §2 beside the language gate.
 
   - **F2a test-strengthening (gaps-db lane)** (20/09): a unidade F2a
     (`save` row-object, `RuntimeOrm4`+`RuntimeOrmSchema`+`RuntimeOrmBind`)

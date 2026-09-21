@@ -95,6 +95,14 @@ flip, with zero conflict to warn anyone. Historical quotes of a half-closed item
 be waived only by a named line in `scripts/changelog-ledger-waivers.txt`, never by
 editing the gate.
 
+**Ledger links must actually land**: `scripts/check_ledger_anchors.sh` recomputes the
+GitHub slug of every section heading and compares it — by exact string — to the
+`pt-switch`/`en-switch` href of the opposite language (diacritics folded, punctuation
+deleted, `_` kept). Measured 21/09: 11 of 26 hrefs were hand-abbreviations pointing at
+nothing (including two this lane shipped the same morning). All regenerated to zero, and
+`--selftest` plants a truncated slug so the class cannot silently return. Both gates sit
+in the CI agent suite (`run-agent-tests.sh`) and fire per-change via `agent-verify.sh`.
+
 **18 items in the open queue** (resynced 21/09 ~07:0x — 20→19 when
 **§380** (JS nested-`if`/`throw` codegen) was formalized ✅ `9f383bcf`,
 re-measured 16/0F at the tip; 19→18 when **§381** (entity-field keyword
