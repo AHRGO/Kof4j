@@ -85,6 +85,8 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO` · `ÓRFÃO`. **Ativos
 
 ## Histórico (tick a tick, mais recente no topo)
 
+> **✅ FEITO (21/09, dono = sessão 9093, lane docs/plataforma): README §0 — dono do `db-parity-plan` `docs/plataforma`→`gaps-db` (handoff 21/09), S0 ✅ (limpa §421), S1 em andamento. Commit `1f416784`; prova `docs-lang` 0/0/0. Sincronização segue bloqueada pelo WIP §421 do 9092.**
+
 > **✅ FEITO (21/09, dono = sessão 9093, lane docs/plataforma): tracker universal sincronizado ao real — invariantes `R5 🟡`→`✅ 21/09 (gate de máquina dos tiers)`, Estágio 3 `planned 19/09 / 3.0.0 recon-pendente`→`em andamento` (recon 3.0 ✅ 19/09, `MakealivePrimitivesE2ETest` 5/5; core 3.1/3.2/3.3/3.8 + 3.7 fechado; só resta 3.6). Commit `4f5da3b6`; prova `docs-lang` 0/0/0. NÃO sincronizei (WIP §421 do 9092).**
 
 > **✅ FEITO (21/09, dono = sessão 9093, lane docs/plataforma — mantenedora "revise os documentos"): docs/development sincronizado (só docs/cabeçalhos sem WIP alheio) — `type-system-extensions-plan` RASCUNHO→APROVADO (X5/X6 + `D-X5-SURFACE`), `ffi-abi-structs` `D6-1 = A+B`→**B** (`D-FFI-STRUCT-B`), `secrets-plan` face 1 autorizada (`D-SECRETS`); `README` §1: `secrets-plan` promovido (não `future/`), `D6-1 = B`; `DECISIONS` §D-FFI-STRUCT alinhado a B com a supersessão. Commits `80db207a`/`b82d6b3d`/`f44e7955`; provas `docs-lang` 0/0/0 + `check_live_records` OK (14 vivos). **NÃO sincronizei** (WIP §421 do 9092 na árvore): **NEXT STEP — `git rebase` + `scripts/sync-push.sh` assim que o 9092 commitar o S0; sem frente destravável sem dono na minha lane.**
