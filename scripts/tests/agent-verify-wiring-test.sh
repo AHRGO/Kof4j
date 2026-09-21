@@ -59,9 +59,11 @@ for_each_pat "$CHG" yes CHANGELOG.md CHANGELOG.pt_BR.md \
 for_each_pat "$CHG" no docs/development/README.md kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java
 for_each_pat "$ANC" yes docs/bugs-and-gaps/known-bugs.md docs/bugs-and-gaps/known-bugs.pt_BR.md
 for_each_pat "$ANC" no CHANGELOG.md scripts/changelog-ledger-waivers.txt
-for_each_pat "$LRC" yes docs/development/README.md docs/development/README.pt_BR.md
+for_each_pat "$LRC" yes docs/development/README.md docs/development/README.pt_BR.md \
+    docs/development/DECISIONS.md docs/development/DECISIONS.pt_BR.md
 for_each_pat "$LRC" no CHANGELOG.md docs/bugs-and-gaps/known-bugs.md
 want_called docs/development/README.md live_records
+want_called docs/development/DECISIONS.md live_records
 want_not   docs/development/README.md ledger_anchors
 want_called docs/bugs-and-gaps/known-bugs.md ledger_anchors
 want_not   docs/bugs-and-gaps/known-bugs.md live_records

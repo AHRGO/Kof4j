@@ -163,7 +163,7 @@ fi
 if touches '^docs/bugs-and-gaps/known-bugs'; then
     run_gate ledger_anchors "${AGENT_VERIFY_LEDGERSANCH:-bash scripts/check_ledger_anchors.sh}"
 fi
-if touches '^docs/development/README'; then
+if touches '^docs/development/'; then
     run_gate live_records "${AGENT_VERIFY_LIVERECORDS:-bash scripts/check_live_records.sh}"
 fi
 if touches '(^|/)(kof-runtime|stdlib)/|stdlib_boundary'; then

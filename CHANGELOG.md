@@ -138,6 +138,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **The gate now closes the loop in both directions** (21/09, docs lane): besides CHANGELOG-claims-closed-without-ledger-backing, an id CLOSED in the ledger at or after section 400 with no CHANGELOG entry now fails the gate. The floor is an epoch rule, not amnesty: measured 21/09, 25 closed ids below 400 lack entries while ZERO above it do — practice solidified, so the rule starts where the practice does. Mutation-verified: a planted closed section in the ledger with no changelog line is named by the gate; real state stays green. (A companion no-ghost idea — forbidding changelog refs to ids absent from the ledger — was measured and REJECTED: the hits are ancient cross-references, a wrong rule for the history, refused per the round-11 lesson.)
+  - **Living-records gate widened; DECISIONS EN/PT parity repaired** (21/09, docs lane): auditing the
+    sister lane's landing found three maintainer decisions recorded EN-only (`R6-SCOPE`,
+    `D-R3-BUFFER`, `D-R3-HANDLE-LIFETIME`) and a corrupted PT section (a stray EN heading plus a
+    byte-identical duplicate of the graphics addendum). Both fixed: the three sections mirrored to PT
+    (translation only, no content change) and the duplicate removed. `check_live_records.sh` now also
+    asserts DECISIONS EN<->PT decision-ID parity (template `D-XXXX` excluded) and zero repeated
+    section headings — mutation-proven (a replanted duplicate and a removed PT section are both
+    named; restored green). The agent-verify wire now fires on all of `docs/development/`.
   - **Living records now have their own gate — and the wiring test grew teeth** (21/09, docs
     lane): `scripts/check_live_records.sh` requires every `N items`/`N live` declaration in this
     lane's two READMEs to equal the classifier's live count — the class that drifted twice today
