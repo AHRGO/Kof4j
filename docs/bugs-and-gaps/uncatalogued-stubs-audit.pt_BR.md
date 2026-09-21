@@ -132,6 +132,11 @@ não se aplica).
 
 ## Proveniência
 
-- Script de inventário: `scripts/audit-stubs.sh` (somente leitura, idempotente).
+- Script de inventário: `scripts/audit-stubs.sh` (somente leitura, idempotente) —
+  agora guardado por um teste RED-first de fixture
+  `scripts/tests/audit-stubs-test.sh` (um `TODO`/`catch` vazio/`@Disabled`
+  plantado precisa ser achado; fixture limpa dá 0; a árvore não pode mudar; raiz
+  sem `*/src/main` recusa), ligado em `scripts/tests/run-agent-tests.sh` (lane
+  docs/.18, 21/09).
 - Base: `16340f62`; contagens re-medidas nesta base.
 - Artefatos de recon prévios: `/tmp/opencode/audit/{markers,candidates,hard}.txt`.

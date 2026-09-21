@@ -13,6 +13,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **tooling — `scripts/audit-stubs.sh` ganha teste RED-first de fixture +
+    wiring na suíte** (21/09, lane docs/.18): a frente de revisão (lane 9094)
+    entregou o inventário de stubs sem teste nem entrada na suíte.
+    `scripts/tests/audit-stubs-test.sh` planta um `TODO`/`catch` vazio/`@Disabled`
+    e exige que sejam achados, fixture limpa dando 0 (anti-falso-positivo — o
+    ruído PT `todo`=`todos`), a árvore inalterada (somente leitura) e raiz sem
+    `*/src/main` recusando; ligado em `scripts/tests/run-agent-tests.sh` (suíte
+    VERDE). Sem mudança de código de produção.
+
   - **release 0.5.0 condição 1 re-certificada GREEN** (21/09, lane docs/.18): o
     jar da árvore estava velho vs a fonte após os pousos do dia (regra de
     re-envelhecimento da própria condição, condição 6 no corte). Recuperado com

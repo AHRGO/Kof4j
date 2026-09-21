@@ -129,6 +129,10 @@ does not apply).
 
 ## Provenance
 
-- Inventory script: `scripts/audit-stubs.sh` (read-only, idempotent).
+- Inventory script: `scripts/audit-stubs.sh` (read-only, idempotent) — now guarded
+  by a RED-first fixture test `scripts/tests/audit-stubs-test.sh` (a planted
+  `TODO`/empty-`catch`/`@Disabled` must be found; a clean fixture must count 0;
+  the tree must not change; a root without `*/src/main` refuses), wired into
+  `scripts/tests/run-agent-tests.sh` (lane docs/.18, 21/09).
 - Base: `16340f62`; counts re-measured on this base.
 - Prior recon artifacts: `/tmp/opencode/audit/{markers,candidates,hard}.txt`.

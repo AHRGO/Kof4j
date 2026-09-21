@@ -13,6 +13,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **tooling — `scripts/audit-stubs.sh` gains a RED-first fixture test + suite
+    wiring** (21/09, lane docs/.18): the review front (lane 9094) shipped the stub
+    inventory without a test or suite entry. `scripts/tests/audit-stubs-test.sh`
+    plants a `TODO`/empty-`catch`/`@Disabled` and requires them found, a clean
+    fixture to count 0 (anti-false-positive — the PT `todo`=`todos` noise), the
+    tree to stay unchanged (read-only) and a root without `*/src/main` to refuse;
+    wired into `scripts/tests/run-agent-tests.sh` (suite VERDE). No production
+    code change.
+
   - **release 0.5.0 condition 1 re-certified GREEN** (21/09, lane docs/.18): the
     tree jar was stale vs source after the day's landings (condition 1's own
     re-stale rule, condition 6 at cut). Recovered with `scripts/build-kof-jar.sh`
