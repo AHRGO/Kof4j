@@ -14241,6 +14241,7 @@ p
 - **`serveStatic` dead + false doc:** `kof-cli/.../KofCliSupport.java:218` `serveStatic(...)` (helper `contentType` at `:255` used only by it) has NO production caller — only `ServeStaticTest`. Full-stack statics are served by the app-level mechanism (`CmdServe.java:200`/`CmdRun.java:198-199` + `app.serveDir`); its javadoc (`:216-219`) still claims it exists "para `run` e `serve` full-stack" (F3-step-2a superseded by F3-step-2b). The green `ServeStaticTest` gives the illusion the feature is live.
 - **Unreachable DAP branch:** `KofDebugNativeDap.java:91-94` returns when `attachPid != null`, so the same test at `:98-100` is dead.
 - **`Compare` ignores unknown options:** `Compare.java:98` prints "unknown option" but does not `return 1`; the command proceeds and may exit 0 (legacy migration is deprioritized).
+- **`KofDebug` option switch (scanner candidate, same family):** `KofDebug.java:77` `default -> { }` inside the option-parsing switch silently drops an unmatched argument — same class as `Compare`; triage pending.
 - **Stale artifacts (hygiene):** six untracked, gitignored `.class` files sit in `kof-cli/src/main/java/dev/kof/cli/` (`AppManifest*.class`, `CmdBuild*.class`, `CmdServe.class`, `KofCliSupport.class`) — not tracked, do not ship, but stale build output inside the source tree.
 - **What is missing:** wire or delete `serveStatic`; remove the dead branch; make `Compare` fail on unknown options; clean the stray `.class` files.
 

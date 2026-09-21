@@ -32,7 +32,31 @@ class B { int x() { return 0; } }
 J
 cat > "$R/alpha/src/test/java/ATest.java" <<'J'
 package a;
-class ATest { @Disabled void t() {} }
+class ATest {
+    @Disabled void t() {}
+    void w() { assertTrue(true); }
+    void m() { assumeTrue(r.success()); }
+}
+J
+cat > "$R/alpha/src/main/java/LspServer.java" <<'J'
+package a;
+class LspServer {
+    void h() {
+        switch (x) {
+            case 1 -> a();
+            default -> { }
+        }
+        switch (y) {
+            case 1 -> a();
+            default -> respond(seq, command, Map.of());
+        }
+    }
+    void a() {}
+}
+J
+cat > "$R/alpha/src/test/java/FooDebugTest.java" <<'J'
+package a;
+class FooDebugTest { @Test void d() { System.out.println("x"); } }
 J
 
 # (a) raiz sem */src/main => recusa (rc!=0), nunca verde mudo
@@ -80,6 +104,17 @@ SEC="$(bash "$S" "$R" --section 7 2>/dev/null)"
 printf '%s\n' "$SEC" | grep -q "## 7\." && ! printf '%s\n' "$SEC" | grep -q "## 1\." \
     && echo "ok  — --section 7 isola a fatia" || { echo "FALHOU: --section 7 nao isolou"; rc=1; }
 
+# (e4) v2.1: fachada de resposta vazia, testes false-green, *DebugTest*
+facv="$(printf '%s\n' "$OUT" | sed -n 's/^fachada resposta vazia:[[:space:]]*//p' | head -1)"
+[ "${facv:-0}" -ge 1 ] && echo "ok  — fachada resposta-vazia detectada ($facv)" \
+    || { echo "FALHOU: fachada resposta-vazia nao detectada (=$facv)"; rc=1; }
+wgr="$(printf '%s\n' "$OUT" | sed -n 's/^testes false-green:[[:space:]]*//p' | head -1)"
+[ "${wgr:-0}" -ge 2 ] && echo "ok  — false-green detectado ($wgr)" \
+    || { echo "FALHOU: false-green nao detectado (=$wgr)"; rc=1; }
+dbg="$(printf '%s\n' "$OUT" | sed -n 's/^debug tests so-print:[[:space:]]*//p' | head -1)"
+[ "${dbg:-0}" -ge 1 ] && echo "ok  — *DebugTest* detectado ($dbg)" \
+    || { echo "FALHOU: *DebugTest* nao detectado (=$dbg)"; rc=1; }
+
 # (f) fixture LIMPA => 0 candidatos (anti-falso-positivo)
 C="$T/clean"; mkdir -p "$C/x/src/main/java"
 cat > "$C/x/src/main/java/C.java" <<'J'
@@ -90,10 +125,14 @@ OUT2="$(bash "$S" "$C" 2>/dev/null)"
 todo2="$(printf '%s\n' "$OUT2" | sed -n 's/^candidatos TODO\/FIXME:[[:space:]]*//p' | head -1)"
 ec2="$(printf '%s\n' "$OUT2" | sed -n 's/^catch vazio:[[:space:]]*//p' | head -1)"
 fac2="$(printf '%s\n' "$OUT2" | sed -n 's/^facades triviais:[[:space:]]*//p' | head -1)"
-if [ "${todo2:-x}" = "0" ] && [ "${ec2:-x}" = "0" ] && [ "${fac2:-x}" = "0" ]; then
+facv2="$(printf '%s\n' "$OUT2" | sed -n 's/^fachada resposta vazia:[[:space:]]*//p' | head -1)"
+wg2="$(printf '%s\n' "$OUT2" | sed -n 's/^testes false-green:[[:space:]]*//p' | head -1)"
+dbg2="$(printf '%s\n' "$OUT2" | sed -n 's/^debug tests so-print:[[:space:]]*//p' | head -1)"
+if [ "${todo2:-x}" = "0" ] && [ "${ec2:-x}" = "0" ] && [ "${fac2:-x}" = "0" ] \
+    && [ "${facv2:-x}" = "0" ] && [ "${wg2:-x}" = "0" ] && [ "${dbg2:-x}" = "0" ]; then
     echo "ok  — fixture limpa da 0/0/0 (sem falso-positivo)"
 else
-    echo "FALHOU: fixture limpa deu todo=$todo2 catch=$ec2 facade=$fac2"; rc=1
+    echo "FALHOU: fixture limpa deu todo=$todo2 catch=$ec2 facade=$fac2 respvazia=$facv2 falsegreen=$wg2 debug=$dbg2"; rc=1
 fi
 
 exit "$rc"

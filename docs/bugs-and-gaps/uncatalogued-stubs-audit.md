@@ -259,6 +259,14 @@ The mechanizable subset of these checks (empty-response `default`, weak-green
 patterns) is the next unit: `scripts/audit-stubs.sh` gains the sections so the
 finding class is reproducible, not a one-off read.
 
+**Done (Fatia 6):** `scripts/audit-stubs.sh` v2.1 adds sections **11** (empty
+DAP/LSP response `default -> { }` / `respond(..., Map.of())`), **12** (false-green
+`assertTrue(true)`/`assumeTrue(...success())`) and **13** (`*DebugTest*`
+print-only harnesses), with summary counts, and `scripts/tests/audit-stubs-test.sh`
+grows RED-first fixtures for each (14 checks, green; clean fixture stays 0). On the
+real tree the sections flag exactly §428/§429/§430 plus the `KofDebug.java:77`
+candidate now noted in §431.
+
 ## Next passes (planned — not yet executed)
 
 1. **Parity asymmetry check** — **DONE (slice 2b, `StdParityGapAuditTest`

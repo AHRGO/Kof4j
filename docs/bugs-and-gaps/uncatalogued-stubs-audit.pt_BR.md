@@ -266,6 +266,15 @@ O subconjunto mecanizável destes checks (`default` de resposta vazia, padrões
 weak-green) é a próxima unidade: o `scripts/audit-stubs.sh` ganha as seções para
 a classe de achado ser reprodutível, não uma leitura única.
 
+**Feito (Fatia 6):** `scripts/audit-stubs.sh` v2.1 adiciona as seções **11**
+(resposta vazia DAP/LSP `default -> { }` / `respond(..., Map.of())`), **12**
+(false-green `assertTrue(true)`/`assumeTrue(...success())`) e **13**
+(harnesses `*DebugTest*` só-print), com contagens no resumo, e o
+`scripts/tests/audit-stubs-test.sh` ganha fixtures RED-first para cada (14
+checagens, verde; fixture limpa segue 0). Na árvore real as seções apontam
+exatamente §428/§429/§430 mais o candidato `KofDebug.java:77` agora anotado no
+§431.
+
 ## Próximas passadas (planejadas — ainda não executadas)
 
 1. **Checagem de assimetria de paridade** — **FEITA (fatia 2b,

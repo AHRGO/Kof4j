@@ -150,6 +150,32 @@ for f in files:
             line = src.count('\n', 0, m.start()) + 1
             hardfail.append(f"{f}:{line}  \"{m.group(1)[:60]}\"")
 
+# ── passada 5: fachadas de resposta vazia + testes false-green (v2.1) ────────
+testfiles = sorted(glob.glob(os.path.join(root, "*/src/test/**/*.java"), recursive=True))
+dapfacade = []
+for f in files:
+    src = open(f, encoding="utf-8", errors="replace").read()
+    for m in re.finditer(r'default\s*->\s*respond\([^;]*Map\.of\(\)', src):
+        line = src.count('\n', 0, m.start()) + 1
+        dapfacade.append(f"{f}:{line}  default -> respond(..., Map.of())")
+    b = os.path.basename(f)
+    if "Lsp" in b or "Dap" in b or "Debug" in b:
+        for m in re.finditer(r'default\s*->\s*\{\s*\}', src):
+            line = src.count('\n', 0, m.start()) + 1
+            dapfacade.append(f"{f}:{line}  default -> {{ }} (sem resposta)")
+
+weakgreen = []
+for f in testfiles:
+    src = open(f, encoding="utf-8", errors="replace").read()
+    for m in re.finditer(r'assert(?:True|False)\(\s*(?:true|false)\s*\)', src):
+        line = src.count('\n', 0, m.start()) + 1
+        weakgreen.append(f"{f}:{line}  {m.group(0)[:40]}")
+    for m in re.finditer(r'assumeTrue\([^;\n]*\bsuccess\s*\(\)', src):
+        line = src.count('\n', 0, m.start()) + 1
+        weakgreen.append(f"{f}:{line}  assumeTrue(...success()) — SKIP que pode mascarar regressao")
+
+debugtests = [f for f in testfiles if re.search(r'DebugTest', os.path.basename(f))]
+
 def show(sec, title, rows, fmt):
     if section and section != sec: return
     print(f"\n## {title}")
@@ -162,6 +188,12 @@ show("9", "9. catch com corpo SÓ comentário (absorve em silêncio) (v2)",
      swallow, lambda r: r)
 show("10", "10. throw UnsupportedOperationException SEM código de gap (v2) — hard-fail não documentado",
      hardfail, lambda r: r)
+show("11", "11. Fachada de resposta vazia DAP/LSP: default -> { } / respond(..., Map.of()) (v2.1)",
+     dapfacade, lambda r: r)
+show("12", "12. Testes false-green: assertTrue(true)/assertFalse(false) ou assumeTrue(...success()) (v2.1)",
+     weakgreen, lambda r: r)
+show("13", "13. Classes *DebugTest* (harness só-print, sem assert) (v2.1)",
+     debugtests, lambda r: r)
 
 if not section or section == "resumo":
     print("\n## resumo")
@@ -169,6 +201,9 @@ if not section or section == "resumo":
     print(f"corpos vazios (design, info):   {len(empties)}")
     print(f"catch so-comentario:            {len(swallow)}")
     print(f"hard-fail sem codigo:           {len(hardfail)}")
+    print(f"fachada resposta vazia:         {len(dapfacade)}")
+    print(f"testes false-green:             {len(weakgreen)}")
+    print(f"debug tests so-print:           {len(debugtests)}")
 PYEOF
 
 if [ -z "$SECTION" ]; then
