@@ -35,6 +35,19 @@ requests with no decision).
 
 ---
 
+## 0. What is live here (read first)
+
+- **Pending (the release gate's condition 3):** `ffi-abi-structs.md` (rule 6 —
+  D6-1..D6-5) · `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (owner: session 9093,
+  platform front) · `makealive-plan.md` (residual 3.2/3.7/3.8, rule 6).
+  Authority: `scripts/check_release_050_gate.sh` (`loose_docs`).
+- **Living records here (not backlog):** `DECISIONS.md`,
+  `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.
+- **§1 is the queue; §4.1/§4.2 are an AUDIT TRAIL** (what already left, with
+  proof) — do not read them as work. How to act: §6.
+
+---
+
 ## 1. Plan execution order (official queue of the development lane)
 
 > Criterion: (1) front designated by the maintainer > (2) gate health >

@@ -127,4 +127,33 @@ setup
 tick
 assert_contains "$(last_opencode_call)" "--attach" "comando usa --attach (sem sessão concorrente)"
 
+echo "A11 — AUTOLOOP_NAME: dois heartbeats coexistem (estado + cron isolados)"
+setup
+# fake crontab: arquivo em disco, para provar install/remove sem tocar o cron real
+export FAKE_CRONTAB_FILE="$TMP/crontab.txt"
+cat > "$TMP/bin/crontab" <<'EOF'
+#!/usr/bin/env bash
+f="${FAKE_CRONTAB_FILE:?}"
+if [ "${1:-}" = "-l" ]; then
+    cat "$f" 2>/dev/null || true
+else
+    tmp="$(mktemp)"; cat > "$tmp"; mv "$tmp" "$f"   # como o crontab real: lê o stdin todo, depois troca
+fi
+EOF
+chmod +x "$TMP/bin/crontab"
+# default (A) e loop nomeado (B) ativos ao mesmo tempo
+bash "$LOOP" start ses_default 2 9094 >/dev/null 2>&1
+AUTOLOOP_NAME=kof-auto-loop-b bash "$LOOP" start ses_b 2 9095 >/dev/null 2>&1
+assert_contains "$(cat "$FAKE_CRONTAB_FILE")" "env AUTOLOOP_NAME=kof-auto-loop-b" "cron do loop B carrega o env do nome"
+assert_eq 1 "$(grep -cE '# kof-auto-loop$' "$FAKE_CRONTAB_FILE")" "cron default presente"
+assert_eq 1 "$(grep -cE '# kof-auto-loop-b$' "$FAKE_CRONTAB_FILE")" "cron do loop B presente"
+# tick com o nome lê o state do loop B (não o default)
+AUTOLOOP_NAME=kof-auto-loop-b bash "$LOOP" tick >> "$TMP/tick.out" 2>&1
+assert_contains "$(last_opencode_call)" "--session ses_b" "tick nomeado usa a sessão do loop B"
+# parar B não pode apagar o cron default (marcador ancorado, não substring)
+AUTOLOOP_NAME=kof-auto-loop-b bash "$LOOP" stop >/dev/null 2>&1
+assert_eq 1 "$(grep -cE '# kof-auto-loop$' "$FAKE_CRONTAB_FILE")" "parar B preserva o cron default"
+assert_eq 0 "$(grep -cE '# kof-auto-loop-b$' "$FAKE_CRONTAB_FILE")" "parar B remove só a linha de B"
+unset FAKE_CRONTAB_FILE AUTOLOOP_NAME
+
 finish

@@ -35,6 +35,19 @@ pedidos sem decisão).
 
 ---
 
+## 0. O que está vivo aqui (leia primeiro)
+
+- **Pendentes (condição 3 do gate de release):** `ffi-abi-structs.md` (regra
+  6 — D6-1..D6-5) · `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (dono: sessão 9093,
+  frente de plataforma) · `makealive-plan.md` (residual 3.2/3.7/3.8, regra 6).
+  Autoridade: `scripts/check_release_050_gate.sh` (`loose_docs`).
+- **Registros vivos aqui (não são backlog):** `DECISIONS.md`,
+  `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.
+- **§1 é a fila; §4.1/§4.2 são TRILHA DE AUDITORIA** (o que já saiu, com
+  prova) — não leia como trabalho. Como agir: §6.
+
+---
+
 ## 1. Ordem de execução dos planos (fila oficial da lane development)
 
 > Critério: (1) frente designada pela mantenedora > (2) saúde do gate >
