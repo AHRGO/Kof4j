@@ -13,6 +13,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **deps — `kof deps resolve` ganha a POLÍTICA de verificação de proveniência (D-ARTIFACT-TRUST fila (c)), em modo observe**
+    (21/09, lane platform-cli/segurança): antes de extrair/instalar um pacote do registry, o tar.gz baixado é conferido contra a
+    identidade PEDIDA (owner/repo@versão — nunca o que a release declara): digest, repo-fonte, workflow que assinou, ref e commit
+    da tag. Pacote oficial sem evidência válida = bloqueado (`REG005` ausente · `REG006` inválida · `REG007` sem como verificar ·
+    `REG008` commit da tag não resolvido), nada instalado; comunitário = aviso visível. O modo padrão é OBSERVE (nunca bloqueia,
+    imprime `would block under enforcement`) até o pipeline de release publicar atestações; `KOF_DEPS_TRUST=enforce` aperta, nada
+    afrouxa. Pega o que o `SHA256SUMS` embutido não pega: jar E soma trocados de forma consistente dentro do tarball. O verificador
+    real (delegado a ferramenta auditada) e o E2E esperam o attest+verify do workflow de release.
+
   - **tooling — least privilege por job nos workflows fora do release**
     (21/09, lane platform-cli/segurança, hardening de D-ARTIFACT-TRUST §5): 19 grants `write` no nível do
     workflow → 0 (a escrita agora é escopo de job: 11, cada uma justificada em `scripts/workflow-permissions.txt`);

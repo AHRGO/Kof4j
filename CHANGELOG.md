@@ -13,6 +13,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **deps — `kof deps resolve` gains the provenance verification POLICY (D-ARTIFACT-TRUST queue (c)), in observe mode**
+    (21/09, platform-cli/security lane): before extracting/installing a registry package the downloaded tar.gz is checked against
+    the REQUESTED identity (owner/repo@version — never what the release claims): digest, source repo, signing workflow, tag ref
+    and tag commit. Official package without valid evidence = blocked (`REG005` missing · `REG006` invalid · `REG007` cannot be
+    verified · `REG008` tag commit unresolved), nothing installed; community = visible warning. Default mode is OBSERVE (never
+    blocks, prints `would block under enforcement`) until the release pipeline publishes attestations; `KOF_DEPS_TRUST=enforce`
+    tightens, nothing relaxes. Catches what the embedded `SHA256SUMS` cannot: a jar AND its sums replaced consistently inside
+    the tarball. The real verifier (delegated to an audited tool) and the E2E wait for the attest+verify step of the release workflow.
+
   - **tooling — least privilege per job in the non-release workflows**
     (21/09, platform-cli/security lane, D-ARTIFACT-TRUST §5 hardening): 19 workflow-level `write` grants → 0
     (writes are now job-scoped: 11, each justified in `scripts/workflow-permissions.txt`); the 3 workflows that

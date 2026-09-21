@@ -53,7 +53,7 @@ class DepsRegistryTest {
 
 
     /** Release D2-A real: jar valido + RELEASE.md + SHA256SUMS + tar.gz do proprio writer. */
-    private static byte[] buildPackage(Path dir, String repo, String version,
+    static byte[] buildPackage(Path dir, String repo, String version,
                                        boolean withJar, boolean goodSums, boolean withSums)
             throws Exception {
         Files.createDirectories(dir);

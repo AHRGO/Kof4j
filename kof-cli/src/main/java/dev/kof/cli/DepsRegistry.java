@@ -114,6 +114,7 @@ final class DepsRegistry {
         Path dl = null;
         try {
             dl = downloadAsset(asset.apiUrl());
+            verifyProvenance(owner, repo, tag, release, asset, dl);   // D-ARTIFACT-TRUST: antes de tocar no conteudo
             extractTarGz(dl, tmpDir);
             Path sums = tmpDir.resolve("SHA256SUMS");
             if (!Files.exists(sums)) {
@@ -185,6 +186,35 @@ final class DepsRegistry {
         for (Asset a : assets) if (a.name().equals(multi)) return a;
         for (Asset a : assets) if (a.name().endsWith(".tar.gz")) return a;
         return null;
+    }
+
+    /** Sufixos aceitos do bundle de atestacao ao lado do tar.gz (nome exato; a confirmar com a lane CI). */
+    private static final List<String> EVIDENCE_SUFFIXES = List.of(".sigstore.json", ".intoto.jsonl", ".jsonl");
+
+    static Asset pickEvidence(ReleaseMeta release, Asset tarball) {
+        for (String suffix : EVIDENCE_SUFFIXES) {
+            for (Asset a : release.assets()) if (a.name().equals(tarball.name() + suffix)) return a;
+        }
+        return null;
+    }
+
+    /**
+     * D-ARTIFACT-TRUST (c): confere a proveniencia do tar.gz baixado contra o PEDIDO (owner/repo@tag),
+     * nao contra o que a release declara. Oficial sem evidencia valida = REG005..REG008 e nada instala;
+     * comunitario = aviso honesto. O commit da tag so e resolvido (rede) quando ha evidencia a amarrar.
+     */
+    private static void verifyProvenance(String owner, String repo, String tag, ReleaseMeta release,
+                                         Asset tarball, Path downloaded) throws IOException {
+        Asset ev = pickEvidence(release, tarball);
+        Path bundle = null;
+        try {
+            if (ev != null) bundle = downloadAsset(ev.apiUrl());
+            String commit = ev == null ? null : RegistryTags.commitOf(owner, repo, tag);
+            TrustGate.check(owner, repo, tag, downloaded, bundle, TrustGate.verifier(), commit,
+                    TrustGate.enforcing());
+        } finally {
+            if (bundle != null) Files.deleteIfExists(bundle);
+        }
     }
 
     private static String stripTagPrefix(String tag, String repo) {
@@ -291,7 +321,7 @@ final class DepsRegistry {
     }
 
     /** Metadata da release (JSON). */
-    private static HttpResponse<String> getJson(String url) throws IOException {
+    static HttpResponse<String> getJson(String url) throws IOException {
         try {
             return HTTP.send(request(URI.create(url), "application/vnd.github+json", true).build(),
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
