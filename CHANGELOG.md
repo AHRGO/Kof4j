@@ -13,6 +13,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **2.2.3 concluded: option B verified implemented + assessment moved to
+    docs/architecture/** (21/09, lane docs/.18): the four source desugars already
+    run through the AST `DesugarStep` registry (`85779f20`: `DesugarSteps.defaults()`
+    registers all four + `CompilerPipeline:303`; `DesugarStepPipelineTest` 7/7;
+    `CompilerDesugar` has no direct call sites left), yet the roadmap line and the
+    assessment doc still read "DECIDED / slices open". Marked roadmap 2.2.3 ✅
+    IMPLEMENTED, README §1 row CONCLUDED+MOVED, and moved
+    `codegen-step-2.2.3-assessment.md` (+PT) to `docs/architecture/` (3-state
+    rule) with a Resolution section. Release gate condition 3 `loose_docs`
+    7 -> 6. Docs only.
+
   - **type-system plan: X5.4 slice corrected to v1 (+ my prior top rewrite
     reverted)** (21/09, lane docs/.18): the plan already carries the maintainer's
     "Surface decisions (RESOLVED)" section (`b94e2975`); my previous commit had

@@ -1,13 +1,14 @@
 [English](codegen-step-2.2.3-assessment.md) | [Português](codegen-step-2.2.3-assessment.pt_BR.md)
 
-# Avaliação 2.2.3 — "Migrar DDL/runner ao hook `CodegenStep`" (proposta)
+# Avaliação 2.2.3 — "Migrar DDL/runner ao hook `CodegenStep`" (RESOLVIDA · opção B)
 
-> **PROPOSTA — precisa de decisão da mantenedora (regra 6); sem código neste doc.**
-> Aberta 21/09/2026 pela lane docs/plataforma após a mantenedora pedir
-> **investigação + proposta** (não uma edição). Fecha a lacuna de medição da linha
-> **2.2.3** do roadmap §23; a decisão é registrada no `DECISIONS.md`.
+> **✅ RESOLVIDA 21/09/2026 — opção B decidida (`DECISIONS.md` §D-DESUGAR-STEP) e
+> IMPLEMENTADA (`85779f20`).** Aberta 21/09/2026 pela lane docs/plataforma após a
+> mantenedora pedir **investigação + proposta** (não uma edição); fechou a lacuna
+> de medição da linha **2.2.3** do roadmap §23. Movida para `docs/architecture/`
+> pela regra dos 3 estados (ver Resolução abaixo).
 
-**Dono (registro):** lane docs/plataforma · **Decisão:** mantenedora
+**Dono (registro):** lane docs/plataforma · **Decisão:** mantenedora (`D-DESUGAR-STEP`)
 
 ---
 
@@ -67,3 +68,19 @@ desugar de AST; nenhum pode ir ao hook pós-IR sem mudar o comportamento observ�
 - Os quatro pontos de entrada do `CompilerDesugar` viram passos registrados (ou
   delegados finos).
 - Prova: suíte completa + golden E2E por alvo, saída inalterada (regra 3 do freeze).
+
+---
+
+## Resolução (opção B — IMPLEMENTADA)
+
+- **Decidida:** `DECISIONS.md` §D-DESUGAR-STEP (mantenedora 21/09) escolheu a **opção B**.
+- **Implementada:** `85779f20` — `DesugarStep` + `DesugarStepPipeline` na fase de
+  AST; `DesugarSteps.defaults()` registra os quatro desugars (`tests`,
+  `application`, `infra`, `nested-functions`) e `CompilerPipeline:303` os roda
+  pelo registry. O `CompilerDesugar` agora é só o delegado que cada passo chama
+  (não restam chamadas diretas).
+- **Prova:** `DesugarStepPipelineTest` 7/7; livre de comportamento (regra 3 do freeze).
+- **DDL:** permanece no lowering (`ExpressionOrmCallLowerer:70`) — não é candidato
+  a registry (regra 11).
+- **Movida** de `docs/development/` (regra dos 3 estados; a condição 3 do gate de
+  release `loose_docs` a rastreava).

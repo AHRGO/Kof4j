@@ -13,6 +13,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **2.2.3 concluído: opção B verificada implementada + assessment movido para
+    docs/architecture/** (21/09, lane docs/.18): os quatro desugars de fonte já
+    rodam pelo registry `DesugarStep` de AST (`85779f20`: `DesugarSteps.defaults()`
+    registra os quatro + `CompilerPipeline:303`; `DesugarStepPipelineTest` 7/7;
+    `CompilerDesugar` sem chamadas diretas restantes), mas a linha do roadmap e o
+    doc de assessment ainda diziam "DECIDIDO / fatias abertas". Marcados roadmap
+    2.2.3 ✅ IMPLEMENTADO, linha §1 do README CONCLUÍDO+MOVIDO, e movido
+    `codegen-step-2.2.3-assessment.md` (+PT) para `docs/architecture/` (regra dos
+    3 estados) com seção Resolução. Condição 3 do gate de release `loose_docs`
+    7 -> 6. Só docs.
+
   - **plano do sistema de tipos: fatia X5.4 corrigida para v1 (+ reversão da minha
     reescrita do topo)** (21/09, lane docs/.18): o plano já carrega a seção
     "Surface decisions (RESOLVED)" da mantenedora (`b94e2975`); meu commit anterior

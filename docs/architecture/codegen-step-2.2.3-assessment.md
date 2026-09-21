@@ -1,13 +1,14 @@
 [English](codegen-step-2.2.3-assessment.md) | [Português](codegen-step-2.2.3-assessment.pt_BR.md)
 
-# 2.2.3 assessment — "Migrate DDL/runner to the `CodegenStep` hook" (proposal)
+# 2.2.3 assessment — "Migrate DDL/runner to the `CodegenStep` hook" (RESOLVED · option B)
 
-> **PROPOSAL — needs a maintainer decision (rule 6); no code in this doc.**
-> Opened 21/09/2026 by the docs/plataforma lane after the maintainer asked for
-> an **investigation + proposal** (not an edit). It closes the measurement gap
-> of roadmap §23 line **2.2.3**; the decision is recorded in `DECISIONS.md`.
+> **✅ RESOLVED 21/09/2026 — option B decided (`DECISIONS.md` §D-DESUGAR-STEP) and
+> IMPLEMENTED (`85779f20`).** Opened 21/09/2026 by the docs/plataforma lane after
+> the maintainer asked for an **investigation + proposal** (not an edit); it
+> closed the measurement gap of roadmap §23 line **2.2.3**. Moved to
+> `docs/architecture/` per the 3-state rule (see Resolution below).
 
-**Owner (record):** docs/plataforma lane · **Decision:** maintainer
+**Owner (record):** docs/plataforma lane · **Decision:** maintainer (`D-DESUGAR-STEP`)
 
 ---
 
@@ -65,3 +66,19 @@ desugar; neither can move to the post-IR hook without changing observable behavi
 - New `DesugarStep` interface + `DesugarStepPipeline` at the AST phase + registry.
 - `CompilerDesugar`'s four entry points become registered steps (or thin delegates).
 - Proof: full suite + golden E2E per target, unchanged output (freeze rule 3).
+
+---
+
+## Resolution (option B — IMPLEMENTED)
+
+- **Decided:** `DECISIONS.md` §D-DESUGAR-STEP (maintainer 21/09) chose **option B**.
+- **Implemented:** `85779f20` — `DesugarStep` + `DesugarStepPipeline` at the AST
+  phase; `DesugarSteps.defaults()` registers the four desugars (`tests`,
+  `application`, `infra`, `nested-functions`) and `CompilerPipeline:303` runs
+  them through the registry. `CompilerDesugar` is now only the delegate each step
+  calls (no direct call sites remain).
+- **Proof:** `DesugarStepPipelineTest` 7/7; behavior-free (freeze rule 3).
+- **DDL:** stays in lowering (`ExpressionOrmCallLowerer:70`) — not a registry
+  candidate (rule 11).
+- **Moved** here from `docs/development/` (3-state rule; the release gate
+  condition 3 `loose_docs` tracked it).
