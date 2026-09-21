@@ -13,6 +13,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **lane docs registra as decisões de 21/09 da mantenedora dentro dos planos**
+    (21/09, lane docs/.18): três planos contradiziam as decisões travadas nas
+    próprias linhas de estado. `type-system-extensions-plan.md` (+PT) dizia
+    "RASCUNHO para revisão" / "PARA REVISÃO" com quatro perguntas abertas — agora
+    registra a aprovação (X5/X6) e o congelamento `D-X5-SURFACE` (`out`/`in`,
+    `sealed` class/record + interface, projeção no sítio de uso na v1, `SEM0xx`);
+    `ffi-abi-structs.md` (+PT) acrescenta D6-1 **B** aprovado spec-first
+    (`D-FFI-STRUCT-B`, regra 11, ainda sem diff de parser/typer); `secrets-plan.md`
+    (+PT) registra a promoção + face 1 (`Secret`) autorizada (`D-SECRETS`). Linha
+    D6-1 da §1 do README corrigida para A+B (B spec-first). Sem mudança de código
+    de produção.
+
   - **`check_live_records.sh` parte I: a fila oficial (§1) tem de nomear todo loose
     doc + README §1 sincronizado com as decisões da mantenedora de 21/09** (21/09,
     lane docs/.18): um doc promovido para `docs/development/` mas ausente da fila

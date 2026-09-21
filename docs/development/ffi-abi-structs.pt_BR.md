@@ -6,8 +6,10 @@
 §D-FFI-STRUCT. D6-1 = A+B (`record` por valor + novo `struct` mutável por
 referência) · D6-2 = só `new T[n]` · D6-3 = `Buffer(U8, INOUT)`, sem sintaxe
 nova · D6-4 = implementar o sret completo · D6-5 = arena confinada por downcall.
-O texto-proposta da §4 fica pelo raciocínio medido. Este documento segue
-SOMENTE DESIGN.
+**D6-1 B aprovado spec-first 21/09 (`D-FFI-STRUCT-B`)**: a superfície `struct`
+mutável é desenhada aqui (§4/§6) e revisada antes de qualquer diff de
+parser/typer (regra 11). O texto-proposta da §4 fica pelo raciocínio medido.
+Este documento segue SOMENTE DESIGN.
 **Execução após aprovação:** compiler lane (linha 3.8 do tracker) + native
 lane (3.7).
 **Pousou 20/09 (fatia sem decisão):** 3.8a `AbiLayout` — o substrato de
@@ -98,8 +100,9 @@ Três exemplos resolvidos que os testes de implementação devem reproduzir bit 
   A) `record` (estrutural, imutável, zero-ceremonia — default recomendado);
   B) um novo `struct` mutável (necessário para buffers *in/out*);
   C) ambos: records = by-value read-only, `struct` = by-ref.
-  A composição que pendemos é A+B; a decisão precisa ser escrita em
-  `DECISIONS.md` antes de 3.8 começar.
+  A composição é A+B; **B está aprovado spec-first 21/09**
+  (`D-FFI-STRUCT-B`) — o desenho é revisado antes de qualquer diff de
+  parser/typer (regra 11).
 - **D6-2 · mapeamento de array.** `List<Int>` é boxed (`ArrayList` no JVM) —
   bindar significa copiar para memória nativa a cada chamada. Proposta:
   arrays primitivos (`new Int[n]`, que já existem) bindam como `ptr` (sem

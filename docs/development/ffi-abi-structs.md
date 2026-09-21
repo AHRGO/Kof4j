@@ -5,7 +5,9 @@
 **Status:** **D6 DECIDED (maintainer 09/20/2026)** — `docs/development/DECISIONS.md`
 §D-FFI-STRUCT. D6-1 = A+B (`record` by-value + a new mutable `struct` by-ref) ·
 D6-2 = only `new T[n]` · D6-3 = `Buffer(U8, INOUT)`, no new syntax · D6-4 =
-implement the full sret · D6-5 = confined arena per downcall. The §4 proposal
+implement the full sret · D6-5 = confined arena per downcall. **D6-1 B approved
+spec-first 21/09 (`D-FFI-STRUCT-B`)**: the mutable `struct` surface is designed
+here (§4/§6) and reviewed before any parser/typer diff (rule 11). The §4 proposal
 text is kept for its measured reasoning. This document stays DESIGN-ONLY.
 **Execution after approval:** compiler lane (tracker line 3.8) + native lane (3.7).
 **Landed 20/09 (decision-free slice):** 3.8a `AbiLayout` — the layout/
@@ -96,8 +98,9 @@ Three worked examples the implementation tests must reproduce bit-exactly:
   A) `record` (structural, immutable, already zero-ceremony — recommended default);
   B) a new mutable `struct` declaration (needed for *in/out* buffers);
   C) both, with records = by-value read-only and `struct` = by-ref.
-  A+B is the composition we lean toward; a decision must be written to
-  `DECISIONS.md` before 3.8 starts.
+  A+B is the composition; **B is approved spec-first 21/09**
+  (`D-FFI-STRUCT-B`) — the design is reviewed before any parser/typer diff
+  (rule 11).
 - **D6-2 · array mapping.** `List<Int>` is boxed (JVM `ArrayList`) — binding
   it means copying to native memory per call. Proposal: primitive arrays
   (`new Int[n]`, which already exist) bind to `ptr` (no implicit length

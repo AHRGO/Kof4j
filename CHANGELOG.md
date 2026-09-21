@@ -13,6 +13,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **docs lane records the maintainer's 21/09 decisions inside the plan docs**
+    (21/09, lane docs/.18): three plan docs contradicted the locked decisions on
+    their own status lines. `type-system-extensions-plan.md` (+PT) said "DRAFT for
+    maintainer review" / "FOR REVIEW" with four open questions — now records the
+    approval (X5/X6) and the `D-X5-SURFACE` freeze (`out`/`in`, `sealed`
+    class/record + interface, use-site projection in v1, `SEM0xx`); `ffi-abi-structs.md`
+    (+PT) adds D6-1 **B** approved spec-first (`D-FFI-STRUCT-B`, rule 11, no
+    parser/typer diff yet); `secrets-plan.md` (+PT) records promotion + face 1
+    (`Secret`) authorized (`D-SECRETS`). README §1 D6-1 row corrected to A+B (B
+    spec-first). No production code change.
+
   - **`check_live_records.sh` part I: the official queue (§1) must name every loose
     doc + README §1 synced with the maintainer's 21/09 decisions** (21/09, lane
     docs/.18): a doc promoted into `docs/development/` but absent from the §1 queue

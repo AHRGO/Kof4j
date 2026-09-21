@@ -3,8 +3,10 @@
 # Secrets — `Secret`, `KeyHandle` e redação forçada (plano de design · Estágio 5 / linha 3.6 do tracker)
 
 **Estado:** Plano (design) — ZERO código pousado (21/09, lane docs/development audit, a pedido da
-mantenedora). Implementar exige voto rule-6 por face antes de qualquer coisa encostar na linguagem
-ou nas assinaturas atuais de `secrets.*` (semântica congelada 0.2.6-beta).
+mantenedora). **Promovido 21/09; face 1 (`Secret`) autorizada (`D-SECRETS`)** — incremental, cada
+face com prova própria e voto rule-6 antes de qualquer coisa encostar na linguagem ou nas
+assinaturas atuais de `secrets.*` (semântica congelada 0.2.6-beta); `KeyHandle`/redação seguem face
+a face.
 **Fonte:** linha 3.6 de `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (`Secret`/`KeyHandle`
 pendentes, Estágio 5) · análise de gap `docs/stdlib/security.md` (linhas "Secrets (env):
 INEXISTENTE", "Secrets em logs: SEM PROTEÇÃO") · §kof.security de `docs/bugs-and-gaps/ecosystem-coverage.md`.

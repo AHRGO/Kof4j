@@ -3,8 +3,9 @@
 # Secrets — `Secret`, `KeyHandle` and enforced redaction (design plan · Stage 5 / tracker 3.6)
 
 **Status:** Plan (design) — ZERO code landed (21/09, docs/development audit lane by maintainer
-request). Implementation requires a rule-6 vote per face before anything touches the language or
-the current `secrets.*` signatures (frozen semantics 0.2.6-beta).
+request). **Promoted 21/09; face 1 (`Secret`) authorized (`D-SECRETS`)** — incremental, each face
+with its own proof and a rule-6 vote before anything touches the language or the current
+`secrets.*` signatures (frozen semantics 0.2.6-beta); `KeyHandle`/redaction follow face by face.
 **Source:** `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` line 3.6 (`Secret`/`KeyHandle`
 pending, Stage 5) · gap analysis `docs/stdlib/security.md` (rows "Secrets (env): NONEXISTENT",
 "Secrets in logs: NO PROTECTION") · `docs/bugs-and-gaps/ecosystem-coverage.md` §kof.security.
