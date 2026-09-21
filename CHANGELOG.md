@@ -13,6 +13,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **`audit-stubs.sh` v2: structural method (maintainer order)** (21/09, lane
+    docs/.18, supporting the re-opened review front 9094): the front was re-opened
+    asking for a **structural** sweep, not markers. v2 adds four detectors that
+    depend on no `TODO` at all — (7) concrete methods whose body is a single
+    trivial `return null/false/0/""` (facade), (9) `catch` bodies holding only
+    comments (silent absorb), (10) `throw new UnsupportedOperationException` with
+    no gap code — plus `--section N` to run one reproducible slice. First measured
+    run: **2 facades, 19 comment-only catches, 1 codeless hard-fail** (candidates,
+    not catalogued — triage is the front's slice). The fixture test now covers
+    each detector and `--section` isolation. Docs/tooling only.
+
   - **new gate `check_doc_refs.sh`: dangling `docs/*.md` refs + phantom SHAs in
     the lane docs** (21/09, lane docs/.18): mechanizes the two drift classes found
     by hand today — a moved doc leaving the old path behind (native-multiarch,

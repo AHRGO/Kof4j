@@ -21,6 +21,8 @@ class A {
         // TODO: plantado (deve ser candidato)
         try { g(); } catch (Exception e) {}
     }
+    void h() { try { g(); } catch (Exception e) { /* absorvido */ } }
+    void k() { throw new UnsupportedOperationException("nao implementado"); }
     void g() { throw new UnsupportedOperationException("R6 honesto"); }
 }
 J
@@ -63,6 +65,21 @@ ec="$(printf '%s\n' "$OUT" | sed -n 's/^catch vazio:[[:space:]]*//p' | head -1)"
 printf '%s\n' "$OUT" | grep -q "ATest.java" && echo "ok  — @Disabled listado" \
     || { echo "FALHOU: @Disabled nao listado"; rc=1; }
 
+# (e2) detectores ESTRUTURAIS v2 (sem depender de marcador)
+fac="$(printf '%s\n' "$OUT" | sed -n 's/^facades triviais:[[:space:]]*//p' | head -1)"
+[ "${fac:-0}" -ge 1 ] && echo "ok  — facade trivial detectada ($fac)" \
+    || { echo "FALHOU: facade (return 0) nao detectada (=$fac)"; rc=1; }
+sw="$(printf '%s\n' "$OUT" | sed -n 's/^catch so-comentario:[[:space:]]*//p' | head -1)"
+[ "${sw:-0}" -ge 1 ] && echo "ok  — catch so-comentario detectado ($sw)" \
+    || { echo "FALHOU: catch so-comentario nao detectado (=$sw)"; rc=1; }
+hf="$(printf '%s\n' "$OUT" | sed -n 's/^hard-fail sem codigo:[[:space:]]*//p' | head -1)"
+[ "${hf:-0}" -ge 1 ] && echo "ok  — hard-fail sem codigo detectado ($hf)" \
+    || { echo "FALHOU: hard-fail sem codigo nao detectado (=$hf)"; rc=1; }
+# (e3) --section 7 isola a fatia (nao imprime os cortes 1-6)
+SEC="$(bash "$S" "$R" --section 7 2>/dev/null)"
+printf '%s\n' "$SEC" | grep -q "## 7\." && ! printf '%s\n' "$SEC" | grep -q "## 1\." \
+    && echo "ok  — --section 7 isola a fatia" || { echo "FALHOU: --section 7 nao isolou"; rc=1; }
+
 # (f) fixture LIMPA => 0 candidatos (anti-falso-positivo)
 C="$T/clean"; mkdir -p "$C/x/src/main/java"
 cat > "$C/x/src/main/java/C.java" <<'J'
@@ -72,10 +89,11 @@ J
 OUT2="$(bash "$S" "$C" 2>/dev/null)"
 todo2="$(printf '%s\n' "$OUT2" | sed -n 's/^candidatos TODO\/FIXME:[[:space:]]*//p' | head -1)"
 ec2="$(printf '%s\n' "$OUT2" | sed -n 's/^catch vazio:[[:space:]]*//p' | head -1)"
-if [ "${todo2:-x}" = "0" ] && [ "${ec2:-x}" = "0" ]; then
-    echo "ok  — fixture limpa da 0/0 (sem falso-positivo)"
+fac2="$(printf '%s\n' "$OUT2" | sed -n 's/^facades triviais:[[:space:]]*//p' | head -1)"
+if [ "${todo2:-x}" = "0" ] && [ "${ec2:-x}" = "0" ] && [ "${fac2:-x}" = "0" ]; then
+    echo "ok  — fixture limpa da 0/0/0 (sem falso-positivo)"
 else
-    echo "FALHOU: fixture limpa deu todo=$todo2 catch=$ec2"; rc=1
+    echo "FALHOU: fixture limpa deu todo=$todo2 catch=$ec2 facade=$fac2"; rc=1
 fi
 
 exit "$rc"

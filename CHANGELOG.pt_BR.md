@@ -13,6 +13,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **`audit-stubs.sh` v2: método estrutural (ordem da mantenedora)** (21/09,
+    lane docs/.18, apoio à frente de revisão 9094 reaberta): a frente pediu
+    varredura **estrutural**, não marcadores. A v2 adiciona
+    quatro detectores que não dependem de `TODO` algum — (7) métodos concretos
+    cujo corpo é só um `return null/false/0/""` trivial (facade), (9) corpos de
+    `catch` só com comentários (absorve em silêncio), (10) `throw new
+    UnsupportedOperationException` sem código de gap — mais `--section N` para
+    rodar uma fatia reprodutível. Primeira medição: **2 facades, 19 catches
+    só-comentário, 1 hard-fail sem código** (candidatos, não catalogados — a
+    triagem é a fatia da frente). O teste de fixture agora cobre cada detector e
+    o isolamento de `--section`. Só docs/tooling.
+
   - **novo gate `check_doc_refs.sh`: refs `docs/*.md` quebradas + SHAs fantasma
     nos docs da lane** (21/09, lane docs/.18): mecaniza as duas classes de drift
     achadas à mão hoje — um doc movido deixando o path antigo para trás
