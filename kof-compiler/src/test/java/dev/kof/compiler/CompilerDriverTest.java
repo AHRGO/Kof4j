@@ -18,7 +18,7 @@ class CompilerDriverTest {
     void externProducesHonestGapNotSilentDrop(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("ffi.kf");
         Files.writeString(source, """
-                extern sum(Int[] xs): Int
+                extern sum(String[] xs): Int
 
                 main() {
                     println("hi")
