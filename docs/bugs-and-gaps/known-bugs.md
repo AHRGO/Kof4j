@@ -14056,4 +14056,4 @@ p
 - **Related:** §258 (the batch this closes), §388 (the io bytes family, this
   lane), §419 (re-land lesson: every SHA/message here re-measured).
 
-<!-- pt-switch --> **PT:** [§420 (pt_BR)](known-bugs.pt_BR.md#420--kofjsrunnerwritebytes-manteve-o-ultimo-cast-bruto-int-sobre-um-getarraysize-do-guest-mesma-família-§258773---corrigido)
+<!-- pt-switch --> **PT:** [§420 (pt_BR)](known-bugs.pt_BR.md#420--kofjsrunnerwritebytes-manteve-o-ultimo-cast-bruto-int-sobre-um-getarraysize-do-guest-mesma-familia-258773---corrigido-2109)

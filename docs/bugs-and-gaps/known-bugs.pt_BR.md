@@ -11586,4 +11586,4 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Relacionado:** §258 (o batch que isto fecha), §388 (a família io bytes,
   desta lane), §419 (lição de re-pouso: todo SHA/mensagem aqui foi re-medido).
 
-<!-- en-switch --> **EN:** [§420 (en)](known-bugs.md#420--kofjsrunnerwritebytes-kept-the-last-raw-int-cast-over-a-guest-getarraysize-same-258773-family--fixed-2109)
+<!-- en-switch --> **EN:** [§420 (en)](known-bugs.md#420--kofjsrunnerwritebytes-kept-the-last-raw-int-cast-over-a-guest-getarraysize-same-258773-family---fixed-2109)
