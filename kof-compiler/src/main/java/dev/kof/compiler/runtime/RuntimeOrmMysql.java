@@ -210,6 +210,95 @@ public final class RuntimeOrmMysql {
                 .ascii "SELECT COUNT(*) FROM `"
             .Lorm_delmy:
                 .ascii "DELETE FROM `"
+
+            # .Lorm_del_my(rdi=id, rsi=key, rdx=table, rcx=schema) -> rax Bool
+            #   F2d3a: DELETE FROM `t` WHERE `pk` = ? no wire mysql via
+            #   kof_db_execute1 (prepared binario). Host: execute1(...) >= 0
+            #   (miss tambem true — affectedRows 0 >= 0). Slots: 0 id |
+            #   8 key | 16 table | 24 schema | 40 ftab | 56 nFields |
+            #   64 pkIndex | 88 pkEntry | 96 sql
+            .Lorm_del_my:
+                pushq %rbp
+                movq %rsp, %rbp
+                andq $-16, %rsp
+                pushq %rbx
+                pushq %r12
+                pushq %r13
+                pushq %r14
+                pushq %r15
+                subq $120, %rsp
+                movq %rdi, 0(%rsp)
+                movq %rsi, 8(%rsp)
+                movq %rdx, 16(%rsp)
+                movq %rcx, 24(%rsp)
+                movq 24(%rsp), %rdi
+                call kof_orm_parse_schema
+                movq %rax, 40(%rsp)              # ftab
+                movq %rcx, 56(%rsp)              # nFields
+                movq %r8, 64(%rsp)               # pkIndex
+                movq 64(%rsp), %rax
+                shlq $5, %rax
+                addq 40(%rsp), %rax
+                movq %rax, 88(%rsp)              # entry da PK
+            # ---- SQL: DELETE FROM `t` WHERE `pk` = ? ---------------------
+                movq 88(%rsp), %rax
+                movl 8(%rax), %edx               # pkLen
+                movq 16(%rsp), %rcx
+                addl 16(%rcx), %edx              # + tblLen
+                addl $33, %edx
+                movl %edx, %edi
+                call .Lorm_bbegin
+                leaq .Lorm_my_d1(%rip), %rsi
+                movl $12, %ecx
+                call .Lorm_bp
+                movq 16(%rsp), %r13
+                movl $96, %r8d                   # '`'
+                call .Lorm_bh
+                leaq 24(%r13), %rsi
+                movl 16(%r13), %ecx
+                call .Lorm_bp
+                movl $96, %r8d
+                call .Lorm_bh
+                leaq .Lorm_my_w(%rip), %rsi
+                movl $7, %ecx
+                call .Lorm_bp
+                movq 88(%rsp), %r13
+                movl $96, %r8d
+                call .Lorm_bh
+                movq 0(%r13), %rsi
+                movl 8(%r13), %ecx
+                call .Lorm_bp
+                movl $96, %r8d
+                call .Lorm_bh
+                leaq .Lorm_my_q(%rip), %rsi
+                movl $4, %ecx
+                call .Lorm_bp
+                call .Lorm_bfin
+                movq %rbx, 96(%rsp)
+            # ---- execute1 (prepared binario) e >= 0 ----------------------
+                movq 0(%rsp), %rdi
+                movq 96(%rsp), %rsi
+                movq 8(%rsp), %rdx
+                call kof_db_execute1
+                cmpl $0, %eax
+                setge %al
+                movzbl %al, %eax
+                addq $120, %rsp
+                popq %r15
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                movq %rbp, %rsp
+                popq %rbp
+                ret
+
+            .Lorm_my_d1:
+                .ascii "DELETE FROM "
+            .Lorm_my_w:
+                .ascii " WHERE "
+            .Lorm_my_q:
+                .ascii " = ?"
             """);
     }
 }

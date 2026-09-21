@@ -47,6 +47,10 @@ public final class RuntimeOrm9 {
                 movq %rdx, 16(%rsp)
                 movq %rcx, 24(%rsp)
                 movq (%rsp), %rdi
+                call kof_db_type
+                cmpl $2, %eax
+                je .Lorm9_mysql                   # F2d3a: wire mysql
+                movq (%rsp), %rdi
                 call .Lorm_conn
                 movq %rax, 32(%rsp)
                 movq 24(%rsp), %rdi
@@ -180,6 +184,13 @@ public final class RuntimeOrm9 {
                 movq %rbx, %rdi
                 call kof_throw_string
                 ud2
+            .Lorm9_mysql:                    # F2d3a: delega ao wire mysql
+                movq 0(%rsp), %rdi
+                movq 8(%rsp), %rsi
+                movq 16(%rsp), %rdx
+                movq 24(%rsp), %rcx
+                call .Lorm_del_my
+                jmp .Lorm9_ret
             .Lorm9_ret:
                 addq $104, %rsp
                 popq %r15
