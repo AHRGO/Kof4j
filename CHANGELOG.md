@@ -13,6 +13,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **type-system plan: X5.4 slice corrected to v1 (+ my prior top rewrite
+    reverted)** (21/09, lane docs/.18): the plan already carries the maintainer's
+    "Surface decisions (RESOLVED)" section (`b94e2975`); my previous commit had
+    rewritten the plan's historical top (status/heading/questions), duplicating
+    it and breaking its "heading above is historical" reference — reverted to the
+    historical top. Kept the real fix: the X5.4 slice row said "default:
+    deferred" contrary to `D-X5-SURFACE` (c) (use-site projection is v1); X5.0
+    and X6.0 now show ✅ and `D-X5-SURFACE` is listed in Evidence. Docs only.
+
   - **docs lane records the maintainer's 21/09 decisions inside the plan docs**
     (21/09, lane docs/.18): three plan docs contradicted the locked decisions on
     their own status lines. `type-system-extensions-plan.md` (+PT) said "DRAFT for

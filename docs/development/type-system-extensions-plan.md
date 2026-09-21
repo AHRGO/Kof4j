@@ -2,21 +2,20 @@
 
 # Type-system extensions — incremental plan (X5 variance + sealed · X6 interop reflection)
 
-> **Status: APPROVED 21/09 — implementing in slices, each with proof** (rule 6
-> satisfied). The maintainer reviewed the plan and authorized incremental slices;
-> X5's v1 surface is frozen by `DECISIONS.md` §D-X5-SURFACE. Authority:
-> `DECISIONS.md` §D-TYPE-VARIANCE (X5 = option C, **approved**) and
-> §D-INTEROP-REFLECT (X6, **approved** — incremental plan). Queue:
+> **Status: DRAFT for maintainer review — spec-first, NO CODE** (rule 6). A core
+> type-system change and a reflection surface only land after this plan is
+> reviewed. Authority: `DECISIONS.md` §D-TYPE-VARIANCE (X5 = option C, open) and
+> §D-INTEROP-REFLECT (X6 = open, incremental plan required). Queue:
 > `roadmap.md` §2.8.4/§2.8.5. Governing rules: rule 6 (maintainer decides),
 > rule 11 (Simplicity Law on any surface), `D-KOF-FIRST`.
 
 ## Why spec-first
 
 Both fronts touch **frozen core** (the type system) or open a **new access path
-to program structure**. The maintainer reviewed and **approved** this plan on
-21/09 (`D-TYPE-VARIANCE`/`D-INTEROP-REFLECT`); slices now proceed incrementally.
-Every slice below is additive and must carry its own proof (test/golden per
-target, rule 5 of the freeze). Type-classes remain a **permanent non-goal**.
+to program structure**. The intent is recorded and the slicing is proposed here;
+nothing is implemented until the maintainer reviews this document. Every slice
+below is additive and must carry its own proof (test/golden per target, rule 5
+of the freeze). Type-classes remain a **permanent non-goal**.
 
 ## X5 — variance + sealed types
 
@@ -34,7 +33,7 @@ target, rule 5 of the freeze). Type-classes remain a **permanent non-goal**.
 - No runtime representation change: variance is **erased**; sealed is a
   **compile-time** property (must hold on JVM/Native/JS with identical output).
 
-### Surface (v1 frozen — `D-X5-SURFACE`)
+### Proposed surface (FOR REVIEW — not decided)
 
 ```kof
 sealed class Shape
@@ -51,22 +50,21 @@ String describe(Shape s) {
 class Box<out T>(T value)   // declaration-site variance (single-char, no ceremony)
 ```
 
-**Answered 21/09 (`D-X5-SURFACE`):** (a) variance keyword = **`out`/`in`**
-(declaration-site, single-char — passes rule 11); (b) `sealed` applies to
-`class`/`record` **and** `interface`; (c) **use-site** projection
-(`List<out T>`) **is in v1** (X5.4 becomes a v1 slice); (d) diagnostics stay in
-the existing **`SEM0xx`** family (no new family). Compiler/frontend only, no
-runtime surface.
+Open design questions for the maintainer: (a) exact keyword for variance
+(`out`/`in` vs none) — must pass rule 11; (b) does `sealed` apply to
+`class`/`record` only, or also to interfaces; (c) is **use-site** projection
+(`List<out T>`) in v1 or deferred; (d) diagnostic code family for
+non-exhaustive `switch` and variance violations.
 
 ### Slices (each = one committable unit with proof)
 
 | # | Slice | Scope | Proof |
 |---|-------|-------|-------|
-| X5.0 | **spec + cells** | freeze the surface (questions a–d); write conformance cells `sealed`/`variance` + `training/idioms` draft | review; no code |
+| X5.0 | **spec + cells** | surface **frozen 21/09** (`D-X5-SURFACE` answered a–d); write conformance cells `sealed`/`variance` + `training/idioms` draft | ✅ frozen; no code |
 | X5.1 | **`sealed` declaration** | parser + typer: closed subtype set; a subtype outside it is a diagnostic | red-first typer test; compiles on JVM/Native/JS |
 | X5.2 | **exhaustive `switch`** | typer proves all cases covered for a sealed subject; missing case = diagnostic | red-first (missing case fails), green (complete); cross-target E2E |
 | X5.3 | **declaration-site variance** | `out`/`in` on generic params; assignment compatibility check | assignability tests; erasure byte-parity across targets |
-| X5.4 | **use-site projection** | decide in review (default: **deferred**) | — |
+| X5.4 | **use-site projection** | **in v1** (`List<out T>`) — `D-X5-SURFACE` overrode the "deferred" default | assignability tests; erasure byte-parity across targets |
 | X5.5 | **parity + docs** | conformance cells, parity matrix, `training/` + `learn/` | suite green; docs-lang 100% |
 
 ### Risks / open questions
@@ -91,7 +89,7 @@ runtime surface.
   dispatch, no annotations-as-framework, no reflection in user control flow.
 - No write path; no `Class.forName`-style dynamic loading in the language.
 
-### Surface (approved — X6 plan, incremental)
+### Proposed surface (FOR REVIEW)
 
 - A member of an interop namespace (e.g. `interop.schema(record)`), returning
   an **immutable** list of field descriptors usable only by the binding layer.
@@ -102,7 +100,7 @@ runtime surface.
 
 | # | Slice | Scope | Proof |
 |---|-------|-------|-------|
-| X6.0 | **spec** | scope, surface, target posture; confirm "interop boundary only" | review; no code |
+| X6.0 | **spec** | scope, surface, target posture; confirm "interop boundary only" | ✅ approved 21/09; no code |
 | X6.1 | **JVM** | host-side structural read (existing `java.lang.reflect` behind the FFI layer) | E2E: schema of a record discovered and matched to a golden |
 | X6.2 | **Native/JS** | honest gap `REF001` (or minimal) — never a silent stub (R6) | pinned diagnostic on unsupported targets |
 | X6.3 | **parity + docs** | binding E2E (Arrow/Parquet-shaped), parity matrix, `training/`/`learn/` | suite green; docs-lang 100% |
@@ -116,9 +114,9 @@ runtime surface.
 
 ## Sequencing / dependencies
 
-`X5.0 and X6.0 (specs) ✅ reviewed/approved 21/09 → X5.1–X5.5 and X6.1–X6.3`
-(now open, incremental). Both depend on nothing in the current critical path and
-must **not** preempt Stage 1 (SYSTEMS) or R3/R4 work.
+`X5.0 and X6.0 (specs) → maintainer review → X5.1–X5.5 and X6.1–X6.3`.
+Both depend on nothing in the current critical path and must **not** preempt
+Stage 1 (SYSTEMS) or R3/R4 work; they are a queue, not current work.
 
 ## Evidence
 

@@ -13,6 +13,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **plano do sistema de tipos: fatia X5.4 corrigida para v1 (+ reversão da minha
+    reescrita do topo)** (21/09, lane docs/.18): o plano já carrega a seção
+    "Surface decisions (RESOLVED)" da mantenedora (`b94e2975`); meu commit anterior
+    havia reescrito o topo histórico do plano (estado/heading/perguntas),
+    duplicando-a e quebrando a referência "cabeçalho acima é histórico" —
+    revertido ao topo histórico. Mantida a correção real: a linha da fatia X5.4
+    dizia "padrão: adiada", contrário a `D-X5-SURFACE` (c) (projeção no sítio de
+    uso é v1); X5.0 e X6.0 agora mostram ✅ e `D-X5-SURFACE` consta em Evidência.
+    Só docs.
+
   - **lane docs registra as decisões de 21/09 da mantenedora dentro dos planos**
     (21/09, lane docs/.18): três planos contradiziam as decisões travadas nas
     próprias linhas de estado. `type-system-extensions-plan.md` (+PT) dizia
