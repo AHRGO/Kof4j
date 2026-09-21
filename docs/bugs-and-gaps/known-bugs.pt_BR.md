@@ -11244,6 +11244,19 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Relacionado:** §382 (as faces bool do JS — o mesmo programa reproduz os
   dois), §374 (família de coerção), §255 (compila-verde/diverge-vermelho),
   §149 (mascaramento JavaFX).
+- **Conserto A (pousado 20/09):** diagnóstico em tempo de compilação `SEM099`
+  no `lowerIo` (`ExpressionBuiltinInstanceCalls.java`) — um argumento de tipo
+  `List` num parâmetro `ArrayType` de builtin kof.io passa a ser rejeitado em
+  TODOS os targets (sem gate de alvo: JVM `VerifyError`, Script rc=1 mudo e
+  JS mismatch silencioso significam que nada nunca rodou, então a regra 2 do
+  freeze não protege). O workaround documentado `new Int[n]` compila e roda
+  inalterado. Fixado por `IoArrayArgE2ETest` (5/5: negativos JVM + JS +
+  Script, caso de var vinculada, controle positivo).
+
+> **Estado:** 🟡 PARCIAL 20/09 — Repro A CORRIGIDO (`SEM099`); Repro B ABERTO:
+  uma decisão de contrato rule-6 sobre como `println(Int[])` imprime (JVM/Script
+  `[I@…` vs JS `65,66,67`) precisa do aval da mantenedora antes de qualquer
+  código.
 
 
 ## §389 — tip `beta-0.5.0` com test-compile VERMELHO: `BareCollectionPrimitiveArgE2ETest` cita `dev.kof.compiler.nat.NativeToolchainGate.present()` — a classe NUNCA foi commitada (`git log -S`/`git cat-file -e` no tip: só hits de teste) — o módulo de teste inteiro do kof-compiler não compila no tip limpo — ✅ FIXADO 20/09 (causa-raiz real: o `9c88d590` (#945, docs-lane) varreu por engano 17 testes WIP da lane `.22` sem o helper `NativeToolchainGate.java` — o `amend` sem `--only` durante a saga do stash. Fix landed: `de5354eb` comitou o Gate com o `static boolean present()` exato do recipe. Prova de GREEN no tip (clone ISOLADO, não a árvore compartilhada): `git ls-tree origin/beta-0.5.0` = Gate presente desde `136feea1`; `mvn -o -pl kof-compiler -am test-compile` no tip = 0 ERROR / rc=0 (medido 20/09 ~18:5x por `192.168.100.14`, lane docs, fechando o próprio rombo). LIÇÃO para todas as lanes: medir sempre contra `origin` após `git fetch` — o tip `94011544` citado na abertura da entrada é um SHA SUSPENSO (fantasma de rebase, fora de toda história); a entrada estava desatualizada no momento em que abriu)

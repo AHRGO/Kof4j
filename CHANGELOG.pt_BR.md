@@ -14,6 +14,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
 ### Em desenvolvimento
+  - **§388-A — `writeBytes`/`appendBytes` com `listOf(...)` compilava VERDE e
+    morria em runtime** (20/09): o `lowerIo` agora reporta `SEM099` quando um
+    argumento de tipo List encontra um parâmetro ArrayType — o contrato `Int[]`
+    declarado no io.md passa a ser cobrado em tempo de compilação em todo target
+    (JVM `VerifyError`, Script rc=1 mudo e mismatch JS morrem juntos; o caminho
+    `new Int[n]` fica intacto). `IoArrayArgE2ETest` 5/5. A Repro B (imprimir o
+    `Int[]` inteiro: JVM/Script `[I@…` vs JS `65,66,67`) segue aberta — decisão
+    de contrato rule-6 pendente.
   - **§397 — binder compartilhado int→Bool virava `false` em silencio (JVM)**
     (20/09): descoberto PELO PROBE do F2b antes de escrever qualquer asm —
     `orm.save(Item(0, true))` gravava 1 e `orm.find<Item>(...).active` lia

@@ -25,7 +25,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `CmdWorkflowTest` 12/12 (3 new js tests, RED-first) + battery 79/0F
     (`WorkflowE2ETest`, `KofJsE2ETest`, `IoBoolFacesE2ETest`, pump).
 
- ### In development
+### In development
+  - **§388-A — `writeBytes`/`appendBytes` with a `listOf(...)` compiled GREEN and
+    died at runtime** (20/09): `lowerIo` now reports `SEM099` when a List-typed
+    actual meets an ArrayType parameter — the `Int[]` contract declared in io.md
+    is enforced at compile time on every target (JVM `VerifyError`, Script silent
+    rc=1 and JS mismatch all die together; the `new Int[n]` path is untouched).
+    `IoArrayArgE2ETest` 5/5. Repro B (printing a whole `Int[]`: JVM/Script
+    `[I@…` vs JS `65,66,67`) stays open — rule-6 contract decision pending.
   - **§397 — binder compartilhado int→Bool virava `false` em silencio (JVM)**
     (20/09): descoberto PELO PROBE do F2b antes de escrever qualquer asm —
     `orm.save(Item(0, true))` gravava 1 e `orm.find<Item>(...).active` lia

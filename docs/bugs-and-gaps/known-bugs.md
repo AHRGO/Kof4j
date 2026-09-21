@@ -11804,6 +11804,18 @@ The test that used to pin the gap is now `logicalValuePositionWithNullableRhsJsM
   the array-print half needs a rule-6 decision before any code).
 - **Related:** §382 (the JS bool faces — same program reproduces both), §374
   (coercion family), §255 (compiles-green/diverges-red), §149 (JavaFX masking).
+- **Fix A (landed 20/09):** compile-time diagnostic `SEM099` in `lowerIo`
+  (`ExpressionBuiltinInstanceCalls.java`) — a `List`-typed argument at a kof.io
+  builtin `ArrayType` parameter is rejected on ALL targets (no target gate:
+  JVM `VerifyError`, Script silent rc=1 and JS silent mismatch mean nothing
+  ever ran, so freeze rule 2 does not protect it). The documented
+  `new Int[n]` workaround compiles and runs unchanged. Pinned by
+  `IoArrayArgE2ETest` (5/5: JVM + JS + Script negatives, bound-var case,
+  positive control).
+
+> **Status:** 🟡 PARTIAL 20/09 — Repro A FIXED (`SEM099`); Repro B OPEN: a rule-6
+  contract decision on how `println(Int[])` prints (JVM/Script `[I@…` vs JS
+  `65,66,67`) needs maintainer sign-off before any code.
 
 
 ## §389 — tip `beta-0.5.0` test-compile RED: `BareCollectionPrimitiveArgE2ETest` cites `dev.kof.compiler.nat.NativeToolchainGate.present()` — the class was NEVER committed (`git log -S`/`git cat-file -e` on the tip: test-side hits only) — the whole kof-compiler test module fails to compile on a clean tip — ✅ FIXED 20/09 (root cause real: `9c88d590` (#945 docs-lane) varreu por engano 17 testes WIP da lane `.22` sem o helper `NativeToolchainGate.java` — o `amend` sem `--only` durante a saga do stash. Fix landed: `de5354eb` comitou o Gate com o `static boolean present()` exato do recipe. Prova de GREEN no tip (clone ISOLADO, nao a arvore compartilhada): `git ls-tree origin/beta-0.5.0` = Gate presente desde `136feea1`; `mvn -o -pl kof-compiler -am test-compile` no tip = 0 ERROR / rc=0 (medido 20/09 ~18:5x por `192.168.100.14`, lane docs, fechando o proprio rombo). LIÇÃO para todas as lanes: medir sempre contra `origin` apos `git fetch` — o tip `94011544` citado na abertura da entrada e um SHA DANGLING (fantasma de rebase, fora de toda historia); a entrada estava desatualizada no momento em que abriu

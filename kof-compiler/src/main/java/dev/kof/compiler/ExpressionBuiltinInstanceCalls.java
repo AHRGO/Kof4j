@@ -160,6 +160,36 @@ final class ExpressionBuiltinInstanceCalls {
         }
         KofIo.IoCall ioCall = KofIo.instanceMethod(recvType, mc.methodName(), mc.arguments().size());
         if (ioCall != null) {
+            // §388-A: parâmetro primitivo-array (writeBytes/appendBytes: Int[])
+            // recebido um List era aceito em silêncio e morria no runtime (JVM
+            // VerifyError na reflection do Run, Script rc=1 mudo, JS mismatch
+            // silencioso) — R6 exige diagnóstico no compile time (família
+            // SEM098, mas SEM gate de alvo: nenhum target rodava de verdade, a
+            // regra 2 do freeze não protege o que já quebrava).
+            List<Type> ioFormals = ioCall.parameterTypes();
+            if (driver.currentDiagnostics != null) {
+                for (int i = 0; i < mc.arguments().size() && i < ioFormals.size(); i++) {
+                    if (!(ioFormals.get(i) instanceof Type.ArrayType)) continue;
+                    Type ioActual = ExpressionTyper.inferExprType(driver, mc.arguments().get(i), locals);
+                    if (ioActual instanceof Type.ClassType ioCt
+                            && ("List".equals(ioCt.name()) || "ArrayList".equals(ioCt.name()))) {
+                        SourcePosition ioPos = mc.position();
+                        driver.currentDiagnostics.error(
+                                ioPos != null ? ioPos.file() : "",
+                                ioPos != null ? ioPos.line() : 0,
+                                ioPos != null ? ioPos.column() : 0, 0,
+                                "cannot pass a List to '" + mc.methodName() + "': the kof.io bytes"
+                                        + " faces take an Int[] primitive array (training/language/"
+                                        + "io.md contract) — a List is not an array on any target"
+                                        + " (VerifyError on the JVM, crash under the interpreter,"
+                                        + " silent mismatch in KofJS). Fill a primitive array:"
+                                        + " val a = new Int[n] with a[i] = v, then f." + mc.methodName()
+                                        + "(a)",
+                                "SEM099");
+                        return localIdx;
+                    }
+                }
+            }
             // receiver File/Path/Directory é apagado pra String
             // path em runtime (empilhado acima); os METHOD args
             // alinham com ioCall.parameterTypes() — a conversão
