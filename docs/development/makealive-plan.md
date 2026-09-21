@@ -169,9 +169,10 @@ the host db slice must be gated per target exactly like `workflow-ckpt-host.kf`
   construction). Proof: `InfraSyntaxE2ETest` 2/2 — the block and its hand-written
   `design()` twin produce byte-identical `plan` output (JVM==JS), Native compiles,
   an invalid body errors by name (R6).
-- **3.7 [compile-time cycle]** — **R4 ✅ landed 21/09**; the 3.2 surface is now
-  decided (above), so the compile-time graph is unblocked and follows 3.2.
-  Meanwhile the **runtime refusal ships in 3.1**.
+- **3.7 [compile-time cycle]** — ✅ **DECIDED 21/09: runtime-only (CLOSED)** —
+  addendum to `D-MAKEALIVE-SYNTAX`. With 3.2 as pure sugar the compiler sees only
+  generic calls, so a static graph would give the block its own semantics (§7/rule
+  11); the runtime refusal (3.1) names the cycle members — that is the contract.
 - **3.8 [`kof infra` CLI]** — ✅ **REAFFIRMED 21/09 (`D-MAKEALIVE-SYNTAX`)**: only
   `kof makealive`; `kof infra` is not added.
 ✅ DECIDED + SHIPPED 20/09 (D-MAKEALIVE-CLI): `kof makealive plan|apply|destroy` landed: verb `makealive` (Q1), `design()`+`provider()` convention, MARK protocol,

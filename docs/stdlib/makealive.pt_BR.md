@@ -12,8 +12,8 @@
 > de runtime (arquivos, processos, HTTP, um banco) vive no corpo do provedor,
 > escrito por você em Kof puro. O desenho tem um **açúcar** declarativo (linha 3.2
 > `infra "prod" { ... }`, **DECIDIDA 21/09 `D-MAKEALIVE-SYNTAX`**, pousada — ver "O desenho declarativo" abaixo);
-> o gate de grafo em tempo de compilação (linha 3.7) segue esse açúcar e, até lá,
-> a recusa em runtime sai nomeada.
+> o gate de ciclo fica **runtime-only** (linha 3.7 FECHADA em 21/09 — a recusa
+> nomeia os membros; sem grafo em compile-time).
 
 ## O contrato (faces injetadas por `import kof.makealive`)
 
@@ -93,8 +93,8 @@ Regras:
   qualquer outro statement é erro de parse nomeado — nunca ignorado em silêncio (R6).
 - `infra` é **identificador**, despachado como `test`/`application` — o núcleo da
   linguagem não cresce (`LanguageCoreSurfaceTest` fica verde por construção).
-- As dependências ainda recusam ciclo **em runtime**, nomeando os membros; o gate
-  em compile-time é a linha 3.7.
+- As dependências recusam ciclo **em runtime**, nomeando os membros; não há gate
+  em compile-time (linha 3.7 fechada como runtime-only, 21/09).
 
 Prova: `InfraSyntaxE2ETest` — o bloco e seu gêmeo `design()` escrito à mão
 produzem `plan` byte-idêntico (JVM==JS) e o bloco compila para Native.

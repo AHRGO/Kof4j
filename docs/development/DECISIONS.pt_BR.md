@@ -2835,8 +2835,11 @@ ele desugara sobre os records/builder já decididos do host e **não ganha semâ
   `design()` imperativo escrito à mão; o contrato do CLI (`D-MAKEALIVE-CLI`) não muda.
 - **(3) Sem HCL, sem aninhamento:** o corpo é Kof puro de chamadas — sem `chave = valor`, sem
   sub-bloco `resource`, sem tipo novo, sem runtime novo.
-- **3.7** (detecção de ciclo em compile-time) segue esta superfície; até lá a recusa em
-  runtime pousada na 3.1 continua o contrato.
+- **3.7** (detecção de ciclo em compile-time) — **FECHADA como runtime-only** (mantenedora
+  21/09, adendo): com o bloco como açúcar puro o compilador só vê chamadas genéricas, então
+  um grafo em compile-time daria ao `infra` **semântica própria** (contra §7 / regra 11); a
+  **recusa em runtime** pousada na 3.1 já nomeia os membros do ciclo — esse É o contrato.
+  Nenhum check estático é adicionado.
 - **3.8** — reiterada: `kof makealive plan|apply|destroy` é o **único** verbo
   (`D-MAKEALIVE-CLI`); `kof infra` **não** é adicionado.
 

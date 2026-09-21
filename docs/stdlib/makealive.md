@@ -12,8 +12,8 @@
 > boundary (files, processes, HTTP, a database) lives in the provider body,
 > written by you in plain Kof. The design has a declarative **sugar** (row 3.2
 > `infra "prod" { ... }`, **DECIDED 21/09 `D-MAKEALIVE-SYNTAX`**, landed — see "The declarative design" below);
-> the compile-time graph gate (row 3.7) follows that sugar, and until then the
-> runtime refusal ships named.
+> the cycle gate stays **runtime-only** (row 3.7 CLOSED so 21/09 — the refusal
+> names the members; no compile-time graph).
 
 ## The contract (faces injected by `import kof.makealive`)
 
@@ -93,8 +93,8 @@ Rules:
 - `infra` is an **identifier**, dispatched like `test`/`application` — the
   language core surface does not grow (`LanguageCoreSurfaceTest` stays green by
   construction).
-- Dependencies still refuse cycles **at runtime**, naming the members; the
-  compile-time gate is row 3.7.
+- Dependencies refuse cycles **at runtime**, naming the members; there is no
+  compile-time gate (row 3.7 closed as runtime-only, 21/09).
 
 Proof: `InfraSyntaxE2ETest` — the block and its hand-written `design()` twin
 produce byte-identical `plan` output (JVM==JS) and the block compiles for

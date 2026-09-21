@@ -2827,8 +2827,11 @@ desugars over the host's already-decided records/builder and gets **no semantics
   the hand-written imperative `design()`; the CLI contract (`D-MAKEALIVE-CLI`) is unchanged.
 - **(3) No HCL, no nesting:** the body is plain Kof call statements — no `key = value`, no
   `resource` sub-block, no new type, no new runtime.
-- **3.7** (compile-time cycle detection) follows this surface; until it lands, the runtime
-  refusal shipped in 3.1 remains the contract.
+- **3.7** (compile-time cycle detection) — **CLOSED as runtime-only** (maintainer 21/09,
+  addendum): with the block as pure sugar the compiler sees only generic calls, so a
+  compile-time graph would give `infra` its **own semantics** (against §7 / rule 11);
+  the **runtime refusal** shipped in 3.1 already names the cycle members — that IS the
+  contract. No static check is added.
 - **3.8** — reaffirmed: `kof makealive plan|apply|destroy` is the **only** verb
   (`D-MAKEALIVE-CLI`); `kof infra` is **not** added.
 

@@ -178,9 +178,10 @@ fatia db do host deve ser gateada por alvo exatamente como `workflow-ckpt-host.k
   construção). Prova: `InfraSyntaxE2ETest` 2/2 — o bloco e seu gêmeo `design()`
   escrito à mão produzem `plan` byte-idêntico (JVM==JS), Native compila, corpo
   inválido erra nomeado (R6).
-- **3.7 [ciclo em compile-time]** — **R4 ✅ pousou 21/09**; a superfície 3.2 agora está
-  decidida (acima), então o grafo em compile-time está destravado e segue a 3.2.
-  Enquanto isso a **recusa em runtime embarca no 3.1**.
+- **3.7 [ciclo em compile-time]** — ✅ **DECIDIDO 21/09: runtime-only (FECHADA)** —
+  adendo ao `D-MAKEALIVE-SYNTAX`. Com a 3.2 como açúcar puro o compilador só vê
+  chamadas genéricas, então um grafo estático daria semântica própria ao bloco
+  (§7/regra 11); a recusa em runtime (3.1) nomeia os membros do ciclo — esse é o contrato.
 - **3.8 [CLI `kof infra`]** — ✅ **REITERADO 21/09 (`D-MAKEALIVE-SYNTAX`)**: só
   `kof makealive`; `kof infra` não é adicionado. ✅ DECIDIDO + ENTREGUE 20/09 (D-MAKEALIVE-CLI): verbo `makealive` (Q1),
   convenção `design()`+`provider()`, protocolo MARK, estado h2 via `--state`
