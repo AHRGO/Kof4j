@@ -2797,3 +2797,6 @@ Native host stub keeps `ORM001` at the call site. **(5) rc:** the marked line de
 output IS the diagnosis, rc 1. Proof: `CmdMakealiveTest` 7/7 + `MakealiveMaxGenE2ETest` 4/4
 + Makealive battery 14/14.
 
+## D-GRAPHICS-GAMING addendum 4 (09/20/2026, maintainer) — Kof WILL HAVE ITS OWN graphics engine for games
+
+Order: Kof needs its own graphics engine for games — the plan's interop-first recommendation (R9) is REVOKED for this domain (D-UNIVERSAL-style precedent). The engine is Kof's (Kof/platform code, house-driven), exposed in zero-boilerplate idiom (rule 11: idiomatic, easy, no accidental complexity); FFI bindings stay limited to the non-engine layer (window/GPU/audio device). Consequence: the plan §§3–4 + Q1/Q5/Q7 in `future/graphics-gaming-plan.md` + README/learn/training/UI-media docs need REWRITE in this direction; R9 gains a named exception in DECISIONS. Detail choices (engine name, first slice, formats) stay rule 6 via the plan open Qs.
