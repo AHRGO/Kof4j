@@ -130,8 +130,7 @@ class KofDebugNativeDapTest {
     }
 
     @Test
-    void editorConversationsBreakContinueAndStackTraceComeBackAsKofSource() throws Exception {
-        Path dir = Files.createTempDirectory("dap-native-");
+    void editorConversationsBreakContinueAndStackTraceComeBackAsKofSource(@TempDir Path dir) throws Exception {
         Session s = start(dir);
         try {
             send(s, 1, "initialize", "\"clientID\":\"kof-editor\"");
@@ -171,8 +170,7 @@ class KofDebugNativeDapTest {
     }
 
     @Test
-    void evaluateOfUnknownSymbolFailsHonestlyNeverInventsAValue() throws Exception {
-        Path dir = Files.createTempDirectory("dap-native-eval-");
+    void evaluateOfUnknownSymbolFailsHonestlyNeverInventsAValue(@TempDir Path dir) throws Exception {
         Session s = start(dir);
         try {
             send(s, 1, "initialize", "");
@@ -192,8 +190,7 @@ class KofDebugNativeDapTest {
     }
 
     @Test
-    void pauseInterruptsAndReportsReasonPause() throws Exception {
-        Path dir = Files.createTempDirectory("dap-native-pause-");
+    void pauseInterruptsAndReportsReasonPause(@TempDir Path dir) throws Exception {
         Session s = start(dir);
         try {
             send(s, 1, "initialize", "");
@@ -217,8 +214,7 @@ class KofDebugNativeDapTest {
     }
 
     @Test
-    void setExceptionBreakpointsHonorsOnlyBothFacesAndNamesTheThrowChain() throws Exception {
-        Path dir = Files.createTempDirectory("dap-native-exc-");
+    void setExceptionBreakpointsHonorsOnlyBothFacesAndNamesTheThrowChain(@TempDir Path dir) throws Exception {
         Session s = start(dir);
         try {
             send(s, 1, "initialize", "");
@@ -251,8 +247,7 @@ class KofDebugNativeDapTest {
     }
 
     @Test
-    void launchWithoutGdbAnswersAnHonestDapError() throws Exception {
-        Path dir = Files.createTempDirectory("dap-native-nogdb-");
+    void launchWithoutGdbAnswersAnHonestDapError(@TempDir Path dir) throws Exception {
         Session s = start(dir, "/nonexistent/kof-gdb-mi-probe");
         try {
             send(s, 1, "launch", "");

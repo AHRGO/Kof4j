@@ -10787,16 +10787,18 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Raiz (por que NÃO "consertar" calado):** (a) sort de Float — o tradutor riscv→aarch não tem `flw` (load FP de 32 bits), então comparações de precisão simples exigiriam uma dança de widening que o runtime cross não tem; ordem errada silenciosa viola a regra 5 do freeze, então o par (sort, Float, nativo) recebe o diagnóstico honesto. Sort de Double ESTÁ implementado (`flt.d`/`feq.d` + `ucomisd`, com a semântica do `Double.compare` medida no oráculo JDK: NaN maior que tudo, NaN==NaN, -0.0 < 0.0). (b) containsValue de valor Object — os slots do `Map<_,Object>` nativo misturam caixas MAGIC (Int/Long, boxed pelo §284) com bit patterns CRUS (Double: dar `put` num mapa Object declarado é legítimo no oráculo JVM — medido `put 7` e `put 2.5` no mesmo mapa), e um bit pattern cru é indistinguível de um header de caixa sem dereferenciá-lo — o que dá SIGSEGV no slot de Double. Nenhum tag estático serve para mapa misto, então a família inteira (containsValue, valor Object, nativo) recusa com NAT002 em vez de chutar.
 - **Catalogado (Q7):** as resoluções completas são (a) suporte a `flw`/loads de precisão no `NativeAarch64Translator` + compare de float riscv, e remover o guard de `CollectionMethodGates.floatSortUnsupportedOnNative`; (b) storage boxed para slots Object no nativo (extensão do §284 com matriz de paridade própria) OU um header de kind de valor por entrada no struct do map, e remover o ramo `-1` de `valueCmpTag`. Ambas vivem em `CollectionMethodGates` + um guard em cada site — rastreáveis pelo próprio código.
 - **Nota pre-existente da mesma família (registrada, não é desta fatia):** consultas com argumento Int em coleções de Long (`List<Long>.contains(2)`/`indexOf(2)`) dão `false` no JVM (equals, medido -1) e identidade crua `true` no nativo — comportamento pré-§382 do `contains`, herdado por `indexOf`/`lastIndexOf`; a resolução pertence a um plano de slot boxed (o (b) acima), não a esta fatia.
-## §353 — lambda cujo corpo retorna DIRETAMENTE o resultado de um metodo `io` e rejeitada com SEM014 (o typer nao resolve o retorno de `kof.io` nessa posicao) — 🟡 ABERTO 19/09 (medido pela lane universal-platform ao escrever `examples/ci/ci-pipeline.kf`; workaround documentado)
+## §353 — lambda cujo corpo retorna DIRETAMENTE o resultado de um metodo `io` e rejeitada com SEM014 (o typer nao resolve o retorno de `kof.io` nessa posicao) — ✅ CORRIGIDO 21/09 (lane compiler; pinos `WorkflowE2ETest.lambdaBodyWithIoBoolCompilesAndRuns` 24/24 + `NullSafetyE2ETest` 14/14)
 
 - **Nota de numeracao:** reivindicado como §352 em voo; o tip remoto publicou §352 (gaps nativos #386/#382, `f32094e8`) durante esta edicao — pela regra de claim compartilhado §NNN este lado foi renumerado para §353; os dois lados preservados.
 
 - **Sintoma (medido 19/09):** com `import kof.workflow`, `job("e", () -> File("x").exists())` nao compila: `:0:0: error: Argument 2 of 'job': expected 'function' but got 'function' [SEM014]`. O mesmo para `Directory("x").exists()`, `File("x").isFile()`, `File("x").isDirectory()`, `File("x").writeText(...)`, `File(p).copyTo(q)`. Nao e a assinatura do `job`: a chamada io identica compila e roda FORA de lambda (`var b = File("x").exists(); println(b)` — verde no `IoE2ETest`).
 - **Nao e o mesmo bug (controle, todos compilam):** lambda que retorna resultado de metodo de `String`/`List` na mesma posicao funciona — `() -> "x".startsWith("x")`, `() -> listOf(1,2).contains(1)`, `() -> "x".isEmpty()`, `() -> "x".length == 1`.
-- **Causa-raiz (medida, nao consertada aqui):** metodos `io` sao resolvidos pelo dispatcher `KofIo` (`KofIo.instanceMethod`/`staticMethod`), nao pelo checador de tipos geral; a inferencia do tipo de retorno da lambda ve um receiver nao resolvido e tipa o corpo como `Unknown`/Void, e o formal `() -> Bool` entao rejeita. Consertar e superficie da lane do compilador (regra 8: esta lane mediu e contornou, nunca tocou o typer).
-- **Workaround (idioma, usado no exemplo):** amarrar o resultado io a um `Bool` explicito antes de retornar — `Bool ok = File(p).exists(); return ok` — ou comparar (`... == true`). Ambos compilam e sao byte-parity JVM/JS.
-- **Repro minimo:** `import kof.workflow` + `main() { var j = job("e", () -> File("x").exists()) }` → SEM014; trocar o corpo por `() -> { Bool ok = File("x").exists(); return ok }` → compila.
-- **Achado por:** `CmdWorkflowTest.realCiPipelineExampleRunsEndToEnd` (E2E do 2.5) — o exemplo carrega o workaround + nota inline apontando para ca.
+- **Causa-raiz (medida 19/09, CONFIRMADA 21/09):** os metodos `io` eram resolvidos pelo dispatcher `KofIo` (`KofIo.instanceMethod`/`staticMethod`) e nao pelo checador de tipos geral; a inferencia do tipo de retorno da lambda via um receiver nao resolvido e tipava o corpo como `Unknown`/Void, e o formal `() -> Bool` rejeitava. A assimetria era exatamente entre os DOIS typers: o typer do EMIT (`MethodCallTyper`, ramo `KofIo.isIoType`) conhecia kof.io desde sempre — o SEMANTICO (`SemMethodCallTyper.infer`, que tipa o corpo da lambda) nao tinha ramo io e caia em `UNKNOWN`.
+- **Correcao (aditiva, espelha a tabela do emit):** `SemMethodCallTyper.infer` ganhou o ramo `KofIo.isIoType` (retorno via `KofIo.instanceMethod`; identidade `path()` devolve o receiver) — mesmo dispatcher, mesma tabela, zero contratos novos (programas que compilavam seguem compilando; apenas programas rejeitados passam a ser aceitos). Prova Q0: `WorkflowE2ETest#lambdaBodyWithIoBoolCompilesAndRuns` e RED (`expected 'function' but got 'function'`, execucao com o correcao em stash) / GREEN com ela, JVM==JS byte a byte com disco real (`writeText` -> `exists` true; arquivo ausente -> job false).
+- **Revelado pela correcao (ambas pousaram aqui, mesmo commit):** tipar io corretamente expoe codigo insalubre que o typer cego engolia. (a) `MakealivePrimitivesE2ETest.ioStateRoundTripRunsJvmJsNativeCompiles` dereferenciava `readText()` (um `String?`) SEM guarda — SEM049 real, consertado no teste com o idioma documentado `back != null && back.length`. (b) `MakealiveFsProviderE2ETest.fsRead` usa o formato **early-return narrowing** `if (t == null) { return } ... t.split(...)` — o narrowing SG-005 so existia DENTRO dos ramos, nunca DEPOIS de um `if` sem else com saida garantida. Completado (aditivo): o ramo `IfStmt` do `StatementAnalyzer` aplica o narrowing do lado ELSE ao escopo externo quando o THEN sai sempre (`thenBranchExits`: return/throw/continue/break/ultimo-de-bloco/if-ambos); `NullSafetyE2ETest` 14/14 trava o positivo (roda, saida correta) E o gemeo negativo (sem saida -> SEM049 continua disparando — nenhuma aceitacao falsa).
+- **Workaround (idioma, continua valido, mantido no exemplo):** amarrar o resultado io a um `Bool` explicito antes de retornar — `Bool ok = File(p).exists(); return ok`. O `examples/ci/ci-pipeline.kf` mantem a forma (retro-compativel); a forma direta `() -> File(p).exists()` agora tambem e legal.
+- **Repro minimo:** `import kof.workflow` + `main() { var j = job("e", () -> File("x").exists()) }` — era SEM014, compila; o jar pre-fix reproduz o erro (medido nos dois lados na sessao).
+- **Achado por:** `CmdWorkflowTest.realCiPipelineExampleRunsEndToEnd` (E2E do 2.5) — o exemplo carrega o workaround + nota inline apontando para aqui. **Caca de edges (21/09, Q4) revelou §399** (funcao top-level nomeada como valor -> SEM011, pre-existente no 0.4.7, catalogada a parte).
 
 ## §354 — atribuicao de campo herdado vertida num temporario `Object` (`Object var11 = w; this.width = var11;`, descritor PUTFIELD `Ljava/lang/Object;` / owner `?` → `NoClassDefFoundError: "?"`) — o nome da superclasse nao era canonico ponta a ponta — ✅ CORRIGIDO 19/09 (3 faces, uma familia; pins `InheritedFieldAssignE2ETest` 9/9)
 
@@ -11402,7 +11404,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
   #545 (padrão SEM023 "no constructor of"), #566 (guarda-chuva), #567/#569
   (irmãs i/iii), `D-KOF-FIRST` (resolvido contra o contrato de entries do
   próprio Kof, não contra Java).
-## §394 — o harness de teste vaza o app servido: o `ServePortTest` mata a CLI com `destroyForcibly` (SIGKILL), o shutdown hook do `kof serve` nunca roda e o filho `java -cp <tmp> Default.Main` fica órfão — 19 JVMs vazados acumulados em 2 dias — 🔴 ABERTO 20/09 (lane estabilização/tooling, achado ao medir o gate 0.5.0)
+## §394 — o harness de teste vaza o app servido: o `ServePortTest` mata a CLI com `destroyForcibly` (SIGKILL), o shutdown hook do `kof serve` nunca roda e o filho `java -cp <tmp> Default.Main` fica órfão — 19 JVMs vazados acumulados em 2 dias — ✅ CORRIGIDO 20/09 (`d0464385`; lane estabilização, achado ao medir o gate 0.5.0)
 
 - **Sintoma (medido 20/09, host da árvore compartilhada):**
   `ps -eo pid,ppid,etimes,args | grep kof-serve` mostrou **19** processos
@@ -11434,11 +11436,13 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
   roda, provado acima). O defeito está no **teardown do teste**, que deve matar
   a árvore inteira de processos (os `descendants()` da CLI primeiro) — sem
   mudança de comportamento do `CmdServe`.
-- **Fix planejado (esta lane, cirúrgico):** no `finally`, destruir
+- **Fix pousado (`d0464385`, esta lane):** no `finally`, destruir
   `p.descendants()` (o filho servido) antes de `p.destroyForcibly()`; mesmo
   endurecimento para o `FullStackE2ETest` (o caminho `destroy()`→
-  `destroyForcibly()` de 5 s também pode orfanar). Prova: `ServePortTest` verde
-  + nenhum `Default.Main` novo com `ppid=1` após a corrida.
+  `destroyForcibly()` de 5 s também pode orfanar). Prova: `ServePortTest` 2/2
+  (com asserção RED-first de que o filho capturado morreu), `FullStackE2ETest`
+  5/5, e **nenhum `ppid=1 Default.Main` novo** após uma corrida completa da
+  suíte; os 17 órfãos legados foram ceifados à mão neste host.
 - **Relacionado:** `CmdServe.java:189-203`, `KofCliSupport.executeProcess`
   (`servedProcess`), `FullStackE2ETest:185-186`, §389 (mesma família "verdade
   da árvore suja compartilhada").
@@ -11467,3 +11471,34 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Correção (raiz):** o ramo boolean do binder aceita `Number` → `intValue() != 0` (simetria gravar==ler e o contrato do Kof: `save(true)` ⇒ `find().ok == true`); sem `if`-mascara — faltava o caminho numerico.
 - **Prova (Q0/Q1/Q3):** RED→GREEN medidos nas 3 vitimas, 1 teste por path: `KofDbE2ETest#typedQueryBindsIntColumnToBoolField` (int 1/0/2 → true/false/true), `KofOrmE2ETest#findPreservesSavedBoolTrueRegression397` (sqlite save(true)→find().ok==true + save(false)→false), `JsonCompleteE2ETest#jvmDecodeIntFieldIntoBoolRecordBindsTrue` (campo `\"ok\":1` → true). **3/3 RED no binder velho (stash do fix), 3/3 GREEN com o fix.**
 - **Cross-target:** Native x86-64 `find` e a fatia F2b (esta linha trava o contrato para a asm: `INTEGER != 0` no slot Bool — nunca `parseBoolean` de texto); JS devolve o bool nativo do host (`Boolean(1)`==true — sem o bug); riscv/aarch64 seguem a asm-fatia quando portada (ORM001 honesto ate la).
+> **Renumerado §396→§398 (21/09, lane bugs-and-gaps):** reivindicada como §396 em voo no worktree; o tip `50599b39` ja publicou §396 (println-Native) — pela regra de claim compartilhado quem chega depois renomeia (cf. §395). Conteudo da lane de estabilizacao preservado integralmente na politica "preserve both sides" do rebase.
+
+## §398 — o harness de debug DAP native vazava os diretórios temporários: o `KofDebugNativeDapTest` criava `dap-native-*` com `Files.createTempDirectory` (nunca apagava), e o diretório do ELF `kof-debug-native-*` da CLI sobrevivia ao SIGTERM porque o `cleanup()` corria com o shutdown hook — 62 + 30 diretórios acumulados — ✅ CORRIGIDO 20/09 (lane estabilização; família §394)
+
+- **Sintoma (medido 20/09, host compartilhado):** `ls -d /tmp/dap-native-*` = **62**
+  e `ls -d /tmp/kof-debug-native-*` = **30** deixados para trás; uma única
+  execução da classe vaza **5 `dap-native-*` + 3 `kof-debug-native-*`**
+  (medido antes/depois de um `rm -rf`, host limpo).
+- **Causa-raiz A (do teste):** cada método fazia
+  `Path dir = Files.createTempDirectory("dap-native-…")` e nunca apagava
+  (o import `org.junit.jupiter.api.io.TempDir` existia mas não era usado).
+- **Causa-raiz B (da CLI):** `KofDebug.buildNativeElf` (`KofDebug.java:252`)
+  cria o ELF em `Files.createTempDirectory("kof-debug-native-")`, limpo "pelo
+  chamador" só no EOF do stdin / disconnect (`KofDebugNativeDap.handleRequest`).
+  No **SIGTERM** (editor fecha / host cai) nenhum cleanup rodava (sem hook).
+  Depois de adicionar o hook ele **corria**: main (EOF) e o hook chamam
+  `cleanup()`; o hook viu `buildDir == null` e retornou, o JVM haltou e **matou
+  a thread main no meio do `Files.walk`** → o diretório sobrevivia parcialmente
+  (log instrumentado: `cleanup dir=X` sem a linha `after … exists=false` nos
+  vazados).
+- **Fix landed (esta lane):** `KofDebugNativeDapTest` passou a usar
+  **`@TempDir Path dir`** (o JUnit é dono e apaga); `KofDebugNativeDap`
+  registra um **shutdown hook** (`kof-dap-cleanup`), torna `cleanup()`
+  **`synchronized`** (o hook espera a exclusão em andamento da main terminar
+  antes do JVM haltar), torna `buildDir` **`volatile`** e o zera após o uso.
+- **Prova:** 3 execuções consecutivas de `-Dtest=KofDebugNativeDapTest` →
+  **5/0F/0E cada**, `dap-native-*` = 0, `kof-debug-native-*` = **0** (era 5+3
+  cada); repro isolado com `kill -TERM` no processo DAP apagou o diretório
+  `kof-debug-native-*` (`1 → 0`), RED antes do hook.
+- **Relacionado:** §394 (mesma família de vazamento — processo vs diretório),
+  `KofDebugNativeDap.java`, `KofCliSupport.cleanup`.

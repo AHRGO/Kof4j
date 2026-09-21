@@ -23,7 +23,7 @@ final class KofDebugNativeDap {
     private final Integer attachPid;
     private final OutputStream out = System.out;
     private KofGdbMi mi;
-    private Path buildDir;
+    private volatile Path buildDir;
     private int nextSeq = 1;
     private final Map<Integer, Integer> frameLevel = new LinkedHashMap<>();
     private volatile boolean pausePending;
@@ -36,6 +36,9 @@ final class KofDebugNativeDap {
 
     void run() throws Exception {
         buildDir = null;
+        // SIGTERM (editor que fecha / host que derruba) nao passa pelo EOF do stdin:
+        // sem o hook o diretorio temporario do ELF (kof-debug-native-*) vaza.
+        Runtime.getRuntime().addShutdownHook(new Thread(this::cleanup, "kof-dap-cleanup"));
         if (attachPid != null) {
             // X7-5: o alvo NATIVO ja esta vivo — gdb -p ANTES de qualquer pedido
             // (mesma semantica da sessao JVM); launch/configurationDone viram no-op honesto.
@@ -361,9 +364,15 @@ final class KofDebugNativeDap {
         }
     }
 
-    private void cleanup() {
-        if (buildDir != null) {
-            KofCliSupport.cleanup(buildDir);
+    // synchronized: o caminho de EOF (thread main) e o shutdown hook (SIGTERM) podem
+    // chamar cleanup ao mesmo tempo; sem a trava o hook retorna antes da exclusao
+    // terminar e o JVM halta matando a main no meio — o diretorio kof-debug-native-*
+    // ficava pela metade.
+    private synchronized void cleanup() {
+        Path dir = buildDir;
+        if (dir != null) {
+            buildDir = null;
+            KofCliSupport.cleanup(dir);
         }
     }
 }
