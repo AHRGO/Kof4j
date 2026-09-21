@@ -12,7 +12,13 @@ SOMENTE DESIGN.
 lane (3.7).
 **Pousou 20/09 (fatia sem decisão):** 3.8a `AbiLayout` — o substrato de
 layout/classificação, com golden medido nas três ABIs (§6.1). O binding
-(3.8b/3.7) e D6-1..D6-5 seguem aguardando a mantenedora.
+(3.8b/3.7) procede sob as decisões D6 acima.
+**Pousou 20/09 (3.8b fatia 1):** `record` Kof→struct C **por valor como
+argumento** no JVM (token `@`; `FfiStructE2ETest` 6/6).
+**Pousou 21/09 (3.8b fatia 2):** `record` Kof **devolvido por valor** no JVM
+(registrador e sret; nome binário codificado em `@`+`:`, reconstrução pelo
+construtor canônico; `FfiStructE2ETest` 10/10). Struct no Native = 3.7;
+bridge JS = follow-up.
 
 ## 1. O que existe hoje (medido 19/09, não lembrado)
 
@@ -28,7 +34,8 @@ compilação**: `FFI001` (JVM/Native não bindável) / `FFI002` (JS) —
 | downcall escalar | ✅ `kof_ffi` FFM (`JvmFfiRuntime.java:142+`) | ✅ **`call sym@PLT` direto em x86-64/riscv64/aarch64** (#431 fatias 1–2, 20/09, §369 — link-by-use, sem `dlopen`) | ✅ bridge do host `KofJsFfiBridge` (browser degrada honesto, R7) |
 | callbacks/upcalls (3.4) | ✅ `Linker.upcallStub` | ❌ `FFI001` (sem mecanismo) | ✅ host |
 | String = `char*` | ✅ entrada + saída | ✅ entrada (payload off 24) + saída (cópia na fronteira) | ✅ |
-| **struct / array / out-buffer / opaco** | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
+| **struct (record, campos escalares)** | ✅ **por valor entrada + retorno** (token `@`, 3.8b fatias 1–2, 20–21/09) | ❌ FFI001 (3.7) | ❌ FFI002 |
+| array / out-buffer / opaco | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
 
 Mapeamento escalar JVM→FFM (medido): `i→JAVA_INT, j→JAVA_LONG, f→JAVA_FLOAT,
 d→JAVA_DOUBLE, b→JAVA_BOOLEAN, S→ADDRESS`; token não-escalar cai em
@@ -125,7 +132,11 @@ FFI001/002 honesto até decidido — nada de binding parcial silencioso.
    não decide nada de D6-1..D6-5; é o substrato compartilhado que 3.8b/3.7
    consomem.
 2. **3.8b** binding JVM: records→`StructLayout` no `kof_ffi` (FFM faz a
-   classificação); política de arena D6-5.
+   classificação); política de arena D6-5. **✅ fatia 1 (param por valor,
+   20/09) + fatia 2 (retorno por valor: registrador + sret, 21/09) POUSARAM** —
+   só o subconjunto de campos escalares; `struct` mutável (D6-1 B) é superfície
+   nova da linguagem sob a Lei da Simplicidade (regra 11), decisão separada.
+   Resta: bridge de struct no JS (pack/unpack no host, D6-5) é follow-up.
 3. **3.7** asm native: classificação manual por target (x86-64 agora;
    aarch64/riscv64 seguem o mesmo golden de AbiLayout) + sret (D6-4).
 4. **JS**: decidir a fronteira wasm/ffi (o host node já binda escalares;

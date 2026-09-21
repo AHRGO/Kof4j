@@ -11,6 +11,12 @@ text is kept for its measured reasoning. This document stays DESIGN-ONLY.
 **Landed 20/09 (decision-free slice):** 3.8a `AbiLayout` — the layout/
 classification substrate, with golden measured on the three ABIs (§6.1). The
 binding (3.8b/3.7) proceeds under the D6 decisions above.
+**Landed 20/09 (3.8b fatia 1):** JVM `record`→C struct **by value as an
+argument** (`@` token; `FfiStructE2ETest` 6/6).
+**Landed 21/09 (3.8b fatia 2):** JVM `record` **return by value** (register
+and sret paths; `@`+`:`-encoded binary name, canonical-constructor
+reconstruction; `FfiStructE2ETest` 10/10). Native struct = 3.7; JS bridge =
+follow-up.
 
 
 ## 1. What exists today (measured 19/09, not remembered)
@@ -27,7 +33,8 @@ gap**: `FFI001` (JVM/Native not bindable) / `FFI002` (JS) —
 | scalar downcall | ✅ `kof_ffi` FFM (`JvmFfiRuntime.java:142+`) | ✅ **direct `call sym@PLT` on x86-64/riscv64/aarch64** (#431 slices 1–2, 20/09, §369 — link-by-use, no `dlopen`) | ✅ host bridge `KofJsFfiBridge` (browser degrades honestly, R7) |
 | callbacks/upcalls (3.4) | ✅ `Linker.upcallStub` | ❌ `FFI001` (no mechanism) | ✅ host |
 | String = `char*` | ✅ in + out | ✅ in (payload off 24) + out (boundary copy) | ✅ |
-| **struct / array / out-buffer / opaque** | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
+| **struct (record, scalar fields)** | ✅ **by value in + out** (`@` token, 3.8b fatias 1–2, 20–21/09) | ❌ FFI001 (3.7) | ❌ FFI002 |
+| array / out-buffer / opaque | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
 
 JVM scalar→FFM mapping (measured): `i→JAVA_INT, j→JAVA_LONG, f→JAVA_FLOAT,
 d→JAVA_DOUBLE, b→JAVA_BOOLEAN, S→ADDRESS`, non-scalar token falls back to
@@ -122,7 +129,11 @@ until decided — no silent partial binding.
    with `_Static_assert` against the real compilers). It binds nothing and
    decides nothing of D6-1..D6-5; it is the shared substrate 3.8b/3.7 consume.
 2. **3.8b** JVM binding: records→`StructLayout` in `kof_ffi` (FFM does
-   classification); D6-5 arena policy.
+   classification); D6-5 arena policy. **✅ fatia 1 (by-value param, 20/09) +
+   fatia 2 (return-by-value: register + sret, 21/09) LANDED** — only the
+   scalar-field subset; `struct` mutable (D6-1 B) is a new language surface
+   under the Simplicity Law (rule 11), a separate decision. Remaining: JS
+   struct bridge (D6-5 host pack/unpack) is a follow-up.
 3. **3.7** native asm: classification by hand per target (x86-64 now;
    aarch64/riscv64 follow the same AbiLayout golden) + sret (D6-4).
 4. **JS**: decide wasm/ffi boundary (node host already binds scalars;
