@@ -237,6 +237,30 @@ ratchet `StdParityGapAuditTest` e `scripts/audit-stubs.sh`. Novos re-triggers
 desta frente devem ser recusados (estabilidade AGENTS); trabalho novo aguarda
 regressão ou decisão da mantenedora.
 
+## Passada 5 — auditoria semântica, batch 1 (21/09, a frente profunda)
+
+As varreduras lexicais estão esgotadas; o desenvolvimento incompleto não
+documentado real é **semântico**. Quatro leituras paralelas (emit-sites de
+codegen, ops no-op de runtime, CLI/LSP/tooling, testes fracos) geraram
+candidatos; cada um foi verificado no código antes de catalogar. Batch 1
+(código/paridade, catalogado como §424–§426, EN+PT):
+
+- **§424** — cinco métodos `String` aceitos (`matches`/`replaceAll`/`replaceFirst`/
+  `toCharArray`/`compareToIgnoreCase`) silenciosamente incompletos no JS e
+  link-fail no Native sem gap code.
+- **§425** — `kof.config` riscv64/aarch64 como stub de default silencioso
+  enquanto `supportedOn` retorna true (javadoc `CONF001` stale).
+- **§426** — `time.collect()` no JS compila sem runtime e sem gate.
+
+Batch 2 (verificado, catalogação a seguir): runtime `kof.io`/web-T1 do cross
+ausente com gate errado; fachada do DAP `default -> respond(success:true, {})`
+(JVM+Native) + claim de `restart` no `debug-adapter.md`; LSP `default -> {}`
+(sem resposta JSON-RPC); testes false-green (`RouterE2ETest#debugConc001`
+zero-assert, 5 `NativeDebugTest*` só-print,
+`KofWebNativeE2ETest#nativeServerAcceptsAndResponds200` `assertTrue(true)`,
+`BareCollectionPrimitiveArgE2ETest#bareListAddPrimitiveNativeRuns`
+`assumeTrue(compileSuccess)` mascarando regressões nativas).
+
 ## Próximas passadas (planejadas — ainda não executadas)
 
 1. **Checagem de assimetria de paridade** — **FEITA (fatia 2b,

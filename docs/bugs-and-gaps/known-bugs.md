@@ -14165,3 +14165,35 @@ p
 - **Related:** §374 (the native face that exposed it), §50 (channel+spawn history), §352 (NAT001/NAT002 honest-diagnostic pattern), `D-GC-B44` (cross clone/futex precedent).
 
 <!-- pt-switch --> **PT:** [§423 (pt_BR)](known-bugs.pt_BR.md#423--canais-nos-alvos-nativos-riscv64aarch64-nunca-foram-portados-qualquer-programa-com-channelchannel-só-falhava-no-link-com-o-críptico-undefined-reference-to-kof_channel_newsendreceive-exposto-2109-ao-fechar-a-face-nativa-do-374--aberto-🟡-com-diagnóstico-honesto-nat005-r6-o-gap-é-declarado-no-lowering-o-port-é-o-trabalho)
+
+## §424 — five accepted `String` methods are silently incomplete on JS and link-fail on Native with no gap code (`matches`/`replaceAll`/`replaceFirst`/`toCharArray`/`compareToIgnoreCase`) — 🔴 OPEN (R6: JVM works, the other targets diverge with no diagnostic)
+
+- **Green surface (source of truth):** `StringMethodRegistry.java:81-85` gives real signatures to `replaceAll`/`replaceFirst` (String), `matches` (Bool), `toCharArray` (Char[]), `compareToIgnoreCase` (Int); `CollectionMethodTyper.java:94-109` types them too; `BuiltinCallTyper` takes the return type from the registry. So the typer accepts all five on every target.
+- **JS (static, verified):** `js/JsCallEmitter.java:461-468` `handleStringOp` has no case for any of the five, so the `default` emits `receiver.<name>(...)`. JS `String.prototype` has no `matches`/`toCharArray`/`replaceFirst`/`compareToIgnoreCase` -> runtime `TypeError`; `replaceAll` EXISTS but with **literal** semantics vs Kof/JVM **regex** (`"a1b".replaceAll("\\d","x")` -> JVM `"axb"`, JS `"a1b"` silently wrong). Compilation is clean — an R6 violation.
+- **Native (static, verified):** none of the five is cased in `nat/NativeX86StringCalls.java`; the call falls to `NativeOpHelpers.java:184-189`, which mangles any unhandled String instance call into `java_lang_String_<method>` -> undefined symbol at link, surfaced only as a cryptic `as`/`ld` failure (`NativeArchEmitter.java:240`) with no Kof gap code. Same for riscv64/aarch64.
+- **Repro:** compile+run `println("123".matches("\\d+"))` / `var c = "ab".toCharArray(); println(c[0])` on JS -> `TypeError`/wrong output; on Native -> link failure; on JVM -> correct. No `ConformanceMatrixTest`/`BackendParityTest` case covers the five.
+- **What is missing:** per-target cases (JS mirrors the JDK contract — regex for `replaceAll`/`replaceFirst`/`matches`, a real char array for `toCharArray`, case-insensitive compare) or an honest `gapCode` backstop; the codegen has no "unhandled String method -> honest gap" fallback.
+- **Related:** §259 (phantom gap-code discipline), `D-KOF-FIRST`, `training/idioms/strings.md`.
+
+<!-- pt-switch --> **PT:** [§424 (pt_BR)](known-bugs.pt_BR.md#424-five-accepted-string-methods-are-silently-incomplete-on-js-and-link-fail-on-native-with-no-gap-code-matches-replaceall-replacefirst-tochararray-comparetoignorecase-open-r6-jvm-works-the-other-targets-diverge-with-no-diagnostic)
+
+## §425 — riscv64/aarch64 `kof.config` is a silent-default stub while `KofConfig.supportedOn` returns true and the javadoc still claims `CONF001` — 🔴 OPEN (R6: wrong values on the cross, no diagnostic)
+
+- **Stub (measured):** `nat/NativeRiscvAsmRtB0.java:295-327` (`# ---- kof.config (minimal — retorna default / 0 / false) ----`): `kof_config_get/env/has` -> `li a0, 0`; `kof_config_str/int/long/bool` -> `mv a0, a1` (echoes the default argument); `kof_config_required` returns the KEY (or `kof_null_error`). There is no real lookup on the cross.
+- **Gate wrong:** `KofConfig.java:43-44` `supportedOn(Target)` returns `true` for every target, so the `CONF001` branch in `ExpressionConfigCallLowerer.java:19-31` is dead; `KofConfig.java:25` javadoc still says "Native and JS targets report CONF001 at compile time" (stale, contradicted by the stub).
+- **x86/JVM are real:** `runtime/RuntimeConfig1.java`+`RuntimeConfig2.java` (x86; `kof_config_required` panics `CONF002` at `RuntimeConfig2.java:97`); JVM has a real implementation. This is a cross parity divergence, not intended scope.
+- **Docs soft:** `docs/stdlib/stdlib-config.md:89` marks riscv/aarch "✅/placeholder"; `docs/backend-parity.md:105` marks `kof.config` ✅ Native. `NativeConfigE2ETest` only runs `Target.NATIVE` (x86).
+- **What is missing:** a real config runtime on the cross, or gate the cross with an honest code (mirror `NAT005`/§423) plus fix the stale javadoc/matrix.
+- **Related:** §423 (NAT005 "declare the gap" precedent), `NativeRiscvAsmRtB0.java:332-333` (`kof_time_now` was the same stub, fixed under R6).
+
+<!-- pt-switch --> **PT:** [§425 (pt_BR)](known-bugs.pt_BR.md#425-riscv64-aarch64-kof-config-is-a-silent-default-stub-while-kofconfig-supportedon-returns-true-and-the-javadoc-still-claims-conf001-open-r6-wrong-values-on-the-cross-no-diagnostic)
+
+## §426 — `time.collect()` compiles on JS but has no runtime and no gate (silent incomplete) — 🔴 OPEN
+
+- `KofTime.java:42` lists `collect` in `functions()`; `:128-129` lowers it to `kof_gc_collect_now`; `supportedOn(method,target)` (`:74-102`) gates only `tzOffsetSeconds` (TIME003), so `collect` returns true on JS; `gapCode(method)` (`:104-111`) yields no code.
+- `js/JsRuntimeOps.java:428` registers it via `runtimeJsName` -> `kofGcCollectNow`, but **no such function exists anywhere under `js/`** (grep empty); `JsEmitter.java:37` imports it from `./kof-runtime.mjs`, so the artifact fails at load while compilation is clean.
+- Implemented on JVM, x86 (`RuntimeGc`) and riscv. No test covers `time.collect()`.
+- **Repro:** `main(){ time.collect() }` on JS -> undefined export/ReferenceError at run; compile clean.
+- **What is missing:** implement the JS GC-collect face, or gate it with an honest code.
+
+<!-- pt-switch --> **PT:** [§426 (pt_BR)](known-bugs.pt_BR.md#426-time-collect-compiles-on-js-but-has-no-runtime-and-no-gate-silent-incomplete-open)

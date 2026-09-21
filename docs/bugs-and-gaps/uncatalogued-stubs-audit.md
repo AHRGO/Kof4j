@@ -231,6 +231,28 @@ durable artifacts are this ledger, the `StdParityGapAuditTest` ratchet and
 `scripts/audit-stubs.sh`. Further re-triggers of this front should be refused
 (AGENTS stability); new work waits for a regression or a maintainer decision.
 
+## Pass 5 — semantic audit, batch 1 (21/09, the deep front)
+
+The lexical scans are exhausted; the real undocumented incomplete development
+is **semantic**. Four parallel reads (codegen emit-sites, runtime no-op ops,
+CLI/LSP/tooling, weak tests) produced candidates; each was verified in the code
+before cataloguing. Batch 1 (code/parity, catalogued as §424–§426, EN+PT):
+
+- **§424** — five accepted `String` methods (`matches`/`replaceAll`/`replaceFirst`/
+  `toCharArray`/`compareToIgnoreCase`) silently incomplete on JS and link-fail on
+  Native with no gap code.
+- **§425** — riscv64/aarch64 `kof.config` silent-default stub while `supportedOn`
+  returns true (stale `CONF001` javadoc).
+- **§426** — JS `time.collect()` compiles with no runtime and no gate.
+
+Batch 2 (verified, cataloguing next): cross `kof.io`/web-T1 runtime absent with a
+wrong gate; DAP `default -> respond(success:true, {})` façade (JVM+Native) +
+`debug-adapter.md` `restart` claim; LSP `default -> {}` (no JSON-RPC reply);
+false-green tests (`RouterE2ETest#debugConc001` zero-assert, 5 `NativeDebugTest*`
+print-only, `KofWebNativeE2ETest#nativeServerAcceptsAndResponds200` `assertTrue(true)`,
+`BareCollectionPrimitiveArgE2ETest#bareListAddPrimitiveNativeRuns`
+`assumeTrue(compileSuccess)` masking native regressions).
+
 ## Next passes (planned — not yet executed)
 
 1. **Parity asymmetry check** — **DONE (slice 2b, `StdParityGapAuditTest`
