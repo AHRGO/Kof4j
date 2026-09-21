@@ -54,6 +54,31 @@ class MapGetOrDefaultTest {
     }
 
     @Test
+    void objectValuedSlotPrimitiveDefaultRunsOnJvm(@TempDir Path tempDir) throws Exception {
+        // §432 — Map<String,Object> with a primitive default: the emitter
+        // resolved the slot V from the call-site argument (Double) and the
+        // result path unboxed to double, so the consumer expecting Object
+        // died with VerifyError: Type double_2nd is not assignable to Object.
+        // V of the owner must govern the RESULT; the argument only boxes the
+        // default. JVM-only face (Native/Script/JS are green, §352).
+        CompilationResult r = compile(tempDir, "O", """
+                main() {
+                    val o: Map<String, Object> = mapOf()
+                    o.put("d", 2.5)
+                    println(o.getOrDefault("d", 9.5))
+                    println(o.getOrDefault("x", 9.5))
+                }
+                """, Target.JVM);
+        assertTrue(r.success(), "#432 verbatim must compile: " + r.diagnostics().getDiagnostics());
+        String javaCmd = TestJdk.javaBin();
+        Process p = new ProcessBuilder(javaCmd, "-cp", tempDir.resolve("out-OJVM").toString(), "Default.Main")
+                .redirectErrorStream(true).start();
+        String out = new String(p.getInputStream().readAllBytes()).replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run must exit 0 (VerifyError fails verification), got:\n" + out);
+        assertEquals("2.5\n9.5", out, "hit returns the stored Object; miss returns the boxed primitive default");
+    }
+
+    @Test
     void getOrDefaultRunsOnJs(@TempDir Path tempDir) throws Exception {
         // Script parity lives in kof-script KofScriptStdlibParityTest (the
         // interpreter runner is not on kof-compiler's classpath by design);
