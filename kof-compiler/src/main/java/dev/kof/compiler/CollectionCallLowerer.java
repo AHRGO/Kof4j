@@ -424,19 +424,18 @@ public final class CollectionCallLowerer {
                     || "kof_map_put_if_absent".equals(mapFn))
                     && argTypes.size() > 1 && driver.target.isNative()
                     && driver.needsErasureBoxing() && mapSlotAcceptsBox(valueType)
-                    && mapBoxablePrim(argTypes.get(1))
+                    && (mapBoxablePrim(argTypes.get(1))
+                            || referenceSlotPrim(valueType, argTypes.get(1)))
                     && !ExpressionTyper.boxesOwnBranches(driver, mc.arguments().get(1), locals)) {
                 CompilerEmissionHelpers.emitErasureBox(driver, ops, argTypes.get(1));
             }
             // #386 — containsValue: extras de valor (box do arg + tag por
-            // valueType×arg + NAT002 p/ mapa de valor Object no nativo) —
-            // responsabilidade em CollectionValueOps; o JVM faz POP do tag,
-            // o nativo usa no scan (valorCmpTag: String/box/miss-seguro).
+            // valueType×arg; §352: mapa Object usa o tag 6 dinâmico — o
+            // runtime classifica com kof_value_kind) — responsabilidade em
+            // CollectionValueOps; o JVM faz POP do tag, o nativo usa no scan.
             if ("kof_map_contains_value".equals(mapFn)) {
-                if (CollectionValueOps.emitContainsValueExtras(driver, mc, ops, locals,
-                        argTypes, valueType)) {
-                    return localIdx;
-                }
+                CollectionValueOps.emitContainsValueExtras(driver, mc, ops, locals,
+                        argTypes, valueType);
                 argTypes = new ArrayList<>(argTypes);
                 argTypes.add(Type.PrimitiveType.INT);
             }
@@ -561,6 +560,17 @@ public final class CollectionCallLowerer {
             case "int", "char", "short", "byte", "long" -> true;
             default -> false;
         };
+    }
+
+    /** §352 NAT002 — slot de valor REFERÊNCIA (Object): TODO primitivo é
+     *  normalizado como caixa no put nativo (kof_box_* existe para
+     *  Double/Float/Bool também). O runtime classifica as caixas/Strings/
+     *  ponteiros no scan de containsValue (tag 6 dinâmico) — sem kind
+     *  estático, sem deref cega. */
+    static boolean referenceSlotPrim(Type slot, Type arg) {
+        if (!(arg instanceof Type.PrimitiveType)) return false;
+        Type s = slot instanceof Type.NullableType nt ? nt.inner() : slot;
+        return BuiltinTypes.isObject(s);
     }
 
     /** §122: tipos que NUNCA são um índice válido p/ get/set/remove de List. */

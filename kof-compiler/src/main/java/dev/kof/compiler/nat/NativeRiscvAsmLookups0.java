@@ -15,13 +15,46 @@ public final class NativeRiscvAsmLookups0 {
     private NativeRiscvAsmLookups0() {}
 
     static String RISCV_LOOKUPS_ASM_0 = """
+            .section .rodata
+            .p2align 3
+            .Lkvlk_magic: .8byte 0x4B4F46425F425801   # MAGIC §284 (RuntimeErasureBox)
             .section .text
+            # kof_value_kind(a0=val) -> a0: 0=raw/ponteiro, 1=String, 2=caixa
+            # §352 NAT002: guarda de arena (_kof_heap.._kof_heap_end, o bump
+            # do G-0) ANTES de derefar — bits de primitivo cru viram 0 sem
+            # leitura, o SIGSEGV clássico do slot de Double nunca ocorre.
+            .globl kof_value_kind
+            kof_value_kind:
+                beqz a0, .Lkvk_zero
+                la   t0, _kof_heap
+                bltu a0, t0, .Lkvk_zero
+                la   t0, _kof_heap_end
+                bgeu a0, t0, .Lkvk_zero
+                la   t1, .Lkvlk_magic
+                ld   t1, 0(t1)
+                ld   t0, 0(a0)
+                beq  t0, t1, .Lkvk_box
+                li   t1, 1
+                bne  t0, t1, .Lkvk_zero
+                li   a0, 1
+                ret
+            .Lkvk_box:
+                li   a0, 2
+                ret
+            .Lkvk_zero:
+                li   a0, 0
+                ret
+
             # kof_map_contains_value(a0=map, a1=val, a2=tag) -> 0/1 (#386)
-            # tag: 0=raw, 1=String, 2=caixa MAGIC, 3=miss garantido.
+            # tag: 0=raw, 1=String, 2=caixa MAGIC, 3=miss garantido,
+            # 6=valor Object dinâmico (§352: classifica arg e entradas com
+            # kof_value_kind — box/box, str/str, ptr/ptr; kind ≠ = miss).
             .globl kof_map_contains_value
             kof_map_contains_value:
                 li   t0, 3
                 beq  a2, t0, .Lmlcv_zero
+                li   t0, 6
+                beq  a2, t0, .Lmlcv_dyn
                 addi sp, sp, -56
                 sd   ra, 48(sp)
                 sd   s0, 40(sp)          # map
@@ -61,6 +94,51 @@ public final class NativeRiscvAsmLookups0 {
             .Lmlcv_next:
                 addi s3, s3, 1
                 j    .Lmlcv_loop
+            .Lmlcv_dyn:
+                addi sp, sp, -56
+                sd   ra, 48(sp)
+                sd   s0, 40(sp)          # map
+                sd   s1, 32(sp)          # val
+                sd   s2, 24(sp)          # kind do arg
+                sd   s3, 16(sp)          # i
+                sd   s4, 8(sp)           # slot
+                sd   s5, 0(sp)           # reserva
+                mv   s0, a0
+                mv   s1, a1
+                mv   a0, s1
+                call kof_value_kind
+                mv   s2, a0
+                li   s3, 0
+            .Lmlcv_dloop:
+                lw   t1, 16(s0)
+                bge  s3, t1, .Lmlcv_no
+                ld   t1, 32(s0)
+                slli t2, s3, 3
+                add  t1, t1, t2
+                ld   s4, 0(t1)
+                mv   a0, s4
+                call kof_value_kind
+                bne  a0, s2, .Lmlcv_dnext
+                li   t0, 2
+                beq  s2, t0, .Lmlcv_dbox
+                li   t0, 1
+                beq  s2, t0, .Lmlcv_dstr
+                bne  s4, s1, .Lmlcv_dnext
+                j    .Lmlcv_yes
+            .Lmlcv_dbox:
+                mv   a0, s4
+                mv   a1, s1
+                call kof_box_equals
+                bnez a0, .Lmlcv_yes
+                j    .Lmlcv_dnext
+            .Lmlcv_dstr:
+                mv   a0, s4
+                mv   a1, s1
+                call kof_string_equals
+                bnez a0, .Lmlcv_yes
+            .Lmlcv_dnext:
+                addi s3, s3, 1
+                j    .Lmlcv_dloop
             .Lmlcv_yes:
                 li   a0, 1
                 j    .Lmlcv_ret

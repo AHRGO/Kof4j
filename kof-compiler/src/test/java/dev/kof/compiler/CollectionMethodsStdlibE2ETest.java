@@ -309,35 +309,78 @@ class CollectionMethodsStdlibE2ETest {
                 "SEM056 expected: " + r.diagnostics().getDiagnostics());
     }
 
+    /** §352/NAT002 FECHADO 21/09: o slot de valor Object normaliza TODO
+     *  primitivo como caixa no nativo (extensão §284: kof_box_* existe p/
+     *  Double/Float/Bool) e o scan usa o tag 6 DINÂMICO — kof_value_kind
+     *  classifica arg e entradas (caixa/String/ponteiro/bit cru) com guarda
+     *  de heap, comparando box×box, str×str, ptr×ptr. Paridade medida:
+     *  JVM (HashMap.equals) × 3 nativos, incl. o print que era vazio no
+     *  Double/Bool cru. */
     @Test
-    void containsValueOnObjectMapWorksOnJvmAndIsHonestOnNative(@TempDir Path tempDir) throws Exception {
-        // NAT002 (§349): no Map<_,Object> nativo o slot de Double cru é
-        // indistinguível de caixa MAGIC sem dereferência (medição JVM: put
-        // Int E Double no mesmo mapa é LEGÍTIMO — SEM056 não pinna tipo
-        // declarado) — rejeição honesta no native, nunca SIGSEGV. No JVM os
-        // dois lados do probe são objetos reais: hit e miss medidos.
+    void objectValuedContainsValueRunsOnNativeInParity(@TempDir Path tempDir) throws Exception {
         String src = """
                 main() {
                     val o: Map<String, Object> = mapOf()
-                    o.put("k1", 7)
+                    o.put("d", 2.5)
+                    o.put("i", 7)
+                    o.put("b", true)
                     println(o.containsValue(7))
-                    println(o.containsValue("s"))
+                    println(o.containsValue(2.5))
+                    println(o.containsValue(true))
+                    println(o.containsValue(8))
+                    println(o.containsValue(2.75))
+                    println(o.get("d"))
+                    println(o.get("b"))
+                    println(o.get("i"))
+                    val x: Object = 2.5
+                    o.put("d2", x)
+                    println(o.containsValue(2.5))
+                    val s: Object = "str"
+                    o.put("s", s)
+                    println(o.containsValue("str"))
+                    println(o.containsValue("nope"))
+                    val only: Map<String, Object> = mapOf()
+                    only.put("d", 2.5)
+                    println(only.containsValue(7))
+                    println(only.containsValue("x"))
+                    val z: Map<String, Object> = mapOf()
+                    z.put("n", -0.0)
+                    println(z.containsValue(0.0))
+                    println(z.containsValue(-0.0))
                 }
                 """;
-        CompilationResult rj = compile(tempDir, "ONJ", src, Target.JVM);
+        // Golden medido no oráculo JVM (java.util): hits Int/Double/Bool/String,
+        // misses de família distinta, print boxed (2.5/true/7), a 2ª entrada
+        // Double do local Object e -0.0 ≠ 0.0 (Double.equals é bit-a-bit).
+        String golden = "true\ntrue\ntrue\nfalse\nfalse\n2.5\ntrue\n7\n"
+                + "true\ntrue\nfalse\nfalse\nfalse\nfalse\ntrue";
+        CompilationResult rj = compile(tempDir, "OJ", src, Target.JVM);
         assertTrue(rj.success(), "Object containsValue works on JVM: " + rj.diagnostics().getDiagnostics());
-        String javaCmd = TestJdk.javaBin();
-        Process p = new ProcessBuilder(javaCmd, "-cp",
-                outDirFor(tempDir, "ONJ", Target.JVM).toString(), "Default.Main")
+        Process p = new ProcessBuilder(TestJdk.javaBin(), "-cp",
+                outDirFor(tempDir, "OJ", Target.JVM).toString(), "Default.Main")
                 .redirectErrorStream(true).start();
-        String out = new String(p.getInputStream().readAllBytes()).replace("\r\n", "\n").trim();
-        assertEquals(0, p.waitFor(), "run exit 0, got:\n" + out);
-        assertEquals("true\nfalse", out, "MEDIÇÃO JVM 19/09 (Probe2): hit 7, miss \"s\"");
-        CompilationResult rn = compile(tempDir, "ONN", src, Target.NATIVE);
-        assertFalse(rn.success(), "Object containsValue must be rejected on native");
-        assertTrue(rn.diagnostics().getDiagnostics().stream()
-                .anyMatch(d -> d.code().equals("NAT002")),
-                "NAT002 expected: " + rn.diagnostics().getDiagnostics());
+        String jvm = new String(p.getInputStream().readAllBytes()).replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "JVM exit, saída:\n" + jvm);
+        assertEquals(golden, jvm, "oráculo JVM (medido)");
+
+        CompilationResult rn = compile(tempDir, "ON", src, Target.NATIVE);
+        assertTrue(rn.success(), "Object containsValue no x86_64: " + rn.diagnostics().getDiagnostics());
+        Path bin = outDirFor(tempDir, "ON", Target.NATIVE).resolve("Default/Main");
+        Process pn = new ProcessBuilder(bin.toString()).redirectErrorStream(true).start();
+        String nat = new String(pn.getInputStream().readAllBytes()).replace("\r\n", "\n").trim();
+        assertEquals(0, pn.waitFor(), "native exit, saída:\n" + nat);
+        assertEquals(golden, nat, "x86_64 = caixa normalizada + kind dinâmico (paridade JVM)");
+
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            org.junit.jupiter.api.Assumptions.assumeTrue(
+                    NativeRiscv64E2ETest.hasToolchain(arch), "toolchain " + arch + " ausente");
+            CompilationResult rc = compile(tempDir, "OC" + arch, src, t);
+            assertTrue(rc.success(), t + " Object containsValue: " + rc.diagnostics().getDiagnostics());
+            String out = NativeRiscv64E2ETest.runQemu(arch,
+                    outDirFor(tempDir, "OC" + arch, t).resolve("Default/Main"));
+            assertEquals(golden, out, t + " = kof_value_kind + arena (paridade JVM)");
+        }
     }
 
     @Test
