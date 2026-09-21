@@ -125,6 +125,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **O gate agora fecha o ciclo nas duas direções** (21/09, lane docs): além de afirmação de fechamento sem respaldo no ledger, um id FECHADO no ledger a partir da seção 400 sem entrada no CHANGELOG agora derruba o gate. O piso é regra de época, não anistia: medido em 21/09, 25 ids abaixo de 400 não têm entrada enquanto ZERO acima têm — a prática consolidou, a regra começa onde a prática começa. Verificado por mutação: uma seção fechada plantada no ledger sem linha no changelog é nomeada pelo gate; estado real segue verde. (Uma ideia companheira — proibir referências do changelog a ids fora do ledger — foi medida e REJEITADA: os achados são remissões antigas de outro espaço de ids, regra errada para a história, recusada pela lição da rodada 11.)
+  - **Gate de release `edges`: query de `1.0-blocks` que falha não vira mais "0 blocks"** (21/09,
+    lane docs): num host sem `gh`, o ramo de roadmap do `c_edges` rodava
+    `check_release_blockers.sh --rc-gate` (rc=3, sem linha de resumo) e então assumia `blocks=0` —
+    um falso GREEN latente da condição 6, mascarado só porque EG-8 está aberto. Agora a contagem
+    fica `UNKNOWN` quando a enumeração não é parseável (R6/Q5, a mesma regra fail-closed que o
+    `bug_issues` já seguia), enquanto EG aberto continua RED; `R050_OPEN_BLOCKS` fornece a contagem
+    offline e `R050_EG_ROADMAP`/`R050_BLOCKS_CMD` tornam o ramo testável. O selftest do gate ganha
+    os dois casos (query falha -> UNKNOWN; query diz 0 -> GREEN).
   - **`check_live_records.sh` parte F: paridade de numeração/nível de seções em todos os pares
     EN<->PT** (21/09, lane docs): a parte C checava número+nível das seções numeradas só no
     `DECISIONS.md`; a F generaliza para **todo `docs/development/*.md` que tenha gêmeo `.pt_BR.md`**

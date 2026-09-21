@@ -138,6 +138,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (claim da fatia no mesmo commit). Onde a asm é cópia adaptada do find
     (padrão da casa), o loop é o MESMO código já provado no §397.
   - **The gate now closes the loop in both directions** (21/09, docs lane): besides CHANGELOG-claims-closed-without-ledger-backing, an id CLOSED in the ledger at or after section 400 with no CHANGELOG entry now fails the gate. The floor is an epoch rule, not amnesty: measured 21/09, 25 closed ids below 400 lack entries while ZERO above it do — practice solidified, so the rule starts where the practice does. Mutation-verified: a planted closed section in the ledger with no changelog line is named by the gate; real state stays green. (A companion no-ghost idea — forbidding changelog refs to ids absent from the ledger — was measured and REJECTED: the hits are ancient cross-references, a wrong rule for the history, refused per the round-11 lesson.)
+  - **Release gate `edges`: a failed `1.0-blocks` query is no longer read as "0 blocks"** (21/09,
+    docs lane): on a host without `gh` the roadmap branch of `c_edges` ran
+    `check_release_blockers.sh --rc-gate` (rc=3, no summary line) and then defaulted `blocks=0` — a
+    latent false GREEN for condition 6 that was masked only because EG-8 is open. Now the count is
+    left `UNKNOWN` when the enumeration cannot be parsed (R6/Q5, the same fail-closed rule
+    `bug_issues` already followed), while an open EG still REDs; `R050_OPEN_BLOCKS` supplies the
+    count offline and `R050_EG_ROADMAP`/`R050_BLOCKS_CMD` make the branch testable. The gate
+    selftest gains both cases (query fails -> UNKNOWN; query says 0 -> GREEN).
   - **`check_live_records.sh` part F: section numbering/level parity over every EN<->PT pair**
     (21/09, docs lane): part C had checked the numbered-section number+level only in `DECISIONS.md`;
     F generalises it to **every `docs/development/*.md` that has a `.pt_BR.md` twin** — a `## 1.` in

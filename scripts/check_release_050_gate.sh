@@ -24,6 +24,11 @@
 #   R050_OPEN_ISSUES_TSV  file "number<TAB>labels"
 #   R050_KNOWN_BUGS_CMD   command printing the known-bugs ledger (default gate)
 #   R050_EG_TSV           file "EG-N<TAB>state" (default: parse roadmap §24)
+#   R050_EG_ROADMAP       roadmap file to parse for EG rows (default docs/development/roadmap.md)
+#   R050_BLOCKS_CMD       command printing the release-blockers summary
+#                         (default `bash scripts/check_release_blockers.sh --rc-gate`);
+#                         when it cannot be parsed, edges is UNKNOWN, never "0 blocks"
+#   R050_OPEN_BLOCKS      external measurement of open 1.0-blocks (skips the query)
 #   R050_LOOSE_MD_FILE    file listing loose md basenames (default: ls)
 #   R050_PENDING_FILE     file whose first line is the pending-decision count
 #   R050_PARITY_FILE      file containing "PARITY: 100%" when parity holds
@@ -40,6 +45,8 @@ cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)"
 OPEN_ISSUES_TSV="${R050_OPEN_ISSUES_TSV:-}"
 KNOWN_BUGS_CMD="${R050_KNOWN_BUGS_CMD:-bash scripts/check_known_bugs_status.sh}"
 EG_TSV="${R050_EG_TSV:-}"
+EG_ROADMAP="${R050_EG_ROADMAP:-docs/development/roadmap.md}"
+BLOCKS_CMD="${R050_BLOCKS_CMD:-bash scripts/check_release_blockers.sh --rc-gate}"
 LOOSE_MD_FILE="${R050_LOOSE_MD_FILE:-}"
 PENDING_FILE="${R050_PENDING_FILE:-}"
 PARITY_FILE="${R050_PARITY_FILE:-}"
@@ -201,22 +208,32 @@ c_edges() {
     blocks="${R050_OPEN_BLOCKS:-0}"
   else
     local eg_all
-    eg_all="$(awk -F'|' '/^\| *EG-[0-9]+ /{print}' docs/development/roadmap.md 2>/dev/null)"
+    eg_all="$(awk -F'|' '/^\| *EG-[0-9]+ /{print}' "$EG_ROADMAP" 2>/dev/null)"
     eg_rows="$(printf '%s\n' "$eg_all" | grep -c 'EG-[0-9]' || true)"
     if [ "${eg_rows:-0}" -eq 0 ]; then
-      STATE[edges]=UNKNOWN; DETAIL[edges]="roadmap EG table unreadable (no EG rows in docs/development/roadmap.md)"; return
+      STATE[edges]=UNKNOWN; DETAIL[edges]="roadmap EG table unreadable (no EG rows in $EG_ROADMAP)"; return
     fi
     eg_open="$(printf '%s\n' "$eg_all" | awk -F'|' '{ id=$2; gsub(/ /,"",id); if ($0 !~ /DONE|FEITO/) print id }' | tr '\n' ' ')"
-    eval "$(scripts/gh-as-agent.sh token 2>/dev/null)" || true
-    local out; out="$(bash scripts/check_release_blockers.sh --rc-gate 2>&1)"
-    blocks="$(printf '%s\n' "$out" | sed -n 's/.*-- \([0-9]*\) open 1.0-blocks.*/\1/p' | head -1)"
-    blocks="${blocks:-0}"
+    local out bl
+    if [ -n "${R050_OPEN_BLOCKS:-}" ]; then
+      blocks="$R050_OPEN_BLOCKS"           # medicao externa (mesma forma do caminho EG_TSV)
+    else
+      eval "$(scripts/gh-as-agent.sh token 2>/dev/null)" || true
+      out="$($BLOCKS_CMD 2>&1)"
+      bl="$(printf '%s\n' "$out" | sed -n 's/.*-- \([0-9]*\) open 1.0-blocks.*/\1/p' | head -1)"
+      # enumeracao que nao respondeu (gh/API fora) NAO pode virar "0 blocks"
+      # verde — seria o mesmo falso-verde que o bug_issues proibe (R6/Q5).
+      if [ -z "$bl" ]; then blocks="UNKNOWN"; else blocks="$bl"; fi
+    fi
   fi
-  if [ -z "${eg_open// }" ] && [ "${blocks:-0}" -eq 0 ]; then
+  if [ -n "${eg_open// }" ]; then
+    STATE[edges]=RED; DETAIL[edges]="open edge(s):$eg_open; open 1.0-blocks: ${blocks:-?}"
+  elif [ "${blocks:-UNKNOWN}" = "UNKNOWN" ]; then
+    STATE[edges]=UNKNOWN; DETAIL[edges]="1.0-blocks query failed (gh/API unavailable) — cannot enumerate open blocks"
+  elif [ "$blocks" -eq 0 ]; then
     STATE[edges]=GREEN; DETAIL[edges]="no open edge (EG-1..EG-10 closed, 0 open 1.0-blocks)"
   else
-    STATE[edges]=RED
-    DETAIL[edges]="open edge(s):${eg_open:- none}; open 1.0-blocks: $blocks"
+    STATE[edges]=RED; DETAIL[edges]="open edge(s): none; open 1.0-blocks: $blocks"
   fi
 }
 
@@ -302,6 +319,23 @@ EOF
     bash "$0" > "$T/out3"; rc=$?
   [ "$rc" -eq 2 ] || fail "inconclusive fixture should be exit 2, got $rc"
   grep -q 'NEEDS-MEASURE' "$T/out3" || fail "inconclusive run should surface NEEDS-MEASURE"
+
+  # edges: todos os EG fechados, mas a query de 1.0-blocks NAO responde.
+  # Nao pode virar "0 blocks" verde (mesmo falso-verde que bug_issues proibe).
+  printf '| EG-1 | x | DONE |\n| EG-2 | y | FEITO |\n' > "$T/rm"
+  R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_ROADMAP="$T/rm" \
+  R050_LOOSE_MD_FILE="$T/loose" R050_SPEC_GAPS_FILE="$T/spec" \
+  R050_KNOWN_BUGS_CMD="cat $T/kb" R050_BLOCKS_CMD="echo boom; exit 3" \
+  R050_MATRIX_CMD=: KOF_SUITE_LOG= \
+    bash "$0" > "$T/out4" 2>/dev/null
+  grep -q 'edges .*UNKNOWN' "$T/out4" || fail "EG fechado + blocks sem resposta devia ser UNKNOWN"
+  # e quando a query responde 0, edges fica GREEN
+  R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_ROADMAP="$T/rm" \
+  R050_LOOSE_MD_FILE="$T/loose" R050_SPEC_GAPS_FILE="$T/spec" \
+  R050_KNOWN_BUGS_CMD="cat $T/kb" R050_BLOCKS_CMD='echo "-- 0 open 1.0-blocks"' \
+  R050_MATRIX_CMD=: KOF_SUITE_LOG= \
+    bash "$0" > "$T/out5" 2>/dev/null
+  grep -q 'edges .*GREEN' "$T/out5" || fail "EG fechado + 0 blocks devia ser GREEN"
 
   echo "SELFTEST OK"
   exit 0
