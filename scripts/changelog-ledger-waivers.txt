@@ -11,9 +11,6 @@
 # §278 EN: meia-face db/orm do over-gating Android FECHADA 20/09 (D-DB-GAPS
 #          DB-2); §278 segue vivo pelas demais faces — mesmo caso ja isento PT.
 278 EN face db/orm fechada; demais faces vivas
-# §268 EN: "Closes §268" (17/09, #313) foi SUPERADA pela reabertura de faces
-#          em 18/09 (ledger PARTIAL vence; o CHANGELOG e historia, nao se reescreve).
-268 EN alegacao historica revertida por faces novas; ledger PARTIAL manda
 # Forma de escrever: 'item 268' e nao '§268' quando o texto so CITA a historia de um
 # id ainda vivo na MESMA linha que carrega token de fechamento — o gate pareia
 # §NNN->token por proximidade e a citação vira afirmação (21/09: ele pegou a
