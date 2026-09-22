@@ -252,8 +252,14 @@ field) and `in T` is forbidden in an output position (return type, any field or
 record component), because a writable `out` / readable `in` would allow the
 covariant/contravariant alias to store or expose a value of the wrong type.
 Record components and interface fields are read-only, so `out T` is allowed
-there. Restriction to v1: variance in **inheritance** positions
-(`extends`/`implements` type arguments) is not cross-checked yet (X5.3b).
+there. **Heritage guard (`SEM083`, X5.3b):** a type parameter declared `out`/
+`in` may not be passed to a supertype parameter whose variance is
+**incompatible** — `class Bad<out T> extends Sink<T>` is rejected when `Sink`
+declares `in T` (the supertype would reintroduce `T` in an input position), and
+`class Bad<in T> extends Source<T>` is rejected when `Source` declares `out T`.
+Passing a variance to an **invariant** supertype parameter is also rejected
+(invariant requires both read and write). The matching case
+(`class Good<out T> extends Source<T>` with `Source<out T>`) is allowed.
 
 **Use-site projection `List<out T>` / `List<in T>` (X5.4 — `D-X5-SURFACE`,
 21/09):** even a type declared **invariant** accepts a projection at the use
@@ -436,6 +442,7 @@ the lambda's return (*probe*: map/filter/reduce correct).
 | `SEM080` | subtype (`extends`/`implements`) of a `sealed` type declared outside its compilation unit (the sealed subtype set is closed) | `SealedTypeChecks` (X5.1/D-X5-SURFACE) |
 | `SEM081` | `switch` expression over a `sealed` subject missing a direct subtype case (no `default`) | `MemberResolver` (X5.2/D-X5-SURFACE) |
 | `SEM082` | `out` type parameter used in an input position (parameter/writable field) or `in` type parameter used in an output position (return/field/record component) — declaration-site variance soundness | `VarianceChecks` (X5.3/D-TYPE-VARIANCE) |
+| `SEM083` | `out`/`in` type parameter passed to a supertype parameter with incompatible variance (or to an invariant one) in `extends`/`implements` — variance soundness in heritage position | `VarianceChecks` (X5.3b/D-TYPE-VARIANCE) |
 | `ARITH001` | division/remainder by a **constant** zero | `ExpressionBinaryLowerer` (constant-zero guard) |
 
 Division by a **non-constant** zero (`7 / z` with `z=0`) → **runtime**

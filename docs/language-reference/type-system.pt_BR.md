@@ -253,9 +253,15 @@ de entrada (parâmetro de método/construtor, campo gravável de classe) e `in T
 proibido em posição de saída (retorno, qualquer campo ou componente de record),
 porque um `out` gravável / `in` legível deixaria o alias covariante/contravariante
 gravar ou expor um valor do tipo errado. Componentes de record e campos de
-interface são somente-leitura, então `out T` é permitido neles. Restrição da v1:
-variância em posição de **herança** (type-args de `extends`/`implements`) ainda não
-é cruzada (X5.3b).
+interface são somente-leitura, então `out T` é permitido neles. **Guarda de
+herança (`SEM083`, X5.3b):** um type-param declarado `out`/`in` não pode ser
+passado a um parâmetro do supertipo com variância **incompatível** —
+`class Bad<out T> extends Sink<T>` é rejeitado quando `Sink` declara `in T` (o
+supertipo reintroduziria `T` numa posição de entrada), e `class Bad<in T>
+extends Source<T>` é rejeitado quando `Source` declara `out T`. Passar uma
+variância para um parâmetro **invariante** do supertipo também é rejeitado (o
+invariante exige leitura e escrita). O caso coerente (`class Good<out T> extends
+Source<T>` com `Source<out T>`) é permitido.
 
 **Projeção no sítio de uso `List<out T>` / `List<in T>` (X5.4 — `D-X5-SURFACE`,
 21/09):** mesmo um tipo declarado **invariante** aceita uma projeção no sítio de
@@ -438,6 +444,7 @@ retorno do lambda (*probe*: map/filter/reduce corretos).
 | `SEM080` | subtipo (`extends`/`implements`) de tipo `sealed` declarado fora de sua unidade de compilação (o conjunto de subtipos selado é fechado) | `SealedTypeChecks` (X5.1/D-X5-SURFACE) |
 | `SEM081` | `switch` expressão sobre sujeito `sealed` sem um caso de subtipo direto (sem `default`) | `MemberResolver` (X5.2/D-X5-SURFACE) |
 | `SEM082` | type-param `out` usado em posição de entrada (parâmetro/campo gravável) ou type-param `in` usado em posição de saída (retorno/campo/componente de record) — solidez da variância declaration-site | `VarianceChecks` (X5.3/D-TYPE-VARIANCE) |
+| `SEM083` | type-param `out`/`in` passado a um parâmetro de supertipo com variância incompatível (ou invariante) em `extends`/`implements` — solidez da variância em posição de herança | `VarianceChecks` (X5.3b/D-TYPE-VARIANCE) |
 | `ARITH001` | divisão/resto por zero **constante** | `ExpressionBinaryLowerer` (guarda de zero constante) |
 
 Divisão por zero **não-constante** (`7 / z` com `z=0`) → erro de **runtime**

@@ -253,4 +253,104 @@ class TypeVarianceE2ETest {
                 """);
         runJvm(tmp, List.of(f), "3");
     }
+
+    // ---------- solidez na HERANÇA (X5.3b) = SEM083 ----------
+
+    @Test
+    void outPassedToContravariantSupertypeIsSem083(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Solo.kf", """
+                class Sink<in T> {
+                    public constructor() { }
+                    String consume(T value) { return "sink" }
+                }
+
+                // `out T` passado a um parâmetro `in` do supertipo: o supertipo
+                // reintroduz T numa posição de ENTRADA → insólido.
+                class Bad<out T> extends Sink<T> {
+                    public constructor() { super() }
+                }
+
+                main() { println("no") }
+                """);
+        CompilationResult result = driver.compileSources(List.of(f), tmp.resolve("out"), Target.JVM, tmp);
+        assertFalse(result.success(), "out T passado a supertipo in T deve falhar (solidez na herança)");
+        assertTrue(result.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> "SEM083".equals(d.code())),
+                "SEM083 esperado, veio: " + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void inPassedToCovariantSupertypeIsSem083(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Solo.kf", """
+                class Source<out T> {
+                    public constructor() { }
+                    T get() { throw "x" }
+                }
+
+                // `in T` passado a um parâmetro `out` do supertipo: o supertipo
+                // reintroduz T numa posição de SAÍDA → insólido.
+                class Bad<in T> extends Source<T> {
+                    public constructor() { super() }
+                }
+
+                main() { println("no") }
+                """);
+        CompilationResult result = driver.compileSources(List.of(f), tmp.resolve("out"), Target.JVM, tmp);
+        assertFalse(result.success(), "in T passado a supertipo out T deve falhar (solidez na herança)");
+        assertTrue(result.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> "SEM083".equals(d.code())),
+                "SEM083 esperado, veio: " + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void outPassedToInvariantSupertypeIsSem083(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Solo.kf", """
+                class Box<T> {
+                    T value
+                    public constructor(T value) { this.value = value }
+                }
+
+                // Parâmetro invariante do supertipo exige leitura E escrita de T.
+                class Bad<out T> extends Box<T> {
+                    public constructor(T value) { super(value) }
+                }
+
+                main() { println("no") }
+                """);
+        CompilationResult result = driver.compileSources(List.of(f), tmp.resolve("out"), Target.JVM, tmp);
+        assertFalse(result.success(), "out T passado a supertipo invariante deve falhar (solidez na herança)");
+        assertTrue(result.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> "SEM083".equals(d.code())),
+                "SEM083 esperado, veio: " + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void matchingVarianceInHeritageCompiles(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Solo.kf", """
+                class Source<out T> {
+                    public constructor() { }
+                    T get() { throw "x" }
+                }
+
+                class Sink<in T> {
+                    public constructor() { }
+                    String consume(T value) { return "sink" }
+                }
+
+                // Mesma variância do supertipo → permitido.
+                class Sub<out T> extends Source<T> {
+                    public constructor() { super() }
+                    T get() { throw "y" }
+                }
+
+                class SubSink<in T> extends Sink<T> {
+                    public constructor() { super() }
+                }
+
+                main() {
+                    println(SubSink<Int>().consume(1))
+                }
+                """);
+        runJvm(tmp, List.of(f), "sink");
+    }
 }
