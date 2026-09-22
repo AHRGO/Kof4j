@@ -168,6 +168,17 @@ public final class StatementAnalyzer {
     }
 
     static void analyzeStatement(SemanticAnalyzer sa, StatementNode stmt, SymbolTable scope, Type returnType) {
+        DiagnosticCollector diag = sa.diagnostics();
+        SourcePosition prev = diag == null ? null : diag.fallbackPosition();
+        if (diag != null && stmt != null && stmt.position() != null) diag.setFallbackPosition(stmt.position());
+        try {
+            analyzeStatementAt(sa, stmt, scope, returnType);
+        } finally {
+            if (diag != null) diag.setFallbackPosition(prev);
+        }
+    }
+
+    private static void analyzeStatementAt(SemanticAnalyzer sa, StatementNode stmt, SymbolTable scope, Type returnType) {
         switch (stmt) {
             case BlockStmt block -> {
                 SymbolTable blockScope = scope.enterScope();

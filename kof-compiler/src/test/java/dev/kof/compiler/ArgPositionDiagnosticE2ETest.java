@@ -78,6 +78,39 @@ class ArgPositionDiagnosticE2ETest {
     }
 
     @Test
+    void redeclarationReportsRealLine(@TempDir Path tempDir) throws Exception {
+        CompilationResult result = compile(tempDir, """
+                main() {
+                    var x = 1
+                    var x = 2
+                }
+                """);
+        assertFalse(result.success(), "redeclaration must not compile");
+        Diagnostic d = result.diagnostics().getDiagnostics().stream()
+                .filter(x -> "SEM024".equals(x.code()))
+                .findFirst().orElseThrow(() -> new AssertionError(
+                        "must report SEM024: " + result.diagnostics().getDiagnostics()));
+        assertEquals(3, d.line(), "SEM024 must point at the redeclaration line: " + d.format());
+    }
+
+    @Test
+    void unknownFieldReportsRealLine(@TempDir Path tempDir) throws Exception {
+        CompilationResult result = compile(tempDir, """
+                class A { constructor() {} }
+                main() {
+                    var a = A()
+                    println(a.bogus)
+                }
+                """);
+        assertFalse(result.success(), "unknown field must not compile");
+        Diagnostic d = result.diagnostics().getDiagnostics().stream()
+                .filter(x -> "SEM025".equals(x.code()))
+                .findFirst().orElseThrow(() -> new AssertionError(
+                        "must report SEM025: " + result.diagnostics().getDiagnostics()));
+        assertEquals(4, d.line(), "SEM025 must point at println(a.bogus): " + d.format());
+    }
+
+    @Test
     void correctArgsStillCompileAndRun(@TempDir Path tempDir) throws Exception {
         CompilationResult result = compile(tempDir, """
                 void show(String s) { println(s) }

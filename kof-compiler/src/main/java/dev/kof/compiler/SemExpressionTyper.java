@@ -15,9 +15,16 @@ public final class SemExpressionTyper {
     static Type inferType(SemanticAnalyzer sa, ExpressionNode expr, SymbolTable scope) {
         Type cached = sa.expressionTypes().get(expr);
         if (cached != null && !Type.isUnknown(cached)) return cached;
-        Type result = inferTypeInternal(sa, expr, scope);
-        sa.putExpressionType(expr, result);
-        return result;
+        DiagnosticCollector diag = sa.diagnostics();
+        SourcePosition prev = diag == null ? null : diag.fallbackPosition();
+        if (diag != null && expr != null && expr.position() != null) diag.setFallbackPosition(expr.position());
+        try {
+            Type result = inferTypeInternal(sa, expr, scope);
+            sa.putExpressionType(expr, result);
+            return result;
+        } finally {
+            if (diag != null) diag.setFallbackPosition(prev);
+        }
     }
 
     static boolean isLocalName(SymbolTable scope, String name) {

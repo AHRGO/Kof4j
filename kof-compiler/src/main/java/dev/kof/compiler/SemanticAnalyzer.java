@@ -218,6 +218,18 @@ public class SemanticAnalyzer {
     }
 
     private void analyzeDeclaration(AstNode decl) {
+        SourcePosition prev = diagnostics == null ? null : diagnostics.fallbackPosition();
+        if (diagnostics != null && decl != null && decl.position() != null) {
+            diagnostics.setFallbackPosition(decl.position());
+        }
+        try {
+            analyzeDeclarationAt(decl);
+        } finally {
+            if (diagnostics != null) diagnostics.setFallbackPosition(prev);
+        }
+    }
+
+    private void analyzeDeclarationAt(AstNode decl) {
         switch (decl) {
             case ClassDeclarationNode cls -> analyzeClass(cls);
             case RecordDeclarationNode rec -> {
