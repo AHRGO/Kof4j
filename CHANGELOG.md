@@ -16,6 +16,22 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
   - **§302 CLOSED — tipos crus `List/Set/Map` em CAMPO: todas as faces medidas verdes no tip (21/09, lane bugs-and-gaps, CLOSEALL): repros do registro + formas de campo/retorno/parâmetro/estáticos — `3` nos 3 alvos (raiz já fechada pelo §373/#443).
 
 
+  - **§268 FIXED — user class `extends <JDK class>` by simple name wrote a RAW superclass (`NoClassDefFoundError` at load)**
+    (22/09, lane 9093, maintainer vote `D-RULE6-BATCH` option (A)): `class Worker extends Thread`,
+    `extends Object` and `implements Runnable` (no import) compiled clean and the class died at
+    load (`NoClassDefFoundError: Thread`/`Runnable`) — the bare super/interfaces went into the
+    class file. Fix: a cached `java.lang` probe (`JavaLangProbe`) qualifies simple
+    `extends`/`implements` names without import; explicit imports/`--classpath` and module types
+    keep precedence; what NOTHING resolves (`IOException` without import, `Zebra`) is a COMPILE
+    error **SEM087** now (`DeclaredTypeChecker`, R6); the JVM lowering routes the interfaces list
+    through the same resolver (the second face of the bug). Wrapper aliases (`Boolean`, `Long`,
+    `Double`, …) are never probed — `Type.of`/builtins govern first (a draft that probed them
+    turned `save(): Boolean` into `java.lang.Boolean` and was caught by the neighbour battery).
+    Rule-7 split: `HeritageQualifier` + `JavaLangProbe` (`CompilerTypes`/`MemberResolver` back
+    under the `check_500` critical line). Proof: `JavaLangHeritageTest` **9/9** (RED measured
+    with the fix stashed: 6 failures — 3 load-crashes + 2 silent accepts + 1 multi-target
+    diagnostic) + 96/0F across 16 neighbour classes.
+
   - **§418 FIXED — the riscv64 `kof debug`/E2E harness could leave qemu alive after a round**
     (21/09, lane nat/native-debug, handoff D-CLOSEALL-BATCH): `NativeRiscv64E2ETest` called
     `waitFor()` with zero `destroy()`/`finally`, so a timed-out qemu survived and the temp

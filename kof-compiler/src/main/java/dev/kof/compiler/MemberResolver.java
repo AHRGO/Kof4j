@@ -197,6 +197,9 @@ public final class MemberResolver {
         if (sa.allClasses().containsKey(name)) return false;
         if (CompilerTypes.unitDeclaresType(sa.unit(), name)) return false;
         if (qualifyViaImports(sa.unit(), name, sa.externalTypes()) != null) return false;
+        // §268 (A): classe do `java.lang` (`Thread`, `Runnable`, `Object`…) —
+        // resolve sem import pelo probe cacheado (mesma regra do toType).
+        if (JavaLangProbe.qualifiedOrNull(name) != null) return false;
         return true;
     }
 
@@ -458,7 +461,9 @@ public final class MemberResolver {
                     }
                 }
                 if (!implemented) {
-                    sa.diagnostics().error("", 0, 0, 0,
+                    SourcePosition pv = cls.position();
+                    sa.diagnostics().error(pv != null ? pv.file() : "",
+                            pv != null ? pv.line() : 0, pv != null ? pv.column() : 0, 0,
                             "class '" + cls.name() + "' does not implement abstract method '"
                                     + am.name() + "()' from superclass '" + superCs.name() + "'",
                             "SEM043");

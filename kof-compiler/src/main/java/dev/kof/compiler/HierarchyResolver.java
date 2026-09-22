@@ -64,11 +64,15 @@ public final class HierarchyResolver {
         if (stored == null || stored.isEmpty()) return null;
         String bare = stripGenerics(stored);
         String simple = simpleOfStored(bare);
-        if (simple.isEmpty() || "Object".equals(simple)) return null;
+        if (simple.isEmpty()) return null;
         if (sa != null) {
             SymbolTable.ClassSymbol cs = sa.getClass(simple);
             if (cs != null) return cs.internalName();
         }
+        // §268 (A): `extends Object` explícito gravava o super cru ("Object" →
+        // internal name inválido, CNFE no load). O sentinela Object vira o
+        // java/lang/Object real; um `class Object` do módulo já venceu acima.
+        if ("Object".equals(simple)) return "java/lang/Object";
         return bare.replace('.', '/');
     }
 

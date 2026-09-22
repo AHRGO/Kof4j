@@ -9753,7 +9753,7 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   `201`+`X-Custom: abc`+corpo no fio vivo (VERMELHO pré-fix: medido `200` + header
   ausente contra o servidor rodando; a mesma sonda verde no JVM `201 Created`).
 
-## §268 — classe de usuário `extends <classe do JDK>` por nome SIMPLES grava a superclasse CRUA → `NoClassDefFoundError` no load — 🟡 PARCIAL 18/09 (face throwables FECHADA pelo #313; face extends mais ampla ABERTA, fork regra 6)
+## §268 — classe de usuário `extends <classe do JDK>` por nome SIMPLES grava a superclasse CRUA → `NoClassDefFoundError` no load — ✅ CORRIGIDO 22/09 (D-RULE6-BATCH opção (A), lane 9093: probe de `java.lang` com cache + SEM087; a face histórica de throwables foi fechada pelo #313)
 
 - **Sintoma:** `class MyEx extends RuntimeException { ... }` compila limpo
   (exit 0) e a PRÓPRIA classe falha no load:
@@ -9819,6 +9819,9 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   (programas que hoje crasham passam a dar erro de compilação → SEM0xx),
   portanto NÃO é edição silenciosa da `.22`. Dono = lane compiler; atacar
   depois que o cluster nullable/generics assentar (mesmos arquivos).
+- **✅ CORRIDO (22/09, lane 9093 — `D-RULE6-BATCH` opção (A), votada pela mantenedora):** a face ampla fechou na raiz pelo probe de `java.lang` implícito. Um `Class.forName("java.lang."+n, false, …)` com cache (`JavaLangProbe`) qualifica um nome simples de `extends`/`implements` sem import (`Thread`, `Runnable`, `Object` → `java/lang/Object`); o import explícito/`--classpath` ainda vence e um tipo do módulo com o mesmo nome ainda vence o probe (`class Thread` sombreia o java.lang). O que NADA resolve — `IOException` (java.io) sem import, `Zebra` — agora falha no COMPILE com **SEM087** (`DeclaredTypeChecker`, R6: antes era super cru silencioso → CNFE no load). Aliases de wrapper (`Boolean`, `Long`, `Double`, `String`, `Object`…) nunca passam pelo probe — o `Type.of`/builtins decidem primeiro (um rascunho inicial virou `save(): Boolean` em `java.lang.Boolean` e quebrou `MultipleInterfaceReturnTypeE2ETest`; pego antes do commit). A lista de interfaces do lowering JVM agora passa pelo mesmo resolvel em vez do nome cru do AST (`implements Runnable` era a segunda metade da face). Split regra 7: `HeritageQualifier` (herança) + `JavaLangProbe` (probe), mantendo `CompilerTypes`/`MemberResolver` sob a linha crítica do `check_500`.
+- **Prova (Q1/Q3/Q4):** novo `JavaLangHeritageTest` **9/9** — RED medido com o fix stashed (**6 falhas**: `extends Thread`/`extends Object`/`implements Runnable` morrem com `NoClassDefFoundError`; `extends Zebra`/`extends IOException` compilavam limpo) → GREEN com o fix; guards: `extends RuntimeException` (regressão #313), `import java.io.IOException` explícito ainda resolve, `class Thread` do módulo sombreia o probe, SEM087 assertado no JVM **e** no NATIVE. Bateria de vizinhos 96/0F (16 classes: `ThrowQualifiedTest`, `ClassExtendsInterfaceE2ETest`, `InterfaceExtendsClassTest`, `DeclaredTypeValidationE2ETest`, `MultipleInterfaceReturnTypeE2ETest`, família generic/sealed/interface).
+- **Suite (reator completo, 43 min):** BUILD SUCCESS; os únicos vermelhos são PRÉ-EXISTENTES e alheios, isolados por medição (fix stashed → mesmos vermelhos): `FfiNativeCrossE2ETest` (3/6, face FFI cross = dono lane FFI) e `ServeStaticTest` (kof-cli `NoSuchMethod`, classes velhas/lane não relacionada).
 
 ### §283 — native aarch64: um job `time.interval`/`scheduler.every` ainda armado impede o processo de terminar sob qemu-aarch64 (sem `time.cancel` ⇒ hang) — catalogado durante a face B do §253 (18/09) — 🟡 ABERTO (lane nat; achada durante §253 face B), PRÉ-EXISTENTE, ortogonal ao desalinhamento x86
 

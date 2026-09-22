@@ -16,6 +16,22 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
   - **§302 FECHADO — tipos crus `List/Set/Map` em CAMPO: todas as faces medidas verdes no tip (21/09, lane bugs-and-gaps, CLOSEALL): repros do registro + formas de campo/retorno/parâmetro/estáticos — `3` nos 3 alvos (raiz já fechada pelo §373/#443).
 
 
+  - **§268 CORRIGIDO — classe de usuário `extends <classe do JDK>` por nome simples gravava superclasse CRUA (`NoClassDefFoundError` no load)**
+    (22/09, lane 9093, voto da mantenedora `D-RULE6-BATCH` opção (A)): `class Worker extends Thread`,
+    `extends Object` e `implements Runnable` (sem import) compilavam limpos e a classe morria no
+    load (`NoClassDefFoundError: Thread`/`Runnable`) — o super/interfaces crus entravam no class
+    file. Fix: probe de `java.lang` com cache (`JavaLangProbe`) qualifica nomes simples de
+    `extends`/`implements` sem import; o import explícito/`--classpath` e os tipos do módulo
+    mantêm precedência; o que NADA resolve (`IOException` sem import, `Zebra`) vira erro de
+    COMPILE **SEM087** agora (`DeclaredTypeChecker`, R6); o lowering JVM passa a rotear a lista
+    de interfaces pelo mesmo resolvel (a segunda face do bug). Aliases de wrapper (`Boolean`,
+    `Long`, `Double`, …) nunca passam pelo probe — o `Type.of`/builtins decidem primeiro (um
+    rascunho que os probara virava `save(): Boolean` em `java.lang.Boolean` e foi pego pela
+    bateria de vizinhos). Split regra 7: `HeritageQualifier` + `JavaLangProbe` (`CompilerTypes`/
+    `MemberResolver` de volta sob a linha crítica do `check_500`). Prova: `JavaLangHeritageTest`
+    **9/9** (RED medido com o fix stashed: 6 falhas — 3 load-crashes + 2 accepts silenciosos +
+    1 diagnóstico multi-target) + 96/0F em 16 classes vizinhas.
+
   - **§418 CORRIGIDO — o harness riscv64 do `kof debug`/E2E podia deixar o qemu vivo após a rodada**
     (21/09, lane nat/native-debug, handoff D-CLOSEALL-BATCH): o `NativeRiscv64E2ETest` chamava
     `waitFor()` sem nenhum `destroy()`/`finally`, então um qemu morto por timeout sobrevivia e o

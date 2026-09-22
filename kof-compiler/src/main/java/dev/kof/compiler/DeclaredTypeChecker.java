@@ -39,8 +39,12 @@ final class DeclaredTypeChecker {
                                 "parameter '" + p.name() + "' of function '" + f.name() + "'");
                     }
                 }
-                case ClassDeclarationNode c -> checkMembers(sa, dc, c.typeParameters(), c.members());
+                case ClassDeclarationNode c -> {
+                    checkHeritage(sa, dc, c.superClass(), c.interfaces(), c.typeParameters(), c.name());
+                    checkMembers(sa, dc, c.typeParameters(), c.members());
+                }
                 case RecordDeclarationNode r -> {
+                    checkHeritage(sa, dc, r.superClass(), r.interfaces(), r.typeParameters(), r.name());
                     Set<String> tps = new HashSet<>(TypeParams.names(r.typeParameters())); // §355
                     for (RecordComponentNode comp : r.components()) {
                         report(dc, sa, comp.type(), tps,
@@ -48,7 +52,10 @@ final class DeclaredTypeChecker {
                     }
                     checkMembers(sa, dc, r.typeParameters(), r.members());
                 }
-                case InterfaceDeclarationNode i -> checkMembers(sa, dc, i.typeParameters(), i.members());
+                case InterfaceDeclarationNode i -> {
+                    checkHeritage(sa, dc, null, i.interfaces(), i.typeParameters(), i.name());
+                    checkMembers(sa, dc, i.typeParameters(), i.members());
+                }
                 case EntityDeclarationNode e -> {
                     for (EntityFieldNode f : e.fields()) {
                         report(dc, sa, f.type(), Set.of(),
@@ -96,6 +103,35 @@ final class DeclaredTypeChecker {
                             + " — declare the type or fix the name (R6: undefined declared types"
                             + " must not compile)",
                     "SEM011");
+        }
+    }
+
+    /**
+     * §268 (D-RULE6-BATCH opção A): `extends`/`implements` por nome simples que
+     * NADA resolve (sem import, sem módulo, fora do `java.lang` — o probe
+     * cacheado cobre Thread/Runnable/… ) vira SEM087 no compile. Antes o nome
+     * cru virava super_class inválido e a classe morria no load
+     * (`NoClassDefFoundError: Zebra`/`IOException`), silenciosamente.
+     */
+    private static void checkHeritage(SemanticAnalyzer sa, DiagnosticCollector dc,
+                                      String superDecl, List<String> interfaces,
+                                      List<String> classTypeParams, String typeName) {
+        Set<String> tps = new HashSet<>(TypeParams.names(classTypeParams));
+        reportHeritage(dc, sa, superDecl, tps, "superclass of '" + typeName + "'");
+        if (interfaces == null) return;
+        for (String iface : interfaces) {
+            reportHeritage(dc, sa, iface, tps, "interface of '" + typeName + "'");
+        }
+    }
+
+    private static void reportHeritage(DiagnosticCollector dc, SemanticAnalyzer sa, String declType,
+                                       Set<String> typeParams, String where) {
+        if (declType == null) return;
+        if (MemberResolver.declaredTypeUnresolved(sa, declType, typeParams)) {
+            dc.error("", 0, 0, 0,
+                    "Undefined superclass or interface: '" + declType.trim() + "' in " + where
+                            + " — import the type or fix the name (R6: a raw super fails at load)",
+                    "SEM087");
         }
     }
 }

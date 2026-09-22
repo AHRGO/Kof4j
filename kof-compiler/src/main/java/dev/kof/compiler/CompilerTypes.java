@@ -82,6 +82,12 @@ public final class CompilerTypes {
          if (JAVA_LANG_THROWABLES.contains(typeName)) {
              return new Type.ClassType("java.lang", typeName, List.of());
          }
+         // §268 (A): qualquer classe de `java.lang` por nome simples
+         // (`Thread`, `Runnable`, `Object`…) resolve sem import — probe cacheado.
+         String javaLang = JavaLangProbe.qualifiedOrNull(typeName);
+         if (javaLang != null) {
+             return new Type.ClassType("java.lang", typeName, List.of());
+         }
          return Type.of(typeName);
      }
 
@@ -254,7 +260,10 @@ public final class CompilerTypes {
             SymbolTable.ClassSymbol cs = sa.getClass(name);
             if (cs != null) return cs.packageName();
         }
-        return null;
+        // §268 (A): classe do JDK por nome simples sem import (`Thread`,
+        // `Object`, `Runnable`…) — o probe cacheado decide; o módulo já venceu
+        // acima (registro primeiro).
+        return JavaLangProbe.qualifiedOrNull(name) != null ? "java.lang" : null;
     }
 
     /**

@@ -24,36 +24,19 @@ public final class SymbolTableBuilder {
             if (superQualified != null && superQualified.contains("<")) {
                 superQualified = superQualified.substring(0, superQualified.indexOf('<')).trim();
             }
-            if (superQualified != null && !"Object".equals(superQualified)) {
-                Type viaImports = MemberResolver.qualifyViaImports(sa.unit(), superQualified);
-                if (viaImports instanceof Type.ClassType qt) {
-                    superQualified = qt.packageName() + "." + qt.name();
-                } else if (CompilerTypes.JAVA_LANG_THROWABLES.contains(superQualified)) {
-                    // #313 família: `class MyEx extends RuntimeException` SEM
-                    // import gravava o super como `RuntimeException` cru →
-                    // NoClassDefFoundError no load da própria classe (medido).
-                    // Throwable simples do JDK mora em java.lang (mesmo mapa
-                    // de exceptionType/#163 e do toType do #313).
-                    superQualified = "java.lang." + superQualified;
-                }
-            }
+            superQualified = HeritageQualifier.qualify(sa.unit(), sa, superQualified);
             String declPkg = sa.packageOf(cls);
             SymbolTable.ClassSymbol sym = new SymbolTable.ClassSymbol(cls.name(), declPkg,
                     cls.superClass() != null ? superQualified : "Object",
-                    cls.interfaces(), members);
+                    cls.interfaces().stream().map(n -> HeritageQualifier.qualifyInterface(sa.unit(), sa, n)).toList(), members);
             sa.putClass(cls.name(), sym);
             sa.currentScope().define(sym);
         } else if (decl instanceof RecordDeclarationNode rec) {
             SymbolTable members = new SymbolTable();
-            String superQualified = rec.superClass();
-            if (superQualified != null && !"Object".equals(superQualified) && !"Record".equals(superQualified)) {
-                Type viaImports = MemberResolver.qualifyViaImports(sa.unit(), superQualified);
-                if (viaImports instanceof Type.ClassType qt) {
-                    superQualified = qt.packageName() + "." + qt.name();
-                }
-            }
+            String superQualified = HeritageQualifier.qualify(sa.unit(), sa, rec.superClass());
             SymbolTable.ClassSymbol sym = new SymbolTable.ClassSymbol(rec.name(), sa.packageOf(rec),
-                    rec.superClass() != null ? superQualified : "Record", rec.interfaces(), members);
+                    rec.superClass() != null ? superQualified : "Record",
+                    rec.interfaces().stream().map(n -> HeritageQualifier.qualifyInterface(sa.unit(), sa, n)).toList(), members);
             sa.putClass(rec.name(), sym);
             sa.currentScope().define(sym);
         } else if (decl instanceof EntityDeclarationNode ent) {
@@ -90,7 +73,7 @@ public final class SymbolTableBuilder {
         } else if (decl instanceof InterfaceDeclarationNode iface) {
             SymbolTable members = new SymbolTable();
             SymbolTable.ClassSymbol sym = new SymbolTable.ClassSymbol(iface.name(), sa.packageOf(iface),
-                    "Object", iface.interfaces(), members);
+                    "Object", iface.interfaces().stream().map(n -> HeritageQualifier.qualifyInterface(sa.unit(), sa, n)).toList(), members);
             sa.putClass(iface.name(), sym);
             sa.addInterface(iface.name());
             sa.currentScope().define(sym);

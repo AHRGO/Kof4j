@@ -10278,7 +10278,7 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   missing header against the running server; the same probe green on JVM
   `201 Created`).
 
-## §268 — user class `extends <JDK class>` by SIMPLE name writes a RAW superclass → `NoClassDefFoundError` on load — 🟡 PARTIAL 18/09 (throwables face CLOSED by #313; broader extends face OPEN, rule-6 fork)
+## §268 — user class `extends <JDK class>` by SIMPLE name writes a RAW superclass → `NoClassDefFoundError` on load — ✅ FIXED 22/09 (D-RULE6-BATCH opção (A), lane 9093: cached `java.lang` probe + SEM087; the historical throwables face was closed by #313)
 
 - **Symptom:** `class MyEx extends RuntimeException { ... }` compiles clean
   (exit 0) and the OWNING class fails at load:
@@ -10341,6 +10341,9 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   aliases (SG-011 §179 pattern) should give the throwable its real package).
 - **Not fixed here** (found while closing §332/#328; the queue for this family
   is `#313/#314`, owner = lane compiler `.22` per DOING line 223).
+- **✅ FIXED (22/09, lane 9093 — `D-RULE6-BATCH` opção (A), voted by the maintainer):** the broad face is closed at the root by the implicit-`java.lang` probe. A cached `Class.forName("java.lang."+n, false, …)` (`JavaLangProbe`) qualifies a simple `extends`/`implements` name without import (`Thread`, `Runnable`, `Object` → `java/lang/Object`); explicit import/`--classpath` still wins and a module type with the same name still wins the probe (`class Thread` shadows java.lang). What NOTHING resolves — `IOException` (java.io) without import, `Zebra` — now fails at COMPILE with **SEM087** (`DeclaredTypeChecker`, R6: was a silent raw super → CNFE at load). Wrapper aliases (`Boolean`, `Long`, `Double`, `String`, `Object`…) never pass the probe — `Type.of`/builtins govern first (a first draft turned `save(): Boolean` into `java.lang.Boolean` and broke `MultipleInterfaceReturnTypeE2ETest`; caught before the commit). The interfaces list of the JVM lowering now goes through the same resolver instead of the raw AST name (`implements Runnable` was the second half of the face). Rule 7 split: `HeritageQualifier` (heritage) + `JavaLangProbe` (probe), keeping `CompilerTypes`/`MemberResolver` under the `check_500` critical line.
+- **Proof (Q1/Q3/Q4):** new `JavaLangHeritageTest` **9/9** — RED measured with the fix stashed (**6 failures**: `extends Thread`/`extends Object`/`implements Runnable` die with `NoClassDefFoundError`; `extends Zebra`/`extends IOException` compiled clean) → GREEN with the fix; guards: `extends RuntimeException` (#313 regression), explicit `import java.io.IOException` still resolves, module `class Thread` shadows the probe, SEM087 asserted on JVM **and** NATIVE. Neighbour battery 96/0F (16 classes: `ThrowQualifiedTest`, `ClassExtendsInterfaceE2ETest`, `InterfaceExtendsClassTest`, `DeclaredTypeValidationE2ETest`, `MultipleInterfaceReturnTypeE2ETest`, generic/sealed/interface family).
+- **Suite (full reactor, 43 min):** BUILD SUCCESS; the only reds are PRE-EXISTING and foreign, isolated by measurement (fix stashed → same reds): `FfiNativeCrossE2ETest` (3/6, FFI cross face = owner FFI lane) and `ServeStaticTest` (kof-cli `NoSuchMethod`, stale classes/unrelated lane).
 
 ### §283 — native aarch64: a running `time.interval`/`scheduler.every` job keeps the process from exiting under qemu-aarch64 (no `time.cancel` ⇒ hang) — catalogued during §253 face B (18/09), PRE-EXISTING, orthogonal to the x86 misalignment — 🟡 OPEN (lane nat; found 18/09 during §253 face B)
 
