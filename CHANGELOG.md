@@ -13,6 +13,19 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **`kof-c-compiler` gains riscv64/aarch64 targets (slice C1 of the cross plan)**
+    (22/09, FFI/kof-c front): the in-repo C subset compiler was x86-64-only
+    (`as --64` + `ld`). Now `KofCTarget` selects the cross binutils
+    (`riscv64-linux-gnu-*` / `aarch64-linux-gnu-*`) and `KofCEmitterBase`
+    drives three per-ISA emitters (`KofCEmitterX86` / `KofCEmitterRiscv` /
+    `KofCEmitterAarch`); `KofCCompiler.compile(path, out, target)` and
+    `kof c --target` expose it. The whole current subset (globals, if/while,
+    `&`/deref, arithmetic/comparison/shift) is byte-identical on riscv64/
+    aarch64 under qemu and matches the x86_64 oracle (`KofCCrossCompilerTest`
+    7/7); x86_64 output is unchanged (`KofCCompilerTest` 7/7). Absent cross
+    toolchain → honest skip. The route to the struct-by-value fixture
+    continues in slices C2–C4 (`docs/development/kof-c-cross.md`).
+
   - **§302 CLOSED — tipos crus `List/Set/Map` em CAMPO: todas as faces medidas verdes no tip (21/09, lane bugs-and-gaps, CLOSEALL): repros do registro + formas de campo/retorno/parâmetro/estáticos — `3` nos 3 alvos (raiz já fechada pelo §373/#443).
 
   - **§443 FIXED — cross-target scalar `extern` (`library()`) had been re-gated to `FFI001` on riscv64/aarch64 by the struct-by-value slices**

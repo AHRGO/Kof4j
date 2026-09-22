@@ -290,7 +290,7 @@ public final class Main {
 
     private static void c(String[] args) {
         if (args.length < 2 || "--help".equals(args[1]) || "-h".equals(args[1])) {
-            System.out.println("usage: kof c <file.c> [--output <bin>] [--run]");
+            System.out.println("usage: kof c <file.c> [--output <bin>] [--run] [--target x86_64|riscv64|aarch64]");
             System.out.println("  Compiles C subset to native ELF64 via KofCcompiler (no JVM)");
             return;
         }
@@ -298,26 +298,32 @@ public final class Main {
         if (!Files.exists(src)) { System.err.println("not found: " + src); System.exit(1); return; }
         Path outDir = null;
         boolean run = false;
+        dev.kof.c.KofCTarget target = dev.kof.c.KofCTarget.X86_64;
         for (int i = 2; i < args.length; i++) {
             if (args[i].equals("--output") && i + 1 < args.length) { outDir = Path.of(args[++i]); }
             else if (args[i].startsWith("--output=")) { outDir = Path.of(args[i].substring("--output=".length())); }
             else if (args[i].equals("--run")) { run = true; }
+            else if (args[i].equals("--target") && i + 1 < args.length) { target = dev.kof.c.KofCTarget.parse(args[++i]); }
+            else if (args[i].startsWith("--target=")) { target = dev.kof.c.KofCTarget.parse(args[i].substring("--target=".length())); }
         }
         try {
             if (outDir == null) outDir = Files.createTempDirectory("kof-c-");
             else Files.createDirectories(outDir);
-            var res = dev.kof.c.KofCCompiler.compile(src, outDir);
+            var res = dev.kof.c.KofCCompiler.compile(src, outDir, target);
             if (!res.success()) { System.err.println(res.diagnostics()); System.exit(1); return; }
             System.out.println("KofC built " + res.binary());
+            String[] runCmd = target.qemu() != null
+                    ? new String[] { target.qemu(), res.binary().toString() }
+                    : new String[] { res.binary().toString() };
             if (run) {
-                ProcessBuilder pb = new ProcessBuilder(res.binary().toString());
+                ProcessBuilder pb = new ProcessBuilder(runCmd);
                 pb.inheritIO();
                 Process p = pb.start();
                 int ec = p.waitFor();
                 System.exit(ec);
             } else if (outDir.toString().contains("kof-c-")) {
                 // temp dir: run immediately for feedback
-                ProcessBuilder pb = new ProcessBuilder(res.binary().toString());
+                ProcessBuilder pb = new ProcessBuilder(runCmd);
                 pb.redirectErrorStream(true);
                 Process p = pb.start();
                 String out = new String(p.getInputStream().readAllBytes());

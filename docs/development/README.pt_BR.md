@@ -38,9 +38,9 @@ nova**).
 
 ## 0. O que está vivo aqui (leia primeiro)
 
-- **Pendentes (condição 3 do gate de release):** nenhum — os dois planos em
-  voo com dono ainda soltos (`db-parity-plan`, `ffi-abi-structs`)
-  estão no **allowlist** por `D-RELEASE-0.5.0-SCOPE`
+- **Pendentes (condição 3 do gate de release):** nenhum — os três planos em
+  voo com dono ainda soltos (`db-parity-plan`, `ffi-abi-structs`,
+  `kof-c-cross`) estão no **allowlist** por `D-RELEASE-0.5.0-SCOPE`
   (mantenedora 21/09/2026): mantêm dono + fila na §1 e concluem nas próprias
   frentes; não barram o corte 0.5.0.
   `IMPLEMENTATION-UNIVERSAL-PLATFORM`, `makealive-plan` e `secrets-plan`
@@ -80,6 +80,7 @@ nova**).
 | — | `db-parity-plan.md` (+PT) — adendo `D-DB-GAPS` 21/09 | `EM DESENVOLVIMENTO` — mantenedora 21/09: **paridade total de DB** (todo alvo aceita mariadb/mysql/sqlite/mongodb); matriz medida + fatias S0–S4 | **lane `gaps-db`** (repassada 21/09 por ordem da mantenedora; a lane docs mantém o registro) · **S0 ✅ FEITO 21/09 (sessão 9092: recusa nomeada `DB001` + link-by-use)** (`D-DB-PARITY-OWNER`) | S1 `mariadb://` = alias mysql-wire (Native); S2 paridade JDBC JVM/JS/Android; S3 `mongodb://` interop-first (R9); S4 oracle |
 | — | ~~`codegen-step-2.2.3-assessment.md`~~ → `docs/architecture/codegen-step-2.2.3-assessment.md` (+PT) — roadmap 2.2.3 | ✅ **CONCLUÍDO + MOVIDO 21/09** — opção B (`D-DESUGAR-STEP`) **implementada** (`85779f20`: `DesugarStepPipeline` + `DesugarSteps.defaults()` com os quatro desugars; `CompilerPipeline:303`) | medido 21/09: **descompasso de fase** (hook = IR otimizada; DDL = lowering; runner = desugar de AST) → o DDL fica no lowering | — (doc em `docs/architecture/`; regra dos 3 estados) |
 | — | ~~`type-system-extensions-plan.md` (+PT)~~ → `docs/type-system-extensions-plan.md` — X5 variância+sealed / X6 reflexão de interop | ✅ **CONCLUÍDO + MOVIDO 22/09** — X5.0–X5.5 + X6.0–X6.3 todos landados (X5.5 células `sealedswitch`/`variance`/`useproj`; X6.3 célula `interopschema` + E2E binding Arrow/Parquet, `InteropSchemaE2ETest` 18/18); regra dos três-estados | — (doc em `docs/`) | — |
+| — | `kof-c-cross.md` (+PT) — alvos cross do `kof-c-compiler` (C1–C4) | `EM DESENVOLVIMENTO` — **C1 LANDADA 22/09**: o compilador C do repositório agora emite riscv64/aarch64 (`KofCTarget`, `KofCEmitterBase`, emissores por ISA `KofCEmitterX86`/`KofCEmitterRiscv`/`KofCEmitterAarch`, `kof c --target`); prova `KofCCrossCompilerTest` 7/7 sob qemu (oráculo x86_64) | aprovado pela mantenedora (chat): a fixture FFI cross de struct-param precisa de um compilador C cross no repositório (o host não tem cc cross) | próximo: C2 params/retorno/locais, C3 struct por valor, C4 `.o`/link p/ a fixture |
 | — | registros vivos: `conformance-matrix.md`, `ecosystem-coverage.md`, `KOFUI-AUDIT.md`, `known-bugs.md` (em `docs/bugs-and-gaps/`); `roadmap.md` (aqui); `roadmap-audit.md`/`complexity-audit.md` (em `docs/audits/`) | `VIVA` | **não são backlog** — matriz/auditoria/fila que se atualizam junto com cada fechamento | atualizar célula/seção no MESMO commit que fecha o gap |
 
 **Regra R12 (AGENTS.md):** nada de `future/` (RAII, package-compiler,

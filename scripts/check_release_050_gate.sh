@@ -69,7 +69,7 @@ ALLOWLIST="DECISIONS.md DECISIONS.pt_BR.md README.md README.pt_BR.md roadmap.md 
 # (IMPLEMENTATION-UNIVERSAL-PLATFORM concluded and moved to docs/architecture/
 # on 21/09; type-system-extensions-plan concluded (X5+X6) and moved to docs/
 # on 22/09 — neither is loose, hence not listed here.)
-ALLOWLIST="$ALLOWLIST db-parity-plan.md db-parity-plan.pt_BR.md ffi-abi-structs.md ffi-abi-structs.pt_BR.md"
+ALLOWLIST="$ALLOWLIST db-parity-plan.md db-parity-plan.pt_BR.md ffi-abi-structs.md ffi-abi-structs.pt_BR.md kof-c-cross.md kof-c-cross.pt_BR.md"
 
 # state per condition: GREEN|RED|NEEDS-MEASURE|NEEDS-REVIEW|UNKNOWN
 declare -A STATE DETAIL

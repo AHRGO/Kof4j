@@ -13,6 +13,19 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **`kof-c-compiler` ganha os alvos riscv64/aarch64 (fatia C1 do plano cross)**
+    (22/09, frente FFI/kof-c): o compilador C do repositório só emitia x86-64
+    (`as --64` + `ld`). Agora `KofCTarget` seleciona os binutils cross
+    (`riscv64-linux-gnu-*` / `aarch64-linux-gnu-*`) e o `KofCEmitterBase`
+    conduz três emissores por ISA (`KofCEmitterX86` / `KofCEmitterRiscv` /
+    `KofCEmitterAarch`); `KofCCompiler.compile(path, out, target)` e
+    `kof c --target` expõem isso. O subconjunto inteiro (globais, if/while,
+    `&`/deref, aritmética/comparação/shift) é byte-a-byte idêntico em riscv64/
+    aarch64 sob qemu e igual ao oráculo x86_64 (`KofCCrossCompilerTest` 7/7);
+    a saída x86_64 não muda (`KofCCompilerTest` 7/7). Sem toolchain cross →
+    skip honesto. O caminho até a fixture de struct-por-valor continua nas
+    fatias C2–C4 (`docs/development/kof-c-cross.md`).
+
   - **§302 FECHADO — tipos crus `List/Set/Map` em CAMPO: todas as faces medidas verdes no tip (21/09, lane bugs-and-gaps, CLOSEALL): repros do registro + formas de campo/retorno/parâmetro/estáticos — `3` nos 3 alvos (raiz já fechada pelo §373/#443).
 
   - **§443 CORRIGIDO — `extern` escalar cross-target (`library()`) voltou a ser re-gateado para `FFI001` no riscv64/aarch64 pelas fatias de struct-by-value**
