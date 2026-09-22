@@ -63,6 +63,7 @@ Auxílio de navegação, não é uma decisão por si só. Ordenado como neste ar
 - **D-1.0-EDGES** — arestas abertas fechadas
 - **D-SLOT-PIN** — §383/#561 valor armazenado do "miss abençoado"
 - **D-RELEASE-0.5.0-GATE** — gate de release 0.5.0
+- **D-RELEASE-0.5.0-SCOPE** — planos em voo no allowlist; EG-8 desacoplado
 - **D-FFI-STRUCT** — ABI de struct/array da FFI (D6)
 - **R6-SCOPE** — entrega incremental não fere o R6
 - **D-R3-BUFFER** — out-buffer = tipo nominal `Buffer(U8)`
@@ -3086,3 +3087,35 @@ de sonoridade de atribuição. Só compiler/frontend; sem superfície de runtime
 Fila: `roadmap.md` §2.8.4; fatias X5.0→X5.5 (X5.4 agora no v1).
 
 - **Relações:** `Relacionado: D-TYPE-VARIANCE, regra 6, regra 11, R10`.
+
+## D-RELEASE-0.5.0-SCOPE — os planos em voo com dono ainda soltos entram no allowlist da condição 3 e o EG-8 é desacoplado da condição 6 (mantenedora 21/09/2026)
+
+**Data:** 2026-09-21 · **Estado:** `DECIDED` (respostas da mantenedora no chat).
+
+Duas decisões de escopo do gate 0.5.0 (`D-RELEASE-0.5.0-GATE`), para o release
+não esperar frentes abertas de outras linhas:
+
+- **(a) Condição 3 — allowlist dos planos EM VOO com dono ainda soltos.**
+  `db-parity-plan` (dono lane gaps-db), `ffi-abi-structs` (dono jonas) e
+  `type-system-extensions-plan` (dono compiler/X5) ficam em
+  `docs/development/` **sem virar RED na condição 3**: cada um tem dono, fila
+  viva e implementação pendente declarada; concluem nas próprias frentes
+  (regra dos três estados), não como pré-condição do corte 0.5.0. O ALLOWLIST
+  do gate os carrega; a fila do README segue rastreando-os. Doc sem dono/fila
+  continua RED. (`IMPLEMENTATION-UNIVERSAL-PLATFORM` estava na lista original
+  da decisão e **concluiu 21/09** — movido para `docs/architecture/`, portanto
+  não é mais solto/allowlistado.)
+- **(b) Condição 6 — EG-8 desacoplado.** EG-8 é o primeiro candidato a RC 1.0
+  mais a declaração explícita da mantenedora "a linha 1.0 está aberta", e só
+  abre depois de EG-1..EG-7 fecharem — pertence à linha 1.0, não ao gate
+  0.5.0. A condição 6 agora mede **EG-1..EG-7 + os `1.0-blocks` abertos**; um
+  EG-8 aberto nunca a torna RED.
+- **(c) Condição 7 — triagem em lote.** A mantenedora recebe os 14 bugs vivos
+  do ledger com recomendação por item (fechar / post-1.0 / não-é-bug) e
+  classifica em lote; até lá a condição segue RED (medida).
+
+**Evidência:** `scripts/check_release_050_gate.sh` (ALLOWLIST + `c_edges`,
+`--selftest` com os dois casos plantados), `release-beta-0.5.0-prep.md`
+condições 3/6, lista de pendentes da condição 3 no README.
+
+- **Relationships:** `Related: D-RELEASE-0.5.0-GATE, D-RELEASE-1.0, rule 6, rule 3`.

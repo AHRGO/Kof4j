@@ -297,12 +297,14 @@ if docdir:
         gtext = open(gate, encoding="utf-8").read()
     except OSError:
         print(f"FALHA: nao consigo ler o gate {gate}"); bad = 1; gtext = ""
-    m = re.search(r'ALLOWLIST="([^"]*)"', gtext)
-    if not m:
+    ms = re.findall(r'ALLOWLIST="([^"]*)"', gtext)
+    if not ms:
         print(f"FALHA: ALLOWLIST nao encontrado em {gate} (formato mudou — atualize o gate)")
         bad = 1
     else:
-        allow = set(m.group(1).split())
+        allow = set()
+        for m in ms:
+            allow |= set(m.split())
         try:
             on_disk = os.listdir(docdir)
         except OSError:
@@ -434,12 +436,14 @@ if lq_on and docdir:
         gtext_i = open(gate, encoding="utf-8").read()
     except OSError:
         print(f"FALHA: nao consigo ler o gate {gate} (parte I)"); bad = 1; gtext_i = ""
-    mi = re.search(r'ALLOWLIST="([^"]*)"', gtext_i)
-    if not mi:
+    ms_i = re.findall(r'ALLOWLIST="([^"]*)"', gtext_i)
+    if not ms_i:
         print(f"FALHA: ALLOWLIST nao encontrado em {gate} (parte I — atualize o gate)")
         bad = 1
     else:
-        allow_i = set(mi.group(1).split())
+        allow_i = set()
+        for m in ms_i:
+            allow_i |= set(m.split())
         try:
             loose_i = sorted(f for f in os.listdir(docdir)
                              if f.endswith(".md") and not f.endswith(".pt_BR.md")

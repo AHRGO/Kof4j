@@ -38,14 +38,13 @@ surface**).
 
 ## 0. What is live here (read first)
 
-- **Pending (the release gate's condition 3):** `ffi-abi-structs.md`
-  (**D6 DECIDED 20/09** — implementation in progress, owner `jonas`) ·
-  `db-parity-plan.md` (+PT — **`D-DB-GAPS` addendum 21/09**: total DB parity,
-  every target accepts mariadb/mysql/sqlite/mongodb; S0 clears §421's silent
-  accept; **owner `gaps-db` lane** (handed over 21/09), S0/S1 authorized — S0 ✅ clears §421, S1 in progress) ·
-  `type-system-extensions-plan.md` (+PT — **X5/X6 APPROVED 21/09**
-  (`D-TYPE-VARIANCE`/`D-INTEROP-REFLECT`), promoted from `future/`; incremental
-  slices with proof, each its own proof; **X5.1/X5.2 ✅ DONE 21/09** — `sealed` + `SEM080`/`SEM081`).
+- **Pending (the release gate's condition 3):** none — the three in-flight
+  OWNED plans still loose (`db-parity-plan`, `ffi-abi-structs`,
+  `type-system-extensions-plan`) are **allowlisted** by `D-RELEASE-0.5.0-SCOPE`
+  (maintainer 21/09/2026): they keep owner + queue in §1 and conclude on their
+  own fronts; they do not gate the 0.5.0 cut.
+  `IMPLEMENTATION-UNIVERSAL-PLATFORM`, `makealive-plan` and `secrets-plan`
+  concluded and moved to `docs/architecture/` (21/09).
   Authority: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Living records here (not backlog):** `DECISIONS.md`,
   `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.

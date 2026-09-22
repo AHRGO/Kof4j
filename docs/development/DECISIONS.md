@@ -65,6 +65,7 @@ A navigation aid, not a decision by itself. Ordered as in this file.
 - **D-1.0-EDGES** — open edges closed
 - **D-SLOT-PIN** — §383/#561 blessed-miss stored value
 - **D-RELEASE-0.5.0-GATE** — 0.5.0 release gate
+- **D-RELEASE-0.5.0-SCOPE** — in-flight plans allowlisted; EG-8 decoupled
 - **D-FFI-STRUCT** — FFI struct/array ABI (D6)
 - **R6-SCOPE** — incremental delivery does not breach R6
 - **D-R3-BUFFER** — out-buffer = nominal `Buffer(U8)`
@@ -3074,3 +3075,35 @@ assignment-soundness check. Compiler/frontend only; no runtime surface.
 Queue: `roadmap.md` §2.8.4; slices X5.0→X5.5 (X5.4 now in v1).
 
 - **Relationships:** `Related: D-TYPE-VARIANCE, rule 6, rule 11, R10`.
+
+## D-RELEASE-0.5.0-SCOPE — the in-flight owned plans still loose are allowlisted in condition 3 and EG-8 is decoupled from condition 6 (maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` (maintainer answers in the chat).
+
+Two scope rulings for the 0.5.0 gate (`D-RELEASE-0.5.0-GATE`), so the release
+does not wait on other lines' open fronts:
+
+- **(a) Condition 3 — allowlist of the in-flight OWNED plans still loose.**
+  `db-parity-plan` (owner gaps-db lane), `ffi-abi-structs` (owner jonas) and
+  `type-system-extensions-plan` (owner compiler/X5) stay in
+  `docs/development/` **without turning condition 3 RED**: each has an owner,
+  a live queue and declared pending implementation; they conclude on their own
+  fronts (three-states rule), not as a precondition of the 0.5.0 cut. The gate
+  ALLOWLIST carries them; the README queue keeps tracking them. A doc without
+  an owner/queue is still RED. (`IMPLEMENTATION-UNIVERSAL-PLATFORM` was on the
+  ruling's original list and **concluded 21/09** — moved to
+  `docs/architecture/`, hence no longer loose/allowlisted.)
+- **(b) Condition 6 — EG-8 decoupled.** EG-8 is the first 1.0 RC candidate plus
+  the maintainer's explicit "the 1.0 line is open" declaration, and it only
+  opens after EG-1..EG-7 close — it belongs to the 1.0 line, not to the 0.5.0
+  gate. Condition 6 now measures **EG-1..EG-7 + the open `1.0-blocks` issues**;
+  an open EG-8 never turns it RED.
+- **(c) Condition 7 — batch triage.** The maintainer receives the 14 live
+  known-bugs with a per-item recommendation (close / post-1.0 / not-a-bug) and
+  classifies them in batch; until then the condition stays RED (measured).
+
+**Evidence:** `scripts/check_release_050_gate.sh` (ALLOWLIST + `c_edges`,
+`--selftest` with both planted cases), `release-beta-0.5.0-prep.md` conditions
+3/6, README condition-3 pending list.
+
+- **Relationships:** `Related: D-RELEASE-0.5.0-GATE, D-RELEASE-1.0, rule 6, rule 3`.

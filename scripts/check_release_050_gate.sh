@@ -9,11 +9,14 @@
 #                  (0 unresolved `[? MEL]` in the PROPOSAL AND 0 `State: OPEN`
 #                   in DECISIONS.md — a spec/plan-first OPEN is direction-decided
 #                   but plan-pending, so it is NEEDS-REVIEW, never a silent GREEN)
-#   3 loose docs   all loose docs/development/*.md concluded and moved out
+#   3 loose docs   all loose docs/development/*.md concluded and moved out —
+#                  the in-flight OWNED plans still loose are allowlisted
+#                  (D-RELEASE-0.5.0-SCOPE, maintainer 21/09/2026)
 #   4 stability    full suite 0F/0E + 5/5 conformance matrix on the candidate
 #   5 bug issues   0 OPEN GitHub issues that are a bug
-#   6 edges        all edges closed (open 1.0-blocks = 0 + EG queue that gates
-#                  the release closed)
+#   6 edges        all edges closed (open 1.0-blocks = 0 + EG-1..EG-7 closed;
+#                  EG-8 — the 1.0-line declaration/RC cut — is DECOUPLED from
+#                  this gate per D-RELEASE-0.5.0-SCOPE)
 #   7 bugs/gaps    nothing pending in known-bugs.md / specification-gaps.md
 #
 # Each condition is GREEN / RED / NEEDS-MEASURE / NEEDS-REVIEW / UNKNOWN.
@@ -60,6 +63,12 @@ R050_SPEC_GAPS_FILE="${R050_SPEC_GAPS_FILE:-}"
 # docs that are living/meta by nature and stay in docs/development (the
 # three-states rule keeps them there while the phase is open).
 ALLOWLIST="DECISIONS.md DECISIONS.pt_BR.md README.md README.pt_BR.md roadmap.md roadmap.pt_BR.md PROPOSAL-1.0-EXIT-GATE.md PROPOSAL-1.0-EXIT-GATE.pt_BR.md release-beta-0.5.0-prep.md release-beta-0.5.0-prep.pt_BR.md"
+# D-RELEASE-0.5.0-SCOPE (maintainer 21/09/2026): the in-flight OWNED plans
+# still loose are allowlisted — 0.5.0 does not wait for db/ffi/type-system to
+# conclude; each keeps its owner and stays tracked in the README queue.
+# (IMPLEMENTATION-UNIVERSAL-PLATFORM concluded and moved to docs/architecture/
+# on 21/09 — no longer loose, hence not listed here.)
+ALLOWLIST="$ALLOWLIST db-parity-plan.md db-parity-plan.pt_BR.md ffi-abi-structs.md ffi-abi-structs.pt_BR.md type-system-extensions-plan.md type-system-extensions-plan.pt_BR.md"
 
 # state per condition: GREEN|RED|NEEDS-MEASURE|NEEDS-REVIEW|UNKNOWN
 declare -A STATE DETAIL
@@ -211,14 +220,17 @@ c_bug_issues() {
 }
 
 c_edges() {
-  # Criterion 6 counts the FULL edge queue (maintainer 09/20/2026): every open
-  # EG item, EG-1 through EG-10 (no 1.0-phase exemption), plus the open
-  # `1.0-blocks` issues.
+  # Criterion 6 counts the edge queue that gates the release: EG-1..EG-7 plus
+  # the open `1.0-blocks` issues. EG-8 — the first 1.0 RC candidate + the
+  # maintainer's "the 1.0 line is open" declaration — is DECOUPLED from the
+  # 0.5.0 gate (D-RELEASE-0.5.0-SCOPE, maintainer 21/09/2026): it belongs to
+  # the 1.0 line and only opens after EG-1..EG-7 close.
   local eg_open="" blocks=0 eg_rows=0
   if [ -n "$EG_TSV" ]; then
     [ -r "$EG_TSV" ] || { STATE[edges]=UNKNOWN; DETAIL[edges]="EG table unreadable: $EG_TSV"; return; }
     while IFS=$'\t' read -r eg st; do
       [ -z "$eg" ] && continue
+      case "$eg" in EG-8) continue ;; esac
       eg_rows=$((eg_rows+1))
       case "$st" in *DONE*|*FEITO*) : ;; *) eg_open="$eg_open $eg" ;; esac
     done < "$EG_TSV"
@@ -234,7 +246,7 @@ c_edges() {
     if [ "${eg_rows:-0}" -eq 0 ]; then
       STATE[edges]=UNKNOWN; DETAIL[edges]="roadmap EG table unreadable (no EG rows in $EG_ROADMAP)"; return
     fi
-    eg_open="$(printf '%s\n' "$eg_all" | awk -F'|' '{ id=$2; gsub(/ /,"",id); if ($0 !~ /DONE|FEITO/) print id }' | tr '\n' ' ')"
+    eg_open="$(printf '%s\n' "$eg_all" | awk -F'|' '{ id=$2; gsub(/ /,"",id); if ($0 !~ /DONE|FEITO/ && id != "EG-8") print id }' | tr '\n' ' ')"
     local out bl
     if [ -n "${R050_OPEN_BLOCKS:-}" ]; then
       blocks="$R050_OPEN_BLOCKS"           # medicao externa (mesma forma do caminho EG_TSV)
@@ -252,7 +264,7 @@ c_edges() {
   elif [ "${blocks:-UNKNOWN}" = "UNKNOWN" ]; then
     STATE[edges]=UNKNOWN; DETAIL[edges]="1.0-blocks query failed (gh/API unavailable) — cannot enumerate open blocks"
   elif [ "$blocks" -eq 0 ]; then
-    STATE[edges]=GREEN; DETAIL[edges]="no open edge (EG-1..EG-10 closed, 0 open 1.0-blocks)"
+    STATE[edges]=GREEN; DETAIL[edges]="no open edge (EG-1..EG-7 closed; EG-8 decoupled per D-RELEASE-0.5.0-SCOPE; 0 open 1.0-blocks)"
   else
     STATE[edges]=RED; DETAIL[edges]="open edge(s): none; open 1.0-blocks: $blocks"
   fi
@@ -309,6 +321,20 @@ EOF
   [ "$rc" -eq 0 ] || fail "clean fixture should be exit 0, got $rc"
   grep -q 'parity .*GREEN' "$T/out" || fail "clean parity not GREEN"
   grep -q 'bugs_gaps .*GREEN' "$T/out" || fail "clean bugs_gaps not GREEN"
+
+  # D-RELEASE-0.5.0-SCOPE (maintainer 21/09/2026): (a) an allowlisted
+  # in-flight plan is NOT loose_docs RED; (b) an open EG-8 is NOT edges RED —
+  # the 1.0-line declaration is decoupled from the 0.5.0 gate.
+  printf 'DECISIONS.md\ntype-system-extensions-plan.md\n' > "$T/loose"
+  printf 'EG-1\tDONE\nEG-8\tOPEN\n' > "$T/eg"
+  R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_PARITY_FILE="$T/parity" \
+  R050_STABILITY_FILE="$T/stab" \
+  R050_PENDING_FILE="$T/pending" R050_LOOSE_MD_FILE="$T/loose" R050_SPEC_GAPS_FILE="$T/spec" \
+  R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 \
+    bash "$0" > "$T/out_scope"; rc=$?
+  [ "$rc" -eq 0 ] || fail "scope fixture should be exit 0, got $rc"
+  grep -q 'loose_docs .*GREEN' "$T/out_scope" || fail "allowlisted doc made loose_docs not GREEN"
+  grep -q 'edges .*GREEN' "$T/out_scope" || fail "open EG-8 made edges not GREEN"
 
   # dirty fixture -> REDs on every condition that has data
   printf '561\tbug,1.0-blocks\n563\tbug,1.0-blocks\n566\tbug,1.0-outside\n' > "$T/issues"
