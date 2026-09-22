@@ -13,6 +13,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§441 FIXED — `Map` with a wide key (`Long`/`Double`) emitted invalid JVM bytecode**
+    (21/09, compiler lane): `mapOf(1.5, "a")`, `mapOf(1L, "x")` (and `put`/`putIfAbsent`
+    with a wide key) type-checked clean and ran on Script/JS, but the JVM class failed
+    to load with `VerifyError: Bad type on operand stack ... swap` — the emitter did a
+    `SWAP` on a category-2 value to box the key. The CLI masked it as the JavaFX message.
+    Fix: box the key without `SWAP` for wide keys (per-method scratch local); Map emission
+    extracted to `JvmOpMap` to respect the ≤500 gate. Proof:
+    `KofMapSetTest.mapWithWideKeyJvm` + `mapWithWideKeyParityJvmJs`, class 16/16.
+
   - **§188 fixed — `"2026" as Int` agora rejeita no cheque (SEM100) apontando `math.parseInt`**
     (21/09, lane bugs-and-gaps, voto (A) da mantenedora; prova `StringAsParseRejectTest`
     4/4, RED 3/3 no código antigo): `as` = cast, nunca parse implícito.

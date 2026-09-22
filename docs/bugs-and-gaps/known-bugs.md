@@ -14383,3 +14383,14 @@ p
 - **Owner:** compiler lane (orphan `Lote PublioSantos`, GitHub #469).
 
 <!-- pt-switch --> **PT:** [§440 (pt_BR)](known-bugs.pt_BR.md#440--recordx---passava-no-check-e-so-morria-em-runtime-illegalaccesserror-no-jvm---corrigido-2109-lane-compilador-semexpressiontyper-emite-sem038-para-incrementodecremento-de-componente-de-record-como-na-atribuicao-diretacomposta)
+
+
+## §441 — `Map` with a wide key (`Long`/`Double`) in `mapOf(...)`/`put`/`putIfAbsent` emitted INVALID JVM bytecode (`swap` on a category-2 value → `VerifyError`, masked as the JavaFX message) — ✅ FIXED 21/09 (JVM emitter boxes the wide key without `swap`)
+
+- **Measured (21/09, tip; `mapWithWideKey` battery):** `var m = mapOf(1.5, "a")` — and equally `mapOf(1L, "x")`, `mapOf(1.5, 2.5)`, `Map<Double,String> m = mapOf(1.5,"a")`, and `m.put(1.5,"b")`/`putIfAbsent` with a wide key — passes `kof check` clean and runs correctly on Script/JS, but on the **JVM** the class fails to load: `java.lang.VerifyError: Bad type on operand stack ... @13: swap — Type double_2nd is not assignable to category1 type`. The CLI's launcher masked the real error behind the JavaFX message (AGENTS "JavaFX rule"); the reflection runner surfaced the `VerifyError`.
+- **Root cause:** `JvmOpCollections.emitMapPut`/`putIfAbsent` boxed the *value* and then, when the key was primitive, emitted `SWAP` to bring the key to the top for boxing. `SWAP` requires **both** operands to be category 1; `Long`/`Double` are category 2 (`double_2nd` on the frame) → invalid bytecode. `setOf`/`m.put` with a narrow key were unaffected (`setOf(1.5,2.5)` already ran), which is why the existing tests missed it (false-green gap: only narrow/`String` keys were covered).
+- **Resolution:** the JVM emitter boxes the key **without `SWAP`** when it is wide: it stores the boxed value in a per-method scratch local (`JvmBackend.scratchLocalIndex()`, reserved above the params/locals in `emitMethod`), boxes the key, then reloads the value. Narrow keys keep the proven `SWAP` path. Map emission moved to `JvmOpMap` (map responsibility) to respect the ≤500 gate (`JvmOpCollections` 584→<500; baseline line removed on split).
+- **Proof (Q1/Q3/Q4):** `KofMapSetTest.mapWithWideKeyJvm` (`Double`/`Long`/`Float` keys, `put`+`putIfAbsent`, golden `a/b/c/y/f`; RED on old code = `VerifyError`) and `mapWithWideKeyParityJvmJs` (JVM==JS byte-for-byte), class 16/16; neighbours 49/0F (`MapGetOrDefaultTest`, `MapReturnElementTypeTest`, `BareCollectionPrimitiveArgE2ETest`, `CollectionMethodsStdlibE2ETest`). `check_500` OK.
+- **Owner:** compiler lane (audit-by-measurement).
+
+<!-- pt-switch --> **PT:** [§441 (pt_BR)](known-bugs.pt_BR.md#441--map-com-chave-larga-longdouble-em-mapofputputifabsent-gerava-bytecode-jvm-invalido-swap-sobre-valor-de-categoria-2--verifyerror-mascarado-pela-mensagem-do-javafx---corrigido-2109-emitter-jvm-boxeia-a-chave-larga-sem-swap)

@@ -13,6 +13,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§441 CORRIGIDO — `Map` com chave larga (`Long`/`Double`) gerava bytecode JVM inválido**
+    (21/09, lane compilador): `mapOf(1.5, "a")`, `mapOf(1L, "x")` (e `put`/`putIfAbsent`
+    com chave larga) passavam limpos no type-check e rodavam em Script/JS, mas a classe
+    JVM não carregava com `VerifyError: Bad type on operand stack ... swap` — o emitter
+    fazia `SWAP` sobre valor de categoria 2 para boxear a chave. A CLI mascarava como a
+    mensagem do JavaFX. Fix: boxear a chave sem `SWAP` para chaves largas (local de
+    rascunho por método); emissão de Map extraída para `JvmOpMap` pelo gate ≤500. Prova:
+    `KofMapSetTest.mapWithWideKeyJvm` + `mapWithWideKeyParityJvmJs`, classe 16/16.
+
   - **§188 fixed — `"2026" as Int` agora rejeita no cheque (SEM100) apontando `math.parseInt`**
     (21/09, lane bugs-and-gaps, voto (A) da mantenedora; prova `StringAsParseRejectTest`
     4/4, RED 3/3 no código antigo): `as` = cast, nunca parse implícito.

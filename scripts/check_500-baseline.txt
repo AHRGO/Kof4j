@@ -21,7 +21,6 @@
 522	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiSecurity.java
 506	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiStdlib.java
 543	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiWeb.java
-584	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java
 541	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpEmitter.java
 549	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmRuntimeJson.java
 532	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmRuntimeUi.java

@@ -53,6 +53,15 @@ public class JvmBackend implements Backend {
     private final java.util.Deque<TryRegion> tryStack = new java.util.ArrayDeque<>();
     private final List<TryCatchEntry> tryCatches = new java.util.ArrayList<>();
 
+    // §441: slot de rascunho por método para o emitter de coleções reordenar
+    // operandos largos (Map.put com chave Long/Double — `swap` em cat2 é
+    // bytecode inválido). Reservado por emitMethod acima dos locais usados.
+    private int scratchLocal = -1;
+
+    int scratchLocalIndex() {
+        return scratchLocal;
+    }
+
     Label resolveLabel(LabelId id) {
         return labelMap.computeIfAbsent(id, k -> new Label());
     }
@@ -262,6 +271,15 @@ public class JvmBackend implements Backend {
             maxLocals = Math.max(maxLocals, JvmLiteralEmitter.computeLocals(block.operations()));
             maxStack = Math.max(maxStack, JvmLiteralEmitter.computeStack(block.operations()));
         }
+        // §441: locais de parâmetro/`this` ocupam slots que computeLocals só vê
+        // quando referenciados — garante que o rascunho fique ACIMA deles.
+        int paramSlots = ((method.accessFlags() & ACC_STATIC) != 0) ? 0 : 1;
+        for (Type pt : method.parameterTypes()) {
+            paramSlots += JvmLiteralEmitter.isDoubleWidth(pt) ? 2 : 1;
+        }
+        maxLocals = Math.max(maxLocals, paramSlots);
+        scratchLocal = maxLocals;
+        maxLocals += 2;
         java.util.Map<KofOperation, SourcePosition> debugPositions =
                 method.debugInfo() != null ? method.debugInfo().positions() : java.util.Map.of();
         Label debugStart = null;
