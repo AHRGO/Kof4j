@@ -58,6 +58,11 @@ public final class RuntimeOrm8 {
                 movq %r8, 40(%rsp)
                 movq %r9, 48(%rsp)
 .Lorm8_bodystart:
+            # F2d4c: mysql -> restaura o frame e tail-chama .Lorm_page_my
+                movq (%rsp), %rdi
+                call kof_db_type
+                cmpl $2, %eax
+                je .Lorm8_my_dispatch
                 movq (%rsp), %rdi
                 call .Lorm_conn
                 movq %rax, 56(%rsp)
@@ -360,6 +365,26 @@ public final class RuntimeOrm8 {
                 movq %rbp, %rsp
                 popq %rbp
                 ret
+
+            # F2d4c: mysql -> restaura o frame e tail-chama .Lorm_page_my
+            # (args originais nos slots; a asm do mysql vive no
+            # RuntimeOrmMysqlPage, emitido junto no mesmo .s).
+            .Lorm8_my_dispatch:
+                movq 0(%rsp), %rdi
+                movq 8(%rsp), %rsi
+                movq 16(%rsp), %rdx
+                movq 32(%rsp), %rcx
+                movq 40(%rsp), %r8
+                movq 48(%rsp), %r9
+                addq $184, %rsp
+                popq %r15
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                movq %rbp, %rsp
+                popq %rbp
+                jmp .Lorm_page_my
 
 
             # ---- parse limit/offset: host ((Number) x).intValue() ----------

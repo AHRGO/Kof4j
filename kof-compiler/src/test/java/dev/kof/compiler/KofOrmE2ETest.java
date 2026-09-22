@@ -857,6 +857,74 @@ class KofOrmE2ETest {
     }
 
     @Test
+    void pageMysqlNativeMatchesJvm(@TempDir Path tempDir) throws Exception {
+        // F2d4c (D-DB-GAPS DB-3): orm.page row-object sobre o wire MySQL no
+        // Native x86-64 — SELECT * FROM `t` LIMIT <lim> OFFSET <off> via
+        // COM_QUERY, lim/off convertidos como o host (((Number)x).intValue()
+        // — box Long incluso) e pagina vazia = lista VAZIA. Host via JDBC;
+        // a prova e byte JVM==Native.
+        int port;
+        try { port = Integer.parseInt(System.getenv().getOrDefault("KOF_MYSQL_PORT", "13306")); }
+        catch (NumberFormatException e) { port = 13306; }
+        org.junit.jupiter.api.Assumptions.assumeTrue(tcpOpen("127.0.0.1", port),
+                "MySQL/MariaDB not reachable on 127.0.0.1:" + port);
+
+        String body = """
+                    db.execute(db, "drop table if exists `user`")
+                    db.execute(db, "create table `user` (id int primary key, name varchar(50), email varchar(80), age int)")
+                    db.execute(db, "insert into `user` values (?, ?, ?, ?)", 1, "Mel", "m@kof.dev", 30)
+                    db.execute(db, "insert into `user` values (?, ?, ?, ?)", 2, "Ana", "a@kof.dev", 25)
+                    db.execute(db, "insert into `user` values (?, ?, ?, ?)", 3, "Bia", "b@kof.dev", 40)
+                    db.execute(db, "insert into `user` values (?, ?, ?, ?)", 4, "Leo", "l@kof.dev", 35)
+                    var p1 = orm.page<User>(db, 2, 0)
+                    println(p1.size)
+                    for (var u in p1) { println(u.name) }
+                    var p2 = orm.page<User>(db, 2, 2)
+                    println(p2.size)
+                    for (var u in p2) { println(u.name) }
+                    var p3 = orm.page<User>(db, 0, 0)
+                    println(p3.size)
+                    var p4 = orm.page<User>(db, 10, 99)
+                    println(p4.size)
+                    var p5 = orm.page<User>(db, 3, 1)
+                    println(p5.size)
+                    for (var u in p5) { println(u.name + "/" + u.age) }
+                    var lim: Long = 2
+                    var off: Long = 0
+                    var p6 = orm.page<User>(db, lim, off)
+                    println(p6.size)
+                    for (var u in p6) { println(u.name) }
+                    db.close(db)
+                }
+                """;
+        String expected = "2\nMel\nAna\n2\nBia\nLeo\n0\n0\n3\nAna/25\nBia/40\nLeo/35\n2\nMel\nAna";
+
+        Path jvmSource = tempDir.resolve("JvmMain.kf");
+        Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"jdbc:mariadb://127.0.0.1:" + port
+                   + "/test?user=root&password=kofpass&allowMultiQueries=true\")\n")
+                + body);
+        runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
+                findDriverJar("mariadb", "MariaDB"), expected);
+
+        Path nativeSource = tempDir.resolve("NativeMain.kf");
+        Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"mysql://root:kofpass@127.0.0.1:" + port + "/test\")\n")
+                + body);
+        CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nativeResult.success(), "Native deve compilar orm.page no mysql (F2d4c): "
+                + nativeResult.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process proc = pb.start();
+        String out = new String(proc.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = proc.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals(expected, out, "paridade byte JVM==Native (page mysql; 2 paginas, vazias, Long, parcial)");
+    }
+
+    @Test
     void postgresCrud(@TempDir Path tempDir) throws Exception {
         org.junit.jupiter.api.Assumptions.assumeTrue(tcpOpen("localhost", 5432),
                 "PostgreSQL not reachable (start it: docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=kof postgres)");
