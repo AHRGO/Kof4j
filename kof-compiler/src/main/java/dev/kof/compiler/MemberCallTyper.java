@@ -54,7 +54,7 @@ public final class MemberCallTyper {
                             kms.name(), kt.internalName(), kms.returnType(),
                             kms.parameterTypes(), kms.accessFlags(),
                             SymbolTable.DispatchKind.STATIC));
-                    TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes0, kms.parameterTypes());
+                    TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes0, kms.parameterTypes(), mc.arguments());
                     return kms.returnType();
                 }
             }
@@ -66,7 +66,7 @@ public final class MemberCallTyper {
                         kms.parameterTypes(), kms.accessFlags(),
                         SymbolTable.DispatchKind.STATIC));
                 for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
-                TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), inferArgTypes(sa, mc, scope), kms.parameterTypes());
+                TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), inferArgTypes(sa, mc, scope), kms.parameterTypes(), mc.arguments());
                 return kms.returnType();
             }
         }
@@ -112,7 +112,7 @@ public final class MemberCallTyper {
             for (ExpressionNode arg : mc.arguments()) argTypes.add(SemExpressionTyper.inferType(sa, arg, scope));
             SymbolTable.Symbol m = MemberResolver.resolveInHierarchy(sa, superName, mc.methodName());
             if (m instanceof SymbolTable.MethodSymbol ms) {
-                TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes, ms.parameterTypes());
+                TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes, ms.parameterTypes(), mc.arguments());
                 return ms.returnType();
             }
             // P0 #6: super.metodoInexistente() — mesma regra da classe:
@@ -297,7 +297,7 @@ public final class MemberCallTyper {
         if (recvType instanceof Type.FunctionType ft) {
             List<Type> argTypes = new ArrayList<>();
             for (ExpressionNode arg : mc.arguments()) argTypes.add(SemExpressionTyper.inferType(sa, arg, scope));
-            TypeChecker.checkArgTypes(sa.diagnostics(), "function call", argTypes, ft.parameterTypes());
+            TypeChecker.checkArgTypes(sa.diagnostics(), "function call", argTypes, ft.parameterTypes(), mc.arguments());
             return ft.returnType();
         }
         if (recvType instanceof Type.ClassType ct) {
@@ -312,7 +312,7 @@ public final class MemberCallTyper {
                     checkMemberAccess(sa, ms.accessFlags(), ms.ownerClass(),
                             "'" + ct.name() + "." + mc.methodName() + "'");
                     sa.putResolvedMethod(mc, ms);
-                    TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes0, ms.parameterTypes());
+                    TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes0, ms.parameterTypes(), mc.arguments());
                     return ms.returnType();
                 }
             }
@@ -325,7 +325,7 @@ public final class MemberCallTyper {
                 sa.putResolvedMethod(mc, ms);
                 List<Type> argTypes = new ArrayList<>();
                 for (ExpressionNode arg : mc.arguments()) argTypes.add(SemExpressionTyper.inferType(sa, arg, scope));
-                TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes, ms.parameterTypes());
+                TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes, ms.parameterTypes(), mc.arguments());
                 return ms.returnType();
             }
             // receiver de classe EXTERNA (android.* etc.): assinatura

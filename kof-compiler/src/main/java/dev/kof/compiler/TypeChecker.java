@@ -212,9 +212,15 @@ public final class TypeChecker {
 
     static void checkArgTypes(DiagnosticCollector diagnostics, String methodName,
                               List<Type> argTypes, List<Type> paramTypes) {
+        checkArgTypes(diagnostics, methodName, argTypes, paramTypes, null);
+    }
+
+    static void checkArgTypes(DiagnosticCollector diagnostics, String methodName,
+                              List<Type> argTypes, List<Type> paramTypes,
+                              List<ExpressionNode> argNodes) {
         if (diagnostics == null || paramTypes.isEmpty() && !argTypes.isEmpty()) return;
         if (argTypes.size() != paramTypes.size()) {
-            diagnostics.error("", 0, 0, 0,
+            diagnostics.error(argNodeAt(argNodes, 0),
                     "Wrong number of arguments for '" + methodName + "': expected "
                             + paramTypes.size() + " but got " + argTypes.size(), "SEM013");
             return;
@@ -222,12 +228,16 @@ public final class TypeChecker {
         for (int i = 0; i < argTypes.size(); i++) {
             if (!Type.isUnknown(argTypes.get(i)) && !Type.isUnknown(paramTypes.get(i))
                     && !isAssignable(argTypes.get(i), paramTypes.get(i))) {
-                diagnostics.error("", 0, 0, 0,
+                diagnostics.error(argNodeAt(argNodes, i),
                         "Argument " + (i + 1) + " of '" + methodName + "': expected '" + Type.display(paramTypes.get(i))
                                 + "' but got '" + Type.display(argTypes.get(i)) + "'", "SEM014");
                 return;
             }
         }
+    }
+
+    private static ExpressionNode argNodeAt(List<ExpressionNode> argNodes, int i) {
+        return argNodes != null && i < argNodes.size() ? argNodes.get(i) : null;
     }
 
     /**
