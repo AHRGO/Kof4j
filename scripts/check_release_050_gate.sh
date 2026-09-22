@@ -326,7 +326,7 @@ EOF
   # D-RELEASE-0.5.0-SCOPE (maintainer 21/09/2026): (a) an allowlisted
   # in-flight plan is NOT loose_docs RED; (b) an open EG-8 is NOT edges RED —
   # the 1.0-line declaration is decoupled from the 0.5.0 gate.
-  printf 'DECISIONS.md\ntype-system-extensions-plan.md\n' > "$T/loose"
+  printf 'DECISIONS.md\nffi-abi-structs.md\n' > "$T/loose"
   printf 'EG-1\tDONE\nEG-8\tOPEN\n' > "$T/eg"
   R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_PARITY_FILE="$T/parity" \
   R050_STABILITY_FILE="$T/stab" \
