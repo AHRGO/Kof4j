@@ -1000,7 +1000,7 @@ rule 6).
 | 2.8.2 | **R3-3.3 handles/out-buffers** (`D-R3-3.3` = A) | nominal opaque `Handle` (non-arithmetic) + `Buffer(U8, INOUT)` (== D6-3); prerequisite of Stages 4–7 | R3 (2.1) |
 | 2.8.3 | **R3-3.5 variadics** (`D-R3-3.5` = A) | NO general variadics — caller passes `List`/`Array`/`Buffer`; documented gap (R6/R7) | R3 (2.1) |
 | 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **APPROVED 21/09**: plan reviewed; **incremental slices** (proof per slice), spec-first BEFORE any parser/typer diff — **X5.1–X5.4 ✅ DONE 21/09** (`sealed`+`SEM080`; exhaustive `switch`+`SEM081`; declaration-site `out`/`in`+`SEM082`; use-site projection `List<out T>`/`List<in T>`); remaining X5.5 (parity+docs+training) | 🔵 |
-| 2.8.5 | **X6 interop reflection** (`D-INTEROP-REFLECT` = open) | **APPROVED 21/09**: incremental plan (slices + proof per slice), only at the interop boundary | 🔵 |
+| 2.8.5 | **X6 interop reflection** (`D-INTEROP-REFLECT` = **A, compile-time intrinsic**) | **APPROVED 21/09**; surface frozen: `interop.schema(R)` → immutable `List<Field>`, zero runtime reflection, all targets, boundary-only. X6.0 ✅; X6.1 (intrinsic+fold) in progress | 🔵 |
 
 **Spec plan (X5 + X6):** [`type-system-extensions-plan.md`](type-system-extensions-plan.md) — **APPROVED 21/09 (D-TYPE-VARIANCE/INTEROP-REFLECT)**, promoted to `docs/development/`; incremental slices with proof.
 

@@ -2786,16 +2786,31 @@ parser/typer — nada pousa em silêncio. Type-classes seguem rejeitadas
 
 ## D-INTEROP-REFLECT — reflexão de interop (múltipla escolha, mantenedora 21/09/2026)
 
-**Data:** 2026-09-21 · **Estado:** `ABERTO — spec/plano primeiro` · **Opção escolhida:** aberta (completa); **plano incremental exigido**.
+**Data:** 2026-09-21 · **Estado:** `DECIDIDA` · **Opção escolhida:** **A — intrínseco de compile-time**.
+
+A mantenedora autorizou começar o X6 (21/09). Superfície congelada:
+
+- **`interop.schema(R)`** — **intrínseco de compile-time** no namespace
+  `interop`, onde `R` é um tipo `record` declarado no módulo. Resolve para uma
+  **`List<Field>` imutável**, com **`record Field(String name, String type)`**
+  sendo um record fornecido pelo compilador cujas entradas são os componentes
+  do record, em ordem de declaração.
+- **Zero reflexão em runtime**: o compilador já conhece a estrutura do record,
+  então o intrínseco é dobrado em compile-time — sem `java.lang.reflect`, sem
+  metaprogramação em runtime, sem `Class.forName`.
+- **Mesma saída em todos os alvos** (JVM/Native/Script/KofJS): a dobra é no
+  frontend, então não há gap `REF001` (a postura JVM-first é satisfeita
+  trivialmente).
+- **Só na fronteira**: o namespace é `interop`; não é fundação da linguagem e
+  não deve crescer para reflexão geral (cerca documentada).
 
 A reflexão é autorizada **somente na fronteira de interop** (nunca fundação da
-linguagem). A mantenedora pediu um **plano de implementação incremental**
-rascunhado primeiro (fatias com prova por fatia), revisado antes do código — o
-mesmo portão spec-first da D6/X5.
+linguagem). O plano incremental foi rascunhado primeiro (fatias com prova por
+fatia) — o mesmo portão spec-first da D6/X5.
 
-- **Destrava:** X6 → aberta (spec-first).
-- **Próxima entrega:** o plano incremental (agente rascunha, mantenedora revisa).
-- **Relações:** `Related: regra 6, R9, X5, D-KOF-FIRST`.
+- **Destrava:** X6 → X6.1 (fatia JVM) em andamento.
+- **Próxima entrega:** implementação X6.1 + teste golden.
+- **Relações:** `Related: regra 6, regra 11, R9, X5, D-KOF-FIRST`.
 
 ---
 

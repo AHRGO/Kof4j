@@ -1001,7 +1001,7 @@ do código, regra 6).
 | 2.8.2 | **R3-3.3 handles/out-buffers** (`D-R3-3.3` = A) | `Handle` opaco nominal (não-aritmético) + `Buffer(U8, INOUT)` (== D6-3); pré-requisito dos Estágios 4–7 | R3 (2.1) |
 | 2.8.3 | **R3-3.5 variadics** (`D-R3-3.5` = A) | SEM variadics gerais — caller passa `List`/`Array`/`Buffer`; gap documentado (R6/R7) | R3 (2.1) |
 | 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **APROVADO 21/09**: plano revisado; **fatias incrementais** (prova por fatia), spec-first ANTES de qualquer diff de parser/typer — **X5.1–X5.4 ✅ FEITO 21/09** (`sealed`+`SEM080`; `switch` exaustivo+`SEM081`; variância declaration-site `out`/`in`+`SEM082`; projeção no sítio de uso `List<out T>`/`List<in T>`); resta X5.5 (parity+docs+training) | 🔵 |
-| 2.8.5 | **X6 reflexão de interop** (`D-INTEROP-REFLECT` = aberto) | **APROVADO 21/09**: plano incremental (fatias + prova por fatia), só na fronteira de interop | 🔵 |
+| 2.8.5 | **X6 reflexão de interop** (`D-INTEROP-REFLECT` = **A, intrínseco de compile-time**) | **APROVADO 21/09**; superfície congelada: `interop.schema(R)` → `List<Field>` imutável, zero reflexão em runtime, todos os alvos, só na fronteira. X6.0 ✅; X6.1 (intrínseco+dobra) em andamento | 🔵 |
 
 **Plano spec (X5 + X6):** [`type-system-extensions-plan.pt_BR.md`](type-system-extensions-plan.pt_BR.md) — **APROVADO 21/09 (`D-TYPE-VARIANCE`/`D-INTEROP-REFLECT`)**, promovido para `docs/development/`; fatias incrementais com prova.
 

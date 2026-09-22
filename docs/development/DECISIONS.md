@@ -2779,16 +2779,31 @@ silently. Type-classes remain rejected (permanent non-goal).
 
 ## D-INTEROP-REFLECT — interop reflection (multiple-choice, maintainer 21/09/2026)
 
-**Date:** 2026-09-21 · **State:** `OPEN — spec/plan first` · **Option chosen:** open (complete); **incremental plan required**.
+**Date:** 2026-09-21 · **State:** `DECIDED` · **Option chosen:** **A — compile-time intrinsic**.
+
+The maintainer authorized starting X6 (21/09). Surface frozen:
+
+- **`interop.schema(R)`** — a **compile-time intrinsic** in the `interop`
+  namespace, where `R` is a `record` type declared in the module. It resolves
+  to an **immutable** `List<Field>`, where
+  **`record Field(String name, String type)`** is a compiler-provided record
+  whose entries are the record's components in declaration order.
+- **Zero runtime reflection**: the compiler already knows the record's
+  structure, so the intrinsic is folded at compile time — no
+  `java.lang.reflect`, no runtime metaprogramming, no `Class.forName`.
+- **Same output on every target** (JVM/Native/Script/KofJS): the fold is
+  frontend-level, so no `REF001` gap is needed (the JVM-first posture is
+  satisfied trivially).
+- **Boundary-only**: the namespace is `interop`; it is not a language
+  foundation and must not grow into general reflection (fence documented).
 
 Reflection is authorized **only at the interop boundary** (never a language
-foundation). The maintainer asked for an **incremental implementation plan**
-drafted first (slices with proof per slice), reviewed before code — the same
-spec-first gate as D6/X5.
+foundation). The incremental plan was drafted first (slices with proof per
+slice) — the same spec-first gate as D6/X5.
 
-- **Unblocks:** X6 → open (spec-first).
-- **Next deliverable:** the incremental plan (agent drafts, maintainer reviews).
-- **Relationships:** `Related: rule 6, R9, X5, D-KOF-FIRST`.
+- **Unblocks:** X6 → X6.1 (JVM slice) in progress.
+- **Next deliverable:** X6.1 implementation + golden test.
+- **Relationships:** `Related: rule 6, rule 11, R9, X5, D-KOF-FIRST`.
 
 ---
 

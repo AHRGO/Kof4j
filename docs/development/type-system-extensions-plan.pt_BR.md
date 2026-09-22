@@ -93,21 +93,23 @@ para `switch` não-exaustivo e violação de variance.
 - Sem caminho de escrita; sem carregamento dinâmico tipo `Class.forName` na
   linguagem.
 
-### Superfície proposta (PARA REVISÃO)
+### Superfície (RESOLVIDA 21/09 — `D-INTEROP-REFLECT`)
 
-- Um membro de um namespace de interop (ex.: `interop.schema(record)`) que
-  devolve uma lista **imutável** de descritores de campo, usável só pela camada
-  de binding.
-- Perguntas abertas: nome/forma exatos; se é exposto como método ou intrínseco
-  de compile-time; qual alvo lidera (JVM primeiro, por R7).
+- **`interop.schema(R)`** — **intrínseco de compile-time** no namespace
+  `interop`, `R` um tipo `record`. Resolve para uma **`List<Field>` imutável**,
+  com **`record Field(String name, String type)`** fornecido pelo compilador;
+  entradas na ordem dos componentes do record.
+- **Zero reflexão em runtime** (o compilador conhece a estrutura) → mesma saída
+  em todos os alvos, então **não há gap `REF001`**. Só na fronteira, nunca
+  fundação da linguagem.
 
 ### Fatias
 
 | # | Fatia | Escopo | Prova |
 |---|-------|--------|-------|
-| X6.0 | **spec** | escopo, superfície, postura por alvo; confirma "só fronteira de interop" | ✅ aprovado 21/09; sem código |
-| X6.1 | **JVM** | leitura estrutural no host (`java.lang.reflect` por trás da camada FFI) | E2E: schema de um record descoberto e casado a um golden |
-| X6.2 | **Native/JS** | gap honesto `REF001` (ou mínimo) — nunca stub silencioso (R6) | diagnóstico pinado em alvos não suportados |
+| X6.0 | **spec** | escopo, superfície, postura por alvo; confirma "só fronteira de interop" | ✅ **FEITO 21/09** — superfície congelada em `D-INTEROP-REFLECT`: `interop.schema(R)` intrínseco de compile-time → `List<Field>` (`record Field(String, String)`), zero reflexão em runtime, todos os alvos, só na fronteira |
+| X6.1 | **intrínseco + dobra** | reconhecer `interop.schema(R)` no typer; dobrar para um literal `List<Field>` imutável em compile-time (frontend, logo todos os alvos) | E2E: schema de um record casado a um golden |
+| X6.2 | **alvos** | a dobra é no frontend → sem `REF001`; em vez disso, diagnóstico honesto para `R` não-record / desconhecido (R6) | diagnóstico pinado para argumento inválido |
 | X6.3 | **paridade + docs** | E2E de binding (forma Arrow/Parquet), matriz de paridade, `training/`/`learn/` | suíte verde; docs-lang 100% |
 
 ### Riscos / perguntas abertas

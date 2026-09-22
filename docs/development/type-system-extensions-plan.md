@@ -90,20 +90,23 @@ non-exhaustive `switch` and variance violations.
   dispatch, no annotations-as-framework, no reflection in user control flow.
 - No write path; no `Class.forName`-style dynamic loading in the language.
 
-### Proposed surface (FOR REVIEW)
+### Surface (RESOLVED 21/09 — `D-INTEROP-REFLECT`)
 
-- A member of an interop namespace (e.g. `interop.schema(record)`), returning
-  an **immutable** list of field descriptors usable only by the binding layer.
-- Open questions: exact name/shape; whether it is exposed as a method or a
-  compile-time intrinsic; which target leads (JVM-first, per R7).
+- **`interop.schema(R)`** — a **compile-time intrinsic** in the `interop`
+  namespace, `R` a `record` type. Resolves to an **immutable**
+  `List<Field>` where `record Field(String name, String type)` is
+  compiler-provided; entries follow the record's component order.
+- **Zero runtime reflection** (the compiler knows the structure) → same output
+  on every target, so **no `REF001` gap** is needed. Boundary-only, never a
+  language foundation.
 
 ### Slices
 
 | # | Slice | Scope | Proof |
 |---|-------|-------|-------|
-| X6.0 | **spec** | scope, surface, target posture; confirm "interop boundary only" | ✅ approved 21/09; no code |
-| X6.1 | **JVM** | host-side structural read (existing `java.lang.reflect` behind the FFI layer) | E2E: schema of a record discovered and matched to a golden |
-| X6.2 | **Native/JS** | honest gap `REF001` (or minimal) — never a silent stub (R6) | pinned diagnostic on unsupported targets |
+| X6.0 | **spec** | scope, surface, target posture; confirm "interop boundary only" | ✅ **DONE 21/09** — surface frozen in `D-INTEROP-REFLECT`: `interop.schema(R)` compile-time intrinsic → `List<Field>` (`record Field(String, String)`), zero runtime reflection, all targets, boundary-only |
+| X6.1 | **intrinsic + fold** | recognize `interop.schema(R)` in the typer; fold to an immutable `List<Field>` literal at compile time (frontend, so all targets) | E2E: schema of a record matched to a golden |
+| X6.2 | **targets** | the fold is frontend-level → no `REF001`; instead an honest diagnostic for non-record / unknown `R` (R6) | pinned diagnostic for an invalid argument |
 | X6.3 | **parity + docs** | binding E2E (Arrow/Parquet-shaped), parity matrix, `training/`/`learn/` | suite green; docs-lang 100% |
 
 ### Risks / open questions
