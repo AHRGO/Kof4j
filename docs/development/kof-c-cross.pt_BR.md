@@ -95,6 +95,12 @@ cruas, sem libc.
 
 ## Notas
 
+- **Consumir um objeto de fixture (C4-x, metade de link):** um `extern` cuja
+  `library()` é um `.o` pré-montado para a arch entra posicional na linha do
+  `ld` cross (`NativeCrossLink.ffiLinkArg` preserva o path), então uma fixture
+  montada com `compileObject` pode ser chamada do Kof (`extern "<path>.o"
+  f(...)`). A metade de ABI (empacotamento do parâmetro struct por valor no
+  cross) é a próxima fatia.
 - **relaxamento de `gp` no riscv64:** o linker relaxa `la` de globais
   próximos para gp-relativo (`addi t0, gp, off`); um `_start` cru não
   inicializa `gp`, então o acesso falha. O `_start` precisa fazer

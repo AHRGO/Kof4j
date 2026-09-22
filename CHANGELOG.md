@@ -113,6 +113,19 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Native cross FFI struct-param fixture consumes;
     `docs/development/kof-c-cross.md`.
 
+  - **`extern` `library()` accepts a prebuilt `.o` fixture on the cross targets
+    (C4-x, FFI link)** (22/09, FFI/kof-c front): `NativeCrossLink.ffiLinkArg`
+    kept only the basename of a path library, so a fixture object built for the
+    arch (`kof-c-compiler`'s `compileObject`) lost its `.o` and was passed as
+    `-l:`, never linked. Now a `.o` argument enters the `ld` line positionally,
+    path preserved — the same shape x86-64 already used. Proof:
+    `NativeCrossObjectFixtureE2ETest` 3/3 — a cross object assembled from a
+    fixture and called from a compiled Kof program through
+    `extern "<path>.o" add(Int, Int): Int` prints `42` under qemu on
+    riscv64/aarch64, plus the `ffiLinkArg` mapping unit case in
+    `NativeCrossDynamicLinkTest`. This is the link half of the struct-param
+    fixture (the ABI half is the next slice).
+
   - **§302 CLOSED — tipos crus `List/Set/Map` em CAMPO: todas as faces medidas verdes no tip (21/09, lane bugs-and-gaps, CLOSEALL): repros do registro + formas de campo/retorno/parâmetro/estáticos — `3` nos 3 alvos (raiz já fechada pelo §373/#443).
 
   - **§443 FIXED — cross-target scalar `extern` (`library()`) had been re-gated to `FFI001` on riscv64/aarch64 by the struct-by-value slices**

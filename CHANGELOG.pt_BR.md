@@ -115,6 +115,19 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     compila e executável sem `main` ainda falha. Este é o caminho que a fixture
     cross FFI de struct-param consome; `docs/development/kof-c-cross.md`.
 
+  - **`extern` `library()` aceita uma fixture `.o` pré-montada nos alvos cross
+    (C4-x, link FFI)** (22/09, frente FFI/kof-c): `NativeCrossLink.ffiLinkArg`
+    guardava só o basename de uma `library()` de caminho, então um objeto de
+    fixture montado para a arch (`compileObject` do `kof-c-compiler`) perdia o
+    `.o` e virava `-l:` — nunca era ligado. Agora um `.o` entra posicional na
+    linha do `ld`, preservando o path — a mesma forma que o x86-64 já usava.
+    Prova: `NativeCrossObjectFixtureE2ETest` 3/3 — um objeto cross montado de
+    uma fixture e chamado por um programa Kof compilado via
+    `extern "<path>.o" add(Int, Int): Int` imprime `42` sob qemu em
+    riscv64/aarch64, mais o caso unitário de mapeamento do `ffiLinkArg` em
+    `NativeCrossDynamicLinkTest`. É a metade de link da fixture de struct-param
+    (a metade de ABI é a próxima fatia).
+
   - **§302 FECHADO — tipos crus `List/Set/Map` em CAMPO: todas as faces medidas verdes no tip (21/09, lane bugs-and-gaps, CLOSEALL): repros do registro + formas de campo/retorno/parâmetro/estáticos — `3` nos 3 alvos (raiz já fechada pelo §373/#443).
 
   - **§443 CORRIGIDO — `extern` escalar cross-target (`library()`) voltou a ser re-gateado para `FFI001` no riscv64/aarch64 pelas fatias de struct-by-value**

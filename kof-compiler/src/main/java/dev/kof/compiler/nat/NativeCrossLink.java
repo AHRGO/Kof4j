@@ -173,8 +173,12 @@ public final class NativeCrossLink {
 
     /** #431: arg de link p/ uma `library()` de extern no cross. Caminho
      *  absoluto NÃO é cross-arch (é host) — só o basename vale no sysroot:
-     *  `libX.so[.N]` → `-l:libX.so.N` (igual x86), nome cru `X` → `-lX`. */
+     *  `libX.so[.N]` → `-l:libX.so.N` (igual x86), nome cru `X` → `-lX`.
+     *  Exceção (fatia C4-x): um objeto {@code .o} já montado PARA A ARCH
+     *  (ex.: fixture gerada pelo `kof-c-compiler` cross) é cross-arch e entra
+     *  posicional, preservando o path — o mesmo padrão que o x86 já usa. */
     static String ffiLinkArg(String lib) {
+        if (lib.endsWith(".o")) return lib;
         String base = lib.startsWith("/") ? lib.substring(lib.lastIndexOf('/') + 1) : lib;
         return base.contains(".so") ? "-l:" + base : "-l" + base;
     }

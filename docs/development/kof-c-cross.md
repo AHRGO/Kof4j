@@ -91,6 +91,12 @@ raw syscalls only, no libc.
 
 ## Notes
 
+- **Consuming a fixture object (C4-x, link half):** an `extern` whose
+  `library()` is a prebuilt `.o` for the arch enters the cross `ld` line
+  positionally (`NativeCrossLink.ffiLinkArg` preserves the path), so a fixture
+  built with `compileObject` can be called from Kof (`extern "<path>.o"
+  f(...)`). The ABI half (struct-by-value parameter packing on the cross) is the
+  next slice.
 - **riscv64 `gp` relaxation:** the linker relaxes `la` of nearby globals to
   gp-relative (`addi t0, gp, off`); a raw `_start` does not initialise `gp`,
   so the access faults. `_start` must do

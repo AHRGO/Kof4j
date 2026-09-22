@@ -95,6 +95,20 @@ class NativeCrossDynamicLinkTest {
         assertFalse(List.of(dynA).contains("--no-relax"), "aarch64 sem --no-relax");
     }
 
+    // ---- unit: forma do arg de link p/ `library()` de extern (#431) ----
+
+    @Test
+    void ffiLinkArgMapsSonamesAndKeepsObjectPaths() {
+        assertEquals("-l:libc.so.6", NativeCrossLink.ffiLinkArg("libc.so.6"));
+        assertEquals("-l:libm.so.6", NativeCrossLink.ffiLinkArg("/usr/lib/libm.so.6"),
+                "soname com path → basename em -l: (lib do sysroot cross)");
+        assertEquals("-lm", NativeCrossLink.ffiLinkArg("m"), "nome cru → -l<nome>");
+        assertEquals("/tmp/fixture.o", NativeCrossLink.ffiLinkArg("/tmp/fixture.o"),
+                "objeto montado p/ a arch entra posicional preservando o path (fatia C4-x)");
+        assertEquals("rel/fixture.o", NativeCrossLink.ffiLinkArg("rel/fixture.o"),
+                "path relativo de objeto também é preservado");
+    }
+
     // ---- unit: detecção do consumidor SQLite + -lsqlite3 (DB001) ----
 
     @Test
