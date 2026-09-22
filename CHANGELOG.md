@@ -27,6 +27,27 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     — x86-64 oracle `3/true/0/true/0/false` byte-identical on riscv64 and
     aarch64 under qemu (incl. the drop-table SQL-error edge), plus the
     `orm.all` gate pin on cross.
+  - **SEM/PKG diagnostics now report the real source position (known-bugs §280)**
+    (22/09, typer lane, session 9093 — the unit authored 21/09 was left mid-unit by a
+    dead turn and finished via the dead-owner rule): 53 of the 91 hard-coded
+    `error("", 0, 0, 0, …)` sites now report the AST node's file/line/column
+    (the `node.position()` lookup inside it), so the canonical repros no longer print the
+    phantom `:0:0` — `Int f() { return "x" }` → SEM010 at the return line,
+    `show(42)` → SEM014 at the call site, assignment to `val` → SEM037 at the
+    target, `new` of an abstract class → SEM041 at the `new`, and the
+    MemberCallTyper sites (SEM072/SEM025) at the call. The position flows through a new
+    `DiagnosticCollector.errorAt(node, msg, code)` helper (one line per site);
+    `checkArgTypes/checkCtorArgTypes` unified on the node-taking signature
+    (all 13 callers pass their call node) — nothing else changed behavior. Land note:
+    the §442 split (`fd5119f6`) landed mid-unit and left the WIP's pre-split
+    `NewExpr` body in conflict; resolved keeping the split's delegation and
+    re-applying the three `NewExpr` sites in `SemNewExprTyper` (preserve both
+    sides, redo mine on top). Proof: `DiagnosticSourceLocationTest` 5/5
+    (RED 4/5 without the patch — `line=0` in the old code) + neighbor slice
+    re-verified green on the current tip. 43 sites remain without a source node
+    in scope (workflow/makealive/supervisor hosts + string-only helpers) — the
+    tracked residual.
+
   - **`kof-c-compiler` gains riscv64/aarch64 targets (slice C1 of the cross plan)**
     (22/09, FFI/kof-c front): the in-repo C subset compiler was x86-64-only
     (`as --64` + `ld`). Now `KofCTarget` selects the cross binutils

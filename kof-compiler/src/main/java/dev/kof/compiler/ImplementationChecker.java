@@ -77,7 +77,7 @@ final class ImplementationChecker {
                         if ((cm.accessFlags() & AccessFlags.ABSTRACT) == 0) {
                             implemented = true;
                             if (cm.parameterTypes().size() != im.parameterTypes().size()) {
-                                diagnostics.error("", 0, 0, 0,
+                                diagnostics.error(cls,
                                         "method '" + im.name() + "' of interface '" + ifaceName
                                                 + "' expects " + im.parameterTypes().size()
                                                 + " parameter(s) but implementation has "
@@ -94,7 +94,7 @@ final class ImplementationChecker {
                         }
                     }
                     if (!implemented && !clsAbstract) {
-                        diagnostics.error("", 0, 0, 0,
+                        diagnostics.error(cls,
                                 "class '" + cls.name() + "' does not implement method '" + im.name()
                                         + "' of interface '" + ifaceName + "'"
                                         + (ob.via() != null ? " inherited via '" + ob.via() + "'" : ""),
@@ -162,7 +162,7 @@ final class ImplementationChecker {
                         Type childRet = child.returnType();
                         if (childRet.equals(parentRet)) continue;
                         if (TypeChecker.isAssignable(sa, childRet, parentRet)) continue;
-                        diagnostics.error("", 0, 0, 0,
+                        diagnostics.error(cls,
                                 "method '" + child.name() + "' in class '" + cls.name()
                                         + "' overrides '" + simple + "' but return type " + childRet
                                         + " is not compatible with the overridden return type " + parentRet,

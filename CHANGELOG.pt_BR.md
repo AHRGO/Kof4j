@@ -13,7 +13,7 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
-  - **`kof.orm` cross riscv64/aarch64 — fatia A: `deleteAll` + `count` reais sobre SQLite**
+ - **`kof.orm` cross riscv64/aarch64 — fatia A: `deleteAll` + `count` reais sobre SQLite**
     (22/09, lane gaps-db, DB-3/DB-1): o ORM era só x86-64 no Native (os alvos
     cross recusavam todo `orm.*` com `ORM001` em compile-time). A fatia A
     porta `kof_orm_delete_all` + `kof_orm_count` (F1a de `RuntimeOrm1`) para o
@@ -27,6 +27,29 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `KofOrmE2ETest.crossNativeF1aDeleteAllCountMatchX86Oracle` — oráculo x86-64
     `3/true/0/true/0/false` byte-idêntico em riscv64 e aarch64 sob qemu (incl.
     o edge SQL-error de drop da tabela), + pin do gate de `orm.all` no cross.
+
+  - **Diagnósticos SEM/PKG agora reportam a posição real da origem (known-bugs §280)**
+    (22/09, lane typer, sessão 9093 — a unidade escrita em 21/09 ficou no meio por
+    um turno morto e foi terminada pela regra do dono-sumido): 53 dos 91 sites
+    hard-coded `error("", 0, 0, 0, …)` agora reportam o file/line/column do nó AST
+    (busca `node.position()` dentro dele), então os repros canônicos não imprimem mais o
+    `:0:0` fantasma — `Int f() { return "x" }` → SEM010 na linha do return,
+    `show(42)` → SEM014 no call-site, escrita em `val` → SEM037 no alvo, `new`
+    de classe abstrata → SEM041 no `new`, e os sites do MemberCallTyper
+    (SEM072/SEM025) no call. A posição flui por um helper novo
+    `DiagnosticCollector.errorAt(node, msg, code)` (1 linha por site);
+    `checkArgTypes/checkCtorArgTypes` unificados na assinatura com node
+    (os 13 callers passam o nó de chamada) — nada mais mudou de comportamento. Nota do land:
+    o split §442 (`fd5119f6`) pousou no meio da unidade e deixou o corpo pré-split
+    do `NewExpr` do WIP em conflito; resolvido mantendo a delegação do split e
+    re-aplicando os 3 sites do `NewExpr` em `SemNewExprTyper` (preservar os dois
+    lados, refazer o meu por cima). Prova: `DiagnosticSourceLocationTest` 5/5
+    (RED 4/5 sem o patch — `line=0` no código antigo) + slice de vizinhança
+    re-verificado verde no tip atual. 43 sites restam sem nó-fonte no escopo
+    (hosts workflow/makealive/supervisor + helpers só-string) — o resíduo
+    rastreado.
+
+
   - **`kof-c-compiler` ganha os alvos riscv64/aarch64 (fatia C1 do plano cross)**
     (22/09, frente FFI/kof-c): o compilador C do repositório só emitia x86-64
     (`as --64` + `ld`). Agora `KofCTarget` seleciona os binutils cross

@@ -32,7 +32,7 @@ final class SemNewExprTyper {
         if (cs != null) {
             // SG-017 (SEM041): classe abstrata não pode ser instanciada.
             if (sa.abstractClasses().contains(ne.typeName()) && sa.diagnostics() != null) {
-                sa.diagnostics().error("", 0, 0, 0,
+                sa.diagnostics().error(ne,
                         "cannot instantiate abstract class '" + ne.typeName() + "'",
                         "SEM041");
             }
@@ -61,19 +61,19 @@ final class SemNewExprTyper {
                 for (ExpressionNode arg : ne.arguments()) {
                     argTypes3.add(SemExpressionTyper.inferType(sa, arg, scope));
                 }
-                TypeChecker.checkCtorArgTypes(sa, cs.members(), ne.typeName(),
+                TypeChecker.checkCtorArgTypes(sa, ne, cs.members(), ne.typeName(),
                         argTypes3);
             } else if (sa.diagnostics() != null) {
                 SymbolTable.Symbol anyInit = cs.members().resolve("<init>");
                 if (anyInit instanceof SymbolTable.ConstructorSymbol c) {
-                    sa.diagnostics().error("", 0, 0, 0,
+                    sa.diagnostics().error(ne,
                             "no constructor of '" + ne.typeName() + "' with "
                                     + ne.arguments().size() + " argument(s) (expected "
                                     + c.parameterTypes().size() + ")",
                             "SEM023");
                 } else if (anyInit instanceof SymbolTable.ConstructorSet set
                         && !set.constructors().isEmpty()) {
-                    sa.diagnostics().error("", 0, 0, 0,
+                    sa.diagnostics().error(ne,
                             "no constructor of '" + ne.typeName() + "' with "
                                     + ne.arguments().size() + " argument(s)",
                             "SEM023");

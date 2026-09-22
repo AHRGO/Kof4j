@@ -164,7 +164,7 @@ final class TopLevelCallTyper {
                 ExternalCtorTyper.Outcome ext = ExternalCtorTyper.infer(sa, mc, argTypes);
                 if (ext.type() != null) return ext.type();
                 if (!ext.diagnosed() && sa.diagnostics() != null) {
-                    sa.diagnostics().error("", 0, 0, 0,
+                    sa.diagnostics().error(mc,
                             "Undefined function: '" + mc.methodName() + "'", "SEM015");
                 }
             }

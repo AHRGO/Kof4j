@@ -260,7 +260,7 @@ public final class ExpressionTyper {
                 if (recvType instanceof Type.ClassType ct
                         && CompilerTypes.isEnumName(ct.name(), driver.currentUnit)) { // #445: pkg real
                     if (!CompilerTypes.enumConstantsOf(ct.name(), driver.currentUnit).contains(fa.fieldName()) && driver.currentDiagnostics != null) {
-                        driver.currentDiagnostics.error("", 0, 0, 0,
+                        driver.currentDiagnostics.error(fa,
                                 "enum '" + ct.name() + "' has no constant '" + fa.fieldName() + "'",
                                 "SEM030");
                     }

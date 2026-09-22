@@ -45,7 +45,7 @@ final class ExternalCtorTyper {
                 sa.externalTypes().resolvePublicConstructor(internal, mc.arguments().size());
         if (sig == null) {
             if (sa.diagnostics() != null) {
-                sa.diagnostics().error("", 0, 0, 0,
+                sa.diagnostics().error(mc,
                         "no public constructor of '" + mc.methodName() + "' with "
                                 + mc.arguments().size() + " argument(s)",
                         "SEM023");

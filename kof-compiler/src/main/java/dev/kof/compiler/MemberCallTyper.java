@@ -32,7 +32,7 @@ public final class MemberCallTyper {
             // Fase 10: tokens são CONSTANTES — um método neles é SEM079 (R6),
             // nunca queda silenciosa p/ void.
             if (sa.diagnostics() != null) {
-                sa.diagnostics().error("", 0, 0, 0,
+                sa.diagnostics().error(mc,
                         "token '" + tokR.name() + "' has no methods — it holds constants: "
                         + KofUiTokens.memberList(tokR.name()), "SEM079");
             }
@@ -122,7 +122,7 @@ public final class MemberCallTyper {
             if (sa.diagnostics() != null
                     && sa.allClasses().containsKey(superName)
                     && !MemberResolver.isObjectMethod(mc.methodName(), mc.arguments().size())) {
-                sa.diagnostics().error("", 0, 0, 0,
+                sa.diagnostics().error(mc,
                         "Cannot resolve method '" + mc.methodName()
                                 + "' in superclass '" + superName + "'",
                         "SEM025");
@@ -162,7 +162,7 @@ public final class MemberCallTyper {
             // CatchTypeCheck #332 — um gate, os 4 alvos reportam).
             if (("add".equals(mn) || "push".equals(mn) || "append".equals(mn))
                     && mc.arguments().size() != 1 && sa.diagnostics() != null) {
-                sa.diagnostics().error("", 0, 0, 0,
+                sa.diagnostics().error(mc,
                         "List." + mn + " appends exactly one element; there is no positional insert — "
                                 + "use set(index, value) to replace at an index",
                         "SEM072");
@@ -176,7 +176,7 @@ public final class MemberCallTyper {
             // signature `(ArrayList,Object,Object)`). Reject at the shared
             // typer (same face as SEM072/#336): one gate, all four targets.
             if ("reduce".equals(mn) && mc.arguments().size() != 2 && sa.diagnostics() != null) {
-                sa.diagnostics().error("", 0, 0, 0,
+                sa.diagnostics().error(mc,
                         "List.reduce takes exactly two arguments: the lambda AND the seed — "
                                 + "reduce((a: Int, b: Int) -> a + b, 0) or reduce(0, (a: Int, b: Int) -> a + b)",
                         "SEM073");
@@ -226,7 +226,7 @@ public final class MemberCallTyper {
             }
             if (!"toArray".equals(mn) && !"sublist".equals(mn) && !"subSet".equals(mn)) {
                 if (sa.diagnostics() != null) {
-                    sa.diagnostics().error("", 0, 0, 0,
+                    sa.diagnostics().error(mc,
                             "Cannot resolve method '" + mn + "' on type 'List' (valid: add/get/set/remove/contains/size/isEmpty/clear/map/filter/reduce/indexOf/lastIndexOf/addAll/subList/sort)",
                             "SEM025");
                 }
@@ -263,7 +263,7 @@ public final class MemberCallTyper {
             if ("keys".equals(mn)) return new Type.ClassType("kof", "List", List.of(keyType));
             if ("values".equals(mn)) return new Type.ClassType("kof", "List", List.of(valueType));
             if (sa.diagnostics() != null) {
-                sa.diagnostics().error("", 0, 0, 0,
+                sa.diagnostics().error(mc,
                         "Cannot resolve method '" + mn + "' on type 'Map' (valid: put/get/getOrDefault/putIfAbsent/remove/containsKey/contains/containsValue/size/clear/isEmpty/keys/values)",
                         "SEM025");
             }
@@ -278,7 +278,7 @@ public final class MemberCallTyper {
             if ("add".equals(mn) || "remove".equals(mn)) return Type.PrimitiveType.BOOL;
             if ("clear".equals(mn)) return Type.PrimitiveType.VOID;
             if (sa.diagnostics() != null && !"toArray".equals(mn) && !"subSet".equals(mn) && !"sublist".equals(mn)) {
-                sa.diagnostics().error("", 0, 0, 0,
+                sa.diagnostics().error(mc,
                         "Cannot resolve method '" + mn + "' on type 'Set' (valid: add/contains/remove/size/clear/isEmpty)",
                         "SEM025");
             }
@@ -359,7 +359,7 @@ public final class MemberCallTyper {
                 boolean isKnownReceiver = sa.allClasses().containsKey(ct.name())
                         || sa.isExternal(ct);
                 if (isKnownReceiver) {
-                    sa.diagnostics().error("", 0, 0, 0,
+                    sa.diagnostics().error(mc,
                             "Cannot resolve method '" + mc.methodName()
                                     + "' on type '" + ct.name() + "'",
                             "SEM025");

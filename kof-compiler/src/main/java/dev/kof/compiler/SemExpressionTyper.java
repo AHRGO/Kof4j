@@ -126,7 +126,7 @@ public final class SemExpressionTyper {
                     yield Type.UnknownType.UNKNOWN;
                 }
                 if (SemUndefinedVarGuard.reportsUndefined(sa, ie.name())) {
-                    sa.diagnostics().error("", 0, 0, 0,
+                    sa.diagnostics().error(ie,
                             "Undefined variable or type: '" + ie.name() + "'", "SEM011");
                 }
                 yield Type.UnknownType.UNKNOWN;
@@ -137,7 +137,7 @@ public final class SemExpressionTyper {
                 // expressão — rejeita com diagnóstico limpo (statements passam
                 // pelo ExpressionStmt, que não chega aqui).
                 if (sa.diagnostics() != null) {
-                    sa.diagnostics().error("", 0, 0, 0,
+                    sa.diagnostics().error(ae,
                             "assignment is a statement, not an expression (use '=' on its own line)",
                             "SEM027");
                 }
@@ -170,7 +170,7 @@ public final class SemExpressionTyper {
                                 && !KofTime.isTimeNamespace(ie.name())
                                 && !KofScheduler.isSchedulerNamespace(ie.name())
                                 && !sa.allClasses().containsKey(ie.name())) {
-                            sa.diagnostics().error("", 0, 0, 0,
+                            sa.diagnostics().error(ie,
                                     "undefined variable: '" + ie.name() + "'", "SEM020");
                         }
                     }
@@ -180,7 +180,7 @@ public final class SemExpressionTyper {
                         if (sa.diagnostics() != null && !Type.isUnknown(targetType) && !Type.isUnknown(valueType)
                                 && !strConcat
                                 && !TypeChecker.isAssignable(sa, valueType, targetType)) {
-                            sa.diagnostics().error("", 0, 0, 0,
+                            sa.diagnostics().error(ae,
                                     "Type mismatch: cannot assign " + valueType + " to " + targetType, "SEM012");
                         }
                     }
@@ -248,7 +248,7 @@ public final class SemExpressionTyper {
                             : inferType(sa, incFa.receiver(), scope);
                     if (incRecv != null && CompilerTypes.isRecordType(incRecv, sa.unit(), sa)
                             && !(incOnThis && sa.inConstructor)) {
-                        sa.diagnostics().error("", 0, 0, 0,
+                        sa.diagnostics().error(incFa,
                                 "cannot assign to '" + incFa.fieldName()
                                         + "': record is immutable",
                                 "SEM038");
@@ -267,7 +267,7 @@ public final class SemExpressionTyper {
                 if (fa.receiver() instanceof IdentifierExpr pId && KofUi.isPalette(pId.name()) && KofUi.paletteColor(fa.fieldName()) != null) yield KofUi.COLOR;
                 if (fa.receiver() instanceof IdentifierExpr tid && KofUiTokens.isTokenNamespace(tid.name())) {
                     if (KofUiTokens.tokenValue(tid.name(), fa.fieldName()) == null && sa.diagnostics() != null) {
-                        sa.diagnostics().error("", 0, 0, 0,
+                        sa.diagnostics().error(fa,
                                 KofUiTokens.unknownMemberMessage(tid.name(), fa.fieldName()), "SEM079");
                     }
                     yield Type.PrimitiveType.INT;
@@ -290,7 +290,7 @@ public final class SemExpressionTyper {
                         && fa.receiver() instanceof IdentifierExpr rid
                         && MemberResolver.isBuiltinTypeName(rid.name())
                         && sa.diagnostics() != null) {
-                    sa.diagnostics().error("", 0, 0, 0,
+                    sa.diagnostics().error(fa,
                             "'" + rid.name() + "' is a primitive type, it has no static field "
                                     + "'" + fa.fieldName() + "' (use the literal, "
                                     + "e.g. 2147483647 for Int; there is no Int.MAX_VALUE in Kof)",
@@ -356,7 +356,7 @@ public final class SemExpressionTyper {
                     boolean isKnownReceiver = sa.allClasses().containsKey(ct.name()) || sa.isExternal(ct);
                     boolean isEnumConstant = MemberResolver.enumConstantOfExpr(sa.unit(), fa) != null;
                     if (sa.diagnostics() != null && isKnownReceiver && !isEnumConstant && !MemberResolver.isObjectMethod(fa.fieldName(), 0)) {
-                        sa.diagnostics().error("", 0, 0, 0,
+                        sa.diagnostics().error(fa,
                                 "Cannot resolve field '" + fa.fieldName()
                                         + "' on type '" + ct.name() + "'",
                                 "SEM025");

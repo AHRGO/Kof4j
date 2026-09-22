@@ -25,7 +25,7 @@ public final class StatementAnalyzer {
         Type valueType = SemExpressionTyper.inferType(sa, ae.value(), scope);
         // SG-005/008 (SEM048): `x = null` é erro — null nunca é atribuível
         if (CompilerComparisons.isNullLiteral(ae.value()) && sa.diagnostics() != null) {
-            sa.diagnostics().error("", 0, 0, 0,
+            sa.diagnostics().error(ae,
                     "null cannot be assigned: null safety works by narrowing"
                             + " (if (x != null)), never by direct null literals",
                     "SEM048");
@@ -44,7 +44,7 @@ public final class StatementAnalyzer {
                 // mutabilidade (SEM037), alinhado à semântica congelada.
                 if (effective instanceof SymbolTable.LocalVariableSymbol lv && lv.isVal()
                         && sa.diagnostics() != null) {
-                    sa.diagnostics().error("", 0, 0, 0,
+                    sa.diagnostics().error(ie,
                             "cannot assign to immutable 'val' variable '" + ie.name() + "'",
                             "SEM037");
                 }
@@ -54,7 +54,7 @@ public final class StatementAnalyzer {
                         && !Type.isUnknown(valueType)
                         && !stringConcat
                         && !TypeChecker.isAssignable(sa, valueType, targetType)) {
-                    sa.diagnostics().error("", 0, 0, 0,
+                    sa.diagnostics().error(ae,
                             "Type mismatch: cannot assign " + valueType + " to " + targetType,
                             "SEM012");
                 }
@@ -91,7 +91,7 @@ public final class StatementAnalyzer {
                             new Type.ClassType("", sa.currentClassName(), List.of()), sa.unit(), sa))
                     : (recvType != null && CompilerTypes.isRecordType(recvType, sa.unit(), sa));
             if (sa.diagnostics() != null && recvIsRecord && !(onThis && sa.inConstructor)) {
-                sa.diagnostics().error("", 0, 0, 0,
+                sa.diagnostics().error(fa,
                         "cannot assign to '" + fa.fieldName() + "': record is immutable",
                         "SEM038");
             }
@@ -118,7 +118,7 @@ public final class StatementAnalyzer {
                     Type fieldType = wfs.type();
                     if (sa.diagnostics() != null && fieldType instanceof Type.FunctionType
                             && !TypeChecker.functionTypesConform(valueType, fieldType)) {
-                        sa.diagnostics().error("", 0, 0, 0,
+                        sa.diagnostics().error(fa,
                                 "type mismatch: cannot assign " + valueType
                                         + " to field '" + fa.fieldName() + ": " + fieldType + "'",
                                 "SEM021");
@@ -137,7 +137,7 @@ public final class StatementAnalyzer {
                             && !strConcatAssign
                             && !(fieldType instanceof Type.FunctionType)
                             && !TypeChecker.isAssignable(sa, valueType, fieldType)) {
-                        sa.diagnostics().error("", 0, 0, 0,
+                        sa.diagnostics().error(fa,
                                 "Type mismatch: cannot assign " + valueType + " to " + fieldType,
                                 "SEM012");
                     }
@@ -219,7 +219,7 @@ public final class StatementAnalyzer {
                 // o programador não fabrica null.
                 if (vds.initializer() != null && CompilerComparisons.isNullLiteral(vds.initializer())
                         && sa.diagnostics() != null) {
-                    sa.diagnostics().error("", 0, 0, 0,
+                    sa.diagnostics().error(vds,
                             "null cannot be assigned: null safety works by narrowing"
                                     + " (if (x != null)), never by direct null literals"
                                     + " (variable '" + vds.name() + "')",
@@ -238,7 +238,7 @@ public final class StatementAnalyzer {
                 boolean selfPredefined = false;
                 if (selfCapture && sa.target().isNative()) {
                     if (sa.diagnostics() != null) {
-                        sa.diagnostics().error("", 0, 0, 0,
+                        sa.diagnostics().error(vds,
                                 "self-referencing initializer var inside a lambda "
                                         + "(var '" + vds.name() + "') is not available on the "
                                         + sa.target() + " target yet — captured handle read in the "
@@ -265,7 +265,7 @@ public final class StatementAnalyzer {
                     // uma declaração-lixo invisível, R6). Diagnostica na raiz.
                     if (sa.diagnostics() != null
                             && MemberResolver.isUnresolvedSimpleType(sa, vds.type(), scope)) {
-                        sa.diagnostics().error("", 0, 0, 0,
+                        sa.diagnostics().error(vds,
                                 "Undefined variable or type: '" + vds.type() + "'", "SEM011");
                     }
                 } else if (vds.initializer() != null) {
@@ -276,7 +276,7 @@ public final class StatementAnalyzer {
                 // SC5: redeclaração no MESMO escopo é erro
                 if (scope.hasLocal(vds.name()) && sa.diagnostics() != null
                         && !selfPredefined) {
-                    sa.diagnostics().error("", 0, 0, 0,
+                    sa.diagnostics().error(vds,
                             "variable '" + vds.name() + "' is already defined in this scope",
                             "SEM024");
                 }
@@ -290,7 +290,7 @@ public final class StatementAnalyzer {
                     if (!initType.equals(Type.UnknownType.UNKNOWN)
                             && !TypeChecker.isAssignable(sa, initType, varType)
                             && !(ftIssue && TypeChecker.functionTypesConform(initType, varType))) {
-                        sa.diagnostics().error("", 0, 0, 0,
+                        sa.diagnostics().error(vds,
                                 "type mismatch: cannot assign " + initType
                                         + " to '" + vds.name() + ": " + varType + "'",
                                 "SEM021");
@@ -514,7 +514,7 @@ public final class StatementAnalyzer {
                     // são Strings em Kof — rejeita com diagnóstico limpo.
                     if (sa.diagnostics() != null && t != null && !Type.isUnknown(t)
                             && !BuiltinTypes.isString(t)) {
-                        sa.diagnostics().error("", 0, 0, 0,
+                        sa.diagnostics().error(ts,
                                 "throw requires a String (exceptions are Strings in Kof),"
                                         + " got " + Type.canonicalPrimitiveName(
                                         t instanceof Type.ClassType ct ? ct.name() : t.toString()),

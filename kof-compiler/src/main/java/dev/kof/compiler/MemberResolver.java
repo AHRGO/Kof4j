@@ -461,9 +461,7 @@ public final class MemberResolver {
                     }
                 }
                 if (!implemented) {
-                    SourcePosition pv = cls.position();
-                    sa.diagnostics().error(pv != null ? pv.file() : "",
-                            pv != null ? pv.line() : 0, pv != null ? pv.column() : 0, 0,
+                    sa.diagnostics().error(cls,
                             "class '" + cls.name() + "' does not implement abstract method '"
                                     + am.name() + "()' from superclass '" + superCs.name() + "'",
                             "SEM043");

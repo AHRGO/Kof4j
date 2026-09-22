@@ -32,7 +32,7 @@ final class MemberCallNamespaces {
                     || ("decode".equals(mc.methodName()) && mc.arguments().size() == 1
                         && !mc.typeArguments().isEmpty());
             if (!valid && sa.diagnostics() != null) {
-                sa.diagnostics().error("", 0, 0, 0,
+                sa.diagnostics().error(mc,
                         "Cannot resolve method '" + mc.methodName() + "' on namespace 'json' — "
                                 + ("decode".equals(mc.methodName())
                                         ? "use json.decode<T>(s) (1 arg + type argument)"
@@ -96,7 +96,7 @@ final class MemberCallNamespaces {
             KofProcess.ProcessCall exitCall = KofProcess.exitCall(argTypes);
             if (exitCall != null) return exitCall.returnType();
             if (sa.diagnostics() != null) {
-                sa.diagnostics().error("", 0, 0, 0,
+                sa.diagnostics().error(mc,
                         "Cannot resolve method '" + mc.methodName() + "' on 'process' (valid: run, spawn, exit)",
                         "SEM025");
             }
@@ -109,7 +109,7 @@ final class MemberCallNamespaces {
             KofShell.ShellCall shellCall = KofShell.staticCall(mc.methodName(), argTypes);
             if (shellCall != null) return shellCall.returnType();
             if (sa.diagnostics() != null) {
-                sa.diagnostics().error("", 0, 0, 0,
+                sa.diagnostics().error(mc,
                         "Cannot resolve method '" + mc.methodName() + "' on 'shell' (valid: "
                                 + String.join(", ", KofShell.functions()) + ")",
                         "SEM025");
@@ -123,7 +123,7 @@ final class MemberCallNamespaces {
             KofSsh.SshCall sshCall = KofSsh.staticCall(mc.methodName(), argTypes);
             if (sshCall != null) return sshCall.returnType();
             if (sa.diagnostics() != null) {
-                sa.diagnostics().error("", 0, 0, 0,
+                sa.diagnostics().error(mc,
                         "Cannot resolve method '" + mc.methodName() + "' on 'ssh' (valid: "
                                 + String.join(", ", KofSsh.functions()) + ")",
                         "SEM025");

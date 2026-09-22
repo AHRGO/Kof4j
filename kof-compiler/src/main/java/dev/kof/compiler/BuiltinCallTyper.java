@@ -103,7 +103,7 @@ public final class BuiltinCallTyper {
             // SG-017 (SEM041): classe abstrata não pode ser instanciada —
             // cobre tanto `new A()` (SemExpressionTyper) quanto `A()` (aqui).
             if (sa.abstractClasses().contains(mc.methodName()) && sa.diagnostics() != null) {
-                sa.diagnostics().error("", 0, 0, 0,
+                sa.diagnostics().error(mc,
                         "cannot instantiate abstract class '" + mc.methodName() + "'",
                         "SEM041");
             }
@@ -118,7 +118,7 @@ public final class BuiltinCallTyper {
                 // conferir TIPO inventava <init>(String)V (VerifyError mudo
                 // no load, R6). Sobrecarga com irmao compativel passa (o emit
                 // resolve por aridade+assignability).
-                TypeChecker.checkCtorArgTypes(sa, ctorClass.members(), mc.methodName(),
+                TypeChecker.checkCtorArgTypes(sa, mc, ctorClass.members(), mc.methodName(),
                         ctorArgTypes);
             } else {
                 // §362/#545: face IMPLICITA sem aridade casada caia aqui em
@@ -277,7 +277,7 @@ public final class BuiltinCallTyper {
                     String extra = (localSym.type() instanceof Type.UnknownType)
                             ? " (untyped — declare the type of the lambda parameter)"
                             : "";
-                    sa.diagnostics().error("", 0, 0, 0,
+                    sa.diagnostics().error(mc,
                             "variable '" + mc.methodName() + "' is not a function"
                                     + " and cannot be called" + extra,
                             "SEM015");
@@ -418,7 +418,7 @@ public final class BuiltinCallTyper {
                 // resolucao por aridade + conferencia de TIPO dos args,
                 // overload-aware (irmao compativel passa). Sem isto a chamada
                 // inventava <init>(String)V e o load estourava VerifyError.
-                TypeChecker.checkCtorArgTypes(sa, ctorClass.members(), mc.methodName(),
+                TypeChecker.checkCtorArgTypes(sa, mc, ctorClass.members(), mc.methodName(),
                         ctorArgTypes);
             } else {
                 // §362/#545: mesmo gate do site de typper acima (face implicita
@@ -469,14 +469,14 @@ public final class BuiltinCallTyper {
         if (sa.diagnostics() == null) return;
         SymbolTable.Symbol anyInit = ctorClass.members().resolve("<init>");
         if (anyInit instanceof SymbolTable.ConstructorSymbol c) {
-            sa.diagnostics().error("", 0, 0, 0,
+            sa.diagnostics().error(mc,
                     "no constructor of '" + mc.methodName() + "' with "
                             + mc.arguments().size() + " argument(s) (expected "
                             + c.parameterTypes().size() + ")",
                     "SEM023");
         } else if (anyInit instanceof SymbolTable.ConstructorSet set
                 && !set.constructors().isEmpty()) {
-            sa.diagnostics().error("", 0, 0, 0,
+            sa.diagnostics().error(mc,
                     "no constructor of '" + mc.methodName() + "' with "
                             + mc.arguments().size() + " argument(s)",
                     "SEM023");

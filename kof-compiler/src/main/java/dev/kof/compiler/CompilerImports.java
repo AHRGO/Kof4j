@@ -245,7 +245,7 @@ public final class CompilerImports {
                 // diferentes é colisão real. A mesma declaração re-adicionada
                 // via import transitivo (fonte explícita + import) não é.
                 if (currentDiagnostics != null) {
-                    currentDiagnostics.error("", 0, 0, 0,
+                    currentDiagnostics.error(d,
                             "duplicate type name '" + n + "' in package '" + pkg + "'",
                             "PKG005");
                 }

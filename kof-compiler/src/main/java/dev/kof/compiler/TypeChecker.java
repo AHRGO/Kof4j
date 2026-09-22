@@ -281,7 +281,7 @@ public final class TypeChecker {
      * classe externa têm de continuar compilando). Aridade sem candidato e
      * SEM023 de quem chama (ja existente).
      */
-    static void checkCtorArgTypes(SemanticAnalyzer sa,
+    static void checkCtorArgTypes(SemanticAnalyzer sa, AstNode node,
             SymbolTable members, String typeName, List<Type> argTypes) {
         if (sa == null || sa.diagnostics() == null) return;
         SymbolTable.Symbol init = members.resolve("<init>");
@@ -304,7 +304,7 @@ public final class TypeChecker {
             Type formal = firstArity.parameterTypes().get(i);
             Type arg = argTypes.get(i);
             if (!emitCtorPairCompatible(formal, arg)) {
-                sa.diagnostics().error("", 0, 0, 0,
+                sa.diagnostics().error(node,
                         "Argument " + (i + 1) + " of '" + typeName + "': expected "
                                 + formal + " but got " + arg
                                 + " (no constructor matches the argument types)",
