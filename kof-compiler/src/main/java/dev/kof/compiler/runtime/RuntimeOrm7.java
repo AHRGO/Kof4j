@@ -83,6 +83,12 @@ public final class RuntimeOrm7 {
                 movq %r9, 40(%rsp)
                 movq %r10, 48(%rsp)
             .Lorm7_body:
+            # F2d4b: mysql -> restaura o frame e tail-chama .Lorm_where_my
+            # (o dispatch mora aqui: as DUAS faces passam pelo corpo)
+                movq (%rsp), %rdi
+                call kof_db_type
+                cmpl $2, %eax
+                je .Lorm7_my_dispatch
             # ---- whitelist do op (host: antes do SQL; "==" -> "=") ---------
                 movq 24(%rsp), %rcx
                 testq %rcx, %rcx
@@ -507,6 +513,27 @@ public final class RuntimeOrm7 {
                 movq %rbp, %rsp
                 popq %rbp
                 ret
+
+            # F2d4b: mysql -> restaura o frame e tail-chama .Lorm_where_my
+            # (className vai em r10 — ABI interna; a asm do mysql vive no
+            # RuntimeOrmMysqlWhere, emitido junto no mesmo .s).
+            .Lorm7_my_dispatch:
+                movq 48(%rsp), %r10
+                movq 0(%rsp), %rdi
+                movq 8(%rsp), %rsi
+                movq 16(%rsp), %rdx
+                movq 24(%rsp), %rcx
+                movq 32(%rsp), %r8
+                movq 40(%rsp), %r9
+                addq $168, %rsp
+                popq %r15
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                movq %rbp, %rsp
+                popq %rbp
+                jmp .Lorm_where_my
 
                         .Lorm7_opbad:
                 # GC-safe: A e B empilhados ANTES do alloc interno do concat
