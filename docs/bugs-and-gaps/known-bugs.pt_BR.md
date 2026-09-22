@@ -11935,14 +11935,14 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 
 <!-- en-switch --> **EN:** [§441 (en)](known-bugs.md#441--map-with-a-wide-key-longdouble-in-mapofputputifabsent-emitted-invalid-jvm-bytecode-swap-on-a-category-2-value--verifyerror-masked-as-the-javafx-message---fixed-2109-jvm-emitter-boxes-the-wide-key-without-swap)
 
-## §442 — `check_500` vermelho: `SemExpressionTyper.java` cresceu 547 → 603 (>= 600) após os fixes §400/§440 — 🟡 ABERTO (a lane frontend/types é dona do split; catalogado pela lane gaps-db)
+## §442 — `check_500` vermelho: `SemExpressionTyper.java` cresceu 547 → 603 (>= 600) após os fixes §400/§440 — ✅ CORRIGIDO 22/09 (split: `NewExpr` → `SemNewExprTyper`; `check_500` rc=0, suíte 3590 0F/0E @ `fd5119f69`)
 - **Medido (21/09, tip `826ef125`):** `./scripts/check_500.sh` → rc=1: `FALHOU — kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java tinha 547 (< 600) no baseline, agora 603 (>= 600): cruzou a linha vermelha, split obrigatório.`; `wc -l` = 603 (também 603 em `origin/beta-0.5.0` — o vermelho já está no remoto, NÃO foi introduzido por esta árvore).
 - **Repro mínima:** `./scripts/check_500.sh` → rc!=0; `wc -l kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java` = 603.
 - **Origem do crescimento:** fixes da própria lane compilador (`cd04246c` §400 função nomeada como valor `SEM011` + `8b5d8a89` §440 `SEM038` para `++`/`--` em componente de record); o arquivo estava em 547 no baseline. A banda tolerada é 500–599; ≥600 falha o CI, então o split (extrair a responsabilidade que cresceu, p.ex. a checagem de função nomeada como valor) é obrigatório antes do merge.
 - **Dono:** lane frontend/types (`SemExpressionTyper` é arquivo dela; regra 8 — a lane gaps-db só cataloga, nunca toca). O fix do §441 moveu a emissão de Map para fora do `JvmOpCollections`; este é outro arquivo e segue aberto.
 - **Nota:** `TypeChecker.java` também avisa 509 → 553 (banda tolerada, 47 linhas do crítico) — item de vigilância, não falha.
 
-<!-- en-switch --> **EN:** [§442 (en)](known-bugs.md#442--check_500-red-semexpressiontyperjava-grew-547--603--600-after-the-400440-fixes---open-frontendtypes-lane-owns-the-split-catalogued-by-the-gaps-db-lane)
+<!-- en-switch --> **EN:** [§442 (en)](known-bugs.md#442--check_500-red-semexpressiontyperjava-grew-547--603--600-after-the-400440-fixes---fixed-2209-split-newexpr--semnewexprtyper-check_500-rc0-suite-3590-0f0e--fd5119f69)
 
 ## §443 — FFI escalar cross-target (`extern` com `library()`) foi re-gateado para `FFI001` no riscv64/aarch64 pelas fatias de struct-por-valor (D6-1/3.7) — regressão invisível em hosts sem qemu — ✅ CORRIGIDO 22/09 (lane estabilização/docs 9093)
 - **Sintoma (medido 22/09, tip `6c9aeb847`, host COM qemu + toolchain cross):** `FfiNativeCrossE2ETest` 3/6 RED — `riscv64ExternScalarAbi`, `aarch64ExternScalarAbi` e `crossTargetsAgreeOnSameProgram` falham com `Compilation should succeed: [ … extern 'abs' in libc.so.6: FFI binding not implemented on the NATIVE_RISCV64 target yet (FFI001) … ]`. O shim escalar em si (LP64/AAPCS64, `d5c849f3c` #431 fatia 2) estava intacto — só o GATE tinha re-fechado.
