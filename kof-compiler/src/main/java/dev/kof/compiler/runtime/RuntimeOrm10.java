@@ -45,6 +45,10 @@ public final class RuntimeOrm10 {
                 movq %rsi, 8(%rsp)
                 movq %rdx, 16(%rsp)
                 movq %rcx, 24(%rsp)
+                movq 0(%rsp), %rdi
+                call kof_db_type
+                cmpl $2, %eax
+                je .Lorm10_my_dispatch
                 movq $0, 32(%rsp)
                 movq 8(%rsp), %rdi
                 call kof_list_size
@@ -74,6 +78,24 @@ public final class RuntimeOrm10 {
                 movq %rbp, %rsp
                 popq %rbp
                 ret
+
+            # F2d4d: mysql -> restaura o frame e tail-chama .Lorm_saveall_my
+            # (args originais nos slots; a asm mysql vive no
+            # RuntimeOrmMysqlSaveAll, emitido junto no mesmo .s).
+            .Lorm10_my_dispatch:
+                movq 0(%rsp), %rdi
+                movq 8(%rsp), %rsi
+                movq 16(%rsp), %rdx
+                movq 24(%rsp), %rcx
+                addq $56, %rsp
+                popq %r15
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                movq %rbp, %rsp
+                popq %rbp
+                jmp .Lorm_saveall_my
         """);
     }
 }

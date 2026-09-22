@@ -91,6 +91,21 @@ public final class NativeOrmEmit {
             sb.append(o9.toString().replace("@@MAGIC@@",
                     dev.kof.compiler.runtime.RuntimeErasureBox.MAGIC));
             dev.kof.compiler.runtime.RuntimeOrm10.emit(sb);
+            // kof_orm_save_all sempre despacha p/ mysql (F2d4d): fatias
+            // lit/exec/saveAll acompanham o Orm10, fora do gate de
+            // ormCtorClasses (o dispatch e incondicional).
+            StringBuilder osl = new StringBuilder();
+            dev.kof.compiler.runtime.RuntimeOrmMysqlFieldLit.emit(osl);
+            sb.append(osl.toString().replace("@@MAGIC@@",
+                    dev.kof.compiler.runtime.RuntimeErasureBox.MAGIC));
+            StringBuilder ose = new StringBuilder();
+            dev.kof.compiler.runtime.RuntimeOrmMysqlExec.emit(ose);
+            sb.append(ose.toString().replace("@@MAGIC@@",
+                    dev.kof.compiler.runtime.RuntimeErasureBox.MAGIC));
+            StringBuilder osm = new StringBuilder();
+            dev.kof.compiler.runtime.RuntimeOrmMysqlSaveAll.emit(osm);
+            sb.append(osm.toString().replace("@@MAGIC@@",
+                    dev.kof.compiler.runtime.RuntimeErasureBox.MAGIC));
         }
     }
 }

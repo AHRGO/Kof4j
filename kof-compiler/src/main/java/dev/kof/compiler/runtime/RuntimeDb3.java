@@ -179,7 +179,10 @@ public final class RuntimeDb3 {
                 nop
             .Ldb_scramble_done:
                 leaq .Ldb_mysql_buf(%rip), %r8
-                movl $0x00088209, 4(%r8)   # +0x0008 CLIENT_CONNECT_WITH_DB (db no auth)
+                movl $0x0008820B, 4(%r8)   # +0x0008 CLIENT_CONNECT_WITH_DB (db no auth)
+                                           # +0x0002 CLIENT_FOUND_ROWS (paridade com o
+                                           # driver JDBC do host: UPDATE sem mudanca
+                                           # devolve found>0 — F2d4d)
                 movl $0x01000000, 8(%r8)
                 movb $0x21, 12(%r8)
                 leaq 13(%r8), %rdi
