@@ -11586,7 +11586,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 
 - **✅ FECHADO 21/09 (lane nat/native-debug, sessão 9093 — handoff D-CLOSEALL-BATCH):** novo `runBounded(Process, what[, timeout, unit])` no `NativeRiscv64E2ETest`: wait bounded (padrão 180s), `destroyForcibly()` + reap bounded no estouro, `destroyForcibly()` no `InterruptedException` e no `finally` — um qemu pendurado não sobrevive mais à rodada, então o temp dir é seguro para remover depois que o helper retorna. Aplicado no `runQemu`, no `runRiscv64` e no sítio de heap-exhaustion (os três buracos de `waitFor()`). **Prova (Q0/Q1):** `hangingChildIsKilledByTheBoundedWait` (o `sleep 60` pendurado morre no bound de 1s; processo afirmado morto) + `NativeRiscv64E2ETest` **54/0F** (1 skip honesto) + as 9 classes vizinhas que chamam `runQemu` **178/0F/0E**. Contagem viva 12→11.
 
-<!-- en-switch --> **EN:** [§418 (en)](known-bugs.md#418--the-kof-debug-riscv64-harness-single-step-under-qemu-hangs-or-loses-the-inferior--no-destroykill-anywhere-in-nativeriscv64e2etest---open-2109-routed-to-the-native-debug-lane-re-landed-from-the-block-lost-to-the-shared-tree-reset-verified-against-the-current-file)
+<!-- en-switch --> **EN:** [§418 (en)](known-bugs.md#418--the-kof-debug-riscv64-harness-single-step-under-qemu-hangs-or-loses-the-inferior--no-destroykill-anywhere-in-nativeriscv64e2etest---fixed-2109-lane-natnative-debug-9093-handoff-d-closeall-batch-bounded-wait--destroykill-no-harness-proof-hangingchildiskilledbytheboundedwait--54-riscv-e2e--178-vizinhos)
 
 ## §419 — RETRATADO: três catalogações re-pousadas de memória após o reset da árvore compartilhada de 21/09 estavam com atribuição errada — referência de código fantasma e alegações falsas no GitHub — ✅ FECHADO 21/09 (esta entrada é a retratação; lição para todas as lanes)
 
@@ -11926,3 +11926,12 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Dono:** lane compilador (auditoria por medição).
 
 <!-- en-switch --> **EN:** [§441 (en)](known-bugs.md#441--map-with-a-wide-key-longdouble-in-mapofputputifabsent-emitted-invalid-jvm-bytecode-swap-on-a-category-2-value--verifyerror-masked-as-the-javafx-message---fixed-2109-jvm-emitter-boxes-the-wide-key-without-swap)
+
+## §442 — `check_500` vermelho: `SemExpressionTyper.java` cresceu 547 → 603 (>= 600) após os fixes §400/§440 — 🟡 ABERTO (a lane frontend/types é dona do split; catalogado pela lane gaps-db)
+- **Medido (21/09, tip `826ef125`):** `./scripts/check_500.sh` → rc=1: `FALHOU — kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java tinha 547 (< 600) no baseline, agora 603 (>= 600): cruzou a linha vermelha, split obrigatório.`; `wc -l` = 603 (também 603 em `origin/beta-0.5.0` — o vermelho já está no remoto, NÃO foi introduzido por esta árvore).
+- **Repro mínima:** `./scripts/check_500.sh` → rc!=0; `wc -l kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java` = 603.
+- **Origem do crescimento:** fixes da própria lane compilador (`cd04246c` §400 função nomeada como valor `SEM011` + `8b5d8a89` §440 `SEM038` para `++`/`--` em componente de record); o arquivo estava em 547 no baseline. A banda tolerada é 500–599; ≥600 falha o CI, então o split (extrair a responsabilidade que cresceu, p.ex. a checagem de função nomeada como valor) é obrigatório antes do merge.
+- **Dono:** lane frontend/types (`SemExpressionTyper` é arquivo dela; regra 8 — a lane gaps-db só cataloga, nunca toca). O fix do §441 moveu a emissão de Map para fora do `JvmOpCollections`; este é outro arquivo e segue aberto.
+- **Nota:** `TypeChecker.java` também avisa 509 → 553 (banda tolerada, 47 linhas do crítico) — item de vigilância, não falha.
+
+<!-- en-switch --> **EN:** [§442 (en)](known-bugs.md#442--check_500-red-semexpressiontyperjava-grew-547--603--600-after-the-400440-fixes---open-frontendtypes-lane-owns-the-split-catalogued-by-the-gaps-db-lane)
