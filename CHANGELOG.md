@@ -45,9 +45,34 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `Double`, …) are never probed — `Type.of`/builtins govern first (a draft that probed them
     turned `save(): Boolean` into `java.lang.Boolean` and was caught by the neighbour battery).
     Rule-7 split: `HeritageQualifier` + `JavaLangProbe` (`CompilerTypes`/`MemberResolver` back
-    under the `check_500` critical line). Proof: `JavaLangHeritageTest` **9/9** (RED measured
-    with the fix stashed: 6 failures — 3 load-crashes + 2 silent accepts + 1 multi-target
-    diagnostic) + 96/0F across 16 neighbour classes.
+     under the `check_500` critical line). Proof: `JavaLangHeritageTest` **9/9** (RED measured
+     with the fix stashed: 6 failures — 3 load-crashes + 2 silent accepts + 1 multi-target
+     diagnostic) + 96/0F across 16 neighbour classes.
+
+  - **§288 FIXED — a type-variable inside a FUNCTION-TYPE signature (`mapItems(f: (T) -> T)`) was scope-blind in two layers: SEM014 "expected 'function' but got 'function'" in the checker, phantom `Function1_CT_CT`/`LT;` in the emit (load crash)**
+    (22/09, lane 9093, maintainer vote `D-RULE6-BATCH` option (b)): the #396 verbatim
+    (`Pipeline<T>.mapItems(transform: (T) -> T)`) compiled with a self-contradictory SEM014 —
+    or, with the checker half-fixed, died at load with a phantom class reference. Fix, the
+    decision's exact contract: (1) parse-time `TypeVariable` with a SINGLE source of truth —
+    `TypeParams.rewrite` now recurses into `FunctionType` (params+return, nested) and
+    `WildcardType` (bound), the one point both the checker (`resolveType`) and the lowering
+    (`resolveWithTypeParams`) pass through, so the synthetic interface erases to
+    `Function1_O_O` and the `LT;` descriptor is gone; `isAssignable` gained the component-wise
+    fn×fn rule (erasure); `CompilerLambdaClass` keeps a `TypeVariable` return through the
+    string round-trip. (2) Interim rejection **SEM085** (R6): measured with the single-source
+    fix alone, the #396 form compiles clean and still dies at load
+    (`IncompatibleClassChangeError` — the call-site lambda is synthesized against its concrete
+    `Function1_int_int` while the dispatch uses the erased declared one); contextual lambda
+    synthesis against the erased signature is the complete erasure ABI = 1.0-line work
+    (§271(B)), so until it lands any declared type whose FUNCTION carries an owner
+    type-parameter (`(T) -> T`, `(Int) -> T`, `List<(T) -> T>`) is rejected at compile on every
+    target. Non-fn `T` shapes (`T value`, `Pipeline<T>`, `List<T>`) stay legal. Proof:
+    `FnTypeVarSignatureE2ETest` **9/9** — verbatim → SEM085 (not SEM014, no crash) JVM+Native,
+    `useTwice`/generic-fn/`(Int) -> T`/`List<(T) -> T>` → SEM085, controls: plain `T get(): T`
+    4-target byte-parity, concrete `(Int) -> Int` (no false positive), `List<T>`-no-fn compile
+    (no false positive), `Zebra` in fn-type → SEM011. Side-finding catalogued (pre-existing,
+    measured on clean origin): **§444** — generic class with a T-ARG constructor runs silent
+    on Native (routed to the nat lane).
 
   - **§418 FIXED — the riscv64 `kof debug`/E2E harness could leave qemu alive after a round**
     (21/09, lane nat/native-debug, handoff D-CLOSEALL-BATCH): `NativeRiscv64E2ETest` called

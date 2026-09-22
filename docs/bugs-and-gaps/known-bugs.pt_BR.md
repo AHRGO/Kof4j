@@ -10156,7 +10156,7 @@ aberta acima, regra 6).
 
 **Prova:** `FnTypeInGenericDeclaredTypeTest` 5/5 — verbatim face A EXECUTA `10` (golden CLI medido), face B (campo + retorno `Void`) compila e roda, face Map/mista EXECUTA `6\n0` (medido), controle: tipo interno indefinido continua rejeitado, gate compila A em NATIVE+JS. Q0: checkout pré-fix do `MemberResolver` → 4/5 RED. Bateria vizinha antes do commit: 73/73 verdes (`DeclaredTypeValidation`/`UndeclaredVarType`/`NestedFnTypeArity`/suites de lambda/funções).
 
-## §288 — #396: type-variable DENTRO de uma assinatura FUNCTION-TYPE (`(T) -> T`) é cego ao escopo em DUAS camadas — SEM014 no checker E `LT;`/`Function1_CT_CT` fantasma no emit — 🔴 OPEN (design: fonte única de verdade para tipos declarados; regra 6)
+## §288 — #396: type-variable DENTRO de uma assinatura FUNCTION-TYPE (`(T) -> T`) — ✅ CORRIGIDA 22/09 (lane 9093, `D-RULE6-BATCH` opção (b): `TypeVariable` em parse-time, fonte única + rejeição interina SEM085; o lowering completo de fn genérica é a ABI de erasure da linha 1.0 — §271)
 
 **Medido no tip (18/09, lane compiler `.22`).** Reproduzir: `class Pipeline<T> { mapItems(transform: (T) -> T): Pipeline<T> {...} }` + `p.mapItems((x: Int) -> ...)` → `:0:0: error: Argument 1 of 'mapItems': expected 'function' but got 'function' [SEM014]` (auto-contraditório — os dois lados SÃO functions).
 
@@ -10169,6 +10169,11 @@ aberta acima, regra 6).
 **Prova da análise (tudo medido, não chutado):** saídas das sondas acima; os três patches de checker foram validados green e REVERTIDOS da árvore de trabalho (zero half-fix em `beta-0.4.0`); reproduzidores mantidos no thread da issue (#396) — `Pipeline` verbatim + `Box.useTwice` mínima + controle `Box.get`.
 
 **Rio:** mesma água do §271 / Cluster A (#363/#365/#366/#385/#399/#295) — erasure de type-variable em tipos declarados compostos. §288 é a face FUNCTION-TYPE desse rio (camada checker documentada aqui; uma única resposta de design deve cobrir as duas camadas).
+
+**Fix (22/09, lane 9093 — `D-RULE6-BATCH` opção (b), voto da mantenedora 21/09).** Duas partes, o contrato exato da decisão:
+1. **`TypeVariable` em parse-time, fonte única de verdade.** `TypeParams.rewrite` agora recursa em `FunctionType` (params + retorno, aninhado) e `WildcardType` (bound) — o único ponto de rewrite por onde passam `MemberResolver.resolveType` (checker) e `CompilerTypes.resolveWithTypeParams` (lowering), então o `(T) -> T` declarado resolve para `FunctionType[TypeVariable(T,bound), TypeVariable(T,bound)]` em todo lugar: os leaves fantasma `ClassType("","T")`, o mangle `Function1_CT_CT` e o descritor `LT;` somem (a interface sintética apaga para `Function1_O_O`). `TypeChecker.isAssignable` ganhou a regra fn×fn por componente (erasure: componente TV aceita qualquer tipo concreto), e o `CompilerLambdaClass` preserva um retorno `TypeVariable` no round-trip por string em vez de fabricar `ClassType("","T")`.
+2. **Rejeição interina SEM085 (R6).** MEDIDO com o fix de fonte única só: o verbatim do #396 compila limpo e morre no LOAD com `IncompatibleClassChangeError: Class Lambda0 does not implement the requested interface kof.Function1_O_O` — a lambda do call site é sintetizada contra a própria assinatura CONCRETA inferida (`Function1_int_int`) enquanto o dispatch usa a declarada APOGADA. A síntese contextual da lambda contra a assinatura apagada (+ box/unbox no corpo) é a ABI de erasure completa = trabalho da **linha 1.0** (§271(B)). Até lá, `DeclaredTypeChecker.reportCompositeTypeParam` rejeita qualquer tipo declarado cuja FUNÇÃO carregue um type-param do dono (`(T) -> T`, `(Int) -> T`, `List<(T) -> T>` — qualquer profundidade) com **SEM085** no compile, em todo target (frontend compartilhado, regra 5). As formas SEM função com `T` (`T value`, `Pipeline<T>`, `List<T>` — o rio §355/§356/§357) seguem legais e foram re-verificadas.
+**Prova:** `FnTypeVarSignatureE2ETest` 9/9 — verbatim do #396 → SEM085 (não SEM014, sem crash no load) em JVM+Native; `Box.useTwice`, a face função-genérica, `(Int) -> T` e `List<(T) -> T>` → SEM085; controles verdes: `T get(): T` puro (paridade byte-a-byte JVM/Script/JS/Native), fn-type CONCRETO `(Int) -> Int` (4 targets — sem falso-positivo do SEM085), `List<T>` sem função em compile (JVM+Native — sem falso-positivo), `Zebra` dentro de fn-type → SEM011 (nomes indefinidos não são mascarados). **Achado lateral (catalogado, pré-existente, NÃO deste fix): §444** — classe genérica com constructor de ARG T roda em silêncio no Native (medido idêntico na origem limpa `8a691ecc`); roteada para a lane nat.
 
 ## §289 — campos estático+instância de MESMO nome com descritores JVM DIFERENTES (`static Int a` + `Long a`) — ✅ FECHADO 18/09 PELO GUARD ESTRILO DO §290 (nunca funcionou em NENHUM target — sobrecarga `wantStatic` desnecessária)
 
@@ -11947,3 +11952,25 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Prova (mesmo commit):** `FfiNativeCrossE2ETest` 6/6 sob qemu (era 3F); o novo `FfiNativeCrossGateTest` 3/3 exercita `CompilerPipeline.isExternBound` direto — pré-codegen, então RED também num host sem toolchain (fecha o ponto cego do skip). Bateria vizinha: FFI `116/0` (`FfiNativeE2ETest` 16, `FfiStructE2ETest` 12, `FfiArrayE2ETest` 5, `BufferFfiE2ETest` 4).
 - **Dono:** lane estabilização/docs (9093) — fix de causa-raiz + prova; o dono das fatias de struct mantém a fatia 3.
 <!-- en-switch --> **EN:** [§443 (en)](known-bugs.md#443--cross-target-scalar-ffi-extern-with-library-was-re-gated-to-ffi001-on-riscv64aarch64-by-the-struct-by-value-slices-d6-137--a-regression-invisible-on-hosts-without-qemu---fixed-2209-lane-estabilizacaodocs-9093)
+
+## §444 — classe genérica com constructor de ARG T RODA EM SILÊNCIO no Native (exit 0, stdout vazio) — 🟡 ABERTO (achada 22/09 na unidade §288, lane 9093 nat; pré-existente, medida em origem limpa)
+
+**Sintoma (medido 22/09, lane 9093):** `class Box<T> { T value; public constructor(T value) { this.value = value }; T get(): T { return this.value } }` + `main() { var b = Box(7); println(b.get()) }` → Native x86-64 compila limpo (diags vazio) e RODA `exit=0` imprimindo **NADA**. JVM/Script/JS imprimem `7`.
+
+**Prova de pré-existente (não é regressão):** re-medido em worktree detache limpo no tip `8a691ecc` de `origin/beta-0.5.0` (sem edições em voo): idêntico — `success=true diags=[] exit=0 out=[]`.
+
+**Matriz de faces (todas medidas, mesmo host/toolchain):**
+
+| forma | resultado Native |
+|---|---|
+| classe genérica + `public constructor(T value)` + `get(): T` | vazio (o bug) |
+| classe genérica + `public constructor(T value)` + `println(b.value)` direto | vazio (o bug) |
+| classe genérica + ctor default + assign de campo (`b.value = 7`) + `get()` | `7` ✓ (a forma da suíte `NativeE2ETest.execGenericClass`) |
+| classe NÃO genérica + `public constructor(Int value)` | `7` ✓ |
+
+**Leitura:** a combinação quebrada é **classe genérica × constructor com ARG T** — o caminho `new Box<Int>()` sem arg + campo/método funciona (o rio §355 foi medido no JVM; o caminho do CONSTRUCTOR-ARG genérico no nativo é território sem teste). R6: silencioso — sem diagnóstico, o valor simplesmente some.
+
+**Dono:** lane 9093 (estabilização/EXIT GATE + nat/native-debug) — causa-raiz em unidade SEPARADA (áreas candidatas: lowering do arg de constructor no `NativeBackend` para dono genérico, ou o tipo de slot do param `T`); a anotação no ponto de código pousa JUNTAMENTE com a causa-raiz. Vizinha, face diferente: §358 (dispatch de método com T sem bound, hoje `NAT004` honesto).
+
+**Não corrigida de passagem:** a unidade §288 (assinaturas de tipo-função) a cataloga pela Q7 e roteia o fix para a fila da lane nat.
+<!-- en-switch --> **EN:** [§444 (en)](known-bugs.md#444--generic-class-with-a-t-arg-constructor-runs-silent-on-native-exit-0-empty-stdout---open-found-2209-in-the-288-unit-lane-9093-nat-pre-existing-measured-on-clean-origin)

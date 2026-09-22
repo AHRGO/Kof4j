@@ -331,6 +331,20 @@ public final class TypeChecker {
             return isAssignable(fa.componentType(), ta.componentType());
         }
         if (from.equals(to)) return true;
+        // §288 (#396): função declarada com type-param do escopo (`(T) -> T`
+        // em `class Box<T>`) apaga para Object nos componentes — `(Int) -> Int`
+        // CONFORMA-se a ela (o invoke da interface sintética recebe/retorna
+        // Object; o call site faz a conversão). Comparação por componente,
+        // invariante: aridade e cada par param/retorno seguem a MESMA regra
+        // (o TypeVariable no topo já aceita qualquer coisa; `(Int)->Int` vs
+        // `(String)->String` continua rejeitado, como antes).
+        if (from instanceof Type.FunctionType ff && to instanceof Type.FunctionType tf) {
+            if (ff.parameterTypes().size() != tf.parameterTypes().size()) return false;
+            for (int i = 0; i < ff.parameterTypes().size(); i++) {
+                if (!isAssignable(ff.parameterTypes().get(i), tf.parameterTypes().get(i))) return false;
+            }
+            return isAssignable(ff.returnType(), tf.returnType());
+        }
         if (from instanceof Type.PrimitiveType fp && to instanceof Type.PrimitiveType tp) {
             if ("bool".equals(Type.canonicalPrimitiveName(fp.name())) || "bool".equals(Type.canonicalPrimitiveName(tp.name()))) {
                 return "bool".equals(Type.canonicalPrimitiveName(fp.name())) && "bool".equals(Type.canonicalPrimitiveName(tp.name()));

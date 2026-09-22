@@ -135,6 +135,30 @@ final class TypeParams {
             Type c = rewrite(nt.inner(), leaf);
             return c == nt.inner() ? t : new Type.NullableType(c);
         }
+        // §288 (#396, D-RULE6-BATCH opção (b)): o miolo de um TIPO-FUNÇÃO
+        // declarado também carrega type-params do escopo — `mapItems(f: (T) -> T)`
+        // deixava `ClassType("","T")` nos params/retorno da FunctionType (o
+        // rewrite só varria ClassType/Array/Nullable), o checker comparava
+        // `(Int)->Int` contra a função fantasma e SEM014, e o lowering
+        // sintetizava a interface `Function1_CT_CT` com descriptor `LT;`
+        // (crash no load). Recursar aqui = fonte ÚNICA: checker (resolveType)
+        // e lowering (resolveWithTypeParams) passam pelo MESMO ponto.
+        if (t instanceof Type.FunctionType ft) {
+            java.util.List<Type> ps = new java.util.ArrayList<>(ft.parameterTypes().size());
+            boolean changed = false;
+            for (Type p : ft.parameterTypes()) {
+                Type rp = rewrite(p, leaf);
+                if (rp != p) changed = true;
+                ps.add(rp);
+            }
+            Type rr = rewrite(ft.returnType(), leaf);
+            if (changed || rr != ft.returnType()) return new Type.FunctionType(ps, rr, ft.className());
+            return t;
+        }
+        if (t instanceof Type.WildcardType wt) {
+            Type rb = rewrite(wt.bound(), leaf);
+            return rb == wt.bound() ? t : new Type.WildcardType(rb, wt.upper());
+        }
         return t;
     }
 

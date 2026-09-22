@@ -49,6 +49,31 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     **9/9** (RED medido com o fix stashed: 6 falhas — 3 load-crashes + 2 accepts silenciosos +
     1 diagnóstico multi-target) + 96/0F em 16 classes vizinhas.
 
+  - **§288 CORRIGIDA — type-variable DENTRO de assinatura de FUNÇÃO (`mapItems(f: (T) -> T`) era cega ao escopo em duas camadas: SEM014 "expected 'function' but got 'function'" no checker e `Function1_CT_CT`/`LT;` fantasma no emit (crash no load)**
+    (22/09, lane 9093, voto da mantenedora `D-RULE6-BATCH` opção (b)): o verbatim do #396
+    (`Pipeline<T>.mapItems(transform: (T) -> T)`) compilava com SEM014 auto-contraditório — ou,
+    com o checker meia-corrigido, morria no load com referência a classe fantasma. Fix, o
+    contrato exato da decisão: (1) `TypeVariable` em parse-time com FONTE ÚNICA de verdade —
+    `TypeParams.rewrite` agora recursa em `FunctionType` (params+retorno, aninhado) e
+    `WildcardType` (bound), o único ponto por onde passam o checker (`resolveType`) e o
+    lowering (`resolveWithTypeParams`), então a interface sintética apaga para
+    `Function1_O_O` e o descritor `LT;` some; `isAssignable` ganhou a regra fn×fn por
+    componente (erasure); `CompilerLambdaClass` preserva retorno `TypeVariable` no round-trip
+    por string. (2) Rejeição interina **SEM085** (R6): medido com o fix de fonte única só, a
+    forma do #396 compila limpa e ainda morre no load (`IncompatibleClassChangeError` — a
+    lambda do call site é sintetizada contra o próprio `Function1_int_int` concreto enquanto
+    o dispatch usa o declarado apagado); a síntese contextual da lambda contra a assinatura
+    apagada é a ABI de erasure completa = trabalho da linha 1.0 (§271(B)), então até lá todo
+    tipo declarado cuja FUNÇÃO carregue type-param do dono (`(T) -> T`, `(Int) -> T`,
+    `List<(T) -> T>`) é rejeitado no compile em todo target. As formas `T` sem função
+    (`T value`, `Pipeline<T>`, `List<T>`) seguem legais. Prova: `FnTypeVarSignatureE2ETest`
+    **9/9** — verbatim → SEM085 (não SEM014, sem crash) JVM+Native, `useTwice`/função-
+    genérica/`(Int) -> T`/`List<(T) -> T>` → SEM085, controles: `T get(): T` puro paridade
+    byte-a-byte 4-alvos, `(Int) -> Int` concreto (sem falso-positivo), `List<T>`-sem-função em
+    compile (sem falso-positivo), `Zebra` em fn-type → SEM011. Achado lateral catalogado
+    (pré-existente, medido em origem limpa): **§444** — classe genérica com constructor de
+    ARG T roda em silêncio no Native (roteada para a lane nat).
+
   - **§418 CORRIGIDO — o harness riscv64 do `kof debug`/E2E podia deixar o qemu vivo após a rodada**
     (21/09, lane nat/native-debug, handoff D-CLOSEALL-BATCH): o `NativeRiscv64E2ETest` chamava
     `waitFor()` sem nenhum `destroy()`/`finally`, então um qemu morto por timeout sobrevivia e o
