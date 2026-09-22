@@ -113,7 +113,7 @@ mark-sweep implementado 03/09 + auto-collect sob exaustão ✅ 19/09 (D1-A, §26
 `munmap` fallback; `spawn`/`await` via `pthread_create` + trampoline +
 `pthread_join` com allocator thread-safe (futex) — 31/08; FP real em XMM —
 FLT001; JSON objetos/records + arrays FP — JSN001/002/003; SQLite nativo `.so`
-direto; MySQL wire protocol WIP) + `native.risc` (riscv64: codegen real 02/09 — asm puro + qemu, NATIVE002
+direto; MySQL wire x86-64 real (13 ORM faces, F2d1–F2d7 22/09)) + `native.risc` (riscv64: codegen real 02/09 — asm puro + qemu, NATIVE002
 parcial) + `native.arm` (aarch64: herda do riscv via tradutor — `NativeArchEmitter.emitAarch64`, 39/39 E2E sob qemu) *(sincronizado 12/09: a linha "codegen ainda placeholder" apodreceu — `NativeAarch64E2ETest` executa sob qemu onde há toolchain; guard honesto pula em host sem cross)*
 
 ### KofJS — Web

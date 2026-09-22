@@ -223,7 +223,7 @@ Current capabilities (x86_64):
 - Integer arithmetic, bitwise, floating-point real em XMM (`vcvtsi2sd`/`mulsd`), control flow (if/else, while/for/do-while/break/continue, switch with pattern matching)
 - Function calls (all forms), lambdas with captures (`BoxN`), exceptions (unwinding), `spawn`/`await` com threads (pthread, 31/08)
 - Strings, arrays, `List<T>` with `map/filter/reduce`, `Map<K,V>`, `Set<T>`, `Box<T>` (`kof_int_to_string`), JSON objetos/records + arrays (Int/Long/Bool/String/Double, 31/08)
-- `kof.io`, `kof.time` (now/sleep), `kof.config` (asm próprio, `/proc/self/environ`), `kof.log` (asm), `kof.security` (SHA-256/HMAC asm), `kof.cache` (30/08 — clobber de registradores corrigido), `kof.db` SQLite (`.so` direto) + MySQL wire protocol (scramble SHA-1, WIP)
+- `kof.io`, `kof.time` (now/sleep), `kof.config` (asm próprio, `/proc/self/environ`), `kof.log` (asm), `kof.security` (SHA-256/HMAC asm), `kof.cache` (30/08 — clobber de registradores corrigido), `kof.db` SQLite (`.so` direto) + MySQL wire protocol (scramble SHA-1; 13 faces ORM reais no x86-64, F2d1–F2d7 22/09)
 
 Runtime functions (x86-64, `NativeRuntime.java:1`):
 - `kof_alloc` / `kof_free_head` free-list (reuso mmap) / `kof_gc_collect` (mark-sweep implementado 03/09)
@@ -288,7 +288,7 @@ flowchart TD
 Gaps de target produzem **diagnósticos claros em compile-time** (SECN00x,
 CONC001, JSN00x, DB001, CONF001, LOG001) — nunca comportamento silenciosamente diferente.
 
-Módulos (0.5.0-beta, re-synced 17/09): `kof.core`, `kof.collections` (`List map/filter/reduce`, `Map/Set`, `Box<T>`), `kof.io`, `kof.time` (scheduler `every` JVM+JS via `setInterval`), `kof.json` (objetos/records + arrays nos 3 targets, 31/08), `kof.http` (JVM+JS via HttpClient; retry/circuit breaker 30/08), `kof.web` (rotas/middleware + WebSocket/SSE JVM, 30/08), `kof.cache` (3 targets, 30/08), `kof.security`, `kof.concurrent` (`spawn` — JVM virtual threads, Native pthread 31/08, JS sequencial), `kof.test`, `kof.cli` (18 comandos: `build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/debug/info/lsp/install/version`), `kof.db`/`kof.orm` (SQLite nativo `.so` + MySQL wire protocol WIP), `kof.config`/`kof.log`. Estado completo em docs/stdlib/stdlib.md e docs/status.md (contagem corrente da suíte).
+Módulos (0.5.0-beta, re-synced 17/09): `kof.core`, `kof.collections` (`List map/filter/reduce`, `Map/Set`, `Box<T>`), `kof.io`, `kof.time` (scheduler `every` JVM+JS via `setInterval`), `kof.json` (objetos/records + arrays nos 3 targets, 31/08), `kof.http` (JVM+JS via HttpClient; retry/circuit breaker 30/08), `kof.web` (rotas/middleware + WebSocket/SSE JVM, 30/08), `kof.cache` (3 targets, 30/08), `kof.security`, `kof.concurrent` (`spawn` — JVM virtual threads, Native pthread 31/08, JS sequencial), `kof.test`, `kof.cli` (18 comandos: `build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/debug/info/lsp/install/version`), `kof.db`/`kof.orm` (SQLite nativo `.so` + MySQL wire x86-64 real (13 faces ORM, F2d1–F2d7)), `kof.config`/`kof.log`. Estado completo em docs/stdlib/stdlib.md e docs/status.md (contagem corrente da suíte).
 
 ## Diagnostics
 

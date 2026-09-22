@@ -7,7 +7,7 @@
 > provados: Nível 3 (Query DSL tipada `User.query(db){...}` → `db.query<T>`) ✅
 > 01/09 (`KofOrmE2ETest` 22); MySQL prepared binário ✅ 03/09
 > (`KofDbE2ETest.nativeMysqlPreparedBinary`). Connection pooling é PLANNED (nenhuma pool hoje — cada `connect` abre sua própria conexão, §Limitações abaixo). DB001/ORM001 em
-> (DB001 fechado: riscv/aarch 15/09 + JS 16/09; ORM001 fechado no JS 18/09); só `ORM001` no **Native** permanece um gap honesto R6 tracked em `docs/backend-parity.md`,
+> (DB001 fechado: riscv/aarch 15/09 + JS 16/09; ORM001 fechado no JS 18/09); só `ORM001` no **Native cross riscv64/aarch64** permanece um gap honesto R6 (ORM x86-64 real desde 22/09: 13/13 faces sobre SQLite + MySQL wire, F2d1–F2d7) tracked em `docs/backend-parity.md`,
 > não pendência desta visão.
 
 **Última atualização:** 12 de setembro de 2026
@@ -212,7 +212,7 @@ db.close(db)
 - **Native:** SQLite via link direto de `libsqlite3.so.0` (sem driver JDBC) —
   `db.connect("sqlite:/path.db")`, execute/query tipado, roundtrip E2E real
   (`nativeSqliteRoundtrip`).
-- **Native MySQL/MariaDB (WIP):** wire protocol próprio sobre sockets nativos
+- **Native MySQL/MariaDB:** wire protocol próprio sobre sockets nativos (real no x86-64: connect/prepared/query + as 13 faces ORM medidas contra o MariaDB 12.3.2, F2d1–F2d7 22/09)
   (auth scramble SHA-1 `kof_db_mysql_scramble` + `lenenc` + parse de
   `user:pass@` na DSN `mysql://[user[:pass]@]host[:port][/db]`) — em
   progresso: handshake completo, query e prepared statements pendentes;
@@ -274,7 +274,7 @@ main() {
 - **MongoDB:** `save/find/all/where/delete/count` sobre o driver oficial via
   reflexão compatível (`Bson`/`Class`, sem `ClientSession`); teste E2E com
   container real (skip condicional; serviço Mongo no CI).
-- **Native:** reporta `ORM001` (gap documentado em compile-time). **JS:** FECHADO
+- **Native x86-64:** real (`kof_orm_*` em asm sobre o `kof_db_*` nativo; SQLite + MySQL wire). **Native riscv64/aarch64:** reporta `ORM001` (gap documentado em compile-time). **JS:** FECHADO
   18/09 — `kof.orm` roda no host GraalJS via `KofJsOrmBridge` (mesmo SQL de
   `JvmOrmRuntime`), records tipados bindados no guest (`__kof_decode_<T>`);
   E2E byte-paridade em `KofOrmE2ETest` (casos `js*`).
@@ -327,7 +327,7 @@ Planejado — não implementado. Hoje cada `db.connect` abre sua própria conex�
 
 1. **Sem suporte a múltiplos bancos em uma mesma conexão** — foco inicial em
    um backend por `connect` (JVM: H2/MySQL/MariaDB/PostgreSQL/SQLite; Native:
-   SQLite + MySQL WIP)
+   SQLite + MySQL wire x86-64 real)
 2. **Sem lazy loading** — pode ser adicionado futuramente
 3. **Sem cache** — pode ser adicionado futuramente
 4. **Migrations** — já implementadas de forma explícita + versionada

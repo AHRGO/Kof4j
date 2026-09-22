@@ -64,7 +64,7 @@ O backend Nativo gera funções de runtime em assembly durante a compilação (0
 - JSON objetos/records + arrays `Int/Long/Bool/String/Double` (31/08)
 - trampoline de `pthread_create` + `pthread_join` (spawn/await, 31/08)
 - `kof_cache_*` (get/set/ttl/delete/clear, 30/08)
-- `kof_db_mysql_scramble` — MySQL auth scramble SHA-1 (wire protocol WIP, 31/08)
+- `kof_db_mysql_scramble` — MySQL auth scramble SHA-1 (wire protocol real no x86-64, 31/08; 13 faces ORM 22/09)
 - `kof_panic`, `kof_null_error`, `kof_bounds_error` — tratamento de erros
 
 **Importante:** Essas funções são **geradas pelo compilador** durante o processo de compilação. Elas não são distribuídas como uma biblioteca pré-compilada. São incorporadas ao executável final como parte do processo de compilação.

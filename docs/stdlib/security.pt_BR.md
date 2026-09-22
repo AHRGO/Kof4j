@@ -186,7 +186,7 @@ resolve a função de runtime e cada target fornece a implementação.
 | `kof.http` (serve + client) | SIM | SIM | PARCIAL (auth via middleware) | JVM (serve); JVM+JS (client) | SIM | SIM | SIM |
 | `kof.web` (web.app, rotas, ws/sse) | SIM | SIM | PARCIAL (auth em construção) | JVM | SIM | SIM (novo) | SIM |
 | `kof.rest` | NÃO | — | — | — | — | — | — |
-| `kof.database` (`kof.db` + `kof.orm`) | SIM | SIM | SIM (bind tipado; SQL explícito) | JVM + Native (SQLite/MySQL WIP) | SIM | SIM | SIM |
+| `kof.database` (`kof.db` + `kof.orm`) | SIM | SIM | SIM (bind tipado; SQL explícito) | JVM + Native (SQLite; MySQL wire x86-64 real, F2d1–F2d7) | SIM | SIM | SIM |
 | `kof.security` | SIM | SIM | SIM | JVM/Native/JS | SIM | SIM | SIM |
 | `kof.concurrent` (spawn/await) | SIM | SIM | SIM | JVM/Native (pthread)/JS | SIM | SIM | SIM |
 | `kof.messaging` (`kof.mq`) | SIM | SIM | PARCIAL (in-memory) | JVM+JS | SIM | SIM | SIM |

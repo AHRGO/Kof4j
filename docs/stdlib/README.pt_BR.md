@@ -136,7 +136,7 @@ Suite estruturada (`test "soma" { ... }`): implementada nos 3 targets (`Structur
 | kof.time | Média | Implementado (`now()`, `sleep`, `interval`) |
 | kof.concurrent | Alta | Implementado (`spawn`/`await`/`channel<T>`, 3 targets) |
 | kof.test | Alta | Implementado (`assert` + `test "name"` + `kof test`) |
-| kof.sql | Alta | Implementado como `kof.db`/`kof.orm` (MySQL wire WIP) — nome do módulo no plano |
+| kof.sql | Alta | Implementado como `kof.db`/`kof.orm` (MySQL wire x86-64 real, 13 faces ORM 22/09) — nome do módulo no plano |
 
 ---
 

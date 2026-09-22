@@ -200,7 +200,7 @@ resolves the runtime function and each target provides the implementation.
 | `kof.http` (serve + client) | YES | YES | PARTIAL (auth via middleware) | JVM (serve); JVM+JS (client) | YES | YES | YES |
 | `kof.web` (web.app, routes, ws/sse) | YES | YES | PARTIAL (auth under construction) | JVM | YES | YES (new) | YES |
 | `kof.rest` | NO | — | — | — | — | — | — |
-| `kof.database` (`kof.db` + `kof.orm`) | YES | YES | YES (typed bind; explicit SQL) | JVM + Native (SQLite/MySQL WIP) | YES | YES | YES |
+| `kof.database` (`kof.db` + `kof.orm`) | YES | YES | YES (typed bind; explicit SQL) | JVM + Native (SQLite; MySQL wire x86-64 real, F2d1–F2d7) | YES | YES | YES |
 | `kof.security` | YES | YES | YES | JVM/Native/JS | YES | YES | YES |
 | `kof.concurrent` (spawn/await) | YES | YES | YES | JVM/Native (pthread)/JS | YES | YES | YES |
 | `kof.messaging` (`kof.mq`) | YES | YES | PARTIAL (in-memory) | JVM+JS | YES | YES | YES |

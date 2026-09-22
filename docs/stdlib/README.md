@@ -136,7 +136,7 @@ Structured suite (`test "soma" { ... }`): implemented on the 3 targets (`Structu
 | kof.time | Medium | Implemented (`now()`, `sleep`, `interval`) |
 | kof.concurrent | High | Implemented (`spawn`/`await`/`channel<T>`, 3 targets) |
 | kof.test | High | Implemented (`assert` + `test "name"` + `kof test`) |
-| kof.sql | High | Implemented as `kof.db`/`kof.orm` (MySQL wire WIP) — module name in the plan |
+| kof.sql | High | Implemented as `kof.db`/`kof.orm` (MySQL wire x86-64 real, ORM 13 faces 22/09) — module name in the plan |
 
 ---
 

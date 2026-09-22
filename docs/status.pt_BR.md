@@ -427,7 +427,7 @@ Bool positivo(Int x) = x > 0         // expression body
 | kof.mq (publish/subscribe/queue) | ✅ | ✅ (01/09, pub/sub + filas in-process, asm) | ✅ |
 | kof.log (`log.info/warn/error/debug`) | ✅ | ✅ (asm; UTC, sem JSON) | ✅ (LOG001 fechado 01/09) |
 | kof.security (passwords, crypto, JWT, secrets) | ✅ | ✅ | ✅ |
-| kof.db (JDBC, query<T>, transaction) + SQLite nativo | ✅ | ✅ (SQLite + transaction; MySQL WIP; **riscv64/aarch64 ✅ 15/09** link-by-use libsqlite3) | ✅ 16/09 (nao-tipado `connect/execute/query/close/transaction` na ponte GraalJS) + ✅ 18/09 tipado `query<T>` (`DB002` fechado — bind no guest via `__kof_decode_<T>`) |
+| kof.db (JDBC, query<T>, transaction) + SQLite nativo | ✅ | ✅ (SQLite + transaction; MySQL wire x86-64 real, ORM 13 faces 22/09; **riscv64/aarch64 ✅ 15/09** link-by-use libsqlite3) | ✅ 16/09 (nao-tipado `connect/execute/query/close/transaction` na ponte GraalJS) + ✅ 18/09 tipado `query<T>` (`DB002` fechado — bind no guest via `__kof_decode_<T>`) |
 | kof.orm (entity, CRUD, where, migrate, MongoDB) | ✅ | ORM001 | ✅ FECHADO 18/09 |
 | String.toInt/toLong/toDouble/toFloat | ✅ | ✅ | ✅ |
 | kof.ui (Color, Palette, Theme, Window) | ✅ | ✅ (JS render) | ✅ |

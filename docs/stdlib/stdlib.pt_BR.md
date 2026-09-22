@@ -66,7 +66,7 @@ CONC001, JSN00x) — nunca comportamento silenciosamente diferente.
 | `kof.c` | ✅ | `KofCcompiler` C subset (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`) → native x86_64 (5 testes kof-c-compiler, 27/08) |
 | `kof.metrics` | ✅ | `kof bench`/`kof profile` (harness + baseline, 37 benchmarks, `benchmark.yml` threshold 1.20) |
 | `kof.rest` | ⏳ | planejado |
-| `kof.database` | ✅ | `kof.db` (JVM JDBC: H2/MySQL/MariaDB/PostgreSQL; Native SQLite via `.so` direto + MySQL wire protocol WIP — auth scramble SHA-1; **riscv64/aarch64 SQLite ✅ 15/09** link-by-use `libsqlite3` + fatias `RtB46/RtB47`; JS **✅ 16/09** nao-tipado via ponte no host GraalJS, tipado `query<T>` **✅ 18/09** (`DB002` fechado)) + `kof.orm` (entity, create/save/saveAll/find/where/count/page/delete/deleteAll/migrate; **coluna tipada em where/count: literal não-campo → `ORM003` em compile-time**; JVM + MongoDB; Native `ORM001`, JS FECHADO 18/09 (`KofJsOrmBridge`)) — ver `docs/stdlib/DATABASE_VISION.md` |
+| `kof.database` | ✅ | `kof.db` (JVM JDBC: H2/MySQL/MariaDB/PostgreSQL; Native SQLite via `.so` direto + MySQL wire real no x86-64 — auth scramble SHA-1; **riscv64/aarch64 SQLite ✅ 15/09** link-by-use `libsqlite3` + fatias `RtB46/RtB47`; JS **✅ 16/09** nao-tipado via ponte no host GraalJS, tipado `query<T>` **✅ 18/09** (`DB002` fechado)) + `kof.orm` (entity, create/save/saveAll/find/where/count/page/delete/deleteAll/migrate; **coluna tipada em where/count: literal não-campo → `ORM003` em compile-time**; JVM + MongoDB; Native `ORM001`, JS FECHADO 18/09 (`KofJsOrmBridge`)) — ver `docs/stdlib/DATABASE_VISION.md` |
 | `kof.messaging` | ✅ | `kof.mq` publish/subscribe/queue — **3 targets** (JVM in-memory; Native asm 01/09; JS in-process) — `KofMqE2ETest` 4/4 |
 | `kof.supervisor` | ✅ | Núcleo OTP (issue #83): `supervisor(name).child(id,fabrica,politica)`+`restartLimit`+`escalate`+`start`/`stop`/`stats` — host **puro-Kof** injetado por `import kof.supervisor` (mecanismo android-host). **JVM+Script ✅ 11/09**, **Native x86 ✅ 15/09** (§129 fechado — chain TLS por thread + handler por worker); **Native riscv64/aarch64 ✅ 19/09** (§129 port cross — tabela de cadeia por-TID `kof_exc_slots`; `OTP001` removido), **JS ✅ 18/09** (§132 fechado — `time.sleep` async cooperativo; `OTP002` levantado; `supervisorJsParity`). **S3 ✅ 14/09**: `restartLimitWindow(max, windowMs)` (janela deslizante, anel por filho), `.clock(nowFn)` (injetável, DD-OTP-10), `stats().dropped` = filhos temporary de fato descartados. `KofSupervisorE2ETest` 16/16 |
 | `kof.validation` | ✅ | `validation.required/notBlank/minLength/maxLength/lengthBetween/isEmail/isUrl/matches/isInt/isLong/inRange/min/max` — JVM/Native/JS (`KofValidationTest` 3/3) |
@@ -122,7 +122,7 @@ Resumo executivo (0.5.0-beta, re-synced 17/09):
 
 1. Native aarch64 codegen completo (placeholder hoje)
 2. ~~GC mark-sweep completo~~ ✅ 03/09 (KofGcE2ETest 3/3)
-3. MySQL/MariaDB native completo (auth scramble SHA-1 + lenenc done; handshake/query/prepared pendentes — WIP)
+3. ~~MySQL/MariaDB native completo~~ — ✅ x86-64 fechado 22/09 (scramble + lenenc + handshake/query/prepared + as 13 faces ORM, F2d1–F2d7; cross riscv64/aarch64 aberto)
 4. Query DSL tipada `User.query { where age > 18 }` (nível 3 DATABASE_VISION)
 5. `kof fmt` (P5) + LSP completo + Debugger DWARF/JS source maps
 6. tracing / OpenTelemetry (WebSocket/SSE ✅ JVM e `kof.cache` ✅ 3 targets fechados 30/08)

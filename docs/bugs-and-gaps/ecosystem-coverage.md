@@ -138,7 +138,7 @@ BackendParity (10) · Exceptions (9) · Web E2E (9) · HttpServer (8) ·
 **KofConfig (8 + Native 8)** · **KofLog (10 + Native 7)** · Idiomatic (7+6) · Ui (14) · Assert (5) ·
 FunctionSyntax (4) · Lambda (4) · **KofTime (5)** · **KofMq (4)** ·
 **KofHttp (4, JVM+JS) + Resilience (3, JVM+JS 08/30)** · TuringComplete (3) · **KofOrm (12+, E2E MariaDB/Postgres + MongoDB + SQLite native)** ·
-**KofDb (8, + SQLite `.so` + MySQL scramble WIP)** · Spawn (3) · Window (3) · IRStatistics (2) · DebugInfo (2) ·
+**KofDb (8, + SQLite `.so` + MySQL wire x86-64 real)** · Spawn (3) · Window (3) · IRStatistics (2) · DebugInfo (2) ·
 NativeDebug (5) · StructuredTest (11) · AndroidInterop (11) · **KofScript (8)** · **KofCcompiler (5)** ·
 **KofWs (11) + KofWsFrame (7) + KofSse (7) + KofCache (5, x3 targets) + Router (E2E)** (08/30-31).
 Golden: `tests/golden/` 16/16 (8 cases × jvm+native). Integration: `tests/run-integration.sh` 9/9. `mvn test` 810.
@@ -205,8 +205,8 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | `db.connect/query/transaction` | ✅ (+ typed `query<T>`) | y | y | ✅ untyped 16/09; typed `query<T>` `DB002` CLOSED 18/09 | KofDbE2ETest | stdlib/DATABASE_VISION.md |
 | prepared statements | ✅ (`?` binds) | y | y | ✅ 16/09 (binds via bridge) | KofDbE2ETest | — |
 | connection pools | `PLANNED` | — | — | — | — | — |
-| migrations | ✅ versioned `orm.migrate` (`kof_migrations`) | y | – ORM001 | ✅ 18/09 | KofOrmE2ETest | stdlib/DATABASE_VISION.md |
-| repositories/ORM | ✅ `kof.orm`: `entity` + create/save/find/all/where/delete/count | y | – ORM001 | ✅ 18/09 | KofOrmE2ETest | stdlib/DATABASE_VISION.md |
+| migrations | ✅ versioned `orm.migrate` (`kof_migrations`) | y | x86-64 ✅ 22/09 (F2d1–F2d7); cross = ORM001 | ✅ 18/09 | KofOrmE2ETest | stdlib/DATABASE_VISION.md |
+| repositories/ORM | ✅ `kof.orm`: `entity` + create/save/find/all/where/delete/count | y | x86-64 ✅ 22/09 (F2d1–F2d7); cross = ORM001 | ✅ 18/09 | KofOrmE2ETest | stdlib/DATABASE_VISION.md |
 | NoSQL (MongoDB) | ✅ official driver via compatible reflection | y | — | — | KofOrmE2ETest (E2E, conditional skip) | stdlib/DATABASE_VISION.md |
 | mapping | ✅ entity → row/document by compile-time schema | y | – | y | JsonE2ETest, KofOrmE2ETest | — |
 | typed query DSL (`User.query { where ... }`) | ✅ (level 3, 01/09 — lowers to `db.query<T>`; JVM H2 E2E) | ✅ | — | — | KofOrmE2ETest | stdlib/DATABASE_VISION.md |
@@ -359,7 +359,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 
 | # | Gap | Impact | Proposed location |
 |---|-----|---------|----------------|
-| G1 | ~~**Database/SQL** nonexistent~~ — ✅ **level 0 implemented**: `kof.db` (JDBC JVM, native SQLite, MySQL WIP) + `kof.orm` (entity, CRUD, where, migrate, MongoDB) | real apps with persistence on JVM/Native-SQLite | ✅ typed query DSL (01/09) + kof.db on JS (16/09) + `kof.orm` on JS (18/09, `ORM001` closed); remaining: pools, ORM on **Native** (`ORM001` — x86 is MySQL-only; riscv64/aarch64 SQLite closed 15/09) |
+| G1 | ~~**Database/SQL** nonexistent~~ — ✅ **level 0 implemented**: `kof.db` (JDBC JVM, native SQLite, MySQL wire x86-64 real) + `kof.orm` (entity, CRUD, where, migrate, MongoDB) | real apps with persistence on JVM/Native-SQLite | ✅ typed query DSL (01/09) + kof.db on JS (16/09) + `kof.orm` on JS (18/09, `ORM001` closed); remaining: pools; ORM on **Native** x86-64 ✅ 22/09 (13/13 faces, F2d1–F2d7), `ORM001` only on riscv64/aarch64 |
 | G2 | ~~**HTTP client** nonexistent~~ — ✅ **implemented**: `kof.http` client (get/post/put/delete/patch/options/status/timeout + retry/circuit 08/30, headers; HTTP002 on Native) | integrations, tests, frontend | ✅ closed — `KofHttpE2ETest` (4, JVM+JS) + `KofHttpResilienceE2ETest` (3) |
 | G3 | ~~Configuration~~ — ✅ `kof.config` implemented (file > env > profile > default, typed `str/int/long/bool`); **native CONF001 closed** (asm `/proc/self/environ`); JS: CONF001 closed 16/09 | — | — |
 | G4 | ~~**Validation** nonexistent~~ — ✅ **implemented**: `kof.validation` (13 predicates on the 3 targets) | — | `KofValidationTest` (3/3) |
@@ -459,7 +459,7 @@ Principles maintained:
 5. ~~G1~~ — ✅ complete level 0 `kof.db` + `kof.orm` (idiomatic JDBC, native
    SQLite, transactions, entity, migrations, **where with operators**,
    **saveAll batch**, **page/count/deleteAll**, **real MariaDB/PostgreSQL**,
-   MongoDB); next: pools, ORM on Native (`ORM001`). Typed query DSL ✅ 01/09; `kof.db` on JS ✅ 16/09 (DB001 closed), `kof.orm` on JS ✅ 18/09 (ORM001 closed).
+   MongoDB); next: pools (ORM on Native x86-64 closed 22/09, F2d1–F2d7). Typed query DSL ✅ 01/09; `kof.db` on JS ✅ 16/09 (DB001 closed), `kof.orm` on JS ✅ 18/09 (ORM001 closed).
 6. ~~G4~~ — ✅ `kof.validation` (13 predicates on the 3 targets; `KofValidationTest` 3/3).
 7. ~~G5~~ — ✅ `kof.observability` (health/readiness/liveness, counter/increment/gauge, requestId/correlationId — JVM/Native/JS; `KofObservabilityTest` 10/10).
 8. ~~G8~~ — ✅ `kof.time.sleep` + `interval`/`cancel` 3 targets (JS: cooperative queue — TIME001 closed 09/02) + **cron 17/09** (JVM/JS real, Native `CRON001`; §274).
