@@ -11835,7 +11835,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Repro mínimo:** `KOF_MYSQL_PORT=13306 mvn -o test -pl kof-compiler -Dtest=ArtifactSizeTest` → 6 run / 1F (antes do fix).
 - **Fix + prova (21/09):** a lane FFI/JS reconciliou os ratchets JS-FFI em `29198ea8` ("reconcile JS-FFI ratchets after the JS surface closed") — re-baseline COM causa, precedente §166: `ArtifactSizeTest` 6 run / 0F / 3 skip.
 
-<!-- en-switch --> **EN:** [§433 (en)](known-bugs.md#-433--remote-tip-red-artifactsizetesthellojsruntimesizewithinbaseline--the-hello-js-bundle-grew-past-the-5-budget-measured-2109-on-the-f2d1-re-push---open-another-lanes-front-catalogued-not-fixed-here)
+<!-- en-switch --> **EN:** [§433 (en)](known-bugs.md#433--artifactsizetesthellojsruntimesizewithinbaseline-was-red-on-the-remote-tip-js-hello-bundle-past-the-5-budget---fixed-2109-by-the-ffijs-lane-29198ea8-the-same-day-it-was-catalogued)
 
 ## §434 — `StdParityGapAuditTest.bufferGatesToJvmWithFfiCodes` estava vermelho no tip remoto (JS ausente da lista auditada de gates de Buffer) — ✅ CORRIGIDO 21/09 pela lane FFI/JS (`29198ea8`) no mesmo dia em que foi catalogado
 
@@ -11845,7 +11845,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Repro mínimo:** `mvn -o test -pl kof-compiler -Dtest=StdParityGapAuditTest` → 15 run / 1F (antes do fix).
 - **Fix + prova (21/09):** o mesmo `29198ea8` reconciliou o catálogo de gates com a lista esperada da auditoria: `StdParityGapAuditTest` 15 run / 0F.
 
-<!-- en-switch --> **EN:** [§434 (en)](known-bugs.md#-434--remote-tip-red-stdparitygapaudittestbuffergatestojvmwithfficodes--js-missing-from-the-audited-buffer-gate-list---open-another-lanes-front-catalogued-not-fixed-here)
+<!-- en-switch --> **EN:** [§434 (en)](known-bugs.md#434--stdparitygapaudittestbuffergatestojvmwithfficodes-was-red-on-the-remote-tip-js-missing-from-the-audited-buffer-gate-list---fixed-2109-by-the-ffijs-lane-29198ea8-the-same-day-it-was-catalogued)
 
 ## §435 — gate `check_500` VERMELHO: `kof-cli/.../LspServer.java` cruzou 600 linhas (baseline 584 → 601) após o fix §429 do LSP — ✅ CORRIGIDO 21/09 (lane .18; split em `LspJsonRpc`, LspServer 601→582)
 
@@ -11935,3 +11935,12 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Nota:** `TypeChecker.java` também avisa 509 → 553 (banda tolerada, 47 linhas do crítico) — item de vigilância, não falha.
 
 <!-- en-switch --> **EN:** [§442 (en)](known-bugs.md#442--check_500-red-semexpressiontyperjava-grew-547--603--600-after-the-400440-fixes---open-frontendtypes-lane-owns-the-split-catalogued-by-the-gaps-db-lane)
+
+## §443 — FFI escalar cross-target (`extern` com `library()`) foi re-gateado para `FFI001` no riscv64/aarch64 pelas fatias de struct-por-valor (D6-1/3.7) — regressão invisível em hosts sem qemu — ✅ CORRIGIDO 22/09 (lane estabilização/docs 9093)
+- **Sintoma (medido 22/09, tip `6c9aeb847`, host COM qemu + toolchain cross):** `FfiNativeCrossE2ETest` 3/6 RED — `riscv64ExternScalarAbi`, `aarch64ExternScalarAbi` e `crossTargetsAgreeOnSameProgram` falham com `Compilation should succeed: [ … extern 'abs' in libc.so.6: FFI binding not implemented on the NATIVE_RISCV64 target yet (FFI001) … ]`. O shim escalar em si (LP64/AAPCS64, `d5c849f3c` #431 fatia 2) estava intacto — só o GATE tinha re-fechado.
+- **Causa-raiz:** as fatias de struct-por-valor (`f670d0551` 3.7 fatia 1 + `aeef88d49` 3.7 fatia 2a) reescreveram `CompilerPipeline.nativeExternBound` e puseram `if (driver.target != Target.NATIVE) return false;` no TOPO — `Target.NATIVE` é só x86-64, então `NATIVE_RISCV64`/`NATIVE_AARCH64` (roteados para cá pelo caller `isNative()` de `d5c849f3c`) caíam em FFI001 em TODO extern escalar. O gate estava correto em `d5c849f3c`; o trabalho de struct o re-fechou em silêncio.
+- **Por que ficou escondido (o defeito real):** o E2E cross é guardado por `assumeTrue(NativeRiscv64E2ETest.hasToolchain(arch))` — num host sem qemu/toolchain ele PULA, então a suíte ficava "0F" ali enquanto o gate estava quebrado. A regressão passou verde de um host sem toolchain.
+- **Fix (`CompilerPipeline.java`):** a condição x86-only agora guarda só os caminhos de STRUCT (retorno/param); uma chamada puramente escalar retorna `true` em todo alvo nativo (`return !x86 || FfiStructLayout.x86Bindable(paramTypes)`). Struct por valor segue x86-64-only (fatia 3) → FFI001 honesto no cross (R6).
+- **Prova (mesmo commit):** `FfiNativeCrossE2ETest` 6/6 sob qemu (era 3F); o novo `FfiNativeCrossGateTest` 3/3 exercita `CompilerPipeline.isExternBound` direto — pré-codegen, então RED também num host sem toolchain (fecha o ponto cego do skip). Bateria vizinha: FFI `116/0` (`FfiNativeE2ETest` 16, `FfiStructE2ETest` 12, `FfiArrayE2ETest` 5, `BufferFfiE2ETest` 4).
+- **Dono:** lane estabilização/docs (9093) — fix de causa-raiz + prova; o dono das fatias de struct mantém a fatia 3.
+<!-- en-switch --> **EN:** [§443 (en)](known-bugs.md#443--cross-target-scalar-ffi-extern-with-library-was-re-gated-to-ffi001-on-riscv64aarch64-by-the-struct-by-value-slices-d6-137--a-regression-invisible-on-hosts-without-qemu---fixed-2209-lane-estabilizacaodocs-9093)
