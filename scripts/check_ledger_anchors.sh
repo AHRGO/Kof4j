@@ -12,6 +12,11 @@
 # como `#435-gate` (faltando o 2º hífen do slug real `#435--gate`) escapava de
 # um regex `[0-9]+--` e passava verde para sempre — o mesmo ponto cego das
 # âncoras abreviadas, agora fechado (21/09, §435: 14 links estavam assim).
+# 22/09 (§443): o regex ainda exigia `[0-9]+` na abertura, então um href com `-`
+# inicial (`#-443--…`, slug hasheado com o `## ` junto) nem era INSPECIONADO.
+# Agora todo href `known-bugs(.pt_BR).md#…` é lido e um slug que não abre com
+# `NNN-` é malformado (RED) — foi assim que 4 links quebrados de §433/§434
+# apareceram (passavam verdes há um dia).
 #
 # Uso: scripts/check_ledger_anchors.sh            # rc!=0 com âncora quebrada
 #      scripts/check_ledger_anchors.sh --selftest
@@ -39,13 +44,22 @@ def check(en_txt, pt_txt, label):
     bad = []
     for src, dst, name in [(en_txt, pt_txt, "EN->PT"), (pt_txt, en_txt, "PT->EN")]:
         hd = heads(dst)
-        for m in re.finditer(r"\]\(known-bugs(?:\.pt_BR)?\.md#([0-9]+-[^\)]*)\)", src):
-            sec = int(re.match(r"\d+", m.group(1)).group(0))
+        for m in re.finditer(r"\]\(known-bugs(?:\.pt_BR)?\.md#([^\)]+)\)", src):
+            slug = m.group(1)
+            mm = re.match(r"(\d+)-", slug)
+            if not mm:
+                # href que NÃO abre com `NNN-` (ex.: `-443--…`, um slug hasheado
+                # com o `## ` junto) escapava do regex antigo `[0-9]+-` e passava
+                # verde para sempre — o mesmo ponto cego das âncoras abreviadas
+                # (§435), reaberto por um `-` inicial (22/09, §443). Nunca mais.
+                bad.append(f"{name}: href malformado (não abre com NNN-): {slug[:100]}")
+                continue
+            sec = int(mm.group(1))
             if sec not in hd:
                 bad.append(f"{name} §{sec}: heading de destino ausente"); continue
             want = gh_slug(f"§{sec} " + hd[sec])
-            if m.group(1) != want:
-                bad.append(f"{name} §{sec}:\n   tem : {m.group(1)[:100]}\n   quer: {want[:100]}")
+            if slug != want:
+                bad.append(f"{name} §{sec}:\n   tem : {slug[:100]}\n   quer: {want[:100]}")
     print(f"{label}: {len(bad)} âncora(s) quebrada(s)")
     for b in bad: print("  - " + b)
     return bad
@@ -61,10 +75,15 @@ if "--selftest" in sys.argv:
     pt2 = "## §2 — outro heading\n<!-- en-switch --> **EN:** [x](known-bugs.md#2--outro-heading)\n"
     bad_b = check(en2, pt2, "selftest-b")
     ok_b = len(bad_b) == 1 and "§2" in bad_b[0] and "EN->PT" in bad_b[0]
-    if ok_a and ok_b:
-        print("SELFTEST OK: truncamento e hífen-único capturados, lado correto limpo")
+    # (c) href com `-` inicial (slug hasheado com o `## ` junto) deve ser capturado
+    en3 = "## §3 — terceiro heading\n<!-- pt-switch --> **PT:** [x](known-bugs.pt_BR.md#-3--terceiro-heading)\n"
+    pt3 = "## §3 — terceiro heading\n<!-- en-switch --> **EN:** [x](known-bugs.md#3--terceiro-heading)\n"
+    bad_c = check(en3, pt3, "selftest-c")
+    ok_c = len(bad_c) == 1 and "malformado" in bad_c[0] and "EN->PT" in bad_c[0]
+    if ok_a and ok_b and ok_c:
+        print("SELFTEST OK: truncamento, hífen-único e href com `-` inicial capturados, lado correto limpo")
         sys.exit(0)
-    print("SELFTEST FALHOU:", bad_a, bad_b); sys.exit(1)
+    print("SELFTEST FALHOU:", bad_a, bad_b, bad_c); sys.exit(1)
 
 for a, b in [("docs/bugs-and-gaps/known-bugs.md", "docs/bugs-and-gaps/known-bugs.pt_BR.md")]:
     if not (os.path.isfile(a) and os.path.isfile(b)):

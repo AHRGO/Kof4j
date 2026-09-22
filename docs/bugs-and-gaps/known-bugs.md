@@ -14305,7 +14305,7 @@ p
 - **Minimal repro:** `KOF_MYSQL_PORT=13306 mvn -o test -pl kof-compiler -Dtest=ArtifactSizeTest` → 6 run / 1F (before the fix).
 - **Fix + proof (21/09):** the FFI/JS lane reconciled the JS-FFI ratchets in `29198ea8` ("reconcile JS-FFI ratchets after the JS surface closed") — re-baseline WITH cause, §166 precedent: `ArtifactSizeTest` 6 run / 0F / 3 skip.
 
-<!-- pt-switch --> **PT:** [§433 (pt_BR)](known-bugs.pt_BR.md#-433--vermelho-do-tip-remoto-artifactsizetesthellojsruntimesizewithinbaseline--o-bundle-js-hello-passou-do-orcamento-de-5-medido-2109-no-re-pouso-do-f2d1---aberto-frente-de-outra-lane-catalogado-nao-corrigido-aqui)
+<!-- pt-switch --> **PT:** [§433 (pt_BR)](known-bugs.pt_BR.md#433--artifactsizetesthellojsruntimesizewithinbaseline-estava-vermelho-no-tip-remoto-bundle-js-hello-passou-do-orcamento-de-5---corrigido-2109-pela-lane-ffijs-29198ea8-no-mesmo-dia-em-que-foi-catalogado)
 
 ## §434 — `StdParityGapAuditTest.bufferGatesToJvmWithFfiCodes` was red on the remote tip (JS missing from the audited Buffer gate list) — ✅ FIXED 21/09 by the FFI/JS lane (`29198ea8`) the same day it was catalogued
 
@@ -14315,7 +14315,7 @@ p
 - **Minimal repro:** `mvn -o test -pl kof-compiler -Dtest=StdParityGapAuditTest` → 15 run / 1F (before the fix).
 - **Fix + proof (21/09):** same `29198ea8` reconciled the gate catalog with the audit's expected list: `StdParityGapAuditTest` 15 run / 0F.
 
-<!-- pt-switch --> **PT:** [§434 (pt_BR)](known-bugs.pt_BR.md#-434--vermelho-do-tip-remoto-stdparitygapaudittestbuffergatestojvmwithfficodes--js-ausente-da-lista-auditada-de-gates-de-buffer---aberto-frente-de-outra-lane-catalogado-nao-corrigido-aqui)
+<!-- pt-switch --> **PT:** [§434 (pt_BR)](known-bugs.pt_BR.md#434--stdparitygapaudittestbuffergatestojvmwithfficodes-estava-vermelho-no-tip-remoto-js-ausente-da-lista-auditada-de-gates-de-buffer---corrigido-2109-pela-lane-ffijs-29198ea8-no-mesmo-dia-em-que-foi-catalogado)
 
 ## §435 — `check_500` gate RED: `kof-cli/.../LspServer.java` crossed 600 lines (584 baseline → 601) after the §429 LSP fix — ✅ FIXED 21/09 (lane .18; split into `LspJsonRpc`, LspServer 601→582)
 

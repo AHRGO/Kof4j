@@ -11835,7 +11835,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Repro mínimo:** `KOF_MYSQL_PORT=13306 mvn -o test -pl kof-compiler -Dtest=ArtifactSizeTest` → 6 run / 1F (antes do fix).
 - **Fix + prova (21/09):** a lane FFI/JS reconciliou os ratchets JS-FFI em `29198ea8` ("reconcile JS-FFI ratchets after the JS surface closed") — re-baseline COM causa, precedente §166: `ArtifactSizeTest` 6 run / 0F / 3 skip.
 
-<!-- en-switch --> **EN:** [§433 (en)](known-bugs.md#-433--remote-tip-red-artifactsizetesthellojsruntimesizewithinbaseline--the-hello-js-bundle-grew-past-the-5-budget-measured-2109-on-the-f2d1-re-push---open-another-lanes-front-catalogued-not-fixed-here)
+<!-- en-switch --> **EN:** [§433 (en)](known-bugs.md#433--artifactsizetesthellojsruntimesizewithinbaseline-was-red-on-the-remote-tip-js-hello-bundle-past-the-5-budget---fixed-2109-by-the-ffijs-lane-29198ea8-the-same-day-it-was-catalogued)
 
 ## §434 — `StdParityGapAuditTest.bufferGatesToJvmWithFfiCodes` estava vermelho no tip remoto (JS ausente da lista auditada de gates de Buffer) — ✅ CORRIGIDO 21/09 pela lane FFI/JS (`29198ea8`) no mesmo dia em que foi catalogado
 
@@ -11845,7 +11845,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Repro mínimo:** `mvn -o test -pl kof-compiler -Dtest=StdParityGapAuditTest` → 15 run / 1F (antes do fix).
 - **Fix + prova (21/09):** o mesmo `29198ea8` reconciliou o catálogo de gates com a lista esperada da auditoria: `StdParityGapAuditTest` 15 run / 0F.
 
-<!-- en-switch --> **EN:** [§434 (en)](known-bugs.md#-434--remote-tip-red-stdparitygapaudittestbuffergatestojvmwithfficodes--js-missing-from-the-audited-buffer-gate-list---open-another-lanes-front-catalogued-not-fixed-here)
+<!-- en-switch --> **EN:** [§434 (en)](known-bugs.md#434--stdparitygapaudittestbuffergatestojvmwithfficodes-was-red-on-the-remote-tip-js-missing-from-the-audited-buffer-gate-list---fixed-2109-by-the-ffijs-lane-29198ea8-the-same-day-it-was-catalogued)
 
 ## §435 — gate `check_500` VERMELHO: `kof-cli/.../LspServer.java` cruzou 600 linhas (baseline 584 → 601) após o fix §429 do LSP — ✅ CORRIGIDO 21/09 (lane .18; split em `LspJsonRpc`, LspServer 601→582)
 
