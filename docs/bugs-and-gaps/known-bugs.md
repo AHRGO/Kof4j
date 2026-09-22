@@ -14036,7 +14036,7 @@ p
   **22/0F/0E** each.
 - **Related:** §398 (same DAP harness), `KofDebugJvmSession.java`,
   `KofDebugJvmStepTest.java`.
-## §400 — a named top-level function passed as a VALUE (e.g. `job("e", probe)` where `Bool probe()`) is rejected with SEM011 "Undefined variable or type" — the name resolves only in CALL position; the diagnostic also names the wrong universe (R6) — 🟡 OPEN 21/09 (catalogued by the §353 edge hunt; measured pre-existing)
+## §400 — a named top-level function passed as a VALUE (e.g. `job("e", probe)` where `Bool probe()`) is rejected with SEM011 "Undefined variable or type" — the name resolves only in CALL position; the diagnostic also names the wrong universe (R6) — ✅ FIXED 21/09 (lane bugs-and-gaps — CLOSEALL batch)
 
 - **Symptom (measured 21/09, identical on the 0.4.7 pre-§353 jar and the tip jar — NOT a §353 regression):** `import kof.workflow` + `Bool always() { return true }` + `job("e", always)` → `:0:0: error: Undefined variable or type: 'always' [SEM011]`. With a cast it is the same (SEM011 fires on the identifier before the cast matters). A lambda literal in the same slot compiles (`job("e", () -> always())` — green).
 - **Why the message is wrong twice (R6):** (a) `always` IS defined — as a function; the diagnostic's "variable or type" names a universe the symbol is not in; (b) whether named functions are first-class VALUES is a language-surface question (rule 11 Simplicity Law + rule 6): Kof's documented idiom for a function argument is the LAMBDA literal (`training/idioms/`), and no corpus text promises `probe`-as-value — so the REJECTION is plausibly correct and only the DIAGNOSTIC is a bug.
@@ -14044,6 +14044,9 @@ p
 - **Workaround (the idiom):** wrap in a lambda — `job("e", () -> always())` — byte-parity JVM/JS (measured in `WorkflowE2ETest` shapes).
 - **Related:** §353 (this was surfaced by the §353 Q4 edge hunt), `LambdaE2ETest.castToFunctionType` (the `as ()->T` river, different position), workflow-host `() -> Bool` flocks.
 
+
+- **Fix (21/09, maintainer vote (A) in `DECISIONS.md` D-CLOSEALL-BATCH — keep the rejection, name the real rule):** at the SEM011 fall-back of `SemExpressionTyper.IdentifierExpr`, a bare name that IS a top-level function now gets the dedicated diagnostic (with position — the old one was `:0:0`): "<name> is a top-level function, not a value in argument position — pass the call wrapped in a lambda: () -> <name>()". Same code SEM011, richer + actionable message; zero semantic change (both rejected, freeze rule 2).
+- **Proof (RED-first):** `NamedFunctionValueDiagnosticE2ETest` 4/4 — repro mínimo `probe` em argumento + forma aninhada (GREEN), idiom lambda ainda aceitável (regressão), símbolo realmente indefinido mantém o diagnóstico antigo (regressão). Stash do patch no código antigo = RED 2/2 nos casos §400 (ciclo completo).
 <!-- pt-switch --> **PT:** [§400 (pt_BR)](known-bugs.pt_BR.md#400--uma-funcao-top-level-nomeada-passada-como-valor-ex-jobe-probe-com-bool-probe-e-rejeitada-com-sem011-undefined-variable-or-type--o-nome-so-resolve-em-posicao-de-chamada-e-o-diagnostico-aponta-o-universo-errado-r6---aberto-2109-catalogado-na-caca-de-edges-do-353-medido-pre-existente)
 
 

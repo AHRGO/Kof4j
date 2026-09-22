@@ -96,6 +96,28 @@ public final class SemExpressionTyper {
                         yield fieldSym.type();
                     }
                 }
+                // §400 (voto D-CLOSEALL-BATCH, mantenedora 21/09, opção A):
+                // FUNÇÃO top-level nomeada usada como VALOR em posição de
+                // argumento (`job("e", probe)` com `Bool probe()`) — não é um
+                // variável indefinida: diagnostica a regra real e aponta o
+                // idiom lambda que já existe (`() -> probe()`).
+                boolean namedTopLevelFunc = false;
+                if (sa.unit() != null) {
+                    for (AstNode f0 : sa.unit().declarations()) {
+                        if (f0 instanceof FunctionDeclarationNode fd0
+                                && ie.name().equals(fd0.name())) { namedTopLevelFunc = true; break; }
+                    }
+                }
+                if (namedTopLevelFunc) {
+                    SourcePosition pn = ie.position();
+                    sa.diagnostics().error(pn != null ? pn.file() : "",
+                            pn != null ? pn.line() : 0, pn != null ? pn.column() : 0,
+                            0,
+                            ie.name() + " is a top-level function, not a value in argument position — "
+                                    + "pass the call wrapped in a lambda: () -> " + ie.name() + "()",
+                            "SEM011");
+                    yield Type.UnknownType.UNKNOWN;
+                }
                 if (SemUndefinedVarGuard.reportsUndefined(sa, ie.name())) {
                     sa.diagnostics().error("", 0, 0, 0,
                             "Undefined variable or type: '" + ie.name() + "'", "SEM011");

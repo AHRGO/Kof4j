@@ -11563,7 +11563,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
   **22/0F/0E** cada.
 - **Relacionado:** §398 (mesmo harness DAP), `KofDebugJvmSession.java`,
   `KofDebugJvmStepTest.java`.
-## §400 — uma funcao top-level NOMEADA passada como VALOR (ex.: `job("e", probe)` com `Bool probe()`) e rejeitada com SEM011 "Undefined variable or type" — o nome so resolve em posicao de CHAMADA; e o diagnostico aponta o universo errado (R6) — 🟡 ABERTO 21/09 (catalogado na caca de edges do §353; medido pre-existente)
+## §400 — uma funcao top-level NOMEADA passada como VALOR (ex.: `job("e", probe)` com `Bool probe()`) e rejeitada com SEM011 "Undefined variable or type" — o nome so resolve em posicao de CHAMADA; e o diagnostico aponta o universo errado (R6) — ✅ CORRIGIDO 21/09 (lane bugs-and-gaps — lote CLOSEALL)
 
 - **Sintoma (medido 21/09, identico no jar 0.4.7 pre-§353 e no tip — NAO e regressao do §353):** `import kof.workflow` + `Bool always() { return true }` + `job("e", always)` → `:0:0: error: Undefined variable or type: 'always' [SEM011]`. Com cast e a mesma coisa. A lambda literal na mesma vaga compila (`job("e", () -> always())` — verde).
 - **Por que a mensagem erra duas vezes (R6):** (a) `always` E definida — como funcao; o diagnostico nomeia um universo ("variable or type") onde o simbolo nao esta; (b) se funcoes nomeadas sao valores de mao cheia e pergunta de superficie da linguagem (regra 11 + regra 6): o idioma documentado para argumento de funcao e a LAMBDA literal (`training/idioms/`), e nenhum texto do corpus promete `probe`-como-valor — logo a REJEICAO e plausivelmente correta e so o DIAGNOSTICO e bug.
@@ -11571,6 +11571,9 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Workaround (o idioma):** embrulhar em lambda — `job("e", () -> always())` — byte-parity JVM/JS (medido nas formas do `WorkflowE2ETest`).
 - **Relacionado:** §353 (isto nasceu da caca de edges Q4 dele), `LambdaE2ETest.castToFunctionType` (o rio `as ()->T`, posicao diferente), os chavlocks `() -> Bool` do workflow-host.
 
+
+- **Fix (21/09, voto (A) da mantenedora em `DECISIONS.md` D-CLOSEALL-BATCH — mantém a rejeição, nomeia a regra real):** no fallback SEM011 do `SemExpressionTyper.IdentifierExpr`, nome NU que É função top-level agora recebe o diagnóstico dedicado (com posição — o antigo era `:0:0`): "<nome> is a top-level function, not a value in argument position — pass the call wrapped in a lambda: () -> <nome>()". Mesmo código SEM011, mensagem mais rica e acionável; zero mudança semântica (ambos rejeitam, freeze regra 2).
+- **Prova (RED-first):** `NamedFunctionValueDiagnosticE2ETest` 4/4 — repro mínimo `probe` em argumento + forma aninhada (VERDE), idiom lambda ainda aceitável (regressão), símbolo realmente indefinido mantém o diagnóstico antigo (regressão). Stash do patch no código antigo = RED 2/2 nos casos §400 (ciclo completo).
 <!-- en-switch --> **EN:** [§400 (en)](known-bugs.md#400--a-named-top-level-function-passed-as-a-value-eg-jobe-probe-where-bool-probe-is-rejected-with-sem011-undefined-variable-or-type--the-name-resolves-only-in-call-position-the-diagnostic-also-names-the-wrong-universe-r6---open-2109-catalogued-by-the-353-edge-hunt-measured-pre-existing)
 
 

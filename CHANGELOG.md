@@ -13,6 +13,13 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§400 fixed — função nomeada como valor agora diagnostica a regra real**
+    (21/09, lane bugs-and-gaps, voto (A) da mantenedora): `print(probe)` agora
+    diz "`probe` is a top-level function, not a value in argument position —
+    pass the call wrapped in a lambda: () -> probe()" (SEM011 com posição real;
+    `NamedFunctionValueDiagnosticE2ETest` 4/4, RED 2/2 no código antigo).
+
+
   - **§334 CLOSED — `kof_box_equals` NaN (batch CLOSEALL da mantenedora 21/09):** probe
     medido nos 2 alvos — `0.0 / 0.0` imprime `NaN` (ARITH001 só pega INT), a face
     box-vs-box imprime `NaN / false / false / false` IDÊNTICO JVM==native; a
