@@ -35,10 +35,14 @@ dos três estados).
        `beta-0.4.0` usado como *nome de branch* pelo `codeql-gate.sh`
        (monitora as duas) e por fixtures de teste; nenhum codifica a versão do
        artefato.
-4. [ ] Corte do CHANGELOG (EN+PT): seção `0.5.0` reunindo os bullets não
+4. [~] Corte do CHANGELOG (EN+PT): seção `0.5.0` reunindo os bullets não
        lançados; cabeçalho `Version:` do `AGENTS.md`(+PT) atualizado no
        mesmo commit. (As lanes podem redigir já; o corte segue esperando as
-       sete condições.)
+       sete condições.) **DRAFT LANDADO 22/09 (sessão 9092):** o cabeçalho da
+       seção unreleased agora é `## [0.5.0-beta] - unreleased (branch
+       beta-0.5.0)` (EN+PT — `VERSION` já é `0.5.0-beta`; o cabeçalho do
+       `AGENTS.md`(+PT) já foi bumpado pelo `D-VERSION-BUMP-0.5.0`). O CORTE
+       em si (datar a seção + tag) segue esperando as sete condições.
 5. [ ] Tally: `'Current build: **N**'` em `docs/backend-parity.md`(+PT) a
        partir da primeira CI Build+Tests hospedada VERDE no tip da release
        (contagem do log do job, nunca memória).

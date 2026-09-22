@@ -9,7 +9,7 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 `build:`, `tooling:`). A seção de cada release é gerada por
 `scripts/changelog.sh` e inserida pela pipeline neste marcador:
 
-## [0.4.0-beta] - unreleased (branch `beta-0.4.0`)
+## [0.5.0-beta] - unreleased (branch `beta-0.5.0`)
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 

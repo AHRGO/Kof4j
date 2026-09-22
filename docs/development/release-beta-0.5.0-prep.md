@@ -36,10 +36,14 @@ the release is cut (three-states rule).
        provenance comments (when a port landed) and `beta-0.4.0` used as a
        *branch name* by `codeql-gate.sh` (monitors both) and by test fixtures;
        none hardcode the artifact version.
-4. [ ] CHANGELOG cut (EN+PT): a `0.5.0` section gathering the unreleased
+4. [~] CHANGELOG cut (EN+PT): a `0.5.0` section gathering the unreleased
        bullets; `AGENTS.md`(+PT) header `Version:` updated in the same
        commit. (Lanes may draft it now; the cut still waits on the seven
-       conditions.)
+       conditions.) **DRAFT LANDED 22/09 (sessão 9092):** the unreleased
+       header is now `## [0.5.0-beta] - unreleased (branch beta-0.5.0)`
+       (EN+PT — `VERSION` is already `0.5.0-beta`; `AGENTS.md`(+PT) header
+       already bumped by `D-VERSION-BUMP-0.5.0`). The CUT itself (date the
+       section + tag) still waits on the seven conditions.
 5. [ ] Tally: `'Current build: **N**'` in `docs/backend-parity.md`(+PT) from
        the first GREEN hosted CI Build+Tests run on the release tip
        (measured from the job log, never memory).
