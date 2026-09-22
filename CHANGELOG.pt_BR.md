@@ -13,6 +13,9 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§302 FECHADO — tipos crus `List/Set/Map` em CAMPO: todas as faces medidas verdes no tip (21/09, lane bugs-and-gaps, CLOSEALL): repros do registro + formas de campo/retorno/parâmetro/estáticos — `3` nos 3 alvos (raiz já fechada pelo §373/#443).
+
+
   - **§418 CORRIGIDO — o harness riscv64 do `kof debug`/E2E podia deixar o qemu vivo após a rodada**
     (21/09, lane nat/native-debug, handoff D-CLOSEALL-BATCH): o `NativeRiscv64E2ETest` chamava
     `waitFor()` sem nenhum `destroy()`/`finally`, então um qemu morto por timeout sobrevivia e o

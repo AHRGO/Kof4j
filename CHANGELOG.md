@@ -13,6 +13,9 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§302 CLOSED — tipos crus `List/Set/Map` em CAMPO: todas as faces medidas verdes no tip (21/09, lane bugs-and-gaps, CLOSEALL): repros do registro + formas de campo/retorno/parâmetro/estáticos — `3` nos 3 alvos (raiz já fechada pelo §373/#443).
+
+
   - **§418 FIXED — the riscv64 `kof debug`/E2E harness could leave qemu alive after a round**
     (21/09, lane nat/native-debug, handoff D-CLOSEALL-BATCH): `NativeRiscv64E2ETest` called
     `waitFor()` with zero `destroy()`/`finally`, so a timed-out qemu survived and the temp
