@@ -43,6 +43,24 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     four rejection cases). Next: slice C3 (struct by value),
     `docs/development/kof-c-cross.md`.
 
+  - **`kof-c-compiler` gains `struct` types and by-value struct parameters
+    (slice C3 of the cross plan)** (22/09, FFI/kof-c front): `struct S { int a;
+    int b; };` with member access (`v.field`) and `struct S v;`
+    globals/locals/parameters on all three targets. Fields are **4-byte C
+    `int`** (matching `AbiLayout.Scalar.INT`); a struct up to 8 bytes is one
+    eightbyte and travels in a single integer register — the same path the libc
+    `div_t` uses — so the fixture the cross FFI tests need (a struct parameter
+    by value) can now be compiled in-repo on riscv64/aarch64. Field loads/stores
+    are 32-bit sign-extended (`movsxd`/`lw`/`ldursw`). unknown struct, unknown
+    field, field on a non-struct and a struct larger than 8 bytes fail with an
+    honest diagnostic before any binary is produced. Proof:
+    `KofCStructCompilerTest` 7/7 on x86_64/riscv64/aarch64 plus the four
+    rejection cases. Remaining: struct return by value, > 8 B structs and the
+    full multi-eightbyte classification; scalar `int` stays 8-byte internally
+    (pointer-holding ints) — the 32-bit width is applied where the C ABI
+    observes memory layout (struct fields). Next: slice C4 (`.o` + link),
+    `docs/development/kof-c-cross.md`.
+
   - **§302 CLOSED — tipos crus `List/Set/Map` em CAMPO: todas as faces medidas verdes no tip (21/09, lane bugs-and-gaps, CLOSEALL): repros do registro + formas de campo/retorno/parâmetro/estáticos — `3` nos 3 alvos (raiz já fechada pelo §373/#443).
 
   - **§443 FIXED — cross-target scalar `extern` (`library()`) had been re-gated to `FFI001` on riscv64/aarch64 by the struct-by-value slices**

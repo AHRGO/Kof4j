@@ -132,6 +132,29 @@ final class KofCEmitterX86 extends KofCEmitterBase {
     }
 
     @Override
+    protected void emitLoadField(Storage storage, int byteOffset) {
+        if (storage.local()) {
+            sb.append("    movsxd rax, dword ptr [rbp - ").append(fieldDisp(storage.slot(), byteOffset)).append("]\n");
+        } else {
+            sb.append("    movsxd rax, dword ptr [rip + ").append(storage.name()).append(globalDisp(byteOffset)).append("]\n");
+        }
+    }
+
+    @Override
+    protected void emitStoreField(Storage storage, int byteOffset) {
+        if (storage.local()) {
+            sb.append("    mov dword ptr [rbp - ").append(fieldDisp(storage.slot(), byteOffset)).append("], eax\n");
+        } else {
+            sb.append("    mov dword ptr [rip + ").append(storage.name()).append(globalDisp(byteOffset)).append("], eax\n");
+        }
+    }
+
+    /** Frame displacement of a field: base slot minus the field byte offset. */
+    private static int fieldDisp(int slot, int byteOffset) { return offset(slot) - byteOffset; }
+
+    private static String globalDisp(int byteOffset) { return byteOffset == 0 ? "" : " + " + byteOffset; }
+
+    @Override
     protected void emitAddrOfStorage(Storage storage) {
         if (storage.local()) {
             sb.append("    lea rax, [rbp - ").append(offset(storage.slot())).append("]\n");

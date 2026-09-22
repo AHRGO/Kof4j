@@ -8,6 +8,8 @@ import java.util.Map;
 public final class KofCParser {
     /** Register-based argument budget shared by the three ISAs (x86_64 SysV has 6). */
     static final int MAX_ARGS = 6;
+    /** Largest struct accepted by value: one eightbyte (int fields ⇒ ≤ 2 fields). */
+    static final int MAX_STRUCT_BYTES = 8;
     private static final List<String> PRINT_BUILTINS = List.of("print", "print_int", "kof_print");
 
     private final List<KofCToken> toks;
@@ -20,17 +22,24 @@ public final class KofCParser {
     public List<String> errors() { return List.copyOf(errors); }
 
     public KofCAst.Program parseProgram() {
+        List<KofCAst.StructDecl> structs = new ArrayList<>();
         List<KofCAst.VarDecl> globals = new ArrayList<>();
         List<KofCAst.FuncDecl> funcs = new ArrayList<>();
         while (!check(KofCTokenType.EOF)) {
-            if (check(KofCTokenType.INT)) {
+            if (check(KofCTokenType.STRUCT)) {
+                if (checkAt(1, KofCTokenType.IDENTIFIER) && checkAt(2, KofCTokenType.LBRACE)) {
+                    structs.add(parseStruct());
+                } else if (checkAt(1, KofCTokenType.IDENTIFIER) && checkAt(2, KofCTokenType.IDENTIFIER)) {
+                    globals.add(parseGlobal("struct"));
+                } else {
+                    error("Expected struct definition or struct variable");
+                    advance();
+                }
+            } else if (check(KofCTokenType.INT)) {
                 if (checkAt(1, KofCTokenType.IDENTIFIER) && checkAt(2, KofCTokenType.LPAREN)) {
                     funcs.add(parseFunc("int"));
                 } else if (checkAt(1, KofCTokenType.IDENTIFIER) && checkAt(2, KofCTokenType.SEMI)) {
-                    advance(); // int
-                    String name = advance().text();
-                    expect(KofCTokenType.SEMI);
-                    globals.add(new KofCAst.VarDecl(name));
+                    globals.add(parseGlobal("int"));
                 } else {
                     error("Expected global variable or function declaration");
                     advance();
@@ -42,9 +51,37 @@ public final class KofCParser {
                 advance();
             }
         }
-        KofCAst.Program program = new KofCAst.Program(globals, funcs);
-        validateCalls(program);
+        KofCAst.Program program = new KofCAst.Program(structs, globals, funcs);
+        validate(program);
         return program;
+    }
+
+    private KofCAst.StructDecl parseStruct() {
+        expect(KofCTokenType.STRUCT);
+        String name = expect(KofCTokenType.IDENTIFIER).text();
+        expect(KofCTokenType.LBRACE);
+        List<KofCAst.Param> fields = new ArrayList<>();
+        while (!check(KofCTokenType.RBRACE) && !check(KofCTokenType.EOF)) {
+            int before = pos;
+            String ftype = parseTypeName();
+            String fname = expect(KofCTokenType.IDENTIFIER).text();
+            expect(KofCTokenType.SEMI);
+            fields.add(new KofCAst.Param(ftype, fname));
+            if (pos == before) { advance(); } // progress guard (malformed field)
+        }
+        expect(KofCTokenType.RBRACE);
+        expect(KofCTokenType.SEMI);
+        return new KofCAst.StructDecl(name, fields);
+    }
+
+    /** Global declaration: {@code int g;} or {@code struct S s;}. */
+    private KofCAst.VarDecl parseGlobal(String kind) {
+        String type;
+        if (kind.equals("int")) { advance(); type = "int"; }
+        else type = parseTypeName();
+        String name = expect(KofCTokenType.IDENTIFIER).text();
+        expect(KofCTokenType.SEMI);
+        return new KofCAst.VarDecl(type, name);
     }
 
     private KofCAst.FuncDecl parseFunc(String retType) {
@@ -53,6 +90,9 @@ public final class KofCParser {
         expect(KofCTokenType.LPAREN);
         List<KofCAst.Param> params = parseParams();
         expect(KofCTokenType.RPAREN);
+        if (!retType.equals("int") && !retType.equals("void")) {
+            error("struct return is not supported yet");
+        }
         List<KofCAst.Stmt> body = parseBlock();
         return new KofCAst.FuncDecl(name, retType, params, body);
     }
@@ -62,10 +102,9 @@ public final class KofCParser {
         if (check(KofCTokenType.RPAREN)) return params;
         if (check(KofCTokenType.VOID) && checkAt(1, KofCTokenType.RPAREN)) { advance(); return params; }
         while (true) {
-            if (!check(KofCTokenType.INT)) { error("Expected parameter type int"); break; }
-            advance(); // int
+            String ptype = parseTypeName();
             String pname = expect(KofCTokenType.IDENTIFIER).text();
-            params.add(new KofCAst.Param("int", pname));
+            params.add(new KofCAst.Param(ptype, pname));
             if (check(KofCTokenType.COMMA)) { advance(); continue; }
             break;
         }
@@ -73,6 +112,18 @@ public final class KofCParser {
             error("Too many parameters (" + params.size() + "); the subset supports at most " + MAX_ARGS);
         }
         return params;
+    }
+
+    /** Type name: {@code int} or {@code struct X}. */
+    private String parseTypeName() {
+        if (check(KofCTokenType.INT)) { advance(); return "int"; }
+        if (check(KofCTokenType.STRUCT)) {
+            advance();
+            String n = expect(KofCTokenType.IDENTIFIER).text();
+            return "struct " + n;
+        }
+        error("Expected a type name");
+        return "int";
     }
 
     private List<KofCAst.Stmt> parseBlock() {
@@ -101,24 +152,44 @@ public final class KofCParser {
             expect(KofCTokenType.SEMI);
             return new KofCAst.ReturnStmt(value);
         }
-        if (check(KofCTokenType.INT) && checkAt(1, KofCTokenType.IDENTIFIER) && checkAt(2, KofCTokenType.SEMI)) {
-            advance(); // int
-            String name = advance().text();
+        // local declaration: int x; | struct S s;
+        if ((check(KofCTokenType.INT) && checkAt(1, KofCTokenType.IDENTIFIER) && checkAt(2, KofCTokenType.SEMI))
+                || (check(KofCTokenType.STRUCT) && checkAt(1, KofCTokenType.IDENTIFIER)
+                    && checkAt(2, KofCTokenType.IDENTIFIER) && checkAt(3, KofCTokenType.SEMI))) {
+            String type = parseTypeName();
+            String name = expect(KofCTokenType.IDENTIFIER).text();
             expect(KofCTokenType.SEMI);
-            return new KofCAst.LocalDeclStmt("int", name);
+            return new KofCAst.LocalDeclStmt(type, name);
         }
-        // assignment (optionally through a pointer): [*(int*)]? ident = expr ;
+        // assignment (optionally through a pointer): [*(int*)]? ident[.field]? = expr ;
         int save = pos;
         boolean deref = false;
         if (isDerefAhead()) { deref = true; consumeDeref(); }
-        if (check(KofCTokenType.IDENTIFIER) && checkAt(1, KofCTokenType.EQUAL)) {
-            String target = advance().text();
-            expect(KofCTokenType.EQUAL);
-            KofCAst.Expr expr = parseExpr();
-            expect(KofCTokenType.SEMI);
-            return new KofCAst.AssignStmt(deref, target, expr);
+        if (check(KofCTokenType.IDENTIFIER)) {
+            String target = peek().text();
+            if (checkAt(1, KofCTokenType.DOT)) {
+                advance(); // ident
+                advance(); // .
+                String field = expect(KofCTokenType.IDENTIFIER).text();
+                if (check(KofCTokenType.EQUAL)) {
+                    advance();
+                    KofCAst.Expr expr = parseExpr();
+                    expect(KofCTokenType.SEMI);
+                    return new KofCAst.FieldAssignStmt(target, field, expr);
+                }
+                pos = save;
+            } else if (checkAt(1, KofCTokenType.EQUAL)) {
+                advance(); // ident
+                expect(KofCTokenType.EQUAL);
+                KofCAst.Expr expr = parseExpr();
+                expect(KofCTokenType.SEMI);
+                return new KofCAst.AssignStmt(deref, target, expr);
+            } else {
+                pos = save;
+            }
+        } else {
+            pos = save;
         }
-        if (deref) pos = save; // backtrack: not an assignment
         // expression statement (a call in practice)
         KofCAst.Expr expr = parseExpr();
         expect(KofCTokenType.SEMI);
@@ -194,6 +265,11 @@ public final class KofCParser {
         if (check(KofCTokenType.IDENTIFIER)) {
             String name = advance().text();
             if (check(KofCTokenType.LPAREN)) return parseCall(name);
+            if (check(KofCTokenType.DOT)) {
+                advance();
+                String field = expect(KofCTokenType.IDENTIFIER).text();
+                return new KofCAst.FieldExpr(name, field);
+            }
             return new KofCAst.IdentExpr(name);
         }
         if (check(KofCTokenType.INTEGER)) {
@@ -222,39 +298,80 @@ public final class KofCParser {
         return new KofCAst.CallExpr(name, args);
     }
 
-    /** Honest diagnostics (R6): unknown call or arity mismatch never becomes a silent wrong binary. */
-    private void validateCalls(KofCAst.Program program) {
+    // ── validation (honest diagnostics, R6/Q7) ─────────────────────────────
+
+    private void validate(KofCAst.Program program) {
+        Map<String, KofCAst.StructDecl> structs = new LinkedHashMap<>();
+        for (var s : program.structs()) {
+            structs.put(s.name(), s);
+            int size = 0;
+            for (var f : s.fields()) {
+                if (!f.type().equals("int")) { error("struct " + s.name() + " field " + f.name() + " must be int"); }
+                size += 4;
+            }
+            if (size > MAX_STRUCT_BYTES) {
+                error("struct " + s.name() + " is " + size + " bytes; the subset supports at most " + MAX_STRUCT_BYTES);
+            }
+        }
+        for (var g : program.globals()) checkStructType(g.type(), structs);
         Map<String, Integer> arity = new LinkedHashMap<>();
         for (var fn : program.funcs()) arity.put(fn.name(), fn.params().size());
         for (var fn : program.funcs()) {
-            for (var st : fn.body()) validateStmt(st, arity);
+            Map<String, String> types = new LinkedHashMap<>();
+            for (var p : fn.params()) { types.put(p.name(), p.type()); checkStructType(p.type(), structs); }
+            for (var g : program.globals()) types.putIfAbsent(g.name(), g.type());
+            collectLocalTypes(fn.body(), types, structs);
+            for (var st : fn.body()) validateStmt(st, types, structs, arity);
         }
     }
 
-    private void validateStmt(KofCAst.Stmt stmt, Map<String, Integer> arity) {
+    private void checkStructType(String type, Map<String, KofCAst.StructDecl> structs) {
+        if (type.startsWith("struct ")) {
+            String n = type.substring("struct ".length());
+            if (!structs.containsKey(n)) error("unknown struct " + n);
+        }
+    }
+
+    private void collectLocalTypes(List<KofCAst.Stmt> body, Map<String, String> types,
+                                   Map<String, KofCAst.StructDecl> structs) {
+        for (var st : body) {
+            if (st instanceof KofCAst.LocalDeclStmt s) { types.put(s.name(), s.type()); checkStructType(s.type(), structs); }
+            else if (st instanceof KofCAst.IfStmt s) collectLocalTypes(s.thenBody(), types, structs);
+            else if (st instanceof KofCAst.WhileStmt s) collectLocalTypes(s.body(), types, structs);
+        }
+    }
+
+    private void validateStmt(KofCAst.Stmt stmt, Map<String, String> types,
+                              Map<String, KofCAst.StructDecl> structs, Map<String, Integer> arity) {
         switch (stmt) {
             case KofCAst.IfStmt s -> {
-                validateExpr(s.cond(), arity);
-                for (var st : s.thenBody()) validateStmt(st, arity);
+                validateExpr(s.cond(), types, structs, arity);
+                for (var st : s.thenBody()) validateStmt(st, types, structs, arity);
             }
             case KofCAst.WhileStmt s -> {
-                validateExpr(s.cond(), arity);
-                for (var st : s.body()) validateStmt(st, arity);
+                validateExpr(s.cond(), types, structs, arity);
+                for (var st : s.body()) validateStmt(st, types, structs, arity);
             }
-            case KofCAst.ExprStmt s -> validateExpr(s.expr(), arity);
-            case KofCAst.AssignStmt s -> validateExpr(s.value(), arity);
-            case KofCAst.ReturnStmt s -> { if (s.value() != null) validateExpr(s.value(), arity); }
+            case KofCAst.ExprStmt s -> validateExpr(s.expr(), types, structs, arity);
+            case KofCAst.AssignStmt s -> validateExpr(s.value(), types, structs, arity);
+            case KofCAst.FieldAssignStmt s -> {
+                validateField(s.target(), s.field(), types, structs);
+                validateExpr(s.value(), types, structs, arity);
+            }
+            case KofCAst.ReturnStmt s -> { if (s.value() != null) validateExpr(s.value(), types, structs, arity); }
             case KofCAst.AsmStmt ignored -> { }
             case KofCAst.LocalDeclStmt ignored -> { }
         }
     }
 
-    private void validateExpr(KofCAst.Expr expr, Map<String, Integer> arity) {
+    private void validateExpr(KofCAst.Expr expr, Map<String, String> types,
+                              Map<String, KofCAst.StructDecl> structs, Map<String, Integer> arity) {
         switch (expr) {
-            case KofCAst.BinaryExpr e -> { validateExpr(e.left(), arity); validateExpr(e.right(), arity); }
-            case KofCAst.ParenExpr e -> validateExpr(e.inner(), arity);
+            case KofCAst.BinaryExpr e -> { validateExpr(e.left(), types, structs, arity); validateExpr(e.right(), types, structs, arity); }
+            case KofCAst.ParenExpr e -> validateExpr(e.inner(), types, structs, arity);
+            case KofCAst.FieldExpr e -> validateField(e.base(), e.field(), types, structs);
             case KofCAst.CallExpr e -> {
-                for (var a : e.args()) validateExpr(a, arity);
+                for (var a : e.args()) validateExpr(a, types, structs, arity);
                 if (PRINT_BUILTINS.contains(e.name())) {
                     if (!e.args().isEmpty()) error("print() takes no arguments in the subset");
                 } else if (arity.containsKey(e.name())) {
@@ -268,6 +385,19 @@ public final class KofCParser {
             }
             case null, default -> { }
         }
+    }
+
+    private void validateField(String base, String field, Map<String, String> types,
+                               Map<String, KofCAst.StructDecl> structs) {
+        String type = types.get(base);
+        if (type == null || !type.startsWith("struct ")) {
+            error(base + " is not a struct variable");
+            return;
+        }
+        KofCAst.StructDecl decl = structs.get(type.substring("struct ".length()));
+        if (decl == null) return; // already reported
+        boolean found = decl.fields().stream().anyMatch(f -> f.name().equals(field));
+        if (!found) error("struct " + decl.name() + " has no field " + field);
     }
 
     private boolean isDerefAhead() {

@@ -45,6 +45,7 @@ public final class KofCLexer {
                     case "while" -> KofCTokenType.WHILE;
                     case "asm" -> KofCTokenType.ASM;
                     case "return" -> KofCTokenType.RETURN;
+                    case "struct" -> KofCTokenType.STRUCT;
                     default -> KofCTokenType.IDENTIFIER;
                 };
                 out.add(new KofCToken(t, w, line, sc));
@@ -88,6 +89,7 @@ public final class KofCLexer {
                 case '}' -> KofCTokenType.RBRACE;
                 case ';' -> KofCTokenType.SEMI;
                 case ',' -> KofCTokenType.COMMA;
+                case '.' -> KofCTokenType.DOT;
                 case '*' -> KofCTokenType.STAR;
                 case '&' -> KofCTokenType.AMP;
                 case '=' -> KofCTokenType.EQUAL;

@@ -144,6 +144,29 @@ final class KofCEmitterRiscv extends KofCEmitterBase {
     }
 
     @Override
+    protected void emitLoadField(Storage storage, int byteOffset) {
+        if (storage.local()) {
+            sb.append("    lw a0, -").append(fieldDisp(storage.slot(), byteOffset)).append("(s0)\n");
+        } else {
+            sb.append("    la t0, ").append(storage.name()).append("\n");
+            sb.append("    lw a0, ").append(byteOffset).append("(t0)\n");
+        }
+    }
+
+    @Override
+    protected void emitStoreField(Storage storage, int byteOffset) {
+        if (storage.local()) {
+            sb.append("    sw a0, -").append(fieldDisp(storage.slot(), byteOffset)).append("(s0)\n");
+        } else {
+            sb.append("    la t0, ").append(storage.name()).append("\n");
+            sb.append("    sw a0, ").append(byteOffset).append("(t0)\n");
+        }
+    }
+
+    /** Frame displacement of a field: base slot minus the field byte offset. */
+    private static int fieldDisp(int slot, int byteOffset) { return offset(slot) - byteOffset; }
+
+    @Override
     protected void emitAddrOfStorage(Storage storage) {
         if (storage.local()) {
             sb.append("    addi a0, s0, -").append(offset(storage.slot())).append("\n");

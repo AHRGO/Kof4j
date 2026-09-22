@@ -149,6 +149,31 @@ final class KofCEmitterAarch extends KofCEmitterBase {
     }
 
     @Override
+    protected void emitLoadField(Storage storage, int byteOffset) {
+        if (storage.local()) {
+            sb.append("    ldursw x0, [x29, #-").append(fieldDisp(storage.slot(), byteOffset)).append("]\n");
+        } else {
+            adrp("x1", storage.name());
+            sb.append("    ldrsw x0, [x1").append(globalDisp(byteOffset)).append("]\n");
+        }
+    }
+
+    @Override
+    protected void emitStoreField(Storage storage, int byteOffset) {
+        if (storage.local()) {
+            sb.append("    stur w0, [x29, #-").append(fieldDisp(storage.slot(), byteOffset)).append("]\n");
+        } else {
+            adrp("x1", storage.name());
+            sb.append("    str w0, [x1").append(globalDisp(byteOffset)).append("]\n");
+        }
+    }
+
+    /** Frame displacement of a field: base slot minus the field byte offset. */
+    private static int fieldDisp(int slot, int byteOffset) { return offset(slot) - byteOffset; }
+
+    private static String globalDisp(int byteOffset) { return byteOffset == 0 ? "" : ", #" + byteOffset; }
+
+    @Override
     protected void emitAddrOfStorage(Storage storage) {
         if (storage.local()) {
             sb.append("    sub x0, x29, #").append(offset(storage.slot())).append("\n");

@@ -30,9 +30,14 @@ abstract class KofCEmitterBase implements KofCEmitter {
     }
 
     private Map<String, Integer> localSlots = Map.of();
+    private Map<String, String> varTypes = Map.of();
+    private final Map<String, KofCAst.StructDecl> structs = new LinkedHashMap<>();
     private String funcEndLabel = "";
 
-    protected KofCEmitterBase(KofCAst.Program prog) { this.prog = prog; }
+    protected KofCEmitterBase(KofCAst.Program prog) {
+        this.prog = prog;
+        for (var s : prog.structs()) structs.put(s.name(), s);
+    }
 
     @Override
     public String emit() {
@@ -47,8 +52,10 @@ abstract class KofCEmitterBase implements KofCEmitter {
 
     private void emitFunc(KofCAst.FuncDecl fn) {
         localSlots = new LinkedHashMap<>();
+        varTypes = new LinkedHashMap<>();
+        for (var g : prog.globals()) varTypes.putIfAbsent(g.name(), g.type());
         int slots = 0;
-        for (var p : fn.params()) localSlots.put(p.name(), slots++);
+        for (var p : fn.params()) { localSlots.put(p.name(), slots++); varTypes.put(p.name(), p.type()); }
         collectLocals(fn.body());
         sb.append(fn.name()).append(":\n");
         emitFuncPrologue(localSlots.size());
@@ -66,12 +73,24 @@ abstract class KofCEmitterBase implements KofCEmitter {
         for (var st : body) {
             if (st instanceof KofCAst.LocalDeclStmt s) {
                 localSlots.computeIfAbsent(s.name(), k -> localSlots.size());
+                varTypes.put(s.name(), s.type());
             } else if (st instanceof KofCAst.IfStmt s) {
                 collectLocals(s.thenBody());
             } else if (st instanceof KofCAst.WhileStmt s) {
                 collectLocals(s.body());
             }
         }
+    }
+
+    /** Byte offset of {@code field} inside {@code type} ({@code struct X}); C int = 4 B. */
+    protected int fieldOffset(String type, String field) {
+        if (type == null || !type.startsWith("struct ")) return 0;
+        KofCAst.StructDecl decl = structs.get(type.substring("struct ".length()));
+        if (decl == null) return 0;
+        for (int i = 0; i < decl.fields().size(); i++) {
+            if (decl.fields().get(i).name().equals(field)) return 4 * i;
+        }
+        return 0;
     }
 
     protected void emitStmt(KofCAst.Stmt stmt) {
@@ -104,6 +123,9 @@ abstract class KofCEmitterBase implements KofCEmitter {
             Storage target = resolve(s.target());
             if (s.deref()) emitDerefStoreStorage(target);
             else emitStoreStorage(target);
+        } else if (stmt instanceof KofCAst.FieldAssignStmt s) {
+            emitExpr(s.value());
+            emitStoreField(resolve(s.target()), fieldOffset(varTypes.get(s.target()), s.field()));
         }
     }
 
@@ -113,6 +135,7 @@ abstract class KofCEmitterBase implements KofCEmitter {
             case KofCAst.IdentExpr e -> emitLoadStorage(resolve(e.name()));
             case KofCAst.UnaryAddr e -> emitAddrOfStorage(resolve(e.ident()));
             case KofCAst.UnaryDeref e -> emitLoadThroughStorage(resolve(e.ident()));
+            case KofCAst.FieldExpr e -> emitLoadField(resolve(e.base()), fieldOffset(varTypes.get(e.base()), e.field()));
             case KofCAst.ParenExpr e -> emitExpr(e.inner());
             case KofCAst.CallExpr e -> emitCallExpr(e);
             case KofCAst.BinaryExpr e -> {
@@ -176,6 +199,12 @@ abstract class KofCEmitterBase implements KofCEmitter {
     protected abstract void emitLoadStorage(Storage storage);
 
     protected abstract void emitStoreStorage(Storage storage);
+
+    /** Loads a 32-bit C {@code int} struct field at {@code byteOffset}, sign-extended. */
+    protected abstract void emitLoadField(Storage storage, int byteOffset);
+
+    /** Stores the accumulator as a 32-bit C {@code int} struct field at {@code byteOffset}. */
+    protected abstract void emitStoreField(Storage storage, int byteOffset);
 
     protected abstract void emitAddrOfStorage(Storage storage);
 

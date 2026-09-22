@@ -2,7 +2,7 @@
 
 [English](kof-c-cross.md) | [Português](kof-c-cross.pt_BR.md)
 
-**Status:** EM CURSO — **C1 + C2 LANDADAS** (22/09). Dono: frente FFI/kof-c
+**Status:** EM CURSO — **C1 + C2 + C3 LANDADAS** (22/09). Dono: frente FFI/kof-c
 (lane development/tooling).
 
 ## Por quê
@@ -21,10 +21,12 @@ testes FFI cross nativos consigam ligar (destravando a fatia de struct-param).
 ## Subconjunto base
 
 Globais `int g;` e funções com parâmetros/retorno `int` e locais — só
-`signed int`, sem structs, sem floats. Controle `if`/`while`, binárias
-inteiras/bitwise/comparação/shift, `&ident` e `*(int*)ident`, chamadas com
-até seis argumentos em registrador, `print`/`print_arg`, bytes `asm` crus.
-Freestanding: só syscalls cruas, sem libc.
+`signed int`, sem floats. Controle `if`/`while`, binárias
+inteiras/bitwise/comparação/shift (um operador por expressão sem parênteses),
+`&ident` e `*(int*)ident`, chamadas com até seis argumentos em registrador,
+`print`/`print_arg`, bytes `asm` crus. Tipos `struct` com campos `int`, acesso
+a membro e parâmetros struct por valor (≤ 8 B). Freestanding: só syscalls
+cruas, sem libc.
 
 ## Fatias
 
@@ -53,10 +55,30 @@ Freestanding: só syscalls cruas, sem libc.
   mutando global, chamadas aninhadas, return antecipado, parâmetro ponteiro
   desreferenciado no callee, os seis registradores de argumento) + os quatro
   casos de rejeição.
-- **C3 — TODO:** tipos `struct` e struct por valor em parâmetro (classificação
-  SysV / AAPCS64 / RISCV64) — a peça que a fixture FFI precisa.
+- **C3 — LANDADA (22/09, primeiro corte):** tipos `struct` com **campos
+  `int` de 4 bytes C** (casando com `AbiLayout.Scalar.INT`) e **parâmetros
+  struct por valor** de até **8 bytes** (um eightbyte). Um struct local/global
+  é um único slot de 8 bytes; o acesso a campo carrega/guarda 32 bits
+  (`movsxd`/`lw`/`ldursw`) com extensão de sinal; um struct ≤ 8 B atravessa em
+  UM registrador inteiro — exatamente o caminho do `div_t` da libc. Gramática:
+  `struct S { int a; int b; };`, `struct S v;` (global/local/parâmetro) e
+  `v.campo`. Diagnósticos honestos: struct maior que 8 bytes, struct
+  desconhecido, campo desconhecido ou campo em não-struct são rejeitados antes
+  de emitir binário (R6/Q7). Prova: `KofCStructCompilerTest` 7/7 em
+  x86_64/riscv64/aarch64 (ida-e-volta de campo, parâmetro por valor, campo
+  negativo com extensão de sinal, struct + escalar misturados, struct global)
+  mais os quatro casos de rejeição. **Falta:** struct **retorno** por valor,
+  structs maiores que 8 bytes (caminho de memória/par de registradores) e a
+  classificação completa SysV/AAPCS64/RISCV64 multi-eightbyte — a necessidade
+  atual da fixture (um parâmetro struct ≤ 8 B) está atendida.
 - **C4 — TODO:** saída de objeto reutilizável (`.o`) e link, para um teste
   cross consumir a fixture.
+- **Fronteira de escopo na largura de `int`:** variáveis `int` escalares
+  mantêm o modelo de slot de 8 bytes do brinquedo (`int p; p = &x;` que guarda
+  ponteiro depende disso); a largura C de 32 bits está implementada onde a ABI
+  C observa layout de memória — campos de struct e empacotamento por valor.
+  Trocar `int` escalar para 32 bits exige um tipo ponteiro real (`int*`) e é
+  uma fatia separada (rule 6).
 
 ## Notas
 
