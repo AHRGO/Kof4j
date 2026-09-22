@@ -513,11 +513,16 @@ public final class CompilerPipeline {
 
     private static boolean nativeExternBound(CompilerDriver driver, ExternalFunctionNode ext) {
         if (ext.library() == null || ext.library().isEmpty()) return false;
-        // Fatias 1–2: só x86-64 (SysV). riscv64/aarch64 struct landam na fatia 3.
-        if (driver.target != Target.NATIVE) return false;
+        // ABI ESCALAR binda em TODO alvo nativo: x86-64 SysV (fatia 1) e o shim
+        // LP64/AAPCS64 do riscv64/aarch64 (#431 fatia 2, gate+lowering+E2E qemu
+        // no mesmo commit). STRUCT por valor é só x86-64 nesta fase (D6-1(A)/3.7
+        // fatias 1–2a): o struct cross landa na fatia 3 → FFI001 honesto (R6).
+        // O caller só entra aqui com `driver.target.isNative()`.
+        boolean x86 = driver.target == Target.NATIVE;
         // Retorno: escalar/void OU struct por valor no register path (≤ 16 B).
         // O sret (> 16 B, D6-4) ainda é FFI001 honesto (fatia 2b).
         if (FfiSignature.returnChar(ext.returnType()) == null) {
+            if (!x86) return false;
             String retFields = FfiSignature.structFieldChars(ext.returnType(), driver);
             if (retFields == null
                     || !FfiStructLayout.x86RegisterOnly(FfiStructLayout.structTypeOfChars(retFields))) {
@@ -530,7 +535,8 @@ public final class CompilerPipeline {
                 paramTypes.add(FfiSignature.paramType(param.type()));
                 continue;
             }
-            // D6-1(A)/3.7: `record` de campos escalares por valor (register path).
+            // D6-1(A)/3.7: `record` de campos escalares por valor (register path) — x86-64.
+            if (!x86) return false;
             String fc = FfiSignature.structFieldChars(param.type(), driver);
             if (fc != null) {
                 paramTypes.add(FfiStructLayout.structTypeOfChars(fc));
@@ -538,7 +544,8 @@ public final class CompilerPipeline {
             }
             return false;
         }
-        return FfiStructLayout.x86Bindable(paramTypes);
+        // Chamada puramente escalar: binda em todo nativo (o layout x86 não se aplica).
+        return !x86 || FfiStructLayout.x86Bindable(paramTypes);
     }
 
     static boolean isIntType(String t) {
