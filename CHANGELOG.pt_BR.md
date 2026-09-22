@@ -54,6 +54,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (`!x86 || x86Bindable`). Prova: `FfiNativeCrossE2ETest` 6/6 sob qemu + novo
     `FfiNativeCrossGateTest` 3/3 (pré-codegen, pega sem toolchain).
 
+  - **§445 CORRIGIDO — cross riscv64: `as -mno-relax` + o split S-5 por função
+    (`.section`) ligou `j .L*` cross-range a si mesmo (`j .`); `encoding.base64Encode`/
+    `base64Decode` travavam para sempre sob qemu** (22/09, lane gaps-db, achado ao montar
+    a toolchain cross para o recon do DB-3): a transformação punha o corpo compartilhado
+    do B23 na seção do `...UrlEncode` enquanto o `base64Encode` era um stub `j .Lv_b64_enc`;
+    o GAS com `-mno-relax` liga esse salto local à frente **sem relocação** (o objeto mostra
+    `j 4` sem `.rela`), então o `--gc-sections` órfã o corpo e o stub salta para si mesmo.
+    Fix: removido o `-mno-relax` do `as` riscv — o hazard de gp que ele guardava é
+    link-time e o `ld --no-relax` já cobre (medido: 0 instruções gp-relative); o passe de
+    sectionização foi para `NativeCrossSections` (movimentação pura, byte-idêntica).
+    Prova: `NativeCrossSectionsTest` 4/4 + `NativeRiscv64E2ETest` 54/0F/0E (7,1 s, era hang
+    de 187 s) + `NativeAarch64E2ETest` 53/0F/0E + `ArtifactSizeTest` cross verde
+    (`hello` riscv 136.512 B, S-5 intacta com 134 seções injetadas).
+
   - **Retorno de struct por valor agora binda nos alvos cross (riscv64/aarch64),
     register path INTEGER ≤ 16 B** (22/09, frente FFI, D6-1/3.7 fatia 3): os
     emissores LP64/AAPCS64 salvam os words de retorno (`a0`/`a1`; `x0`/`x1` no

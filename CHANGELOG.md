@@ -54,6 +54,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     native target (`!x86 || x86Bindable`). Proof: `FfiNativeCrossE2ETest` 6/6 under qemu +
     new `FfiNativeCrossGateTest` 3/3 (pre-codegen, catches it without a toolchain).
 
+  - **§445 FIXED — riscv64 cross: `as -mno-relax` + the S-5 per-function `.section`
+    split bound a cross-range `j .L*` to itself (`j .`); `encoding.base64Encode`/
+    `base64Decode` hung forever under qemu** (22/09, gaps-db lane, found building the
+    cross toolchain for the DB-3 recon): the transform put B23's shared body in the
+    `...UrlEncode` section while `base64Encode` stubbed `j .Lv_b64_enc`; GAS with
+    `-mno-relax` binds that forward local branch **without a relocation** (object shows
+    `j 4` with no `.rela`), so `--gc-sections` orphaned the body and the stub jumped to
+    itself. Fix: dropped `-mno-relax` from the riscv `as` — the gp hazard it guarded is
+    link-time and `ld --no-relax` already covers it (measured: 0 gp-relative instructions);
+    the sectionize pass moved to `NativeCrossSections` (pure move, byte-identical).
+    Proof: `NativeCrossSectionsTest` 4/4 + `NativeRiscv64E2ETest` 54/0F/0E (7.1 s, was
+    a 187 s hang) + `NativeAarch64E2ETest` 53/0F/0E + cross `ArtifactSizeTest` green
+    (`hello` riscv 136,512 B, S-5 with 134 injected sections intact).
+
   - **FFI struct return by value now binds on the cross targets (riscv64/aarch64),
     register path INTEGER ≤ 16 B** (22/09, FFI front, D6-1/3.7 fatia 3): the
     LP64/AAPCS64 emitters save the return words (`a0`/`a1`; `x0`/`x1` under

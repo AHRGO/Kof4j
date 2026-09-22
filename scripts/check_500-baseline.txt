@@ -31,7 +31,6 @@
 573	kof-compiler/src/main/java/dev/kof/compiler/KofUi.java
 521	kof-compiler/src/main/java/dev/kof/compiler/MemberCallTyper.java
 510	kof-compiler/src/main/java/dev/kof/compiler/MethodCallTyper.java
-515	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeArchEmitter.java
 573	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeBackend.java
 553	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmMapset0.java
 581	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmRtB33.java
