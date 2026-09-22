@@ -109,6 +109,21 @@ non-exhaustive `switch` and variance violations.
 | X6.2 | **targets** | the fold is frontend-level → no `REF001`; instead an honest diagnostic for non-record / unknown `R` (R6) | pinned diagnostic for an invalid argument |
 | X6.3 | **parity + docs** | binding E2E (Arrow/Parquet-shaped), parity matrix, `training/`/`learn/` | suite green; docs-lang 100% |
 
+### Implementation notes (X6.1, design)
+
+- The compiler knows `R`'s components, so `interop.schema(R)` folds in the
+  **lowerer** into the exact ops the equivalent `listOf(Field("n","t"),…)`
+  would emit (`kof_list_new` + `kof_list_add`; the record ctor via the normal
+  path) — **no per-backend code**, hence same output on all targets.
+- `record Field(String name, String type)` is a classic host-injected record
+  (same mechanism as `kof.supervisor`/`kof.workflow`), so member access
+  (`f.name`/`f.type`) and codegen work unchanged; typing returns
+  `List<Field>`.
+- **Open sub-choice (maintainer):** import-free magic (needs an AST scan to
+  decide injection) **vs.** explicit `import kof.interop` (inject on import,
+  simpler and always correct). Leaning to the explicit import — it is the
+  established host mechanism and avoids a fragile scanner.
+
 ### Risks / open questions
 
 - Temptation to grow into general reflection — the "interop boundary only"

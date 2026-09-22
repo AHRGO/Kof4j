@@ -112,6 +112,22 @@ para `switch` não-exaustivo e violação de variance.
 | X6.2 | **alvos** | a dobra é no frontend → sem `REF001`; em vez disso, diagnóstico honesto para `R` não-record / desconhecido (R6) | diagnóstico pinado para argumento inválido |
 | X6.3 | **paridade + docs** | E2E de binding (forma Arrow/Parquet), matriz de paridade, `training/`/`learn/` | suíte verde; docs-lang 100% |
 
+### Notas de implementação (X6.1, desenho)
+
+- O compilador conhece os componentes de `R`, então `interop.schema(R)` dobra
+  no **lowerer** para exatamente as ops que o `listOf(Field("n","t"),…)`
+  equivalente emitiria (`kof_list_new` + `kof_list_add`; o ctor do record pelo
+  caminho normal) — **sem código por backend**, logo mesma saída em todos os
+  alvos.
+- `record Field(String name, String type)` é um record de host injection
+  clássico (mesmo mecanismo de `kof.supervisor`/`kof.workflow`), então acesso a
+  membro (`f.name`/`f.type`) e codegen funcionam sem mudança; a tipagem devolve
+  `List<Field>`.
+- **Sub-escolha em aberto (mantenedora):** mágica sem import (exige varredura
+  da AST para decidir a injeção) **vs.** `import kof.interop` explícito (injeta
+  no import, mais simples e sempre correto). Tendência ao import explícito — é
+  o mecanismo de host estabelecido e evita um scanner frágil.
+
 ### Riscos / perguntas abertas
 
 - Tentação de virar reflexão geral — a cerca "só fronteira de interop" tem de
