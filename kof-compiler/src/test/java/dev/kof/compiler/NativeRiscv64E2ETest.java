@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -55,16 +56,8 @@ class NativeRiscv64E2ETest {
         ProcessBuilder pb = qemu(arch, binFile);
         pb.redirectErrorStream(true);
         Process p = pb.start();
-        String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
-                .replace("\r\n", "\n").trim();
-        int ec;
-        try {
-            ec = p.waitFor();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Interrupted while running " + arch + " binary", e);
-        }
-        assertEquals(0, ec, "Exit code should be 0, output: '" + output + "'");
+        String output = runBounded(p, arch + " binary");
+        assertEquals(0, p.exitValue(), "Exit code should be 0, output: '" + output + "'");
         return output;
     }
 
@@ -94,6 +87,47 @@ class NativeRiscv64E2ETest {
         return null;
     }
 
+    /** §418: qemu nunca sobrevive à rodada — espera bounded (180s), mata se
+     *  estourar e destroy no finally; só então o temp dir pode ser removido.
+     *  (O `timeout` externo SIGKILLa o grupo inteiro; aqui a rodada normal não
+     *  deixa órfão nem some com o primeiro evento do inferior.) */
+    static String runBounded(Process p, String what) throws IOException {
+        return runBounded(p, what, 180, TimeUnit.SECONDS);
+    }
+
+    static String runBounded(Process p, String what, long timeout, TimeUnit unit) throws IOException {
+        try {
+            if (!p.waitFor(timeout, unit)) {
+                p.destroyForcibly();
+                p.waitFor(10, TimeUnit.SECONDS);
+                throw new IOException(what + " não terminou em " + timeout + " " + unit
+                        + " — qemu morto (§418)");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            p.destroyForcibly();
+            throw new IOException("Interrupted while running " + what, e);
+        } finally {
+            if (p.isAlive()) p.destroyForcibly();
+        }
+        return new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+    }
+
+    /** §418 (teste do harness): um filho pendurado não sobrevive à rodada —
+     *  bound estourado ⇒ destroyForcibly, e o processo morre de verdade. */
+    @Test
+    void hangingChildIsKilledByTheBoundedWait() throws Exception {
+        Process p = new ProcessBuilder("sh", "-c", "sleep 60").start();
+        long t0 = System.nanoTime();
+        assertThrows(IOException.class,
+                () -> runBounded(p, "hanging child", 1, TimeUnit.SECONDS));
+        long ms = (System.nanoTime() - t0) / 1_000_000;
+        assertTrue(ms < 30_000, "deveria desistir dentro do bound, levou " + ms + "ms");
+        p.waitFor(10, TimeUnit.SECONDS);
+        assertFalse(p.isAlive(), "§418: o filho pendurado tem de morrer (destroyForcibly)");
+    }
+
     private String runRiscv64(Path tempDir, String source) throws IOException {
         Path src = tempDir.resolve("Main.kf");
         Files.writeString(src, source);
@@ -105,16 +139,8 @@ class NativeRiscv64E2ETest {
         ProcessBuilder pb = qemu("riscv64", binFile);
         pb.redirectErrorStream(true);
         Process p = pb.start();
-        String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
-                .replace("\r\n", "\n").trim();
-        int ec;
-        try {
-            ec = p.waitFor();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Interrupted while running riscv64 binary", e);
-        }
-        assertEquals(0, ec, "Exit code should be 0, output: '" + output + "'");
+        String output = runBounded(p, "riscv64 binary");
+        assertEquals(0, p.exitValue(), "Exit code should be 0, output: '" + output + "'");
         return output;
     }
 
@@ -1137,8 +1163,8 @@ main() {
         ProcessBuilder pb = qemu("riscv64", binFile);
         pb.redirectErrorStream(true);
         Process p = pb.start();
-        String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        int ec = p.waitFor();
+        String output = runBounded(p, "riscv64 heap-exhaustion");
+        int ec = p.exitValue();
         assertNotEquals(0, ec, "esgotar o heap deve terminar com exit != 0 (não travar/lixo), output: " + output);
         assertTrue(output.contains("out of memory"),
                 "esgotar o heap deve dar o panic honesto 'out of memory', foi: " + output);

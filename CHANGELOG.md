@@ -13,6 +13,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§418 FIXED — the riscv64 `kof debug`/E2E harness could leave qemu alive after a round**
+    (21/09, lane nat/native-debug, handoff D-CLOSEALL-BATCH): `NativeRiscv64E2ETest` called
+    `waitFor()` with zero `destroy()`/`finally`, so a timed-out qemu survived and the temp
+    dir (and the next round) inherited the corpse. Fix: new `runBounded` helper (bounded
+    180s wait, `destroyForcibly()` on timeout + bounded reap, kill on interrupt and in the
+    `finally`) applied to `runQemu`, `runRiscv64` and the heap-exhaustion site. Proof:
+    `hangingChildIsKilledByTheBoundedWait` (hanging child dies at the 1s bound) +
+    `NativeRiscv64E2ETest` 54/0F + the 9 neighbor classes calling `runQemu` 178/0F/0E.
+
   - **§441 FIXED — `Map` with a wide key (`Long`/`Double`) emitted invalid JVM bytecode**
     (21/09, compiler lane): `mapOf(1.5, "a")`, `mapOf(1L, "x")` (and `put`/`putIfAbsent`
     with a wide key) type-checked clean and ran on Script/JS, but the JVM class failed
