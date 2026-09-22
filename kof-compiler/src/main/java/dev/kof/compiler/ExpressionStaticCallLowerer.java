@@ -183,13 +183,20 @@ if (mc.receiver() == null && "Color".equals(mc.methodName()) && mc.arguments().s
         int handledUi = ExpressionUiStaticLowerer.lower(driver, mc, ops, owner, localIdx, locals);
         if (handledUi >= 0) return handledUi;
     }
-// X6 (D-INTEROP-REFLECT): `interop.schema(R)` é intrínseco de compile-time.
-// O compilador conhece os componentes de R, então a chamada dobra para as
-// mesmas ops que `listOf(Field("n","t"), …)` emitiria — sem reflexão em
-// runtime e sem código por backend (mesma saída nos 4 alvos). R precisa ser um
-// `record` declarado no módulo; senão, diagnóstico honesto (R6).
-if (CompilerInterop.isSchemaCall(mc)) {
-    return CompilerInterop.lowerSchema(driver, mc, ops, owner, localIdx, locals);
+// X6 (D-INTEROP-REFLECT, X6.2): TODO uso do namespace `interop` é dono do
+// CompilerInterop — `schema(R)` dobra para as mesmas ops que
+// `listOf(Field("n","t"), …)` emitiria (sem reflexão em runtime, mesma saída
+// nos 4 alvos); membro desconhecido, aridade errada ou argumento que não é o
+// nome de um record declarado são diagnóstico honesto (R6) — nunca silêncio
+// (antes caíam no instance-lowerer genérico e a chamada sumia). Locais,
+// campos da classe corrente e classes/records do usuário chamados `interop`
+// sombream o namespace e seguem o caminho de instância/classe normal.
+if (mc.receiver() instanceof IdentifierExpr rid
+        && CompilerInterop.isInteropNamespace(rid.name())
+        && !driver.isLocalVarName(rid.name(), locals)
+        && !ExpressionMethodCallLowerer.shadowsFieldOfCurrentClass(driver, owner, rid.name())
+        && (driver.semanticAnalyzer == null || driver.semanticAnalyzer.getClass(rid.name()) == null)) {
+    return CompilerInterop.lowerNamespaceCall(driver, mc, ops, owner, localIdx, locals);
 }
 if ("listOf".equals(mc.methodName()) && mc.receiver() == null) {
     Type elemType = driver.listOfElementType(mc, locals);

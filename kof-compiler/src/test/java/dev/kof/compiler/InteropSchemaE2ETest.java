@@ -181,8 +181,220 @@ class InteropSchemaE2ETest {
                 Target.JVM, tmp);
         assertFalse(r.success(), "class argument must be rejected");
         assertTrue(r.diagnostics().getDiagnostics().stream()
-                        .anyMatch(d -> "INTEROP001".equals(d.code())),
-                "expected INTEROP001, got: " + r.diagnostics().getDiagnostics());
+                        .anyMatch(d -> "INTEROP001".equals(d.code())
+                                && d.message().contains("is a class, not a record")),
+                "expected INTEROP001 'is a class, not a record', got: "
+                        + r.diagnostics().getDiagnostics());
+    }
+
+    // ── X6.2 (D-INTEROP-REFLECT): matriz de edge — toda face inválida do
+    //    namespace é diagnóstico honesto com posição (R6), nunca silêncio.
+    //    Antes do X6.2, `interop.foo()` e `interop.schema(A, B)` compilavam
+    //    sem emitir NADA (a chamada sumia no instance-lowerer genérico).
+
+    @Test
+    void unknownMemberOfInteropNamespaceDiagnoses(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Solo.kf", """
+                import kof.interop
+
+                record User(String name, Int age)
+
+                main() {
+                    interop.foo()
+                }
+                """);
+        CompilationResult r = driver.compileSources(List.of(f), tmp.resolve("unk"),
+                Target.JVM, tmp);
+        assertFalse(r.success(), "interop.foo() must be rejected");
+        assertTrue(r.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> "INTEROP002".equals(d.code())
+                                && d.message().contains("no member 'foo()'")),
+                "expected INTEROP002 for unknown member, got: "
+                        + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void schemaWithTwoArgsDiagnoses(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Solo.kf", """
+                import kof.interop
+
+                record User(String name, Int age)
+                record Point(Int x, Int y)
+
+                main() {
+                    interop.schema(User, Point)
+                }
+                """);
+        CompilationResult r = driver.compileSources(List.of(f), tmp.resolve("arity2"),
+                Target.JVM, tmp);
+        assertFalse(r.success(), "interop.schema(A, B) must be rejected");
+        assertTrue(r.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> "INTEROP001".equals(d.code())
+                                && d.message().contains("got 2")),
+                "expected INTEROP001 wrong arity, got: "
+                        + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void schemaWithZeroArgsDiagnoses(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Solo.kf", """
+                import kof.interop
+
+                main() {
+                    interop.schema()
+                }
+                """);
+        CompilationResult r = driver.compileSources(List.of(f), tmp.resolve("arity0"),
+                Target.JVM, tmp);
+        assertFalse(r.success(), "interop.schema() must be rejected");
+        assertTrue(r.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> "INTEROP001".equals(d.code())
+                                && d.message().contains("got 0")),
+                "expected INTEROP001 wrong arity, got: "
+                        + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void schemaOfLocalValueDiagnoses(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Solo.kf", """
+                import kof.interop
+
+                record User(String name, Int age)
+
+                main() {
+                    var u = User("a", 1)
+                    interop.schema(u)
+                }
+                """);
+        CompilationResult r = driver.compileSources(List.of(f), tmp.resolve("local"),
+                Target.JVM, tmp);
+        assertFalse(r.success(), "interop.schema(localValue) must be rejected");
+        assertTrue(r.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> "INTEROP001".equals(d.code())
+                                && d.message().contains("is a value (local variable)")),
+                "expected INTEROP001 'value, not type', got: "
+                        + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void schemaOfEnumDiagnoses(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Solo.kf", """
+                import kof.interop
+
+                enum Color { Red, Green, Blue }
+
+                main() {
+                    interop.schema(Color)
+                }
+                """);
+        CompilationResult r = driver.compileSources(List.of(f), tmp.resolve("enum"),
+                Target.JVM, tmp);
+        assertFalse(r.success(), "interop.schema(enum) must be rejected");
+        assertTrue(r.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> "INTEROP001".equals(d.code())
+                                && d.message().contains("is an enum, not a record")),
+                "expected INTEROP001 'enum, not a record', got: "
+                        + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void schemaOfUnknownNameDiagnosesWithSem011(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Solo.kf", """
+                import kof.interop
+
+                main() {
+                    interop.schema(DoesNotExist)
+                }
+                """);
+        CompilationResult r = driver.compileSources(List.of(f), tmp.resolve("unkname"),
+                Target.JVM, tmp);
+        assertFalse(r.success(), "interop.schema(unknown) must be rejected");
+        assertTrue(r.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> "SEM011".equals(d.code())),
+                "expected SEM011 for the undefined name, got: "
+                        + r.diagnostics().getDiagnostics());
+        // SEM011 já cobre o nome — INTEROP não pode duplicar o diagnóstico.
+        assertTrue(r.diagnostics().getDiagnostics().stream()
+                        .noneMatch(d -> "INTEROP001".equals(d.code())
+                                || "INTEROP002".equals(d.code())),
+                "must not double-report the undefined name, got: "
+                        + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void schemaOfEntityRecordWorks(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Solo.kf", """
+                import kof.interop
+
+                entity User {
+                    name: String
+                    age: Int
+                }
+
+                main() {
+                    for (var f in interop.schema(User)) {
+                        println(f.name() + ":" + f.type())
+                    }
+                }
+                """);
+        String expected = "name:String\nage:Int";
+        runJvm(tmp, List.of(f), expected);
+        runScript(tmp, List.of(f), expected);
+        runJs(tmp, List.of(f), expected);
+    }
+
+    @Test
+    void localVariableNamedInteropShadowsNamespace(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Solo.kf", """
+                import kof.interop
+
+                class Box {
+                    Int schema() { return 7 }
+                }
+
+                main() {
+                    var interop = Box()
+                    println(interop.schema())
+                }
+                """);
+        String expected = "7";
+        runJvm(tmp, List.of(f), expected);
+        runScript(tmp, List.of(f), expected);
+    }
+
+    @Test
+    void schemaOfEmptyRecordRuns(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Solo.kf", """
+                import kof.interop
+
+                record Empty()
+
+                main() {
+                    List<Field> s = interop.schema(Empty)
+                    println(s.size)
+                }
+                """);
+        String expected = "0";
+        runJvm(tmp, List.of(f), expected);
+        runScript(tmp, List.of(f), expected);
+        runJs(tmp, List.of(f), expected);
+    }
+
+    @Test
+    void schemaOfCrossFileRecordWorks(@TempDir Path tmp) throws Exception {
+        Path a = write(tmp, "A.kf", """
+                import kof.interop
+
+                main() {
+                    for (var f in interop.schema(Widget)) {
+                        println(f.name() + ":" + f.type())
+                    }
+                }
+                """);
+        Path b = write(tmp, "B.kf", "record Widget(Int id, String label)\n");
+        String expected = "id:Int\nlabel:String";
+        runJvm(tmp, List.of(a, b), expected);
+        runScript(tmp, List.of(a, b), expected);
     }
 
     @Test

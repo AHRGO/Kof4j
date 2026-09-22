@@ -74,8 +74,63 @@ final class CompilerInterop {
             if (d instanceof RecordDeclarationNode r && r.name().equals(name)) {
                 return r.components();
             }
+            // entity é record no sistema de tipos (o lowering sintetiza um
+            // RecordDeclarationNode dele — lowerToIR); espelha o mesmo mapeio
+            // de campos para o schema cobrir as duas formas de record.
+            if (d instanceof EntityDeclarationNode e && e.name().equals(name)) {
+                List<RecordComponentNode> comps = new ArrayList<>();
+                for (EntityFieldNode f : e.fields()) {
+                    comps.add(new RecordComponentNode(f.position(), List.of(), f.type(), f.name(), null));
+                }
+                return comps;
+            }
         }
         return null;
+    }
+
+    /**
+     * Fragmento de mensagem para {@code interop.schema(X)} quando {@code X}
+     * NÃO é record — distingue a forma declarada (classe/enum/interface) de um
+     * nome que não declara record no módulo. A semântica já abortou nomes
+     * indefinidos (SEM011), então aqui só chegam tipos declarados.
+     */
+    static String declaredKindMessage(CompilerDriver driver, String name) {
+        for (AstNode d : driver.currentUnit.declarations()) {
+            if (d instanceof ClassDeclarationNode c && c.name().equals(name)) {
+                return "is a class, not a record";
+            }
+            if (d instanceof EnumDeclarationNode e && e.name().equals(name)) {
+                return "is an enum, not a record";
+            }
+            if (d instanceof InterfaceDeclarationNode i && i.name().equals(name)) {
+                return "is an interface, not a record";
+            }
+        }
+        return "is not a record declared in this module";
+    }
+
+    /**
+     * Ponto único de entrada do namespace {@code interop} no lowerer. Toda
+     * chamada cujo receiver é o identificador {@code interop} (namespace, não
+     * local/campo) passa por aqui: {@code schema} com 1 argumento dobra para o
+     * intrínseco; qualquer outra face (membro desconhecido, aridade errada) é
+     * um diagnóstico honesto (R6) — nunca silêncio.
+     */
+    static int lowerNamespaceCall(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
+                                  String owner, int localIdx, List<IRLocalVariable> locals) {
+        if (!"schema".equals(mc.methodName())) {
+            error(driver, mc, "INTEROP002",
+                    "interop has no member '" + mc.methodName() + "()' — the only member is "
+                            + "schema(R) (INTEROP002)");
+            return localIdx;
+        }
+        if (mc.arguments().size() != 1) {
+            error(driver, mc, "INTEROP001",
+                    "interop.schema expects exactly one argument (the record type name), got "
+                            + mc.arguments().size() + " (INTEROP001)");
+            return localIdx;
+        }
+        return lowerSchema(driver, mc, ops, owner, localIdx, locals);
     }
 
     /**
@@ -87,18 +142,29 @@ final class CompilerInterop {
     static int lowerSchema(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
                            String owner, int localIdx, List<IRLocalVariable> locals) {
         if (!hostPresent(driver)) {
-            error(driver, mc, "interop.schema requires `import kof.interop` (INTEROP001)");
+            error(driver, mc, "INTEROP001",
+                    "interop.schema requires `import kof.interop` (INTEROP001)");
             return localIdx;
         }
         ExpressionNode schemaArg = mc.arguments().get(0);
         if (!(schemaArg instanceof IdentifierExpr recId)) {
-            error(driver, mc, "interop.schema expects a record type name as its argument (INTEROP001)");
+            error(driver, mc, "INTEROP001",
+                    "interop.schema expects a record type name as its argument (INTEROP001)");
+            return localIdx;
+        }
+        if (driver.findLocalVar(recId.name(), locals) != null) {
+            error(driver, mc, "INTEROP001",
+                    "interop.schema expects a record type name, but '" + recId.name()
+                            + "' is a value (local variable) — pass the record type, e.g. "
+                            + "interop.schema(User) (INTEROP001)");
             return localIdx;
         }
         List<RecordComponentNode> comps = recordComponents(driver, recId.name());
         if (comps == null) {
-            error(driver, mc, "interop.schema: '" + recId.name()
-                    + "' is not a record declared in this module (INTEROP001)");
+            error(driver, mc, "INTEROP001",
+                    "interop.schema: '" + recId.name() + "' "
+                            + declaredKindMessage(driver, recId.name())
+                            + " (INTEROP001)");
             return localIdx;
         }
         List<ExpressionNode> fieldCalls = new ArrayList<>();
@@ -112,11 +178,11 @@ final class CompilerInterop {
         return ExpressionLowerer.emitExpression(driver, listCall, ops, owner, localIdx, locals);
     }
 
-    private static void error(CompilerDriver driver, MethodCallExpr mc, String message) {
+    private static void error(CompilerDriver driver, MethodCallExpr mc, String code, String message) {
         if (driver.currentDiagnostics == null) return;
         SourcePosition pos = mc.position();
         driver.currentDiagnostics.error(pos != null ? pos.file() : "",
-                pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0, message, "INTEROP001");
+                pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0, message, code);
     }
 
     static CompilationUnitNode injectHostIfNeeded(CompilerDriver driver,
