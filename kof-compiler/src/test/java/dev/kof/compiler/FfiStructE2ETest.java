@@ -37,6 +37,12 @@ class FfiStructE2ETest {
             struct ParamMix parammixret(long l, double d, int i) {
                 struct ParamMix m; m.l = l; m.d = d; m.i = i; return m;
             }
+            struct MixIF { int i; float f; };
+            double mixif(struct MixIF m) { return m.i + m.f; }
+            struct Time { long t; double d; };
+            double timesum(struct Time t) { return (double)t.t + t.d; }
+            struct Big3 { int a; int b; int c; int d; int e; };
+            int bigsum(struct Big3 g) { return g.a + g.b + g.c + g.d + g.e; }
             """;
 
     private final CompilerDriver driver = new CompilerDriver();
@@ -250,21 +256,62 @@ class FfiStructE2ETest {
     }
 
     @Test
-    void structParamNativeStaysFfi001(@TempDir Path dir) throws IOException {
+    void structParamNativeMemoryPathStaysFfi001(@TempDir Path dir) throws IOException {
+        // 3.7 fatia 1: só o caminho de REGISTRADORES x86-64 binda. Um struct
+        // grande (> 16 B → SysV MEMORY) segue FFI001 honesto (R6).
         Path src = dir.resolve("nat.kf");
         Files.writeString(src, """
-                record Point(Int x, Int y)
+                record Big3(Int a, Int b, Int c, Int d, Int e)
 
-                extern "libc.so.6" sumpoint(Point p): Int
+                extern "libc.so.6" bigsum(Big3 g): Int
 
                 main() {
                     println("hi")
                 }
                 """);
         CompilationResult r = driver.compile(src, dir.resolve("out-native"), Target.NATIVE);
-        assertFalse(r.success(), "Native struct ABI is slice 3.7 — must stay unbound");
+        assertFalse(r.success(), "Native struct memory path is not bound in 3.7 fatia 1");
         assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI001"),
                 "expected FFI001 on Native, got: " + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void structParamByValueNativeRegisterPath(@TempDir Path dir) throws Exception {
+        // 3.7 fatia 1: struct by-value no caminho de registradores x86-64 SysV.
+        // Point (2×Int, 1 eightbyte INTEGER), MixIF (Int+Float no MESMO eightbyte
+        // → INTEGER, shift/or) e Time (Long INTEGER + Double SSE). Golden = o
+        // MESMO fonte no JVM (FFM) — paridade byte-a-byte.
+        String so = compileHostLib(dir);
+        String kof = """
+                record Point(Int x, Int y)
+                record MixIF(Int i, Float f)
+                record Time(Long t, Double d)
+
+                extern "%s" sumpoint(Point p): Int
+                extern "%s" scale(Point p, Double f): Double
+                extern "%s" mixif(MixIF m): Double
+                extern "%s" timesum(Time t): Double
+
+                main() {
+                    println(sumpoint(Point(3, 4)))
+                    println(scale(Point(2, 3), 2.0))
+                    println(mixif(MixIF(7, 1.5 as Float)))
+                    println(timesum(Time(5, 2.25)))
+                }
+                """.formatted(so, so, so, so);
+        String expected = "7\n10.0\n8.5\n7.25";
+
+        Path jvmSrc = dir.resolve("natstruct-jvm.kf");
+        Files.writeString(jvmSrc, kof);
+        Path jvmOut = dir.resolve("out-natstruct-jvm");
+        CompilationResult rj = driver.compile(jvmSrc, jvmOut, Target.JVM);
+        assertTrue(rj.success(), "JVM oracle compile: " + rj.diagnostics().getDiagnostics());
+        String jvm = runJvm(jvmOut);
+        assertEquals(expected, jvm, "JVM golden (struct param by value)");
+
+        String nat = runNative(dir, "natstruct", kof);
+        assertEquals(expected, nat, "NATIVE x86-64 SysV struct param (register path)");
+        assertEquals(jvm, nat, "JVM↔Native byte-for-byte parity (struct param)");
     }
 
     @Test
@@ -346,6 +393,30 @@ class FfiStructE2ETest {
                 new java.io.ByteArrayInputStream(new byte[0]), out);
         assertEquals(0, ec, "JS exit code, output: " + out);
         return out.toString(java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+    }
+
+    /** Compila p/ NATIVE, executa o binário e devolve stdout+stderr combinados. */
+    private String runNative(Path dir, String base, String kof) throws IOException {
+        Path src = dir.resolve(base + "-nat.kf");
+        Files.writeString(src, kof);
+        Path out = dir.resolve("out-" + base + "-nat");
+        CompilationResult r = driver.compile(src, out, Target.NATIVE);
+        assertTrue(r.success(), () -> "NATIVE compile " + base + " (3.7 struct register path): "
+                + r.diagnostics().getDiagnostics());
+        Path bin = out.resolve("Default/Main");
+        assertTrue(Files.exists(bin), "binary " + bin + " deve existir");
+        try {
+            Process p = new ProcessBuilder(bin.toString())
+                    .directory(dir.toFile()).redirectErrorStream(true).start();
+            String o = new String(p.getInputStream().readAllBytes(),
+                    java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+            int ec = p.waitFor();
+            assertEquals(0, ec, () -> "NATIVE run " + base + " exit code, output: " + o);
+            return o;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("interrupted", e);
+        }
     }
 
     private String runJvm(Path outDir) throws IOException {

@@ -65,7 +65,17 @@ if (mc.receiver() == null && driver.externSignatures.containsKey(mc.methodName()
             // o backend escolhe o shim (x86 SysV / riscv LP64 / aarch AAPCS64
             // via tradução do texto riscv).
             List<Type> ffiParams = new java.util.ArrayList<>();
-            for (var p : ext.parameters()) ffiParams.add(FfiSignature.paramType(p.type()));
+            for (var p : ext.parameters()) {
+                Type scalar = FfiSignature.paramType(p.type());
+                if (scalar != null) {
+                    ffiParams.add(scalar);
+                } else {
+                    // 3.7: `record` por valor — o Type carrega os campos p/ o
+                    // backend montar os registradores sem precisar do driver.
+                    String fc = FfiSignature.structFieldChars(p.type(), driver);
+                    ffiParams.add(fc != null ? FfiStructLayout.structTypeOfChars(fc) : null);
+                }
+            }
             for (int i = 0; i < mc.arguments().size(); i++) {
                 ExpressionNode arg = mc.arguments().get(i);
                 localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);

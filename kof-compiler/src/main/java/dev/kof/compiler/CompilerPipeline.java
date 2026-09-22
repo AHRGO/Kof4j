@@ -500,7 +500,7 @@ public final class CompilerPipeline {
         // continuam FFI001 honesto na linha da declaração (R6). riscv64/aarch64:
         // mesma ABI com shim próprio — ver branch abaixo.
         if (driver.target.isNative()) {
-            return nativeExternBound(ext);
+            return nativeExternBound(driver, ext);
         }
         // NATIVE (riscv64/aarch64): o shim cross (LP64/AAPCS64) landou na
         // fatia 2 do #431 — gate+lowering+E2E qemu no MESMO commit (política
@@ -509,14 +509,27 @@ public final class CompilerPipeline {
         return false;
     }
 
-    private static boolean nativeExternBound(ExternalFunctionNode ext) {
+    private static boolean nativeExternBound(CompilerDriver driver, ExternalFunctionNode ext) {
         if (ext.library() == null || ext.library().isEmpty()) return false;
-        Character rc = FfiSignature.returnChar(ext.returnType());
-        if (rc == null) return false;
+        // struct return ainda fora do conjunto nativo (FFI001) — fatia 2.
+        if (FfiSignature.returnChar(ext.returnType()) == null) return false;
+        // Fatia 1: só x86-64 (SysV). riscv64/aarch64 struct landam na fatia 3.
+        if (driver.target != Target.NATIVE) return false;
+        java.util.List<Type> paramTypes = new java.util.ArrayList<>();
         for (var param : ext.parameters()) {
-            if (FfiSignature.paramChar(param.type()) == null) return false;
+            if (FfiSignature.paramChar(param.type()) != null) {
+                paramTypes.add(FfiSignature.paramType(param.type()));
+                continue;
+            }
+            // D6-1(A)/3.7: `record` de campos escalares por valor (register path).
+            String fc = FfiSignature.structFieldChars(param.type(), driver);
+            if (fc != null) {
+                paramTypes.add(FfiStructLayout.structTypeOfChars(fc));
+                continue;
+            }
+            return false;
         }
-        return true;
+        return FfiStructLayout.x86Bindable(paramTypes);
     }
 
     static boolean isIntType(String t) {

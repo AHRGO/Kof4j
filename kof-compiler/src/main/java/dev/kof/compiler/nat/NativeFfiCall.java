@@ -1,6 +1,8 @@
 package dev.kof.compiler.nat;
 
+import dev.kof.compiler.AbiLayout;
 import dev.kof.compiler.FfiSignature;
+import dev.kof.compiler.FfiStructLayout;
 import dev.kof.compiler.KofCall;
 import dev.kof.compiler.KofCallKind;
 import dev.kof.compiler.Type;
@@ -57,18 +59,55 @@ final class NativeFfiCall {
         String[] intRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
         int n = kc.parameterTypes().size();
         char[] cls = new char[n];
-        for (int i = 0; i < n; i++) cls[i] = FfiSignature.charOfType(kc.parameterTypes().get(i));
+        boolean[] isStruct = new boolean[n];
+        Type[] structTypes = new Type[n];
+        for (int i = 0; i < n; i++) {
+            Type pt = kc.parameterTypes().get(i);
+            if (FfiStructLayout.isStructType(pt)) {
+                isStruct[i] = true;
+                structTypes[i] = pt;
+            } else {
+                cls[i] = FfiSignature.charOfType(pt);
+            }
+        }
         char ret = FfiSignature.charOfType(kc.returnType()).charValue();
-        // ordinais POR CLASSE na ordem formal (arg0 → reg0 da sua classe)
+        // ordinais POR CLASSE na ordem formal (arg0 → reg0 da sua classe). Um
+        // struct ocupa um ordinal por eightbyte (INTEGER→reg int, SSE→xmm).
         int[] ord = new int[n];
+        int[][] sOrd = new int[n][];
+        boolean[][] sFlt = new boolean[n][];
         int nInt = 0, nFlt = 0;
         for (int i = 0; i < n; i++) {
-            if (isFloatClass(cls[i])) { ord[i] = nFlt++; } else { ord[i] = nInt++; }
+            if (isStruct[i]) {
+                var cs = FfiStructLayout.layout(AbiLayout.Abi.SYSV_X86_64, structTypes[i]).classes();
+                sOrd[i] = new int[cs.size()];
+                sFlt[i] = new boolean[cs.size()];
+                for (int e = 0; e < cs.size(); e++) {
+                    boolean f = cs.get(e) == AbiLayout.ArgClass.SSE;
+                    sFlt[i][e] = f;
+                    sOrd[i][e] = f ? nFlt++ : nInt++;
+                }
+            } else if (isFloatClass(cls[i])) {
+                ord[i] = nFlt++;
+            } else {
+                ord[i] = nInt++;
+            }
         }
         int spill = (nInt > 6 ? nInt - 6 : 0) + (nFlt > 8 ? nFlt - 8 : 0);
         int seq = nb.inlineSeq++;
         // 1) desempilha direita→esquerda (o topo é o último arg) nos destinos
         for (int i = n - 1; i >= 0; i--) {
+            if (isStruct[i]) {
+                // struct por valor: ponteiro do objeto Kof → monta cada eightbyte
+                // direto no registrador de destino (shift/or no int, mov na xmm).
+                sb.append("    popq %r10\n");
+                for (int e = 0; e < sOrd[i].length; e++) {
+                    boolean f = sFlt[i][e];
+                    String dst = f ? "%xmm" + sOrd[i][e] : intRegs[sOrd[i][e]];
+                    FfiStructLayout.emitX86Eightbyte(sb, structTypes[i], e, "%r10", dst, f);
+                }
+                continue;
+            }
             char c = cls[i];
             if (isFloatClass(c)) {
                 sb.append("    popq %r11\n");
@@ -107,7 +146,7 @@ final class NativeFfiCall {
         sb.append("    andq $-16, %rsp\n");
         if (spill % 2 != 0) sb.append("    subq $8, %rsp\n");
         for (int i = n - 1; i >= 0; i--) {
-            if (isFloatClass(cls[i]) ? ord[i] >= 8 : ord[i] >= 6) {
+            if (!isStruct[i] && (isFloatClass(cls[i]) ? ord[i] >= 8 : ord[i] >= 6)) {
                 sb.append("    pushq -").append(256 + i * 8).append("(%rbp)\n");
             }
         }
