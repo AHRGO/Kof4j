@@ -15,6 +15,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
   - **§302 CLOSED — tipos crus `List/Set/Map` em CAMPO: todas as faces medidas verdes no tip (21/09, lane bugs-and-gaps, CLOSEALL): repros do registro + formas de campo/retorno/parâmetro/estáticos — `3` nos 3 alvos (raiz já fechada pelo §373/#443).
 
+  - **§443 FIXED — cross-target scalar `extern` (`library()`) had been re-gated to `FFI001` on riscv64/aarch64 by the struct-by-value slices**
+    (22/09, lane estabilização/docs 9093): `f670d055`/`aeef88d4` rewrote
+    `CompilerPipeline.nativeExternBound` with `if (driver.target != Target.NATIVE) return false;`
+    at the top — `Target.NATIVE` is x86-64 only, so `NATIVE_RISCV64`/`NATIVE_AARCH64` fell
+    through to `FFI001` on EVERY scalar extern, invisible on hosts without qemu. Fix: the
+    x86-only guard now covers only the STRUCT paths; a purely scalar call binds on every
+    native target (`!x86 || x86Bindable`). Proof: `FfiNativeCrossE2ETest` 6/6 under qemu +
+    new `FfiNativeCrossGateTest` 3/3 (pre-codegen, catches it without a toolchain).
+
 
   - **§268 FIXED — user class `extends <JDK class>` by simple name wrote a RAW superclass (`NoClassDefFoundError` at load)**
     (22/09, lane 9093, maintainer vote `D-RULE6-BATCH` option (A)): `class Worker extends Thread`,

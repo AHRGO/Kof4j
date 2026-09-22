@@ -15,6 +15,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
   - **§302 FECHADO — tipos crus `List/Set/Map` em CAMPO: todas as faces medidas verdes no tip (21/09, lane bugs-and-gaps, CLOSEALL): repros do registro + formas de campo/retorno/parâmetro/estáticos — `3` nos 3 alvos (raiz já fechada pelo §373/#443).
 
+  - **§443 CORRIGIDO — `extern` escalar cross-target (`library()`) voltou a ser re-gateado para `FFI001` no riscv64/aarch64 pelas fatias de struct-by-value**
+    (22/09, lane estabilização/docs 9093): `f670d055`/`aeef88d4` reescreveram
+    `CompilerPipeline.nativeExternBound` com `if (driver.target != Target.NATIVE) return false;`
+    no topo — `Target.NATIVE` é só x86-64, então `NATIVE_RISCV64`/`NATIVE_AARCH64` caíam em
+    `FFI001` em TODO `extern` escalar, invisível em host sem qemu. Fix: a guarda x86-only agora
+    cobre só os caminhos de STRUCT; chamada puramente escalar binda em todo alvo nativo
+    (`!x86 || x86Bindable`). Prova: `FfiNativeCrossE2ETest` 6/6 sob qemu + novo
+    `FfiNativeCrossGateTest` 3/3 (pré-codegen, pega sem toolchain).
+
 
   - **§268 CORRIGIDO — classe de usuário `extends <classe do JDK>` por nome simples gravava superclasse CRUA (`NoClassDefFoundError` no load)**
     (22/09, lane 9093, voto da mantenedora `D-RULE6-BATCH` opção (A)): `class Worker extends Thread`,

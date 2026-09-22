@@ -76,12 +76,28 @@ final class NativeFfiCall {
         Character retC = FfiSignature.charOfType(kc.returnType());
         boolean structRet = retC == null;   // ClassType: `record` por valor (3.7)
         char ret = structRet ? 0 : retC.charValue();
+        // 3.7 fatia 2b: retorno struct por MEMORY → sret (ponteiro escondido em
+        // rdi). O objeto Kof é alocado ANTES do call (o call C preserva
+        // %r12/%r13) e o struct cru vai para um buffer na pilha.
+        Type retStructType = null;
+        AbiLayout.Layout retLayout = null;
+        NativeOpHelpers.Resolved retResolved = null;
+        boolean sret = false;
+        if (structRet) {
+            retResolved = NativeOpHelpers.resolveClass(nb, kc.returnType());
+            List<Type> retFts = new ArrayList<>();
+            if (retResolved != null) for (var f : retResolved.layout().fields()) retFts.add(f.type());
+            retStructType = FfiStructLayout.structType(retFts);
+            retLayout = FfiStructLayout.layout(AbiLayout.Abi.SYSV_X86_64, retStructType);
+            sret = retLayout.byMemory();
+        }
+        int intReserved = sret ? 1 : 0;
         // ordinais POR CLASSE na ordem formal (arg0 → reg0 da sua classe). Um
         // struct ocupa um ordinal por eightbyte (INTEGER→reg int, SSE→xmm).
         int[] ord = new int[n];
         int[][] sOrd = new int[n][];
         boolean[][] sFlt = new boolean[n][];
-        int nInt = 0, nFlt = 0;
+        int nInt = intReserved, nFlt = 0;
         for (int i = 0; i < n; i++) {
             if (isStruct[i]) {
                 var cs = FfiStructLayout.layout(AbiLayout.Abi.SYSV_X86_64, structTypes[i]).classes();
@@ -100,6 +116,13 @@ final class NativeFfiCall {
         }
         int spill = (nInt > 6 ? nInt - 6 : 0) + (nFlt > 8 ? nFlt - 8 : 0);
         int seq = nb.inlineSeq++;
+        // sret: aloca o objeto ANTES de popar os args (a alocação é um call C e
+        // clobberaria os registradores de arg; aqui os args ainda estão na pilha,
+        // acima do frame do kof_alloc — preservados). C preserva %r12.
+        if (sret) {
+            NativeOpHelpers.emitAllocObject(nb, sb, retResolved);
+            sb.append("    movq %rax, %r12\n");
+        }
         // 1) desempilha direita→esquerda (o topo é o último arg) nos destinos
         for (int i = n - 1; i >= 0; i--) {
             if (isStruct[i]) {
@@ -148,20 +171,28 @@ final class NativeFfiCall {
         //    compensa a paridade do spill e empilha os derramados — o formal
         //    mais à DIREITA primeiro p/ o 1º derramado ficar em 0(%rsp).
         sb.append("    movq %rsp, %rbx\n");
-        sb.append("    andq $-16, %rsp\n");
+        if (sret) {
+            int buf = ((retLayout.size() + 15) & ~15) + 16;
+            sb.append("    subq $").append(buf).append(", %rsp\n");
+            sb.append("    andq $-16, %rsp\n");
+            sb.append("    movq %rsp, %r13\n");
+        } else {
+            sb.append("    andq $-16, %rsp\n");
+        }
         if (spill % 2 != 0) sb.append("    subq $8, %rsp\n");
         for (int i = n - 1; i >= 0; i--) {
             if (!isStruct[i] && (isFloatClass(cls[i]) ? ord[i] >= 8 : ord[i] >= 6)) {
                 sb.append("    pushq -").append(256 + i * 8).append("(%rbp)\n");
             }
         }
+        if (sret) sb.append("    movq %r13, %rdi\n");   // ponteiro escondido (D6-4)
         // 3) o call direto (PLT → ld.so resolve no exec; sem dlopen — §61)
         sb.append("    call ").append(symbolOf(kc)).append("@PLT\n");
         sb.append("    movq %rbx, %rsp\n");
-        // 4) retorno: struct por valor (register path) materializa o `record`;
-        //    caso contrário, o escalar/void de sempre → slot de 8 bytes.
+        // 4) retorno: struct por valor materializa o `record` (register path ou
+        //    sret); caso contrário, o escalar/void de sempre → slot de 8 bytes.
         if (structRet) {
-            emitX86StructReturn(nb, sb, kc);
+            emitX86StructReturn(nb, sb, kc, retResolved, retStructType, retLayout, sret);
             return;
         }
         switch (ret) {
@@ -183,18 +214,39 @@ final class NativeFfiCall {
     }
 
     /**
-     * 3.7 fatia 2 (x86-64 SysV, register path ≤ 16 B): materializa o `record`
-     * devolvido por valor. Os eightbytes de retorno (rax/rdx + xmm0/xmm1) são
-     * salvos na pilha, o objeto Kof é alocado+inicializado e cada campo é
-     * extraído do seu eightbyte (shift + extensão pela largura) para o slot de
-     * 8 bytes do objeto. O sret (&gt; 16 B, D6-4) fica FFI001 honesto (fatia 2b).
+     * 3.7 fatia 2: materializa o `record` devolvido por valor.
+     *
+     * <p><b>Register path</b> (≤ 16 B): os eightbytes de retorno (rax/rdx +
+     * xmm0/xmm1) são salvos na pilha, o objeto Kof é alocado+inicializado e cada
+     * campo é extraído do seu eightbyte (shift + extensão pela largura).
+     *
+     * <p><b>sret</b> (&gt; 16 B, SysV MEMORY — D6-4): o objeto já foi alocado
+     * antes do call (em %r12) e o struct cru está no buffer apontado por %r13;
+     * cada campo é lido do seu offset C (sem eightbyte).
      */
-    private static void emitX86StructReturn(NativeBackend nb, StringBuilder sb, KofCall kc) {
-        NativeOpHelpers.Resolved r = NativeOpHelpers.resolveClass(nb, kc.returnType());
+    private static void emitX86StructReturn(NativeBackend nb, StringBuilder sb, KofCall kc,
+                                            NativeOpHelpers.Resolved r, Type st,
+                                            AbiLayout.Layout l, boolean sret) {
         List<Type> ftypes = new ArrayList<>();
         if (r != null) for (var f : r.layout().fields()) ftypes.add(f.type());
-        Type st = FfiStructLayout.structType(ftypes);
-        AbiLayout.Layout l = FfiStructLayout.layout(AbiLayout.Abi.SYSV_X86_64, st);
+        if (sret) {
+            for (int i = 0; i < ftypes.size(); i++) {
+                AbiLayout.Scalar sc = FfiStructLayout.scalarOf(ftypes.get(i));
+                int cOff = l.offsets()[i];
+                int kofOff = r != null ? r.layout().fields().get(i).offset() : 16 + 8 * i;
+                switch (sc.size) {
+                    case 1 -> sb.append("    movzbl ").append(cOff).append("(%r13), %eax\n");
+                    case 2 -> sb.append("    movzwl ").append(cOff).append("(%r13), %eax\n");
+                    case 4 -> sb.append(sc == AbiLayout.Scalar.INT
+                            ? "    movslq " + cOff + "(%r13), %rax\n"
+                            : "    movl " + cOff + "(%r13), %eax\n");
+                    default -> sb.append("    movq ").append(cOff).append("(%r13), %rax\n");
+                }
+                sb.append("    movq %rax, ").append(kofOff).append("(%r12)\n");
+            }
+            sb.append("    pushq %r12\n");
+            return;
+        }
         List<AbiLayout.ArgClass> classes = l.classes();
         // 1) guarda os eightbytes de retorno (e0 em 0(%rsp) após os pushes)
         sb.append("    movq %rax, %r10\n");

@@ -147,23 +147,37 @@ class FfiStructE2ETest {
     }
 
     @Test
-    void structReturnNativeSretStaysFfi001(@TempDir Path dir) throws IOException {
-        // 3.7 fatia 2a: o caminho de REGISTRADORES (≤ 16 B) binda; o sret
-        // (> 16 B → SysV MEMORY, ponteiro escondido) segue FFI001 honesto (2b).
-        Path src = dir.resolve("retnat.kf");
-        Files.writeString(src, """
+    void structReturnSretNative(@TempDir Path dir) throws Exception {
+        // 3.7 fatia 2b: struct > 16 B (SysV MEMORY) devolvido por valor — o
+        // caller passa o ponteiro escondido em rdi e o callee preenche; o
+        // backend aloca o objeto Kof antes do call e copia os campos do buffer.
+        // ParamMix(Long,Double,Int) = 20 B (l/d/i no layout misto).
+        String so = compileHostLib(dir);
+        String kof = """
                 record ParamMix(Long l, Double d, Int i)
 
-                extern "libc.so.6" parammixret(Long l, Double d, Int i): ParamMix
+                extern "%s" parammixret(Long l, Double d, Int i): ParamMix
 
                 main() {
-                    println("hi")
+                    val pm = parammixret(9, 4.5, 2)
+                    println(pm.l())
+                    println(pm.d())
+                    println(pm.i())
                 }
-                """);
-        CompilationResult r = driver.compile(src, dir.resolve("out-retnat"), Target.NATIVE);
-        assertFalse(r.success(), "Native struct sret path is not bound in 3.7 fatia 2a");
-        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI001"),
-                "expected FFI001 on Native, got: " + r.diagnostics().getDiagnostics());
+                """.formatted(so);
+        String expected = "9\n4.5\n2";
+
+        Path jvmSrc = dir.resolve("sret-jvm.kf");
+        Files.writeString(jvmSrc, kof);
+        Path jvmOut = dir.resolve("out-sret-jvm");
+        CompilationResult rj = driver.compile(jvmSrc, jvmOut, Target.JVM);
+        assertTrue(rj.success(), "JVM oracle compile: " + rj.diagnostics().getDiagnostics());
+        String jvm = runJvm(jvmOut);
+        assertEquals(expected, jvm, "JVM golden (struct return sret)");
+
+        String nat = runNative(dir, "sret", kof);
+        assertEquals(expected, nat, "NATIVE x86-64 SysV struct return (sret > 16 B)");
+        assertEquals(jvm, nat, "JVM↔Native byte-for-byte parity (sret)");
     }
 
     @Test

@@ -123,11 +123,24 @@ public final class FfiStructLayout {
         return sseEightbytesAreSingleField(structType);
     }
 
+    /** True when a single struct is bindable as an x86-64 sret RETURN: larger
+     *  than 16 B (SysV MEMORY) — the caller passes a hidden pointer in `rdi`
+     *  and the callee fills it (D6-4). */
+    public static boolean x86SretReturn(Type structType) {
+        return layout(AbiLayout.Abi.SYSV_X86_64, structType).byMemory();
+    }
+
     /** True when the whole parameter list is bindable on x86-64 (scalars may
      *  spill; structs must fit entirely in registers and use single-field SSE
      *  eightbytes). Simulates SysV register counting in formal order. */
     public static boolean x86Bindable(List<Type> paramTypes) {
-        int nInt = 0, nFlt = 0;
+        return x86Bindable(paramTypes, 0);
+    }
+
+    /** As {@link #x86Bindable(List)} but {@code intReserved} INTEGER registers
+     *  are already taken (1 for the sret hidden pointer). */
+    public static boolean x86Bindable(List<Type> paramTypes, int intReserved) {
+        int nInt = intReserved, nFlt = 0;
         for (Type t : paramTypes) {
             if (isStructType(t)) {
                 if (!sseEightbytesAreSingleField(t)) return false;
@@ -167,7 +180,6 @@ public final class FfiStructLayout {
     public static void emitX86Eightbyte(StringBuilder sb, Type structType, int e,
                                         String base, String dst, boolean sse) {
         List<FieldInfo> fs = fields(structType);
-        AbiLayout.Layout l = layout(AbiLayout.Abi.SYSV_X86_64, structType);
         int lo = e * 8;
         if (sse) {
             for (FieldInfo f : fs) {

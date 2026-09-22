@@ -519,13 +519,19 @@ public final class CompilerPipeline {
         // fatias 1–2a): o struct cross landa na fatia 3 → FFI001 honesto (R6).
         // O caller só entra aqui com `driver.target.isNative()`.
         boolean x86 = driver.target == Target.NATIVE;
-        // Retorno: escalar/void OU struct por valor no register path (≤ 16 B).
-        // O sret (> 16 B, D6-4) ainda é FFI001 honesto (fatia 2b).
+        // Retorno: escalar/void, struct por valor no register path (≤ 16 B) OU
+        // sret (> 16 B, ponteiro escondido — D6-4).
+        boolean sret = false;
         if (FfiSignature.returnChar(ext.returnType()) == null) {
             if (!x86) return false;
             String retFields = FfiSignature.structFieldChars(ext.returnType(), driver);
-            if (retFields == null
-                    || !FfiStructLayout.x86RegisterOnly(FfiStructLayout.structTypeOfChars(retFields))) {
+            if (retFields == null) return false;
+            Type retStruct = FfiStructLayout.structTypeOfChars(retFields);
+            if (FfiStructLayout.x86RegisterOnly(retStruct)) {
+                // register path
+            } else if (FfiStructLayout.x86SretReturn(retStruct)) {
+                sret = true;
+            } else {
                 return false;
             }
         }
@@ -544,8 +550,10 @@ public final class CompilerPipeline {
             }
             return false;
         }
-        // Chamada puramente escalar: binda em todo nativo (o layout x86 não se aplica).
-        return !x86 || FfiStructLayout.x86Bindable(paramTypes);
+        // Chamada puramente escalar: binda em todo nativo (o layout x86 não se
+        // aplica). sret consome 1 registrador INTEGER (o ponteiro escondido) —
+        // os parâmetros deslocam uma posição (rdi vira rsi…).
+        return !x86 || FfiStructLayout.x86Bindable(paramTypes, sret ? 1 : 0);
     }
 
     static boolean isIntType(String t) {

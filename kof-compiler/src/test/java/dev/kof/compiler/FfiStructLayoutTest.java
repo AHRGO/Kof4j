@@ -45,6 +45,24 @@ class FfiStructLayoutTest {
     }
 
     @Test
+    void sretReturnAndReservedIntRegister() {
+        assertTrue(FfiStructLayout.x86SretReturn(struct('i', 'i', 'i', 'i', 'i')),
+                "5×Int = 20 B → SysV MEMORY → sret (D6-4)");
+        assertFalse(FfiStructLayout.x86SretReturn(struct('j', 'd')),
+                "Time = 16 B → register path, não sret");
+        // o ponteiro escondido do sret ocupa rdi: um struct param que caberia
+        // sem o sret passa a não caber (deslocamento de 1 registrador INTEGER).
+        List<Type> fiveInts = List.of(Type.PrimitiveType.INT, Type.PrimitiveType.INT,
+                Type.PrimitiveType.INT, Type.PrimitiveType.INT, Type.PrimitiveType.INT);
+        List<Type> withStruct = new java.util.ArrayList<>(fiveInts);
+        withStruct.add(struct('i', 'i'));
+        assertTrue(FfiStructLayout.x86Bindable(withStruct, 0),
+                "5 ints + Point: o struct cai em r9 (ordinal 5) sem sret");
+        assertFalse(FfiStructLayout.x86Bindable(withStruct, 1),
+                "com o rdi reservado pelo sret, o struct iria à memória → não-bindável");
+    }
+
+    @Test
     void abiForMapsTargets() {
         assertEquals(AbiLayout.Abi.SYSV_X86_64, FfiStructLayout.abiFor(Target.NATIVE));
         assertEquals(AbiLayout.Abi.RISCV64, FfiStructLayout.abiFor(Target.NATIVE_RISCV64));

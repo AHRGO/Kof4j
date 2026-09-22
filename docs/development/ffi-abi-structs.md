@@ -74,8 +74,21 @@ registers (≤ 16 B): the call-site saves the return eightbytes (`rax`/`rdx` +
 each field out of its eightbyte (shift + width extension) into the Kof 8-byte
 slot. Proof: `FfiStructE2ETest` `structReturnByValueNativeRegisterPath`
 (`Point` = 1 INTEGER eightbyte, `Big` = 2 INTEGER eightbytes, `Mix` = SSE+INTEGER)
-byte-for-byte JVM==Native. The **sret** path (> 16 B, SysV MEMORY, hidden
-pointer — D6-4), riscv64/aarch64 and `T[]`/`Buffer` remain 3.7 (FFI001).
+byte-for-byte JVM==Native.
+**Landed 21/09 (3.7 fatia 2b · native struct return, sret > 16 B):** the
+x86-64 SysV backend now binds the **sret** path (SysV MEMORY, `> 16 B`,
+hidden pointer — D6-4): the caller passes the hidden pointer in `%rdi` and the
+callee fills the buffer. The call-site allocates the Kof object **before**
+popping the args (allocation is a C call and would clobber the caller-saved arg
+registers; the args are still on the operand stack above `kof_alloc`'s frame),
+places the raw return buffer on the stack, passes its address in `%rdi`, and
+copies each field from its C offset straight into the Kof slot (natural scalar
+width). The hidden pointer consumes one INTEGER register, so
+`x86Bindable(paramTypes, 1)` shifts the params (`rdi`→`rsi`…). Proof:
+`FfiStructE2ETest` `structReturnSretNative` (`ParamMix` = `Long,Double,Int` =
+20 B) byte-for-byte JVM==Native; `FfiStructLayoutTest.sretReturnAndReservedIntRegister`
+(when the 1 reserved register pushes a param struct out of the regs the call is
+not bindable). riscv64/aarch64 and `T[]`/`Buffer` remain 3.7 (FFI001).
 
 
 ## 1. What exists today (measured 19/09, not remembered)
@@ -93,7 +106,7 @@ the nested token `(<ret><params>)`. Anything the map does not cover is a
 | scalar downcall | ✅ `kof_ffi` FFM (`JvmFfiRuntime.java:142+`) | ✅ **direct `call sym@PLT` on x86-64/riscv64/aarch64** (#431 slices 1–2, 20/09, §369 — link-by-use, no `dlopen`) | ✅ host bridge `KofJsFfiBridge` (browser degrades honestly, R7) |
 | callbacks/upcalls (3.4) | ✅ `Linker.upcallStub` | ❌ `FFI001` (no mechanism) | ✅ host |
 | String = `char*` | ✅ in + out | ✅ in (payload off 24) + out (boundary copy) | ✅ |
-| **struct (record, scalar fields)** | ✅ **by value in + out** (`@` token, 3.8b fatias 1–2, 20–21/09) | ◐ **by value param + return, register path x86-64** (3.7 fatias 1–2a, 21/09); sret/array/`Buffer`/memory-path and riscv64/aarch64 → `FFI001` (3.7) | ✅ **by value IN + OUT** (IN: `@<n><chars>` + `__kof_ffi_fields`; OUT: `@<n><chars>` return + `__kof_ffi_from`; bridges 21/09) |
+| **struct (record, scalar fields)** | ✅ **by value in + out** (`@` token, 3.8b fatias 1–2, 20–21/09) | ◐ **by value param + return, register path *and* sret x86-64** (3.7 fatias 1–2b, 21/09); array/`Buffer` and riscv64/aarch64 → `FFI001` (3.7) | ✅ **by value IN + OUT** (IN: `@<n><chars>` + `__kof_ffi_fields`; OUT: `@<n><chars>` return + `__kof_ffi_from`; bridges 21/09) |
 | **scalar array `T[]`→`ptr`** | ✅ **copy-in per call** (`p<elem>` token, 3.8b fatia 3, 21/09; no write-back) | ❌ FFI001 | ✅ **copy-in per call** (`packArray` bridge, 21/09; no write-back) |
 | **out-buffer `Buffer(U8)` INOUT** | ✅ **copy-in / call / copy-back** (`B` token + `buffer.alloc`/`Buffer.bytes()`, D6-3, 21/09) | ❌ FFI001 | ✅ **copy-in / call / copy-back** (`B` token + `packBuffer`/copy-back after the downcall, bridge 21/09) |
 | non-scalar array / opaque (e.g. `String[]`/`List<T>`/`Handle`) | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
@@ -217,11 +230,11 @@ until decided — no silent partial binding.
    `packBuffer` + copy-back) and struct **return** (`__kof_ffi_from`). The JS
    FFI surface (param + return) is complete; the only D6 work left is Native
    (3.7: struct/array/sret).
-3. **3.7** native asm: classification by hand per target. **◐ fatias 1–2a
-   LANDED 21/09 (x86-64 struct param + return, register path —
-   `FfiStructLayout` + call-site pack/materialise, golden JVM==Native)**;
-   remaining: sret (D6-4), then aarch64/riscv64 (same `AbiLayout` golden), then
-   `T[]`/`Buffer(U8)` native.
+3. **3.7** native asm: classification by hand per target. **◐ fatias 1–2b
+   LANDED 21/09 (x86-64 struct param + return, register path *and* sret > 16 B
+   — `FfiStructLayout` + call-site pack/materialise, golden JVM==Native)**;
+   remaining: aarch64/riscv64 (same `AbiLayout` golden), then `T[]`/`Buffer(U8)`
+   native.
 4. **JS**: decide wasm/ffi boundary (node host already binds scalars;
    struct = host-side pack/unpack) — no browser promise (R7).
 5. **DoD (R5)**: per-target golden E2E matrix (same C harness, 3 ABIs),
