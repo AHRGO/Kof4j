@@ -13,7 +13,7 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
- - **`kof.orm` cross riscv64/aarch64 — fatia A: `deleteAll` + `count` reais sobre SQLite**
+  - **`kof.orm` cross riscv64/aarch64 — fatias A/B: `deleteAll` + `count` reais sobre SQLite**
     (22/09, lane gaps-db, DB-3/DB-1): o ORM era só x86-64 no Native (os alvos
     cross recusavam todo `orm.*` com `ORM001` em compile-time). A fatia A
     porta `kof_orm_delete_all` + `kof_orm_count` (F1a de `RuntimeOrm1`) para o
@@ -27,6 +27,12 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `KofOrmE2ETest.crossNativeF1aDeleteAllCountMatchX86Oracle` — oráculo x86-64
     `3/true/0/true/0/false` byte-idêntico em riscv64 e aarch64 sob qemu (incl.
     o edge SQL-error de drop da tabela), + pin do gate de `orm.all` no cross.
+    A fatia B adiciona `create` (peça `RtB51`, port de `RuntimeOrm2` —
+    parser do schema + DDL + `sqlite3_exec`), também byte-idêntico ao
+    oráculo x86-64: DDL lido do `sqlite_master`
+    (AUTOINCREMENT/UNIQUE/VARCHAR/tipos), `unique` em campo generated
+    suprimido, entidade sem `generated` com o próprio shape de pk, id ruim
+    → throw `unknown db connection: <id>` e recuperação; `KofOrmE2ETest` 62/0F.
 
   - **Diagnósticos SEM/PKG agora reportam a posição real da origem (known-bugs §280)**
     (22/09, lane typer, sessão 9093 — a unidade escrita em 21/09 ficou no meio por

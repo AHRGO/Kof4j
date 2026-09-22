@@ -27,9 +27,10 @@ import java.util.List;
  * }</pre>
  *
  * <p>JVM: JDBC (via kof.db). Native x86-64: asm {@code kof_orm_*} real
- * (F1/F2/F3). Cross riscv64/aarch64: slice A (22/09) — F1a
- * {@code delete_all}/{@code count} reais sobre o SQLite do cross; as demais
- * faces reportam {@code ORM001} em compile-time. JS: KofJsOrmBridge.
+ * (F1/F2/F3). Cross riscv64/aarch64: slices A/B (22/09) — F1a
+ * {@code delete_all}/{@code count} (peça RtB50) + F1d {@code create}
+ * (peça RtB51) reais sobre o SQLite do cross; as demais faces reportam
+ * {@code ORM001} em compile-time. JS: KofJsOrmBridge.
  */
 public final class KofOrm {
 
@@ -56,12 +57,14 @@ public final class KofOrm {
         return target == Target.JVM || target == Target.ANDROID || target == Target.JS;
     }
 
-    /** DB-3/DB-1 cross slice A (22/09): F1a do ORM no riscv64/aarch64 —
-     *  {@code delete_all} + {@code count} sobre os kof_db_* SQLite do cross
-     *  (peça RtB50, port de RuntimeOrm1; aarch64 herda pelo tradutor). O que
-     *  ainda não tem porte cross segue ORM001 compile-time (R6/R7). */
+    /** DB-3/DB-1 cross (22/09): fatias A/B do ORM no riscv64/aarch64 sobre
+     *  os kof_db_* SQLite do cross — slice A: {@code delete_all} + {@code count}
+     *  (peça RtB50, port de RuntimeOrm1); slice B: {@code create} (peça RtB51,
+     *  port de RuntimeOrm2 — parser do schema + DDL + sqlite3_exec); aarch64
+     *  herda pelo tradutor. O que ainda não tem porte cross segue ORM001
+     *  compile-time (R6/R7). */
     private static final java.util.Set<String> CROSS_F1A = java.util.Set.of(
-            "kof_orm_delete_all", "kof_orm_count");
+            "kof_orm_delete_all", "kof_orm_count", "kof_orm_create");
 
     /** D-DB-GAPS DB-1 (20/09): faces SQL-puro do Native x86-64, uma por fatia.
      *  F1a = {@code delete_all}, F1b = {@code count}, F1c = {@code migrate}

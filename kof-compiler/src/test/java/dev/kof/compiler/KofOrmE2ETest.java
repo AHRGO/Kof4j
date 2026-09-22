@@ -2284,6 +2284,114 @@ class KofOrmE2ETest {
                 "gate honesto (nunca silent): " + gated.diagnostics().getDiagnostics());
     }
 
+    /** DB-3/DB-1 cross slice B (22/09): {@code orm.create} REAL no riscv64/
+     *  aarch64 (peça RtB51, port de RuntimeOrm2) — parser de schema + DDL
+     *  byte-idêntico ao x86-64 (o golden LÊ o sql gravado no sqlite_master:
+     *  AUTOINCREMENT/UNIQUE/VARCHAR/tipos) + mensagem de id ruim. */
+    @Test
+    void crossNativeF1dCreateMatchesX86Oracle(@TempDir Path tempDir) throws IOException {
+        assumeTrue(isLinux(), "cross ORM E2E requires Linux + libsqlite3");
+        String userTemplate = """
+            entity User {
+                id: Long generated
+                name: String
+                email: String unique
+                age: Int
+            }
+            main() {
+                var db = db.connect("sqlite:%s/kof.db")
+                println(orm.create<User>(db))
+                println(orm.create<User>(db))
+                db.execute(db, "insert into user (name, email, age) values ('Mel', 'm@kof.dev', 30)")
+                println(orm.count<User>(db))
+                println(db.query(db, "select email from user").get(0))
+                println(db.query(db, "select sql from sqlite_master where type='table' and name='user'").get(0))
+                db.close(db)
+            }
+            """;
+        String golden = "true\ntrue\n1\n{\"email\":\"m@kof.dev\"}\n"
+                + "{\"sql\":\"CREATE TABLE \\\"user\\\" (\\\"id\\\" INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + "\\\"name\\\" VARCHAR(255), \\\"email\\\" VARCHAR(255) UNIQUE, \\\"age\\\" INTEGER)\"}";
+        String oracle = runX86CreateOracle(tempDir, "user", userTemplate);
+        assertEquals(golden, oracle, "oráculo x86-64 (DDL real lido do sqlite_master)");
+        assertCrossCreateParity(tempDir, "user", userTemplate, oracle);
+
+        String edgeTemplate = """
+            entity Item {
+                id: Long generated unique
+                flag: Bool
+                ratio: Float
+                price: Double
+                note: String
+                qty: Int
+                big: Long
+            }
+            entity Product {
+                code: String unique
+                price: Double
+            }
+            main() {
+                var db = db.connect("sqlite:%s/edge.db")
+                println(orm.create<Item>(db))
+                println(orm.create<Product>(db))
+                println(db.query(db, "select sql from sqlite_master where type='table' and name='item'").get(0))
+                println(db.query(db, "select sql from sqlite_master where type='table' and name='product'").get(0))
+                try {
+                    println(orm.create<Item>("db2"))
+                } catch (String e) {
+                    println(e)
+                }
+                println("after-throw")
+                db.close(db)
+            }
+            """;
+        String edgeGolden = "true\ntrue\n"
+                + "{\"sql\":\"CREATE TABLE \\\"item\\\" (\\\"id\\\" INTEGER PRIMARY KEY AUTOINCREMENT, \\\"flag\\\" BOOLEAN, "
+                + "\\\"ratio\\\" REAL, \\\"price\\\" DOUBLE, \\\"note\\\" VARCHAR(255), \\\"qty\\\" INTEGER, \\\"big\\\" INTEGER)\"}\n"
+                + "{\"sql\":\"CREATE TABLE \\\"product\\\" (\\\"code\\\" VARCHAR(255) UNIQUE, \\\"price\\\" DOUBLE)\"}\n"
+                + "unknown db connection: db2\nafter-throw";
+        String edgeOracle = runX86CreateOracle(tempDir, "edge", edgeTemplate);
+        assertEquals(edgeGolden, edgeOracle,
+                "oráculo x86-64 (edges: unique em generated, sem generated, tipos, id ruim)");
+        assertCrossCreateParity(tempDir, "edge", edgeTemplate, edgeOracle);
+    }
+
+    /** x86-64: compila e roda o template numa pasta propria (banco limpo) e
+     *  devolve o stdout — o oráculo do contrato D-DB-GAPS. */
+    private String runX86CreateOracle(Path tempDir, String label, String template) throws IOException {
+        Path out = tempDir.resolve("oracle-" + label);
+        Files.createDirectories(out);
+        Path source = out.resolve("Main.kf");
+        Files.writeString(source, template.formatted(out));
+        CompilationResult r = driver.compile(source, out, Target.NATIVE);
+        assumeTrue(r.success(), "x86-64 oracle should compile: " + r.diagnostics().getDiagnostics());
+        return runNativeBinary(out.resolve("Default/Main"), null);
+    }
+
+    /** riscv64/aarch64: mesma pasta-por-alvo (banco limpo) + byte-parity com o
+     *  oráculo x86-64; sem toolchain/sysroot/sqlite = skip honesto. */
+    private void assertCrossCreateParity(Path tempDir, String label, String template, String oracle)
+            throws IOException {
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            String as = arch.equals("riscv64") ? "riscv64-linux-gnu-as" : "aarch64-linux-gnu-as";
+            String ld = arch.equals("riscv64") ? "riscv64-linux-gnu-ld" : "aarch64-linux-gnu-ld";
+            assumeTrue(has(as, ld, "qemu-" + arch), "cross toolchain " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sysrootOrNull(arch) != null,
+                    "sysroot cross " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sqliteAvailable(arch),
+                    "libsqlite3 " + arch + " ausente no sysroot — pulando");
+            Path out = tempDir.resolve(label + "-" + t);
+            Files.createDirectories(out);
+            Path source = out.resolve("Main.kf");
+            Files.writeString(source, template.formatted(out));
+            CompilationResult r = driver.compile(source, out, t);
+            assertTrue(r.success(), t + " deveria compilar F1d real: " + r.diagnostics().getDiagnostics());
+            String got = runNativeBinary(out.resolve("Default/Main"), "qemu-" + arch);
+            assertEquals(oracle, got, t + " byte-parity com o oráculo x86-64 (" + label + ")");
+        }
+    }
+
     /** Executa o binário nativo (x86 direto; cross via qemu-<arch> com
      *  QEMU_LD_PREFIX do sysroot) e devolve o stdout com exit 0 exigido. */
     private static String runNativeBinary(Path bin, String qemu) throws IOException {
