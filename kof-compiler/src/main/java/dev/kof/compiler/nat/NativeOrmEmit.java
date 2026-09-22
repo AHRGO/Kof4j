@@ -55,6 +55,10 @@ public final class NativeOrmEmit {
                 dev.kof.compiler.runtime.RuntimeOrmMysqlKeyLit.emit(okl);
                 sb.append(okl.toString().replace("@@MAGIC@@",
                         dev.kof.compiler.runtime.RuntimeErasureBox.MAGIC));
+                StringBuilder oam = new StringBuilder();
+                dev.kof.compiler.runtime.RuntimeOrmMysqlAll.emit(oam);
+                sb.append(oam.toString().replace("@@MAGIC@@",
+                        dev.kof.compiler.runtime.RuntimeErasureBox.MAGIC));
                 StringBuilder o5 = new StringBuilder();
                 dev.kof.compiler.runtime.RuntimeOrm5.emit(o5);
                 sb.append(o5.toString().replace("@@MAGIC@@",

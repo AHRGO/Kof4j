@@ -47,6 +47,10 @@ public final class RuntimeOrm6 {
                 movq %rdx, 16(%rsp)
                 movq %rcx, 24(%rsp)
                 movq (%rsp), %rdi
+                call kof_db_type
+                cmpl $2, %eax
+                je .Lorm6_my_dispatch
+                movq (%rsp), %rdi
                 call .Lorm_conn
                 movq %rax, 32(%rsp)
                 movq 16(%rsp), %rdi
@@ -332,6 +336,24 @@ public final class RuntimeOrm6 {
                 movq %rbp, %rsp
                 popq %rbp
                 ret
+
+            # F2d4a: mysql -> restaura o frame e tail-chama .Lorm_all_my
+            # (args originais nos slots; a asm do mysql vive no
+            # RuntimeOrmMysqlAll, emitido junto no mesmo .s).
+            .Lorm6_my_dispatch:
+                movq (%rsp), %rdi
+                movq 8(%rsp), %rsi
+                movq 16(%rsp), %rdx
+                movq 24(%rsp), %rcx
+                addq $168, %rsp
+                popq %r15
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                movq %rbp, %rsp
+                popq %rbp
+                jmp .Lorm_all_my
 
             # ---------------------- literais --------------------------------
             .Lorm6_s1:
