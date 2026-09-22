@@ -67,6 +67,10 @@ public final class RuntimeOrm4 {
                 movq %rdx, 16(%rsp)
                 movq %rcx, 24(%rsp)
                 movq (%rsp), %rdi
+                call kof_db_type
+                cmpl $2, %eax
+                je .Lorm4_my_dispatch
+                movq (%rsp), %rdi
                 call .Lorm_conn
                 movq %rax, 32(%rsp)
                 movq 24(%rsp), %rdi
@@ -474,6 +478,24 @@ public final class RuntimeOrm4 {
                 .asciz "SELECT last_insert_rowid()"
             .Lorm4_pre:
                 .ascii "sqlite: "
+
+            # F2d5: mysql -> restaura o frame e tail-chama .Lorm_save_my
+            # (args originais nos slots; a asm mysql vive no
+            # RuntimeOrmMysqlSave, emitido junto no mesmo .s).
+            .Lorm4_my_dispatch:
+                movq 0(%rsp), %rdi
+                movq 8(%rsp), %rsi
+                movq 16(%rsp), %rdx
+                movq 24(%rsp), %rcx
+                addq $152, %rsp
+                popq %r15
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                movq %rbp, %rsp
+                popq %rbp
+                jmp .Lorm_save_my
             """);
     }
 }
