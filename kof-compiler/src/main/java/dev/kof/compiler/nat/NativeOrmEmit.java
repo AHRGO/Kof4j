@@ -115,6 +115,11 @@ public final class NativeOrmEmit {
             dev.kof.compiler.runtime.RuntimeOrmMysqlSave.emit(osv);
             sb.append(osv.toString().replace("@@MAGIC@@",
                     dev.kof.compiler.runtime.RuntimeErasureBox.MAGIC));
+            // F2d6: count com filtro (kof_orm_count_where despacha sempre).
+            StringBuilder ocw = new StringBuilder();
+            dev.kof.compiler.runtime.RuntimeOrmMysqlCountWhere.emit(ocw);
+            sb.append(ocw.toString().replace("@@MAGIC@@",
+                    dev.kof.compiler.runtime.RuntimeErasureBox.MAGIC));
         }
     }
 }

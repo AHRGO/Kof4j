@@ -55,6 +55,10 @@ public final class RuntimeOrm3 {
                 movq %rcx, 24(%rsp)
                 movq %r8, 32(%rsp)
                 movq (%rsp), %rdi
+                call kof_db_type
+                cmpl $2, %eax
+                je .Lorm3cw_my_dispatch
+                movq (%rsp), %rdi
                 call .Lorm_conn
                 movq %rax, 40(%rsp)
             # ---- SQL: SELECT COUNT(*) FROM "t" WHERE "f" = ? -------------
@@ -198,6 +202,25 @@ public final class RuntimeOrm3 {
                 movq %rbp, %rsp
                 popq %rbp
                 ret
+
+            # F2d6: mysql -> restaura o frame e tail-chama .Lorm_cw_my
+            # (args originais nos slots; a asm mysql vive no
+            # RuntimeOrmMysqlCountWhere, emitido junto no mesmo .s).
+            .Lorm3cw_my_dispatch:
+                movq 0(%rsp), %rdi
+                movq 8(%rsp), %rsi
+                movq 16(%rsp), %rdx
+                movq 24(%rsp), %rcx
+                movq 32(%rsp), %r8
+                addq $72, %rsp
+                popq %r15
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                movq %rbp, %rsp
+                popq %rbp
+                jmp .Lorm_cw_my
 
             # ---------------------- literais --------------------------------
             .Lorm3cw_s1:
