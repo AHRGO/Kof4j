@@ -124,8 +124,8 @@ a new domain. **This stage closes before any Tier 6+ (R12).**
 
 | # | Item | Status | Owner | Proof / note |
 |---|------|--------|-------|--------------|
-| 1.7.1 | HAL seam `kof_plat_*` + freestanding profile (faces B-0…B-5) | 🔵 | native lane | `docs/development/future/PLAN-BAREMETAL-BOOT.md`; **not scheduled** — MCU depends on 1.2 |
-| 1.7.2 | Scheduling of the bare-metal faces | 🔵 | — (native lane drafts) | **✅ decided (`D3-A` 19/09): the design plan is authorized** (`docs/development/future/PLAN-BAREMETAL-BOOT.md`); no owner assigned yet — enters when SYSTEMS closes (R12) |
+| 1.7.1 | HAL seam `kof_plat_*` + freestanding profile (faces B-0…B-6) | 🟡 | baremetal lane (session 9092) | `docs/development/PLAN-BAREMETAL-BOOT.md`; **IN DEVELOPMENT — promoted 22/09** (`D-BAREMETAL-BOOT`); B-0 is the first executable slice; MCU depends on 1.2 |
+| 1.7.2 | Scheduling of the bare-metal faces | ✅ | — | **`D3-A` 19/09 + `D-BAREMETAL-BOOT` 22/09: front OPEN, R12 overridden**; ordered scope = bare-metal with ring0/ring1 (B-6); the plan's §7 order governs |
 
 ---
 

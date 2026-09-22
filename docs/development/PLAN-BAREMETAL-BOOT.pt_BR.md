@@ -1,26 +1,24 @@
 [English](PLAN-BAREMETAL-BOOT.md) | [Português](PLAN-BAREMETAL-BOOT.pt_BR.md)
 
-# Kof bare-metal / bootável — costura HAL + freestanding, BIOS legado, UEFI e MCU
+# Kof bare-metal / bootável — costura HAL + freestanding, BIOS legado, UEFI, MCU e anéis de privilégio (ring0/ring1)
 
-**Status:** Plano (arquitetura futura) — **zero código**, sem passo agendado
-**Tipo:** arquitetura futura / registo de dependência (NÃO ordem de implementação)
-**Data:** 15 de setembro de 2026
+**Status:** **EM DESENVOLVIMENTO — promovido de `future/` 22/09/2026** (ordem da mantenedora; `DECISIONS.md` §D-BAREMETAL-BOOT, fila 1.7) — face habilitadora **B-0** ainda não pousou (zero código)
+**Tipo:** plano de implementação (promovido; ordem de execução da frente bare-metal)
+**Data:** 15 de setembro de 2026 · **promoção:** 22 de setembro de 2026
 **Fonte:** `../../architecture/UNIVERSAL-PLATFORM-VISION.md` §8.2 (Native: "deploy/edge/sistemas") ·
 `PLAN-TREE-SHAKING.md` §T3 (rota embedded/MCU) · `docs/native-multiarch.md`
 · diretiva da mantenedora (15/09): *"todo código nativo deve se comunicar direto
 com barebones também — código bootável para microcontroladores, legado e UEFI com Kof"*.
 
-> **Regra deste documento** (mesma do `../../architecture/UNIVERSAL-PLATFORM-VISION.md`): é um registo
-> estratégico/de arquitetura. Não implementa nada, não abre frente, não muda
-> roadmap, não move arquivo, não adiciona dependência. O estado atual do Kof fica
-> 100% intacto. Qualquer coisa que exija mudança profunda no core é gravada como
-> **dependência arquitetural futura**, nunca como ação.
->
-> Este item fica em `future/` porque **não há código**: é a fronteira honesta já
-> medida por `PLAN-TREE-SHAKING.md` §T3 ("embedded real exige um backend
-> RTOS/bare-metal — fica em `future/` sem passo agendado"). Quando a primeira face
-> pousar (um link freestanding produzindo ELF sem dinâmica), o item **sai de
-> `future/` para `docs/development/`** conforme a regra do `future/README.md`.
+> **Promoção (ordem da mantenedora, 22/09/2026 — `DECISIONS.md` §D-BAREMETAL-BOOT):**
+> o plano **saiu de `future/` para `docs/development/`** e a frente está **aberta**;
+> o portão R12 (SYSTEMS primeiro) é **sobreposto para esta frente pela ordem da
+> mantenedora** (mesmo padrão do §D-UNIVERSAL). Escopo ordenado: **bare-metal com
+> suporte a ring0/ring1** (níveis de privilégio x86_64) — a face habilitadora
+> **B-0** (costura HAL) é o primeiro passo executável; a superfície Kof para mirar
+> o ring1 é decisão rule 6 e **não** é inventada aqui. `PLAN-TREE-SHAKING.md` §T3
+> ("embedded real = um backend RTOS/bare-metal em si") segue a fronteira honesta
+> que este plano paga.
 
 ---
 
@@ -30,7 +28,9 @@ Todo backend **nativo** deve poder mirar uma máquina **sem sistema operacional*
 o mesmo frontend/IR/stdlib do Kof, mas emitindo artefatos **bootáveis** para
 (a) **microcontroladores**, (b) **BIOS legado (MBR/real mode)** e (c) **UEFI**,
 com a fronteira de runtime (`write`/`exit`/alocação/tempo) fornecida por um
-**back-end de plataforma por alvo** em vez de syscalls Linux.
+**back-end de plataforma por alvo** em vez de syscalls Linux. No x86_64 o modelo
+de privilégio é explícito: o runtime boota em **ring0** e a plataforma suporta
+domínios **ring1** (costura de privilégio B-6) — nunca uma troca silenciosa.
 
 A diretiva é mais ampla que um novo formato de saída: é o princípio de que o
 código nativo fala com uma superfície "barebones", da qual a superfície atual de
@@ -110,7 +110,7 @@ quatro valores novos no enum `Target` — análogo a como `native.risc`/`native.
 são variantes de arch, não novas línguas. Este documento **não** toma posição;
 regista as duas opções.
 
-## 4. Decomposição (faces B-0…B-5), cada uma provável independentemente
+## 4. Decomposição (faces B-0…B-6), cada uma provável independentemente
 
 Seguindo o estilo G-0…G-5 do `native-multiarch.md`: cada face tem uma
 **prova falseável**, e faces posteriores dependem das anteriores.
@@ -173,6 +173,23 @@ Implementar a tabela do §3 para UEFI (B-2), BIOS (B-3) e MCU (B-4). Em bare-met
 `spawn`/`select`/`await` não podem ser fornecidos honestamente → **lacuna
 `CONC003`** (nunca um stub silencioso), consistente com o precedente `CONC003` do JS.
 
+### B-6 — Anéis de privilégio x86_64: kernel ring0 + domínios ring1 · **depende de B-1 (+ caminho de boot B-2/B-3)**
+Entrar em long mode com **GDT** própria do Kof (código/dados ring0 + ring1, TSS)
+e **IDT**; o runtime executa em **CPL0**. Uma primitiva mínima e documentada de
+transição deixa uma função Kof rodar em **CPL1** e retornar (`iretq`
+inter-privilégio + `rsp0` do TSS para o trap de volta ao ring0), de modo que
+instruções privilegiadas (`cli`/`hlt`/`lgdt`) são **recusadas pela CPU** no
+domínio ring1 — a prova falseável de que o nível é real, não um rótulo.
+**Aceitação:** sob `qemu-system-x86_64`, (a) o boot chega a CPL0 e imprime;
+(b) uma entrada controlada executa função Kof em CPL1 e retorna com o estado
+intacto; (c) instrução privilegiada tentada no domínio ring1 gera `#GP` (pega
+pelo handler ring0 e reportada, nunca um travamento silencioso); (d) sabotagem:
+remover o descritor ring1 da GDT faz a entrada CPL1 falhar — provando que o
+nível é imposto, não decorativo.
+**Depende de:** B-1 + um caminho de boot x86 (B-2 ou B-3). **Classificação:** H (alta).
+**Superfície:** a API Kof para *mirar* um domínio ring1 é decisão **rule 6**
+(mantenedora); esta face pousa a maquinaria habilitadora primeiro.
+
 ## 5. Dependências honestas, bloqueios e classificação
 
 | Face | Depende de | Custo | Lacuna em falha |
@@ -183,6 +200,7 @@ Implementar a tabela do §3 para UEFI (B-2), BIOS (B-3) e MCU (B-4). Em bare-met
 | B-3 BIOS legado | B-1 (+entrada 16-bit) | H | `NATIVE003` |
 | B-4 MCU (32 bits) | B-0, B-1, G-4/G-5 | R/H | `NATIVE002` (codegen) / `NATIVE003` |
 | B-5 corpos de plataforma | por face | M | `CONC003` para concorrência |
+| B-6 anéis de privilégio (x86_64) | B-1 + B-2/B-3 | H | `NATIVE003` / `#GP` tratado |
 
 **Bloqueios transversais (reais):**
 - **Coletor GC (G-4/G-5)** precisa pousar antes do B-4 (RAM em escala KB). Não é
@@ -205,8 +223,12 @@ Implementar a tabela do §3 para UEFI (B-2), BIOS (B-3) e MCU (B-4). Em bare-met
   nunca stubados.
 - **Não** é um RTOS. Escalonamento, drivers além de serial/framebuffer e
   filesystems são território do usuário/FFI.
-- **Não** está agendado: fica em `future/` até B-1 produzir um ELF sem dinâmica,
-  quando o item vai para `docs/development/` com estado real.
+- **Não** é um microkernel/hypervisor: os anéis do B-6 são uma **costura mínima
+  de privilégio** (kernel em ring0, um domínio ring1), não escalonador, IPC ou
+  camada de VM.
+- **Não** está mais sem agendamento: **promovido 22/09/2026** (ordem da
+  mantenedora, `D-BAREMETAL-BOOT`) — a execução segue o §7; o R12 é sobreposto
+  para esta frente.
 
 ## 7. Como terminar (ordem, uma vez autorizada)
 
@@ -215,6 +237,9 @@ Implementar a tabela do §3 para UEFI (B-2), BIOS (B-3) e MCU (B-4). Em bare-met
 2. **B-1** (ELF freestanding) — primeiro artefato quase-bootável, prova qemu-user.
 3. **B-2** (UEFI/OVMF) **ou B-3** (BIOS/MBR) — o que a mantenedora priorizar; ambos
    são H e independentes entre si.
-4. **G-4/G-5** (coletor) — pré-requisito do **B-4** (MCU).
-5. **B-4** (MCU 32 bits) — o maior, classe-resquisa.
-6. **B-5** — os corpos de plataforma, um por face conforme cada uma pousa.
+4. **B-6** (ring0/ring1, x86_64) — sobre o caminho de boot escolhido em 3 (escopo
+   ordenado do `D-BAREMETAL-BOOT`; a superfície Kof dos anéis é decidida com a
+   mantenedora antes de qualquer sintaxe/API pousar — rule 6 + Lei da Simplicidade).
+5. **G-4/G-5** (coletor) — pré-requisito do **B-4** (MCU).
+6. **B-4** (MCU 32 bits) — o maior, classe-resquisa.
+7. **B-5** — os corpos de plataforma, um por face conforme cada uma pousa.

@@ -21,7 +21,7 @@ para artefatos **byte-idênticos** aos que a implementação Java produz hoje �
 e depois compila **a si mesmo** (ponto fixo, §6). Fecharia então,
 ponta-a-ponta, o "Kof como nuvem de si mesmo": o compilador se compila,
 provisiona sua infraestrutura (Makealive, etapa 7), roda nela (Native /
-bare-metal via `future/PLAN-BAREMETAL-BOOT.md`) e hospeda os próprios
+bare-metal via `../PLAN-BAREMETAL-BOOT.md`) e hospeda os próprios
 pacotes no registry (`kof deps`, etapa 1.4).
 
 ## 2. Condições de entrada (a execução não pode ser reivindicada antes de TODAS valerem)

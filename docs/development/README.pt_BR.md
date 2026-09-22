@@ -38,10 +38,11 @@ nova**).
 
 ## 0. O que está vivo aqui (leia primeiro)
 
-- **Pendentes (condição 3 do gate de release):** nenhum — os três planos em
+- **Pendentes (condição 3 do gate de release):** nenhum — os quatro planos em
   voo com dono ainda soltos (`db-parity-plan`, `ffi-abi-structs`,
-  `kof-c-cross`) estão no **allowlist** por `D-RELEASE-0.5.0-SCOPE`
-  (mantenedora 21/09/2026): mantêm dono + fila na §1 e concluem nas próprias
+  `kof-c-cross`, `PLAN-BAREMETAL-BOOT`) estão no **allowlist** por
+  `D-RELEASE-0.5.0-SCOPE` (mantenedora 21/09/2026) + `D-BAREMETAL-BOOT`
+  (mantenedora 22/09/2026): mantêm dono + fila na §1 e concluem nas próprias
   frentes; não barram o corte 0.5.0.
   `IMPLEMENTATION-UNIVERSAL-PLATFORM`, `makealive-plan` e `secrets-plan`
   concluíram e foram movidos para `docs/architecture/` (21/09); o plano de
@@ -81,6 +82,7 @@ nova**).
 | — | ~~`codegen-step-2.2.3-assessment.md`~~ → `docs/architecture/codegen-step-2.2.3-assessment.md` (+PT) — roadmap 2.2.3 | ✅ **CONCLUÍDO + MOVIDO 21/09** — opção B (`D-DESUGAR-STEP`) **implementada** (`85779f20`: `DesugarStepPipeline` + `DesugarSteps.defaults()` com os quatro desugars; `CompilerPipeline:303`) | medido 21/09: **descompasso de fase** (hook = IR otimizada; DDL = lowering; runner = desugar de AST) → o DDL fica no lowering | — (doc em `docs/architecture/`; regra dos 3 estados) |
 | — | ~~`type-system-extensions-plan.md` (+PT)~~ → `docs/type-system-extensions-plan.md` — X5 variância+sealed / X6 reflexão de interop | ✅ **CONCLUÍDO + MOVIDO 22/09** — X5.0–X5.5 + X6.0–X6.3 todos landados (X5.5 células `sealedswitch`/`variance`/`useproj`; X6.3 célula `interopschema` + E2E binding Arrow/Parquet, `InteropSchemaE2ETest` 18/18); regra dos três-estados | — (doc em `docs/`) | — |
 | — | `kof-c-cross.md` (+PT) — alvos cross do `kof-c-compiler` (C1–C4) | `EM DESENVOLVIMENTO` — **C1 LANDADA 22/09**: o compilador C do repositório agora emite riscv64/aarch64 (`KofCTarget`, `KofCEmitterBase`, emissores por ISA `KofCEmitterX86`/`KofCEmitterRiscv`/`KofCEmitterAarch`, `kof c --target`); prova `KofCCrossCompilerTest` 7/7 sob qemu (oráculo x86_64) | aprovado pela mantenedora (chat): a fixture FFI cross de struct-param precisa de um compilador C cross no repositório (o host não tem cc cross) | próximo: C2 params/retorno/locais, C3 struct por valor, C4 `.o`/link p/ a fixture |
+| — | `PLAN-BAREMETAL-BOOT.md` (+PT) — bare-metal/bootável com ring0/ring1 (faces B-0…B-6) | `EM DESENVOLVIMENTO` — **PROMOVIDO de `future/` 22/09** (`D-BAREMETAL-BOOT`, ordem da mantenedora): a frente bare-metal está aberta (R12 sobreposto só para ela); escopo ordenado inclui **ring0/ring1** (níveis de privilégio x86_64, face B-6); **zero código ainda** | **lane `baremetal` (sessão 9092)** | próximo: **B-0** — rotear toda operação ambiental dos runtimes nativos por `kof_plat_*` (impl Linux = rename; suíte nativa/cross verde + teste de sabotagem), depois B-1 freestanding, depois os anéis B-6 |
 | — | registros vivos: `conformance-matrix.md`, `ecosystem-coverage.md`, `KOFUI-AUDIT.md`, `known-bugs.md` (em `docs/bugs-and-gaps/`); `roadmap.md` (aqui); `roadmap-audit.md`/`complexity-audit.md` (em `docs/audits/`) | `VIVA` | **não são backlog** — matriz/auditoria/fila que se atualizam junto com cada fechamento | atualizar célula/seção no MESMO commit que fecha o gap |
 
 **Regra R12 (AGENTS.md):** nada de `future/` (RAII, package-compiler,
@@ -262,7 +264,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 |---|---|
 | `PLAN-MULTIPARADIGMA.md` (multiparadigma / pipelines funcionais + queries declarativas; 16/09, só design) | primeiro incremento funcional começa (SYSTEMS fechado, R12) |
 | `scoped-resources-plan.md` (RAII TIER 2.4) | bump com `using`/`resource_scope` decidido |
-| `PLAN-BAREMETAL-BOOT.md` (nativo → bare-metal/bootável; diretiva da mantenedora 15/09) | SYSTEMS fechado (R12) + primeira face (costura HAL) autorizada |
+| ~~`PLAN-BAREMETAL-BOOT.md`~~ → **promovido para [`../PLAN-BAREMETAL-BOOT.md`](../PLAN-BAREMETAL-BOOT.md) 22/09** | **PROMOVIDO 22/09 (`D-BAREMETAL-BOOT`, ordem da mantenedora)** — frente bare-metal aberta com escopo ring0/ring1; a linha foi para a §1 |
 | `PLAN-BOOTSTRAP.md` (o Bootstrapper: Kof escrito em Kof — **estrela-guia**, `DECISIONS.md` §D-BOOTSTRAP, 20/09) | EXIT GATE 1.0 fechado + condições de entrada E1–E6 (`roadmap.md` §24) |
 | `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_MIGRATION.md` (plataforma de migração legado) | **de volta p/ cá 15/09 — DESPRIORIZADO pela mantenedora**; promoção exige decisão explícita dela |
 

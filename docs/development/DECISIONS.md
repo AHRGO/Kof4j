@@ -3193,3 +3193,34 @@ The maintainer reviewed the six rule-6 items of the 14-live triage and decided:
 and updates its ledger section in the same commit.
 
 - **Relationships:** `Related: D-RELEASE-0.5.0-SCOPE, D-RELEASE-1.0, rule 6, rule 11, R6`.
+
+## D-BAREMETAL-BOOT — bare-metal front promoted: `PLAN-BAREMETAL-BOOT` leaves `future/`, R12 overridden, ordered scope = bare-metal with ring0/ring1 (maintainer 22/09/2026)
+
+**Date:** 2026-09-22 · **State:** `DECIDED` (maintainer order in the chat —
+autonomous session) · **Overrides:** the R12 gate (SYSTEMS before everything)
+**for this front only** — same pattern as §D-UNIVERSAL.
+
+**Decision (maintainer's words):** "você vai assumir PLAN-BAREMETAL-BOOT de
+future e vai trazer pra desenvolvimento. quero que desenvolva pra baremetal com
+suporte a ring0 e ring1".
+
+1. **Promotion (three-states):** `PLAN-BAREMETAL-BOOT.md` (+`.pt_BR`) moves
+   from `future/` to `docs/development/`, status **IN DEVELOPMENT**; the
+   `future/README` row is reclassified as moved; `roadmap.md` 1.6 and tracker
+   1.7 follow in the same commit.
+2. **R12 override** for this front (maintainer's order), recorded here — the
+   front opens now; the plan's own §7 order governs (B-0 → B-1 → boot path →
+   rings B-6 → …).
+3. **Ordered scope:** bare-metal **with ring0/ring1** (x86_64 privilege levels,
+   face B-6) — boot at CPL0 + ring1 domains with a falsifiable `#GP` proof. The
+   **Kof-level surface** to target a ring1 domain is **NOT** decided here: it is
+   a rule-6 decision (rule 11 / Simplicity Law applies) and lands only with the
+   maintainer's review.
+4. **Queue:** DOING (lane claim, session 9092); the 0.5.0 gate's condition 3
+   keeps the plan allowlisted as an in-flight owned plan
+   (`D-RELEASE-0.5.0-SCOPE` pattern) — the 0.5.0 cut does not wait for it.
+
+**Evidence:** maintainer message 22/09/2026 (chat, this session); plan file
+promoted in the same commit; `check_release_050_gate.sh` ALLOWLIST updated.
+
+- **Relationships:** `Related: D-POLL-19 (D3-A), D-UNIVERSAL (R12 override pattern), D-BOOTSTRAP (north star), rule 6, rule 11, R12`.

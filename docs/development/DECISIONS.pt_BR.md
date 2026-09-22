@@ -3206,3 +3206,35 @@ A mantenedora revisou os seis itens rule-6 da triagem dos 14 vivos e decidiu:
 (RED→GREEN) e atualiza a seção do ledger no mesmo commit.
 
 - **Relationships:** `Related: D-RELEASE-0.5.0-SCOPE, D-RELEASE-1.0, rule 6, rule 11, R6`.
+
+## D-BAREMETAL-BOOT — frente bare-metal promovida: `PLAN-BAREMETAL-BOOT` sai de `future/`, R12 sobreposto, escopo ordenado = bare-metal com ring0/ring1 (mantenedora 22/09/2026)
+
+**Data:** 22/09/2026 · **Estado:** `DECIDED` (ordem da mantenedora no chat —
+sessão autônoma) · **Sobrepõe:** o portão R12 (SYSTEMS antes de tudo) **só para
+esta frente** — mesmo padrão do §D-UNIVERSAL.
+
+**Decisão (palavras da mantenedora):** "você vai assumir PLAN-BAREMETAL-BOOT de
+future e vai trazer pra desenvolvimento. quero que desenvolva pra baremetal com
+suporte a ring0 e ring1".
+
+1. **Promoção (três-estados):** `PLAN-BAREMETAL-BOOT.md` (+`.pt_BR`) vai de
+   `future/` para `docs/development/`, status **EM DESENVOLVIMENTO**; a
+   linha do `future/README` é reclassificada como movida; `roadmap.md` 1.6 e o
+   tracker 1.7 acompanham no mesmo commit.
+2. **Sobreposição do R12** para esta frente (ordem da mantenedora), registrada
+   aqui — a frente abre agora; a ordem do §7 do próprio plano governa
+   (B-0 → B-1 → caminho de boot → anéis B-6 → …).
+3. **Escopo ordenado:** bare-metal **com ring0/ring1** (níveis de privilégio
+   x86_64, face B-6) — boot em CPL0 + domínios ring1 com prova falseável de
+   `#GP`. A **superfície Kof** para mirar um domínio ring1 **NÃO** é decidida
+   aqui: é decisão rule 6 (valem a regra 11 / Lei da Simplicidade) e só pousa
+   com revisão da mantenedora.
+4. **Fila:** DOING (claim da lane, sessão 9092); a condição 3 do gate 0.5.0
+   mantém o plano no allowlist como frente em voo com dono (padrão
+   `D-RELEASE-0.5.0-SCOPE`) — o corte 0.5.0 não espera por ela.
+
+**Evidência:** mensagem da mantenedora 22/09/2026 (chat, esta sessão); arquivo
+do plano promovido no mesmo commit; ALLOWLIST do `check_release_050_gate.sh`
+atualizado.
+
+- **Relações:** `Related: D-POLL-19 (D3-A), D-UNIVERSAL (padrão de sobreposição do R12), D-BOOTSTRAP (norte), rule 6, rule 11, R12`.

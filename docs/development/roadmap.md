@@ -928,7 +928,7 @@ domain (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + parity matrix;
 | 1.3 | Typed query DSL (`User.query {}`) | ✅ 01/09 (`KofOrmE2ETest`) |
 | 1.4 | Package manager MVP (`kofdeps`) | ✅ `kof deps` + Maven Central resolution; **transitive ✅ 16/09** (Maven delegation + `kofdeps.lock`, `DepsTransitiveTest` 10/10 incl. real-Maven E2E); **registry ✅ 19/09** (D2-A publish + 1.5.3-S2 pull, `DepsRegistryTest` 6/6) |
 | 1.5 | Tracing/OpenTelemetry + `application{}` lifecycle | 🟡 W3C spans + lifecycle ✅ 3 targets; **OTel export ✅ JVM/JS (`exportSpans()` → OTLP/JSON, `OBS003`); Native gap honesto `OBS003`** |
-| 1.6 | **Native → bare-metal/bootable** (microcontroller, legacy BIOS, UEFI) — 15/09 maintainer directive | ⚪ **plan only** — HAL seam `kof_plat_*` + freestanding profile, faces B-0…B-5 in `docs/development/future/PLAN-BAREMETAL-BOOT.md`; not scheduled; MCU depends on 1.2 |
+| 1.6 | **Native → bare-metal/bootable with ring0/ring1** (microcontroller, legacy BIOS, UEFI, x86_64 privilege rings) — 15/09 maintainer directive | 🟡 **IN DEVELOPMENT — promoted from `future/` 22/09** (`D-BAREMETAL-BOOT`, maintainer order; R12 overridden for this front): HAL seam `kof_plat_*` + freestanding profile, faces B-0…B-6 in `docs/development/PLAN-BAREMETAL-BOOT.md`; **zero code yet** (B-0 is the first slice); MCU depends on 1.2 |
 
 ### TIER 2 — Compiler foundations (M) — **status corrected against the code**
 

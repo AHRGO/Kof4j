@@ -1,26 +1,24 @@
 [English](PLAN-BAREMETAL-BOOT.md) | [Português](PLAN-BAREMETAL-BOOT.pt_BR.md)
 
-# Bare-metal / bootable Kof — HAL seam + freestanding, legacy BIOS, UEFI and MCU
+# Bare-metal / bootable Kof — HAL seam + freestanding, legacy BIOS, UEFI, MCU and privilege rings (ring0/ring1)
 
-**Status:** Plan (future architecture) — **zero code**, no scheduled step
-**Type:** future architecture / dependency record (NOT an implementation order)
-**Date:** September 15, 2026
+**Status:** **IN DEVELOPMENT — promoted from `future/` 22/09/2026** (maintainer order; `DECISIONS.md` §D-BAREMETAL-BOOT, queue 1.7) — enabling face **B-0** not landed yet (zero code)
+**Type:** implementation plan (promoted; execution order of the bare-metal front)
+**Date:** September 15, 2026 · **promoted:** September 22, 2026
 **Source:** `../../architecture/UNIVERSAL-PLATFORM-VISION.md` §8.2 (Native: "deploy/edge/systems") ·
 `PLAN-TREE-SHAKING.md` §T3 (embedded/MCU route) · `docs/native-multiarch.md`
 · maintainer directive (15/09): *"all native code must also talk directly to
 barebones — bootable code for microcontrollers, legacy and UEFI with Kof"*.
 
-> **Rule of this document** (same as `../../architecture/UNIVERSAL-PLATFORM-VISION.md`): it is a
-> strategic/architecture record. It implements nothing, opens no front, changes no
-> roadmap, moves no file, adds no dependency. The current state of Kof remains
-> 100% intact. Anything here requiring a deep core change is recorded as a
-> **future architectural dependency**, never as an action.
->
-> This item stays in `future/` because **there is no code**: it is the honest
-> boundary already measured by `PLAN-TREE-SHAKING.md` §T3 ("real embedded requires
-> an RTOS/bare-metal backend — it stays in `future/` with no scheduled step").
-> When the first face lands (a freestanding link producing a dynamic-free ELF), it
-> **leaves `future/` for `docs/development/`** per the `future/README.md` rule.
+> **Promotion (maintainer order, 22/09/2026 — `DECISIONS.md` §D-BAREMETAL-BOOT):**
+> the plan **left `future/` for `docs/development/`** and the front is **open**;
+> the R12 gate (SYSTEMS first) is **overridden for this front by the maintainer's
+> order** (same pattern as §D-UNIVERSAL). Ordered scope: **bare-metal with
+> ring0/ring1 support** (x86_64 privilege levels) — the enabling face **B-0**
+> (HAL seam) is the first executable step; the Kof-level surface to target ring1
+> is a rule-6 decision and is **not** invented here. `PLAN-TREE-SHAKING.md` §T3
+> ("real embedded = an RTOS/bare-metal backend of its own") remains the honest
+> boundary this plan pays for.
 
 ---
 
@@ -30,7 +28,9 @@ Every **native** backend must be able to target a machine with **no operating
 system**: the same Kof frontend/IR/stdlib, but emitting **bootable** artifacts for
 (a) **microcontrollers**, (b) **legacy BIOS (MBR/real mode)** and (c) **UEFI**,
 with the runtime boundary (`write`/`exit`/allocation/time) supplied by a
-**platform back-end per target** instead of Linux syscalls.
+**platform back-end per target** instead of Linux syscalls. On x86_64 the
+privilege model is explicit: the runtime boots at **ring0** and the platform
+supports **ring1** domains (privilege seam B-6) — never a silent switch.
 
 The directive is wider than a new output format: it is the principle that *native
 code talks to a "barebones" surface*, of which the current Linux syscall surface
@@ -109,7 +109,7 @@ four new `Target` enum values — analogous to how `native.risc`/`native.arm` ar
 arch variants, not new languages. This document takes **no** position; it records
 both options.
 
-## 4. Decomposition (faces B-0…B-5), each independently provable
+## 4. Decomposition (faces B-0…B-6), each independently provable
 
 Following the `native-multiarch.md` G-0…G-5 style: each face has a **falsifiable
 proof**, and later faces depend on earlier ones.
@@ -170,6 +170,23 @@ Implement the §3 table for UEFI (B-2), BIOS (B-3) and MCU (B-4). On bare-metal,
 `spawn`/`select`/`await` cannot be provided honestly → **`CONC003` gap** (never a
 silent stub), consistent with the JS `CONC003` precedent.
 
+### B-6 — x86_64 privilege rings: ring0 kernel + ring1 domains · **depends B-1 (+ boot path B-2/B-3)**
+Enter long mode with a Kof-owned **GDT** (ring0 + ring1 code/data, TSS) and
+**IDT**; the runtime executes at **CPL0**. A minimal, documented transition
+primitive lets a Kof function run at **CPL1** and return (inter-privilege
+`iretq` + TSS `rsp0` for the trap back to ring0), so privileged instructions
+(`cli`/`hlt`/`lgdt`) are **refused by the CPU** in the ring1 domain — the
+falsifiable proof that the level is real, not a label.
+**Acceptance:** under `qemu-system-x86_64`, (a) boot reaches CPL0 and prints;
+(b) a controlled entry executes a Kof function at CPL1 and returns with state
+intact; (c) a privileged instruction attempted in the ring1 domain raises `#GP`
+(caught by the ring0 handler and reported, never a silent hang); (d) sabotage:
+removing the ring1 GDT descriptor makes the CPL1 entry fault — proving the
+level is enforced, not decorative.
+**Depends on:** B-1 + one x86 boot path (B-2 or B-3). **Classification:** H (high).
+**Surface:** the Kof-level API to *target* a ring1 domain is a **rule-6 decision**
+(maintainer); this face lands the enabling machinery first.
+
 ## 5. Honest dependencies, blockers and classification
 
 | Face | Depends on | Cost | Gap on failure |
@@ -180,6 +197,7 @@ silent stub), consistent with the JS `CONC003` precedent.
 | B-3 legacy BIOS | B-1 (+16-bit entry) | H | `NATIVE003` |
 | B-4 MCU (32-bit) | B-0, B-1, G-4/G-5 | R/H | `NATIVE002` (codegen) / `NATIVE003` |
 | B-5 platform bodies | per face | M | `CONC003` for concurrency |
+| B-6 privilege rings (x86_64) | B-1 + B-2/B-3 | H | `NATIVE003` / `#GP` handled |
 
 **Cross-cutting blockers (real):**
 - **GC collector (G-4/G-5)** must land before B-4 (KB-scale RAM). Not needed for
@@ -201,8 +219,10 @@ silent stub), consistent with the JS `CONC003` precedent.
   signals are **absent** and reported as gaps (`CONC003`, `NET…`), never stubbed.
 - **Not** an RTOS. Scheduling, drivers beyond serial/framebuffer, and filesystems
   are user/FFI territory.
-- **Not** scheduled: this stays in `future/` until B-1 produces a dynamic-free ELF,
-  at which point the item moves to `docs/development/` with real state.
+- **Not** a microkernel/hypervisor: the B-6 rings are a **minimal privilege
+  seam** (kernel at ring0, one ring1 domain), not a scheduler, IPC or VM layer.
+- **Not** scheduled as before: **promoted 22/09/2026** (maintainer order,
+  `D-BAREMETAL-BOOT`) — execution follows §7; R12 is overridden for this front.
 
 ## 7. How to finish (order, once authorized)
 
@@ -211,6 +231,9 @@ silent stub), consistent with the JS `CONC003` precedent.
 2. **B-1** (freestanding ELF) — first bootable-adjacent, qemu-user proof.
 3. **B-2** (UEFI/OVMF) **or B-3** (BIOS/MBR) — whichever the maintainer prioritises;
    both are H and independent of each other.
-4. **G-4/G-5** (collector) — prerequisite for **B-4** (MCU).
-5. **B-4** (32-bit MCU) — the largest, research-class step.
-6. **B-5** — the platform bodies, one per face as each lands.
+4. **B-6** (ring0/ring1, x86_64) — on top of the boot path chosen in 3 (ordered
+   scope of `D-BAREMETAL-BOOT`; the Kof-level ring surface is decided with the
+   maintainer before any syntax/API lands — rule 6 + Simplicity Law).
+5. **G-4/G-5** (collector) — prerequisite for **B-4** (MCU).
+6. **B-4** (32-bit MCU) — the largest, research-class step.
+7. **B-5** — the platform bodies, one per face as each lands.

@@ -38,10 +38,11 @@ surface**).
 
 ## 0. What is live here (read first)
 
-- **Pending (the release gate's condition 3):** none — the three in-flight
+- **Pending (the release gate's condition 3):** none — the four in-flight
   OWNED plans still loose (`db-parity-plan`, `ffi-abi-structs`,
-  `kof-c-cross`) are **allowlisted** by `D-RELEASE-0.5.0-SCOPE`
-  (maintainer 21/09/2026): they keep owner + queue in §1 and conclude on their
+  `kof-c-cross`, `PLAN-BAREMETAL-BOOT`) are **allowlisted** by
+  `D-RELEASE-0.5.0-SCOPE` (maintainer 21/09/2026) + `D-BAREMETAL-BOOT`
+  (maintainer 22/09/2026): they keep owner + queue in §1 and conclude on their
   own fronts; they do not gate the 0.5.0 cut.
   `IMPLEMENTATION-UNIVERSAL-PLATFORM`, `makealive-plan` and `secrets-plan`
   concluded and moved to `docs/architecture/` (21/09); the type-system plan
@@ -81,6 +82,7 @@ surface**).
 | — | ~~`codegen-step-2.2.3-assessment.md`~~ → `docs/architecture/codegen-step-2.2.3-assessment.md` (+PT) — roadmap 2.2.3 | ✅ **CONCLUDED + MOVED 21/09** — option B (`D-DESUGAR-STEP`) **implemented** (`85779f20`: `DesugarStepPipeline` + `DesugarSteps.defaults()` with the four desugars; `CompilerPipeline:303`) | measured 21/09: **phase mismatch** (hook = optimized IR; DDL = lowering; runner = AST desugar) → the DDL stays in lowering | — (doc in `docs/architecture/`; 3-state rule) |
 | — | ~~`type-system-extensions-plan.md` (+PT)~~ → `docs/type-system-extensions-plan.md` — X5 variance+sealed / X6 interop reflection | ✅ **CONCLUDED + MOVED 22/09** — X5.0–X5.5 + X6.0–X6.3 all landed (X5.5 cells `sealedswitch`/`variance`/`useproj`; X6.3 cell `interopschema` + Arrow/Parquet binding E2E, `InteropSchemaE2ETest` 18/18); 3-state rule | — (doc in `docs/`) | — |
 | — | `kof-c-cross.md` (+PT) — `kof-c-compiler` cross targets (C1–C4) | `IN DEVELOPMENT` — **C1 LANDED 22/09**: the in-repo C subset compiler now emits riscv64/aarch64 (`KofCTarget`, `KofCEmitterBase`, per-ISA `KofCEmitterX86`/`KofCEmitterRiscv`/`KofCEmitterAarch`, `kof c --target`); proof `KofCCrossCompilerTest` 7/7 under qemu (x86_64 oracle) | approved by the maintainer (chat): the FFI cross struct-param fixture needs an in-repo cross C compiler (the host has no cross cc) | next: C2 params/return/locals, C3 struct by-value, C4 `.o`/link for the fixture |
+| — | `PLAN-BAREMETAL-BOOT.md` (+PT) — bare-metal/bootable with ring0/ring1 (faces B-0…B-6) | `IN DEVELOPMENT` — **PROMOTED from `future/` 22/09** (`D-BAREMETAL-BOOT`, maintainer order): the bare-metal front is open (R12 overridden for it); ordered scope includes **ring0/ring1** (x86_64 privilege levels, face B-6); **zero code yet** | **`baremetal` lane (session 9092)** | next: **B-0** — route every environmental op of the native runtimes through `kof_plat_*` (Linux impl = rename; full native/cross suite green + sabotage test), then B-1 freestanding, then B-6 rings |
 | — | living records: `conformance-matrix.md`, `ecosystem-coverage.md`, `KOFUI-AUDIT.md`, `known-bugs.md` (in `docs/bugs-and-gaps/`); `roadmap.md` (here); `roadmap-audit.md`/`complexity-audit.md` (in `docs/audits/`) | `LIVE` | **they are not backlog** — matrix/audit/queue that update together with each closure | update the cell/section in the SAME commit that closes the gap |
 
 **R12 rule (AGENTS.md):** nothing from `future/` (RAII, package-compiler,
@@ -264,7 +266,7 @@ scalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 |---|---|
 | `PLAN-MULTIPARADIGMA.md` (multiparadigm / functional pipelines + declarative queries; 16/09, design only) | first functional increment begins (SYSTEMS closed, R12) |
 | `scoped-resources-plan.md` (RAII TIER 2.4) | bump with `using`/`resource_scope` decided |
-| `PLAN-BAREMETAL-BOOT.md` (native → bare-metal/bootable; 15/09 maintainer directive) | SYSTEMS closed (R12) + first face (HAL seam) authorized |
+| ~~`PLAN-BAREMETAL-BOOT.md`~~ → **promoted to [`../PLAN-BAREMETAL-BOOT.md`](../PLAN-BAREMETAL-BOOT.md) 22/09** | **PROMOTED 22/09 (`D-BAREMETAL-BOOT`, maintainer order)** — bare-metal front open with ring0/ring1 scope; the row moved to §1 |
 | `PLAN-BOOTSTRAP.md` (the Bootstrapper: Kof written in Kof — **north star**, `DECISIONS.md` §D-BOOTSTRAP, 20/09) | 1.0 EXIT GATE closed + entry conditions E1–E6 (`roadmap.md` §24) |
 | `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_MIGRATION.md` (legacy migration platform) | **back here 15/09 — DEPRIORITIZED by the maintainer**; promotion needs her explicit decision |
 
