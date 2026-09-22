@@ -66,6 +66,7 @@ A navigation aid, not a decision by itself. Ordered as in this file.
 - **D-SLOT-PIN** — §383/#561 blessed-miss stored value
 - **D-RELEASE-0.5.0-GATE** — 0.5.0 release gate
 - **D-RELEASE-0.5.0-SCOPE** — in-flight plans allowlisted; EG-8 decoupled
+- **D-RULE6-BATCH** — triage rule-6: six decisions (functions as values, SEM084-087, ABI in 1.0)
 - **D-FFI-STRUCT** — FFI struct/array ABI (D6)
 - **R6-SCOPE** — incremental delivery does not breach R6
 - **D-R3-BUFFER** — out-buffer = nominal `Buffer(U8)`
@@ -3122,3 +3123,72 @@ does not wait on other lines' open fronts:
 3/6, README condition-3 pending list.
 
 - **Relationships:** `Related: D-RELEASE-0.5.0-GATE, D-RELEASE-1.0, rule 6, rule 3`.
+
+## D-CLOSEALL-BATCH — batch dos 14 known-bugs: a mantenedora ordenou fechar tudo com evidências; os 3 forks rule-6 foram votados (mantenedora, 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` (mantenedora, interativo — diretiva
+"você assume bugs-and-gaps e fecha todos os bugs que existem e apresenta
+evidências para todos"; sub-votos respondidos no chat com as opções recomendadas).
+
+- **§334 (`kof_box_equals` NaN) → CLOSED:** divergência documentada e
+  INALCANÇAVEL do código-fonte Kof (nenhum produtor de NaN hoje — divisão por
+  zero é diagnóstico de compile-time OBS-009); downgrade para informativo,
+  como a própria entrada prevê.
+- **§188 (`"2026" as Int` → VerifyError) → (A) REJEITAR no compile-time** —
+  novo SEM0xx nomeando o idiom canônico `math.parseInt`.
+- **§400 (função nomeada passada como VALOR, SEM011 falso) → (A) MANTER a
+  rejeição, novo diagnóstico nomeia a regra real e aponta o idiom lambda
+  (`probe` → `() -> probe()`, byte-paridade já medida).**
+- **§283 (native aarch64: processo nunca encerra com `time.interval` vivo)
+  → (B) WORKER COMO THREAD DAEMON — paridade com `java.util.Timer` (daemon
+  por padrão na JVM).**
+- **§418 (harness riscv debug sem destroy) + §423 (channels riscv/aarch sem
+  runtime): HANDOFF p/ lane nat/native-debug (9093, ativa no período — fechou
+  §424/425/427); assumo se ela parar (regra dead-task).**
+- O resto do lote (§302/§280/§268/§248/§278/§205) = trabalho normal da lane;
+  §271/§288 = MESMA raiz river (caminho único de resolução de tipo).
+
+**Relationships:** rule 6, §271/§288 river, §334/OBS-009, DECISIONS.md (NaN policy se precisar).
+
+## D-RULE6-BATCH — rule-6 review of the triage: six decisions (maintainer 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` (maintainer answers in the chat, multiple-choice).
+
+The maintainer reviewed the six rule-6 items of the 14-live triage and decided:
+
+- **§400 — (B) named functions become VALUES — supersedes the batch's (A).**
+  The maintainer had voted **(A) keep the rejection + fix the message** in
+  `D-CLOSEALL-BATCH` and the batch lane landed it (`cd04246c`, new SEM011
+  naming the idiom); in this review she answered **(B)**: a named top-level
+  function in argument position converts to the expected `FunctionType`
+  (overloads included). **Operative decision: (B)** — the landed (A)
+  diagnostic stays only until the conversion lands (it is strictly better than
+  the old message and disappears with the surface); surface expansion → rule 11
+  gate + queue in the type front, never a drive-by edit. Pending her
+  confirmation of the supersession (flagged in the chat 21/09).
+- **§188 — (A) reject `String as Int` with a diagnostic (`SEM084`).** `as` is
+  numeric conversion, not textual parsing; the canonical path stays
+  `math.parseInt`. Kill the false-accept (check-clean → runtime CCE).
+- **§288 — (b) parse-time `TypeVariable` + interim rejection (`SEM085`).**
+  Annotate type-params as `TypeVariable` at parse inside the generic owner
+  (single source of truth); until the pipeline fix lands, reject the composite
+  form instead of converting a loud error into a load crash.
+- **§302 — (A+B) fix the pin guard + diagnose what remains (`SEM086`).**
+  `Type.of`/`toType` parity across locals × fields × params × records (all four
+  backends); a bare collection type that stays ambiguous gets an honest
+  diagnostic.
+- **§268 — (A) implicit `java.lang` via cached probe + honest diagnostic
+  (`SEM087`).** `Class.forName("java.lang."+n)` cached; unresolved simple name
+  in `extends`/`implements` → diagnostic (no raw super); `Object` →
+  `java/lang/Object`.
+- **§271 — (B) interim honest diagnostic now; the COMPLETE erasure ABI in the
+  1.0 line.** Bridge/descriptor emission across the four backends is a **1.0
+  deliverable, not post-1.0** (maintainer 21/09): the release ladder may
+  continue through further minor betas (up to 0.9.x if needed) before 1.0; what
+  must not ship is the silent `NoSuchMethodError`. Interim: refuse the
+  unsupported generic-interface dispatch with a code (mirroring `NAT005`).
+
+**Queue:** DOING (lane 9093 claim); each fix carries its own proof (RED→GREEN)
+and updates its ledger section in the same commit.
+
+- **Relationships:** `Related: D-RELEASE-0.5.0-SCOPE, D-RELEASE-1.0, rule 6, rule 11, R6`.

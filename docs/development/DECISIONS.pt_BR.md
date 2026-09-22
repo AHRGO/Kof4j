@@ -64,6 +64,7 @@ Auxílio de navegação, não é uma decisão por si só. Ordenado como neste ar
 - **D-SLOT-PIN** — §383/#561 valor armazenado do "miss abençoado"
 - **D-RELEASE-0.5.0-GATE** — gate de release 0.5.0
 - **D-RELEASE-0.5.0-SCOPE** — planos em voo no allowlist; EG-8 desacoplado
+- **D-RULE6-BATCH** — triagem rule-6: seis decisões (funções como valores, SEM084-087, ABI na 1.0)
 - **D-FFI-STRUCT** — ABI de struct/array da FFI (D6)
 - **R6-SCOPE** — entrega incremental não fere o R6
 - **D-R3-BUFFER** — out-buffer = tipo nominal `Buffer(U8)`
@@ -3134,3 +3135,73 @@ não esperar frentes abertas de outras linhas:
 condições 3/6, lista de pendentes da condição 3 no README.
 
 - **Relationships:** `Related: D-RELEASE-0.5.0-GATE, D-RELEASE-1.0, rule 6, rule 3`.
+
+## D-CLOSEALL-BATCH — lote dos 14 known-bugs: a mantenedora ordenou fechar tudo com evidências; os 3 forks rule-6 foram votados (mantenedora, 21/09/2026)
+
+**Date:** 2026-09-21 · **State:** `DECIDED` (mantenedora, interativo — diretiva
+"você assume bugs-and-gaps e fecha todos os bugs que existem e apresenta
+evidências para todos"; sub-votos respondidos no chat com as opções recomendadas).
+
+- **§334 (`kof_box_equals` NaN) → CLOSED:** divergência documentada e
+  INALCANÇÁVEL do código-fonte Kof (nenhum produtor de NaN hoje — divisão por
+  zero é diagnóstico de compile-time OBS-009); downgrade para informativo,
+  como a própria entrada prevê.
+- **§188 (`"2026" as Int` → VerifyError) → (A) REJEITAR no compile-time** —
+  novo SEM0xx nomeando o idiom canônico `math.parseInt`.
+- **§400 (função nomeada passada como VALOR, SEM011 falso) → (A) MANTER a
+  rejeição, novo diagnóstico nomeia a regra real e aponta o idiom lambda
+  (`probe` → `() -> probe()`, byte-paridade já medida).**
+- **§283 (native aarch64: processo nunca encerra com `time.interval` vivo)
+  → (B) WORKER COMO THREAD DAEMON — paridade com `java.util.Timer` (daemon
+  por padrão na JVM).**
+- **§418 (harness riscv debug sem destroy) + §423 (channels riscv/aarch sem
+  runtime): HANDOFF p/ lane nat/native-debug (9093, ativa no período — fechou
+  §424/425/427); assumo se ela parar (regra dead-task).**
+- O resto do lote (§302/§280/§268/§248/§278/§205) = trabalho normal da lane;
+  §271/§288 = MESMA raiz river (caminho único de resolução de tipo).
+
+**Relationships:** regra 6, river §271/§288, §334/OBS-009, DECISIONS.md (política de NaN se precisar).
+
+## D-RULE6-BATCH — revisão rule-6 da triagem: seis decisões (mantenedora 21/09/2026)
+
+**Data:** 2026-09-21 · **Estado:** `DECIDED` (respostas da mantenedora no chat, múltipla escolha).
+
+A mantenedora revisou os seis itens rule-6 da triagem dos 14 vivos e decidiu:
+
+- **§400 — (B) funções nomeadas viram VALORES — supersede o (A) do lote.**
+  A mantenedora havia votado **(A) manter a rejeição + corrigir a mensagem** no
+  `D-CLOSEALL-BATCH` e a lane do lote pousou isso (`cd04246c`, novo SEM011
+  nomeando o idiom); nesta revisão ela respondeu **(B)**: função top-level
+  nomeada em posição de argumento converte para o `FunctionType` esperado
+  (overloads incluídos). **Decisão operativa: (B)** — o diagnóstico (A)
+  pousado fica só até a conversão pousar (é estritamente melhor que a
+  mensagem antiga e desaparece com a superfície); expansão de superfície →
+  gate da regra 11 + fila na frente de tipos, nunca edição drive-by. Pendente
+  a confirmação dela da supersessão (sinalizado no chat 21/09).
+- **§188 — (A) rejeitar `String as Int` com diagnóstico (`SEM084`).** `as` é
+  conversão numérica, não parsing textual; o caminho canônico segue
+  `math.parseInt`. Mata o false-accept (check limpo → CCE em runtime).
+- **§288 — (b) `TypeVariable` no parse + rejeição interina (`SEM085`).**
+  Anotar type-params como `TypeVariable` no parse dentro do owner genérico
+  (fonte única); até o fix do pipeline pousar, rejeitar a forma composta em vez
+  de converter erro alto em crash no load.
+- **§302 — (A+B) corrigir o pin guard + diagnosticar o que sobrar (`SEM086`).**
+  Paridade `Type.of`/`toType` em locals × fields × params × records (os quatro
+  backends); tipo de coleção nu que continuar ambíguo ganha diagnóstico
+  honesto.
+- **§268 — (A) `java.lang` implícito via probe cacheado + diagnóstico honesto
+  (`SEM087`).** `Class.forName("java.lang."+n)` cacheado; nome simples não
+  resolvido em `extends`/`implements` → diagnóstico (nada de super raw);
+  `Object` → `java/lang/Object`.
+- **§271 — (B) diagnóstico honesto interino agora; a ABI COMPLETA de erasure
+  na linha 1.0.** Emissão de bridge/descriptor nos quatro backends é
+  **entrega da 1.0, não post-1.0** (mantenedora 21/09): a escada de releases
+  pode continuar por mais minors betas (até 0.9.x se precisar) antes da 1.0; o
+  que não pode shipar é o `NoSuchMethodError` silencioso. Interino: recusar o
+  dispatch de interface genérica não-suportado com código (espelhando
+  `NAT005`).
+
+**Fila:** DOING (claim da lane 9093); cada fix carrega a própria prova
+(RED→GREEN) e atualiza a seção do ledger no mesmo commit.
+
+- **Relationships:** `Related: D-RELEASE-0.5.0-SCOPE, D-RELEASE-1.0, rule 6, rule 11, R6`.
