@@ -62,7 +62,7 @@ R050_SPEC_GAPS_FILE="${R050_SPEC_GAPS_FILE:-}"
 
 # docs that are living/meta by nature and stay in docs/development (the
 # three-states rule keeps them there while the phase is open).
-ALLOWLIST="DECISIONS.md DECISIONS.pt_BR.md README.md README.pt_BR.md roadmap.md roadmap.pt_BR.md PROPOSAL-1.0-EXIT-GATE.md PROPOSAL-1.0-EXIT-GATE.pt_BR.md release-beta-0.5.0-prep.md release-beta-0.5.0-prep.pt_BR.md"
+ALLOWLIST="DECISIONS.md DECISIONS.pt_BR.md README.md README.pt_BR.md roadmap.md roadmap.pt_BR.md PROPOSAL-1.0-EXIT-GATE.md PROPOSAL-1.0-EXIT-GATE.pt_BR.md PROPOSAL-VERSIONING-RELEASE.md PROPOSAL-VERSIONING-RELEASE.pt_BR.md release-beta-0.5.0-prep.md release-beta-0.5.0-prep.pt_BR.md"
 # D-RELEASE-0.5.0-SCOPE (maintainer 21/09/2026): the in-flight OWNED plans
 # still loose are allowlisted — 0.5.0 does not wait for db/ffi/type-system to
 # conclude; each keeps its owner and stays tracked in the README queue.

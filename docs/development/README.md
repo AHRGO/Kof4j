@@ -47,7 +47,8 @@ surface**).
   concluded and moved to `docs/architecture/` (21/09).
   Authority: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Living records here (not backlog):** `DECISIONS.md`,
-  `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.
+  `PROPOSAL-1.0-EXIT-GATE.md`, `PROPOSAL-VERSIONING-RELEASE.md`, `roadmap.md`,
+  `release-beta-0.5.0-prep.md`.
 - **§1 is the queue; §4.1/§4.2 are an AUDIT TRAIL** (what already left, with
   proof) — do not read them as work. How to act: §6.
 

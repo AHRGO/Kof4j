@@ -47,7 +47,8 @@ nova**).
   concluíram e foram movidos para `docs/architecture/` (21/09).
   Autoridade: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Registros vivos aqui (não são backlog):** `DECISIONS.md`,
-  `PROPOSAL-1.0-EXIT-GATE.md`, `roadmap.md`, `release-beta-0.5.0-prep.md`.
+  `PROPOSAL-1.0-EXIT-GATE.md`, `PROPOSAL-VERSIONING-RELEASE.md`, `roadmap.md`,
+  `release-beta-0.5.0-prep.md`.
 - **§1 é a fila; §4.1/§4.2 são TRILHA DE AUDITORIA** (o que já saiu, com
   prova) — não leia como trabalho. Como agir: §6.
 
