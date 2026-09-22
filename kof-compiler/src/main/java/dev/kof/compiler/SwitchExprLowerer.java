@@ -93,6 +93,11 @@ public final class SwitchExprLowerer {
         } else {
             ops.add(new KofLoadLocal(switchType, switchTmp));
             localIdx = ExpressionLowerer.emitExpression(driver, sc.value(), ops, owner, localIdx, locals);
+            // #473: promove o literal do case ao tipo do subject (Int → Long/
+            // Double/Float) antes do EQ largo — sem isto o LCMP/DCMP operava
+            // sobre largura errada e o frame do ASM estourava.
+            Type caseValType = ExpressionTyper.inferExprType(driver, sc.value(), locals);
+            driver.emitWideningIfNeeded(ops, caseValType, switchType);
             if (Type.isString(switchType)) {
                 // igualdade de String é por conteúdo (bug 4 do statement)
                 ops.add(new KofCall(BuiltinTypes.STRING, "kof_string_equals",

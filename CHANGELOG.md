@@ -13,6 +13,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§439 FIXED — switch on a wide subject with an `Int` literal case crashed
+    the JVM backend** (21/09, compiler lane): `switch (var x: Long = 3) { case
+    1: ... }` type-checked but the JVM backend blew up with
+    `NegativeArraySizeException` in ASM `COMPUTE_FRAMES` (masked by the JavaFX
+    launcher). The case value was lowered with its own type (a bare `1` is
+    `Int`) while the subject is wide, so `KofBinary(EQ, long)`/`DCMP` ran over a
+    mixed-width stack. Fix: widen the case value to the subject type before the
+    comparison (`emitWideningIfNeeded`) in `SwitchStmtLowerer` (numeric and
+    pattern branches) and `SwitchExprLowerer` — IR-only (regra 5), no
+    parser/typer/backend change. Proof:
+    `SwitchLongDoubleSupportE2ETest.intLiteralCasesWidenToLongSubject` +
+    `intLiteralCasesWidenCrossTargetParity` (JVM == Script == JS == Native
+    x86-64, golden `three\nother`), class 5/5, RED→GREEN.
+
   - **§438 FIXED — `kof debug` no longer leaks the debuggee JVM / temp dir**
     (21/09, lane .18): `KofDebugJvmSession` had no shutdown hook (unlike
     `KofDebugNativeDap`), so SIGTERM/editor-close killed the CLI without

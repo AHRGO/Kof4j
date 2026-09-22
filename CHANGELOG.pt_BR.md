@@ -13,6 +13,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§439 CORRIGIDO — switch sobre subject largo com case literal `Int` quebrava
+    o backend JVM** (21/09, lane compilador): `switch (var x: Long = 3) { case
+    1: ... }` passava no type-check mas o backend JVM estourava com
+    `NegativeArraySizeException` no `COMPUTE_FRAMES` do ASM (mascarado pelo
+    launcher JavaFX). O valor do case era rebaixado com o próprio tipo (um `1`
+    nu é `Int`) enquanto o subject é largo, então `KofBinary(EQ, long)`/`DCMP`
+    rodava sobre pilha de largura mista. Fix: promover o valor do case ao tipo
+    do subject antes da comparação (`emitWideningIfNeeded`) no
+    `SwitchStmtLowerer` (ramos numérico e pattern) e no `SwitchExprLowerer` —
+    só IR (regra 5), sem mudança de parser/typer/backend. Prova:
+    `SwitchLongDoubleSupportE2ETest.intLiteralCasesWidenToLongSubject` +
+    `intLiteralCasesWidenCrossTargetParity` (JVM == Script == JS == Native
+    x86-64, golden `three\nother`), classe 5/5, RED→GREEN.
+
   - **§438 CORRIGIDO — `kof debug` não vaza mais a JVM debuggee / dir temporário**
     (21/09, lane .18): o `KofDebugJvmSession` não tinha shutdown hook (ao
     contrário do `KofDebugNativeDap`), então SIGTERM/fechar o editor matava o

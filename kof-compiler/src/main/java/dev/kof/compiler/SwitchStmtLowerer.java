@@ -91,6 +91,13 @@ if (hasPattern) {
         } else {
             ops.add(new KofLoadLocal(switchType, switchTmp));
             localIdx = ExpressionLowerer.emitExpression(driver, sc.value(), ops, owner, localIdx, locals);
+            // #473: o valor do case é tipado por si (um literal `1` é Int)
+            // enquanto o subject pode ser largo (`switch (x: Long)`). Sem a
+            // promoção, `KofBinary(EQ, long)` emitia LCMP sobre [long, int] e
+            // o frame calculation do ASM estourava (NegativeArraySizeException
+            // em COMPUTE_FRAMES) — mesmo mecanismo do widening de `long == int`.
+            Type caseValType = ExpressionTyper.inferExprType(driver, sc.value(), locals);
+            driver.emitWideningIfNeeded(ops, caseValType, switchType);
             ops.add(new KofBinary(KofBinaryOp.EQ, switchType));
             ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
             ops.add(new KofConditionalJump(KofComparison.EQ, nextTest, bodyLabels.get(i)));
@@ -176,6 +183,10 @@ for (int i = 0; i < ss.cases().size(); i++) {
     SwitchCase sc = ss.cases().get(i);
     ops.add(new KofLoadLocal(switchType, switchTmp));
     localIdx = ExpressionLowerer.emitExpression(driver, sc.value(), ops, owner, localIdx, locals);
+    // #473: promove o valor do case ao tipo do subject (literal Int em
+    // `switch (Long)` precisa de I2L antes do KofBinary/EQ largo).
+    Type caseValType = ExpressionTyper.inferExprType(driver, sc.value(), locals);
+    driver.emitWideningIfNeeded(ops, caseValType, switchType);
     if (enumSwitch) {
         // D-ENUM207: as constantes são INSTÂNCIAS (singletons), a igualdade
         // é por IDENTIDADE (if_acmp) — não mais kof_string_equals sobre o
