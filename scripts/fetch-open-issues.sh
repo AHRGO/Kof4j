@@ -11,6 +11,7 @@
 # pode ser feita pela API publica.
 #
 # Preferencia:
+#   0. `KOF_ISSUES_JSON` (fixture offline) — override explicito, sem rede;
 #   1. `gh` autenticado (canonico, sem limite apertado);
 #   2. `curl` na API do GitHub, com token (GH_TOKEN/GITHUB_TOKEN) se houver;
 #   3. `curl` sem auth (limite ~60 req/h) — suficiente para uma corrida do gate.
@@ -23,18 +24,10 @@ cd "$(git rev-parse --show-toplevel)"
 REPO="${KOF_ISSUES_REPO:-KofLang/Kof4j}"
 LIMIT="${KOF_ISSUES_LIMIT:-200}"
 
-# 1) gh canonico
-if command -v gh >/dev/null 2>&1; then
-    eval "$(scripts/gh-as-agent.sh token 2>/dev/null)" || true
-    if out="$(gh issue list --repo "$REPO" --state open --limit "$LIMIT" \
-            --json number,labels \
-            --jq '.[] | "\(.number)\t\([.labels[].name]|join(","))"' 2>/dev/null)"; then
-        printf '%s\n' "$out"
-        exit 0
-    fi
-fi
-
-# modo offline (teste/depuracao): um array JSON em KOF_ISSUES_JSON, sem rede.
+# 0) modo offline (teste/depuracao): um array JSON em KOF_ISSUES_JSON, sem rede.
+# Um fixture explicito e um override explicito: tem precedencia sobre `gh`/API
+# (sem isso o modo offline fica inalcancavel em host com `gh` autenticado e o
+# teste deixa de ser hermetico — mesma classe do §390).
 if [ -n "${KOF_ISSUES_JSON:-}" ]; then
     [ -r "$KOF_ISSUES_JSON" ] || { echo "ERRO: KOF_ISSUES_JSON ilegivel" >&2; exit 1; }
     python3 -c '
@@ -45,6 +38,17 @@ for i in d:
     print("%d\t%s" % (i["number"], ",".join(l["name"] for l in i["labels"])))
 ' "$KOF_ISSUES_JSON" || exit 1
     exit 0
+fi
+
+# 1) gh canonico
+if command -v gh >/dev/null 2>&1; then
+    eval "$(scripts/gh-as-agent.sh token 2>/dev/null)" || true
+    if out="$(gh issue list --repo "$REPO" --state open --limit "$LIMIT" \
+            --json number,labels \
+            --jq '.[] | "\(.number)\t\([.labels[].name]|join(","))"' 2>/dev/null)"; then
+        printf '%s\n' "$out"
+        exit 0
+    fi
 fi
 
 # 2/3) API do GitHub via curl (publica).

@@ -380,5 +380,5 @@ Sem cópia de Scala/Kotlin/Haskell/Rust/LINQ; sem API funcional gigante sem sem�
 - `docs/bugs-and-gaps/specification-gaps.md` (SG-009, SG-012, SG-002)
 - `docs/bugs-and-gaps/known-bugs.md` (bugs 19/20, §170, §181)
 - `docs/development/roadmap.md` §23 Tiers 0–12, `docs/development/DECISIONS.md` (D-NULL-INTENT N1→N4)
-- `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (invariants R1–R12)
+- `docs/architecture/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (invariants R1–R12)
 - `training/idioms/collections.md`

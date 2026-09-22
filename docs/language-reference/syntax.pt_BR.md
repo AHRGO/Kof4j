@@ -204,7 +204,7 @@ os alvos (§370/#549 corrigido 20/09): `Int`/`Double` num slot `Float`, `Int`/`L
 slot `Double` etc. são convertidos; String/Bool/`Double→Int` são `SEM014`.
 O caminho da lib é resolvido em **runtime** na JVM/JS (símbolo ausente =
 exceção `kof_ffi_*`). O alargamento era a fatia R3
-(`docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.pt_BR.md`, #431); a face JVM landou 18/09 (`.18`), o host JS no mesmo dia, o Native x86-64 + riscv64/aarch64 em 20/09, e as formas D6 struct/array/out-buffer na JVM (record por valor in/out, `T[]`→`ptr` copy-in, `Buffer(U8)` INOUT) em 20–21/09.
+(`docs/architecture/IMPLEMENTATION-UNIVERSAL-PLATFORM.pt_BR.md`, #431); a face JVM landou 18/09 (`.18`), o host JS no mesmo dia, o Native x86-64 + riscv64/aarch64 em 20/09, e as formas D6 struct/array/out-buffer na JVM (record por valor in/out, `T[]`→`ptr` copy-in, `Buffer(U8)` INOUT) em 20–21/09.
 
 ## Testes e lifecycle
 

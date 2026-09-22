@@ -23,6 +23,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # doc-refs (agent tests) verifies that every SHA cited in docs/development
+          # exists as a git object; the default shallow clone (fetch-depth: 1) turns
+          # every historical SHA into a false "SHA FANTASMA".
+          fetch-depth: 0
 
       - name: Set up JDK 25 (Tooling API baseline)
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6

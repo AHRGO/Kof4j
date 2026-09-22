@@ -143,7 +143,7 @@ the `./kof-runtime*.mjs` modules it imports (§298), so the `node <name>.mjs`
 printed in `RELEASE.md` works from a clean directory. `--publish <registry>` is
 **refused honestly with `DEP001`** until the maintainer decides the release
 registry (plan decision **D2**); same for the cross archs (riscv64/aarch64) —
-slices following in `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`
+slices following in `docs/architecture/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`
 (X9). Android refuses `DEP001` only when ANDROID_HOME is missing or its build-tools lack a d8 that reads the artifact's bytecode (the CLI picks the highest installed version; >= 35.0.0 for Java 21)
 (honest environment guard, never a fake APK). No exit 0 without a real
 artifact, ever (R6).

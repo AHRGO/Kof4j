@@ -13,7 +13,7 @@ Android permanecem gap honesto de compile-time `SECN008` (R6). Provas: `SecretE2
 7/7, `KeyHandleE2ETest` 5/5. `secrets.get` manteve o `String` cru legado (congelado
 0.2.6) — o caminho tipado é `secrets.of`/`secrets.secret` (sem quebra).
 **Autorizado em bloco** por `DECISIONS.md` §D-SECRETS (mantenedora 21/09).
-**Fonte:** linha 3.6 de `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (`Secret`/`KeyHandle`
+**Fonte:** linha 3.6 de `docs/architecture/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (`Secret`/`KeyHandle`
 pendentes, Estágio 5) · análise de gap `docs/stdlib/security.md` (linhas "Secrets (env):
 INEXISTENTE", "Secrets em logs: SEM PROTEÇÃO") · §kof.security de `docs/bugs-and-gaps/ecosystem-coverage.md`.
 

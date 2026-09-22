@@ -41,8 +41,8 @@ is explicitly non-deliverable and outside the current scope).
 | ~~`planning-stdlib-array-returns.md`~~ → `docs/stdlib/DD-STDLIB-01-array-returns.md` | DD-STDLIB-01 | **CLOSED 13/09** — decision 6a + implementation (`randomBytesHex`->String; choice=idiom), moved to docs/ |
 
 > **`IMPLEMENTATION-UNIVERSAL-PLATFORM.md` left `future/` on 17/09/2026** — promoted to
-> `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` as **current work** by maintainer
-> decision, which **overrides the R12 gate** (see `DECISIONS.md` §D-UNIVERSAL).
+> current work by maintainer decision — today `docs/architecture/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` —
+> which **overrides the R12 gate** (see `DECISIONS.md` §D-UNIVERSAL).
 > The vision/design is unchanged; the entry point is Stage 1 (SYSTEMS
 > consolidation) and the executable recommendations R1–R12.
 

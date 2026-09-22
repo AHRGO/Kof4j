@@ -34,7 +34,7 @@ O binário "hello" x86_64 contém, verificado por `strings`: `kof_jwt_*`,
 (servidor HTTP), `kof_mq_*`, `kof_channel_*`, `kof_cache_*`, DB, URI,
 math-double, random, uuid, observabilidade — **nada disso é alcançável pelo
 programa**. É exatamente o cenário que o briefing da mantenedora quer
-eliminar, e a tabela de riscos do `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md:1318` já o
+eliminar, e a tabela de riscos do `docs/architecture/UNIVERSAL-PLATFORM-VISION.md:1168` já o
 prevê: *"Stdlib inchada → capability/link por uso"*.
 
 Os números de 11/09 nos E2E cross (riscv 34/0, aarch 34/0) valem para

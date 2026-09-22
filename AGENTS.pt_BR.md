@@ -893,7 +893,7 @@ pronta.
 
 ---
 
-## Invariantes da plataforma (plano universal — `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`)
+## Invariantes da plataforma (plano universal — `docs/architecture/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`)
 
 Estas regras **sempre** se aplicam, mesmo quando não há código de domínio novo
 em jogo. São o mecanismo anti-"god language":

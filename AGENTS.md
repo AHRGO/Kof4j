@@ -891,7 +891,7 @@ ready.
 
 ---
 
-## Platform invariants (universal plan — `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`)
+## Platform invariants (universal plan — `docs/architecture/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`)
 
 These rules **always** apply, even when there's no new domain code
 at stake. They are the anti-"god language" mechanism:

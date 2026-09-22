@@ -13,7 +13,7 @@ Android stay an honest compile-time gap `SECN008` (R6). Proofs: `SecretE2ETest`
 7/7, `KeyHandleE2ETest` 5/5. `secrets.get` kept the legacy raw `String` (frozen
 0.2.6) — the typed path is `secrets.of`/`secrets.secret` (non-breaking).
 **Authorized in full** by `DECISIONS.md` §D-SECRETS (maintainer 21/09).
-**Source:** `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` line 3.6 (`Secret`/`KeyHandle`
+**Source:** `docs/architecture/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` line 3.6 (`Secret`/`KeyHandle`
 pending, Stage 5) · gap analysis `docs/stdlib/security.md` (rows "Secrets (env): NONEXISTENT",
 "Secrets in logs: NO PROTECTION") · `docs/bugs-and-gaps/ecosystem-coverage.md` §kof.security.
 

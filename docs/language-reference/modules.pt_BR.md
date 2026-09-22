@@ -168,7 +168,7 @@ define as assinaturas. **Experimental** como superfície (muda entre versões).
     `lib::symbol` (stack trace, não mensagem cirúrgica). Fatias R3 restantes
     (handle lifetime `D-R3-3.3`, struct/array + callbacks no Native, bridge de struct no JS; variadics fechado como gap documentado; **struct/array + out-buffer JVM 3.8b + paridade JVM/JS escalar+callback + Native escalar fechados**)
     em
-  `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431).
+  `docs/architecture/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431).
 
 - **Native/JS**: não há interop com tipos do host da mesma forma. **Unspecified.**
 - **Annotations** (`@Name`, `@JsonFormat`) são metadados de interop emitidos no

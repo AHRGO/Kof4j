@@ -168,7 +168,7 @@ Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
      a `kof_ffi` exception naming `lib::symbol` (stack trace, not a surgical
        message). Remaining R3 slices (handle lifetime `D-R3-3.3`, Native struct/array + callbacks, JS struct bridge; variadics closed as a documented gap; **JVM struct/array + out-buffer 3.8b + JVM/JS scalar+callback parity + Native scalar closed**)
     in
-   `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431).
+   `docs/architecture/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431).
 
 - **Native/JS**: there is no interop with host types the same way. **Unspecified.**
 - **Annotations** (`@Name`, `@JsonFormat`) are interop metadata emitted in the
