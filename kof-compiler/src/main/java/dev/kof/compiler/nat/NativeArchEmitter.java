@@ -159,8 +159,7 @@ final class NativeArchEmitter {
             sb.append("    call fflush\n");
         }
         sb.append("    li a0, 0\n");
-        sb.append("    li a7, 94\n");
-        sb.append("    ecall\n");
+        sb.append("    call kof_plat_exit_group\n");
         int rtStart = sb.length();
         sb.append(NativeRiscvAsm.RISCV_RUNTIME_ASM).append(NativeRiscvAsm.RISCV_STRN002_ASM).append(NativeRiscvAsm.RISCV_RUNTIME_ASM_B).append(NativeRiscvAsm.RISCV_MAPSET_ASM);
         int rtEnd = sb.length();
@@ -351,8 +350,8 @@ final class NativeArchEmitter {
         // de uma lib C (GLFW/raylib) sobrevivem ao main e o processo NUNCA
         // morre (hang medido sob qemu antes do fix; o x86 e o riscv já
         // usavam 94 — M32.3). Números riscv/aarch idênticos (asm-generic).
-        riscvSb.append("    li a7, 94\n");
-        riscvSb.append("    ecall\n");
+        // B-0 (D-BAREMETAL-BOOT): a saída cruza a costura kof_plat_exit_group.
+        riscvSb.append("    call kof_plat_exit_group\n");
         int rtStart = riscvSb.length();
         riscvSb.append(NativeRiscvAsm.RISCV_RUNTIME_ASM).append(NativeRiscvAsm.RISCV_STRN002_ASM).append(NativeRiscvAsm.RISCV_RUNTIME_ASM_B).append(NativeRiscvAsm.RISCV_MAPSET_ASM);
         int rtEnd = riscvSb.length();

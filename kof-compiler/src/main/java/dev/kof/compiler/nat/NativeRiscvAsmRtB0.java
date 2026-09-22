@@ -270,22 +270,19 @@ public final class NativeRiscvAsmRtB0 {
                 mv   a0, s2
                 mv   a1, t0
                 li   a2, 8
-                li   a7, 64
-                ecall
+                call kof_plat_write
                 # write(fd, msg.data, msg.len)
                 beqz s0, .Llw_skip_msg
                 lw   a2, 16(s0)
                 addi a1, s0, 24
                 mv   a0, s2
-                li   a7, 64
-                ecall
+                call kof_plat_write
             .Llw_skip_msg:
                 # newline (usar .Lnewline)
                 mv   a0, s2
                 la   a1, .Lnewline
                 li   a2, 1
-                li   a7, 64
-                ecall
+                call kof_plat_write
                 ld   s1, 8(sp)
                 ld   s0, 16(sp)
                 ld   ra, 24(sp)
@@ -335,10 +332,8 @@ public final class NativeRiscvAsmRtB0 {
             kof_time_now:
                 addi sp, sp, -32
                 sd   ra, 24(sp)
-                addi a1, sp, 0              # &timespec {sec@0, nsec@8}
-                li   a0, 0                  # CLOCK_REALTIME
-                li   a7, 113
-                ecall
+                addi a0, sp, 0              # &timespec {sec@0, nsec@8}
+                call kof_plat_time
                 ld   t0, 0(sp)              # tv_sec
                 ld   t1, 8(sp)              # tv_nsec
                 li   t2, 1000
@@ -368,8 +363,7 @@ public final class NativeRiscvAsmRtB0 {
                 sd   t1, 8(sp)             # timespec.tv_nsec
                 mv   a0, sp                # &ts
                 mv   a1, zero              # rem = NULL
-                li   a7, 101
-                ecall
+                call kof_plat_sleep
                 ld   s1, 24(sp)
                 ld   s0, 32(sp)
                 ld   ra, 40(sp)

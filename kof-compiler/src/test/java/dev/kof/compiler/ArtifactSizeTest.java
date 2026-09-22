@@ -88,15 +88,20 @@ class ArtifactSizeTest {
     // kof_json_encode_map (B46) entraram no alcançável do hello:
     // 133.288→136.048B, 24→41 syms. (O hello agora carrega o par
     // put/println-boxed que o contrato Map nativo exige.)
-    private static final long HELLO_RV_BYTES = 136_048L;
-    private static final int HELLO_RV_SYMS = 41;
+    // B-0/PLAN-BAREMETAL-BOOT (22/09, costura HAL): o roteamento de
+    // print/_start/random pela costura kof_plat_* acrescentou os símbolos
+    // kof_plat_write/writev/exit_group/random ao alcançável do hello —
+    // 136.048→136.824B (+0,6%), 41→45 syms (+4). Medido no host pós-seam.
+    private static final long HELLO_RV_BYTES = 136_824L;
+    private static final int HELLO_RV_SYMS = 45;
     // Hello aarch64 (medido 12/09, mesmo caminho: poda S-4 + gc-sections S-5
     // no asm riscv ANTES do tradutor). G-4 (15/09): também 18→24 syms.
     // §284/§284-map (18/09): 133.112→201.408B, 24→41 syms — o TRADUTOR
     // aarch64 expande as fatias novas do riscv (movi/adrp-loops) muito acima
     // da média do binário; mesmo caminho de poda (regra 5), medido pós-port.
-    private static final long HELLO_AA_BYTES = 201_408L;
-    private static final int HELLO_AA_SYMS = 41;
+    // B-0 (22/09): 201.408→202.168B, 41→45 syms (mesma costura do riscv).
+    private static final long HELLO_AA_BYTES = 202_168L;
+    private static final int HELLO_AA_SYMS = 45;
 
     private static final double TOL = 0.05; // gate de inchaço >5%
 

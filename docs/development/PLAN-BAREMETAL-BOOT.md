@@ -121,6 +121,20 @@ Route **every** environmental operation in the three native runtimes through the
 **Acceptance:** the full native/cross suite is green **without** changing expected
 outputs; a sabotage (make `kof_plat_write` a no-op) makes the output tests fail —
 proving the seam is really used, not decorative.
+**Slice 1 (LANDED 22/09, lane `baremetal` 9092):** the seam exists and is routed
+on the **riscv64 runtime** (aarch64 inherits it line-by-line via the translator)
+for the core surface of single-threaded programs — `kof_plat_write`,
+`kof_plat_writev`, `kof_plat_exit`, `kof_plat_exit_group`, `kof_plat_time`,
+`kof_plat_time_mono`, `kof_plat_sleep`, `kof_plat_random`, `kof_plat_thread_id`
+(call sites: Rt0 print/panic, `_start` exit_group in both emitters, B0 log/time,
+Obs entropy+clock, B4/B48 gettid, B25/B25b/B27 entropy, B42 gc-print writes).
+Proof: riscv64 E2E 54/54 + aarch64 E2E 53/53 under qemu (byte-identical outputs),
+slice-registry model green, and `PlatformSeamSabotageTest` — sabotaging the body
+of `kof_plat_writev` to `ret` makes the program print **nothing** on both
+targets (the seam is load-bearing, not decorative). **Next slices:** x86_64
+runtime (its `call`/libc sites), spawn/futex (`kof_plat_thread`/`kof_plat_sync`)
+and net sockets (`kof_plat_net_*`); `NATIVE003` stays reserved for the bare
+profiles (B-1+).
 **Depends on:** nothing. **Gap:** `NATIVE003` (proposed).
 
 ### B-1 — Freestanding link profile · **depends B-0**

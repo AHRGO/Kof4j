@@ -122,6 +122,21 @@ Roteia **toda** operação ambiental nos três runtimes nativos pelos símbolos
 **Aceitação:** a suíte nativa/cross completa fica verde **sem** mudar saídas
 esperadas; uma sabotagem (fazer `kof_plat_write` no-op) faz os testes de saída
 falhar — provando que a costura é realmente usada, não decorativa.
+**Fatia 1 (LANDADA 22/09, lane `baremetal` 9092):** a costura existe e está
+roteada no **runtime riscv64** (o aarch64 a herda linha-a-linha via tradutor)
+para a superfície core de programas single-thread — `kof_plat_write`,
+`kof_plat_writev`, `kof_plat_exit`, `kof_plat_exit_group`, `kof_plat_time`,
+`kof_plat_time_mono`, `kof_plat_sleep`, `kof_plat_random`, `kof_plat_thread_id`
+(call sites: print/panic da Rt0, exit_group do `_start` nos dois emissores,
+log/time da B0, entropia+relógio da Obs, gettid da B4/B48, entropia da
+B25/B25b/B27, escritas de gc-print da B42).
+Prova: E2E riscv64 54/54 + E2E aarch64 53/53 sob qemu (saídas byte-idênticas),
+modelo de fatias verde e `PlatformSeamSabotageTest` — sabotar o corpo de
+`kof_plat_writev` para `ret` faz o programa **não imprimir nada** nos dois
+alvos (a costura é load-bearing, não decorativa). **Próximas fatias:** runtime
+x86_64 (os sítios `call`/libc dele), spawn/futex
+(`kof_plat_thread`/`kof_plat_sync`) e sockets de rede (`kof_plat_net_*`);
+`NATIVE003` fica reservado aos perfis bare (B-1+).
 **Depende de:** nada. **Lacuna:** `NATIVE003` (proposta).
 
 ### B-1 — Perfil de link freestanding · **depende de B-0**

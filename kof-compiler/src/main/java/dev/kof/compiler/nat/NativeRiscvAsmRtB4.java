@@ -389,8 +389,7 @@ public final class NativeRiscvAsmRtB4 {
                 sd   s0, 16(sp)
                 sd   s1, 8(sp)
                 sd   s2, 0(sp)
-                li   a7, 178                # gettid
-                ecall
+                call kof_plat_thread_id     # gettid
                 mv   s0, a0
                 li   t0, 0x9E3779B97F4A7C15
                 mul  s1, s0, t0
