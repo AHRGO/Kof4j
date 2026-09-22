@@ -1,3 +1,5 @@
+[English](IMPLEMENTATION-UNIVERSAL-PLATFORM-future.md) | [Português](IMPLEMENTATION-UNIVERSAL-PLATFORM-future.pt_BR.md)
+
 # IMPLEMENTATION-UNIVERSAL-PLATFORM — Fases Futuras (apenas plano, sem código)
 
 > Este documento contém as Fases 4–7 do plano de plataforma universal. Pela regra dos três estados (AGENTS.md), estas são **apenas plano, sem código** e pertencem a `development/future/`. Não são trabalho de desenvolvimento atual.

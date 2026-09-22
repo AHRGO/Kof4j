@@ -1,3 +1,5 @@
+[English](IMPLEMENTATION-UNIVERSAL-PLATFORM-future.md) | [Português](IMPLEMENTATION-UNIVERSAL-PLATFORM-future.pt_BR.md)
+
 # IMPLEMENTATION-UNIVERSAL-PLATFORM — Future Stages (plan only, zero code)
 
 > This document contains Stages 4–7 from the universal platform plan. Per the three-states rule (AGENTS.md), these are **plan only, zero code** and belong in `development/future/`. They are not current development work.

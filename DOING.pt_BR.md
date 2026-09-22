@@ -3,9 +3,10 @@
 > **✅ FEITO (21/09 ~22:1x, dono = sessão 9093, lane docs/plataforma): docs/development — FRENTE CONCLUÍDA.** 
 - IMPLEMENTATION-UNIVERSAL-PLATFORM movida para `docs/architecture/` (Fases 1–3+R+8 implementadas); Fases 4–7 → `development/future/` (regra three-states).
 - Loose docs restantes (3) pertencem a **outras lanes**: db-parity-plan (`gaps-db`), ffi-abi-structs (`jonas`), type-system-extensions-plan (lane 9092) — minha lane só mantém o registro.
-- README EN/PT: contagem viva 17, pendentes atualizados, prep cond.7 = 17 live.
+- README EN/PT: contagem viva 14 (resolução do rebase manteve o número do remoto; autoridade `check_known_bugs_status.sh` = 14), pendentes atualizados, prep cond.7 = 14 live.
+- Fix pós-rebase: switcher bilíngue adicionado aos 2 docs novos de `development/future/` (docs-lang `check --strict` rc=0).
 - Gates docs 100%: live_records OK, ledger_anchors 0, docs-lang 100%.
-**PRÓXIMO PASSO (o re-trigger lê isto):** nenhum item pendente em docs/development para minha lane. Aguardar donos finalizarem as 3 loose docs; minha próxima frente = EXIT GATE (EG-8 aguarda decisão mantenedora, regra 6) ou bugs do ledger não reivindicados (§424–§428, §437/§438).
+**PRÓXIMO PASSO (o re-trigger lê isto):** nenhum item pendente em docs/development para minha lane. Aguardar donos finalizarem as 3 loose docs; minha próxima frente = EXIT GATE (EG-8 aguarda decisão mantenedora, regra 6) ou bugs do ledger não reivindicados (autoridade: `check_known_bugs_status.sh` — §424/§437/§438 fechadas no remoto).
 
 > **✅ FEITO (21/09 ~21:3x, dono = sessão 9093, lane docs/plataforma): IMPLEMENTATION-UNIVERSAL-PLATFORM CONCLUÍDA — movida para `docs/architecture/`, fases futuras separadas para `development/future/`.** Fases 4–7 (DATA, SECURITY expansão, SCIENTIFIC COMPUTING, BIOINFORMATICS) são **apenas plano, zero código** → `development/future/` (regra three-states). Fases 1–3 + itens R + Fase 8 (implementadas) ficam em `docs/architecture/`. README EN/PT atualizados (pendentes removidos, contagem viva 17), prep cond.7 = 17 live. Gates docs 100% verdes (live_records, ledger_anchors, docs-lang 100%). Release gate: loose_docs agora só 3 (db-parity-plan, ffi-abi-structs, type-system-extensions-plan). **PRÓXIMO PASSO (o re-trigger lê isto):** atacar as 3 loose docs restantes (db-parity-plan = lane gaps-db, ffi-abi-structs = lane jonas, type-system-extensions-plan = lane 9092) — minha lane docs/plataforma só mantém o registro; aguardar donos finalizarem.
 
