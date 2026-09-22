@@ -130,6 +130,20 @@ public final class FfiStructLayout {
         return layout(AbiLayout.Abi.SYSV_X86_64, structType).byMemory();
     }
 
+    /** True when a single struct is bindable as a cross (riscv64/aarch64)
+     *  RETURN value in the register path. First cut (3.7 fatia 3): all fields
+     *  INTEGER-class, ≤ 16 B — the words arrive in `a0`/`a1` (x0/x1 under
+     *  AAPCS64, same text). Floats/HFA and the byref path (&gt; 16 B) stay an
+     *  honest FFI001 (R6). */
+    public static boolean crossIntRegisterOnly(Target t, Type structType) {
+        AbiLayout.Layout l = layout(abiFor(t), structType);
+        if (l.byMemory() || l.size() > 16 || l.classes().isEmpty()) return false;
+        for (AbiLayout.ArgClass c : l.classes()) {
+            if (c != AbiLayout.ArgClass.INTEGER) return false;
+        }
+        return true;
+    }
+
     /** True when the whole parameter list is bindable on x86-64 (scalars may
      *  spill; structs must fit entirely in registers and use single-field SSE
      *  eightbytes). Simulates SysV register counting in formal order. */

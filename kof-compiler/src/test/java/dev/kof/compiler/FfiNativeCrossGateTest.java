@@ -21,7 +21,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * do assembler/linker.
  *
  * <p>Contrato (R6 + fatias R3): escalar binda em TODO alvo nativo; struct por
- * valor fica x86-64-only até a fatia 3 (riscv64/aarch64 = FFI001 honesto).
+ * valor no x86-64 (register path + sret); no cross (3.7 fatia 3) o RETURN com
+ * campos INTEGER (≤ 16 B) binda — o caso positivo é provado com toolchain em
+ * {@link FfiNativeCrossE2ETest} (`div()` da libc). Um nome de record que o
+ * driver não resolve (sem classe) não tem layout → FFI001 honesto em todo alvo.
  */
 class FfiNativeCrossGateTest {
 
@@ -58,10 +61,13 @@ class FfiNativeCrossGateTest {
     }
 
     @Test
-    void structByValueReturnStaysX86Only() {
-        assertFalse(CompilerPipeline.isExternBound(driver(Target.NATIVE_RISCV64), structReturnExtern()),
-                "retorno de struct no riscv64 ainda é FFI001 (fatia 3)");
-        assertFalse(CompilerPipeline.isExternBound(driver(Target.NATIVE_AARCH64), structReturnExtern()),
-                "retorno de struct no aarch64 ainda é FFI001 (fatia 3)");
+    void unresolvableStructReturnNameStaysGapOnEveryTarget() {
+        // Sem registro da classe no driver não há layout de struct → nada a
+        // bindar; nunca silencioso (R6). O caminho POSITIVO (record declarado,
+        // campos INTEGER) é provado com toolchain em FfiNativeCrossE2ETest.
+        for (Target t : List.of(Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64)) {
+            assertFalse(CompilerPipeline.isExternBound(driver(t), structReturnExtern()),
+                    "retorno de tipo record não resolvido é FFI001 em " + t);
+        }
     }
 }

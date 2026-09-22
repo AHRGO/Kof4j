@@ -63,6 +63,32 @@ class FfiStructLayoutTest {
     }
 
     @Test
+    void crossIntReturnIsBindableOnlyForIntegerRegisterPath() {
+        // 3.7 fatia 3 (primeiro corte): só struct de campos INTEGER, ≤ 16 B.
+        assertTrue(FfiStructLayout.crossIntRegisterOnly(Target.NATIVE_RISCV64, struct('i', 'i')),
+                "div_t(Int,Int): riscv ≤2 campos → 1 doubleword INTEGER (a0)");
+        assertTrue(FfiStructLayout.crossIntRegisterOnly(Target.NATIVE_AARCH64, struct('i', 'i')),
+                "div_t(Int,Int): aarch ≤16 B → 1 eightword INTEGER (x0)");
+        assertTrue(FfiStructLayout.crossIntRegisterOnly(Target.NATIVE_RISCV64,
+                        struct('i', 'i', 'i')),
+                "{Int,Int,Int}: riscv 3+ campos → 2 doublewords INTEGER");
+        assertTrue(FfiStructLayout.crossIntRegisterOnly(Target.NATIVE_AARCH64, struct('j', 'j')),
+                "{Long,Long}: aarch 2 eightwords INTEGER");
+        // gaps honestos (R6): float na riscv vira classe SSE; HFA no aarch;
+        // byref > 16 B nas duas.
+        assertFalse(FfiStructLayout.crossIntRegisterOnly(Target.NATIVE_RISCV64, struct('d', 'i')),
+                "{Double,Int}: riscv ≤2 campos → SSE+INTEGER (float não emitido na fatia 3)");
+        assertFalse(FfiStructLayout.crossIntRegisterOnly(Target.NATIVE_AARCH64, struct('f', 'f')),
+                "HFA (2×Float) no aarch vai em SIMD (não emitido na fatia 3)");
+        assertFalse(FfiStructLayout.crossIntRegisterOnly(Target.NATIVE_AARCH64,
+                        struct('i', 'i', 'i', 'i', 'i')),
+                "5×Int = 20 B → BYREF no cross (FFI001 honesto)");
+        assertFalse(FfiStructLayout.crossIntRegisterOnly(Target.NATIVE_RISCV64,
+                        struct('i', 'i', 'i', 'i', 'i')),
+                "5×Int = 20 B → BYREF no riscv (FFI001 honesto)");
+    }
+
+    @Test
     void abiForMapsTargets() {
         assertEquals(AbiLayout.Abi.SYSV_X86_64, FfiStructLayout.abiFor(Target.NATIVE));
         assertEquals(AbiLayout.Abi.RISCV64, FfiStructLayout.abiFor(Target.NATIVE_RISCV64));

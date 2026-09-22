@@ -24,6 +24,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (`!x86 || x86Bindable`). Prova: `FfiNativeCrossE2ETest` 6/6 sob qemu + novo
     `FfiNativeCrossGateTest` 3/3 (pré-codegen, pega sem toolchain).
 
+  - **Retorno de struct por valor agora binda nos alvos cross (riscv64/aarch64),
+    register path INTEGER ≤ 16 B** (22/09, frente FFI, D6-1/3.7 fatia 3): os
+    emissores LP64/AAPCS64 salvam os words de retorno (`a0`/`a1`; `x0`/`x1` no
+    AAPCS64), alocam+inicializam o objeto Kof e extraem cada campo do seu word
+    pela largura natural. Provado com a `div` da libc (`div_t { int quot; int rem; }`,
+    sem fixture C): `FfiNativeCrossE2ETest` 10/10 sob qemu — riscv == aarch == JVM
+    (`3\n1`); float/HFA, > 16 B e o caminho de param struct seguem FFI001 honesto (R6).
+
 
   - **§268 CORRIGIDO — classe de usuário `extends <classe do JDK>` por nome simples gravava superclasse CRUA (`NoClassDefFoundError` no load)**
     (22/09, lane 9093, voto da mantenedora `D-RULE6-BATCH` opção (A)): `class Worker extends Thread`,

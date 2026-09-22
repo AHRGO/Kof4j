@@ -523,15 +523,20 @@ public final class CompilerPipeline {
         // sret (> 16 B, ponteiro escondido — D6-4).
         boolean sret = false;
         if (FfiSignature.returnChar(ext.returnType()) == null) {
-            if (!x86) return false;
             String retFields = FfiSignature.structFieldChars(ext.returnType(), driver);
             if (retFields == null) return false;
             Type retStruct = FfiStructLayout.structTypeOfChars(retFields);
-            if (FfiStructLayout.x86RegisterOnly(retStruct)) {
-                // register path
-            } else if (FfiStructLayout.x86SretReturn(retStruct)) {
-                sret = true;
-            } else {
+            if (x86) {
+                if (FfiStructLayout.x86RegisterOnly(retStruct)) {
+                    // register path
+                } else if (FfiStructLayout.x86SretReturn(retStruct)) {
+                    sret = true;
+                } else {
+                    return false;
+                }
+            } else if (!FfiStructLayout.crossIntRegisterOnly(driver.target, retStruct)) {
+                // 3.7 fatia 3: cross struct return = INTEGER register path only;
+                // floats/HFA/byref segue FFI001 honesto (R6).
                 return false;
             }
         }

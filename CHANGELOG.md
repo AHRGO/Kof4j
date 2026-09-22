@@ -24,6 +24,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     native target (`!x86 || x86Bindable`). Proof: `FfiNativeCrossE2ETest` 6/6 under qemu +
     new `FfiNativeCrossGateTest` 3/3 (pre-codegen, catches it without a toolchain).
 
+  - **FFI struct return by value now binds on the cross targets (riscv64/aarch64),
+    register path INTEGER ≤ 16 B** (22/09, FFI front, D6-1/3.7 fatia 3): the
+    LP64/AAPCS64 emitters save the return words (`a0`/`a1`; `x0`/`x1` under
+    AAPCS64), allocate+initialise the Kof object and extract each field from its
+    word by natural width. Proven with libc `div` (`div_t { int quot; int rem; }`,
+    no C fixture): `FfiNativeCrossE2ETest` 10/10 under qemu — riscv == aarch == JVM
+    (`3\n1`); floats/HFA, > 16 B and the struct param path stay an honest FFI001 (R6).
+
 
   - **§268 FIXED — user class `extends <JDK class>` by simple name wrote a RAW superclass (`NoClassDefFoundError` at load)**
     (22/09, lane 9093, maintainer vote `D-RULE6-BATCH` option (A)): `class Worker extends Thread`,

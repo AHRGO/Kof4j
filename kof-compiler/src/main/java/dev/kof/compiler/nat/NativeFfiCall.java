@@ -308,7 +308,9 @@ final class NativeFfiCall {
         int n = kc.parameterTypes().size();
         char[] cls = new char[n];
         for (int i = 0; i < n; i++) cls[i] = FfiSignature.charOfType(kc.parameterTypes().get(i));
-        char ret = FfiSignature.charOfType(kc.returnType()).charValue();
+        Character retC = FfiSignature.charOfType(kc.returnType());
+        boolean structRet = retC == null;   // `record` por valor (3.7 fatia 3)
+        char ret = structRet ? 0 : retC.charValue();
         // ordinais POR CLASSE na ordem formal (arg0 → reg0 da sua classe)
         int[] ord = new int[n];
         int nInt = 0, nFlt = 0;
@@ -374,6 +376,10 @@ final class NativeFfiCall {
         // 5) call direto (PLT gerado pelo ld; §61: resolve no exec sem dlopen)
         sb.append("    call ").append(symbolOf(kc)).append("\n");
         sb.append("    ld sp, ").append(8 * ns + 8).append("(sp)\n");
+        if (structRet) {
+            emitRiscvStructReturn(nb, sb, kc);
+            return;
+        }
         switch (ret) {
             case 'v': return;
             case 'i': sb.append("    sext.w a0, a0\n"); break; // canonicaliza o Int 32-bit
@@ -393,6 +399,67 @@ final class NativeFfiCall {
         }
         sb.append("    addi sp, sp, -8\n");
         sb.append("    sd a0, 0(sp)\n");
+    }
+
+    /**
+     * 3.7 fatia 3: materializa o `record` devolvido por valor no alvo cross
+     * (register path, campos INTEGER, &le; 16 B — {@code div_t} de {@code div}).
+     * Os words chegam em {@code a0}/{@code a1} ({@code x0}/{@code x1} sob
+     * AAPCS64 — o tradutor mapeia) e são SALVOS na pilha antes do
+     * {@code kof_alloc} (a alocação clobberaria os registradores de retorno);
+     * o objeto Kof é alocado+inicializado e cada campo é extraído do seu word
+     * (shift pela largura natural — mesmo packing little-endian nas duas archs).
+     * Struct com campo float/HFA ou &gt; 16 B nunca chega aqui (gate FFI001, R6).
+     */
+    private static void emitRiscvStructReturn(NativeBackend nb, StringBuilder sb, KofCall kc) {
+        NativeOpHelpers.Resolved r = NativeOpHelpers.resolveClass(nb, kc.returnType());
+        List<Type> fts = new ArrayList<>();
+        if (r != null) for (var f : r.layout().fields()) fts.add(f.type());
+        Type st = FfiStructLayout.structType(fts);
+        AbiLayout.Layout l = FfiStructLayout.layout(AbiLayout.Abi.SYSV_X86_64, st);
+        int words = (l.size() + 7) / 8;
+        // 1) salva os words de retorno na pilha (kof_alloc clobbera a0-a3)
+        sb.append("    addi sp, sp, -").append(8 * words).append("\n");
+        for (int e = 0; e < words; e++) {
+            sb.append("    sd a").append(e).append(", ").append(8 * e).append("(sp)\n");
+        }
+        // 2) aloca+inicializa o objeto Kof (a0 = objeto)
+        int size = r != null ? r.layout().totalSize()
+                             : dev.kof.compiler.ClassLayout.HEADER_SIZE + 64;
+        sb.append("    li a0, ").append(size).append("\n");
+        sb.append("    call kof_alloc\n");
+        if (r != null) {
+            String mangled = nb.sanitizeName(r.name());
+            sb.append("    mv a1, a0\n");
+            sb.append("    li a2, ").append(r.typeId()).append("\n");
+            sb.append("    la a3, ").append(mangled).append("_vtable\n");
+            sb.append("    mv a0, a1\n");
+            sb.append("    mv a1, a2\n");
+            sb.append("    mv a2, a3\n");
+            sb.append("    call kof_init_object\n");
+        }
+        sb.append("    mv t3, a0\n");
+        // 3) cada campo: do word cru p/ o slot Kof (largura natural)
+        List<FfiStructLayout.FieldInfo> fs = FfiStructLayout.fields(st);
+        for (FfiStructLayout.FieldInfo f : fs) {
+            int cOff = f.cOffset();
+            int e = cOff / 8;
+            int shift = (cOff - e * 8) * 8;
+            int kofOff = 16 + 8 * f.kofSlot();
+            sb.append("    ld t0, ").append(8 * e).append("(sp)\n");
+            if (shift > 0) sb.append("    srli t0, t0, ").append(shift).append("\n");
+            switch (f.scalar().size) {
+                case 1 -> sb.append("    andi t0, t0, 255\n");
+                case 2 -> sb.append("    slli t0, t0, 48\n    srli t0, t0, 48\n");
+                case 4 -> sb.append("    sext.w t0, t0\n");
+                default -> { }
+            }
+            sb.append("    sd t0, ").append(kofOff).append("(t3)\n");
+        }
+        // 4) remove o stash e empilha o objeto como resultado
+        sb.append("    addi sp, sp, ").append(8 * words).append("\n");
+        sb.append("    addi sp, sp, -8\n");
+        sb.append("    sd t3, 0(sp)\n");
     }
 
     /** Helper char*→String (cópia UTF-8 crua na fronteira — o buffer C nunca é

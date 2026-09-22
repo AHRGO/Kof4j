@@ -92,7 +92,20 @@ desloca os params (`rdi`→`rsi`…). Prova: `FfiStructE2ETest`
 `structReturnSretNative` (`ParamMix` = `Long,Double,Int` = 20 B) byte-a-byte
 JVM==Native; `FfiStructLayoutTest.sretReturnAndReservedIntRegister` (quando o
 registrador reservado empurra um struct param para fora dos regs, a chamada não
-é bindável). riscv64/aarch64 e `T[]`/`Buffer` seguem 3.7 (FFI001).
+é bindável).
+**Pousou 22/09 (3.7 fatia 3 · retorno de struct INTEGER no cross, register path):**
+os emissores riscv64 LP64 / aarch64 AAPCS64 agora bindam um `record` **devolvido
+por valor** quando todo campo é classe INTEGER e o struct é ≤ 16 B (provado com
+a `div` da libc → `div_t { int quot; int rem; }`): o call-site salva os words de
+retorno (`a0`/`a1`; `x0`/`x1` no AAPCS64), aloca+inicializa o objeto Kof
+(`kof_alloc`/`kof_init_object`) e extrai cada campo do seu word pela largura
+natural. Float/HFA, > 16 B e o caminho de **parâmetro** struct no cross seguem
+`FFI001` honesto (R6) — o lado do param também é bloqueado por ferramenta aqui
+(sem compilador C cross para uma `.so` de fixture, §365). Prova:
+`FfiNativeCrossE2ETest` `riscv64StructReturnViaLibcDiv`/`aarch64StructReturnViaLibcDiv`/
+`crossStructReturnAgreesBetweenArchs` (qemu, golden `3\n1` = o oráculo JVM) +
+`FfiStructLayoutTest.crossIntReturnIsBindableOnlyForIntegerRegisterPath`.
+`T[]`/`Buffer` e as demais formas de struct riscv64/aarch64 seguem 3.7 (FFI001).
 
 ## 1. O que existe hoje (medido 19/09, não lembrado)
 
@@ -109,7 +122,7 @@ tempo de compilação**: `FFI001` (JVM/Native não bindável) / `FFI002` (JS) �
 | downcall escalar | ✅ `kof_ffi` FFM (`JvmFfiRuntime.java:142+`) | ✅ **`call sym@PLT` direto em x86-64/riscv64/aarch64** (#431 fatias 1–2, 20/09, §369 — link-by-use, sem `dlopen`) | ✅ bridge do host `KofJsFfiBridge` (browser degrada honesto, R7) |
 | callbacks/upcalls (3.4) | ✅ `Linker.upcallStub` | ❌ `FFI001` (sem mecanismo) | ✅ host |
 | String = `char*` | ✅ entrada + saída | ✅ entrada (payload off 24) + saída (cópia na fronteira) | ✅ |
-| **struct (record, campos escalares)** | ✅ **por valor entrada + retorno** (token `@`, 3.8b fatias 1–2, 20–21/09) | ◐ **por valor param + retorno, caminho de registradores *e* sret x86-64** (3.7 fatias 1–2b, 21/09); array/`Buffer` e riscv64/aarch64 → `FFI001` (3.7) | ✅ **por valor ENTRADA + RETORNO** (IN: `@<n><chars>` + `__kof_ffi_fields`; OUT: retorno `@<n><chars>` + `__kof_ffi_from`, bridges 21/09) |
+| **struct (record, campos escalares)** | ✅ **por valor entrada + retorno** (token `@`, 3.8b fatias 1–2, 20–21/09) | ◐ **por valor param + retorno, caminho de registradores *e* sret x86-64** (3.7 fatias 1–2b, 21/09); **retorno** INTEGER ≤ 16 B no cross binda (fatia 3, 22/09); param struct/float/HFA/array/`Buffer` em riscv64/aarch64 → `FFI001` (3.7) | ✅ **por valor ENTRADA + RETORNO** (IN: `@<n><chars>` + `__kof_ffi_fields`; OUT: retorno `@<n><chars>` + `__kof_ffi_from`, bridges 21/09) |
 | **array escalar `T[]`→`ptr`** | ✅ **copy-in por chamada** (token `p<elem>`, 3.8b fatia 3, 21/09; sem write-back) | ❌ FFI001 | ✅ **copy-in por chamada** (`packArray` bridge, 21/09; sem write-back) |
 | **out-buffer `Buffer(U8)` INOUT** | ✅ **copy-in / chamada / copy-back** (token `B` + `buffer.alloc`/`Buffer.bytes()`, D6-3, 21/09) | ❌ FFI001 | ✅ **copy-in / chamada / copy-back** (token `B` + `packBuffer`/copy-back após o downcall, bridge 21/09) |
 | array não-escalar / opaco (ex. `String[]`/`List<T>`/`Handle`) | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |

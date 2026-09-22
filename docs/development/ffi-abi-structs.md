@@ -88,7 +88,20 @@ width). The hidden pointer consumes one INTEGER register, so
 `FfiStructE2ETest` `structReturnSretNative` (`ParamMix` = `Long,Double,Int` =
 20 B) byte-for-byte JVM==Native; `FfiStructLayoutTest.sretReturnAndReservedIntRegister`
 (when the 1 reserved register pushes a param struct out of the regs the call is
-not bindable). riscv64/aarch64 and `T[]`/`Buffer` remain 3.7 (FFI001).
+not bindable).
+**Landed 22/09 (3.7 fatia 3 · cross INTEGER struct return, register path):** the
+riscv64 LP64 / aarch64 AAPCS64 emitters now bind a `record` **returned by value**
+when every field is INTEGER-class and the struct is ≤ 16 B (proven with libc
+`div` → `div_t { int quot; int rem; }`): the call-site saves the return words
+(`a0`/`a1`; `x0`/`x1` under AAPCS64), allocates+initialises the Kof object
+(`kof_alloc`/`kof_init_object`) and extracts each field from its word by natural
+width. Floats/HFA, > 16 B and the struct **parameter** path on the cross remain
+an honest `FFI001` (R6) — the param side is also tooling-blocked here (no cross C
+compiler for a fixture `.so`, §365). Proof:
+`FfiNativeCrossE2ETest` `riscv64StructReturnViaLibcDiv`/`aarch64StructReturnViaLibcDiv`/
+`crossStructReturnAgreesBetweenArchs` (qemu, golden `3\n1` = the JVM oracle) +
+`FfiStructLayoutTest.crossIntReturnIsBindableOnlyForIntegerRegisterPath`.
+`T[]`/`Buffer` and the remaining riscv64/aarch64 struct shapes stay 3.7 (FFI001).
 
 
 ## 1. What exists today (measured 19/09, not remembered)
@@ -106,7 +119,7 @@ the nested token `(<ret><params>)`. Anything the map does not cover is a
 | scalar downcall | ✅ `kof_ffi` FFM (`JvmFfiRuntime.java:142+`) | ✅ **direct `call sym@PLT` on x86-64/riscv64/aarch64** (#431 slices 1–2, 20/09, §369 — link-by-use, no `dlopen`) | ✅ host bridge `KofJsFfiBridge` (browser degrades honestly, R7) |
 | callbacks/upcalls (3.4) | ✅ `Linker.upcallStub` | ❌ `FFI001` (no mechanism) | ✅ host |
 | String = `char*` | ✅ in + out | ✅ in (payload off 24) + out (boundary copy) | ✅ |
-| **struct (record, scalar fields)** | ✅ **by value in + out** (`@` token, 3.8b fatias 1–2, 20–21/09) | ◐ **by value param + return, register path *and* sret x86-64** (3.7 fatias 1–2b, 21/09); array/`Buffer` and riscv64/aarch64 → `FFI001` (3.7) | ✅ **by value IN + OUT** (IN: `@<n><chars>` + `__kof_ffi_fields`; OUT: `@<n><chars>` return + `__kof_ffi_from`; bridges 21/09) |
+| **struct (record, scalar fields)** | ✅ **by value in + out** (`@` token, 3.8b fatias 1–2, 20–21/09) | ◐ **by value param + return, register path *and* sret x86-64** (3.7 fatias 1–2b, 21/09); cross **return** INTEGER ≤ 16 B binds (fatia 3, 22/09); struct param/float/HFA/array/`Buffer` on riscv64/aarch64 → `FFI001` (3.7) | ✅ **by value IN + OUT** (IN: `@<n><chars>` + `__kof_ffi_fields`; OUT: `@<n><chars>` return + `__kof_ffi_from`; bridges 21/09) |
 | **scalar array `T[]`→`ptr`** | ✅ **copy-in per call** (`p<elem>` token, 3.8b fatia 3, 21/09; no write-back) | ❌ FFI001 | ✅ **copy-in per call** (`packArray` bridge, 21/09; no write-back) |
 | **out-buffer `Buffer(U8)` INOUT** | ✅ **copy-in / call / copy-back** (`B` token + `buffer.alloc`/`Buffer.bytes()`, D6-3, 21/09) | ❌ FFI001 | ✅ **copy-in / call / copy-back** (`B` token + `packBuffer`/copy-back after the downcall, bridge 21/09) |
 | non-scalar array / opaque (e.g. `String[]`/`List<T>`/`Handle`) | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
