@@ -114,6 +114,15 @@ public final class FfiStructLayout {
         return true;
     }
 
+    /** True when a single struct is bindable as an x86-64 RETURN value in the
+     *  register path (≤ 16 B, no MEMORY, single-field SSE eightbytes). The
+     *  sret path (&gt; 16 B) is a later slice. */
+    public static boolean x86RegisterOnly(Type structType) {
+        AbiLayout.Layout l = layout(AbiLayout.Abi.SYSV_X86_64, structType);
+        if (l.byMemory() || l.size() > 16) return false;
+        return sseEightbytesAreSingleField(structType);
+    }
+
     /** True when the whole parameter list is bindable on x86-64 (scalars may
      *  spill; structs must fit entirely in registers and use single-field SSE
      *  eightbytes). Simulates SysV register counting in formal order. */

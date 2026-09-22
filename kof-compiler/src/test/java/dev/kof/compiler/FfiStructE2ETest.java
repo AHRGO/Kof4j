@@ -147,21 +147,67 @@ class FfiStructE2ETest {
     }
 
     @Test
-    void structReturnNativeStaysFfi001(@TempDir Path dir) throws IOException {
+    void structReturnNativeSretStaysFfi001(@TempDir Path dir) throws IOException {
+        // 3.7 fatia 2a: o caminho de REGISTRADORES (≤ 16 B) binda; o sret
+        // (> 16 B → SysV MEMORY, ponteiro escondido) segue FFI001 honesto (2b).
         Path src = dir.resolve("retnat.kf");
         Files.writeString(src, """
-                record Point(Int x, Int y)
+                record ParamMix(Long l, Double d, Int i)
 
-                extern "libc.so.6" mkpoint(Int x, Int y): Point
+                extern "libc.so.6" parammixret(Long l, Double d, Int i): ParamMix
 
                 main() {
                     println("hi")
                 }
                 """);
         CompilationResult r = driver.compile(src, dir.resolve("out-retnat"), Target.NATIVE);
-        assertFalse(r.success(), "Native struct ABI is slice 3.7 — return must stay unbound");
+        assertFalse(r.success(), "Native struct sret path is not bound in 3.7 fatia 2a");
         assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI001"),
                 "expected FFI001 on Native, got: " + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void structReturnByValueNativeRegisterPath(@TempDir Path dir) throws Exception {
+        // 3.7 fatia 2a: `record` devolvido por valor no caminho de registradores
+        // x86-64 — Point (1 eightbyte INTEGER em rax, x+y empacotados), Big
+        // (2 eightbytes INTEGER rax+rdx) e Mix (e0 SSE xmm0 + e1 INTEGER rax).
+        // Golden = o MESMO fonte no JVM (FFM) — paridade byte-a-byte.
+        String so = compileHostLib(dir);
+        String kof = """
+                record Point(Int x, Int y)
+                record Big(Int a, Int b, Int c)
+                record Mix(Double d, Int i)
+
+                extern "%s" mkpoint(Int x, Int y): Point
+                extern "%s" bigret(Int a, Int b, Int c): Big
+                extern "%s" mixret(Double d, Int i): Mix
+
+                main() {
+                    val p = mkpoint(3, 4)
+                    println(p.x())
+                    println(p.y())
+                    val g = bigret(10, 20, 30)
+                    println(g.a())
+                    println(g.b())
+                    println(g.c())
+                    val m = mixret(2.5, 7)
+                    println(m.d())
+                    println(m.i())
+                }
+                """.formatted(so, so, so);
+        String expected = "3\n4\n10\n20\n30\n2.5\n7";
+
+        Path jvmSrc = dir.resolve("natret-jvm.kf");
+        Files.writeString(jvmSrc, kof);
+        Path jvmOut = dir.resolve("out-natret-jvm");
+        CompilationResult rj = driver.compile(jvmSrc, jvmOut, Target.JVM);
+        assertTrue(rj.success(), "JVM oracle compile: " + rj.diagnostics().getDiagnostics());
+        String jvm = runJvm(jvmOut);
+        assertEquals(expected, jvm, "JVM golden (struct return)");
+
+        String nat = runNative(dir, "natret", kof);
+        assertEquals(expected, nat, "NATIVE x86-64 SysV struct return (register path)");
+        assertEquals(jvm, nat, "JVM↔Native byte-for-byte parity (struct return)");
     }
 
     @Test

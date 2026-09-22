@@ -7,6 +7,9 @@ import dev.kof.compiler.KofCall;
 import dev.kof.compiler.KofCallKind;
 import dev.kof.compiler.Type;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * #431 (Native FFI): call-site do `extern` no alvo nativo — marshaling SysV
  * (x86-64) direto para uma shared object ligada no link do binário
@@ -70,7 +73,9 @@ final class NativeFfiCall {
                 cls[i] = FfiSignature.charOfType(pt);
             }
         }
-        char ret = FfiSignature.charOfType(kc.returnType()).charValue();
+        Character retC = FfiSignature.charOfType(kc.returnType());
+        boolean structRet = retC == null;   // ClassType: `record` por valor (3.7)
+        char ret = structRet ? 0 : retC.charValue();
         // ordinais POR CLASSE na ordem formal (arg0 → reg0 da sua classe). Um
         // struct ocupa um ordinal por eightbyte (INTEGER→reg int, SSE→xmm).
         int[] ord = new int[n];
@@ -153,7 +158,12 @@ final class NativeFfiCall {
         // 3) o call direto (PLT → ld.so resolve no exec; sem dlopen — §61)
         sb.append("    call ").append(symbolOf(kc)).append("@PLT\n");
         sb.append("    movq %rbx, %rsp\n");
-        // 4) retorno → slot de 8 bytes (void: nada)
+        // 4) retorno: struct por valor (register path) materializa o `record`;
+        //    caso contrário, o escalar/void de sempre → slot de 8 bytes.
+        if (structRet) {
+            emitX86StructReturn(nb, sb, kc);
+            return;
+        }
         switch (ret) {
             case 'v': return;
             case 'i': sb.append("    movslq %eax, %rax\n"); break;
@@ -170,6 +180,66 @@ final class NativeFfiCall {
             default: return;
         }
         sb.append("    pushq %rax\n");
+    }
+
+    /**
+     * 3.7 fatia 2 (x86-64 SysV, register path ≤ 16 B): materializa o `record`
+     * devolvido por valor. Os eightbytes de retorno (rax/rdx + xmm0/xmm1) são
+     * salvos na pilha, o objeto Kof é alocado+inicializado e cada campo é
+     * extraído do seu eightbyte (shift + extensão pela largura) para o slot de
+     * 8 bytes do objeto. O sret (&gt; 16 B, D6-4) fica FFI001 honesto (fatia 2b).
+     */
+    private static void emitX86StructReturn(NativeBackend nb, StringBuilder sb, KofCall kc) {
+        NativeOpHelpers.Resolved r = NativeOpHelpers.resolveClass(nb, kc.returnType());
+        List<Type> ftypes = new ArrayList<>();
+        if (r != null) for (var f : r.layout().fields()) ftypes.add(f.type());
+        Type st = FfiStructLayout.structType(ftypes);
+        AbiLayout.Layout l = FfiStructLayout.layout(AbiLayout.Abi.SYSV_X86_64, st);
+        List<AbiLayout.ArgClass> classes = l.classes();
+        // 1) guarda os eightbytes de retorno (e0 em 0(%rsp) após os pushes)
+        sb.append("    movq %rax, %r10\n");
+        sb.append("    movq %rdx, %r11\n");
+        for (int e = classes.size() - 1; e >= 0; e--) {
+            if (classes.get(e) == AbiLayout.ArgClass.SSE) {
+                sb.append("    movq %xmm").append(ordinal(classes, e, true)).append(", %rax\n");
+                sb.append("    pushq %rax\n");
+            } else {
+                sb.append("    pushq ").append(ordinal(classes, e, false) == 0 ? "%r10" : "%r11").append("\n");
+            }
+        }
+        // 2) aloca+inicializa o objeto Kof (obj em %rax → %r10)
+        NativeOpHelpers.emitAllocObject(nb, sb, r);
+        sb.append("    movq %rax, %r10\n");
+        // 3) cada campo: do eightbyte cru p/ o slot Kof (largura natural)
+        for (int i = 0; i < ftypes.size(); i++) {
+            AbiLayout.Scalar sc = FfiStructLayout.scalarOf(ftypes.get(i));
+            int cOff = l.offsets()[i];
+            int e = cOff / 8;
+            int shift = (cOff - e * 8) * 8;
+            int kofOff = r != null ? r.layout().fields().get(i).offset() : 16 + 8 * i;
+            sb.append("    movq ").append(8 * e).append("(%rsp), %rax\n");
+            if (shift > 0) sb.append("    shrq $").append(shift).append(", %rax\n");
+            switch (sc.size) {
+                case 1 -> sb.append("    movzbl %al, %eax\n");
+                case 2 -> sb.append("    movzwl %ax, %eax\n");
+                case 4 -> sb.append(sc == AbiLayout.Scalar.INT
+                        ? "    movslq %eax, %rax\n" : "    movl %eax, %eax\n");
+                default -> { }
+            }
+            sb.append("    movq %rax, ").append(kofOff).append("(%r10)\n");
+        }
+        // 4) remove o scratch e empilha o objeto como resultado
+        if (!classes.isEmpty()) sb.append("    addq $").append(8 * classes.size()).append(", %rsp\n");
+        sb.append("    pushq %r10\n");
+    }
+
+    private static int ordinal(List<AbiLayout.ArgClass> classes, int e, boolean sse) {
+        int n = 0;
+        for (int i = 0; i < e; i++) {
+            boolean isSse = classes.get(i) == AbiLayout.ArgClass.SSE;
+            if (isSse == sse) n++;
+        }
+        return n;
     }
 
     // ── riscv64 / aarch64 (LP64 duploat + AAPCS64) ───────────────────

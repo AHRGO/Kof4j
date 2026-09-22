@@ -83,9 +83,17 @@ if (mc.receiver() == null && driver.externSignatures.containsKey(mc.methodName()
                 // argumento chega já convertido ao tipo declarado (regra comum).
                 ExternArgumentCoercion.coerce(driver, arg, i < ffiParams.size() ? ffiParams.get(i) : null, ops, locals);
             }
+            // 3.7 fatia 2: retorno `record` por valor — o KofCall carrega o
+            // ClassType REAL do record (resolução de `.campo()` a jusante e o
+            // backend materializa o objeto a partir do registrador/scratch).
+            Type ffiRet = FfiSignature.returnType(ext.returnType());
+            if (FfiSignature.returnChar(ext.returnType()) == null) {
+                Type st = FfiSignature.structReturnType(ext.returnType(), driver);
+                if (st != null) ffiRet = st;
+            }
             ops.add(new KofCall(new Type.ClassType("kof", "ffi", List.of()),
                     ext.library() + "::" + ext.name(), ffiParams,
-                    FfiSignature.returnType(ext.returnType()), KofCallKind.FUNCTION));
+                    ffiRet, KofCallKind.FUNCTION));
             return localIdx;
         }
         // FFI (R3, generalizado): kof_ffi(lib, nome, sig, Object[] args).

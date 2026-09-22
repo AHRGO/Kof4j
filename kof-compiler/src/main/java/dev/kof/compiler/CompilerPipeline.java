@@ -511,10 +511,17 @@ public final class CompilerPipeline {
 
     private static boolean nativeExternBound(CompilerDriver driver, ExternalFunctionNode ext) {
         if (ext.library() == null || ext.library().isEmpty()) return false;
-        // struct return ainda fora do conjunto nativo (FFI001) — fatia 2.
-        if (FfiSignature.returnChar(ext.returnType()) == null) return false;
-        // Fatia 1: só x86-64 (SysV). riscv64/aarch64 struct landam na fatia 3.
+        // Fatias 1–2: só x86-64 (SysV). riscv64/aarch64 struct landam na fatia 3.
         if (driver.target != Target.NATIVE) return false;
+        // Retorno: escalar/void OU struct por valor no register path (≤ 16 B).
+        // O sret (> 16 B, D6-4) ainda é FFI001 honesto (fatia 2b).
+        if (FfiSignature.returnChar(ext.returnType()) == null) {
+            String retFields = FfiSignature.structFieldChars(ext.returnType(), driver);
+            if (retFields == null
+                    || !FfiStructLayout.x86RegisterOnly(FfiStructLayout.structTypeOfChars(retFields))) {
+                return false;
+            }
+        }
         java.util.List<Type> paramTypes = new java.util.ArrayList<>();
         for (var param : ext.parameters()) {
             if (FfiSignature.paramChar(param.type()) != null) {
