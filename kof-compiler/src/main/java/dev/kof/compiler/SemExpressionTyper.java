@@ -255,114 +255,7 @@ public final class SemExpressionTyper {
                 yield operandType;
             }
             case MethodCallExpr mc -> SemMethodCallTyper.infer(sa, mc, scope);
-            case NewExpr ne -> {
-                Type coll = CompilerTypes.builtinCollectionType(ne.typeName(), sa.unit(), sa);
-                if (coll != null) {
-                    // #193/#198: aplicar os type-arguments no tipo da colecao,
-                    // espelhando o ExpressionTyper do emit (que sempre aplicou).
-                    // Sem isso `new List<() -> Int>()` tipava como List<Unknown>
-                    // no SEMANTICO e o get(0) devolvia Unknown -> `f()` dava
-                    // SEM015 (#193) e o call-chainado `get(0)()` emitia Methodref
-                    // vazio (ClassFormatError, #198).
-                    if (!ne.typeArguments().isEmpty() && coll instanceof Type.ClassType ct) {
-                        coll = new Type.ClassType(ct.packageName(), ct.name(),
-                                ne.typeArguments().stream().map(Type::of).toList());
-                    }
-                    yield coll;
-                }
-                SymbolTable.ClassSymbol cs = sa.getClass(ne.typeName());
-                if (cs != null) {
-                    // SG-017 (SEM041): classe abstrata não pode ser instanciada.
-                    if (sa.abstractClasses().contains(ne.typeName()) && sa.diagnostics() != null) {
-                        sa.diagnostics().error("", 0, 0, 0,
-                                "cannot instantiate abstract class '" + ne.typeName() + "'",
-                                "SEM041");
-                    }
-                    // #340 (SEM071): interface não é instanciável — `new I()`.
-                    ClassShapeChecks.checkInstantiable(sa, ne.typeName());
-                    // Inferencia dos argumentos: o efeito colateral importa
-                    // (cache expressionTypes + diagnostics de SEM nas exprs), a
-                    // resolucao do construtor e por aridade (constructorFor
-                    // aceita int) — o container de tipos era write-only
-                    // (CodeQL unused-container: achado real, nao FP).
-                    for (ExpressionNode arg : ne.arguments()) {
-                        inferType(sa, arg, scope);
-                    }
-                    SymbolTable.ConstructorSymbol ctor3 =
-                            SymbolTable.constructorFor(cs.members(), ne.arguments().size());
-                    if (ctor3 != null) {
-                        sa.putResolvedConstructor(ne, ctor3);
-                        // #323: a RESOLUCAO era so por aridade; o tipo dos
-                        // argumentos nunca era conferido contra a assinatura
-                        // do construtor. Sem isto, `new A("x")` num ctor
-                        // `(Int)` compila e a chamada inventa <init>(String)V
-                        // → VerifyError no load (R6/Q7: nunca silencioso).
-                        // Overload-aware: irmao de mesma aridade que casa
-                        // (isAssignable) passa — mesmo predicado do emit.
-                        List<Type> argTypes3 = new ArrayList<>();
-                        for (ExpressionNode arg : ne.arguments()) {
-                            argTypes3.add(inferType(sa, arg, scope));
-                        }
-                        TypeChecker.checkCtorArgTypes(sa, cs.members(), ne.typeName(),
-                                argTypes3);
-                    } else if (sa.diagnostics() != null) {
-                        SymbolTable.Symbol anyInit = cs.members().resolve("<init>");
-                        if (anyInit instanceof SymbolTable.ConstructorSymbol c) {
-                            sa.diagnostics().error("", 0, 0, 0,
-                                    "no constructor of '" + ne.typeName() + "' with "
-                                            + ne.arguments().size() + " argument(s) (expected "
-                                            + c.parameterTypes().size() + ")",
-                                    "SEM023");
-                        } else if (anyInit instanceof SymbolTable.ConstructorSet set
-                                && !set.constructors().isEmpty()) {
-                            sa.diagnostics().error("", 0, 0, 0,
-                                    "no constructor of '" + ne.typeName() + "' with "
-                                            + ne.arguments().size() + " argument(s)",
-                                    "SEM023");
-                        }
-                    }
-                    // X5.3 (D-TYPE-VARIANCE): o EMIT (ExpressionTyper:185)
-                    // sempre aplicou os type-args do NewExpr ao tipo do raw —
-                    // o SEMANTICO so fazia isso p/ colecoes builtin (#193/#198).
-                    // Sem alinhar, `Box<Dog>()` tipava raw (args vazios) e a
-                    // checagem de variancia nunca via args concretos (o §270
-                    // invariante virava permissivo). Aqui espelha o emit.
-                    List<Type> newArgs = ne.typeArguments().isEmpty() ? List.of()
-                            : ne.typeArguments().stream()
-                                    .map(n -> CompilerTypes.toType(n, sa.unit(), sa)).toList();
-                    yield new Type.ClassType(cs.packageName(), cs.name(), newArgs);
-                }
-                // classe EXTERNA (android.webkit.WebView etc.): qualifica pelo
-                // import e registra o construtor do classpath — sem isso a
-                // variável fica Unknown e toda a cadeia de chamadas seguinte
-                // perde o tipo
-                String qname = ne.typeName();
-                if (!qname.contains(".")) {
-                    Type viaImport = MemberResolver.qualifyViaImports(sa.unit(), qname,
-                            sa.externalTypes());
-                    if (viaImport != null) qname = viaImport instanceof Type.ClassType qt
-                            ? qt.packageName() + "." + qt.name() : qname;
-                }
-                if (qname.contains(".") && sa.externalTypes() != null) {
-                    String internal = qname.replace('.', '/');
-                    if (sa.externalTypes().knows(internal)) {
-                        ExternalClasspath.MethodSignature sig =
-                                sa.externalTypes().resolveConstructor(internal, ne.arguments().size());
-                        if (sig != null) {
-                            List<Type> params = new ArrayList<>();
-                            for (String d : sig.parameterDescriptors()) {
-                                params.add(ExternalClasspath.typeFromDescriptor(d));
-                            }
-                            sa.putResolvedConstructor(ne, new SymbolTable.ConstructorSymbol(
-                                    internal.substring(internal.lastIndexOf('/') + 1), params, 1));
-                        }
-                        int lastDot = qname.lastIndexOf('.');
-                        yield new Type.ClassType(qname.substring(0, lastDot),
-                                qname.substring(lastDot + 1), List.of());
-                    }
-                }
-                yield Type.UnknownType.UNKNOWN;
-            }
+            case NewExpr ne -> SemNewExprTyper.infer(sa, ne, scope);
             case FieldAccessExpr fa -> {
                 if (fa.receiver() instanceof IdentifierExpr pId && KofUi.isPalette(pId.name()) && KofUi.paletteColor(fa.fieldName()) != null) yield KofUi.COLOR;
                 if (fa.receiver() instanceof IdentifierExpr tid && KofUiTokens.isTokenNamespace(tid.name())) {
@@ -601,3 +494,4 @@ public final class SemExpressionTyper {
         return "get(i)";
     }
 }
+
