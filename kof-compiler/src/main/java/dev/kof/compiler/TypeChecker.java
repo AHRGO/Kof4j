@@ -100,6 +100,22 @@ public final class TypeChecker {
             return Type.PrimitiveType.BOOL;
         }
         if ("as".equals(operator)) {
+            // §188 (voto (A), D-CLOSEALL-BATCH, mantenedora 21/09):
+            // `String as <numérico|char|bool>` era um PARSE encubierto —
+            // compilava no cheque e dava VerifyError no load (checkcast
+            // Integer sobre String). `as` = cast, sem conversão implícita;
+            // o caminho canônico de texto→valor já existe no stdlib
+            // (math.parseInt / math.parseFloat / math.parseDouble /
+            // math.parseChar).
+            if (diagnostics != null && isStringParseCast(left, right)) {
+                diagnostics.error("", 0, 0, 0,
+                        "an 'as' cast is not a parse: '" + left + "' does not cast to '"
+                                + right + "' (an implicit String conversion would be a "
+                                + "hidden parse) — use the stdlib parsers "
+                                + "(math.parseInt / math.parseFloat / math.parseDouble / math.parseChar)",
+                        "SEM100");
+                return Type.UnknownType.UNKNOWN;
+            }
             return right;
         }
         if (Type.isString(left) || Type.isString(right)) {
@@ -164,6 +180,19 @@ public final class TypeChecker {
             return Type.UnknownType.UNKNOWN;
         }
         return left;
+    }
+
+    /** §188: cast de origem STRING para destino primitivo (não-String) =
+     *  parse encubierto → SEM100 (nulo-nullable incluso nos dois lados). */
+    private static boolean isStringParseCast(Type src, Type dst) {
+        Type s = src instanceof Type.NullableType nt ? nt.inner() : src;
+        Type d = dst instanceof Type.NullableType nt ? nt.inner() : dst;
+        if (!Type.isString(s)) return false;
+        if (!(d instanceof Type.PrimitiveType dt)) return false;
+        switch (dt.name()) {
+            case "int", "long", "byte", "short", "float", "double", "char", "bool": return true;
+            default: return false;
+        }
     }
 
     static boolean isConcurrentHandle(Type t) {
