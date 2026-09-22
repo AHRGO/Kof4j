@@ -6591,7 +6591,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 
 ### §188 — `String as Int` compila e faz `VerifyError` no runtime JVM (R6: código errado emitido)
 
-- **Estado:** 🟡 ABERTO — false-accept `String as Int` (VerifyError no runtime); conserto honesto = fork regra-6 do contrato do `as`, dono = lane compiler (caminho canonico hoje: `math.parseInt`).
+- **FECHADO (21/09, lane bugs-and-gaps — lote CLOSEALL, voto (A) da mantenedora — ✅): o bug morreu no cheque com SEM100. Conserto: o ramo `as` do `inferBinaryResultType` agora rejeita toda origem STRING × destino numérico/char/bool/byte/short com SEM100 + ponteiro para os parsers canônicos do stdlib (`math.parseInt / math.parseFloat / math.parseDouble / math.parseChar`) — `as` é cast, nunca parse implícito (freeze regra 2 — nova rejeição: o que morria no LOAD agora falha cedo, no cheque, com mensagem acionável). Prova RED-first: `StringAsParseRejectTest` 4/4 (literal + repro do registro + todos os destinos + `a as Long` ok); stash do patch = RED 3/3.
 
 - **Sintoma (medido 14/09, dono = 192.168.100.17):** `var p = "2026".split("-");
   var y = p.get(0) as Int` → a compilação JVM **SUCDEDE** e o `.class` faz

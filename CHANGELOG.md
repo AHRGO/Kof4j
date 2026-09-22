@@ -13,6 +13,11 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§188 fixed — `"2026" as Int` agora rejeita no cheque (SEM100) apontando `math.parseInt`**
+    (21/09, lane bugs-and-gaps, voto (A) da mantenedora; prova `StringAsParseRejectTest`
+    4/4, RED 3/3 no código antigo): `as` = cast, nunca parse implícito.
+
+
   - **§400 fixed — função nomeada como valor agora diagnostica a regra real**
     (21/09, lane bugs-and-gaps, voto (A) da mantenedora): `print(probe)` agora
     diz "`probe` is a top-level function, not a value in argument position —
