@@ -2,7 +2,7 @@
 
 [English](kof-c-cross.md) | [Português](kof-c-cross.pt_BR.md)
 
-**Status:** EM CURSO — **C1 + C2 + C3 LANDADAS** (22/09). Dono: frente FFI/kof-c
+**Status:** EM CURSO — **C1 + C2 + C3 + C4 LANDADAS** (22/09). Dono: frente FFI/kof-c
 (lane development/tooling).
 
 ## Por quê
@@ -71,8 +71,21 @@ cruas, sem libc.
   structs maiores que 8 bytes (caminho de memória/par de registradores) e a
   classificação completa SysV/AAPCS64/RISCV64 multi-eightbyte — a necessidade
   atual da fixture (um parâmetro struct ≤ 8 B) está atendida.
-- **C4 — TODO:** saída de objeto reutilizável (`.o`) e link, para um teste
-  cross consumir a fixture.
+- **C4 — LANDADA (22/09):** saída de objeto reutilizável e link.
+  `KofCCompiler.compileObject(cFile, oFile, target)` monta um `.o` avulso —
+  sem `_start` e **sem exigir `main`** — com todas as funções definidas emitidas
+  como `.globl`; os helpers de print só são emitidos quando `print()` é
+  realmente chamado, então um objeto que não imprime não carrega globais
+  inúteis para colidir no link. `compile(cFile, outDir, target, extraObjects)`
+  acrescenta objetos de fixture à linha do `ld`, e funções externas se
+  declaram com protótipo C simples (`int f(int a);` — resolvido no link,
+  validado por aridade). `kof c -c` expõe o modo objeto. Prova:
+  `KofCObjectCompilerTest` 5/5 — uma fixture com struct por valor
+  (`int take(struct Pair p)`) construída como objeto em
+  x86_64/riscv64/aarch64 e ligada a um driver que só vê o protótipo, executada
+  sob qemu e imprimindo o golden `42`; mais objeto sem `main` que compila e
+  executável sem `main` que ainda falha. Este é o caminho que a fixture cross
+  FFI de struct-param consome.
 - **Fronteira de escopo na largura de `int`:** variáveis `int` escalares
   mantêm o modelo de slot de 8 bytes do brinquedo (`int p; p = &x;` que guarda
   ponteiro depende disso); a largura C de 32 bits está implementada onde a ABI

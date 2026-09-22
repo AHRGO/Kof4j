@@ -17,7 +17,7 @@ final class KofCEmitterRiscv extends KofCEmitterBase {
 
     private static final String[] ARG_REGS = {"a0", "a1", "a2", "a3", "a4", "a5"};
 
-    KofCEmitterRiscv(KofCAst.Program prog) { super(prog); }
+    KofCEmitterRiscv(KofCAst.Program prog, boolean executable) { super(prog, executable); }
 
     @Override
     protected void emitDataSection(List<KofCAst.VarDecl> globals) {

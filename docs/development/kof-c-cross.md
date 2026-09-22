@@ -2,7 +2,7 @@
 
 [English](kof-c-cross.md) | [Português](kof-c-cross.pt_BR.md)
 
-**Status:** IN PROGRESS — **C1 + C2 + C3 LANDED** (22/09). Owner: FFI/kof-c
+**Status:** IN PROGRESS — **C1 + C2 + C3 + C4 LANDED** (22/09). Owner: FFI/kof-c
 front (development/tooling lane).
 
 ## Why
@@ -69,8 +69,20 @@ raw syscalls only, no libc.
   than 8 bytes (memory/pair register path) and the full SysV/AAPCS64/RISCV64
   multi-eightbyte classification — the fixture's current need (a ≤ 8 B
   struct parameter) is met.
-- **C4 — TODO:** reusable object output (`.o`) plus linking so a cross test
-  can consume the fixture.
+- **C4 — LANDED (22/09):** reusable object output plus linking.
+  `KofCCompiler.compileObject(cFile, oFile, target)` assembles a standalone
+  `.o` — no `_start` and **no `main` requirement** — with every defined function
+  emitted as `.globl`; the print helpers are only emitted when `print()` is
+  actually called, so an object that does not print carries no unused globals to
+  collide at link time. `compile(cFile, outDir, target, extraObjects)` appends
+  fixture objects to the `ld` line, and external functions are declared with a
+  plain C prototype (`int f(int a);` — resolved at link, validated for arity).
+  `kof c -c` exposes object mode. Proof: `KofCObjectCompilerTest` 5/5 — a
+  struct-by-value fixture (`int take(struct Pair p)`) built as an object on
+  x86_64/riscv64/aarch64 and linked into a driver that only sees the prototype,
+  executed under qemu and printing the golden `42`; plus object-without-`main`
+  succeeds and executable-without-`main` still fails. This is the path the
+  Native cross FFI struct-param fixture consumes.
 - **Scope boundary on `int` width:** scalar `int` variables keep the toy's
   8-byte slot model (pointer-holding `int`s like `int p; p = &x;` rely on it);
   the 32-bit C width is implemented where the C ABI observes memory layout —

@@ -25,6 +25,7 @@ public final class KofCParser {
         List<KofCAst.StructDecl> structs = new ArrayList<>();
         List<KofCAst.VarDecl> globals = new ArrayList<>();
         List<KofCAst.FuncDecl> funcs = new ArrayList<>();
+        List<KofCAst.Prototype> prototypes = new ArrayList<>();
         while (!check(KofCTokenType.EOF)) {
             if (check(KofCTokenType.STRUCT)) {
                 if (checkAt(1, KofCTokenType.IDENTIFIER) && checkAt(2, KofCTokenType.LBRACE)) {
@@ -37,7 +38,7 @@ public final class KofCParser {
                 }
             } else if (check(KofCTokenType.INT)) {
                 if (checkAt(1, KofCTokenType.IDENTIFIER) && checkAt(2, KofCTokenType.LPAREN)) {
-                    funcs.add(parseFunc("int"));
+                    addCallable(parseCallable("int"), funcs, prototypes);
                 } else if (checkAt(1, KofCTokenType.IDENTIFIER) && checkAt(2, KofCTokenType.SEMI)) {
                     globals.add(parseGlobal("int"));
                 } else {
@@ -45,15 +46,20 @@ public final class KofCParser {
                     advance();
                 }
             } else if (check(KofCTokenType.VOID)) {
-                funcs.add(parseFunc("void"));
+                addCallable(parseCallable("void"), funcs, prototypes);
             } else {
                 error("Unexpected token " + peek().text());
                 advance();
             }
         }
-        KofCAst.Program program = new KofCAst.Program(structs, globals, funcs);
+        KofCAst.Program program = new KofCAst.Program(structs, globals, funcs, prototypes);
         validate(program);
         return program;
+    }
+
+    private void addCallable(Object decl, List<KofCAst.FuncDecl> funcs, List<KofCAst.Prototype> prototypes) {
+        if (decl instanceof KofCAst.FuncDecl f) funcs.add(f);
+        else if (decl instanceof KofCAst.Prototype p) prototypes.add(p);
     }
 
     private KofCAst.StructDecl parseStruct() {
@@ -84,7 +90,8 @@ public final class KofCParser {
         return new KofCAst.VarDecl(type, name);
     }
 
-    private KofCAst.FuncDecl parseFunc(String retType) {
+    /** Definition ({@code int f(...) { ... }}) or prototype ({@code int f(...);}). */
+    private Object parseCallable(String retType) {
         advance(); // type
         String name = expect(KofCTokenType.IDENTIFIER).text();
         expect(KofCTokenType.LPAREN);
@@ -92,6 +99,10 @@ public final class KofCParser {
         expect(KofCTokenType.RPAREN);
         if (!retType.equals("int") && !retType.equals("void")) {
             error("struct return is not supported yet");
+        }
+        if (check(KofCTokenType.SEMI)) { // prototype — resolved at link
+            advance();
+            return new KofCAst.Prototype(name, retType, params);
         }
         List<KofCAst.Stmt> body = parseBlock();
         return new KofCAst.FuncDecl(name, retType, params, body);
@@ -316,6 +327,7 @@ public final class KofCParser {
         for (var g : program.globals()) checkStructType(g.type(), structs);
         Map<String, Integer> arity = new LinkedHashMap<>();
         for (var fn : program.funcs()) arity.put(fn.name(), fn.params().size());
+        for (var p : program.prototypes()) arity.putIfAbsent(p.name(), p.params().size());
         for (var fn : program.funcs()) {
             Map<String, String> types = new LinkedHashMap<>();
             for (var p : fn.params()) { types.put(p.name(), p.type()); checkStructType(p.type(), structs); }

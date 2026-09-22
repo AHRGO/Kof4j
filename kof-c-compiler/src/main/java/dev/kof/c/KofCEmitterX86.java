@@ -17,7 +17,7 @@ final class KofCEmitterX86 extends KofCEmitterBase {
 
     private static final String[] ARG_REGS = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
-    KofCEmitterX86(KofCAst.Program prog) { super(prog); }
+    KofCEmitterX86(KofCAst.Program prog, boolean executable) { super(prog, executable); }
 
     @Override
     protected void emitDataSection(List<KofCAst.VarDecl> globals) {

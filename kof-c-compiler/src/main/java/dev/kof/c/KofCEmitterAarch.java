@@ -18,7 +18,7 @@ final class KofCEmitterAarch extends KofCEmitterBase {
 
     private static final String[] ARG_REGS = {"x0", "x1", "x2", "x3", "x4", "x5"};
 
-    KofCEmitterAarch(KofCAst.Program prog) { super(prog); }
+    KofCEmitterAarch(KofCAst.Program prog, boolean executable) { super(prog, executable); }
 
     @Override
     protected void emitDataSection(List<KofCAst.VarDecl> globals) {

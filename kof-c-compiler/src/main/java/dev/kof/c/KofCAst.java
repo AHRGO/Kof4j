@@ -3,7 +3,7 @@ package dev.kof.c;
 import java.util.List;
 
 public final class KofCAst {
-    public record Program(List<StructDecl> structs, List<VarDecl> globals, List<FuncDecl> funcs) {}
+    public record Program(List<StructDecl> structs, List<VarDecl> globals, List<FuncDecl> funcs, List<Prototype> prototypes) {}
 
     /** Struct definition; the subset allows `int` fields only, total size ≤ 8 B. */
     public record StructDecl(String name, List<Param> fields) {}
@@ -15,6 +15,9 @@ public final class KofCAst {
     public record Param(String type, String name) {}
 
     public record FuncDecl(String name, String retType, List<Param> params, List<Stmt> body) {}
+
+    /** Forward declaration of an external function ({@code int f(int a);}) — resolved at link. */
+    public record Prototype(String name, String retType, List<Param> params) {}
 
     public sealed interface Stmt permits IfStmt, WhileStmt, AsmStmt, ExprStmt, AssignStmt, FieldAssignStmt, LocalDeclStmt, ReturnStmt {}
 

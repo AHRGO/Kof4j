@@ -10,7 +10,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * KofCcompiler — native-only C subset compiler.
  * Input: .c file with subset grammar.
- * Output: ELF64 executable via GAS + LD, no alvo escolhido.
+ * Output: ELF64 executable via GAS + LD, no alvo escolhido, or a reusable
+ * object ({@link #compileObject}) for the cross FFI fixtures.
  * No JVM target.
  */
 public final class KofCCompiler {
@@ -23,63 +24,40 @@ public final class KofCCompiler {
     }
 
     public static CompileResult compile(Path cFile, Path outDir, KofCTarget target) throws IOException {
-        String src = Files.readString(cFile);
-        var lexer = new KofCLexer(src);
-        List<KofCToken> toks = lexer.lex();
-        var parser = new KofCParser(toks);
-        var prog = parser.parseProgram();
+        return compile(cFile, outDir, target, List.of());
+    }
 
-        // nunca emitir binario a partir de uma AST lixo (R6/Q7): o parser
-        // sincroniza apos o erro, mas o resultado nao e valido — reporta e para.
-        if (parser.hasErrors()) {
-            return new CompileResult(false,
-                    String.join("\n", parser.errors()), null);
-        }
+    /**
+     * Links an executable, optionally pulling extra objects (a cross fixture
+     * built with {@link #compileObject}) into the {@code ld} invocation.
+     */
+    public static CompileResult compile(Path cFile, Path outDir, KofCTarget target,
+                                        List<Path> extraObjects) throws IOException {
+        FrontEnd fe = parse(cFile);
+        if (!fe.ok()) return new CompileResult(false, fe.diagnostics(), null);
 
-        // basic validation: need main
-        boolean hasMain = prog.funcs().stream().anyMatch(f -> f.name().equals("main"));
+        boolean hasMain = fe.prog().funcs().stream().anyMatch(f -> f.name().equals("main"));
         if (!hasMain) {
             return new CompileResult(false, "missing main() function", null);
         }
 
-        KofCEmitter emitter = switch (target) {
-            case X86_64 -> new KofCEmitterX86(prog);
-            case RISCV64 -> new KofCEmitterRiscv(prog);
-            case AARCH64 -> new KofCEmitterAarch(prog);
-        };
-        String asm = emitter.emit();
+        String asm = emitter(fe.prog(), target, true).emit();
 
         Files.createDirectories(outDir);
         Path sFile = outDir.resolve("kofc.s");
         Files.writeString(sFile, asm);
 
         Path oFile = outDir.resolve("kofc.o");
-        Path bin = outDir.resolve(cFile.getFileName().toString().replaceFirst("\\.c$", ""));
-        if (bin.toString().endsWith(".c")) bin = outDir.resolve("a.out");
-        // also ensure we produce file without extension for execution
-        if (!bin.getFileName().toString().contains(".")) {
-            // keep as is
-        } else {
-            bin = outDir.resolve("kofc_bin");
-        }
+        Path bin = outDir.resolve("kofc_bin");
 
-        // as (binário + flags do alvo)
-        List<String> asCmd = new ArrayList<>(target.assembler());
-        asCmd.add("-o");
-        asCmd.add(oFile.toString());
-        asCmd.add(sFile.toString());
-        ProcessBuilder pbAs = new ProcessBuilder(asCmd);
-        pbAs.redirectErrorStream(true);
-        Process pAs = pbAs.start();
-        String asOut = new String(pAs.getInputStream().readAllBytes());
-        try { pAs.waitFor(5, TimeUnit.SECONDS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-        if (pAs.exitValue() != 0) {
-            return new CompileResult(false, "as failed: " + asOut + "\n" + asm, null);
-        }
+        CompileResult as = assemble(sFile, oFile, target);
+        if (!as.success()) return new CompileResult(false, as.diagnostics() + "\n" + asm, null);
 
         // ld — freestanding (`-e _start`), com o linker do alvo.
-        ProcessBuilder pbLd = new ProcessBuilder(
-                target.linker(), "-o", bin.toString(), "-e", "_start", oFile.toString());
+        List<String> ldCmd = new ArrayList<>(List.of(
+                target.linker(), "-o", bin.toString(), "-e", "_start", oFile.toString()));
+        for (Path extra : extraObjects) ldCmd.add(extra.toString());
+        ProcessBuilder pbLd = new ProcessBuilder(ldCmd);
         pbLd.redirectErrorStream(true);
         Process pLd = pbLd.start();
         String ldOut = new String(pLd.getInputStream().readAllBytes());
@@ -89,7 +67,9 @@ public final class KofCCompiler {
                 return new CompileResult(false, "ld failed: " + ldOut + "\n" + asm, null);
             }
             // fallback to gcc (só host x86_64 — cross não tem cc)
-            ProcessBuilder pbGcc = new ProcessBuilder("gcc", "-nostdlib", "-o", bin.toString(), oFile.toString());
+            List<String> gccCmd = new ArrayList<>(List.of("gcc", "-nostdlib", "-o", bin.toString(), oFile.toString()));
+            for (Path extra : extraObjects) gccCmd.add(extra.toString());
+            ProcessBuilder pbGcc = new ProcessBuilder(gccCmd);
             pbGcc.redirectErrorStream(true);
             Process pGcc = pbGcc.start();
             String gccOut = new String(pGcc.getInputStream().readAllBytes());
@@ -98,27 +78,91 @@ public final class KofCCompiler {
                 return new CompileResult(false, "ld failed: " + ldOut + "\ngcc failed: " + gccOut + "\n" + asm, null);
             }
         }
-        // chmod +x
         bin.toFile().setExecutable(true);
         return new CompileResult(true, "", bin);
     }
 
+    /**
+     * Emits a reusable object ({@code .o}) for {@code target} — no {@code _start},
+     * no {@code main} requirement. The FFI cross tests link it into the program
+     * so a C fixture with by-value struct parameters can be consumed.
+     */
+    public static CompileResult compileObject(Path cFile, Path oFile, KofCTarget target) throws IOException {
+        FrontEnd fe = parse(cFile);
+        if (!fe.ok()) return new CompileResult(false, fe.diagnostics(), null);
+
+        String asm = emitter(fe.prog(), target, false).emit();
+
+        Path parent = oFile.toAbsolutePath().getParent();
+        if (parent != null) Files.createDirectories(parent);
+        Path sFile = oFile.resolveSibling(oFile.getFileName() + ".s");
+        Files.writeString(sFile, asm);
+
+        CompileResult as = assemble(sFile, oFile, target);
+        if (!as.success()) return new CompileResult(false, as.diagnostics() + "\n" + asm, null);
+        return new CompileResult(true, "", oFile);
+    }
+
+    private static KofCEmitter emitter(KofCAst.Program prog, KofCTarget target, boolean executable) {
+        return switch (target) {
+            case X86_64 -> new KofCEmitterX86(prog, executable);
+            case RISCV64 -> new KofCEmitterRiscv(prog, executable);
+            case AARCH64 -> new KofCEmitterAarch(prog, executable);
+        };
+    }
+
+    private static CompileResult assemble(Path sFile, Path oFile, KofCTarget target) throws IOException {
+        List<String> asCmd = new ArrayList<>(target.assembler());
+        asCmd.add("-o");
+        asCmd.add(oFile.toString());
+        asCmd.add(sFile.toString());
+        ProcessBuilder pbAs = new ProcessBuilder(asCmd);
+        pbAs.redirectErrorStream(true);
+        Process pAs = pbAs.start();
+        String asOut = new String(pAs.getInputStream().readAllBytes());
+        try { pAs.waitFor(5, TimeUnit.SECONDS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        if (pAs.exitValue() != 0) return new CompileResult(false, "as failed: " + asOut, null);
+        return new CompileResult(true, "", oFile);
+    }
+
+    private record FrontEnd(KofCAst.Program prog, List<String> errors) {
+        boolean ok() { return errors.isEmpty(); }
+        String diagnostics() { return String.join("\n", errors); }
+    }
+
+    private static FrontEnd parse(Path cFile) throws IOException {
+        String src = Files.readString(cFile);
+        var parser = new KofCParser(new KofCLexer(src).lex());
+        KofCAst.Program prog = parser.parseProgram();
+        // never emit a binary from a junk AST (R6/Q7)
+        return new FrontEnd(prog, parser.errors());
+    }
+
     public static void main(String[] args) throws Exception {
         if (args.length == 0) {
-            System.err.println("Usage: KofCCompiler <file.c> [-o outDir] [--target x86_64|riscv64|aarch64]");
+            System.err.println("Usage: KofCCompiler <file.c> [-o outDir] [--target x86_64|riscv64|aarch64] [-c]");
             System.exit(1);
         }
         Path cFile = Path.of(args[0]);
         Path outDir = Files.createTempDirectory("kofc-out");
         KofCTarget target = KofCTarget.X86_64;
+        boolean objectOnly = false;
         for (int i = 1; i < args.length; i++) {
             if (args[i].equals("-o") && i + 1 < args.length) {
                 outDir = Path.of(args[++i]);
             } else if (args[i].equals("--target") && i + 1 < args.length) {
                 target = KofCTarget.parse(args[++i]);
+            } else if (args[i].equals("-c")) {
+                objectOnly = true;
             }
         }
-        var res = compile(cFile, outDir, target);
+        CompileResult res;
+        if (objectOnly) {
+            Path o = outDir.resolve(cFile.getFileName().toString().replaceFirst("\\.c$", "") + ".o");
+            res = compileObject(cFile, o, target);
+        } else {
+            res = compile(cFile, outDir, target);
+        }
         if (!res.success()) {
             System.err.println(res.diagnostics());
             System.exit(1);

@@ -20,8 +20,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 abstract class KofCEmitterBase implements KofCEmitter {
     protected final KofCAst.Program prog;
+    protected final boolean executable;
     protected final StringBuilder sb = new StringBuilder();
     private final AtomicInteger labelSeq = new AtomicInteger(0);
+    private static final List<String> PRINT_BUILTINS = List.of("print", "print_int", "kof_print");
 
     /** Localização de uma variável: slot do frame ou global. */
     protected record Storage(boolean local, int slot, String name) {
@@ -34,8 +36,9 @@ abstract class KofCEmitterBase implements KofCEmitter {
     private final Map<String, KofCAst.StructDecl> structs = new LinkedHashMap<>();
     private String funcEndLabel = "";
 
-    protected KofCEmitterBase(KofCAst.Program prog) {
+    protected KofCEmitterBase(KofCAst.Program prog, boolean executable) {
         this.prog = prog;
+        this.executable = executable;
         for (var s : prog.structs()) structs.put(s.name(), s);
     }
 
@@ -44,10 +47,41 @@ abstract class KofCEmitterBase implements KofCEmitter {
         sb.setLength(0);
         emitDataSection(prog.globals());
         sb.append("    .text\n");
-        emitStart();
-        emitPrintHelpers();
+        if (executable) emitStart();
+        if (usesPrint()) emitPrintHelpers();
         for (var fn : prog.funcs()) emitFunc(fn);
         return sb.toString();
+    }
+
+    /** Whether the program calls the {@code print()} builtin (avoids emitting unused globals in objects). */
+    private boolean usesPrint() {
+        for (var fn : prog.funcs()) {
+            for (var st : fn.body()) if (usesPrint(st)) return true;
+        }
+        return false;
+    }
+
+    private boolean usesPrint(KofCAst.Stmt st) {
+        return switch (st) {
+            case KofCAst.IfStmt s -> { boolean f = usesPrint(s.cond()); for (var x : s.thenBody()) f |= usesPrint(x); yield f; }
+            case KofCAst.WhileStmt s -> { boolean f = usesPrint(s.cond()); for (var x : s.body()) f |= usesPrint(x); yield f; }
+            case KofCAst.ExprStmt s -> usesPrint(s.expr());
+            case KofCAst.AssignStmt s -> usesPrint(s.value());
+            case KofCAst.FieldAssignStmt s -> usesPrint(s.value());
+            case KofCAst.ReturnStmt s -> s.value() != null && usesPrint(s.value());
+            case KofCAst.AsmStmt ignored -> false;
+            case KofCAst.LocalDeclStmt ignored -> false;
+        };
+    }
+
+    private boolean usesPrint(KofCAst.Expr e) {
+        return switch (e) {
+            case KofCAst.CallExpr c -> PRINT_BUILTINS.contains(c.name())
+                    || c.args().stream().anyMatch(this::usesPrint);
+            case KofCAst.BinaryExpr b -> usesPrint(b.left()) || usesPrint(b.right());
+            case KofCAst.ParenExpr p -> usesPrint(p.inner());
+            case null, default -> false;
+        };
     }
 
     private void emitFunc(KofCAst.FuncDecl fn) {
@@ -57,6 +91,7 @@ abstract class KofCEmitterBase implements KofCEmitter {
         int slots = 0;
         for (var p : fn.params()) { localSlots.put(p.name(), slots++); varTypes.put(p.name(), p.type()); }
         collectLocals(fn.body());
+        sb.append("    .globl ").append(fn.name()).append("\n");
         sb.append(fn.name()).append(":\n");
         emitFuncPrologue(localSlots.size());
         for (int i = 0; i < fn.params().size(); i++) {

@@ -62,6 +62,22 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     memória (campos de struct). Próximo: fatia C4 (`.o` + link),
     `docs/development/kof-c-cross.md`.
 
+  - **`kof-c-compiler` ganha saída de objeto reutilizável e link entre objetos
+    (fatia C4 do plano cross)** (22/09, frente FFI/kof-c):
+    `KofCCompiler.compileObject(cFile, oFile, target)` monta um `.o` avulso sem
+    `_start` e **sem exigir `main`**, emitindo toda função definida como
+    `.globl`; os helpers de print só saem quando `print()` é de fato chamado,
+    então um objeto que não imprime não carrega globais inúteis para colidir no
+    link. `compile(cFile, outDir, target, extraObjects)` acrescenta objetos de
+    fixture à linha do `ld`, e funções externas se declaram com protótipo C
+    simples (`int f(int a);`, resolvido no link e checado por aridade);
+    `kof c -c` expõe o modo objeto. Prova: `KofCObjectCompilerTest` 5/5 — uma
+    fixture com struct por valor (`int take(struct Pair p)`) construída como
+    objeto em x86_64/riscv64/aarch64 e ligada a um driver que só vê o
+    protótipo, rodada sob qemu e imprimindo o golden `42`; objeto sem `main`
+    compila e executável sem `main` ainda falha. Este é o caminho que a fixture
+    cross FFI de struct-param consome; `docs/development/kof-c-cross.md`.
+
   - **§302 FECHADO — tipos crus `List/Set/Map` em CAMPO: todas as faces medidas verdes no tip (21/09, lane bugs-and-gaps, CLOSEALL): repros do registro + formas de campo/retorno/parâmetro/estáticos — `3` nos 3 alvos (raiz já fechada pelo §373/#443).
 
   - **§443 CORRIGIDO — `extern` escalar cross-target (`library()`) voltou a ser re-gateado para `FFI001` no riscv64/aarch64 pelas fatias de struct-by-value**
