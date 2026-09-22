@@ -13,6 +13,13 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§334 CLOSED — `kof_box_equals` NaN (batch CLOSEALL da mantenedora 21/09):** probe
+    medido nos 2 alvos — `0.0 / 0.0` imprime `NaN` (ARITH001 só pega INT), a face
+    box-vs-box imprime `NaN / false / false / false` IDÊNTICO JVM==native; a
+    divergência de bits só exigiria dois NaN payloads exóticos (inalcançável do
+    fonte hoje) → informativo, guard (b) pronto se um produtor exótico chegar.
+
+
   - **§440 FIXED — `record.x++`/`--` was accepted by `check` and died at runtime**
     (21/09, compiler lane): `p.x++` on a record component type-checked clean but
     `kof run` died with `IllegalAccessError: ... access private field P.x`.

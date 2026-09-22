@@ -13,6 +13,13 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§334 CLOSED — `kof_box_equals` NaN (batch CLOSEALL da mantenedora 21/09):** probe
+    medido nos 2 alvos — `0.0 / 0.0` imprime `NaN` (ARITH001 só pega INT), a face
+    box-vs-box imprime `NaN / false / false / false` IDÊNTICO JVM==native; a
+    divergência de bits só exigiria dois NaN payloads exóticos (inalcançável do
+    fonte hoje) → informativo, guard (b) pronto se um produtor exótico chegar.
+
+
   - **§440 CORRIGIDO — `record.x++`/`--` passava no `check` e morria em runtime**
     (21/09, lane compilador): `p.x++` em componente de record passava limpo no
     type-check mas o `kof run` morria com `IllegalAccessError: ... access
