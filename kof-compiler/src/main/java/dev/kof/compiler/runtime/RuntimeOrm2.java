@@ -10,8 +10,11 @@ package dev.kof.compiler.runtime;
  * O schema chega como o literal compilado por {@code KofOrm.schemaString}:
  * campos separados por {@code ','}, partes por {@code ':'} —
  * {@code name:dbType[:generated][:unique]}. O mapeamento de tipos espelha
- * {@code kof_orm_sql_type}/{@code kof_orm_pk_ddl} na dialecto sqlite (a
- * unica que o Native serve hoje; mysql e ORM001 honesto no .Lorm_conn).
+ * {@code kof_orm_sql_type}/{@code kof_orm_pk_ddl} na dialecto sqlite; a
+ * variante mysql (F2d7, {@link #emitMysql}) reaproveita o MESMO parser com
+ * os literais do host mysql (backtick, INT/BIGINT/TINYINT(1),
+ * BIGINT AUTO_INCREMENT PRIMARY KEY) e executa via {@code .Lorm_ddl_exec}
+ * (wire mysql).
  *
  * <p>Contrato de pilha (F1c): entrada 16-alinhada + {@code andq} no prologo;
  * todo {@code call} para C sai com {@code rsp % 16 == 0}; epilogio espelha
@@ -26,7 +29,16 @@ public final class RuntimeOrm2 {
     private RuntimeOrm2() {}
 
     public static void emit(StringBuilder sb) {
-        sb.append("""
+        sb.append(body(false));
+    }
+
+    /** F2d7: variante mysql (mesmo parser; dialeto backtick + tipos do host). */
+    public static void emitMysql(StringBuilder sb) {
+        sb.append(body(true));
+    }
+
+    private static String body(boolean mysql) {
+        String b = """
             # ---------------------------------------------------------------
             # kof_orm_create(id*, table*, schema*) -> Bool
             #   CREATE TABLE IF NOT EXISTS "t" ("a" T[ UNIQUE], ...)
@@ -34,8 +46,7 @@ public final class RuntimeOrm2 {
             #   slots: 0 id | 8 table | 16 schema | 24 conn | 32 nameStart |
             #   40 nameLen | 48 typeStart | 56 f1 | 64 gen | 72 uniq
             # ---------------------------------------------------------------
-                .globl kof_orm_create
-                .type kof_orm_create, @function
+                @@SYMBOL@@
             kof_orm_create:
                 pushq %rbp
                 movq %rsp, %rbp
@@ -49,16 +60,14 @@ public final class RuntimeOrm2 {
                 movq %rdi, (%rsp)
                 movq %rsi, 8(%rsp)
                 movq %rdx, 16(%rsp)
+            @@DISPATCH@@
                 xorl %eax, %eax
                 movq %rax, 48(%rsp)             # typeStart = NULL (sem tipo)
                 movl $1, %eax
                 movq %rax, 56(%rsp)             # f1
                 movq $0, 64(%rsp)               # gen
                 movq $0, 72(%rsp)               # uniq
-                movq (%rsp), %rdi
-                call .Lorm_conn
-                movq %rax, 24(%rsp)             # conn no slot (r14/r15 viram
-                                                #   cursor/len do builder)
+            @@CONN@@
                 # cap = 66 + tblLen + 40 + 40*campos  — limite: por campo no
                 # maximo nome(<=schema)+3 aspas/espaco+VARCHAR(255) UNIQUE(19)
                 # + ", " <= 2*schemaLen + 24; folga total = 64 + tbl + 2*sch + 24*8
@@ -218,8 +227,8 @@ public final class RuntimeOrm2 {
                 call .Lorm2_tis
                 testl %eax, %eax
                 jz .Lorm2_l3
-                leaq .Lorm2_integer(%rip), %rsi
-                movl $.Lorm2_integer_len, %ecx
+                leaq .Lorm2_longsql(%rip), %rsi
+                movl $.Lorm2_longsql_len, %ecx
                 call .Lorm_bp
                 jmp .Lorm2_uniq
             .Lorm2_l3:
@@ -277,11 +286,9 @@ public final class RuntimeOrm2 {
                 movl $41, %r8d                  # ')'
                 call .Lorm_bh
                 call .Lorm_bfin
-                movq 24(%rsp), %rdi
-                movq %rbx, %rsi
-                call .Lorm_exec
+            @@EXEC@@
                 testl %eax, %eax
-                sete %al
+                @@OKBOOL@@
                 movzbl %al, %eax
                 addq $88, %rsp
                 popq %r15
@@ -293,6 +300,7 @@ public final class RuntimeOrm2 {
                 popq %rbp
                 ret
 
+            @@STUB@@
             # .Lorm2_qq(rdi=KofString*) -> emite '"' body '"' no builder
             .Lorm2_qq:
                 pushq %r12
@@ -336,13 +344,16 @@ public final class RuntimeOrm2 {
             .Lorm2_comma:
                 .ascii ", "
             .Lorm2_pk:
-                .ascii "INTEGER PRIMARY KEY AUTOINCREMENT"
+                .ascii "@@PK@@"
                 .set .Lorm2_pk_len, . - .Lorm2_pk
             .Lorm2_integer:
-                .ascii "INTEGER"
+                .ascii "@@INT@@"
                 .set .Lorm2_integer_len, . - .Lorm2_integer
+            .Lorm2_longsql:
+                .ascii "@@LONG@@"
+                .set .Lorm2_longsql_len, . - .Lorm2_longsql
             .Lorm2_boolean:
-                .ascii "BOOLEAN"
+                .ascii "@@BOOL@@"
                 .set .Lorm2_boolean_len, . - .Lorm2_boolean
             .Lorm2_double_sql:
                 .ascii "DOUBLE"
@@ -370,6 +381,46 @@ public final class RuntimeOrm2 {
                 .ascii "double"
             .Lorm2_float:
                 .ascii "float"
-            """);
+            """;
+        if (mysql) {
+            b = b.replace(".Lorm2_", ".Lorm2my_")
+                 .replace("kof_orm_create", ".Lorm2my_create")
+                 .replace("$34, %r8d", "$96, %r8d");
+        }
+        return b
+                .replace("@@SYMBOL@@", mysql ? ""
+                        : ".globl kof_orm_create\n            .type kof_orm_create, @function")
+                .replace("@@DISPATCH@@", mysql ? ""
+                        : "                movq (%rsp), %rdi\n                call kof_db_type\n                cmpl $2, %eax\n                je .Lorm2my_dispatch")
+                .replace("@@CONN@@", mysql ? ""
+                        : "                movq (%rsp), %rdi\n                call .Lorm_conn\n                movq %rax, 24(%rsp)             # conn no slot (r14/r15 viram\n                                                #   cursor/len do builder)")
+                .replace("@@EXEC@@", mysql
+                        ? "                movq (%rsp), %rdi\n                leaq 24(%rbx), %rsi\n                movl 16(%rbx), %edx\n                call .Lorm_ddl_exec"
+                        : "                movq 24(%rsp), %rdi\n                movq %rbx, %rsi\n                call .Lorm_exec")
+                .replace("@@OKBOOL@@", mysql ? "setns %al" : "sete %al")
+                .replace("@@STUB@@", mysql ? "" : SQLITE_STUB)
+                .replace("@@PK@@", mysql
+                        ? "BIGINT AUTO_INCREMENT PRIMARY KEY" : "INTEGER PRIMARY KEY AUTOINCREMENT")
+                .replace("@@INT@@", mysql ? "INT" : "INTEGER")
+                .replace("@@LONG@@", mysql ? "BIGINT" : "INTEGER")
+                .replace("@@BOOL@@", mysql ? "TINYINT(1)" : "BOOLEAN");
     }
+
+    private static final String SQLITE_STUB = """
+            # F2d7: dispatch mysql -> restaura o frame e tail-chama o create
+            # mysql (.Lorm2my_create, variante emitida do MESMO parser).
+            .Lorm2my_dispatch:
+                movq 0(%rsp), %rdi
+                movq 8(%rsp), %rsi
+                movq 16(%rsp), %rdx
+                addq $88, %rsp
+                popq %r15
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                movq %rbp, %rsp
+                popq %rbp
+                jmp .Lorm2my_create
+            """;
 }

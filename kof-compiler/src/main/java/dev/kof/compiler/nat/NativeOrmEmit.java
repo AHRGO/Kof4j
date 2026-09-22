@@ -39,6 +39,8 @@ public final class NativeOrmEmit {
             dev.kof.compiler.runtime.RuntimeOrm1.emit(sb);
             dev.kof.compiler.runtime.RuntimeOrmMysql.emit(sb);
             dev.kof.compiler.runtime.RuntimeOrm2.emit(sb);
+            dev.kof.compiler.runtime.RuntimeOrm2.emitMysql(sb);
+            dev.kof.compiler.runtime.RuntimeOrmMysqlDdl.emit(sb);
             StringBuilder o3 = new StringBuilder();
             dev.kof.compiler.runtime.RuntimeOrm3.emit(o3);
             sb.append(o3.toString().replace("@@MAGIC@@",

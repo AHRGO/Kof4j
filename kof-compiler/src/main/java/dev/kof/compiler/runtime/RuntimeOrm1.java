@@ -390,8 +390,9 @@ public final class RuntimeOrm1 {
             #   espelha o host: CREATE da tabela de historico (rc ignorado,
             #   como la); SELECT name = ? ja aplicada -> true; exec sql < 0 ->
             #   false; INSERT (name, ms desde epoch via clock_gettime syscall
-            #   228, mesmo padrao dos spans) -> true. id ruim/mysql lanca as
-            #   mesmas strings do host (.Lorm_conn). Pilha fica 16-alinhada
+            #   228, mesmo padrao dos spans) -> true. id ruim lanca as
+            #   mesmas strings do host (.Lorm_conn); mysql (F2d7) tail-chama
+            #   .Lorm_mig_my (RuntimeOrmMysqlDdl). Pilha fica 16-alinhada
             #   (subq $88) nos calls diretos ao sqlite; epilogio espelha
             #   delete_all (pops na regiao andada, rbp so no fim).
             # ---------------------------------------------------------------
@@ -410,6 +411,10 @@ kof_orm_migrate:
             movq %rdi, (%rsp)               # id
             movq %rsi, 8(%rsp)              # name
             movq %rdx, 16(%rsp)             # sql
+            movq (%rsp), %rdi
+            call kof_db_type
+            cmpl $2, %eax
+            je .Lorm_mig_my_dispatch
             movq (%rsp), %rdi
             call .Lorm_conn
             movq %rax, %rbx                 # conn (callee-saved; .Lorm_* preservam)
@@ -502,6 +507,22 @@ kof_orm_migrate:
             movq %rbp, %rsp
             popq %rbp
             ret
+
+            # F2d7: mysql -> restaura o frame e tail-chama .Lorm_mig_my
+            # (dialeto backtick + wire mysql; RuntimeOrmMysqlDdl).
+            .Lorm_mig_my_dispatch:
+            movq 0(%rsp), %rdi
+            movq 8(%rsp), %rsi
+            movq 16(%rsp), %rdx
+            addq $88, %rsp
+            popq %r15
+            popq %r14
+            popq %r13
+            popq %r12
+            popq %rbx
+            movq %rbp, %rsp
+            popq %rbp
+            jmp .Lorm_mig_my
 
             """);
     }

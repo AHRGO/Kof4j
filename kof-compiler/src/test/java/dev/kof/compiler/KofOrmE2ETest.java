@@ -1113,6 +1113,112 @@ class KofOrmE2ETest {
     }
 
     @Test
+    void createMysqlNativeMatchesJvm(@TempDir Path tempDir) throws Exception {
+        // F2d7 (D-DB-GAPS DB-3): orm.create sobre o wire MySQL no Native
+        // x86-64 — dialeto backtick + tipos do host (INT/BIGINT/TINYINT(1)/
+        // VARCHAR(255); generated = BIGINT AUTO_INCREMENT PRIMARY KEY).
+        // Prova de dialeto: o save gera o pk (LAST_INSERT_ID) e o UNIQUE de
+        // email aceita a 1a linha. Q3: create 2x (IF NOT EXISTS) e tipos.
+        int port;
+        try { port = Integer.parseInt(System.getenv().getOrDefault("KOF_MYSQL_PORT", "13306")); }
+        catch (NumberFormatException e) { port = 13306; }
+        org.junit.jupiter.api.Assumptions.assumeTrue(tcpOpen("127.0.0.1", port),
+                "MySQL/MariaDB not reachable on 127.0.0.1:" + port);
+
+        String body = """
+                    db.execute(db, "drop table if exists `user`")
+                    println(orm.create<User>(db))
+                    println(orm.create<User>(db))
+                    var u = orm.save(db, User(0, "Mel", "m@kof.dev", 30))
+                    println(u.id)
+                    println(orm.count<User>(db, "name", "Mel"))
+                    println(orm.count<User>(db, "email", "m@kof.dev"))
+                    db.close(db)
+                }
+                """;
+        String expected = "true\ntrue\n1\n1\n1";
+
+        Path jvmSource = tempDir.resolve("JvmMain.kf");
+        Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"jdbc:mariadb://127.0.0.1:" + port
+                   + "/test?user=root&password=kofpass&allowMultiQueries=true\")\n")
+                + body);
+        runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
+                findDriverJar("mariadb", "MariaDB"), expected);
+
+        Path nativeSource = tempDir.resolve("NativeMain.kf");
+        Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"mysql://root:kofpass@127.0.0.1:" + port + "/test\")\n")
+                + body);
+        CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nativeResult.success(), "Native deve compilar orm.create no mysql (F2d7): "
+                + nativeResult.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process proc = pb.start();
+        String out = new String(proc.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = proc.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals(expected, out, "paridade byte JVM==Native (create mysql; AUTO_INCREMENT + IF NOT EXISTS)");
+    }
+
+    @Test
+    void migrateMysqlNativeMatchesJvm(@TempDir Path tempDir) throws Exception {
+        // F2d7 (D-DB-GAPS DB-3): orm.migrate sobre o wire MySQL no Native
+        // x86-64 — tabela kof_migrations com backtick, aplica uma unica vez
+        // (2a chamada com SQL invalido prova que nao reexecuta), ALTER via
+        // dialeto do host e INSERT do historico. Prova forte: a coluna
+        // extra existe (insert de 3 colunas) mesmo depois de uma migracao
+        // "drop column extra" que NAO pode rodar (ja aplicada).
+        int port;
+        try { port = Integer.parseInt(System.getenv().getOrDefault("KOF_MYSQL_PORT", "13306")); }
+        catch (NumberFormatException e) { port = 13306; }
+        org.junit.jupiter.api.Assumptions.assumeTrue(tcpOpen("127.0.0.1", port),
+                "MySQL/MariaDB not reachable on 127.0.0.1:" + port);
+
+        String body = """
+                    db.execute(db, "drop table if exists `kof_migrations`")
+                    db.execute(db, "drop table if exists `widget`")
+                    println(orm.migrate(db, "001-widget", "create table `widget` (id int primary key, label varchar(50))"))
+                    println(orm.migrate(db, "001-widget", "this is not valid sql -- nao reexecuta"))
+                    db.execute(db, "insert into `widget` values (1, 'a')")
+                    println(db.query(db, "select count(*) as n from `widget`").get(0))
+                    println(orm.migrate(db, "002-extra", "alter table `widget` add column extra int"))
+                    println(orm.migrate(db, "002-extra", "alter table `widget` drop column extra"))
+                    db.execute(db, "insert into `widget` values (2, 'b', 7)")
+                    println(db.query(db, "select count(*) as n from `kof_migrations`").get(0))
+                    db.close(db)
+                }
+                """;
+        String expected = "true\ntrue\n{\"n\":1}\ntrue\ntrue\n{\"n\":2}";
+
+        Path jvmSource = tempDir.resolve("JvmMain.kf");
+        Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"jdbc:mariadb://127.0.0.1:" + port
+                   + "/test?user=root&password=kofpass&allowMultiQueries=true\")\n")
+                + body);
+        runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
+                findDriverJar("mariadb", "MariaDB"), expected);
+
+        Path nativeSource = tempDir.resolve("NativeMain.kf");
+        Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
+                + ("    var db = db.connect(\"mysql://root:kofpass@127.0.0.1:" + port + "/test\")\n")
+                + body);
+        CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
+        assertTrue(nativeResult.success(), "Native deve compilar orm.migrate no mysql (F2d7): "
+                + nativeResult.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(tempDir.resolve("native-out/Default/Main").toString());
+        pb.redirectErrorStream(true);
+        Process proc = pb.start();
+        String out = new String(proc.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = proc.waitFor();
+        assertEquals(0, ec, "Native exit code, output: '" + out + "'");
+        assertEquals(expected, out, "paridade byte JVM==Native (migrate mysql; aplica uma vez, historico)");
+    }
+
+    @Test
     void postgresCrud(@TempDir Path tempDir) throws Exception {
         org.junit.jupiter.api.Assumptions.assumeTrue(tcpOpen("localhost", 5432),
                 "PostgreSQL not reachable (start it: docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=kof postgres)");
