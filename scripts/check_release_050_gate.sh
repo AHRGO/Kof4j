@@ -64,11 +64,12 @@ R050_SPEC_GAPS_FILE="${R050_SPEC_GAPS_FILE:-}"
 # three-states rule keeps them there while the phase is open).
 ALLOWLIST="DECISIONS.md DECISIONS.pt_BR.md README.md README.pt_BR.md roadmap.md roadmap.pt_BR.md PROPOSAL-1.0-EXIT-GATE.md PROPOSAL-1.0-EXIT-GATE.pt_BR.md PROPOSAL-VERSIONING-RELEASE.md PROPOSAL-VERSIONING-RELEASE.pt_BR.md release-beta-0.5.0-prep.md release-beta-0.5.0-prep.pt_BR.md"
 # D-RELEASE-0.5.0-SCOPE (maintainer 21/09/2026): the in-flight OWNED plans
-# still loose are allowlisted — 0.5.0 does not wait for db/ffi/type-system to
-# conclude; each keeps its owner and stays tracked in the README queue.
+# still loose are allowlisted — 0.5.0 does not wait for db/ffi to conclude;
+# each keeps its owner and stays tracked in the README queue.
 # (IMPLEMENTATION-UNIVERSAL-PLATFORM concluded and moved to docs/architecture/
-# on 21/09 — no longer loose, hence not listed here.)
-ALLOWLIST="$ALLOWLIST db-parity-plan.md db-parity-plan.pt_BR.md ffi-abi-structs.md ffi-abi-structs.pt_BR.md type-system-extensions-plan.md type-system-extensions-plan.pt_BR.md"
+# on 21/09; type-system-extensions-plan concluded (X5+X6) and moved to docs/
+# on 22/09 — neither is loose, hence not listed here.)
+ALLOWLIST="$ALLOWLIST db-parity-plan.md db-parity-plan.pt_BR.md ffi-abi-structs.md ffi-abi-structs.pt_BR.md"
 
 # state per condition: GREEN|RED|NEEDS-MEASURE|NEEDS-REVIEW|UNKNOWN
 declare -A STATE DETAIL

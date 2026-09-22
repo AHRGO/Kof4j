@@ -22,7 +22,7 @@ documento de arquitetura/visão **sem código implementado** (ou com código que
 
 | Doc | Tema | Por que fica em `future/` |
 |-----|------|---------------------------|
-| ~~`type-system-extensions-plan.md`~~ **promovido 21/09 → [`../type-system-extensions-plan.pt_BR.md`](../type-system-extensions-plan.pt_BR.md)** | X5 variance + sealed · X6 reflexão de interop | não fica mais em `future/` — plano **APROVADO**, fatias incrementais (três estados: implementação pendente) |
+| ~~`type-system-extensions-plan.md`~~ **movido → [`../../type-system-extensions-plan.pt_BR.md`](../../type-system-extensions-plan.pt_BR.md)** | X5 variância + sealed · X6 reflexão de interop | plano **CONCLUÍDO** (X5+X6), movido para `docs/` 22/09 (três estados) |
 | `PLAN-MULTIPARADIGMA.md` | multiparadigma / pipelines funcionais e queries declarativas (`users.filter{...}.map{...}`), diagnóstico no HEAD 16/09 | **design puro, zero código no doc** (§8 não lista nenhum arquivo alterado); promovido só quando o primeiro incremento funcional landar (SYSTEMS fechado, R12) |
 | `scoped-resources-plan.md` | RAII leve (TIER 2.4, `using`/`resource_scope`) | design puro — zero ocorrências de `resource_scope`/`kof_resource`/`using` no lexer/parser/runtime; gated por bump |
 | `value-records-plan.md` | value records / tipos-valor first-class (TIER 2.7, `value record`) — aceito 16/09 (issue #275, `DECISIONS.md` §D-VALUE-RECORD) | **zero código** — a feature não existe no lexer/parser/backends; só design, barrado pelo R12 + autorização explícita para abrir a frente |

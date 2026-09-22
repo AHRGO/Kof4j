@@ -1003,7 +1003,7 @@ do código, regra 6).
 | 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **APROVADO 21/09**: plano revisado; **fatias incrementais** (prova por fatia), spec-first ANTES de qualquer diff de parser/typer — **X5.1–X5.4 ✅ FEITO 21/09** (`sealed`+`SEM080`; `switch` exaustivo+`SEM081`; variância declaration-site `out`/`in`+`SEM082`; projeção no sítio de uso `List<out T>`/`List<in T>`); resta X5.5 (parity+docs+training) | 🔵 |
 | 2.8.5 | **X6 reflexão de interop** (`D-INTEROP-REFLECT` = **A, intrínseco de compile-time**) | **APROVADO 21/09**; superfície congelada: `interop.schema(R)` → `List<Field>` imutável, zero reflexão em runtime, todos os alvos, só na fronteira. X6.0 ✅; X6.1 (intrínseco+dobra) em andamento | 🔵 |
 
-**Plano spec (X5 + X6):** [`type-system-extensions-plan.pt_BR.md`](type-system-extensions-plan.pt_BR.md) — **APROVADO 21/09 (`D-TYPE-VARIANCE`/`D-INTEROP-REFLECT`)**, promovido para `docs/development/`; fatias incrementais com prova.
+**Plano spec (X5 + X6):** [`type-system-extensions-plan.pt_BR.md`](../type-system-extensions-plan.pt_BR.md) — **APROVADO 21/09 (`D-TYPE-VARIANCE`/`D-INTEROP-REFLECT`)**; **CONCLUÍDO + MOVIDO para `docs/` 22/09** (todas as fatias X5.0–X5.5, X6.0–X6.3 com prova).
 
 ### TIER 3–5 — Plataforma de migração legado (Fases A–H) ✅ código+testes
 

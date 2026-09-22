@@ -3100,15 +3100,16 @@ Two scope rulings for the 0.5.0 gate (`D-RELEASE-0.5.0-GATE`), so the release
 does not wait on other lines' open fronts:
 
 - **(a) Condition 3 — allowlist of the in-flight OWNED plans still loose.**
-  `db-parity-plan` (owner gaps-db lane), `ffi-abi-structs` (owner jonas) and
-  `type-system-extensions-plan` (owner compiler/X5) stay in
-  `docs/development/` **without turning condition 3 RED**: each has an owner,
+  `db-parity-plan` (owner gaps-db lane) and `ffi-abi-structs` (owner jonas) stay
+  in `docs/development/` **without turning condition 3 RED**: each has an owner,
   a live queue and declared pending implementation; they conclude on their own
   fronts (three-states rule), not as a precondition of the 0.5.0 cut. The gate
   ALLOWLIST carries them; the README queue keeps tracking them. A doc without
   an owner/queue is still RED. (`IMPLEMENTATION-UNIVERSAL-PLATFORM` was on the
   ruling's original list and **concluded 21/09** — moved to
-  `docs/architecture/`, hence no longer loose/allowlisted.)
+  `docs/architecture/`; `type-system-extensions-plan` (owner compiler/X5)
+  **concluded 22/09** — X5+X6 landed with proof, moved to `docs/`; hence
+  neither is loose/allowlisted.)
 - **(b) Condition 6 — EG-8 decoupled.** EG-8 is the first 1.0 RC candidate plus
   the maintainer's explicit "the 1.0 line is open" declaration, and it only
   opens after EG-1..EG-7 close — it belongs to the 1.0 line, not to the 0.5.0

@@ -1002,7 +1002,7 @@ rule 6).
 | 2.8.4 | **X5 variance + sealed** (`D-TYPE-VARIANCE` = C) | **APPROVED 21/09**: plan reviewed; **incremental slices** (proof per slice), spec-first BEFORE any parser/typer diff — **X5.1–X5.4 ✅ DONE 21/09** (`sealed`+`SEM080`; exhaustive `switch`+`SEM081`; declaration-site `out`/`in`+`SEM082`; use-site projection `List<out T>`/`List<in T>`); remaining X5.5 (parity+docs+training) | 🔵 |
 | 2.8.5 | **X6 interop reflection** (`D-INTEROP-REFLECT` = **A, compile-time intrinsic**) | **APPROVED 21/09**; surface frozen: `interop.schema(R)` → immutable `List<Field>`, zero runtime reflection, all targets, boundary-only. X6.0 ✅; X6.1 (intrinsic+fold) in progress | 🔵 |
 
-**Spec plan (X5 + X6):** [`type-system-extensions-plan.md`](type-system-extensions-plan.md) — **APPROVED 21/09 (D-TYPE-VARIANCE/INTEROP-REFLECT)**, promoted to `docs/development/`; incremental slices with proof.
+**Spec plan (X5 + X6):** [`type-system-extensions-plan.md`](../type-system-extensions-plan.md) — **APPROVED 21/09 (D-TYPE-VARIANCE/INTEROP-REFLECT)**; **CONCLUDED + MOVED to `docs/` 22/09** (all slices X5.0–X5.5, X6.0–X6.3 landed with proof).
 
 ### TIER 3–5 — Legacy migration platform (Phases A–H) ✅ code+tests
 

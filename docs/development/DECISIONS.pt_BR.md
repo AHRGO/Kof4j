@@ -3112,15 +3112,16 @@ Duas decisões de escopo do gate 0.5.0 (`D-RELEASE-0.5.0-GATE`), para o release
 não esperar frentes abertas de outras linhas:
 
 - **(a) Condição 3 — allowlist dos planos EM VOO com dono ainda soltos.**
-  `db-parity-plan` (dono lane gaps-db), `ffi-abi-structs` (dono jonas) e
-  `type-system-extensions-plan` (dono compiler/X5) ficam em
-  `docs/development/` **sem virar RED na condição 3**: cada um tem dono, fila
+  `db-parity-plan` (dono lane gaps-db) e `ffi-abi-structs` (dono jonas) ficam
+  em `docs/development/` **sem virar RED na condição 3**: cada um tem dono, fila
   viva e implementação pendente declarada; concluem nas próprias frentes
   (regra dos três estados), não como pré-condição do corte 0.5.0. O ALLOWLIST
   do gate os carrega; a fila do README segue rastreando-os. Doc sem dono/fila
   continua RED. (`IMPLEMENTATION-UNIVERSAL-PLATFORM` estava na lista original
-  da decisão e **concluiu 21/09** — movido para `docs/architecture/`, portanto
-  não é mais solto/allowlistado.)
+  da decisão e **concluiu 21/09** — movido para `docs/architecture/`;
+  `type-system-extensions-plan` (dono compiler/X5) **concluiu 22/09** — X5+X6
+  landados com prova, movido para `docs/`; portanto nenhum dos dois é
+  solto/allowlistado.)
 - **(b) Condição 6 — EG-8 desacoplado.** EG-8 é o primeiro candidato a RC 1.0
   mais a declaração explícita da mantenedora "a linha 1.0 está aberta", e só
   abre depois de EG-1..EG-7 fecharem — pertence à linha 1.0, não ao gate

@@ -24,7 +24,8 @@
 #   I) a fila oficial (README sec.1) tem de nomear TODO loose doc do gate: um doc
 #      promovido para docs/development/ e ausente da fila e trabalho invisivel (a
 #      sec.0 pode lista-lo como pendente, mas ninguem o poe em posicao). Achou o
-#      type-system-extensions-plan.md promovido em 21/09 fora da sec.1 em EN+PT.
+#      type-system-extensions-plan.md promovido em 21/09 fora da sec.1 em EN+PT
+#      (concluido X5+X6 e movido para docs/ em 22/09 — nao e mais loose).
 #
 # A classe (A) ja driftou duas vezes em 21/09; a classe (B) apareceu quando a lane
 # irma adicionou 3 decisoes so no EN e um merge deixou um heading orfao + duplicado
