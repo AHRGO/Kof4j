@@ -458,6 +458,59 @@ class CompilerDriverTest {
                 "should be SEM038, was: " + result.diagnostics().getDiagnostics());
     }
 
+    // known-bugs #469 — `record.x++`/`--` passava no `check` e só falhava em
+    // runtime (IllegalAccessError no JVM). Agora é SEM038 no frontend, igual
+    // à escrita direta/composta.
+    @Test
+    void incrementRecordComponentGivesSem038(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Bad.kf");
+        Files.writeString(source, """
+            record P(Int x)
+            main() {
+                var p = P(1)
+                p.x++
+            }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertFalse(result.success(), "increment of record component should fail to compile");
+        assertTrue(result.diagnostics().getDiagnostics().toString().contains("SEM038"),
+                "should be SEM038, was: " + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void decrementRecordComponentViaThisGivesSem038(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Bad.kf");
+        Files.writeString(source, """
+            record P(Int x) {
+                bump() {
+                    this.x--
+                }
+            }
+            main() { println(P(1).x()) }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertFalse(result.success(), "this.x-- in record method should fail to compile");
+        assertTrue(result.diagnostics().getDiagnostics().toString().contains("SEM038"),
+                "should be SEM038, was: " + result.diagnostics().getDiagnostics());
+    }
+
+    // #469 controle positivo: `++` em campo de CLASSE mutável segue legal.
+    @Test
+    void incrementMutableClassFieldStillCompiles(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Ok.kf");
+        Files.writeString(source, """
+            class C {
+                Int x
+                public constructor(Int x) { this.x = x }
+                bump() { this.x++ }
+            }
+            main() { var c = C(1); c.bump(); println(c.x) }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "++ on mutable class field should compile: "
+                + result.diagnostics().getDiagnostics());
+    }
+
     // known-bugs #42 (c) — `this.x =` em MÉTODO de record (não no construtor).
     @Test
     void writeRecordFieldViaThisInMethodGivesSem038(@TempDir Path tempDir) throws IOException {

@@ -14366,3 +14366,14 @@ p
 - **Owner:** compiler lane (orphan `Lote PublioSantos` re-claimed 21/09 after the >8h sweep).
 
 <!-- pt-switch --> **PT:** [§439 (pt_BR)](known-bugs.pt_BR.md#439--switch-sobre-subject-largo-longdoublefloat-com-case-literal-int-quebrava-o-backend-jvm-negativearraysizeexception-no-compute_frames-do-asm---corrigido-2109-lane-compilador-o-valor-do-case-e-promovido-ao-tipo-do-subject-em-switchstmtlowererswitchexprlowerer)
+
+
+## §440 — `record.x++`/`--` was accepted by `check` and only died at runtime (`IllegalAccessError` on the JVM) — ✅ FIXED 21/09 (compiler lane: `SemExpressionTyper` emits `SEM038` for increment/decrement of a record component, like direct/compound assignment)
+
+- **Measured (21/09, tip `f632ed67`, `lib/kof.jar` rebuilt):** `record P(Int x)` + `var p = P(1); p.x++` → `kof check` reports **no errors**, but `kof run` dies with `java.lang.IllegalAccessError: class Default.Main tried to access private field P.x` (the record component compiles to a private final field). Direct `p.x = 9` and compound `p.x += 1` already gave `SEM038` ("record is immutable") in `StatementAnalyzer`; only the `++`/`--` path skipped the check.
+- **Root cause:** increment/decrement are typed by `SemExpressionTyper` (`UnaryExpr`) and lowered by `CompilerEmission2.emitIncrement` — neither consults record immutability, so the frontend accepted a mutation it cannot emit legally.
+- **Resolution:** in `SemExpressionTyper`'s `UnaryExpr` case, when the operator is `++`/`--` and the operand is a `FieldAccessExpr` whose receiver is a record type (explicit receiver or `this`), emit `SEM038` — the same contract/diagnostic as direct and compound assignment, on all four targets. `this.x++` inside the record constructor stays legal (final-field init), mirroring the assignment rule.
+- **Proof (Q1/Q3):** new `CompilerDriverTest.incrementRecordComponentGivesSem038` + `decrementRecordComponentViaThisGivesSem038` (RED: `check` was clean) and the positive control `incrementMutableClassFieldStillCompiles` (mutable class unaffected). `CompilerDriverTest` **262/262**.
+- **Owner:** compiler lane (orphan `Lote PublioSantos`, GitHub #469).
+
+<!-- pt-switch --> **PT:** [§440 (pt_BR)](known-bugs.pt_BR.md#440--recordx---passava-no-check-e-so-morria-em-runtime-illegalaccesserror-no-jvm---corrigido-2109-lane-compilador-semexpressiontyper-emite-sem038-para-incrementodecremento-de-componente-de-record-como-na-atribuicao-diretacomposta)

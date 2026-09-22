@@ -11899,3 +11899,14 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Dono:** lane compilador (`Lote PublioSantos` órfã, re-claimada 21/09 após o sweep de >8h).
 
 <!-- en-switch --> **EN:** [§439 (en)](known-bugs.md#439--switch-on-a-wide-subject-longdoublefloat-with-an-int-literal-case-crashed-the-jvm-backend-asm-negativearraysizeexception-in-compute_frames---fixed-2109-compiler-lane-the-case-value-is-widened-to-the-subject-type-in-switchstmtlowererswitchexprlowerer)
+
+
+## §440 — `record.x++`/`--` passava no `check` e só morria em runtime (`IllegalAccessError` no JVM) — ✅ CORRIGIDO 21/09 (lane compilador: `SemExpressionTyper` emite `SEM038` para incremento/decremento de componente de record, como na atribuição direta/composta)
+
+- **Medido (21/09, tip `f632ed67`, `lib/kof.jar` reconstruído):** `record P(Int x)` + `var p = P(1); p.x++` → `kof check` **sem erros**, mas `kof run` morre com `java.lang.IllegalAccessError: class Default.Main tried to access private field P.x` (o componente de record compila para campo privado final). A escrita direta `p.x = 9` e a composta `p.x += 1` já davam `SEM038` ("record is immutable") no `StatementAnalyzer`; só o caminho `++`/`--` escapava.
+- **Causa raiz:** incremento/decremento são tipados pelo `SemExpressionTyper` (`UnaryExpr`) e rebaixados pelo `CompilerEmission2.emitIncrement` — nenhum consulta a imutabilidade do record, então o frontend aceitava uma mutação que não consegue emitir legalmente.
+- **Resolução:** no caso `UnaryExpr` do `SemExpressionTyper`, quando o operador é `++`/`--` e o operando é um `FieldAccessExpr` cujo receiver é tipo record (receiver explícito ou `this`), emitir `SEM038` — mesmo contrato/diagnóstico da atribuição direta e composta, nos quatro alvos. `this.x++` dentro do construtor do record segue legal (init de campo final), espelhando a regra da atribuição.
+- **Prova (Q1/Q3):** novos `CompilerDriverTest.incrementRecordComponentGivesSem038` + `decrementRecordComponentViaThisGivesSem038` (RED: o `check` passava limpo) e o controle positivo `incrementMutableClassFieldStillCompiles` (classe mutável intacta). `CompilerDriverTest` **262/262**.
+- **Dono:** lane compilador (`Lote PublioSantos` órfã, GitHub #469).
+
+<!-- en-switch --> **EN:** [§440 (en)](known-bugs.md#440--recordx---was-accepted-by-check-and-only-died-at-runtime-illegalaccesserror-on-the-jvm---fixed-2109-compiler-lane-semexpressiontyper-emits-sem038-for-incrementdecrement-of-a-record-component-like-directcompound-assignment)

@@ -13,6 +13,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§440 FIXED — `record.x++`/`--` was accepted by `check` and died at runtime**
+    (21/09, compiler lane): `p.x++` on a record component type-checked clean but
+    `kof run` died with `IllegalAccessError: ... access private field P.x`.
+    Direct `p.x = 9` and compound `p.x += 1` already gave `SEM038` ("record is
+    immutable"); only the increment/decrement path (typed in `SemExpressionTyper`,
+    lowered in `CompilerEmission2.emitIncrement`) skipped the check. Fix:
+    `SEM038` for `++`/`--` on a record component (explicit receiver or `this`,
+    constructor excluded), same contract as assignment. Proof:
+    `CompilerDriverTest.incrementRecordComponentGivesSem038` +
+    `decrementRecordComponentViaThisGivesSem038` + the mutable-class positive
+    control, class 262/262.
+
   - **§439 FIXED — switch on a wide subject with an `Int` literal case crashed
     the JVM backend** (21/09, compiler lane): `switch (var x: Long = 3) { case
     1: ... }` type-checked but the JVM backend blew up with

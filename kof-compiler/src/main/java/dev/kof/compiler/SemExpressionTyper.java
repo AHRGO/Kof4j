@@ -201,6 +201,30 @@ public final class SemExpressionTyper {
             }
             case UnaryExpr ue -> {
                 Type operandType = inferType(sa, ue.operand(), scope);
+                // #469: `record.x++`/`--` passava no `check` e só falhava em
+                // runtime (IllegalAccessError no JVM / TypeError no JS — o
+                // campo é privado/final). A escrita direta (`x = v`) e o
+                // composto (`x += v`) já são SEM038 no StatementAnalyzer; o
+                // incremento não passava por lá. Mesmo contrato (record
+                // imutável), mesmo diagnóstico, agora em compile-time nos 4
+                // alvos.
+                if (("++".equals(ue.operator()) || "--".equals(ue.operator()))
+                        && ue.operand() instanceof FieldAccessExpr incFa
+                        && sa.diagnostics() != null) {
+                    boolean incOnThis = incFa.receiver() instanceof IdentifierExpr rid2
+                            && "this".equals(rid2.name());
+                    Type incRecv = incOnThis
+                            ? (sa.currentClassName() != null
+                                    ? new Type.ClassType("", sa.currentClassName(), List.of()) : null)
+                            : inferType(sa, incFa.receiver(), scope);
+                    if (incRecv != null && CompilerTypes.isRecordType(incRecv, sa.unit(), sa)
+                            && !(incOnThis && sa.inConstructor)) {
+                        sa.diagnostics().error("", 0, 0, 0,
+                                "cannot assign to '" + incFa.fieldName()
+                                        + "': record is immutable",
+                                "SEM038");
+                    }
+                }
                 // D-TROOL (19/09): `!Troolean` = tres estados (Kleene `!U = U`)
                 // — o tipo semantico tem de casar com a caixa do lowering.
                 if ("!".equals(ue.operator())) yield CompilerComparisons.isNullableBool(operandType)

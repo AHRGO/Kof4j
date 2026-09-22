@@ -13,6 +13,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§440 CORRIGIDO — `record.x++`/`--` passava no `check` e morria em runtime**
+    (21/09, lane compilador): `p.x++` em componente de record passava limpo no
+    type-check mas o `kof run` morria com `IllegalAccessError: ... access
+    private field P.x`. A escrita direta `p.x = 9` e a composta `p.x += 1` já
+    davam `SEM038` ("record is immutable"); só o caminho de incremento/decremento
+    (tipado no `SemExpressionTyper`, rebaixado no `CompilerEmission2.emitIncrement`)
+    escapava. Fix: `SEM038` para `++`/`--` em componente de record (receiver
+    explícito ou `this`, construtor excluído), mesmo contrato da atribuição.
+    Prova: `CompilerDriverTest.incrementRecordComponentGivesSem038` +
+    `decrementRecordComponentViaThisGivesSem038` + controle positivo de classe
+    mutável, classe 262/262.
+
   - **§439 CORRIGIDO — switch sobre subject largo com case literal `Int` quebrava
     o backend JVM** (21/09, lane compilador): `switch (var x: Long = 3) { case
     1: ... }` passava no type-check mas o backend JVM estourava com
