@@ -57,12 +57,19 @@ classify() {
   fi
 }
 
-# read_issues <fixture|-> -> "number<TAB>labels" lines for OPEN issues only
+# read_issues <fixture|-> -> "number<TAB>labels" lines for OPEN issues only.
+# Exit status is the API's: 0 with EMPTY output means "zero OPEN issues"
+# (a valid, successful answer), NOT "API down". RELEASE_BLOCKERS_GH_CMD is the
+# test hook that stands in for the `gh api` call (same contract: rc + stdout).
 read_issues() {
   local fixture="$1"
   if [ -n "$fixture" ]; then
     cat "$fixture"
     return 0
+  fi
+  if [ -n "${RELEASE_BLOCKERS_GH_CMD:-}" ]; then
+    eval "$RELEASE_BLOCKERS_GH_CMD"
+    return $?
   fi
   # NOTE: /issues returns PRs too — filter them out (pull_request field).
   gh api "/repos/$GH_REPO/issues?state=open&per_page=100" --paginate \
@@ -95,6 +102,22 @@ FIX
   # rc-gate variant must fail because 1.0-blocks are open
   run_gate "$fixture" "--rc-gate" >/dev/null 2>&1; local rc2=$?
   [ "$rc2" -eq 4 ] || { echo "selftest: --rc-gate expected exit 4, got $rc2"; fail=1; }
+  # empty-but-SUCCESSFUL API (zero OPEN issues) must read as "0 open
+  # 1.0-blocks", never NAO-AVALIADO — the bug that pinned `edges` to UNKNOWN
+  # whenever the repo had no open issue (rc 0 + empty != API down).
+  local out3 rc3
+  out3="$(LEDGER=/dev/null RELEASE_BLOCKERS_GH_CMD=':' run_gate "" "" 2>&1)"; rc3=$?
+  printf '%s\n' "$out3" | grep -q -- "-- 0 open 1.0-blocks" \
+    || { echo "selftest: empty API not counted as 0 open 1.0-blocks"; fail=1; }
+  printf '%s\n' "$out3" | grep -q "NAO-AVALIADO" \
+    && { echo "selftest: empty API wrongly reported NAO-AVALIADO"; fail=1; }
+  [ "$rc3" -eq 0 ] || { echo "selftest: empty API expected rc 0, got $rc3"; fail=1; }
+  # a FAILING API (rc != 0) must stay NAO-AVALIADO (rc 3), never 0 blocks
+  local out4 rc4
+  out4="$(LEDGER=/dev/null RELEASE_BLOCKERS_GH_CMD='exit 3' run_gate "" "" 2>&1)"; rc4=$?
+  printf '%s\n' "$out4" | grep -q "NAO-AVALIADO" \
+    || { echo "selftest: failing API not NAO-AVALIADO"; fail=1; }
+  [ "$rc4" -eq 3 ] || { echo "selftest: failing API expected rc 3, got $rc4"; fail=1; }
   rm -f "$tmp"
   if [ "$fail" -eq 0 ]; then echo "selftest: OK (classification + rc-gate fixtures)"; return 0; fi
   return 2
@@ -102,9 +125,9 @@ FIX
 
 # run_gate <fixture|-> <extra-flag> -> report; rc per the contract
 run_gate() {
-  local fixture="$1" extra="$2" rows rc=0 violations=0 blocks=0
-  rows="$(read_issues "$fixture")" || return 3
-  if [ -z "$rows" ] && [ -z "$fixture" ]; then
+  local fixture="$1" extra="$2" rows rc=0 violations=0 blocks=0 read_rc=0
+  rows="$(read_issues "$fixture")"; read_rc=$?
+  if [ "$read_rc" -ne 0 ] && [ -z "$fixture" ]; then
     echo "  NAO-AVALIADO — API indisponivel (rate limit?); o CI continua sendo a porta real"
     return 3
   fi
