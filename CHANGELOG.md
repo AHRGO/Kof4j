@@ -26,6 +26,23 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     toolchain → honest skip. The route to the struct-by-value fixture
     continues in slices C2–C4 (`docs/development/kof-c-cross.md`).
 
+  - **`kof-c-compiler` gains parameters, return values, locals and calls
+    (slice C2 of the cross plan)** (22/09, FFI/kof-c front): functions now take
+    up to six `int` register arguments, declare locals and return a value —
+    `int f(int a, int b) { int t; t = a + b; return t; }`. Each function gets a
+    real frame (saved frame/return pair + one 8-byte slot per parameter/local,
+    based on `rbp`/`s0`/`x29`); arguments follow the C ABI (SysV
+    `rdi,rsi,rdx,rcx,r8,r9`, LP64 `a0..a5`, AAPCS64 `x0..x5`) and the return
+    lands in the accumulator, which is the ABI return register on every
+    target. Calls spill arguments on the stack and pop them into the argument
+    registers, so a later argument can reuse the accumulator without
+    clobbering an earlier one. Unknown calls, arity mismatches, `print()` with
+    arguments and more than six parameters/arguments fail with an honest
+    diagnostic before any binary is produced. Proof: `KofCParamsCompilerTest`
+    7/7 on x86_64/riscv64/aarch64 (including all six argument registers and the
+    four rejection cases). Next: slice C3 (struct by value),
+    `docs/development/kof-c-cross.md`.
+
   - **§302 CLOSED — tipos crus `List/Set/Map` em CAMPO: todas as faces medidas verdes no tip (21/09, lane bugs-and-gaps, CLOSEALL): repros do registro + formas de campo/retorno/parâmetro/estáticos — `3` nos 3 alvos (raiz já fechada pelo §373/#443).
 
   - **§443 FIXED — cross-target scalar `extern` (`library()`) had been re-gated to `FFI001` on riscv64/aarch64 by the struct-by-value slices**

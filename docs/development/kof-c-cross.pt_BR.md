@@ -2,7 +2,7 @@
 
 [English](kof-c-cross.md) | [Português](kof-c-cross.pt_BR.md)
 
-**Status:** EM CURSO — **C1 LANDADA** (22/09). Dono: frente FFI/kof-c
+**Status:** EM CURSO — **C1 + C2 LANDADAS** (22/09). Dono: frente FFI/kof-c
 (lane development/tooling).
 
 ## Por quê
@@ -20,10 +20,11 @@ testes FFI cross nativos consigam ligar (destravando a fatia de struct-param).
 
 ## Subconjunto base
 
-Globais `int g;` e funções `void f() { }` — sem parâmetros, sem retorno, sem
-locais, sem structs, sem floats. Testes: `if`/`while`, binárias
-inteiras/bitwise/comparação/shift, `&ident` e `*(int*)ident`, `print`/
-`print_arg`, bytes `asm` crus. Freestanding: só syscalls cruas, sem libc.
+Globais `int g;` e funções com parâmetros/retorno `int` e locais — só
+`signed int`, sem structs, sem floats. Controle `if`/`while`, binárias
+inteiras/bitwise/comparação/shift, `&ident` e `*(int*)ident`, chamadas com
+até seis argumentos em registrador, `print`/`print_arg`, bytes `asm` crus.
+Freestanding: só syscalls cruas, sem libc.
 
 ## Fatias
 
@@ -36,8 +37,22 @@ inteiras/bitwise/comparação/shift, `&ident` e `*(int*)ident`, `print`/
   byte-a-byte idêntico em riscv64/aarch64 sob qemu e igual ao oráculo x86_64
   (`KofCCrossCompilerTest` 7/7; `KofCCompilerTest` 7/7 inalterado). Sem
   toolchain cross → skip honesto (`assumeTrue`).
-- **C2 — TODO:** parâmetros de função, retorno e locais
-  (`int f(int a, int b)`) emitidos nas três ISAs com a ABI C.
+- **C2 — LANDADA (22/09):** parâmetros, retorno, locais e chamadas
+  (`int f(int a, int b) { int t; ... return t; }`) nas três ISAs com a ABI C.
+  Frame: par frame/retorno salvo + um slot de 8 bytes por parâmetro/local
+  (base `rbp`/`s0`/`x29`). Argumentos seguem SysV
+  (`rdi,rsi,rdx,rcx,r8,r9`), LP64 (`a0..a5`) e AAPCS64 (`x0..x5`) — até seis
+  argumentos em registrador; o retorno sai no acumulador
+  (`rax`/`a0`/`x0`), que é o registrador de retorno da ABI em todo alvo. As
+  chamadas avaliam os argumentos na pilha e os desempilham nos registradores,
+  então um argumento posterior pode reusar o acumulador sem clobberar o
+  anterior. Diagnósticos honestos: chamada desconhecida, aridade errada,
+  `print()` com argumentos e mais de seis parâmetros/argumentos são rejeitados
+  antes de emitir binário (R6/Q7). Prova: `KofCParamsCompilerTest` 7/7 em
+  x86_64/riscv64/aarch64 (retorno de dois parâmetros, locais + laço, void
+  mutando global, chamadas aninhadas, return antecipado, parâmetro ponteiro
+  desreferenciado no callee, os seis registradores de argumento) + os quatro
+  casos de rejeição.
 - **C3 — TODO:** tipos `struct` e struct por valor em parâmetro (classificação
   SysV / AAPCS64 / RISCV64) — a peça que a fixture FFI precisa.
 - **C4 — TODO:** saída de objeto reutilizável (`.o`) e link, para um teste

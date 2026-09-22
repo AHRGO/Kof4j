@@ -26,6 +26,23 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     skip honesto. O caminho até a fixture de struct-por-valor continua nas
     fatias C2–C4 (`docs/development/kof-c-cross.md`).
 
+  - **`kof-c-compiler` ganha parâmetros, retorno, locais e chamadas
+    (fatia C2 do plano cross)** (22/09, frente FFI/kof-c): funções agora
+    recebem até seis argumentos `int` em registrador, declaram locais e
+    retornam valor — `int f(int a, int b) { int t; t = a + b; return t; }`.
+    Cada função tem frame real (par frame/retorno salvo + um slot de 8 bytes
+    por parâmetro/local, com base `rbp`/`s0`/`x29`); os argumentos seguem a
+    ABI C (SysV `rdi,rsi,rdx,rcx,r8,r9`, LP64 `a0..a5`, AAPCS64 `x0..x5`) e o
+    retorno sai no acumulador, que é o registrador de retorno da ABI em todo
+    alvo. As chamadas derramam os argumentos na pilha e os desempilham nos
+    registradores, então um argumento posterior pode reusar o acumulador sem
+    clobberar o anterior. Chamada desconhecida, aridade errada, `print()` com
+    argumentos e mais de seis parâmetros/argumentos falham com diagnóstico
+    honesto antes de emitir binário. Prova: `KofCParamsCompilerTest` 7/7 em
+    x86_64/riscv64/aarch64 (inclusive os seis registradores de argumento e os
+    quatro casos de rejeição). Próximo: fatia C3 (struct por valor),
+    `docs/development/kof-c-cross.md`.
+
   - **§302 FECHADO — tipos crus `List/Set/Map` em CAMPO: todas as faces medidas verdes no tip (21/09, lane bugs-and-gaps, CLOSEALL): repros do registro + formas de campo/retorno/parâmetro/estáticos — `3` nos 3 alvos (raiz já fechada pelo §373/#443).
 
   - **§443 CORRIGIDO — `extern` escalar cross-target (`library()`) voltou a ser re-gateado para `FFI001` no riscv64/aarch64 pelas fatias de struct-by-value**

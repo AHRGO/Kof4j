@@ -44,6 +44,7 @@ public final class KofCLexer {
                     case "if" -> KofCTokenType.IF;
                     case "while" -> KofCTokenType.WHILE;
                     case "asm" -> KofCTokenType.ASM;
+                    case "return" -> KofCTokenType.RETURN;
                     default -> KofCTokenType.IDENTIFIER;
                 };
                 out.add(new KofCToken(t, w, line, sc));

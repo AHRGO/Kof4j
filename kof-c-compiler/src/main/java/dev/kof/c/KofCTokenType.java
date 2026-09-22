@@ -2,7 +2,7 @@ package dev.kof.c;
 
 public enum KofCTokenType {
     // keywords
-    INT, VOID, IF, WHILE, ASM,
+    INT, VOID, IF, WHILE, ASM, RETURN,
     // literals
     IDENTIFIER, INTEGER,
     // symbols

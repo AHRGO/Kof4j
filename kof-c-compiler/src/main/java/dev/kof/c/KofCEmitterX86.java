@@ -7,8 +7,15 @@ import java.util.List;
  * C — alvo histórico, freestanding ({@code as --64} + {@code ld}). Preserva a
  * estrutura original: globais de 8 bytes, acumulador {@code rax}, temporários
  * na pilha e {@code _start} que chama {@code main} e sai por syscall.
+ *
+ * <p>Frame: {@code rbp} é a base; o par salvo fica em {@code [rbp]} e o retorno
+ * em {@code [rbp+8]}; parâmetros e locais vivem em {@code [rbp-8*(slot+1)]}.
+ * Argumentos seguem a ABI SysV ({@code rdi,rsi,rdx,rcx,r8,r9}); o retorno sai
+ * em {@code rax}, que já é o acumulador.
  */
 final class KofCEmitterX86 extends KofCEmitterBase {
+
+    private static final String[] ARG_REGS = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
     KofCEmitterX86(KofCAst.Program prog) { super(prog); }
 
@@ -81,16 +88,25 @@ final class KofCEmitterX86 extends KofCEmitterBase {
     }
 
     @Override
-    protected void emitFuncPrologue() {
+    protected void emitFuncPrologue(int frameSlots) {
         sb.append("    push rbp\n");
         sb.append("    mov rbp, rsp\n");
+        if (frameSlots > 0) sb.append("    sub rsp, ").append(frameSlots * 8).append("\n");
     }
 
     @Override
-    protected void emitFuncEpilogue() {
-        sb.append("    pop rbp\n");
+    protected void emitFuncEpilogue(int frameSlots) {
+        sb.append("    leave\n");
         sb.append("    ret\n");
     }
+
+    @Override
+    protected void emitStoreParam(int argIndex, int slot) {
+        sb.append("    mov qword ptr [rbp - ").append(offset(slot)).append("], ")
+                .append(ARG_REGS[argIndex]).append("\n");
+    }
+
+    private static int offset(int slot) { return 8 * (slot + 1); }
 
     @Override
     protected void emitLoadImm(int v) {
@@ -98,30 +114,42 @@ final class KofCEmitterX86 extends KofCEmitterBase {
     }
 
     @Override
-    protected void emitLoadGlobal(String name) {
-        sb.append("    mov rax, qword ptr [rip + ").append(name).append("]\n");
+    protected void emitLoadStorage(Storage storage) {
+        if (storage.local()) {
+            sb.append("    mov rax, qword ptr [rbp - ").append(offset(storage.slot())).append("]\n");
+        } else {
+            sb.append("    mov rax, qword ptr [rip + ").append(storage.name()).append("]\n");
+        }
     }
 
     @Override
-    protected void emitStoreGlobal(String name) {
-        sb.append("    mov qword ptr [rip + ").append(name).append("], rax\n");
+    protected void emitStoreStorage(Storage storage) {
+        if (storage.local()) {
+            sb.append("    mov qword ptr [rbp - ").append(offset(storage.slot())).append("], rax\n");
+        } else {
+            sb.append("    mov qword ptr [rip + ").append(storage.name()).append("], rax\n");
+        }
     }
 
     @Override
-    protected void emitAddrOfGlobal(String name) {
-        sb.append("    lea rax, [rip + ").append(name).append("]\n");
+    protected void emitAddrOfStorage(Storage storage) {
+        if (storage.local()) {
+            sb.append("    lea rax, [rbp - ").append(offset(storage.slot())).append("]\n");
+        } else {
+            sb.append("    lea rax, [rip + ").append(storage.name()).append("]\n");
+        }
     }
 
     @Override
-    protected void emitLoadThrough(String name) {
-        sb.append("    mov rax, qword ptr [rip + ").append(name).append("]\n");
+    protected void emitLoadThroughStorage(Storage storage) {
+        emitLoadStorage(storage);
         sb.append("    mov rax, qword ptr [rax]\n");
     }
 
     @Override
-    protected void emitDerefStore(String target) {
+    protected void emitDerefStoreStorage(Storage storage) {
         sb.append("    mov rcx, rax\n");
-        sb.append("    mov rax, qword ptr [rip + ").append(target).append("]\n");
+        emitLoadStorage(storage);
         sb.append("    mov qword ptr [rax], rcx\n");
     }
 
@@ -138,6 +166,11 @@ final class KofCEmitterX86 extends KofCEmitterBase {
     @Override
     protected void emitPopLeftToAcc() {
         sb.append("    pop rax\n"); // left in rax
+    }
+
+    @Override
+    protected void emitPopArg(int argIndex) {
+        sb.append("    pop ").append(ARG_REGS[argIndex]).append("\n");
     }
 
     @Override

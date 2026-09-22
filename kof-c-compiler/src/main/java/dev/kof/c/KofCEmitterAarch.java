@@ -7,12 +7,16 @@ import java.util.List;
  * syscalls cruas ({@code exit}=93, {@code write}=64), montado por
  * {@code aarch64-linux-gnu-as} + {@code ld} e rodado sob {@code qemu-aarch64}.
  *
- * <p>Acumulador = {@code x0}; a pilha (16 bytes por temporário) guarda o lado
- * esquerdo das binárias; {@code x1} é o operando direito. Os globais são
- * endereçados por {@code adrp}+{@code :lo12:}. Funções salvam {@code x29/x30}
- * no par de prólogo/epílogo (o {@code bl} coloca o retorno em {@code x30}).
+ * <p>Acumulador = {@code x0} (também o retorno da ABI); a pilha (16 bytes por
+ * temporário) guarda o lado esquerdo das binárias; {@code x1} é o operando
+ * direito. Frame: {@code x29} é a base, com {@code x29}/{@code x30} salvos por
+ * {@code stp}; parâmetros e locais em {@code [x29, #-(8*(slot+1))]} (offsets
+ * negativos usam {@code ldur}/{@code stur}). Globais por {@code adrp}+{@code :lo12:}.
+ * Argumentos em {@code x0..x5}.
  */
 final class KofCEmitterAarch extends KofCEmitterBase {
+
+    private static final String[] ARG_REGS = {"x0", "x1", "x2", "x3", "x4", "x5"};
 
     KofCEmitterAarch(KofCAst.Program prog) { super(prog); }
 
@@ -84,15 +88,28 @@ final class KofCEmitterAarch extends KofCEmitterBase {
     }
 
     @Override
-    protected void emitFuncPrologue() {
+    protected void emitFuncPrologue(int frameSlots) {
         sb.append("    stp x29, x30, [sp, #-16]!\n");
+        sb.append("    mov x29, sp\n");
+        if (frameSlots > 0) sb.append("    sub sp, sp, #").append(frameBytes(frameSlots)).append("\n");
     }
 
     @Override
-    protected void emitFuncEpilogue() {
+    protected void emitFuncEpilogue(int frameSlots) {
+        sb.append("    mov sp, x29\n");
         sb.append("    ldp x29, x30, [sp], #16\n");
         sb.append("    ret\n");
     }
+
+    /** Bytes do frame, arredondados p/ 16 (mantém alinhamento da ABI). */
+    private static int frameBytes(int slots) { return ((slots + 1) / 2) * 16; }
+
+    @Override
+    protected void emitStoreParam(int argIndex, int slot) {
+        sb.append("    stur ").append(ARG_REGS[argIndex]).append(", [x29, #-").append(offset(slot)).append("]\n");
+    }
+
+    private static int offset(int slot) { return 8 * (slot + 1); }
 
     @Override
     protected void emitLoadImm(int v) {
@@ -112,34 +129,54 @@ final class KofCEmitterAarch extends KofCEmitterBase {
     }
 
     @Override
-    protected void emitLoadGlobal(String name) {
-        adrp("x1", name);
+    protected void emitLoadStorage(Storage storage) {
+        if (storage.local()) {
+            sb.append("    ldur x0, [x29, #-").append(offset(storage.slot())).append("]\n");
+        } else {
+            adrp("x1", storage.name());
+            sb.append("    ldr x0, [x1]\n");
+        }
+    }
+
+    @Override
+    protected void emitStoreStorage(Storage storage) {
+        if (storage.local()) {
+            sb.append("    stur x0, [x29, #-").append(offset(storage.slot())).append("]\n");
+        } else {
+            adrp("x1", storage.name());
+            sb.append("    str x0, [x1]\n");
+        }
+    }
+
+    @Override
+    protected void emitAddrOfStorage(Storage storage) {
+        if (storage.local()) {
+            sb.append("    sub x0, x29, #").append(offset(storage.slot())).append("\n");
+        } else {
+            adrp("x0", storage.name());
+        }
+    }
+
+    @Override
+    protected void emitLoadThroughStorage(Storage storage) {
+        emitPtr(storage, "x1");
         sb.append("    ldr x0, [x1]\n");
     }
 
     @Override
-    protected void emitStoreGlobal(String name) {
-        adrp("x1", name);
+    protected void emitDerefStoreStorage(Storage storage) {
+        emitPtr(storage, "x1");
         sb.append("    str x0, [x1]\n");
     }
 
-    @Override
-    protected void emitAddrOfGlobal(String name) {
-        adrp("x0", name);
-    }
-
-    @Override
-    protected void emitLoadThrough(String name) {
-        adrp("x1", name);
-        sb.append("    ldr x1, [x1]\n");
-        sb.append("    ldr x0, [x1]\n");
-    }
-
-    @Override
-    protected void emitDerefStore(String target) {
-        adrp("x1", target);
-        sb.append("    ldr x1, [x1]\n");
-        sb.append("    str x0, [x1]\n");
+    /** Carrega o valor da variável (ponteiro) em {@code reg}, preservando {@code x0}. */
+    private void emitPtr(Storage storage, String reg) {
+        if (storage.local()) {
+            sb.append("    ldur ").append(reg).append(", [x29, #-").append(offset(storage.slot())).append("]\n");
+        } else {
+            adrp(reg, storage.name());
+            sb.append("    ldr ").append(reg).append(", [").append(reg).append("]\n");
+        }
     }
 
     /** {@code adrp reg, sym} + {@code add reg, reg, :lo12:sym}. */
@@ -162,6 +199,11 @@ final class KofCEmitterAarch extends KofCEmitterBase {
     @Override
     protected void emitPopLeftToAcc() {
         sb.append("    ldr x0, [sp], #16\n"); // left in x0
+    }
+
+    @Override
+    protected void emitPopArg(int argIndex) {
+        sb.append("    ldr ").append(ARG_REGS[argIndex]).append(", [sp], #16\n");
     }
 
     @Override

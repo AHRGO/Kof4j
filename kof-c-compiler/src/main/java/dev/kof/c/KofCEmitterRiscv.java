@@ -7,12 +7,15 @@ import java.util.List;
  * cruas ({@code exit}=93, {@code write}=64), montado por
  * {@code riscv64-linux-gnu-as} + {@code ld} e rodado sob {@code qemu-riscv64}.
  *
- * <p>Acumulador = {@code a0}; a pilha (16 bytes por temporário, alinhada)
- * guarda o lado esquerdo das binárias; {@code a1} é o operando direito.
- * Funções salvam/restauram {@code ra} no prólogo/epílogo (o {@code call} é
- * quem clobbera, diferente do x86 que empilha o retorno sozinho).
+ * <p>Acumulador = {@code a0} (também o retorno da ABI); a pilha (16 bytes por
+ * temporário, alinhada) guarda o lado esquerdo das binárias; {@code a1} é o
+ * operando direito. Frame: {@code s0} é a base, com {@code ra}/{@code s0}
+ * salvos em {@code 8(s0)}/{@code 0(s0)}; parâmetros e locais em
+ * {@code -(8*(slot+1))(s0)}. Argumentos em {@code a0..a7}.
  */
 final class KofCEmitterRiscv extends KofCEmitterBase {
+
+    private static final String[] ARG_REGS = {"a0", "a1", "a2", "a3", "a4", "a5"};
 
     KofCEmitterRiscv(KofCAst.Program prog) { super(prog); }
 
@@ -91,17 +94,29 @@ final class KofCEmitterRiscv extends KofCEmitterBase {
     }
 
     @Override
-    protected void emitFuncPrologue() {
+    protected void emitFuncPrologue(int frameSlots) {
         sb.append("    addi sp, sp, -16\n");
         sb.append("    sd ra, 8(sp)\n");
+        sb.append("    sd s0, 0(sp)\n");
+        sb.append("    mv s0, sp\n");
+        if (frameSlots > 0) sb.append("    addi sp, sp, -").append(frameSlots * 8).append("\n");
     }
 
     @Override
-    protected void emitFuncEpilogue() {
+    protected void emitFuncEpilogue(int frameSlots) {
+        sb.append("    mv sp, s0\n");
         sb.append("    ld ra, 8(sp)\n");
+        sb.append("    ld s0, 0(sp)\n");
         sb.append("    addi sp, sp, 16\n");
         sb.append("    ret\n");
     }
+
+    @Override
+    protected void emitStoreParam(int argIndex, int slot) {
+        sb.append("    sd ").append(ARG_REGS[argIndex]).append(", -").append(offset(slot)).append("(s0)\n");
+    }
+
+    private static int offset(int slot) { return 8 * (slot + 1); }
 
     @Override
     protected void emitLoadImm(int v) {
@@ -109,34 +124,54 @@ final class KofCEmitterRiscv extends KofCEmitterBase {
     }
 
     @Override
-    protected void emitLoadGlobal(String name) {
-        sb.append("    la t0, ").append(name).append("\n");
+    protected void emitLoadStorage(Storage storage) {
+        if (storage.local()) {
+            sb.append("    ld a0, -").append(offset(storage.slot())).append("(s0)\n");
+        } else {
+            sb.append("    la t0, ").append(storage.name()).append("\n");
+            sb.append("    ld a0, 0(t0)\n");
+        }
+    }
+
+    @Override
+    protected void emitStoreStorage(Storage storage) {
+        if (storage.local()) {
+            sb.append("    sd a0, -").append(offset(storage.slot())).append("(s0)\n");
+        } else {
+            sb.append("    la t0, ").append(storage.name()).append("\n");
+            sb.append("    sd a0, 0(t0)\n");
+        }
+    }
+
+    @Override
+    protected void emitAddrOfStorage(Storage storage) {
+        if (storage.local()) {
+            sb.append("    addi a0, s0, -").append(offset(storage.slot())).append("\n");
+        } else {
+            sb.append("    la a0, ").append(storage.name()).append("\n");
+        }
+    }
+
+    @Override
+    protected void emitLoadThroughStorage(Storage storage) {
+        emitPtr(storage, "t0");
         sb.append("    ld a0, 0(t0)\n");
     }
 
     @Override
-    protected void emitStoreGlobal(String name) {
-        sb.append("    la t0, ").append(name).append("\n");
+    protected void emitDerefStoreStorage(Storage storage) {
+        emitPtr(storage, "t0");
         sb.append("    sd a0, 0(t0)\n");
     }
 
-    @Override
-    protected void emitAddrOfGlobal(String name) {
-        sb.append("    la a0, ").append(name).append("\n");
-    }
-
-    @Override
-    protected void emitLoadThrough(String name) {
-        sb.append("    la t0, ").append(name).append("\n");
-        sb.append("    ld t0, 0(t0)\n");
-        sb.append("    ld a0, 0(t0)\n");
-    }
-
-    @Override
-    protected void emitDerefStore(String target) {
-        sb.append("    la t0, ").append(target).append("\n");
-        sb.append("    ld t0, 0(t0)\n");
-        sb.append("    sd a0, 0(t0)\n");
+    /** Carrega o valor da variável (ponteiro) em {@code reg}, preservando {@code a0}. */
+    private void emitPtr(Storage storage, String reg) {
+        if (storage.local()) {
+            sb.append("    ld ").append(reg).append(", -").append(offset(storage.slot())).append("(s0)\n");
+        } else {
+            sb.append("    la ").append(reg).append(", ").append(storage.name()).append("\n");
+            sb.append("    ld ").append(reg).append(", 0(").append(reg).append(")\n");
+        }
     }
 
     @Override
@@ -153,6 +188,12 @@ final class KofCEmitterRiscv extends KofCEmitterBase {
     @Override
     protected void emitPopLeftToAcc() {
         sb.append("    ld a0, 0(sp)\n"); // left in a0
+        sb.append("    addi sp, sp, 16\n");
+    }
+
+    @Override
+    protected void emitPopArg(int argIndex) {
+        sb.append("    ld ").append(ARG_REGS[argIndex]).append(", 0(sp)\n");
         sb.append("    addi sp, sp, 16\n");
     }
 
