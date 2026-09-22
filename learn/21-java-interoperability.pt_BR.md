@@ -80,6 +80,32 @@ var hoje = LocalDate.now()          // ❌ SEM011 sem classpath
 var conn = DriverManager.getConnection(url, user, pass)   // ❌ idem
 ```
 
+## Reflexão na fronteira — `interop.schema` (X6)
+
+Quando os dados vêm de fora (schemas Arrow/Parquet/ML), você normalmente precisa
+da **estrutura** do record (nomes + tipos dos campos) para ligar colunas a
+campos. O Kof expõe isso como um **intrínseco de compile-time**, só na fronteira
+de interop — sem reflexão em runtime, sem mapper escrito à mão:
+
+```kf
+import kof.interop
+
+record Order(String id, Double amount, Long qty)
+
+main() {
+    for (var f in interop.schema(Order)) {
+        println(f.name() + ":" + f.type())   // id:String, amount:Double, qty:Long
+    }
+}
+```
+
+`interop.schema(R)` devolve uma `List<Field>` imutável, onde `Field` é um
+`record Field(String name, String type)` fornecido pelo compilador, na ordem de
+declaração. Como a dobra acontece no frontend, a saída é idêntica em
+JVM/Native/Script/JS. Uso inválido é diagnosticado (`INTEROP002` membro
+desconhecido; `INTEROP001` aridade errada / valor / classe / enum) — nunca
+silencioso.
+
 ## Regras de interoperabilidade
 
 1. **Tipos Kof → Java**: mapeados diretamente (`Int` → `int`, `String` → `String`)
@@ -87,6 +113,31 @@ var conn = DriverManager.getConnection(url, user, pass)   // ❌ idem
 3. **Annotations**: chegam ao bytecode corretamente (ver cap. 20)
 4. **Antes de usar API Java**: compile e rode — o suporte é parcial e a
    resolução de overloads ainda tem falhas (02/09)
+
+## Reflexão na fronteira — `interop.schema(R)` (X6)
+
+Quando dados externos precisam se ligar a um `record` Kof (um schema
+Arrow/Parquet/ML), você não escreve um mapper à mão. O compilador já conhece a
+estrutura do record: `interop.schema(R)` dá uma visão somente-leitura dela em
+compile-time — zero reflexão em runtime, logo a mesma saída em todo target.
+Ativado explicitamente por `import kof.interop`.
+
+```kf
+import kof.interop
+
+record Order(String id, Double amount, Long qty)
+
+main() {
+    for (var f in interop.schema(Order)) {
+        println(f.name() + ":" + f.type())   // id:String, amount:Double, qty:Long
+    }
+}
+```
+
+`interop.schema(R)` resolve para uma `List<Field>` imutável, onde `Field` é o
+`record Field(String name, String type)` fornecido pelo compilador, na ordem de
+declaração. Uso inválido é diagnóstico, nunca silêncio (`INTEROP002` para membro
+desconhecido, `INTEROP001` para aridade errada ou argumento que não é record).
 
 ## Próximo passo
 

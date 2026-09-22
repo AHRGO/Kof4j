@@ -2288,4 +2288,27 @@ class ConformanceMatrixTest {
                 }
                 """, "1\n1", Set.of(), tempDir);
     }
+
+    // ===== Lote X6 — interop reflection (D-INTEROP-REFLECT, 22/09) =====
+
+    @Test
+    void conformanceInteropReflectX6(@TempDir Path tempDir) throws IOException {
+        // X6.1/X6.2: `interop.schema(R)` é um intrínseco de compile-time — a
+        // dobra é no frontend (mesmas ops do `listOf(Field(…))` equivalente),
+        // logo a saída é IDÊNTICA nos 4 alvos e não há gap `REF001`. O caso
+        // trava compilar+rodar igual em JVM/Native/Script/JS.
+        matrix("interopschema", """
+                import kof.interop
+
+                record User(String name, Int age)
+
+                main() {
+                    var fields = interop.schema(User)
+                    println(fields.size)
+                    for (var f in fields) {
+                        println(f.name() + ":" + f.type())
+                    }
+                }
+                """, "2\nname:String\nage:Int", Set.of(), tempDir);
+    }
 }

@@ -74,6 +74,33 @@ println(ptlen(Pt(1, 2)))                              // 2 (record passed by val
 // (byte-for-byte JVM==JS). The scalar ABI binds on every target.
 ```
 
+## Reflection at the boundary — `interop.schema(R)` (X6, `D-INTEROP-REFLECT`)
+
+A **read-only** view of a `record`'s structure, available **only at the interop
+boundary** (Arrow/Parquet/ML schemas), so external data binds to Kof records
+without hand-written mappers. It is a **compile-time intrinsic** — zero runtime
+reflection, so the same output on every target (no `REF001` gap). Enabled by an
+explicit `import kof.interop`; resolves to an immutable `List<Field>` with the
+compiler-provided `record Field(String name, String type)`, in declaration order.
+
+```kof
+import kof.interop
+
+record Order(String id, Double amount, Long qty)
+
+main() {
+    for (var f in interop.schema(Order)) {
+        println(f.name() + ":" + f.type())   // id:String, amount:Double, qty:Long
+    }
+}
+```
+
+An invalid use is an honest diagnostic (R6), never silence: an unknown member of
+`interop` → `INTEROP002`; wrong arity, a value, a class or an enum (not a
+`record`) → `INTEROP001`. An `entity` counts as a record. It is **not** a
+language foundation: no runtime metaprogramming, no dynamic dispatch, no write
+path.
+
 ## BAD → GOOD
 
 | ❌ BAD | ✅ GOOD | Why |
@@ -85,6 +112,7 @@ println(ptlen(Pt(1, 2)))                              // 2 (record passed by val
 | assuming `library()` means the same thing on every target | on JVM/JS it is the dlopen path; on **Native** it is resolved **by basename at LINK time through the sysroot** (`libc.so.6` → `-l:libc.so.6`; an absolute HOST path is wrong-arch cross) | Native has no FFM: a bound `extern` is a `call sym@PLT` + link-by-use (#431 20/09, §369) |
 | reusing `Byte[]`/`String` for a C out-buffer | declare the nominal **`Buffer(U8)`** in the `extern` and create it with `buffer.alloc(n)` (D-R3-BUFFER/D6-3) | an out-buffer is mutable and bidirectional (copy-in + copy-back); `T[]` is copy-in read-only and `String`/`char*` is read-only — distinct ABI kinds |
 | hand-emitting bytecode for a struct/array/out-buffer call | declare the `record`/`new T[n]`/`Buffer(U8)` in the `extern`; the compiler classifies the ABI (`AbiLayout`) | complexity belongs to the compiler (iron rule 2); a hand-rolled ABI is a silent bug on the next target |
+| hand-writing a per-record mapper/schema (field names + types duplicated in a string) | derive it from `interop.schema(R)` at the boundary | the compiler already knows the record structure — zero runtime reflection, identical output on the 4 targets |
 
 ## See also
 

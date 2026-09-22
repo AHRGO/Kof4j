@@ -80,6 +80,31 @@ var hoje = LocalDate.now()          // ❌ SEM011 without classpath
 var conn = DriverManager.getConnection(url, user, pass)   // ❌ same
 ```
 
+## Reflection at the boundary — `interop.schema` (X6)
+
+When the data comes from outside (Arrow/Parquet/ML schemas), you usually need
+the record's **structure** (field names + types) to bind columns to fields. Kof
+exposes that as a **compile-time intrinsic**, only at the interop boundary — no
+runtime reflection, no hand-written mapper:
+
+```kf
+import kof.interop
+
+record Order(String id, Double amount, Long qty)
+
+main() {
+    for (var f in interop.schema(Order)) {
+        println(f.name() + ":" + f.type())   // id:String, amount:Double, qty:Long
+    }
+}
+```
+
+`interop.schema(R)` returns an immutable `List<Field>`, where `Field` is a
+compiler-provided `record Field(String name, String type)` in declaration order.
+Because the fold happens in the frontend, the output is identical on
+JVM/Native/Script/JS. An invalid use is diagnosed (`INTEROP002` unknown member;
+`INTEROP001` wrong arity / a value / a class / an enum) — never silent.
+
 ## Interoperability rules
 
 1. **Kof types → Java**: mapped directly (`Int` → `int`, `String` → `String`)
@@ -87,6 +112,31 @@ var conn = DriverManager.getConnection(url, user, pass)   // ❌ same
 3. **Annotations**: reach the bytecode correctly (see ch. 20)
 4. **Before using a Java API**: compile and run — support is partial and
    overload resolution still has flaws (02/09)
+
+## Reflection at the boundary — `interop.schema(R)` (X6)
+
+When external data must bind to a Kof `record` (an Arrow/Parquet/ML schema),
+you do not hand-write a mapper. The compiler already knows the record structure:
+`interop.schema(R)` gives a read-only view of it at compile time — zero runtime
+reflection, so the same output on every target. It is enabled explicitly by
+`import kof.interop`.
+
+```kf
+import kof.interop
+
+record Order(String id, Double amount, Long qty)
+
+main() {
+    for (var f in interop.schema(Order)) {
+        println(f.name() + ":" + f.type())   // id:String, amount:Double, qty:Long
+    }
+}
+```
+
+`interop.schema(R)` resolves to an immutable `List<Field>`, where `Field` is the
+compiler-provided `record Field(String name, String type)` in declaration order.
+An invalid use is a diagnostic, never silence (`INTEROP002` for an unknown
+member, `INTEROP001` for a wrong arity or a non-record argument).
 
 ## Next step
 

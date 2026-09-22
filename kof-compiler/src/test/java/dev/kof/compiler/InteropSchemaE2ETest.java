@@ -415,4 +415,42 @@ class InteropSchemaE2ETest {
                         .anyMatch(d -> "INTEROP001".equals(d.code())),
                 "expected INTEROP001, got: " + r.diagnostics().getDiagnostics());
     }
+
+    @Test
+    void bindingE2eDrivesAnArrowShapedMapper(@TempDir Path tmp) throws Exception {
+        Path f = write(tmp, "Bind.kf", """
+                import kof.interop
+
+                record Order(String id, Double amount, Long qty)
+
+                main() {
+                    var fields = interop.schema(Order)
+                    // Arrow/Parquet-shaped header DERIVED from the record structure
+                    // (name:type joined by '|') — never hand-written.
+                    var header = ""
+                    var first = true
+                    for (var f in fields) {
+                        if (!first) { header = header + "|" }
+                        header = header + f.name() + ":" + f.type()
+                        first = false
+                    }
+                    println(header)
+                    // schema-driven binder: resolve a value slot by field NAME.
+                    var idx = -1
+                    var i = 0
+                    for (var f in fields) {
+                        if (f.name() == "amount") { idx = i }
+                        i = i + 1
+                    }
+                    println(idx)
+                }
+                """);
+        String expected = "id:String|amount:Double|qty:Long\n1";
+        runJvm(tmp, List.of(f), expected);
+        runScript(tmp, List.of(f), expected);
+        runJs(tmp, List.of(f), expected);
+        CompilationResult r = driver.compileSources(List.of(f), tmp.resolve("native"),
+                Target.NATIVE, tmp);
+        assertTrue(r.success(), "NATIVE compile failed: " + r.diagnostics().getDiagnostics());
+    }
 }

@@ -77,6 +77,34 @@ println(ptlen(Pt(1, 2)))                              // 2 (record passado por v
 // A ABI escalar binda em todo target; estas formas D6 sao JVM-first (R7).
 ```
 
+## Reflexão na fronteira — `interop.schema(R)` (X6, `D-INTEROP-REFLECT`)
+
+Uma visão **somente-leitura** da estrutura de um `record`, disponível **apenas
+na fronteira de interop** (schemas Arrow/Parquet/ML), para os dados externos se
+ligarem a records Kof sem mappers escritos à mão. É um **intrínseco de
+compile-time** — zero reflexão em runtime, logo a mesma saída em todo target (sem
+gap `REF001`). Ativada por `import kof.interop`; resolve para uma `List<Field>`
+imutável com o `record Field(String name, String type)` fornecido pelo
+compilador, na ordem de declaração.
+
+```kof
+import kof.interop
+
+record Order(String id, Double amount, Long qty)
+
+main() {
+    for (var f in interop.schema(Order)) {
+        println(f.name() + ":" + f.type())   // id:String, amount:Double, qty:Long
+    }
+}
+```
+
+Uso inválido é diagnóstico honesto (R6), nunca silêncio: membro desconhecido de
+`interop` → `INTEROP002`; aridade errada, valor, classe ou enum (não um
+`record`) → `INTEROP001`. Um `entity` conta como record. **Não** é fundação da
+linguagem: sem metaprogramação em runtime, sem dispatch dinâmico, sem caminho de
+escrita.
+
 ## RUIM → BOM
 
 | ❌ RUIM | ✅ BOM | Por quê |
@@ -88,6 +116,7 @@ println(ptlen(Pt(1, 2)))                              // 2 (record passado por v
 | assumir que `library()` significa o mesmo em todo target | no JVM/JS e o caminho do dlopen; no **Native** resolve **por basename em LINK-time pelo sysroot** (`libc.so.6` → `-l:libc.so.6`; caminho absoluto do HOST e arch-errado no cross) | o Native nao tem FFM: um `extern` casado e um `call sym@PLT` + link-by-use (#431 20/09, §369) |
 | reusar `Byte[]`/`String` para um out-buffer da C | declare o tipo nominal **`Buffer(U8)`** no `extern` e crie com `buffer.alloc(n)` (D-R3-BUFFER/D6-3) | um out-buffer e mutavel e bidirecional (copy-in + copy-back); `T[]` e copy-in somente-leitura e `String`/`char*` e somente-leitura — tipos ABI distintos |
 | emitir bytecode na mao para um call de struct/array/out-buffer | declare o `record`/`new T[n]`/`Buffer(U8)` no `extern`; o compilador classifica a ABI (`AbiLayout`) | complexidade e do compilador (regra de ferro 2); uma ABI na mao vira bug silencioso no proximo target |
+| escrever um mapper/schema por record a mao (nomes + tipos duplicados numa string) | derive de `interop.schema(R)` na fronteira | o compilador ja conhece a estrutura do record — zero reflexao em runtime, saida identica nos 4 alvos |
 
 ## Veja também
 

@@ -287,6 +287,7 @@ CLOSED 11/09 (riscv64/aarch64)**: `addDays`/`diffDays` run on the 5 targets —
 | `sealed` + exhaustive `switch` over sealed subject (X5.1/X5.2, `SEM080`/`SEM081`) | `circle` / `square` | DONE | DONE | DONE | DONE | `sealedswitch` |
 | declaration-site variance `out T` (X5.3, erased) | `rex` | DONE | DONE | DONE | DONE | `variance` |
 | use-site projection `List<out T>` / `List<in T>` (X5.4, erased) | `1` / `1` | DONE | DONE | DONE | DONE | `useproj` |
+| `interop.schema(R)` compile-time reflection (X6.1/X6.2, erased) | `2` / `name:String` / `age:Int` | DONE | DONE | DONE | DONE | `interopschema` |
 
 > **X5 (`D-X5-SURFACE`, 21/09):** the three cases are compile-time-only
 > features (`sealed`, variance, projection) — codegen erases them, so the cell

@@ -74,6 +74,8 @@
 | Generics (erasure) — `Box<T>` `T` primitivo | ✅ | ✅ | ✅ | 25/08 `substituteTypeVariable` + `kof_int_to_string` |
 | Tipos `sealed` + `switch` exaustivo (X5.1/X5.2, `SEM080`/`SEM081`) | ✅ | ✅ | ✅ | 0.5.0-beta — modificador apagado na emissão; conjunto fechado por mesmo arquivo; `switch`-expr precisa cobrir os subtipos diretos. `SealedTypeE2ETest` 9/9 + matriz `sealedswitch` |
 | variância `out`/`in` (declaration-site) + projeção no sítio de uso `List<out T>`/`List<in T>` (X5.3/X5.4, `SEM082`) | ✅ | ✅ | ✅ | 0.5.0-beta — só compile-time (vira `WildcardType` na erosão); `TypeVarianceE2ETest` 9/9 · `UseSiteVarianceE2ETest` 5/5 · matriz `variance`/`useproj` |
+| Reflexão na fronteira `interop.schema(R)` (X6.0–X6.2, `D-INTEROP-REFLECT`) | ✅ | ✅ | ✅ | 0.5.0-beta — `import kof.interop`; intrínseco de compile-time (zero reflexão em runtime, mesma saída nos 4 alvos, sem `REF001`); `List<Field>` imutável + `record Field(String name, String type)` do compilador; `INTEROP001`/`INTEROP002`; `InteropSchemaE2ETest` 18/18 · matriz `interopschema` |
+| Reflexão na fronteira `interop.schema(R)` (X6.0–X6.2, `D-INTEROP-REFLECT`) | ✅ | ✅ | ✅ | 0.5.0-beta — `import kof.interop`; intrínseco de compile-time (zero reflexão em runtime, mesma saída nos 4 alvos, sem `REF001`); `List<Field>` imutável + `record Field(String name, String type)` fornecido pelo compilador; `INTEROP001`/`INTEROP002`; `InteropSchemaE2ETest` 18/18 · matriz `interopschema` |
 | Lambdas `(x: Int) -> expr` | ✅ | ✅ | ✅ | com capturas (box `BoxN`) |
 | Exceptions (throw "msg", try/catch/finally) | ✅ | ✅ | ✅ | Native: unwinding próprio |
 | `assert(cond[, msg])` | ✅ | ✅ | ✅ | |
