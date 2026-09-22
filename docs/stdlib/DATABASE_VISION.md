@@ -7,7 +7,7 @@
 > proven: Level 3 (typed Query DSL `User.query(db){...}` → `db.query<T>`) ✅
 > 01/09 (`KofOrmE2ETest` 22); binary prepared MySQL ✅ 03/09
 > (`KofDbE2ETest.nativeMysqlPreparedBinary`). Connection pooling is PLANNED (no pool today — each `connect` opens its own connection, §Limitations below). DB001/ORM001 in
-> (DB001 closed: riscv/aarch 15/09 + JS 16/09; ORM001 closed on JS 18/09); only `ORM001` on **Native cross riscv64/aarch64** remains an honest R6 gap (x86-64 ORM real since 22/09: 13/13 faces over SQLite + MySQL wire, F2d1–F2d7) tracked in `docs/backend-parity.md`,
+> (DB001 closed: riscv/aarch 15/09 + JS 16/09; ORM001 closed on JS 18/09); ORM **F1a real since 22/09 on Native cross riscv64/aarch64** (`deleteAll`/`count` over SQLite, piece `RtB50`), with `ORM001` for the remaining cross faces (x86-64 ORM real since 22/09: 13/13 faces over SQLite + MySQL wire, F2d1–F2d7) tracked in `docs/backend-parity.md`,
 > not a pending item of this vision.
 
 **Last updated:** September 12, 2026
@@ -274,7 +274,7 @@ main() {
 - **MongoDB:** `save/find/all/where/delete/count` over the official driver via
   compatible reflection (`Bson`/`Class`, without `ClientSession`); E2E test with
   a real container (conditional skip; Mongo service in CI).
-- **Native x86-64:** real (`kof_orm_*` asm over the native `kof_db_*`; SQLite + MySQL wire). **Native riscv64/aarch64:** reports `ORM001` (gap documented at compile-time). **JS:** CLOSED
+- **Native x86-64:** real (`kof_orm_*` asm over the native `kof_db_*`; SQLite + MySQL wire). **Native riscv64/aarch64:** ORM F1a real since 22/09 (`deleteAll`/`count` over SQLite, piece `RtB50`); the rest reports `ORM001` (gap documented at compile-time). **JS:** CLOSED
   18/09 — `kof.orm` runs on the GraalJS host via `KofJsOrmBridge` (same SQL as
   `JvmOrmRuntime`), typed records bound guest-side (`__kof_decode_<T>`); byte-parity
   E2E in `KofOrmE2ETest` (`js*` cases).

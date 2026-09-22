@@ -110,6 +110,10 @@ public final class NativeRiscvAsm {
                 // §284 (18/09): box de erasure — kof_box_*/unbox/box_to_string
                 // (port RuntimeErasureBox x86; aarch64 herda via tradutor).
                 .append(NativeRiscvAsmRtB49.RISCV_RUNTIME_ASM_B_49)
+                // DB-3/DB-1 cross slice A (22/09): ORM F1a no riscv64 —
+                // kof_orm_delete_all + kof_orm_count (port RuntimeOrm1) sobre
+                // o kof.db SQLite de RtB46/RtB47; aarch64 herda via tradutor.
+                .append(NativeRiscvAsmRtB50.RISCV_RUNTIME_ASM_B_50)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

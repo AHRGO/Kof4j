@@ -13,6 +13,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **`kof.orm` cross riscv64/aarch64 — fatia A: `deleteAll` + `count` reais sobre SQLite**
+    (22/09, lane gaps-db, DB-3/DB-1): o ORM era só x86-64 no Native (os alvos
+    cross recusavam todo `orm.*` com `ORM001` em compile-time). A fatia A
+    porta `kof_orm_delete_all` + `kof_orm_count` (F1a de `RuntimeOrm1`) para o
+    runtime riscv64 (peça `RtB50`, sobre os `kof_db_*` SQLite de
+    `RtB46/RtB47`; aarch64 herda pelo tradutor): semântica idêntica ao x86
+    (id ruim → `unknown db connection: <id>`; delete_all → false em SQL error,
+    true no sucesso; count → 0 em erro/zero-row, valor exato via
+    `sqlite3_column_int64`). `KofOrm.fnSupportedOn` flipa SÓ essas duas faces
+    em NATIVE_RISCV64/AARCH64 — o resto mantém o `ORM001` honesto em
+    compile-time (R6/R7). Prova:
+    `KofOrmE2ETest.crossNativeF1aDeleteAllCountMatchX86Oracle` — oráculo x86-64
+    `3/true/0/true/0/false` byte-idêntico em riscv64 e aarch64 sob qemu (incl.
+    o edge SQL-error de drop da tabela), + pin do gate de `orm.all` no cross.
   - **`kof-c-compiler` ganha os alvos riscv64/aarch64 (fatia C1 do plano cross)**
     (22/09, frente FFI/kof-c): o compilador C do repositório só emitia x86-64
     (`as --64` + `ld`). Agora `KofCTarget` seleciona os binutils cross

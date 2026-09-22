@@ -26,8 +26,10 @@ import java.util.List;
  * orm.delete<User>(db, 1)
  * }</pre>
  *
- * <p>JVM: JDBC (via kof.db). Native e JS reportam {@code ORM001} em
- * compile-time.
+ * <p>JVM: JDBC (via kof.db). Native x86-64: asm {@code kof_orm_*} real
+ * (F1/F2/F3). Cross riscv64/aarch64: slice A (22/09) — F1a
+ * {@code delete_all}/{@code count} reais sobre o SQLite do cross; as demais
+ * faces reportam {@code ORM001} em compile-time. JS: KofJsOrmBridge.
  */
 public final class KofOrm {
 
@@ -46,11 +48,20 @@ public final class KofOrm {
     /** JVM/ANDROID: JDBC via kof.db (ANDROID fecha 20/09, D-DB-GAPS DB-2 —
      *  mesmo JvmBackend, paridade por construção). JS: KofJsOrmBridge (18/09,
      *  ORM001). Native x86-64: SQL-puro (F1) + row-object completo (F2,
-     *  21/09) REAL; cross riscv/aarch64 (compile-time) e MySQL (runtime)
-     *  seguem ORM001 honesto. */
+     *  21/09) REAL; cross riscv/aarch64: slice A da DB-3 (22/09) — F1a
+     *  ({@code delete_all}/{@code count}) REAL sobre o SQLite de RtB46/RtB47
+     *  (peça RtB50; aarch64 herda via tradutor), o resto em compile-time
+     *  ORM001; MySQL (runtime) segue pending no backend via .Lorm_conn. */
     static boolean supportedOn(@SuppressWarnings("unused") Target target) {
         return target == Target.JVM || target == Target.ANDROID || target == Target.JS;
     }
+
+    /** DB-3/DB-1 cross slice A (22/09): F1a do ORM no riscv64/aarch64 —
+     *  {@code delete_all} + {@code count} sobre os kof_db_* SQLite do cross
+     *  (peça RtB50, port de RuntimeOrm1; aarch64 herda pelo tradutor). O que
+     *  ainda não tem porte cross segue ORM001 compile-time (R6/R7). */
+    private static final java.util.Set<String> CROSS_F1A = java.util.Set.of(
+            "kof_orm_delete_all", "kof_orm_count");
 
     /** D-DB-GAPS DB-1 (20/09): faces SQL-puro do Native x86-64, uma por fatia.
      *  F1a = {@code delete_all}, F1b = {@code count}, F1c = {@code migrate}
@@ -82,7 +93,9 @@ public final class KofOrm {
 
     static boolean fnSupportedOn(Target target, String fn) {
         if (supportedOn(target)) return true;
-        return target == Target.NATIVE && NATIVE_F1.contains(fn);
+        if (target == Target.NATIVE) return NATIVE_F1.contains(fn);
+        if (target == Target.NATIVE_RISCV64 || target == Target.NATIVE_AARCH64) return CROSS_F1A.contains(fn);
+        return false;
     }
 
     static String gapCode() {

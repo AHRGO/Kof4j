@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * kof.orm — o ORM da própria linguagem: {@code entity} define o schema em
@@ -2211,5 +2212,132 @@ class KofOrmE2ETest {
         assertFalse(r.success(), "row-object REAL so no x86-64; riscv64 ainda ORM001 ate a frente cross");
         assertTrue(r.diagnostics().getDiagnostics().toString().contains("ORM001"),
                 "gate honesto (nunca silent): " + r.diagnostics().getDiagnostics());
+    }
+
+    /** DB-3/DB-1 cross slice A (22/09): {@code orm.deleteAll} + {@code orm.count}
+     *  REAIS no riscv64/aarch64 sobre o SQLite do cross (peça RtB50, port de
+     *  RuntimeOrm1) — byte-parity com o oráculo x86-64 (a referência do
+     *  contrato, D-DB-GAPS) e as faces ainda não portadas seguem ORM001
+     *  compile-time (pin de granularidade no mesmo teste). */
+    @Test
+    void crossNativeF1aDeleteAllCountMatchX86Oracle(@TempDir Path tempDir) throws IOException {
+        assumeTrue(isLinux(), "cross ORM E2E requires Linux + libsqlite3");
+        Path source = tempDir.resolve("OrmCross.kf");
+        Files.writeString(source, """
+            entity User {
+                id: Long generated
+                name: String
+                age: Int
+            }
+            main() {
+                var db = db.connect("sqlite:%s/kof.db")
+                db.execute(db, "create table if not exists user(id integer primary key, name varchar, age int)")
+                db.execute(db, "delete from user")
+                db.execute(db, "insert into user(id, name, age) values (?, ?, ?)", 1, "Mel", 30)
+                db.execute(db, "insert into user(id, name, age) values (?, ?, ?)", 2, "Ana", 25)
+                db.execute(db, "insert into user(id, name, age) values (?, ?, ?)", 3, "Bia", 41)
+                println(orm.count<User>(db))
+                println(orm.deleteAll<User>(db))
+                println(orm.count<User>(db))
+                println(orm.deleteAll<User>(db))
+                db.execute(db, "drop table user")
+                println(orm.count<User>(db))
+                println(orm.deleteAll<User>(db))
+                db.close(db)
+            }
+            """.formatted(tempDir));
+        Path x86out = tempDir.resolve("out-x86");
+        CompilationResult xo = driver.compile(source, x86out, Target.NATIVE);
+        assumeTrue(xo.success(), "x86-64 oracle should compile: " + xo.diagnostics().getDiagnostics());
+        String oracle = runNativeBinary(x86out.resolve("Default/Main"), null);
+        assertEquals("3\ntrue\n0\ntrue\n0\nfalse", oracle, "oráculo x86-64 (contrato D-DB-GAPS; drop -> count 0 / deleteAll false)");
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            String as = arch.equals("riscv64") ? "riscv64-linux-gnu-as" : "aarch64-linux-gnu-as";
+            String ld = arch.equals("riscv64") ? "riscv64-linux-gnu-ld" : "aarch64-linux-gnu-ld";
+            assumeTrue(has(as, ld, "qemu-" + arch), "cross toolchain " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sysrootOrNull(arch) != null,
+                    "sysroot cross " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sqliteAvailable(arch),
+                    "libsqlite3 " + arch + " ausente no sysroot — pulando");
+            Path out = tempDir.resolve("out-" + t);
+            CompilationResult r = driver.compile(source, out, t);
+            assertTrue(r.success(), t + " deveria compilar F1a real: " + r.diagnostics().getDiagnostics());
+            String got = runNativeBinary(out.resolve("Default/Main"), "qemu-" + arch);
+            assertEquals(oracle, got, t + " byte-parity com o oráculo x86-64");
+        }
+        Path srcGated = tempDir.resolve("OrmCrossGate.kf");
+        Files.writeString(srcGated, """
+            entity User {
+                id: Long generated
+                name: String
+                age: Int
+            }
+            main() {
+                var db = db.connect("sqlite:%s/gate.db")
+                println(orm.all<User>(db))
+            }
+            """.formatted(tempDir));
+        CompilationResult gated = driver.compile(srcGated, tempDir.resolve("out-gate"), Target.NATIVE_RISCV64);
+        assertFalse(gated.success(), "orm.all segue ORM001 no cross até a fatia F2");
+        assertTrue(gated.diagnostics().getDiagnostics().toString().contains("ORM001"),
+                "gate honesto (nunca silent): " + gated.diagnostics().getDiagnostics());
+    }
+
+    /** Executa o binário nativo (x86 direto; cross via qemu-<arch> com
+     *  QEMU_LD_PREFIX do sysroot) e devolve o stdout com exit 0 exigido. */
+    private static String runNativeBinary(Path bin, String qemu) throws IOException {
+        ProcessBuilder pb = qemu == null
+                ? new ProcessBuilder(bin.toString())
+                : new ProcessBuilder(qemu, bin.toString());
+        if (qemu != null) {
+            String arch = qemu.endsWith("riscv64") ? "riscv64" : "aarch64";
+            String prefix = qemuPrefix(arch);
+            if (prefix != null) pb.environment().put("QEMU_LD_PREFIX", prefix);
+        }
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        int ec;
+        try {
+            ec = p.waitFor();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted running native binary " + bin, e);
+        }
+        assertEquals(0, ec, "exit code, output: '" + out + "'");
+        return out;
+    }
+
+    /** has() do padrão dos testes cross (command -v). */
+    private static boolean has(String... cmds) {
+        for (String c : cmds) {
+            try {
+                Process p = new ProcessBuilder("sh", "-c", "command -v " + c)
+                        .redirectErrorStream(true).start();
+                String out = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).trim();
+                if (p.waitFor() != 0 || out.isEmpty()) return false;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** QEMU_LD_PREFIX p/ o loader dinâmico (espelho de KofDbE2ETest). */
+    private static String qemuPrefix(String arch) {
+        String env = System.getenv("KOF_CROSS_SYSROOT");
+        String loader = arch.equals("riscv64") ? "ld-linux-riscv64-lp64d.so.1" : "ld-linux-aarch64.so.1";
+        if (env != null && !env.isBlank()) {
+            java.io.File f = new java.io.File(env + "/usr/" + arch + "-linux-gnu/lib/" + loader);
+            if (f.exists()) return env + "/usr/" + arch + "-linux-gnu";
+        }
+        java.io.File sys = new java.io.File("/usr/" + arch + "-linux-gnu/lib/" + loader);
+        return sys.exists() ? "/usr/" + arch + "-linux-gnu" : null;
+    }
+
+    private static boolean isLinux() {
+        return System.getProperty("os.name", "").toLowerCase().contains("linux");
     }
 }
