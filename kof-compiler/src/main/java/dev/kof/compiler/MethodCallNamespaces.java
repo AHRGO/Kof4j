@@ -36,6 +36,12 @@ final class MethodCallNamespaces {
             if (consts.contains(mc.methodName())) return enumT;
             return Type.UnknownType.UNKNOWN;
         }
+        // X6 (D-INTEROP-REFLECT): `interop.schema(R)` é intrínseco de
+        // compile-time — o tipo é List<Field> (host kof.interop), dobrado no
+        // lowerer sem reflexão em runtime.
+        if (CompilerInterop.isSchemaCall(mc) && CompilerInterop.hostPresent(driver)) {
+            return CompilerInterop.schemaType();
+        }
         if (mc.receiver() instanceof IdentifierExpr rid && "json".equals(rid.name())) {
             if ("encode".equals(mc.methodName())) return BuiltinTypes.STRING;
             if ("decode".equals(mc.methodName()) && !mc.typeArguments().isEmpty()) {

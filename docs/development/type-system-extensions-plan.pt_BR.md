@@ -108,7 +108,7 @@ para `switch` não-exaustivo e violação de variance.
 | # | Fatia | Escopo | Prova |
 |---|-------|--------|-------|
 | X6.0 | **spec** | escopo, superfície, postura por alvo; confirma "só fronteira de interop" | ✅ **FEITO 21/09** — superfície congelada em `D-INTEROP-REFLECT`: `interop.schema(R)` intrínseco de compile-time → `List<Field>` (`record Field(String, String)`), zero reflexão em runtime, todos os alvos, só na fronteira |
-| X6.1 | **intrínseco + dobra** | reconhecer `interop.schema(R)` no typer; dobrar para um literal `List<Field>` imutável em compile-time (frontend, logo todos os alvos) | E2E: schema de um record casado a um golden |
+| X6.1 | **intrínseco + dobra** | reconhecer `interop.schema(R)` no typer; dobrar para um literal `List<Field>` imutável em compile-time (frontend, logo todos os alvos) | ✅ **FEITO 22/09** — `import kof.interop` injeta o host `record Field`; typer → `List<Field>`; lowerer dobra para as ops de `listOf(Field("n","t"),…)` (sem reflexão em runtime, sem código por backend). `InteropSchemaE2ETest` 7/7 (ordem JVM/Script/JS, lista imutável, 1 campo, genérico, compila NATIVE, `INTEROP001` x2) |
 | X6.2 | **alvos** | a dobra é no frontend → sem `REF001`; em vez disso, diagnóstico honesto para `R` não-record / desconhecido (R6) | diagnóstico pinado para argumento inválido |
 | X6.3 | **paridade + docs** | E2E de binding (forma Arrow/Parquet), matriz de paridade, `training/`/`learn/` | suíte verde; docs-lang 100% |
 
@@ -123,10 +123,9 @@ para `switch` não-exaustivo e violação de variance.
   clássico (mesmo mecanismo de `kof.supervisor`/`kof.workflow`), então acesso a
   membro (`f.name`/`f.type`) e codegen funcionam sem mudança; a tipagem devolve
   `List<Field>`.
-- **Sub-escolha em aberto (mantenedora):** mágica sem import (exige varredura
-  da AST para decidir a injeção) **vs.** `import kof.interop` explícito (injeta
-  no import, mais simples e sempre correto). Tendência ao import explícito — é
-  o mecanismo de host estabelecido e evita um scanner frágil.
+- **Sub-escolha RESOLVIDA (mantenedora 21/09):** `import kof.interop`
+  explícito (injeta no import — o mecanismo de host estabelecido, sem scanner
+  frágil). Implementada no X6.1.
 
 ### Riscos / perguntas abertas
 

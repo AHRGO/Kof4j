@@ -105,7 +105,7 @@ non-exhaustive `switch` and variance violations.
 | # | Slice | Scope | Proof |
 |---|-------|-------|-------|
 | X6.0 | **spec** | scope, surface, target posture; confirm "interop boundary only" | ✅ **DONE 21/09** — surface frozen in `D-INTEROP-REFLECT`: `interop.schema(R)` compile-time intrinsic → `List<Field>` (`record Field(String, String)`), zero runtime reflection, all targets, boundary-only |
-| X6.1 | **intrinsic + fold** | recognize `interop.schema(R)` in the typer; fold to an immutable `List<Field>` literal at compile time (frontend, so all targets) | E2E: schema of a record matched to a golden |
+| X6.1 | **intrinsic + fold** | recognize `interop.schema(R)` in the typer; fold to an immutable `List<Field>` literal at compile time (frontend, so all targets) | ✅ **DONE 22/09** — `import kof.interop` injects host `record Field`; typer → `List<Field>`; lowerer folds to the `listOf(Field("n","t"),…)` ops (no runtime reflection, no per-backend code). `InteropSchemaE2ETest` 7/7 (JVM/Script/JS order, immutable list, 1-field, generic, NATIVE compile, `INTEROP001` x2) |
 | X6.2 | **targets** | the fold is frontend-level → no `REF001`; instead an honest diagnostic for non-record / unknown `R` (R6) | pinned diagnostic for an invalid argument |
 | X6.3 | **parity + docs** | binding E2E (Arrow/Parquet-shaped), parity matrix, `training/`/`learn/` | suite green; docs-lang 100% |
 
@@ -119,10 +119,9 @@ non-exhaustive `switch` and variance violations.
   (same mechanism as `kof.supervisor`/`kof.workflow`), so member access
   (`f.name`/`f.type`) and codegen work unchanged; typing returns
   `List<Field>`.
-- **Open sub-choice (maintainer):** import-free magic (needs an AST scan to
-  decide injection) **vs.** explicit `import kof.interop` (inject on import,
-  simpler and always correct). Leaning to the explicit import — it is the
-  established host mechanism and avoids a fragile scanner.
+- **Sub-choice RESOLVED (maintainer 21/09):** explicit `import kof.interop`
+  (inject on import — the established host mechanism, no fragile scanner).
+  Implemented in X6.1.
 
 ### Risks / open questions
 

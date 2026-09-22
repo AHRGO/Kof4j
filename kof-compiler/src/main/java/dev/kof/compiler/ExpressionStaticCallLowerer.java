@@ -183,6 +183,14 @@ if (mc.receiver() == null && "Color".equals(mc.methodName()) && mc.arguments().s
         int handledUi = ExpressionUiStaticLowerer.lower(driver, mc, ops, owner, localIdx, locals);
         if (handledUi >= 0) return handledUi;
     }
+// X6 (D-INTEROP-REFLECT): `interop.schema(R)` é intrínseco de compile-time.
+// O compilador conhece os componentes de R, então a chamada dobra para as
+// mesmas ops que `listOf(Field("n","t"), …)` emitiria — sem reflexão em
+// runtime e sem código por backend (mesma saída nos 4 alvos). R precisa ser um
+// `record` declarado no módulo; senão, diagnóstico honesto (R6).
+if (CompilerInterop.isSchemaCall(mc)) {
+    return CompilerInterop.lowerSchema(driver, mc, ops, owner, localIdx, locals);
+}
 if ("listOf".equals(mc.methodName()) && mc.receiver() == null) {
     Type elemType = driver.listOfElementType(mc, locals);
     Type listType = new Type.ClassType("kof", "List", List.of(elemType));

@@ -17,6 +17,7 @@ final class SemUndefinedVarGuard {
                 && !"this".equals(name) && !"super".equals(name)
                 && !"json".equals(name) && !"process".equals(name) && !"shell".equals(name)
                 && !"ssh".equals(name)
+                && !CompilerInterop.isInteropNamespace(name)
                 && !KofWeb.isWebNamespace(name)
                 && !KofConfig.isConfigNamespace(name)
                 && !KofCache.isCacheNamespace(name)

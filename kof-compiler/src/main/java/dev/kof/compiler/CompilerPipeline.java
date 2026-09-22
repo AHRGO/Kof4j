@@ -449,6 +449,8 @@ public final class CompilerPipeline {
         if (merged == null) return null;
         merged = CompilerMakealive.injectHostIfNeeded(driver, merged, diagnostics);
         if (merged == null) return null;
+        merged = CompilerInterop.injectHostIfNeeded(driver, merged, diagnostics);
+        if (merged == null) return null;
         ExternalClasspath extCp = (driver.target == Target.JVM || driver.target == Target.ANDROID)
                 ? driver.externalClasspath : null;
         merged = CompilerImports.expandKofImports(merged, driver.moduleRoot, diagnostics, driver.declarationPackages, extCp,
