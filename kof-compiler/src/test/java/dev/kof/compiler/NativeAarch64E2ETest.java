@@ -104,6 +104,35 @@ class NativeAarch64E2ETest {
                 "aarch64 must match the JVM oracle (regra 5)");
     }
 
+    // §444-cross — generic class + T-ARG ctor no aarch64 (mesmo IR riscv
+    // traduzido; o ramo TypeVariable → kof_box_to_string do §444-cross herda
+    // via tradutor). Paridade R5: oráculo JVM 7/7/hi/true.
+    @Test
+    void aarch64GenericCtorArgPrintsLikeJvm(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String out = runAarch64(tempDir, """
+            class Box<T> {
+                T value
+                public constructor(T value) {
+                    this.value = value
+                }
+                get(): T {
+                    return this.value
+                }
+            }
+            main() {
+                var b = Box(7)
+                println(b.get())
+                println(b.value)
+                var s = Box("hi")
+                println(s.get())
+                var t = Box(true)
+                println(t.get())
+            }
+            """);
+        assertEquals("7\n7\nhi\ntrue", out, "§444: aarch64 deve casar o oráculo JVM");
+    }
+
     // Arestas do port §359 (add_all riscv + kof_list_cmp→String_compareTo;
     // aarch64 herda via tradutor): addAll em dst populado/crescente e o
     // compare-to do sort (prefixo "app"<"apple" + iguais "apple").

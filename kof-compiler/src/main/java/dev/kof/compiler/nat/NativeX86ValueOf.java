@@ -119,6 +119,17 @@ final class NativeX86ValueOf {
                 sb.append("    popq %rdi\n");
                 sb.append("    call kof_box_to_string\n");
                 sb.append("    pushq %rax\n");
+            } else if (dispatchType instanceof Type.TypeVariable) {
+                // §444: TypeVariable NÃO casava ramo nenhum e o emit terminava
+                // `return true` SEM emitir conversão — o box de erasure cru
+                // (o ctor genérico boxeia o primitivo) caía no println_string
+                // = lixo/stdio vazio (silent, R6). Mesma invariante §284 do
+                // ramo Object: valor de T apagado é box de primitivo ou
+                // referência real — kof_box_to_string despacha por MAGIC+tag
+                // e passa não-box cru.
+                sb.append("    popq %rdi\n");
+                sb.append("    call kof_box_to_string\n");
+                sb.append("    pushq %rax\n");
             } else if (dispatchType instanceof Type.ClassType ct && !BuiltinTypes.isString(dispatchType)) {
                 // valueOf(objeto) → obj.toString() via vtable (records têm
                 // toString no IR; String é identity). Paridade com o JVM.
