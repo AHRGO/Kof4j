@@ -36,6 +36,26 @@ public final class FfiStructLayout {
         return new Type.ClassType(PKG, NAME, fieldTypes);
     }
 
+    /** D6-2 (3.7): a scalar array `T[]`→C `ptr` parameter travels as a
+     *  {@link Type.ClassType} tagged {@code kof.ffi}/{@code array} whose single
+     *  type argument is the element. Current cut: element classes whose Kof
+     *  slot width equals the C width — {@code Long} (`j`) / {@code Double}
+     *  (`d`), both 8 B — copy with a plain memcpy. */
+    public static Type arrayPtrType(char elem) {
+        return new Type.ClassType(PKG, "array", List.of(primitiveOf(elem)));
+    }
+
+    public static boolean isArrayPtr(Type t) {
+        return t instanceof Type.ClassType ct
+                && PKG.equals(ct.packageName()) && "array".equals(ct.name());
+    }
+
+    /** Element char of an array-ptr marker, or null when {@code t} is not one. */
+    public static Character arrayPtrElem(Type t) {
+        if (!isArrayPtr(t)) return null;
+        return FfiSignature.charOfType(((Type.ClassType) t).typeArguments().get(0));
+    }
+
     static Type primitiveOf(char ch) {
         return switch (ch) {
             case 'j' -> Type.PrimitiveType.LONG;
@@ -187,6 +207,12 @@ public final class FfiStructLayout {
     public static boolean x86Bindable(List<Type> paramTypes, int intReserved) {
         int nInt = intReserved, nFlt = 0;
         for (Type t : paramTypes) {
+            if (isArrayPtr(t)) {
+                // 3.7 D6-2: array→ptr é um ponteiro INTEGER (um ordinal).
+                if (nInt >= 6) return false;
+                nInt++;
+                continue;
+            }
             if (isStructType(t)) {
                 if (!sseEightbytesAreSingleField(t)) return false;
                 AbiLayout.Layout l = layout(AbiLayout.Abi.SYSV_X86_64, t);

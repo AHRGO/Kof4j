@@ -13,6 +13,23 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **FFI 3.7 step 1 — scalar array `T[]`→`ptr` on Native x86-64 (copy-in per
+    call, D6-2)** (22/09, FFI/kof-c lane): `extern` taking `Long[]`→`long*` or
+    `Double[]`→`double*` (element slot width == C width, 8 B) now binds on the
+    x86-64 target. The gate (`CompilerPipeline.nativeExternBound`) accepts an
+    array param only on x86-64 and only for `j`/`d` elements; the lowering marks
+    it with a synthetic `kof.ffi`/`array(elem)` type; `NativeFfiCall.emitX86`
+    runs a pack pre-pass that copies each array into a fresh buffer via the new
+    runtime helper `kof_ffi_pack_array` (behind `NativeBackend.ffiUsesArray`)
+    and passes the buffer as one INTEGER register. Semantics match the JVM
+    byte-for-byte: **copy-in per call**, the C never writes back (D6-3's
+    out-buffer is the write path). `Int[]`/`Float[]`/`Bool[]` (4/1 B, need a
+    narrowing loop) and every cross array stay `FFI001` at the declaration line
+    (R6). Proof: `FfiNativeArrayE2ETest` 2/2 — a gcc-built `.so` shim
+    (`suml`/`sumd`) linked into the native binary, golden byte-equal to the JVM
+    oracle of the same program (empty array and negative values included), plus
+    the `Int[]`→`FFI001` gate pin; FFI battery 50/0F/12skip.
+
   - **FFI 3.7 fatia 4 — struct param by value on the Native cross (riscv64/aarch64)**
     (22/09, FFI/kof-c lane): a Kof `record` of INTEGER fields (≤ 16 B) passed by
     value to an `extern` now binds on the cross targets, closing the honest

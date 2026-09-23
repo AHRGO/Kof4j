@@ -73,7 +73,13 @@ if (mc.receiver() == null && driver.externSignatures.containsKey(mc.methodName()
                     // 3.7: `record` por valor — o Type carrega os campos p/ o
                     // backend montar os registradores sem precisar do driver.
                     String fc = FfiSignature.structFieldChars(p.type(), driver);
-                    ffiParams.add(fc != null ? FfiStructLayout.structTypeOfChars(fc) : null);
+                    if (fc != null) {
+                        ffiParams.add(FfiStructLayout.structTypeOfChars(fc));
+                    } else {
+                        // D6-2/3.7: array escalar `T[]`→`ptr` (marker kof.ffi/array).
+                        Character ae = FfiSignature.arrayElemChar(p.type());
+                        ffiParams.add(ae != null ? FfiStructLayout.arrayPtrType(ae) : null);
+                    }
                 }
             }
             for (int i = 0; i < mc.arguments().size(); i++) {

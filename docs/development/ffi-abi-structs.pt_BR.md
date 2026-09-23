@@ -266,10 +266,20 @@ FFI001/002 honesto até decidido — nada de binding parcial silencioso.
 A próxima fatia é maior que uma sessão, decomposta para que cada passo seja um
 vertical completo (nenhum caminho meio-ligado, R6):
 
-1. **`T[]`→`ptr` C no x86-64, copy-in por chamada (D6-2).** Classes de elemento
-   cuja largura de slot Kof iguala a largura C copiam com `memcpy` simples:
-   **`Long[]`→`long*`, `Double[]`→`double*`** (8 B). `Int[]`/`Float[]`/`Bool[]`
-   (4/1 B) exigem loop de estreitamento e seguem `FFI001` neste corte.
+> **LANDADO 22/09 (3.7 passo 1 · `T[]`→`ptr` no x86-64, D6-2):** `Long[]`→
+> `long*` e `Double[]`→`double*` (largura de slot == largura C, 8 B) bindam com
+> **copy-in por chamada** — `FfiStructLayout.arrayPtrType`/`isArrayPtr`/`arrayPtrElem`,
+> gate `CompilerPipeline.nativeExternBound` (só x86, `j`/`d`), marker de lowering
+> em `ExpressionMethodCallLowerer`, pré-passo de pack no `emitX86` + helper
+> `kof_ffi_pack_array` atrás de `NativeBackend.ffiUsesArray`. Prova:
+> `FfiNativeArrayE2ETest` 2/2 (shim `.so` do gcc, golden byte-a-byte igual ao
+> oráculo JVM, bordas vazio/negativo) — passos 2–3 abaixo restantes.
+
+1. **✅ FEITO (22/09) — `T[]`→`ptr` C no x86-64, copy-in por chamada (D6-2).**
+   Classes de elemento cuja largura de slot Kof iguala a largura C copiam com
+   `memcpy` simples: **`Long[]`→`long*`, `Double[]`→`double*`** (8 B).
+   `Int[]`/`Float[]`/`Bool[]` (4/1 B) exigem loop de estreitamento e seguem
+   `FFI001` neste corte.
    - gate `CompilerPipeline.nativeExternBound`: aceitar param array no x86
      quando `FfiSignature.arrayElemChar` ∈ {`j`,`d`}.
    - lowering `ExpressionMethodCallLowerer` (branch nativo): adicionar um tipo

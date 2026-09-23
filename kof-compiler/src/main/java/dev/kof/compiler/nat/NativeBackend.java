@@ -99,6 +99,8 @@ public class NativeBackend implements Backend {
     /** #431: bibliotecas dos `extern` bound (ligadas no ld, link-by-use). */
     final Set<String> ffiLibs = new LinkedHashSet<>();
     boolean ffiUsesCstr = false;
+    /** D6-2/3.7: algum extern recebe array `T[]`→`ptr` (pede `kof_ffi_pack_array`). */
+    boolean ffiUsesArray = false;
     final Map<String, String> functionMangleMap = new HashMap<>();
     private final Map<String, ClassLayout> layoutCache = new HashMap<>();
     Map<String, IRClass> allClassesMap = new HashMap<>();
@@ -311,6 +313,7 @@ public class NativeBackend implements Backend {
                             // `call sym@PLT` não resolve.
                             ffiLibs.add(NativeFfiCall.libOf(kc));
                             if (NativeFfiCall.returnsCstr(kc)) ffiUsesCstr = true;
+                            if (NativeFfiCall.usesArrayParam(kc)) ffiUsesArray = true;
                         }
                     }
                 }
@@ -357,6 +360,10 @@ public class NativeBackend implements Backend {
             // (uma definição por programa, no texto do programa — a poda de
             // runtime não alcança rótulos do programa; chamado via call-site).
             NativeFfiCall.emitX86CstrHelper(sb);
+        }
+        if (ffiUsesArray) {
+            // D6-2/3.7: empacotador copy-in de array (x86-64).
+            NativeFfiCall.emitX86ArrayPackHelper(sb);
         }
         if (debugInfo && target == Target.NATIVE) {
             kofDwarf.emit(sb, sourceFile);
@@ -557,6 +564,7 @@ public class NativeBackend implements Backend {
     private void scanExterns(IRModule module) {
         ffiLibs.clear();
         ffiUsesCstr = false;
+        ffiUsesArray = false;
         for (IRClass c : module.classes()) {
             for (IRMethod m : c.methods()) {
                 for (IRBasicBlock b : m.basicBlocks()) {
@@ -564,6 +572,7 @@ public class NativeBackend implements Backend {
                         if (op instanceof KofCall kc && NativeFfiCall.isExternCall(kc)) {
                             ffiLibs.add(NativeFfiCall.libOf(kc));
                             if (NativeFfiCall.returnsCstr(kc)) ffiUsesCstr = true;
+                            if (NativeFfiCall.usesArrayParam(kc)) ffiUsesArray = true;
                         }
                     }
                 }

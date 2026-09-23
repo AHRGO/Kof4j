@@ -547,6 +547,15 @@ public final class CompilerPipeline {
                 paramTypes.add(FfiSignature.paramType(param.type()));
                 continue;
             }
+            // D6-2/3.7: array escalar `T[]`→`ptr` no x86-64 — só classes de
+            // elemento com largura de slot == largura C (Long/Double, 8 B)
+            // copiam direto; Int/Float/Bool (4/1 B) e cross seguem FFI001.
+            Character ae = FfiSignature.arrayElemChar(param.type());
+            if (ae != null) {
+                if (!x86 || (ae != 'j' && ae != 'd')) return false;
+                paramTypes.add(FfiStructLayout.arrayPtrType(ae));
+                continue;
+            }
             // D6-1(A)/3.7: `record` de campos escalares por valor (register path) — x86-64.
             String fc = FfiSignature.structFieldChars(param.type(), driver);
             if (fc == null) return false;

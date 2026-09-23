@@ -260,9 +260,18 @@ until decided — no silent partial binding.
 The next slice is bigger than one session, decomposed so every step is a
 complete vertical (no half-bound path, R6):
 
-1. **`T[]`→C `ptr` on x86-64, copy-in per call (D6-2).** Element classes whose
-   Kof slot width equals the C width copy with a plain `memcpy`:
-   **`Long[]`→`long*`, `Double[]`→`double*`** (8 B). `Int[]`/`Float[]`/`Bool[]`
+> **Landed 22/09 (3.7 step 1 · `T[]`→`ptr` on x86-64, D6-2):** `Long[]`→
+> `long*` and `Double[]`→`double*` (slot width == C width, 8 B) bind with
+> **copy-in per call** — `FfiStructLayout.arrayPtrType`/`isArrayPtr`/`arrayPtrElem`,
+> gate `CompilerPipeline.nativeExternBound` (x86 only, `j`/`d`), lowering marker
+> in `ExpressionMethodCallLowerer`, x86 pack pre-pass + helper
+> `kof_ffi_pack_array` behind `NativeBackend.ffiUsesArray`. Proof:
+> `FfiNativeArrayE2ETest` 2/2 (gcc `.so` shim, golden byte-equal to the JVM
+> oracle, empty/negative edges) — remaining steps 2–3 below.
+
+1. **✅ DONE (22/09) — `T[]`→C `ptr` on x86-64, copy-in per call (D6-2).**
+   Element classes whose Kof slot width equals the C width copy with a plain
+   `memcpy`: **`Long[]`→`long*`, `Double[]`→`double*`** (8 B). `Int[]`/`Float[]`/`Bool[]`
    (4/1 B) need a narrowing loop and stay `FFI001` in this cut.
    - gate `CompilerPipeline.nativeExternBound`: accept an array param on x86
      when `FfiSignature.arrayElemChar` ∈ {`j`,`d`}.
