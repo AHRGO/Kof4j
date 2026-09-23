@@ -40,6 +40,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     prints `KO-RING1 CPL1 OK` + `41` + `KO-RING MAIN`; negative = `NATIVE003`
     under `UEFI`/`HOST`).
 
+  - **B-6.3 — ring1 `#GP` proof + GDT-descriptor sabotage (x86_64 `uefi-ring`
+    profile) (lane baremetal 9092)** (23/09): a privileged instruction (`cli`)
+    executed at CPL1 raises `#GP`, caught by the ring0 handler and reported
+    (`KO-RING1 GP OK`) — never a silent hang; zeroing the ring1 code GDT
+    descriptor makes the CPL1 `iretq` itself fault, proving the level is
+    **enforced** (`KO-RING1 SABOTAGE OK`). `RuntimeRings` patches IDT vector 13
+    to a `#GP` handler that recovers when a ring1 transition is active (flag
+    cleared by `kof_ring1_ret`), else halts loud (R6); two selftests run in
+    `_start` before `kof_rings_restore`. No Kof surface change (B-6.2a/b
+    defined it). Proof: `RingPrivilegeE2ETest` 5/0F under real OVMF. Closes B-6.
+
   - **§477 — generic top-level function returning bare `T` lost the caller-side
     `checkcast` on a reference instantiation (session 9092, issue #592)** (23/09):
     `T idf<T>(T x) { return x }` + `idf<Point>(Point(5, 6))` compiled clean but

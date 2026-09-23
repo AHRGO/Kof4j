@@ -97,6 +97,13 @@ public final class RuntimeRings {
                 .quad 0
             kof_ring1_target:
                 .quad 0
+            # B-6.3: transição ring1 ativa + flag de #GP capturado pelo handler
+            kof_ring1_active:
+                .quad 0
+            kof_ring1_gp_flag:
+                .quad 0
+            kof_ring1_saved_desc:
+                .quad 0
 
             .section .bss
             .align 16
@@ -210,6 +217,18 @@ public final class RuntimeRings {
                 shrq $16, %rax
                 movl %eax, 8(%r8)
                 movl $0, 12(%r8)
+                # vetor 13 (#GP): handler ring0 (DPL=0) que reporta e recupera
+                leaq kof_rings_idt+208(%rip), %r8
+                leaq kof_rings_gp(%rip), %rax
+                movw %ax, 0(%r8)
+                movw $0x08, 2(%r8)
+                movb $0, 4(%r8)
+                movb $0x8E, 5(%r8)
+                shrq $16, %rax
+                movw %ax, 6(%r8)
+                shrq $16, %rax
+                movl %eax, 8(%r8)
+                movl $0, 12(%r8)
                 # IDTR local + lidt; carrega o TSS
                 movw $4095, (%rsp)
                 leaq kof_rings_idt(%rip), %rax
@@ -278,12 +297,33 @@ public final class RuntimeRings {
                 int $0x81
             1:  jmp 1b
 
+            # Alvo ring1 que tenta uma instrução privilegiada (`cli`): em CPL1 o
+            # CPU levanta #GP, capturado por kof_rings_gp (B-6.3).
+            kof_ring1_gp_stub:
+                cli
+                int $0x81
+            1:  jmp 1b
+
             # Handler ring0 do trap-back: roda na pilha rsp0 do TSS; volta para
             # a continuação de kof_ring1_entry na pilha original do ring0.
             kof_ring1_trapback:
                 movq kof_ring1_ring0_rsp(%rip), %rsp
                 movq %r15, kof_ring1_cs(%rip)
                 jmp kof_ring1_ret
+
+            # Handler ring0 do #GP (vetor 13). Se o fault veio de uma transição
+            # ring1 ativa, marca a flag e recupera na pilha ring0; caso contrário
+            # trava alto (nunca silencioso — R6).
+            kof_rings_gp:
+                cmpq $0, kof_ring1_active(%rip)
+                je .Lgp_unexpected
+                movq $1, kof_ring1_gp_flag(%rip)
+                movq kof_ring1_ring0_rsp(%rip), %rsp
+                jmp kof_ring1_ret
+            .Lgp_unexpected:
+                cli
+                hlt
+                jmp .Lgp_unexpected
 
             # Entrada CPL1: monta o frame de iretq (SS=0x20, RSP=pilha ring1,
             # RFLAGS, CS=0x18|RPL1, RIP=kof_ring1_call) na pilha do ring1 e
@@ -295,6 +335,7 @@ public final class RuntimeRings {
                 pushq %r12
                 movq %rdi, kof_ring1_target(%rip)
                 movq %rsp, kof_ring1_ring0_rsp(%rip)
+                movq $1, kof_ring1_active(%rip)
                 leaq kof_ring1_stack_top(%rip), %rax
                 movq %rax, kof_ring1_ring1_rsp(%rip)
                 movq %rax, %rsp
@@ -307,6 +348,7 @@ public final class RuntimeRings {
                 pushq %rax
                 iretq
             kof_ring1_ret:
+                movq $0, kof_ring1_active(%rip)
                 popq %r12
                 popq %rbx
                 ret
@@ -360,11 +402,72 @@ public final class RuntimeRings {
                 addq $8, %rsp
                 ret
 
+            # B-6.3: entra em CPL1 executando um alvo que tenta `cli`; o CPU
+            # levanta #GP, o handler ring0 marca a flag e recupera — prova viva
+            # de que o nível é aplicado, não silencioso.
+            .globl kof_ring1_gp_selftest
+            kof_ring1_gp_selftest:
+                subq $8, %rsp
+                movq $0, kof_ring1_gp_flag(%rip)
+                leaq kof_ring1_gp_stub(%rip), %rdi
+                call kof_ring1_entry
+                cmpq $1, kof_ring1_gp_flag(%rip)
+                jne .Lring1_gp_fail
+                leaq .Lring1_gp_ok(%rip), %rsi
+                movq $15, %rdx
+                movl $1, %edi
+                call kof_plat_write
+                addq $8, %rsp
+                ret
+            .Lring1_gp_fail:
+                leaq .Lring1_gp_bad(%rip), %rsi
+                movq $16, %rdx
+                movl $1, %edi
+                call kof_plat_write
+                addq $8, %rsp
+                ret
+
+            # B-6.3 sabotagem: zera o descritor GDT de código ring1 (seletor
+            # 0x18) e prova que o `iretq` para CPL1 falha com #GP — o nível é
+            # ENFORCED, não decorativo. Restaura o descritor em seguida.
+            .globl kof_ring1_sabotage_selftest
+            kof_ring1_sabotage_selftest:
+                subq $8, %rsp
+                movq $0, kof_ring1_gp_flag(%rip)
+                leaq kof_gdt+24(%rip), %rcx
+                movq (%rcx), %rax
+                movq %rax, kof_ring1_saved_desc(%rip)
+                movq $0, (%rcx)
+                leaq kof_ring1_stub(%rip), %rdi
+                call kof_ring1_entry
+                movq kof_ring1_saved_desc(%rip), %rax
+                leaq kof_gdt+24(%rip), %rcx
+                movq %rax, (%rcx)
+                cmpq $1, kof_ring1_gp_flag(%rip)
+                jne .Lring1_sab_fail
+                leaq .Lring1_sab_ok(%rip), %rsi
+                movq $21, %rdx
+                movl $1, %edi
+                call kof_plat_write
+                addq $8, %rsp
+                ret
+            .Lring1_sab_fail:
+                leaq .Lring1_sab_bad(%rip), %rsi
+                movq $22, %rdx
+                movl $1, %edi
+                call kof_plat_write
+                addq $8, %rsp
+                ret
+
             .section .rodata
             .Lrings_ok:  .asciz "KO-RING IDT OK\\n"
             .Lrings_bad: .asciz "KO-RING IDT BAD\\n"
             .Lring1_ok:  .asciz "KO-RING1 CPL1 OK\\n"
             .Lring1_bad: .asciz "KO-RING1 CPL1 BAD\\n"
+            .Lring1_gp_ok:  .asciz "KO-RING1 GP OK\\n"
+            .Lring1_gp_bad: .asciz "KO-RING1 GP BAD\\n"
+            .Lring1_sab_ok:  .asciz "KO-RING1 SABOTAGE OK\\n"
+            .Lring1_sab_bad: .asciz "KO-RING1 SABOTAGE BAD\\n"
 
             .section .text
             """);

@@ -235,6 +235,27 @@ class RingPrivilegeE2ETest {
                         + text.substring(Math.max(0, text.length() - 400)));
     }
 
+    /** B-6.3: uma instrucao privilegiada (`cli`) executada em CPL1 levanta #GP,
+     *  capturado pelo handler ring0 e reportado — nunca hang silencioso — e a
+     *  sabotagem (descritor ring1 zerado) faz a propria entrada CPL1 faltar,
+     *  provando que o nivel e ENFORCED, nao decorativo. */
+    @Test
+    void ring1PrivilegedInstructionAndSabotageProveEnforcement(@TempDir Path tempDir) throws Exception {
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path bin = build(tempDir, NativeProfile.UEFI_RING);
+        String text = bootOvmf(tempDir, bin, "KO-RING MAIN");
+        assertTrue(text.contains("KO-RING1 GP OK"),
+                "OVMF nao provou o #GP capturado em CPL1. Fim do log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+        assertTrue(text.contains("KO-RING1 SABOTAGE OK"),
+                "a sabotagem do descritor ring1 nao faltou a entrada CPL1. Fim: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+        assertTrue(text.contains("KO-RING MAIN"),
+                "main nao completou apos as provas B-6.3. Fim do log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+    }
+
     /** B-6.2b: fora do perfil ring, `ring1(fn)` e um gap NOMEADO (NATIVE003) —
      *  nunca silencioso (R6/R7). */
     @Test

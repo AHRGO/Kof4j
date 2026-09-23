@@ -39,6 +39,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     4/0F sob OVMF real (positivo imprime `KO-RING1 CPL1 OK` + `41` +
     `KO-RING MAIN`; negativo = `NATIVE003` sob `UEFI`/`HOST`).
 
+  - **B-6.3 — prova de `#GP` no ring1 + sabotagem do descritor da GDT (perfil
+    x86_64 `uefi-ring`) (lane baremetal 9092)** (23/09): uma instrução
+    privilegiada (`cli`) executada em CPL1 levanta `#GP`, capturado pelo handler
+    ring0 e reportado (`KO-RING1 GP OK`) — nunca um hang silencioso; zerar o
+    descritor de código ring1 da GDT faz o próprio `iretq` de CPL1 faultar,
+    provando que o nível é **enforced** (`KO-RING1 SABOTAGE OK`). O
+    `RuntimeRings` aponta o vetor 13 da IDT para um handler de `#GP` que recupera
+    quando uma transição ring1 está ativa (flag limpa pelo `kof_ring1_ret`),
+    senão para alto (R6); dois selftests rodam no `_start` antes de
+    `kof_rings_restore`. Sem mudança de superfície Kof (B-6.2a/b já a definiu).
+    Prova: `RingPrivilegeE2ETest` 5/0F sob OVMF real. Fecha o B-6.
+
   - **§477 — função de topo genérica que devolve `T` puro perdia o `checkcast`
     no call-site numa instanciação reference (sessão 9092, issue #592)** (23/09):
     `T idf<T>(T x) { return x }` + `idf<Point>(Point(5, 6))` compilava limpo mas a
