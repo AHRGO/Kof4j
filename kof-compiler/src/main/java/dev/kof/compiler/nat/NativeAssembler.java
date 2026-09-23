@@ -53,8 +53,25 @@ public final class NativeAssembler {
         // de funções não-alcançadas morrem no `--gc-sections`.
         if (bare) {
             try {
-                runCommand(new String[]{"ld", "-o", binFile.toString(), objFile.toString(),
-                        "--gc-sections", "-e", "_start"}, "ld");
+                java.util.List<String> ldCmd = new java.util.ArrayList<>(java.util.Arrays.asList(
+                        "ld", "-o", binFile.toString(), objFile.toString(), "--gc-sections"));
+                Path ldScript = null;
+                // B-1 (23/09): no perfil FREESTANDING entra o linker script
+                // próprio — `_end` explícito (topo da varredura de raízes
+                // estáticas do GC, ANTES da arena) + arena de heap e pilha de
+                // tamanho configurável (env KOF_HEAP_SIZE/KOF_STACK_SIZE).
+                // O UEFI (B-2) segue com o script default do ld + objcopy: a
+                // conversão PE32+ depende do layout que ele já produz.
+                if (NativeProfile.active != NativeProfile.UEFI) {
+                    ldScript = asmFile.resolveSibling(asmFile.getFileName() + ".ld");
+                    Files.writeString(ldScript, freestandingLinkerScript());
+                    ldCmd.add("-T");
+                    ldCmd.add(ldScript.toString());
+                }
+                ldCmd.add("-e");
+                ldCmd.add("_start");
+                runCommand(ldCmd.toArray(new String[0]), "ld");
+                if (ldScript != null) Files.deleteIfExists(ldScript);
             } catch (IOException e) {
                 // R6: no perfil freestanding nenhuma capacidade libc entra —
                 // se sobrou símbolo libc (ex.: `println(Double)` alcança
@@ -144,6 +161,53 @@ public final class NativeAssembler {
         Files.deleteIfExists(objFile);
         if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);
         binFile.toFile().setExecutable(true);
+    }
+
+    /** B-1 (23/09): linker script do perfil FREESTANDING. {@code _end} fecha a
+     *  {@code .bss} REAL (topo da varredura de raízes estáticas do GC na
+     *  {@code RuntimeGc}) ANTES da arena; a arena {@code __kof_heap_*} e a
+     *  pilha {@code __kof_stack_*} ficam na MESMA PT_LOAD NOBITS (zero-fill do
+     *  kernel) — o tamanho é configurável por {@code KOF_HEAP_SIZE}/
+     *  {@code KOF_STACK_SIZE} (ou props {@code kof.heap.size}/
+     *  {@code kof.stack.size}), senão 8 MiB/1 MiB. */
+    private static String freestandingLinkerScript() {
+        long heap = freestandingSize("KOF_HEAP_SIZE", "kof.heap.size", 8L * 1024 * 1024);
+        long stack = freestandingSize("KOF_STACK_SIZE", "kof.stack.size", 1L * 1024 * 1024);
+        return "ENTRY(_start)\n"
+                + "SECTIONS\n{\n"
+                + "  . = 0x400000;\n"
+                + "  .text : { *(.text*) }\n"
+                + "  .rodata : { *(.rodata*) }\n"
+                + "  .data : { *(.data*) }\n"
+                + "  .bss : {\n"
+                + "    *(.bss*) *(COMMON)\n"
+                + "    . = ALIGN(16);\n"
+                + "    _end = .;\n"
+                + "    __kof_heap_start = .;\n"
+                + "    . += " + heap + ";\n"
+                + "    __kof_heap_end = .;\n"
+                + "    . = ALIGN(16);\n"
+                + "    __kof_stack_bottom = .;\n"
+                + "    . += " + stack + ";\n"
+                + "    __kof_stack_top = .;\n"
+                + "  }\n"
+                + "  /DISCARD/ : { *(.note*) *(.comment) *(.eh_frame*) }\n"
+                + "}\n";
+    }
+
+    /** Tamanho da região do script: env → prop → default (sempre > 0). */
+    private static long freestandingSize(String env, String prop, long fallback) {
+        String raw = System.getenv(env);
+        if (raw == null || raw.isBlank()) raw = System.getProperty(prop);
+        if (raw != null && !raw.isBlank()) {
+            try {
+                long v = Long.parseLong(raw.trim());
+                if (v > 0) return v;
+            } catch (NumberFormatException ignored) {
+                // valor inválido → default (o link segue determinístico)
+            }
+        }
+        return fallback;
     }
 
     static void runCommand(String[] cmd, String name) throws IOException {

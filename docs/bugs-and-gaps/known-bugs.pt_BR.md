@@ -12045,3 +12045,12 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Fix:** `HELLO_RV_SYMS`/`HELLO_AA_SYMS` 45→55 em `ArtifactSizeTest`, com o comentário atualizado registrando o §448. É a manutenção de baseline pretendida (o teste documenta cada crescimento legítimo anterior), não um relaxamento de asserção.
 - **Prova:** `ArtifactSizeTest` 6/6 no tip E-parte-5/6; `KofOrmE2ETest` 71/0F/3skip + `NativeRiscvRuntimeSliceRegistryTest` 8/8 + `NativeCrossDynamicLinkTest` 10 + `RuntimeConstantInliningGuardTest` 2.
 - **Dono:** lane gaps-db (verificado/corrigido 23/09; crescimento da lane baremetal §448).
+
+## §451 — O `kof_panic` nativo imprimia a mensagem `.asciz` do panic como lixo (lia um comprimento de KofString falso em `16(%rdi)`) — ✅ FIXED 23/09 (lane baremetal: `kof_panic` imprime via `kof_print`/C-string, terminada em NUL)
+
+- **Achado** (lane baremetal 9092, 23/09) ao provar o heap freestanding do B-1: o teste novo de arena mínima (`FreestandingLinkE2ETest.freestandingTinyHeapFailsHonestly`) esgotou a arena → `kof_alloc_fail → kof_panic`, e o stdout foi uma sequência de bytes crus de `.rodata` (strings de HTTP, rótulos de memstats) em vez de `Runtime error: out of memory`.
+- **Causa-raiz:** o `kof_panic` (`RuntimeGc`) chamava `kof_println_string`, que espera uma **KofString** (`length` em `16(%rdi)`, dados em `24(%rdi)`), mas todo call-site do panic passa um `.asciz` estático (C string). O comprimento era lido de dentro do literal e o ponteiro de dados de além dele → mensagem lixo (e um comprimento enorme falso).
+- **Atribuição:** latente em TODOS os perfis nativos x86 (HOST incluso) — a face (i) do B-1b (22/09) trocou o dispatcher genérico `kof_println` por `kof_println_string` para derrubar o dtoa, mas a convenção de chamada da substituição não casava com os call-sites `.asciz`. Só alcançável num panic (OOM), que a arena freestanding tornou reprodutível.
+- **Fix:** o `kof_panic` imprime via `kof_print` (lê até o NUL, C-string) + `.Lnewline`; nenhum dtoa é arrastado, então a propriedade libc-free do B-1b é preservada.
+- **Prova:** `FreestandingLinkE2ETest.freestandingTinyHeapFailsHonestly` (arena de 4 KiB + programa que retém alocações) → exit != 0 e stdout contém `out of memory`; bateria 100/0F (`FreestandingLinkE2ETest` 8, `DtoaParityE2ETest` 3, `NativeE2ETest` 68, `LinkByUseTest` 3, `PlatformSeamSabotageTest` 5, `NativeRuntimeSliceRegistryTest` 7, `ArtifactSizeTest` 6) + `CmdBuildProfileTest` 4/0 / `CmdRunProfileTest` 2/0.
+- **Dono:** lane baremetal 9092.

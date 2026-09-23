@@ -363,7 +363,13 @@ public final class RuntimeGc {
                 # string (todos os call-sites passam .asciz) — usar o dispatcher
                 # genérico kof_println arrastava kof_double_to_string/kof_float_to_string
                 # (snprintf/strtod) para TODO objeto freestanding, mesmo sem float no programa.
-                call kof_println_string
+                # §451 (23/09, lane baremetal 9092): kof_println_string esperava
+                # KofString (length em 16(%rdi)) e imprimia LIXO com o .asciz do
+                # panic — bug latente exposto pelo OOM do heap freestanding (B-1).
+                # kof_print lê até o NUL (C-string), sem arrastar dtoa.
+                call kof_print
+                leaq .Lnewline(%rip), %rdi
+                call kof_print
                 movq $1, %rdi
                 call kof_plat_exit
             """);

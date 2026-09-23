@@ -105,6 +105,25 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     both arches), `NativeRiscvRuntimeSliceRegistryTest` 8/8; cross battery
     177/0F/2skip. Live count 5→4.
 
+  - **B-1 freestanding linker script — configurable heap/stack and explicit
+    `_end`** (23/09, baremetal lane): the `FREESTANDING` link now uses a
+    generated `-T` script (`ENTRY(_start)`, base `0x400000`) that closes the
+    real `.bss` with `_end` (top of the GC static-root scan) and reserves a
+    heap arena `__kof_heap_start..__kof_heap_end` plus a stack
+    `__kof_stack_bottom..__kof_stack_top` in the same NOBITS PT_LOAD, sized by
+    `KOF_HEAP_SIZE`/`KOF_STACK_SIZE` (or props `kof.heap.size`/`kof.stack.size`;
+    default 8 MiB/1 MiB). `_start` switches `%rsp` to the script stack and
+    `kof_plat_heap_grow` bump-allocates from the arena instead of `mmap`
+    (`RuntimeFreestanding`), so freestanding no longer needs a SO for memory; an
+    exhausted arena fails through `kof_panic` ("out of memory"), never a silent
+    invalid pointer. **§451 ✅ FIXED (found while proving this):** `kof_panic`
+    passed its `.asciz` message to `kof_println_string` (which expects a
+    KofString and reads a bogus length) -> garbage on any native x86 OOM; it now
+    prints via `kof_print` (C-string). Proof: `FreestandingLinkE2ETest` 8/0
+    (heap/stack sizes measured from the ELF symbols; tiny-heap OOM is honest),
+    `DtoaParityE2ETest` 3/0, `NativeE2ETest` 68/0, `ArtifactSizeTest` 6/0,
+    battery 100/0F + `CmdBuildProfileTest` 4/0, `CmdRunProfileTest` 2/0.
+
   - **§450 ✅ FIXED — `ArtifactSizeTest` hello riscv64/aarch64 symbol baseline
     went stale after §448** (23/09, gaps-db lane): the libc-free Schubfach dtoa
     is reachable from the hello's box printer (`kof_box_to_string →

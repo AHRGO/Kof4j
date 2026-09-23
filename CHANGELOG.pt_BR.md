@@ -104,6 +104,26 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     nas duas arches), `NativeRiscvRuntimeSliceRegistryTest` 8/8; bateria cross
     177/0F/2skip. Contagem viva 5→4.
 
+  - **Linker script do freestanding B-1 — heap/pilha configuráveis e `_end`
+    explícito** (23/09, lane baremetal): o link `FREESTANDING` passa a usar um
+    script `-T` gerado (`ENTRY(_start)`, base `0x400000`) que fecha a `.bss`
+    REAL com `_end` (topo da varredura de raízes estáticas do GC) e reserva uma
+    arena de heap `__kof_heap_start..__kof_heap_end` e uma pilha
+    `__kof_stack_bottom..__kof_stack_top` na mesma PT_LOAD NOBITS, com tamanho
+    por `KOF_HEAP_SIZE`/`KOF_STACK_SIZE` (ou props `kof.heap.size`/
+    `kof.stack.size`; default 8 MiB/1 MiB). O `_start` troca o `%rsp` para a
+    pilha do script e o `kof_plat_heap_grow` faz bump na arena em vez de `mmap`
+    (`RuntimeFreestanding`) — o freestanding deixa de precisar de SO para
+    memória; arena esgotada falha por `kof_panic` ("out of memory"), nunca um
+    ponteiro inválido silencioso. **§451 ✅ CORRIGIDO (achado ao provar isto):**
+    o `kof_panic` passava a mensagem `.asciz` ao `kof_println_string` (que
+    espera KofString e lê um comprimento falso) -> lixo em qualquer OOM nativo
+    x86; agora imprime via `kof_print` (C-string). Prova:
+    `FreestandingLinkE2ETest` 8/0 (tamanhos de heap/pilha medidos dos símbolos
+    do ELF; o OOM de arena mínima é honesto), `DtoaParityE2ETest` 3/0,
+    `NativeE2ETest` 68/0, `ArtifactSizeTest` 6/0, bateria 100/0F +
+    `CmdBuildProfileTest` 4/0, `CmdRunProfileTest` 2/0.
+
   - **§450 ✅ CORRIGIDO — baseline de símbolos do hello riscv64/aarch64 no
     `ArtifactSizeTest` ficou stale após o §448** (23/09, lane gaps-db): o dtoa
     Schubfach libc-free é alcançável pelo box printer do hello

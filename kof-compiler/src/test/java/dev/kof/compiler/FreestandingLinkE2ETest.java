@@ -187,4 +187,85 @@ class FreestandingLinkE2ETest {
         Path bin = build(dir, FLOAT, NativeProfile.FREESTANDING, true);
         assertEquals(jvmOracle(dir, FLOAT), runBinary(bin), "Float freestanding != oracle JVM");
     }
+
+    private static final String GROWS = """
+            main() {
+                var l = listOf(0)
+                var i = 0
+                while (i < 200000) {
+                    l.add(i)
+                    i = i + 1
+                }
+                println(l.size)
+            }
+            """;
+
+    /** Valor (hex) de um simbolo no `readelf -s`, ou null se ausente. */
+    private Long symValue(String syms, String name) {
+        for (String line : syms.split("\n")) {
+            String[] tok = line.strip().split("\\s+");
+            if (tok.length >= 8 && tok[tok.length - 1].equals(name)) {
+                try {
+                    return Long.parseLong(tok[1], 16);
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
+    @Test
+    void freestandingLinkerScriptSizesHeapAndStackFromEnv(@TempDir Path dir) throws Exception {
+        // B-1 (23/09): o linker script do freestanding reserva arena de heap +
+        // pilha e as dimensiona por KOF_HEAP_SIZE/KOF_STACK_SIZE (ou props).
+        // `_end` fecha a .bss REAL antes da arena (topo da varredura de raizes
+        // estaticas do GC). Prova: os 4 simbolos existem e os deltas == config.
+        assumeTrue(hasTool("as") && hasTool("ld") && hasTool("readelf"),
+                "x86 toolchain/readelf ausentes");
+        System.setProperty("kof.heap.size", "65536");
+        System.setProperty("kof.stack.size", "131072");
+        Path bin;
+        try {
+            bin = build(dir, PLAIN, NativeProfile.FREESTANDING, true);
+        } finally {
+            System.clearProperty("kof.heap.size");
+            System.clearProperty("kof.stack.size");
+        }
+        String syms = readelf("-s", bin);
+        Long heapStart = symValue(syms, "__kof_heap_start");
+        Long heapEnd = symValue(syms, "__kof_heap_end");
+        Long stackBottom = symValue(syms, "__kof_stack_bottom");
+        Long stackTop = symValue(syms, "__kof_stack_top");
+        Long end = symValue(syms, "_end");
+        assertTrue(heapStart != null && heapEnd != null && stackBottom != null
+                && stackTop != null && end != null, "simbolos do script ausentes:\n" + syms);
+        assertEquals(65536L, heapEnd - heapStart, "arena de heap != KOF_HEAP_SIZE");
+        assertEquals(131072L, stackTop - stackBottom, "pilha != KOF_STACK_SIZE");
+        assertEquals(heapStart.longValue(), end.longValue(),
+                "_end deve fechar a .bss REAL antes da arena");
+        assertEquals(jvmOracle(dir, PLAIN), runBinary(bin), "saida freestanding != oraculo JVM");
+    }
+
+    @Test
+    void freestandingTinyHeapFailsHonestly(@TempDir Path dir) throws Exception {
+        // B-1: a alocacao freestanding vem da arena do script (nao de mmap).
+        // Com arena minuscula, um programa que RETEM alocacoes a esgota ->
+        // kof_panic("out of memory") + exit != 0 (R6: nunca ponteiro invalido
+        // silencioso). Prova falsificavel de que o heap e o que o script deu.
+        assumeTrue(hasTool("as") && hasTool("ld"), "x86 toolchain ausente");
+        System.setProperty("kof.heap.size", "4096");
+        Path bin;
+        try {
+            bin = build(dir, GROWS, NativeProfile.FREESTANDING, true);
+        } finally {
+            System.clearProperty("kof.heap.size");
+        }
+        Process p = new ProcessBuilder(bin.toString()).redirectErrorStream(true).start();
+        String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        int ec = p.waitFor();
+        assertTrue(ec != 0, "arena de 4 KiB deveria esgotar (exit=" + ec + ", saida=" + out + ")");
+        assertTrue(out.contains("out of memory"), "panic honesto esperado, veio: " + out);
+    }
 }

@@ -14514,3 +14514,12 @@ p
 - **Fix:** `HELLO_RV_SYMS`/`HELLO_AA_SYMS` 45→55 in `ArtifactSizeTest`, with the comment updated to record §448. This is the intended baseline maintenance (the test documents every prior legitimate growth), not an assertion relaxation.
 - **Proof:** `ArtifactSizeTest` 6/6 on the E-parte-5/6 tip; `KofOrmE2ETest` 71/0F/3skip + `NativeRiscvRuntimeSliceRegistryTest` 8/8 + `NativeCrossDynamicLinkTest` 10 + `RuntimeConstantInliningGuardTest` 2.
 - **Owner:** gaps-db lane (verified/fixed 23/09; growth authored by the baremetal lane §448).
+
+## §451 — Native `kof_panic` printed the `.asciz` panic message as garbage (read a bogus KofString length at `16(%rdi)`) — ✅ FIXED 23/09 (baremetal lane: `kof_panic` prints through `kof_print`/C-string, NUL-terminated)
+
+- **Found** (baremetal lane 9092, 23/09) while proving the B-1 freestanding heap: the new tiny-heap test (`FreestandingLinkE2ETest.freestandingTinyHeapFailsHonestly`) exhausted the arena → `kof_alloc_fail → kof_panic`, and stdout was a run of raw `.rodata` bytes (HTTP strings, memstats labels) instead of `Runtime error: out of memory`.
+- **Root cause:** `kof_panic` (`RuntimeGc`) called `kof_println_string`, which expects a **KofString** (`length` at `16(%rdi)`, data at `24(%rdi)`), but every panic call-site passes a static `.asciz` (C string). The length was read from inside the literal and the data pointer from beyond it → garbage message (and a bogus huge length).
+- **Attribution:** latent on ALL native x86 profiles (HOST included) — B-1b face (i) (22/09) swapped the generic `kof_println` dispatcher for `kof_println_string` to drop dtoa, but the replacement's calling convention didn't match the `.asciz` call-sites. Only reachable on a panic (OOM), which the freestanding arena made reproducible.
+- **Fix:** `kof_panic` prints via `kof_print` (reads to the NUL, C-string) + `.Lnewline`; no dtoa is dragged in, so the B-1b libc-free property is preserved.
+- **Proof:** `FreestandingLinkE2ETest.freestandingTinyHeapFailsHonestly` (4 KiB arena + a program that retains allocations) → exit != 0 and stdout contains `out of memory`; battery 100/0F (`FreestandingLinkE2ETest` 8, `DtoaParityE2ETest` 3, `NativeE2ETest` 68, `LinkByUseTest` 3, `PlatformSeamSabotageTest` 5, `NativeRuntimeSliceRegistryTest` 7, `ArtifactSizeTest` 6) + `CmdBuildProfileTest` 4/0 / `CmdRunProfileTest` 2/0.
+- **Owner:** baremetal lane 9092.

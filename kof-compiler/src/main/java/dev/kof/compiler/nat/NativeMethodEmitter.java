@@ -402,6 +402,10 @@ final class NativeMethodEmitter {
                 .anyMatch(m -> !m.parameterTypes().isEmpty());
         sb.append("\n.globl _start\n");
         sb.append("_start:\n");
+        if (nb.freestanding) {
+            // B-1: pilha vinda do linker script, nao a que o carregador deu.
+            sb.append("    leaq __kof_stack_top(%rip), %rsp\n");
+        }
         // G-6b (16/09): fundo da pilha da thread main (rsp na entrada, antes de
         // qualquer push) — o kof_gc_mark varre a pilha INTEIRA ate aqui, nao so
         // o frame corrente (causa (1) do §260: String viva no frame de main

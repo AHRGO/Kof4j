@@ -207,6 +207,9 @@ public final class RuntimeMemory {
         // agnóstico de plataforma (o seam é o ponto único de plataforma).
         if (dev.kof.compiler.nat.NativeProfile.active == dev.kof.compiler.nat.NativeProfile.UEFI) {
             RuntimeUefi.emitUefiHeapGrow(sb);
+        } else if (dev.kof.compiler.nat.NativeProfile.active == dev.kof.compiler.nat.NativeProfile.FREESTANDING) {
+            // B-1: sem SO para mmap — a arena vem do linker script.
+            RuntimeFreestanding.emitHeapGrow(sb);
         } else {
             sb.append("""
             .section .text
