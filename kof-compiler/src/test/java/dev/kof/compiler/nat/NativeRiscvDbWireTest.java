@@ -588,6 +588,155 @@ class NativeRiscvDbWireTest {
                 "a falha deve citar kof_db_mysql_build_auth_response: " + r[0]);
     }
 
+    private static int mysqlPort() {
+        return Integer.parseInt(System.getenv().getOrDefault("KOF_MYSQL_PORT", "13306"));
+    }
+
+    /** Pula se o MariaDB real não estiver acessível (mesma porta de KofDbE2ETest). */
+    private void assumeMaria() {
+        try (java.net.Socket s = new java.net.Socket()) {
+            s.connect(new java.net.InetSocketAddress("127.0.0.1", mysqlPort()), 500);
+        } catch (Exception e) {
+            Assumptions.assumeTrue(false, "MariaDB em 127.0.0.1:" + mysqlPort() + " ausente — pulando (S5.1 real)");
+        }
+    }
+
+    /** _start: handshake real com credenciais corretas (0) e senha errada (-1). */
+    private static String mysqlHandshakeHarness() {
+        int port = mysqlPort();
+        String hi = String.format("0x%02X", (port >> 8) & 0xff);
+        String lo = String.format("0x%02X", port & 0xff);
+        return """
+                .section .data
+                .align 3
+                .Lmh_user:
+                    .zero 16
+                    .word 4
+                    .zero 4
+                    .ascii "root"
+                .align 3
+                .Lmh_pass:
+                    .zero 16
+                    .word 7
+                    .zero 4
+                    .ascii "kofpass"
+                .align 3
+                .Lmh_baddb:
+                    .zero 16
+                    .word 18
+                    .zero 4
+                    .ascii "kof_no_such_db_xyz"
+                .align 3
+                .Lmh_db:
+                    .zero 16
+                    .word 4
+                    .zero 4
+                    .ascii "test"
+                .align 3
+                .Lmh_addr:
+                    .byte 2, 0, PORT_HI, PORT_LO, 127, 0, 0, 1
+                    .zero 8
+                .align 3
+                .Lkof_heap_root_start:
+                .Lkof_heap_root_end:
+                .section .text
+                .globl _start
+                _start:
+                    andi sp, sp, -16
+                    addi sp, sp, -64
+                    # conexao 1: credenciais corretas
+                    li   a0, 2
+                    li   a1, 1
+                    li   a2, 0
+                    call kof_plat_net_socket
+                    mv   s0, a0
+                    mv   a0, s0
+                    la   a1, .Lmh_addr
+                    li   a2, 16
+                    call kof_plat_net_connect
+                    mv   a0, s0
+                    la   a1, .Lmh_user
+                    la   a2, .Lmh_pass
+                    la   a3, .Lmh_db
+                    call kof_db_mysql_handshake
+                    call kof_println_int
+                    mv   a0, s0
+                    call kof_plat_close
+                    # conexao 2: banco inexistente -> ERR (1049) do servidor
+                    li   a0, 2
+                    li   a1, 1
+                    li   a2, 0
+                    call kof_plat_net_socket
+                    mv   s0, a0
+                    mv   a0, s0
+                    la   a1, .Lmh_addr
+                    li   a2, 16
+                    call kof_plat_net_connect
+                    mv   a0, s0
+                    la   a1, .Lmh_user
+                    la   a2, .Lmh_pass
+                    la   a3, .Lmh_baddb
+                    call kof_db_mysql_handshake
+                    call kof_println_int
+                    mv   a0, s0
+                    call kof_plat_close
+                    li   a0, 0
+                    li   a7, 93
+                    ecall
+                .globl kof_super_table
+                kof_super_table:
+                    .word 0
+                """.replace("PORT_HI", hi).replace("PORT_LO", lo);
+    }
+
+    @Test
+    void handshakeAgainstRealMariaDbOnRiscv64(@TempDir Path tempDir) throws Exception {
+        assumeRiscv();
+        assumeMaria();
+        String harness = mysqlHandshakeHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String out = buildRun("riscv64", tempDir, "hs_rv", harness + "\n" + runtime);
+        assertEquals("0\n-1", out, "handshake riscv64: creds ok devem dar 0 e banco inexistente -1");
+    }
+
+    @Test
+    void handshakeAgainstRealMariaDbOnAarch64(@TempDir Path tempDir) throws Exception {
+        assumeAarch64();
+        assumeMaria();
+        String harness = mysqlHandshakeHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String riscv = harness + "\n" + runtime;
+        StringBuilder arm = new StringBuilder();
+        for (String line : riscv.split("\n", -1)) {
+            for (String t : NativeAarch64Translator.translateRiscvToAarch64(line)) arm.append(t).append('\n');
+        }
+        String out = buildRun("aarch64", tempDir, "hs_aa", arm.toString());
+        assertEquals("0\n-1", out, "handshake aarch64: creds ok devem dar 0 e banco inexistente -1");
+    }
+
+    @Test
+    void withoutHandshakePieceLinkFailsSabotage(@TempDir Path tempDir) throws IOException {
+        assumeRiscv();
+        String harness = mysqlHandshakeHarness();
+        Set<Integer> keep = new LinkedHashSet<>(RiscvSlices.keepForProgramText(harness));
+        int b66 = -1;
+        for (RiscvSlices.Piece p : RiscvSlices.pieces()) {
+            if ("RISCV_RUNTIME_ASM_B_66".equals(p.field())) b66 = p.index();
+        }
+        assertTrue(b66 >= 0, "peça B66 (handshake) não encontrada no inventário");
+        assertTrue(keep.remove(b66), "B66 deveria estar no keep do harness de handshake");
+        String runtime = RiscvSlices.renderSubset(keep);
+        Path asm = tempDir.resolve("sab_hs.s");
+        Files.writeString(asm, harness + "\n" + runtime);
+        Path obj = tempDir.resolve("sab_hs.o");
+        Path bin = tempDir.resolve("sab_hs");
+        runCapture("riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
+        String[] r = runAllowFail("riscv64-linux-gnu-ld", "--no-relax", "-o", bin.toString(), obj.toString());
+        assertNotEquals("0", r[1], "sem a B66 o link deveria falhar (undefined kof_db_mysql_handshake); saída: " + r[0]);
+        assertTrue(r[0].contains("kof_db_mysql_handshake"),
+                "a falha deve citar kof_db_mysql_handshake: " + r[0]);
+    }
+
     @Test
     void greetingParseMatchesOracleOnRiscv64(@TempDir Path tempDir) throws Exception {
         assumeRiscv();

@@ -8,7 +8,7 @@
 > when parity is complete.
 
 **Owner:** `gaps-db` lane (handed over 21/09 by order of the maintainer, under `D-DB-PARITY-OWNER`; S0/S1 authorized) · **Records/plan:** docs/plataforma lane
-**Branch:** `beta-0.5.0` · **Status:** S0 ✅ DONE (21/09, session 9092) — honest native refusal of an unsupported scheme with the named `DB001` code, plus real link-by-use (no `libmariadb` link for non-mysql literals); **S1 ✅ DONE on Native x86-64 (23/09, gaps-db lane)** — `mariadb://` is a `mysql://` wire alias; cross stays honest `DB001` until the mysql wire is ported (R7); **S2 ✅ DONE on JVM/JS/Android (23/09, gaps-db lane)** — a missing JDBC driver is now a named `DB001` diagnostic (real connection failures untouched); **S3/S4 ✅ DONE 23/09 (gaps-db lane)** — `mongodb://` real on JVM/Android and declared `DB001` on JS/Native; `oracle` declared (no driver/server on the host); **S5.0 (cross socket layer) ✅ SATISFIED 23/09 (measured — already proven by the cross HTTP core)**; **S5.1 (handshake+auth) STARTED 23/09 (cross piece `B62`: `kof_sec_sha1_block`/`kof_sec_sha1_internal` short-input + `kof_bswap32/64`, proven on both arches by `NativeRiscvDbWireTest` against the JVM `MessageDigest` oracle; scramble/lenenc/greeting still on the next dedicated slice)**
+**Branch:** `beta-0.5.0` · **Status:** S0 ✅ DONE (21/09, session 9092) — honest native refusal of an unsupported scheme with the named `DB001` code, plus real link-by-use (no `libmariadb` link for non-mysql literals); **S1 ✅ DONE on Native x86-64 (23/09, gaps-db lane)** — `mariadb://` is a `mysql://` wire alias; cross stays honest `DB001` until the mysql wire is ported (R7); **S2 ✅ DONE on JVM/JS/Android (23/09, gaps-db lane)** — a missing JDBC driver is now a named `DB001` diagnostic (real connection failures untouched); **S3/S4 ✅ DONE 23/09 (gaps-db lane)** — `mongodb://` real on JVM/Android and declared `DB001` on JS/Native; `oracle` declared (no driver/server on the host); **S5.0 (cross socket layer) ✅ SATISFIED 23/09 (measured — already proven by the cross HTTP core)**; **S5.1 (handshake+auth) ✅ SATISFIED 23/09 (pieces `B62`–`B66`): SHA1/bswap + scramble/lenenc + greeting parse + auth-response build + the socket round-trip, proven by `NativeRiscvDbWireTest` on riscv64+aarch64 (qemu, against the JVM oracle and against the REAL MariaDB — the server returns the OK packet; an unknown DB yields Err). The Kof surface (`db.connect` cross) still emits the honest `DB001` until S5.4**
 
 ---
 
@@ -195,9 +195,19 @@ typed roundtrip) produces the **same observable result** on all four targets, or
       `<20>+scramble` or empty, database, plugin `mysql_native_password`),
       mirroring `RuntimeDb3`. Proof: `NativeRiscvDbWireTest` builds it for
       `passLen=20` and empty on both arches against a fixed oracle, plus a B65
-      sabotage test. **Still open:** wire it to the socket (send the response,
-      read the OK / handle `AuthSwitchRequest`) — the last S5.1 step towards the
-      real-MariaDB-under-qemu proof.
+      sabotage test.
+    - **23/09 — fifth/final slice DONE (piece `B66`, gaps-db lane):** the socket
+      round-trip — `kof_db_mysql_handshake(fd, user, pass, db)` reads the
+      greeting, parses the seed, computes the scramble, builds and sends the
+      handshake response and reads OK/ERR, over the `kof_plat_net_*` HAL.
+      **S5.1 ✅ SATISFIED:** `NativeRiscvDbWireTest` drives it on riscv64 +
+      aarch64 (qemu) against the **real MariaDB** — correct credentials return
+      `0` (OK packet received) and an unknown database returns `-1` (Err 1049).
+      (The host runs MariaDB with `--skip-grant-tables`, so the pass/fail axis is
+      the unknown-DB error, not the password; the scramble itself is proven
+      against the JVM oracle in B63.) The `AuthSwitchRequest` branch is not hit
+      by this server (native password is the default) and stays a declared,
+      diagnosed path for a later slice if a server negotiates it.
   - **S5.2 — `COM_QUERY` + text resultset.** Port packet framing + result parse.
     *Proof:* `db.query` roundtrip under qemu, byte-identical to x86/JVM.
   - **S5.3 — bind/prepared + tx + ORM.** Port the prepared/execute/transaction

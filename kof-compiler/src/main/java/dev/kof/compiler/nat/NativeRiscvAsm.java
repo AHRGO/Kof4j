@@ -180,6 +180,10 @@ public final class NativeRiscvAsm {
                 // (handshake response) — capabilities/user/scramble/db/plugin
                 // (port de RuntimeDb3); aarch64 herda via tradutor.
                 .append(NativeRiscvAsmRtB65.RISCV_RUNTIME_ASM_B_65)
+                // S5.1 db-parity (gaps-db lane, 23/09): fecha o handshake/auth —
+                // le greeting, scramble, monta/envia a resposta e le o OK (port
+                // do fluxo de RuntimeDb3 sobre as pecas B62..B65 + HAL de socket).
+                .append(NativeRiscvAsmRtB66.RISCV_RUNTIME_ASM_B_66)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

@@ -139,6 +139,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `GenericInterfaceAssignabilityTest` **10/10** (JVM/Script/JS + Native direto e
     herdado; RED medido com o código sem o fix). Suíte completa 3197/0F/0E.
 
+  - **S5.1 SATISFEITA (db-parity, lane gaps-db) — handshake/auth MySQL sobre o
+    socket cross (peça cross `B66`)** (23/09): `kof_db_mysql_handshake(fd, user,
+    pass, db)` lê o greeting, parseia o seed, calcula o scramble
+    `mysql_native_password`, monta/envia a resposta e lê OK/ERR, sobre a HAL
+    `kof_plat_net_*`. Prova: `NativeRiscvDbWireTest` dirige em riscv64 + aarch64
+    sob qemu contra o **MariaDB real** — credenciais corretas devolvem `0`
+    (pacote OK) e um banco inexistente devolve `-1` (Err 1049) — mais um teste
+    de sabotagem da B66. O `db.connect` cross mantém o `DB001` honesto até o
+    S5.4 ligar a superfície Kof.
+
   - **S5.1 (db-parity, lane gaps-db) — montador do auth response MySQL para o
     wire cross (peça cross `B65`)** (23/09): `kof_db_mysql_build_auth_response`
     escreve o frame do handshake response (len 3 bytes + seq 1) e o payload

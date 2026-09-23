@@ -8,7 +8,7 @@
 > estiver completa.
 
 **Dono:** lane `gaps-db` (repassada 21/09 por ordem da mantenedora, sob `D-DB-PARITY-OWNER`; S0/S1 autorizadas) · **Registros/plano:** lane docs/plataforma
-**Branch:** `beta-0.5.0` · **Estado:** S0 ✅ FEITO (21/09, sessão 9092) — recusa nativa honesta de scheme não suportado com o código nomeado `DB001`, mais link-by-use real (sem link de `libmariadb` para literais não-mysql); **S1 ✅ FEITO no Native x86-64 (23/09, lane gaps-db)** — `mariadb://` é alias do wire `mysql://`; no cross segue `DB001` honesto até o wire mysql ser portado (R7); **S2 ✅ FEITO no JVM/JS/Android (23/09, lane gaps-db)** — driver JDBC ausente agora é diagnóstico `DB001` nomeado (falhas reais de conexão intactas); **S3/S4 ✅ FEITOS 23/09 (lane gaps-db)** — `mongodb://` real no JVM/Android e `DB001` declarado no JS/Native; `oracle` declarado (sem driver/servidor no host); **S5.0 (camada de socket cross) ✅ SATISFEITA 23/09 (medido — já provada pelo core HTTP cross)**; **S5.1 (handshake+auth) INICIADA 23/09 (peça cross `B62`: `kof_sec_sha1_block`/`kof_sec_sha1_internal` de entrada curta + `kof_bswap32/64`, provados nas 2 archs por `NativeRiscvDbWireTest` contra o oráculo `MessageDigest` do JVM; scramble/lenenc/greeting ficam na próxima fatia dedicada)**
+**Branch:** `beta-0.5.0` · **Estado:** S0 ✅ FEITO (21/09, sessão 9092) — recusa nativa honesta de scheme não suportado com o código nomeado `DB001`, mais link-by-use real (sem link de `libmariadb` para literais não-mysql); **S1 ✅ FEITO no Native x86-64 (23/09, lane gaps-db)** — `mariadb://` é alias do wire `mysql://`; no cross segue `DB001` honesto até o wire mysql ser portado (R7); **S2 ✅ FEITO no JVM/JS/Android (23/09, lane gaps-db)** — driver JDBC ausente agora é diagnóstico `DB001` nomeado (falhas reais de conexão intactas); **S3/S4 ✅ FEITOS 23/09 (lane gaps-db)** — `mongodb://` real no JVM/Android e `DB001` declarado no JS/Native; `oracle` declarado (sem driver/servidor no host); **S5.0 (camada de socket cross) ✅ SATISFEITA 23/09 (medido — já provada pelo core HTTP cross)**; **S5.1 (handshake+auth) ✅ SATISFEITA 23/09 (peças `B62`–`B66`): SHA1/bswap + scramble/lenenc + parse do greeting + montagem da resposta de auth + o round-trip de socket, provados por `NativeRiscvDbWireTest` em riscv64+aarch64 (qemu, contra o oráculo JVM e contra o MariaDB REAL — o servidor devolve o pacote OK; um DB inexistente devolve Err). A superfície Kof (`db.connect` cross) segue emitindo o `DB001` honesto até o S5.4**
 
 ---
 
@@ -197,9 +197,19 @@ por scheme é a prova.
       `<20>+scramble` ou vazio, database, plugin `mysql_native_password`),
       espelhando o `RuntimeDb3`. Prova: `NativeRiscvDbWireTest` monta para
       `passLen=20` e vazio nas 2 archs contra um oráculo fixo, mais um teste de
-      sabotagem da B65. **Ainda aberto:** ligar ao socket (enviar a resposta,
-      ler o OK / tratar `AuthSwitchRequest`) — último passo do S5.1 até a prova
-      com o MariaDB real sob qemu.
+      sabotagem da B65.
+    - **23/09 — quinta/última fatia FEITA (peça `B66`, lane gaps-db):** o
+      round-trip de socket — `kof_db_mysql_handshake(fd, user, pass, db)` lê o
+      greeting, parseia o seed, calcula o scramble, monta e envia a resposta e
+      lê OK/ERR, sobre a HAL `kof_plat_net_*`. **S5.1 ✅ SATISFEITA:**
+      `NativeRiscvDbWireTest` dirige em riscv64 + aarch64 (qemu) contra o
+      **MariaDB real** — credenciais corretas devolvem `0` (pacote OK recebido) e
+      um banco inexistente devolve `-1` (Err 1049). (O host roda MariaDB com
+      `--skip-grant-tables`, então o eixo passa/falha é o erro de DB inexistente,
+      não a senha; o scramble em si é provado contra o oráculo JVM na B63.) O
+      ramo `AuthSwitchRequest` não é atingido por este servidor (native password
+      é o default) e fica como caminho declarado/diagnosticado para uma fatia
+      futura caso um servidor o negocie.
   - **S5.2 — `COM_QUERY` + resultset texto.** Portar framing + parse do resultado.
     *Prova:* roundtrip `db.query` sob qemu, byte-idêntico ao x86/JVM.
   - **S5.3 — bind/prepared + tx + ORM.** Portar o dispatch de prepared/execute/
