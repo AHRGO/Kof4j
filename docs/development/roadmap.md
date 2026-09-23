@@ -1052,8 +1052,8 @@ Ordered queue from the maintainer's multiple-choice rulings 23/09 (source:
 | 13.1 | §248 — interface default methods on JS + Native (parity) | compiler (**9092, ✅ DONE 23/09**) | Native vtable slot + JS materialization; `InterfaceDefaultMethodE2ETest` 7/7 on 4 targets |
 | 13.2 | §271 — bridge methods on generic-interface impls (erasure ABI) | compiler (**9092, ✅ DONE 23/09**) | JVM face ✅ (§356 `c8d55a10`); Native face ✅ (§483) — `NoSuchMethodError` closed, suite green |
 | 13.3 | §278 — port `kof.security` (`kof.security` ✅ **DONE 23/09**, byte-parity Android=JVM; `kof.gpu` residual — FFM absent on Android, needs a design decision) | gaps-db | security byte-parity proven; gpu face pending |
-| 13.4 | §423 — port `kof_channel_*` runtime to riscv64/aarch64 | nat | qemu proof on both arches |
-| 13.5 | Split batch: `NativeBackend` 603 + `CompilerPipeline` 588 + `RuntimeOrm7` 585 (behavior-preserving, precedent §442/§446) — `CompilerPipeline` ✅ **475** (23/09, 9092); `RuntimeOrm7` pending; `NativeBackend` blocked by UEFI WIP 9093 | claimant lane | `check_500.sh` rc=0 + same suite green |
+| 13.4 | §423 — port `kof_channel_*` runtime to riscv64/aarch64 | nat (**✅ DONE 23/09, baremetal 9092**) | `kof_channel_*` in slice `RtB61`, `NAT005` gate removed; qemu parity on both arches (`BareCollectionPrimitiveArgE2ETest` 12/12; ledger §423 ✅ FIXED) |
+| 13.5 | Split batch: `NativeBackend` 603 + `CompilerPipeline` 588 + `RuntimeOrm7` 585 (behavior-preserving, precedent §442/§446) | 9092 (**✅ DONE 23/09**) | `CompilerPipeline` ✅ 475; `RuntimeOrm7` ✅ split (`RuntimeOrm7` 34 + `RuntimeOrm7Setup` 265 + `RuntimeOrm7Fetch` 329); `NativeBackend` ✅ 547 (<600, tolerated band; baseline 571→547 refreshed) — `check_500.sh` rc=0, suite green |
 | 13.6 | D6-1=B — mutable `struct` by-ref front (spec-first, rule 11) | FFI | design §4/§6 reviewed, then parser/typer diff + tests |
 
 ## 24. KOF 1.0 EXIT GATE — contract stabilization (RATIFIED 09/20/2026, `DECISIONS.md` §D-RELEASE-1.0; edges closed by `D-1.0-EDGES`)
