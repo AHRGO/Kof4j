@@ -69,7 +69,7 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     FFI battery 107/0F/2skip. `docs/development/kof-c-cross.md` C4-x link half
     + ABI half now complete.
 
-  - **`kof.orm` cross riscv64/aarch64 — slices A/B: `deleteAll` + `count` real over SQLite**
+  - **`kof.orm` cross riscv64/aarch64 — slices A–E: `deleteAll`/`count`/`create`/`migrate`/`count_where`/`delete` real over SQLite**
     (22/09, gaps-db lane, DB-3/DB-1): the ORM was x86-64-only on Native (the
     cross targets refused every `orm.*` with a compile-time `ORM001`). Slice A
     ports `kof_orm_delete_all` + `kof_orm_count` (F1a of `RuntimeOrm1`) to the
@@ -109,6 +109,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (bool literal/var/false hit the right rows, TEXT row not matched,
     injection/negative/miss/ORM001/bad id); `KofOrmE2ETest` 64/0F; battery
     315/0F. `orm.all` gate pin on cross.
+    Slice E adds `delete` (piece `RtB54`, port of `RuntimeOrm9` plus the
+    schema parser of `RuntimeOrmSchema`) — pk = first `:generated` field
+    (else 0), `DELETE FROM "t" WHERE "pk" = ?` (table KofString-quoted via
+    `.L54_qq`, pk raw-quoted via `.L54_qraw`), key through the same
+    classifier as `count_where` (§284 box / KofString / null; foreign tag →
+    `bind_null`, as x86), always true on SQLITE_DONE (miss too — host
+    `execute1 >= 0`), prepare/step failure → `sqlite: <errmsg>` (R6), bad id
+    → host throw; the parser ABI (`.L54_ps(schema*) -> ftab/nbuf/nFields/pkIndex`)
+    is reused by the next row-object slices. `CROSS_FACES` (ex-`CROSS_F1A`)
+    gains `kof_orm_delete` (6 names). Proof:
+    `KofOrmE2ETest.crossNativeF2c3DeleteMatchesX86Oracle` byte-parity x86-64
+    oracle + riscv64/aarch64 + JVM host leg (Long pk > int32, negative pk,
+    miss true, re-delete, bad id throw + recovery); `KofOrmE2ETest` 65/0F;
+    battery 91/0F.
   - **check_500 red closed — `TypeChecker` 606 + `StatementAnalyzer` 600 (known-bugs §446)**
     (22/09, typer lane, session 9093): the two CRITICAL files inherited from the
     §280 slices were split by responsibility (`SemBinaryResultTyper` +166,

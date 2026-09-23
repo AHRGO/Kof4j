@@ -72,7 +72,7 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     rejeições de gate; bateria FFI 107/0F/2skip. `docs/development/kof-c-cross.md`
     metade de link (C4-x) + metade de ABI agora completas.
 
-  - **`kof.orm` cross riscv64/aarch64 — fatias A/B: `deleteAll` + `count` reais sobre SQLite**
+  - **`kof.orm` cross riscv64/aarch64 — fatias A–E: `deleteAll`/`count`/`create`/`migrate`/`count_where`/`delete` reais sobre SQLite**
     (22/09, lane gaps-db, DB-3/DB-1): o ORM era só x86-64 no Native (os alvos
     cross recusavam todo `orm.*` com `ORM001` em compile-time). A fatia A
     porta `kof_orm_delete_all` + `kof_orm_count` (F1a de `RuntimeOrm1`) para o
@@ -113,6 +113,21 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     valores (bool literal/var/false casam as linhas certas, linha TEXT não
     casada, injeção/negativo/miss/ORM001/id-ruim); `KofOrmE2ETest` 64/0F;
     bateria 315/0F.
+    A fatia E adiciona `delete` (peça `RtB54`, port de `RuntimeOrm9` + o
+    parser de schema do `RuntimeOrmSchema`) — pk = primeiro campo
+    `:generated` (senão 0), `DELETE FROM "t" WHERE "pk" = ?` (tabela com
+    aspas pelo `.L54_qq`, pk crua pelo `.L54_qraw`), key pelo mesmo
+    classificador do `count_where` (caixa §284 / KofString / null; tag
+    estranha → `bind_null`, como o x86), sempre true no SQLITE_DONE (miss
+    também — `execute1 >= 0` do host), falha de prepare/step → `sqlite:
+    <errmsg>` (R6), id ruim → throw do host; a ABI do parser
+    (`.L54_ps(schema*) -> ftab/nbuf/nFields/pkIndex`) é reusada pelas
+    próximas fatias row-object. `CROSS_FACES` (ex-`CROSS_F1A`) ganha
+    `kof_orm_delete` (6 nomes). Prova:
+    `KofOrmE2ETest.crossNativeF2c3DeleteMatchesX86Oracle` byte-parity
+    oráculo x86-64 + riscv64/aarch64 + perna host JVM (pk Long > int32, pk
+    negativa, miss true, re-delete, id ruim throw + recuperação);
+    `KofOrmE2ETest` 65/0F; bateria 91/0F.
   - **check_500 vermelho fechado — `TypeChecker` 606 + `StatementAnalyzer` 600 (known-bugs §446)**
     (22/09, lane typer, sessão 9093): os dois arquivos CRÍTICOS herdados das
     fatias do §280 foram splitados por responsabilidade (`SemBinaryResultTyper`

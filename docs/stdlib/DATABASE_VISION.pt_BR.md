@@ -7,7 +7,7 @@
 > provados: Nível 3 (Query DSL tipada `User.query(db){...}` → `db.query<T>`) ✅
 > 01/09 (`KofOrmE2ETest` 22); MySQL prepared binário ✅ 03/09
 > (`KofDbE2ETest.nativeMysqlPreparedBinary`). Connection pooling é PLANNED (nenhuma pool hoje — cada `connect` abre sua própria conexão, §Limitações abaixo). DB001/ORM001 em
-> (DB001 fechado: riscv/aarch 15/09 + JS 16/09; ORM001 fechado no JS 18/09); ORM **F1a+F1c+F1d+F3a reais desde 22/09 no Native cross riscv64/aarch64** (`deleteAll`/`count`/`create`/`migrate`/`count` com filtro sobre SQLite, peças `RtB50`/`RtB51`/`RtB52`/`RtB53`; §447 corrigido: literal Bool boxeia `kof_box_bool` no Native), com `ORM001` nas faces cross restantes (ORM x86-64 real desde 22/09: 13/13 faces sobre SQLite + MySQL wire, F2d1–F2d7) tracked em `docs/backend-parity.md`,
+> (DB001 fechado: riscv/aarch 15/09 + JS 16/09; ORM001 fechado no JS 18/09); ORM **F1a+F1c+F1d+F3a+F2c3 reais desde 22/09 no Native cross riscv64/aarch64** (`deleteAll`/`count`/`create`/`migrate`/`count` com filtro/`delete` sobre SQLite, peças `RtB50`/`RtB51`/`RtB52`/`RtB53`/`RtB54`; §447 corrigido: literal Bool boxeia `kof_box_bool` no Native), com `ORM001` nas faces cross restantes (ORM x86-64 real desde 22/09: 13/13 faces sobre SQLite + MySQL wire, F2d1–F2d7) tracked em `docs/backend-parity.md`,
 > não pendência desta visão.
 
 **Última atualização:** 12 de setembro de 2026
@@ -274,7 +274,7 @@ main() {
 - **MongoDB:** `save/find/all/where/delete/count` sobre o driver oficial via
   reflexão compatível (`Bson`/`Class`, sem `ClientSession`); teste E2E com
   container real (skip condicional; serviço Mongo no CI).
-- **Native x86-64:** real (`kof_orm_*` em asm sobre o `kof_db_*` nativo; SQLite + MySQL wire). **Native riscv64/aarch64:** ORM F1a+F1c+F1d+F3a reais desde 22/09 (`deleteAll`/`count`/`create`/`migrate`/`count` com filtro sobre SQLite, peças `RtB50`/`RtB51`/`RtB52`/`RtB53`; §447 literal Bool boxeia `kof_box_bool` no Native); o restante reporta `ORM001` (gap documentado em compile-time). **JS:** FECHADO
+- **Native x86-64:** real (`kof_orm_*` em asm sobre o `kof_db_*` nativo; SQLite + MySQL wire). **Native riscv64/aarch64:** ORM F1a+F1c+F1d+F3a+F2c3 reais desde 22/09 (`deleteAll`/`count`/`create`/`migrate`/`count` com filtro/`delete` sobre SQLite, peças `RtB50`/`RtB51`/`RtB52`/`RtB53`/`RtB54`; §447 literal Bool boxeia `kof_box_bool` no Native); o restante reporta `ORM001` (gap documentado em compile-time). **JS:** FECHADO
   18/09 — `kof.orm` roda no host GraalJS via `KofJsOrmBridge` (mesmo SQL de
   `JvmOrmRuntime`), records tipados bindados no guest (`__kof_decode_<T>`);
   E2E byte-paridade em `KofOrmE2ETest` (casos `js*`).

@@ -2490,6 +2490,65 @@ class KofOrmE2ETest {
                 findDriverJar("sqlite-jdbc", "SQLite"), goldenJvm);
     }
 
+    /** DB-3/DB-1 cross slice E (22/09): {@code orm.delete} REAL no riscv64/
+     *  aarch64 (peça RtB54, port de RuntimeOrm9) — a PK resolvida pelo parser
+     *  de schema portado de RuntimeOrmSchema (primeiro campo {@code generated},
+     *  senão 0), SQL {@code DELETE FROM "t" WHERE "pk" = ?} (tabela e PK com
+     *  aspas duplas, key pelo classificador box §284/KofString/null) e sempre
+     *  {@code true} no SQLITE_DONE — inclusive no miss (host {@code execute1 >= 0}).
+     *  Q3: PK Long grande (&gt; int32, prova do bind int64) e negativa, miss,
+     *  re-delete, id ruim → throw + recuperação. Byte-parity com o oráculo
+     *  x86-64. */
+    @Test
+    void crossNativeF2c3DeleteMatchesX86Oracle(@TempDir Path tempDir) throws IOException {
+        assumeTrue(isLinux(), "cross ORM E2E requires Linux + libsqlite3");
+        String template = """
+            entity User {
+                id: Long generated
+                name: String
+                email: String unique
+                age: Int
+            }
+            main() {
+                var db = db.connect("sqlite:%s/kof.db")
+                println(orm.create<User>(db))
+                db.execute(db, "insert into user (name, email, age) values ('Mel', 'm@kof.dev', 30)")
+                db.execute(db, "insert into user (name, email, age) values ('Ana', 'a@kof.dev', 25)")
+                db.execute(db, "insert into user (name, email, age) values ('Bia', 'b@kof.dev', 41)")
+                db.execute(db, "insert into user (id, name, email, age) values (5000000000, 'Big', 'big@kof.dev', 7)")
+                db.execute(db, "insert into user (id, name, email, age) values (-7, 'Neg', 'neg@kof.dev', 8)")
+                println(orm.count<User>(db))
+                println(orm.delete<User>(db, 2))
+                println(orm.count<User>(db))
+                println(orm.delete<User>(db, 999))
+                println(orm.count<User>(db))
+                var big: Long = 5000000000
+                println(orm.delete<User>(db, big))
+                var neg: Long = -7
+                println(orm.delete<User>(db, neg))
+                println(orm.count<User>(db))
+                println(db.query(db, "select name from user order by id").get(0))
+                println(orm.delete<User>(db, 1))
+                println(orm.delete<User>(db, 3))
+                println(orm.delete<User>(db, 3))
+                println(orm.count<User>(db))
+                try {
+                    println(orm.delete<User>("db2", 1))
+                } catch (String e) {
+                    println(e)
+                }
+                println("after-throw")
+                db.close(db)
+            }
+            """;
+        String golden = "true\n5\ntrue\n4\ntrue\n4\ntrue\ntrue\n2\n{\"name\":\"Mel\"}\n"
+                + "true\ntrue\ntrue\n0\nunknown db connection: db2\nafter-throw";
+        String oracle = runX86CreateOracle(tempDir, "delete", template);
+        assertEquals(golden, oracle,
+                "oráculo x86-64 (delete: PK do schema, miss true, Long>int32, negativo, id ruim)");
+        assertCrossCreateParity(tempDir, "delete", template, oracle);
+    }
+
     /** x86-64: compila e roda o template numa pasta propria (banco limpo) e
      *  devolve o stdout — o oráculo do contrato D-DB-GAPS. */
     private String runX86CreateOracle(Path tempDir, String label, String template) throws IOException {
