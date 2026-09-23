@@ -8,7 +8,7 @@
 > estiver completa.
 
 **Dono:** lane `gaps-db` (repassada 21/09 por ordem da mantenedora, sob `D-DB-PARITY-OWNER`; S0/S1 autorizadas) · **Registros/plano:** lane docs/plataforma
-**Branch:** `beta-0.5.0` · **Estado:** S0 ✅ FEITO (21/09, sessão 9092) — recusa nativa honesta de scheme não suportado com o código nomeado `DB001`, mais link-by-use real (sem link de `libmariadb` para literais não-mysql); **S1 ✅ FEITO no Native x86-64 (23/09, lane gaps-db)** — `mariadb://` é alias do wire `mysql://`; no cross segue `DB001` honesto até o wire mysql ser portado (R7); **S2 ✅ FEITO no JVM/JS/Android (23/09, lane gaps-db)** — driver JDBC ausente agora é diagnóstico `DB001` nomeado (falhas reais de conexão intactas); **S3/S4 ✅ FEITOS 23/09 (lane gaps-db)** — `mongodb://` real no JVM/Android e `DB001` declarado no JS/Native; `oracle` declarado (sem driver/servidor no host); **S5 (wire cross `mysql://`/`mariadb://`) PLANEJADO — dimensionado 23/09**
+**Branch:** `beta-0.5.0` · **Estado:** S0 ✅ FEITO (21/09, sessão 9092) — recusa nativa honesta de scheme não suportado com o código nomeado `DB001`, mais link-by-use real (sem link de `libmariadb` para literais não-mysql); **S1 ✅ FEITO no Native x86-64 (23/09, lane gaps-db)** — `mariadb://` é alias do wire `mysql://`; no cross segue `DB001` honesto até o wire mysql ser portado (R7); **S2 ✅ FEITO no JVM/JS/Android (23/09, lane gaps-db)** — driver JDBC ausente agora é diagnóstico `DB001` nomeado (falhas reais de conexão intactas); **S3/S4 ✅ FEITOS 23/09 (lane gaps-db)** — `mongodb://` real no JVM/Android e `DB001` declarado no JS/Native; `oracle` declarado (sem driver/servidor no host); **S5.0 (camada de socket cross) ✅ SATISFEITA 23/09 (medido — já provada pelo core HTTP cross); S5.1 (handshake+auth) é a próxima fatia dedicada**
 
 ---
 
@@ -151,23 +151,23 @@ por scheme é a prova.
   | `RuntimeDb6` (`kof_db_mysql_*`) | tratamento de valor/coluna |
 
   **Fatias (uma sessão cada, cada uma com a própria prova):**
-  - **S5.1 — camada de socket cross.** Portar `kof_net_*` (socket/connect/read/
-    write/close) para asm riscv64 (aarch64 via tradutor). **Medido 23/09:** a HAL
-    cross (`NativeRiscvAsmRt0`) já tem `kof_plat_net_socket` (198) e
-    `kof_plat_net_connect` (203) mais `kof_plat_read/close`; faltam só
-    `kof_plat_net_send` (syscall 206 `sendto` com addr NULL) e os wrappers finos
-    `kof_net_*` (formato do `RuntimeNet`). Os helpers de URL `kof_net_*` cross já
-    existem (`NativeRiscvAsmRtB24`). *Prova:* como o cross não tem API de rede
-    pública, o consumidor independente é o próprio wire DB — a prova ponta a ponta
-    pousa com o S5.2 (connect chega ao greeting); o S5.1 trava em nível
-    símbolo/asm + link (programa cross `db.connect("mysql://…")` linka).
-  - **S5.2 — handshake + auth.** Portar SHA1/scramble/lenenc + ler o greeting +
-    enviar o auth switch. *Prova:* connect no MariaDB real sob qemu chega ao pacote OK.
-  - **S5.3 — `COM_QUERY` + resultset texto.** Portar framing + parse do resultado.
+  - **S5.0 — camada de socket cross. ✅ SATISFEITA (medido 23/09).** A HAL cross
+    (`NativeRiscvAsmRt0`) já expõe `kof_plat_net_socket` (198) /
+    `kof_plat_net_connect` (203) / `kof_plat_read` (63) / `kof_plat_write` (64) /
+    `kof_plat_close` (57), e o core HTTP cross (`NativeRiscvHttpCore`) já conduz TCP
+    real com eles sob qemu — `KofHttpNativeResilienceCrossTest` abre/lê/escreve/
+    re-tenta sockets de verdade no riscv64/aarch64. **Nenhum wrapper novo é
+    necessário:** o wire DB constrói direto sobre os mesmos primitivos (write num fd
+    funciona em socket), exatamente como o core HTTP faz. (Os wrappers `kof_net_*`
+    do x86 são conveniência do x86, não requisito.)
+  - **S5.1 — handshake + auth.** Portar SHA1/scramble/lenenc + ler o greeting +
+    enviar a resposta de handshake/auth-switch. *Prova:* programa cross conecta no
+    MariaDB real sob qemu e o servidor devolve o pacote OK.
+  - **S5.2 — `COM_QUERY` + resultset texto.** Portar framing + parse do resultado.
     *Prova:* roundtrip `db.query` sob qemu, byte-idêntico ao x86/JVM.
-  - **S5.4 — bind/prepared + tx + ORM.** Portar o dispatch de prepared/execute/
+  - **S5.3 — bind/prepared + tx + ORM.** Portar o dispatch de prepared/execute/
     transaction. *Prova:* E2E `orm.*` sob qemu.
-  - **S5.5 — link + teste de paridade.** `-lmariadb` link-by-use no cross + o
+  - **S5.4 — link + teste de paridade.** `-lmariadb` link-by-use no cross + o
     espelho riscv/aarch de `KofDbE2ETest#nativeMariadbAliasWireProtocol`. Depois
     disso o `DB001` cross do S1 vira real.
 
