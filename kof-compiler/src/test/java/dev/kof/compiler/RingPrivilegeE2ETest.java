@@ -87,6 +87,7 @@ class RingPrivilegeE2ETest {
 
     private Path makeEsp(Path tempDir, Path peBinary) throws IOException, InterruptedException {
         Path esp = tempDir.resolve("esp.img");
+        Files.deleteIfExists(esp);
         run(5_000, "mformat", "-i", esp.toString(), "-C", "-T", "16384", "::");
         run(5_000, "mmd", "-i", esp.toString(), "::/EFI");
         run(5_000, "mmd", "-i", esp.toString(), "::/EFI/BOOT");
@@ -100,17 +101,31 @@ class RingPrivilegeE2ETest {
                 "falhou: " + String.join(" ", cmd));
     }
 
-    /** Boota o PE sob OVMF e devolve o texto do serial (bounded, §418). */
+    /** Boota o PE sob OVMF e devolve o texto do serial. Faz até 2 tentativas:
+     *  o boot OVMF/qemu é estável (~7 s quando funciona), mas o host já mediu
+     *  um travamento de agendamento (imprime o 1º byte e estanca) — uma segunda
+     *  tentativa determinística elimina o flake ambiental sem mascarar fault
+     *  real (um fault real falha nas duas). Janela por tentativa: 60 s. */
     private String bootOvmf(Path tempDir, Path peBinary, String expected) throws Exception {
         Path code = findOvmfCode();
         Path qemu = findQemu();
         assumeTrue(code != null, "OVMF ausente (KOF_OVMF_HOME ou ~/.local/share/kof-ovmf)");
         assumeTrue(qemu != null, "qemu-system-x86_64 ausente");
         assumeTrue(hasTool("mformat", "-V") || hasTool("mformat", "--help"), "mtools ausente");
+        String text = "";
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            text = tryBoot(tempDir, peBinary, expected, code, qemu, attempt);
+            if (text.contains(expected)) break;
+        }
+        return text;
+    }
+
+    private String tryBoot(Path tempDir, Path peBinary, String expected, Path code, Path qemu,
+            int attempt) throws Exception {
         Path esp = makeEsp(tempDir, peBinary);
-        Path vars = tempDir.resolve("vars.fd");
+        Path vars = tempDir.resolve("vars-" + attempt + ".fd");
         Files.copy(code.resolveSibling("OVMF_VARS_4M.fd"), vars);
-        Path ser = tempDir.resolve("ser.log");
+        Path ser = tempDir.resolve("ser-" + attempt + ".log");
 
         java.util.List<String> cmd = new java.util.ArrayList<>();
         boolean prefixQemu = ovmfPrefix() != null && qemu.startsWith(ovmfPrefix());
@@ -133,7 +148,7 @@ class RingPrivilegeE2ETest {
         Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
         String text = "";
         try {
-            long deadline = System.currentTimeMillis() + 150_000;
+            long deadline = System.currentTimeMillis() + 60_000;
             while (System.currentTimeMillis() < deadline) {
                 if (Files.exists(ser)) {
                     text = Files.readString(ser, StandardCharsets.ISO_8859_1).replace("\0", "");
@@ -143,6 +158,7 @@ class RingPrivilegeE2ETest {
             }
         } finally {
             p.destroyForcibly();
+            p.waitFor(10, TimeUnit.SECONDS);
         }
         return text;
     }
