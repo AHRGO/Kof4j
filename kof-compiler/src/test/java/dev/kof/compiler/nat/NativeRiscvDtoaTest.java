@@ -64,6 +64,12 @@ class NativeRiscvDtoaTest {
             2.2250738585072014e-308, 0.0, -0.0, 1.0, 1.0e20, 1.0e-5, 123.0,
             1230000.0, 12300000.0, 0.001, 0.0009999, 6.02e23, -3.05e-7, 2.5, 1000000.0,
             3.5, 250.0, -0.75,
+            // §448: subnormais onde o loop snprintf/strtod escolhia o mais curto
+            // (5.0E-324) e o JVM/Schubfach escolhe o mais proximo (4.9E-324).
+            Double.MIN_VALUE, Double.longBitsToDouble(2L), Double.longBitsToDouble(3L),
+            Double.longBitsToDouble(5L), Double.longBitsToDouble(1000L),
+            Double.longBitsToDouble((1L << 52) - 1), Double.MIN_NORMAL,
+            -Double.MIN_VALUE, Double.longBitsToDouble(1L << 51),
     };
 
     private static final float[] FLOATS = {

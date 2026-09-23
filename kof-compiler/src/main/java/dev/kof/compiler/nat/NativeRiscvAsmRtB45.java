@@ -28,6 +28,11 @@ package dev.kof.compiler.nat;
 //
 // Requer libc (snprintf/strtod): um programa que imprime FP linka DINAMICO
 // (needsLibc detecta `call snprintf`). Programas sem FP seguem estaticos.
+//
+// §448 (23/09): o DOUBLE saiu do loop libc — `kof_double_to_string` agora e o
+// Schubfach libc-free de NativeRiscvSchubfach (+ NativeRiscvSchubfachFormat),
+// com paridade JVM inclusive nos subnormais. Esta peca mantem o caminho libc
+// so para FLOAT (`kof_dtoa_format`/`kof_float_to_string`) — fatia seguinte.
 public final class NativeRiscvAsmRtB45 {
 
     private NativeRiscvAsmRtB45() {}
@@ -233,89 +238,6 @@ public final class NativeRiscvAsmRtB45 {
                 addi sp, sp, 80
                 ret
 
-            # kof_double_to_string(a0=value_bits) -> a0 = String*
-            .globl kof_double_to_string
-            kof_double_to_string:
-                mv   t3, sp
-                addi sp, sp, -256
-                andi sp, sp, -16
-                sd   t3, 240(sp)         # sp original
-                sd   ra, 248(sp)
-                sd   s0, 232(sp)
-                sd   s1, 224(sp)
-                sd   s2, 216(sp)
-                sd   s3, 208(sp)
-                sd   s4, 200(sp)
-                sd   s5, 192(sp)
-                mv   s0, a0              # bits
-                srli t0, s0, 52
-                li   t1, 0x7ff
-                and  t0, t0, t1
-                beq  t0, t1, .Ld2s_naninf
-                li   s1, 0               # prec
-            .Ld2s_loop:
-                mv   a0, sp
-                li   a1, 64
-                la   a2, .Ldtf_fmt_sci
-                mv   a3, s1
-                mv   a4, s0
-                fmv.d.x f0, a4
-                call snprintf
-                mv   a0, sp
-                li   a1, 0
-                call strtod
-                fmv.x.d t0, fa0
-                beq  t0, s0, .Ld2s_fmt
-                addi s1, s1, 1
-                li   t0, 17
-                blt  s1, t0, .Ld2s_loop
-                li   s1, 16
-                mv   a0, sp
-                li   a1, 64
-                la   a2, .Ldtf_fmt_sci
-                mv   a3, s1
-                mv   a4, s0
-                fmv.d.x f0, a4
-                call snprintf
-            .Ld2s_fmt:
-                mv   a0, sp
-                addi a1, sp, 64
-                mv   a2, s1
-                mv   a3, s0
-                call kof_dtoa_format
-                mv   a1, a0
-                addi a0, sp, 64
-                call kof_string_from_literal
-                j    .Ld2s_done
-            .Ld2s_naninf:
-                slli t0, s0, 12
-                bnez t0, .Ld2s_nan
-                bltz s0, .Ld2s_ninf
-                la   a0, .Ldtf_str_inf
-                li   a1, 8
-                call kof_string_from_literal
-                j    .Ld2s_done
-            .Ld2s_ninf:
-                la   a0, .Ldtf_str_ninf
-                li   a1, 9
-                call kof_string_from_literal
-                j    .Ld2s_done
-            .Ld2s_nan:
-                la   a0, .Ldtf_str_nan
-                li   a1, 3
-                call kof_string_from_literal
-            .Ld2s_done:
-                ld   t3, 240(sp)
-                ld   ra, 248(sp)
-                ld   s0, 232(sp)
-                ld   s1, 224(sp)
-                ld   s2, 216(sp)
-                ld   s3, 208(sp)
-                ld   s4, 200(sp)
-                ld   s5, 192(sp)
-                mv   sp, t3
-                ret
-
             # kof_float_to_string(a0=low32 bits) -> a0 = String*
             .globl kof_float_to_string
             kof_float_to_string:
@@ -410,5 +332,5 @@ public final class NativeRiscvAsmRtB45 {
                 ld   s5, 192(sp)
                 mv   sp, t3
                 ret
-            """;
+            """ + NativeRiscvSchubfach.emit();
 }
