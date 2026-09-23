@@ -79,6 +79,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `SwitchEmptyDefaultE2ETest` 3/3 (both JVM cases hung before the fix; GREEN
     after) + neighbours 53/0F; `check_500` rc=0.
 
+  - **§480 — uncaught exception on the native cross lost the message
+    (gaps-db lane, session 9092)** (23/09): `.Lthrow_panic` in
+    `NativeRiscvAsmRt0` called `kof_panic` with the **KofString** exception,
+    but `kof_panic` expects a raw `.asciz` (reads to NUL) → byte 0 of the
+    header ended the string, so riscv64/aarch64 printed only a newline and
+    exited 1 (silent, R6). Fix mirrors the x86 `.Lkof_throw_panic`:
+    `kof_println_string` (KofString-aware) + `kof_plat_exit(1)`. Proof: new
+    `KofDbE2ETest.crossUncaughtThrowPrintsMessageAndExitsNonZero` (real
+    binaries under qemu, RED→GREEN) + `crossNativeMysqlRefusalNamesTruthfulDb001`;
+    `check_500` rc=0 (`Rt0` stays 598).
+
   - **B-2 UEFI profile (baremetal lane): `--profile uefi` emits bootable
     PE32+** (23/09, lane 9093): a new `NativeProfile.UEFI` makes the x86-64
     native backend emit a static, PLT/GOT-free PE32+ image (subsystem 10) that

@@ -14611,3 +14611,13 @@ Expected `6`; actual: `VerifyError: Bad type on operand stack` at load.
 - **Owner:** session 9092 (23/09), issue #594.
 <!-- pt-switch --> **PT:** [§479 (pt_BR)](known-bugs.pt_BR.md#479--excecao-lancada-dentro-de-lambda-de-listmapfilterreduce-escapa-do-trycatch-string-e-como-invocationtargetexception-no-jvm---corrigido-2309-sessao-9092-issue-594)
 
+## §480 — uncaught exception on the native CROSS (riscv64/aarch64) printed only an EMPTY line — the message was LOST (silent, R6) — ✅ FIXED 23/09 (gaps-db lane, session 9092)
+
+- **Repro (measured, qemu):** any program whose exception reaches the top level with no `try`/`catch`, e.g. `main() { throw "BOOM-MESSAGE" }`, compiled for `NATIVE_RISCV64`/`NATIVE_AARCH64` and run under `qemu-<arch>`: **exit code 1, output = a single newline** (the message never appears). The x86_64/JVM/JS targets print `BOOM-MESSAGE` — a real cross-parity + R6 (never-silent) violation.
+- **Root cause:** `kof_throw_string` in `NativeRiscvAsmRt0` falls to `.Lthrow_panic`, which called `kof_panic` passing the **KofString** exception. But `kof_panic` expects a raw `.asciz` C-string (it walks to a NUL, per §451 on the x86 side): it read byte 0 of the KofString header as the terminator → `strlen == 0` → wrote only the trailing newline. The x86 `RuntimeGc.kof_throw_string` `.Lkof_throw_panic` instead prints through `kof_println_string` (KofString-aware) and `kof_plat_exit(1)` — the cross lacked that face.
+- **Fix (behavior-preserving otherwise):** `.Lthrow_panic` now mirrors the x86 contract — `call kof_println_string` (a0 is the KofString, already restored) + `li a0, 1` + `call kof_plat_exit`. `kof_panic` keeps its `.asciz` contract for `kof_null_error`/`kof_bounds_error` (unchanged). `NativeRiscvAsmRt0` stays **598** lines (`check_500` OK).
+- **Q0 RED→GREEN:** new `KofDbE2ETest.crossUncaughtThrowPrintsMessageAndExitsNonZero` — real riscv64+aarch64 binaries under qemu, asserts exit != 0 **and** the message present; it printed the empty line before the fix (RED) and `BOOM-MESSAGE` after (GREEN). Also unblocks the new `KofDbE2ETest.crossNativeMysqlRefusalNamesTruthfulDb001` (the cross `DB001` refusal message was invisible for the same reason). Cross battery `KofConcurrency2Test` + `NativeRiscv64E2ETest` + `NativeAarch64E2ETest` + `NativeE2ETest` green (one known-flaky `channelWithSpawnCrossArch`, §423 open in another lane, 2/2 in isolation). `check_500` rc=0.
+- **Owner:** gaps-db lane, session 9092 (23/09) — found while adding the cross E2E proof of the `DB001` refusal.
+
+<!-- pt-switch --> **PT:** [§477 (pt_BR)](known-bugs.pt_BR.md#480--excecao-nao-capturada-no-cross-nativo-riscv64aarch64-imprimia-so-uma-linha-vazia--a-mensagem-era-perdida-silencioso-r6---corrigido-2309-lane-gaps-db-sessao-9092)
+

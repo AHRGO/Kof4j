@@ -79,6 +79,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `SwitchEmptyDefaultE2ETest` 3/3 (os dois casos JVM travavam antes do fix;
     VERDE depois) + vizinhos 53/0F; `check_500` rc=0.
 
+  - **§480 — exceção não capturada no cross nativo perdia a mensagem
+    (lane gaps-db, sessão 9092)** (23/09): `.Lthrow_panic` no
+    `NativeRiscvAsmRt0` chamava `kof_panic` com o **KofString** da exceção,
+    mas `kof_panic` espera `.asciz` cru (lê até NUL) → o byte 0 do header
+    terminava a string, então riscv64/aarch64 imprimia só um newline e saía 1
+    (silencioso, R6). O fix espelha o `.Lkof_throw_panic` x86:
+    `kof_println_string` (ciente de KofString) + `kof_plat_exit(1)`. Prova:
+    novo `KofDbE2ETest.crossUncaughtThrowPrintsMessageAndExitsNonZero`
+    (binários reais sob qemu, RED→GREEN) + `crossNativeMysqlRefusalNamesTruthfulDb001`;
+    `check_500` rc=0 (`Rt0` fica 598).
+
   - **Perfil UEFI B-2 (lane baremetal): `--profile uefi` emite PE32+ bootável**
     (23/09, lane 9093): o novo `NativeProfile.UEFI` faz o backend nativo x86-64
     emitir uma imagem PE32+ estática, sem PLT/GOT (subsystem 10), que boota sob

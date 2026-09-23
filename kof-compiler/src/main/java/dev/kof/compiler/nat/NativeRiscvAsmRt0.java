@@ -440,8 +440,7 @@ public final class NativeRiscvAsmRt0 {
                 la   a0, .Lstr_bounds_err
                 call kof_panic
 
-            # kof_throw_string(str) — desempilha a chain da thread; sem handler
-            # → panic. a0=str é preservado até o handler.
+            # kof_throw_string(str) — chain; sem handler imprime a KofString e sai 1 (paridade x86).
             .globl kof_throw_string
             kof_throw_string:
                 addi sp, sp, -32
@@ -464,8 +463,9 @@ public final class NativeRiscvAsmRt0 {
                 mv   s11, t2
                 jr   t4
             .Lthrow_panic:
-                call kof_panic
-
+                call kof_println_string    # a0 = KofString (não .asciz — kof_panic leria lixo, §451 análogo)
+                li   a0, 1
+                call kof_plat_exit
             # ---- arrays (header 24: typeId@0 super@4 vtable@8 len@16 elemSize@20 data@24) ----
             .globl kof_array_alloc
             kof_array_alloc:

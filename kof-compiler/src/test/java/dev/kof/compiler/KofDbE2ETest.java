@@ -968,6 +968,97 @@ class KofDbE2ETest {
         }
     }
 
+    // §477 (23/09): excecao NAO capturada no cross perdia a mensagem — o
+    // `.Lthrow_panic` chamava `kof_panic` (que le .asciz) com um KofString:
+    // strlen=0 -> so' um newline. Paridade x86: imprime a mensagem e sai 1.
+    // Este teste roda os binarios riscv64/aarch64 de verdade (qemu) e pina a
+    // mensagem no stdout/stderr — sem isso o erro era SILENCIOSO (R6).
+    @Test
+    void crossUncaughtThrowPrintsMessageAndExitsNonZero(@TempDir Path tempDir) throws Exception {
+        Path source = tempDir.resolve("Boom.kf");
+        Files.writeString(source, "main() {\n    throw \"BOOM-MESSAGE\"\n}\n");
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            String as = arch.equals("riscv64") ? "riscv64-linux-gnu-as" : "aarch64-linux-gnu-as";
+            String ld = arch.equals("riscv64") ? "riscv64-linux-gnu-ld" : "aarch64-linux-gnu-ld";
+            assumeTrue(has(as, ld, "qemu-" + arch), "cross toolchain " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sysrootOrNull(arch) != null,
+                    "sysroot cross " + arch + " ausente — pulando");
+            Path out = tempDir.resolve("out-boom-" + t);
+            CompilationResult r = driver.compile(source, out, t);
+            assertTrue(r.success(), t + " deveria compilar throw: " + r.diagnostics().getDiagnostics());
+            Path binFile = out.resolve("Default/Main");
+            assertTrue(Files.exists(binFile), "binário " + t + " deveria existir");
+            ProcessBuilder pb = new ProcessBuilder("qemu-" + arch, binFile.toString());
+            String prefix = qemuPrefix(arch);
+            if (prefix != null) pb.environment().put("QEMU_LD_PREFIX", prefix);
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n");
+            int ec;
+            try {
+                ec = p.waitFor();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted running " + t + " binary", e);
+            }
+            assertNotEquals(0, ec, t + " excecao nao capturada deve sair != 0: " + output);
+            assertTrue(output.contains("BOOM-MESSAGE"),
+                    t + " excecao nao capturada deve IMPRIMIR a mensagem (R6), veio: [" + output + "]");
+        }
+    }
+
+    // S1/honestidade (23/09): a recusa DB001 do cross e' VERDADEIRA e roda de
+    // fato nos binarios riscv64/aarch64 (nao so' no texto do asm): um programa
+    // com mysql:// sai != 0 e imprime a mensagem corrigida (sqlite-only; mysql
+    // wire x86-only) — nunca anuncia mysql:// como suportado (R6/R7).
+    @Test
+    void crossNativeMysqlRefusalNamesTruthfulDb001(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("CrossRefuse.kf");
+        Files.writeString(source, """
+            main() {
+                var db = db.connect("mysql://root@127.0.0.1:3306/x")
+                println("connected")
+            }
+            """);
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            String as = arch.equals("riscv64") ? "riscv64-linux-gnu-as" : "aarch64-linux-gnu-as";
+            String ld = arch.equals("riscv64") ? "riscv64-linux-gnu-ld" : "aarch64-linux-gnu-ld";
+            assumeTrue(has(as, ld, "qemu-" + arch), "cross toolchain " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sysrootOrNull(arch) != null,
+                    "sysroot cross " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sqliteAvailable(arch),
+                    "libsqlite3 " + arch + " ausente no sysroot — pulando");
+            Path out = tempDir.resolve("out-refuse-" + t);
+            CompilationResult r = driver.compile(source, out, t);
+            assertTrue(r.success(), t + " deveria compilar (connect mysql://): " + r.diagnostics().getDiagnostics());
+            Path binFile = out.resolve("Default/Main");
+            assertTrue(Files.exists(binFile), "binário " + t + " deveria existir");
+            ProcessBuilder pb = new ProcessBuilder("qemu-" + arch, binFile.toString());
+            String prefix = qemuPrefix(arch);
+            if (prefix != null) pb.environment().put("QEMU_LD_PREFIX", prefix);
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n");
+            int ec;
+            try {
+                ec = p.waitFor();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted running " + t + " binary", e);
+            }
+            assertNotEquals(0, ec, t + " mysql:// no cross nao pode 'conectar': " + output);
+            assertTrue(output.contains("DB001"), t + " recusa deve NOMEAR DB001, veio: " + output);
+            assertTrue(output.contains("mysql:// / mariadb:// wire is x86-64 only"),
+                    t + " mensagem deve ser VERDADEIRA (sqlite-only; mysql x86-only), veio: " + output);
+            assertFalse(output.contains("(native: sqlite:, mysql://)"),
+                    t + " mensagem nao pode anunciar mysql:// como suportado, veio: " + output);
+        }
+    }
+
     /** has() do padrão dos testes cross (command -v). */
     private static boolean has(String... cmds) {
         for (String c : cmds) {
