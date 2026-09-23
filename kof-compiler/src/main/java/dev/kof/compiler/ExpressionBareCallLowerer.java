@@ -75,6 +75,12 @@ public final class ExpressionBareCallLowerer {
                         ops, owner, localIdx, locals);
                 ops.add(new KofCall(ownerType, mc.methodName(), selfMethod.parameterTypes(),
                         selfMethod.returnType(), KofCallKind.STATIC));
+                // §479: o path de MÓDULO (CLI) sai POR AQUI — o SA resolveu a
+                // função como MethodSymbol — e este ramo não adaptava o retorno
+                // genérico `T`: o call-site de referência ficava SEM checkcast
+                // (VerifyError no load) e o de primitivo sem unbox. Mesma
+                // adaptação do §477/#592, agora no caminho selfMethod.
+                GenericReturnAdapter.emit(driver, mc, ops, locals, selfMethod.returnType());
                 return localIdx;
             }
             ops.add(new KofLoadLocal(ownerType, 0));
@@ -92,6 +98,9 @@ public final class ExpressionBareCallLowerer {
             if (driver.semanticAnalyzer.isInterfaceType(selfOwner)) selfKind = KofCallKind.INTERFACE;
             ops.add(new KofCall(ownerType, mc.methodName(), selfMethod.parameterTypes(),
                     selfMethod.returnType(), selfKind));
+            // §479: mesma adaptação do ramo STATIC acima (retorno `T` do
+            // selfMethod — unbox p/ primitivo, checkcast p/ referência).
+            GenericReturnAdapter.emit(driver, mc, ops, locals, selfMethod.returnType());
             return localIdx;
         }
         SymbolTable.ClassSymbol cs = driver.semanticAnalyzer != null ? driver.semanticAnalyzer.getClass(mc.methodName()) : null;
@@ -173,6 +182,10 @@ public final class ExpressionBareCallLowerer {
                 List<Type> argTypes = new ArrayList<>();
                 for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
                 Type returnType = Type.UnknownType.UNKNOWN;
+                // §479: witness explícito (`idf<Point>`) — hoisted p/ o adapter
+                // depois da emissão do KofCall (descritor fica apagado).
+                boolean witnessable = false;
+                Type boundReturn = returnType;
                 if (driver.currentUnit != null) {
                     // SG-011B: mesmo veredicto do typer (frontend único). Único
                     // candidato → caminho idêntico ao antigo; ≥2 → assinatura.
@@ -194,7 +207,30 @@ public final class ExpressionBareCallLowerer {
                         if (sel >= 0) chosen = ovlCands.get(sel).fn();
                     }
                     if (chosen != null) {
+                        // §479: função top-level GENÉRICA com witness EXPLÍTITO
+                        // (`idf<Point>(...)`) — liga T := Point no retorno E nos
+                        // formais. Sem isto o path de MÓDULO (CLI) deixava o
+                        // call-site sem o checkcast do GenericReturnAdapter
+                        // (VerifyError no load; path de arquivo único cobria
+                        // pela cauda do SA) e o emit checava `T` cru (SEM014
+                        // falso-positivo). Mesma forma do witness de construtor
+                        // do §474/#585.
+                        witnessable = !chosen.typeParameters().isEmpty()
+                                && mc.typeArguments().size() == chosen.typeParameters().size();
+                        List<Type> callWitness = new ArrayList<>();
+                        if (witnessable) {
+                            for (var ta : mc.typeArguments()) {
+                                callWitness.add(MemberResolver.resolveType(driver.semanticAnalyzer, ta, null));
+                            }
+                        }
                         returnType = CompilerTypes.resolveWithTypeParams(chosen.returnType(), chosen.typeParameters(), driver.currentUnit, driver.semanticAnalyzer);
+                        // §479: o descritor do KofCall fica APAGADO (erasure,
+                        // idem declaração); o binding alimenta SÓ a adaptação
+                        // do retorno — o tipo EFETIVO ligado decide o
+                        // unbox/checkcast (o adapter no fim do ramo).
+                        if (witnessable) {
+                            boundReturn = GenericReturnAdapter.bindTypeVariables(returnType, chosen.typeParameters(), callWitness);
+                        }
                         List<Type> fnTypes = new ArrayList<>();
                         for (var pp : chosen.parameters()) fnTypes.add(CompilerTypes.resolveWithTypeParams(pp.type(), chosen.typeParameters(), driver.currentUnit, driver.semanticAnalyzer));
                         boolean hasDefaults = chosen.parameters().stream()
@@ -213,7 +249,15 @@ public final class ExpressionBareCallLowerer {
                 // referência) pelo helper compartilhado; antes só o unbox de
                 // primitivo era tratado aqui → `idf<Point>(...)` devolvia
                 // Object sem checkcast → NoSuchMethodError/VerifyError.
-                GenericReturnAdapter.emit(driver, mc, ops, locals, returnType);
+                if (witnessable) {
+                    // §479: witness explícito — o tipo EFETIVO já é conhecido,
+                    // sem depender de inferExprType (que no path de módulo/CLI
+                    // não registra o tipo da chamada e deixava o call-site de
+                    // referência SEM checkcast = VerifyError no load; §477/#592).
+                    GenericReturnAdapter.emitBound(driver, ops, boundReturn);
+                } else {
+                    GenericReturnAdapter.emit(driver, mc, ops, locals, returnType);
+                }
             }
         }
         return localIdx;
