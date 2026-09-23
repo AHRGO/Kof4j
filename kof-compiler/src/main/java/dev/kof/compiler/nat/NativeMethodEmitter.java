@@ -505,82 +505,12 @@ final class NativeMethodEmitter {
     }
 
     /**
-     * B-3 (PLAN-BAREMETAL-BOOT): entry LEGACY BIOS — setor de boot de 512 bytes
-     * em modo real 16-bit. O BIOS carrega o primeiro setor na fiz {@code 0x7C00}
-     * e salta para lá com {@code CS:IP=0:0x7C00}; imprimimos "KO-BIOS OK" pela
-     * teletype do BIOS ({@code int 0x10, ah=0x0E}) e também no COM1 (0x3F8) para
-     * a captura headless do qemu, e paramos. A assinatura {@code 0xAA55} fecha o
-     * setor (offset 510). A carga do payload Kof é a fatia B-3b.
+     * B-3 (PLAN-BAREMETAL-BOOT): entry LEGACY BIOS. A emissão do setor de
+     * boot (modo real 16-bit, carga do payload e long mode) vive em
+     * {@link NativeBiosBootEmitter} (gate <=500 linhas); aqui só delegamos.
      */
     private void emitStartBios(StringBuilder sb, IRClass clazz) {
-        boolean hasMain = clazz.methods().stream().anyMatch(m -> "main".equals(m.name()));
-        if (!hasMain) return;
-        sb.append("\n.section .text.boot,\"ax\"\n");
-        sb.append(".globl _start\n");
-        sb.append(".code16\n");
-        sb.append("_start:\n");
-        sb.append("    cli\n");
-        sb.append("    xorw %ax, %ax\n");
-        sb.append("    movw %ax, %ds\n");
-        sb.append("    movw %ax, %es\n");
-        sb.append("    movw %ax, %ss\n");
-        sb.append("    movw $0x7C00, %sp\n");
-        sb.append("    movb %dl, kof_bios_drive\n");   // drive de boot (BIOS entrega em DL)
-        // B-3b-1: lê o setor do payload (LBA 1) via EDD int 0x13 ah=0x42
-        sb.append("    movb $0x42, %ah\n");
-        sb.append("    movb kof_bios_drive, %dl\n");
-        sb.append("    movw $kof_bios_dap, %si\n");
-        sb.append("    int $0x13\n");
-        sb.append("    jc kof_bios_load_bad\n");       // carry = falha NOMEADA, nunca hang
-        sb.append("    movl $0x50464F4B, %eax\n");     // magia "KOFP"
-        sb.append("    cmpl %eax, 0x8000\n");
-        sb.append("    jne kof_bios_load_bad\n");
-        sb.append("    movl $0x444C5941, %eax\n");     // magia "AYLD"
-        sb.append("    cmpl %eax, 0x8004\n");
-        sb.append("    jne kof_bios_load_bad\n");
-        sb.append("    movw $kof_bios_ok, %si\n");
-        sb.append("    jmp kof_bios_print\n");
-        sb.append("kof_bios_load_bad:\n");
-        sb.append("    movw $kof_bios_bad, %si\n");
-        sb.append("kof_bios_print:\n");
-        sb.append("    lodsb\n");
-        sb.append("    testb %al, %al\n");
-        sb.append("    jz kof_bios_halt\n");
-        sb.append("    movb %al, %bl\n");
-        sb.append("    movb $0x0E, %ah\n");
-        sb.append("    int $0x10\n");              // teletype do BIOS (plano B-3)
-        sb.append("    movw $0x3FD, %dx\n");       // LSR do COM1
-        sb.append("kof_bios_txe:\n");
-        sb.append("    inb %dx, %al\n");
-        sb.append("    testb $0x20, %al\n");       // THR vazio
-        sb.append("    jz kof_bios_txe\n");
-        sb.append("    movw $0x3F8, %dx\n");
-        sb.append("    movb %bl, %al\n");
-        sb.append("    outb %al, %dx\n");          // espelho no serial (captura qemu)
-        sb.append("    jmp kof_bios_print\n");
-        sb.append("kof_bios_halt:\n");
-        sb.append("    cli\n");
-        sb.append("kof_bios_loop:\n");
-        sb.append("    hlt\n");
-        sb.append("    jmp kof_bios_loop\n");
-        sb.append("kof_bios_dap:\n");              // Disk Address Packet (EDD)
-        sb.append("    .byte 0x10, 0\n");
-        sb.append("    .word 1\n");                // 1 setor
-        sb.append("    .word 0x8000\n");           // offset do buffer de staging
-        sb.append("    .word 0\n");                // segmento
-        sb.append("    .quad 1\n");                // LBA 1
-        sb.append("kof_bios_drive:\n");
-        sb.append("    .byte 0\n");
-        sb.append("kof_bios_ok:\n");
-        sb.append("    .asciz \"KO-BIOS OK\\r\\n\"\n");
-        sb.append("kof_bios_bad:\n");
-        sb.append("    .asciz \"KO-BIOS LOAD BAD\\r\\n\"\n");
-        sb.append("    .org 510, 0\n");            // preenche até a assinatura
-        sb.append("    .word 0xAA55\n");
-        // setor do payload em LBA 1: magia + padding até 512 B (imagem válida = 2 setores)
-        sb.append(".section .payload,\"a\"\n");
-        sb.append(".ascii \"KOFPAYLD\"\n");
-        sb.append("    .space 504, 0\n");
+        NativeBiosBootEmitter.emit(sb, clazz);
     }
 
 }

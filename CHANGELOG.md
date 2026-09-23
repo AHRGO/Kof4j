@@ -116,6 +116,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     the named failure and never the success marker. No new Kof surface. B-3b-2
     (A20 + long mode) and B-3b-3 (run the Kof payload) remain.
 
+  - **B-3b-2 — the BIOS boot sector enters x86_64 long mode (lane baremetal
+    9092)** (23/09): after the payload load, `_start` enables A20
+    (`int 0x15, ax=0x2401`), loads a flat GDT (code32 `0x08` / data `0x10` /
+    code64 `0x18`), sets `CR0.PE`, far-jumps to a 32-bit stub that sets
+    `CR4.PAE`, points `CR3` at an identity-mapped PML4→PDPT→PD (2 MiB page
+    covering 0..2 MiB), sets `EFER.LME` and `CR0.PG`, then far-jumps to the
+    64-bit code segment, whose code writes `KO-BIOS LM64 OK` to COM1 and halts —
+    a live proof the CPU runs in long mode. The boot-sector emission moved to
+    `NativeBiosBootEmitter` (≤500 gate: `NativeMethodEmitter` was 671 ≥ 600,
+    now 515). Proof: `BiosBootE2ETest` 4/0F — the 64-bit marker under real
+    qemu/SeaBIOS; entry neighbours 84/0F (`NativeUefi`/`FreestandingLink`/
+    `RingPrivilege`/`NativeE2E`); native battery 305/0F; `check_500` rc=0. No
+    new Kof surface. B-3b-3 (run the Kof payload) remains.
+
   - **B-6.3 — ring1 `#GP` proof + GDT-descriptor sabotage (x86_64 `uefi-ring`
     profile) (lane baremetal 9092)** (23/09): a privileged instruction (`cli`)
     executed at CPL1 raises `#GP`, caught by the ring0 handler and reported

@@ -117,6 +117,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     marcador de sucesso. Sem superfície Kof nova. B-3b-2 (A20 + long mode) e
     B-3b-3 (rodar o payload Kof) restam.
 
+  - **B-3b-2 — o setor de boot BIOS entra em long mode x86_64 (lane baremetal
+    9092)** (23/09): após a carga do payload, o `_start` habilita A20
+    (`int 0x15, ax=0x2401`), carrega uma GDT flat (code32 `0x08` / data `0x10` /
+    code64 `0x18`), seta `CR0.PE`, far-jump para um stub 32-bit que seta
+    `CR4.PAE`, aponta `CR3` para uma PML4→PDPT→PD de identidade (page de 2 MiB
+    cobrindo 0..2 MiB), seta `EFER.LME` e `CR0.PG`, e far-jump para o segmento
+    code64, cujo código escreve `KO-BIOS LM64 OK` no COM1 e para — prova viva de
+    que a CPU roda em long mode. A emissão do setor de boot saiu para
+    `NativeBiosBootEmitter` (gate ≤500: `NativeMethodEmitter` tinha 671 ≥ 600,
+    agora 515). Prova: `BiosBootE2ETest` 4/0F — o marcador 64-bit sob
+    qemu/SeaBIOS real; vizinhos de entry 84/0F (`NativeUefi`/`FreestandingLink`/
+    `RingPrivilege`/`NativeE2E`); bateria nativa 305/0F; `check_500` rc=0. Sem
+    superfície Kof nova. B-3b-3 (rodar o payload Kof) resta.
+
   - **B-6.3 — prova de `#GP` no ring1 + sabotagem do descritor da GDT (perfil
     x86_64 `uefi-ring`) (lane baremetal 9092)** (23/09): uma instrução
     privilegiada (`cli`) executada em CPL1 levanta `#GP`, capturado pelo handler

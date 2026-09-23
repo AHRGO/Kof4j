@@ -39,6 +39,8 @@ class BiosBootE2ETest {
 
     private static final String BAD_MARKER = "KO-BIOS LOAD BAD";
 
+    private static final String LM_MARKER = "KO-BIOS LM64 OK";
+
     private static boolean hasTool(String tool, String... args) {
         String[] cmd = new String[args.length + 1];
         cmd[0] = tool;
@@ -218,5 +220,35 @@ class BiosBootE2ETest {
                 "payload corrompido deveria imprimir '" + BAD_MARKER + "'. Log: " + text2);
         assertFalse(text2.contains(MARKER),
                 "payload corrompido NAO pode reportar sucesso: " + text2);
+    }
+
+    @Test
+    void biosEntersLongModeAndRuns64BitCode(@TempDir Path tempDir) throws Exception {
+        Path qemu = findQemu();
+        assumeTrue(qemu != null, "qemu-system-x86_64 ausente");
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path img = build(tempDir, HELLO);
+
+        Path ser = tempDir.resolve("ser.log");
+        Process p = new ProcessBuilder(qemuCmd(qemu, img, ser)).redirectErrorStream(true).start();
+        String text = "";
+        try {
+            long deadline = System.currentTimeMillis() + 90_000;
+            while (System.currentTimeMillis() < deadline) {
+                if (Files.exists(ser)) {
+                    text = serialText(ser);
+                    if (text.contains(LM_MARKER)) break;
+                }
+                Thread.sleep(500);
+            }
+        } finally {
+            p.destroyForcibly();
+        }
+        assertTrue(text.contains(MARKER),
+                "carga 16-bit nao rodou antes do long mode. Log: " + text);
+        assertTrue(text.contains(LM_MARKER),
+                "codigo 64-bit nao rodou (long mode nao entrou). Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
     }
 }
