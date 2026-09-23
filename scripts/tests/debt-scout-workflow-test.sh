@@ -39,19 +39,28 @@ else
     rc=1
 fi
 
-# gates mecanicos ja existentes do repo, aplicados ao arquivo novo tambem
-if ! bash scripts/check_workflow_pins.sh >/tmp/wf-pins.$$ 2>&1; then
-    echo "FALHOU: check_workflow_pins.sh (ver detalhe):"; cat /tmp/wf-pins.$$; rc=1
+# gates mecanicos ja existentes do repo, aplicados ao arquivo novo tambem —
+# SKIP honesto (nao FALHA) quando o gate nao existe nesta branch (ex.: main
+# congelada, mais antiga que o hardening P2 da beta-0.5.0 que criou esses
+# scripts). Skip != falha silenciosa: fica explicito no output.
+if [ -f scripts/check_workflow_pins.sh ]; then
+    if ! OUT_PINS="$(bash scripts/check_workflow_pins.sh 2>&1)"; then
+        echo "FALHOU: check_workflow_pins.sh (ver detalhe):"; echo "$OUT_PINS"; rc=1
+    else
+        echo "ok  — check_workflow_pins.sh (repo inteiro, incl. $WF)"
+    fi
 else
-    echo "ok  — check_workflow_pins.sh (repo inteiro, incl. $WF)"
+    echo "SKIP — scripts/check_workflow_pins.sh nao existe nesta branch (ambiente sem o gate)"
 fi
-rm -f /tmp/wf-pins.$$
 
-if ! python3 scripts/check_workflow_permissions.py >/tmp/wf-perms.$$ 2>&1; then
-    echo "FALHOU: check_workflow_permissions.py (ver detalhe):"; cat /tmp/wf-perms.$$; rc=1
+if [ -f scripts/check_workflow_permissions.py ]; then
+    if ! OUT_PERMS="$(python3 scripts/check_workflow_permissions.py 2>&1)"; then
+        echo "FALHOU: check_workflow_permissions.py (ver detalhe):"; echo "$OUT_PERMS"; rc=1
+    else
+        echo "ok  — check_workflow_permissions.py (repo inteiro, incl. $WF)"
+    fi
 else
-    echo "ok  — check_workflow_permissions.py (repo inteiro, incl. $WF)"
+    echo "SKIP — scripts/check_workflow_permissions.py nao existe nesta branch (ambiente sem o gate)"
 fi
-rm -f /tmp/wf-perms.$$
 
 exit $rc

@@ -16,16 +16,20 @@ else
 fi
 
 STATE_JSON="$(python3 scripts/debt-scout/scan.py --phase state)"
+# NAO assume "sem drift" (essa e' uma propriedade do estado atual da
+# branch, nao um invariante do codigo — `main` tem drift real agora,
+# `beta-0.5.0` nao). O invariante e' que a resolucao acontece sem crash.
 if ! echo "$STATE_JSON" | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
 assert d['default_branch']
-assert d['declared_active_branch_exists'] is True
+assert d['declared_active_branch_exists'] is not None
 " 2>/dev/null; then
-    echo "FALHOU: --phase state nao concorda com o estado real do repo"
+    echo "FALHOU: --phase state nao resolveu o estado real do repo"
     rc=1
 else
-    echo "ok  — --phase state: repo real sem drift"
+    EXISTS="$(python3 -c "import json,sys; print(json.loads(sys.argv[1])['declared_active_branch_exists'])" "$STATE_JSON")"
+    echo "ok  — --phase state: resolvido (declared_active_branch_exists=$EXISTS)"
 fi
 
 OUT_FILE=".debt-scout/out/candidates-test.json"

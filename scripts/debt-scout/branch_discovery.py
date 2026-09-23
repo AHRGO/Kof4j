@@ -33,12 +33,16 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(__file__))
+import fingerprint  # noqa: E402
+
 for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
 _DECLARED_RE = re.compile(r"active branch\s*=\s*\*{0,2}`([^`]+)`\*{0,2}")
 _RULE_ID = "KOF-DEBT-DOC-BRANCH-001"
+_RULE_VERSION = "1.0.0"
 
 
 def parse_declared_active_branch(agents_md_text):
@@ -85,9 +89,27 @@ def branch_exists(name, cwd="."):
     return False
 
 
-def _drift_candidate(declared):
+def _drift_candidate(declared, analyzed_sha="UNKNOWN"):
+    """Schema-v2-compliant (contract §59/`schema.py`) — this path was NOT
+    exercised by any selftest until a real drift was found by running
+    against `main` (beta-0.5.0 always has declared_active_branch_exists
+    == True, so `candidates` was always `[]` there and this function had
+    never actually been schema-validated end to end). Keep it that way:
+    every field `schema.validate_candidate` requires is filled for real,
+    not stubbed."""
+    claim = (
+        f"AGENTS.md declares the active branch as '{declared}', but no "
+        f"ref refs/remotes/origin/{declared} or refs/heads/{declared} "
+        "exists in this checkout."
+    )
+    symbol = f"AGENTS.md#active-branch:{declared}"
+    finding_fp = fingerprint.finding_fingerprint(_RULE_ID, symbol, claim)
     return {
+        "schema": 2,
+        "candidate_id": finding_fp.split(":", 1)[1][:16],
         "rule_id": _RULE_ID,
+        "rule_version": _RULE_VERSION,
+        "finding_fingerprint": finding_fp,
         "confidence": "C1",
         "taxonomy": {
             "debt_type": "DOCUMENTATION",
@@ -95,14 +117,25 @@ def _drift_candidate(declared):
             "domains": ["CI_GOVERNANCE", "DOCS_TRAINING"],
             "mechanism": "DOC_CODE_DRIFT",
         },
-        "claim": (
-            f"AGENTS.md declares the active branch as '{declared}', but no "
-            f"ref refs/remotes/origin/{declared} or refs/heads/{declared} "
-            "exists in this checkout."
-        ),
+        "claim": claim,
+        "locations": [{"path": "AGENTS.md", "line": None}],
         "publication": {"public_safe": True, "eligible": False,
                          "reason": "C1 — candidate store only, never an Issue"},
+        "lineage": {
+            "analyzed_sha": analyzed_sha,
+            "model_used": False,
+            "rule_id": _RULE_ID,
+            "rule_version": _RULE_VERSION,
+        },
+        "evidence": [{"type": "DOC", "ref": "AGENTS.md"}],
     }
+
+
+def _analyzed_sha(cwd):
+    out = _run_git(cwd, "rev-parse", "HEAD")
+    if out is not None and out.returncode == 0:
+        return out.stdout.strip()
+    return "UNKNOWN"
 
 
 def discover(cwd=".", agents_md_path=None):
@@ -125,7 +158,7 @@ def discover(cwd=".", agents_md_path=None):
     exists = branch_exists(declared, cwd)
     result["declared_active_branch_exists"] = exists
     if not exists:
-        result["candidates"].append(_drift_candidate(declared))
+        result["candidates"].append(_drift_candidate(declared, _analyzed_sha(cwd)))
     return result
 
 
@@ -158,6 +191,9 @@ def selftest():
     check("does not false-positive on a similar but different phrase",
           parse_declared_active_branch("the active branch is `main`") is None)
 
+    import schema  # local import: avoids a hard dependency for callers
+    # that only need parsing/discovery, not validation
+
     cwd = os.path.join(os.path.dirname(__file__), "..", "..")
     real_agents_md = os.path.join(cwd, "AGENTS.md")
     if os.path.exists(real_agents_md):
@@ -166,11 +202,19 @@ def selftest():
               bool(result["default_branch"]))
         check("live: AGENTS.md's declared active branch is parsed",
               result["declared_active_branch"] is not None)
-        check("live: the declared active branch exists as a ref "
-              f"(declared={result['declared_active_branch']!r}) — "
-              "no contract-drift candidate on a healthy repo",
-              result["declared_active_branch_exists"] is True
-              and result["candidates"] == [])
+        # INVARIANT, not a specific outcome — this repo's checked-out
+        # branch decides whether there IS drift right now (there
+        # genuinely is on `main`, genuinely isn't on `beta-0.5.0`; the
+        # selftest must hold on either, not assume one).
+        exists = result["declared_active_branch_exists"]
+        candidates = result["candidates"]
+        check("live: exists=True <=> zero candidates, exists=False <=> "
+              f"exactly one schema-valid C1 candidate (measured: "
+              f"declared={result['declared_active_branch']!r} exists={exists})",
+              (exists is True and candidates == [])
+              or (exists is False and len(candidates) == 1
+                  and candidates[0]["confidence"] == "C1"
+                  and schema.validate_candidate(candidates[0]) == []))
     else:
         print("  FAIL — real repo AGENTS.md not found at", real_agents_md)
         ok = False
@@ -180,10 +224,15 @@ def selftest():
     bogus = "definitely-not-a-real-branch-xyz-000"
     check("branch_exists is False for a made-up branch name",
           branch_exists(bogus, cwd=cwd) is False)
-    candidate = _drift_candidate(bogus)
+    candidate = _drift_candidate(bogus, "deadbeef" * 5)
     check("a drift candidate is C1 and never Issue-eligible",
           candidate["confidence"] == "C1"
           and candidate["publication"]["eligible"] is False)
+    errors = schema.validate_candidate(candidate)
+    check("a drift candidate is schema-valid (this path was NOT exercised "
+          "before the first real drift was found on main)", errors == [])
+    if errors:
+        print("    ", errors)
 
     return ok
 

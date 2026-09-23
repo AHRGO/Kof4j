@@ -179,9 +179,12 @@ def selftest():
     root = os.path.join(HERE, "..", "..")
     if os.path.exists(os.path.join(root, "AGENTS.md")):
         state = run_state_phase(root)
+        # declared_active_branch_exists can legitimately be False here —
+        # e.g. on a frozen `main` whose AGENTS.md still names a deleted
+        # branch; that IS the tool working, not a test precondition.
         check("live --phase state resolves the real repo's branches",
               state["default_branch"] is not None
-              and state["declared_active_branch_exists"] is True)
+              and state["declared_active_branch_exists"] is not None)
         live_report = run_deterministic_phase(root)
         check("live --phase deterministic produces schema-valid candidates only",
               all(schema.validate_candidate(c) == [] for c in live_report["candidates"]))
