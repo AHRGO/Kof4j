@@ -13,6 +13,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **`docs/development` resync — the queue and the release ALLOWLIST now match
+    reality** (23/09, lane docs/frontier): the `kof-c-cross` row (moved to
+    `docs/`, C1–C4 all landed) and the `PLAN-BAREMETAL-BOOT` row ("zero code"
+    → B-0..B-2 + B-6 landed, B-3b-3 paused) were stale, `check_500` is rc=0
+    (`NativeBackend` 547) not the RED the row claimed, and the release gate
+    still allowlisted the moved `kof-c-cross.md`. Proof:
+    `check-release-050-gate-test.sh` VERDE (7/7) + `--selftest` OK +
+    `loose_docs` GREEN.
+
   - **R1 boundary gate un-redded — `kof.ffi`/`kof.interop` registered in the
     stdlib ledger (`scripts/stdlib_boundary.txt`)** (23/09, lane docs/frontier):
     the namespaces landed (X6.1 `6c9aeb847`, FFI `f670d0551`) without their

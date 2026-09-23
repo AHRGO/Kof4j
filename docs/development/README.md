@@ -38,15 +38,16 @@ surface**).
 
 ## 0. What is live here (read first)
 
-- **Pending (the release gate's condition 3):** none — the three in-flight
+- **Pending (the release gate's condition 3):** none — the two in-flight
   OWNED plans still loose (`db-parity-plan`,
-  `kof-c-cross`, `PLAN-BAREMETAL-BOOT`) are **allowlisted** by
+  `PLAN-BAREMETAL-BOOT`) are **allowlisted** by
   `D-RELEASE-0.5.0-SCOPE` (maintainer 21/09/2026) + `D-BAREMETAL-BOOT`
   (maintainer 22/09/2026): they keep owner + queue in §1 and conclude on their
   own fronts; they do not gate the 0.5.0 cut.
   `IMPLEMENTATION-UNIVERSAL-PLATFORM`, `makealive-plan` and `secrets-plan`
   concluded and moved to `docs/architecture/` (21/09); the type-system plan
-  (X5+X6) concluded and moved to `docs/` (22/09).
+  (X5+X6) concluded and moved to `docs/` (22/09); `kof-c-cross` (C1–C4 +
+  C3-residual) concluded and moved to `docs/` (23/09).
   Authority: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Living records here (not backlog):** `DECISIONS.md`,
   `PROPOSAL-1.0-EXIT-GATE.md`, `PROPOSAL-VERSIONING-RELEASE.md`, `roadmap.md`,
@@ -81,9 +82,9 @@ surface**).
 | — | `db-parity-plan.md` (+PT) — `D-DB-GAPS` addendum 21/09 | `IN DEVELOPMENT` — maintainer 21/09: **total DB parity** (every target accepts mariadb/mysql/sqlite/mongodb); measured matrix + slices S0–S4 | **`gaps-db` lane** (handed over 21/09 by order of the maintainer; docs/plataforma keeps the record) · **S0 ✅ DONE 21/09 (session 9092: `DB001` named refusal + link-by-use)** (`D-DB-PARITY-OWNER`) | S1 `mariadb://` = mysql-wire alias (Native); S2 JDBC scheme parity JVM/JS/Android; S3 `mongodb://` interop-first (R9); S4 oracle |
 | — | ~~`codegen-step-2.2.3-assessment.md`~~ → `docs/architecture/codegen-step-2.2.3-assessment.md` (+PT) — roadmap 2.2.3 | ✅ **CONCLUDED + MOVED 21/09** — option B (`D-DESUGAR-STEP`) **implemented** (`85779f20`: `DesugarStepPipeline` + `DesugarSteps.defaults()` with the four desugars; `CompilerPipeline:303`) | measured 21/09: **phase mismatch** (hook = optimized IR; DDL = lowering; runner = AST desugar) → the DDL stays in lowering | — (doc in `docs/architecture/`; 3-state rule) |
 | — | ~~`type-system-extensions-plan.md` (+PT)~~ → `docs/type-system-extensions-plan.md` — X5 variance+sealed / X6 interop reflection | ✅ **CONCLUDED + MOVED 22/09** — X5.0–X5.5 + X6.0–X6.3 all landed (X5.5 cells `sealedswitch`/`variance`/`useproj`; X6.3 cell `interopschema` + Arrow/Parquet binding E2E, `InteropSchemaE2ETest` 18/18); 3-state rule | — (doc in `docs/`) | — |
-| — | `kof-c-cross.md` (+PT) — `kof-c-compiler` cross targets (C1–C4) | `IN DEVELOPMENT` — **C1 LANDED 22/09**: the in-repo C subset compiler now emits riscv64/aarch64 (`KofCTarget`, `KofCEmitterBase`, per-ISA `KofCEmitterX86`/`KofCEmitterRiscv`/`KofCEmitterAarch`, `kof c --target`); proof `KofCCrossCompilerTest` 7/7 under qemu (x86_64 oracle) | approved by the maintainer (chat): the FFI cross struct-param fixture needs an in-repo cross C compiler (the host has no cross cc) | next: C2 params/return/locals, C3 struct by-value, C4 `.o`/link for the fixture |
-| — | `PLAN-BAREMETAL-BOOT.md` (+PT) — bare-metal/bootable with ring0/ring1 (faces B-0…B-6) | `IN DEVELOPMENT` — **PROMOTED from `future/` 22/09** (`D-BAREMETAL-BOOT`, maintainer order): the bare-metal front is open (R12 overridden for it); ordered scope includes **ring0/ring1** (x86_64 privilege levels, face B-6); **zero code yet** | **`baremetal` lane (session 9092)** | next: **B-0** — route every environmental op of the native runtimes through `kof_plat_*` (Linux impl = rename; full native/cross suite green + sabotage test), then B-1 freestanding, then B-6 rings |
-| — | `tech-debt.md` (+PT) — historical technical-debt ledger | **OPEN, maintainer-owned (23/09)** — 6 live §NNN + check_500 RED (`NativeBackend` 603) + tolerated band + honest gaps + open decisions §5; agents never close rows alone | maintainer edits directly; each answer = `DECISIONS.md` line + §23/DOING queue, same commit |
+| — | ~~`kof-c-cross.md` (+PT)~~ → `docs/kof-c-cross.md` — `kof-c-compiler` cross targets (C1–C4) | ✅ **CONCLUDED + MOVED 23/09** — C1+C2+C3+C4+C3-residual all landed (in-repo C subset compiler emits riscv64/aarch64 via per-ISA emitters; `kof c --target`/`-c`/`.o`; struct multi-eightbyte param ≤48 B + struct return ≤16 B); proof `KofCCrossCompilerTest`/`KofCParamsCompilerTest`/`KofCStructCompilerTest` 14/14 + `KofCObjectCompilerTest` 5/5 under qemu (x86_64 oracle) | moved to `docs/` (three-states rule) | — |
+| — | `PLAN-BAREMETAL-BOOT.md` (+PT) — bare-metal/bootable with ring0/ring1 (faces B-0…B-6) | `IN DEVELOPMENT` — **PROMOTED from `future/` 22/09** (`D-BAREMETAL-BOOT`, maintainer order) · **B-0..B-2 + B-6 LANDED** (`kof_plat_*` seam on x86+cross; freestanding link + configurable heap/stack + `_end`; libc-free Schubfach dtoa on x86+cross; UEFI profile; legacy BIOS boot up to long mode; ring0/ring1 with `#GP` + GDT-sabotage proof); **B-3b-3 PAUSED** by maintainer order 23/09 (`BiosBootE2ETest` 4/0F) | **`baremetal` lane (session 9092)** | next: **B-3b-3** — link the 64-bit Kof program at a fixed base (`0x100000`) + BIOS `kof_plat_*` body, E2E printing the Kof `main` hello; one slice at a time, `check_500` rc=0 |
+| — | `tech-debt.md` (+PT) — historical technical-debt ledger | **OPEN, maintainer-owned (23/09)** — 6 live §NNN + the `check_500` size gate (re-measured 23/09: **rc=0**, `NativeBackend` 547) + tolerated band + honest gaps + open decisions §5; agents never close rows alone | maintainer edits directly; each answer = `DECISIONS.md` line + §23/DOING queue, same commit |
 | — | living records: `conformance-matrix.md`, `ecosystem-coverage.md`, `KOFUI-AUDIT.md`, `known-bugs.md` (in `docs/bugs-and-gaps/`); `roadmap.md` (here); `roadmap-audit.md`/`complexity-audit.md` (in `docs/audits/`) | `LIVE` | **they are not backlog** — matrix/audit/queue that update together with each closure | update the cell/section in the SAME commit that closes the gap |
 
 **R12 rule (AGENTS.md):** nothing from `future/` (RAII, package-compiler,

@@ -13,6 +13,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **Ressincronização de `docs/development` — a fila e o allowlist do gate de
+    release agora batem com a realidade** (23/09, lane docs/fronteira): a linha
+    do `kof-c-cross` (movido para `docs/`, C1–C4 landados) e a do
+    `PLAN-BAREMETAL-BOOT` ("zero código" → B-0..B-2 + B-6 landados, B-3b-3
+    pausado) estavam stale, `check_500` está rc=0 (`NativeBackend` 547) e não o
+    RED que a linha alegava, e o gate de release ainda allowlistava o
+    `kof-c-cross.md` movido. Prova: `check-release-050-gate-test.sh` VERDE (7/7)
+    + `--selftest` OK + `loose_docs` GREEN.
+
   - **Gate R1 da fronteira destravado — `kof.ffi`/`kof.interop` registrados no
     ledger da stdlib (`scripts/stdlib_boundary.txt`)** (23/09, lane docs/fronteira):
     os namespaces pousaram (X6.1 `6c9aeb847`, FFI `f670d0551`) sem a linha de

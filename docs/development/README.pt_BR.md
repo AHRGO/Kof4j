@@ -38,15 +38,16 @@ nova**).
 
 ## 0. O que está vivo aqui (leia primeiro)
 
-- **Pendentes (condição 3 do gate de release):** nenhum — os três planos em
+- **Pendentes (condição 3 do gate de release):** nenhum — os dois planos em
   voo com dono ainda soltos (`db-parity-plan`,
-  `kof-c-cross`, `PLAN-BAREMETAL-BOOT`) estão no **allowlist** por
+  `PLAN-BAREMETAL-BOOT`) estão no **allowlist** por
   `D-RELEASE-0.5.0-SCOPE` (mantenedora 21/09/2026) + `D-BAREMETAL-BOOT`
   (mantenedora 22/09/2026): mantêm dono + fila na §1 e concluem nas próprias
   frentes; não barram o corte 0.5.0.
   `IMPLEMENTATION-UNIVERSAL-PLATFORM`, `makealive-plan` e `secrets-plan`
   concluíram e foram movidos para `docs/architecture/` (21/09); o plano de
-  tipos (X5+X6) concluiu e foi movido para `docs/` (22/09).
+  tipos (X5+X6) concluiu e foi movido para `docs/` (22/09); `kof-c-cross`
+  (C1–C4 + C3-residual) concluiu e foi movido para `docs/` (23/09).
   Autoridade: `scripts/check_release_050_gate.sh` (`loose_docs`).
 - **Registros vivos aqui (não são backlog):** `DECISIONS.md`,
   `PROPOSAL-1.0-EXIT-GATE.md`, `PROPOSAL-VERSIONING-RELEASE.md`, `roadmap.md`,
@@ -81,9 +82,9 @@ nova**).
 | — | `db-parity-plan.md` (+PT) — adendo `D-DB-GAPS` 21/09 | `EM DESENVOLVIMENTO` — mantenedora 21/09: **paridade total de DB** (todo alvo aceita mariadb/mysql/sqlite/mongodb); matriz medida + fatias S0–S4 | **lane `gaps-db`** (repassada 21/09 por ordem da mantenedora; a lane docs mantém o registro) · **S0 ✅ FEITO 21/09 (sessão 9092: recusa nomeada `DB001` + link-by-use)** (`D-DB-PARITY-OWNER`) | S1 `mariadb://` = alias mysql-wire (Native); S2 paridade JDBC JVM/JS/Android; S3 `mongodb://` interop-first (R9); S4 oracle |
 | — | ~~`codegen-step-2.2.3-assessment.md`~~ → `docs/architecture/codegen-step-2.2.3-assessment.md` (+PT) — roadmap 2.2.3 | ✅ **CONCLUÍDO + MOVIDO 21/09** — opção B (`D-DESUGAR-STEP`) **implementada** (`85779f20`: `DesugarStepPipeline` + `DesugarSteps.defaults()` com os quatro desugars; `CompilerPipeline:303`) | medido 21/09: **descompasso de fase** (hook = IR otimizada; DDL = lowering; runner = desugar de AST) → o DDL fica no lowering | — (doc em `docs/architecture/`; regra dos 3 estados) |
 | — | ~~`type-system-extensions-plan.md` (+PT)~~ → `docs/type-system-extensions-plan.md` — X5 variância+sealed / X6 reflexão de interop | ✅ **CONCLUÍDO + MOVIDO 22/09** — X5.0–X5.5 + X6.0–X6.3 todos landados (X5.5 células `sealedswitch`/`variance`/`useproj`; X6.3 célula `interopschema` + E2E binding Arrow/Parquet, `InteropSchemaE2ETest` 18/18); regra dos três-estados | — (doc em `docs/`) | — |
-| — | `kof-c-cross.md` (+PT) — alvos cross do `kof-c-compiler` (C1–C4) | `EM DESENVOLVIMENTO` — **C1 LANDADA 22/09**: o compilador C do repositório agora emite riscv64/aarch64 (`KofCTarget`, `KofCEmitterBase`, emissores por ISA `KofCEmitterX86`/`KofCEmitterRiscv`/`KofCEmitterAarch`, `kof c --target`); prova `KofCCrossCompilerTest` 7/7 sob qemu (oráculo x86_64) | aprovado pela mantenedora (chat): a fixture FFI cross de struct-param precisa de um compilador C cross no repositório (o host não tem cc cross) | próximo: C2 params/retorno/locais, C3 struct por valor, C4 `.o`/link p/ a fixture |
-| — | `PLAN-BAREMETAL-BOOT.md` (+PT) — bare-metal/bootável com ring0/ring1 (faces B-0…B-6) | `EM DESENVOLVIMENTO` — **PROMOVIDO de `future/` 22/09** (`D-BAREMETAL-BOOT`, ordem da mantenedora): a frente bare-metal está aberta (R12 sobreposto só para ela); escopo ordenado inclui **ring0/ring1** (níveis de privilégio x86_64, face B-6); **zero código ainda** | **lane `baremetal` (sessão 9092)** | próximo: **B-0** — rotear toda operação ambiental dos runtimes nativos por `kof_plat_*` (impl Linux = rename; suíte nativa/cross verde + teste de sabotagem), depois B-1 freestanding, depois os anéis B-6 |
-| — | `tech-debt.md` (+PT) — ledger histórico de dívida técnica | **ABERTO, da mantenedora (23/09)** — 6 §NNN vivos + check_500 VERMELHO (`NativeBackend` 603) + faixa tolerada + gaps honestos + decisões abertas §5; agentes nunca fecham linhas sozinhos | a mantenedora edita direto; cada resposta = linha `DECISIONS.md` + fila §23/DOING, mesmo commit |
+| — | ~~`kof-c-cross.md` (+PT)~~ → `docs/kof-c-cross.md` — alvos cross do `kof-c-compiler` (C1–C4) | ✅ **CONCLUÍDO + MOVIDO 23/09** — C1+C2+C3+C4+C3-residual todos landados (o compilador C do repositório emite riscv64/aarch64 via emissores por ISA; `kof c --target`/`-c`/`.o`; struct multi-eightbyte param ≤48 B + return ≤16 B); prova `KofCCrossCompilerTest`/`KofCParamsCompilerTest`/`KofCStructCompilerTest` 14/14 + `KofCObjectCompilerTest` 5/5 sob qemu (oráculo x86_64) | movido p/ `docs/` (regra dos 3 estados) | — |
+| — | `PLAN-BAREMETAL-BOOT.md` (+PT) — bare-metal/bootável com ring0/ring1 (faces B-0…B-6) | `EM DESENVOLVIMENTO` — **PROMOVIDO de `future/` 22/09** (`D-BAREMETAL-BOOT`, ordem da mantenedora) · **B-0..B-2 + B-6 LANDADOS** (costura `kof_plat_*` no x86+cross; link freestanding + heap/stack configuráveis + `_end`; dtoa Schubfach libc-free no x86+cross; perfil UEFI; boot BIOS legado até long mode; ring0/ring1 com prova de `#GP` + sabotagem da GDT); **B-3b-3 PAUSADO** por ordem da mantenedora 23/09 (`BiosBootE2ETest` 4/0F) | **lane `baremetal` (sessão 9092)** | próximo: **B-3b-3** — ligar o programa Kof 64-bit numa base fixa (`0x100000`) + corpo `kof_plat_*` de BIOS, E2E imprimindo o hello do `main` Kof; uma fatia por vez, `check_500` rc=0 |
+| — | `tech-debt.md` (+PT) — ledger histórico de dívida técnica | **ABERTO, da mantenedora (23/09)** — 6 §NNN vivos + o gate de tamanho `check_500` (re-medido 23/09: **rc=0**, `NativeBackend` 547) + faixa tolerada + gaps honestos + decisões abertas §5; agentes nunca fecham linhas sozinhos | a mantenedora edita direto; cada resposta = linha `DECISIONS.md` + fila §23/DOING, mesmo commit |
 | — | registros vivos: `conformance-matrix.md`, `ecosystem-coverage.md`, `KOFUI-AUDIT.md`, `known-bugs.md` (em `docs/bugs-and-gaps/`); `roadmap.md` (aqui); `roadmap-audit.md`/`complexity-audit.md` (em `docs/audits/`) | `VIVA` | **não são backlog** — matriz/auditoria/fila que se atualizam junto com cada fechamento | atualizar célula/seção no MESMO commit que fecha o gap |
 
 **Regra R12 (AGENTS.md):** nada de `future/` (RAII, package-compiler,

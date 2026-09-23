@@ -66,15 +66,16 @@ R050_SPEC_GAPS_FILE="${R050_SPEC_GAPS_FILE:-}"
 # way: it never "concludes" into docs/ while the project has open debt.
 ALLOWLIST="DECISIONS.md DECISIONS.pt_BR.md README.md README.pt_BR.md roadmap.md roadmap.pt_BR.md PROPOSAL-1.0-EXIT-GATE.md PROPOSAL-1.0-EXIT-GATE.pt_BR.md PROPOSAL-VERSIONING-RELEASE.md PROPOSAL-VERSIONING-RELEASE.pt_BR.md release-beta-0.5.0-prep.md release-beta-0.5.0-prep.pt_BR.md tech-debt.md tech-debt.pt_BR.md"
 # D-RELEASE-0.5.0-SCOPE (maintainer 21/09/2026): the in-flight OWNED plans
-# still loose are allowlisted — 0.5.0 does not wait for db/ffi to conclude;
+# still loose are allowlisted — 0.5.0 does not wait for db to conclude;
 # each keeps its owner and stays tracked in the README queue.
 # (IMPLEMENTATION-UNIVERSAL-PLATFORM concluded and moved to docs/architecture/
 # on 21/09; type-system-extensions-plan concluded (X5+X6) and moved to docs/
-# on 22/09 — neither is loose, hence not listed here.)
+# on 22/09; kof-c-cross concluded (C1–C4 + C3-residual) and moved to docs/ on
+# 23/09 — none is loose, hence not listed here.)
 # D-BAREMETAL-BOOT (maintainer 22/09/2026): PLAN-BAREMETAL-BOOT promoted from
 # future/ (bare-metal + ring0/ring1 scope) — allowlisted the same way: the
 # 0.5.0 cut does not wait for the bare-metal front.
-ALLOWLIST="$ALLOWLIST db-parity-plan.md db-parity-plan.pt_BR.md kof-c-cross.md kof-c-cross.pt_BR.md PLAN-BAREMETAL-BOOT.md PLAN-BAREMETAL-BOOT.pt_BR.md"
+ALLOWLIST="$ALLOWLIST db-parity-plan.md db-parity-plan.pt_BR.md PLAN-BAREMETAL-BOOT.md PLAN-BAREMETAL-BOOT.pt_BR.md"
 
 # state per condition: GREEN|RED|NEEDS-MEASURE|NEEDS-REVIEW|UNKNOWN
 declare -A STATE DETAIL
