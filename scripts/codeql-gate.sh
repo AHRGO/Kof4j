@@ -33,6 +33,12 @@ set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 REPO="${CODEQL_GATE_REPO:-KofLang/Kof4j}"
+# #604: code scanning holds SARIF from MORE than one tool (the Debt Scout
+# uploads note-level C0/C1 signals under /debt-scout/*). This gate judges
+# CodeQL only — every alerts/analyses query filters by tool, otherwise a
+# non-security note turns it RED and another tool's analysis can certify
+# a tip that CodeQL never analyzed.
+TOOL="CodeQL"
 BASELINE="${CODEQL_BASELINE_FILE:-scripts/codeql-baseline.txt}"
 BRANCHES=("main" "beta-0.4.0" "beta-0.5.0")
 FAILED=0
@@ -97,16 +103,16 @@ echo "== GATE 1: CodeQL alerts (security/code-scanning) — baseline: $BASELINE 
 # CUSTO (licao 15/09 ~18:40): NUNCA 1 GET/alerta x 731 (8min de hang); o list
 # paginado vem com state/dismissed_at/fixed_at/most_recent_instance — 1 chamada
 # resolve; 1 GET individual so para os `null` que o list escondeu.
-ROWS=$(gh api "/repos/$REPO/code-scanning/alerts?per_page=100" --paginate \
+ROWS=$(gh api "repos/$REPO/code-scanning/alerts?per_page=100&tool_name=$TOOL" --paginate \
   --jq '.[] | [(.number|tostring), (.state // "null"), (.dismissed_at // "-"), (.fixed_at // "-"), (.most_recent_instance.ref // "-"), (.rule.id), ((.most_recent_instance.location.path // "-") + ":" + ((.most_recent_instance.location.start_line // "-")|tostring))] | @tsv' 2>/dev/null) \
   || { echo "  [aviso] API indisponivel (rate limit?) — GATE 1 NAO verificado; o CI (codeql.yml) continua sendo a porta real"; api_ok=0; ROWS=""; }
 
 if [ -n "$ROWS" ]; then
   for br in "${BRANCHES[@]}"; do
-    nums=$(gh api "/repos/$REPO/code-scanning/alerts?ref=refs/heads/$br&state=open&per_page=100" --paginate --jq '.[].number' 2>/dev/null) || api_ok=0
+    nums=$(gh api "repos/$REPO/code-scanning/alerts?ref=refs/heads/$br&state=open&per_page=100&tool_name=$TOOL" --paginate --jq '.[].number' 2>/dev/null) || api_ok=0
     for n in $nums; do
       printf '%s\n' "$ROWS" | cut -f1 | grep -qx "$n" && continue
-      extra=$(gh api "/repos/$REPO/code-scanning/alerts/$n" \
+      extra=$(gh api "repos/$REPO/code-scanning/alerts/$n" \
         --jq '[(.number|tostring), (.state // "null"), (.dismissed_at // "-"), (.fixed_at // "-"), (.most_recent_instance.ref // "-"), .rule.id, ((.most_recent_instance.location.path // "-") + ":" + ((.most_recent_instance.location.start_line // "-")|tostring))] | @tsv' 2>/dev/null) || api_ok=0
       [ -n "$extra" ] && ROWS="$ROWS
 $extra"
@@ -142,9 +148,9 @@ for br in "${BRANCHES[@]}"; do
   # above still wins as RED. The analysis SHA comes from the code-scanning
   # analyses API; the tip from the branch API (one extra call per branch).
   sha_api=1
-  ana=$(gh api "/repos/$REPO/code-scanning/analyses?ref=refs/heads/$br&per_page=1" \
+  ana=$(gh api "repos/$REPO/code-scanning/analyses?ref=refs/heads/$br&per_page=1&tool_name=$TOOL" \
     --jq '.[0].commit_sha' 2>/dev/null) || { sha_api=0; ana=""; }
-  tip=$(gh api "/repos/$REPO/branches/$br" --jq '.commit.sha' 2>/dev/null) || { sha_api=0; tip=""; }
+  tip=$(gh api "repos/$REPO/branches/$br" --jq '.commit.sha' 2>/dev/null) || { sha_api=0; tip=""; }
   sha_state=current
   if [ "$sha_api" = 0 ]; then sha_state=unavailable
   elif [ -z "$ana" ]; then sha_state=no-analysis
