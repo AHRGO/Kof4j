@@ -37,6 +37,8 @@ class BiosBootE2ETest {
 
     private static final String MARKER = "KO-BIOS OK";
 
+    private static final String BAD_MARKER = "KO-BIOS LOAD BAD";
+
     private static boolean hasTool(String tool, String... args) {
         String[] cmd = new String[args.length + 1];
         cmd[0] = tool;
@@ -164,5 +166,57 @@ class BiosBootE2ETest {
         String text2 = Files.exists(ser2) ? serialText(ser2) : "";
         assertFalse(text2.contains(MARKER),
                 "assinatura quebrada NAO pode bootar, mas imprimiu: " + text2);
+    }
+
+    @Test
+    void biosLoadsPayloadSectorAndNamesCorruptedPayload(@TempDir Path tempDir) throws Exception {
+        Path qemu = findQemu();
+        assumeTrue(qemu != null, "qemu-system-x86_64 ausente");
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path img = build(tempDir, HELLO);
+
+        // (a) carga POSITIVA — o setor lê o payload (LBA 1) e valida a magia.
+        Path ser = tempDir.resolve("ser.log");
+        Process p = new ProcessBuilder(qemuCmd(qemu, img, ser)).redirectErrorStream(true).start();
+        String text = "";
+        try {
+            long deadline = System.currentTimeMillis() + 60_000;
+            while (System.currentTimeMillis() < deadline) {
+                if (Files.exists(ser)) {
+                    text = serialText(ser);
+                    if (text.contains(MARKER)) break;
+                }
+                Thread.sleep(500);
+            }
+        } finally {
+            p.destroyForcibly();
+        }
+        assertTrue(text.contains(MARKER),
+                "payload (LBA 1) nao carregou/magic nao bateu. Log: " + text);
+
+        // (b) payload CORROMPIDO — a magia em LBA 1 deixa de bater e o setor
+        // imprime a falha NOMEADA no serial (nunca um hang silencioso).
+        byte[] corrupt = Files.readAllBytes(img);
+        assertTrue(corrupt.length >= 520, "imagem deveria ter o setor do payload");
+        corrupt[512] = (byte) 'X';
+        Path bad = tempDir.resolve("badpay.img");
+        Files.write(bad, corrupt);
+        Path ser2 = tempDir.resolve("ser2.log");
+        Process p2 = new ProcessBuilder(qemuCmd(qemu, bad, ser2)).redirectErrorStream(true).start();
+        try {
+            long deadline = System.currentTimeMillis() + 60_000;
+            while (System.currentTimeMillis() < deadline) {
+                if (Files.exists(ser2) && serialText(ser2).contains(BAD_MARKER)) break;
+                Thread.sleep(500);
+            }
+        } finally {
+            p2.destroyForcibly();
+        }
+        String text2 = Files.exists(ser2) ? serialText(ser2) : "";
+        assertTrue(text2.contains(BAD_MARKER),
+                "payload corrompido deveria imprimir '" + BAD_MARKER + "'. Log: " + text2);
+        assertFalse(text2.contains(MARKER),
+                "payload corrompido NAO pode reportar sucesso: " + text2);
     }
 }

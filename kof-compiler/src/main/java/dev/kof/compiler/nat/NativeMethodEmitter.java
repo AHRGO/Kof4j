@@ -525,7 +525,23 @@ final class NativeMethodEmitter {
         sb.append("    movw %ax, %es\n");
         sb.append("    movw %ax, %ss\n");
         sb.append("    movw $0x7C00, %sp\n");
-        sb.append("    movw $kof_bios_msg, %si\n");
+        sb.append("    movb %dl, kof_bios_drive\n");   // drive de boot (BIOS entrega em DL)
+        // B-3b-1: lê o setor do payload (LBA 1) via EDD int 0x13 ah=0x42
+        sb.append("    movb $0x42, %ah\n");
+        sb.append("    movb kof_bios_drive, %dl\n");
+        sb.append("    movw $kof_bios_dap, %si\n");
+        sb.append("    int $0x13\n");
+        sb.append("    jc kof_bios_load_bad\n");       // carry = falha NOMEADA, nunca hang
+        sb.append("    movl $0x50464F4B, %eax\n");     // magia "KOFP"
+        sb.append("    cmpl %eax, 0x8000\n");
+        sb.append("    jne kof_bios_load_bad\n");
+        sb.append("    movl $0x444C5941, %eax\n");     // magia "AYLD"
+        sb.append("    cmpl %eax, 0x8004\n");
+        sb.append("    jne kof_bios_load_bad\n");
+        sb.append("    movw $kof_bios_ok, %si\n");
+        sb.append("    jmp kof_bios_print\n");
+        sb.append("kof_bios_load_bad:\n");
+        sb.append("    movw $kof_bios_bad, %si\n");
         sb.append("kof_bios_print:\n");
         sb.append("    lodsb\n");
         sb.append("    testb %al, %al\n");
@@ -547,10 +563,24 @@ final class NativeMethodEmitter {
         sb.append("kof_bios_loop:\n");
         sb.append("    hlt\n");
         sb.append("    jmp kof_bios_loop\n");
-        sb.append("kof_bios_msg:\n");
+        sb.append("kof_bios_dap:\n");              // Disk Address Packet (EDD)
+        sb.append("    .byte 0x10, 0\n");
+        sb.append("    .word 1\n");                // 1 setor
+        sb.append("    .word 0x8000\n");           // offset do buffer de staging
+        sb.append("    .word 0\n");                // segmento
+        sb.append("    .quad 1\n");                // LBA 1
+        sb.append("kof_bios_drive:\n");
+        sb.append("    .byte 0\n");
+        sb.append("kof_bios_ok:\n");
         sb.append("    .asciz \"KO-BIOS OK\\r\\n\"\n");
+        sb.append("kof_bios_bad:\n");
+        sb.append("    .asciz \"KO-BIOS LOAD BAD\\r\\n\"\n");
         sb.append("    .org 510, 0\n");            // preenche até a assinatura
         sb.append("    .word 0xAA55\n");
+        // setor do payload em LBA 1: magia + padding até 512 B (imagem válida = 2 setores)
+        sb.append(".section .payload,\"a\"\n");
+        sb.append(".ascii \"KOFPAYLD\"\n");
+        sb.append("    .space 504, 0\n");
     }
 
 }

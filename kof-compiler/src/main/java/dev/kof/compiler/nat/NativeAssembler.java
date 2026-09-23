@@ -214,14 +214,17 @@ public final class NativeAssembler {
     /** B-3 (23/09): linker script do perfil BIOS. O setor de boot
      *  ({@code .text.boot}) é a PRIMEIRA seção, carregada pelo firmware em
      *  {@code 0x7C00}; a assinatura {@code 0xAA55} em 0x1FE vem do
-     *  {@code .org 510} no próprio {@code _start} (NativeMethodEmitter). O resto
-     *  do programa (64-bit, inalcançável nesta fatia) segue depois; o payload
-     *  Kof é a fatia B-3b. */
+     *  {@code .org 510} no próprio {@code _start} (NativeMethodEmitter).
+     *  B-3b: {@code .payload} é forçado ao LMA {@code 0x7E00} (= setor LBA 1),
+     *  para o próprio setor de boot carregá-lo do disco; {@code KEEP} impede o
+     *  gc-sections de descartá-lo. */
     private static String biosLinkerScript() {
         return "ENTRY(_start)\n"
                 + "SECTIONS\n{\n"
                 + "  . = 0x7C00;\n"
-                + "  .text.boot : { *(.text.boot) }\n"
+                + "  .text.boot : { KEEP(*(.text.boot)) }\n"
+                + "  . = 0x7E00;\n"
+                + "  .payload : { KEEP(*(.payload)) }\n"
                 + "  .text : { *(.text*) }\n"
                 + "  .rodata : { *(.rodata*) }\n"
                 + "  .data : { *(.data*) }\n"

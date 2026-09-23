@@ -104,6 +104,19 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     sabotar a assinatura faz o firmware recusar o disco. B-3b (carregar/rodar o
     payload Kof) resta.
 
+  - **B-3b-1 — o setor de boot BIOS carrega o seu setor de payload do disco
+    (lane baremetal 9092)** (23/09): o MBR agora lê o **LBA 1 da sua própria
+    imagem** via EDD (`int 0x13, ah=0x42`) para um buffer de staging em `0x8000`
+    e valida a magia `KOFPAYLD` emitida pelo linker numa seção `.payload`
+    forçada ao LMA `0x7E00` (= setor 1, com `KEEP` contra `--gc-sections`); a
+    imagem flat é um disco raw válido de 2 setores. O sucesso imprime
+    `KO-BIOS OK`; carry do EDD ou magia errada imprime uma falha **nomeada**
+    `KO-BIOS LOAD BAD` — nunca um hang silencioso. Prova: `BiosBootE2ETest`
+    3/0F — o marcador de carga sob `qemu-system-x86_64` real (SeaBIOS) mais um
+    caso de LBA 1 corrompido que tem de imprimir a falha nomeada e nunca o
+    marcador de sucesso. Sem superfície Kof nova. B-3b-2 (A20 + long mode) e
+    B-3b-3 (rodar o payload Kof) restam.
+
   - **B-6.3 — prova de `#GP` no ring1 + sabotagem do descritor da GDT (perfil
     x86_64 `uefi-ring`) (lane baremetal 9092)** (23/09): uma instrução
     privilegiada (`cli`) executada em CPL1 levanta `#GP`, capturado pelo handler
