@@ -33,6 +33,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     **10/10** (JVM/Script/JS + Native direct and inherited; RED measured with the
     code unfixed). Full suite 3197/0F/0E.
 
+  - **S5.1 (db-parity, gaps-db lane) — SHA1 + bswap for the cross MySQL wire
+    (cross piece `B62`)** (23/09): the first primitives of the `mysql_native_
+    password` auth path now exist on riscv64/aarch64 — `kof_sec_sha1_block` +
+    `kof_sec_sha1_internal` (short input, `len < 56`) ported from the x86
+    `RuntimeDb1`, plus `kof_bswap32`/`kof_bswap64`. Proof: `NativeRiscvDbWireTest`
+    runs SHA1 on both arches under qemu against the JVM `MessageDigest` oracle
+    (empty, `abc`, the 43-byte pangram) and a sabotage test (removing `B62`
+    makes `ld` fail undefined). Cross lesson: RV64 `lw` sign-extends where x86
+    `movl` zeroes — 32-bit loads feeding shifts, and the SHA1 working words, are
+    explicitly zero-extended. Scramble/lenenc/greeting remain on the next slice.
+
   - **§481 — `listOf()` widening of records sharing an interface picked the
     unqualified `Record` instead of the interface (session 9092, issue #596)**
     (23/09): `record Circle(...) implements Shape` + `record Square(...)

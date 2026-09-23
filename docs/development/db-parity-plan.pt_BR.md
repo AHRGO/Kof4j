@@ -8,7 +8,7 @@
 > estiver completa.
 
 **Dono:** lane `gaps-db` (repassada 21/09 por ordem da mantenedora, sob `D-DB-PARITY-OWNER`; S0/S1 autorizadas) · **Registros/plano:** lane docs/plataforma
-**Branch:** `beta-0.5.0` · **Estado:** S0 ✅ FEITO (21/09, sessão 9092) — recusa nativa honesta de scheme não suportado com o código nomeado `DB001`, mais link-by-use real (sem link de `libmariadb` para literais não-mysql); **S1 ✅ FEITO no Native x86-64 (23/09, lane gaps-db)** — `mariadb://` é alias do wire `mysql://`; no cross segue `DB001` honesto até o wire mysql ser portado (R7); **S2 ✅ FEITO no JVM/JS/Android (23/09, lane gaps-db)** — driver JDBC ausente agora é diagnóstico `DB001` nomeado (falhas reais de conexão intactas); **S3/S4 ✅ FEITOS 23/09 (lane gaps-db)** — `mongodb://` real no JVM/Android e `DB001` declarado no JS/Native; `oracle` declarado (sem driver/servidor no host); **S5.0 (camada de socket cross) ✅ SATISFEITA 23/09 (medido — já provada pelo core HTTP cross); S5.1 (handshake+auth) é a próxima fatia dedicada**
+**Branch:** `beta-0.5.0` · **Estado:** S0 ✅ FEITO (21/09, sessão 9092) — recusa nativa honesta de scheme não suportado com o código nomeado `DB001`, mais link-by-use real (sem link de `libmariadb` para literais não-mysql); **S1 ✅ FEITO no Native x86-64 (23/09, lane gaps-db)** — `mariadb://` é alias do wire `mysql://`; no cross segue `DB001` honesto até o wire mysql ser portado (R7); **S2 ✅ FEITO no JVM/JS/Android (23/09, lane gaps-db)** — driver JDBC ausente agora é diagnóstico `DB001` nomeado (falhas reais de conexão intactas); **S3/S4 ✅ FEITOS 23/09 (lane gaps-db)** — `mongodb://` real no JVM/Android e `DB001` declarado no JS/Native; `oracle` declarado (sem driver/servidor no host); **S5.0 (camada de socket cross) ✅ SATISFEITA 23/09 (medido — já provada pelo core HTTP cross)**; **S5.1 (handshake+auth) INICIADA 23/09 (peça cross `B62`: `kof_sec_sha1_block`/`kof_sec_sha1_internal` de entrada curta + `kof_bswap32/64`, provados nas 2 archs por `NativeRiscvDbWireTest` contra o oráculo `MessageDigest` do JVM; scramble/lenenc/greeting ficam na próxima fatia dedicada)**
 
 ---
 
@@ -163,6 +163,19 @@ por scheme é a prova.
   - **S5.1 — handshake + auth.** Portar SHA1/scramble/lenenc + ler o greeting +
     enviar a resposta de handshake/auth-switch. *Prova:* programa cross conecta no
     MariaDB real sob qemu e o servidor devolve o pacote OK.
+    - **23/09 — primeira fatia FEITA (peça `B62`, lane gaps-db):** SHA1 (entrada
+      curta, `len < 56` — o caminho de auth nunca hasheia mais) portado do
+      `RuntimeDb1` x86 (`kof_sec_sha1_block` + `kof_sec_sha1_internal`) mais
+      `kof_bswap32`/`kof_bswap64`. Prova: `NativeRiscvDbWireTest` roda SHA1 em
+      riscv64 + aarch64 (qemu) contra o oráculo `MessageDigest` do JVM em 3
+      vetores (vazio, `abc`, o pangrama de 43 bytes), mais um teste de sabotagem
+      provando que a peça é a exercitada (sem `B62`, o `ld` falha undefined).
+      Lição cross (load-bearing): `lw` no RV64 SIGN-ESTENDE (o `movl` x86 zera) —
+      todo load de 32 bits que alimenta `srli`/`slli` precisa de zero-extend
+      explícito, e as palavras de trabalho de 32 bits devem ser zext a cada round
+      (RV64 não tem GPR de 32 bits). **Ainda aberto:** scramble de auth
+      (`kof_db_mysql_scramble`), lenenc, leitura do greeting e a resposta de
+      auth-switch.
   - **S5.2 — `COM_QUERY` + resultset texto.** Portar framing + parse do resultado.
     *Prova:* roundtrip `db.query` sob qemu, byte-idêntico ao x86/JVM.
   - **S5.3 — bind/prepared + tx + ORM.** Portar o dispatch de prepared/execute/

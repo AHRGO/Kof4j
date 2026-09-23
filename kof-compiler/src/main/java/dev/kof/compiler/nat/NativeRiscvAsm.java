@@ -163,6 +163,11 @@ public final class NativeRiscvAsm {
                 // send/receive (port RuntimeChannel x86) sobre kof_alloc/free
                 // + futex (kof_plat_sync); aarch64 herda via tradutor.
                 .append(NativeRiscvAsmRtB61.RISCV_RUNTIME_ASM_B_61)
+                // S5.1 db-parity (gaps-db lane, 23/09): SHA1 curto + bswap —
+                // primitivas do auth mysql_native_password no cross (port de
+                // RuntimeDb1); prova por harness asm (kof.security recusa no
+                // cross por SECN000, entao nao ha superficie Kof).
+                .append(NativeRiscvAsmRtB62.RISCV_RUNTIME_ASM_B_62)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();
