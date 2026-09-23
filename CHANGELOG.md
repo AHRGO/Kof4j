@@ -13,6 +13,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§479 — exception thrown inside a `List.map`/`filter`/`reduce` lambda escaped
+    `try`/`catch (String e)` as `InvocationTargetException` on the JVM (session
+    9092, issue #594)** (23/09): every `map`/`filter`/`reduce` routes through the
+    `kof_ho_invoke` runtime shim, which reaches the lambda's synthesized `invoke`
+    via `java.lang.reflect.Method.invoke(...)` — that ALWAYS wraps a target
+    exception in `InvocationTargetException`, and the shim only caught
+    `IllegalArgumentException`, so the wrapper leaked past Kof's `catch
+    (String e)` (lowered to `catch java/lang/RuntimeException`). Fix (additive):
+    unwrap the `InvocationTargetException` cause and rethrow it, matching the
+    contract `kof_await`/`kof_select_any` already use (§291). Proof:
+    `KofHigherOrderTest` 8/8 — `throw` inside `map`/`filter`/`reduce` lambdas each
+    caught by `catch (String e)` on JVM/Native x86/JS; RED measured with the code
+    unfixed (JVM only — Native/JS already propagated correctly).
+
   - **§477 — generic top-level function returning bare `T` lost the caller-side
     `checkcast` on a reference instantiation (session 9092, issue #592)** (23/09):
     `T idf<T>(T x) { return x }` + `idf<Point>(Point(5, 6))` compiled clean but

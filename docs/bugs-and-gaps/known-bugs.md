@@ -14598,3 +14598,16 @@ Expected `6`; actual: `VerifyError: Bad type on operand stack` at load.
 - **Owner:** session 9092 (23/09), issue #592.
 <!-- pt-switch --> **PT:** [§477 (pt_BR)](known-bugs.pt_BR.md#477--funcao-de-topo-generica-que-devolve-t-puro-perde-o-checkcast-no-call-site-numa-instanciacao-reference--nosuchmethoderror-no-jvm---corrigido-2309-sessao-9092-issue-592)
 
+## §479 — exception thrown inside a `List.map`/`filter`/`reduce` lambda escapes `try`/`catch (String e)` as `InvocationTargetException` on the JVM — ✅ FIXED 23/09 (session 9092, issue #594)
+
+**Symptom (measured, verbatim issue #594 repro):** `listOf(1, 2, 3).map((x: Int) -> { if (x == 2) { throw "bad value" } return x * 2 })` inside `try { } catch (String e) { }` compiles clean; on the JVM the `throw` is not caught and an uncaught `java.lang.reflect.InvocationTargetException` (cause `RuntimeException("bad value")`) crashes `main` — the same for `filter` and `reduce`.
+
+**Root cause (measured):** `kof_ho_invoke` (the runtime shim every `map`/`filter`/`reduce` routes through, emitted by `JvmStringMiscRuntime`) calls the lambda's synthesized `invoke(...)` via `java.lang.reflect.Method.invoke(...)`, which by JDK contract ALWAYS wraps an exception thrown by the target in `InvocationTargetException`. The shim only caught `IllegalArgumentException` (overload probing), so the wrapper leaked past Kof's `catch (String e)` — which lowers to `catch (java/lang/RuntimeException)` (`JvmBackend` type mapping). The original `RuntimeException("bad value")` was present as the cause, just never unwrapped.
+
+**Fix (root, additive):** `kof_ho_invoke` now catches `InvocationTargetException` and rethrows its cause (RuntimeException/Error directly, any other checked cause wrapped in `RuntimeException`), matching the already-established unwrap contract of `kof_await`/`kof_select_any` (§291) and the spawn-task shim. No new semantics: `throw`/`catch` now behave the same everywhere.
+
+**Proof (same commit, RED→GREEN):** `KofHigherOrderTest` grew 3 cases (`exceptionInLambdaIsCaughtJvm`, `exceptionInLambdaJs`, `exceptionInLambdaNative`, 8/8) exercising `throw` inside `map`, `filter` and `reduce` lambdas, each caught by `catch (String e)` → `caught: map-bad` / `filter-bad` / `reduce-bad` / `done`. Q0 measured with the code unfixed: the JVM case fails with the issue's exact `InvocationTargetException` (Native/JS already propagated correctly — the bug was a JVM reflection-shim artifact). Cross-target parity: identical output on JVM, Native x86_64 and JS.
+
+- **Owner:** session 9092 (23/09), issue #594.
+<!-- pt-switch --> **PT:** [§479 (pt_BR)](known-bugs.pt_BR.md#479--excecao-lancada-dentro-de-lambda-de-listmapfilterreduce-escapa-do-trycatch-string-e-como-invocationtargetexception-no-jvm---corrigido-2309-sessao-9092-issue-594)
+

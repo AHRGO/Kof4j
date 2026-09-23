@@ -13,6 +13,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§479 — exceção lançada dentro de lambda de `List.map`/`filter`/`reduce`
+    escapava do `try`/`catch (String e)` como `InvocationTargetException` no JVM
+    (sessão 9092, issue #594)** (23/09): todo `map`/`filter`/`reduce` passa pelo
+    shim de runtime `kof_ho_invoke`, que alcança o `invoke` sintetizado do lambda
+    via `java.lang.reflect.Method.invoke(...)` — isso SEMPRE embrulha em
+    `InvocationTargetException` a exceção do alvo, e o shim só capturava
+    `IllegalArgumentException`, então o wrapper vazava do `catch (String e)` do
+    Kof (lowered para `catch java/lang/RuntimeException`). Correção (aditiva):
+    desembrulhar a causa do `InvocationTargetException` e relançá-la, seguindo o
+    contrato que `kof_await`/`kof_select_any` já usam (§291). Prova:
+    `KofHigherOrderTest` 8/8 — `throw` dentro de lambdas de `map`/`filter`/`reduce`
+    capturado por `catch (String e)` no JVM/Native x86/JS; RED medido com o código
+    sem o fix (só JVM — Native/JS já propagavam corretamente).
+
   - **§477 — função de topo genérica que devolve `T` puro perdia o `checkcast`
     no call-site numa instanciação reference (sessão 9092, issue #592)** (23/09):
     `T idf<T>(T x) { return x }` + `idf<Point>(Point(5, 6))` compilava limpo mas a
