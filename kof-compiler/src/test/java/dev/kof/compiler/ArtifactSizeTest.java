@@ -68,8 +68,15 @@ class ArtifactSizeTest {
     // podador) — o hello deixa de carregar as famílias que não usa (env, sync,
     // create, io, net) e ENCOLHE: 39.544->39.432B, 94->91 syms (encolher é
     // sempre ok). Medido no host pós-split.
-    private static final long HELLO_X86_BYTES = 39_432L;
-    private static final int HELLO_X86_SYMS = 91;
+    // B-1c (23/09, PLAN-BAREMETAL-BOOT): o dtoa do host deixou de usar libc e
+    // passou a carregar o Schubfach portado do JDK — as tabelas g (617 pares
+    // g1,g0) + pow10 são ~10KB de .rodata inerentes ao algoritmo exato. O host
+    // não roda `ld --gc-sections` (o freestanding roda e poda a fatia inteira
+    // quando não há Double: hello freestanding fica sem kof_schub_*), então o
+    // hello x86 host cresceu 39.432→52.096B, 91→100 syms. Medido no host.
+    // Follow-up (otimização, não correção): podar a fatia dtoa por uso no host.
+    private static final long HELLO_X86_BYTES = 52_096L;
+    private static final int HELLO_X86_SYMS = 100;
     // Pós-#104 (13/09): o shim globalThis.kof_platform do core JS (erro claro
     // em vez de ReferenceError fora do GraalJS) entrou no préâmbulo always —
     // o hello carrega ~827B a mais. Re-medido neste host: 6.873 → 7.700.
@@ -152,8 +159,8 @@ class ArtifactSizeTest {
         // alcançabilidade derrubou 627→~37 símbolos. O gate agora exige o
         // número BAIXO (era o inverso, pré-poda). Se alguém re-introduzir
         // emissão incondicional, isso estoura.
-        assertTrue(e.kofSymbols() < 100,
-                "S-3 podou o hello a <100 syms; se estourou, alguém voltou a emitir runtime inteiro — symbs=" + e.kofSymbols());
+        assertTrue(e.kofSymbols() < 110,
+                "S-3 podou o hello a <110 syms; se estourou, alguém voltou a emitir runtime inteiro — symbs=" + e.kofSymbols());
         assertNoBloat(e.fileBytes(), e.kofSymbols(), HELLO_X86_BYTES, HELLO_X86_SYMS, "hello x86_64");
     }
 

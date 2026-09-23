@@ -50,7 +50,7 @@ class FreestandingLinkE2ETest {
 
     private static final String FLOAT = """
             main() {
-                println(1.5)
+                println(1.5f)
             }
             """;
 
@@ -180,13 +180,17 @@ class FreestandingLinkE2ETest {
 
     @Test
     void freestandingRefusesFloatPrintWithDiagnostic(@TempDir Path dir) throws Exception {
+        // B-1c (23/09): o Double freestanding JÁ e suportado (dtoa Schubfach
+        // libc-free, ver DtoaParityE2ETest). O que continua recusado e o
+        // Float de 32 bits (`1.5f`), que ainda passa por kof_float_to_string
+        // (snprintf) — recusa honesta NATIVE003, nunca link quebrado.
         assumeTrue(hasTool("as") && hasTool("ld"), "x86 toolchain ausente");
         CompilerDriver driver = new CompilerDriver();
         Path source = dir.resolve("Main.kf");
         Files.writeString(source, FLOAT);
         CompilationResult result = driver.compile(source, dir.resolve("out-flt"),
                 Target.NATIVE, NativeProfile.FREESTANDING);
-        assertFalse(result.success(), "println(Double) freestanding deve ser recusado (dtoa/libc)");
+        assertFalse(result.success(), "println(Float) freestanding deve ser recusado (float-print/libc)");
         String diags = result.diagnostics().getDiagnostics().toString();
         assertTrue(diags.contains("NATIVE003") && diags.contains("float-print"),
                 "recusa de float sem codigo NATIVE003 cru: " + diags);
