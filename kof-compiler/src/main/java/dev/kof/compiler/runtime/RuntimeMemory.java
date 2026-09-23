@@ -205,7 +205,7 @@ public final class RuntimeMemory {
         // host/freestanding = mmap syscall (semântica idêntica ao que estava
         // inline); UEFI = AllocatePool via RuntimeUefi. O alocador fica
         // agnóstico de plataforma (o seam é o ponto único de plataforma).
-        if (dev.kof.compiler.nat.NativeProfile.active == dev.kof.compiler.nat.NativeProfile.UEFI) {
+        if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()) {
             RuntimeUefi.emitUefiHeapGrow(sb);
         } else if (dev.kof.compiler.nat.NativeProfile.active == dev.kof.compiler.nat.NativeProfile.FREESTANDING) {
             // B-1: sem SO para mmap — a arena vem do linker script.

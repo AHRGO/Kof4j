@@ -62,7 +62,7 @@ public final class NativeAssembler {
                 // tamanho configurável (env KOF_HEAP_SIZE/KOF_STACK_SIZE).
                 // O UEFI (B-2) segue com o script default do ld + objcopy: a
                 // conversão PE32+ depende do layout que ele já produz.
-                if (NativeProfile.active != NativeProfile.UEFI) {
+                if (!NativeProfile.activeIsUefi()) {
                     ldScript = asmFile.resolveSibling(asmFile.getFileName() + ".ld");
                     Files.writeString(ldScript, freestandingLinkerScript());
                     ldCmd.add("-T");
@@ -89,7 +89,7 @@ public final class NativeAssembler {
             // (a receita medida no OVMF: seções .text/.rodata/.data/.bss/.reloc,
             // subsystem 10; o .reloc dummy de 10 bytes vem do runtime
             // (RuntimeUefi) — o loader EDK2 exige dir de relocs não-vazio).
-            if (NativeProfile.active == NativeProfile.UEFI) {
+            if (NativeProfile.activeIsUefi()) {
                 Path elfFile = binFile.resolveSibling(binFile.getFileName() + ".elf");
                 Files.move(binFile, elfFile);
                 try {

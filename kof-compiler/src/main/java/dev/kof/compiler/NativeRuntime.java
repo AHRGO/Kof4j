@@ -8,6 +8,7 @@ import dev.kof.compiler.runtime.RuntimeValidationFmtBr;
 import dev.kof.compiler.runtime.RuntimeValidationNet;
 import dev.kof.compiler.runtime.RuntimeRandom;
 import dev.kof.compiler.runtime.RuntimeRng;
+import dev.kof.compiler.runtime.RuntimeRings;
 import dev.kof.compiler.runtime.RuntimeUuid;
 import dev.kof.compiler.runtime.RuntimeChannel;
 import dev.kof.compiler.runtime.RuntimeConcurrency;
@@ -228,6 +229,7 @@ public final class NativeRuntime {
         RuntimeMap.emit(sb);
         RuntimeMapLookups.emit(sb);
         RuntimeSet.emit(sb);
+        RuntimeRings.emitRings(sb);
         return sb.toString();
     }
 

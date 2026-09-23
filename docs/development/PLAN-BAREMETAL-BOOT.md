@@ -442,6 +442,8 @@ is independently provable, machinery first, surface last):**
   removing the ring1 GDT descriptor makes the CPL1 entry fault, proving the
   level is *enforced*, not decorative. E2E under OVMF.
 
+**B-6.1 LANDED 23/09 (lane 9092):** `NativeProfile.UEFI_RING` (via `NativeProfile.of("uefi-ring")`; programmatic — the CLI whitelist stays `host|freestanding`), a sub-profile that leaves today's `UEFI` output untouched. A new runtime slice `RuntimeRings` emits the Kof-owned **GDT** (null; ring0 code/data `0x08`/`0x10`; ring1 code/data `0x18`/`0x20`; 64-bit TSS `0x28`), the **TSS** (`rsp0` patched in `_start`), and a 256-gate **IDT**; `_start` runs `lgdt` + far `lretq` (reloads `CS=0x08`), `lidt`, `ltr`. A controlled `int3` lands in the ring0 `#BP` handler, which increments a memory counter; `_start` prints `KO-RING IDT OK` only when `hits==1`, then restores the firmware GDT/IDT (`lgdt`/`lidt`) + `popfq` and returns to the UEFI path. The profile routes the `kof_plat_*` seam through the UEFI branch (`activeIsUefi()` now covers `UEFI_RING`). **Acceptance:** `RingPrivilegeE2ETest` — OVMF boot prints `KO-RING IDT OK` + `KO-RING MAIN` (ring0 proof), and plain `UEFI` does **not** emit the ring proof. **Root bug fixed:** the `#BP` IDT patch targeted entry 0 instead of vector 3 (missing `+48` offset), so `int3` hit the default `cli;hlt` gate and hung under OVMF (diagnosed with `INIT`/`FAULT` markers). No language surface — rule 6 untouched.
+
 **Decision needed before B-6.2 (rule 6 + Simplicity Law):** how Kof code
 *targets* a ring1 domain (syntax/API). B-6.1 advances without it; B-6.2 does not.
 

@@ -134,8 +134,10 @@ public class NativeBackend implements Backend {
     /** B-1: perfil de link (HOST padrão; FREESTANDING = estático, sem libc no x86_64;
      *  B-2: UEFI = herda o link estático sem libc + entry MS x64 e PE32+). */
     public NativeBackend profile(NativeProfile p) {
-        this.freestanding = p == NativeProfile.FREESTANDING || p == NativeProfile.UEFI;
-        this.uefi = p == NativeProfile.UEFI;
+        this.freestanding = p == NativeProfile.FREESTANDING || p == NativeProfile.UEFI
+                || p == NativeProfile.UEFI_RING;
+        this.uefi = p == NativeProfile.UEFI || p == NativeProfile.UEFI_RING;
+        this.rings = p == NativeProfile.UEFI_RING;
         NativeProfile.active = p;
         return this;
     }
@@ -143,6 +145,8 @@ public class NativeBackend implements Backend {
     boolean freestanding = false;
     /** B-2: perfil UEFI — entry {@code _start} MS x64 + corpos de costura EFI + PE32+. */
     boolean uefi = false;
+    /** B-6.1: perfil {@code uefi-ring} — instala GDT/IDT/TSS próprios no {@code _start}. */
+    boolean rings = false;
 
     String resolveLabel(LabelId id) {
         return labelMap.computeIfAbsent(id, k -> ".Lkof_" + (labelCounter++));

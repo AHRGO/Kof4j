@@ -455,6 +455,8 @@ fatia é provável de forma independente, maquinaria primeiro, superfície por
   **Sabotagem:** remover o descritor ring1 da GDT faz a entrada CPL1 falhar,
   provando que o nível é *imposto*, não decorativo. E2E sob OVMF.
 
+**B-6.1 POUSADO 23/09 (lane 9092):** `NativeProfile.UEFI_RING` (via `NativeProfile.of("uefi-ring")`; programático — a whitelist do CLI continua `host|freestanding`), um sub-perfil que não toca a saída do `UEFI` atual. Uma nova fatia de runtime `RuntimeRings` emite a **GDT** do Kof (null; código/dados ring0 `0x08`/`0x10`; código/dados ring1 `0x18`/`0x20`; **TSS** 64-bit `0x28`), o **TSS** (`rsp0` patcheado no `_start`) e uma **IDT** de 256 gates; o `_start` roda `lgdt` + `lretq` far (recarrega `CS=0x08`), `lidt`, `ltr`. Um `int3` controlado cai no handler ring0 de `#BP`, que incrementa um contador em memória; o `_start` imprime `KO-RING IDT OK` só quando `hits==1`, então restaura a GDT/IDT do firmware (`lgdt`/`lidt`) + `popfq` e volta ao caminho UEFI. O perfil roteia a costura `kof_plat_*` pelo ramo UEFI (`activeIsUefi()` agora cobre `UEFI_RING`). **Aceitação:** `RingPrivilegeE2ETest` — boot OVMF imprime `KO-RING IDT OK` + `KO-RING MAIN` (prova CPL0) e o `UEFI` puro **não** emite a prova de anel. **Bug raiz corrigido:** o patch de IDT do `#BP` mirava a entrada 0 em vez do vetor 3 (faltava o offset `+48`), então o `int3` batia no gate padrão `cli;hlt` e travava sob OVMF (diagnosticado com marcadores `INIT`/`FAULT`). Sem superfície de linguagem — rule 6 intocada.
+
 **Decisão necessária antes do B-6.2 (rule 6 + Lei da Simplicidade):** como o
 código Kof *mira* um domínio ring1 (sintaxe/API). O B-6.1 avança sem ela; o
 B-6.2 não.

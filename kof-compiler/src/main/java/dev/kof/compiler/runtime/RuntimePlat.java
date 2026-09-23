@@ -19,7 +19,7 @@ public final class RuntimePlat {
     public static void emitPlatWrite(StringBuilder sb) {
         // B-2: no perfil UEFI os syscalls Linux não existem — a costura fala
         // com o firmware (OutputString/Exit) via RuntimeUefi.
-        if (dev.kof.compiler.nat.NativeProfile.active == dev.kof.compiler.nat.NativeProfile.UEFI) {
+        if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()) {
             RuntimeUefi.emitUefiHelpers(sb);
             RuntimeUefi.emitUefiWrite(sb);
             return;
@@ -57,7 +57,7 @@ public final class RuntimePlat {
     public static void emitPlatTime(StringBuilder sb) {
         // B-2: família sem corpo UEFI nesta fatia — recusa NOMEADA (R6),
         // nunca um syscall Linux silencioso que não existe no firmware.
-        if (dev.kof.compiler.nat.NativeProfile.active == dev.kof.compiler.nat.NativeProfile.UEFI) {
+        if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()) {
             RuntimeUefi.emitUefiRefuse(sb, "kof_plat_time, kof_plat_time_mono, kof_plat_sleep");
             return;
         }
@@ -92,7 +92,7 @@ public final class RuntimePlat {
     public static void emitPlatRandom(StringBuilder sb) {
         // B-2: família sem corpo UEFI nesta fatia — recusa NOMEADA (R6),
         // nunca um syscall Linux silencioso que não existe no firmware.
-        if (dev.kof.compiler.nat.NativeProfile.active == dev.kof.compiler.nat.NativeProfile.UEFI) {
+        if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()) {
             RuntimeUefi.emitUefiRefuse(sb, "kof_plat_random");
             return;
         }
@@ -109,7 +109,7 @@ public final class RuntimePlat {
 
     public static void emitPlatThreadId(StringBuilder sb) {
         // B-2: UEFI roda sem threads — TID constante (o GC do hello não marca concorrente).
-        if (dev.kof.compiler.nat.NativeProfile.active == dev.kof.compiler.nat.NativeProfile.UEFI) {
+        if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()) {
             RuntimeUefi.emitUefiThreadId(sb);
             return;
         }
@@ -127,7 +127,7 @@ public final class RuntimePlat {
         // B-2: UEFI é single-threaded — o futex nunca tem contensão;
         // no-op é semântica correta (não é silenciamento: não há threads
         // para esperar — kof_plat_thread_create é recusado com diagnóstico).
-        if (dev.kof.compiler.nat.NativeProfile.active == dev.kof.compiler.nat.NativeProfile.UEFI) {
+        if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()) {
             RuntimeUefi.emitUefiSyncNoop(sb);
             return;
         }
@@ -144,7 +144,7 @@ public final class RuntimePlat {
     public static void emitPlatThreadCreate(StringBuilder sb) {
         // B-2: família sem corpo UEFI nesta fatia — recusa NOMEADA (R6),
         // nunca um syscall Linux silencioso que não existe no firmware.
-        if (dev.kof.compiler.nat.NativeProfile.active == dev.kof.compiler.nat.NativeProfile.UEFI) {
+        if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()) {
             RuntimeUefi.emitUefiRefuse(sb, "kof_plat_thread_create");
             return;
         }
@@ -159,7 +159,7 @@ public final class RuntimePlat {
     public static void emitPlatIo(StringBuilder sb) {
         // B-2: família sem corpo UEFI nesta fatia — recusa NOMEADA (R6),
         // nunca um syscall Linux silencioso que não existe no firmware.
-        if (dev.kof.compiler.nat.NativeProfile.active == dev.kof.compiler.nat.NativeProfile.UEFI) {
+        if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()) {
             RuntimeUefi.emitUefiRefuse(sb, "kof_plat_read, kof_plat_close");
             return;
         }
@@ -183,7 +183,7 @@ public final class RuntimePlat {
     public static void emitPlatNet(StringBuilder sb) {
         // B-2: família sem corpo UEFI nesta fatia — recusa NOMEADA (R6),
         // nunca um syscall Linux silencioso que não existe no firmware.
-        if (dev.kof.compiler.nat.NativeProfile.active == dev.kof.compiler.nat.NativeProfile.UEFI) {
+        if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()) {
             RuntimeUefi.emitUefiRefuse(sb, "kof_plat_net_socket, kof_plat_net_connect, kof_plat_net_bind, kof_plat_net_listen, kof_plat_net_accept, kof_plat_net_send");
             return;
         }

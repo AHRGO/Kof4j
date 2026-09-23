@@ -481,6 +481,7 @@ final class NativeMethodEmitter {
         sb.append("    andq $-16, %rsp\n");       // o firmware entra MS: rsp%16==8
         sb.append("    call kof_plat_thread_id\n");
         sb.append("    movq %rax, kof_main_tid(%rip)\n");
+        if (nb.rings) sb.append("    call kof_rings_init\n    call kof_rings_selftest\n    call kof_rings_restore\n"); // B-6.1
         if (mainHasArgs) {
             // N3: array vazio — mesmo contrato do _start host.
             sb.append("    xorl %edi, %edi\n");

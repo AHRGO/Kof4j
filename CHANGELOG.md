@@ -41,6 +41,23 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     bodies); the `NativeBackend` <=500 gate paid with `NativeLinkPolicy`
     extracted (608->571 lines).
 
+  - **B-6.1 x86_64 privilege rings — Kof-owned GDT/TSS/IDT + CPL0 proof**
+    (23/09, lane 9092): a new `NativeProfile.UEFI_RING` (via
+    `NativeProfile.of("uefi-ring")`, programmatic; the CLI whitelist stays
+    `host|freestanding`) emits, on top of the B-2 UEFI image, a Kof-owned GDT
+    (ring0 code/data `0x08`/`0x10`, ring1 code/data `0x18`/`0x20`, 64-bit TSS
+    `0x28`), a TSS with a runtime-patched `rsp0`, and a 256-gate IDT. `_start`
+    runs `lgdt` + a far `lretq` (reloads `CS=0x08`), `lidt`, `ltr`; a
+    controlled `int3` must land in the ring0 `#BP` handler (memory counter)
+    before `_start` prints `KO-RING IDT OK`, then the firmware GDT/IDT are
+    restored (`lgdt`/`lidt`) + `popfq` and control returns to the UEFI path.
+    The `kof_plat_*` seam's UEFI branch now covers `UEFI_RING`
+    (`activeIsUefi()`). No language surface (rule 6 untouched). Proof:
+    `RingPrivilegeE2ETest` 2/0F (OVMF boot prints `KO-RING IDT OK`+`KO-RING
+    MAIN`; plain `UEFI` does not emit the ring proof). Root bug fixed: the
+    `#BP` IDT patch wrote entry 0 instead of vector 3 (missing `+48` offset),
+    so `int3` hit the `cli;hlt` default gate and hung under OVMF.
+
   - **DB parity S1 — `mariadb://` is a `mysql://` wire alias on Native x86-64**
     (23/09, gaps-db lane): `kof_db_connect_inner` (`RuntimeDb2`) now matches
     `mariadb://` and reuses the whole mysql path (`r12 = schemeStart+2`, so the
