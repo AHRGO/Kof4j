@@ -71,6 +71,7 @@ Auxílio de navegação, não é uma decisão por si só. Ordenado como neste ar
 - **D-R3-HANDLE-LIFETIME** — memória do `Handle` é automática
 - **D-ARTIFACT-TRUST** — contrato de confiança dos artefatos 1.0
 - **D-VERSIONING-RELEASE** — política consolidada de versionamento e corte de release
+- **D-DEBT-SCOUT** — ferramenta de escoteiro de dívida técnica autorizada, só Wave 1, sem capacidade de publicar Issue
 
 ---
 
@@ -3349,3 +3350,58 @@ lote · D6-1=B = abrir agora.
 `docs/development/tech-debt.pt_BR.md` §5.
 
 - **Relações:** `Related: tech-debt.pt_BR.md §5, regra 6, regra 11, R6, D-FFI-STRUCT-B, D-RELEASE-0.5.0-GATE (cond. 2/7).`
+
+## D-DEBT-SCOUT — frente do KOF Technical Debt Scout abre: só Wave 1 (determinístico, somente shadow), sem capacidade de publicar Issue (dirigido pelo usuário, 23/09/2026)
+
+**Data:** 2026-09-23 · **Estado:** `DECIDED` (escopo, não detalhe de
+implementação) · **Fonte:** dois documentos de pesquisa fornecidos pelo
+usuário nesta sessão (`KOF_TECHNICAL_DEBT_SCOUT_AGENT_V1_BACKUP.md`,
+`KOF_TECHNICAL_DEBT_SCOUT_AGENT_V2.md`) — a V2 substitui a V1 conforme o
+próprio §0 dela. O contrato operacional condensado pousou em
+`docs/development/technical-debt/DEBT_SCOUT_CONTRACT.md` no mesmo commit
+deste registro.
+
+**Decisão:** abre-se uma nova frente de ferramenta — descoberta/
+documentação automatizada de dívida técnica histórica —, restrita
+estritamente à **Wave 1** do desenho V2: só detectores determinísticos
+(nenhum LLM no laço), um schema de candidato estável + dois fingerprints
+(finding/dívida), descoberta de branch/ref que nunca hardcoda uma versão,
+e um orquestrador de scan. **Nenhum script e nenhum workflow deste pouso
+pode chamar a API de escrita de Issues do GitHub, e nenhum workflow
+concede `issues: write` a este sistema.** O Scout alimenta a triagem
+humana (hoje: `docs/development/tech-debt.md`, o ledger mantido pela
+mantenedora) — nunca é um segundo escritor desse ledger, e não decide
+contrato de linguagem, não implementa correções, não fecha Issues, não
+faz merge de PR (a regra 6 se aplica a qualquer coisa que o Scout
+levante e que exija mudança de contrato).
+
+**Por que um registro de decisão para ferramenta, não só um edit:** esta
+frente pode, em waves futuras que os documentos-fonte descrevem, ganhar
+a capacidade de abrir Issues no GitHub de forma autônoma. Essa
+capacidade **não** está autorizada por este registro — avançar além da
+Wave 1 (upload de SARIF, o Debt Inbox e, principalmente, qualquer mudança
+de permissão de workflow rumo a `issues: write` para este sistema) exige
+seu próprio registro em `DECISIONS.md` com a autorização de fase da
+mantenedora (`DEBT_SCOUT_CONTRACT.md` §7, fases S1/S2/S3), do mesmo jeito
+que `D-ARTIFACT-TRUST` condicionou o caminho de escrita de
+`scripts/agent-close-issue.sh`.
+
+**Rejeitado neste pouso:** copiar qualquer um dos dois documentos-fonte
+de 104 seções verbatim para o repositório (viola a lição de "partes
+pequenas", `AGENTS.md` §"Lição aprendida (09/04)"); um framework paralelo
+de risco/evidência/despacho (a própria V2 §46 manda reusar
+`scripts/agent-*.sh`); qualquer caminho de auto-publicação antes de uma
+fase de trust-rollout ser explicitamente autorizada.
+
+**Evidência:** os dois documentos-fonte (fornecidos na sessão, 23/09/2026);
+infraestrutura de agente existente (`scripts/agent-common.sh`,
+`agent-dispatch-gate.sh`, `agent-state-fingerprint.sh`, `agent-risk.sh`,
+`agent-evidence.sh`, `agent-verify.sh`) confirmada presente e reusável;
+`docs/development/tech-debt.md` (aberto 23/09) confirmado como o ledger
+manual existente que esta ferramenta alimenta em vez de duplicar; nenhuma
+label `technical-debt` existe ainda no GitHub (`gh label list`), então
+qualquer rotulação futura fica no corpo do candidato conforme o contrato,
+não numa taxonomia inventada na hora.
+
+- **Relações:** `Related: AGENTS.md regra 6/8/9/10/11, R6,
+  D-ARTIFACT-TRUST, D-KOF-FIRST, tech-debt.md.`

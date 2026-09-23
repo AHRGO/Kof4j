@@ -73,6 +73,7 @@ A navigation aid, not a decision by itself. Ordered as in this file.
 - **D-R3-HANDLE-LIFETIME** — `Handle` memory is automatic
 - **D-ARTIFACT-TRUST** — 1.0 artifact trust contract
 - **D-VERSIONING-RELEASE** — consolidated versioning and release-cut policy
+- **D-DEBT-SCOUT** — technical-debt scout tooling authorized, Wave 1 only, no Issue-publish capability
 
 ---
 
@@ -3331,3 +3332,55 @@ D6-1=B = open now.
 `docs/development/tech-debt.md` §5.
 
 - **Relationships:** `Related: tech-debt.md §5, rule 6, rule 11, R6, D-FFI-STRUCT-B, D-RELEASE-0.5.0-GATE (cond. 2/7).`
+
+## D-DEBT-SCOUT — KOF Technical Debt Scout front opens: Wave 1 (deterministic, shadow-only) only, no Issue-publish capability (user-directed, 23/09/2026)
+
+**Date:** 2026-09-23 · **State:** `DECIDED` (scope, not implementation
+detail) · **Source:** two research documents supplied by the user in this
+session (`KOF_TECHNICAL_DEBT_SCOUT_AGENT_V1_BACKUP.md`,
+`KOF_TECHNICAL_DEBT_SCOUT_AGENT_V2.md`) — V2 supersedes V1 per its own
+§0. Condensed operating contract landed at
+`docs/development/technical-debt/DEBT_SCOUT_CONTRACT.md` in the same
+commit as this entry.
+
+**Decision:** a new tooling front — automated discovery/documentation of
+historical technical debt — is authorized, scoped strictly to **Wave 1**
+of the V2 design: deterministic detectors only (no LLM in the loop), a
+stable candidate schema + two fingerprints (finding/debt), branch/ref
+discovery that never hardcodes a version string, and a scan orchestrator.
+**No script and no workflow in this landing may call the GitHub Issues
+write API, and no workflow grants this system `issues: write`.** The
+Scout is a feed into human triage (today: `docs/development/tech-debt.md`,
+the maintainer-owned ledger) — it is never a second writer of that
+ledger, and it does not decide language contract, does not implement
+fixes, does not close Issues, does not merge PRs (rule 6 applies to
+anything the Scout surfaces that would require a contract change).
+
+**Why a decision record for tooling, not just an edit:** this front can,
+in later waves the source documents describe, gain the ability to open
+GitHub Issues autonomously. That capability is explicitly **not**
+authorized by this entry — moving past Wave 1 (SARIF upload, the Debt
+Inbox, and especially any workflow permission change toward
+`issues: write` for this system) requires its own `DECISIONS.md` entry
+recording the maintainer's phase authorization (`DEBT_SCOUT_CONTRACT.md`
+§7, phases S1/S2/S3), the same way `D-ARTIFACT-TRUST` gated
+`scripts/agent-close-issue.sh`'s write path.
+
+**Rejected for this landing:** copying either 104-section source document
+verbatim into the repo (violates the "small parts" lesson, `AGENTS.md`
+§"Lesson learned (09/04)"); a parallel risk/evidence/dispatch framework
+(V2 §46 already mandates reusing `scripts/agent-*.sh`); any auto-publish
+path before a trust-rollout phase is explicitly authorized.
+
+**Evidence:** the two source documents (session-supplied, 2026-09-23);
+existing agent infrastructure (`scripts/agent-common.sh`,
+`agent-dispatch-gate.sh`, `agent-state-fingerprint.sh`, `agent-risk.sh`,
+`agent-evidence.sh`, `agent-verify.sh`) confirmed present and reusable;
+`docs/development/tech-debt.md` (opened 23/09) confirmed as the existing
+manual ledger this tooling feeds rather than duplicates; no
+`technical-debt` GitHub label exists yet (`gh label list`), so any future
+labeling stays in the candidate body per the contract, not a new
+taxonomy invented on the fly.
+
+- **Relationships:** `Related: AGENTS.md rule 6/8/9/10/11, R6,
+  D-ARTIFACT-TRUST, D-KOF-FIRST, tech-debt.md.`
