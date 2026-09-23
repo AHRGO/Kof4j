@@ -13,6 +13,24 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§448 ✅ CORRIGIDO — `toString` de `Double`/`Float` no Native agora casa o
+    oráculo JVM nos subnormais (x86 e cross)** (23/09, lane baremetal): o dtoa
+    nativo escolhia o decimal **mais curto** em vez do **mais próximo entre os
+    mais curtos**, então `println(5E-324)` imprimia `5.0E-324` onde o JVM
+    imprime `4.9E-324`. Causa-raiz: `RuntimeDtoa`/`NativeRiscvAsmRtB45` iteravam
+    `snprintf("%.*e")` + `strtod` (glibc) e ficavam com a primeira precisão que
+    fazia round-trip. Corrigido portando o `DoubleToDecimal`/`FloatToDecimal`
+    (Schubfach) do JDK para asm libc-free — `RuntimeDtoaSchubfach` no x86 (o
+    `RuntimeDtoa` libc foi DELETADO; o runtime x86 agora tem zero refs de
+    formatação libc) e `NativeRiscvSchubfach`/`…Format`/`…Float` no cross (o
+    aarch64 herda pelo `NativeAarch64Translator`, que ganhou `mulhu`/`sltu`/
+    `xori`/shifts por registrador). Prova: `DtoaParityE2ETest` (freestanding,
+    sem snprintf/strtod no dynsym) + `FreestandingLinkE2ETest.
+    freestandingFloatPrintMatchesJvmOracle` byte-a-byte vs o oráculo JVM medido;
+    o corpus do `NativeRiscvDtoaTest` estendido com subnormais de `Double`+
+    `Float` é byte-parity em riscv64 **e** aarch64, com um pin de que o runtime
+    podado não tem `call snprintf`/`call strtod`. Contagem viva 6→5.
+
   - **DB-3/DB-1 cross — `orm.all` REAL no riscv64/aarch64 (leitura row-object
     do ORM → `List`, E-parte-4)** (23/09, lane gaps-db): `SELECT * FROM "t"` sem
     bind, resolvendo `kof_orm_ctors` uma vez antes do loop de linhas; cada linha

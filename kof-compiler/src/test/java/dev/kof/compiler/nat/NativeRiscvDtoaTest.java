@@ -76,6 +76,10 @@ class NativeRiscvDtoaTest {
             3.14f, -1.0f, 0.5f, 1e7f, 9999999f, 1e-3f, 1.17549435e-38f,
             3.4028235e38f, 0.1f, 1.0f / 3.0f, 123456.78f, 2.5f, 100.0f, 1e-5f,
             0.001f, 0.0f, -0.0f, 6.02e23f, 7.5f, -12.25f,
+            // §448 cross: subnormais de Float (mesma face do Double).
+            Float.MIN_VALUE, Float.intBitsToFloat(2), Float.intBitsToFloat(3),
+            Float.intBitsToFloat(5), Float.intBitsToFloat((1 << 23) - 1),
+            Float.MIN_NORMAL, -Float.MIN_VALUE,
     };
 
     private static String oracle() {
@@ -190,6 +194,16 @@ class NativeRiscvDtoaTest {
         }
         String out = buildDynamic("aarch64", tempDir, "dtoaaa", arm.toString());
         assertEquals(oracle(), out);
+    }
+
+    /** §448: o dtoa cross e libc-free — o runtime podado do harness nao pode
+     *  referenciar snprintf/strtod (antes eram o motor do loop mais-curto). */
+    @Test
+    void dtoaPrunedRuntimeHasNoLibcFormatRefs() {
+        assumeToolchain();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness());
+        assertFalse(runtime.contains("call snprintf"), "dtoa riscv nao deve chamar snprintf");
+        assertFalse(runtime.contains("call strtod"), "dtoa riscv nao deve chamar strtod");
     }
 
     @Test

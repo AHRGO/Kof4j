@@ -13,6 +13,24 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§448 ✅ FIXED — `Double`/`Float` `toString` on Native now matches the JVM
+    oracle on subnormals (x86 and cross)** (23/09, baremetal lane): the native
+    dtoa picked the **shortest** decimal instead of the **closest among the
+    shortest**, so `println(5E-324)` printed `5.0E-324` where the JVM prints
+    `4.9E-324`. Root cause: `RuntimeDtoa`/`NativeRiscvAsmRtB45` looped
+    `snprintf("%.*e")` + `strtod` (glibc) and took the first round-tripping
+    precision. Fixed by porting the JDK `DoubleToDecimal`/`FloatToDecimal`
+    (Schubfach) to libc-free asm — `RuntimeDtoaSchubfach` on x86 (the libc
+    `RuntimeDtoa` was DELETED; x86 runtime now has zero libc format refs) and
+    `NativeRiscvSchubfach`/`…Format`/`…Float` on the cross (aarch64 inherits via
+    `NativeAarch64Translator`, which gained `mulhu`/`sltu`/`xori`/register
+    shifts). Proof: `DtoaParityE2ETest` (freestanding, no snprintf/strtod in
+    dynsym) + `FreestandingLinkE2ETest.freestandingFloatPrintMatchesJvmOracle`
+    byte-for-byte vs the measured JVM oracle; the `NativeRiscvDtoaTest` corpus
+    extended with `Double`+`Float` subnormals is byte-parity on riscv64 **and**
+    aarch64, with a pin that the pruned runtime has no `call snprintf`/`call
+    strtod`. Live count 6→5.
+
   - **DB-3/DB-1 cross — `orm.all` is REAL on riscv64/aarch64 (ORM row-object
     read → `List`, E-parte-4)** (23/09, gaps-db lane): `SELECT * FROM "t"` with
     no bind, resolving `kof_orm_ctors` once before the row loop; each row is a
