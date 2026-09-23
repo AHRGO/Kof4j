@@ -260,3 +260,32 @@ FFI001/002 honesto até decidido — nada de binding parcial silencioso.
    FFI00x inalterado para tudo que não for coberto,
    `training/idioms/interop.md` atualizado com a forma Kof escolhida em
    D6-1, e este doc promovido a `docs/` quando 3.8 pousar.
+
+## 7. Native 3.7 restante — todo de implementação (lane FFI/kof-c, reivindicada 22/09)
+
+A próxima fatia é maior que uma sessão, decomposta para que cada passo seja um
+vertical completo (nenhum caminho meio-ligado, R6):
+
+1. **`T[]`→`ptr` C no x86-64, copy-in por chamada (D6-2).** Classes de elemento
+   cuja largura de slot Kof iguala a largura C copiam com `memcpy` simples:
+   **`Long[]`→`long*`, `Double[]`→`double*`** (8 B). `Int[]`/`Float[]`/`Bool[]`
+   (4/1 B) exigem loop de estreitamento e seguem `FFI001` neste corte.
+   - gate `CompilerPipeline.nativeExternBound`: aceitar param array no x86
+     quando `FfiSignature.arrayElemChar` ∈ {`j`,`d`}.
+   - lowering `ExpressionMethodCallLowerer` (branch nativo): adicionar um tipo
+     de param sintético `kof.ffi`/`array`(`elem`) em vez de null; pular a
+     coerção escalar para ele.
+   - emissor `NativeFfiCall.emitX86`: empacotar cada arg array num buffer novo
+     de `kof_alloc` via o helper de runtime `kof_ffi_pack_array` (emitido como
+     `emitX86CstrHelper`, atrás de uma flag `ffiUsesArray` do backend) e passar
+     o buffer como um registrador INTEGER; só copy-in — escritas da C são
+     descartadas, exatamente como no JVM (paridade, regra 5).
+   - prova: um shim `.o` compilado com gcc (`long*`/`double*`) ligado ao
+     binário nativo, golden medido contra o oráculo JVM do mesmo programa
+     (`FfiArrayE2ETest`), + pin de gate `Int[]`→`FFI001`.
+2. **Pack com estreitamento de `Int[]`/`Float[]`/`Bool[]`** — mesma família de
+   helper, largura 4/1 (grava os bytes baixos de cada slot de 8 B).
+3. **`String[]`→`char**` e `Buffer(U8)` nativos** — `Buffer` precisa do tipo
+   nominal + runtime no Native primeiro (hoje só JVM/JS); `String[]` é array de
+   ponteiros (distinto do copy-in escalar). Ambos seguem `FFI001` até o seu
+   próprio corte.

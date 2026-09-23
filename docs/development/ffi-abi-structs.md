@@ -251,6 +251,35 @@ until decided — no silent partial binding.
 4. **JS**: decide wasm/ffi boundary (node host already binds scalars;
    struct = host-side pack/unpack) — no browser promise (R7).
 5. **DoD (R5)**: per-target golden E2E matrix (same C harness, 3 ABIs),
-   FFI00x unchanged for everything not covered, `training/idioms/interop.md`
+   FFI00x unchanged for everything not covered,    `training/idioms/interop.md`
    updated with the chosen Kof shape from D6-1, this doc promoted to
    `docs/` when 3.8 lands.
+
+## 7. Native 3.7 remaining — implementation todo (FFI/kof-c lane, claimed 22/09)
+
+The next slice is bigger than one session, decomposed so every step is a
+complete vertical (no half-bound path, R6):
+
+1. **`T[]`→C `ptr` on x86-64, copy-in per call (D6-2).** Element classes whose
+   Kof slot width equals the C width copy with a plain `memcpy`:
+   **`Long[]`→`long*`, `Double[]`→`double*`** (8 B). `Int[]`/`Float[]`/`Bool[]`
+   (4/1 B) need a narrowing loop and stay `FFI001` in this cut.
+   - gate `CompilerPipeline.nativeExternBound`: accept an array param on x86
+     when `FfiSignature.arrayElemChar` ∈ {`j`,`d`}.
+   - lowering `ExpressionMethodCallLowerer` (native branch): add a synthetic
+     `kof.ffi`/`array`(`elem`) param type instead of null; skip the scalar
+     coercion for it.
+   - emitter `NativeFfiCall.emitX86`: pack each array arg into a fresh
+     `kof_alloc` buffer via a runtime helper `kof_ffi_pack_array` (emitted
+     like `emitX86CstrHelper`, behind a `ffiUsesArray` backend flag) and pass
+     the buffer as one INTEGER register; copy-in only — C writes are dropped,
+     exactly as on the JVM (parity, rule 5).
+   - proof: a gcc-built `.o` shim (`long*`/`double*`) linked into the native
+     binary, golden measured against the JVM oracle of the same program
+     (`FfiArrayE2ETest`), plus the `Int[]`→`FFI001` gate pin.
+2. **`Int[]`/`Float[]`/`Bool[]` narrowing pack** — same helper family, element
+   width 4/1 (store the low bytes of each 8 B slot).
+3. **`String[]`→`char**` and `Buffer(U8)` native** — `Buffer` needs the
+   nominal type + runtime on Native first (today JVM/JS only); `String[]` is an
+   array of pointers (distinct from the scalar copy-in). Both stay `FFI001`
+   until their own cut.
