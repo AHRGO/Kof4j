@@ -80,8 +80,9 @@ class SecretE2ETest {
                     println(secrets.of("x"))
                 }
                 """;
+        // §278: ANDROID now runs kof.security (reuses the JVM) — no longer a gap.
         for (Target t : new Target[] { Target.JS, Target.NATIVE, Target.NATIVE_RISCV64,
-                Target.NATIVE_AARCH64, Target.ANDROID }) {
+                Target.NATIVE_AARCH64 }) {
             Path src = dir.resolve("secgap-" + t.name() + ".kf");
             Files.writeString(src, kof);
             CompilationResult r = driver.compile(src, dir.resolve("out-secgap-" + t.name()), t);

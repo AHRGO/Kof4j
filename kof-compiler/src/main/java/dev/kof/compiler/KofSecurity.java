@@ -280,6 +280,16 @@ public final class KofSecurity {
     }
 
     /**
+     * Android reuses the JVM backend/runtime (`CompilerPipeline:186`), and every
+     * `kof.security` shim on JVM is JCA/`java.util` only (MessageDigest, Mac,
+     * Cipher, SecureRandom, Base64, KeyStore, `java.nio.file`) — all present on
+     * Android. So a JVM-capable function is Android-capable too (§278 port,
+     * `D-TECHDEBT-23/09` = "port the stacks"). `kof.gpu` is NOT covered here:
+     * its JVM runtime needs FFM (`java.lang.foreign`), absent on Android.
+     */
+    private static boolean jvmLike(Target t) { return t == Target.JVM || t == Target.ANDROID; }
+
+    /**
      * Target support matrix. Unsupported calls produce a compile-time
      * diagnostic; never silently different behavior.
      */
@@ -293,47 +303,48 @@ public final class KofSecurity {
         }
         return switch (function) {
             case "kof_sec_aesgcm_encrypt", "kof_sec_aesgcm_decrypt" ->
-                    target == Target.JVM || target == Target.JS || target.isNative();
+                    jvmLike(target) || target == Target.JS || target.isNative();
             // D-SEC chacha (13/09): JVM+JS nesta unidade (asm x86 de
             // ChaCha20+Poly1305 p/ NATIVE fica na fila — SECN002 com
             // diagnóstico em compile-time até o port, igual SECN000).
             case "kof_sec_chacha20_encrypt", "kof_sec_chacha20_decrypt" ->
-                    target == Target.JVM || target == Target.JS;
+                    jvmLike(target) || target == Target.JS;
             case "kof_sec_password_hash", "kof_sec_password_verify", "kof_sec_password_needs_rehash" ->
-                    target == Target.JVM || target == Target.JS || target.isNative();
-            case "kof_sec_sha512" -> target == Target.JVM || target == Target.JS || target.isNative();
+                    jvmLike(target) || target == Target.JS || target.isNative();
+            case "kof_sec_sha512" -> jvmLike(target) || target == Target.JS || target.isNative();
             case "kof_sec_jwt_create", "kof_sec_jwt_create_ttl", "kof_sec_jwt_verify",
                     "kof_sec_jwt_verify_iss_aud", "kof_sec_jwt_secret" ->
-                    target == Target.JVM || target == Target.JS || target.isNative();
+                    jvmLike(target) || target == Target.JS || target.isNative();
             case "kof_sec_csrf_token", "kof_sec_csrf_valid", "kof_sec_cors_allowed",
                     "kof_sec_csp_header", "kof_sec_hsts_header", "kof_sec_content_type_options_header",
                     "kof_sec_frame_header", "kof_sec_referrer_header",
                     "kof_sec_auth_secret", "kof_sec_auth_token", "kof_sec_auth_authenticated",
                     "kof_sec_auth_claims", "kof_sec_auth_user", "kof_sec_auth_has_role",
-                    "kof_sec_auth_has_permission" -> target == Target.JVM;
+                    "kof_sec_auth_has_permission" -> jvmLike(target);
             // D-SEC camada 16 (14/09): OAuth2 resource-server (JWKS + RSA/EC)
             // — JVM-only nesta unidade; Native/JS seguem gap honesto.
             case "kof_sec_auth_resource_server", "kof_sec_auth_resource_server_verify" ->
-                    target == Target.JVM;
+                    jvmLike(target);
             // D-SEC C11 (14/09): cookies parse/set — JVM+JS nesta unidade
             // (Native segue gap honesto em compile-time, igual SECN000/002).
             case "kof_sec_cookie_set", "kof_sec_cookie_set_opts", "kof_sec_cookie_get" ->
-                    target == Target.JVM || target == Target.JS;
+                    jvmLike(target) || target == Target.JS;
             // G9: available on all targets (JVM/Native/JS)
             case "kof_sec_rate_limit", "kof_sec_session_create", "kof_sec_session_get", "kof_sec_session_destroy",
                     "kof_sec_api_key_generate", "kof_sec_api_key_valid" -> true;
-            // D-SECRETS face 1 (Stage 5/3.6): tipo Secret — JVM primeiro (R7);
-            // JS/Native/Script/Android seguem gap honesto SECN008.
+            // D-SECRETS face 1 (Stage 5/3.6): tipo Secret — JVM + Android
+            // (paridade por backend, §278/D-TECHDEBT-23/09); JS/Native/Script
+            // seguem gap honesto SECN008.
             case "kof_sec_secret_of", "kof_sec_secret", "kof_sec_secret_reveal",
-                    "kof_sec_secret_redacted", "kof_sec_secret_from_bytes" -> target == Target.JVM;
-            // D-SECRETS P3 (KeyHandle): JVM-primeiro (R7); os demais alvos
+                    "kof_sec_secret_redacted", "kof_sec_secret_from_bytes" -> jvmLike(target);
+            // D-SECRETS P3 (KeyHandle): JVM + Android; os demais alvos
             // seguem gap honesto SECN008 (nunca link-break/silencioso).
             case "kof_sec_key_from_hex", "kof_sec_key_from_pem", "kof_sec_key_from_keystore",
                     "kof_sec_key_rotate", "kof_sec_hmac_sha256_key",
                     "kof_sec_aesgcm_encrypt_key", "kof_sec_aesgcm_decrypt_key",
                     "kof_sec_chacha20_encrypt_key", "kof_sec_chacha20_decrypt_key",
                     "kof_sec_jwt_create_key", "kof_sec_jwt_create_ttl_key",
-                    "kof_sec_jwt_verify_key", "kof_sec_jwt_verify_iss_aud_key" -> target == Target.JVM;
+                    "kof_sec_jwt_verify_key", "kof_sec_jwt_verify_iss_aud_key" -> jvmLike(target);
             default -> true;
         };
     }

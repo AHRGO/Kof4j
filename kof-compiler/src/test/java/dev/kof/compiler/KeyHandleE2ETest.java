@@ -15,8 +15,8 @@ import org.junit.jupiter.api.io.TempDir;
  * D-SECRETS P3 (Stage 5 / tracker 3.6): {@code KeyHandle}. A named key that
  * never exposes bytes to the guest — only the crypto algorithms consume it.
  * {@code rotate()} returns a new handle and revokes the old one; using the
- * revoked handle fails with {@code SECN010} (honest, never silent). JVM-first
- * (R7); JS/Native/Script/Android stay a compile-time gap {@code SECN008}.
+ * revoked handle fails with {@code SECN010} (honest, never silent). JVM + Android
+ * (parity by backend, §278); JS/Native/Script stay a compile-time gap {@code SECN008}.
  */
 class KeyHandleE2ETest {
 
@@ -101,8 +101,9 @@ class KeyHandleE2ETest {
                     println(crypto.hmacSha256(k, "x"))
                 }
                 """;
+        // §278: ANDROID now runs kof.security (reuses the JVM) — no longer a gap.
         for (Target t : new Target[] { Target.JS, Target.NATIVE, Target.NATIVE_RISCV64,
-                Target.NATIVE_AARCH64, Target.ANDROID }) {
+                Target.NATIVE_AARCH64 }) {
             Path src = dir.resolve("keygap-" + t.name() + ".kf");
             Files.writeString(src, kof);
             CompilationResult r = driver.compile(src, dir.resolve("out-keygap-" + t.name()), t);

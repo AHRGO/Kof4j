@@ -353,7 +353,7 @@ class DomainGapCodesTest {
      * — separate decisions not taken), so the doc gate still covers Android.
      */
     @Test
-    void androidCompilesDbLikeJvmAndRefusesCryptoWithTheDocumentedCode(@TempDir Path tmp) throws Exception {
+    void androidCompilesDbAndCryptoLikeJvm(@TempDir Path tmp) throws Exception {
         Path file = tmp.resolve("Db-" + System.nanoTime() + ".kf");
         Files.writeString(file, """
             main() {
@@ -364,11 +364,17 @@ class DomainGapCodesTest {
         CompilationResult r = driver.compile(file, tmp.resolve("out-db"), Target.ANDROID);
         assertTrue(r.success(), "android compila kof.db desde DB-2 (20/09): "
                 + r.diagnostics().getDiagnostics());
-        assertGap(tmp, Target.ANDROID, "SECN003", """
+        // §278 (D-TECHDEBT-23/09): kof.security roda no Android (reusa o JVM;
+        // shims JCA/java.util) — SECN003 nao mais no Android.
+        Path crypto = tmp.resolve("Crypto-" + System.nanoTime() + ".kf");
+        Files.writeString(crypto, """
             main() {
                 println(crypto.sha512("x"))
             }
             """);
+        CompilationResult rc = driver.compile(crypto, tmp.resolve("out-crypto"), Target.ANDROID);
+        assertTrue(rc.success(), "android compila kof.security desde §278: "
+                + rc.diagnostics().getDiagnostics());
     }
 
     /**

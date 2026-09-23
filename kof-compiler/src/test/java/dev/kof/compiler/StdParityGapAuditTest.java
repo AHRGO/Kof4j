@@ -128,21 +128,20 @@ class StdParityGapAuditTest {
     }
 
     @Test
-    @DisplayName("security.sha512: riscv/aarch + ANDROID/SCRIPT gated (SECN003)")
+    @DisplayName("security.sha512: riscv/aarch + SCRIPT gated (SECN003); ANDROID segue o JVM (§278)")
     void securitySha512GatedOnCross() {
-        assertEquals(Set.of(Target.NATIVE_RISCV64, Target.NATIVE_AARCH64,
-                Target.ANDROID, Target.SCRIPT),
+        assertEquals(Set.of(Target.NATIVE_RISCV64, Target.NATIVE_AARCH64, Target.SCRIPT),
                 unsupported(t -> KofSecurity.supportedOn("kof_sec_sha512", t)));
         assertEquals("SECN003", KofSecurity.gapCode("kof_sec_sha512"));
     }
 
     @Test
-    @DisplayName("security por função: chacha/cookie (JVM+JS) e auth/resource-server (JVM-only)")
+    @DisplayName("security por função: chacha/cookie (JVM+JS) e auth/resource-server (JVM-only) — ANDROID = JVM (§278)")
     void securityPerFunctionGates() {
         var jvmJsOnly = Set.of(Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64,
-                Target.ANDROID, Target.SCRIPT);
+                Target.SCRIPT);
         var jvmOnly = Set.of(Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64,
-                Target.JS, Target.ANDROID, Target.SCRIPT);
+                Target.JS, Target.SCRIPT);
         assertEquals(jvmJsOnly,
                 unsupported(t -> KofSecurity.supportedOn("kof_sec_chacha20_encrypt", t)));
         assertEquals("SECN002", KofSecurity.gapCode("kof_sec_chacha20_encrypt"));

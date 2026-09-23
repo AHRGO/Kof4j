@@ -36,6 +36,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     descriptor stays erased). Goldens of #590/#593 adopted into
     `tests/golden/` and validated via `kof bench`.
 
+  - **§278 — `kof.security` now runs on `--target android` (gaps-db lane,
+    `D-TECHDEBT-23/09` "port the stacks")** (23/09): Android reuses the
+    `JvmBackend`, and every `kof_sec_*` JVM shim is JCA/`java.util` only
+    (MessageDigest, Mac, Cipher, SecureRandom, Base64, KeyStore,
+    `java.nio.file`) — all present on Android. `KofSecurity.supportedOn` now
+    treats `ANDROID` like `JVM` (`jvmLike`), so no more `SECN000/001/002/003/
+    004/006/007/008` refusal on Android. Proof: `KofSecurityTest.androidSecurity
+    CompilesByteIdenticalToJvm` (`Default/Main.class` byte-identical to JVM;
+    RED on the old gate). `kof.gpu` on Android stays `GPU001` — its JVM stack
+    needs FFM (`java.lang.foreign`), absent on Android (rule 6).
+
   - **§479 — exception thrown inside a `List.map`/`filter`/`reduce` lambda escaped
     `try`/`catch (String e)` as `InvocationTargetException` on the JVM (session
     9092, issue #594)** (23/09): every `map`/`filter`/`reduce` routes through the

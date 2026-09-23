@@ -217,8 +217,8 @@ resolve a função de runtime e cada target fornece a implementação.
 | Headers/CSRF/CORS | INEXISTENTE |
 | Segredos (env) | `secrets.get(name[,fallback])` (`String` cru) + `secrets.secret(name)` → `Secret` |
 | Auth em HTTP | PARCIAL: `header("x-auth")` manual no middleware |
-| Secrets em logs | PROTEGIDO no JVM pelo tipo `Secret` (D-SECRETS, Estágio 5/3.6): imprime `Secret(*** )`, o texto cru só por `reveal()`, `json.encode(secret)` redigido em runtime (P2) e aviso `SECN009` quando `reveal()` alimenta `log.*`/`json.encode`. JS/Native/Script/Android = gap honesto `SECN008` |
-| Material de chave | `KeyHandle` (D-SECRETS P3) nunca expõe bytes crus: `secrets.keyFromHex/keyFromPem/keyFromKeystore(...)`, `rotate()` revoga o handle antigo (uso posterior `SECN010`); JS/Native/Script/Android = gap honesto `SECN008` |
+| Secrets em logs | PROTEGIDO no JVM pelo tipo `Secret` (D-SECRETS, Estágio 5/3.6): imprime `Secret(*** )`, o texto cru só por `reveal()`, `json.encode(secret)` redigido em runtime (P2) e aviso `SECN009` quando `reveal()` alimenta `log.*`/`json.encode`. JS/Native/Script = gap honesto `SECN008` (Android roda `kof.security` desde §278, 23/09) |
+| Material de chave | `KeyHandle` (D-SECRETS P3) nunca expõe bytes crus: `secrets.keyFromHex/keyFromPem/keyFromKeystore(...)`, `rotate()` revoga o handle antigo (uso posterior `SECN010`); JS/Native/Script = gap honesto `SECN008` (Android roda `kof.security` desde §278, 23/09) |
 
 ---
 

@@ -10558,7 +10558,7 @@ The corpus (`backend-parity.md` media row + `stdlib-web.md` ×3 + `KofCliSupport
   post-fix both `true`. Single-compile native still links and runs
   (`nm`: `T kof_Function1_int_int_invoke`; binary prints `7`/`14`).
 
-### §278 — Android (`--target android`) refuses `kof.db`/`kof.security`/`kof.gpu` with `DB001`/`SECN00x`/`GPU001`, which the corpus never attributes to Android — 🟡 PARTIAL (found 17/09, lane bugs-and-gaps `.15`; **`kof.db`/`kof.orm` face FIXED 20/09 by D-DB-GAPS DB-2**; `kof.security`/`kof.gpu` refusals stay open — their stacks don't run on Android yet)
+### §278 — Android (`--target android`) refuses `kof.db`/`kof.security`/`kof.gpu` with `DB001`/`SECN00x`/`GPU001`, which the corpus never attributes to Android — 🟡 PARTIAL (found 17/09, lane bugs-and-gaps `.15`; **`kof.db`/`kof.orm` face FIXED 20/09 by D-DB-GAPS DB-2**; **`kof.security` face FIXED 23/09, `D-TECHDEBT-23/09` = "port the stacks"**; `kof.gpu` refusal stays OPEN — its JVM stack needs FFM, absent on Android)
 
 `--target android` reuses the JVM backend (`CompilerPipeline.java:186` → `new JvmBackend()`) and the JVM `ExternalClasspath` (`:438`), so it emits the same bytecode as `--target jvm`. But several `supportedOn` gates list only `JVM`/`JS`/`isNative()` and therefore **exclude `ANDROID`**, so the compiler refuses calls the JVM target accepts, under codes the corpus attributes to other targets:
 
@@ -10581,9 +10581,28 @@ The corpus (`backend-parity.md` media row + `stdlib-web.md` ×3 + `KofCliSupport
 **parity by construction** — `KofDbE2ETest.androidDbEmitsTheSameBytecodeAsJvm`
 compiles the same entity+create+count program on both targets and asserts the
 emitted `Default/Main.class` is byte-identical. The old pin flipped:
-`DomainGapCodesTest.androidCompilesDbLikeJvmAndRefusesCryptoWithTheDocumentedCode`
-(db compiles clean; `SECN003` still refused — the security/gpu half stays
-open above, rule 6).
+`DomainGapCodesTest.androidCompilesDbAndCryptoLikeJvm` (db + crypto compile
+clean).
+
+**FIXED — security half (23/09, `D-TECHDEBT-23/09` "port the stacks", GAPS-DB
+lane):** `KofSecurity.supportedOn` now treats `ANDROID` like `JVM`
+(`jvmLike(target)`) — every security function that runs on the JVM runs on
+Android, because the JVM shims are JCA/`java.util` only (MessageDigest, Mac,
+Cipher, SecureRandom, Base64, KeyStore, `java.nio.file`), all present on
+Android. Proof (parity by construction, same pin as DB-2):
+`KofSecurityTest.androidSecurityCompilesByteIdenticalToJvm` compiles
+sha256/sha512/hmac + passwords + `secrets.of` on both targets and asserts the
+emitted `Default/Main.class` is byte-identical. **Q0 RED measured** with only
+the gate stashed: `SECN003`/`SECN001`/`SECN008` refused on ANDROID, GREEN after.
+Pins flipped: `DomainGapCodesTest`, `StdParityGapAuditTest.security*` (ANDROID
+removed from the gap sets), `SecretE2ETest`/`KeyHandleE2ETest` Android loop.
+
+**Still OPEN — gpu half (rule 6):** `kof.gpu` on Android stays `GPU001`. Its
+JVM runtime needs FFM (`java.lang.foreign` — `JvmVkRuntime`/`JvmVkInitRuntime`/
+`JvmVkBuildRuntime`/`JvmVkDispatchRuntime`), which **does not exist on Android**
+(no Project Panama). "Porting" it requires a separate Android GPU path — a
+design decision, not a gate flip; `KofGpu.supportedOn` keeps excluding
+`ANDROID` until then.
 
 ### §279 — KofJS: an `if` on a **nullable primitive** whose condition the optimizer folds leaves the §267 `KofStatementIf` marker orphaned → `COMP002 unexpected op in expression statement` (ICE) — ✅ FIXED (found 18/09 in the `.22` ISSUE-LANE triage, re-measured by lane bugs-and-gaps `.15`; fix owner = KofJS lane `.18` — regression of the §267 marker; JS ICE gone since #278 `495445cd`, re-measured + pinned 18/09 by `.18`)
 

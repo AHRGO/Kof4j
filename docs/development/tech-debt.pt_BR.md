@@ -28,7 +28,7 @@ Os gates que nomeiam a dívida: `check_500.sh`,
 | §205 | print heterogêneo de `Object` no Native (caso direto fixado fatia 1; face boxed-print = residual §104b-ii) | 15/09 🟡 PARCIAL | nat | caminho de print nativo de boxed/`Object`; prova = célula de conformidade verde nos 4 alvos |
 | §248 | default methods de interface caídos no JS (`TypeError`) + Native (`null`, exit 0); hoje só JVM | 15/09 🔴 ABERTO | compiler `.22` | precisa de **decisão de escopo** (regra 6) antes do código |
 | §271 | DISPATCH de interface genérica: `invokeinterface …(Object)Object` apagado, sem bridge no impl → `NoSuchMethodError` | 18/09 🔴 ABERTO | compiler `.22` | rio do Cluster A, **regra 6** — decisão de ABI de bridge primeiro |
-| §278 | Android recusa `kof.security`/`kof.gpu` (`SECN00x`/`GPU001`); face `kof.db`/`kof.orm` CORRIGIDA 20/09 (DB-2) | 17/09 🟡 PARCIAL | gaps-db `.15` | stacks que rodem no Android, ou recusa permanente honesta |
+| §278 | Android: `kof.db`/`kof.orm` CORRIGIDOS 20/09 (DB-2); **`kof.security` CORRIGIDO 23/09** (`D-TECHDEBT-23/09`, shims JCA, byte-parity); `kof.gpu` segue recusado (`GPU001` — sua pilha JVM exige FFM, ausente no Android) | 17/09 🟡 PARCIAL | gaps-db `.15` | security pronto; gpu = caminho GPU próprio do Android (decisão de design) |
 | §283 | `time.interval`/`scheduler.every` no aarch64 sem cancel nunca sai sob qemu | 18/09 🟡 ABERTO | nat | pré-existente, ortogonal ao §253-B; prova = run qemu terminando |
 | §423 | channels NUNCA portados p/ Native riscv64/aarch64 (link `undefined reference to kof_channel_*`; NAT005 honesto no lowering) | 21/09 🟡 ABERTO | nat | o port cross, ou manter o diagnóstico declarado |
 

@@ -30,7 +30,7 @@ flipped to ✅. The gates that name the debt: `check_500.sh`,
 | §205 | heterogeneous `if`-expr print of `Object` on Native (direct case fixed slice 1; boxed-print face = §104b-ii residual) | 15/09 🟡 PARTIAL | nat | boxed/`Object` native print path; proof = conformance cell green on all 4 targets |
 | §248 | interface default methods dropped on JS (`TypeError`) + Native (`null`, exit 0); JVM-only today | 15/09 🔴 OPEN | compiler `.22` | needs a **scope decision** (rule 6) before code |
 | §271 | generic interface DISPATCH: erased `invokeinterface …(Object)Object`, no bridge on impl → `NoSuchMethodError` | 18/09 🔴 OPEN | compiler `.22` | Cluster A river, **rule 6** — bridge ABI decision first |
-| §278 | Android refuses `kof.security`/`kof.gpu` (`SECN00x`/`GPU001`); `kof.db`/`kof.orm` face FIXED 20/09 (DB-2) | 17/09 🟡 PARTIAL | gaps-db `.15` | stacks that run on Android, or an honest permanent refusal |
+| §278 | Android: `kof.db`/`kof.orm` FIXED 20/09 (DB-2); **`kof.security` FIXED 23/09** (`D-TECHDEBT-23/09`, JCA shims, byte-parity); `kof.gpu` still refused (`GPU001` — its JVM stack needs FFM, absent on Android) | 17/09 🟡 PARTIAL | gaps-db `.15` | security done; gpu = separate Android GPU path (design decision) |
 | §283 | aarch64 `time.interval`/`scheduler.every` without cancel never exits under qemu | 18/09 🟡 OPEN | nat | pre-existing, orthogonal to §253-B; proof = terminating qemu run |
 | §423 | channels NEVER ported to riscv64/aarch64 Native (link `undefined reference to kof_channel_*`; honest NAT005 at lowering) | 21/09 🟡 OPEN | nat | the cross port, or keep the declared diagnostic |
 

@@ -36,6 +36,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `emitBound` (o descritor do KofCall fica apagado). Goldens dos
     #590/#593 adotados em `tests/golden/` e validados via `kof bench`.
 
+  - **§278 — `kof.security` agora roda em `--target android` (lane gaps-db,
+    `D-TECHDEBT-23/09` "portar as pilhas")** (23/09): o Android reusa o
+    `JvmBackend`, e todo shim `kof_sec_*` do JVM é só JCA/`java.util`
+    (MessageDigest, Mac, Cipher, SecureRandom, Base64, KeyStore,
+    `java.nio.file`) — todos presentes no Android. `KofSecurity.supportedOn`
+    agora trata `ANDROID` como `JVM` (`jvmLike`), sem mais recusa
+    `SECN000/001/002/003/004/006/007/008` no Android. Prova:
+    `KofSecurityTest.androidSecurityCompilesByteIdenticalToJvm`
+    (`Default/Main.class` byte-idêntico ao JVM; RED no gate antigo). `kof.gpu`
+    no Android segue `GPU001` — sua pilha JVM exige FFM
+    (`java.lang.foreign`), ausente no Android (regra 6).
+
   - **§479 — exceção lançada dentro de lambda de `List.map`/`filter`/`reduce`
     escapava do `try`/`catch (String e)` como `InvocationTargetException` no JVM
     (sessão 9092, issue #594)** (23/09): todo `map`/`filter`/`reduce` passa pelo
