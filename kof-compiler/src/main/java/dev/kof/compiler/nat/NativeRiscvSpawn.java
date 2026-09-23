@@ -82,14 +82,14 @@ public final class NativeRiscvSpawn {
                 # herda s0,s1; o KERNEL grava o TID do filho em &handle->tid
                 # (ctid), que kof_cancel (B48) usa p/ achar a entry de flag.
                 # §129: a cadeia é por-TID (kof_exc_slot), então não precisa de
-                # TLS no clone.
+                # TLS no clone. B-1: o clone cruza a costura kof_plat_thread_create
+                # (o `call` riscv não empilha — o frame do pai fica intacto).
                 li   a0, 0x3D0F00
                 mv   a1, s2
                 addi a2, s1, 32
                 li   a3, 0
                 li   a4, 0
-                li   a7, 220
-                ecall
+                call kof_plat_thread_create
                 bltz a0, .Lsp_inline
                 bnez a0, .Lsp_reg           # pai: registra handle p/ join
                 # ---- filho: a0=0, s0=task, s1=handle ----

@@ -190,17 +190,20 @@ and the 3 `SYS_futex` sites of `NativeRiscvSpawn` routed (WAKE, await-WAIT and
 join-WAIT) — aarch64 inherits through the translator. **x86_64:**
 `kof_plat_thread_create` added to `RuntimePlat` as a tail `jmp pthread_create`
 (Linux+libc) and the 2 call sites (`RuntimeConcurrency`, `RuntimeScheduler`)
-routed to it. **Deliberate, never-silent deferral:** the riscv `clone` (220)
-split-flow **cannot** cross a call-based seam — the child inherits the parent's
-active frame and must swap `sp` *before any* `call`, otherwise `ra` lands on the
-parent's live slot (the race documented in `NativeRiscvSpawn`); the riscv
-thread-create seam is therefore reserved for B-1, where the freestanding flow is
-restructured. Proof: 251/0F (`KofConcurrency2Test` 48, `SpawnE2ETest` 10,
-`SpawnAwaitBlockE2ETest` 5, `ProcessSpawnE2ETest` 4, `NativeE2ETest` 67,
-`NativeRiscv64E2ETest` 54/1 skip, `NativeAarch64E2ETest` 53/1 skip,
-`PlatformSeamSabotageTest` 4/4, `ArtifactSizeTest` 6/6 — riscv/aarch baselines
-unchanged at 136,824 B/45 syms and 202,168 B/45 syms, `kof_plat_sync` is pruned
-from the hello). **Next:** net sockets (`kof_plat_net_*`), then B-1.
+routed to it. **riscv `clone` (220) — LANDED 22/09 (sessão 9092), deferral
+caducado:** the earlier note that the split-flow "cannot cross a call-based
+seam" was too conservative. On riscv `call` does **not** push (the return
+address is a register), so the child returns from the seam straight to
+`kof_spawn_result`, which swaps `sp` *before* calling the trampoline — the
+parent's frame is never touched. `NativeRiscvSpawn` now sets the args and
+`call kof_plat_thread_create` (seam in `NativeRiscvAsmRt0`, `li a7,220`; aarch64
+inherits through the translator); no raw `li a7, 220` is left in the spawn.
+Guard: `PlatformSeamSabotageTest#riscvThreadCreateRoutesThroughSeam`. Proof:
+`PlatformSeamSabotageTest` 5/5, `NativeRiscv64E2ETest` 54/1 skip,
+`NativeAarch64E2ETest` 53/1 skip, `KofConcurrency2Test` 48, `SpawnE2ETest` 10,
+`ArtifactSizeTest` 6, slice-registry 7 → 182/0F/2 skip (hello baselines unchanged:
+riscv/aarch still 136,824 B/45 syms and 202,168 B/45 syms; `kof_plat_sync` is
+pruned from the hello). **Next:** net sockets (`kof_plat_net_*`), then B-1.
 
 **Slice 4a (LANDED 22/09, lane `baremetal` 9092):** the x86_64 **net** surface
 crosses the seam — `RuntimePlat` gains `kof_plat_read`/`kof_plat_close` (0/3) and

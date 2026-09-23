@@ -93,6 +93,14 @@ public final class NativeRiscvAsmRt0 {
                 ecall
                 ret
 
+            # kof_plat_thread_create(flags=a0, stack=a1, ptid=a2, tls=a3, ctid=a4)
+            # -> tid (clone 220); `call` riscv nao empilha: o filho troca o sp no caller.
+            .globl kof_plat_thread_create
+            kof_plat_thread_create:
+                li   a7, 220
+                ecall
+                ret
+
             # kof_plat_read(fd=a0, buf=a1, len=a2) -> read
             .globl kof_plat_read
             kof_plat_read:

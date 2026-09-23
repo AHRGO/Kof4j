@@ -194,16 +194,18 @@ e os 3 sítios `SYS_futex` de `NativeRiscvSpawn` são roteados (WAKE, WAIT do aw
 e WAIT do join) — o aarch64 herda pelo tradutor. **x86_64:**
 `kof_plat_thread_create` entra no `RuntimePlat` como `jmp pthread_create` (Linux+
 libc) e os 2 sítios (`RuntimeConcurrency`, `RuntimeScheduler`) são roteados.
-**Adiamento deliberado e nunca-silencioso:** o fluxo partido do `clone` (220)
-riscv **não pode** cruzar uma costura baseada em `call` — o filho herda o frame
-ativo do pai e precisa trocar o `sp` *antes de qualquer* `call`, senão o `ra` cai
-no slot vivo do pai (race documentada em `NativeRiscvSpawn`); a costura de
-criação de thread no riscv fica reservada para B-1, quando o fluxo freestanding é
-reestruturado. Prova: 251/0F (`KofConcurrency2Test` 48, `SpawnE2ETest` 10,
-`SpawnAwaitBlockE2ETest` 5, `ProcessSpawnE2ETest` 4, `NativeE2ETest` 67,
-`NativeRiscv64E2ETest` 54/1 skip, `NativeAarch64E2ETest` 53/1 skip,
-`PlatformSeamSabotageTest` 4/4, `ArtifactSizeTest` 6/6 — baselines riscv/aarch
-inalterados em 136.824 B/45 syms e 202.168 B/45 syms, `kof_plat_sync` é podado do
+**Adiamento CADUCADO — risco era conservador (LANDADO 22/09, sessão 9092):** o
+`clone` (220) riscv cruza a costura com segurança: no riscv o `call` **não**
+empilha (o endereço de retorno é registrador), então o filho volta do seam
+direto ao `kof_spawn_result`, que troca o `sp` *antes* de chamar o trampoline —
+o frame do pai nunca é tocado. `NativeRiscvSpawn` passa a setar os args e
+`call kof_plat_thread_create` (seam no `NativeRiscvAsmRt0`, `li a7,220`; aarch64
+herda pelo tradutor); nenhum `li a7, 220` cru sobra no spawn. Guarda:
+`PlatformSeamSabotageTest#riscvThreadCreateRoutesThroughSeam`. Prova:
+`PlatformSeamSabotageTest` 5/5, `NativeRiscv64E2ETest` 54/1 skip,
+`NativeAarch64E2ETest` 53/1 skip, `KofConcurrency2Test` 48, `SpawnE2ETest` 10,
+`ArtifactSizeTest` 6, slice-registry 7 → 182/0F/2 skip (baselines riscv/aarch
+inalterados em 136.824 B/45 syms e 202.168 B/45 syms; `kof_plat_sync` é podado do
 hello). **Próxima:** sockets de rede (`kof_plat_net_*`), depois B-1.
 
 **Fatia 4a (LANDADA 22/09, lane `baremetal` 9092):** a superfície de **rede** do

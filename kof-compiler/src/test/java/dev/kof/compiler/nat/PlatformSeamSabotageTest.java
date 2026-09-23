@@ -275,4 +275,24 @@ class PlatformSeamSabotageTest {
         assertEquals(java.util.List.of(), bad,
                 "caller da costura sem sd/ld ra (folha virou caller): " + bad);
     }
+
+    /** B-1 (22/09): o clone do spawn riscv64 cruza a costura
+     *  {@code kof_plat_thread_create} — antes era ecall inline (deferral de
+     *  B-0). O {@code call} riscv não empilha, então o filho volta ao caller
+     *  e troca o {@code sp} antes do trampoline (frame do pai intacto). Guarda
+     *  estrutural: o seam existe com a syscall 220 e o caller roteia por ele —
+     *  nenhum clone cru ({@code li a7, 220}) pode sobrar no spawn. */
+    @Test
+    void riscvThreadCreateRoutesThroughSeam() {
+        assertTrue(NativeRiscvAsmRt0.RISCV_RUNTIME_ASM_0.contains(
+                "kof_plat_thread_create:\n    li   a7, 220\n    ecall\n    ret"),
+                "seam kof_plat_thread_create (clone 220) ausente na costura riscv");
+        StringBuilder sb = new StringBuilder();
+        NativeRiscvSpawn.emitRiscvSpawn(sb);
+        String spawn = sb.toString();
+        assertTrue(spawn.contains("call kof_plat_thread_create"),
+                "kof_spawn_result deve cruzar a costura do clone (B-1)");
+        assertFalse(spawn.contains("li   a7, 220"),
+                "clone cru (li a7,220) não pode sobrar no spawn — B-1 seam quebrado");
+    }
 }
