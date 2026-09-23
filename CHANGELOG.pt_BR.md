@@ -72,6 +72,28 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     true sem re-rodar o DDL), SQL inválido → false sem registrar (mesmo
     contrato do host), `applied_at` = epoch-ms via `kof_time_now` e o
     INSERT bindado; `KofOrmE2ETest` 63/0F.
+    A fatia D adiciona `count_where` (peça `RtB53`, port de `RuntimeOrm3`) —
+    `SELECT COUNT(*) FROM "t" WHERE "f" = ?` montado sem concatenação, value
+    ligado pelo tag da caixa §284 (Int/Long/Bool/Double/Float, FP pela ABI
+    fa0), KofString (`bind_text` transiente) e null (`bind_null`), forma
+    estranha → throw `ORM001` honesto; a sonda Q4 achou e o fix fechou o
+    **§447**: no Native o box do argumento ORM saía como
+    `java.lang.Boolean.valueOf` → o dispatch nativo de `valueOf` (o caminho
+    de conversão para String do concat/print) ligava TEXTO `"true"` (o JVM
+    liga `Boolean`/1; o caso Int ficava mascarado pelo affinity numérico do
+    SQLite), então o `ExpressionOrmCallLowerer` agora emite `kof_box_bool`
+    para Bool nos alvos nativos (resíduo não-Bool catalogado no §447).
+    Prova: `KofOrmE2ETest.crossNativeF3aCountWhereMatchesX86Oracle` — oráculo
+    x86-64 + byte-parity riscv64/aarch64 + perna host JVM na matriz toda de
+    valores (bool literal/var/false casam as linhas certas, linha TEXT não
+    casada, injeção/negativo/miss/ORM001/id-ruim); `KofOrmE2ETest` 64/0F;
+    bateria 315/0F.
+  - **check_500 vermelho fechado — `TypeChecker` 606 + `StatementAnalyzer` 600 (known-bugs §446)**
+    (22/09, lane typer, sessão 9093): os dois arquivos CRÍTICOS herdados das
+    fatias do §280 foram splitados por responsabilidade (`SemBinaryResultTyper`
+    +166, `SemAssignmentAnalyzer` +146, movimentos verbatim), `check_500` rc=0;
+    bateria 171/171 na superfície tocada. Entrada de paridade adicionada aqui
+    para o gate CHANGELOG×ledger refletir o fechamento.
 
   - **Diagnósticos SEM/PKG agora reportam a posição real da origem (known-bugs §280)**
     (22/09, lane typer, sessão 9093 — a unidade escrita em 21/09 ficou no meio por

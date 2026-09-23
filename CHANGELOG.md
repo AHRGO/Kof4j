@@ -70,7 +70,28 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     true without re-running the DDL), invalid SQL → false without
     recording (same host contract), `applied_at` = epoch-ms via
     `kof_time_now` and the INSERT bound; `KofOrmE2ETest` 63/0F.
-    `orm.all` gate pin on cross.
+    Slice D adds `count_where` (piece `RtB53`, port of `RuntimeOrm3`) —
+    `SELECT COUNT(*) FROM "t" WHERE "f" = ?` built without concatenation,
+    value bound by §284 box tag (Int/Long/Bool/Double/Float, FP through the
+    fa0 ABI), KofString (transient `bind_text`) and null (`bind_null`),
+    foreign shape → honest `ORM001` throw; the Q4 probe caught and the fix
+    closed **§447**: on Native the ORM argument box left as
+    `java.lang.Boolean.valueOf` → the native `valueOf` dispatch (the
+    String-conversion path of concat/print) bound TEXT `"true"` (JVM binds
+    `Boolean`/1; the Int case was masked by SQLite numeric affinity), so
+    `ExpressionOrmCallLowerer` now emits `kof_box_bool` for Bool on the
+    native targets (non-Bool residual catalogued in §447). Proof:
+    `KofOrmE2ETest.crossNativeF3aCountWhereMatchesX86Oracle` — x86-64 oracle
+    + riscv64/aarch64 byte-parity + JVM host leg over the whole value matrix
+    (bool literal/var/false hit the right rows, TEXT row not matched,
+    injection/negative/miss/ORM001/bad id); `KofOrmE2ETest` 64/0F; battery
+    315/0F. `orm.all` gate pin on cross.
+  - **check_500 red closed — `TypeChecker` 606 + `StatementAnalyzer` 600 (known-bugs §446)**
+    (22/09, typer lane, session 9093): the two CRITICAL files inherited from the
+    §280 slices were split by responsibility (`SemBinaryResultTyper` +166,
+    `SemAssignmentAnalyzer` +146, verbatim moves), `check_500` rc=0; battery
+    171/171 on the touched surface. Parity entry added here so the
+    CHANGELOG×ledger gate reflects the closure.
   - **SEM/PKG diagnostics now report the real source position (known-bugs §280)**
     (22/09, typer lane, session 9093 — the unit authored 21/09 was left mid-unit by a
     dead turn and finished via the dead-owner rule): 53 of the 91 hard-coded

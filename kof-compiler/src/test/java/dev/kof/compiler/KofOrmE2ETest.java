@@ -2399,6 +2399,97 @@ class KofOrmE2ETest {
         assertCrossCreateParity(tempDir, "migrate", template, oracle);
     }
 
+    /** DB-3/DB-1 cross slice D (22/09): {@code orm.count_where} REAL no
+     *  riscv64/aarch64 (peça RtB53, port de RuntimeOrm3) — bind por tag de
+     *  caixa §284 (Int/Long/Bool/Double/Float), KofString e null, SQL sem
+     *  concatenação (injeção vira busca literal), miss/negativo → 0, valor
+     *  de forma inválida → throw ORM001 (R6), id ruim → throw. Byte-parity
+     *  com o oráculo x86-64 e com o host JVM na matriz toda.
+     *
+     *  <p>O caso Bool literal pina o §447: no Native o box de erasure do
+     *  argumento ORM saía como {@code java.lang.Boolean.valueOf} → o
+     *  dispatch nativo de {@code valueOf} (que converte para String no
+     *  caminho de concat/print) devolvia TEXTO "true"/"false" e o bind
+     *  comparava TEXT contra a coluna INTEGER — 0 sempre (o Int escapava
+     *  pelo affinity numérico do SQLite; o Bool expôs). Fix no
+     *  {@code ExpressionOrmCallLowerer}: face Bool emite {@code kof_box_bool} no
+     *  Native (os demais primitivos seguem no valueOf/TEXTO — residuo §447).
+     *
+     *  <p>Face (b) diagnosticada: valor de forma inválida é throw ORM001 no
+     *  Native (honesto) e 0 silencioso no host JVM (o golden JVM abaixo
+     *  registra a divergência medida; a lane do host decide o R6 de lá). */
+    @Test
+    void crossNativeF3aCountWhereMatchesX86Oracle(@TempDir Path tempDir) throws IOException {
+        assumeTrue(isLinux(), "cross ORM E2E requires Linux + libsqlite3");
+        String template = """
+            entity User {
+                id: Long generated
+                name: String
+                email: String unique
+                age: Int
+            }
+            entity Flagged {
+                id: Long generated
+                ok: Bool
+                ratio: Float
+                price: Double
+                tag: Long
+            }
+            main() {
+                var db = db.connect("sqlite:%s/kof.db")
+                println(orm.create<User>(db))
+                db.execute(db, "insert into user (name, email, age) values ('Mel', 'm@kof.dev', 30)")
+                db.execute(db, "insert into user (name, email, age) values ('Ana', 'a@kof.dev', 41)")
+                println(orm.count<User>(db, "name", "Mel"))
+                println(orm.count<User>(db, "age", 30))
+                println(orm.count<User>(db, "email", "nope@x.io"))
+                println(orm.count<User>(db, "name", "x' OR 1=1 --"))
+                println(orm.count<User>(db, "age", -7))
+                println(orm.create<Flagged>(db))
+                db.execute(db, "insert into flagged (ok, ratio, price, tag) values (1, 1.5, 2.25, 7)")
+                println(orm.count<Flagged>(db, "ok", true))
+                println(orm.count<Flagged>(db, "ok", 1))
+                println(db.query(db, "select ok, typeof(ok) as t from flagged").get(0))
+                db.execute(db, "insert into flagged (ok, ratio, price, tag) values ('true', 1.5, 2.25, 8)")
+                db.execute(db, "insert into flagged (ok, ratio, price, tag) values (0, 1.5, 2.25, 9)")
+                var b: Bool = true
+                println(orm.count<Flagged>(db, "ok", true))
+                println(orm.count<Flagged>(db, "ok", b))
+                println(orm.count<Flagged>(db, "ok", false))
+                println(orm.count<Flagged>(db, "price", 2.25))
+                var r: Float = 1.5
+                println(orm.count<Flagged>(db, "ratio", r))
+                var l: Long = 7
+                println(orm.count<Flagged>(db, "tag", l))
+                try {
+                    println(orm.count<User>(db, "age", listOf(1, 2)))
+                } catch (String e) {
+                    println(e)
+                }
+                println("after-throw")
+                db.close(db)
+            }
+            """;
+        String golden = "true\n1\n1\n0\n0\n0\ntrue\n1\n1\n{\"ok\":1,\"t\":\"integer\"}\n"
+                + "1\n1\n1\n3\n3\n1\n"
+                + "orm.count bind value: unsupported type on Native (ORM001)\nafter-throw";
+        String oracle = runX86CreateOracle(tempDir, "countwhere", template);
+        assertEquals(golden, oracle,
+                "oráculo x86-64 (count_where: matriz de tags + §447 bool literal + ORM001)");
+        assertCrossCreateParity(tempDir, "countwhere", template, oracle);
+        // host JVM (b): bate com o oráculo na matriz toda; a UNICA linha que
+        // diverge e o valor de forma invalida (0 silencioso la, ORM001 aqui).
+        Path jvmDir = tempDir.resolve("countwhere-jvm");
+        Files.createDirectories(jvmDir);
+        Path jvmSource = jvmDir.resolve("Main.kf");
+        Files.writeString(jvmSource, template.formatted(jvmDir)
+                .replace("sqlite:" + jvmDir, "jdbc:sqlite:" + jvmDir));
+        String goldenJvm = golden.replace(
+                "orm.count bind value: unsupported type on Native (ORM001)", "0");
+        runJvmWithExtra(jvmSource, jvmDir.resolve("out"),
+                findDriverJar("sqlite-jdbc", "SQLite"), goldenJvm);
+    }
+
     /** x86-64: compila e roda o template numa pasta propria (banco limpo) e
      *  devolve o stdout — o oráculo do contrato D-DB-GAPS. */
     private String runX86CreateOracle(Path tempDir, String label, String template) throws IOException {

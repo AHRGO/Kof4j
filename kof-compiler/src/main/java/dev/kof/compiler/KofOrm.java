@@ -62,12 +62,14 @@ public final class KofOrm {
      *  os kof_db_* SQLite do cross — slice A: {@code delete_all} + {@code count}
      *  (peça RtB50, port de RuntimeOrm1); slice B: {@code create} (peça RtB51,
      *  port de RuntimeOrm2 — parser do schema + DDL + sqlite3_exec); slice C:
-     *  {@code migrate} (peça RtB52, kof_migrations + idempotência); aarch64
+     *  {@code migrate} (peça RtB52, kof_migrations + idempotência); slice D:
+     *  {@code count_where} (peça RtB53, bind via box §284; §447: o
+     *  literal Bool boxeia kof_box_bool, nunca TEXTO); aarch64
      *  herda pelo tradutor. O que ainda não tem porte cross segue ORM001
      *  compile-time (R6/R7). */
     private static final java.util.Set<String> CROSS_F1A = java.util.Set.of(
             "kof_orm_delete_all", "kof_orm_count", "kof_orm_create",
-            "kof_orm_migrate");
+            "kof_orm_migrate", "kof_orm_count_where");
 
     /** D-DB-GAPS DB-1 (20/09): faces SQL-puro do Native x86-64, uma por fatia.
      *  F1a = {@code delete_all}, F1b = {@code count}, F1c = {@code migrate}
