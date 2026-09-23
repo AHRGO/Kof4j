@@ -31,6 +31,25 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (verbatim `-5`, todos-os-ids, contrato de box do §57/§70, default
     explícito); RED medido com stash só do fix.
 
+  - **§248 — default methods de interface eram descartados em silêncio no JS e
+    no Native (paridade cross-target do §209/#213; sessão 9092, TIER 13.1)**
+    (23/09): o repro do §248 (`interface Greeter` com o default `greetLoud` +
+    `class SimpleGreeter implements Greeter` + `g.greetLoud("Alice")`) imprimia
+    `HELLO ALICE` no JVM mas `null` no Native x86_64 e quebrava no JS
+    (`TypeError: g.greetLoud is not a function`). Causa raiz, duas faces:
+    (a) **Native** — `NativeClassMeta.collectVirtualMethods` só semeava as
+    interfaces da *superclasse* na coleta de slots de vtable, nunca as
+    interfaces **próprias** da classe, então um default herdado não ganhava slot
+    e a chamada caía fora do índice; fix: semear `clazz.interfaces()` e, no
+    `addSlot`, deixar um método `ACC_BRIDGE` sobrescrever o slot da interface que
+    ele apaga (o dispatch apagado do §483 segue verde). (b) **JS** —
+    `JsLoweringContext.skipClass` descarta toda `IRClass` `INTERFACE` e o
+    implementador não herdava o default; fix: `JsBackend.injectInterfaceDefaults`
+    materializa cada default herdado no implementador que não o sobrescreve,
+    antes dos mapas de método/aridade. Prova: `InterfaceDefaultMethodE2ETest`
+    **7/7** (JVM + Native + JS; RED medido: Native `null\nHello Bob`, JS exit 1);
+    `GenericInterfaceAssignabilityTest` 10/10; suíte completa 3778 run, 0F/0E.
+
   - **§483 — dispatch por interface genérica no Native passava um primitivo
     boxed ao método concreto → retorno lixo (sessão 9092, TIER 13.2 / §271)**
     (23/09): o repro da §271 (`interface Converter<A,B>` +

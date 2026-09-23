@@ -1051,7 +1051,7 @@ Fila ordenada dos vereditos de múltipla escolha da mantenedora 23/09 (fonte:
 
 | # | Item | Lane dona | Prova |
 |---|---|---|---|
-| 13.1 | §248 — default methods de interface no JS + Native (paridade) | compiler (**9092, CLAIM 23/09**) | golden E2E paridade 4 alvos |
+| 13.1 | §248 — default methods de interface no JS + Native (paridade) | compiler (**9092, ✅ FEITO 23/09**) | slot de vtable no Native + materialização no JS; `InterfaceDefaultMethodE2ETest` 7/7 nos 4 alvos |
 | 13.2 | §271 — bridge methods nos impls de interface genérica (ABI de erasure) | compiler (**9092, ✅ FEITO 23/09**) | face JVM ✅ (§356 `c8d55a10`); face Native ✅ (§483) — `NoSuchMethodError` fechado, suíte verde |
 | 13.3 | §278 — portar `kof.security` (`kof.security` ✅ **FEITO 23/09**, byte-parity Android=JVM; residual `kof.gpu` — FFM ausente no Android, exige decisão de design) | gaps-db | byte-parity do security provada; face gpu pendente |
 | 13.4 | §423 — portar runtime `kof_channel_*` p/ riscv64/aarch64 | nat | prova qemu nas 2 archs |
