@@ -114,8 +114,9 @@ class RingPrivilegeE2ETest {
         assumeTrue(hasTool("mformat", "-V") || hasTool("mformat", "--help"), "mtools ausente");
         String text = "";
         for (int attempt = 1; attempt <= 2; attempt++) {
-            text = tryBoot(tempDir, peBinary, expected, code, qemu, attempt);
-            if (text.contains(expected)) break;
+            String t = tryBoot(tempDir, peBinary, expected, code, qemu, attempt);
+            if (t.contains(expected)) return t;
+            if (t.length() > text.length()) text = t;
         }
         return text;
     }
@@ -168,9 +169,13 @@ class RingPrivilegeE2ETest {
         assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
                 && hasTool("objcopy", "--version"), "toolchain binutils ausente");
         Path bin = build(tempDir, NativeProfile.UEFI_RING);
-        String text = bootOvmf(tempDir, bin, "KO-RING IDT OK");
+        String text = bootOvmf(tempDir, bin, "KO-RING1 CPL1 OK");
         assertTrue(text.contains("KO-RING IDT OK"),
                 "OVMF nao provou a IDT ring0 do Kof. Fim do log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+        // B-6.2a: a transição CPL0->CPL1 executou código com RPL=1 e voltou.
+        assertTrue(text.contains("KO-RING1 CPL1 OK"),
+                "OVMF nao provou a entrada CPL1 (ring1). Fim do log: "
                         + text.substring(Math.max(0, text.length() - 400)));
         // o programa Kof segue rodando normalmente após a restauração.
         assertTrue(text.contains("KO-RING MAIN"),
@@ -187,5 +192,7 @@ class RingPrivilegeE2ETest {
         assertTrue(text.contains("KO-RING MAIN"), "UEFI puro deve rodar normalmente");
         assertFalse(text.contains("KO-RING IDT OK"),
                 "a maquinaria de anéis NAO pode vazar para o perfil uefi puro (R6)");
+        assertFalse(text.contains("KO-RING1 CPL1 OK"),
+                "a maquinaria de CPL1 NAO pode vazar para o perfil uefi puro (R6)");
     }
 }

@@ -39,8 +39,8 @@ public final class RuntimeRings {
                 .quad 0
                 .quad 0x00AF9A000000FFFF    # 0x08 ring0 code (P=1,DPL=0,type=A,L=1,G=1)
                 .quad 0x00CF92000000FFFF    # 0x10 ring0 data
-                .quad 0x00AFFA000000FFFF    # 0x18 ring1 code (DPL=1)
-                .quad 0x00CFF2000000FFFF    # 0x20 ring1 data (DPL=1)
+                .quad 0x00AFBA000000FFFF    # 0x18 ring1 code (P=1,DPL=1,L=1)
+                .quad 0x00CFB2000000FFFF    # 0x20 ring1 data (P=1,DPL=1)
             kof_gdt_tss:
                 .word 0x0067                # limit 15:0
                 .word 0                     # base 15:0  (kof_rings_init patcheia)
@@ -85,6 +85,22 @@ public final class RuntimeRings {
             .globl kof_rings_hits
             kof_rings_hits:
                 .quad 0
+
+            # B-6.2: transição CPL0->CPL1 (prova). A pilha do ring1 é
+            # separada; kof_ring1_cs guarda o CS observado em CPL1.
+            .align 16
+            kof_ring1_ring0_rsp:
+                .quad 0
+            kof_ring1_ring1_rsp:
+                .quad 0
+            kof_ring1_cs:
+                .quad 0
+
+            .section .bss
+            .align 16
+            kof_ring1_stack:
+                .zero 8192
+            kof_ring1_stack_top:
 
             .section .text
             # Gate padrão da IDT própria (vetor não tratado): trava. Só é
@@ -180,6 +196,18 @@ public final class RuntimeRings {
                 shrq $16, %rax
                 movl %eax, 8(%r8)
                 movl $0, 12(%r8)
+                # vetor 0x81: gate de trap-back do ring1 (DPL=3 -> 0xEE)
+                leaq kof_rings_idt+2064(%rip), %r8
+                leaq kof_ring1_trapback(%rip), %rax
+                movw %ax, 0(%r8)
+                movw $0x08, 2(%r8)
+                movb $0, 4(%r8)
+                movb $0xEE, 5(%r8)
+                shrq $16, %rax
+                movw %ax, 6(%r8)
+                shrq $16, %rax
+                movl %eax, 8(%r8)
+                movl $0, 12(%r8)
                 # IDTR local + lidt; carrega o TSS
                 movw $4095, (%rsp)
                 leaq kof_rings_idt(%rip), %rax
@@ -236,9 +264,74 @@ public final class RuntimeRings {
                 popfq
                 ret
 
+            # Código que roda em CPL1: troca para os dados ring1 e registra o
+            # CS observado; então trap-back para o ring0 (vetor 0x81).
+            kof_ring1_stub:
+                movw %cs, %ax
+                movzwl %ax, %r15d
+                int $0x81
+            1:  jmp 1b
+
+            # Handler ring0 do trap-back: roda na pilha rsp0 do TSS; volta para
+            # a continuação de kof_ring1_entry na pilha original do ring0.
+            kof_ring1_trapback:
+                movq kof_ring1_ring0_rsp(%rip), %rsp
+                movq %r15, kof_ring1_cs(%rip)
+                jmp kof_ring1_ret
+
+            # Entrada CPL1: salva callee-saved, monta o frame de iretq
+            # (SS=0x20, RSP=pilha ring1, RFLAGS, CS=0x18, RIP=stub) na pilha do
+            # ring1 e iretq. Volta por kof_ring1_trapback -> kof_ring1_ret.
+            .globl kof_ring1_entry
+            kof_ring1_entry:
+                pushq %rbx
+                pushq %r12
+                movq %rsp, kof_ring1_ring0_rsp(%rip)
+                leaq kof_ring1_stack_top(%rip), %rax
+                movq %rax, kof_ring1_ring1_rsp(%rip)
+                movq %rax, %rsp
+                pushq $0x21
+                movq kof_ring1_ring1_rsp(%rip), %rax
+                pushq %rax
+                pushq $0x2
+                pushq $0x19
+                leaq kof_ring1_stub(%rip), %rax
+                pushq %rax
+                iretq
+            kof_ring1_ret:
+                popq %r12
+                popq %rbx
+                ret
+
+            # Prova: entra em CPL1, confere que o CS observado tem RPL=1.
+            .globl kof_ring1_selftest
+            kof_ring1_selftest:
+                subq $8, %rsp
+                movq $0, kof_ring1_cs(%rip)
+                call kof_ring1_entry
+                movq kof_ring1_cs(%rip), %rax
+                andq $3, %rax
+                cmpq $1, %rax
+                jne .Lring1_fail
+                leaq .Lring1_ok(%rip), %rsi
+                movq $17, %rdx
+                movl $1, %edi
+                call kof_plat_write
+                addq $8, %rsp
+                ret
+            .Lring1_fail:
+                leaq .Lring1_bad(%rip), %rsi
+                movq $18, %rdx
+                movl $1, %edi
+                call kof_plat_write
+                addq $8, %rsp
+                ret
+
             .section .rodata
             .Lrings_ok:  .asciz "KO-RING IDT OK\\n"
             .Lrings_bad: .asciz "KO-RING IDT BAD\\n"
+            .Lring1_ok:  .asciz "KO-RING1 CPL1 OK\\n"
+            .Lring1_bad: .asciz "KO-RING1 CPL1 BAD\\n"
 
             .section .text
             """);

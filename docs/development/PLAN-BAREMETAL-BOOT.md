@@ -432,13 +432,13 @@ is independently provable, machinery first, surface last):**
   only then does it print `KO-RING IDT OK` via `ConOut`. E2E under OVMF. No
   language surface (nothing of rule 6 yet). **Toolchain:** OVMF +
   `qemu-system-x86_64` already extracted root-free by B-2.
-- **B-6.2 — CPL1 entry (surface DECIDED 23/09: built-in `ring1(fn)`).** `iretq` to
-  `CS=0x18` (RPL=1) with `SS=0x20`, running a "ring1 domain" code region that
-  executes a Kof function and returns; the TSS `rsp0` backs the trap back to
-  CPL0. The Kof-level surface is the **built-in marker function `ring1(fn)`**
-  (`D-BAREMETAL-RING1-SURFACE`) — no new syntax; it lowers to the ring0→ring1
-  transition and is a named `NATIVE003` elsewhere (R6/R7). Proof: state intact
-  after return + the function ran at CPL1.
+- **B-6.2 — CPL1 entry (surface DECIDED 23/09: built-in `ring1(fn)`).** Split:
+  **B-6.2a** (machinery, no Kof surface) — `iretq` to `CS=0x18` (RPL=1) with
+  `SS=0x20`, running a code region that executes at CPL1 and returns; the TSS
+  `rsp0` backs the trap back to CPL0. **B-6.2b** (Kof surface) — the built-in
+  marker function `ring1(fn)` (`D-BAREMETAL-RING1-SURFACE`) lowers to that
+  ring0→ring1 transition and is a named `NATIVE003` elsewhere (R6/R7). Proof:
+  state intact after return + the function ran at CPL1.
 - **B-6.3 — `#GP` proof + sabotage.** A privileged instruction (`cli`/`hlt`/
   `lgdt`) attempted in the ring1 domain must raise **`#GP`** (vector 13),
   caught by the ring0 handler and reported — never a silent hang. **Sabotage:**
@@ -446,6 +446,8 @@ is independently provable, machinery first, surface last):**
   level is *enforced*, not decorative. E2E under OVMF.
 
 **B-6.1 LANDED 23/09 (lane 9092):** `NativeProfile.UEFI_RING` (via `NativeProfile.of("uefi-ring")`; programmatic — the CLI whitelist stays `host|freestanding`), a sub-profile that leaves today's `UEFI` output untouched. A new runtime slice `RuntimeRings` emits the Kof-owned **GDT** (null; ring0 code/data `0x08`/`0x10`; ring1 code/data `0x18`/`0x20`; 64-bit TSS `0x28`), the **TSS** (`rsp0` patched in `_start`), and a 256-gate **IDT**; `_start` runs `lgdt` + far `lretq` (reloads `CS=0x08`), `lidt`, `ltr`. A controlled `int3` lands in the ring0 `#BP` handler, which increments a memory counter; `_start` prints `KO-RING IDT OK` only when `hits==1`, then restores the firmware GDT/IDT (`lgdt`/`lidt`) + `popfq` and returns to the UEFI path. The profile routes the `kof_plat_*` seam through the UEFI branch (`activeIsUefi()` now covers `UEFI_RING`). **Acceptance:** `RingPrivilegeE2ETest` — OVMF boot prints `KO-RING IDT OK` + `KO-RING MAIN` (ring0 proof), and plain `UEFI` does **not** emit the ring proof. **Root bug fixed:** the `#BP` IDT patch targeted entry 0 instead of vector 3 (missing `+48` offset), so `int3` hit the default `cli;hlt` gate and hung under OVMF (diagnosed with `INIT`/`FAULT` markers). No language surface — rule 6 untouched.
+
+**B-6.2a LANDED 23/09 (lane 9092):** `RuntimeRings` now emits `kof_ring1_stack` (8 KiB, `.bss`), `kof_ring1_entry`/`kof_ring1_stub`/`kof_ring1_trapback`/`kof_ring1_selftest`, and a DPL=3 (`0xEE`) IDT gate at vector `0x81`. `_start` calls `kof_rings_init; kof_rings_selftest; kof_ring1_selftest; kof_rings_restore`. `kof_ring1_entry` builds the 5-qword `iretq` frame (`SS=0x20`, `RSP=ring1 stack top`, `RFLAGS`, `CS=0x18|RPL1=0x19`, `RIP=kof_ring1_stub`) and verifies that the CS observed at CPL1 has RPL=1, printing `KO-RING1 CPL1 OK`. The stub captures `%cs` in `%r15` and traps back via `int $0x81`; the ring0 handler switches to the saved ring0 stack and returns through `kof_ring1_ret`. **Root bug fixed:** the ring1 code/data GDT descriptors were encoded `0xFA`/`0xF2` = **DPL=3**, not DPL=1 — `iretq` to CPL1 then failed the `DPL==RPL` check and took `#GP(0x18)` (the ring1 CS selector; diagnosed by printing the `#GP` error code). Correct DPL=1 access bytes are `0xBA` (code) / `0xB2` (data). **Acceptance:** `RingPrivilegeE2ETest` 2/0F under real OVMF; regression battery 117/0F (NativeE2ETest 68, NativeUefiE2ETest 3, FreestandingLinkE2ETest 8, ConformanceMatrixTest 14, NativeRuntimeSliceRegistryTest 7, ArtifactSizeTest 6, PlatformSeamSabotageTest 5, DtoaParityE2ETest 3, LinkByUseTest 3). No language surface yet — `ring1(fn)` lowering is **B-6.2b**.
 
 **DECIDED 23/09 (rule 6):** the Kof surface to target a ring1 domain is the
 **built-in marker function `ring1(fn)`** — no new syntax; recorded in

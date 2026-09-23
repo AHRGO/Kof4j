@@ -445,12 +445,13 @@ fatia é provável de forma independente, maquinaria primeiro, superfície por
   `ConOut`. E2E sob OVMF. Sem superfície de linguagem (nada de rule 6 ainda).
   **Toolchain:** OVMF + `qemu-system-x86_64` já extraídos sem root pelo B-2.
 - **B-6.2 — entrada CPL1 (superfície DECIDIDA 23/09: embutido `ring1(fn)`).**
-  `iretq` para `CS=0x18` (RPL=1) com `SS=0x20`, executando uma região de código
-  "domínio ring1" que roda uma função Kof e retorna; o `rsp0` do TSS sustenta o
-  trap de volta a CPL0. A superfície Kof é a **função marcadora embutida
-  `ring1(fn)`** (`D-BAREMETAL-RING1-SURFACE`) — sem sintaxe nova; baixa para a
-  transição ring0→ring1 e é um `NATIVE003` nomeado nos demais alvos (R6/R7).
-  Prova: estado intacto após o retorno + a função rodou em CPL1.
+  Dividido: **B-6.2a** (maquinaria, sem superfície Kof) — `iretq` para `CS=0x18`
+  (RPL=1) com `SS=0x20`, rodando uma região de código que executa em CPL1 e
+  retorna; o `rsp0` do TSS sustenta o trap de volta a CPL0. **B-6.2b** (superfície
+  Kof) — a **função marcadora embutida `ring1(fn)`**
+  (`D-BAREMETAL-RING1-SURFACE`) baixa para essa transição ring0→ring1 e é um
+  `NATIVE003` nomeado nos demais alvos (R6/R7). Prova: estado intacto após o
+  retorno + a função rodou em CPL1.
 - **B-6.3 — prova de `#GP` + sabotagem.** Uma instrução privilegiada
   (`cli`/`hlt`/`lgdt`) tentada no domínio ring1 deve gerar **`#GP`** (vetor
   13), pega pelo handler ring0 e reportada — nunca um travamento silencioso.
@@ -458,6 +459,8 @@ fatia é provável de forma independente, maquinaria primeiro, superfície por
   provando que o nível é *imposto*, não decorativo. E2E sob OVMF.
 
 **B-6.1 POUSADO 23/09 (lane 9092):** `NativeProfile.UEFI_RING` (via `NativeProfile.of("uefi-ring")`; programático — a whitelist do CLI continua `host|freestanding`), um sub-perfil que não toca a saída do `UEFI` atual. Uma nova fatia de runtime `RuntimeRings` emite a **GDT** do Kof (null; código/dados ring0 `0x08`/`0x10`; código/dados ring1 `0x18`/`0x20`; **TSS** 64-bit `0x28`), o **TSS** (`rsp0` patcheado no `_start`) e uma **IDT** de 256 gates; o `_start` roda `lgdt` + `lretq` far (recarrega `CS=0x08`), `lidt`, `ltr`. Um `int3` controlado cai no handler ring0 de `#BP`, que incrementa um contador em memória; o `_start` imprime `KO-RING IDT OK` só quando `hits==1`, então restaura a GDT/IDT do firmware (`lgdt`/`lidt`) + `popfq` e volta ao caminho UEFI. O perfil roteia a costura `kof_plat_*` pelo ramo UEFI (`activeIsUefi()` agora cobre `UEFI_RING`). **Aceitação:** `RingPrivilegeE2ETest` — boot OVMF imprime `KO-RING IDT OK` + `KO-RING MAIN` (prova CPL0) e o `UEFI` puro **não** emite a prova de anel. **Bug raiz corrigido:** o patch de IDT do `#BP` mirava a entrada 0 em vez do vetor 3 (faltava o offset `+48`), então o `int3` batia no gate padrão `cli;hlt` e travava sob OVMF (diagnosticado com marcadores `INIT`/`FAULT`). Sem superfície de linguagem — rule 6 intocada.
+
+**B-6.2a POUSADO 23/09 (lane 9092):** o `RuntimeRings` agora emite `kof_ring1_stack` (8 KiB, `.bss`), `kof_ring1_entry`/`kof_ring1_stub`/`kof_ring1_trapback`/`kof_ring1_selftest`, e um gate de IDT DPL=3 (`0xEE`) no vetor `0x81`. O `_start` chama `kof_rings_init; kof_rings_selftest; kof_ring1_selftest; kof_rings_restore`. O `kof_ring1_entry` monta o frame de `iretq` de 5 qwords (`SS=0x20`, `RSP=topo da pilha ring1`, `RFLAGS`, `CS=0x18|RPL1=0x19`, `RIP=kof_ring1_stub`) e verifica que o CS observado em CPL1 tem RPL=1, imprimindo `KO-RING1 CPL1 OK`. O stub captura `%cs` em `%r15` e faz trap-back via `int $0x81`; o handler ring0 troca para a pilha ring0 salva e retorna por `kof_ring1_ret`. **Bug raiz corrigido:** os descritores GDT de código/dados ring1 estavam codificados `0xFA`/`0xF2` = **DPL=3**, não DPL=1 — o `iretq` para CPL1 falhava a checagem `DPL==RPL` e tomava `#GP(0x18)` (o seletor CS do ring1; diagnosticado imprimindo o error code do `#GP`). Os access bytes corretos com DPL=1 são `0xBA` (código) / `0xB2` (dados). **Aceitação:** `RingPrivilegeE2ETest` 2/0F sob OVMF real; bateria de regressão 117/0F (NativeE2ETest 68, NativeUefiE2ETest 3, FreestandingLinkE2ETest 8, ConformanceMatrixTest 14, NativeRuntimeSliceRegistryTest 7, ArtifactSizeTest 6, PlatformSeamSabotageTest 5, DtoaParityE2ETest 3, LinkByUseTest 3). Ainda sem superfície de linguagem — o lowering de `ring1(fn)` é o **B-6.2b**.
 
 **DECIDIDO 23/09 (rule 6):** a superfície Kof para mirar um domínio ring1 é a
 **função marcadora embutida `ring1(fn)`** — sem sintaxe nova; registrado em

@@ -53,6 +53,26 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     bodies); the `NativeBackend` <=500 gate paid with `NativeLinkPolicy`
     extracted (608->571 lines).
 
+  - **B-6.2a x86_64 privilege rings — CPL1 entry via `iretq` + ring0 trap-back**
+    (23/09, lane 9092): on top of B-6.1, `RuntimeRings` now emits an 8 KiB
+    ring1 stack (`kof_ring1_stack`, `.bss`), `kof_ring1_entry` (builds the
+    5-qword `iretq` frame `SS=0x20` / `RSP=ring1 top` / `RFLAGS` /
+    `CS=0x18|RPL1=0x19` / `RIP=kof_ring1_stub`), `kof_ring1_stub` (runs at
+    CPL1 and captures `%cs` in `%r15`), `kof_ring1_trapback` (ring0 handler of
+    a DPL=3 `0xEE` IDT gate at vector `0x81`, switches back to the saved ring0
+    stack) and `kof_ring1_selftest` (checks the observed CS has RPL=1, prints
+    `KO-RING1 CPL1 OK`). `_start` calls
+    `kof_rings_init; kof_rings_selftest; kof_ring1_selftest; kof_rings_restore`.
+    No language surface (the `ring1(fn)` lowering is B-6.2b). Root bug fixed:
+    the ring1 code/data GDT descriptors were encoded `0xFA`/`0xF2` = **DPL=3**,
+    not DPL=1, so `iretq` to CPL1 failed the `DPL==RPL` check and took
+    `#GP(0x18)` — diagnosed by printing the `#GP` error code; the correct DPL=1
+    access bytes are `0xBA` (code) / `0xB2` (data). Proof: `RingPrivilegeE2ETest`
+    2/0F under real OVMF; regression battery 117/0F (`NativeE2ETest` 68,
+    `NativeUefiE2ETest` 3, `FreestandingLinkE2ETest` 8, `ConformanceMatrixTest`
+    14, `NativeRuntimeSliceRegistryTest` 7, `ArtifactSizeTest` 6,
+    `PlatformSeamSabotageTest` 5, `DtoaParityE2ETest` 3, `LinkByUseTest` 3).
+
   - **B-6.1 x86_64 privilege rings — Kof-owned GDT/TSS/IDT + CPL0 proof**
     (23/09, lane 9092): a new `NativeProfile.UEFI_RING` (via
     `NativeProfile.of("uefi-ring")`, programmatic; the CLI whitelist stays
