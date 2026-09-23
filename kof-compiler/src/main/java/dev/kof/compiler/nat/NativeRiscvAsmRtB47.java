@@ -575,7 +575,7 @@ public final class NativeRiscvAsmRtB47 {
                     .long .Ldb_unsupported_len
                     .long 0
                 .Ldb_unsupported_body:
-                    .asciz "DB001: unsupported db scheme (native: sqlite:, mysql://)"
+                    .asciz "DB001: unsupported db scheme (native cross: sqlite: only here; mysql:// / mariadb:// wire is x86-64 only)"
                     .set .Ldb_unsupported_len, . - .Ldb_unsupported_body - 1
                 .section .text
 

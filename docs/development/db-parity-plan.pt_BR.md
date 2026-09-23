@@ -94,7 +94,11 @@ por scheme é a prova.
   portado — R7 honesto). *Prova:* `KofDbE2ETest#nativeMariadbAliasWireProtocol`
   — MariaDB real (KOF_MYSQL_PORT), nas duas formas `user:pass@host` e só-host,
   byte-idêntico `{"id":7,"name":"Alias"}`; `KofDbE2ETest` 28/0F +
-  `NativeDbSchemeRefusalAsmTest` 2/2.
+  `NativeDbSchemeRefusalAsmTest` 2/2. **Diagnóstico cross corrigido 23/09:** a
+  mensagem `DB001` do riscv64/aarch64 ANUNCIAVA `mysql://` como suportado
+  enquanto o código cross o recusa — agora diz a verdade (`sqlite: only here;
+  mysql:// / mariadb:// wire is x86-64 only`), travada por
+  `NativeRiscvRuntimeSliceRegistryTest#crossDb001MessageDoesNotAdvertiseUnportedMysql`.
 - **S2 — paridade de schemes JDBC JVM/JS/Android. ✅ FEITO 23/09 (lane gaps-db).**
   A medição por-driver já é provada pelo corpus E2E — `h2` (`KofDbE2ETest`
   execute/query/tipado), `sqlite` (`KofOrmE2ETest` `jdbc:sqlite:`, find/save/page

@@ -93,7 +93,11 @@ typed roundtrip) produces the **same observable result** on all four targets, or
   not ported — honest R7). *Proof:* `KofDbE2ETest#nativeMariadbAliasWireProtocol`
   — real MariaDB (KOF_MYSQL_PORT), both the `user:pass@host` and the host-only
   form, byte-identical `{"id":7,"name":"Alias"}`; `KofDbE2ETest` 28/0F +
-  `NativeDbSchemeRefusalAsmTest` 2/2.
+  `NativeDbSchemeRefusalAsmTest` 2/2. **Cross diagnostic corrected 23/09:**
+  the riscv64/aarch64 `DB001` message advertised `mysql://` as supported while
+  the cross code refuses it — now it states the truth (`sqlite: only here;
+  mysql:// / mariadb:// wire is x86-64 only`), pinned by
+  `NativeRiscvRuntimeSliceRegistryTest#crossDb001MessageDoesNotAdvertiseUnportedMysql`.
 - **S2 — JDBC scheme parity JVM/JS/Android. ✅ DONE 23/09 (gaps-db lane).**
   Per-driver measurement is already proven by the E2E corpus — `h2`
   (`KofDbE2ETest` execute/query/typed), `sqlite` (`KofOrmE2ETest` `jdbc:sqlite:`,

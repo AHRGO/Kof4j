@@ -113,6 +113,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `jdbc:` URL. Proof: `KofDbE2ETest#jsMongodbSchemeNamesGapNotSilent` +
     `#jvmMongodbMissingDriverNamesGap`; `KofOrmE2ETest#mongoCrud` (JVM real).
 
+  - **fix(db): the cross (`riscv64`/`aarch64`) `DB001` message no longer
+    advertises an unported scheme** (23/09, gaps-db lane): the riscv/aarch64
+    runtime refused `mysql://`/`mariadb://` but its `DB001: unsupported db
+    scheme` text read `(native: sqlite:, mysql://)` — it claimed a scheme the
+    code rejects (an R6 gap hidden behind a false advertising). It now states the
+    truth: `sqlite: only here; mysql:// / mariadb:// wire is x86-64 only`. Proof:
+    `NativeRiscvRuntimeSliceRegistryTest#crossDb001MessageDoesNotAdvertiseUnportedMysql`
+    (reads the production runtime asm; 9/9).
+
   - **§448 ✅ FIXED — `Double`/`Float` `toString` on Native now matches the JVM
     oracle on subnormals (x86 and cross)** (23/09, baremetal lane): the native
     dtoa picked the **shortest** decimal instead of the **closest among the

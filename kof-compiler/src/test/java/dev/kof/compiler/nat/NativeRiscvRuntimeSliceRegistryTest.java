@@ -71,6 +71,21 @@ class NativeRiscvRuntimeSliceRegistryTest {
         assertTrue(uni.size() <= 10, "piso riscv deveria ser ~7 peças, veio " + uni.size());
     }
 
+    /** R6/S1 (23/09): a mensagem DB001 do runtime CROSS tem de ser VERDADEIRA —
+     *  ao contrario do texto x86 (que lista sqlite/mysql/mariadb porque lá o wire
+     *  existe), o cross recusa `sqlite:`-fora e NAO pode ANUNCIAR `mysql://` como
+     *  suportado (isso esconderia o gap R7). Medido no runtime de produção. */
+    @Test
+    void crossDb001MessageDoesNotAdvertiseUnportedMysql() {
+        String asm = NativeRiscvAsm.RISCV_RUNTIME_ASM_B;
+        assertTrue(asm.contains("DB001: unsupported db scheme"),
+                "constante do diagnostico DB001 ausente no runtime cross");
+        assertTrue(asm.contains("mysql:// / mariadb:// wire is x86-64 only"),
+                "o cross deve DECLARAR que mysql/mariadb nao estao portados aqui (R7/R6)");
+        assertFalse(asm.contains("(native: sqlite:, mysql://)"),
+                "a mensagem cross nao pode anunciar mysql:// como suportado (ele e recusado)");
+    }
+
     @Test
     void mandatoryFloorIsSmall() {
         Set<Integer> floor = RiscvSlices.mandatoryRoots();
