@@ -321,6 +321,12 @@ expressões de range do DWARF). `Float`/`Double` exigem substituir o
   silenciosa (regra 3 do Freeze). Logo a unidade libc-free é um **formatador
   `%.*e` corretamente arredondado + um `strtod` corretamente arredondado**, não
   um shortest-dtoa arbitrário (ex. Ryū) cujo desempate pode divergir da glibc.
+- **Resultado do recon (§448, medido 23/09):** a escolha de dígitos do loop do
+  host já está **errada vs o JVM** nos menores subnormais (`println(5E-324)`:
+  JVM `4.9E-324`, Nativo `5.0E-324`; `println(1E-323)`: JVM `9.9E-324`, Nativo
+  `1.0E-323`) — o loop da glibc pega o *mais curto*, o JDK pega o *mais próximo
+  entre os mais curtos*. Logo o alvo do B-1c é **paridade JVM (mais curto E mais
+  próximo)**, o que também corrige o bug latente host/cross `known-bugs.md §448`.
 - **Recon primeiro (barato, sem asm):** fixar o algoritmo e *provar* a paridade
   em Java contra o oráculo JVM (e contra a saída glibc-host) num corpus grande
   (bits aleatórios + bordas: subnormais, `±0.0`, `1e308`, `5e-324`, os limiares

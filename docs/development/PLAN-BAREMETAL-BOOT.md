@@ -313,6 +313,12 @@ need `RuntimeDtoa`'s `snprintf("%.*e")`/`strtod` replaced.
   regression (Freeze rule 3). So the libc-free unit is a **correctly-rounded
   `%.*e` formatter + a correctly-rounded `strtod`**, not an arbitrary
   shortest-dtoa (e.g. Ryū) whose tie-breaking may differ from glibc.
+- **Recon outcome (§448, measured 23/09):** the host loop's digit choice is
+  already **wrong vs the JVM** on the smallest subnormals (`println(5E-324)`:
+  JVM `4.9E-324`, Native `5.0E-324`; `println(1E-323)`: JVM `9.9E-324`, Native
+  `1.0E-323`) — glibc's loop picks the *shortest*, the JDK picks the *closest
+  among the shortest*. So B-1c's target is **JVM parity (shortest AND closest)**,
+  which also fixes the latent host/cross bug `known-bugs.md §448`.
 - **Recon first (cheap, no asm):** fix the algorithm and *prove* parity in Java
   against the JVM oracle (and against the glibc-host output) over a large corpus
   (random bits + edges: subnormals, `±0.0`, `1e308`, `5e-324`, the `1e-3`/`1e7`
