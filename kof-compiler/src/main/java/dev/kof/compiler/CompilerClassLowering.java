@@ -82,6 +82,9 @@ public final class CompilerClassLowering {
         if (driver.target == Target.JVM) {
             // §356: bridges também para as INTERFACES implementadas (a
             // chamada via interface usa o descritor apagado do pai).
+            // §483: no Native estes bridges NÃO são gerados; a vtable aponta ao
+            // método concreto e o call site boxed (param type-var → Object)
+            // entrega lixo — face Native da §271 (TIER 13.2).
             methods.addAll(CompilerRecordSupport.generateCovariantReturnBridges(
                     driver, internalName, superName, ifaces, methods));
         }

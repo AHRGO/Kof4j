@@ -9890,7 +9890,7 @@ que compila hoje falha no runtime com CCE, apertar casa com o contrato documenta
   #400/#390 (faces rejeicao-falsa) ja landaram 17/09-18/09; dispatch em runtime
   segue §271 (regra 6).
 
-## §271 — DISPATCH de interface genérica em runtime: os call sites emitem o `invokeinterface Converter.convert(Object)Object` apagado mas nenhuma bridge é emitida na implementação (e o descritor da interface carrega a type-var) — `NoSuchMethodError` no load/primeira chamada — 🔴 ABERTA 18/09 (rio do Cluster A, regra 6) — lane compiler `.22`
+## §271 — DISPATCH de interface genérica em runtime: os call sites emitem o `invokeinterface Converter.convert(Object)Object` apagado mas nenhuma bridge é emitida na implementação (e o descritor da interface carrega a type-var) — `NoSuchMethodError` no load/primeira chamada — 🟡 PARCIAL 23/09 (face JVM CORRIGIDA por §356 `c8d55a10`; face Native = §482) — TIER 13.2 (`D-TECHDEBT-23/09`)
 
 - **Achado (18/09, unidade #400):** o **falso positivo** do SEM021 (atribuir a
   instância de `class IntToString implements Converter<Int, String>` a uma
@@ -12193,3 +12193,16 @@ Esperado `6`; atual: `VerifyError: Bad type on operand stack` no load.
 
 - **Dono:** sessão 9092 (23/09), issue #596.
 <!-- pt-switch --> **EN:** [§481 (en)](known-bugs.md#481--listof-widening-of-records-sharing-an-interface-resolved-to-the-unqualified-record-the-jvm-structural-ancestor-instead-of-the-interface--noclassdeffounderror-record---fixed-2309-session-9092-issue-596)
+
+## §483 — dispatch por interface genérica no Native passa um primitivo boxed ao método concreto → retorno lixo (o bridge de erasure do JVM da §356 está limitado a `target == JVM`) — 🟡 ABERTA 23/09 (TIER 13.2, face da §271)
+
+**Sintoma (medido 23/09, repro verbatim da §271):** `interface Converter<A,B> { convert(input: A): B }` + `class IntToString implements Converter<Int,String> { convert(input: Int): String { return input.toString() } }` + `val cv: Converter<Int,String> = c; println(cv.convert(99))` imprime `42` / `99` no JVM, Script e JS, mas no Native x86_64 a chamada via interface imprime `-820342752` (lixo/não inicializado) — divergência de paridade (regra 5).
+
+**Causa raiz (medida no `Main.s` emitido):** `CompilerClassLowering:83` limita o gerador de bridges apagados da §356 a `driver.target == Target.JVM`, então a classe implementadora carrega SÓ o `convert(int)String` concreto; o slot de vtable resolvido para o método de interface (`NativeClassMeta.collectVirtualMethods`) aponta direto ao método concreto. O call site, porém, ainda segue a ABI APAGADA da interface (o parâmetro declarado é a type-variable `A` → referência `Object`), então emite `kof_box_int(99)` e passa o ponteiro boxed em `%rsi`; `IntToString_convert` lê esse ponteiro como `int` cru e o entrega a `kof_int_to_string` → lixo. O JVM só está correto porque a §356 sintetiza o bridge `convert(Object)Object` que desembala e delega.
+
+**Fix (raiz — ainda não implementado):** o bridge apagado precisa existir também no Native, e o slot de vtable do método de interface precisa resolver para ele (ou o call site precisa parar de boxar para o type-argument substituído). Opções medidas: (a) ampliar o gate da §356 para `Target.NATIVE` e fazer `collectVirtualMethods` preferir o bridge de assinatura apagada no slot apagado; (b) substituir os type-arguments do receiver no call site para usar a ABI concreta. Ambas são modelagem da ABI de generics (regra 6) e foram DECIDIDAS pela mantenedora em `D-TECHDEBT-23/09` (TIER 13.2) — esta face foi separada da §271 para prova própria.
+
+**Prova / evidência (mesmo commit da face JVM):** `GenericInterfaceAssignabilityTest` (8/8) — `genericInterfaceDispatchRunsOnJvm` (`42\n99`) e `genericInterfaceDispatchScriptAndJsParity` (Script + JS) VERDES; a face Native é catalogada aqui, NÃO asserida como esperada (regra 4 do freeze). Q0: a execução Native mediu `42\n-820342752` no tip antes de qualquer fix.
+
+- **Dono:** sessão 9092 (23/09), TIER 13.2 / §271 (face JVM fechada pela §356, `c8d55a10`).
+<!-- pt-switch --> **EN:** [§483 (en)](known-bugs.md#483--generic-interface-dispatch-on-native-passes-a-boxed-primitive-to-the-concrete-method--garbage-return-the-jvm-erasure-bridge-of-356-is-gated-target--jvm---open-2309-tier-132-face-of-271)

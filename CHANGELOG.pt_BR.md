@@ -13,6 +13,24 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§483 (catalogada) — dispatch por interface genérica no Native passa um
+    primitivo boxed ao método concreto → retorno lixo (sessão 9092, TIER 13.2 /
+    §271)** (23/09): o repro da §271 (`interface Converter<A,B>` +
+    `class IntToString implements Converter<Int,String>` + chamada pela variável
+    `Converter<Int,String>`) imprime `42`/`99` no JVM, Script e JS — a face JVM do
+    `NoSuchMethodError` já estava CORRIGIDA pelo gerador de bridges apagados da
+    §356 (`c8d55a10`) — mas no Native x86_64 a chamada via interface imprime
+    `-820342752`. Causa raiz: o gerador de bridges da §356 está limitado a
+    `driver.target == Target.JVM` (`CompilerClassLowering:83`), então o slot de
+    vtable Native resolve para o `convert(int)String` concreto enquanto o call
+    site ainda boxa contra o param APAGADO da interface (`kof_box_int(99)`) → o
+    método concreto lê o ponteiro como `int` cru. Catalogada para fix próprio
+    (opções: renderizar o bridge apagado no Native e mapear o slot de vtable
+    apagado para ele, ou substituir os type-args do receiver no call site — ambas
+    são ABI de generics, decididas no `D-TECHDEBT-23/09`). Prova das faces verdes:
+    `GenericInterfaceAssignabilityTest` 8/8 (JVM/Script/JS); a face Native é
+    catalogada, nunca asserida como esperada (regra 4 do freeze).
+
   - **§481 — widening de `listOf()` de records que compartilham uma interface
     escolhia o `Record` nu em vez da interface (sessão 9092, issue #596)** (23/09):
     `record Circle(...) implements Shape` + `record Square(...) implements Shape`

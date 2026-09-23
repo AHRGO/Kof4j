@@ -13,6 +13,24 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§483 (catalogued) — generic interface dispatch on Native passes a boxed
+    primitive to the concrete method → garbage return (session 9092, TIER 13.2 /
+    §271)** (23/09): the §271 repro (`interface Converter<A,B>` +
+    `class IntToString implements Converter<Int,String>` + a call through the
+    `Converter<Int,String>` variable) prints `42`/`99` on JVM, Script and JS — the
+    JVM `NoSuchMethodError` face was ALREADY fixed by the §356 erased-bridge
+    generator (`c8d55a10`) — but on Native x86_64 the interface call prints
+    `-820342752`. Root cause: §356's bridge generator is gated
+    `driver.target == Target.JVM` (`CompilerClassLowering:83`), so the Native
+    vtable slot resolves to the concrete `convert(int)String` while the call site
+    still boxes against the ERASED interface param (`kof_box_int(99)`) → the
+    concrete method reads the pointer as a raw `int`. Catalogued for its own fix
+    (options: render the erased bridge on Native and map the erased vtable slot to
+    it, or substitute the receiver's type arguments at the call site — both are
+    generics-ABI, decided in `D-TECHDEBT-23/09`). Proof of the green faces:
+    `GenericInterfaceAssignabilityTest` 8/8 (JVM/Script/JS); the Native face is
+    catalogued, never asserted as expected (freeze rule 4).
+
   - **§481 — `listOf()` widening of records sharing an interface picked the
     unqualified `Record` instead of the interface (session 9092, issue #596)**
     (23/09): `record Circle(...) implements Shape` + `record Square(...)
