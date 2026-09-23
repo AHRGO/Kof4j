@@ -352,6 +352,20 @@ expressões de range do DWARF). `Float`/`Double` exigem substituir o
   usam `snprintf`/`strtod` da libc) fica fora desta face; a unidade x86 é a
   referência.
 
+- **LANDADO (x86_64, lane `baremetal` 9092, 23/09):** fatias (2)–(4) fechadas.
+  `RuntimeDtoaSchubfach` (3 classes, todas <500) porta o `DoubleToDecimal` **e** o
+  `FloatToDecimal` do JDK (Schubfach, H=17/9, tabelas `g`/`pow10` == `MathUtils.g`
+  por fórmula fechada) para asm x86 libc-free; o `RuntimeDtoa` (snprintf/strtod)
+  foi **deletado** — o runtime x86 não carrega nenhuma ref de formatação libc. A
+  recusa NATIVE003 de float-print sumiu. **Prova:** `DtoaParityE2ETest` 3/3 — o
+  corpus Double, o corpus Float e um corpus escalares+box imprimindo
+  Bool/Int/Long/String/**Troolean** e Double/Float boxados via `Object`, tudo
+  freestanding, sem `snprintf`/`strtod` no `nm -u`, byte-a-byte == oráculo JVM
+  medido; `FreestandingLinkE2ETest` 6/6; `ConformanceMatrixTest` 14/0F; suíte do
+  compilador 3111/2F, sendo os 2 red o WIP da lane UEFI irmã, não esta face.
+  §448 x86 `Double`+`Float` **FECHADOS**; residual = dtoa **cross** (rv/aa,
+  `NativeRiscvAsmRtB45`), fora desta face pela nota de escopo abaixo.
+
 **Depende de:** B-0. **Classificação:** M (médio).
 
 ### B-2 — UEFI (x86_64, e depois aarch64) · **depende de B-1**

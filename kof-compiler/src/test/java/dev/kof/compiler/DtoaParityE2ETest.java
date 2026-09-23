@@ -56,6 +56,30 @@ class DtoaParityE2ETest {
             }
             """;
 
+    /** B-1c acceptance: Bool/Int/Long/String/Troolean + boxed Double/Float. */
+    private static final String SCALARS_BOXES_CORPUS = """
+            Troolean nb() { return null }
+            main() {
+                println(true)
+                println(false)
+                println(42)
+                println(-7)
+                println(9000000000)
+                println("hi")
+                Troolean t
+                println(t)
+                println(nb())
+                Object a = 2.5
+                println(a)
+                Object b = 3.5f
+                println(b)
+                Object c = true
+                println(c)
+                Object d = 42
+                println(d)
+            }
+            """;
+
     private static boolean hasTool(String tool) {
         try {
             Process p = new ProcessBuilder(tool, "--version").start();
@@ -88,6 +112,11 @@ class DtoaParityE2ETest {
     @Test
     void freestandingFloatPrintMatchesJvmOracle(@TempDir Path dir) throws Exception {
         assertFreestandingMatchesOracle(dir, FLOAT_CORPUS, "out-flt");
+    }
+
+    @Test
+    void freestandingScalarsAndBoxesMatchJvmOracle(@TempDir Path dir) throws Exception {
+        assertFreestandingMatchesOracle(dir, SCALARS_BOXES_CORPUS, "out-scalars");
     }
 
     private void assertFreestandingMatchesOracle(Path dir, String program, String sub)

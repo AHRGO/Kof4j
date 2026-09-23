@@ -343,6 +343,20 @@ need `RuntimeDtoa`'s `snprintf("%.*e")`/`strtod` replaced.
 - **Scope note:** the same `kof_dtoa_format` cross-debt (riscv/aarch use libc
   `snprintf`/`strtod`) is out of this face; the x86 unit is the reference.
 
+- **LANDED (x86_64, lane `baremetal` 9092, 23/09):** slices (2)–(4) closed.
+  `RuntimeDtoaSchubfach` (3 classes, all <500) ports the JDK `DoubleToDecimal` **and**
+  `FloatToDecimal` (Schubfach, H=17/9, tables `g`/`pow10` == `MathUtils.g` by
+  closed form) to libc-free x86 asm; `RuntimeDtoa` (snprintf/strtod) was
+  **deleted** — the x86 runtime carries zero libc format refs. The NATIVE003
+  float-print refusal is gone. Proof: `DtoaParityE2ETest` 3/3 — the Double
+  corpus, the Float corpus, and a scalars+boxed corpus printing Bool/Int/Long/
+  String/**Troolean** and boxed Double/Float via `Object`, all freestanding, no
+  `snprintf`/`strtod` in `nm -u`, byte-for-byte == the measured JVM oracle;
+  `FreestandingLinkE2ETest` 6/6; `ConformanceMatrixTest` 14/0F; compiler suite
+  3111/2F where the 2 red are the sibling UEFI lane's WIP, not this face.
+  §448 x86 `Double`+`Float` **FECHADOS**; residual = **cross** dtoa (rv/aa,
+  `NativeRiscvAsmRtB45`), explicitly out of this face per the scope note below.
+
 **Depends on:** B-0. **Classification:** M (medium).
 
 ### B-2 — UEFI (x86_64, and later aarch64) · **depends B-1**
