@@ -14573,3 +14573,16 @@ Expected `6`; actual: `VerifyError: Bad type on operand stack` at load.
 
 <!-- pt-switch --> **PT:** [§476 (pt_BR)](known-bugs.pt_BR.md#476--lista-de-cases-mista-pattern--valor-com-default-vazio-compila-limpo-e-morre-no-load-do-jvm-com-verifyerror-bad-type-on-operand-stack---aberto-2309-achado-cacando-o-fix-do-588-sonda-adversarial-q4)
 
+## §477 — generic top-level function returning bare `T` loses the caller-side `checkcast` on a reference instantiation → `NoSuchMethodError` on the JVM — ✅ FIXED 23/09 (session 9092, issue #592)
+
+**Symptom (measured, verbatim issue #592 repro):** `record Point(Int x, Int y)` + `T idf<T>(T x) { return x }` + `var p = idf<Point>(Point(5, 6)); println(p.x() + "," + p.y())` compiles clean on all targets; the JVM run throws `NoSuchMethodError: 'java.lang.Object java.lang.Object.x()'` (bytecode: `invokestatic idf:(Ljava/lang/Object;)Ljava/lang/Object;` stored to a local, then `invokevirtual Point.x:()I` with NO `checkcast` in between). `idf<Int>(7)` worked — only the primitive-unbox half of the generic return was handled. Same missing-adaptation family as §474 (#585), but on the BARE top-level function call path, not the instance-method path.
+
+**Root cause (measured):** the top-level-function branch of `ExpressionBareCallLowerer.lower` emitted the `KofCall` and then handled only the primitive half: `if (returnType instanceof Type.TypeVariable && TypeMetrics.isPrimitiveType(effective)) driver.emitErasureUnbox(ops, effective);`. No branch inserted a `checkcast` when `effective` resolved to a reference type, unlike `ExpressionInstanceCallLowerer` which delegates the whole adaptation (unbox or `checkcast`) to the shared `GenericReturnAdapter.emit(...)` (the helper #585 relies on).
+
+**Fix (root, additive):** the bare-call branch now delegates to the same `GenericReturnAdapter.emit(driver, mc, ops, locals, returnType)` — it covers primitive unbox and reference `checkcast` uniformly and no-ops its receiver fallback when `mc.receiver()` is null (always true for a bare call). One call site; no new semantics.
+
+**Proof (same commit, RED→GREEN):** 4 cases added to `GenericWitnessConstructionE2ETest` (10/10) — the verbatim #592 repro on JVM, Native x86_64 and JS, plus a mixed-face program (record + String with a member call + the `idf<Int>` primitive control) printing `9,10\n3\n7`. Q0 measured by stashing ONLY the fix with the test present: `bareTopLevelGenericReturnMatchesJvmOnJvm` and `...ReferenceAndPrimitiveFaces` FAIL with the issue's exact `NoSuchMethodError` (Native/JS stay green — erasure is a no-op there), GREEN after the fix.
+
+- **Owner:** session 9092 (23/09), issue #592.
+<!-- pt-switch --> **PT:** [§477 (pt_BR)](known-bugs.pt_BR.md#477--funcao-de-topo-generica-que-devolve-t-puro-perde-o-checkcast-no-call-site-numa-instanciacao-reference--nosuchmethoderror-no-jvm---corrigido-2309-sessao-9092-issue-592)
+

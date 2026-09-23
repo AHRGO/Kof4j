@@ -208,10 +208,12 @@ public final class ExpressionBareCallLowerer {
                 }
                 localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), argTypes, ops, owner, localIdx, locals);
                 ops.add(new KofCall(CompilerTypes.mainClassType(driver.currentModule), mc.methodName(), argTypes, returnType, KofCallKind.FUNCTION));
-                Type effective = ExpressionTyper.inferExprType(driver, mc, locals);
-                if (returnType instanceof Type.TypeVariable && TypeMetrics.isPrimitiveType(effective)) {
-                    driver.emitErasureUnbox(ops, effective);
-                }
+                // §592: retorno `T` de FUNÇÃO de topo — mesma adaptação do
+                // call-site de instância (unbox p/ primitivo, checkcast p/
+                // referência) pelo helper compartilhado; antes só o unbox de
+                // primitivo era tratado aqui → `idf<Point>(...)` devolvia
+                // Object sem checkcast → NoSuchMethodError/VerifyError.
+                GenericReturnAdapter.emit(driver, mc, ops, locals, returnType);
             }
         }
         return localIdx;

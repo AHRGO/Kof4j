@@ -13,6 +13,19 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§477 — função de topo genérica que devolve `T` puro perdia o `checkcast`
+    no call-site numa instanciação reference (sessão 9092, issue #592)** (23/09):
+    `T idf<T>(T x) { return x }` + `idf<Point>(Point(5, 6))` compilava limpo mas a
+    execução no JVM lançava `NoSuchMethodError: java.lang.Object.x()` — o
+    lowering de chamada nua (`ExpressionBareCallLowerer`) só tratava a metade de
+    unbox primitivo de um retorno genérico, nunca o `checkcast` para reference.
+    Correção (aditiva, semântica congelada intacta): delegar ao helper
+    compartilhado `GenericReturnAdapter.emit(...)` (unbox p/ primitivo,
+    `checkcast` p/ referência) — o mesmo já usado pelas chamadas de método de
+    instância. Prova: `GenericWitnessConstructionE2ETest` 10/10 (repro verbatim
+    no JVM/Native x86/JS + programa de faces mistas record/String/primitivo);
+    RED medido guardando só o fix com o teste presente.
+
   - **§474 — construção implícita `ClassName<T>(...)` descartava o type-witness
     (lane frontend/sem, issue #585)** (23/09): os dois sites de construção
     implícita do `BuiltinCallTyper` (`infer`/`inferTail`) devolviam a classe CRUA

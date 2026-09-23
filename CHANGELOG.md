@@ -13,6 +13,19 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§477 — generic top-level function returning bare `T` lost the caller-side
+    `checkcast` on a reference instantiation (session 9092, issue #592)** (23/09):
+    `T idf<T>(T x) { return x }` + `idf<Point>(Point(5, 6))` compiled clean but
+    the JVM run threw `NoSuchMethodError: java.lang.Object.x()` — the bare
+    top-level call lowering (`ExpressionBareCallLowerer`) only handled the
+    primitive-unbox half of a generic return, never the `checkcast` for a
+    reference type. Fix (additive, frozen semantics untouched): delegate to the
+    shared `GenericReturnAdapter.emit(...)` (unbox for primitives, `checkcast`
+    for references) — the same helper instance-method calls already use. Proof:
+    `GenericWitnessConstructionE2ETest` 10/10 (verbatim repro on JVM/Native
+    x86/JS + a mixed record/String/primitive-face program); RED measured by
+    stashing only the fix with the test present.
+
   - **§474 — implicit construction `ClassName<T>(...)` dropped the type witness
     (frontend/sem lane, issue #585)** (23/09): the two implicit-construction
     sites in `BuiltinCallTyper` (`infer`/`inferTail`) returned the RAW class

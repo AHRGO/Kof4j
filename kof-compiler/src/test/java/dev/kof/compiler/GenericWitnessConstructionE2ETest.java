@@ -194,4 +194,55 @@ class GenericWitnessConstructionE2ETest {
         Path out = compileTo(tempDir, "w585p", primitive, Target.JVM);
         assertEquals("42", runJvm(out), "controle primitivo (§288) não pode regredir");
     }
+
+    private static final String BARE_FN = """
+            record Point(Int x, Int y)
+
+            T idf<T>(T x) { return x }
+
+            main() {
+                var p = idf<Point>(Point(5, 6))
+                println(p.x() + "," + p.y())
+            }
+            """;
+
+    /** #592 — o reproducer verbatim da issue (função de topo `T idf<T>(T)`). */
+    @Test
+    void bareTopLevelGenericReturnMatchesJvmOnJvm(@TempDir Path tempDir) throws IOException {
+        Path out = compileTo(tempDir, "w592j", BARE_FN, Target.JVM);
+        assertEquals("5,6", runJvm(out), "#592: idf<Point> deve imprimir 5,6 no JVM");
+    }
+
+    @Test
+    void bareTopLevelGenericReturnMatchesJvmOnNativeX86(@TempDir Path tempDir) throws IOException {
+        Path out = compileTo(tempDir, "w592n", BARE_FN, Target.NATIVE);
+        assertEquals("5,6", runNative(out), "#592: idf<Point> deve imprimir 5,6 no Native x86_64");
+    }
+
+    @Test
+    void bareTopLevelGenericReturnMatchesJvmOnJs(@TempDir Path tempDir) throws IOException {
+        Path out = compileTo(tempDir, "w592js", BARE_FN, Target.JS);
+        assertEquals("5,6", runJs(out), "#592: idf<Point> deve imprimir 5,6 no JS");
+    }
+
+    /** #592 — faces reference (record/String, com chamada de membro) e o
+     *  controle primitivo num único programa (Q3). */
+    @Test
+    void bareTopLevelGenericReturnReferenceAndPrimitiveFaces(@TempDir Path tempDir) throws IOException {
+        String src = """
+                record Point(Int x, Int y)
+
+                T idf<T>(T x) { return x }
+
+                main() {
+                    var p = idf<Point>(Point(9, 10))
+                    println(p.x() + "," + p.y())
+                    println(idf<String>("kof").length())
+                    println(idf<Int>(7))
+                }
+                """;
+        Path out = compileTo(tempDir, "w592f", src, Target.JVM);
+        assertEquals("9,10\n3\n7", runJvm(out),
+                "reference (record/String com membro) + primitivo não podem regredir");
+    }
 }
