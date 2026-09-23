@@ -64,8 +64,7 @@ public final class RuntimeMemory {
                 xorq %r10, %r10
                 xorq %r8, %r8
                 xorq %r9, %r9
-                movq $202, %rax                  # SYS_futex WAIT
-                syscall
+                call kof_plat_sync
                 jmp .Lkof_alloc_lock_try
             .Lkof_alloc_locked:
                 movq $0, 8(%rsp)                 # flag: GC ainda nao tentou
@@ -102,10 +101,9 @@ public final class RuntimeMemory {
                 leaq kof_alloc_lock(%rip), %rdi
                 movl $0, (%rdi)
                 movl $1, %esi                    # FUTEX_WAKE, 1 waiter
-                movq $202, %rax
                 xorl %edx, %edx
                 xorq %r10, %r10
-                syscall
+                call kof_plat_sync
                 movq (%rsp), %rax
                 addq $24, %rsp
                 popq %r15
@@ -183,10 +181,9 @@ public final class RuntimeMemory {
                 leaq kof_alloc_lock(%rip), %rdi
                 movl $0, (%rdi)
                 movl $1, %esi                    # FUTEX_WAKE, 1 waiter
-                movq $202, %rax
                 xorl %edx, %edx
                 xorq %r10, %r10
-                syscall
+                call kof_plat_sync
                 movq (%rsp), %rax
                 addq $24, %rsp
                 popq %r15
@@ -199,10 +196,9 @@ public final class RuntimeMemory {
                 leaq kof_alloc_lock(%rip), %rdi
                 movl $0, (%rdi)
                 movl $1, %esi
-                movq $202, %rax
                 xorl %edx, %edx
                 xorq %r10, %r10
-                syscall
+                call kof_plat_sync
                 leaq .Lstr_alloc_fail(%rip), %rdi
                 call kof_panic
             """);

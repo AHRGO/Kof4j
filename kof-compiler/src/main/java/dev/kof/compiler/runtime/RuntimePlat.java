@@ -83,6 +83,13 @@ public final class RuntimePlat {
                 movq $186, %rax          # gettid
                 syscall
                 ret
+
+            .globl kof_plat_sync
+            .type kof_plat_sync, @function
+            kof_plat_sync:
+                movq $202, %rax          # futex(uaddr, op, val, timeout)
+                syscall
+                ret
             """);
     }
 }

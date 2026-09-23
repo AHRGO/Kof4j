@@ -178,6 +178,16 @@ re-medido (39.304→39.512 B, 88→93 syms). **Próximas fatias:** spawn/futex x
 então B-1.
 **Depende de:** nada. **Lacuna:** `NATIVE003` (proposta).
 
+**Fatia 3b-i (LANDADA 22/09, lane `baremetal` 9092):** os sítios de **futex** do
+x86_64 cruzam a costura — `kof_plat_sync` (futex 202) entra no `RuntimePlat` e os
+19 sítios `SYS_futex` de `RuntimeScheduler`/`RuntimeChannel`/`RuntimeMemory` são
+roteados para ele (o lock de alocação espera/acorda pela costura, então todo
+binário nativo a exercita). Prova: `KofConcurrency2Test` 48/48, `SpawnE2ETest`
+10/10, `SpawnAwaitBlockE2ETest` 5/5, `ProcessSpawnE2ETest` 4/4, `NativeE2ETest`
+67/67, `PlatformSeamSabotageTest` 4/4; baseline x86 re-medido (39.512→39.544 B,
+93→94 syms). **Próximas:** `kof_plat_sync` no seam riscv + `kof_plat_thread`
+(create) nos dois ISAs, depois sockets de rede (`kof_plat_net_*`) e B-1.
+
 ### B-1 — Perfil de link freestanding · **depende de B-0**
 `native --profile freestanding`: sem `-lc`/`-dynamic-linker`, `_start`/`_end`
 próprios, linker script (heap e stack configuráveis), sem libc. No x86_64 remove
