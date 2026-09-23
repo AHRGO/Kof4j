@@ -129,6 +129,14 @@ public class NativeBackend implements Backend {
     public NativeBackend() { this(Target.NATIVE); }
     public NativeBackend(Target target) { this.target = target; nativeMethods = new NativeMethodEmitter(this); nativeArch = new NativeArchEmitter(this); }
 
+    /** B-1: perfil de link (HOST padrão; FREESTANDING = estático, sem libc no x86_64). */
+    public NativeBackend profile(NativeProfile p) {
+        this.freestanding = p == NativeProfile.FREESTANDING;
+        return this;
+    }
+
+    boolean freestanding = false;
+
     String resolveLabel(LabelId id) {
         return labelMap.computeIfAbsent(id, k -> ".Lkof_" + (labelCounter++));
     }
@@ -451,13 +459,21 @@ public class NativeBackend implements Backend {
     }
 
     void assemble(Path asmFile, Path binFile) throws IOException {
+        // B-1: no perfil freestanding (x86_64) o link é estático e sem libc —
+        // qualquer capacidade que precise de libc é RECUSADA com diagnóstico
+        // (nunca um link que falha feio nem um binário que resolve em runtime).
+        if (freestanding && target == Target.NATIVE
+                && (usesDb || usesOrm || usesMysql || usesConcurrency || usesPow || !ffiLibs.isEmpty())) {
+            throw new IOException("NATIVE003: perfil freestanding nao suporta libc (db/mysql/concurrency/pow/ffi) "
+                    + "neste alvo; use o perfil host ou remova a dependencia");
+        }
         // R2 fatia 1 (20/09): -lm AGORA é by-use como sqlite/mariadb/pthread —
         // o shim `call pow` do monolito virou WEAK (RuntimeMath `.weak pow`),
         // então linkar sem libm fecha; usaPow só quando a fonte chama
         // kof_math_pow (scan acima — único caminho ao shim). A história do
         // 7f174a6f (arg morto, link incondicional) mora aqui.
         NativeAssembler.assemble(asmFile, binFile, usesDb || usesOrm, usesMysql,
-                usesConcurrency, ffiLibs, usesPow);
+                usesConcurrency, ffiLibs, usesPow, freestanding);
     }
 
     // ---------------------------------------------------------------------

@@ -24,7 +24,7 @@ public final class NativeAssembler {
      *  `-l:<nome>` — exatamente o padrão do SQLite (DB001), sem dlopen. */
     static void assemble(Path asmFile, Path binFile, boolean usesDb, boolean usesMysql,
                    boolean usesConcurrency, java.util.Collection<String> ffiLibs,
-                   boolean usesPow) throws IOException {
+                   boolean usesPow, boolean freestanding) throws IOException {
         Path objFile = asmFile.resolveSibling(asmFile.getFileName() + ".o");
         System.err.println("NativeBackend: assembling " + asmFile);
         try {
@@ -32,6 +32,23 @@ public final class NativeAssembler {
         } catch (IOException e) {
             System.err.println("NativeBackend: as failed: " + e.getMessage());
             throw e;
+        }
+        // B-1: perfil freestanding (x86_64) — link ESTÁTICO, sem
+        // `-dynamic-linker` e sem `-lc`; o binário só fala com o SO pela
+        // costura kof_plat_* (B-0). As capacidades libc-dependentes já foram
+        // recusadas em NativeBackend.assemble (NATIVE003).
+        //
+        // `--unresolved-symbols=ignore-all`: as fatias x86 são grossas e
+        // carregam chamadas libc de funções NÃO alcançadas no mesmo objeto
+        // (snprintf/strtod do dtoa, pthread_*, usleep). No perfil host elas
+        // resolvem pela libc; aqui ficam sem resolução e só são fatais se o
+        // PROGRAMA alcançar o caminho libc — as capacidades que fazem isso
+        // (float/db/concurrency/pow/ffi) são recusadas por uso. Remover as
+        // refs na origem (seções por função + gc-sections) é o passo B-1b.
+        if (freestanding && System.getProperty("os.name", "").toLowerCase().contains("linux")) {
+            runCommand(new String[]{"ld", "-o", binFile.toString(), objFile.toString(),
+                    "--unresolved-symbols=ignore-all"}, "ld");
+            return;
         }
         // Native always needs dynamic linker + libc now (printf for float, db optionally)
         // to keep single codegen path; plain integer programs still work via ld+ld.so.

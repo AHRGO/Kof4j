@@ -232,6 +232,14 @@ IRModule currentModule;
         return CompilerPipeline.compile((CompilerDriver) this, sourceFile, outputDir, target);
     }
 
+    /** B-1: compila p/ nativo com perfil explícito (HOST padrão; FREESTANDING = estático, sem libc). */
+    public CompilationResult compile(Path sourceFile, Path outputDir, Target target,
+                                     dev.kof.compiler.nat.NativeProfile profile) {
+        ((CompilerDriver) this).nativeProfile = profile == null
+                ? dev.kof.compiler.nat.NativeProfile.HOST : profile;
+        return CompilerPipeline.compile((CompilerDriver) this, sourceFile, outputDir, target);
+    }
+
     public CompilationResult compileSources(java.util.List<Path> sources, Path outputDir, Target target) {
         return CompilerPipeline.compileSources((CompilerDriver) this, sources, outputDir, target);
     }

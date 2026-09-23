@@ -253,6 +253,27 @@ every sync-only binary). Proof: `NativeRuntimeSliceRegistryTest` 7/7,
 `ArtifactSizeTest` 6/6 (hello unchanged: 39,432 B/91 syms), `KofConcurrency2Test`
 48/48, `SpawnE2ETest` 10/10, `PlatformSeamSabotageTest` 4/4.
 
+**B-1a (LANDED 22/09, lane `baremetal` 9092): freestanding link profile
+end-to-end.** New `NativeProfile {HOST, FREESTANDING}` (`nat/NativeProfile.java`)
+threaded through `CompilerDriver.nativeProfile` → `CompilerDriverState.compile(src,
+out, target, profile)` → `CompilerPipeline.selectBackend` → `NativeBackend.profile(p)`
+→ `NativeAssembler.assemble(..., freestanding)`. In freestanding mode x86_64 links
+`ld -o bin obj --unresolved-symbols=ignore-all` (no `-dynamic-linker`, no `-lc`/libs).
+Capabilities that need libc by use (db/orm/mysql/concurrency/pow/ffi) are **refused**
+at compile time with the `NATIVE003` diagnostic — never a silent dynamic fallback.
+**Why `--unresolved-symbols=ignore-all`:** the x86 runtime slices are coarse and
+carry libc calls from functions *not reached* in the same object
+(`snprintf`/`strtod` from dtoa, `pthread_*`, `usleep`); on the host they resolve via
+libc, here they stay unresolved and are only fatal if the program reaches the libc
+path — which the refused capabilities cover. Removing the refs at the source
+(per-function sections + `gc-sections`) is the **B-1b** follow-up.
+**Acceptance met:** hello freestanding has no `PT_INTERP` and no `DT_NEEDED`
+(`readelf`) and still prints the JVM-oracle value; the `HOST` control shows both
+(anti-false-green); freestanding+`spawn` is refused with `NATIVE003`. Proof:
+`FreestandingLinkE2ETest` 3/3 + regression `LinkByUseTest` 3, `PlatformSeamSabotageTest`
+4, `NativeRuntimeSliceRegistryTest` 7, `ArtifactSizeTest` 6 (hello unchanged
+39,432 B/91 syms), `KofConcurrency2Test` 48, `NativeE2ETest` 67 → 138/0F.
+
 **Depends on:** B-0. **Classification:** M (medium).
 
 ### B-2 — UEFI (x86_64, and later aarch64) · **depends B-1**

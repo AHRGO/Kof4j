@@ -259,6 +259,29 @@ toca o futex do lock de alocação (`kof_plat_sync`) não arrasta mais
 39.432 B/91 syms), `KofConcurrency2Test` 48/48, `SpawnE2ETest` 10/10,
 `PlatformSeamSabotageTest` 4/4.
 
+**B-1a (LANDADA 22/09, lane `baremetal` 9092): perfil de link freestanding
+ponta a ponta.** Novo `NativeProfile {HOST, FREESTANDING}`
+(`nat/NativeProfile.java`) passado por `CompilerDriver.nativeProfile` →
+`CompilerDriverState.compile(src, out, target, profile)` →
+`CompilerPipeline.selectBackend` → `NativeBackend.profile(p)` →
+`NativeAssembler.assemble(..., freestanding)`. Em freestanding o x86_64 liga
+`ld -o bin obj --unresolved-symbols=ignore-all` (sem `-dynamic-linker`, sem
+`-lc`/libs). Capacidades que precisam de libc por uso (db/orm/mysql/concurrency/
+pow/ffi) são **recusadas** em compile-time com o diagnóstico `NATIVE003` — nunca
+um fallback dinâmico silencioso. **Por que `--unresolved-symbols=ignore-all`:**
+as fatias do runtime x86 são grossas e carregam chamadas libc de funções *não
+alcançadas* no mesmo objeto (`snprintf`/`strtod` do dtoa, `pthread_*`, `usleep`);
+no host elas resolvem pela libc, aqui ficam sem resolução e só são fatais se o
+programa alcançar o caminho libc — coberto pelas capacidades recusadas. Remover
+as refs na origem (seções por função + `gc-sections`) é o próximo passo **B-1b**.
+**Aceitação cumprida:** o hello freestanding não tem `PT_INTERP` nem `DT_NEEDED`
+(`readelf`) e ainda imprime o valor do oráculo JVM; o controle `HOST` mostra
+ambos (anti-falso-verde); freestanding+`spawn` é recusado com `NATIVE003`. Prova:
+`FreestandingLinkE2ETest` 3/3 + regressão `LinkByUseTest` 3,
+`PlatformSeamSabotageTest` 4, `NativeRuntimeSliceRegistryTest` 7,
+`ArtifactSizeTest` 6 (hello inalterado 39.432 B/91 syms), `KofConcurrency2Test`
+48, `NativeE2ETest` 67 → 138/0F.
+
 **Depende de:** B-0. **Classificação:** M (médio).
 
 ### B-2 — UEFI (x86_64, e depois aarch64) · **depende de B-1**

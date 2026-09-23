@@ -108,6 +108,7 @@ public class CompilerDriver extends CompilerDriverState {
         return CompilerPipeline.rootFor(sources);
     }
 Target target = Target.JVM;
+dev.kof.compiler.nat.NativeProfile nativeProfile = dev.kof.compiler.nat.NativeProfile.HOST;
 
 
     /** Um caso `test "nome" { }` descoberto em compile-time. */
