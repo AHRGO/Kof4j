@@ -74,6 +74,7 @@ A navigation aid, not a decision by itself. Ordered as in this file.
 - **D-ARTIFACT-TRUST** — 1.0 artifact trust contract
 - **D-VERSIONING-RELEASE** — consolidated versioning and release-cut policy
 - **D-DEBT-SCOUT** — technical-debt scout tooling authorized, Wave 1 only, no Issue-publish capability
+- **D-DEBT-SCOUT-W2** — Wave 2 authorized (evidence qualification, clustering, SARIF); still shadow, still no Issue-publish
 
 ---
 
@@ -3384,3 +3385,44 @@ taxonomy invented on the fly.
 
 - **Relationships:** `Related: AGENTS.md rule 6/8/9/10/11, R6,
   D-ARTIFACT-TRUST, D-KOF-FIRST, tech-debt.md.`
+
+## D-DEBT-SCOUT-W2 — Debt Scout Wave 2 authorized: evidence qualification, root-cause clustering, principal/interest/lock-in, C2/C3 classifier, Debt Inbox, SARIF — still shadow, still zero Issue-publish (user-directed, 23/09/2026)
+
+**Date:** 2026-09-23 · **State:** `DECIDED` · **Source:** user said "segue
+para wave2" after reviewing the Wave 1 landing (contract `DEBT_SCOUT_
+CONTRACT.md` §11, `KOF_TECHNICAL_DEBT_SCOUT_AGENT_V2.md` §94).
+
+**Decision:** Wave 2 of the V2 design is authorized: a deterministic
+KOF-first context builder, root-cause clustering (by `debt_fingerprint`),
+the principal/interest/lock-in vector (never a single score, contract
+§11/§12), a C2/C3 confidence classifier that only promotes a cluster
+past `C1` when the mandatory-evidence checklist (contract §7, C3
+requirements) is actually satisfied — never by many weak signals — a
+Debt Inbox for C2 findings without a code location, and a SARIF writer
+for C0/C1/C2 findings that DO have a location (contract §37: "prefer
+SARIF/code scanning over opening an Issue" for exactly that case).
+
+**What is explicitly still NOT authorized by this entry:** the C3
+publisher, any `issues: write` grant anywhere, any push/schedule
+trigger. Wave 2 stays `mode: shadow` end to end — `issues_created`
+remains a structural `0`, proven the same way Wave 1 proved it (the
+report/workflow asserts it, not merely intends it). Advancing to Wave 3
+(§95 of the source spec: the canary C3 publisher) needs its own
+`DECISIONS.md` entry with the maintainer's phase-S1 authorization
+(`DEBT_SCOUT_CONTRACT.md` §7), exactly as `D-DEBT-SCOUT` already said.
+
+**New privilege this wave introduces, scoped tightly:** the workflow's
+`scan` job gains `security-events: write` (SARIF upload only,
+`github/codeql-action/upload-sarif`) — still zero `issues: write`
+anywhere. This is the same least-privilege discipline
+`D-ARTIFACT-TRUST` already applies to every other workflow in this repo.
+
+**Evidence:** Wave 1's own real run (`https://github.com/KofLang/Kof4j/
+actions/runs/35839064175`) measured that of 33 real candidates (32 `C0`
+SATD, 1 `C1` branch-drift), **zero** qualified for an Issue under the
+contract's own gates when triaged by hand — that triage is exactly what
+Wave 2's classifier now does mechanically, so the next run's result is
+checkable without manual re-triage every time.
+
+- **Relationships:** `Related: D-DEBT-SCOUT, DEBT_SCOUT_CONTRACT.md §7/§11/§37,
+  D-ARTIFACT-TRUST, rule 6.`

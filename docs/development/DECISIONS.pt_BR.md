@@ -72,6 +72,7 @@ Auxílio de navegação, não é uma decisão por si só. Ordenado como neste ar
 - **D-ARTIFACT-TRUST** — contrato de confiança dos artefatos 1.0
 - **D-VERSIONING-RELEASE** — política consolidada de versionamento e corte de release
 - **D-DEBT-SCOUT** — ferramenta de escoteiro de dívida técnica autorizada, só Wave 1, sem capacidade de publicar Issue
+- **D-DEBT-SCOUT-W2** — Wave 2 autorizada (qualificação de evidência, clustering, SARIF); ainda shadow, ainda sem publicar Issue
 
 ---
 
@@ -3405,3 +3406,46 @@ não numa taxonomia inventada na hora.
 
 - **Relações:** `Related: AGENTS.md regra 6/8/9/10/11, R6,
   D-ARTIFACT-TRUST, D-KOF-FIRST, tech-debt.md.`
+
+## D-DEBT-SCOUT-W2 — Wave 2 do Debt Scout autorizada: qualificação de evidência, clustering de causa-raiz, principal/interest/lock-in, classificador C2/C3, Debt Inbox, SARIF — ainda shadow, ainda zero publicação de Issue (dirigido pelo usuário, 23/09/2026)
+
+**Data:** 2026-09-23 · **Estado:** `DECIDED` · **Fonte:** o usuário disse
+"segue para wave2" depois de revisar o pouso da Wave 1 (contrato
+`DEBT_SCOUT_CONTRACT.md` §11, `KOF_TECHNICAL_DEBT_SCOUT_AGENT_V2.md` §94).
+
+**Decisão:** a Wave 2 do desenho V2 é autorizada: um context builder
+KOF-first determinístico, clustering de causa-raiz (por `debt_fingerprint`),
+o vetor principal/interest/lock-in (nunca um score único, contrato
+§11/§12), um classificador de confiança C2/C3 que só promove um cluster
+além de `C1` quando o checklist de evidência obrigatória (contrato §7,
+requisitos de C3) está de fato satisfeito — nunca por muitos sinais
+fracos —, um Debt Inbox para achados C2 sem localização de código, e um
+escritor SARIF para achados C0/C1/C2 que TÊM localização (contrato §37:
+"prefira SARIF/code scanning a abrir Issue" exatamente para esse caso).
+
+**O que este registro explicitamente NÃO autoriza ainda:** o publisher
+de C3, qualquer concessão de `issues: write` em lugar nenhum, qualquer
+trigger push/schedule. A Wave 2 fica `mode: shadow` de ponta a ponta —
+`issues_created` continua sendo `0` estrutural, provado do mesmo jeito
+que a Wave 1 provou (o relatório/workflow afirma isso, não só pretende).
+Avançar para a Wave 3 (§95 do spec-fonte: o publisher canary de C3)
+precisa do próprio registro em `DECISIONS.md` com a autorização de fase
+S1 da mantenedora (`DEBT_SCOUT_CONTRACT.md` §7), exatamente como
+`D-DEBT-SCOUT` já dizia.
+
+**Novo privilégio que esta wave introduz, com escopo apertado:** o job
+`scan` do workflow ganha `security-events: write` (só upload de SARIF,
+`github/codeql-action/upload-sarif`) — continua zero `issues: write` em
+qualquer lugar. É a mesma disciplina de mínimo privilégio que
+`D-ARTIFACT-TRUST` já aplica em todo outro workflow deste repositório.
+
+**Evidência:** a própria rodada real da Wave 1 (`https://github.com/
+KofLang/Kof4j/actions/runs/35839064175`) mediu que, dos 33 candidatos
+reais (32 `C0` SATD, 1 `C1` de branch-drift), **zero** se qualificou
+para Issue sob os próprios gates do contrato quando triados à mão —
+essa triagem é exatamente o que o classificador da Wave 2 agora faz de
+forma mecânica, então o resultado da próxima rodada é conferível sem
+re-triagem manual toda vez.
+
+- **Relações:** `Related: D-DEBT-SCOUT, DEBT_SCOUT_CONTRACT.md §7/§11/§37,
+  D-ARTIFACT-TRUST, regra 6.`
