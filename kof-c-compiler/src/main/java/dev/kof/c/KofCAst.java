@@ -5,7 +5,7 @@ import java.util.List;
 public final class KofCAst {
     public record Program(List<StructDecl> structs, List<VarDecl> globals, List<FuncDecl> funcs, List<Prototype> prototypes) {}
 
-    /** Struct definition; the subset allows `int` fields only, total size ≤ 8 B. */
+    /** Struct definition; fields are `int` only. By value: parameter ≤ six eightbytes (48 B), return ≤ two (16 B). */
     public record StructDecl(String name, List<Param> fields) {}
 
     /** Global variable ({@code int g;} or {@code struct S s;}). */

@@ -26,7 +26,7 @@ final class KofCEmitterAarch extends KofCEmitterBase {
             sb.append("    .bss\n");
             for (var g : globals) {
                 sb.append("    .globl ").append(g.name()).append("\n");
-                sb.append("    .comm ").append(g.name()).append(",8,8\n");
+                sb.append("    .comm ").append(g.name()).append(",").append(gsize(g.type())).append(",8\n");
             }
         }
     }
@@ -105,9 +105,12 @@ final class KofCEmitterAarch extends KofCEmitterBase {
     private static int frameBytes(int slots) { return ((slots + 1) / 2) * 16; }
 
     @Override
-    protected void emitStoreParam(int argIndex, int slot) {
-        sb.append("    stur ").append(ARG_REGS[argIndex]).append(", [x29, #-").append(offset(slot)).append("]\n");
+    protected void emitStoreParam(int argIndex, int slot, int eightbytes) {
+        for (int j = 0; j < eightbytes; j++)
+            sb.append("    stur ").append(ARG_REGS[argIndex + j]).append(", [x29, #-").append(offset(slot + j)).append("]\n");
     }
+
+    private int gsize(String type) { int b = structBytes(type); return b == 0 ? 8 : b; }
 
     private static int offset(int slot) { return 8 * (slot + 1); }
 
@@ -227,8 +230,31 @@ final class KofCEmitterAarch extends KofCEmitterBase {
     }
 
     @Override
-    protected void emitPopArg(int argIndex) {
-        sb.append("    ldr ").append(ARG_REGS[argIndex]).append(", [sp], #16\n");
+    protected void emitPackEightbyte(Storage base, int idx, int fields) {
+        fld32w("x0", base, 8 * idx);
+        if (2 * idx + 1 < fields) { fld32w("x3", base, 8 * idx + 4); sb.append("    lsl x3, x3, #32\n"); sb.append("    orr x0, x0, x3\n"); }
+    }
+
+    private void fld32w(String reg, Storage s, int bo) {
+        if (s.local()) sb.append("    ldr ").append(reg).append(", [x29, #").append(-(offset(s.slot()) - bo)).append("]\n");
+        else { adrp("x9", s.name()); sb.append("    ldr ").append(reg).append(", [x9, #").append(bo).append("]\n"); }
+    }
+
+    @Override
+    protected void emitStoreSecondReturn(Storage storage) {
+        if (storage.local()) sb.append("    str x1, [x29, #-").append(offset(storage.slot())).append("]\n");
+        else { adrp("x9", storage.name()); sb.append("    str x1, [x9]\n"); }
+    }
+
+    @Override
+    protected void emitLoadSecondReturn(Storage storage) {
+        if (storage.local()) sb.append("    ldr x1, [x29, #-").append(offset(storage.slot())).append("\n");
+        else { adrp("x9", storage.name()); sb.append("    ldr x1, [x9]\n"); }
+    }
+
+    @Override
+    protected void emitPopArg(int argIndex, int eightbytes) {
+        for (int j = 0; j < eightbytes; j++) sb.append("    ldr ").append(ARG_REGS[argIndex + j]).append(", [sp], #16\n");
     }
 
     @Override

@@ -26,7 +26,7 @@ final class KofCEmitterX86 extends KofCEmitterBase {
             sb.append("    .bss\n");
             for (var g : globals) {
                 sb.append("    .globl ").append(g.name()).append("\n");
-                sb.append("    .comm ").append(g.name()).append(",8,8\n");
+                sb.append("    .comm ").append(g.name()).append(",").append(gsize(g.type())).append(",8\n");
             }
         }
     }
@@ -101,10 +101,13 @@ final class KofCEmitterX86 extends KofCEmitterBase {
     }
 
     @Override
-    protected void emitStoreParam(int argIndex, int slot) {
-        sb.append("    mov qword ptr [rbp - ").append(offset(slot)).append("], ")
-                .append(ARG_REGS[argIndex]).append("\n");
+    protected void emitStoreParam(int argIndex, int slot, int eightbytes) {
+        for (int j = 0; j < eightbytes; j++)
+            sb.append("    mov qword ptr [rbp - ").append(offset(slot + j)).append("], ")
+                    .append(ARG_REGS[argIndex + j]).append("\n");
     }
+
+    private int gsize(String type) { int b = structBytes(type); return b == 0 ? 8 : b; }
 
     private static int offset(int slot) { return 8 * (slot + 1); }
 
@@ -192,8 +195,31 @@ final class KofCEmitterX86 extends KofCEmitterBase {
     }
 
     @Override
-    protected void emitPopArg(int argIndex) {
-        sb.append("    pop ").append(ARG_REGS[argIndex]).append("\n");
+    protected void emitPackEightbyte(Storage base, int idx, int fields) {
+        fld32("eax", base, 8 * idx);
+        if (2 * idx + 1 < fields) { fld32("ecx", base, 8 * idx + 4); sb.append("    shl rcx, 32\n"); sb.append("    or rax, rcx\n"); }
+    }
+
+    private void fld32(String reg, Storage s, int bo) {
+        if (s.local()) sb.append("    mov ").append(reg).append(", dword ptr [rbp - ").append(offset(s.slot()) - bo).append("]\n");
+        else sb.append("    mov ").append(reg).append(", dword ptr [rip + ").append(s.name()).append(bo == 0 ? "" : " + " + bo).append("]\n");
+    }
+
+    @Override
+    protected void emitStoreSecondReturn(Storage storage) {
+        if (storage.local()) sb.append("    mov qword ptr [rbp - ").append(offset(storage.slot())).append("], rdx\n");
+        else sb.append("    mov qword ptr [rip + ").append(storage.name()).append("], rdx\n");
+    }
+
+    @Override
+    protected void emitLoadSecondReturn(Storage storage) {
+        if (storage.local()) sb.append("    mov rdx, qword ptr [rbp - ").append(offset(storage.slot())).append("\n");
+        else sb.append("    mov rdx, qword ptr [rip + ").append(storage.name()).append("\n");
+    }
+
+    @Override
+    protected void emitPopArg(int argIndex, int eightbytes) {
+        for (int j = 0; j < eightbytes; j++) sb.append("    pop ").append(ARG_REGS[argIndex + j]).append("\n");
     }
 
     @Override

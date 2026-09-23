@@ -34,12 +34,37 @@ abstract class KofCEmitterBase implements KofCEmitter {
     private Map<String, Integer> localSlots = Map.of();
     private Map<String, String> varTypes = Map.of();
     private final Map<String, KofCAst.StructDecl> structs = new LinkedHashMap<>();
+    private final Map<String, List<String>> calleeParams = new LinkedHashMap<>();
+    private int nextSlot;
     private String funcEndLabel = "";
 
     protected KofCEmitterBase(KofCAst.Program prog, boolean executable) {
         this.prog = prog;
         this.executable = executable;
         for (var s : prog.structs()) structs.put(s.name(), s);
+        for (var fn : prog.funcs()) calleeParams.put(fn.name(), fn.params().stream().map(KofCAst.Param::type).toList());
+        for (var pt : prog.prototypes()) calleeParams.putIfAbsent(pt.name(), pt.params().stream().map(KofCAst.Param::type).toList());
+    }
+
+    /** Bytes do tipo struct (campos int = 4 B); 0 para não-struct. */
+    protected int structBytes(String type) {
+        if (type == null || !type.startsWith("struct ")) return 0;
+        var d = structs.get(type.substring("struct ".length()));
+        return d == null ? 0 : 4 * d.fields().size();
+    }
+
+    /** eightbytes = ceil(campos/2) — o bloco que atravessa em registradores. */
+    protected int structEightbytes(String type) {
+        int b = structBytes(type);
+        if (b == 0) return 1;
+        return (b + 7) / 8;
+    }
+
+    private int slotCount(String type) { return structBytes(type) == 0 ? 1 : structEightbytes(type); }
+
+    private KofCAst.FuncDecl findFunc(String name) {
+        for (var f : prog.funcs()) if (f.name().equals(name)) return f;
+        return null;
     }
 
     @Override
@@ -87,15 +112,22 @@ abstract class KofCEmitterBase implements KofCEmitter {
     private void emitFunc(KofCAst.FuncDecl fn) {
         localSlots = new LinkedHashMap<>();
         varTypes = new LinkedHashMap<>();
+        nextSlot = 0;
         for (var g : prog.globals()) varTypes.putIfAbsent(g.name(), g.type());
-        int slots = 0;
-        for (var p : fn.params()) { localSlots.put(p.name(), slots++); varTypes.put(p.name(), p.type()); }
+        for (var p : fn.params()) {
+            varTypes.put(p.name(), p.type());
+            localSlots.put(p.name(), nextSlot);
+            nextSlot += slotCount(p.type());
+        }
         collectLocals(fn.body());
         sb.append("    .globl ").append(fn.name()).append("\n");
         sb.append(fn.name()).append(":\n");
         emitFuncPrologue(localSlots.size());
-        for (int i = 0; i < fn.params().size(); i++) {
-            emitStoreParam(i, localSlots.get(fn.params().get(i).name()));
+        int r = 0;
+        for (var prm : fn.params()) {
+            int k = slotCount(prm.type());
+            emitStoreParam(r, localSlots.get(prm.name()), k);
+            r += k;
         }
         funcEndLabel = label("ret");
         for (var st : fn.body()) emitStmt(st);
@@ -107,7 +139,10 @@ abstract class KofCEmitterBase implements KofCEmitter {
     private void collectLocals(List<KofCAst.Stmt> body) {
         for (var st : body) {
             if (st instanceof KofCAst.LocalDeclStmt s) {
-                localSlots.computeIfAbsent(s.name(), k -> localSlots.size());
+                if (!localSlots.containsKey(s.name())) {
+                    localSlots.put(s.name(), nextSlot);
+                    nextSlot += slotCount(s.type());
+                }
                 varTypes.put(s.name(), s.type());
             } else if (st instanceof KofCAst.IfStmt s) {
                 collectLocals(s.thenBody());
@@ -151,13 +186,24 @@ abstract class KofCEmitterBase implements KofCEmitter {
         } else if (stmt instanceof KofCAst.LocalDeclStmt) {
             // o slot já foi reservado na pré-varredura; nada a emitir
         } else if (stmt instanceof KofCAst.ReturnStmt s) {
-            if (s.value() != null) emitExpr(s.value());
+            if (s.value() != null) {
+                emitExpr(s.value());
+                // struct local ≥2 eightbytes: o segundo registro de retorno sai do slot seguinte
+                if (s.value() instanceof KofCAst.IdentExpr id && structEightbytes(varTypes.get(id.name())) >= 2) {
+                    var src = resolve(id.name());
+                    emitLoadSecondReturn(src.local() ? Storage.local(src.slot() + 1) : src);
+                }
+            }
             emitJump(funcEndLabel);
         } else if (stmt instanceof KofCAst.AssignStmt s) {
+            boolean two = twoEightbyteReturn(s.value());
             emitExpr(s.value());
             Storage target = resolve(s.target());
             if (s.deref()) emitDerefStoreStorage(target);
-            else emitStoreStorage(target);
+            else {
+                emitStoreStorage(target);
+                if (two) emitStoreSecondReturn(target.local() ? Storage.local(target.slot() + 1) : target);
+            }
         } else if (stmt instanceof KofCAst.FieldAssignStmt s) {
             emitExpr(s.value());
             emitStoreField(resolve(s.target()), fieldOffset(varTypes.get(s.target()), s.field()));
@@ -188,17 +234,44 @@ abstract class KofCEmitterBase implements KofCEmitter {
     }
 
     private void emitCallExpr(KofCAst.CallExpr call) {
-        if (call.name().equals("print") || call.name().equals("print_int") || call.name().equals("kof_print")) {
+        if (PRINT_BUILTINS.contains(call.name())) {
             emitCall("kof_print");
             return;
         }
-        List<KofCAst.Expr> args = call.args();
-        for (var a : args) {
-            emitExpr(a);
-            emitPushAcc();
+        // args: struct atravessa em seus eightbytes (ordem do ABI), escalar em 1 registro
+        var ptypes = calleeParams.getOrDefault(call.name(), List.<String>of());
+        int[] width = new int[call.args().size()];
+        for (int i = 0; i < call.args().size(); i++) {
+            String pt = i < ptypes.size() ? ptypes.get(i) : "int";
+            if (pt.startsWith("struct ")) {
+                width[i] = structEightbytes(pt);
+                var st = resolve(structArg(call.args().get(i)));
+                for (int j = 0; j < width[i]; j++) {
+                    emitPackEightbyte(st, j, structs.get(pt.substring("struct ".length())).fields().size());
+                    emitPushAcc();
+                }
+            } else {
+                emitExpr(call.args().get(i));
+                emitPushAcc();
+                width[i] = 1;
+            }
         }
-        for (int i = args.size() - 1; i >= 0; i--) emitPopArg(i);
+        int r = call.args().size();
+        for (int i = call.args().size() - 1; i >= 0; i--) {
+            r -= width[i];
+            emitPopArg(r, width[i]);
+        }
         emitCall(call.name());
+    }
+
+    private String structArg(KofCAst.Expr a) {
+        return ((KofCAst.IdentExpr) a).name();
+    }
+
+    private boolean twoEightbyteReturn(KofCAst.Expr e) {
+        if (!(e instanceof KofCAst.CallExpr c)) return false;
+        var callee = findFunc(c.name());
+        return callee != null && structBytes(callee.retType()) >= 16;
     }
 
     protected Storage resolve(String name) {
@@ -226,9 +299,6 @@ abstract class KofCEmitterBase implements KofCEmitter {
 
     protected abstract void emitFuncEpilogue(int frameSlots);
 
-    /** Salva o registrador do argumento {@code argIndex} no slot de parâmetro. */
-    protected abstract void emitStoreParam(int argIndex, int slot);
-
     protected abstract void emitLoadImm(int v);
 
     protected abstract void emitLoadStorage(Storage storage);
@@ -253,10 +323,25 @@ abstract class KofCEmitterBase implements KofCEmitter {
 
     protected abstract void emitPopLeftToAcc();
 
-    /** Desempilha o topo para o registrador do argumento {@code argIndex}. */
-    protected abstract void emitPopArg(int argIndex);
-
     protected abstract void emitBinaryOp(String op);
+
+    /**
+     * Monta no acumulador o eightbyte {@code idx} da variável {@code base} (campos int de 4 B):
+     * campo par zero-estendido, ímpar no meio alto ({@code |<<32}).
+     */
+    protected abstract void emitPackEightbyte(Storage base, int idx, int fields);
+
+    /** Salva o argumento (k eightbytes em {@code ARG_REGS[argIndex..]}) nos slots consecutivos a partir de {@code slot}. */
+    protected abstract void emitStoreParam(int argIndex, int slot, int eightbytes);
+
+    /** Desempilha k valores para {@code ARG_REGS[argIndex..]}. */
+    protected abstract void emitPopArg(int argIndex, int eightbytes);
+
+    /** Salva o segundo registro de retorno (rdx/x1/a1) em {@code storage}. */
+    protected abstract void emitStoreSecondReturn(Storage storage);
+
+    /** Carrega {@code storage} no segundo registro de retorno (rdx/x1/a1). */
+    protected abstract void emitLoadSecondReturn(Storage storage);
 
     protected abstract void emitBranchIfZero(String label);
 
