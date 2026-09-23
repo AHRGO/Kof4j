@@ -128,6 +128,29 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     oráculo x86-64 + riscv64/aarch64 + perna host JVM (pk Long > int32, pk
     negativa, miss true, re-delete, id ruim throw + recuperação);
     `KofOrmE2ETest` 65/0F; bateria 91/0F.
+  - **F2a `orm.save` no cross do Native (D-DB-GAPS DB-3/DB-1, fatia E-parte-2a)**
+    (23/09, lane gaps-db): `orm.save` é REAL no riscv64/aarch64 — peças novas
+    `NativeRiscvAsmRtB55` (`kof_orm_save`, port de `RuntimeOrm4`) +
+    `NativeRiscvAsmRtB55Helpers` (globais `kof_orm_conn`/`sb_append`/`sb_char`/
+    `sb_qraw`/`sb_qstr`/`bind_field`); o parser de schema de RtB54 foi promovido
+    ao global `kof_orm_parse_schema` (ABI x86 reusada); `CROSS_FACES` ganha
+    `kof_orm_save` (7 nomes). Contrato (3 saídas do host): pk 0/null → INSERT
+    sem a PK + chave gerada (`sqlite3_last_insert_rowid`) + NOVA instância com
+    a pk patchada (`nFields*8+16`, vtable/typeId do header da FONTE, offset
+    `pkIndex*8+16`); pk≠0 → UPDATE (PK bindada por último) → MESMO ponteiro;
+    UPDATE 0 linhas → upsert INSERT de todas as colunas; int/long==0 e
+    double/float truncado (`fcvt.l.* rtz`) decidem INSERT; falha → throw
+    `sqlite: <msg>` (R6). Prova:
+    `KofOrmE2ETest.crossNativeF2aSaveMatchesX86Oracle` — oráculo x86-64
+    byte-parity riscv64/aarch64 + perna host JVM
+    (`true/1/1/1/1/{"name":"Mel2"}/9/2/10/3/unknown db connection: db2/after-throw`);
+    `KofOrmE2ETest` 66/0F/3skip + bateria 26/0F. Bug de causa-raiz caçado na
+    perna aarch64 (Q4/Q0): o tradutor mapeia `s10`→`x16` (scratch CALLER-SAVED
+    da AAPCS64), então manter o contador de loop em `s10` através de chamadas C
+    (`sqlite3_bind_*`/`kof_memcpy`) corrompia-o (crash rc=1, saída parcial
+    `true|1|1`; riscv64 imune); fix: índice `i` movido p/ slot de pilha
+    `48(sp)`. Regra da lane: nunca manter estado vivo em `s10` através de um
+    `call` no cross.
   - **check_500 vermelho fechado — `TypeChecker` 606 + `StatementAnalyzer` 600 (known-bugs §446)**
     (22/09, lane typer, sessão 9093): os dois arquivos CRÍTICOS herdados das
     fatias do §280 foram splitados por responsabilidade (`SemBinaryResultTyper`

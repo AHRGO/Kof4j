@@ -123,6 +123,28 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     oracle + riscv64/aarch64 + JVM host leg (Long pk > int32, negative pk,
     miss true, re-delete, bad id throw + recovery); `KofOrmE2ETest` 65/0F;
     battery 91/0F.
+  - **F2a `orm.save` on the Native cross (D-DB-GAPS DB-3/DB-1, slice E-part-2a)**
+    (23/09, gaps-db lane): `orm.save` is REAL on riscv64/aarch64 — new pieces
+    `NativeRiscvAsmRtB55` (`kof_orm_save`, port of `RuntimeOrm4`) +
+    `NativeRiscvAsmRtB55Helpers` (globals `kof_orm_conn`/`sb_append`/`sb_char`/
+    `sb_qraw`/`sb_qstr`/`bind_field`); the RtB54 schema parser was promoted to
+    the global `kof_orm_parse_schema` (x86 ABI reused); `CROSS_FACES` gains
+    `kof_orm_save` (7 names). Contract (3 host exits): pk 0/null → INSERT
+    without the pk + generated key (`sqlite3_last_insert_rowid`) + a NEW
+    instance with the pk patched (`nFields*8+16`, vtable/typeId from the
+    SOURCE header, offset `pkIndex*8+16`); pk≠0 → UPDATE (pk bound last) →
+    SAME pointer; UPDATE 0 rows → upsert INSERT of all columns; int/long==0
+    and truncated double/float (`fcvt.l.* rtz`) choose INSERT; failure →
+    `sqlite: <msg>` throw (R6). Proof:
+    `KofOrmE2ETest.crossNativeF2aSaveMatchesX86Oracle` — x86-64 oracle
+    byte-parity riscv64/aarch64 + JVM host leg
+    (`true/1/1/1/1/{"name":"Mel2"}/9/2/10/3/unknown db connection: db2/after-throw`);
+    `KofOrmE2ETest` 66/0F/3skip + battery 26/0F. Root-cause bug hunted on the
+    aarch64 leg (Q4/Q0): the translator maps `s10`→`x16` (AAPCS64 CALLER-SAVED
+    scratch), so keeping the loop counter in `s10` across C calls
+    (`sqlite3_bind_*`/`kof_memcpy`) corrupted it (crash rc=1, partial
+    `true|1|1`; riscv64 immune); fix: index `i` moved to stack slot `48(sp)`.
+    Lane rule: never keep live state in `s10` across a `call` on cross.
   - **check_500 red closed — `TypeChecker` 606 + `StatementAnalyzer` 600 (known-bugs §446)**
     (22/09, typer lane, session 9093): the two CRITICAL files inherited from the
     §280 slices were split by responsibility (`SemBinaryResultTyper` +166,

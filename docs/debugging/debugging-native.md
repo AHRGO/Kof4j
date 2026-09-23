@@ -240,3 +240,28 @@ The rule is simple:
 > missing toolchain does not prove a defect in the generated code; a
 > regression must remain reproducible once the environment the target
 > needs is available.
+
+## 6. Cross translator register map (riscv64 → aarch64)
+
+The aarch64 target is produced by translating the pruned riscv64 assembly
+(`NativeAarch64Translator` + `NativeAarch64Helpers`). The mapping is not
+1:1 in price, and one entry is a trap:
+
+| riscv64 | aarch64 | saved across a `call`? |
+|---|---|---|
+| `s0`–`s9` | `x19`–`x28` | **yes** (callee-saved) |
+| `s10` | **`x16`** | **no — `x16` is caller-saved scratch (AAPCS64 IP0)** |
+| `s11` | `x29` | yes (callee-saved) |
+| `ra` | `x30` | yes (return address) |
+
+**Symptom of the trap:** a function that keeps live state (e.g. a loop
+counter) in `s10` across a `call` works on riscv64 but crashes on aarch64
+with a partial output and `rc=1`, because the C callee
+(`sqlite3_bind_*`, `kof_memcpy`, …) clobbers `x16`. Measured on
+`kof_orm_save` (slice E-part-2a, 23/09): the loop index was moved to a
+stack slot (`48(sp)`) and both arches matched.
+
+**Rule for new cross runtime pieces:** never keep live state in `s10`
+across a `call`; use `s0`–`s9`/`s11` or a stack slot. When a piece works on
+riscv64 but not aarch64, diff the generated `.s`
+(`KOF_KEEP_ASM=1` keeps it in the output dir) and suspect `s10` first.
