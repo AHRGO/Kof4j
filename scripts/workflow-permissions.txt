@@ -5,6 +5,7 @@ exempt release.yml faixa da lane CI — workflow-level contents:write + push dir
 allow codeql.yml analyze security-events upload do SARIF da analise CodeQL (code scanning)
 allow issue-spam-guard.yml guard issues fecha a issue excedente do limite de 24h e comenta o motivo
 allow kof-bots.yml orchestrate actions createWorkflowDispatch dos bots quality/warning/security
+allow kof-debt-scout.yml scan security-events upload do SARIF do Debt Scout (contract secao 37; categoria /debt-scout/wave2; D-DEBT-SCOUT-W2) — nunca issues:write
 allow kof-issues-agent.yml triage issues addLabels + addAssignees na issue recem-aberta
 allow kof-issues-agent.yml respond issues createComment de agradecimento ao autor da issue
 allow kof-issues-agent.yml stale issues actions/stale marca e fecha issues inativas

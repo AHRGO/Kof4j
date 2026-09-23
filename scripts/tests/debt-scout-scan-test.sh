@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # debt-scout-scan-test.sh — structural test do orquestrador scan.py
-# (última unidade de código da Wave 1). O selftest cobre um diretório
-# não-git isolado (degrada sem crash), um config inválido (recusa
-# escanear) e uma varredura AO VIVO do repo real. Este teste tambem
-# exercita o CLI ponta-a-ponta (--phase state, --out) sem deixar sujeira.
+# (Wave 1+2). O selftest cobre um diretório não-git isolado (degrada
+# sem crash), um config inválido (recusa escanear) e uma varredura AO
+# VIVO do repo real, incluindo o pipeline de clustering/qualificação.
+# Este teste tambem exercita o CLI ponta-a-ponta (--phase state, --out,
+# --sarif-out, --inbox-out) sem deixar sujeira.
 set -u
 cd "$(git rev-parse --show-toplevel)"
 
@@ -33,10 +34,12 @@ else
 fi
 
 OUT_FILE=".debt-scout/out/candidates-test.json"
+SARIF_FILE=".debt-scout/out/results-test.sarif"
+INBOX_FILE=".debt-scout/out/inbox-test.md"
 rm -rf .debt-scout
-python3 scripts/debt-scout/scan.py --out "$OUT_FILE" >/dev/null
-if [ ! -f "$OUT_FILE" ]; then
-    echo "FALHOU: --out nao escreveu $OUT_FILE"
+python3 scripts/debt-scout/scan.py --out "$OUT_FILE" --sarif-out "$SARIF_FILE" --inbox-out "$INBOX_FILE" >/dev/null
+if [ ! -f "$OUT_FILE" ] || [ ! -f "$SARIF_FILE" ] || [ ! -f "$INBOX_FILE" ]; then
+    echo "FALHOU: --out/--sarif-out/--inbox-out nao escreveram os 3 arquivos"
     rc=1
 else
     if ! python3 -c "
@@ -45,14 +48,19 @@ with open('$OUT_FILE', encoding='utf-8') as f:
     d = json.load(f)
 assert d['summary']['issues_opened'] == 0
 assert all(c['publication']['eligible'] is False for c in d['candidates'])
+assert sum(cl['member_count'] for cl in d['clusters']) == d['summary']['total_candidates']
+with open('$SARIF_FILE', encoding='utf-8') as f:
+    sarif_doc = json.load(f)
+assert sarif_doc['version'] == '2.1.0'
 " 2>/dev/null; then
-        echo "FALHOU: $OUT_FILE tem forma inesperada"
+        echo "FALHOU: os arquivos escritos tem forma inesperada"
         rc=1
     else
-        echo "ok  — --out escreve um relatorio valido ($(python3 -c "
+        N="$(python3 -c "
 import json
 print(json.load(open('$OUT_FILE', encoding='utf-8'))['summary']['total_candidates'])
-") candidatos, issues_opened=0)"
+")"
+        echo "ok  — --out/--sarif-out/--inbox-out escrevem relatorios validos ($N candidatos, issues_opened=0, SARIF 2.1.0)"
     fi
 fi
 rm -rf .debt-scout

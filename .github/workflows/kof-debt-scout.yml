@@ -1,14 +1,17 @@
 name: kof-debt-scout
 
-# KOF Technical Debt Scout — Wave 1 (deterministic, shadow-only). See
+# KOF Technical Debt Scout — Wave 1+2 (deterministic, shadow-only). See
 # docs/development/technical-debt/DEBT_SCOUT_CONTRACT.md and
-# docs/development/DECISIONS.md §D-DEBT-SCOUT.
+# docs/development/DECISIONS.md §D-DEBT-SCOUT / §D-DEBT-SCOUT-W2.
 #
-# This workflow is DISCOVERY-ONLY: there is no publish job, top-level
-# `permissions` is `contents: read` and nothing else grants more, and no
-# step ever calls the GitHub Issues write API. `issues_opened` is a
+# This workflow is DISCOVERY-ONLY: there is no publish job, and no step
+# ever calls the GitHub Issues WRITE API. `issues_opened` is a
 # structural invariant of scan.py's report (contract §7/§11), not a
-# promise this workflow keeps by convention.
+# promise this workflow keeps by convention. Wave 2 adds exactly one
+# new privilege — `security-events: write`, for SARIF upload — and
+# `issues: read` (read-only, for the dedup check `gh search issues`
+# runs before any cluster can even qualify for C2). Nothing here gets
+# `issues: write`.
 #
 # Manual trigger only in this landing (`workflow_dispatch`) — a
 # push/schedule trigger is a separate, later decision (contract
@@ -31,14 +34,23 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      security-events: write # SARIF upload only (contract §37)
+      issues: read # dedup check only (kof_first.check_duplicates, gh search issues) — never write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: run the Wave-1 module suite
+      - name: run the Wave-1+2 module suite
         run: bash scripts/tests/run-agent-tests.sh debt-scout
 
       - name: run scan.py
-        run: python3 scripts/debt-scout/scan.py --out .debt-scout/out/candidates.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/debt-scout/scan.py \
+            --check-duplicates \
+            --out .debt-scout/out/candidates.json \
+            --sarif-out .debt-scout/out/results.sarif \
+            --inbox-out .debt-scout/out/inbox.md
 
       - name: write the job summary
         run: |
@@ -52,19 +64,32 @@ jobs:
           run = d["run"]
           summary = d["summary"]
           state = d["repository_state"]
-          print("# KOF Technical Debt Scout — Wave 1 (shadow)")
+          print("# KOF Technical Debt Scout — Wave 1+2 (shadow)")
           print()
-          print(f"- mode: `{run['mode']}` · model_used: `{run['model_used']}` · scanner: `{run['scanner_version']}`")
+          print(f"- mode: `{run['mode']}` · model_used: `{run['model_used']}` · "
+                f"duplicates_checked: `{run['duplicates_checked']}` · scanner: `{run['scanner_version']}`")
           print(f"- default branch: `{state['default_branch']}` · declared active branch: "
                 f"`{state['declared_active_branch']}` (exists: `{state['declared_active_branch_exists']}`)")
           print(f"- **issues_opened: {summary['issues_opened']}** (this workflow has no publish job)")
           print(f"- total candidates: {summary['total_candidates']} — "
                 + ", ".join(f"{k}={v}" for k, v in summary["by_confidence"].items()))
+          print(f"- total clusters: {summary['total_clusters']} — "
+                + ", ".join(f"{k}={v}" for k, v in summary["clusters_by_confidence"].items()))
           print()
-          print("No candidate in this run is Issue-eligible or SARIF-eligible — Wave 1 has "
-                "neither a publisher nor a SARIF writer. This summary and the uploaded "
-                "artifact are for human review only.")
+          with open(".debt-scout/out/inbox.md", encoding="utf-8") as f:
+              print(f.read())
+          print("No candidate in this run is Issue-eligible — Wave 2 has no publisher "
+                "(`D-DEBT-SCOUT`/`D-DEBT-SCOUT-W2`). Located C0/C1/C2 findings are on "
+                "the Code Scanning tab (SARIF, category `/debt-scout/wave2`); "
+                "no-location C2+ findings are in the Debt Inbox above. This summary "
+                "and the uploaded artifact are for human review only.")
           PY
+
+      - uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+        if: ${{ hashFiles('.debt-scout/out/results.sarif') != '' }}
+        with:
+          sarif_file: .debt-scout/out/results.sarif
+          category: /debt-scout/wave2
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

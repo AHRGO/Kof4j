@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
-"""scan.py — the Wave 1 orchestrator CLI (`docs/development/
+"""scan.py — the Wave 1+2 orchestrator CLI (`docs/development/
 technical-debt/DEBT_SCOUT_CONTRACT.md` §11). Combines `config`,
-`branch_discovery`, and every detector under `detectors/` into one
-report. This is the last Wave-1 unit before a discovery-only GitHub
-Actions workflow calls it — this script itself still calls no GitHub
-API and writes nothing but a local JSON file/stdout.
+`branch_discovery`, every detector under `detectors/`, and — Wave 2 —
+`cluster`/`kof_first`/`priority`/`confidence` into one report, plus
+`sarif`/`inbox` as separate emitters. This script still calls no
+GitHub Issues API and writes nothing to GitHub itself — the workflow
+that calls it owns SARIF upload (`security-events: write`), not this
+script.
 
 Hard invariant, checked at the orchestration layer too (defense in
-depth, not trusting each detector alone): the run REFUSES to proceed if
+depth, not trusting each module alone): the run REFUSES to proceed if
 `.debt-scout.yml` fails validation, and the emitted report asserts
 `issues_opened: 0` and that no candidate is `publication.eligible=true`
 — violating either is a bug in this script, not a possible outcome.
 
 CLI:
   scan.py --phase state        -> JSON: branch_discovery.discover() only
-  scan.py --phase deterministic [--out FILE]
-                                -> JSON: full Wave-1 report (default phase)
+  scan.py --phase deterministic [--out FILE] [--check-duplicates]
+                                -> JSON: full report incl. `clusters`
+                                   (default phase; --check-duplicates
+                                   calls `gh` over the network — off by
+                                   default so tests stay network-free)
+  scan.py --sarif-out FILE [--out FILE]   -> also writes the SARIF doc
+  scan.py --inbox-out FILE [--out FILE]   -> also writes the Inbox md
   scan.py --selftest
 """
 import json
@@ -27,7 +34,13 @@ import tempfile
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
 import branch_discovery  # noqa: E402
+import cluster as cluster_mod  # noqa: E402
+import confidence  # noqa: E402
 import config as config_mod  # noqa: E402
+import inbox  # noqa: E402
+import kof_first  # noqa: E402
+import priority  # noqa: E402
+import sarif  # noqa: E402
 import schema  # noqa: E402
 from detectors import satd  # noqa: E402
 
@@ -59,10 +72,16 @@ def run_state_phase(root="."):
     return branch_discovery.discover(root)
 
 
-def run_deterministic_phase(root="."):
-    """Loads+validates config, runs every Wave-1 detector, returns the
-    full report dict. Raises ScanError if the config is invalid — a scan
-    never runs on an unvalidated/rejected config."""
+def run_deterministic_phase(root=".", check_duplicates=False):
+    """Loads+validates config, runs every detector, clusters, qualifies
+    (Wave 2: kof_first + priority + confidence), returns the full
+    report dict. Raises ScanError if the config is invalid — a scan
+    never runs on an unvalidated/rejected config.
+
+    `check_duplicates=True` calls `gh` over the network (kof_first's
+    dedup check) — OFF by default so this function stays safe to call
+    from --selftest and from any test wrapper without a network
+    dependency; production runs (the workflow) opt in explicitly."""
     config_path = os.path.join(root, ".debt-scout.yml")
     try:
         cfg = config_mod.load_config(config_path)
@@ -81,20 +100,39 @@ def run_deterministic_phase(root="."):
         if c["publication"]["eligible"] is True:
             raise ScanError(
                 "a detector emitted publication.eligible=true — impossible "
-                "in Wave 1 (no publisher exists); this is a bug in the "
+                "in Wave 1/2 (no publisher exists); this is a bug in the "
                 "detector, not a valid outcome"
             )
+
+    analyzed_sha = _analyzed_sha(root)
+    decisions_text = kof_first._read_decisions_md(root)
+    clusters = cluster_mod.cluster_candidates(candidates)
+    for cl in clusters:
+        dup = (kof_first.check_duplicates(cl["debt_fingerprint"])
+               if check_duplicates else None)
+        cl["kof_triage"] = kof_first.build_context(cl, decisions_text, dup)
+        cl["priority_vector"] = priority.compute_priority_vector(cl)
+        confidence.apply_classification(cl)
+        for errs_c in (schema.validate_candidate(m) for m in cl["members"]):
+            if errs_c:
+                raise ScanError(f"a cluster member became schema-invalid "
+                                 f"after qualification: {errs_c}")
 
     by_confidence = {"C0": 0, "C1": 0, "C2": 0, "C3": 0}
     for c in candidates:
         by_confidence[c["confidence"]] = by_confidence.get(c["confidence"], 0) + 1
+    clusters_by_confidence = {"C0": 0, "C1": 0, "C2": 0, "C3": 0}
+    for cl in clusters:
+        clusters_by_confidence[cl["confidence"]] = (
+            clusters_by_confidence.get(cl["confidence"], 0) + 1)
 
     return {
         "run": {
-            "analyzed_sha": _analyzed_sha(root),
+            "analyzed_sha": analyzed_sha,
             "scanner_version": SCANNER_VERSION,
             "mode": cfg["mode"],
             "model_used": False,
+            "duplicates_checked": check_duplicates,
         },
         "repository_state": {
             "default_branch": repo_state.get("default_branch"),
@@ -102,12 +140,23 @@ def run_deterministic_phase(root="."):
             "declared_active_branch_exists": repo_state.get("declared_active_branch_exists"),
         },
         "candidates": candidates,
+        "clusters": clusters,
         "summary": {
             "total_candidates": len(candidates),
             "by_confidence": by_confidence,
+            "total_clusters": len(clusters),
+            "clusters_by_confidence": clusters_by_confidence,
             "issues_opened": 0,
         },
     }
+
+
+def emit_sarif(report):
+    return sarif.build_sarif(report["candidates"], report["run"]["analyzed_sha"])
+
+
+def emit_inbox(report):
+    return inbox.render_inbox_markdown(report["clusters"])
 
 
 # --------------------------------------------------------------------------
@@ -192,6 +241,22 @@ def selftest():
               live_report["summary"]["issues_opened"] == 0)
         check("live run: no candidate is ever publish-eligible",
               all(c["publication"]["eligible"] is False for c in live_report["candidates"]))
+        check("live run: clusters sum to the same candidate count "
+              "(clustering never loses a candidate)",
+              sum(cl["member_count"] for cl in live_report["clusters"])
+              == live_report["summary"]["total_candidates"])
+        check("live run: without --check-duplicates, no cluster reaches "
+              "C2/C3 (no network call was made, so nothing was ready)",
+              all(cl["confidence"] in ("C0", "C1") for cl in live_report["clusters"]))
+        check("live run: run.duplicates_checked reflects the flag",
+              live_report["run"]["duplicates_checked"] is False)
+        live_sarif = emit_sarif(live_report)
+        check("live run: emit_sarif produces a valid, serializable SARIF doc",
+              live_sarif["version"] == "2.1.0"
+              and json.dumps(live_sarif) is not None)
+        live_inbox = emit_inbox(live_report)
+        check("live run: emit_inbox never crashes and returns text",
+              isinstance(live_inbox, str) and len(live_inbox) > 0)
     else:
         print("  FAIL — real repo root not found for the live check")
         ok = False
@@ -212,11 +277,13 @@ def main(argv):
     if "--phase" in argv:
         phase = argv[argv.index("--phase") + 1]
 
+    check_dup = "--check-duplicates" in argv
+
     try:
         if phase == "state":
             result = run_state_phase(root)
         elif phase == "deterministic":
-            result = run_deterministic_phase(root)
+            result = run_deterministic_phase(root, check_duplicates=check_dup)
         else:
             print(f"scan: unknown --phase {phase!r} (state|deterministic)", file=sys.stderr)
             return 2
@@ -233,6 +300,21 @@ def main(argv):
         print(f"scan: wrote {out_path}")
     else:
         print(text)
+
+    if phase == "deterministic":
+        if "--sarif-out" in argv:
+            sarif_path = argv[argv.index("--sarif-out") + 1]
+            os.makedirs(os.path.dirname(sarif_path) or ".", exist_ok=True)
+            with open(sarif_path, "w", encoding="utf-8") as f:
+                json.dump(emit_sarif(result), f, indent=2, sort_keys=True)
+                f.write("\n")
+            print(f"scan: wrote {sarif_path}")
+        if "--inbox-out" in argv:
+            inbox_path = argv[argv.index("--inbox-out") + 1]
+            os.makedirs(os.path.dirname(inbox_path) or ".", exist_ok=True)
+            with open(inbox_path, "w", encoding="utf-8") as f:
+                f.write(emit_inbox(result))
+            print(f"scan: wrote {inbox_path}")
     return 0
 
 

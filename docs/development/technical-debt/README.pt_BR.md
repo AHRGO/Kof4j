@@ -2,8 +2,9 @@
 
 # KOF Technical Debt Scout
 
-**Status:** EM DESENVOLVIMENTO — Wave 1 (determinístico, somente shadow).
-Ver `DOING.md` para o claim/dono vivo e o próximo passo.
+**Status:** EM DESENVOLVIMENTO — Wave 1 PRONTA, Wave 2 (qualificação de
+evidência) PRONTA, as duas somente shadow. Ver `DOING.md` para o
+claim/dono vivo e o próximo passo.
 
 Esta é uma ferramenta que encontra e documenta dívida técnica
 *histórica* antes que uma escolha temporária de implementação, uma
@@ -20,9 +21,9 @@ aberto em 23/09/2026).
    roteamento de publicação/trust rollout, regras de privilégio. É isso
    que o código em `scripts/debt-scout/` implementa.
 2. `TAXONOMY.md` (EN) — a classificação de três eixos que todo candidato usa.
-3. `docs/development/DECISIONS.md` §`D-DEBT-SCOUT` — o registro de decisão
-   que autorizou esta frente e o limite de escopo atual (ainda não existe
-   capacidade de publicar Issue).
+3. `docs/development/DECISIONS.md` §`D-DEBT-SCOUT`/§`D-DEBT-SCOUT-W2` —
+   os registros de decisão que autorizaram esta frente e o limite de
+   escopo atual (ainda não existe capacidade de publicar Issue).
 
 ## De onde veio o desenho
 
@@ -36,29 +37,46 @@ governança paralelo). Esses documentos-fonte têm 100+ seções cada e
 destilação condensada e sincronizada com o código que os scripts de fato
 seguem. Quando os dois divergem, o contrato desta pasta vence.
 
-## O que existe hoje (Wave 1)
+## O que existe hoje (Wave 1 + Wave 2)
 
 ```text
 scripts/debt-scout/
 ├── config.py            — carrega/valida .debt-scout.yml (só stdlib)
 ├── schema.py             — schema v2 do Candidate (validação)
+├── taxonomy.py            — enums de 3 eixos (cruzados contra TAXONOMY.md)
 ├── fingerprint.py        — fingerprints de finding/dívida (estável, sha256)
 ├── branch_discovery.py   — resolve branch default/ativa; sinaliza drift
 │                            de contrato em vez de hardcodar uma ref
 ├── detectors/
-│   └── satd.py            — detector de marcadores SATD (TODO/FIXME/HACK/…)
-└── scan.py               — CLI orquestrador (--phase state|deterministic)
+│   ├── README.md          — a convenção de fixture que todo detector segue
+│   └── satd.py            — detector de marcadores SATD (TODO/FIXME/HACK/XXX)
+├── cluster.py             — clustering de causa-raiz + debt_fingerprint
+├── priority.py            — vetor principal/interest/lock-in (nunca score)
+├── kof_first.py           — context builder KOF-first determinístico
+├── confidence.py          — classificador C2/C3 (checklist de evidência obrigatória)
+├── sarif.py               — escritor SARIF 2.1.0 pros achados com localização
+├── inbox.py               — Debt Inbox pros achados C2+ sem localização
+└── scan.py               — CLI orquestrador (--phase state|deterministic,
+                             --check-duplicates, --sarif-out, --inbox-out)
 ```
 
-Todo módulo tem `--selftest` e/ou um teste
-`scripts/tests/debt-scout-*.sh`. **Nenhum script chama a API de escrita
-de Issues do GitHub.** Nenhum workflow em `.github/workflows/` concede
-`issues: write` a este sistema.
+Todo módulo tem `--selftest` e/ou um teste `scripts/tests/debt-scout-*.sh`,
+cada um incluindo uma rodada ao vivo contra os dados reais deste repo —
+essa disciplina pegou 4 bugs reais antes de irem pro ar (ver as entradas
+Wave 1/Wave 2 do `DOING.md` de cada um). **Nenhum script chama a API de
+escrita de Issues do GitHub.** Nenhum workflow em `.github/workflows/`
+concede `issues: write` a este sistema — a Wave 2 adicionou exatamente
+um privilégio novo, `security-events: write` (só upload de SARIF),
+justificado em `scripts/workflow-permissions.txt`.
 
 ## O que ainda NÃO existe (não assumir que roda)
 
-Upload de SARIF, o Debt Inbox, o publisher de C3, qualquer etapa de
-qualificação com LLM, o experimento de corpus estilo Crater e as
+O publisher canary de C3 (a única coisa que algum dia abriria uma Issue
+no GitHub), qualquer etapa de qualificação com LLM, integração com
+histórico do git (`historical_origin_searched` é honestamente `False`
+em todo checklist do `confidence.py` hoje), checagem cruzada de
+ownership do `DOING.md`, o experimento de corpus estilo Crater e as
 superfícies de CLI `kof debt`/`kof fix`. Cada um é uma unidade futura
 separada e com escopo explícito — ver `DEBT_SCOUT_CONTRACT.md` §11 e
-`DOING.md`.
+`DOING.md`. Avançar além da Wave 2 precisa do próprio registro em
+`DECISIONS.md` com a autorização de fase da mantenedora.

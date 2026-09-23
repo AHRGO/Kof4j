@@ -1,7 +1,7 @@
 # KOF Technical Debt Scout — operating contract (V2, condensed)
 
 **Status:** IN DEVELOPMENT (Wave 1 DONE; Wave 2 — evidence qualification —
-IN PROGRESS; still shadow, still zero Issues).
+DONE; still shadow, still zero Issues).
 **Source:** distilled from two research documents supplied by the user
 2026-09-22/23 (`KOF_TECHNICAL_DEBT_SCOUT_AGENT_V1_BACKUP.md`,
 `KOF_TECHNICAL_DEBT_SCOUT_AGENT_V2.md`). **V2 supersedes V1** — the four
@@ -193,15 +193,16 @@ exploit.
   the scan orchestrator, discovery-only workflow. Proven with a real
   hosted `workflow_dispatch` run
   (`https://github.com/KofLang/Kof4j/actions/runs/35839064175`).
-- **Wave 2 — evidence qualification (IN PROGRESS, authorized
+- **Wave 2 — evidence qualification (DONE, 2026-09-23, authorized
   `D-DEBT-SCOUT-W2`):** root-cause clustering (by `debt_fingerprint`),
   the deterministic KOF-first context builder, the principal/interest/
   lock-in vector, the C2/C3 confidence classifier (mandatory-evidence
   checklist, never a weak-signal average), the Debt Inbox for
   no-location C2, and the SARIF writer for located C0/C1/C2 findings
   (§37: this is the case SARIF exists for, instead of an Issue). Still
-  `mode: shadow`, still zero `issues: write` anywhere. See `DOING.md`
-  for the current claim and next step.
+  `mode: shadow`, still zero `issues: write` anywhere — the workflow
+  gained exactly one new privilege, `security-events: write` (SARIF
+  upload only). See `DOING.md` for the hosted-run proof and next step.
 - **Wave 3+ (the C3 canary publisher and beyond):** not started, and
   not authorized by `D-DEBT-SCOUT-W2` — needs its own `DECISIONS.md`
   entry with the maintainer's phase-S1 authorization (§7) before any
