@@ -69,6 +69,17 @@ else
     rc=1
 fi
 
+# o SARIF nao carrega automationDetails: a categoria estavel vem SO do
+# input category: do upload-sarif — tem que ser a mesma de sarif.CATEGORY.
+WF_CAT="$(grep -E '^\s*category:' "$WF" | head -1 | sed -E 's/^\s*category:\s*//; s/\s*(#.*)?$//')"
+PY_CAT="$(python3 -c "import sys; sys.path.insert(0, 'scripts/debt-scout'); import sarif; print(sarif.CATEGORY)")"
+if [ -n "$WF_CAT" ] && [ "$WF_CAT" = "$PY_CAT" ]; then
+    echo "ok  — category do upload-sarif ($WF_CAT) == sarif.CATEGORY"
+else
+    echo "FALHOU: category do workflow ('$WF_CAT') != sarif.CATEGORY ('$PY_CAT')"
+    rc=1
+fi
+
 # gates mecanicos ja existentes do repo, aplicados ao arquivo novo tambem —
 # SKIP honesto (nao FALHA) quando o gate nao existe nesta branch (ex.: main
 # congelada, mais antiga que o hardening P2 da beta-0.5.0 que criou esses

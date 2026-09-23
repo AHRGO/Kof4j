@@ -97,7 +97,19 @@ def build_sarif(candidates, analyzed_sha="UNKNOWN"):
                 "rules": _rules(located),
             }},
             "results": results,
-            "runAutomationDetails": {"id": f"{CATEGORY}/{analyzed_sha}/"},
+            # The analyzed SHA goes in versionControlProvenance (the SARIF
+            # 2.1.0 run property for it). No `automationDetails` here: the
+            # workflow's upload-sarif `category:` input is the single source
+            # of the stable category. The first cut wrote
+            # `runAutomationDetails` (the spec's TYPE name, not the run
+            # PROPERTY name) -> the real upload rejected it; and its id
+            # `<category>/<sha>/` ended in "/", which GitHub reads as an
+            # all-category id -> a new category per run, alerts never
+            # reconciled across runs.
+            "versionControlProvenance": [{
+                "repositoryUri": "https://github.com/KofLang/Kof4j",
+                "revisionId": analyzed_sha,
+            }],
         }],
     }
 
@@ -157,9 +169,25 @@ def selftest():
     check("only the located candidate produces a result "
           "(no-location candidates are silently excluded, never a "
           "fabricated location)", len(doc["runs"][0]["results"]) == 1)
-    check("runAutomationDetails.id carries the analyzed SHA, never a "
-          "bare category with no run identity",
-          "deadbeef" in doc["runs"][0]["runAutomationDetails"]["id"])
+    check("the analyzed SHA is recorded in versionControlProvenance",
+          doc["runs"][0]["versionControlProvenance"][0]["revisionId"] == "deadbeef")
+    # SARIF 2.1.0 `run` object properties (sarif-schema-2.1.0.json,
+    # additionalProperties: false) — GitHub's upload validates against it.
+    run_props = {
+        "tool", "invocations", "conversion", "language", "versionControlProvenance",
+        "originalUriBaseIds", "artifacts", "logicalLocations", "graphs", "results",
+        "automationDetails", "runAggregates", "baselineGuid", "redactionTokens",
+        "defaultEncoding", "defaultSourceLanguage", "newlineSequences",
+        "columnKind", "externalPropertyFileReferences", "threadFlowLocations",
+        "taxonomies", "addresses", "translations", "policies", "webRequests",
+        "webResponses", "specialLocations", "properties",
+    }
+    check("every run key is a real SARIF 2.1.0 run property (the upload "
+          "rejects unknown ones — runAutomationDetails was one)",
+          set(doc["runs"][0]) <= run_props)
+    check("no automationDetails in the file: the workflow category input "
+          "is the single source of the stable category",
+          "automationDetails" not in doc["runs"][0])
     check("the driver declares exactly the rules that produced a result "
           "(one entry for KOF-DEBT-TEST-001)",
           [r["id"] for r in doc["runs"][0]["tool"]["driver"]["rules"]]
