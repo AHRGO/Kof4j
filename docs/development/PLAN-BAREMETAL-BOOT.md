@@ -284,11 +284,14 @@ both, and freestanding+`spawn` is refused with `NATIVE003` — all without any
 unresolved-symbol escape hatch. Proof: `FreestandingLinkE2ETest` 4/4 + battery
 116/0F (`LinkByUseTest` 3, `PlatformSeamSabotageTest` 5,
 `NativeRuntimeSliceRegistryTest` 7, `ArtifactSizeTest` 6, `NativeE2ETest` 67,
-`NullSafetyE2ETest` 14, `ArrayBoundsSafetyE2ETest` 10). **Remaining for B-1:**
-CLI surface (`--profile`) gated on a `NATIVE003` refusal for float-print
-(a freestanding `println(Double)` currently dies at `ld` with a raw undefined
-reference — honest but uncoded), then the linker script with configurable
-heap/stack and `_end`.
+`NullSafetyE2ETest` 14, `ArrayBoundsSafetyE2ETest` 10). **Float-print refusal
+(LANDED 22/09, lane 9092):** a freestanding `println(Double)`/`Float` now fails
+with the named `NATIVE003` diagnostic (the freestanding link converts surviving
+libc refs — `snprintf`/`strtod` of dtoa — into the coded refusal) instead of a
+raw `ld` "undefined reference"; proof `FreestandingLinkE2ETest` 5/5 (new
+`freestandingRefusesFloatPrintWithDiagnostic`). **Remaining for B-1:** the CLI
+surface (`--profile`), then the linker script with configurable heap/stack and
+`_end`.
 
 **Depends on:** B-0. **Classification:** M (medium).
 

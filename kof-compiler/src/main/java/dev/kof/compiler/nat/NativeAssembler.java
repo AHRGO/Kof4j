@@ -52,8 +52,21 @@ public final class NativeAssembler {
         // recusadas em NativeBackend.assemble (NATIVE003). B-1b: as refs libc
         // de funções não-alcançadas morrem no `--gc-sections`.
         if (bare) {
-            runCommand(new String[]{"ld", "-o", binFile.toString(), objFile.toString(),
-                    "--gc-sections", "-e", "_start"}, "ld");
+            try {
+                runCommand(new String[]{"ld", "-o", binFile.toString(), objFile.toString(),
+                        "--gc-sections", "-e", "_start"}, "ld");
+            } catch (IOException e) {
+                // R6: no perfil freestanding nenhuma capacidade libc entra —
+                // se sobrou símbolo libc (ex.: `println(Double)` alcança
+                // snprintf/strtod do dtoa), a recusa é NOMEADA, não um
+                // "undefined reference" cru do ld.
+                if (String.valueOf(e.getMessage()).contains("undefined reference")) {
+                    throw new IOException("NATIVE003: perfil freestanding nao suporta libc — "
+                            + "o programa usa uma capacidade libc (float-print/db/concurrency/pow/ffi); "
+                            + "use o perfil host ou remova a dependencia. Detalhe: " + e.getMessage());
+                }
+                throw e;
+            }
             Files.deleteIfExists(objFile);
             Files.deleteIfExists(asmToAssemble);
             if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);

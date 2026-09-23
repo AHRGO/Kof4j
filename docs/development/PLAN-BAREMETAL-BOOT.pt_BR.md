@@ -291,10 +291,13 @@ controle `HOST` mantém ambos, e freestanding+`spawn` é recusado com `NATIVE003
 `FreestandingLinkE2ETest` 4/4 + bateria 116/0F (`LinkByUseTest` 3,
 `PlatformSeamSabotageTest` 5, `NativeRuntimeSliceRegistryTest` 7,
 `ArtifactSizeTest` 6, `NativeE2ETest` 67, `NullSafetyE2ETest` 14,
-`ArrayBoundsSafetyE2ETest` 10). **Restante de B-1:** superfície CLI
-(`--profile`) condicionada a uma recusa `NATIVE003` de float-print (hoje um
-`println(Double)` freestanding morre no `ld` com undefined reference cru —
-honesto mas sem código), e depois o linker script com heap/stack configuráveis e
+`ArrayBoundsSafetyE2ETest` 10). **Recusa de float-print (LANDADA 22/09, lane
+9092):** um `println(Double)`/`Float` freestanding agora falha com o diagnóstico
+nomeado `NATIVE003` (o link freestanding converte refs libc remanescentes —
+`snprintf`/`strtod` do dtoa — na recusa codificada) em vez de um "undefined
+reference" cru do `ld`; prova `FreestandingLinkE2ETest` 5/5 (novo
+`freestandingRefusesFloatPrintWithDiagnostic`). **Restante de B-1:** a superfície
+CLI (`--profile`), e depois o linker script com heap/stack configuráveis e
 `_end`.
 
 **Depende de:** B-0. **Classificação:** M (médio).

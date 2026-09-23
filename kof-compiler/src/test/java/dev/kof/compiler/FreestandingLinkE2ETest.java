@@ -39,6 +39,12 @@ class FreestandingLinkE2ETest {
             }
             """;
 
+    private static final String FLOAT = """
+            main() {
+                println(1.5)
+            }
+            """;
+
     private static boolean hasTool(String tool) {
         try {
             Process p = new ProcessBuilder(tool, "--version").start();
@@ -147,5 +153,19 @@ class FreestandingLinkE2ETest {
         String diags = result.diagnostics().getDiagnostics().toString();
         assertTrue(diags.contains("NATIVE003") && diags.contains("freestanding"),
                 "recusa precisa ser honesta e diagnostica (NATIVE003): " + diags);
+    }
+
+    @Test
+    void freestandingRefusesFloatPrintWithDiagnostic(@TempDir Path dir) throws Exception {
+        assumeTrue(hasTool("as") && hasTool("ld"), "x86 toolchain ausente");
+        CompilerDriver driver = new CompilerDriver();
+        Path source = dir.resolve("Main.kf");
+        Files.writeString(source, FLOAT);
+        CompilationResult result = driver.compile(source, dir.resolve("out-flt"),
+                Target.NATIVE, NativeProfile.FREESTANDING);
+        assertFalse(result.success(), "println(Double) freestanding deve ser recusado (dtoa/libc)");
+        String diags = result.diagnostics().getDiagnostics().toString();
+        assertTrue(diags.contains("NATIVE003") && diags.contains("float-print"),
+                "recusa de float sem codigo NATIVE003 cru: " + diags);
     }
 }
