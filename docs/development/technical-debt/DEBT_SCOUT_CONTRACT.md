@@ -203,6 +203,27 @@ exploit.
   `mode: shadow`, still zero `issues: write` anywhere — the workflow
   gained exactly one new privilege, `security-events: write` (SARIF
   upload only). See `DOING.md` for the hosted-run proof and next step.
+- **Wave 1/2 completion (DONE, 2026-09-23 — items the V2 spec §93/§94
+  lists inside Wave 1/2 that the first landing had deferred; no new
+  privilege, no new phase):** `detectors/partial_decisions.py`
+  (`KOF-DEBT-DECISION-001`, V2 §17: each `PARTIAL`/`BLOCKED`/
+  `IN_PROGRESS` decision body is one `C1` signal whose governing
+  contract is the decision itself), `history.py` (V2 §21/§34:
+  `git blame --root` origin with the verbatim commit subject and the
+  `#NNN`/`§NNN`/`D-XXX` refs literally in it — intent is always
+  `UNKNOWN`; a shallow clone is `NOT_CHECKED`, never a fabricated
+  origin, so the workflow checks out with `fetch-depth: 0`),
+  `ownership.py` (V2 §39: a cluster named by an active `DOING.md` claim
+  becomes `RESOLUTION_IN_PROGRESS` and is never promoted; shared
+  coordination ledgers — `DOING.md`, `AGENTS*.md`, `DECISIONS*.md`, … —
+  are never an ownership unit by path, measured: path-matching them
+  marked 36/69 real clusters "owned"), and the per-run JSONL metrics
+  record (V2 §76, `--metrics-out`, `model_calls` always 0). The C3
+  checklist items `historical_origin_searched` and
+  `owner_collision_checked` are now real evidence instead of
+  hard-coded `False`. **Not built, by design:** a skipped-test
+  detector — `scripts/audit-stubs.sh` §5/§6/§12 already owns
+  `@Disabled`/`assumeTrue`/weak-green (V2 Anti-pattern 5).
 - **Wave 3+ (the C3 canary publisher and beyond):** not started, and
   not authorized by `D-DEBT-SCOUT-W2` — needs its own `DECISIONS.md`
   entry with the maintainer's phase-S1 authorization (§7) before any

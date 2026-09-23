@@ -60,6 +60,15 @@ else
     echo "ok  — nenhuma permissao pull-requests: write (dedup e so leitura)"
 fi
 
+# history.py so prova origem num clone completo: --history sem fetch-depth: 0
+# seria um NOT_CHECKED permanente disfarcado de feature ligada.
+if grep -q -- '--history' "$WF" && grep -qE 'fetch-depth:[[:space:]]*0' "$WF"; then
+    echo "ok  — --history ligado E checkout com fetch-depth: 0 (historia real)"
+else
+    echo "FALHOU: --history exige checkout com fetch-depth: 0 no mesmo workflow"
+    rc=1
+fi
+
 # gates mecanicos ja existentes do repo, aplicados ao arquivo novo tambem —
 # SKIP honesto (nao FALHA) quando o gate nao existe nesta branch (ex.: main
 # congelada, mais antiga que o hardening P2 da beta-0.5.0 que criou esses

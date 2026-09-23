@@ -38,6 +38,8 @@ jobs:
       issues: read # dedup check only (kof_first.check_duplicates, gh search issues) — never write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # history.py: a shallow clone would make every origin NOT_CHECKED
 
       - name: run the Wave-1+2 module suite
         run: bash scripts/tests/run-agent-tests.sh debt-scout
@@ -48,6 +50,8 @@ jobs:
         run: |
           python3 scripts/debt-scout/scan.py \
             --check-duplicates \
+            --history \
+            --metrics-out .debt-scout/out/metrics.jsonl \
             --out .debt-scout/out/candidates.json \
             --sarif-out .debt-scout/out/results.sarif \
             --inbox-out .debt-scout/out/inbox.md
@@ -75,6 +79,12 @@ jobs:
                 + ", ".join(f"{k}={v}" for k, v in summary["by_confidence"].items()))
           print(f"- total clusters: {summary['total_clusters']} — "
                 + ", ".join(f"{k}={v}" for k, v in summary["clusters_by_confidence"].items()))
+          with open(".debt-scout/out/metrics.jsonl", encoding="utf-8") as f:
+              m = json.loads(f.read().splitlines()[-1])
+          print(f"- detectors run: {m['detectors_run']} · history origins found: "
+                f"{m['history_found']} · RESOLUTION_IN_PROGRESS (DOING.md owner): "
+                f"{m['resolution_in_progress']} · duplicates: {m['duplicates']} · "
+                f"model calls: {m['model_calls']} · {m['duration_seconds']}s")
           print()
           with open(".debt-scout/out/inbox.md", encoding="utf-8") as f:
               print(f.read())

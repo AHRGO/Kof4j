@@ -1,7 +1,9 @@
 # Detectors — fixture convention
 
 Every detector under this directory follows the same shape (see
-`satd.py` as the reference implementation):
+`satd.py` as the reference implementation; `partial_decisions.py` is
+the second, and the first that carries its governing contract by
+construction in `contract_ids`):
 
 - a `RULE_ID` / `RULE_VERSION` constant pair (contract §16, rule schema
   §60);

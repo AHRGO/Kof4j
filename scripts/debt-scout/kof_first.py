@@ -47,7 +47,7 @@ _STOPWORDS = {
 _WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]{3,}")
 _INDEX_ENTRY_RE = re.compile(r"^- \*\*([A-Z][A-Z0-9.-]*)\*\* — (.+)$")
 
-_PROCESS_MECHANISMS = {"WORKAROUND", "DOC_CODE_DRIFT"}
+_PROCESS_MECHANISMS = {"WORKAROUND", "DOC_CODE_DRIFT", "PARTIAL_MIGRATION"}
 
 
 def _extract_keywords(text):
@@ -123,7 +123,13 @@ def build_context(cluster, decisions_md_text=None, duplicate_check=None):
     so this stays pure-testable; the CLI wires the real files/gh call."""
     claim = " ".join(m["claim"] for m in cluster.get("members", [cluster]))
     contract_source = ["UNKNOWN"]
-    if decisions_md_text:
+    declared = sorted({c for m in cluster.get("members", [])
+                       for c in (m.get("contract_ids") or []) if c != "UNKNOWN"})
+    if declared:
+        # a contract the detector knows by construction beats any
+        # keyword-overlap hint from the index
+        contract_source = declared
+    elif decisions_md_text:
         entries = _decisions_index_entries(decisions_md_text)
         hits = _score_decisions_index(claim, entries)
         if hits:

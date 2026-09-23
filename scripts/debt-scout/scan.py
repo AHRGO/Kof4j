@@ -23,6 +23,8 @@ CLI:
                                    default so tests stay network-free)
   scan.py --sarif-out FILE [--out FILE]   -> also writes the SARIF doc
   scan.py --inbox-out FILE [--out FILE]   -> also writes the Inbox md
+  scan.py --metrics-out FILE              -> appends one JSONL metrics line
+  scan.py --history                       -> git blame per located cluster
   scan.py --selftest
 """
 import json
@@ -30,6 +32,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
@@ -37,18 +40,20 @@ import branch_discovery  # noqa: E402
 import cluster as cluster_mod  # noqa: E402
 import confidence  # noqa: E402
 import config as config_mod  # noqa: E402
+import history  # noqa: E402
 import inbox  # noqa: E402
 import kof_first  # noqa: E402
+import ownership  # noqa: E402
 import priority  # noqa: E402
 import sarif  # noqa: E402
 import schema  # noqa: E402
-from detectors import satd  # noqa: E402
+from detectors import partial_decisions, satd  # noqa: E402
 
 for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
-SCANNER_VERSION = "0.1.0"
+SCANNER_VERSION = "0.2.0"
 
 
 class ScanError(RuntimeError):
@@ -72,7 +77,7 @@ def run_state_phase(root="."):
     return branch_discovery.discover(root)
 
 
-def run_deterministic_phase(root=".", check_duplicates=False):
+def run_deterministic_phase(root=".", check_duplicates=False, with_history=False):
     """Loads+validates config, runs every detector, clusters, qualifies
     (Wave 2: kof_first + priority + confidence), returns the full
     report dict. Raises ScanError if the config is invalid — a scan
@@ -81,7 +86,13 @@ def run_deterministic_phase(root=".", check_duplicates=False):
     `check_duplicates=True` calls `gh` over the network (kof_first's
     dedup check) — OFF by default so this function stays safe to call
     from --selftest and from any test wrapper without a network
-    dependency; production runs (the workflow) opt in explicitly."""
+    dependency; production runs (the workflow) opt in explicitly.
+
+    `with_history=True` runs `git blame` per located cluster
+    (history.py) — OFF by default because it is the slowest step; a
+    shallow clone yields NOT_CHECKED, never a fabricated origin.
+    DOING.md ownership (ownership.py) is local and cheap: always on."""
+    started = time.monotonic()
     config_path = os.path.join(root, ".debt-scout.yml")
     try:
         cfg = config_mod.load_config(config_path)
@@ -90,8 +101,13 @@ def run_deterministic_phase(root=".", check_duplicates=False):
 
     repo_state = branch_discovery.discover(root)
     candidates = list(repo_state.get("candidates", []))
+    detectors_run = ["branch_discovery"]
     if cfg["rules"].get("satd"):
         candidates.extend(satd.scan(root))
+        detectors_run.append("satd")
+    if cfg["rules"].get("partial_decisions"):
+        candidates.extend(partial_decisions.scan(root))
+        detectors_run.append("partial_decisions")
 
     for c in candidates:
         errors = schema.validate_candidate(c)
@@ -107,7 +123,13 @@ def run_deterministic_phase(root=".", check_duplicates=False):
     analyzed_sha = _analyzed_sha(root)
     decisions_text = kof_first._read_decisions_md(root)
     clusters = cluster_mod.cluster_candidates(candidates)
+    doing_text = ownership.read_doing(root)
+    shallow = history.is_shallow(root) if with_history else None
     for cl in clusters:
+        cl["ownership"] = ownership.owner_for_cluster(cl, doing_text)
+        cl["historical_origin"] = (
+            history.origin_for_cluster(root, cl, shallow) if with_history
+            else {"status": "NOT_CHECKED", "reason": "history not requested (--history)"})
         dup = (kof_first.check_duplicates(cl["debt_fingerprint"])
                if check_duplicates else None)
         cl["kof_triage"] = kof_first.build_context(cl, decisions_text, dup)
@@ -133,6 +155,9 @@ def run_deterministic_phase(root=".", check_duplicates=False):
             "mode": cfg["mode"],
             "model_used": False,
             "duplicates_checked": check_duplicates,
+            "history_checked": with_history,
+            "detectors_run": detectors_run,
+            "duration_seconds": round(time.monotonic() - started, 3),
         },
         "repository_state": {
             "default_branch": repo_state.get("default_branch"),
@@ -157,6 +182,35 @@ def emit_sarif(report):
 
 def emit_inbox(report):
     return inbox.render_inbox_markdown(report["clusters"])
+
+
+def emit_metrics(report):
+    """One JSONL observability record per run (V2 spec §76/§77). Counts
+    only — no token/money figure is ever invented (no model is called)."""
+    run, summary = report["run"], report["summary"]
+    clusters = report["clusters"]
+    return {
+        "sha": run["analyzed_sha"],
+        "scanner_version": run["scanner_version"],
+        "mode": run["mode"],
+        "detectors_run": len(run["detectors_run"]),
+        "signals": summary["total_candidates"],
+        "c0": summary["by_confidence"]["C0"],
+        "c1": summary["by_confidence"]["C1"],
+        "c2": summary["by_confidence"]["C2"],
+        "c3": summary["by_confidence"]["C3"],
+        "clusters": summary["total_clusters"],
+        "duplicates": sum(1 for cl in clusters
+                          if (cl.get("kof_triage", {}).get("duplicate_precedent_check")
+                              or {}).get("status") == "DUPLICATE"),
+        "resolution_in_progress": sum(1 for cl in clusters
+                                      if cl.get("lifecycle_state") == "RESOLUTION_IN_PROGRESS"),
+        "history_found": sum(1 for cl in clusters
+                             if cl["historical_origin"]["status"] == "FOUND"),
+        "issues_opened": summary["issues_opened"],
+        "model_calls": 0,
+        "duration_seconds": run["duration_seconds"],
+    }
 
 
 # --------------------------------------------------------------------------
@@ -223,6 +277,44 @@ def selftest():
               and report2["summary"]["by_confidence"]["C0"] == 1)
         check("every candidate in the report is schema-valid",
               all(schema.validate_candidate(c) == [] for c in report2["candidates"]))
+        check("history is NOT_CHECKED unless --history is requested",
+              all(cl["historical_origin"]["status"] == "NOT_CHECKED"
+                  for cl in report2["clusters"]))
+        check("a missing DOING.md makes ownership NOT_CHECKED, never NOT_OWNED",
+              all(cl["ownership"]["status"] == "NOT_CHECKED"
+                  for cl in report2["clusters"]))
+
+        # partial_decisions + ownership: a PARTIAL decision named by an
+        # active DOING.md claim is RESOLUTION_IN_PROGRESS, not a new finding
+        with open(os.path.join(td, ".debt-scout.yml"), "a", encoding="utf-8") as f:
+            f.write("  partial_decisions: true\n")
+        os.makedirs(os.path.join(td, "docs", "development"), exist_ok=True)
+        with open(os.path.join(td, "docs", "development", "DECISIONS.md"), "w",
+                  encoding="utf-8") as f:
+            f.write("## D-SEC — security\n\n**State:** `PARTIAL`\n\n"
+                    "## D-APP — app\n\n**State:** `PARTIAL`\n")
+        with open(os.path.join(td, "DOING.md"), "w", encoding="utf-8") as f:
+            f.write("> **⚡ EM CURSO (dono = lane sec): finishing `D-SEC`.**\n")
+        report3 = run_deterministic_phase(td)
+        by_id = {cl["members"][0]["contract_ids"][0]: cl for cl in report3["clusters"]
+                 if cl["members"][0]["rule_id"] == partial_decisions.RULE_ID}
+        check("partial_decisions emits one C1 cluster per incomplete decision",
+              sorted(by_id) == ["D-APP", "D-SEC"]
+              and all(cl["confidence"] == "C1" for cl in by_id.values()))
+        check("the decision named by an active claim is OWNED + "
+              "RESOLUTION_IN_PROGRESS; the other is NOT_OWNED",
+              by_id["D-SEC"]["ownership"]["status"] == "OWNED"
+              and by_id["D-SEC"].get("lifecycle_state") == "RESOLUTION_IN_PROGRESS"
+              and by_id["D-APP"]["ownership"]["status"] == "NOT_OWNED")
+        check("the governing contract of a partial decision is the decision itself",
+              by_id["D-APP"]["kof_triage"]["contract_source"] == ["D-APP"])
+        m = emit_metrics(report3)
+        check("emit_metrics counts signals/clusters/resolution_in_progress and "
+              "never invents model cost",
+              m["signals"] == report3["summary"]["total_candidates"]
+              and m["resolution_in_progress"] == 1 and m["model_calls"] == 0
+              and m["issues_opened"] == 0
+              and json.loads(json.dumps(m)) == m)
 
     # live run against the real repo this script ships in
     root = os.path.join(HERE, "..", "..")
@@ -250,6 +342,18 @@ def selftest():
               all(cl["confidence"] in ("C0", "C1") for cl in live_report["clusters"]))
         check("live run: run.duplicates_checked reflects the flag",
               live_report["run"]["duplicates_checked"] is False)
+        check("live run: every cluster carries an ownership result",
+              all(cl["ownership"]["status"] in ("OWNED", "NOT_OWNED")
+                  for cl in live_report["clusters"]))
+        hist_report = run_deterministic_phase(root, with_history=True)
+        hist_statuses = {cl["historical_origin"]["status"] for cl in hist_report["clusters"]}
+        if history.is_shallow(root) is False:
+            check("live run --history on a full clone resolves at least one "
+                  "real origin, and never crashes",
+                  "FOUND" in hist_statuses)
+        else:
+            check("live run --history on a shallow clone is all NOT_CHECKED",
+                  hist_statuses <= {"NOT_CHECKED"})
         live_sarif = emit_sarif(live_report)
         check("live run: emit_sarif produces a valid, serializable SARIF doc",
               live_sarif["version"] == "2.1.0"
@@ -278,12 +382,14 @@ def main(argv):
         phase = argv[argv.index("--phase") + 1]
 
     check_dup = "--check-duplicates" in argv
+    with_hist = "--history" in argv
 
     try:
         if phase == "state":
             result = run_state_phase(root)
         elif phase == "deterministic":
-            result = run_deterministic_phase(root, check_duplicates=check_dup)
+            result = run_deterministic_phase(root, check_duplicates=check_dup,
+                                             with_history=with_hist)
         else:
             print(f"scan: unknown --phase {phase!r} (state|deterministic)", file=sys.stderr)
             return 2
@@ -315,6 +421,12 @@ def main(argv):
             with open(inbox_path, "w", encoding="utf-8") as f:
                 f.write(emit_inbox(result))
             print(f"scan: wrote {inbox_path}")
+        if "--metrics-out" in argv:
+            metrics_path = argv[argv.index("--metrics-out") + 1]
+            os.makedirs(os.path.dirname(metrics_path) or ".", exist_ok=True)
+            with open(metrics_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(emit_metrics(result), sort_keys=True) + "\n")
+            print(f"scan: appended {metrics_path}")
     return 0
 
 

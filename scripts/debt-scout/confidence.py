@@ -4,13 +4,11 @@
 when there is real, checkable evidence for it — never by averaging many
 weak signals (contract §5: "Confianca nao e media matematica").
 
-**C3 requires every item of the mandatory checklist (§7).** Two of
-Wave 1/2's detector capabilities are honestly absent today —
-`historical_origin_searched` (no `git log -S`/`git blame` integration
-yet), `current_implementation_identified` (no detector links to
+**C3 requires every item of the mandatory checklist (§7).** Some of the
+checklist's capabilities are honestly absent today —
+`current_implementation_identified` (no detector links to
 compiler/runtime source), `debt_mechanism_proved` (a marker/drift is a
-signal, not a proven cause), `owner_collision_checked` (no `DOING.md`
-ownership check yet), `exit_condition_expressible` (no detector
+signal, not a proven cause), `exit_condition_expressible` (no detector
 formulates one). This module reports those as `False`, not `True` —
 which means **no cluster this repo produces today can reach `C3`**,
 and that is the correct, honest result, not a bug to work around.
@@ -77,11 +75,15 @@ def evaluate_c3_checklist(cluster):
             interest_level not in (None, "unknown")
             or lockin_level not in (None, "none", "unknown")
         ),
-        # No git-history integration exists yet (V2 spec §21/§34).
-        "historical_origin_searched": False,
+        # history.py: FOUND/UNKNOWN = searched; NOT_CHECKED (shallow
+        # clone, no location, git failure) = not searched.
+        "historical_origin_searched": (cluster.get("historical_origin") or {})
+        .get("status") in ("FOUND", "UNKNOWN"),
         "duplicates_checked": dup.get("status") in ("NO_DUPLICATE_FOUND", "DUPLICATE"),
-        # No DOING.md ownership cross-check exists yet.
-        "owner_collision_checked": False,
+        # ownership.py: only a completed read of DOING.md that found NO
+        # active owner clears this — OWNED means someone is already on it.
+        "owner_collision_checked": (cluster.get("ownership") or {})
+        .get("status") == "NOT_OWNED",
         "security_publication_gate_passed": "SECURITY" not in domains,
         # No detector formulates a machine-checkable exit condition yet.
         "exit_condition_expressible": False,
@@ -93,8 +95,10 @@ def _looks_c2_ready(cluster):
     contract_source = triage.get("contract_source") or []
     dup = triage.get("duplicate_precedent_check", {}) or {}
     classification = triage.get("classification")
+    owned = (cluster.get("ownership") or {}).get("status") == "OWNED"
     return (
-        bool(contract_source) and contract_source != ["UNKNOWN"]
+        not owned  # V2 §39: DOING owner on the same unit -> RESOLUTION_IN_PROGRESS
+        and bool(contract_source) and contract_source != ["UNKNOWN"]
         and dup.get("status") == "NO_DUPLICATE_FOUND"
         and classification not in (None, "UNKNOWN")
     )
@@ -128,6 +132,8 @@ def classify(cluster):
 def apply_classification(cluster):
     new_confidence, checklist = classify(cluster)
     cluster["confidence"] = new_confidence
+    if (cluster.get("ownership") or {}).get("status") == "OWNED":
+        cluster["lifecycle_state"] = "RESOLUTION_IN_PROGRESS"
     if checklist is not None:
         cluster["c3_checklist"] = checklist
     return cluster
@@ -187,10 +193,10 @@ def selftest():
                                   interest="high", lockin="documented")
     new_conf4, checklist4 = classify(almost_c3_from_c2)
     check("even with every OTHER signal present, a C2 with today's "
-          "detectors NEVER reaches C3 (historical_origin_searched, "
-          "current_implementation_identified, debt_mechanism_proved, "
-          "owner_collision_checked, exit_condition_expressible are all "
-          "honestly False)", new_conf4 == "C2")
+          "detectors NEVER reaches C3 (without history/ownership evidence "
+          "attached, and with current_implementation_identified, "
+          "debt_mechanism_proved, exit_condition_expressible honestly "
+          "False)", new_conf4 == "C2")
     check("the checklist explains exactly why (each missing item is "
           "visible, not hidden)",
           checklist4 is not None and checklist4["historical_origin_searched"] is False)
@@ -230,6 +236,37 @@ def selftest():
     check("when every C3 requirement genuinely holds, C2 -> C3 actually "
           "promotes (the happy path is not dead code)",
           new_conf7 == "C2" and new_conf8 == "C3" and all(checklist8.values()))
+
+    with_history = _cluster("C2")
+    with_history["historical_origin"] = {"status": "FOUND"}
+    with_history["ownership"] = {"status": "NOT_OWNED"}
+    cl_h = evaluate_c3_checklist(with_history)
+    check("history FOUND + ownership NOT_OWNED clear exactly those two items",
+          cl_h["historical_origin_searched"] is True
+          and cl_h["owner_collision_checked"] is True)
+    shallow = _cluster("C2")
+    shallow["historical_origin"] = {"status": "NOT_CHECKED"}
+    shallow["ownership"] = {"status": "NOT_CHECKED"}
+    cl_s = evaluate_c3_checklist(shallow)
+    check("history/ownership NOT_CHECKED never count as searched/checked",
+          cl_s["historical_origin_searched"] is False
+          and cl_s["owner_collision_checked"] is False)
+    owned = _cluster("C1", contract_source=["D-SEC"],
+                     dup_status="NO_DUPLICATE_FOUND", classification="N/A-PROCESS")
+    owned["ownership"] = {"status": "OWNED", "owner": "x"}
+    apply_classification(owned)
+    check("an OWNED cluster is never promoted to C2 and is marked "
+          "RESOLUTION_IN_PROGRESS (V2 §39)",
+          owned["confidence"] == "C1"
+          and owned.get("lifecycle_state") == "RESOLUTION_IN_PROGRESS")
+    still_c2 = _cluster("C2", contract_source=["D-BRANCH-0.5.0"],
+                        dup_status="NO_DUPLICATE_FOUND", classification="GAP REAL",
+                        interest="high", lockin="documented")
+    still_c2["historical_origin"] = {"status": "FOUND"}
+    still_c2["ownership"] = {"status": "NOT_OWNED"}
+    check("even with history + ownership cleared, C3 stays unreachable while "
+          "mechanism/implementation/exit condition are unproven",
+          classify(still_c2)[0] == "C2")
 
     return ok
 

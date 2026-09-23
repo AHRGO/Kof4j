@@ -49,7 +49,10 @@ scripts/debt-scout/
 │                            contract drift instead of hardcoding a ref
 ├── detectors/
 │   ├── README.md          — the fixture convention every detector follows
-│   └── satd.py            — SATD marker detector (TODO/FIXME/HACK/XXX)
+│   ├── satd.py            — SATD marker detector (TODO/FIXME/HACK/XXX)
+│   └── partial_decisions.py — PARTIAL/BLOCKED/IN_PROGRESS decisions (C1)
+├── history.py             — git-blame origin (verbatim subject; shallow = NOT_CHECKED)
+├── ownership.py           — DOING.md active-claim cross-check (RESOLUTION_IN_PROGRESS)
 ├── cluster.py             — root-cause clustering + debt_fingerprint
 ├── priority.py            — principal/interest/lock-in vector (never a score)
 ├── kof_first.py           — deterministic KOF-first context builder
@@ -57,7 +60,8 @@ scripts/debt-scout/
 ├── sarif.py               — SARIF 2.1.0 writer for located findings
 ├── inbox.py               — Debt Inbox for no-location C2+ findings
 └── scan.py               — orchestrator CLI (--phase state|deterministic,
-                             --check-duplicates, --sarif-out, --inbox-out)
+                             --check-duplicates, --history, --sarif-out,
+                             --inbox-out, --metrics-out)
 ```
 
 Every module has a `--selftest` and/or a `scripts/tests/debt-scout-*.sh`
@@ -72,9 +76,13 @@ write API.** No workflow in `.github/workflows/` grants this system
 ## What does NOT exist yet (do not assume it runs)
 
 The C3 canary publisher (the only thing that would ever open a GitHub
-Issue), any LLM-backed qualification step, git-history integration
-(`historical_origin_searched` is honestly `False` in every
-`confidence.py` checklist today), `DOING.md` ownership cross-checking,
+Issue), any LLM-backed qualification step, the detectors that would
+prove `current_implementation_identified` / `debt_mechanism_proved` /
+`exit_condition_expressible` (so no cluster can reach `C3` yet — the
+honest result), a dedicated skipped-test detector (deliberately NOT
+built: `scripts/audit-stubs.sh` §5/§6/§12 already owns
+`@Disabled`/`assumeTrue`/weak-green, same division of labor as
+`satd.py`), tombstones/feedback/rule circuit breakers (V2 Wave 4),
 the ecosystem/Crater-style corpus experiment, and `kof debt`/`kof fix`
 CLI surfaces. Each is a separate, explicitly scoped future unit — see
 `DEBT_SCOUT_CONTRACT.md` §11 and `DOING.md`. Advancing past Wave 2 needs

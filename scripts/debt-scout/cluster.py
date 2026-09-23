@@ -57,6 +57,21 @@ def cluster_key(candidate):
     )
 
 
+def _shared_contract_id(members):
+    """A detector that knows its governing contract by construction
+    (e.g. partial_decisions.py: the finding IS the decision) carries it in
+    `contract_ids`. The cluster keeps it only when EVERY member names the
+    same single known id — any disagreement or absence stays UNKNOWN
+    (kof_first.py may still resolve it; nothing here guesses)."""
+    ids = set()
+    for m in members:
+        own = [c for c in (m.get("contract_ids") or []) if c != UNKNOWN_CONTRACT]
+        if len(own) != 1:
+            return UNKNOWN_CONTRACT
+        ids.add(own[0])
+    return ids.pop() if len(ids) == 1 else UNKNOWN_CONTRACT
+
+
 def cluster_candidates(candidates):
     """candidates (list of schema-v2 dicts) -> list of cluster dicts,
     each carrying its own `debt_fingerprint` and the member candidates
@@ -68,13 +83,14 @@ def cluster_candidates(candidates):
 
     clusters = []
     for (debt_type, domain, mechanism, symbol, claim), members in groups.items():
-        governing_contract_id = UNKNOWN_CONTRACT
+        governing_contract_id = _shared_contract_id(members)
         debt_fp = fingerprint.debt_fingerprint(
             debt_type, domain, mechanism, governing_contract_id, symbol, claim,
         )
         for m in members:
             m["debt_fingerprint"] = debt_fp
-            m["contract_ids"] = [governing_contract_id]
+            if not m.get("contract_ids"):
+                m["contract_ids"] = [governing_contract_id]
         confidences = {m["confidence"] for m in members}
         # a cluster's own confidence is the HIGHEST member's — clustering
         # never silently downgrades a C1 finding by grouping it with C0s.
@@ -171,6 +187,20 @@ def selftest():
     else:
         print("  FAIL — real repo .debt-scout.yml not found")
         ok = False
+
+    shared = cluster_candidates([
+        dict(_candidate("REQUIREMENTS_CONTRACT", "SECURITY", "PARTIAL_MIGRATION",
+                        "docs/development/DECISIONS.md", "decision D-SEC is PARTIAL"),
+             contract_ids=["D-SEC"])])
+    unknown = cluster_candidates([
+        _candidate("REQUIREMENTS_CONTRACT", "SECURITY", "PARTIAL_MIGRATION",
+                   "docs/development/DECISIONS.md", "decision D-SEC is PARTIAL")])
+    check("a member's own single contract id becomes the cluster's governing "
+          "contract (and changes the debt fingerprint vs UNKNOWN)",
+          shared[0]["members"][0]["contract_ids"] == ["D-SEC"]
+          and shared[0]["debt_fingerprint"] != unknown[0]["debt_fingerprint"])
+    check("a member with no contract id still gets UNKNOWN",
+          unknown[0]["members"][0]["contract_ids"] == ["UNKNOWN"])
 
     return ok
 
