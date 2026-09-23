@@ -25,6 +25,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `HeterogeneousListInferTest` (6/6) roda o repro verbatim no JVM + compila em
     Native/JS; RED medido com o código sem o fix.
 
+  - **§482 ✅ CORRIGIDO — chamada top-level genérica pelo path de MÓDULO/CLI
+    agora recebe a adaptação de retorno do §477 (rota selfMethod) + binding
+    de witness explícito** (23/09, lane 9093, achado pelo golden do PR #593):
+    `idf<Point>(...)` morria no load do JVM com `VerifyError` no `kof build`
+    enquanto o mesmo programa passava nos testes de driver puro — a saída
+    antecipada resolvida pelo SA no `ExpressionBareCallLowerer` emitia sem
+    adapter nenhum. Os dois ramos selfMethod rodam o adapter compartilhado; o
+    witness explícito alimenta `GenericReturnAdapter.bindTypeVariables`/
+    `emitBound` (o descritor do KofCall fica apagado). Goldens dos
+    #590/#593 adotados em `tests/golden/` e validados via `kof bench`.
+
   - **§479 — exceção lançada dentro de lambda de `List.map`/`filter`/`reduce`
     escapava do `try`/`catch (String e)` como `InvocationTargetException` no JVM
     (sessão 9092, issue #594)** (23/09): todo `map`/`filter`/`reduce` passa pelo
@@ -50,6 +61,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     descritor é re-habilitado antes de cada `ltr`. Prova: `RingPrivilegeE2ETest`
     4/0F sob OVMF real (positivo imprime `KO-RING1 CPL1 OK` + `41` +
     `KO-RING MAIN`; negativo = `NATIVE003` sob `UEFI`/`HOST`).
+
+  - **B-3a — boot path BIOS legado/MBR (x86_64) (lane baremetal 9092)** (23/09):
+    o `NativeProfile.BIOS` emite um **MBR flat de 512 bytes** (magia `0xAA55`
+    em `0x1FE`) cujo `_start` roda em **16-bit real mode** (`.code16`,
+    `CS:IP=0:0x7C00`), imprime `KO-BIOS OK` pela teletipo do BIOS
+    (`int 0x10, ah=0x0E`) e espelha no COM1 (0x3F8), e para. O link usa script
+    `-T` de BIOS (ENTRY `_start`, `.text.boot` primeiro em `0x7C00`) + `objcopy
+    --output-target=binary`. Sem superfície Kof nova. Prova: `BiosBootE2ETest`
+    2/0F — artefato de 512 bytes com a assinatura de boot e, sob
+    `qemu-system-x86_64` real (SeaBIOS), imprime `KO-BIOS OK` no serial;
+    sabotar a assinatura faz o firmware recusar o disco. B-3b (carregar/rodar o
+    payload Kof) resta.
 
   - **B-6.3 — prova de `#GP` no ring1 + sabotagem do descritor da GDT (perfil
     x86_64 `uefi-ring`) (lane baremetal 9092)** (23/09): uma instrução

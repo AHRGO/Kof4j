@@ -64,7 +64,8 @@ public final class NativeAssembler {
                 // conversão PE32+ depende do layout que ele já produz.
                 if (!NativeProfile.activeIsUefi()) {
                     ldScript = asmFile.resolveSibling(asmFile.getFileName() + ".ld");
-                    Files.writeString(ldScript, freestandingLinkerScript());
+                    Files.writeString(ldScript, NativeProfile.active.isBios()
+                            ? biosLinkerScript() : freestandingLinkerScript());
                     ldCmd.add("-T");
                     ldCmd.add(ldScript.toString());
                 }
@@ -101,6 +102,21 @@ public final class NativeAssembler {
                             "-j", ".bss*", "-j", ".reloc",
                             "--target", "pei-x86-64", "--subsystem", "10",
                             elfFile.toString(), binFile.toString()}, "objcopy");
+                } finally {
+                    Files.deleteIfExists(elfFile);
+                }
+            }
+            // B-3: perfil BIOS — a imagem final é um binário FLAT (o setor de
+            // boot começa em 0x7C00 e leva a assinatura 0xAA55 em 0x1FE). O ld
+            // produz o ELF e o objcopy --output-target=binary remove o
+            // embrulho, preservando o offset do setor (LMA do .text.boot).
+            if (NativeProfile.active.isBios()) {
+                Path elfFile = binFile.resolveSibling(binFile.getFileName() + ".elf");
+                Files.move(binFile, elfFile);
+                try {
+                    runCommand(new String[]{"objcopy",
+                            "--output-target", "binary", elfFile.toString(), binFile.toString()},
+                            "objcopy");
                 } finally {
                     Files.deleteIfExists(elfFile);
                 }
@@ -191,6 +207,25 @@ public final class NativeAssembler {
                 + "    . += " + stack + ";\n"
                 + "    __kof_stack_top = .;\n"
                 + "  }\n"
+                + "  /DISCARD/ : { *(.note*) *(.comment) *(.eh_frame*) }\n"
+                + "}\n";
+    }
+
+    /** B-3 (23/09): linker script do perfil BIOS. O setor de boot
+     *  ({@code .text.boot}) é a PRIMEIRA seção, carregada pelo firmware em
+     *  {@code 0x7C00}; a assinatura {@code 0xAA55} em 0x1FE vem do
+     *  {@code .org 510} no próprio {@code _start} (NativeMethodEmitter). O resto
+     *  do programa (64-bit, inalcançável nesta fatia) segue depois; o payload
+     *  Kof é a fatia B-3b. */
+    private static String biosLinkerScript() {
+        return "ENTRY(_start)\n"
+                + "SECTIONS\n{\n"
+                + "  . = 0x7C00;\n"
+                + "  .text.boot : { *(.text.boot) }\n"
+                + "  .text : { *(.text*) }\n"
+                + "  .rodata : { *(.rodata*) }\n"
+                + "  .data : { *(.data*) }\n"
+                + "  .bss : { *(.bss*) *(COMMON) }\n"
                 + "  /DISCARD/ : { *(.note*) *(.comment) *(.eh_frame*) }\n"
                 + "}\n";
     }

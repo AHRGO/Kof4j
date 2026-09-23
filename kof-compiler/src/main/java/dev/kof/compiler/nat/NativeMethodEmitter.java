@@ -393,6 +393,10 @@ final class NativeMethodEmitter {
     }
 
     void emitStart(StringBuilder sb, IRClass clazz) {
+        if (nb.bios) {
+            emitStartBios(sb, clazz);
+            return;
+        }
         if (nb.uefi) {
             emitStartUefi(sb, clazz);
             return;
@@ -498,6 +502,55 @@ final class NativeMethodEmitter {
         sb.append("    xorl %edi, %edi\n");
         sb.append("    call kof_plat_exit_group\n");
         sb.append("    ret\n");
+    }
+
+    /**
+     * B-3 (PLAN-BAREMETAL-BOOT): entry LEGACY BIOS — setor de boot de 512 bytes
+     * em modo real 16-bit. O BIOS carrega o primeiro setor na fiz {@code 0x7C00}
+     * e salta para lá com {@code CS:IP=0:0x7C00}; imprimimos "KO-BIOS OK" pela
+     * teletype do BIOS ({@code int 0x10, ah=0x0E}) e também no COM1 (0x3F8) para
+     * a captura headless do qemu, e paramos. A assinatura {@code 0xAA55} fecha o
+     * setor (offset 510). A carga do payload Kof é a fatia B-3b.
+     */
+    private void emitStartBios(StringBuilder sb, IRClass clazz) {
+        boolean hasMain = clazz.methods().stream().anyMatch(m -> "main".equals(m.name()));
+        if (!hasMain) return;
+        sb.append("\n.section .text.boot,\"ax\"\n");
+        sb.append(".globl _start\n");
+        sb.append(".code16\n");
+        sb.append("_start:\n");
+        sb.append("    cli\n");
+        sb.append("    xorw %ax, %ax\n");
+        sb.append("    movw %ax, %ds\n");
+        sb.append("    movw %ax, %es\n");
+        sb.append("    movw %ax, %ss\n");
+        sb.append("    movw $0x7C00, %sp\n");
+        sb.append("    movw $kof_bios_msg, %si\n");
+        sb.append("kof_bios_print:\n");
+        sb.append("    lodsb\n");
+        sb.append("    testb %al, %al\n");
+        sb.append("    jz kof_bios_halt\n");
+        sb.append("    movb %al, %bl\n");
+        sb.append("    movb $0x0E, %ah\n");
+        sb.append("    int $0x10\n");              // teletype do BIOS (plano B-3)
+        sb.append("    movw $0x3FD, %dx\n");       // LSR do COM1
+        sb.append("kof_bios_txe:\n");
+        sb.append("    inb %dx, %al\n");
+        sb.append("    testb $0x20, %al\n");       // THR vazio
+        sb.append("    jz kof_bios_txe\n");
+        sb.append("    movw $0x3F8, %dx\n");
+        sb.append("    movb %bl, %al\n");
+        sb.append("    outb %al, %dx\n");          // espelho no serial (captura qemu)
+        sb.append("    jmp kof_bios_print\n");
+        sb.append("kof_bios_halt:\n");
+        sb.append("    cli\n");
+        sb.append("kof_bios_loop:\n");
+        sb.append("    hlt\n");
+        sb.append("    jmp kof_bios_loop\n");
+        sb.append("kof_bios_msg:\n");
+        sb.append("    .asciz \"KO-BIOS OK\\r\\n\"\n");
+        sb.append("    .org 510, 0\n");            // preenche até a assinatura
+        sb.append("    .word 0xAA55\n");
     }
 
 }

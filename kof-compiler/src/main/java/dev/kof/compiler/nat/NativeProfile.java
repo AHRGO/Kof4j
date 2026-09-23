@@ -25,7 +25,16 @@ public enum NativeProfile {
      *  ring0 e ring1), recarregando {@code CS} para o seletor do Kof. A
      *  superfície Kof para mirar ring1 (B-6.2) é decisão rule 6; esta fatia é só
      *  a maquinaria. Não altera a saída do perfil {@link #UEFI}. */
-    UEFI_RING;
+    UEFI_RING,
+    /** B-3 (PLAN-BAREMETAL-BOOT): boot path LEGACY BIOS — um setor de boot de
+     *  512 bytes (magia {@code 0xAA55} em 0x1FE) em modo real 16-bit, entrada
+     *  {@code _start} que imprime via teletype do BIOS ({@code int 0x10,
+     *  ah=0x0E}) + COM1 e para. Herda o link estático sem libc do
+     *  {@link #FREESTANDING}; carregar o payload Kof (B-3b) é a fatia seguinte. */
+    BIOS;
+
+    /** B-3: o boot path legado (setor de boot) — sem costura EFI nem PE32+. */
+    public boolean isBios() { return this == BIOS; }
 
     /** Perfil da compilação CORRENTE — a costura ({@code RuntimePlat}) e o
      *  link ({@code NativeAssembler}) são estáticos e sem parâmetro; o
@@ -47,6 +56,7 @@ public enum NativeProfile {
             case "freestanding", "bare" -> FREESTANDING;
             case "uefi", "efi" -> UEFI;
             case "uefi-ring", "ring", "rings" -> UEFI_RING;
+            case "bios", "mbr" -> BIOS;
             default -> throw new IllegalArgumentException("unknown native profile: " + value);
         };
     }

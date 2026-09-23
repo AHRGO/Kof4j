@@ -25,6 +25,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (6/6) runs the verbatim repro on the JVM + compiles it on Native/JS; RED
     measured with the code unfixed.
 
+  - **§482 ✅ FIXED — generic top-level call via the CLI/module path now gets
+    the §477 return adaptation (selfMethod route) + explicit witness binding**
+    (23/09, lane 9093, found by the PR #593 golden): `idf<Point>(...)` died at
+    JVM load with `VerifyError` on `kof build` while the same program passed
+    the bare-driver tests — the SA-resolved early exit in
+    `ExpressionBareCallLowerer` emitted no adapter at all. Both selfMethod
+    branches now run the shared adapter; the explicit witness feeds
+    `GenericReturnAdapter.bindTypeVariables`/`emitBound` (the KofCall
+    descriptor stays erased). Goldens of #590/#593 adopted into
+    `tests/golden/` and validated via `kof bench`.
+
   - **§479 — exception thrown inside a `List.map`/`filter`/`reduce` lambda escaped
     `try`/`catch (String e)` as `InvocationTargetException` on the JVM (session
     9092, issue #594)** (23/09): every `map`/`filter`/`reduce` routes through the
@@ -51,6 +62,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     each `ltr`. Proof: `RingPrivilegeE2ETest` 4/0F under real OVMF (positive
     prints `KO-RING1 CPL1 OK` + `41` + `KO-RING MAIN`; negative = `NATIVE003`
     under `UEFI`/`HOST`).
+
+  - **B-3a — legacy BIOS/MBR boot path (x86_64) (lane baremetal 9092)** (23/09):
+    `NativeProfile.BIOS` emits a flat **512-byte MBR** (magic `0xAA55` at
+    `0x1FE`) whose `_start` runs in **16-bit real mode** (`.code16`,
+    `CS:IP=0:0x7C00`), prints `KO-BIOS OK` via the BIOS teletype
+    (`int 0x10, ah=0x0E`) and mirrors it to COM1 (0x3F8), then halts. The link
+    uses a BIOS `-T` script (ENTRY `_start`, `.text.boot` first at `0x7C00`)
+    plus `objcopy --output-target=binary`. No new Kof surface. Proof:
+    `BiosBootE2ETest` 2/0F — 512-byte artifact with the boot signature, and
+    under real `qemu-system-x86_64` (SeaBIOS) it prints `KO-BIOS OK` on the
+    serial; sabotaging the signature makes the firmware refuse the disk.
+    B-3b (load/run the Kof payload) remains.
 
   - **B-6.3 — ring1 `#GP` proof + GDT-descriptor sabotage (x86_64 `uefi-ring`
     profile) (lane baremetal 9092)** (23/09): a privileged instruction (`cli`)

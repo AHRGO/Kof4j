@@ -385,6 +385,8 @@ the Kof hello from the boot sector; a sabotage (break `0x55AA`) → qemu reports
 **Depends on:** B-1. **Classification:** H (high) — the real-mode entry is the
 dominant cost.
 
+**B-3a LANDED 23/09 (lane baremetal 9092):** the legacy boot path is real — the API profile `NativeProfile.BIOS` (also accepted as `bios`/`mbr` by `NativeProfile.of`) emits a **flat 512-byte MBR** (magic `0xAA55` at `0x1FE`) whose `_start` runs in **16-bit real mode** (`.code16`, `CS:IP=0:0x7C00`), prints `KO-BIOS OK` via the BIOS teletype (`int 0x10, ah=0x0E`) and mirrors it to COM1 (0x3F8) for headless capture, then halts (`cli;hlt`). `NativeAssembler` links with a BIOS `-T` script (ENTRY `_start`, `.text.boot` first at `0x7C00`) and `objcopy --output-target=binary` (the sector signature comes from the `.org 510` in the entry itself). **Acceptance:** `BiosBootE2ETest` **2/0F** — the artifact is a 512-byte image carrying the boot signature, and under real `qemu-system-x86_64` (SeaBIOS) it prints `KO-BIOS OK` on the serial; sabotaging the signature makes the firmware refuse the disk and nothing prints (the level is real). Regression battery **108/0F**; `check_500` rc=0. **Remaining B-3b:** load the Kof payload from the following sectors and run it (the 64-bit program is emitted but unreachable in this slice).
+
 ### B-4 — Microcontroller (ARM Cortex-M Thumb-2 / riscv32) · **depends B-1**
 New 32-bit codegen (`Target`/arch variant), a linker script with a **vector
 table** (`Reset_Handler`), no OS; output via UART or ARM **semihosting**

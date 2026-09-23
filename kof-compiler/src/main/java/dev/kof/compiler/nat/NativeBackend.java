@@ -135,9 +135,10 @@ public class NativeBackend implements Backend {
      *  B-2: UEFI = herda o link estático sem libc + entry MS x64 e PE32+). */
     public NativeBackend profile(NativeProfile p) {
         this.freestanding = p == NativeProfile.FREESTANDING || p == NativeProfile.UEFI
-                || p == NativeProfile.UEFI_RING;
+                || p == NativeProfile.UEFI_RING || p == NativeProfile.BIOS;
         this.uefi = p == NativeProfile.UEFI || p == NativeProfile.UEFI_RING;
         this.rings = p == NativeProfile.UEFI_RING;
+        this.bios = p == NativeProfile.BIOS;
         NativeProfile.active = p;
         return this;
     }
@@ -147,6 +148,9 @@ public class NativeBackend implements Backend {
     boolean uefi = false;
     /** B-6.1: perfil {@code uefi-ring} — instala GDT/IDT/TSS próprios no {@code _start}. */
     boolean rings = false;
+    /** B-3: perfil BIOS — entry {@code _start} 16-bit real-mode e imagem de setor
+     *  de boot de 512 bytes ({@code 0xAA55}). */
+    boolean bios = false;
 
     String resolveLabel(LabelId id) {
         return labelMap.computeIfAbsent(id, k -> ".Lkof_" + (labelCounter++));

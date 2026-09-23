@@ -396,6 +396,8 @@ o hello Kof do setor de boot; uma sabotagem (quebrar `0x55AA`) → qemu reporta
 **Depende de:** B-1. **Classificação:** H (alto) — a entrada real-mode é o custo
 dominante.
 
+**B-3a POUSADO 23/09 (lane baremetal 9092):** o boot path legado é real — o perfil de API `NativeProfile.BIOS` (também aceito como `bios`/`mbr` pelo `NativeProfile.of`) emite um **MBR flat de 512 bytes** (magia `0xAA55` em `0x1FE`) cujo `_start` roda em **16-bit real mode** (`.code16`, `CS:IP=0:0x7C00`), imprime `KO-BIOS OK` pela teletipo do BIOS (`int 0x10, ah=0x0E`) e espelha no COM1 (0x3F8) para a captura headless, e para (`cli;hlt`). O `NativeAssembler` liga com script `-T` de BIOS (ENTRY `_start`, `.text.boot` primeiro em `0x7C00`) e `objcopy --output-target=binary` (a assinatura do setor vem do `.org 510` no próprio entry). **Aceitação:** `BiosBootE2ETest` **2/0F** — o artefato é uma imagem de 512 bytes com a assinatura de boot e, sob `qemu-system-x86_64` real (SeaBIOS), imprime `KO-BIOS OK` no serial; sabotar a assinatura faz o firmware recusar o disco e nada é impresso (o nível é real). Bateria de regressão **108/0F**; `check_500` rc=0. **B-3b restante:** carregar o payload Kof dos setores seguintes e rodá-lo (o programa 64-bit é emitido mas inalcançável nesta fatia).
+
 ### B-4 — Microcontrolador (ARM Cortex-M Thumb-2 / riscv32) · **depende de B-1**
 Codegen novo de 32 bits (variante `Target`/arch), linker script com **vector
 table** (`Reset_Handler`), sem OS; saída via UART ou **semihosting** ARM
