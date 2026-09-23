@@ -8,8 +8,13 @@ Two independent facts, both discovered, never assumed:
     refs/remotes/origin/HEAD`, with a network fallback to
     `git ls-remote --symref`);
   - the branch `AGENTS.md` DECLARES as active (parsed out of its prose —
-    `AGENTS.md` version header carries
-    "active branch = **`<name>`**").
+    `AGENTS.md` version header carries "active branch = `<name>`", with
+    or without bold markdown around the backticks — confirmed both forms
+    are real: beta-0.5.0's header wraps the name in ** (bold), main's
+    frozen snapshot leaves it plain; the first cut of this regex only
+    matched the bold form and silently returned `None` on `main` —
+    found by actually running this tool against `main`, not by
+    inspection).
 
 If the declared branch does not exist as a ref, this is NOT a crash and
 NOT silently ignored: it becomes one `C1` contract-drift candidate
@@ -32,7 +37,7 @@ for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
-_DECLARED_RE = re.compile(r"active branch\s*=\s*\*\*`([^`]+)`\*\*")
+_DECLARED_RE = re.compile(r"active branch\s*=\s*\*{0,2}`([^`]+)`\*{0,2}")
 _RULE_ID = "KOF-DEBT-DOC-BRANCH-001"
 
 
@@ -138,10 +143,16 @@ def selftest():
         print(f"  {status}— {name}")
         ok = ok and cond
 
-    check("parses the real AGENTS.md wording",
+    check("parses the bold form (beta-0.5.0's real wording)",
           parse_declared_active_branch(
               "active branch = **`beta-0.5.0`** (`D-BRANCH-0.5.0`, 09/20)"
           ) == "beta-0.5.0")
+    check("parses the plain, unbolded form (main's real frozen wording — "
+          "this form was a false negative in the first cut of the regex, "
+          "found by running against main, not by inspection)",
+          parse_declared_active_branch(
+              "...D-BRANCH-0.5.0` (20/09); active branch = `beta-0.4.0`)"
+          ) == "beta-0.4.0")
     check("returns None when the wording is absent",
           parse_declared_active_branch("nothing about branches here") is None)
     check("does not false-positive on a similar but different phrase",
