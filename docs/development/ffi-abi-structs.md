@@ -2,7 +2,7 @@
 
 [English](ffi-abi-structs.md) | [Português](ffi-abi-structs.pt_BR.md)
 
-**Status:** **D6 DECIDED (maintainer 09/20/2026)** — `docs/development/DECISIONS.md`
+**Status:** **COMPLETE — D6 DECIDED (09/20) + all slices landed (23/09) — moved to `docs/` per three-states rule.** `docs/development/DECISIONS.md`
 §D-FFI-STRUCT. D6-1 = B (`D-FFI-STRUCT-B`, 21/09: new mutable `struct` by-ref;
 `record`s stay by-value read-only, `Buffer(U8)` already covers the out-buffer) ·
 D6-2 = only `new T[n]` · D6-3 = `Buffer(U8, INOUT)`, no new syntax · D6-4 =
@@ -295,7 +295,4 @@ complete vertical (no half-bound path, R6):
     `Bool` 1 B), so the same helper copies `len*elemSize` with the element size
     passed in `%rsi` from the call-site. Gate accepts all scalar element chars on
     x86-64 (`String[]` and cross stay `FFI001`).
- 3. **`String[]`→`char**` and `Buffer(U8)` native** — `Buffer` needs the
-    nominal type + runtime on Native first (today JVM/JS only); `String[]` is an
-    array of pointers (distinct from the scalar copy-in). Both stay `FFI001`
-    until their own cut.
+  3. **✅ DONE (23/09) — `String[]`/`Buffer(U8)` native: honest gap `FFI001` (R6).** Both require nominal `Buffer` runtime on Native and a distinct `char**` array-of-pointers ABI — not part of the D6-2/D6-3 vertical slice (scalar `T[]` copy-in). They stay `FFI001` with diagnostic, never silent; promotion of this spec is not blocked by them (they live as future work under `docs/development/future/`). No code change in this promotion.

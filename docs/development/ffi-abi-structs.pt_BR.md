@@ -2,7 +2,7 @@
 
 [English](ffi-abi-structs.md) | [Português](ffi-abi-structs.pt_BR.md)
 
-**Status:** **D6 DECIDIDO (mantenedora 20/09/2026)** — `docs/development/DECISIONS.md`
+**Status:** **CONCLUÍDO — D6 DECIDIDO (20/09) + todas as fatias pousadas (23/09) — movido para `docs/` pela regra dos três estados.** `docs/development/DECISIONS.md`
 §D-FFI-STRUCT. D6-1 = B (`D-FFI-STRUCT-B`, 21/09: novo `struct` mutável por
 referência; `record`s ficam por valor read-only, `Buffer(U8)` já cobre o
 out-buffer) · D6-2 = só `new T[n]` · D6-3 = `Buffer(U8, INOUT)`, sem sintaxe
