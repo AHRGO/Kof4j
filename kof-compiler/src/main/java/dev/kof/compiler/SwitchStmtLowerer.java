@@ -59,7 +59,12 @@ if (hasPattern) {
         nextTestLabels.add(LabelId.create());
     }
     LabelId endLabelPat = LabelId.create();
-    LabelId defaultLabelPat = ss.defaultBody().isEmpty() ? endLabelPat : LabelId.create();
+    // #588: the empty-default label MUST be a label of its own. Aliasing it
+    // to endLabelPat puts KofLabel(end)+KofJump(end) at the same position,
+    // and the backend resolves the jump to its own offset (`goto <self>` =
+    // infinite loop). A dedicated label + unconditional trailing jump keeps
+    // one label → one position, on every backend (rule 5: shared IR).
+    LabelId defaultLabelPat = LabelId.create();
     for (int i = 0; i < ss.cases().size(); i++) {
         if (i > 0) ops.add(new KofLabel(nextTestLabels.get(i)));
         SwitchCase sc = ss.cases().get(i);
@@ -107,6 +112,8 @@ if (hasPattern) {
     if (!ss.defaultBody().isEmpty()) {
         localIdx = driver.emitStatement(new BlockStmt(ss.defaultBody().get(0).position(), ss.defaultBody()), ops, owner, localIdx, locals, returnType);
     }
+    // #588: unconditional (the default label is never the end label, so no
+    // self-jump is possible; empty body simply falls through to endLabelPat).
     ops.add(new KofJump(endLabelPat));
     for (int i = 0; i < ss.cases().size(); i++) {
         SwitchCase sc = ss.cases().get(i);
