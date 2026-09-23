@@ -30,6 +30,9 @@ fail() { echo "  FAIL— $1"; FAILED=1; }
 ROW_883=$'883\topen\t-\t-\trefs/heads/main\tjava/concatenated-command-line\tkof-compiler/src/test/java/dev/kof/compiler/ClassShapeChecksTest.java:171'
 ROW_999=$'999\topen\t-\t-\trefs/heads/main\tjava/io-resource-leak\tkof-runtime/src/main/java/dev/kof/runtime/Novo.java:1'
 ROW_NULL=$'998\tnull\t-\t-\trefs/heads/beta-0.5.0\tjava/relative-path-command\texamples/ForaBaseline.java:7'
+# #604: alerta de OUTRA ferramenta de code scanning (SARIF do Debt Scout, nota C0).
+# A API real so o devolve quando a consulta NAO filtra tool_name=CodeQL.
+ROW_DEBT=$'1047\topen\t-\t-\trefs/heads/beta-0.5.0\tKOF-DEBT-SATD-001\tscripts/x.sh:18'
 TIP_SHA="1111111111111111111111111111111111111111"
 OLD_SHA="2222222222222222222222222222222222222222"
 
@@ -50,6 +53,9 @@ case "\$args" in
       stale)    printf '%s\n' "$ROW_883" ;;
       noana)    printf '%s\n' "$ROW_883" ;;
       empty)    printf '' ;;
+      othertool|othertool_ana)
+        printf '%s\n' "$ROW_883"
+        case "\$args" in *"tool_name=CodeQL"*) ;; *) printf '%s\n' "$ROW_DEBT" ;; esac ;;
     esac
     ;;
   *"alerts?ref=refs/heads/main&state=open"*)
@@ -61,14 +67,22 @@ case "\$args" in
   *"alerts?ref=refs/heads/beta-0.5.0&state=open"*)
     # uniao por branch: so o modo nullstate revela o #998 (a lista o omite).
     [ "\$mode" = "nullstate" ] && printf '998\n'
+    case "\$mode:\$args" in othertool*:*tool_name=CodeQL*) ;; othertool*) printf '1047\n' ;; esac
     printf ''
     ;;
   *"/code-scanning/alerts/998"*)
     [ "\$mode" = "nullstate" ] && printf '%s\n' "$ROW_NULL"
     ;;
+  *"/code-scanning/alerts/1047"*)
+    case "\$mode" in othertool*) printf '%s\n' "$ROW_DEBT" ;; esac
+    ;;
   *"/code-scanning/analyses?ref=refs/heads/"*)
     # EG-2: analise mais recente do branch. Modo 'stale' = SHA antigo != tip.
+    # #604 'othertool_ana': a analise mais recente de QUALQUER ferramenta e a do
+    # Debt Scout (no tip); a do CodeQL esta velha — so tool_name=CodeQL a revela.
     case "\$mode" in
+      othertool_ana)
+        case "\$args" in *"tool_name=CodeQL"*) printf '%s\n' "$OLD_SHA" ;; *) printf '%s\n' "$TIP_SHA" ;; esac ;;
       stale) printf '%s\n' "$OLD_SHA" ;;
       noana) : ;;
       *)     printf '%s\n' "$TIP_SHA" ;;
@@ -165,6 +179,26 @@ make_fake_gh "$TMP" noana
 out=$(run_gate "$TMP"); rc=$?
 printf '%s' "$out" | grep -q "analise no-analysis" && pass "ausencia de analise sinalizada" || { fail "no-analysis nao sinalizado"; printf '%s\n' "$out" | sed 's/^/      /'; }
 [ "$rc" = 2 ] && pass "exit 2" || fail "exit=$rc (esperado 2)"
+
+echo "== cenario 11 (#604): alerta de OUTRA ferramenta (SARIF do Debt Scout) nao conta como CodeQL =="
+make_fake_gh "$TMP" othertool
+out=$(run_gate "$TMP"); rc=$?
+printf '%s' "$out" | grep -q "KOF-DEBT-SATD-001" && { fail "alerta nao-CodeQL entrou no gate (tool_name ausente)"; printf '%s\n' "$out" | sed 's/^/      /'; } || pass "nota do Debt Scout ignorada pelo gate do CodeQL"
+printf '%s' "$out" | grep -q "green — beta-0.5.0: 0 novo" && pass "beta-0.5.0 green (so o #883 do baseline conta)" || { fail "beta-0.5.0 nao ficou green"; printf '%s\n' "$out" | sed 's/^/      /'; }
+[ "$rc" = 0 ] && pass "exit 0" || fail "exit=$rc (esperado 0)"
+
+echo "== cenario 12 (#604): analise mais nova de OUTRA ferramenta nao certifica o tip =="
+make_fake_gh "$TMP" othertool_ana
+out=$(run_gate "$TMP"); rc=$?
+printf '%s' "$out" | grep -q "INCONCLUSIVO — main: analise stale" && pass "amarrado a analise do CodeQL (velha), nao a do Debt Scout" || { fail "a analise de outra ferramenta certificou o tip"; printf '%s\n' "$out" | sed 's/^/      /'; }
+[ "$rc" = 2 ] && pass "exit 2 (nao certifica)" || fail "exit=$rc (esperado 2)"
+
+echo "== cenario 13 (#605): nenhum 'gh api \"/...' (Git Bash/MSYS reescreve /repos/... como caminho de arquivo) =="
+if grep -nE 'gh api "?/' "$GATE" >/dev/null; then
+  fail "endpoint com barra inicial voltou (quebra no Windows/Git Bash):"; grep -nE 'gh api "?/' "$GATE" | sed 's/^/      /'
+else
+  pass "todos os endpoints sem barra inicial (portavel no Git Bash)"
+fi
 
 rm -rf "$TMP"
 
