@@ -79,6 +79,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     **10/10** (JVM/Script/JS + Native direct and inherited; RED measured with the
     code unfixed). Full suite 3197/0F/0E.
 
+  - **S5.1 (db-parity, gaps-db lane) — MySQL greeting parser for the cross wire
+    (cross piece `B64`)** (23/09): `kof_db_mysql_parse_greeting` walks the
+    server handshake packet (protocol 0x0A, version, conn-id, the two
+    auth-plugin-data halves) and extracts the 20-byte seed, mirroring
+    `RuntimeDb3`. Proof: `NativeRiscvDbWireTest` parses a synthetic MariaDB
+    greeting and a bad-protocol packet on both arches against a fixed oracle,
+    plus a B64 sabotage test. Building/sending the auth-switch response and
+    reading the OK remain on the next slice.
+
   - **S5.1 (db-parity, gaps-db lane) — MySQL auth helper for the cross wire
     (cross piece `B63`)** (23/09): `kof_db_mysql_scramble` (the
     `mysql_native_password` formula `SHA1(pass) XOR SHA1(seed || SHA1(SHA1(

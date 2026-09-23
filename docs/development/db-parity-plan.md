@@ -180,8 +180,15 @@ typed roundtrip) produces the **same observable result** on all four targets, or
       `0xFD`+3 LE) ported from `RuntimeDb1`. Proof: same `NativeRiscvDbWireTest`
       harness on riscv64 + aarch64 against a JVM oracle (`MessageDigest` +
       the standard scramble formula) for a fixed seed/password, plus the three
-      lenenc cases and a B63 sabotage test. **Still open:** read the server
-      greeting and send the auth-switch response.
+      lenenc cases and a B63 sabotage test.
+    - **23/09 — third slice DONE (piece `B64`, gaps-db lane):** the server
+      greeting parser — `kof_db_mysql_parse_greeting` walks the handshake packet
+      (protocol 0x0A, NUL-terminated version, conn-id, the two auth-plugin-data
+      halves) and extracts the 20-byte seed, exactly like `RuntimeDb3` does
+      before `kof_db_mysql_scramble`. Proof: `NativeRiscvDbWireTest` parses a
+      synthetic MariaDB greeting + a bad-protocol packet on both arches against a
+      fixed oracle, plus a B64 sabotage test. **Still open:** build/send the
+      auth-switch (handshake response) packet and read the OK.
   - **S5.2 — `COM_QUERY` + text resultset.** Port packet framing + result parse.
     *Proof:* `db.query` roundtrip under qemu, byte-identical to x86/JVM.
   - **S5.3 — bind/prepared + tx + ORM.** Port the prepared/execute/transaction

@@ -325,6 +325,147 @@ class NativeRiscvDbWireTest {
         assertEquals(oracle(), out, "SHA1 aarch64 diverge do oráculo JVM");
     }
 
+    private static final String GREETING_SEED = "abcdefghABCDEFGH1234";
+
+    /** Oráculo: status 1 + os 20 bytes do seed; depois status 0 no pacote ruim. */
+    private static String greetingOracle() {
+        StringBuilder sb = new StringBuilder("1");
+        for (byte b : GREETING_SEED.getBytes(StandardCharsets.US_ASCII)) sb.append('\n').append(b & 0xff);
+        sb.append("\n0");
+        return sb.toString();
+    }
+
+    /** _start: parse do greeting sintético (seed 20B) + pacote com protocolo ruim. */
+    private static String greetingHarness() {
+        return """
+                .section .rodata
+                .Lgr_pkt:
+                    .byte 0x4A, 0x00, 0x00, 0x00
+                    .byte 0x0A
+                    .ascii "5.5.5-10.3.39-MariaDB"
+                    .byte 0
+                    .byte 0x2A, 0x00, 0x00, 0x00
+                    .ascii "abcdefgh"
+                    .byte 0
+                    .byte 0x00, 0x00
+                    .byte 0x21
+                    .byte 0x02, 0x00
+                    .byte 0x00, 0x00
+                    .byte 21
+                    .zero 10
+                    .ascii "ABCDEFGH1234"
+                    .byte 0
+                .Lgr_bad:
+                    .byte 0x05, 0x00, 0x00, 0x00
+                    .byte 0x0B
+                    .zero 8
+                .section .data
+                .align 3
+                .Lkof_heap_root_start:
+                .Lkof_heap_root_end:
+                .section .text
+                .globl _start
+                _start:
+                    andi sp, sp, -16
+                    addi sp, sp, -32
+                    mv   s0, sp
+                    li   t0, 0
+                .Lgr_zero:
+                    li   t1, 20
+                    bge  t0, t1, .Lgr_zero_done
+                    add  t2, s0, t0
+                    sb   zero, 0(t2)
+                    addi t0, t0, 1
+                    j    .Lgr_zero
+                .Lgr_zero_done:
+                    la   a0, .Lgr_pkt
+                    mv   a1, s0
+                    call kof_db_mysql_parse_greeting
+                    call kof_println_int
+                    mv   a0, s0
+                    call .Lgr_print20
+                    la   a0, .Lgr_bad
+                    mv   a1, s0
+                    call kof_db_mysql_parse_greeting
+                    call kof_println_int
+                    li   a0, 0
+                    li   a7, 93
+                    ecall
+                .Lgr_print20:
+                    addi sp, sp, -32
+                    sd   ra, 0(sp)
+                    sd   s0, 8(sp)
+                    sd   s1, 16(sp)
+                    sd   s2, 24(sp)
+                    mv   s0, a0
+                    li   s1, 0
+                .Lgr_pr_loop:
+                    li   s2, 20
+                    bge  s1, s2, .Lgr_pr_done
+                    add  t0, s0, s1
+                    lbu  a0, 0(t0)
+                    call kof_println_int
+                    addi s1, s1, 1
+                    j    .Lgr_pr_loop
+                .Lgr_pr_done:
+                    ld   ra, 0(sp)
+                    ld   s0, 8(sp)
+                    ld   s1, 16(sp)
+                    ld   s2, 24(sp)
+                    addi sp, sp, 32
+                    ret
+                .globl kof_super_table
+                kof_super_table:
+                    .word 0
+                """;
+    }
+
+    @Test
+    void greetingParseMatchesOracleOnRiscv64(@TempDir Path tempDir) throws Exception {
+        assumeRiscv();
+        String harness = greetingHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String out = buildRun("riscv64", tempDir, "greet_rv", harness + "\n" + runtime);
+        assertEquals(greetingOracle(), out, "parse do greeting riscv64 diverge do oráculo");
+    }
+
+    @Test
+    void greetingParseMatchesOracleOnAarch64(@TempDir Path tempDir) throws Exception {
+        assumeAarch64();
+        String harness = greetingHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String riscv = harness + "\n" + runtime;
+        StringBuilder arm = new StringBuilder();
+        for (String line : riscv.split("\n", -1)) {
+            for (String t : NativeAarch64Translator.translateRiscvToAarch64(line)) arm.append(t).append('\n');
+        }
+        String out = buildRun("aarch64", tempDir, "greet_aa", arm.toString());
+        assertEquals(greetingOracle(), out, "parse do greeting aarch64 diverge do oráculo");
+    }
+
+    @Test
+    void withoutGreetingPieceLinkFailsSabotage(@TempDir Path tempDir) throws IOException {
+        assumeRiscv();
+        String harness = greetingHarness();
+        Set<Integer> keep = new LinkedHashSet<>(RiscvSlices.keepForProgramText(harness));
+        int b64 = -1;
+        for (RiscvSlices.Piece p : RiscvSlices.pieces()) {
+            if ("RISCV_RUNTIME_ASM_B_64".equals(p.field())) b64 = p.index();
+        }
+        assertTrue(b64 >= 0, "peça B64 (parse do greeting) não encontrada no inventário");
+        assertTrue(keep.remove(b64), "B64 deveria estar no keep do harness de greeting");
+        String runtime = RiscvSlices.renderSubset(keep);
+        Path asm = tempDir.resolve("sab_greet.s");
+        Files.writeString(asm, harness + "\n" + runtime);
+        Path obj = tempDir.resolve("sab_greet.o");
+        Path bin = tempDir.resolve("sab_greet");
+        runCapture("riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
+        String[] r = runAllowFail("riscv64-linux-gnu-ld", "--no-relax", "-o", bin.toString(), obj.toString());
+        assertNotEquals("0", r[1], "sem a B64 o link deveria falhar (undefined kof_db_mysql_parse_greeting); saída: " + r[0]);
+        assertTrue(r[0].contains("kof_db_mysql_parse_greeting"),
+                "a falha deve citar kof_db_mysql_parse_greeting: " + r[0]);
+    }
+
     @Test
     void scrambleAndLenencMatchOracleOnRiscv64(@TempDir Path tempDir) throws Exception {
         assumeRiscv();
