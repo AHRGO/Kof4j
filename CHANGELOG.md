@@ -145,6 +145,19 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (`sqlite3_bind_*`/`kof_memcpy`) corrupted it (crash rc=1, partial
     `true|1|1`; riscv64 immune); fix: index `i` moved to stack slot `48(sp)`.
     Lane rule: never keep live state in `s10` across a `call` on cross.
+  - **F2c3 `orm.saveAll` on the Native cross (D-DB-GAPS DB-3/DB-1, slice E-part-2b)**
+    (23/09, gaps-db lane): `orm.saveAll` is REAL on riscv64/aarch64 — new piece
+    `NativeRiscvAsmRtB56` (port of `RuntimeOrm10`): loop `kof_list_size`/
+    `kof_list_get` → `kof_orm_save` per item, the patched instance discarded
+    (the input List keeps the original objects, as the host); returns true when
+    the loop ends, SQL failure throws `sqlite: <msg>` through the save itself
+    (R6); no `className` (the item carries vtable/typeId). GC-safe: id/items/
+    table/schema in stack slots (the conservative GC scans the stack).
+    `CROSS_FACES` gains `kof_orm_save_all` (8 names). Proof:
+    `KofOrmE2ETest.crossNativeF2aSaveAllMatchesX86Oracle` — x86-64 oracle
+    byte-parity riscv64/aarch64 + JVM host leg (batch of INSERTs, count, order,
+    batch of UPDATEs by pk, empty list true without touching the DB, bad id
+    throw + recovery); `KofOrmE2ETest` 67/0F/3skip + battery 93/0F/3skip.
   - **check_500 red closed — `TypeChecker` 606 + `StatementAnalyzer` 600 (known-bugs §446)**
     (22/09, typer lane, session 9093): the two CRITICAL files inherited from the
     §280 slices were split by responsibility (`SemBinaryResultTyper` +166,

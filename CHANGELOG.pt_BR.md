@@ -151,6 +151,19 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `true|1|1`; riscv64 imune); fix: índice `i` movido p/ slot de pilha
     `48(sp)`. Regra da lane: nunca manter estado vivo em `s10` através de um
     `call` no cross.
+  - **F2c3 `orm.saveAll` no cross do Native (D-DB-GAPS DB-3/DB-1, fatia E-parte-2b)**
+    (23/09, lane gaps-db): `orm.saveAll` é REAL no riscv64/aarch64 — peça nova
+    `NativeRiscvAsmRtB56` (port de `RuntimeOrm10`): loop `kof_list_size`/
+    `kof_list_get` → `kof_orm_save` por item, a instância patchada descartada
+    (a List de entrada guarda os objetos originais, como o host); retorna true
+    quando o loop termina, erro de SQL lança `sqlite: <msg>` pelo próprio save
+    (R6); sem `className` (o item carrega vtable/typeId). GC-safe: id/items/
+    table/schema em slots de pilha (o GC conservativo varre a stack).
+    `CROSS_FACES` ganha `kof_orm_save_all` (8 nomes). Prova:
+    `KofOrmE2ETest.crossNativeF2aSaveAllMatchesX86Oracle` — oráculo x86-64
+    byte-parity riscv64/aarch64 + perna host JVM (lote de INSERTs, count,
+    ordem, lote de UPDATEs por pk, lista vazia true sem tocar no banco, id ruim
+    throw + recuperação); `KofOrmE2ETest` 67/0F/3skip + bateria 93/0F/3skip.
   - **check_500 vermelho fechado — `TypeChecker` 606 + `StatementAnalyzer` 600 (known-bugs §446)**
     (22/09, lane typer, sessão 9093): os dois arquivos CRÍTICOS herdados das
     fatias do §280 foram splitados por responsabilidade (`SemBinaryResultTyper`
