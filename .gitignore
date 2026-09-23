@@ -22,3 +22,5 @@ lib/kof.jar.bak
 lib/kof.jar.stamp
 lib/kof.jar.old*
 scripts/__pycache__/
+scripts/debt-scout/__pycache__/
+scripts/debt-scout/detectors/__pycache__/

@@ -8,7 +8,7 @@ Normative reference for `scripts/debt-scout/`. See `DEBT_SCOUT_CONTRACT.md`
 ## Axis A — Debt type (TDM category)
 
 ```text
-REQUIREMENTS_CONTRACT   (includes KOF normative/language decisions)
+REQUIREMENTS_CONTRACT
 ARCHITECTURE
 DESIGN
 CODE
@@ -18,6 +18,8 @@ DOCUMENTATION
 INFRASTRUCTURE
 VERSIONING_COMPATIBILITY
 ```
+
+`REQUIREMENTS_CONTRACT` includes KOF normative/language decisions.
 
 ## Axis B — KOF domain
 
