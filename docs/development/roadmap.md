@@ -1050,7 +1050,7 @@ Ordered queue from the maintainer's multiple-choice rulings 23/09 (source:
 | # | Item | Owner lane | Proof |
 |---|---|---|---|
 | 13.1 | §248 — interface default methods on JS + Native (parity) | compiler | E2E golden 4-target parity |
-| 13.2 | §271 — bridge methods on generic-interface impls (erasure ABI) | compiler | `NoSuchMethodError` closed, suite green |
+| 13.2 | §271 — bridge methods on generic-interface impls (erasure ABI) | compiler (**9092, CLAIMED 23/09**) | `NoSuchMethodError` closed, suite green |
 | 13.3 | §278 — port `kof.security`/`kof.gpu` stacks to Android | gaps-db | stacks run on Android or honest permanent refusal |
 | 13.4 | §423 — port `kof_channel_*` runtime to riscv64/aarch64 | nat | qemu proof on both arches |
 | 13.5 | Split batch: `NativeBackend` 603 + `CompilerPipeline` 588 + `RuntimeOrm7` 585 (behavior-preserving, precedent §442/§446) — `CompilerPipeline` ✅ **475** (23/09, 9092); `RuntimeOrm7` pending; `NativeBackend` blocked by UEFI WIP 9093 | claimant lane | `check_500.sh` rc=0 + same suite green |
