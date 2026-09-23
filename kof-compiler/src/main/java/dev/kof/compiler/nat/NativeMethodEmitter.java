@@ -5,6 +5,7 @@ import dev.kof.compiler.KofArrayStore;
 import dev.kof.compiler.KofCallKind;
 import dev.kof.compiler.KofCatchStart;
 import dev.kof.compiler.KofCheckCast;
+import dev.kof.compiler.KofFunctionAddress;
 import dev.kof.compiler.KofDup;
 import dev.kof.compiler.KofDup2;
 import dev.kof.compiler.KofDupX1;
@@ -311,6 +312,7 @@ final class NativeMethodEmitter {
             case KofJump kj -> sb.append("    jmp ").append(nb.resolveLabel(kj.target())).append("\n");
             case KofConditionalJump kc -> nb.emitConditionalJump(sb, kc);
             case KofCall kc -> nb.emitCall(sb, kc);
+            case KofFunctionAddress fa -> NativeOpHelpers.emitFunctionAddress(nb, sb, fa);
             case KofNewObject no -> nb.emitNewObject(sb, no);
             case KofDup _ -> sb.append("    movq (%rsp), %rax\n    pushq %rax\n");
             case KofDup2 _ -> sb.append("""

@@ -22,6 +22,20 @@ public final class BuiltinCallTyper {
                     : MemberResolver.resolveType(sa, mc.typeArguments().get(0), scope);
             return new Type.ClassType("kof.concurrent", "Channel", List.of(elemType));
         }
+        if (mc.receiver() == null && "ring1".equals(mc.methodName())
+                && mc.arguments().size() == 1 && !hasUserFunctionNamed(sa, scope, "ring1")) {
+            // B-6.2b (D-BAREMETAL-RING1-SURFACE): `ring1(fn)` e um marcador
+            // builtin que baixa para a transicao ring0->ring1 no perfil x86_64
+            // UEFI_RING (NATIVE003 nomeado nos demais alvos, emitido no
+            // lowering). O argumento NAO e inferido: nome de funcao top-level
+            // em posicao de argumento e SEM011 por design; validamos apenas
+            // que e uma fn top-level de zero args.
+            if (mc.arguments().get(0) instanceof IdentifierExpr fnId
+                    && isZeroArgTopLevelFunction(sa, fnId.name())) {
+                return Type.PrimitiveType.VOID;
+            }
+            return null;
+        }
         if (mc.receiver() == null && "listOf".equals(mc.methodName())) {
             // listOf(...) keeps its element type: List<T> must survive
             // the whole pipeline (for-in, get, method resolution).
@@ -245,6 +259,31 @@ public final class BuiltinCallTyper {
      * a API String — na ordem exata e com as guardas originais (alguns
      * branches só valem sem receiver).
      */
+
+    /** B-6.2b: `ring1` so vale como builtin se nenhuma declaracao do usuario
+     *  (funcao top-level, externa, membro da classe atual ou local) ja usa o
+     *  nome — nao sombreia (freeze regra 2). */
+    private static boolean hasUserFunctionNamed(SemanticAnalyzer sa, SymbolTable scope, String name) {
+        if (scope != null && scope.resolve(name) != null) return true;
+        for (AstNode d : sa.unit().declarations()) {
+            if (d instanceof FunctionDeclarationNode fn && fn.name().equals(name)) return true;
+            if (d instanceof ExternalFunctionNode ext && ext.name().equals(name)) return true;
+        }
+        return sa.currentClassName() != null && !sa.currentClassName().isEmpty()
+                && MemberResolver.resolveInHierarchy(sa, sa.currentClassName(), name) != null;
+    }
+
+    /** B-6.2b: o alvo de `ring1(fn)` tem de ser uma funcao top-level de zero
+     *  args (o codigo ring1 nao recebe parametros por enquanto, B-6.2b). */
+    private static boolean isZeroArgTopLevelFunction(SemanticAnalyzer sa, String name) {
+        for (AstNode d : sa.unit().declarations()) {
+            if (d instanceof FunctionDeclarationNode fn && fn.name().equals(name)
+                    && fn.parameters().isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /** #495: o diagnostico de aridade so vale para o BUILTIN. Se uma
      *  funcao/metodo do usuario com o MESMO nome existe (top-level com

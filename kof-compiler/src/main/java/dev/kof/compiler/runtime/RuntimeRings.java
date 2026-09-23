@@ -215,6 +215,9 @@ public final class RuntimeRings {
                 leaq kof_rings_idt(%rip), %rax
                 movq %rax, 2(%rsp)
                 lidt (%rsp)
+                # o ltr anterior deixou o descritor do TSS busy (bit B); o GDT
+                # persiste entre init/restore, então reabilita antes do novo ltr
+                movb $0x89, kof_gdt_tss+5(%rip)
                 movw $0x28, %ax
                 ltr %ax
                 addq $24, %rsp

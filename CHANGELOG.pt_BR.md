@@ -26,6 +26,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `KofHigherOrderTest` 8/8 — `throw` dentro de lambdas de `map`/`filter`/`reduce`
     capturado por `catch (String e)` no JVM/Native x86/JS; RED medido com o código
     sem o fix (só JVM — Native/JS já propagavam corretamente).
+  - **B-6.2b — builtin `ring1(fn)` executa uma função Kof em CPL1 (perfil x86_64
+    `uefi-ring`) (lane baremetal 9092)** (23/09): a superfície rule-6 decidida em
+    `D-BAREMETAL-RING1-SURFACE` está completa. Novo op de IR `KofFunctionAddress`;
+    o `ExpressionStaticCallLowerer` emite a chamada `kof_ring1_run` só em
+    `Target.NATIVE` + `UEFI_RING` (senão um `NATIVE003` nomeado — R6/R7); o
+    `RuntimeRings` ganha `kof_ring1_target` + `kof_ring1_call` + `kof_ring1_run`.
+    **Bug raiz corrigido:** o segundo `kof_rings_init` recarregava o `kof_gdt`
+    persistente cujo descritor do TSS ficou **busy** pelo primeiro `ltr`, então o
+    novo `ltr` tomava `#GP` no gate default `cli;hlt` (hang silencioso) — o
+    descritor é re-habilitado antes de cada `ltr`. Prova: `RingPrivilegeE2ETest`
+    4/0F sob OVMF real (positivo imprime `KO-RING1 CPL1 OK` + `41` +
+    `KO-RING MAIN`; negativo = `NATIVE003` sob `UEFI`/`HOST`).
 
   - **§477 — função de topo genérica que devolve `T` puro perdia o `checkcast`
     no call-site numa instanciação reference (sessão 9092, issue #592)** (23/09):

@@ -48,6 +48,7 @@ class RingPrivilegeE2ETest {
             main() {
                 ring1(task)
                 println(Mark.value)
+                println("KO-RING MAIN")
             }
             """;
 

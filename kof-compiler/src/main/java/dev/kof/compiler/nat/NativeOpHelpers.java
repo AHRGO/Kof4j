@@ -171,8 +171,16 @@ final class NativeOpHelpers {
         sb.append("    jmp ").append(nb.resolveLabel(kc.falseLabel())).append("\n");
     }
 
-    static String resolveCalleeName(NativeBackend nb, KofCall kc) {
-        // builtins de coleção são símbolos globais do runtime — nunca
+    /** B-6.2b: {@code ring1(fn)} — empilha o endereco do simbolo da funcao
+     *  top-level (leaq <sym>(%rip),%rax; pushq %rax). */
+    static void emitFunctionAddress(NativeBackend nb, StringBuilder sb, KofFunctionAddress fa) {
+        KofCall ref = new KofCall(fa.ownerType(), fa.name(), fa.parameterTypes(),
+                Type.PrimitiveType.VOID, KofCallKind.FUNCTION);
+        sb.append("    leaq ").append(resolveCalleeName(nb, ref)).append("(%rip), %rax\n");
+        sb.append("    pushq %rax\n");
+    }
+
+    static String resolveCalleeName(NativeBackend nb, KofCall kc) {        // builtins de coleção são símbolos globais do runtime — nunca
         // mangle com o dono (Map_kof_map_put etc.)
         String mn = kc.methodName();
         if (mn.startsWith("kof_map_") || mn.startsWith("kof_set_")) {
