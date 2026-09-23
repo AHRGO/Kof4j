@@ -184,6 +184,24 @@ exercises it). Proof: `KofConcurrency2Test` 48/48, `SpawnE2ETest` 10/10,
 93→94 syms). **Next:** `kof_plat_sync` on the riscv seam + `kof_plat_thread`
 (create) on both ISAs, then net sockets (`kof_plat_net_*`) and B-1.
 
+**Slice 3b-ii (LANDED 22/09, lane `baremetal` 9092):** synchronization and thread
+creation cross the seam. **riscv64:** `kof_plat_sync` (futex 98) added to the seam
+and the 3 `SYS_futex` sites of `NativeRiscvSpawn` routed (WAKE, await-WAIT and
+join-WAIT) — aarch64 inherits through the translator. **x86_64:**
+`kof_plat_thread_create` added to `RuntimePlat` as a tail `jmp pthread_create`
+(Linux+libc) and the 2 call sites (`RuntimeConcurrency`, `RuntimeScheduler`)
+routed to it. **Deliberate, never-silent deferral:** the riscv `clone` (220)
+split-flow **cannot** cross a call-based seam — the child inherits the parent's
+active frame and must swap `sp` *before any* `call`, otherwise `ra` lands on the
+parent's live slot (the race documented in `NativeRiscvSpawn`); the riscv
+thread-create seam is therefore reserved for B-1, where the freestanding flow is
+restructured. Proof: 251/0F (`KofConcurrency2Test` 48, `SpawnE2ETest` 10,
+`SpawnAwaitBlockE2ETest` 5, `ProcessSpawnE2ETest` 4, `NativeE2ETest` 67,
+`NativeRiscv64E2ETest` 54/1 skip, `NativeAarch64E2ETest` 53/1 skip,
+`PlatformSeamSabotageTest` 4/4, `ArtifactSizeTest` 6/6 — riscv/aarch baselines
+unchanged at 136,824 B/45 syms and 202,168 B/45 syms, `kof_plat_sync` is pruned
+from the hello). **Next:** net sockets (`kof_plat_net_*`), then B-1.
+
 ### B-1 — Freestanding link profile · **depends B-0**
 `native --profile freestanding`: no `-lc`/`-dynamic-linker`, own `_start`/`_end`,
 linker script (heap size and stack configurable), no libc. For x86_64 this removes

@@ -188,6 +188,24 @@ binário nativo a exercita). Prova: `KofConcurrency2Test` 48/48, `SpawnE2ETest`
 93→94 syms). **Próximas:** `kof_plat_sync` no seam riscv + `kof_plat_thread`
 (create) nos dois ISAs, depois sockets de rede (`kof_plat_net_*`) e B-1.
 
+**Fatia 3b-ii (LANDADA 22/09, lane `baremetal` 9092):** sincronização e criação
+de thread cruzam a costura. **riscv64:** `kof_plat_sync` (futex 98) entra no seam
+e os 3 sítios `SYS_futex` de `NativeRiscvSpawn` são roteados (WAKE, WAIT do await
+e WAIT do join) — o aarch64 herda pelo tradutor. **x86_64:**
+`kof_plat_thread_create` entra no `RuntimePlat` como `jmp pthread_create` (Linux+
+libc) e os 2 sítios (`RuntimeConcurrency`, `RuntimeScheduler`) são roteados.
+**Adiamento deliberado e nunca-silencioso:** o fluxo partido do `clone` (220)
+riscv **não pode** cruzar uma costura baseada em `call` — o filho herda o frame
+ativo do pai e precisa trocar o `sp` *antes de qualquer* `call`, senão o `ra` cai
+no slot vivo do pai (race documentada em `NativeRiscvSpawn`); a costura de
+criação de thread no riscv fica reservada para B-1, quando o fluxo freestanding é
+reestruturado. Prova: 251/0F (`KofConcurrency2Test` 48, `SpawnE2ETest` 10,
+`SpawnAwaitBlockE2ETest` 5, `ProcessSpawnE2ETest` 4, `NativeE2ETest` 67,
+`NativeRiscv64E2ETest` 54/1 skip, `NativeAarch64E2ETest` 53/1 skip,
+`PlatformSeamSabotageTest` 4/4, `ArtifactSizeTest` 6/6 — baselines riscv/aarch
+inalterados em 136.824 B/45 syms e 202.168 B/45 syms, `kof_plat_sync` é podado do
+hello). **Próxima:** sockets de rede (`kof_plat_net_*`), depois B-1.
+
 ### B-1 — Perfil de link freestanding · **depende de B-0**
 `native --profile freestanding`: sem `-lc`/`-dynamic-linker`, `_start`/`_end`
 próprios, linker script (heap e stack configuráveis), sem libc. No x86_64 remove

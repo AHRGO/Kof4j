@@ -86,6 +86,13 @@ public final class NativeRiscvAsmRt0 {
                 ecall
                 ret
 
+            # kof_plat_sync(uaddr=a0, op=a1, val=a2, timeout=a3) -> futex
+            .globl kof_plat_sync
+            kof_plat_sync:
+                li   a7, 98
+                ecall
+                ret
+
             # kof_alloc/kof_free/kof_memstats MOVIDOS p/ B42 (G-1, 15/09): o
             # header de bloco 32B do G-0 ganhou free-list (port do x86) + lock
             # + contadores. Aqui ficou ≤500 linhas.

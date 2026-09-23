@@ -187,7 +187,7 @@ public final class RuntimeScheduler {
                 xorl %esi, %esi
                 leaq kof_sched_trampoline(%rip), %rdx
                 movq %rbx, %rcx
-                call pthread_create
+                call kof_plat_thread_create
                 movq %rbp, %rax                    # id
                 addq $8, %rsp
                 popq %rbp

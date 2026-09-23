@@ -199,8 +199,7 @@ public final class NativeRiscvSpawn {
                 addi a0, s1, 4              # &done (futex word)
                 li   a1, 129                # FUTEX_WAKE_PRIVATE
                 li   a2, 1
-                li   a7, 98
-                ecall
+                call kof_plat_sync
                 # CONC001/§286: slot volta a vazio (tid=0) sem tocar worker
                 # alheio — a entry vem do FRAME (40(sp)), não do handle
                 # (reciclável entre done=1 e este delete).
@@ -237,8 +236,7 @@ public final class NativeRiscvSpawn {
                 li   a1, 128                # FUTEX_WAIT_PRIVATE
                 li   a2, 0                  # esperado done==0
                 li   a3, 0
-                li   a7, 98
-                ecall
+                call kof_plat_sync
                 lw   t0, 4(s0)
                 beqz t0, .Lkw_wait
                 mv   a0, s0
@@ -284,8 +282,7 @@ public final class NativeRiscvSpawn {
                 li   a1, 128                # FUTEX_WAIT_PRIVATE
                 li   a2, 0
                 li   a3, 0
-                li   a7, 98
-                ecall
+                call kof_plat_sync
                 j    .Lkj_wait
             .Lkj_next:
                 addi s2, s2, 1

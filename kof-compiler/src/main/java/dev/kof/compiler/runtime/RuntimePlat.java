@@ -90,6 +90,11 @@ public final class RuntimePlat {
                 movq $202, %rax          # futex(uaddr, op, val, timeout)
                 syscall
                 ret
+
+            .globl kof_plat_thread_create
+            .type kof_plat_thread_create, @function
+            kof_plat_thread_create:
+                jmp pthread_create       # Linux+libc: o spawn x86 é C call
             """);
     }
 }
