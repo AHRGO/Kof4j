@@ -13,6 +13,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **R1 boundary gate un-redded — `kof.ffi`/`kof.interop` registered in the
+    stdlib ledger (`scripts/stdlib_boundary.txt`)** (23/09, lane docs/frontier):
+    the namespaces landed (X6.1 `6c9aeb847`, FFI `f670d0551`) without their
+    layer line, so `scripts/check_stdlib_boundary.sh` failed in CI's
+    "Structural quality gates" (`VIOLATION: undocumented namespace 'kof.ffi'` /
+    `'kof.interop'`). Both belong to the outermost R1 layer →
+    `interop`/`experimental`. Proof: `--selftest` + gate `rc=0` (38
+    namespaces registered, `interop: 2`).
+
   - **§484 ✅ FIXED — switch-expression with a bare pattern-bound id in the
     first case no longer emits a boxed synthetic fallback against int bodies
     (#601)** (23/09, lane 9093; root cause traced and reported by the issue

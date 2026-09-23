@@ -64,3 +64,5 @@ root excluded - — JvmMediaCoreRuntime.java (filesystem path string, not a name
 super excluded - — keyword receiver (MemberCallTyper.java "super".equals(rid.name())), not a module
 this excluded - — keyword receiver (same pattern), not a module
 rng base-stdlib experimental — KofRng.java
+ffi interop experimental — FfiStructLayout.java (PKG marker "kof.ffi"; KofCall owner emitted by the extern lowering for FFI marshaling, R3/3.7)
+interop interop experimental — CompilerInterop.java (HOST_IMPORT "kof.interop"; interop.schema(R) compile-time intrinsic, X6.1/D-INTEROP-REFLECT)

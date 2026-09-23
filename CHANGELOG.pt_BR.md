@@ -13,6 +13,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **Gate R1 da fronteira destravado — `kof.ffi`/`kof.interop` registrados no
+    ledger da stdlib (`scripts/stdlib_boundary.txt`)** (23/09, lane docs/fronteira):
+    os namespaces pousaram (X6.1 `6c9aeb847`, FFI `f670d0551`) sem a linha de
+    camada, então `scripts/check_stdlib_boundary.sh` falhava no "Structural
+    quality gates" do CI (`VIOLATION: undocumented namespace 'kof.ffi'` /
+    `'kof.interop'`). Ambos pertencem à camada mais externa do R1 →
+    `interop`/`experimental`. Prova: `--selftest` + gate `rc=0` (38 namespaces
+    registrados, `interop: 2`).
+
   - **§484 ✅ CORRIGIDO — switch-expressão com id bound por pattern no
     primeiro case não emite mais fallback sintético boxado contra corpos int
     (#601)** (23/09, lane 9093; causa raiz traçada e reportada pelo autor da
