@@ -33,6 +33,11 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (AUTOINCREMENT/UNIQUE/VARCHAR/tipos), `unique` em campo generated
     suprimido, entidade sem `generated` com o próprio shape de pk, id ruim
     → throw `unknown db connection: <id>` e recuperação; `KofOrmE2ETest` 62/0F.
+    A fatia C adiciona `migrate` (peça `RtB52`, port de `RuntimeOrm1`) —
+    `kof_migrations` criada sob demanda, idempotente por nome (2ª chamada
+    true sem re-rodar o DDL), SQL inválido → false sem registrar (mesmo
+    contrato do host), `applied_at` = epoch-ms via `kof_time_now` e o
+    INSERT bindado; `KofOrmE2ETest` 63/0F.
 
   - **Diagnósticos SEM/PKG agora reportam a posição real da origem (known-bugs §280)**
     (22/09, lane typer, sessão 9093 — a unidade escrita em 21/09 ficou no meio por

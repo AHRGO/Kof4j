@@ -2356,6 +2356,49 @@ class KofOrmE2ETest {
         assertCrossCreateParity(tempDir, "edge", edgeTemplate, edgeOracle);
     }
 
+    /** DB-3/DB-1 cross slice C (22/09): {@code orm.migrate} REAL no riscv64/
+     *  aarch64 (peça RtB52, port de RuntimeOrm1) — {@code kof_migrations},
+     *  idempotência por nome (2ª chamada true sem re-rodar), SQL inválido →
+     *  false (mesmo contrato do host JVM/x86: rc<0) sem registrar, e id ruim →
+     *  throw. Byte-parity com o oráculo x86-64. */
+    @Test
+    void crossNativeF1cMigrateMatchesX86Oracle(@TempDir Path tempDir) throws IOException {
+        assumeTrue(isLinux(), "cross ORM E2E requires Linux + libsqlite3");
+        String template = """
+            entity User {
+                id: Long generated
+                name: String
+                email: String unique
+                age: Int
+            }
+            main() {
+                var db = db.connect("sqlite:%s/kof.db")
+                println(orm.migrate(db, "001-user", "create table if not exists user (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, age INTEGER)"))
+                println(orm.migrate(db, "001-user", "create table if not exists user (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, age INTEGER)"))
+                println(orm.migrate(db, "002-t2", "create table if not exists t2 (id INTEGER)"))
+                println(orm.migrate(db, "003-bad", "not a sql"))
+                println(orm.migrate(db, "004-good", "create table if not exists t4 (x INTEGER)"))
+                println(orm.migrate(db, "003-bad", "not a sql"))
+                println(db.query(db, "select count(*) as n from kof_migrations").get(0))
+                db.execute(db, "insert into user (name, email, age) values ('Mel', 'm@kof.dev', 30)")
+                println(db.query(db, "select count(*) as n from kof_migrations").get(0))
+                println(orm.count<User>(db))
+                try {
+                    println(orm.migrate("db2", "005", "create table t5(x int)"))
+                } catch (String e) {
+                    println(e)
+                }
+                println("after-throw")
+                db.close(db)
+            }
+            """;
+        String golden = "true\ntrue\ntrue\nfalse\ntrue\nfalse\n{\"n\":3}\n{\"n\":3}\n1\n"
+                + "unknown db connection: db2\nafter-throw";
+        String oracle = runX86CreateOracle(tempDir, "migrate", template);
+        assertEquals(golden, oracle, "oráculo x86-64 (migrate: idempotente, inválido→false sem registrar, id ruim→throw)");
+        assertCrossCreateParity(tempDir, "migrate", template, oracle);
+    }
+
     /** x86-64: compila e roda o template numa pasta propria (banco limpo) e
      *  devolve o stdout — o oráculo do contrato D-DB-GAPS. */
     private String runX86CreateOracle(Path tempDir, String label, String template) throws IOException {

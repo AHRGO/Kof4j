@@ -32,6 +32,11 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (AUTOINCREMENT/UNIQUE/VARCHAR/types), `unique` on a generated field
     suppressed, entity without `generated` as its own pk shape, bad id →
     `unknown db connection: <id>` throw and recovery; `KofOrmE2ETest` 62/0F.
+    Slice C adds `migrate` (piece `RtB52`, port of `RuntimeOrm1`) —
+    `kof_migrations` created on demand, idempotent per name (second call
+    true without re-running the DDL), invalid SQL → false without
+    recording (same host contract), `applied_at` = epoch-ms via
+    `kof_time_now` and the INSERT bound; `KofOrmE2ETest` 63/0F.
     `orm.all` gate pin on cross.
   - **SEM/PKG diagnostics now report the real source position (known-bugs §280)**
     (22/09, typer lane, session 9093 — the unit authored 21/09 was left mid-unit by a

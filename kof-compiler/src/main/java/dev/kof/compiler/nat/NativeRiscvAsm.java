@@ -118,6 +118,10 @@ public final class NativeRiscvAsm {
                 // kof_orm_create (parser do schema + DDL + sqlite3_exec, port
                 // RuntimeOrm2) sobre o SQLite de RtB46/RtB47.
                 .append(NativeRiscvAsmRtB51.RISCV_RUNTIME_ASM_B_51)
+                // DB-3/DB-1 cross slice C (22/09): ORM F1c no riscv64 —
+                // kof_orm_migrate (kof_migrations + idempotência + INSERT
+                // bindado, port RuntimeOrm1) sobre o SQLite de RtB46/RtB47.
+                .append(NativeRiscvAsmRtB52.RISCV_RUNTIME_ASM_B_52)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();
