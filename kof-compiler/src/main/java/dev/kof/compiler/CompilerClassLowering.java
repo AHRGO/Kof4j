@@ -79,14 +79,20 @@ public final class CompilerClassLowering {
                 && !methods.stream().anyMatch(m -> "equals".equals(m.name()))) {
             methods.add(CompilerRecordSupport.buildClassIdentityEqualsMethod(driver, internalName));
         }
-        if (driver.target == Target.JVM) {
+        if (driver.target == Target.JVM || driver.target.isNative()) {
             // §356: bridges também para as INTERFACES implementadas (a
             // chamada via interface usa o descritor apagado do pai).
-            // §483: no Native estes bridges NÃO são gerados; a vtable aponta ao
-            // método concreto e o call site boxed (param type-var → Object)
-            // entrega lixo — face Native da §271 (TIER 13.2).
-            methods.addAll(CompilerRecordSupport.generateCovariantReturnBridges(
-                    driver, internalName, superName, ifaces, methods));
+            // §483: no Native estes bridges TAMBÉM são necessários — o call site
+            // boxa o primitivo contra o param apagado da interface. O slot da
+            // vtable é resolvido por ÍNDICE a partir da interface erasure, então
+            // o bridge precisa vir ANTES do método concreto para ocupar esse slot.
+            List<IRMethod> bridges = CompilerRecordSupport.generateCovariantReturnBridges(
+                    driver, internalName, superName, ifaces, methods);
+            if (driver.target.isNative()) {
+                methods.addAll(0, bridges);
+            } else {
+                methods.addAll(bridges);
+            }
         }
         return new IRClass(internalName, superName, ifaces, access, fields, methods, List.of(), null,
                 typeId, CompilerAnnotations.lowerAnnotations(driver, cls.annotations()));

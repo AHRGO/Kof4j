@@ -10410,7 +10410,7 @@ respected). Execution = Cluster A, compiler lane `.22`.
   collection. Cluster: #401 CLOSED with this unit; #400/#390 (false-reject faces)
   already landed 17/09-18/09; runtime dispatch stays §271 (rule 6).
 
-## §271 — generic interface DISPATCH at runtime: call sites emit the erased `invokeinterface Converter.convert(Object)Object` but no bridge is emitted on the impl (and the interface descriptor carries the type-var) — `NoSuchMethodError` on load/first call — 🟡 PARTIAL 23/09 (JVM face FIXED by §356 `c8d55a10`; Native face = §482) — TIER 13.2 (`D-TECHDEBT-23/09`)
+## §271 — generic interface DISPATCH at runtime: call sites emit the erased `invokeinterface Converter.convert(Object)Object` but no bridge is emitted on the impl (and the interface descriptor carries the type-var) — `NoSuchMethodError` on load/first call — ✅ FIXED 23/09 (JVM face by §356 `c8d55a10`; Native face by §483 `CompilerClassLowering`/`NativeClassMeta`) — TIER 13.2 (`D-TECHDEBT-23/09`)
 
 - **Found (18/09, #400 unit):** the SEM021 **false positive** (assigning a
   `class IntToString implements Converter<Int, String>` instance to a
@@ -10428,8 +10428,9 @@ respected). Execution = Cluster A, compiler lane `.22`.
   `convert(Object)Object` (and matching interface descriptor) which no
   emitter produces. Fixing it changes the generics ABI modeling in the 4
   backends → **rule 6**: it becomes a plan, never a drive-by edit.
-- **Status of the issues on this river:** #400 stays OPEN until the dispatch
-  lands (face 1 — the false rejection — is FIXED with proof); #390 (SEM043
+- **Status of the issues on this river:** the dispatch landed (JVM §356, Native
+  §483), so #400's runtime blocker is CLEARED (face 1 — the false rejection — is
+  FIXED with proof); #390 (SEM043
   override with substituted T) and #401 (cross-instantiation args check) are
   neighbours with their own faces.
 - **Repro (minimal, measured 18/09):** `interface Converter<A,B> { convert(input: A): B }` +
@@ -14663,15 +14664,15 @@ Expected `6`; actual: `VerifyError: Bad type on operand stack` at load.
 - **Owner:** session 9092 (23/09), issue #596.
 <!-- pt-switch --> **PT:** [§481 (pt_BR)](known-bugs.pt_BR.md#481--widening-de-listof-de-records-que-compartilham-uma-interface-resolvia-para-o-record-nu-ancestral-estrutural-do-jvm-em-vez-da-interface--noclassdeffounderror-record---corrigido-2309-sessao-9092-issue-596)
 
-## §483 — generic interface dispatch on Native passes a boxed primitive to the concrete method → garbage return (the JVM erasure bridge of §356 is gated `target == JVM`) — 🟡 OPEN 23/09 (TIER 13.2, face of §271)
+## §483 — generic interface dispatch on Native passes a boxed primitive to the concrete method → garbage return (the JVM erasure bridge of §356 is gated `target == JVM`) — ✅ FIXED 23/09 (session 9092, TIER 13.2, face of §271)
 
 **Symptom (measured 23/09, VERBATIM §271 repro):** `interface Converter<A,B> { convert(input: A): B }` + `class IntToString implements Converter<Int,String> { convert(input: Int): String { return input.toString() } }` + `val cv: Converter<Int,String> = c; println(cv.convert(99))` prints `42` / `99` on JVM, Script and JS, but on Native x86_64 the interface call prints `-820342752` (uninitialised/garbage) — a rule-5 parity divergence.
 
 **Root cause (measured from the emitted `Main.s`):** `CompilerClassLowering:83` gates the §356 erased-bridge generator on `driver.target == Target.JVM`, so the implementing class carries ONLY the concrete `convert(int)String`; the Native vtable slot resolved for the interface method (`NativeClassMeta.collectVirtualMethods`) therefore points straight at the concrete method. The call site, however, still follows the ERASED interface ABI (the declared param is the type-variable `A` → reference `Object`), so it emits `kof_box_int(99)` and passes the boxed pointer in `%rsi`; `IntToString_convert` reads that pointer as a raw `int` and feeds it to `kof_int_to_string` → garbage. JVM is correct only because §356 synthesises the `convert(Object)Object` bridge that unboxes and delegates.
 
-**Fix (root — not yet implemented):** the erased bridge must exist on Native too, and the vtable slot for the interface method must resolve to it (or the call site must stop boxing for the substituted type argument). Options measured: (a) widen §356's gate to `Target.NATIVE` and make `collectVirtualMethods` prefer the erased-signature bridge for the erased slot; (b) substitute the receiver's type arguments at the call site so the concrete ABI is used. Both are generics-ABI modelling (rule 6) and were DECIDED by the maintainer under `D-TECHDEBT-23/09` (TIER 13.2) — this face was split out of §271 for its own proof.
+**Fix (root, implemented):** (a) `CompilerClassLowering` now runs the §356 erased-bridge generator for `driver.target.isNative()` too, and PREPENDS the bridge (Native addAll at index 0) so the interface's erased vtable slot resolves to the bridge before the concrete method. (b) The child vtable had to mirror the parent layout: `NativeClassMeta.collectVirtualMethods` is refactored so the three passes (superclass chain, inherited interfaces, own methods) share one `addSlot` using the tagged `fnSymbol` + `sigMangles` criterion — the old superclass pass used the untagged `Owner_name`, pointing at an undefined symbol and skipping the concrete slot when a bridge existed. Interface methods still only take a slot when the name is absent (they never overwrite a class/ancestor slot). Both are generics-ABI modelling (rule 6), DECIDED by the maintainer under `D-TECHDEBT-23/09` (TIER 13.2).
 
-**Proof / evidence (same commit as the JVM face):** `GenericInterfaceAssignabilityTest` (8/8) — `genericInterfaceDispatchRunsOnJvm` (`42\n99`) and `genericInterfaceDispatchScriptAndJsParity` (Script + JS) are GREEN; the Native face is catalogued here, NOT asserted as expected (freeze rule 4). Q0: the Native run measured `42\n-820342752` on the tip before any fix.
+**Proof / evidence (RED→GREEN, same commit):** `GenericInterfaceAssignabilityTest` now 10/10 — `genericInterfaceDispatchRunsOnNative` (`42\n99`), `inheritedGenericInterfaceDispatchRunsOnNative` (`42`), plus the JVM/Script/JS faces. Q0 measured with the code unfixed: Native printed `42\n-820342752` (direct) and the inherited case failed at link with `undefined reference to 'Base_run'`; both GREEN after. Full suite on the tip: 3197/0F/0E (one qemu `RingPrivilegeE2ETest` flake on the first run, 5/5 on re-run).
 
 - **Owner:** session 9092 (23/09), TIER 13.2 / §271 (JVM face closed by §356, `c8d55a10`).
-<!-- pt-switch --> **PT:** [§483 (pt_BR)](known-bugs.pt_BR.md#483--dispatch-por-interface-generica-no-native-passa-um-primitivo-boxed-ao-metodo-concreto--retorno-lixo-o-bridge-de-erasure-do-jvm-da-356-esta-limitado-a-target--jvm---aberta-2309-tier-132-face-da-271)
+<!-- pt-switch --> **PT:** [§483 (pt_BR)](known-bugs.pt_BR.md#483--dispatch-por-interface-generica-no-native-passa-um-primitivo-boxed-ao-metodo-concreto--retorno-lixo-o-bridge-de-erasure-do-jvm-da-356-esta-limitado-a-target--jvm---corrigido-2309-sessao-9092-tier-132-face-da-271)

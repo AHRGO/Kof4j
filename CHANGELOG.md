@@ -13,23 +13,25 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
-  - **§483 (catalogued) — generic interface dispatch on Native passes a boxed
-    primitive to the concrete method → garbage return (session 9092, TIER 13.2 /
-    §271)** (23/09): the §271 repro (`interface Converter<A,B>` +
+  - **§483 — generic interface dispatch on Native passed a boxed primitive to
+    the concrete method → garbage return (session 9092, TIER 13.2 / §271)**
+    (23/09): the §271 repro (`interface Converter<A,B>` +
     `class IntToString implements Converter<Int,String>` + a call through the
-    `Converter<Int,String>` variable) prints `42`/`99` on JVM, Script and JS — the
-    JVM `NoSuchMethodError` face was ALREADY fixed by the §356 erased-bridge
-    generator (`c8d55a10`) — but on Native x86_64 the interface call prints
-    `-820342752`. Root cause: §356's bridge generator is gated
-    `driver.target == Target.JVM` (`CompilerClassLowering:83`), so the Native
-    vtable slot resolves to the concrete `convert(int)String` while the call site
-    still boxes against the ERASED interface param (`kof_box_int(99)`) → the
-    concrete method reads the pointer as a raw `int`. Catalogued for its own fix
-    (options: render the erased bridge on Native and map the erased vtable slot to
-    it, or substitute the receiver's type arguments at the call site — both are
-    generics-ABI, decided in `D-TECHDEBT-23/09`). Proof of the green faces:
-    `GenericInterfaceAssignabilityTest` 8/8 (JVM/Script/JS); the Native face is
-    catalogued, never asserted as expected (freeze rule 4).
+    `Converter<Int,String>` variable) printed `42`/`99` on JVM, Script and JS but
+    `42`/`-820342752` on Native x86_64; the inherited variant
+    (`class Sub extends Base`) failed at link with `undefined reference to
+    'Base_run'`. Root cause: §356's erased-bridge generator was gated
+    `driver.target == Target.JVM`, so the Native vtable slot resolved to the
+    concrete `convert(int)String` while the call site boxes against the ERASED
+    interface param. Fix: (a) `CompilerClassLowering` now runs the §356 generator
+    for `isNative()` too and prepends the bridge so the erased slot resolves to
+    it; (b) `NativeClassMeta.collectVirtualMethods` is refactored so the
+    superclass/interfaces/own-methods passes share one `addSlot` using the tagged
+    `fnSymbol` + `sigMangles` criterion (the old superclass pass used the untagged
+    `Owner_name` and skipped the concrete slot when a bridge existed); interface
+    methods still never overwrite a class slot. Proof: `GenericInterfaceAssignabilityTest`
+    **10/10** (JVM/Script/JS + Native direct and inherited; RED measured with the
+    code unfixed). Full suite 3197/0F/0E.
 
   - **§481 — `listOf()` widening of records sharing an interface picked the
     unqualified `Record` instead of the interface (session 9092, issue #596)**

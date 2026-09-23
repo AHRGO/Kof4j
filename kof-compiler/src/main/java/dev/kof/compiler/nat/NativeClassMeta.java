@@ -21,19 +21,10 @@ final class NativeClassMeta {
             IRClass superClazz = nb.allClassesMap.get(current);
             if (superClazz == null) break;
             for (IRMethod m : superClazz.methods()) {
-                if (!"<init>".equals(m.name()) && !"<clinit>".equals(m.name())
-                        && !m.name().startsWith("kof_")) {
-                    if (!methodNames.contains(m.name())) {
-                        methodNames.add(m.name());
-                        methods.add(nb.sanitizeName(superClazz.name()) + "_" + nb.sanitizeName(m.name()));
-                    }
-                }
+                addSlot(nb, methods, methodNames, superClazz.name(), m);
             }
             for (String iface : superClazz.interfaces()) {
-                if (!visited.contains(iface)) {
-                    visited.add(iface);
-                    queue.add(iface);
-                }
+                if (visited.add(iface)) queue.add(iface);
             }
             current = superClazz.superName();
         }
@@ -42,46 +33,62 @@ final class NativeClassMeta {
             IRClass ifaceClazz = nb.allClassesMap.get(ifaceName);
             if (ifaceClazz == null) continue;
             for (IRMethod m : ifaceClazz.methods()) {
-                if (!"<init>".equals(m.name()) && !"<clinit>".equals(m.name())
-                        && !m.name().startsWith("kof_")) {
-                    if (!methodNames.contains(m.name())) {
-                        methodNames.add(m.name());
-                        methods.add(nb.sanitizeName(ifaceClazz.name()) + "_" + nb.sanitizeName(m.name()));
-                    }
+                if ("<init>".equals(m.name()) || "<clinit>".equals(m.name())
+                        || m.name().startsWith("kof_")) {
+                    continue;
+                }
+                // Interfaces são CONTRATO herdado: só ganham slot se o nome ainda
+                // não existe (nunca sobrescrevem o slot da classe/superclasse — o
+                // impl concreto já ocupa aquele índice). §483.
+                if (!methodNames.contains(m.name())) {
+                    methodNames.add(m.name());
+                    methods.add(NativeSymbolMangling.fnSymbol(ifaceClazz.name(), m.name(),
+                            m.parameterTypes(), nb.allClassesMap));
                 }
             }
             for (String iface : ifaceClazz.interfaces()) {
-                if (!visited.contains(iface)) {
-                    visited.add(iface);
-                    queue.add(iface);
-                }
+                if (visited.add(iface)) queue.add(iface);
             }
         }
         for (IRMethod m : clazz.methods()) {
-            if (!"<init>".equals(m.name()) && !"<clinit>".equals(m.name())
-                    && !m.name().startsWith("kof_")) {
-                // SG-011B: fnSymbol == sanitize+"_"+name p/ classes reais (vtable
-                // idêntica); só o recipiente Main leva sufixo de assinatura — o
-                // MESMO da .globl, então cada slot referencia um símbolo definido.
-                // §131 (10a): método sobrecarregado (2+ defs do nome) ganha slot
-                // PRÓPRIO por assinatura (fnSymbol tageia) — antes o 2º def
-                // sobrescrevia o slot (methods.set) e os 2 .globl colidiam.
-                String sym = NativeSymbolMangling.fnSymbol(clazz.name(), m.name(), m.parameterTypes(), nb.allClassesMap);
-                if (NativeSymbolMangling.sigMangles(clazz.name(), m.name(), nb.allClassesMap)) {
-                    methodNames.add(m.name());
-                    methods.add(sym);
-                } else {
-                    int idx = methodNames.indexOf(m.name());
-                    if (idx >= 0) {
-                        methods.set(idx, sym);
-                    } else {
-                        methodNames.add(m.name());
-                        methods.add(sym);
-                    }
-                }
-            }
+            addSlot(nb, methods, methodNames, clazz.name(), m);
         }
         return methods;
+    }
+
+    /**
+     * §483: acrescenta um slot de vtable usando o MESMO símbolo (fnSymbol, que
+     * tageia sobrecargas E bridges da §356) e o mesmo critério de slot das três
+     * passagens (superclasse, interfaces herdadas, métodos próprios). Antes o
+     * loop da superclasse usava `Owner_nome` sem tag: um método herdado com
+     * bridge apontava para um símbolo indefinido e o layout de slots do filho
+     * não espelhava o do pai (o método concreto ficava sem slot → dispatch caía
+     * no slot errado).
+     */
+    private static void addSlot(NativeBackend nb, List<String> methods, List<String> methodNames,
+                                String ownerName, IRMethod m) {
+        if ("<init>".equals(m.name()) || "<clinit>".equals(m.name()) || m.name().startsWith("kof_")) {
+            return;
+        }
+        // SG-011B: fnSymbol == sanitize+"_"+name p/ classes reais (vtable
+        // idêntica); só o recipiente Main leva sufixo de assinatura — o MESMO da
+        // .globl, então cada slot referencia um símbolo definido.
+        // §131 (10a): método sobrecarregado (2+ defs do nome) ganha slot PRÓPRIO
+        // por assinatura (fnSymbol tageia) — antes o 2º def sobrescrevia o slot
+        // (methods.set) e os 2 .globl colidiam.
+        String sym = NativeSymbolMangling.fnSymbol(ownerName, m.name(), m.parameterTypes(), nb.allClassesMap);
+        if (NativeSymbolMangling.sigMangles(ownerName, m.name(), nb.allClassesMap)) {
+            methodNames.add(m.name());
+            methods.add(sym);
+        } else {
+            int idx = methodNames.indexOf(m.name());
+            if (idx >= 0) {
+                methods.set(idx, sym);
+            } else {
+                methodNames.add(m.name());
+                methods.add(sym);
+            }
+        }
     }
 
     static int findVirtualMethodIndex(NativeBackend nb, String ownerTypeName, String methodName, int argCount) {

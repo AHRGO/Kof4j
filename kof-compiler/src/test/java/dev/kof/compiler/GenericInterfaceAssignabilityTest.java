@@ -180,9 +180,8 @@ class GenericInterfaceAssignabilityTest {
 
     @Test
     void genericInterfaceDispatchScriptAndJsParity(@TempDir Path tempDir) throws Exception {
-        // Native face is §483 (call site boxes the primitive arg against the
-        // erased interface param while the native vtable points at the concrete
-        // method → garbage); Script/JS are dynamic and dispatch correctly.
+        // Script/JS are dynamic and dispatch correctly; the Native face (§483)
+        // is proven by genericInterfaceDispatchRunsOnNative below.
         Path src = tempDir.resolve("P.kf");
         Files.writeString(src, VERBATIM);
         KofInterpreter.Result ir = driver.interpret(java.util.List.of(src), src.getParent(), new String[0]);
@@ -216,5 +215,50 @@ class GenericInterfaceAssignabilityTest {
                 }
                 """);
         assertEquals("42", out, "§271: bridge through the superclass chain");
+    }
+
+    private String runNative(Path tempDir, String source) throws IOException {
+        Path file = tempDir.resolve("N-" + System.nanoTime() + ".kf");
+        Files.writeString(file, source);
+        Path outDir = tempDir.resolve("outn-" + System.nanoTime());
+        CompilationResult result = driver.compile(file, outDir, Target.NATIVE);
+        assertTrue(result.success(), "native compile failed: " + result.diagnostics().getDiagnostics());
+        Path bin = outDir.resolve("Default/Main");
+        assertTrue(Files.exists(bin), "ELF produced");
+        try {
+            Process p = new ProcessBuilder(bin.toString()).redirectErrorStream(true).start();
+            String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n").trim();
+            int ec = p.waitFor();
+            assertEquals(0, ec, "native exit " + ec + ", output: " + output);
+            return output;
+        } catch (InterruptedException e) {
+            throw new IOException("interrupted", e);
+        }
+    }
+
+    @Test
+    void genericInterfaceDispatchRunsOnNative(@TempDir Path tempDir) throws Exception {
+        assertEquals("42\n99", runNative(tempDir, VERBATIM),
+                "§483: the erased bridge must occupy the interface vtable slot on Native");
+    }
+
+    @Test
+    void inheritedGenericInterfaceDispatchRunsOnNative(@TempDir Path tempDir) throws Exception {
+        assertEquals("42", runNative(tempDir, """
+                interface Runner<T> {
+                    run(item: T): Int
+                }
+                class Base implements Runner<Int> {
+                    run(item: Int): Int { return item + 1 }
+                }
+                class Sub extends Base {
+                }
+                main() {
+                    var s = Sub()
+                    var rv: Runner<Int> = s
+                    println(rv.run(41))
+                }
+                """), "§483: erased bridge through the superclass chain on Native");
     }
 }

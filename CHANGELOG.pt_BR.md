@@ -13,23 +13,25 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
-  - **§483 (catalogada) — dispatch por interface genérica no Native passa um
-    primitivo boxed ao método concreto → retorno lixo (sessão 9092, TIER 13.2 /
-    §271)** (23/09): o repro da §271 (`interface Converter<A,B>` +
+  - **§483 — dispatch por interface genérica no Native passava um primitivo
+    boxed ao método concreto → retorno lixo (sessão 9092, TIER 13.2 / §271)**
+    (23/09): o repro da §271 (`interface Converter<A,B>` +
     `class IntToString implements Converter<Int,String>` + chamada pela variável
-    `Converter<Int,String>`) imprime `42`/`99` no JVM, Script e JS — a face JVM do
-    `NoSuchMethodError` já estava CORRIGIDA pelo gerador de bridges apagados da
-    §356 (`c8d55a10`) — mas no Native x86_64 a chamada via interface imprime
-    `-820342752`. Causa raiz: o gerador de bridges da §356 está limitado a
-    `driver.target == Target.JVM` (`CompilerClassLowering:83`), então o slot de
-    vtable Native resolve para o `convert(int)String` concreto enquanto o call
-    site ainda boxa contra o param APAGADO da interface (`kof_box_int(99)`) → o
-    método concreto lê o ponteiro como `int` cru. Catalogada para fix próprio
-    (opções: renderizar o bridge apagado no Native e mapear o slot de vtable
-    apagado para ele, ou substituir os type-args do receiver no call site — ambas
-    são ABI de generics, decididas no `D-TECHDEBT-23/09`). Prova das faces verdes:
-    `GenericInterfaceAssignabilityTest` 8/8 (JVM/Script/JS); a face Native é
-    catalogada, nunca asserida como esperada (regra 4 do freeze).
+    `Converter<Int,String>`) imprimia `42`/`99` no JVM, Script e JS mas
+    `42`/`-820342752` no Native x86_64; a variante herdada
+    (`class Sub extends Base`) falhava no link com `undefined reference to
+    'Base_run'`. Causa raiz: o gerador de bridges apagados da §356 estava limitado
+    a `driver.target == Target.JVM`, então o slot de vtable Native resolvia para o
+    `convert(int)String` concreto enquanto o call site boxa contra o param APAGADO
+    da interface. Fix: (a) `CompilerClassLowering` agora roda o gerador da §356
+    também para `isNative()` e pré-pende o bridge para o slot apagado resolver
+    para ele; (b) `NativeClassMeta.collectVirtualMethods` foi refatorado para as
+    passagens superclasse/interfaces/métodos próprios compartilharem um `addSlot`
+    com o `fnSymbol` tagueado + critério `sigMangles` (a passagem antiga da
+    superclasse usava `Owner_nome` sem tag e pulava o slot concreto quando havia
+    bridge); métodos de interface nunca sobrescrevem slot de classe. Prova:
+    `GenericInterfaceAssignabilityTest` **10/10** (JVM/Script/JS + Native direto e
+    herdado; RED medido com o código sem o fix). Suíte completa 3197/0F/0E.
 
   - **§481 — widening de `listOf()` de records que compartilham uma interface
     escolhia o `Record` nu em vez da interface (sessão 9092, issue #596)** (23/09):
