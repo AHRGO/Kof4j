@@ -48,6 +48,19 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     referência morta do `D-APP` `docs/architecture/application-model.md` (nunca no
     histórico do git) agora aponta para `docs/backend-parity.md` (`APP001–003`).
 
+  - **O triage do `kof-issues-agent` deixa de rotular por substring (#600)**
+    (23/09, lane docs/fronteira): o job `triage` casava `body.includes('rce')`,
+    então 33/37 rótulos `security` vinham de "source"/"enforce"/"resource";
+    `js` casava "json" e `doc` casava "docker"/"docs/...". O match agora é por
+    palavra inteira. A rota de segurança apontava para `aminadojava` (404 — não
+    atribuível), então o GitHub dropava e 0/39 issues de segurança tinham
+    responsável; agora aponta para `melmonfre` e chama `core.setFailed` se o
+    assignee for dropado (R6, nunca silencioso). Prova:
+    `scripts/tests/kof-issues-agent-script-test.sh` **12/12** verde, **VERMELHO
+    5** contra o workflow pré-fix (`KOF_ISSUES_AGENT_YML`). Escopo: só
+    `beta-0.5.0` — o `main` (que roda os eventos de issue) fica intocado, para
+    um pouso aprovado pela mantenedora.
+
   - **§484 ✅ CORRIGIDO — switch-expressão com id bound por pattern no
     primeiro case não emite mais fallback sintético boxado contra corpos int
     (#601)** (23/09, lane 9093; causa raiz traçada e reportada pelo autor da

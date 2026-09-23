@@ -27,33 +27,39 @@ jobs:
           script: |
             const issue = context.payload.issue;
             const body = (issue.body || '').toLowerCase();
+            // #600: match by WHOLE WORD, never by substring — a bare
+            // `body.includes('rce')` labeled "source"/"enforce"/"resource" as
+            // security (33/37 false labels), `js` matched "json", `doc`
+            // matched "docker"/"docs/...", `native` matched "alternative".
+            const word = (w) => new RegExp('(^|[^a-z0-9_])' + w + '([^a-z0-9_]|$)');
+            const has = (...ws) => ws.some((w) => word(w).test(body));
             const labels = [];
 
-            // Security-related
-            if (body.includes('security') || body.includes('vulnerability') || body.includes('exploit') || body.includes('rce') || body.includes('xss') || body.includes('sql injection')) {
+            // Security-related — never inferred from arbitrary prose.
+            if (has('security', 'vulnerability', 'exploit', 'rce', 'xss', 'sql injection')) {
               labels.push('security');
             }
 
             // Bug vs Feature
-            if (body.includes('bug') || body.includes('crash') || body.includes('error') || body.includes('exception') || body.includes('fail') || body.includes('broken')) {
+            if (has('bug', 'crash', 'error', 'exception', 'fail', 'broken')) {
               labels.push('bug');
-            } else if (body.includes('feature') || body.includes('request') || body.includes('enhancement') || body.includes('improve')) {
+            } else if (has('feature', 'request', 'enhancement', 'improve')) {
               labels.push('enhancement');
             }
 
             // Documentation
-            if (body.includes('doc') || body.includes('documentation') || body.includes('readme') || body.includes('typo')) {
+            if (has('doc', 'documentation', 'readme', 'typo')) {
               labels.push('documentation');
             }
 
             // Platform/Target
-            if (body.includes('native') || body.includes('riscv') || body.includes('aarch64') || body.includes('arm64')) {
+            if (has('native', 'riscv', 'aarch64', 'arm64')) {
               labels.push('native');
             }
-            if (body.includes('js') || body.includes('javascript') || body.includes('browser') || body.includes('node')) {
+            if (has('js', 'javascript', 'browser', 'node')) {
               labels.push('js');
             }
-            if (body.includes('jvm') || body.includes('java')) {
+            if (has('jvm', 'java')) {
               labels.push('jvm');
             }
 
@@ -72,13 +78,23 @@ jobs:
           script: |
             const issue = context.payload.issue;
             const body = (issue.body || '').toLowerCase();
-            if (body.includes('security') || body.includes('vulnerability') || body.includes('exploit') || body.includes('rce')) {
-              await github.rest.issues.addAssignees({
+            // #600: `aminadojava` is NOT assignable in this repo (404) — GitHub
+            // dropped it silently and 0 of 39 security issues had an assignee.
+            // Route to an assignable account and fail loudly if it is dropped.
+            const word = (w) => new RegExp('(^|[^a-z0-9_])' + w + '([^a-z0-9_]|$)');
+            const has = (...ws) => ws.some((w) => word(w).test(body));
+            if (has('security', 'vulnerability', 'exploit', 'rce')) {
+              const assignee = 'melmonfre';
+              const res = await github.rest.issues.addAssignees({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue.number,
-                assignees: ['aminadojava']
+                assignees: [assignee]
               });
+              const assigned = ((res && res.data && res.data.assignees) || []).map((a) => a.login);
+              if (!assigned.includes(assignee)) {
+                core.setFailed("security routing: '" + assignee + "' is not assignable in this repo — the report was NOT routed (R6)");
+              }
             }
 
   respond:

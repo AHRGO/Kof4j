@@ -48,6 +48,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     and `D-APP`'s dead reference `docs/architecture/application-model.md`
     (never in git history) now points at `docs/backend-parity.md` (`APP001–003`).
 
+  - **`kof-issues-agent` triage no longer labels by substring (#600)** (23/09,
+    lane docs/frontier): the `triage` job matched `body.includes('rce')`, so
+    33/37 `security` labels came from "source"/"enforce"/"resource"; `js`
+    matched "json" and `doc` matched "docker"/"docs/...". Matching is now
+    whole-word. Security routing targeted `aminadojava` (404 — not assignable),
+    so GitHub dropped it and 0/39 security issues had an assignee; it now
+    targets `melmonfre` and calls `core.setFailed` when the assignee is dropped
+    (R6, never silent). Proof: `scripts/tests/kof-issues-agent-script-test.sh`
+    **12/12** green, **RED 5** against the pre-fix workflow
+    (`KOF_ISSUES_AGENT_YML`). Scope: `beta-0.5.0` only — `main` (which runs
+    issue events) is intentionally left for a maintainer-approved landing.
+
   - **§484 ✅ FIXED — switch-expression with a bare pattern-bound id in the
     first case no longer emits a boxed synthetic fallback against int bodies
     (#601)** (23/09, lane 9093; root cause traced and reported by the issue

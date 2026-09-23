@@ -63,6 +63,65 @@ async function scenario(label, payload, check) {
     (err, calls) => err ? String(err.message) : (calls.length ? 'agradeceu de novo' : null));
   await scenario('sem issue.comments no payload conta como 1o comentario',
     { action: 'created', comment: { user: human('alice') }, issue: { number: 9, user: human('alice') } }, oneOn(9));
+  // #600 — job `triage`: rotulagem por PALAVRA INTEIRA (sem falsos por substring)
+  const labelScript = extractScript('Auto-label by content');
+  const assignScript = extractScript('Assign to maintainer if security');
+
+  async function labelScenario(label, body, check) {
+    const calls = [];
+    const github = { rest: { issues: { addLabels: async (a) => { calls.push(a); } } } };
+    const context = { repo: { owner: 'KofLang', repo: 'Kof4j' }, payload: { issue: { number: 3, body } } };
+    let err = null;
+    try { await new AsyncFunction('github', 'context', labelScript)(github, context); } catch (e) { err = e; }
+    const labels = calls.length ? calls[0].labels : [];
+    const problem = check(err, labels);
+    console.log(problem ? '!!! FAIL — ' + label + ': ' + problem : '  ok  — ' + label);
+    if (problem) failed++;
+  }
+
+  await labelScenario('"source"/"enforce"/"resource" NAO produzem security',
+    'the source of this; we enforce it; the resource is reused',
+    (err, labels) => err ? String(err.message)
+      : (labels.includes('security') ? 'security falso: ' + JSON.stringify(labels) : null));
+  await labelScenario('um path JSON NAO produz js',
+    'see src/main/Foo.json and the config',
+    (err, labels) => err ? String(err.message)
+      : (labels.includes('js') ? 'js falso: ' + JSON.stringify(labels) : null));
+  await labelScenario('"docker"/"docs/..." NAO produzem documentation por substring',
+    'the docker image and the docs/ folder',
+    (err, labels) => err ? String(err.message)
+      : (labels.includes('documentation') ? 'documentation falso: ' + JSON.stringify(labels) : null));
+  await labelScenario('relato REAL de seguranca AINDA produz security',
+    'security vulnerability: RCE allows arbitrary code execution',
+    (err, labels) => err ? String(err.message)
+      : (labels.includes('security') ? null : 'nao marcou security: ' + JSON.stringify(labels)));
+
+  async function assignScenario(label, body, response, check) {
+    const calls = [];
+    const failures = [];
+    const github = { rest: { issues: { addAssignees: async (a) => { calls.push(a); return response; } } } };
+    const core = { setFailed: (m) => { failures.push(m); } };
+    const context = { repo: { owner: 'KofLang', repo: 'Kof4j' }, payload: { issue: { number: 3, body } } };
+    let err = null;
+    try { await new AsyncFunction('github', 'context', 'core', assignScript)(github, context, core); } catch (e) { err = e; }
+    const problem = check(err, calls, failures);
+    console.log(problem ? '!!! FAIL — ' + label + ': ' + problem : '  ok  — ' + label);
+    if (problem) failed++;
+  }
+
+  await assignScenario('seguranca atribui uma conta ATRIBUIVEL (melmonfre)',
+    'security vulnerability', { data: { assignees: [{ login: 'melmonfre' }] } },
+    (err, calls, fails) => err ? String(err.message)
+      : ((calls.length === 1 && calls[0].assignees[0] === 'melmonfre' && !fails.length) ? null
+        : 'assignees=' + JSON.stringify(calls.map((c) => c.assignees)) + ' fails=' + fails.length));
+  await assignScenario('assignee dropado FALHA ALTO (R6, nunca silencioso)',
+    'security vulnerability', { data: { assignees: [] } },
+    (err, calls, fails) => err ? String(err.message)
+      : (fails.length === 1 ? null : 'nao falhou alto (silencio proibido)'));
+  await assignScenario('sem seguranca nao atribui',
+    'a plain bug report', { data: { assignees: [] } },
+    (err, calls) => err ? String(err.message) : (calls.length ? 'atribuiu indevidamente' : null));
+
   console.log(failed ? '== kof-issues-agent-script: VERMELHO (' + failed + ')' : '== kof-issues-agent-script: VERDE');
   process.exit(failed ? 1 : 0);
 })();
