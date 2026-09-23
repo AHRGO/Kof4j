@@ -31,6 +31,23 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `interop`/`experimental`. Prova: `--selftest` + gate `rc=0` (38 namespaces
     registrados, `interop: 2`).
 
+  - **`[server] port` do `kof.toml` é honrado — o `kof serve` repassa a porta do
+    manifesto (APP002, #598)** (23/09, lane docs/fronteira; Opção 1 ratificada no
+    chat): o `kof new --type backend` escrevia `[server] port` mas nada lia o
+    valor — mudá-lo era ignorado em silêncio (R6). O `CmdServe` agora lê o
+    `kof.toml` (a CLI lê o manifesto, não o runtime) e, quando nenhum
+    `KOF_SERVER_PORT` está setado no ambiente, repassa o valor ao app como
+    `KOF_SERVER_PORT` (`config.int("server.port", …)` o lê por convenção); uma
+    env var explícita ainda prevalece. Prova: `ServeManifestPortE2ETest` 2/2
+    (manifesto honrado + env sobre o manifesto), `FullStackE2ETest` 5/5 verde.
+
+  - **Drift do `DECISIONS.md` corrigido — estado do `D-ENUM207` e referência do
+    `D-APP` (#599)** (23/09, lane docs/fronteira; ratificado no chat): `D-ENUM207`
+    `IN_PROGRESS` → `IMPLEMENTED` (enums são classes reais, identidade `==`,
+    `enum == String` é `SEM062`; prova `EnumIdentityE2ETest` 6/6, §211 CLOSED) e a
+    referência morta do `D-APP` `docs/architecture/application-model.md` (nunca no
+    histórico do git) agora aponta para `docs/backend-parity.md` (`APP001–003`).
+
   - **§484 ✅ CORRIGIDO — switch-expressão com id bound por pattern no
     primeiro case não emite mais fallback sintético boxado contra corpos int
     (#601)** (23/09, lane 9093; causa raiz traçada e reportada pelo autor da

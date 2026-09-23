@@ -553,7 +553,7 @@ O modelo não muda entre essas topologias.
 * `KofWebE2ETest`
 
 **Referência:** `docs/backend-parity.md` (modelo de app `APP001–003`)
-**Fila:** `CmdNew` ✅ (`new` em `Main.java:37`); integração de manifesto/dependências ✅ (`kofdeps` + lock transitivo 1.5.2 + registry pull 1.5.3-S2, 19/09); gaps de target → rastreados em `docs/backend-parity.md` (ledger, não este registro).
+**Fila:** `CmdNew` ✅ (`new` em `Main.java:37`); integração de manifesto/dependências ✅ (`kofdeps` + lock transitivo 1.5.2 + registry pull 1.5.3-S2, 19/09); gaps de target → rastreados em `docs/backend-parity.md` (ledger, não este registro). `APP002` ✅ FEITO 23/09 (#598, ratificado no chat): o `kof serve` repassa `[server] port` do `kof.toml` como `KOF_SERVER_PORT` quando a env var não está setada (env do usuário prevalece) — prova `ServeManifestPortE2ETest` 2/2.
 
 ---
 

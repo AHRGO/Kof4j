@@ -576,7 +576,7 @@ The model does not change between these topologies.
 
 **Reference:** `docs/backend-parity.md` (App model `APP001–003`)
 
-**Queue:** `CmdNew` ✅ (`new` in `Main.java:37`); manifest/dependency integration ✅ (`kofdeps` + transitive lock 1.5.2 + registry pull 1.5.3-S2, 19/09); target gaps → tracked in `docs/backend-parity.md` (ledger, not this record).
+**Queue:** `CmdNew` ✅ (`new` in `Main.java:37`); manifest/dependency integration ✅ (`kofdeps` + transitive lock 1.5.2 + registry pull 1.5.3-S2, 19/09); target gaps → tracked in `docs/backend-parity.md` (ledger, not this record). `APP002` ✅ FIXED 23/09 (#598, ratified in chat): `kof serve` forwards `[server] port` from `kof.toml` as `KOF_SERVER_PORT` when the env var is unset (user env wins) — proof `ServeManifestPortE2ETest` 2/2.
 
 ---
 

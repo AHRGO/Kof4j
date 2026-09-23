@@ -31,6 +31,23 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `interop`/`experimental`. Proof: `--selftest` + gate `rc=0` (38
     namespaces registered, `interop: 2`).
 
+  - **`kof.toml [server] port` is honored — `kof serve` forwards the manifest
+    port (APP002, #598)** (23/09, lane docs/frontier; Option 1 ratified in the
+    chat): `kof new --type backend` wrote `[server] port` but nothing read it —
+    changing it was silently ignored (R6). `CmdServe` now reads `kof.toml` (the
+    CLI reads the manifest, not the runtime) and, when no `KOF_SERVER_PORT` is
+    set in the environment, forwards the value to the app as `KOF_SERVER_PORT`
+    (`config.int("server.port", …)` reads it by convention); an explicit env
+    var still wins. Proof: `ServeManifestPortE2ETest` 2/2 (manifest honored +
+    env-over-manifest), `FullStackE2ETest` 5/5 green.
+
+  - **`DECISIONS.md` drift fixed — `D-ENUM207` state and `D-APP` reference
+    (#599)** (23/09, lane docs/frontier; ratified in the chat): `D-ENUM207`
+    `IN_PROGRESS` → `IMPLEMENTED` (enums are real classes, identity `==`,
+    `enum == String` is `SEM062`; proof `EnumIdentityE2ETest` 6/6, §211 CLOSED)
+    and `D-APP`'s dead reference `docs/architecture/application-model.md`
+    (never in git history) now points at `docs/backend-parity.md` (`APP001–003`).
+
   - **§484 ✅ FIXED — switch-expression with a bare pattern-bound id in the
     first case no longer emits a boxed synthetic fallback against int bodies
     (#601)** (23/09, lane 9093; root cause traced and reported by the issue
