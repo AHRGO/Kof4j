@@ -1,0 +1,49 @@
+# .debt-scout.yml — config for scripts/debt-scout/ (Wave 1, shadow-only).
+# See docs/development/technical-debt/DEBT_SCOUT_CONTRACT.md for what each
+# field means and what it authorizes. Parsed by scripts/debt-scout/config.py
+# with a minimal stdlib-only indentation parser (no PyYAML dependency —
+# same precedent as scripts/check_workflow_permissions.py: an undeclared
+# dependency this repo's CI never installs is its own toolchain debt).
+#
+# mode/model.enabled MUST stay shadow/false until a DECISIONS.md entry
+# records the maintainer's phase authorization (contract §7). config.py
+# refuses to load a file that sets either to anything else without that
+# entry existing — see fixtures in scripts/tests/debt-scout-config-test.sh.
+
+schema: 2
+
+mode: shadow
+
+default_branch: auto
+active_branch_strategy: repository-and-governance
+
+confidence:
+  auto_issue_min: C3
+  inbox_min: C2
+
+budget:
+  issues_per_run: 2
+  issues_per_day: 2
+  issues_per_week: 8
+
+trust:
+  min_reviewed_findings: 30
+  min_effective_precision: 0.90
+
+sarif:
+  enabled: false
+
+model:
+  enabled: false
+  only_after_deterministic_candidate: true
+
+rules:
+  satd: true
+  partial_decisions: false
+  contract_drift: false
+  cross_target: false
+  accidental_contract: false
+  skipped_tests: false
+  architecture: shadow
+  performance: measured-only
+  security: private-route
