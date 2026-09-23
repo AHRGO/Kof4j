@@ -225,6 +225,23 @@ símbolos da costura em qualquer binário; o `RuntimePlat` foi dividido por fam�
 (`NativeRiscvHttpCore` socket 198 / connect 203 + os sítios do http-support),
 depois B-1.
 
+**Fatia 4b (LANDADA 22/09, lane `baremetal` 9092):** a superfície de **rede**
+riscv64 entra na costura — `kof_plat_read` (63), `kof_plat_close` (57),
+`kof_plat_net_socket` (198) e `kof_plat_net_connect` (203) no
+`NativeRiscvAsmRt0`, e os 9 sítios do `NativeRiscvHttpCore` roteados (socket,
+connect, reúso de `write`, `read`, 5×`close`) — todos em funções que já salvam o
+`ra`, então a guarda de `ra` segue verde; o aarch64 herda pelo tradutor. Só os
+membros referenciados foram adicionados: `bind`/`listen`/`accept`/`send` ainda
+não têm chamador riscv, então suas entradas na costura ficam **deliberadamente
+ausentes** (entram quando existir caminho de servidor riscv — nunca silencioso).
+Prova: `NativeRiscv64E2ETest` 54/1 skip, `NativeAarch64E2ETest` 53/1 skip,
+`KofHttpNativeResilienceCrossTest` 4/4, `KofHttpNativeTimeoutE2ETest` 3/3,
+`KofHttpNativeCircuitE2ETest` 2/2, `KofHttpNativeRetryE2ETest` 3/3,
+`KofHttpE2ETest` 8/8, `KofNetTest` 4/4, `CrossRuntimePortsE2ETest` 2/2,
+`PlatformSeamSabotageTest` 4/4, `NativeRuntimeSliceRegistryTest` 7/7,
+`ArtifactSizeTest` 6/6 (baselines riscv/aarch inalterados: os novos membros da
+costura são podados do hello). **Próxima:** B-1 (perfil de link freestanding).
+
 ### B-1 — Perfil de link freestanding · **depende de B-0**
 `native --profile freestanding`: sem `-lc`/`-dynamic-linker`, `_start`/`_end`
 próprios, linker script (heap e stack configuráveis), sem libc. No x86_64 remove

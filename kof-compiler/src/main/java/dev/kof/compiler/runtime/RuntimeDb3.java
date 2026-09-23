@@ -114,8 +114,7 @@ public final class RuntimeDb3 {
                 movq %rbx, %rdi
                 movq %r8, %rsi
                 movl $16, %edx
-                movq $42, %rax
-                syscall
+                call kof_plat_net_connect
                 testq %rax, %rax
                 js .Ldb_connect_bad
                 addq $48, %rsp

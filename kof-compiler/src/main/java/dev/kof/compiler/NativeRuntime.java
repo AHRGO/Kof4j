@@ -98,7 +98,13 @@ public final class NativeRuntime {
         sb.append("            .section .data\n");
         sb.append("            .quad 0\n");
         sb.append("            .section .text\n");
-        RuntimePlat.emitPlatSeam(sb);
+        RuntimePlat.emitPlatWrite(sb);
+        RuntimePlat.emitPlatTime(sb);
+        RuntimePlat.emitPlatRandom(sb);
+        RuntimePlat.emitPlatThreadId(sb);
+        RuntimePlat.emitPlatSync(sb);
+        RuntimePlat.emitPlatIo(sb);
+        RuntimePlat.emitPlatNet(sb);
         RuntimePrint.emitPrint(sb);
         RuntimePrint.emitPrintln(sb);
         RuntimeErasureBox.emitBox(sb);   // §284

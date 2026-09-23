@@ -6,16 +6,17 @@ package dev.kof.compiler.runtime;
  * implementação Linux é syscall direto; o perfil bare-metal (B-1+) troca só
  * o corpo, sem tocar os chamadores.
  *
- * <p>Superfície desta fatia (núcleo single-thread): {@code kof_plat_write},
- * {@code kof_plat_writev}, {@code kof_plat_exit} e
- * {@code kof_plat_exit_group}. As fatias seguintes acrescentam
- * tempo/sono/entropia/tid e depois spawn/futex e sockets.
+ * <p>Dividida por FAMÍLIA (um método = uma fatia p/ o podador de
+ * {@code RuntimeSlices}; classe+método é a granularidade da fatia): só a
+ * família referenciada pelo programa entra no binário. Núcleo single-thread
+ * (write/exit), ambiente (time/random/tid), sincronização (sync/create),
+ * I/O (read/close) e rede.
  */
 public final class RuntimePlat {
 
     private RuntimePlat() {}
 
-    public static void emitPlatSeam(StringBuilder sb) {
+    public static void emitPlatWrite(StringBuilder sb) {
         sb.append("""
             .section .text
             .globl kof_plat_write
@@ -43,7 +44,11 @@ public final class RuntimePlat {
             kof_plat_exit_group:
                 movq $231, %rax
                 syscall
+            """);
+    }
 
+    public static void emitPlatTime(StringBuilder sb) {
+        sb.append("""
             .globl kof_plat_time
             .type kof_plat_time, @function
             kof_plat_time:
@@ -68,7 +73,11 @@ public final class RuntimePlat {
                 movq $35, %rax           # nanosleep(req, rem)
                 syscall
                 ret
+            """);
+    }
 
+    public static void emitPlatRandom(StringBuilder sb) {
+        sb.append("""
             .globl kof_plat_random
             .type kof_plat_random, @function
             kof_plat_random:
@@ -76,14 +85,22 @@ public final class RuntimePlat {
                 xorq %rdx, %rdx
                 syscall
                 ret
+            """);
+    }
 
+    public static void emitPlatThreadId(StringBuilder sb) {
+        sb.append("""
             .globl kof_plat_thread_id
             .type kof_plat_thread_id, @function
             kof_plat_thread_id:
                 movq $186, %rax          # gettid
                 syscall
                 ret
+            """);
+    }
 
+    public static void emitPlatSync(StringBuilder sb) {
+        sb.append("""
             .globl kof_plat_sync
             .type kof_plat_sync, @function
             kof_plat_sync:
@@ -95,6 +112,70 @@ public final class RuntimePlat {
             .type kof_plat_thread_create, @function
             kof_plat_thread_create:
                 jmp pthread_create       # Linux+libc: o spawn x86 é C call
+            """);
+    }
+
+    public static void emitPlatIo(StringBuilder sb) {
+        sb.append("""
+            .globl kof_plat_read
+            .type kof_plat_read, @function
+            kof_plat_read:
+                movq $0, %rax            # read(fd, buf, len)
+                syscall
+                ret
+
+            .globl kof_plat_close
+            .type kof_plat_close, @function
+            kof_plat_close:
+                movq $3, %rax            # close(fd)
+                syscall
+                ret
+            """);
+    }
+
+    public static void emitPlatNet(StringBuilder sb) {
+        sb.append("""
+            .globl kof_plat_net_socket
+            .type kof_plat_net_socket, @function
+            kof_plat_net_socket:
+                movq $41, %rax           # socket(domain, type, proto)
+                syscall
+                ret
+
+            .globl kof_plat_net_connect
+            .type kof_plat_net_connect, @function
+            kof_plat_net_connect:
+                movq $42, %rax           # connect(fd, addr, len)
+                syscall
+                ret
+
+            .globl kof_plat_net_bind
+            .type kof_plat_net_bind, @function
+            kof_plat_net_bind:
+                movq $49, %rax           # bind(fd, addr, len)
+                syscall
+                ret
+
+            .globl kof_plat_net_listen
+            .type kof_plat_net_listen, @function
+            kof_plat_net_listen:
+                movq $50, %rax           # listen(fd, backlog)
+                syscall
+                ret
+
+            .globl kof_plat_net_accept
+            .type kof_plat_net_accept, @function
+            kof_plat_net_accept:
+                movq $43, %rax           # accept(fd, addr, lenp)
+                syscall
+                ret
+
+            .globl kof_plat_net_send
+            .type kof_plat_net_send, @function
+            kof_plat_net_send:
+                movq $44, %rax           # sendto(fd, buf, len, flags, 0, 0)
+                syscall
+                ret
             """);
     }
 }

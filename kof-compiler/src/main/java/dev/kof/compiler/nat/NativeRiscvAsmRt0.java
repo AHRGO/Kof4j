@@ -93,6 +93,34 @@ public final class NativeRiscvAsmRt0 {
                 ecall
                 ret
 
+            # kof_plat_read(fd=a0, buf=a1, len=a2) -> read
+            .globl kof_plat_read
+            kof_plat_read:
+                li   a7, 63
+                ecall
+                ret
+
+            # kof_plat_close(fd=a0) -> close
+            .globl kof_plat_close
+            kof_plat_close:
+                li   a7, 57
+                ecall
+                ret
+
+            # kof_plat_net_socket(domain=a0, type=a1, proto=a2)
+            .globl kof_plat_net_socket
+            kof_plat_net_socket:
+                li   a7, 198
+                ecall
+                ret
+
+            # kof_plat_net_connect(fd=a0, addr=a1, len=a2)
+            .globl kof_plat_net_connect
+            kof_plat_net_connect:
+                li   a7, 203
+                ecall
+                ret
+
             # kof_alloc/kof_free/kof_memstats MOVIDOS p/ B42 (G-1, 15/09): o
             # header de bloco 32B do G-0 ganhou free-list (port do x86) + lock
             # + contadores. Aqui ficou ≤500 linhas.

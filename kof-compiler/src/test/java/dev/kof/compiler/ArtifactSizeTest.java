@@ -63,8 +63,13 @@ class ArtifactSizeTest {
     // B-0.3b-i (22/09, futex pela costura): kof_plat_sync entra no alcançável
     // do hello (o lock de alocação espera/acorda por futex) — 39.512->39.544B,
     // 93->94 syms. Medido no host pós-seam.
-    private static final long HELLO_X86_BYTES = 39_544L;
-    private static final int HELLO_X86_SYMS = 94;
+    // B-0.4a (22/09, net+read/close pela costura): `RuntimePlat` foi dividido
+    // por FAMÍLIA (um método = uma fatia; classe+método é a granularidade do
+    // podador) — o hello deixa de carregar as famílias que não usa (env, sync,
+    // create, io, net) e ENCOLHE: 39.544->39.432B, 94->91 syms (encolher é
+    // sempre ok). Medido no host pós-split.
+    private static final long HELLO_X86_BYTES = 39_432L;
+    private static final int HELLO_X86_SYMS = 91;
     // Pós-#104 (13/09): o shim globalThis.kof_platform do core JS (erro claro
     // em vez de ReferenceError fora do GraalJS) entrou no préâmbulo always —
     // o hello carrega ~827B a mais. Re-medido neste host: 6.873 → 7.700.

@@ -220,6 +220,23 @@ sync/io/net) and the hello **shrinks** — 39.544→39.432 B, 94→91 syms. Proo
 net seam (`NativeRiscvHttpCore` socket 198 / connect 203 + the http-support
 sites), then B-1.
 
+**Slice 4b (LANDED 22/09, lane `baremetal` 9092):** the riscv64 **net** surface
+joins the seam — `kof_plat_read` (63), `kof_plat_close` (57),
+`kof_plat_net_socket` (198) and `kof_plat_net_connect` (203) added to
+`NativeRiscvAsmRt0`, and the 9 sites of `NativeRiscvHttpCore` routed (socket,
+connect, `write` reuse, `read`, 5×`close`) — all inside functions that already
+save `ra`, so the RA guard stays green; aarch64 inherits through the translator.
+Only the referenced members were added: `bind`/`listen`/`accept`/`send` have no
+riscv caller yet, so their seam entries are **deliberately absent** (added when a
+riscv server path exists — never silent). Proof: `NativeRiscv64E2ETest` 54/1
+skip, `NativeAarch64E2ETest` 53/1 skip, `KofHttpNativeResilienceCrossTest` 4/4,
+`KofHttpNativeTimeoutE2ETest` 3/3, `KofHttpNativeCircuitE2ETest` 2/2,
+`KofHttpNativeRetryE2ETest` 3/3, `KofHttpE2ETest` 8/8, `KofNetTest` 4/4,
+`CrossRuntimePortsE2ETest` 2/2, `PlatformSeamSabotageTest` 4/4,
+`NativeRuntimeSliceRegistryTest` 7/7, `ArtifactSizeTest` 6/6 (riscv/aarch
+baselines unchanged: the new seam members are pruned from the hello). **Next:**
+B-1 (freestanding link profile).
+
 ### B-1 — Freestanding link profile · **depends B-0**
 `native --profile freestanding`: no `-lc`/`-dynamic-linker`, own `_start`/`_end`,
 linker script (heap size and stack configurable), no libc. For x86_64 this removes
