@@ -152,8 +152,15 @@ por scheme é a prova.
 
   **Fatias (uma sessão cada, cada uma com a própria prova):**
   - **S5.1 — camada de socket cross.** Portar `kof_net_*` (socket/connect/read/
-    write/close) para asm riscv64 (aarch64 via tradutor). *Prova:* programa cross
-    conecta em `127.0.0.1:<porta>` sob qemu e lê bytes (greeting ou servidor echo).
+    write/close) para asm riscv64 (aarch64 via tradutor). **Medido 23/09:** a HAL
+    cross (`NativeRiscvAsmRt0`) já tem `kof_plat_net_socket` (198) e
+    `kof_plat_net_connect` (203) mais `kof_plat_read/close`; faltam só
+    `kof_plat_net_send` (syscall 206 `sendto` com addr NULL) e os wrappers finos
+    `kof_net_*` (formato do `RuntimeNet`). Os helpers de URL `kof_net_*` cross já
+    existem (`NativeRiscvAsmRtB24`). *Prova:* como o cross não tem API de rede
+    pública, o consumidor independente é o próprio wire DB — a prova ponta a ponta
+    pousa com o S5.2 (connect chega ao greeting); o S5.1 trava em nível
+    símbolo/asm + link (programa cross `db.connect("mysql://…")` linka).
   - **S5.2 — handshake + auth.** Portar SHA1/scramble/lenenc + ler o greeting +
     enviar o auth switch. *Prova:* connect no MariaDB real sob qemu chega ao pacote OK.
   - **S5.3 — `COM_QUERY` + resultset texto.** Portar framing + parse do resultado.

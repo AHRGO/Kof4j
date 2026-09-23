@@ -151,9 +151,15 @@ typed roundtrip) produces the **same observable result** on all four targets, or
 
   **Slices (one session each, each with its own proof):**
   - **S5.1 — cross socket layer.** Port `kof_net_*` (socket/connect/read/write/
-    close) to riscv64 asm (aarch64 via translator). *Proof:* a cross program
-    connects to `127.0.0.1:<port>` under qemu and reads bytes (greeting or an
-    echo server).
+    close) to riscv64 asm (aarch64 via translator). **Measured 23/09:** the cross
+    HAL (`NativeRiscvAsmRt0`) already has `kof_plat_net_socket` (198) and
+    `kof_plat_net_connect` (203) plus `kof_plat_read/close`; only
+    `kof_plat_net_send` (syscall 206 `sendto` with NULL addr) and the thin
+    `kof_net_*` wrappers (`RuntimeNet` shape) are missing. The cross `kof_net_*`
+    URL helpers already exist (`NativeRiscvAsmRtB24`). *Proof:* since the cross has
+    no public net API, the independent consumer is the DB wire itself — the
+    end-to-end proof lands with S5.2 (connect reaches the greeting); S5.1 is pinned
+    symbol/asm-level + link (a `db.connect("mysql://…")` cross program links).
   - **S5.2 — handshake + auth.** Port SHA1/scramble/lenenc + read the greeting +
     send the auth switch. *Proof:* connect to the real MariaDB under qemu reaches
     the OK packet.
