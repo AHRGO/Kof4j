@@ -70,6 +70,7 @@ Auxílio de navegação, não é uma decisão por si só. Ordenado como neste ar
 - **D-R3-BUFFER** — out-buffer = tipo nominal `Buffer(U8)`
 - **D-R3-HANDLE-LIFETIME** — memória do `Handle` é automática
 - **D-ARTIFACT-TRUST** — contrato de confiança dos artefatos 1.0
+- **D-VERSIONING-RELEASE** — política consolidada de versionamento e corte de release
 
 ---
 
@@ -660,6 +661,17 @@ O contador não congela features.
 Features e fixes concluídos com suíte verde entram no pacote.
 
 **Estado registrado em 14/09:** `main..beta = 1`.
+
+### Relação (adicionada em 22/09/2026 — `D-VERSIONING-RELEASE`)
+
+O histórico acima é preservado (§1.3). A `D-VERSIONING-RELEASE` generaliza e
+refina esta regra sem apagá-la:
+
+- a faixa de `100–150 commits` é o **gatilho ordinário de avaliação de
+  release** — um gatilho, nunca uma autorização para publicar;
+- a faixa é `LAST_RELEASE..ACTIVE_BRANCH`, não mais fixada em
+  `origin/beta-0.4.0`;
+- a classificação PATCH/MINOR/MAJOR agora segue a `D-VERSIONING-RELEASE`.
 
 ---
 
@@ -3238,3 +3250,73 @@ do plano promovido no mesmo commit; ALLOWLIST do `check_release_050_gate.sh`
 atualizado.
 
 - **Relações:** `Related: D-POLL-19 (D3-A), D-UNIVERSAL (padrão de sobreposição do R12), D-BOOTSTRAP (norte), rule 6, rule 11, R12`.
+
+## D-VERSIONING-RELEASE — política consolidada de versionamento e corte de release: PATCH = sem diff de superfície pública contratada, MINOR obrigatório para qualquer diff de superfície pública pré-1.0, SemVer estrito pós-1.0, gatilho ≠ corte (aprovação da mantenedora 22/09/2026)
+
+**Data:** 22/09/2026 · **Estado:** `DECIDED` (aprovação da mantenedora — PR #582
+mergeado em 22/09/2026) · **Sobrepõe parcialmente:** as regras de classificação
+e de gatilho da `D-RELEASE` — a decisão histórica é preservada (§1.3); só o
+escopo dela é refinado. · **Incorpora por referência, sem relaxar:**
+`D-RELEASE-1.0`, `D-1.0-EDGES`, `D-RELEASE-0.5.0-GATE`,
+`D-RELEASE-0.5.0-SCOPE`.
+
+**Escopo:** como uma mudança é classificada (PATCH/MINOR/MAJOR) e quando um
+candidato a release é avaliado; não corta uma release por si só.
+
+**Contrato:**
+
+1. **Classificação é separada do corte.** Uma mudança ser PATCH não autoriza
+   publicar um PATCH; classificação → avaliação → candidato → gate → corte é um
+   pipeline, e um gatilho só abre a avaliação.
+2. **PATCH pré-1.0:** reservado a mudanças **sem diff de superfície pública
+   contratada** — bugfix, fix de segurança/regressão, fix de paridade para
+   satisfazer um contrato existente, performance/refactor interno,
+   CI/tooling/packaging/docs, ou melhoria de diagnóstico que não muda o
+   contrato. `PUBLIC_CONTRACT_SURFACE_DIFF = 0 → PATCH admissível`.
+3. **MINOR pré-1.0 (obrigatório):** qualquer **superfície pública contratada
+   nova ou alterada** — sintaxe/operador/semântica observável nova, API ou
+   namespace público relevante, comando/flag público, capacidade pública da
+   stdlib, contrato de pacote/registry/interop, promoção de alvo a
+   Supported/Stable, ou breaking change pré-1.0 deliberado e aprovado.
+   `PUBLIC_CONTRACT_SURFACE_DIFF > 0 → PATCH proibido, MINOR no mínimo,
+   Decision ID obrigatório`.
+4. **Breaking change pré-1.0:** MINOR + decisão registrada + nota de
+   impacto/migração + prova. Nunca escondido num patch por o projeto estar
+   abaixo de 1.0.
+5. **Pós-1.0:** SemVer estrito — PATCH = fixes retrocompatíveis, MINOR =
+   funcionalidade pública retrocompatível nova, MAJOR = mudança incompatível de
+   contrato; a compatibilidade é avaliada nas dimensões **fonte**,
+   **artefato/binário**, **comportamental** e **paridade cross-target**.
+6. **Primeiro `1.0.0`:** só quando a `D-RELEASE-1.0` (EXIT GATE) estiver
+   totalmente GREEN no mesmo candidato e nenhuma aresta da `D-1.0-EDGES`
+   estiver aberta — nunca por contagem de commits, de features, idade do
+   projeto ou alcance de `0.9.9`.
+7. **Gatilho ordinário (generalizado):** `LAST_RELEASE..ACTIVE_BRANCH` (não
+   fixado a uma branch histórica) cruzando **100–150 commits** abre uma
+   AVALIAÇÃO DE RELEASE — nunca publicação automática.
+8. **Gatilho extraordinário:** um fix de segurança relevante, uma regressão
+   crítica, um fix urgente de distribuição/pacote, ou uma decisão explícita da
+   mantenedora abrem a avaliação imediatamente.
+9. **Baseline comum de elegibilidade ao corte** (os gates por linha seguem
+   prevalecendo): SHA do candidato identificado; VERSION/pom/recurso de versão
+   consistentes; CHANGELOG/metadados de release coerentes; suíte exigida GREEN
+   no candidato; classificação PATCH/MINOR/MAJOR provada; decisões necessárias
+   registradas; bloqueadores aplicáveis resolvidos; pacote real validado quando
+   aplicável; confiança/provenance do artefato conforme `D-ARTIFACT-TRUST`;
+   docs EN/PT sincronizadas.
+10. **Gate mecânico futuro (backlog, não esta decisão):**
+    `release-surface-gate` comparando a última release com o candidato em
+    gramática, language-reference, operadores, regras de tipagem, catálogo da
+    stdlib Stable, comandos/flags contratuais da CLI, contrato de
+    pacote/registry e Stable Target Surface; `PUBLIC_SURFACE_DIFF > 0` rejeita
+    PATCH.
+
+**Texto materializado:** `docs/distribution/VERSIONING.md` (+PT) descreve o
+estado atual e aponta para cá; a `D-RELEASE` mantém o histórico com uma nota de
+relação; `D-RELEASE-0.5.0-GATE` e `D-RELEASE-1.0` ficam inalteradas.
+
+**Evidência:** `docs/development/PROPOSAL-VERSIONING-RELEASE.md` (+PT) — bloco
+de evidência KOF-first e ancoragem externa; aprovação da mantenedora (PR #582
+mergeado em 22/09/2026; registro de issue fechada).
+
+- **Relações:** `Related: D-RELEASE (parcialmente sobreposta), D-RELEASE-1.0, D-1.0-EDGES, D-RELEASE-0.5.0-GATE, D-RELEASE-0.5.0-SCOPE, D-ARTIFACT-TRUST, D-BRANCH-0.5.0, D-VERSION-BUMP-0.5.0, rule 6`.

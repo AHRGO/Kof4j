@@ -2,7 +2,7 @@
 
 # KOF — Proposta de consolidação da política de versionamento e corte de releases
 
-**Status:** `DESIGN / CONTRACT — AGUARDANDO APROVAÇÃO DA MANTENEDORA`
+**Status:** `RATIFICADA — aprovada pela mantenedora (PR #582 mergeado em 22/09/2026); MATERIALIZADA como D-VERSIONING-RELEASE (22/09/2026)`
 **Branch-base:** `beta-0.5.0`
 **Tip revalidado na elaboração:** `6c9aeb847f167e97ed48c21a9e4453028198da63`
 **VERSION medido no tip:** `0.5.0-beta`
@@ -720,18 +720,18 @@ Não aceitável:
 ## Aprovação da Mel — etapa A
 
 ```text
-[ ] review solicitado para melmonfre
-[ ] decisão explícita registrada
+[x] review solicitado para melmonfre
+[x] decisão explícita registrada (PR #582 mergeado em 22/09/2026)
 [x] nenhuma mudança normativa antes da decisão
 ```
 
 ## Materialização
 
 ```text
-[ ] DECISIONS EN/PT atualizado após aprovação
-[ ] VERSIONING EN/PT atualizado
-[ ] release-naming EN/PT alinhado se necessário
-[ ] D-RELEASE refinado sem apagar história
+[x] DECISIONS EN/PT atualizado após aprovação (D-VERSIONING-RELEASE, 22/09/2026)
+[x] VERSIONING EN/PT atualizado (estado atual + ponteiro da política)
+[x] release-naming EN/PT alinhado se necessário (já consistente — sem mudança)
+[x] D-RELEASE refinado sem apagar história
 [x] nenhuma mudança de VERSION/tag/release
 [x] nenhum production code
 ```

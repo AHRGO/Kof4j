@@ -2,7 +2,7 @@
 
 # KOF — Proposal to consolidate the versioning and release-cut policy
 
-**Status:** `DESIGN / CONTRACT — AWAITING MAINTAINER APPROVAL`
+**Status:** `RATIFIED — approved by the maintainer (PR #582 merged 22/09/2026); MATERIALIZED as D-VERSIONING-RELEASE (22/09/2026)`
 **Base branch:** `beta-0.5.0`
 **Tip revalidated during drafting:** `6c9aeb847f167e97ed48c21a9e4453028198da63`
 **VERSION measured at the tip:** `0.5.0-beta`
@@ -720,18 +720,18 @@ Not acceptable:
 ## Mel's approval — step A
 
 ```text
-[ ] review requested from melmonfre
-[ ] explicit decision recorded
+[x] review requested from melmonfre
+[x] explicit decision recorded (PR #582 merged 22/09/2026)
 [x] no normative change before the decision
 ```
 
 ## Materialization
 
 ```text
-[ ] DECISIONS EN/PT updated after approval
-[ ] VERSIONING EN/PT updated
-[ ] release-naming EN/PT aligned if needed
-[ ] D-RELEASE refined without erasing history
+[x] DECISIONS EN/PT updated after approval (D-VERSIONING-RELEASE, 22/09/2026)
+[x] VERSIONING EN/PT updated (current state + policy pointer)
+[x] release-naming EN/PT aligned if needed (already consistent — no change)
+[x] D-RELEASE refined without erasing history
 [x] no VERSION/tag/release change
 [x] no production code
 ```

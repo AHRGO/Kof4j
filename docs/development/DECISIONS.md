@@ -72,6 +72,7 @@ A navigation aid, not a decision by itself. Ordered as in this file.
 - **D-R3-BUFFER** — out-buffer = nominal `Buffer(U8)`
 - **D-R3-HANDLE-LIFETIME** — `Handle` memory is automatic
 - **D-ARTIFACT-TRUST** — 1.0 artifact trust contract
+- **D-VERSIONING-RELEASE** — consolidated versioning and release-cut policy
 
 ---
 
@@ -693,6 +694,17 @@ The counter does not freeze features.
 Features and fixes completed with a green suite enter the package.
 
 **Status recorded on 2026-09-14:** `main..beta = 1`.
+
+### Relationship (added 2026-09-22 — `D-VERSIONING-RELEASE`)
+
+The history above is preserved (§1.3). `D-VERSIONING-RELEASE` generalizes and
+refines this rule without erasing it:
+
+- the `100–150 commits` range is the **ordinary release-evaluation trigger** —
+  a trigger, never an authorization to publish;
+- the range is `LAST_RELEASE..ACTIVE_BRANCH`, no longer hardcoded to
+  `origin/beta-0.4.0`;
+- PATCH/MINOR/MAJOR classification now follows `D-VERSIONING-RELEASE`.
 
 ---
 
@@ -3224,3 +3236,69 @@ suporte a ring0 e ring1".
 promoted in the same commit; `check_release_050_gate.sh` ALLOWLIST updated.
 
 - **Relationships:** `Related: D-POLL-19 (D3-A), D-UNIVERSAL (R12 override pattern), D-BOOTSTRAP (north star), rule 6, rule 11, R12`.
+
+## D-VERSIONING-RELEASE — consolidated versioning and release-cut policy: PATCH = no contracted public-surface diff, MINOR mandatory for any public-surface diff pre-1.0, strict SemVer post-1.0, trigger ≠ cut (maintainer approval 22/09/2026)
+
+**Date:** 2026-09-22 · **State:** `DECIDED` (maintainer approval — PR #582
+merged 22/09/2026) · **Partially supersedes:** the classification and trigger
+rules of `D-RELEASE` — the historical decision is preserved (§1.3); only its
+scope is refined. · **Incorporates by reference, without relaxing:**
+`D-RELEASE-1.0`, `D-1.0-EDGES`, `D-RELEASE-0.5.0-GATE`,
+`D-RELEASE-0.5.0-SCOPE`.
+
+**Scope:** how a change is classified (PATCH/MINOR/MAJOR) and when a release
+candidate is evaluated; it does not cut a release by itself.
+
+**Contract:**
+
+1. **Classification is separate from the cut.** A change being a PATCH does not
+   authorize publishing a PATCH; classification → evaluation → candidate → gate
+   → cut is a pipeline, and a trigger only opens the evaluation.
+2. **Pre-1.0 PATCH:** reserved for changes with **no contracted public-surface
+   diff** — bugfix, security/regression fix, parity fix to satisfy an existing
+   contract, performance/internal refactor, CI/tooling/packaging/docs, or a
+   diagnostic improvement that does not change the contract.
+   `PUBLIC_CONTRACT_SURFACE_DIFF = 0 → PATCH admissible`.
+3. **Pre-1.0 MINOR (mandatory):** any **new or altered contracted public
+   surface** — new syntax/operator/observable semantics, relevant public API or
+   namespace, public command/flag, public stdlib capability, package/registry/
+   interop contract, promoting a target to Supported/Stable, or a deliberate
+   approved pre-1.0 breaking change.
+   `PUBLIC_CONTRACT_SURFACE_DIFF > 0 → PATCH forbidden, MINOR minimum,
+   Decision ID mandatory`.
+4. **Pre-1.0 breaking change:** MINOR + recorded decision + impact/migration
+   note + proof. Never hidden in a patch because the project is below 1.0.
+5. **Post-1.0:** strict SemVer — PATCH backward-compatible fixes, MINOR
+   backward-compatible public functionality, MAJOR incompatible contract
+   change; compatibility is evaluated across **source**, **artifact/binary**,
+   **behavioral** and **cross-target parity** dimensions.
+6. **First `1.0.0`:** only when `D-RELEASE-1.0` (EXIT GATE) is fully GREEN on
+   the same candidate and no `D-1.0-EDGES` edge is open — never by commit
+   count, feature count, project age, or reaching `0.9.9`.
+7. **Ordinary trigger (generalized):** `LAST_RELEASE..ACTIVE_BRANCH` (not
+   hardcoded to a historical branch) crossing **100–150 commits** opens a
+   RELEASE EVALUATION — never an automatic publication.
+8. **Extraordinary trigger:** a relevant security fix, a critical regression,
+   an urgent distribution/package fix, or an explicit maintainer decision opens
+   the evaluation immediately.
+9. **Common eligibility-to-cut baseline** (line-specific gates still prevail):
+   candidate SHA identified; VERSION/pom/version resource consistent;
+   CHANGELOG/release metadata coherent; required suite GREEN on the candidate;
+   PATCH/MINOR/MAJOR classification proven; necessary decisions recorded;
+   applicable blockers resolved; real package validated when applicable;
+   artifact trust/provenance per `D-ARTIFACT-TRUST`; EN/PT docs synced.
+10. **Future mechanical gate (backlog, not this decision):**
+    `release-surface-gate` comparing the last release against the candidate
+    across grammar, language-reference, operators, typing rules, Stable stdlib
+    catalog, contractual CLI commands/flags, package/registry contract and
+    Stable Target Surface; `PUBLIC_SURFACE_DIFF > 0` rejects PATCH.
+
+**Materialized text:** `docs/distribution/VERSIONING.md` (+PT) describes the
+current state and points here; `D-RELEASE` keeps its history with a
+relationship note; `D-RELEASE-0.5.0-GATE` and `D-RELEASE-1.0` are unchanged.
+
+**Evidence:** `docs/development/PROPOSAL-VERSIONING-RELEASE.md` (+PT) — the
+KOF-first evidence block and external grounding; maintainer approval (PR #582
+merged 22/09/2026; closed-issue record).
+
+- **Relationships:** `Related: D-RELEASE (partially superseded), D-RELEASE-1.0, D-1.0-EDGES, D-RELEASE-0.5.0-GATE, D-RELEASE-0.5.0-SCOPE, D-ARTIFACT-TRUST, D-BRANCH-0.5.0, D-VERSION-BUMP-0.5.0, rule 6`.
