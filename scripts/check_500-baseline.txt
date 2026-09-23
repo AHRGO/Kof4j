@@ -44,6 +44,4 @@
 558	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeOrm7.java
 579	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeTimeIso.java
 566	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeUi.java
-589	kof-compiler/src/main/java/dev/kof/compiler/StatementAnalyzer.java
-509	kof-compiler/src/main/java/dev/kof/compiler/TypeChecker.java
 572	kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java

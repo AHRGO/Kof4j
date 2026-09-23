@@ -197,7 +197,7 @@ public final class SemExpressionTyper {
                     Type leftT = inferType(sa, bin.left(), scope);
                     SymbolTable rightScope = SemNarrowing.narrowedScope(bin.left(), scope);
                     Type rightT = inferType(sa, bin.right(), rightScope);
-                    yield TypeChecker.inferBinaryResultType(sa.diagnostics(), "&&", leftT, rightT);
+                    yield SemBinaryResultTyper.inferBinaryResultType(sa.diagnostics(), "&&", leftT, rightT);
                 }
                 // Left-associative chains (huge string concatenations in
                 // generated UIs, editors) are iterated instead of recursed:
@@ -224,7 +224,7 @@ public final class SemExpressionTyper {
                         Type q = CompilerTypes.toType(rie.name(), sa.unit());
                         if (!(q instanceof Type.UnknownType)) rightType = q;
                     }
-                    accType = TypeChecker.inferBinaryResultType(sa.diagnostics(), be.operator(), accType, rightType);
+                    accType = SemBinaryResultTyper.inferBinaryResultType(sa.diagnostics(), be.operator(), accType, rightType);
                 }
                 yield accType;
             }

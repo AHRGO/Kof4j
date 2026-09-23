@@ -202,6 +202,24 @@ restructured. Proof: 251/0F (`KofConcurrency2Test` 48, `SpawnE2ETest` 10,
 unchanged at 136,824 B/45 syms and 202,168 B/45 syms, `kof_plat_sync` is pruned
 from the hello). **Next:** net sockets (`kof_plat_net_*`), then B-1.
 
+**Slice 4a (LANDED 22/09, lane `baremetal` 9092):** the x86_64 **net** surface
+crosses the seam — `RuntimePlat` gains `kof_plat_read`/`kof_plat_close` (0/3) and
+`kof_plat_net_socket`/`connect`/`bind`/`listen`/`accept`/`send` (41/42/49/50/43/
+44); routed: `kof_net_socket`/`bind`/`listen`/`accept`/`read`/`write`/`close`
+(`RuntimeNet`) and the MySQL connect (`RuntimeDb3`). **Pruning fix:** a slice is
+*class+method*, so the single `emitPlatSeam` linked **all** seam symbols into
+every binary; `RuntimePlat` was split by family (write/time/random/thread-id/
+sync/io/net) and the hello **shrinks** — 39.544→39.432 B, 94→91 syms. Proof:
+`KofNetTest` 4/4, `KofHttpE2ETest` 8/8, `KofHttpNativeCircuitE2ETest` 2/2,
+`KofHttpNativeRetryE2ETest` 3/3, `KofHttpNativeTimeoutE2ETest` 3/3,
+`KofHttpResilienceE2ETest` 3/3, `KofHttpServerTest` 8/8,
+`KofHttpNativeResilienceCrossTest` 4/4, `KofDbE2ETest` 27/4 skips,
+`NativeE2ETest` 67/67, `NativeRuntimeSliceRegistryTest` 7/7,
+`RuntimeSourceLoaderTest` 6/6, `PlatformSeamSabotageTest` 4/4, `ArtifactSizeTest`
+6/6, `KofConcurrency2Test` 48/48, `KofTimeE2ETest` 42/42. **Next:** the riscv64
+net seam (`NativeRiscvHttpCore` socket 198 / connect 203 + the http-support
+sites), then B-1.
+
 ### B-1 — Freestanding link profile · **depends B-0**
 `native --profile freestanding`: no `-lc`/`-dynamic-linker`, own `_start`/`_end`,
 linker script (heap size and stack configurable), no libc. For x86_64 this removes

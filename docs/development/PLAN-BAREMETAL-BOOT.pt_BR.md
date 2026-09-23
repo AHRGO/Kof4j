@@ -206,6 +206,25 @@ reestruturado. Prova: 251/0F (`KofConcurrency2Test` 48, `SpawnE2ETest` 10,
 inalterados em 136.824 B/45 syms e 202.168 B/45 syms, `kof_plat_sync` é podado do
 hello). **Próxima:** sockets de rede (`kof_plat_net_*`), depois B-1.
 
+**Fatia 4a (LANDADA 22/09, lane `baremetal` 9092):** a superfície de **rede** do
+x86_64 cruza a costura — `RuntimePlat` ganha `kof_plat_read`/`kof_plat_close`
+(0/3) e `kof_plat_net_socket`/`connect`/`bind`/`listen`/`accept`/`send` (41/42/
+49/50/43/44); roteados: `kof_net_socket`/`bind`/`listen`/`accept`/`read`/`write`/
+`close` (`RuntimeNet`) e o connect MySQL (`RuntimeDb3`). **Correção de poda:** a
+fatia é *classe+método*, então o `emitPlatSeam` único linkava **todos** os
+símbolos da costura em qualquer binário; o `RuntimePlat` foi dividido por família
+(write/time/random/thread-id/sync/io/net) e o hello **encolhe** — 39.544→39.432 B,
+94→91 syms. Prova: `KofNetTest` 4/4, `KofHttpE2ETest` 8/8,
+`KofHttpNativeCircuitE2ETest` 2/2, `KofHttpNativeRetryE2ETest` 3/3,
+`KofHttpNativeTimeoutE2ETest` 3/3, `KofHttpResilienceE2ETest` 3/3,
+`KofHttpServerTest` 8/8, `KofHttpNativeResilienceCrossTest` 4/4,
+`KofDbE2ETest` 27/4 skips, `NativeE2ETest` 67/67,
+`NativeRuntimeSliceRegistryTest` 7/7, `RuntimeSourceLoaderTest` 6/6,
+`PlatformSeamSabotageTest` 4/4, `ArtifactSizeTest` 6/6, `KofConcurrency2Test`
+48/48, `KofTimeE2ETest` 42/42. **Próxima:** a costura de rede riscv64
+(`NativeRiscvHttpCore` socket 198 / connect 203 + os sítios do http-support),
+depois B-1.
+
 ### B-1 — Perfil de link freestanding · **depende de B-0**
 `native --profile freestanding`: sem `-lc`/`-dynamic-linker`, `_start`/`_end`
 próprios, linker script (heap e stack configuráveis), sem libc. No x86_64 remove
