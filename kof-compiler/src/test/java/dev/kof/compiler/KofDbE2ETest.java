@@ -150,6 +150,27 @@ class KofDbE2ETest {
                 "Falha real de conexao NAO pode virar DB001 (driver existe): " + output);
     }
 
+    // S3/db-parity (23/09): `mongodb://` sem o driver mongo no classpath do
+    // programa deve nomear DB001 (R6) em vez de um ClassNotFoundException cru.
+    // (O classpath do teste TEM o driver; aqui rodamos com cp=outDir apenas.)
+    @Test
+    void jvmMongodbMissingDriverNamesGap(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var db = db.connect("mongodb://localhost:27017/kof_gap")
+                println("connected")
+            }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "JVM compile should succeed: " + result.diagnostics().getDiagnostics());
+        String output = runJvmExpectFailure(tempDir.resolve("out"), null);
+        assertTrue(output.contains("DB001"), "Deve NOMEAR o gap DB001 (R6), veio: " + output);
+        assertTrue(output.contains("mongodb"), "Diagnostico deve citar mongodb, veio: " + output);
+        assertFalse(output.contains("ClassNotFoundException"),
+                "Nao vazar ClassNotFoundException cru: " + output);
+    }
+
     private String runJvmExpectFailure(Path outDir, String extraJar) throws IOException {
         try {
             String cp = outDir.toString();
@@ -400,6 +421,33 @@ class KofDbE2ETest {
         assertNotEquals(0, ec, "Servidor fora nao pode 'conectar' no JS: " + output);
         assertFalse(output.contains("DB001"),
                 "Falha real de conexao NAO pode virar DB001 no JS: " + output);
+    }
+
+    // S3/db-parity (23/09): `mongodb://` no JS nao e URL JDBC — a recusa deve
+    // ser SCHEME-AWARE (DB001 nomeando mongodb), nunca a mensagem generica de
+    // driver JDBC ausente (que seria enganosa para quem passou mongodb://).
+    @Test
+    void jsMongodbSchemeNamesGapNotSilent(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var db = db.connect("mongodb://localhost:27017/kof_gap")
+                println("connected")
+            }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JS);
+        assertTrue(result.success(), "JS compilation should succeed: " + result.diagnostics().getDiagnostics());
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int ec = dev.kof.runtime.KofJsRunner.run(tempDir.resolve("out/Default.mjs"), out,
+                new java.io.ByteArrayInputStream(new byte[0]), out);
+        String output = out.toString(java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertNotEquals(0, ec, "mongodb:// nao suportado no JS nao pode 'conectar': " + output);
+        assertTrue(output.contains("DB001"), "JS deve NOMEAR o gap DB001 (R6), veio: " + output);
+        assertTrue(output.contains("not supported on the JS target"),
+                "Recusa deve ser SCHEME-AWARE (nao a mensagem JDBC generica), veio: " + output);
+        assertFalse(output.contains("No suitable driver"),
+                "Nao vazar a mensagem JDBC generica para mongodb://: " + output);
     }
 
     @Test

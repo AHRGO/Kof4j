@@ -67,6 +67,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `#jsRealConnectionFailureIsNotRelabeledDb001` (a do JVM VERMELHA no código
     antigo); `KofDbE2ETest` 32/0F.
 
+  - **Paridade DB S3/S4 — `mongodb://` e Oracle viram diagnóstico nomeado onde
+    não rodam** (23/09, lane gaps-db): `mongodb://` é real no JVM/Android (roundtrip
+    ORM completo sobre o `mongodb-driver-sync` real, `KofOrmE2ETest#mongoCrud`) e
+    `DB001` **declarado** no JS/Native — `KofJsDbBridge.connect/connect2` agora
+    recusa com mensagem ciente do scheme, em vez do "sem driver JDBC" enganoso;
+    driver mongo ausente no JVM também é nomeado. Oracle não tem driver/servidor
+    aqui e, como o Mongo, nunca será servidor caseiro (R9): `jdbc:oracle:` conecta
+    com driver presente, senão dispara o `DB001` do S2; `oracle://` nu é `DB001`
+    (não é URL JDBC); o Native recusa via S0. A tabela de estado medido do plano
+    também foi corrigida — os schemes nus são aceitos **como escritos só no
+    Native**; JVM/Android/JS precisam de URL `jdbc:`. Prova:
+    `KofDbE2ETest#jsMongodbSchemeNamesGapNotSilent` +
+    `#jvmMongodbMissingDriverNamesGap`; `KofOrmE2ETest#mongoCrud` (JVM real).
+
   - **§448 ✅ CORRIGIDO — `toString` de `Double`/`Float` no Native agora casa o
     oráculo JVM nos subnormais (x86 e cross)** (23/09, lane baremetal): o dtoa
     nativo escolhia o decimal **mais curto** em vez do **mais próximo entre os

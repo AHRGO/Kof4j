@@ -8,7 +8,7 @@
 > estiver completa.
 
 **Dono:** lane `gaps-db` (repassada 21/09 por ordem da mantenedora, sob `D-DB-PARITY-OWNER`; S0/S1 autorizadas) · **Registros/plano:** lane docs/plataforma
-**Branch:** `beta-0.5.0` · **Estado:** S0 ✅ FEITO (21/09, sessão 9092) — recusa nativa honesta de scheme não suportado com o código nomeado `DB001`, mais link-by-use real (sem link de `libmariadb` para literais não-mysql); **S1 ✅ FEITO no Native x86-64 (23/09, lane gaps-db)** — `mariadb://` é alias do wire `mysql://`; no cross segue `DB001` honesto até o wire mysql ser portado (R7); **S2 ✅ FEITO no JVM/JS/Android (23/09, lane gaps-db)** — driver JDBC ausente agora é diagnóstico `DB001` nomeado (falhas reais de conexão intactas); S3–S4 seguem
+**Branch:** `beta-0.5.0` · **Estado:** S0 ✅ FEITO (21/09, sessão 9092) — recusa nativa honesta de scheme não suportado com o código nomeado `DB001`, mais link-by-use real (sem link de `libmariadb` para literais não-mysql); **S1 ✅ FEITO no Native x86-64 (23/09, lane gaps-db)** — `mariadb://` é alias do wire `mysql://`; no cross segue `DB001` honesto até o wire mysql ser portado (R7); **S2 ✅ FEITO no JVM/JS/Android (23/09, lane gaps-db)** — driver JDBC ausente agora é diagnóstico `DB001` nomeado (falhas reais de conexão intactas); **S3/S4 ✅ FEITOS 23/09 (lane gaps-db)** — `mongodb://` real no JVM/Android e `DB001` declarado no JS/Native; `oracle` declarado (sem driver/servidor no host)
 
 ---
 
@@ -26,22 +26,37 @@ o plano só **alarga o conjunto de URLs aceitas**, cada scheme **real** (R6). Um
 scheme não suportado é **gap interino honesto** enquanto sua fatia pousa (R6: um
 diagnóstico, nunca silêncio) — nunca recusa permanente, nunca aceite silencioso.
 
-## Estado medido (21/09/2026 — medição, não memória)
+## Estado medido (corrigido 23/09/2026 — medição, não memória)
 
-| Scheme | JVM | Android | JS | Native (x86/riscv/aarch) |
+> A tabela anterior usava nomes de scheme crus como atalho para a **URL JDBC** no
+> JVM/Android/JS. Isso era enganoso: `sqlite:`/`mysql://` são aceitos **como
+> escritos** só no **Native**. No JVM/Android/JS o mesmo scheme precisa ser URL
+> `jdbc:` (`jdbc:sqlite:`, `jdbc:mysql://`, …) — um scheme nu não-JDBC é `DB001`
+> nomeado. `mongodb://` é a exceção (JVM/Android o tratam à parte).
+
+| URL como escrita | JVM | Android | JS | Native (x86/riscv/aarch) |
 |---|---|---|---|---|
-| `sqlite:` | ✅ JDBC (driver) | ✅ JVM | ✅ JDBC host | ✅ `sqlite3` link-by-use |
-| `mysql://` | ✅ JDBC | ✅ JVM | ✅ JDBC host | ⚠️ wire em andamento (`RuntimeDb2` — auth scramble/lenenc feito; handshake/prepared completo pendente) |
-| `mariadb://` | ✅ JDBC (driver) | ✅ JVM | ✅ JDBC host | ⚠️ x86-64 ✅ alias do wire `mysql://` (23/09); riscv/aarch ainda `DB001` (wire mysql não portado → R7) |
-| `mongodb://` | ✅ JDBC (driver) | ✅ JVM | ✅ JDBC host | ❌ não parseado |
-| `oracle://` | ✅ JDBC (driver) | ✅ JVM | ✅ JDBC host | ❌ não parseado |
-| `postgres://` | ✅ JDBC (driver) | ✅ JVM | ✅ JDBC host | ❌ não parseado |
+| `jdbc:sqlite:` / `jdbc:h2:` | ✅ JDBC (driver) | ✅ JVM | ✅ JDBC host | — |
+| `sqlite:` (nu) | ❌ `DB001` (use `jdbc:` no JVM/JS) | ❌ `DB001` | ❌ `DB001` | ✅ `sqlite3` link-by-use |
+| `jdbc:mysql:` / `jdbc:mariadb:` / `jdbc:postgresql:` | ✅ JDBC (driver no cp) | ✅ JVM | ✅ JDBC host | — |
+| `mysql://` / `mariadb://` (nu) | ❌ `DB001` (não é JDBC) | ❌ `DB001` | ❌ `DB001` | ⚠️ x86: wire `mysql://` + alias `mariadb://` (23/09); riscv/aarch `DB001` (wire não portado → R7) |
+| `mongodb://` | ✅ real (driver via reflexão) | ✅ JVM | ❌ `DB001` — gap declarado (S3) | ❌ `DB001` |
+| `jdbc:oracle:` | ✅ JDBC com driver no cp, senão `DB001` | ✅ JVM | ✅ JDBC host | — |
+| qualquer outra / driver ausente | ❌ `DB001` nomeado (S2) | ❌ `DB001` nomeado | ❌ `DB001` nomeado | ❌ `DB001` nomeado (S0) |
 
-- **JVM/Android/JS** aceitam qualquer URL JDBC com driver no classpath; o delegate
-  JS **é** o JDBC do host. Driver ausente é `DB001` em runtime hoje.
-- **Native** parseia só `sqlite:` e `mysql://`; qualquer outro scheme registra um
-  handle tipo-0 (o aceite silencioso do §421). `kof_db_type` já reserva
+- **JVM/Android/JS** aceitam qualquer URL **`jdbc:`** com driver no classpath; o
+  delegate JS **é** o JDBC do host. Driver ausente agora é `DB001` **nomeado**
+  (S2), nunca `SQLException` cru.
+- **`mongodb://`** é real no JVM/Android (driver via reflexão) e `DB001`
+  declarado no JS/Native (S3). O Native não vai criar servidor Mongo caseiro (R9).
+- **Native** parseia só `sqlite:` e `mysql://`/`mariadb://`; qualquer outro scheme
+  recusa com `DB001` nomeado no connect (S0). `kof_db_type` reserva
   **1=sqlite 2=mysql 3=oracle 4=mongo**.
+- **Questão de design aberta (rule 6, NÃO é edição de agente):** JVM/Android/JS
+  devem **normalizar** um scheme nu (`mysql://`, `sqlite:`) para seu equivalente
+  `jdbc:` para que a *mesma URL* funcione em todo alvo? Hoje o chamador precisa
+  escrever `jdbc:` no JVM/JS e a forma nua no Native. A normalização é frágil para
+  credenciais (`mysql://user:pass@host` vs `?user=&password=`) — a mantenedora decide.
 - Referência: `docs/stdlib/DATABASE_VISION.md` (Níveis 0–4, face Mongo no JVM,
   SQLite nativo real, MySQL/MariaDB nativo em andamento).
 
@@ -98,10 +113,24 @@ por scheme é a prova.
   `#jsMissingJdbcDriverNamesGapNotSilent` +
   `#jsRealConnectionFailureIsNotRelabeledDb001` (a do JVM VERMELHA no código
   antigo — `No suitable driver`); `KofDbE2ETest` 32/0F.
-- **S3 — `mongodb://` interop-first (R9).** Driver/wire por trás da API Kof —
-  **nunca** um servidor caseiro. Fechamento nativo conforme R7.
-  *Prova:* roundtrip E2E, ou gap declarado com o código até o driver pousar.
-- **S4 — `oracle://` (mesma rota do S3).**
+- **S3 — `mongodb://` interop-first (R9). ✅ FEITO 23/09 (lane gaps-db).**
+  JVM/Android rodam de verdade: `KofOrmE2ETest#mongoCrud` (roundtrip ORM completo —
+  save/find/where/count/saveAll/page/deleteAll — sobre o `mongodb-driver-sync`
+  real). JS/Native são um `DB001` **declarado**, nunca silencioso:
+  `KofJsDbBridge.connect/connect2` agora recusa `mongodb://` com
+  `DB001: mongodb:// is not supported on the JS target yet (host driver bridge
+  pending): <url>` (em vez da mensagem enganosa de "sem driver JDBC"), e o Native
+  recusa via S0. No JVM, driver mongo ausente também é nomeado (`DB001: mongodb://
+  needs the mongodb-driver-sync on the classpath`). Sem servidor caseiro (R9).
+  *Prova:* `KofDbE2ETest#jsMongodbSchemeNamesGapNotSilent` +
+  `#jvmMongodbMissingDriverNamesGap`; `KofOrmE2ETest#mongoCrud` (JVM real).
+- **S4 — `jdbc:oracle:` (mesma rota do S3). ✅ FEITO 23/09 (lane gaps-db,
+  declarado).** Não há driver/servidor Oracle neste host, e Oracle — como Mongo —
+  nunca será servidor caseiro (R9). No JVM/Android/JS, `jdbc:oracle:` conecta com o
+  driver no classpath, senão o `DB001` nomeado do S2 dispara; `oracle://` nu é
+  `DB001` (não é URL JDBC). O Native recusa via S0. *Prova:* os testes de
+  diagnóstico do S2 cobrem o caminho driver-ausente genericamente; nenhum E2E
+  específico de servidor é possível aqui (declarado, não silencioso).
 
 ## Não-objetivos / invariantes
 

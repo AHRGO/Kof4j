@@ -34,6 +34,7 @@ public final class KofJsDbBridge {
     private static final ThreadLocal<java.sql.Connection> TX = new ThreadLocal<>();
 
     public static String connect(String url) throws Exception {
+        if (isMongo(url)) throw mongoGap(url);
         try {
             return register(java.sql.DriverManager.getConnection(url));
         } catch (java.sql.SQLException e) {
@@ -42,11 +43,27 @@ public final class KofJsDbBridge {
     }
 
     public static String connect2(String url, String user, String pass) throws Exception {
+        if (isMongo(url)) throw mongoGap(url);
         try {
             return register(java.sql.DriverManager.getConnection(url, user, pass));
         } catch (java.sql.SQLException e) {
             throw dbDriverGap(url, e);
         }
+    }
+
+    private static boolean isMongo(String url) {
+        return url != null && url.startsWith("mongodb://");
+    }
+
+    /**
+     * S3/db-parity: o alvo JS ainda nao tem a ponte de driver mongo no host
+     * (o caminho ORM mongo vive no runtime do alvo JVM). Recusa NOMEADA (R6),
+     * em vez da mensagem generica de "sem driver JDBC" — que seria enganosa,
+     * porque {@code mongodb://} nao e URL JDBC.
+     */
+    private static Exception mongoGap(String url) {
+        return new IllegalArgumentException(
+                "DB001: mongodb:// is not supported on the JS target yet (host driver bridge pending): " + url);
     }
 
     /**

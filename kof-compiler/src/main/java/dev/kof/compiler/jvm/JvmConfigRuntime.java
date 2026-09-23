@@ -234,20 +234,27 @@ public final class JvmConfigRuntime {
                         // MongoDB: o driver (mongodb-driver-sync) fica no
                         // classpath do programa — o runtime usa reflexão para
                         // não depender dele em compile-time
-                        Class<?> clients = Class.forName("com.mongodb.client.MongoClients");
-                        Object client = clients.getMethod("create", String.class).invoke(null, url);
-                        String dbName = url;
-                        int slash = url.indexOf('/', "mongodb://".length());
-                        if (slash > 0) {
-                            int q = url.indexOf('?', slash);
-                            dbName = url.substring(slash + 1, q > 0 ? q : url.length());
+                        try {
+                            Class<?> clients = Class.forName("com.mongodb.client.MongoClients");
+                            Object client = clients.getMethod("create", String.class).invoke(null, url);
+                            String dbName = url;
+                            int slash = url.indexOf('/', "mongodb://".length());
+                            if (slash > 0) {
+                                int q = url.indexOf('?', slash);
+                                dbName = url.substring(slash + 1, q > 0 ? q : url.length());
+                            }
+                            if (dbName.isEmpty()) dbName = "kof";
+                            Object database = client.getClass().getMethod("getDatabase", String.class)
+                                    .invoke(client, dbName);
+                            String id = "mongo-" + KOF_MONGO_SEQ.incrementAndGet();
+                            KOF_MONGO.put(id, database);
+                            return id;
+                        } catch (ClassNotFoundException e) {
+                            // S3/db-parity: driver ausente = DB001 NOMEADO (R6),
+                            // nunca um ClassNotFoundException cru.
+                            throw new IllegalArgumentException(
+                                    "DB001: mongodb:// needs the mongodb-driver-sync on the classpath: " + url);
                         }
-                        if (dbName.isEmpty()) dbName = "kof";
-                        Object database = client.getClass().getMethod("getDatabase", String.class)
-                                .invoke(client, dbName);
-                        String id = "mongo-" + KOF_MONGO_SEQ.incrementAndGet();
-                        KOF_MONGO.put(id, database);
-                        return id;
                     }
                     try {
                         return kof_db_register(java.sql.DriverManager.getConnection(url));
