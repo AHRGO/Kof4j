@@ -2200,6 +2200,17 @@ class KofOrmE2ETest {
         // save/save_all/find/all/where/where_op/page). Nao ha mais ORM001 de
         // compile-time em ORM no cross; MySQL (runtime) segue recusado pelo
         // kof_orm_conn honesto (R6/R7).
+        // As faces serem REAIS mudou o caminho: o compile agora LINK com
+        // -lsqlite3 cross (antes parava no gate ORM001). O irmao da fatia A
+        // carrega o trio de guards (§255); sem ele o teste hard-falha em host
+        // sem libsqlite3-cross em vez de SKIP honesto.
+        assumeTrue(isLinux(), "cross ORM E2E requires Linux + libsqlite3");
+        assumeTrue(has("riscv64-linux-gnu-as", "riscv64-linux-gnu-ld", "qemu-riscv64"),
+                "cross toolchain riscv64 ausente — pulando");
+        assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sysrootOrNull("riscv64") != null,
+                "sysroot cross riscv64 ausente — pulando");
+        assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sqliteAvailable("riscv64"),
+                "libsqlite3 riscv64 ausente no sysroot — pulando");
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, ENTITY_SRC + """
                 main() {

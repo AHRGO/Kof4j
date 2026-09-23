@@ -52,7 +52,6 @@
 527	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeOrm1.java
 501	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeOrm4.java
 518	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeOrm5.java
-585	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeOrm7.java
 504	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeOrm8.java
 579	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeTimeIso.java
 566	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeUi.java
