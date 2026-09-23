@@ -267,6 +267,7 @@ carry libc calls from functions *not reached* in the same object
 libc, here they stay unresolved and are only fatal if the program reaches the libc
 path — which the refused capabilities cover. Removing the refs at the source
 (per-function sections + `gc-sections`) is the **B-1b** follow-up.
+> **Face (i) LANDED (22/09, lane 9093 — claimed after coordination with 9092):** the panic path no longer reaches the generic dispatcher — `kof_panic` now prints via `kof_println_string` (every panic message is a static `.asciz`). Measured: hello/plain/numeric programs without floats carry no `snprintf`/`strtod` anymore (`nm -u` of the gc-linked binary: present on the old code, gone on the fix). Proof: new `FreestandingLinkE2ETest.freestandingHelloCarriesNoLibcFormatRefs` (RED on the old code) + class 4/4 + native battery 101/0F (`NativeE2ETest` 67, `NullSafety` 14, `ArrayBounds` 10, catches/prints 10). Face (ii) — libc-free dtoa through the seam — still OPEN, owner lane 9092.
 **Acceptance met:** hello freestanding has no `PT_INTERP` and no `DT_NEEDED`
 (`readelf`) and still prints the JVM-oracle value; the `HOST` control shows both
 (anti-false-green); freestanding+`spawn` is refused with `NATIVE003`. Proof:

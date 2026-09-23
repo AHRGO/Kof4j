@@ -107,6 +107,21 @@ class FreestandingLinkE2ETest {
     }
 
     @Test
+    void freestandingHelloCarriesNoLibcFormatRefs(@TempDir Path dir) throws Exception {
+        // B-1b face (i): o panic genérico nao pode mais arrastar dtoa
+        // (snprintf/strtod) para o objeto freestanding — hello não usa float.
+        assumeTrue(hasTool("as") && hasTool("ld") && hasTool("readelf"),
+                "x86 toolchain/readelf ausentes");
+        Path bin = build(dir, PLAIN, NativeProfile.FREESTANDING, true);
+        String dyn = readelf("--dyn-syms", bin);
+        assertFalse(dyn.contains("snprintf"),
+                "freestanding hello: snprintf vivo no dynsym (dtoa arrastado):\n" + dyn);
+        assertFalse(dyn.contains("strtod"),
+                "freestanding hello: strtod vivo no dynsym (dtoa arrastado):\n" + dyn);
+        assertEquals(jvmOracle(dir, PLAIN), runBinary(bin), "saida freestanding != oracle JVM");
+    }
+
+    @Test
     void hostProfileStaysDynamic(@TempDir Path dir) throws Exception {
         assumeTrue(hasTool("as") && hasTool("ld") && hasTool("readelf"),
                 "x86 toolchain/readelf ausentes");

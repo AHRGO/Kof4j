@@ -274,6 +274,7 @@ alcançadas* no mesmo objeto (`snprintf`/`strtod` do dtoa, `pthread_*`, `usleep`
 no host elas resolvem pela libc, aqui ficam sem resolução e só são fatais se o
 programa alcançar o caminho libc — coberto pelas capacidades recusadas. Remover
 as refs na origem (seções por função + `gc-sections`) é o próximo passo **B-1b**.
+> **Face (i) LANDED (22/09, lane 9093 — reivindicado após coordenação com a 9092):** o caminho de panic não alcança mais o dispatcher genérico — o `kof_panic` imprime via `kof_println_string` (toda mensagem de panic é um `.asciz` estático). Medido: programas hello/plain/numéricos sem float não carregam mais `snprintf`/`strtod` (`nm -u` do binário linkado com gc: presente no código antigo, ausente com o fix). Prova: novo `FreestandingLinkE2ETest.freestandingHelloCarriesNoLibcFormatRefs` (RED no código antigo) + classe 4/4 + bateria nativa 101/0F (`NativeE2ETest` 67, `NullSafety` 14, `ArrayBounds` 10, catches/prints 10). Face (ii) — dtoa libc-free pela costura — ainda ABERTA, dona lane 9092.
 **Aceitação cumprida:** o hello freestanding não tem `PT_INTERP` nem `DT_NEEDED`
 (`readelf`) e ainda imprime o valor do oráculo JVM; o controle `HOST` mostra
 ambos (anti-falso-verde); freestanding+`spawn` é recusado com `NATIVE003`. Prova:

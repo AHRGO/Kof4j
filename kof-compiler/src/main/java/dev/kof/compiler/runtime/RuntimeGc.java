@@ -359,7 +359,11 @@ public final class RuntimeGc {
             .globl kof_panic
             .type kof_panic, @function
             kof_panic:
-                call kof_println
+                # B-1b face (i) (22/09, sessão 9093): mensagem de panic é SEMPRE
+                # string (todos os call-sites passam .asciz) — usar o dispatcher
+                # genérico kof_println arrastava kof_double_to_string/kof_float_to_string
+                # (snprintf/strtod) para TODO objeto freestanding, mesmo sem float no programa.
+                call kof_println_string
                 movq $1, %rdi
                 call kof_plat_exit
             """);
