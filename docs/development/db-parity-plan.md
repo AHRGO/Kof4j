@@ -187,8 +187,17 @@ typed roundtrip) produces the **same observable result** on all four targets, or
       halves) and extracts the 20-byte seed, exactly like `RuntimeDb3` does
       before `kof_db_mysql_scramble`. Proof: `NativeRiscvDbWireTest` parses a
       synthetic MariaDB greeting + a bad-protocol packet on both arches against a
-      fixed oracle, plus a B64 sabotage test. **Still open:** build/send the
-      auth-switch (handshake response) packet and read the OK.
+      fixed oracle, plus a B64 sabotage test.
+    - **23/09 — fourth slice DONE (piece `B65`, gaps-db lane):** the handshake
+      response builder — `kof_db_mysql_build_auth_response` writes the packet
+      frame (3-byte length LE + seq 1) and payload (capabilities
+      `0x0008820B`, max-packet, charset, 23-byte reserved, user, auth response
+      `<20>+scramble` or empty, database, plugin `mysql_native_password`),
+      mirroring `RuntimeDb3`. Proof: `NativeRiscvDbWireTest` builds it for
+      `passLen=20` and empty on both arches against a fixed oracle, plus a B65
+      sabotage test. **Still open:** wire it to the socket (send the response,
+      read the OK / handle `AuthSwitchRequest`) — the last S5.1 step towards the
+      real-MariaDB-under-qemu proof.
   - **S5.2 — `COM_QUERY` + text resultset.** Port packet framing + result parse.
     *Proof:* `db.query` roundtrip under qemu, byte-identical to x86/JVM.
   - **S5.3 — bind/prepared + tx + ORM.** Port the prepared/execute/transaction

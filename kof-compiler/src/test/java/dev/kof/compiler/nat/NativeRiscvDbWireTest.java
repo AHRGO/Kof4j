@@ -420,6 +420,174 @@ class NativeRiscvDbWireTest {
                 """;
     }
 
+    private static final byte[] AUTH_SCRAMBLE = new byte[20];
+    static {
+        for (int i = 0; i < 20; i++) AUTH_SCRAMBLE[i] = (byte) (0x10 + i);
+    }
+
+    /** Payload do handshake response, espelhando o layout do RuntimeDb3 x86. */
+    private static byte[] authPayload(int passLen) {
+        java.io.ByteArrayOutputStream o = new java.io.ByteArrayOutputStream();
+        o.write(0x0B);
+        o.write(0x82);
+        o.write(0x08);
+        o.write(0x00);
+        o.write(0x00);
+        o.write(0x00);
+        o.write(0x00);
+        o.write(0x01);
+        o.write(0x21);
+        for (int i = 0; i < 23; i++) o.write(0);
+        for (byte b : "root".getBytes(StandardCharsets.US_ASCII)) o.write(b);
+        o.write(0);
+        if (passLen > 0) {
+            o.write(20);
+            o.writeBytes(AUTH_SCRAMBLE);
+        } else {
+            o.write(0);
+        }
+        for (byte b : "kof".getBytes(StandardCharsets.US_ASCII)) o.write(b);
+        o.write(0);
+        for (byte b : "mysql_native_password".getBytes(StandardCharsets.US_ASCII)) o.write(b);
+        o.write(0);
+        return o.toByteArray();
+    }
+
+    private static String authOracle() {
+        StringBuilder sb = new StringBuilder();
+        boolean first = true;
+        for (int passLen : new int[]{20, 0}) {
+            byte[] p = authPayload(passLen);
+            if (!first) sb.append('\n');
+            first = false;
+            sb.append(p.length);
+            for (byte b : p) sb.append('\n').append(b & 0xff);
+        }
+        return sb.toString();
+    }
+
+    private static String authHarness() {
+        return """
+                .section .rodata
+                .Law_scramble:
+                    .byte 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17
+                    .byte 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F
+                    .byte 0x20, 0x21, 0x22, 0x23
+                .section .data
+                .align 3
+                .Law_user:
+                    .zero 16
+                    .word 4
+                    .zero 4
+                    .ascii "root"
+                .align 3
+                .Law_db:
+                    .zero 16
+                    .word 3
+                    .zero 4
+                    .ascii "kof"
+                .align 3
+                .Lkof_heap_root_start:
+                .Lkof_heap_root_end:
+                .section .text
+                .globl _start
+                _start:
+                    andi sp, sp, -16
+                    addi sp, sp, -528
+                    mv   s0, sp
+                    # caso passLen=20
+                    mv   a0, s0
+                    la   a1, .Law_scramble
+                    la   a2, .Law_user
+                    la   a3, .Law_db
+                    li   a4, 20
+                    call kof_db_mysql_build_auth_response
+                    mv   s1, a0
+                    call kof_println_int
+                    li   s2, 0
+                .Law_pr1:
+                    bge  s2, s1, .Law_pr1_done
+                    add  t0, s0, s2
+                    addi t0, t0, 4
+                    lbu  a0, 0(t0)
+                    call kof_println_int
+                    addi s2, s2, 1
+                    j    .Law_pr1
+                .Law_pr1_done:
+                    # caso passLen=0
+                    mv   a0, s0
+                    la   a1, .Law_scramble
+                    la   a2, .Law_user
+                    la   a3, .Law_db
+                    li   a4, 0
+                    call kof_db_mysql_build_auth_response
+                    mv   s1, a0
+                    call kof_println_int
+                    li   s2, 0
+                .Law_pr2:
+                    bge  s2, s1, .Law_pr2_done
+                    add  t0, s0, s2
+                    addi t0, t0, 4
+                    lbu  a0, 0(t0)
+                    call kof_println_int
+                    addi s2, s2, 1
+                    j    .Law_pr2
+                .Law_pr2_done:
+                    li   a0, 0
+                    li   a7, 93
+                    ecall
+                .globl kof_super_table
+                kof_super_table:
+                    .word 0
+                """;
+    }
+
+    @Test
+    void authResponseMatchesOracleOnRiscv64(@TempDir Path tempDir) throws Exception {
+        assumeRiscv();
+        String harness = authHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String out = buildRun("riscv64", tempDir, "auth_rv", harness + "\n" + runtime);
+        assertEquals(authOracle(), out, "auth response riscv64 diverge do oráculo");
+    }
+
+    @Test
+    void authResponseMatchesOracleOnAarch64(@TempDir Path tempDir) throws Exception {
+        assumeAarch64();
+        String harness = authHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String riscv = harness + "\n" + runtime;
+        StringBuilder arm = new StringBuilder();
+        for (String line : riscv.split("\n", -1)) {
+            for (String t : NativeAarch64Translator.translateRiscvToAarch64(line)) arm.append(t).append('\n');
+        }
+        String out = buildRun("aarch64", tempDir, "auth_aa", arm.toString());
+        assertEquals(authOracle(), out, "auth response aarch64 diverge do oráculo");
+    }
+
+    @Test
+    void withoutAuthResponsePieceLinkFailsSabotage(@TempDir Path tempDir) throws IOException {
+        assumeRiscv();
+        String harness = authHarness();
+        Set<Integer> keep = new LinkedHashSet<>(RiscvSlices.keepForProgramText(harness));
+        int b65 = -1;
+        for (RiscvSlices.Piece p : RiscvSlices.pieces()) {
+            if ("RISCV_RUNTIME_ASM_B_65".equals(p.field())) b65 = p.index();
+        }
+        assertTrue(b65 >= 0, "peça B65 (auth response) não encontrada no inventário");
+        assertTrue(keep.remove(b65), "B65 deveria estar no keep do harness de auth response");
+        String runtime = RiscvSlices.renderSubset(keep);
+        Path asm = tempDir.resolve("sab_authr.s");
+        Files.writeString(asm, harness + "\n" + runtime);
+        Path obj = tempDir.resolve("sab_authr.o");
+        Path bin = tempDir.resolve("sab_authr");
+        runCapture("riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
+        String[] r = runAllowFail("riscv64-linux-gnu-ld", "--no-relax", "-o", bin.toString(), obj.toString());
+        assertNotEquals("0", r[1], "sem a B65 o link deveria falhar (undefined kof_db_mysql_build_auth_response); saída: " + r[0]);
+        assertTrue(r[0].contains("kof_db_mysql_build_auth_response"),
+                "a falha deve citar kof_db_mysql_build_auth_response: " + r[0]);
+    }
+
     @Test
     void greetingParseMatchesOracleOnRiscv64(@TempDir Path tempDir) throws Exception {
         assumeRiscv();

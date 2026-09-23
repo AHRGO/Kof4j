@@ -79,6 +79,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     **10/10** (JVM/Script/JS + Native direct and inherited; RED measured with the
     code unfixed). Full suite 3197/0F/0E.
 
+  - **S5.1 (db-parity, gaps-db lane) — MySQL auth-response builder for the
+    cross wire (cross piece `B65`)** (23/09): `kof_db_mysql_build_auth_response`
+    writes the handshake-response frame (3-byte length + seq 1) and payload
+    (capabilities `0x0008820B`, max-packet, charset, reserved, user, the
+    `<20>+scramble` (or empty) auth response, database, plugin
+    `mysql_native_password`), mirroring `RuntimeDb3`. Proof:
+    `NativeRiscvDbWireTest` builds it for `passLen=20` and empty on both arches
+    against a fixed oracle, plus a B65 sabotage test. Wiring it to the socket
+    (send + read OK / `AuthSwitchRequest`) is the last S5.1 step.
+
   - **S5.1 (db-parity, gaps-db lane) — MySQL greeting parser for the cross wire
     (cross piece `B64`)** (23/09): `kof_db_mysql_parse_greeting` walks the
     server handshake packet (protocol 0x0A, version, conn-id, the two

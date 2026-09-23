@@ -79,6 +79,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `GenericInterfaceAssignabilityTest` **10/10** (JVM/Script/JS + Native direto e
     herdado; RED medido com o código sem o fix). Suíte completa 3197/0F/0E.
 
+  - **S5.1 (db-parity, lane gaps-db) — montador do auth response MySQL para o
+    wire cross (peça cross `B65`)** (23/09): `kof_db_mysql_build_auth_response`
+    escreve o frame do handshake response (len 3 bytes + seq 1) e o payload
+    (capabilities `0x0008820B`, max-packet, charset, reservados, user, o auth
+    response `<20>+scramble` (ou vazio), database, plugin
+    `mysql_native_password`), espelhando o `RuntimeDb3`. Prova:
+    `NativeRiscvDbWireTest` monta para `passLen=20` e vazio nas 2 archs contra
+    um oráculo fixo, mais um teste de sabotagem da B65. Ligar ao socket
+    (enviar + ler OK / `AuthSwitchRequest`) é o último passo do S5.1.
+
   - **S5.1 (db-parity, lane gaps-db) — parser do greeting MySQL para o wire
     cross (peça cross `B64`)** (23/09): `kof_db_mysql_parse_greeting` percorre o
     pacote de handshake do servidor (protocolo 0x0A, versão, conn-id, as duas

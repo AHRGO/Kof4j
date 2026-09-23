@@ -189,8 +189,17 @@ por scheme é a prova.
       `RuntimeDb3` faz antes do `kof_db_mysql_scramble`. Prova:
       `NativeRiscvDbWireTest` parseia um greeting sintético do MariaDB + um
       pacote com protocolo ruim nas 2 archs contra um oráculo fixo, mais um
-      teste de sabotagem da B64. **Ainda aberto:** montar/enviar o pacote de
-      auth-switch (handshake response) e ler o OK.
+      teste de sabotagem da B64.
+    - **23/09 — quarta fatia FEITA (peça `B65`, lane gaps-db):** o montador do
+      handshake response — `kof_db_mysql_build_auth_response` escreve o frame
+      (len 3 bytes LE + seq 1) e o payload (capabilities `0x0008820B`,
+      max-packet, charset, 23 bytes reservados, user, auth response
+      `<20>+scramble` ou vazio, database, plugin `mysql_native_password`),
+      espelhando o `RuntimeDb3`. Prova: `NativeRiscvDbWireTest` monta para
+      `passLen=20` e vazio nas 2 archs contra um oráculo fixo, mais um teste de
+      sabotagem da B65. **Ainda aberto:** ligar ao socket (enviar a resposta,
+      ler o OK / tratar `AuthSwitchRequest`) — último passo do S5.1 até a prova
+      com o MariaDB real sob qemu.
   - **S5.2 — `COM_QUERY` + resultset texto.** Portar framing + parse do resultado.
     *Prova:* roundtrip `db.query` sob qemu, byte-idêntico ao x86/JVM.
   - **S5.3 — bind/prepared + tx + ORM.** Portar o dispatch de prepared/execute/
