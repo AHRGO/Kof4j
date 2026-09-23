@@ -78,6 +78,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     both arches), `NativeRiscvRuntimeSliceRegistryTest` 8/8; cross battery
     177/0F/2skip. Live count 5→4.
 
+  - **§450 ✅ FIXED — `ArtifactSizeTest` hello riscv64/aarch64 symbol baseline
+    went stale after §448** (23/09, gaps-db lane): the libc-free Schubfach dtoa
+    is reachable from the hello's box printer (`kof_box_to_string →
+    kof_double_to_string`), so the reachable symbol set grew 45→55 (+10); bytes
+    stayed within tolerance. `HELLO_RV_SYMS`/`HELLO_AA_SYMS` 45→55; red
+    reproduced byte-identically at the base tip `a148a9557` without the
+    E-parte-5/6 commits (attribution = §448, not the ORM work). Proof:
+    `ArtifactSizeTest` 6/6.
+
   - **DB-3/DB-1 cross — `orm.all` is REAL on riscv64/aarch64 (ORM row-object
     read → `List`, E-parte-4)** (23/09, gaps-db lane): `SELECT * FROM "t"` with
     no bind, resolving `kof_orm_ctors` once before the row loop; each row is a

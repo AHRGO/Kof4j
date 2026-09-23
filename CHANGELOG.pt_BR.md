@@ -79,6 +79,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     nas duas arches), `NativeRiscvRuntimeSliceRegistryTest` 8/8; bateria cross
     177/0F/2skip. Contagem viva 5→4.
 
+  - **§450 ✅ CORRIGIDO — baseline de símbolos do hello riscv64/aarch64 no
+    `ArtifactSizeTest` ficou stale após o §448** (23/09, lane gaps-db): o dtoa
+    Schubfach libc-free é alcançável pelo box printer do hello
+    (`kof_box_to_string → kof_double_to_string`), então o conjunto de símbolos
+    alcançáveis cresceu 45→55 (+10); os bytes ficaram dentro da tolerância.
+    `HELLO_RV_SYMS`/`HELLO_AA_SYMS` 45→55; o vermelho reproduziu byte-a-byte no
+    tip base `a148a9557` sem os commits da E-parte-5/6 (atribuição = §448, não
+    o trabalho ORM). Prova: `ArtifactSizeTest` 6/6.
+
   - **DB-3/DB-1 cross — `orm.all` REAL no riscv64/aarch64 (leitura row-object
     do ORM → `List`, E-parte-4)** (23/09, lane gaps-db): `SELECT * FROM "t"` sem
     bind, resolvendo `kof_orm_ctors` uma vez antes do loop de linhas; cada linha
