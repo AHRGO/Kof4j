@@ -100,7 +100,10 @@ cruas, sem libc.
   `ld` cross (`NativeCrossLink.ffiLinkArg` preserva o path), então uma fixture
   montada com `compileObject` pode ser chamada do Kof (`extern "<path>.o"
   f(...)`). A metade de ABI (empacotamento do parâmetro struct por valor no
-  cross) é a próxima fatia.
+  cross) **LANDOU como 3.7 fatia 4 (22/09)**: o emissor empacota cada eightbyte
+  INTEGER do `record` Kof no seu registrador inteiro (`a0`/`a1`; AAPCS64
+  `x0`/`x1` pelo tradutor), prova `FfiCrossStructParamE2ETest` sob qemu nas
+  duas archs (`dev.kof.compiler.nat`).
 - **relaxamento de `gp` no riscv64:** o linker relaxa `la` de globais
   próximos para gp-relativo (`addi t0, gp, off`); um `_start` cru não
   inicializa `gp`, então o acesso falha. O `_start` precisa fazer

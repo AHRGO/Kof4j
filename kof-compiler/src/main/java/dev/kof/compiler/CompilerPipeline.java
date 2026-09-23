@@ -515,8 +515,9 @@ public final class CompilerPipeline {
         if (ext.library() == null || ext.library().isEmpty()) return false;
         // ABI ESCALAR binda em TODO alvo nativo: x86-64 SysV (fatia 1) e o shim
         // LP64/AAPCS64 do riscv64/aarch64 (#431 fatia 2, gate+lowering+E2E qemu
-        // no mesmo commit). STRUCT por valor é só x86-64 nesta fase (D6-1(A)/3.7
-        // fatias 1–2a): o struct cross landa na fatia 3 → FFI001 honesto (R6).
+        // no mesmo commit). STRUCT por valor binda nos dois: x86-64 register/sret
+        // (D6-1(A)/3.7 fatias 1–2b) e cross register path INTEGER ≤ 16 B (fatia 4)
+        // — float/HFA/byref cross segue FFI001 honesto (R6).
         // O caller só entra aqui com `driver.target.isNative()`.
         boolean x86 = driver.target == Target.NATIVE;
         // Retorno: escalar/void, struct por valor no register path (≤ 16 B) OU
@@ -547,18 +548,19 @@ public final class CompilerPipeline {
                 continue;
             }
             // D6-1(A)/3.7: `record` de campos escalares por valor (register path) — x86-64.
-            if (!x86) return false;
             String fc = FfiSignature.structFieldChars(param.type(), driver);
-            if (fc != null) {
-                paramTypes.add(FfiStructLayout.structTypeOfChars(fc));
-                continue;
-            }
-            return false;
+            if (fc == null) return false;
+            Type st = FfiStructLayout.structTypeOfChars(fc);
+            // 3.7 fatia 4: no cross o struct por valor binda só no register path
+            // INTEGER (≤ 16 B) — float/HFA/byref segue FFI001 honesto (R6).
+            if (!x86 && !FfiStructLayout.crossIntRegisterOnly(driver.target, st)) return false;
+            paramTypes.add(st);
         }
         // Chamada puramente escalar: binda em todo nativo (o layout x86 não se
         // aplica). sret consome 1 registrador INTEGER (o ponteiro escondido) —
         // os parâmetros deslocam uma posição (rdi vira rsi…).
-        return !x86 || FfiStructLayout.x86Bindable(paramTypes, sret ? 1 : 0);
+        if (x86) return FfiStructLayout.x86Bindable(paramTypes, sret ? 1 : 0);
+        return FfiStructLayout.crossBindable(paramTypes);
     }
 
     static boolean isIntType(String t) {

@@ -13,6 +13,22 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **FFI 3.7 fatia 4 — struct por valor como parâmetro no cross riscv64/aarch64**
+    (22/09, lane FFI/kof-c): um `record` Kof de campos INTEGER (≤ 16 B) passado
+    por valor a um `extern` agora binda nos alvos cross, fechando o `FFI001`
+    honesto para o qual a fatia de fixture C foi construída. O gate
+    (`CompilerPipeline.nativeExternBound`) aceita o param struct só pelo
+    caminho de registradores INTEGER (`FfiStructLayout.crossIntRegisterOnly`), e
+    o caller empacota cada eightbyte do `record` no seu registrador inteiro
+    (`a0`/`a1`; AAPCS64 `x0`/`x1` pelo tradutor — um texto, duas archs).
+    Float/HFA e > 16 B (BYREF/MEMORY) seguem `FFI001` na linha da declaração
+    (R6). Prova: `FfiCrossStructParamE2ETest` 5/5 — um objeto de fixture
+    montado à mão (`as` cross, sem cc cruzado no host) chamado pelo binário Kof
+    sob qemu, golden `42/2/6` medido nas duas archs (extensão de sinal de campo
+    negativo, struct de 3 campos/12 B, struct + arg escalar) mais as duas
+    rejeições de gate; bateria FFI 107/0F/2skip. `docs/development/kof-c-cross.md`
+    metade de link (C4-x) + metade de ABI agora completas.
+
   - **`kof.orm` cross riscv64/aarch64 — fatias A/B: `deleteAll` + `count` reais sobre SQLite**
     (22/09, lane gaps-db, DB-3/DB-1): o ORM era só x86-64 no Native (os alvos
     cross recusavam todo `orm.*` com `ORM001` em compile-time). A fatia A

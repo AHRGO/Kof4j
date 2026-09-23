@@ -144,6 +144,37 @@ public final class FfiStructLayout {
         return true;
     }
 
+    /** Number of eightbyte words a cross struct occupies (INTEGER-only, from
+     *  {@code crossIntRegisterOnly}). Integer fields are ABI-independent in
+     *  size/offset, so the SysV layout is reused for the word count. */
+    public static int crossWords(Type structType) {
+        return layout(AbiLayout.Abi.RISCV64, structType).classes().size();
+    }
+
+    /** True when the whole cross (riscv64/aarch64) parameter list is bindable.
+     *  A struct must be INTEGER-only (≤ 16 B) and fit entirely in the integer
+     *  registers — unlike scalars, which may spill (the shim handles it).
+     *  Simulates LP64/AAPCS64 register counting in formal order. */
+    public static boolean crossBindable(List<Type> paramTypes) {
+        int nInt = 0, nFlt = 0;
+        for (Type t : paramTypes) {
+            if (isStructType(t)) {
+                AbiLayout.Layout l = layout(AbiLayout.Abi.RISCV64, t);
+                if (l.byMemory() || l.size() > 16 || l.classes().isEmpty()) return false;
+                for (AbiLayout.ArgClass c : l.classes()) {
+                    if (c != AbiLayout.ArgClass.INTEGER) return false;
+                    if (nInt >= 8) return false;
+                    nInt++;
+                }
+            } else {
+                Character ch = FfiSignature.charOfType(t);
+                if (ch == null) return false;
+                if (ch == 'f' || ch == 'd') nFlt++; else nInt++;
+            }
+        }
+        return true;
+    }
+
     /** True when the whole parameter list is bindable on x86-64 (scalars may
      *  spill; structs must fit entirely in registers and use single-field SSE
      *  eightbytes). Simulates SysV register counting in formal order. */
@@ -225,5 +256,40 @@ public final class FfiStructLayout {
             sb.append("    orq %r11, %rax\n");
         }
         sb.append("    movq %rax, ").append(dst).append("\n");
+    }
+
+    // ── riscv64/aarch64 emission ─────────────────────────────────────────
+
+    /**
+     * Builds INTEGER eightbyte {@code e} of the struct (base register holds the
+     * Kof record object pointer) into {@code dst}, using RISC-V text that the
+     * aarch64 translator normalizes (same one-text-two-archs rule as the rest
+     * of the cross shim). Each field is zero-extended to its natural width,
+     * shifted to its position and OR'd — a field never crosses an eightbyte
+     * boundary under natural alignment, so OR is safe. {@code scratch} must
+     * differ from {@code base} and {@code dst}.
+     */
+    public static void emitRiscvIntEightbyte(StringBuilder sb, Type structType, int e,
+                                             String base, String dst, String scratch) {
+        List<FieldInfo> fs = fields(structType);
+        int lo = e * 8;
+        sb.append("    li ").append(dst).append(", 0\n");
+        for (FieldInfo f : fs) {
+            if (f.cOffset() >= lo + 8 || f.cOffset() + f.scalar().size <= lo) continue;
+            int off = 16 + 8 * f.kofSlot();
+            int shift = (f.cOffset() - lo) * 8;
+            switch (f.scalar().size) {
+                case 1 -> sb.append("    lbu ").append(scratch).append(", ").append(off).append("(").append(base).append(")\n");
+                case 2 -> sb.append("    lhu ").append(scratch).append(", ").append(off).append("(").append(base).append(")\n");
+                case 4 -> sb.append("    lw ").append(scratch).append(", ").append(off).append("(").append(base).append(")\n")
+                                .append("    slli ").append(scratch).append(", ").append(scratch).append(", 32\n")
+                                .append("    srli ").append(scratch).append(", ").append(scratch).append(", 32\n");
+                default -> sb.append("    ld ").append(scratch).append(", ").append(off).append("(").append(base).append(")\n");
+            }
+            if (shift > 0) {
+                sb.append("    slli ").append(scratch).append(", ").append(scratch).append(", ").append(shift).append("\n");
+            }
+            sb.append("    or ").append(dst).append(", ").append(dst).append(", ").append(scratch).append("\n");
+        }
     }
 }

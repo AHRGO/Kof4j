@@ -192,7 +192,7 @@ final class NativeFfiCall {
         // 4) retorno: struct por valor materializa o `record` (register path ou
         //    sret); caso contrário, o escalar/void de sempre → slot de 8 bytes.
         if (structRet) {
-            emitX86StructReturn(nb, sb, kc, retResolved, retStructType, retLayout, sret);
+            emitX86StructReturn(nb, sb, retResolved, retLayout, sret);
             return;
         }
         switch (ret) {
@@ -224,8 +224,8 @@ final class NativeFfiCall {
      * antes do call (em %r12) e o struct cru está no buffer apontado por %r13;
      * cada campo é lido do seu offset C (sem eightbyte).
      */
-    private static void emitX86StructReturn(NativeBackend nb, StringBuilder sb, KofCall kc,
-                                            NativeOpHelpers.Resolved r, Type st,
+    private static void emitX86StructReturn(NativeBackend nb, StringBuilder sb,
+                                            NativeOpHelpers.Resolved r,
                                             AbiLayout.Layout l, boolean sret) {
         List<Type> ftypes = new ArrayList<>();
         if (r != null) for (var f : r.layout().fields()) ftypes.add(f.type());
@@ -307,15 +307,35 @@ final class NativeFfiCall {
         String[] intRegs = {"a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7"};
         int n = kc.parameterTypes().size();
         char[] cls = new char[n];
-        for (int i = 0; i < n; i++) cls[i] = FfiSignature.charOfType(kc.parameterTypes().get(i));
+        boolean[] isStruct = new boolean[n];
+        Type[] structTypes = new Type[n];
+        for (int i = 0; i < n; i++) {
+            Type pt = kc.parameterTypes().get(i);
+            if (FfiStructLayout.isStructType(pt)) {
+                isStruct[i] = true;
+                structTypes[i] = pt;
+            } else {
+                cls[i] = FfiSignature.charOfType(pt);
+            }
+        }
         Character retC = FfiSignature.charOfType(kc.returnType());
         boolean structRet = retC == null;   // `record` por valor (3.7 fatia 3)
         char ret = structRet ? 0 : retC.charValue();
-        // ordinais POR CLASSE na ordem formal (arg0 → reg0 da sua classe)
+        // ordinais POR CLASSE na ordem formal (arg0 → reg0 da sua classe). Um
+        // struct INTEGER ocupa um ordinal por eightbyte (fatia 4).
         int[] ord = new int[n];
+        int[][] sOrd = new int[n][];
         int nInt = 0, nFlt = 0;
         for (int i = 0; i < n; i++) {
-            if (isFloatClass(cls[i])) { ord[i] = nFlt++; } else { ord[i] = nInt++; }
+            if (isStruct[i]) {
+                int w = FfiStructLayout.crossWords(structTypes[i]);
+                sOrd[i] = new int[w];
+                for (int e = 0; e < w; e++) sOrd[i][e] = nInt++;
+            } else if (isFloatClass(cls[i])) {
+                ord[i] = nFlt++;
+            } else {
+                ord[i] = nInt++;
+            }
         }
         int ns = (nInt > 8 ? nInt - 8 : 0) + (nFlt > 8 ? nFlt - 8 : 0);
         int seq = nb.inlineSeq++;
@@ -323,6 +343,17 @@ final class NativeFfiCall {
         //    intacto p/ os derramados; String: payload no offset 24, NULL→NULL)
         sb.append("    mv t0, sp\n");
         for (int i = 0; i < n; i++) {
+            if (isStruct[i]) {
+                // struct INTEGER por valor: ponteiro do objeto Kof → monta cada
+                // eightbyte no registrador de destino da sua classe (fatia 4).
+                sb.append("    ld t4, ").append(8 * (n - 1 - i)).append("(t0)\n");
+                for (int e = 0; e < sOrd[i].length; e++) {
+                    if (sOrd[i][e] >= 8) continue;   // derramado: passo 3
+                    FfiStructLayout.emitRiscvIntEightbyte(sb, structTypes[i], e,
+                            "t4", intRegs[sOrd[i][e]], "t5");
+                }
+                continue;
+            }
             char c = cls[i];
             boolean floatC = isFloatClass(c);
             if (floatC ? ord[i] >= 8 : ord[i] >= 8) continue; // derramado: passo 3
@@ -356,6 +387,15 @@ final class NativeFfiCall {
         //    valor cru (8 bytes) passa direto p/ o slot da C, float incluso.
         int k = 0;
         for (int i = 0; i < n; i++) {
+            if (isStruct[i]) {
+                sb.append("    ld t4, ").append(8 * (n - 1 - i)).append("(t0)\n");
+                for (int e = 0; e < sOrd[i].length; e++) {
+                    if (sOrd[i][e] < 8) continue;
+                    FfiStructLayout.emitRiscvIntEightbyte(sb, structTypes[i], e, "t4", "t5", "t6");
+                    sb.append("    sd t5, ").append(8 * k++).append("(sp)\n");
+                }
+                continue;
+            }
             char c = cls[i];
             boolean floatC = isFloatClass(c);
             if (!(floatC ? ord[i] >= 8 : ord[i] >= 8)) continue;

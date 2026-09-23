@@ -95,8 +95,11 @@ raw syscalls only, no libc.
   `library()` is a prebuilt `.o` for the arch enters the cross `ld` line
   positionally (`NativeCrossLink.ffiLinkArg` preserves the path), so a fixture
   built with `compileObject` can be called from Kof (`extern "<path>.o"
-  f(...)`). The ABI half (struct-by-value parameter packing on the cross) is the
-  next slice.
+  f(...)`). The ABI half (struct-by-value parameter packing on the cross)
+  **LANDED as 3.7 fatia 4 (22/09)**: the emitter packs each INTEGER eightbyte
+  of the Kof `record` into its integer register (`a0`/`a1`; AAPCS64 `x0`/`x1`
+  via the translator), proof `FfiCrossStructParamE2ETest` under qemu on both
+  archs (`dev.kof.compiler.nat`).
 - **riscv64 `gp` relaxation:** the linker relaxes `la` of nearby globals to
   gp-relative (`addi t0, gp, off`); a raw `_start` does not initialise `gp`,
   so the access faults. `_start` must do
