@@ -8,7 +8,7 @@
 > when parity is complete.
 
 **Owner:** `gaps-db` lane (handed over 21/09 by order of the maintainer, under `D-DB-PARITY-OWNER`; S0/S1 authorized) · **Records/plan:** docs/plataforma lane
-**Branch:** `beta-0.5.0` · **Status:** S0 ✅ DONE (21/09, session 9092) — honest native refusal of an unsupported scheme with the named `DB001` code, plus real link-by-use (no `libmariadb` link for non-mysql literals); S1 in progress (`mariadb://` alias); S2–S4 follow
+**Branch:** `beta-0.5.0` · **Status:** S0 ✅ DONE (21/09, session 9092) — honest native refusal of an unsupported scheme with the named `DB001` code, plus real link-by-use (no `libmariadb` link for non-mysql literals); **S1 ✅ DONE on Native x86-64 (23/09, gaps-db lane)** — `mariadb://` is a `mysql://` wire alias; cross stays honest `DB001` until the mysql wire is ported (R7); S2–S4 follow
 
 ---
 
@@ -32,7 +32,7 @@ diagnostic, never silence) — never a permanent refusal, never a silent accept.
 |---|---|---|---|---|
 | `sqlite:` | ✅ JDBC (driver) | ✅ JVM | ✅ host JDBC | ✅ `sqlite3` link-by-use |
 | `mysql://` | ✅ JDBC | ✅ JVM | ✅ host JDBC | ⚠️ wire in progress (`RuntimeDb2` — auth scramble/lenenc done; full handshake/prepared pending) |
-| `mariadb://` | ✅ JDBC (driver) | ✅ JVM | ✅ host JDBC | ❌ not parsed (mysql-wire compatible) |
+| `mariadb://` | ✅ JDBC (driver) | ✅ JVM | ✅ host JDBC | ⚠️ x86-64 ✅ alias of the `mysql://` wire (23/09); riscv/aarch still `DB001` (mysql wire not ported → R7) |
 | `mongodb://` | ✅ JDBC (driver) | ✅ JVM | ✅ host JDBC | ❌ not parsed |
 | `oracle://` | ✅ JDBC (driver) | ✅ JVM | ✅ host JDBC | ❌ not parsed |
 | `postgres://` | ✅ JDBC (driver) | ✅ JVM | ✅ host JDBC | ❌ not parsed |
@@ -68,9 +68,17 @@ typed roundtrip) produces the **same observable result** on all four targets, or
   green + `KofDbE2ETest.nativeUnsupportedSchemeNamesGapNotSilent` pin (rc≠0,
   `DB001`, no `unknown db connection`) + `NativeDbSchemeRefusalAsmTest`
   (deterministic codegen) + `LinkByUseTest` 3/3.
-- **S1 — `mariadb://` = mysql-wire alias (Native, 3 arches).** Parse `mariadb://`
-  into the same path as `mysql://`; `kof_db_type` reports the mysql family.
-  *Proof:* native E2E connect + query on x86-64 (cross guarded by toolchain).
+- **S1 — `mariadb://` = mysql-wire alias (Native, 3 arches). ✅ DONE on x86-64
+  23/09 (gaps-db lane).** `kof_db_connect_inner` (`RuntimeDb2`) matches
+  `mariadb://` and reuses the `mysql://` path (`r12 = schemeStart+2`, so the
+  shared `leaq 8(%r12)` host offset lands after the 10-char scheme);
+  `kof_db_type` reports the mysql family (2), so `execute`/`query`/ORM take the
+  wire. The `DB001` message now lists `mariadb://`. On riscv64/aarch64 both
+  `mysql://` and `mariadb://` still refuse with `DB001` (the cross mysql wire is
+  not ported — honest R7). *Proof:* `KofDbE2ETest#nativeMariadbAliasWireProtocol`
+  — real MariaDB (KOF_MYSQL_PORT), both the `user:pass@host` and the host-only
+  form, byte-identical `{"id":7,"name":"Alias"}`; `KofDbE2ETest` 28/0F +
+  `NativeDbSchemeRefusalAsmTest` 2/2.
 - **S2 — JDBC scheme parity JVM/JS/Android.** Per-driver measurement (h2, sqlite,
   mysql, mariadb, postgres) + honest missing-driver diagnostic with the code.
   *Proof:* E2E per scheme on JVM; JS/Android delegate proof.

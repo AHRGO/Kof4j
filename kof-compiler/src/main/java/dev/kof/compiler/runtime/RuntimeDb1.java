@@ -37,8 +37,8 @@ public final class RuntimeDb1 {
                 .long 0
                 .asciz "rollback"
             # §421/S0: diagnóstico honesto p/ scheme fora do contrato nativo
-            # (sqlite:/mysql://). Antes: handle nulo -> "unknown db connection: "
-            # anônimo tarde no .Lorm_conn (R6 violado).
+            # (sqlite:/mysql://, S1: +mariadb://). Antes: handle nulo ->
+            # "unknown db connection: " anônimo tarde no .Lorm_conn (R6 violado).
             .Ldb_unsupported_str:
                 .long 1
                 .long 0
@@ -46,7 +46,7 @@ public final class RuntimeDb1 {
                 .long .Ldb_unsupported_len
                 .long 0
             .Ldb_unsupported_body:
-                .asciz "DB001: unsupported db scheme (native: sqlite:, mysql://)"
+                .asciz "DB001: unsupported db scheme (native: sqlite:, mysql://, mariadb://)"
                 .set .Ldb_unsupported_len, . - .Ldb_unsupported_body - 1
             .section .bss
             .Ldb_slots: .zero 512

@@ -557,6 +557,57 @@ class KofDbE2ETest {
     }
 
     @Test
+    void nativeMariadbAliasWireProtocol(@TempDir Path tempDir) throws IOException {
+        assumeTrue(isLinux(), "Native MySQL requires Linux");
+        // S1/db-parity-plan: `mariadb://` é alias do wire `mysql://` (mesmo
+        // handshake/auth/COM_QUERY/resultset, kof_db_type=2). Cobre as DUAS
+        // formas de host: com userinfo (`user:pass@`) e sem (o caminho
+        // `.Ldb_host_orig`, que computa o host a partir do comprimento do
+        // scheme — o bug clássico do alias). Requer MariaDB real (KOF_MYSQL_PORT).
+        int port;
+        try { port = Integer.parseInt(System.getenv().getOrDefault("KOF_MYSQL_PORT", "13306")); }
+        catch (NumberFormatException e) { port = 13306; }
+        boolean up;
+        try (java.net.Socket s = new java.net.Socket()) {
+            s.connect(new java.net.InetSocketAddress("127.0.0.1", port), 500);
+            up = s.isConnected();
+        } catch (Exception e) { up = false; }
+        assumeTrue(up, "MariaDB server not reachable on 127.0.0.1:" + port);
+        Path source = tempDir.resolve("M.kf");
+        Files.writeString(source, """
+            main() {
+                var db = db.connect("mariadb://root:kofpass@127.0.0.1:%d/test")
+                db.execute(db, "create table if not exists m1(id int, name varchar(50))")
+                db.execute(db, "delete from m1")
+                db.execute(db, "insert into m1 values (?, ?)", 7, "Alias")
+                var rows = db.query(db, "select id, name from m1 where id = ?", 7)
+                for (var r in rows) { println(r) }
+                db.close(db)
+                var db2 = db.connect("mariadb://127.0.0.1:%d/test")
+                var rows2 = db.query(db2, "select id, name from m1 where id = ?", 7)
+                for (var r in rows2) { println(r) }
+                db.close(db2)
+            }
+            """.formatted(port, port));
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.NATIVE);
+        assertTrue(result.success(), "Native compile should succeed: " + result.diagnostics().getDiagnostics());
+        Path binFile = tempDir.resolve("out/Default/Main");
+        try {
+            ProcessBuilder pb = new ProcessBuilder(binFile.toString());
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+            int ec = p.waitFor();
+            assertEquals(0, ec, "Exit code should be 0, output: '" + output + "'");
+            assertEquals("{\"id\":7,\"name\":\"Alias\"}\n{\"id\":7,\"name\":\"Alias\"}", output,
+                    "Native mariadb:// alias output (userinfo + host-only forms)");
+        } catch (InterruptedException e) {
+            throw new IOException("Interrupted while running native binary", e);
+        }
+    }
+
+    @Test
     void nativeMysqlPreparedBinary(@TempDir Path tempDir) throws IOException {
         assumeTrue(isLinux(), "Native MySQL requires Linux");
         int port;
