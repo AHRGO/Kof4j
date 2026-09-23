@@ -12230,3 +12230,14 @@ Esperado `6`; atual: `VerifyError: Bad type on operand stack` no load.
 
 **Prova (mesmo commit, RED→GREEN):** novo `SwitchExprPatternBindingE2ETest` 4/4 — o eval recursivo verbatim (`-5`), o formato todos-os-ids (`6\n9`), o contrato de box do §57/§70 para ramos mistos (zero regressão) e a face com `default` explícito (`9\n-1`); RED medido com stash SÓ do fix (1F = o verbatim). Vizinhos: o cluster switch inteiro 56/0F (expr+stmt+guard+empty-default+break-scope+long/double+rhs).
 <!-- pt-switch --> **EN:** [§484 (en)](known-bugs.md#484--switch-expression-whose-first-case-body-is-a-bare-pattern-bound-identifier-case-litvar-v---v-inferred-resulttype-unknown--the-synthetic-exhaustive-fallback-tail-was-emitted-boxed-against-int-case-bodies--verifyerror-bad-type-on-operand-stack-at-load---fixed-2309-lane-9093-sem--issue-601-root-cause-traced-and-reported-by-the-issue-author-fix-landed-here)
+
+## §485 — no CROSS nativo o `KofConcurrency2Test#channelWithSpawnCrossArch` estoura com SIGSEGV sob CARGA de suíte completa (`qemu: uncaught target signal 11`, exit 139) mas fica verde isolado — FLAKE INTERMITENTE no caminho nativo de channel/spawn (§423/B61) — ABERTO (achado no full-suite da lane gaps-db, 23/09 sessão 9092)
+
+**Status** ABERTO — intermitente; registrado pela lane gaps-db 23/09 (dono: caminho nativo de channel/spawn, §423/B61).
+
+**Sintoma (medido):** a suíte completa (23/09, `s5_1e`) reportou `KofConcurrency2Test` `Failures: 1` — `channelWithSpawnCrossArch` morreu em `NativeRiscv64E2ETest.runQemu` com `Exit code should be 0, output: 'qemu: uncaught target signal 11 (Segmentation fault) - core dumped'` (exit 139). O mesmo teste passa 3/3 isolado e a classe inteira passa 49/49 duas vezes na mesma árvore.
+
+**Repro:** rodar a suíte completa do reactor (contenção de CPU, muitos processos qemu ao mesmo tempo) — o flake é sensível a carga e NÃO reproduz nas execuções isoladas acima.
+
+**Não foi introduzido pelo trabalho de S5.1:** o teste de channel poda as peças novas B62–B66 (anexadas depois de B61 mas não referenciadas pelo programa de channel) e fica verde isolado no mesmo commit; o caminho que falha é o runtime nativo de channel/spawn (§423, peça `B61`). Registrado conforme o freeze (gate vermelho sem causa na própria mudança), para o dono do channel. As faces JVM/JS do mesmo teste estão verdes — só a face qemu-nativa segfaulta, sob carga.
+<!-- pt-dbwire-485 --> **EN:** [§485 (en)](known-bugs.md#485--native-cross-kofconcurrency2testchannelwithspawncrossarch-segfaults-under-full-suite-load-qemu-uncaught-target-signal-11-exit-139-while-green-in-isolation--intermittent-flake-in-the-channelspawn-native-path-423b61--open-found-by-the-gaps-db-lane-full-suite-run-2309-session-9092)
