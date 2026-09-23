@@ -2,8 +2,7 @@
 
 [English](kof-c-cross.md) | [Português](kof-c-cross.pt_BR.md)
 
-**Status:** EM CURSO — **C1 + C2 + C3 + C4 LANDADAS** (22/09). Dono: frente FFI/kof-c
-(lane development/tooling).
+**Status:** CONCLUÍDO — **C1 + C2 + C3 + C4 + C3-residual LANDADAS** (23/09). Dono: frente FFI/kof-c. Movido para `docs/` pela regra dos três estados.
 
 ## Por quê
 
@@ -67,10 +66,8 @@ cruas, sem libc.
   de emitir binário (R6/Q7). Prova: `KofCStructCompilerTest` 7/7 em
   x86_64/riscv64/aarch64 (ida-e-volta de campo, parâmetro por valor, campo
   negativo com extensão de sinal, struct + escalar misturados, struct global)
-  mais os quatro casos de rejeição. **Falta:** struct **retorno** por valor,
-  structs maiores que 8 bytes (caminho de memória/par de registradores) e a
-  classificação completa SysV/AAPCS64/RISCV64 multi-eightbyte — a necessidade
-  atual da fixture (um parâmetro struct ≤ 8 B) está atendida.
+   mais os quatro casos de rejeição.
+- **C3-residual — LANDADA (23/09):** struct **retorno por valor** (≤16 B) + **parâmetros multi-eightbyte** (≤48 B / 6 eightbytes). Retorno ≤8 B no acumulador (`rax`/`a0`/`x0`), 9–16 B em `rax+rdx` / `a0+a1` / `x0+x1` (par SysV/LP64/AAPCS64 — desvio documentado do SysV memória para 16 B, escolhido por paridade). Parâmetros classificados por eightbyte (só INTEGER — float/HFA → `FFI001`), empacotados dos campos do `record` Kof e desempilhados em ordem de pilha. Frame: variável de `k` eightbytes ocupa `k` slots em `low = next+2k-2` (extent `k*8` de `low` para baixo, nunca além de `rbp`); segundo chunk de retorno em `low-1`. Diagnósticos honestos: param >48 B ou retorno >16 B → `at most 48/16` (R6). Prova: `KofCStructCompilerTest` agora **14/14** em x86_64/riscv64/aarch64 (adiciona 12 B 3-campos, 20 B 5-campos misto, retorno 8 B/16 B, arg+retorno combinado) + 4 casos de rejeição; paridade cross byte-idêntica ao oráculo x86.
 - **C4 — LANDADA (22/09):** saída de objeto reutilizável e link.
   `KofCCompiler.compileObject(cFile, oFile, target)` monta um `.o` avulso —
   sem `_start` e **sem exigir `main`** — com todas as funções definidas emitidas
