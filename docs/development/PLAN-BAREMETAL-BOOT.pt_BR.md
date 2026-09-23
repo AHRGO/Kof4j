@@ -314,13 +314,20 @@ bug (corrigido: o passe de sectionize movia as funções do programa e quebrava 
 expressões de range do DWARF). `Float`/`Double` exigem substituir o
 `snprintf("%.*e")`/`strtod` do `RuntimeDtoa`.
 
+- **Decisão (mantenedora, 23/09): espelhar o JDK EXATAMENTE.** Um dtoa
+  matematicamente "mais curto" (Ryū/Steele-White) **não basta**: medido no
+  Temurin **JDK 25**, `Double.parseDouble("5e-324")` faz round-trip para bits
+  `0x1`, mas `Double.toString(0x1)` = `4.9E-324` (2 dígitos) — o comportamento
+  de compatibilidade especificado do JDK *não* é o mais curto. O `5.0E-324` do
+  host atual já é o mais curto; logo um conversor só-shortest não corrigiria o
+  §448 nem casaria com o oráculo dos testes. Portanto o B-1c porta **o algoritmo
+  do JDK (`DoubleToDecimal`, Schubfach) + a formatação do `Double.toString`**
+  libc-free, reproduzindo a saída exata (incluindo o comportamento subnormal).
 - **Restrição de paridade (o ponto difícil).** O host x86_64 escolhe a precisão
   mais curta iterando `snprintf("%.*e", p)` + `strtod` (glibc, round-half-even) e
   fica com o primeiro `p` que faz round-trip. O conversor bare-metal PRECISA
-  reproduzir a MESMA escolha de dígitos, senão o golden host muda — regressão
-  silenciosa (regra 3 do Freeze). Logo a unidade libc-free é um **formatador
-  `%.*e` corretamente arredondado + um `strtod` corretamente arredondado**, não
-  um shortest-dtoa arbitrário (ex. Ryū) cujo desempate pode divergir da glibc.
+  reproduzir a escolha de dígitos do JDK (mais curto **e** mais próximo, com as
+  fronteiras exatas do JDK) — senão os testes de paridade divergem.
 - **Resultado do recon (§448, medido 23/09):** a escolha de dígitos do loop do
   host já está **errada vs o JVM** nos menores subnormais (`println(5E-324)`:
   JVM `4.9E-324`, Nativo `5.0E-324`; `println(1E-323)`: JVM `9.9E-324`, Nativo
@@ -331,14 +338,16 @@ expressões de range do DWARF). `Float`/`Double` exigem substituir o
   em Java contra o oráculo JVM (e contra a saída glibc-host) num corpus grande
   (bits aleatórios + bordas: subnormais, `±0.0`, `1e308`, `5e-324`, os limiares
   JDK `1e-3`/`1e7`, empates exatos) **antes** de escrever qualquer assembly.
-- **Fatias sugeridas (cada uma com prova):** (1) harness de recon/paridade em
-  Java; (2) núcleo big-integer exato (add/sub/mul-small/shl/cmp/divmod-10) no
-  runtime x86 + teste de corpus ponta-a-ponta; (3) `kof_fmt_sci` (`%.*e`
-  corretamente arredondado) substitui `snprintf`; (4) `kof_parse_double`
-  (corretamente arredondado) substitui `strtod`; (5) liga em
-  `kof_double_to_string`/`kof_float_to_string`, apaga a recusa `NATIVE003` e
-  prova `FreestandingLinkE2ETest` verde com corpus `println(Double)`/`Math.PI` ==
-  oráculo JVM e sem `snprintf`/`strtod` no `nm -u`.
+- **Fatias (cada uma com prova):** (1) recon — FEITA 23/09 (§448 + a decisão de
+  espelhar o JDK); (2) portar o core do `DoubleToDecimal` do JDK (Schubfach:
+  decode, multiplicação 128-bit + tabela de potências de 10, laço
+  shortest/closest) para o runtime x86, com teste de corpus Nativo
+  `== Double.toString` (bordas incl. subnormais) — a prova decisiva; (3) adaptar
+  o `kof_dtoa_format`/formatação às regras do `Double.toString` (limiares
+  `1e-3`/`1e7`, sempre um dígito fracionário); (4) ligar em
+  `kof_double_to_string`/`kof_float_to_string`, apagar a recusa `NATIVE003` e
+  provar `FreestandingLinkE2ETest` verde com corpus `println(Double)` == oráculo
+  JDK e sem `snprintf`/`strtod` no `nm -u`.
 - **Nota de escopo:** o mesmo débito do `kof_dtoa_format` no cross (riscv/aarch
   usam `snprintf`/`strtod` da libc) fica fora desta face; a unidade x86 é a
   referência.

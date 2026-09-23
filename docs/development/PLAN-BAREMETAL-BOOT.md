@@ -306,13 +306,20 @@ alive; a multi-function program exposed a second bug (fixed: the sectionize pass
 moved program functions and broke DWARF range expressions). `Float`/`Double`
 need `RuntimeDtoa`'s `snprintf("%.*e")`/`strtod` replaced.
 
+- **Decision (maintainer, 23/09): mirror the JDK EXACTLY.** A mathematically
+  "shortest" dtoa (Ryū/Steele-White) is **not** enough: measured on Temurin
+  **JDK 25**, `Double.parseDouble("5e-324")` round-trips to bits `0x1`, yet
+  `Double.toString(0x1)` = `4.9E-324` (2 digits) — the JDK's specified
+  compatibility behavior is *not* the shortest. The host's current `5.0E-324`
+  is already the shortest, so a shortest-only converter would neither fix §448
+  nor match the oracle the tests use. Therefore B-1c ports **the JDK algorithm
+  (`DoubleToDecimal`, Schubfach) + `Double.toString` formatting** libc-free,
+  reproducing its exact output (including the subnormal behavior).
 - **Parity constraint (the hard part).** The host x86_64 picks the shortest
   precision by looping `snprintf("%.*e", p)` + `strtod` (glibc, round-half-even)
   and takes the first `p` that round-trips. The bare-metal converter MUST
-  reproduce that digit selection, or the host golden changes — a silent
-  regression (Freeze rule 3). So the libc-free unit is a **correctly-rounded
-  `%.*e` formatter + a correctly-rounded `strtod`**, not an arbitrary
-  shortest-dtoa (e.g. Ryū) whose tie-breaking may differ from glibc.
+  reproduce the JDK's digit selection (shortest **and closest**, with the JDK's
+  exact boundaries) — otherwise the parity tests diverge.
 - **Recon outcome (§448, measured 23/09):** the host loop's digit choice is
   already **wrong vs the JVM** on the smallest subnormals (`println(5E-324)`:
   JVM `4.9E-324`, Native `5.0E-324`; `println(1E-323)`: JVM `9.9E-324`, Native
@@ -324,14 +331,15 @@ need `RuntimeDtoa`'s `snprintf("%.*e")`/`strtod` replaced.
   (random bits + edges: subnormals, `±0.0`, `1e308`, `5e-324`, the `1e-3`/`1e7`
   JDK thresholds, exact ties) **before** writing any assembly. No asm is written
   until the digit selection is pinned.
-- **Suggested slices (each with proof):** (1) recon/parity harness in Java;
-  (2) exact big-integer core (add/sub/mul-small/shl/cmp/divmod-10) in the x86
-  runtime + end-to-end corpus test; (3) `kof_fmt_sci` (correctly-rounded `%.*e`)
-  replacing `snprintf`; (4) `kof_parse_double` (correctly-rounded) replacing
-  `strtod`; (5) wire `kof_double_to_string`/`kof_float_to_string`, delete the
+- **Slices (each with proof):** (1) recon — DONE 23/09 (§448 + the decision to
+  mirror the JDK); (2) port the JDK `DoubleToDecimal` core (Schubfach: decode,
+  128-bit multiply + power-of-10 table, the shortest/closest loop) into the x86
+  runtime, with a Native-corpus test `== Double.toString` (edges incl.
+  subnormals) — the decisive proof; (3) adapt `kof_dtoa_format`/formatting to the
+  JDK `Double.toString` rules (the `1e-3`/`1e7` thresholds, always a fraction
+  digit); (4) wire `kof_double_to_string`/`kof_float_to_string`, delete the
   `NATIVE003` float-print refusal, and prove `FreestandingLinkE2ETest` green with
-  a `println(Double)`/`Math.PI` corpus == JVM oracle and no `snprintf`/`strtod`
-  in `nm -u`.
+  a `println(Double)` corpus == JDK oracle and no `snprintf`/`strtod` in `nm -u`.
 - **Scope note:** the same `kof_dtoa_format` cross-debt (riscv/aarch use libc
   `snprintf`/`strtod`) is out of this face; the x86 unit is the reference.
 
