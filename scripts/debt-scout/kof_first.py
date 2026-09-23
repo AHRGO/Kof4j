@@ -255,9 +255,22 @@ def selftest():
 
     root = os.path.join(os.path.dirname(__file__), "..", "..")
     real_decisions = _read_decisions_md(root)
-    check("real repo DECISIONS.md is found and parses into index entries",
-          real_decisions is not None
-          and len(_decisions_index_entries(real_decisions)) > 10)
+    # NOT ">10 entries" -- that assumed beta-0.5.0's own accumulated index
+    # size as if it were universal. It is not: an older checkout of
+    # DECISIONS.md (e.g. main, frozen 15/09) genuinely has no "## 0.
+    # Decision index" section yet, and 0 entries is the CORRECT parse for
+    # that content, not a parser failure. The real invariant: the file is
+    # found, parsing never crashes, and every entry that IS found is a
+    # well-formed (id, description) pair.
+    check("real repo DECISIONS.md is found and readable",
+          real_decisions is not None)
+    if real_decisions is not None:
+        real_entries = _decisions_index_entries(real_decisions)
+        check("every parsed index entry is a well-formed (id, description) "
+              f"pair ({len(real_entries)} entries found on this checkout)",
+              all(isinstance(e, tuple) and len(e) == 2
+                  and re.match(r"^[A-Z][A-Z0-9.-]*$", e[0]) and e[1]
+                  for e in real_entries))
 
     return ok
 
