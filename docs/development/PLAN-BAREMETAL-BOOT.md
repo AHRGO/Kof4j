@@ -147,8 +147,30 @@ the output vanish), `NativeE2ETest` 67/67, `KofConcurrency2Test` 48/48,
 `JsonE2ETest` 18/18, `JsonCompleteE2ETest` 10/10, `KofDbE2ETest` 27/27 (4
 skips), `NullSafetyE2ETest` 14/14, `ProcessResultContentE2ETest` 4/4,
 `NativeNullablePrimitiveContractE2ETest` 42/42, `ArtifactSizeTest` 6/6 with the
-x86 baseline re-measured (39.232→39.304 B, 84→88 syms). **Next slices:**
-x86_64 env surface (time/sleep/mono, entropy, gettid), spawn/futex
+ x86 baseline re-measured (39.232→39.304 B, 84→88 syms). **Next slices:**
+ x86_64 env surface (time/sleep/mono, entropy, gettid), spawn/futex
+ (`kof_plat_thread`/`kof_plat_sync`), net sockets (`kof_plat_net_*`), then B-1.
+ **Depends on:** nothing. **Gap:** `NATIVE003` (proposed).
+
+**Slice 3a (LANDED 22/09, lane `baremetal` 9092):** the x86_64 **environment
+surface** crosses the seam — `RuntimePlat` gains `kof_plat_time`/`time_mono`
+(clock_gettime 228, `rdi`=ts), `kof_plat_sleep` (nanosleep 35), `kof_plat_random`
+(getrandom 318) and `kof_plat_thread_id` (gettid 186); the sites are routed:
+`kof_now`/`kof_time_sleep`, the log timestamp, `kof_obs_mono_nanos`/
+`kof_obs_epoch_micros`, `kof_random_bool`/`kof_random_double`,
+`kof_sec_random_hex`/`_int`/`kof_sec_random_bytes`, the ORM migration clock
+(`RuntimeOrm1`/`RuntimeOrmMysqlDdl`) and the `_start` gettid. **Bug caught while
+hunting (Q4), not shipped:** the first impl swapped the `clock_gettime` raw-syscall
+args (on x86_64 `rdi`=clockid, `rsi`=ts — not the reverse); `NativeLogE2ETest`,
+`KofSecurityTest.jwtNative` and `KofTimeE2ETest` red-flagged it (JWT read
+"expired", log dated 1970) and the fix is proven. Bonus: the log timestamp read
+`tv_usec` as if it were nsec (ms always 0) — the seam's real **timespec** closes
+that latent bug. Proof: 371/0F (`KofTimeE2ETest` 42, `KofLogE2ETest` 11,
+`NativeLogE2ETest` 7, `KofObservabilityTest` 12, `KofRandomTest` 15,
+`KofRngTest` 11, `KofUuidTest` 14, `KofSecurityTest` 41, `KofSecurityG9Test` 3,
+`KofConcurrency2Test` 48, `NativeE2ETest` 67, `KofOrmE2ETest` 63/18 skips,
+`KofDbE2ETest` 27/4 skips, `PlatformSeamSabotageTest` 4/4), x86 baseline
+re-measured (39.304→39.512 B, 88→93 syms). **Next slices:** spawn/futex x86
 (`kof_plat_thread`/`kof_plat_sync`), net sockets (`kof_plat_net_*`), then B-1.
 **Depends on:** nothing. **Gap:** `NATIVE003` (proposed).
 

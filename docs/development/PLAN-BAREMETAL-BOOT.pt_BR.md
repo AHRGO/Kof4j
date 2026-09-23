@@ -150,7 +150,30 @@ saída sumir), `NativeE2ETest` 67/67, `KofConcurrency2Test` 48/48, `JsonE2ETest`
 `NullSafetyE2ETest` 14/14, `ProcessResultContentE2ETest` 4/4,
 `NativeNullablePrimitiveContractE2ETest` 42/42, `ArtifactSizeTest` 6/6 com o
 baseline x86 re-medido (39.232→39.304 B, 84→88 syms). **Próximas fatias:**
-superfície de ambiente x86_64 (time/sleep/mono, entropia, gettid), spawn/futex
+ superfície de ambiente x86_64 (time/sleep/mono, entropia, gettid), spawn/futex
+ (`kof_plat_thread`/`kof_plat_sync`), sockets de rede (`kof_plat_net_*`) e
+ então B-1.
+ **Depende de:** nada. **Lacuna:** `NATIVE003` (proposta).
+
+**Fatia 3a (LANDADA 22/09, lane `baremetal` 9092):** a **superfície de ambiente**
+x86_64 cruza a costura — `RuntimePlat` ganha `kof_plat_time`/`time_mono`
+(clock_gettime 228, `rdi`=ts), `kof_plat_sleep` (nanosleep 35), `kof_plat_random`
+(getrandom 318) e `kof_plat_thread_id` (gettid 186); os sítios são roteados:
+`kof_now`/`kof_time_sleep`, o timestamp do log, `kof_obs_mono_nanos`/
+`kof_obs_epoch_micros`, `kof_random_bool`/`kof_random_double`,
+`kof_sec_random_hex`/`_int`/`kof_sec_random_bytes`, o relógio da migração ORM
+(`RuntimeOrm1`/`RuntimeOrmMysqlDdl`) e o gettid do `_start`. **Bug pego na caça
+(Q4), não enviado:** a 1ª impl trocou os args da syscall crua `clock_gettime`
+(no x86_64 `rdi`=clockid, `rsi`=ts — não o inverso); `NativeLogE2ETest`,
+`KofSecurityTest.jwtNative` e `KofTimeE2ETest` o denunciaram (JWT lido como
+"expirado", log datado de 1970) e o fix está provado. Bônus: o timestamp do log
+lia `tv_usec` como se fosse nsec (ms sempre 0) — o **timespec** real da costura
+fecha esse bug latente. Prova: 371/0F (`KofTimeE2ETest` 42, `KofLogE2ETest` 11,
+`NativeLogE2ETest` 7, `KofObservabilityTest` 12, `KofRandomTest` 15,
+`KofRngTest` 11, `KofUuidTest` 14, `KofSecurityTest` 41, `KofSecurityG9Test` 3,
+`KofConcurrency2Test` 48, `NativeE2ETest` 67, `KofOrmE2ETest` 63/18 skips,
+`KofDbE2ETest` 27/4 skips, `PlatformSeamSabotageTest` 4/4), baseline x86
+re-medido (39.304→39.512 B, 88→93 syms). **Próximas fatias:** spawn/futex x86
 (`kof_plat_thread`/`kof_plat_sync`), sockets de rede (`kof_plat_net_*`) e
 então B-1.
 **Depende de:** nada. **Lacuna:** `NATIVE003` (proposta).

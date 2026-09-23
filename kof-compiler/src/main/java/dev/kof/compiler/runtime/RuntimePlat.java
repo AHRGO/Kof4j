@@ -43,6 +43,46 @@ public final class RuntimePlat {
             kof_plat_exit_group:
                 movq $231, %rax
                 syscall
+
+            .globl kof_plat_time
+            .type kof_plat_time, @function
+            kof_plat_time:
+                movq %rdi, %rsi          # ts
+                xorq %rdi, %rdi          # CLOCK_REALTIME
+                movq $228, %rax
+                syscall
+                ret
+
+            .globl kof_plat_time_mono
+            .type kof_plat_time_mono, @function
+            kof_plat_time_mono:
+                movq %rdi, %rsi          # ts
+                movq $1, %rdi            # CLOCK_MONOTONIC
+                movq $228, %rax
+                syscall
+                ret
+
+            .globl kof_plat_sleep
+            .type kof_plat_sleep, @function
+            kof_plat_sleep:
+                movq $35, %rax           # nanosleep(req, rem)
+                syscall
+                ret
+
+            .globl kof_plat_random
+            .type kof_plat_random, @function
+            kof_plat_random:
+                movq $318, %rax          # getrandom(buf, len, 0)
+                xorq %rdx, %rdx
+                syscall
+                ret
+
+            .globl kof_plat_thread_id
+            .type kof_plat_thread_id, @function
+            kof_plat_thread_id:
+                movq $186, %rax          # gettid
+                syscall
+                ret
             """);
     }
 }

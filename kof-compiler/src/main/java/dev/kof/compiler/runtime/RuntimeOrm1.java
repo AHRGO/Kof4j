@@ -457,10 +457,8 @@ kof_orm_migrate:
             call .Lorm_exec
             testl %eax, %eax
             js .Lorm_mig_false              # sql falhou (host: rc<0 -> false)
-            xorl %edi, %edi                 # CLOCK_REALTIME
-            leaq 24(%rsp), %rsi             # struct timespec
-            movl $228, %eax
-            syscall
+            leaq 24(%rsp), %rdi             # struct timespec
+            call kof_plat_time
             movq 24(%rsp), %rax
             imulq $1000, %rax, %r12         # sec -> ms
             movq 32(%rsp), %rax             # nsec

@@ -55,8 +55,13 @@ class ArtifactSizeTest {
     // print/panic/exit pela costura kof_plat_* acrescentou
     // kof_plat_write/writev/exit/exit_group ao alcancavel do hello —
     // 39.232->39.304B (+0,2%), 84->88 syms. Medido no host pos-seam.
-    private static final long HELLO_X86_BYTES = 39_304L;
-    private static final int HELLO_X86_SYMS = 88;
+    // B-0.3/PLAN-BAREMETAL-BOOT (22/09, ambiente x86_64 pela costura): o
+    // gettid do _start e os sítios de time/log/random/obs/orm passaram a
+    // chamar kof_plat_thread_id/time/time_mono/sleep/random (a fatia
+    // RuntimePlat linka inteira ao ser referenciada) — 39.304->39.512B
+    // (+0,5%), 88->93 syms. Medido no host pós-seam.
+    private static final long HELLO_X86_BYTES = 39_512L;
+    private static final int HELLO_X86_SYMS = 93;
     // Pós-#104 (13/09): o shim globalThis.kof_platform do core JS (erro claro
     // em vez de ReferenceError fora do GraalJS) entrou no préâmbulo always —
     // o hello carrega ~827B a mais. Re-medido neste host: 6.873 → 7.700.

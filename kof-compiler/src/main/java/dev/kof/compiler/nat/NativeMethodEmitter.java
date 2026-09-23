@@ -403,9 +403,8 @@ final class NativeMethodEmitter {
         // o frame corrente (causa (1) do §260: String viva no frame de main
         // enquanto um helper aloca era INVISIVEL ao mark -> sweep liberava vivo)
         sb.append("    movq %rsp, kof_main_stack_bottom(%rip)\n");
-        // grava o TID do main thread (SYS_gettid=186) — limita GC ao main
-        sb.append("    movq $186, %rax\n");
-        sb.append("    syscall\n");
+        // grava o TID do main thread — limita GC ao main (B-0: via costura kof_plat_)
+        sb.append("    call kof_plat_thread_id\n");
         sb.append("    movq %rax, kof_main_tid(%rip)\n");
         if (mainHasArgs) {
             // N3: passa array vazio — evita segfault ao tratar argc como ponteiro

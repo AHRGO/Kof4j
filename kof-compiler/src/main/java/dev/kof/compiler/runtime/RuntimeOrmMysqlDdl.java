@@ -167,10 +167,8 @@ public final class RuntimeOrmMysqlDdl {
                 leaq 24(%rax), %rsi
                 movl 16(%rax), %edx
                 call .Lorm_ddl_exec          # sql do usuario
-                xorl %edi, %edi              # CLOCK_REALTIME
-                leaq 32(%rsp), %rsi
-                movl $228, %eax
-                syscall
+                leaq 32(%rsp), %rdi
+                call kof_plat_time
                 movq 32(%rsp), %rax
                 imulq $1000, %rax, %r12      # sec -> ms
                 movq 40(%rsp), %rax
