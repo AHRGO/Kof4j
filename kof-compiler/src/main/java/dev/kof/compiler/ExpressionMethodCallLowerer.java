@@ -54,7 +54,7 @@ int handledStatic = ExpressionStaticCallLowerer.lower(driver, mc, ops, owner, lo
 if (handledStatic >= 0) return handledStatic;
 if (mc.receiver() == null && driver.externSignatures.containsKey(mc.methodName())) {
     ExternalFunctionNode ext = driver.externSignatures.get(mc.methodName());
-    if (CompilerPipeline.isExternBound(driver, ext)) {
+    if (CompilerFfiBinding.isExternBound(driver, ext)) {
         // #431/§61 (Native): ABI escalar DIRETA — os args ficam crus na pilha de
         // operandos (mesma convenção push dos calls internos) e o backend emite o
         // marshaling SysV + `call sym@PLT` (precedente: consumidor SQLite/DB001).

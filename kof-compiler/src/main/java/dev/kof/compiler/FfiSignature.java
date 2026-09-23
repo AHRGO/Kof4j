@@ -121,7 +121,8 @@ public final class FfiSignature {
     }
 
     /** Retorno bindável no JVM e no JS (Native fica FFI001) — gate do
-     *  `isExternBound`, fora do `CompilerPipeline` p/ manter a classe ≤500. No JS
+     *  `isExternBound` (agora em `CompilerFfiBinding`, fora do pipeline p/
+     *  manter a classe ≤500). No JS
      *  o host devolve os campos e o guest reconstrói (`__kof_ffi_from`). */
     static boolean structReturnBindable(CompilerDriver driver, ExternalFunctionNode ext) {
         return (driver.target == Target.JVM || driver.target == Target.JS)

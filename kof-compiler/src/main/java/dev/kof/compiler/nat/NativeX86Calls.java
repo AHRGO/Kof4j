@@ -20,7 +20,7 @@ public final class NativeX86Calls {
 
      void emitCall(StringBuilder sb, KofCall kc) {
         if (NativeFfiCall.isExternCall(kc)) {
-            // #431: extern bound (gate CompilerPipeline.isExternBound) — ABI
+            // #431: extern bound (gate CompilerFfiBinding.isExternBound) — ABI
             // escalar direta p/ a .so ligada no link (ver NativeFfiCall).
             NativeFfiCall.emitX86(nb, sb, kc);
             return;

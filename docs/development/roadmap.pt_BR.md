@@ -1055,7 +1055,7 @@ Fila ordenada dos vereditos de múltipla escolha da mantenedora 23/09 (fonte:
 | 13.2 | §271 — bridge methods nos impls de interface genérica (ABI de erasure) | compiler | `NoSuchMethodError` fechado, suíte verde |
 | 13.3 | §278 — portar stacks `kof.security`/`kof.gpu` p/ Android | gaps-db | stacks rodam no Android ou recusa permanente honesta |
 | 13.4 | §423 — portar runtime `kof_channel_*` p/ riscv64/aarch64 | nat | prova qemu nas 2 archs |
-| 13.5 | Lote de split: `NativeBackend` 603 + `CompilerPipeline` 588 + `RuntimeOrm7` 585 (behavior-preserving, precedente §442/§446) | lane reivindicante | `check_500.sh` rc=0 + mesma suíte verde |
+| 13.5 | Lote de split: `NativeBackend` 603 + `CompilerPipeline` 588 + `RuntimeOrm7` 585 (behavior-preserving, precedente §442/§446) — `CompilerPipeline` ✅ **475** (23/09, 9092); `RuntimeOrm7` pendente; `NativeBackend` bloqueado pelo WIP UEFI 9093 | lane reivindicante | `check_500.sh` rc=0 + mesma suíte verde |
 | 13.6 | D6-1=B — frente `struct` mutável by-ref (spec-first, regra 11) | FFI | design §4/§6 revisado, depois diff parser/typer + testes |
 
 ## 24. KOF 1.0 EXIT GATE — estabilização dos contratos (RATIFICADO 20/09/2026, `DECISIONS.md` §D-RELEASE-1.0; arestas fechadas por `D-1.0-EDGES`)

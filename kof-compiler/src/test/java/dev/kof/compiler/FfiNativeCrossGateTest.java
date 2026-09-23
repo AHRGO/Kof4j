@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * #431 fatia 2). O sintoma só aparecia onde há qemu + toolchain cross — os hosts
  * sem toolchain PULAM o {@link FfiNativeCrossE2ETest} ({@code assumeTrue}) e a
  * regressão passou silenciosa. Este teste fecha essa cegueira: exercita
- * {@link CompilerPipeline#isExternBound} direto, que é pré-codegen e independe
+ * {@link CompilerFfiBinding#isExternBound} direto, que é pré-codegen e independe
  * do assembler/linker.
  *
  * <p>Contrato (R6 + fatias R3): escalar binda em TODO alvo nativo; struct por
@@ -47,7 +47,7 @@ class FfiNativeCrossGateTest {
     @Test
     void scalarExternBindsOnEveryNativeTarget() {
         for (Target t : List.of(Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64)) {
-            assertTrue(CompilerPipeline.isExternBound(driver(t), scalarExtern()),
+            assertTrue(CompilerFfiBinding.isExternBound(driver(t), scalarExtern()),
                     "extern escalar (Int→Int + library()) deve bindar no " + t
                             + " — #431 fatia 2 abriu o shim cross e as fatias de struct não podem re-fechá-lo");
         }
@@ -56,7 +56,7 @@ class FfiNativeCrossGateTest {
     @Test
     void scalarExternWithoutLibraryStaysGap() {
         ExternalFunctionNode noLib = new ExternalFunctionNode(null, null, "Int", "abs", List.of());
-        assertFalse(CompilerPipeline.isExternBound(driver(Target.NATIVE_RISCV64), noLib),
+        assertFalse(CompilerFfiBinding.isExternBound(driver(Target.NATIVE_RISCV64), noLib),
                 "extern sem library() não tem o que linkar → FFI001 (R6)");
     }
 
@@ -66,7 +66,7 @@ class FfiNativeCrossGateTest {
         // bindar; nunca silencioso (R6). O caminho POSITIVO (record declarado,
         // campos INTEGER) é provado com toolchain em FfiNativeCrossE2ETest.
         for (Target t : List.of(Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64)) {
-            assertFalse(CompilerPipeline.isExternBound(driver(t), structReturnExtern()),
+            assertFalse(CompilerFfiBinding.isExternBound(driver(t), structReturnExtern()),
                     "retorno de tipo record não resolvido é FFI001 em " + t);
         }
     }
