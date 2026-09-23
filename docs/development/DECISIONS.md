@@ -574,7 +574,7 @@ The model does not change between these topologies.
 * `KofBlogE2ETest`
 * `KofWebE2ETest`
 
-**Reference:** `docs/architecture/application-model.md`
+**Reference:** `docs/backend-parity.md` (App model `APP001–003`)
 
 **Queue:** `CmdNew` ✅ (`new` in `Main.java:37`); manifest/dependency integration ✅ (`kofdeps` + transitive lock 1.5.2 + registry pull 1.5.3-S2, 19/09); target gaps → tracked in `docs/backend-parity.md` (ledger, not this record).
 
@@ -1047,19 +1047,15 @@ The SEM012 false positive from case #159 must be eliminated.
 
 **Date:** 2026-09-15
 
-**State:** `IN_PROGRESS`
+**State:** `IMPLEMENTED`
 
-Enum identity implementation was reassigned to the bugs-and-gaps lane.
-
-The semantic change:
+Enum identity implementation was reassigned to the bugs-and-gaps lane and is **complete**: enums are real classes (`CompilerEnumLowering`), identity `==`, real `name`/`ordinal`/`values()`. The semantic change below was treated as a **contract decision** (not a local fix) and is now resolved — slice 1 made `enum == String` a **type error** (`SEM062`) on all targets; slice 2 materialized enums as real classes. Proof: `EnumIdentityE2ETest` 6/6; `known-bugs.md` §211 ✅ CLOSED 15/09; issue #207 closed.
 
 ```kof
 Dir.N == "N"
 ```
 
-must be treated as a contract decision, not as a simple local fix.
-
-The final decision on the semantics remains recorded in this section before changing the behavior.
+The final semantics are recorded in this section; the behavior was changed under this decision.
 
 ---
 

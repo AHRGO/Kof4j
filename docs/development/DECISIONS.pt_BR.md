@@ -552,7 +552,7 @@ O modelo não muda entre essas topologias.
 * `KofBlogE2ETest`
 * `KofWebE2ETest`
 
-**Referência:** `docs/architecture/application-model.md`
+**Referência:** `docs/backend-parity.md` (modelo de app `APP001–003`)
 **Fila:** `CmdNew` ✅ (`new` em `Main.java:37`); integração de manifesto/dependências ✅ (`kofdeps` + lock transitivo 1.5.2 + registry pull 1.5.3-S2, 19/09); gaps de target → rastreados em `docs/backend-parity.md` (ledger, não este registro).
 
 ---
@@ -997,19 +997,15 @@ O falso-positivo SEM012 do caso #159 deve ser eliminado.
 ## D-ENUM207 — identidade de enum
 
 **Data:** 15/09/2026
-**Estado:** `IN_PROGRESS`
+**Estado:** `IMPLEMENTED`
 
-A implementação de identidade de enum foi reatribuída à lane bugs-and-gaps.
-
-A mudança semântica:
+A implementação de identidade de enum foi reatribuída à lane bugs-and-gaps e está **completa**: enums são classes reais (`CompilerEnumLowering`), identidade `==`, `name`/`ordinal`/`values()` reais. A mudança semântica abaixo foi tratada como **decisão de contrato** (não correção local) e está resolvida — a fatia 1 tornou `enum == String` um **erro de tipo** (`SEM062`) em todos os alvos; a fatia 2 materializou enums como classes reais. Prova: `EnumIdentityE2ETest` 6/6; `known-bugs.md` §211 ✅ CLOSED 15/09; issue #207 fechada.
 
 ```kof
 Dir.N == "N"
 ```
 
-deve ser tratada como decisão de contrato, não como simples correção local.
-
-A decisão final sobre a semântica permanece registrada nesta seção antes da alteração do comportamento.
+A semântica final está registrada nesta seção; o comportamento foi alterado sob esta decisão.
 
 ---
 
