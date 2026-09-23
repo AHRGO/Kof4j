@@ -172,9 +172,16 @@ typed roundtrip) produces the **same observable result** on all four targets, or
       the piece is the one exercised (without `B62`, `ld` fails undefined).
       Cross lesson (load-bearing): RV64 `lw` SIGN-EXTENDS (x86 `movl` zeroes) —
       every 32-bit load feeding `srli`/`slli` needs an explicit zero-extend, and
-      the 32-bit working words must be zext'd each round (RV64 has no 32-bit GPR).
-      **Still open:** auth scramble (`kof_db_mysql_scramble`), lenenc, greeting
-      read and the auth-switch response.
+      the 32-bit working words must be zext'd each round       (RV64 has no 32-bit GPR).
+    - **23/09 — second slice DONE (piece `B63`, gaps-db lane):** the auth helper
+      itself — `kof_db_mysql_scramble` (`mysql_native_password`:
+      `SHA1(pass) XOR SHA1(seed || SHA1(SHA1(pass)))`, over the B62 SHA1) and
+      `kof_db_mysql_lenenc` (length-encoded integer: `<0xFC` / `0xFC`+2 LE /
+      `0xFD`+3 LE) ported from `RuntimeDb1`. Proof: same `NativeRiscvDbWireTest`
+      harness on riscv64 + aarch64 against a JVM oracle (`MessageDigest` +
+      the standard scramble formula) for a fixed seed/password, plus the three
+      lenenc cases and a B63 sabotage test. **Still open:** read the server
+      greeting and send the auth-switch response.
   - **S5.2 — `COM_QUERY` + text resultset.** Port packet framing + result parse.
     *Proof:* `db.query` roundtrip under qemu, byte-identical to x86/JVM.
   - **S5.3 — bind/prepared + tx + ORM.** Port the prepared/execute/transaction

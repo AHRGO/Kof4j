@@ -42,6 +42,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `GenericInterfaceAssignabilityTest` **10/10** (JVM/Script/JS + Native direto e
     herdado; RED medido com o código sem o fix). Suíte completa 3197/0F/0E.
 
+  - **S5.1 (db-parity, lane gaps-db) — helper de auth MySQL para o wire cross
+    (peça cross `B63`)** (23/09): `kof_db_mysql_scramble` (a fórmula
+    `mysql_native_password` `SHA1(pass) XOR SHA1(seed || SHA1(SHA1(pass)))`,
+    sobre o SHA1 da B62) e `kof_db_mysql_lenenc` (inteiro length-encoded) agora
+    existem em riscv64/aarch64. Prova: `NativeRiscvDbWireTest` roda os dois nas
+    2 archs sob qemu contra um oráculo JVM (`MessageDigest` + a fórmula padrão
+    do scramble) mais os 3 casos de lenenc e um teste de sabotagem da B63. Ler o
+    greeting + a resposta de auth-switch ficam na próxima fatia.
+
   - **S5.1 (db-parity, lane gaps-db) — SHA1 + bswap para o wire MySQL cross
     (peça cross `B62`)** (23/09): as primeiras primitivas do caminho de auth
     `mysql_native_password` agora existem em riscv64/aarch64 — `kof_sec_sha1_

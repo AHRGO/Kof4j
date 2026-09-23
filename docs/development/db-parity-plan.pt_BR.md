@@ -173,9 +173,16 @@ por scheme é a prova.
       Lição cross (load-bearing): `lw` no RV64 SIGN-ESTENDE (o `movl` x86 zera) —
       todo load de 32 bits que alimenta `srli`/`slli` precisa de zero-extend
       explícito, e as palavras de trabalho de 32 bits devem ser zext a cada round
-      (RV64 não tem GPR de 32 bits). **Ainda aberto:** scramble de auth
-      (`kof_db_mysql_scramble`), lenenc, leitura do greeting e a resposta de
-      auth-switch.
+      (RV64 não tem GPR de 32 bits).
+    - **23/09 — segunda fatia FEITA (peça `B63`, lane gaps-db):** o helper de
+      auth em si — `kof_db_mysql_scramble` (`mysql_native_password`:
+      `SHA1(pass) XOR SHA1(seed || SHA1(SHA1(pass)))`, sobre o SHA1 da B62) e
+      `kof_db_mysql_lenenc` (inteiro length-encoded: `<0xFC` / `0xFC`+2 LE /
+      `0xFD`+3 LE) portados do `RuntimeDb1`. Prova: o mesmo harness
+      `NativeRiscvDbWireTest` em riscv64 + aarch64 contra um oráculo JVM
+      (`MessageDigest` + a fórmula padrão do scramble) para seed/password fixos,
+      mais os 3 casos de lenenc e um teste de sabotagem da B63. **Ainda aberto:**
+      ler o greeting do servidor e enviar a resposta de auth-switch.
   - **S5.2 — `COM_QUERY` + resultset texto.** Portar framing + parse do resultado.
     *Prova:* roundtrip `db.query` sob qemu, byte-idêntico ao x86/JVM.
   - **S5.3 — bind/prepared + tx + ORM.** Portar o dispatch de prepared/execute/

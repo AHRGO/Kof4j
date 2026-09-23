@@ -42,6 +42,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     **10/10** (JVM/Script/JS + Native direct and inherited; RED measured with the
     code unfixed). Full suite 3197/0F/0E.
 
+  - **S5.1 (db-parity, gaps-db lane) — MySQL auth helper for the cross wire
+    (cross piece `B63`)** (23/09): `kof_db_mysql_scramble` (the
+    `mysql_native_password` formula `SHA1(pass) XOR SHA1(seed || SHA1(SHA1(
+    pass)))`, on top of the B62 SHA1) and `kof_db_mysql_lenenc` (length-encoded
+    integer) now exist on riscv64/aarch64. Proof: `NativeRiscvDbWireTest` runs
+    them on both arches under qemu against a JVM oracle (`MessageDigest` + the
+    standard scramble formula) plus the three lenenc cases and a B63 sabotage
+    test. Reading the greeting + the auth-switch response remain on the next
+    slice.
+
   - **S5.1 (db-parity, gaps-db lane) — SHA1 + bswap for the cross MySQL wire
     (cross piece `B62`)** (23/09): the first primitives of the `mysql_native_
     password` auth path now exist on riscv64/aarch64 — `kof_sec_sha1_block` +

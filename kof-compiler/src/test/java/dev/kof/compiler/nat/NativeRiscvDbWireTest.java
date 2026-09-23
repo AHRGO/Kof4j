@@ -70,6 +70,113 @@ class NativeRiscvDbWireTest {
         return sb.toString().trim();
     }
 
+    private static final byte[] SEED = "12345678901234567890".getBytes(StandardCharsets.US_ASCII);
+    private static final byte[] PASS = "password".getBytes(StandardCharsets.US_ASCII);
+
+    /** Oráculo: scramble (20 bytes) + os 3 casos de lenenc (valor, offset). */
+    private static String wireOracle() throws Exception {
+        MessageDigest md = MessageDigest.getInstance("SHA-1");
+        byte[] s1 = md.digest(PASS);
+        byte[] s2 = md.digest(s1);
+        byte[] combo = new byte[SEED.length + s2.length];
+        System.arraycopy(SEED, 0, combo, 0, SEED.length);
+        System.arraycopy(s2, 0, combo, SEED.length, s2.length);
+        byte[] s3 = md.digest(combo);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 20; i++) sb.append((s1[i] ^ s3[i]) & 0xff).append('\n');
+        // offsets absolutos no buffer .Ldw_lenenc (caso 2 no byte 1, caso 3 no byte 4)
+        sb.append("16\n1\n4660\n4\n1193046\n8");
+        return sb.toString().trim();
+    }
+
+    /**
+     * _start: scramble do par (seed, pass) + impressão dos 20 bytes; depois os
+     * 3 casos de lenenc (valor, offset de retorno) sobre buscas em offsets
+     * distintos do mesmo buffer.
+     */
+    private static String wireHarness() {
+        return """
+                .section .rodata
+                .Ldw_seed:
+                    .ascii "12345678901234567890"
+                .Ldw_lenenc:
+                    .byte 0x10, 0xFC, 0x34, 0x12, 0xFD, 0x56, 0x34, 0x12
+                .section .data
+                .align 3
+                .Ldw_pass:
+                    .zero 16
+                    .word 8
+                    .zero 4
+                    .ascii "password"
+                .align 3
+                .Lkof_heap_root_start:
+                .Lkof_heap_root_end:
+                .section .text
+                .globl _start
+                _start:
+                    andi sp, sp, -16
+                    addi sp, sp, -64
+                    mv   a0, sp
+                    la   a1, .Ldw_seed
+                    li   a2, 20
+                    la   a3, .Ldw_pass
+                    call kof_db_mysql_scramble
+                    mv   a0, sp
+                    call .Ldw_print20
+                    la   s0, .Ldw_lenenc
+                    # caso 1: 1 byte (0x10), offset base+0
+                    mv   a0, s0
+                    call kof_db_mysql_lenenc
+                    mv   s1, a1
+                    call kof_println_int
+                    sub  a0, s1, s0
+                    call kof_println_int
+                    # caso 2: 0xFC + 2 bytes LE, offset base+1
+                    addi a0, s0, 1
+                    call kof_db_mysql_lenenc
+                    mv   s1, a1
+                    call kof_println_int
+                    sub  a0, s1, s0
+                    call kof_println_int
+                    # caso 3: 0xFD + 3 bytes LE, offset base+4
+                    addi a0, s0, 4
+                    call kof_db_mysql_lenenc
+                    mv   s1, a1
+                    call kof_println_int
+                    sub  a0, s1, s0
+                    call kof_println_int
+                    li   a0, 0
+                    li   a7, 93
+                    ecall
+                .Ldw_print20:
+                    addi sp, sp, -32
+                    sd   ra, 0(sp)
+                    sd   s0, 8(sp)
+                    sd   s1, 16(sp)
+                    sd   s2, 24(sp)
+                    mv   s0, a0
+                    li   s1, 0
+                .Ldw_pr_loop:
+                    li   s2, 20
+                    bge  s1, s2, .Ldw_pr_done
+                    add  t0, s0, s1
+                    lbu  a0, 0(t0)
+                    call kof_println_int
+                    addi s1, s1, 1
+                    j    .Ldw_pr_loop
+                .Ldw_pr_done:
+                    ld   ra, 0(sp)
+                    ld   s0, 8(sp)
+                    ld   s1, 16(sp)
+                    ld   s2, 24(sp)
+                    addi sp, sp, 32
+                    ret
+                .globl kof_super_table
+                kof_super_table:
+                    .word 0
+                """;
+    }
+
     /** _start: SHA1 dos 3 vetores + impressão dos 20 bytes de cada digest. */
     private static String harness() {
         return """
@@ -216,6 +323,52 @@ class NativeRiscvDbWireTest {
         }
         String out = buildRun("aarch64", tempDir, "sha1aa", arm.toString());
         assertEquals(oracle(), out, "SHA1 aarch64 diverge do oráculo JVM");
+    }
+
+    @Test
+    void scrambleAndLenencMatchOracleOnRiscv64(@TempDir Path tempDir) throws Exception {
+        assumeRiscv();
+        String harness = wireHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String out = buildRun("riscv64", tempDir, "wire_rv", harness + "\n" + runtime);
+        assertEquals(wireOracle(), out, "scramble/lenenc riscv64 diverge do oráculo");
+    }
+
+    @Test
+    void scrambleAndLenencMatchOracleOnAarch64(@TempDir Path tempDir) throws Exception {
+        assumeAarch64();
+        String harness = wireHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String riscv = harness + "\n" + runtime;
+        StringBuilder arm = new StringBuilder();
+        for (String line : riscv.split("\n", -1)) {
+            for (String t : NativeAarch64Translator.translateRiscvToAarch64(line)) arm.append(t).append('\n');
+        }
+        String out = buildRun("aarch64", tempDir, "wire_aa", arm.toString());
+        assertEquals(wireOracle(), out, "scramble/lenenc aarch64 diverge do oráculo");
+    }
+
+    @Test
+    void withoutAuthPieceLinkFailsSabotage(@TempDir Path tempDir) throws IOException {
+        assumeRiscv();
+        String harness = wireHarness();
+        Set<Integer> keep = new LinkedHashSet<>(RiscvSlices.keepForProgramText(harness));
+        int b63 = -1;
+        for (RiscvSlices.Piece p : RiscvSlices.pieces()) {
+            if ("RISCV_RUNTIME_ASM_B_63".equals(p.field())) b63 = p.index();
+        }
+        assertTrue(b63 >= 0, "peça B63 (auth cross) não encontrada no inventário");
+        assertTrue(keep.remove(b63), "B63 deveria estar no keep do harness de auth");
+        String runtime = RiscvSlices.renderSubset(keep);
+        Path asm = tempDir.resolve("sab_auth.s");
+        Files.writeString(asm, harness + "\n" + runtime);
+        Path obj = tempDir.resolve("sab_auth.o");
+        Path bin = tempDir.resolve("sab_auth");
+        runCapture("riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
+        String[] r = runAllowFail("riscv64-linux-gnu-ld", "--no-relax", "-o", bin.toString(), obj.toString());
+        assertNotEquals("0", r[1], "sem a B63 o link deveria falhar (undefined kof_db_mysql_scramble); saída: " + r[0]);
+        assertTrue(r[0].contains("kof_db_mysql_scramble"),
+                "a falha deve citar kof_db_mysql_scramble: " + r[0]);
     }
 
     @Test
