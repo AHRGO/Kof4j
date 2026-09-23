@@ -96,6 +96,8 @@ fatia vertical, nunca silenciando o diagnóstico.
 6. **Superfície D6-1=B:** abrir agora a frente `struct` mutável by-ref, ou
    manter estacionada (regra 11 spec-first)?
 
+
+**Decidido 23/09 (`D-TECHDEBT-23/09`, múltipla escolha da mantenedora):** §248 = portar JS+Native · §271 = emitir bridges · §278 = portar as stacks · §423 = agendar o port · split = todos em lote · D6-1=B = abrir agora. Fila: `roadmap.pt_BR.md` TIER 13.
 Cada resposta pousa como: linha de decisão em `DECISIONS.md` (+PT) + fila
 em `roadmap.md` §23/DOING no MESMO commit (regra: decidir sem registrar =
 invisível; registrar sem abrir fila = morto).

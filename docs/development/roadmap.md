@@ -1040,6 +1040,22 @@ the order. **DEPRIORITIZED 15/09 (maintainer): TIER 3–5 is not current work.**
 FFI) · `2.2 codegen hook` → `infra`/gRPC stubs · **TIER 1 (SYSTEMS) closes
 before ANY Tier 6+ (R12).**
 
+### TIER 13 — Tech-debt ledger queue (OPEN 23/09, `D-TECHDEBT-23/09`)
+
+Ordered queue from the maintainer's multiple-choice rulings 23/09 (source:
+`docs/development/tech-debt.md` §5; decision: `DECISIONS.md`
+`D-TECHDEBT-23/09`). Claim in `DOING.md` before code; one item = one owner
++ one proof.
+
+| # | Item | Owner lane | Proof |
+|---|---|---|---|
+| 13.1 | §248 — interface default methods on JS + Native (parity) | compiler | E2E golden 4-target parity |
+| 13.2 | §271 — bridge methods on generic-interface impls (erasure ABI) | compiler | `NoSuchMethodError` closed, suite green |
+| 13.3 | §278 — port `kof.security`/`kof.gpu` stacks to Android | gaps-db | stacks run on Android or honest permanent refusal |
+| 13.4 | §423 — port `kof_channel_*` runtime to riscv64/aarch64 | nat | qemu proof on both arches |
+| 13.5 | Split batch: `NativeBackend` 603 + `CompilerPipeline` 588 + `RuntimeOrm7` 585 (behavior-preserving, precedent §442/§446) | claimant lane | `check_500.sh` rc=0 + same suite green |
+| 13.6 | D6-1=B — mutable `struct` by-ref front (spec-first, rule 11) | FFI | design §4/§6 reviewed, then parser/typer diff + tests |
+
 ## 24. KOF 1.0 EXIT GATE — contract stabilization (RATIFIED 09/20/2026, `DECISIONS.md` §D-RELEASE-1.0; edges closed by `D-1.0-EDGES`)
 
 Development meta until the first RC: **no bug ships, no edge stays open.** The

@@ -3302,3 +3302,32 @@ KOF-first evidence block and external grounding; maintainer approval (PR #582
 merged 22/09/2026; closed-issue record).
 
 - **Relationships:** `Related: D-RELEASE (partially superseded), D-RELEASE-1.0, D-1.0-EDGES, D-RELEASE-0.5.0-GATE, D-RELEASE-0.5.0-SCOPE, D-ARTIFACT-TRUST, D-BRANCH-0.5.0, D-VERSION-BUMP-0.5.0, rule 6`.
+
+## D-TECHDEBT-23/09 — tech-debt ledger rulings (maintainer 23/09/2026, multiple-choice)
+
+**Date:** 2026-09-23 · **State:** `DECIDED` (maintainer answers in chat,
+multiple-choice — "chama no pente") · **Source:** `docs/development/tech-debt.md`
+§5 (6 open questions) → answers: §248 = port JS+Native · §271 = emit bridges ·
+§278 = port the stacks · §423 = schedule the port · split = all-in-batch ·
+D6-1=B = open now.
+
+1. **§248 — interface default methods: PORT JS + NATIVE** (not JVM-only).
+   Queue: compiler lane — emit defaults on JS + Native with parity proof.
+2. **§271 — generic interface dispatch: EMIT BRIDGES** (erasure ABI line
+   decided now). Queue: compiler lane — bridge methods on generic-interface
+   impls.
+3. **§278 — Android: PORT THE STACKS** (`kof.security`/`kof.gpu` run on
+   Android; `kof.db`/`kof.orm` already fixed via DB-2). Queue: gaps-db lane.
+4. **§423 — channels cross: SCHEDULE THE PORT** (riscv64/aarch64
+   `kof_channel_*` runtime + qemu proof). Queue: nat lane.
+5. **Split order: ALL IN BATCH** — `NativeBackend` 603 (RED) +
+   `CompilerPipeline` 588 + `RuntimeOrm7` 585 in one batch (precedent
+   §442/§446, behavior-preserving).
+6. **D6-1=B — OPEN NOW** (mutable `struct` by-ref front opens under
+   spec-first + Simplicity Law, rule 11). Queue: FFI lane — design §4/§6
+   for review, then parser/typer diff.
+
+**Evidence:** maintainer multiple-choice answers 23/09 (this session);
+`docs/development/tech-debt.md` §5.
+
+- **Relationships:** `Related: tech-debt.md §5, rule 6, rule 11, R6, D-FFI-STRUCT-B, D-RELEASE-0.5.0-GATE (cond. 2/7).`

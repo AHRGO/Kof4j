@@ -3320,3 +3320,32 @@ de evidência KOF-first e ancoragem externa; aprovação da mantenedora (PR #582
 mergeado em 22/09/2026; registro de issue fechada).
 
 - **Relações:** `Related: D-RELEASE (parcialmente sobreposta), D-RELEASE-1.0, D-1.0-EDGES, D-RELEASE-0.5.0-GATE, D-RELEASE-0.5.0-SCOPE, D-ARTIFACT-TRUST, D-BRANCH-0.5.0, D-VERSION-BUMP-0.5.0, rule 6`.
+
+## D-TECHDEBT-23/09 — vereditos do ledger de dívida técnica (mantenedora 23/09/2026, múltipla escolha)
+
+**Data:** 23/09/2026 · **Estado:** `DECIDIDO` (respostas da mantenedora no chat,
+múltipla escolha — "chama no pente") · **Fonte:** `docs/development/tech-debt.pt_BR.md`
+§5 (6 perguntas abertas) → respostas: §248 = portar JS+Native · §271 = emitir
+bridges · §278 = portar as stacks · §423 = agendar o port · split = todos em
+lote · D6-1=B = abrir agora.
+
+1. **§248 — default methods de interface: PORTAR JS + NATIVE** (não só JVM).
+   Fila: lane compiler — emitir defaults no JS + Native com prova de paridade.
+2. **§271 — dispatch de interface genérica: EMITIR BRIDGES** (linha de ABI de
+   erasure decidida agora). Fila: lane compiler — bridge methods nos impls de
+   interface genérica.
+3. **§278 — Android: PORTAR AS STACKS** (`kof.security`/`kof.gpu` rodam no
+   Android; `kof.db`/`kof.orm` já corrigidos via DB-2). Fila: lane gaps-db.
+4. **§423 — channels cross: AGENDAR O PORT** (runtime `kof_channel_*`
+   riscv64/aarch64 + prova qemu). Fila: lane nat.
+5. **Ordem de split: TODOS EM LOTE** — `NativeBackend` 603 (VERMELHO) +
+   `CompilerPipeline` 588 + `RuntimeOrm7` 585 num lote só (precedente
+   §442/§446, behavior-preserving).
+6. **D6-1=B — ABRIR AGORA** (frente `struct` mutável by-ref abre sob
+   spec-first + Lei da Simplicidade, regra 11). Fila: lane FFI — design §4/§6
+   para revisão, depois diff de parser/typer.
+
+**Evidência:** respostas de múltipla escolha da mantenedora 23/09 (esta sessão);
+`docs/development/tech-debt.pt_BR.md` §5.
+
+- **Relações:** `Related: tech-debt.pt_BR.md §5, regra 6, regra 11, R6, D-FFI-STRUCT-B, D-RELEASE-0.5.0-GATE (cond. 2/7).`

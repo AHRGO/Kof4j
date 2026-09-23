@@ -98,6 +98,8 @@ silencing the diagnostic.
 6. **D6-1=B surface:** open the mutable-`struct` by-ref front now, or
    keep it parked (rule 11 spec-first)?
 
+
+**Decided 23/09 (`D-TECHDEBT-23/09`, maintainer multiple-choice):** §248 = port JS+Native · §271 = emit bridges · §278 = port the stacks · §423 = schedule the port · split = all-in-batch · D6-1=B = open now. Queue: `roadmap.md` TIER 13.
 Each answer lands as: decision line in `DECISIONS.md` (+PT) + queue in
 `roadmap.md` §23/DOING in the SAME commit (rule: deciding without
 recording = invisible; recording without queue = dead).
