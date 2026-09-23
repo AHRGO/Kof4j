@@ -14504,3 +14504,12 @@ p
 - **Proof:** `KofOrmE2ETest#crossNativeF2bFindMatchesX86Oracle` — a program with `User` + `Item` + `Ghost`, explicit x86-64 golden pinning `price=2.25` and the three-entity dispatch, byte-parity riscv64/aarch64 (`crossNativeF2c1AllMatchesX86Oracle` extends the multi-entity dispatch to `all`; `crossNativeF2c2WhereMatchesX86Oracle`/`crossNativeF2c3PageMatchesX86Oracle` close the read family with the `Double` path live). `KofOrmE2ETest` 71/0F/3skip. The previous corpus never found two different entities in one program (each row-object read test used a single entity), so the bugs were latent.
 - **Repro:** a Kof program with entities `User` and `Item` (the latter with a `Double` field), inserting one `Item` row and running `orm.find<User>(db, 1)` then `orm.find<Item>(db, 1)` compiled to `NATIVE` (before the fix: SEGV; and the Item double prints `0.0`).
 - **Owner:** gaps-db lane (closed 23/09).
+
+## §450 — `ArtifactSizeTest` hello riscv64/aarch64 symbol baseline went stale after §448 (libc-free Schubfach dtoa) — ✅ FIXED 23/09 (baseline 45→55 syms; red measured at base `a148a9557` WITHOUT the E-parte-5/6 commits)
+
+- **Found** (gaps-db lane, 23/09) while re-running the post-rebase pins for E-parte-5/6: `ArtifactSizeTest.helloRiscvSizeWithinBaseline` and `helloAarch64SizeWithinBaseline` failed with `ganhou símbolos: 55 > 47 (baseline 45 +5%)`.
+- **Root cause:** the §448 libc-free dtoa (`NativeRiscvSchubfach`/`…Format`/`…Float`, and x86 `RuntimeDtoaSchubfach`) is reachable from the hello's generic box printer (`kof_box_to_string → kof_double_to_string`), so the riscv64/aarch64 hello's reachable symbol set grew 45→55 (+10). Bytes stayed within tolerance; only the symbol baseline was not updated in the §448 unit.
+- **Attribution:** NOT the E-parte-5/6 change — reproduced byte-identically at the base tip `a148a9557` with the E-parte-5/6 commits absent (`git checkout a148a9557` + `ArtifactSizeTest` → same 2 failures). The growth was authored by the baremetal lane (§448).
+- **Fix:** `HELLO_RV_SYMS`/`HELLO_AA_SYMS` 45→55 in `ArtifactSizeTest`, with the comment updated to record §448. This is the intended baseline maintenance (the test documents every prior legitimate growth), not an assertion relaxation.
+- **Proof:** `ArtifactSizeTest` 6/6 on the E-parte-5/6 tip; `KofOrmE2ETest` 71/0F/3skip + `NativeRiscvRuntimeSliceRegistryTest` 8/8 + `NativeCrossDynamicLinkTest` 10 + `RuntimeConstantInliningGuardTest` 2.
+- **Owner:** gaps-db lane (verified/fixed 23/09; growth authored by the baremetal lane §448).
