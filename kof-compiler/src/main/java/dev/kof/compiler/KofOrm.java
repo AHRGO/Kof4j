@@ -66,14 +66,17 @@ public final class KofOrm {
      *  {@code migrate} (peça RtB52, kof_migrations + idempotência); slice D:
      *  {@code count_where} (peça RtB53, bind via box §284; §447: o
      *  literal Bool boxeia kof_box_bool, nunca TEXTO); slice E:
-     *  {@code delete} (peça RtB54, com o parser de schema
-     *  {@code kof_orm_parse_schema} embutido — pedra-chave das faces
-     *  row-object); aarch64
+     *  {@code delete} (peça RtB54, parser de schema exposto como o global
+     *  {@code kof_orm_parse_schema} — pedra-chave das faces row-object);
+     *  E-parte-2a: {@code save} (peça RtB55, F2a de {@code RuntimeOrm4}:
+     *  insert/update/upsert + generated key + nova instância; reusa o parser
+     *  global); aarch64
      *  herda pelo tradutor. O que ainda não tem porte cross segue ORM001
      *  compile-time (R6/R7). */
     private static final java.util.Set<String> CROSS_FACES = java.util.Set.of(
             "kof_orm_delete_all", "kof_orm_count", "kof_orm_create",
-            "kof_orm_migrate", "kof_orm_count_where", "kof_orm_delete");
+            "kof_orm_migrate", "kof_orm_count_where", "kof_orm_delete",
+            "kof_orm_save");
 
     /** D-DB-GAPS DB-1 (20/09): faces SQL-puro do Native x86-64, uma por fatia.
      *  F1a = {@code delete_all}, F1b = {@code count}, F1c = {@code migrate}

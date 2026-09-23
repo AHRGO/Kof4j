@@ -131,6 +131,13 @@ public final class NativeRiscvAsm {
                 // RuntimeOrmSchema, pedra-chave das faces row-object) sobre o
                 // SQLite de RtB46/RtB47; aarch64 herda via tradutor.
                 .append(NativeRiscvAsmRtB54.RISCV_RUNTIME_ASM_B_54)
+                // DB-3/DB-1 cross slice E-parte-2a (22/09): ORM F2a no
+                // riscv64 — helpers globais (conexão/builder/bind) + kof_orm_save
+                // (insert/update/upsert + generated key + nova instância)
+                // sobre o mesmo SQLite; reusa o parser global
+                // kof_orm_parse_schema de RtB54; aarch64 via tradutor.
+                .append(NativeRiscvAsmRtB55Helpers.RISCV_RUNTIME_ASM_B_55H)
+                .append(NativeRiscvAsmRtB55.RISCV_RUNTIME_ASM_B_55)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

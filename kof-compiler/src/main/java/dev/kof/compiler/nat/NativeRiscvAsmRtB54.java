@@ -125,12 +125,16 @@ public final class NativeRiscvAsmRtB54 {
                 ret
 
             # ---------------------------------------------------------------
-            # .L54_ps(schema*) -> a0=ftab, a1=nbuf, a2=nFields, a3=pkIndex
-            #   (port RuntimeOrmSchema: ',' separa campos, ':' separa partes
-            #    name:dbType[:generated][:unique]; names copiados p/ buffer
+            # kof_orm_parse_schema(schema*) -> a0=ftab, a1=nbuf, a2=nFields,
+            #   a3=pkIndex (port RuntimeOrmSchema; ABI igual ao x86 rax/rdx/
+            #   rcx/r8; global desde a fatia E-parte-2 para as peças
+            #   row-object reusarem — ',' separa campos, ':' separa partes
+            #   name:dbType[:generated][:unique], names copiados p/ buffer
             #    adjacente à ftab)
             # ---------------------------------------------------------------
-            .L54_ps:
+            .globl kof_orm_parse_schema
+            .type kof_orm_parse_schema, @function
+            kof_orm_parse_schema:
                 addi sp, sp, -96
                 sd   ra, 88(sp)
                 sd   s0, 80(sp)
@@ -319,7 +323,7 @@ public final class NativeRiscvAsmRtB54 {
                 call .L54_conn
                 mv   s0, a0                        # conn
                 mv   a0, s4
-                call .L54_ps                       # a0=ftab a1=nbuf a2=nF a3=pkIdx
+                call kof_orm_parse_schema                       # a0=ftab a1=nbuf a2=nF a3=pkIdx
                 mv   s5, a0                        # ftab
                 mv   s1, a3                        # pkIndex
                 slli t0, s1, 5
