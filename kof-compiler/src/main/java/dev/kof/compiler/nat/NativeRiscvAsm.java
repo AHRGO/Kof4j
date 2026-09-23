@@ -159,6 +159,10 @@ public final class NativeRiscvAsm {
                 // DB-3/DB-1 cross slice E-parte-6 (23/09): kof_orm_page (F2c3
                 // de RuntimeOrm8) — fecha o row-object de leitura no cross.
                 .append(NativeRiscvAsmRtB60.RISCV_RUNTIME_ASM_B_60)
+                // §423 (TIER 13.4, 23/09): canais no cross — kof_channel_new/
+                // send/receive (port RuntimeChannel x86) sobre kof_alloc/free
+                // + futex (kof_plat_sync); aarch64 herda via tradutor.
+                .append(NativeRiscvAsmRtB61.RISCV_RUNTIME_ASM_B_61)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

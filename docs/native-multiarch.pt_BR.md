@@ -67,7 +67,7 @@
 > o coletor (G-4) é quem de fato recupera; (2) a face cross do DB001
 > FECHADA 15/09 (SQLite; JS mantém DB001) e os helpers do CONC001
 > (selectAny/done/poll/cancel/cancelled/awaitTimeout) FECHADOS 15/09
-> — restam as recusas SECN000/JSN004, `channel` → **NAT005** (§423),
+> e `channel<T>` send/receive FECHADO 23/09 (fatia `RtB61`, §423) — restam as recusas SECN000/JSN004,
 > `kof.io` File/Path/Directory → **NAT006** e web-T1 `listen`/`route` →
 > **NAT007** (§427, 21/09; recusa honesta em compile-time — os runtimes x86_64
 > nunca foram portados para o cross) (OTP001 removido 19/09); (3) FP-coleção no cross

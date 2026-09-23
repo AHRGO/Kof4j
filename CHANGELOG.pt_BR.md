@@ -62,6 +62,23 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     !=, vazio→lista vazia, op inválido→throw, campo sem coluna→throw);
     `KofOrmE2ETest` 70/0F/3skip.
 
+  - **§423 ✅ CORRIGIDO — `channel`/`channel<T>` send/receive nos alvos NATIVOS
+    riscv64/aarch64 estão PORTADOS** (23/09, lane baremetal; TIER 13.4): o
+    runtime era só x86, então qualquer programa com canal falhava no link com o
+    críptico `undefined reference to 'kof_channel_new/send/receive'`; desde
+    21/09 estava gateado pelo `NAT005` honesto. Nova fatia
+    `nat/NativeRiscvAsmRtB61` implementa `kof_channel_new`/`send`/`receive` em
+    asm riscv64 cru (aarch64 via `NativeAarch64Translator`): fila ligada FIFO
+    (struct 56 B — head@0/tail@8/count@16/lock@20; nó 16 B — value@0/next@8),
+    lock `amoswap.w` com `fence rw,rw` acquire/release, bloqueio no futex
+    `kof_plat_sync` (PRIVATE 128/129) e `receive` vazio que destrava e faz
+    `kof_time_sleep(1 ms)` antes de re-tentar (sem busy-spin). O gate `NAT005`
+    do `ChannelWrites` foi removido. Prova: `BareCollectionPrimitiveArgE2ETest`
+    (nu → `1`, tipado → `11`, RODAM sob qemu nas duas arches, paridade JVM),
+    `KofConcurrency2Test.channelWithSpawnCrossArch` (worker→main FIFO `v=42`,
+    nas duas arches), `NativeRiscvRuntimeSliceRegistryTest` 8/8; bateria cross
+    177/0F/2skip. Contagem viva 5→4.
+
   - **DB-3/DB-1 cross — `orm.all` REAL no riscv64/aarch64 (leitura row-object
     do ORM → `List`, E-parte-4)** (23/09, lane gaps-db): `SELECT * FROM "t"` sem
     bind, resolvendo `kof_orm_ctors` uma vez antes do loop de linhas; cada linha

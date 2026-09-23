@@ -570,6 +570,36 @@ class KofConcurrency2Test {
         assertEquals("v=42", output, "channel send dentro de spawn no Native");
     }
 
+    /** §423 (TIER 13.4, 23/09): canais + spawn no cross — o MESMO cenário do
+     *  #50 que no x86_64 travava em SIGSEGV (futex WAIT do receive) roda nos 2
+     *  alvos: o worker envia 2 itens, a main bloqueia no futex e recebe (FIFO);
+     *  paridade JVM byte-a-byte. */
+    @Test
+    void channelWithSpawnCrossArch(@TempDir Path tmp) throws Exception {
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            Assumptions.assumeTrue(NativeRiscv64E2ETest.hasToolchain(arch),
+                    "cross toolchain " + arch + " ausente — pulando");
+            Path f = tmp.resolve("CHAN" + arch + ".kf");
+            Files.writeString(f, """
+                    main() {
+                        val c = channel<Int>()
+                        spawn {
+                            c.send(41)
+                            c.send(1)
+                        }
+                        val v = c.receive() + c.receive()
+                        println("v=" + v)
+                    }
+                    """);
+            Path outDir = tmp.resolve("chan-" + arch);
+            CompilationResult r = driver.compile(f, outDir, t);
+            assertTrue(r.success(), t + " canal+spawn compila: " + r.diagnostics().getDiagnostics());
+            String out = NativeRiscv64E2ETest.runQemu(arch, outDir.resolve("Default/Main"));
+            assertEquals("v=42", out, t + " canal+spawn no cross (§423)");
+        }
+    }
+
     @Test
     void channelJs(@TempDir Path tmp) throws Exception {
         // JS sequencial: canal = {items:[]} (send push, receive shift).

@@ -26,23 +26,10 @@ final class ChannelWrites {
     static int lower(CompilerDriver driver, Type recvType, MethodCallExpr mc,
                      List<KofOperation> ops, String owner, int localIdx,
                      List<IRLocalVariable> locals) {
-        // §374-cross (21/09): o runtime de canais só existe na face x86_64
-        // (NativeX86Calls); riscv64/aarch64 nunca portaram `kof_channel_*`.
-        // Diagnóstico honesto NAT005 no lugar do link-fail críptico
-        // (`undefined reference`), padrão §352/R6. Resolução = portar os
-        // canais no cross (projeto da lane nat).
-        if (driver.target.isNative() && driver.target != Target.NATIVE) {
-            if (driver.currentDiagnostics != null) {
-                var pos = mc.position();
-                driver.currentDiagnostics.error(pos != null ? pos.file() : "",
-                        pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
-                        "Channel is not supported on the riscv64/aarch64 native targets yet"
-                                + " (NAT005) — use the x86_64 native target (--target native)"
-                                + " or JVM/JS/Script",
-                        "NAT005");
-            }
-            return localIdx;
-        }
+        // §423 FECHADO (23/09, lane baremetal): o runtime cross ganhou
+        // kof_channel_new/send/receive (NativeRiscvAsmRtB61) — a recusa NAT005
+        // do riscv64/aarch64 caiu; o lowering agora emite as chamadas como no
+        // x86_64 (o backend cross resolve os símbolos kof_).
         Type elemT = BuiltinTypes.channelElement(recvType);
         if ("send".equals(mc.methodName()) && mc.arguments().size() == 1) {
             ExpressionNode arg = mc.arguments().get(0);

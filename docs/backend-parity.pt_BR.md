@@ -153,7 +153,7 @@ nota em contrário.
 | Map/Set + boxes de erasure (§284/§284-map) | ✅ | ✅ (`RtB49`/`RtB46`) | ✅ (tradutor) | `NativeErasureBoxE2ETest` 6/6 (md5 igual nos 3), `KofMapSetTest` |
 | FP→string Double/Float (FLT001) | ✅ | ✅ (`RtB45`, libc sob demanda) | ✅ | `nativeValueOfDoubleFloatMatchesJvmGolden` nos dois arcos |
 | spawn / helpers CONC001 | ✅ (pthread) | ✅ (clone 220 + futex + `RtB48`) | ✅ | `SpawnE2ETest`, `KofConcurrency2Test.crossNative*` |
-| `channel<T>` send/receive | ✅ (fila de objetos) | 🟡 NAT005 — runtime nunca portado (§423; recusa honesta no lowering, sem `kof_channel_*` no cross) | 🟡 NAT005 (§423) | `KofConcurrency2Test.channelNative` (x86), `BareCollectionPrimitiveArgE2ETest` 12/12 (x86 `1` + NAT005 nos dois cross) |
+| `channel<T>` send/receive | ✅ (fila de objetos) | ✅ 23/09 (FIFO futex portado — fatia `RtB61`, §423: `kof_channel_new/send/receive`, lock `amoswap.w` + futex 128/129 + sleep 1 ms no receive vazio) | ✅ 23/09 (mesma fonte via tradutor) | `KofConcurrency2Test.channelNative` (x86) + `channelWithSpawnCrossArch` (duas arches), `BareCollectionPrimitiveArgE2ETest` (nu `1` + tipado `11` rodam sob qemu nos dois cross) |
 | supervisor | ✅ | ✅ (×3 — §129 port cross 19/09) | ✅ | `KofSupervisorE2ETest` |
 | scheduler `every`/`at` | ✅ | ✅ | ✅ | `KofTimeE2ETest`; `at(cron)` = CRON001 em TODOS os native (não é por arco) |
 | math (MATH001 fechado; `pow`) | ✅ (`pow` via libm) | ✅ FP; `pow` recusa MATH001 | ✅ FP; `pow` recusa MATH001 | `KofMathTest`, `KofMath.supportedOn` |

@@ -323,16 +323,22 @@ class BareCollectionPrimitiveArgE2ETest {
         assertTrue(rt.success(), "typed Channel<Int> must keep compiling: " + diags(rt));
         assertEquals("11", runNative(out2), "typed Channel<Int> unchanged (regra 1)");
 
-        // §374-cross: canal no riscv64/aarch64 — o runtime kof_channel_* só
-        // existe no x86_64; a recusa vira diagnóstico NAT005 no lowering
-        // (sem toolchain, sem link-fail críptico).
+        // §423 FECHADO (23/09, lane baremetal): o runtime de canais existe nos
+        // 2 alvos cross (NativeRiscvAsmRtB61) — o programa compila, linka e
+        // roda sob qemu com paridade byte-a-byte do JVM (bare `1`, tipado `11`).
         for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
-            for (String src : new String[]{bareSrc, typedSrc}) {
+            String arch = t == Target.NATIVE_RISCV64 ? "riscv64" : "aarch64";
+            org.junit.jupiter.api.Assumptions.assumeTrue(
+                    NativeRiscv64E2ETest.hasToolchain(arch),
+                    "cross toolchain " + arch + " + qemu ausente — pulando (NATIVE002)");
+            for (String[] pair : new String[][]{new String[]{bareSrc, "1"}, new String[]{typedSrc, "11"}}) {
                 Path f = tmp.resolve("B553ChanCross-" + t + "-" + System.nanoTime() + ".kf");
-                Files.writeString(f, src);
-                CompilationResult rc = driver.compile(f, tmp.resolve("o-x-" + System.nanoTime()), t);
-                assertFalse(rc.success(), t + " channel must be refused (NAT005): " + diags(rc));
-                assertTrue(diags(rc).contains("NAT005"), t + " honest diagnostic NAT005: " + diags(rc));
+                Files.writeString(f, pair[0]);
+                Path co = tmp.resolve("o-x-" + t + "-" + System.nanoTime());
+                CompilationResult rc = driver.compile(f, co, t);
+                assertTrue(rc.success(), t + " channel must compile now (§423): " + diags(rc));
+                assertEquals(pair[1], NativeRiscv64E2ETest.runQemu(arch, co.resolve("Default/Main")),
+                        t + " channel output (paridade JVM)");
             }
         }
     }

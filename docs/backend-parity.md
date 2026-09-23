@@ -156,7 +156,7 @@ unless a dedicated note says otherwise.
 | Map/Set + erasure boxes (§284/§284-map) | ✅ | ✅ (`RtB49`/`RtB46`) | ✅ (translator) | `NativeErasureBoxE2ETest` 6/6 (md5 equal across the 3), `KofMapSetTest` |
 | FP→string Double/Float (FLT001) | ✅ | ✅ (`RtB45`, libc on demand) | ✅ | `nativeValueOfDoubleFloatMatchesJvmGolden` both arches |
 | spawn / CONC001 helpers | ✅ (pthread) | ✅ (clone 220 + futex + `RtB48`) | ✅ | `SpawnE2ETest`, `KofConcurrency2Test.crossNative*` |
-| `channel<T>` send/receive | ✅ (object queue) | 🟡 NAT005 — runtime never ported (§423; honest refusal at lowering, no `kof_channel_*` in the cross) | 🟡 NAT005 (§423) | `KofConcurrency2Test.channelNative` (x86), `BareCollectionPrimitiveArgE2ETest` 12/12 (x86 `1` + NAT005 both cross) |
+| `channel<T>` send/receive | ✅ (object queue) | ✅ 23/09 (FIFO futex ported — slice `RtB61`, §423: `kof_channel_new/send/receive`, `amoswap.w` lock + futex 128/129 + 1 ms sleep on empty receive) | ✅ 23/09 (same source through the translator) | `KofConcurrency2Test.channelNative` (x86) + `channelWithSpawnCrossArch` (both arches), `BareCollectionPrimitiveArgE2ETest` (bare `1` + typed `11` run under qemu on both cross) |
 | `kof.io` File/Path/Directory | ✅ | ✅ x86_64 real | 🟡 NAT006 — no `kof_io_file_*` in the cross (§427; honest refusal) | `DomainGapCodesTest.ioOnCrossIsNat006` + `ioAndWebT1OnX86AndJsHaveNoGap` |
 | `kof.web` T1 (listen/route) | ✅ | ✅ x86_64 real | 🟡 NAT007 — `NativeWebRuntime` is x86_64-only (§427; honest refusal) | `DomainGapCodesTest.webT1OnCrossIsNat007` + `ioAndWebT1OnX86AndJsHaveNoGap` |
 | supervisor | ✅ | ✅ (×3 — §129 cross port 19/09) | ✅ | `KofSupervisorE2ETest` |
