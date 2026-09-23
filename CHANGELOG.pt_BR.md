@@ -26,14 +26,6 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     perfil (o 2º perfil não reusa corpos do 1º); o gate <=500 do `NativeBackend`
     foi pago com a extração de `NativeLinkPolicy` (608->571 linhas).
 
-  - **§450 ✅ CORRIGIDO — baseline de símbolos do hello riscv64/aarch64 do
-    `ArtifactSizeTest` ficou stale após o §448** (23/09, lane gaps-db): o dtoa
-    Schubfach libc-free do §448 é alcançável pelo box printer genérico do hello
-    (`kof_box_to_string → kof_double_to_string`), então o conjunto de símbolos
-    alcançáveis cresceu 45→55 (bytes dentro da tolerância). RED verificado no tip
-    base `a148a9557` sem os commits da E-parte-5/6 (não foi obra deles);
-    `HELLO_RV_SYMS`/`HELLO_AA_SYMS` 45→55. Prova: `ArtifactSizeTest` 6/6.
-
   - **Paridade DB S1 — `mariadb://` é alias do wire `mysql://` no Native x86-64**
     (23/09, lane gaps-db): o `kof_db_connect_inner` (`RuntimeDb2`) agora casa
     `mariadb://` e reusa todo o caminho mysql (`r12 = schemeStart+2`, para o

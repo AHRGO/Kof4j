@@ -27,14 +27,6 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     bodies); the `NativeBackend` <=500 gate paid with `NativeLinkPolicy`
     extracted (608->571 lines).
 
-  - **§450 ✅ FIXED — `ArtifactSizeTest` hello riscv64/aarch64 symbol baseline
-    was stale after §448** (23/09, gaps-db lane): the libc-free Schubfach dtoa
-    added by §448 is reachable from the hello's generic box printer
-    (`kof_box_to_string → kof_double_to_string`), so the reachable symbol set
-    grew 45→55 (bytes stayed within tolerance). Verified red at the base tip
-    `a148a9557` with the E-parte-5/6 commits absent (not caused by them);
-    `HELLO_RV_SYMS`/`HELLO_AA_SYMS` 45→55. Proof: `ArtifactSizeTest` 6/6.
-
   - **DB parity S1 — `mariadb://` is a `mysql://` wire alias on Native x86-64**
     (23/09, gaps-db lane): `kof_db_connect_inner` (`RuntimeDb2`) now matches
     `mariadb://` and reuses the whole mysql path (`r12 = schemeStart+2`, so the
