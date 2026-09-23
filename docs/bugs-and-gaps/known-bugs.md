@@ -14571,5 +14571,5 @@ Expected `6`; actual: `VerifyError: Bad type on operand stack` at load.
 
 **Owner:** lane 9092 compiler (pair with the #587 unit). Signal recorded in DOING 23/09 (lane 9093).
 
-<!-- pt-switch --> **PT:** [§476 (pt_BR)](known-bugs.pt_BR.md#476-placeholder)
+<!-- pt-switch --> **PT:** [§476 (pt_BR)](known-bugs.pt_BR.md#476--lista-de-cases-mista-pattern--valor-com-default-vazio-compila-limpo-e-morre-no-load-do-jvm-com-verifyerror-bad-type-on-operand-stack---aberto-2309-achado-cacando-o-fix-do-588-sonda-adversarial-q4)
 

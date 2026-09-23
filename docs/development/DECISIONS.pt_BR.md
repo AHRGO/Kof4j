@@ -3449,3 +3449,47 @@ re-triagem manual toda vez.
 
 - **Relações:** `Related: D-DEBT-SCOUT, DEBT_SCOUT_CONTRACT.md §7/§11/§37,
   D-ARTIFACT-TRUST, regra 6.`
+
+## D-BAREMETAL-RING1-SURFACE — superfície do domínio ring1 = um marcador embutido `ring1(fn)` (sem sintaxe nova); o compilador baixa para a transição CPL0→CPL1 (mantenedora 23/09/2026)
+
+**Data:** 2026-09-23 · **Estado:** `DECIDED` (a mantenedora respondeu a múltipla
+escolha no chat, opção "Built-in marker function") · **Origem:** B-6.1 pousou
+(GDT/TSS/IDT do Kof sob OVMF); o B-6.2 (entrada CPL1) estava bloqueado nesta
+decisão rule-6 (`D-BAREMETAL-BOOT` §3 deixou a superfície Kof aberta).
+
+**Decisão:** a forma de o código Kof mirar um **domínio ring1** é uma **função
+marcadora embutida `ring1(fn)`** — uma chamada cujo nome do alvo é reservado e
+baixado pelo compilador; **sem gramática, palavra-chave, bloco, anotação ou
+modificador novos**. `ring1(fn)` roda o valor de função Kof dado em **CPL1** e
+devolve o resultado a CPL0: o runtime faz a transição `iretq` (`CS=0x18` RPL=1,
+`SS=0x20`, `rsp0` do TSS sustentando o trap de volta), chama a função, e o
+caminho de fault de instrução privilegiada retorna por um gate ring0.
+
+**Razão (Lei da Simplicidade, rule 11):** o Kof declara a **intenção**
+(`ring1(fn)`), a plataforma faz o mecanismo. Uma chamada embutida é a menor
+superfície possível — parseia como chamada comum, existe em zero produções de
+gramática e lê exatamente como um humano escreveria. Palavra-chave/bloco foi
+rejeitado como superfície maior e menos Kof.
+
+**Restrições (semântica congelada intocada):**
+1. O embutido só faz sentido no perfil bare-metal/UEFI x86_64 com anéis
+   (`NativeProfile.UEFI_RING`/seu caminho de boot). Em qualquer outro alvo/backend
+   ele deve falhar com **diagnóstico nomeado** (`NATIVE003`), nunca no-op
+   silencioso (R6) — um domínio CPL1 não existe em JVM/JS/riscv/aarch64 hoje
+   (R7, escopo honesto).
+2. **Aditivo**: código que não chama `ring1` fica intocado; sem mudança de
+   operadores, precedência, ordem de avaliação ou API existente.
+3. `ring1` recebe um **valor de função** (função/lambda Kof); não é palavra-chave
+   de statement, então compõe como expressão devolvendo o resultado da função.
+
+**Fila:** B-6.2 (`PLAN-BAREMETAL-BOOT`), lane baremetal, sessão 9092; o B-6.3
+(prova de `#GP` no domínio ring1 + sabotagem do descritor da GDT) segue quando o
+B-6.2 estiver provado. A condição 3 do gate 0.5.0 mantém o plano na allowlist
+(plano em voo, padrão `D-BAREMETAL-BOOT`) — o corte não espera por ele.
+
+**Evidência:** resposta de múltipla escolha da mantenedora no chat, 23/09/2026
+(esta sessão), opção "Built-in marker function (Recommended)"; registrado aqui
+antes de qualquer código do B-6.2 (rule 6: não se ataca frente sem decisão
+travada).
+
+- **Relacionados:** `Related: D-BAREMETAL-BOOT, D-UNIVERSAL, D-BOOTSTRAP, rule 6, rule 11, R6, R7`.

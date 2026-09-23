@@ -3426,3 +3426,47 @@ checkable without manual re-triage every time.
 
 - **Relationships:** `Related: D-DEBT-SCOUT, DEBT_SCOUT_CONTRACT.md §7/§11/§37,
   D-ARTIFACT-TRUST, rule 6.`
+
+## D-BAREMETAL-RING1-SURFACE — ring1 domain surface = a built-in `ring1(fn)` marker (no new syntax); compiler lowers to the CPL0→CPL1 transition (maintainer 23/09/2026)
+
+**Date:** 2026-09-23 · **State:** `DECIDED` (maintainer answered the
+multiple-choice in the chat, option "Built-in marker function") · **Source:**
+B-6.1 landed (Kof-owned GDT/TSS/IDT under OVMF); B-6.2 (CPL1 entry) was blocked
+on this rule-6 decision (`D-BAREMETAL-BOOT` §3 left the Kof-level surface open).
+
+**Decision:** the way Kof code targets a **ring1 domain** is a **built-in
+marker function `ring1(fn)`** — a call whose callee name is reserved and lowered
+by the compiler; **no new grammar, keyword, block, annotation or modifier**.
+`ring1(fn)` runs the given Kof function value at **CPL1** and returns its result
+to CPL0: the runtime performs the `iretq` transition (`CS=0x18` RPL=1,
+`SS=0x20`, TSS `rsp0` backing the trap back), calls the function, and the
+privileged-instruction fault path returns through a ring0 gate.
+
+**Rationale (Simplicity Law, rule 11):** Kof declares the **intent**
+(`ring1(fn)`), the platform does the mechanism. A built-in call is the smallest
+possible surface — it parses as an ordinary call, exists in zero grammar
+productions, and reads exactly as a human would write it. A keyword/block was
+rejected as a larger, less Kof-y surface.
+
+**Constraints (frozen semantics untouched):**
+1. The builtin is meaningful **only** on the x86_64 bare-metal/UEFI ring profile
+   (`NativeProfile.UEFI_RING`/its boot path). On every other target/backend it
+   must fail with a **named diagnostic** (`NATIVE003`), never a silent no-op
+   (R6) — a CPL1 domain does not exist on JVM/JS/riscv/aarch64 today (R7
+   honest scope).
+2. **Additive**: code that does not call `ring1` is unaffected; no change to
+   operators, precedence, evaluation order or any existing API.
+3. `ring1` takes a **function value** (a Kof function/lambda); it is not a
+   statement keyword, so it composes as an expression returning the function's
+   result.
+
+**Queue:** B-6.2 (`PLAN-BAREMETAL-BOOT`), lane baremetal, session 9092; B-6.3
+(`#GP` proof in the ring1 domain + GDT-descriptor sabotage) follows once B-6.2
+is proven. The 0.5.0 gate's condition 3 keeps the plan allowlisted (in-flight
+owned plan, `D-BAREMETAL-BOOT` pattern) — the cut does not wait for it.
+
+**Evidence:** maintainer multiple-choice answer in the chat, 23/09/2026 (this
+session), option "Built-in marker function (Recommended)"; recorded here before
+any B-6.2 code (rule 6: a front is not attacked without a locked decision).
+
+- **Relationships:** `Related: D-BAREMETAL-BOOT, D-UNIVERSAL, D-BOOTSTRAP, rule 6, rule 11, R6, R7`.

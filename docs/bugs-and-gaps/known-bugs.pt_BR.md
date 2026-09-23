@@ -12101,4 +12101,4 @@ Esperado `6`; atual: `VerifyError: Bad type on operand stack` no load.
 **Leitura:** mesmo arquivo/família de faces do §475 (#588) e da #587 anunciada (break-em-switch) — todos dentro de `SwitchStmtLowerer`. NÃO corrigido aqui: o arquivo é o próximo passo anunciado da lane compiler (9092, #587 no DOING) — regra de colisão de arquivo; catalogado por Q7/Q4 com o repro para que a unidade corretiva case com a #587.
 
 **Dono:** lane 9092 compiler (casar com a unidade #587). Sinal registrado no DOING 23/09 (lane 9093).
-
+<!-- pt-switch --> **EN:** [§476 (en)](known-bugs.md#476--mixed-patternvalue-case-list-with-an-empty-default-case-tagvar-n--case-99--default-compiles-clean-and-dies-at-jvm-load-with-verifyerror-bad-type-on-operand-stack---open-2309-found-hunting-588s-fix-q4-adversarial-probe)
