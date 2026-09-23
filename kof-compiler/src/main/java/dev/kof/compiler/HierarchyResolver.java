@@ -161,7 +161,7 @@ public final class HierarchyResolver {
         visited.add(from);
         SymbolTable.ClassSymbol start = sa.getClass(from);
         if (start == null) return null;
-        if (start.superClass() != null && !"Object".equals(start.superClass())) {
+        if (start.superClass() != null && !isImplicitAncestor(start.superClass())) {
             queue.add(simpleOfStored(start.superClass()));
         }
         for (String iface : start.interfaces()) queue.add(simpleOfStored(iface));
@@ -173,7 +173,7 @@ public final class HierarchyResolver {
             if (TypeChecker.isAssignable(sa, other, curType)) return curType;
             SymbolTable.ClassSymbol cs = sa.getClass(cur);
             if (cs != null) {
-                if (cs.superClass() != null && !"Object".equals(cs.superClass())) {
+                if (cs.superClass() != null && !isImplicitAncestor(cs.superClass())) {
                     queue.add(simpleOfStored(cs.superClass()));
                 }
                 for (String iface : cs.interfaces()) queue.add(simpleOfStored(iface));
@@ -185,6 +185,15 @@ public final class HierarchyResolver {
     private static Type ancestorType(SemanticAnalyzer sa, String simpleName) {
         SymbolTable.ClassSymbol cs = sa.getClass(simpleName);
         return cs != null ? cs.type() : new Type.ClassType("", simpleName, java.util.List.of());
+    }
+
+    /** Ancestrais implícitos do JVM que não são tipos Kof e não entram no
+     *  widening: `Object` (todo tipo) e `Record` (estrutural de `record`,
+     *  §596) — enfileirá-los ANTES das interfaces fazia o BFS resolver o
+     *  ancestral comum como o nome nu `Record` (checkcast `Record` →
+     *  NoClassDefFoundError) em vez da interface compartilhada. */
+    private static boolean isImplicitAncestor(String stored) {
+        return "Object".equals(stored) || "Record".equals(stored);
     }
 
     private static String stripGenerics(String declared) {

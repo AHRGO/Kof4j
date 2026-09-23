@@ -13,6 +13,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§481 — `listOf()` widening of records sharing an interface picked the
+    unqualified `Record` instead of the interface (session 9092, issue #596)**
+    (23/09): `record Circle(...) implements Shape` + `record Square(...)
+    implements Shape` + `listOf(Circle(1), Square(2))` compiled clean but the JVM
+    run died with `NoClassDefFoundError: Record` — `firstCommonAncestor` BFS'd a
+    record's STRUCTURAL `extends Record` superclass before its own interfaces, so
+    the common ancestor resolved to `Record` and `get()` emitted `checkcast
+    Record`. Fix (additive): skip both implicit JVM ancestors (`Object`/`Record`)
+    in the BFS; the shared interface wins. Proof: `HeterogeneousListInferTest`
+    (6/6) runs the verbatim repro on the JVM + compiles it on Native/JS; RED
+    measured with the code unfixed.
+
   - **§479 — exception thrown inside a `List.map`/`filter`/`reduce` lambda escaped
     `try`/`catch (String e)` as `InvocationTargetException` on the JVM (session
     9092, issue #594)** (23/09): every `map`/`filter`/`reduce` routes through the

@@ -14621,3 +14621,15 @@ Expected `6`; actual: `VerifyError: Bad type on operand stack` at load.
 
 <!-- pt-switch --> **PT:** [§477 (pt_BR)](known-bugs.pt_BR.md#480--excecao-nao-capturada-no-cross-nativo-riscv64aarch64-imprimia-so-uma-linha-vazia--a-mensagem-era-perdida-silencioso-r6---corrigido-2309-lane-gaps-db-sessao-9092)
 
+## §481 — `listOf()` widening of records sharing an interface resolved to the unqualified `Record` (the JVM structural ancestor) instead of the interface → `NoClassDefFoundError: Record` — ✅ FIXED 23/09 (session 9092, issue #596)
+
+**Symptom (measured, verbatim issue #596 repro):** `interface Shape` + `record Circle(Int r) implements Shape` + `record Square(Int s) implements Shape` + `listOf(Circle(1), Square(2))` compiles clean; the JVM run dies at class load with `NoClassDefFoundError: Record` — the loop's `get()` emitted `checkcast Record` (an unqualified, unresolvable class name), not `Shape`.
+
+**Root cause (measured):** `HierarchyResolver.firstCommonAncestor` BFS's the closure of `base` (superclass then interfaces). A `record`'s stored superclass is the STRUCTURAL `"Record"` (its JVM `extends java.lang.Record`), and it was queued BEFORE the record's own interfaces — so the first ancestor `other` was assignable to was `Record`, resolved as `ClassType("", "Record")` and emitted as a bare `checkcast Record`. The guard only excluded the implicit `"Object"`.
+
+**Fix (root, additive):** the BFS now skips BOTH implicit JVM ancestors (`Object` and `Record`) when seeding and expanding the queue via `isImplicitAncestor` — neither is a Kof-visible type. The shared interface (`Shape`) is then the first common ancestor and the checkcast targets it. No change for classes (their stored superclass is a real Kof type) or for unrelated types (no named ancestor → the pre-#360 first-wins stays).
+
+**Proof (same commit, RED→GREEN):** 2 cases added to `HeterogeneousListInferTest` (6/6) — the verbatim #596 repro runs `Circle[r=1]` / `Square[s=2]` on the JVM, plus a compile gate for the same records on Native and JS (the widening fix is shared IR). Q0 measured with the code unfixed: the JVM case fails with the issue's exact `NoClassDefFoundError: Record`; the other #360 cases stay green.
+
+- **Owner:** session 9092 (23/09), issue #596.
+<!-- pt-switch --> **PT:** [§481 (pt_BR)](known-bugs.pt_BR.md#481--widening-de-listof-de-records-que-compartilham-uma-interface-resolvia-para-o-record-nu-ancestral-estrutural-do-jvm-em-vez-da-interface--noclassdeffounderror-record---corrigido-2309-sessao-9092-issue-596)

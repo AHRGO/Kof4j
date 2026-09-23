@@ -12151,3 +12151,16 @@ Esperado `6`; atual: `VerifyError: Bad type on operand stack` no load.
 - **Dono:** lane gaps-db, sessão 9092 (23/09) — achado ao somar a prova E2E cross da recusa `DB001`.
 
 <!-- pt-switch --> **EN:** [§477 (en)](known-bugs.md#480--uncaught-exception-on-the-native-cross-riscv64aarch64-printed-only-an-empty-line--the-message-was-lost-silent-r6---fixed-2309-gaps-db-lane-session-9092)
+
+## §481 — widening de `listOf()` de records que compartilham uma interface resolvia para o `Record` nu (ancestral estrutural do JVM) em vez da interface → `NoClassDefFoundError: Record` — ✅ CORRIGIDO 23/09 (sessão 9092, issue #596)
+
+**Sintoma (medido, repro verbatim da issue #596):** `interface Shape` + `record Circle(Int r) implements Shape` + `record Square(Int s) implements Shape` + `listOf(Circle(1), Square(2))` compila limpo; a execução no JVM morre no carregamento com `NoClassDefFoundError: Record` — o `get()` do loop emitiu `checkcast Record` (nome de classe nu e não-resolvível), não `Shape`.
+
+**Causa raiz (medida):** o BFS do `HierarchyResolver.firstCommonAncestor` percorre o fecho de `base` (superclasse e depois interfaces). A superclasse ARMAZENADA de um `record` é a ESTRUTURAL `"Record"` (o `extends java.lang.Record` do JVM), e ela era enfileirada ANTES das próprias interfaces do record — então o primeiro ancestral ao qual `other` era atribuível era `Record`, resolvido como `ClassType("", "Record")` e emitido como `checkcast Record` nu. A guarda só excluía o `"Object"` implícito.
+
+**Correção (raiz, aditiva):** o BFS agora pula AMBOS os ancestrais implícitos do JVM (`Object` e `Record`) ao semear e expandir a fila via `isImplicitAncestor` — nenhum é tipo visível em Kof. A interface compartilhada (`Shape`) passa a ser o primeiro ancestral comum e o checkcast a mira. Sem mudança para classes (superclasse armazenada é tipo Kof real) nem para tipos sem parentesco (sem ancestral nomeado → mantém o first-wins pré-#360).
+
+**Prova (mesmo commit, RED→GREEN):** 2 casos adicionados ao `HeterogeneousListInferTest` (6/6) — o repro verbatim do #596 imprime `Circle[r=1]` / `Square[s=2]` no JVM, mais um gate de compilação dos mesmos records em Native e JS (o fix de widening é IR compartilhada). Q0 medido com o código sem o fix: o caso JVM falha com o `NoClassDefFoundError: Record` exato da issue; os demais casos #360 seguem verdes.
+
+- **Dono:** sessão 9092 (23/09), issue #596.
+<!-- pt-switch --> **EN:** [§481 (en)](known-bugs.md#481--listof-widening-of-records-sharing-an-interface-resolved-to-the-unqualified-record-the-jvm-structural-ancestor-instead-of-the-interface--noclassdeffounderror-record---fixed-2309-session-9092-issue-596)
