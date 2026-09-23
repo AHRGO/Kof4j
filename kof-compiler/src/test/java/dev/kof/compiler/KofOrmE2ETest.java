@@ -2602,6 +2602,58 @@ class KofOrmE2ETest {
         assertCrossCreateParity(tempDir, "save", template, oracle);
     }
 
+    /** DB-3/DB-1 cross slice E-parte-2b (23/09): {@code orm.saveAll} REAL no
+     *  riscv64/aarch64 (peça RtB56, port de {@code RuntimeOrm10}) — loop
+     *  {@code kof_list_get}→{@code kof_orm_save}; lote de INSERTs, lote de
+     *  UPDATEs por pk, lista vazia (true, sem tocar no banco) e id ruim →
+     *  throw. Byte-parity com o oráculo x86-64 + perna JVM. */
+    @Test
+    void crossNativeF2aSaveAllMatchesX86Oracle(@TempDir Path tempDir) throws IOException {
+        assumeTrue(isLinux(), "cross ORM E2E requires Linux + libsqlite3");
+        String template = """
+            entity User {
+                id: Long generated
+                name: String
+                email: String unique
+                age: Int
+            }
+            main() {
+                var db = db.connect("sqlite:%s/kof.db")
+                println(orm.create<User>(db))
+                var l1 = new List<User>()
+                l1.add(User(0, "Mel", "m@kof.dev", 30))
+                l1.add(User(0, "Ana", "a@kof.dev", 25))
+                println(orm.saveAll<User>(db, l1))
+                println(orm.count<User>(db))
+                println(db.query(db, "select name from user order by id").get(0))
+                println(db.query(db, "select name from user order by id").get(1))
+                var l2 = new List<User>()
+                l2.add(User(1, "Mel2", "m2@kof.dev", 31))
+                l2.add(User(2, "Ana2", "a2@kof.dev", 26))
+                println(orm.saveAll<User>(db, l2))
+                println(orm.count<User>(db))
+                println(db.query(db, "select name from user where id = 1").get(0))
+                var empty = new List<User>()
+                println(orm.saveAll<User>(db, empty))
+                println(orm.count<User>(db))
+                try {
+                    orm.saveAll<User>("db2", l1)
+                } catch (String e) {
+                    println(e)
+                }
+                println("after-throw")
+                db.close(db)
+            }
+            """;
+        String golden = "true\ntrue\n2\n{\"name\":\"Mel\"}\n{\"name\":\"Ana\"}\n"
+                + "true\n2\n{\"name\":\"Mel2\"}\ntrue\n2\n"
+                + "unknown db connection: db2\nafter-throw";
+        String oracle = runX86CreateOracle(tempDir, "saveall", template);
+        assertEquals(golden, oracle,
+                "oráculo x86-64 (saveAll: lote INSERT, count, ordem, lote UPDATE, vazio true, id ruim)");
+        assertCrossCreateParity(tempDir, "saveall", template, oracle);
+    }
+
     /** x86-64: compila e roda o template numa pasta propria (banco limpo) e
      *  devolve o stdout — o oráculo do contrato D-DB-GAPS. */
     private String runX86CreateOracle(Path tempDir, String label, String template) throws IOException {
