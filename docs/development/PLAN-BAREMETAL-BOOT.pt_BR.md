@@ -277,13 +277,25 @@ no host elas resolvem pela libc, aqui ficam sem resolução e só são fatais se
 programa alcançar o caminho libc — coberto pelas capacidades recusadas. Remover
 as refs na origem (seções por função + `gc-sections`) é o próximo passo **B-1b**.
 > **Face (i) LANDED (22/09, lane 9093 — reivindicado após coordenação com a 9092):** o caminho de panic não alcança mais o dispatcher genérico — o `kof_panic` imprime via `kof_println_string` (toda mensagem de panic é um `.asciz` estático). Medido: programas hello/plain/numéricos sem float não carregam mais `snprintf`/`strtod` (`nm -u` do binário linkado com gc: presente no código antigo, ausente com o fix). Prova: novo `FreestandingLinkE2ETest.freestandingHelloCarriesNoLibcFormatRefs` (RED no código antigo) + classe 4/4 + bateria nativa 101/0F (`NativeE2ETest` 67, `NullSafety` 14, `ArrayBounds` 10, catches/prints 10). Face (ii) — dtoa libc-free pela costura — ainda ABERTA, dona lane 9092.
-**Aceitação cumprida:** o hello freestanding não tem `PT_INTERP` nem `DT_NEEDED`
-(`readelf`) e ainda imprime o valor do oráculo JVM; o controle `HOST` mostra
-ambos (anti-falso-verde); freestanding+`spawn` é recusado com `NATIVE003`. Prova:
-`FreestandingLinkE2ETest` 3/3 + regressão `LinkByUseTest` 3,
-`PlatformSeamSabotageTest` 4, `NativeRuntimeSliceRegistryTest` 7,
-`ArtifactSizeTest` 6 (hello inalterado 39.432 B/91 syms), `KofConcurrency2Test`
-48, `NativeE2ETest` 67 → 138/0F.
+
+**B-1b (LANDADA 22/09, lane `baremetal` 9092): o link freestanding x86_64 fica
+livre de libc e fecha SEM `--unresolved-symbols=ignore-all`.** Com a face (i)
+landada, as funções que carregavam libc eram inalcançáveis no objeto; o caminho
+freestanding agora passa o texto do runtime por
+`NativeCrossSections.sectionizeTextFunctions` (o passe do cross, lição §445) e
+linka `ld -o bin obj --gc-sections -e _start`. O `nm -u` do resultado não mostra
+`snprintf`/`strtod`/`pthread_*`/`usleep`. **Aceitação cumprida:** sem
+`PT_INTERP`, sem `DT_NEEDED`, o binário ainda imprime o valor do oráculo JVM, o
+controle `HOST` mantém ambos, e freestanding+`spawn` é recusado com `NATIVE003`
+— tudo sem nenhum escape de símbolo não resolvido. Prova:
+`FreestandingLinkE2ETest` 4/4 + bateria 116/0F (`LinkByUseTest` 3,
+`PlatformSeamSabotageTest` 5, `NativeRuntimeSliceRegistryTest` 7,
+`ArtifactSizeTest` 6, `NativeE2ETest` 67, `NullSafetyE2ETest` 14,
+`ArrayBoundsSafetyE2ETest` 10). **Restante de B-1:** superfície CLI
+(`--profile`) condicionada a uma recusa `NATIVE003` de float-print (hoje um
+`println(Double)` freestanding morre no `ld` com undefined reference cru —
+honesto mas sem código), e depois o linker script com heap/stack configuráveis e
+`_end`.
 
 **Depende de:** B-0. **Classificação:** M (médio).
 

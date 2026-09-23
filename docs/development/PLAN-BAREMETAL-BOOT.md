@@ -271,12 +271,24 @@ libc, here they stay unresolved and are only fatal if the program reaches the li
 path — which the refused capabilities cover. Removing the refs at the source
 (per-function sections + `gc-sections`) is the **B-1b** follow-up.
 > **Face (i) LANDED (22/09, lane 9093 — claimed after coordination with 9092):** the panic path no longer reaches the generic dispatcher — `kof_panic` now prints via `kof_println_string` (every panic message is a static `.asciz`). Measured: hello/plain/numeric programs without floats carry no `snprintf`/`strtod` anymore (`nm -u` of the gc-linked binary: present on the old code, gone on the fix). Proof: new `FreestandingLinkE2ETest.freestandingHelloCarriesNoLibcFormatRefs` (RED on the old code) + class 4/4 + native battery 101/0F (`NativeE2ETest` 67, `NullSafety` 14, `ArrayBounds` 10, catches/prints 10). Face (ii) — libc-free dtoa through the seam — still OPEN, owner lane 9092.
-**Acceptance met:** hello freestanding has no `PT_INTERP` and no `DT_NEEDED`
-(`readelf`) and still prints the JVM-oracle value; the `HOST` control shows both
-(anti-false-green); freestanding+`spawn` is refused with `NATIVE003`. Proof:
-`FreestandingLinkE2ETest` 3/3 + regression `LinkByUseTest` 3, `PlatformSeamSabotageTest`
-4, `NativeRuntimeSliceRegistryTest` 7, `ArtifactSizeTest` 6 (hello unchanged
-39,432 B/91 syms), `KofConcurrency2Test` 48, `NativeE2ETest` 67 → 138/0F.
+
+**B-1b (LANDED 22/09, lane `baremetal` 9092): the freestanding x86_64 link is
+libc-free and closes without `--unresolved-symbols=ignore-all`.** With face (i)
+landed, the only remaining libc-carrying functions were unreachable in the
+object; the freestanding path now runs the runtime text through
+`NativeCrossSections.sectionizeTextFunctions` (the cross pass, §445 lesson) and
+links `ld -o bin obj --gc-sections -e _start`. `nm -u` of the result shows no
+`snprintf`/`strtod`/`pthread_*`/`usleep`. **Acceptance met:** no `PT_INTERP`, no
+`DT_NEEDED`, the binary still prints the JVM-oracle value, `HOST` control keeps
+both, and freestanding+`spawn` is refused with `NATIVE003` — all without any
+unresolved-symbol escape hatch. Proof: `FreestandingLinkE2ETest` 4/4 + battery
+116/0F (`LinkByUseTest` 3, `PlatformSeamSabotageTest` 5,
+`NativeRuntimeSliceRegistryTest` 7, `ArtifactSizeTest` 6, `NativeE2ETest` 67,
+`NullSafetyE2ETest` 14, `ArrayBoundsSafetyE2ETest` 10). **Remaining for B-1:**
+CLI surface (`--profile`) gated on a `NATIVE003` refusal for float-print
+(a freestanding `println(Double)` currently dies at `ld` with a raw undefined
+reference — honest but uncoded), then the linker script with configurable
+heap/stack and `_end`.
 
 **Depends on:** B-0. **Classification:** M (medium).
 

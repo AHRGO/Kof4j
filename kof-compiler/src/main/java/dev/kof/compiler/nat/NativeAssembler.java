@@ -26,9 +26,22 @@ public final class NativeAssembler {
                    boolean usesConcurrency, java.util.Collection<String> ffiLibs,
                    boolean usesPow, boolean freestanding) throws IOException {
         Path objFile = asmFile.resolveSibling(asmFile.getFileName() + ".o");
+        boolean bare = freestanding && System.getProperty("os.name", "").toLowerCase().contains("linux");
+        Path asmToAssemble = asmFile;
+        if (bare) {
+            // B-1b: seção por FUNÇÃO no .text (reusa NativeCrossSections, o
+            // mesmo passe do cross, lição §445) → o ld com --gc-sections
+            // descarta o que o programa não alcança. Com a face (i) do B-1b
+            // (panic imprime string, sem dispatcher genérico), o hello deixa
+            // de arrastar dtoa/pthread/usleep — o link fecha SEM libc e SEM
+            // `--unresolved-symbols=ignore-all`.
+            asmToAssemble = asmFile.resolveSibling(asmFile.getFileName() + ".bare.s");
+            Files.writeString(asmToAssemble,
+                    NativeCrossSections.sectionizeTextFunctions(Files.readString(asmFile)));
+        }
         System.err.println("NativeBackend: assembling " + asmFile);
         try {
-            runCommand(new String[]{"as", "-o", objFile.toString(), asmFile.toString()}, "as");
+            runCommand(new String[]{"as", "-o", objFile.toString(), asmToAssemble.toString()}, "as");
         } catch (IOException e) {
             System.err.println("NativeBackend: as failed: " + e.getMessage());
             throw e;
@@ -36,18 +49,15 @@ public final class NativeAssembler {
         // B-1: perfil freestanding (x86_64) — link ESTÁTICO, sem
         // `-dynamic-linker` e sem `-lc`; o binário só fala com o SO pela
         // costura kof_plat_* (B-0). As capacidades libc-dependentes já foram
-        // recusadas em NativeBackend.assemble (NATIVE003).
-        //
-        // `--unresolved-symbols=ignore-all`: as fatias x86 são grossas e
-        // carregam chamadas libc de funções NÃO alcançadas no mesmo objeto
-        // (snprintf/strtod do dtoa, pthread_*, usleep). No perfil host elas
-        // resolvem pela libc; aqui ficam sem resolução e só são fatais se o
-        // PROGRAMA alcançar o caminho libc — as capacidades que fazem isso
-        // (float/db/concurrency/pow/ffi) são recusadas por uso. Remover as
-        // refs na origem (seções por função + gc-sections) é o passo B-1b.
-        if (freestanding && System.getProperty("os.name", "").toLowerCase().contains("linux")) {
+        // recusadas em NativeBackend.assemble (NATIVE003). B-1b: as refs libc
+        // de funções não-alcançadas morrem no `--gc-sections`.
+        if (bare) {
             runCommand(new String[]{"ld", "-o", binFile.toString(), objFile.toString(),
-                    "--unresolved-symbols=ignore-all"}, "ld");
+                    "--gc-sections", "-e", "_start"}, "ld");
+            Files.deleteIfExists(objFile);
+            Files.deleteIfExists(asmToAssemble);
+            if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);
+            binFile.toFile().setExecutable(true);
             return;
         }
         // Native always needs dynamic linker + libc now (printf for float, db optionally)
