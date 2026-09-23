@@ -95,6 +95,8 @@ public final class RuntimeRings {
                 .quad 0
             kof_ring1_cs:
                 .quad 0
+            kof_ring1_target:
+                .quad 0
 
             .section .bss
             .align 16
@@ -264,8 +266,9 @@ public final class RuntimeRings {
                 popfq
                 ret
 
-            # Código que roda em CPL1: troca para os dados ring1 e registra o
-            # CS observado; então trap-back para o ring0 (vetor 0x81).
+            # Código que roda em CPL1: registra o CS observado e trap-back ao
+            # ring0 (vetor 0x81). Usado so pelo auto-teste (o builtin `ring1(fn)`
+            # passa pelo trampolim kof_ring1_call, abaixo).
             kof_ring1_stub:
                 movw %cs, %ax
                 movzwl %ax, %r15d
@@ -279,13 +282,15 @@ public final class RuntimeRings {
                 movq %r15, kof_ring1_cs(%rip)
                 jmp kof_ring1_ret
 
-            # Entrada CPL1: salva callee-saved, monta o frame de iretq
-            # (SS=0x20, RSP=pilha ring1, RFLAGS, CS=0x18, RIP=stub) na pilha do
-            # ring1 e iretq. Volta por kof_ring1_trapback -> kof_ring1_ret.
+            # Entrada CPL1: monta o frame de iretq (SS=0x20, RSP=pilha ring1,
+            # RFLAGS, CS=0x18|RPL1, RIP=kof_ring1_call) na pilha do ring1 e
+            # iretq. O alvo vem em %rdi (ABI SysV) e roda sob o trampolim;
+            # volta por kof_ring1_trapback -> kof_ring1_ret.
             .globl kof_ring1_entry
             kof_ring1_entry:
                 pushq %rbx
                 pushq %r12
+                movq %rdi, kof_ring1_target(%rip)
                 movq %rsp, kof_ring1_ring0_rsp(%rip)
                 leaq kof_ring1_stack_top(%rip), %rax
                 movq %rax, kof_ring1_ring1_rsp(%rip)
@@ -295,7 +300,7 @@ public final class RuntimeRings {
                 pushq %rax
                 pushq $0x2
                 pushq $0x19
-                leaq kof_ring1_stub(%rip), %rax
+                leaq kof_ring1_call(%rip), %rax
                 pushq %rax
                 iretq
             kof_ring1_ret:
@@ -303,11 +308,36 @@ public final class RuntimeRings {
                 popq %rbx
                 ret
 
+            # Trampolim CPL1: registra o CS observado, chama o alvo dinâmico e
+            # volta ao ring0 via int $0x81. O alvo roda no nível ring1 (só pode
+            # tocar memória e retornar; chamar firmware ring0 gera #GP).
+            kof_ring1_call:
+                movw %cs, %ax
+                movzwl %ax, %r15d
+                call *kof_ring1_target(%rip)
+                int $0x81
+            1:  jmp 1b
+
+            # Wrapper ring0 do builtin `ring1(fn)` (B-6.2b): instala os anéis,
+            # passa o alvo (%rdi) à entrada CPL1 e restaura o firmware.
+            # Preserva r15 (o trampolim o usa) e o alvo.
+            .globl kof_ring1_run
+            kof_ring1_run:
+                pushq %r15
+                pushq %rdi
+                call kof_rings_init
+                popq %rdi
+                call kof_ring1_entry
+                popq %r15
+                call kof_rings_restore
+                ret
+
             # Prova: entra em CPL1, confere que o CS observado tem RPL=1.
             .globl kof_ring1_selftest
             kof_ring1_selftest:
                 subq $8, %rsp
                 movq $0, kof_ring1_cs(%rip)
+                leaq kof_ring1_stub(%rip), %rdi
                 call kof_ring1_entry
                 movq kof_ring1_cs(%rip), %rax
                 andq $3, %rax

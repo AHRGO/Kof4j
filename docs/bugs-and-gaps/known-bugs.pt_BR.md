@@ -12104,10 +12104,6 @@ Esperado `6`; atual: `VerifyError: Bad type on operand stack` no load.
 
 **Dono:** lane 9093 (fixada na unidade #587, mesmo arquivo).
 <!-- pt-switch --> **EN:** [§476 (en)](known-bugs.md#476--mixed-patternvalue-case-list-with-an-empty-default-case-tagvar-n--case-99--default-compiles-clean-and-dies-at-jvm-load-with-verifyerror-bad-type-on-operand-stack---fixed-2309-lane-9093-paired-with-the-587-unit--the-existing-sem035-refusal-extended-to-the-value-case-site)
-
-**Dono:** lane 9092 compiler (casar com a unidade #587). Sinal registrado no DOING 23/09 (lane 9093).
-<!-- pt-switch --> **EN:** [§476 (en)](known-bugs.md#476--mixed-patternvalue-case-list-with-an-empty-default-case-tagvar-n--case-99--default-compiles-clean-and-dies-at-jvm-load-with-verifyerror-bad-type-on-operand-stack---open-2309-found-hunting-588s-fix-q4-adversarial-probe)
-
 ## §477 — função de topo genérica que devolve `T` puro perde o `checkcast` no call-site numa instanciação reference → `NoSuchMethodError` no JVM — ✅ CORRIGIDO 23/09 (sessão 9092, issue #592)
 
 **Sintoma (medido, repro verbatim da issue #592):** `record Point(Int x, Int y)` + `T idf<T>(T x) { return x }` + `var p = idf<Point>(Point(5, 6)); println(p.x() + "," + p.y())` compila limpo em todos os alvos; a execução no JVM lança `NoSuchMethodError: 'java.lang.Object java.lang.Object.x()'` (bytecode: `invokestatic idf:(Ljava/lang/Object;)Ljava/lang/Object;` guardado num local e depois `invokevirtual Point.x:()I` SEM `checkcast` no meio). `idf<Int>(7)` funcionava — só a metade de unbox primitivo do retorno genérico era tratada. Mesma família de adaptação ausente do §474 (#585), mas no caminho de chamada de FUNÇÃO de topo (nua), não no de método de instância.

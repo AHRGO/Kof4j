@@ -36,6 +36,21 @@ class RingPrivilegeE2ETest {
             }
             """;
 
+    /** B-6.2b: `ring1(task)` executa `task` em CPL1 (só toca memória) e o
+     *  estado sobrevive ao retorno ao ring0. */
+    private static final String RING1_SRC = """
+            class Mark {
+                static Int value = 0
+            }
+            void task() {
+                Mark.value = 41
+            }
+            main() {
+                ring1(task)
+                println(Mark.value)
+            }
+            """;
+
     private static boolean hasTool(String tool, String... args) {
         String[] cmd = new String[args.length + 1];
         cmd[0] = tool;
@@ -75,9 +90,13 @@ class RingPrivilegeE2ETest {
     }
 
     private Path build(Path tempDir, NativeProfile profile) throws IOException {
+        return buildSource(tempDir, profile, HELLO);
+    }
+
+    private Path buildSource(Path tempDir, NativeProfile profile, String src) throws IOException {
         CompilerDriver driver = new CompilerDriver();
         Path source = tempDir.resolve("Main.kf");
-        Files.writeString(source, HELLO);
+        Files.writeString(source, src);
         Path outDir = tempDir.resolve("out-" + profile);
         CompilationResult result = driver.compile(source, outDir, Target.NATIVE, profile);
         assertEquals(true, result.success(),
@@ -194,5 +213,41 @@ class RingPrivilegeE2ETest {
                 "a maquinaria de anéis NAO pode vazar para o perfil uefi puro (R6)");
         assertFalse(text.contains("KO-RING1 CPL1 OK"),
                 "a maquinaria de CPL1 NAO pode vazar para o perfil uefi puro (R6)");
+    }
+
+    /** B-6.2b: o builtin `ring1(fn)` executa a funcao Kof em CPL1 e o estado
+     *  (um campo estatico) sobrevive; o programa segue no ring0. */
+    @Test
+    void ring1BuiltinRunsKofFunctionAtCpl1(@TempDir Path tempDir) throws Exception {
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path bin = buildSource(tempDir, NativeProfile.UEFI_RING, RING1_SRC);
+        String text = bootOvmf(tempDir, bin, "KO-RING MAIN");
+        assertTrue(text.contains("KO-RING1 CPL1 OK"),
+                "OVMF nao provou a entrada CPL1. Fim do log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+        assertTrue(text.contains("41"),
+                "a funcao Kof `ring1(task)` nao rodou em CPL1 (Mark.value != 41). Fim: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+        assertTrue(text.contains("KO-RING MAIN"),
+                "main nao completou apos o ring1(fn). Fim do log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+    }
+
+    /** B-6.2b: fora do perfil ring, `ring1(fn)` e um gap NOMEADO (NATIVE003) —
+     *  nunca silencioso (R6/R7). */
+    @Test
+    void ring1BuiltinOutsideRingProfileIsNamedGap(@TempDir Path tempDir) throws Exception {
+        for (NativeProfile p : new NativeProfile[] { NativeProfile.UEFI, NativeProfile.HOST }) {
+            CompilerDriver driver = new CompilerDriver();
+            Path source = tempDir.resolve("Main-" + p + ".kf");
+            Files.writeString(source, RING1_SRC);
+            CompilationResult result = driver.compile(source, tempDir.resolve("out-" + p),
+                    Target.NATIVE, p);
+            assertFalse(result.success(), "ring1(fn) sob " + p + " devia falhar (NATIVE003)");
+            String diags = result.diagnostics().getDiagnostics().toString();
+            assertTrue(diags.contains("NATIVE003"),
+                    "o gap `ring1(fn)` sob " + p + " devia ser NOMEADO NATIVE003 (R6), veio: " + diags);
+        }
     }
 }

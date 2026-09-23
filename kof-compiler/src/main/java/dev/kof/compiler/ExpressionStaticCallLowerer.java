@@ -322,6 +322,35 @@ if (mc.receiver() == null && "awaitTimeout".equals(mc.methodName())
             resT, KofCallKind.FUNCTION));
     return localIdx;
 }
+if (mc.receiver() == null && "ring1".equals(mc.methodName())
+        && mc.arguments().size() == 1
+        && driver.findLocalVar("ring1", locals) == null
+        && !hasUserFunctionNamed(driver, "ring1")) {
+    // B-6.2b: builtin marcador `ring1(fn)` (D-BAREMETAL-RING1-SURFACE) — so
+    // baixa no perfil x86_64 UEFI_RING; nos demais alvos/perfis e NATIVE003
+    // nomeado (R6/R7, nunca silencioso). O alvo roda em CPL1: so pode tocar
+    // memoria e retornar (chamar firmware ring0, ex. println, geraria #GP).
+    ExpressionNode arg0 = mc.arguments().get(0);
+    String fnName = arg0 instanceof IdentifierExpr id ? id.name() : null;
+    if (fnName != null
+            && driver.target == Target.NATIVE
+            && dev.kof.compiler.nat.NativeProfile.UEFI_RING.equals(driver.nativeProfile())) {
+        ops.add(new KofFunctionAddress(
+                CompilerTypes.mainClassType(driver.currentModule), fnName, List.of()));
+        ops.add(new KofCall(new Type.ClassType("dev.kof.runtime", "KofRuntime", List.of()),
+                "kof_ring1_run", List.of(Type.PrimitiveType.LONG),
+                Type.PrimitiveType.VOID, KofCallKind.FUNCTION));
+        return localIdx;
+    }
+    if (driver.currentDiagnostics != null) {
+        var rpos = arg0.position() != null ? arg0.position() : mc.position();
+        driver.currentDiagnostics.error(rpos != null ? rpos.file() : "",
+                rpos != null ? rpos.line() : 0, rpos != null ? rpos.column() : 0, 0,
+                "ring1(fn): only available on --target native --profile uefi-ring"
+                        + " (x86_64) (NATIVE003)", "NATIVE003");
+    }
+    return localIdx;
+}
 if (mc.receiver() == null && "channel".equals(mc.methodName())
         && mc.arguments().isEmpty()
         && driver.findLocalVar("channel", locals) == null) {
@@ -473,4 +502,15 @@ if ("setOf".equals(mc.methodName()) && mc.receiver() == null) {
     // slot; TID real via gettid(178) gravado pelo kernel no clone ctid).
     // O caminho do frontend é o MESMO do x86 (kof_* FUNCTION, assinaturas
     // idênticas) — NativeX86Calls é a referência de semântica.
+
+    /** B-6.2b: `ring1` so vale como builtin se nenhuma funcao do usuario usa
+     *  o nome (nao sombreia — freeze regra 2). */
+    private static boolean hasUserFunctionNamed(CompilerDriver driver, String name) {
+        if (driver.currentUnit == null) return false;
+        for (AstNode d : driver.currentUnit.declarations()) {
+            if (d instanceof FunctionDeclarationNode fn && fn.name().equals(name)) return true;
+            if (d instanceof ExternalFunctionNode ext && ext.name().equals(name)) return true;
+        }
+        return false;
+    }
 }
