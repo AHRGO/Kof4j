@@ -224,6 +224,28 @@ exploit.
   hard-coded `False`. **Not built, by design:** a skipped-test
   detector — `scripts/audit-stubs.sh` §5/§6/§12 already owns
   `@Disabled`/`assumeTrue`/weak-green (V2 Anti-pattern 5).
+- **Evidence qualification for decisions (DONE, 2026-09-23 — Wave 1/2
+  scope, no new privilege):** `detectors/decision_evidence.py` reads only
+  structured ledger fields (sub-item `**State:**` lines, `known-bugs.md`
+  `§NNN` headings and `backend-parity.md` rows that name the decision)
+  and resolves cited names against files that exist:
+  `PARTIAL_PROVED` (complete + incomplete items), `STALE_STATE` (the
+  decision's state lags closed entries → `DOC_CODE_DRIFT`) or
+  `UNPROVED`. It is the first real source for
+  `current_implementation_identified` / `debt_mechanism_proved` /
+  `exit_condition_expressible`; a new checklist item,
+  `not_an_already_documented_gap`, applies the V2 §5 hard stop (an
+  incomplete part already recorded as an honest gap is `TRACKED`, never
+  an Issue). Two real bugs fixed with it: `confidence.classify` returned
+  right after C1→C2, so `C3` was unreachable in a real scan (candidates
+  start at C1, classified once); and live dedup ran one GitHub search per
+  cluster (70 > the 30/min search limit), making late clusters
+  `NOT_CHECKED` — now only C1+ clusters are searched (C0 is never
+  promotable). Measured on `d6e0f1a3`: `D-SEC`/`D-APP` `C2` `TRACKED`;
+  `D-ENUM207` `C3` (stale state: `known-bugs.md` §211 closed 15/09,
+  issue #207 closed, `EnumIdentityE2ETest` 6/6 green on a clean build),
+  yet it fails the §75 completeness gate on observed *cost*, so it would
+  not publish.
 - **Wave 3+ (the C3 canary publisher and beyond):** not started, and
   not authorized by `D-DEBT-SCOUT-W2` — needs its own `DECISIONS.md`
   entry with the maintainer's phase-S1 authorization (§7) before any

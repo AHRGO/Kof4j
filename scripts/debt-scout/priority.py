@@ -37,6 +37,22 @@ def _dim(level, evidence=None):
     return {"level": level, "evidence": list(evidence or [])}
 
 
+def _lock_in(members):
+    """A qualifier's MEASURED lock-in (decision_evidence.py: tests that
+    assert a gap code, or a stale state inside the normative ledger) —
+    the highest one among members; otherwise `none`, never guessed."""
+    order = ["none", "low", "medium", "high"]
+    best, evidence = "none", []
+    for m in members:
+        q = (m.get("qualification") or {}).get("lock_in")
+        if q and q[0] in order and order.index(q[0]) > order.index(best):
+            best, evidence = q[0], list(q[1])
+    if best == "none":
+        evidence = ["no evidence this is encoded in tests, docs-as-normative, or "
+                    "external/ecosystem code"]
+    return _dim(best, evidence)
+
+
 def compute_priority_vector(cluster):
     """cluster (from cluster.py) -> priority_vector dict. Deterministic,
     conservative: only claims a level above `unknown`/`none` when the
@@ -54,10 +70,7 @@ def compute_priority_vector(cluster):
         "interest_observed": _dim("unknown", [
             "no recurrence/maintenance-incident tracking exists yet",
         ]),
-        "lock_in": _dim("none", [
-            "no evidence this is encoded in tests, docs-as-normative, or "
-            "external/ecosystem code",
-        ]),
+        "lock_in": _lock_in(members),
         "reach": _dim(
             "medium" if len(domains) > 1 else "low",
             [f"touches {len(domains)} domain(s): {sorted(domains)}"],
@@ -134,6 +147,13 @@ def selftest():
 
     check("nothing here ever produces a single aggregate score field "
           "(no 'priority' key at top level)", "priority" not in v)
+
+    measured = compute_priority_vector({
+        "confidence": "C1", "member_count": 1,
+        "members": [{"taxonomy": {"domains": ["SECURITY"]},
+                     "qualification": {"lock_in": ["medium", ["SECN002 asserted by 3 tests"]]}}]})
+    check("a qualifier's measured lock-in is carried with its evidence",
+          measured["lock_in"] == {"level": "medium", "evidence": ["SECN002 asserted by 3 tests"]})
 
     return ok
 

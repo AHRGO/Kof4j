@@ -104,6 +104,10 @@ def cluster_candidates(candidates):
                 "mechanism": mechanism,
             },
             "root_symbol": symbol,
+            # lifted only when every member states the SAME exit condition
+            "exit_condition": (members[0].get("exit_condition")
+                               if len({m.get("exit_condition") for m in members}) == 1
+                               else None),
             "confidence": cluster_confidence,
             "member_count": len(members),
             "members": members,

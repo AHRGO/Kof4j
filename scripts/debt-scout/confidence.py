@@ -4,14 +4,16 @@
 when there is real, checkable evidence for it — never by averaging many
 weak signals (contract §5: "Confianca nao e media matematica").
 
-**C3 requires every item of the mandatory checklist (§7).** Some of the
-checklist's capabilities are honestly absent today —
-`current_implementation_identified` (no detector links to
-compiler/runtime source), `debt_mechanism_proved` (a marker/drift is a
-signal, not a proven cause), `exit_condition_expressible` (no detector
-formulates one). This module reports those as `False`, not `True` —
-which means **no cluster this repo produces today can reach `C3`**,
-and that is the correct, honest result, not a bug to work around.
+**C3 requires every item of the mandatory checklist (§7).** Each item is
+real evidence attached by a detector or qualifier, never a default:
+`current_implementation_identified` / `debt_mechanism_proved` come from
+`detectors/decision_evidence.py` (structured ledger fields + files that
+exist in the tree), `exit_condition_expressible` from a detector that
+formulates one, history from `history.py`, ownership from
+`ownership.py`. `not_an_already_documented_gap` is the V2 §5 hard stop:
+an incomplete part already recorded as an honest gap is `TRACKED`,
+never an Issue. Any missing item keeps the cluster below `C3` and stays
+visible in `c3_checklist`.
 
 **C2 requires convergent-but-incomplete evidence:** a resolved
 governing contract, a completed (not `NOT_CHECKED`) duplicate check,
@@ -49,6 +51,7 @@ C3_REQUIREMENTS = (
     "owner_collision_checked",
     "security_publication_gate_passed",
     "exit_condition_expressible",
+    "not_an_already_documented_gap",
 )
 
 
@@ -65,12 +68,19 @@ def evaluate_c3_checklist(cluster):
     return {
         "governing_contract_identified": bool(contract_source)
         and contract_source != ["UNKNOWN"],
-        # No detector in this repo links a finding to the compiler/
-        # runtime implementation it concerns yet.
-        "current_implementation_identified": False,
+        # decision_evidence.py: real repo files the finding resolves to
+        # (cited classes / files emitting its gap code). Nothing else counts.
+        "current_implementation_identified": any(
+            (m.get("qualification") or {}).get("implementation_refs")
+            for m in cluster.get("members", [])),
         "observable_behavior_measured": bool(cluster.get("members")),
-        # A marker or a drift check is a SIGNAL, never a proven cause.
-        "debt_mechanism_proved": False,
+        # A marker is a SIGNAL, never a proven cause. Proved only when a
+        # detector shows the mechanism from structured ledger fields:
+        # mixed complete/incomplete items, or a state older than every
+        # closed entry naming it.
+        "debt_mechanism_proved": any(
+            (m.get("qualification") or {}).get("kind") in ("PARTIAL_PROVED", "STALE_STATE")
+            for m in cluster.get("members", [])),
         "cost_lockin_evidence_exists": (
             interest_level not in (None, "unknown")
             or lockin_level not in (None, "none", "unknown")
@@ -85,9 +95,18 @@ def evaluate_c3_checklist(cluster):
         "owner_collision_checked": (cluster.get("ownership") or {})
         .get("status") == "NOT_OWNED",
         "security_publication_gate_passed": "SECURITY" not in domains,
-        # No detector formulates a machine-checkable exit condition yet.
-        "exit_condition_expressible": False,
+        "exit_condition_expressible": bool(cluster.get("exit_condition")),
+        # V2 §5 hard stop: the incomplete part is already an honestly
+        # documented gap in a ledger -> TRACKED, never an Issue.
+        "not_an_already_documented_gap": not _tracked_gap_refs(cluster),
     }
+
+
+def _tracked_gap_refs(cluster):
+    refs = []
+    for m in cluster.get("members", []):
+        refs += (m.get("qualification") or {}).get("tracked_gap_refs") or []
+    return refs
 
 
 def _looks_c2_ready(cluster):
@@ -118,13 +137,17 @@ def classify(cluster):
         return current, None
 
     checklist = evaluate_c3_checklist(cluster)
-    if current == "C2" and all(checklist.values()):
-        # C3 promotion is only meaningful starting from a real C2 — a
-        # cluster that never qualified for C2 cannot leapfrog to C3.
-        return "C3", checklist
-
     if current == "C1" and _looks_c2_ready(cluster):
-        return "C2", checklist
+        # promoted to C2 in THIS call; fall through so the C3 checklist is
+        # evaluated too. Returning here made C3 unreachable in a real scan
+        # (candidates always start at C1 and scan.py classifies once) —
+        # found 23/09; the old C2->C3 fixture started from a hand-made C2.
+        current = "C2"
+
+    if current == "C2" and all(checklist.values()):
+        # C3 only from a real C2 — a cluster that does not satisfy the C2
+        # readiness gate can never leapfrog to C3.
+        return "C3", checklist
 
     return current, checklist
 
@@ -134,6 +157,9 @@ def apply_classification(cluster):
     cluster["confidence"] = new_confidence
     if (cluster.get("ownership") or {}).get("status") == "OWNED":
         cluster["lifecycle_state"] = "RESOLUTION_IN_PROGRESS"
+    elif _tracked_gap_refs(cluster):
+        cluster["lifecycle_state"] = "TRACKED"
+        cluster["tracked_by"] = _tracked_gap_refs(cluster)
     if checklist is not None:
         cluster["c3_checklist"] = checklist
     return cluster
@@ -267,6 +293,30 @@ def selftest():
     check("even with history + ownership cleared, C3 stays unreachable while "
           "mechanism/implementation/exit condition are unproven",
           classify(still_c2)[0] == "C2")
+
+    full = _cluster("C1", contract_source=["D-X"], dup_status="NO_DUPLICATE_FOUND",
+                    classification="GAP REAL", interest="medium", lockin="medium")
+    full["historical_origin"] = {"status": "FOUND"}
+    full["ownership"] = {"status": "NOT_OWNED"}
+    full["exit_condition"] = "D-X reaches IMPLEMENTED"
+    full["members"][0]["qualification"] = {"kind": "PARTIAL_PROVED",
+                                           "implementation_refs": ["a/B.java"],
+                                           "tracked_gap_refs": []}
+    check("a C1 with every piece of evidence reaches C3 in ONE classify call "
+          "(the real scan classifies once; C1->C2 used to return early)",
+          classify(full)[0] == "C3")
+    tracked = json.loads(json.dumps(full))
+    tracked["members"][0]["qualification"]["tracked_gap_refs"] = ["docs/backend-parity.md line 1"]
+    apply_classification(tracked)
+    check("an incomplete part already documented as an honest gap is TRACKED, "
+          "never C3 (V2 §5 hard stop)",
+          tracked["confidence"] == "C2" and tracked["lifecycle_state"] == "TRACKED"
+          and tracked["c3_checklist"]["not_an_already_documented_gap"] is False)
+    unproved = json.loads(json.dumps(full))
+    unproved["members"][0]["qualification"] = {"kind": "UNPROVED", "implementation_refs": []}
+    ev = evaluate_c3_checklist(unproved)
+    check("an UNPROVED qualification never counts as mechanism or implementation",
+          ev["debt_mechanism_proved"] is False and ev["current_implementation_identified"] is False)
 
     return ok
 

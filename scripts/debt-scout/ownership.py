@@ -41,6 +41,7 @@ _DONE_RE = re.compile(r"✅|\bFEITO\b|\bDONE\b")
 _OWNER_RE = re.compile(r"dono\s*=\s*([^,;)]+)|owner\s*=\s*([^,;)]+)", re.IGNORECASE)
 _TICK_RE = re.compile(r"`([^`\n]+)`")
 _HEADER_CHARS = 160  # the state word lives in the bold header of a claim
+_SELF_CLAIM_RE = re.compile(r"Debt Scout|debt-scout", re.IGNORECASE)
 
 
 def parse_active_claims(doing_text):
@@ -55,6 +56,12 @@ def parse_active_claims(doing_text):
             continue
         if not line.lstrip().startswith(("> **", "**", "- **", "|")):
             continue  # prose that merely mentions the words, not a claim
+        if _SELF_CLAIM_RE.search(header):
+            # the Debt Scout's own front: its DOING line REPORTS findings
+            # (e.g. "3 real signals: D-SEC/D-APP/D-ENUM207"); treating that
+            # as ownership made the scout suppress its own findings —
+            # measured 23/09 after the tip's DOING.md named them.
+            continue
         m = _OWNER_RE.search(line)
         owner = (m.group(1) or m.group(2)).strip() if m else "UNKNOWN"
         refs = {t.strip() for t in _TICK_RE.findall(line)}
@@ -176,6 +183,11 @@ def selftest():
           owner_for_symbols(["scripts/prose.sh"], claims)["status"] == "NOT_OWNED")
     check("no substring/fuzzy match: 'scripts/boot' (no slash) != 'scripts/booty.sh'",
           owner_for_symbols(["scripts/booty.sh"], claims)["status"] == "NOT_OWNED")
+    self_claim = parse_active_claims(
+        "> **⚡ EM CURSO (dono = x, lane tooling — KOF Technical Debt Scout WAVE 2): "
+        "3 real signals: `D-SEC`, `D-APP`.**\n")
+    check("the Debt Scout's own claim never owns the findings it reports "
+          "(no self-suppression loop)", self_claim == [])
     check("missing DOING.md is NOT_CHECKED, never NOT_OWNED",
           owner_for_cluster({"members": []}, None)["status"] == "NOT_CHECKED")
 

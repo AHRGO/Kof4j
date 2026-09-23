@@ -130,8 +130,18 @@ def run_deterministic_phase(root=".", check_duplicates=False, with_history=False
         cl["historical_origin"] = (
             history.origin_for_cluster(root, cl, shallow) if with_history
             else {"status": "NOT_CHECKED", "reason": "history not requested (--history)"})
-        dup = (kof_first.check_duplicates(cl["debt_fingerprint"])
-               if check_duplicates else None)
+        # Live dedup only where it can change an outcome: C0 is never
+        # promoted (confidence.py only promotes from C1), and the GitHub
+        # search API allows 30 req/min — one search per cluster (70 on
+        # this repo) made every cluster after the 30th NOT_CHECKED
+        # (measured 23/09: D-ENUM207 lost its dedup to "gh exit 1").
+        if check_duplicates and cl["confidence"] != "C0":
+            dup = kof_first.check_duplicates(cl["debt_fingerprint"])
+        elif check_duplicates:
+            dup = {"status": "NOT_CHECKED", "matched": None,
+                   "reason": "C0 is never promotable; live search skipped (API budget)"}
+        else:
+            dup = None
         cl["kof_triage"] = kof_first.build_context(cl, decisions_text, dup)
         cl["priority_vector"] = priority.compute_priority_vector(cl)
         confidence.apply_classification(cl)
@@ -200,6 +210,12 @@ def emit_metrics(report):
         "c2": summary["by_confidence"]["C2"],
         "c3": summary["by_confidence"]["C3"],
         "clusters": summary["total_clusters"],
+        # c0..c3 above count CANDIDATES; promotion happens on CLUSTERS, so a
+        # C2 cluster of C1 candidates showed as "c2: 0" (measured 23/09).
+        "clusters_c0": summary["clusters_by_confidence"]["C0"],
+        "clusters_c1": summary["clusters_by_confidence"]["C1"],
+        "clusters_c2": summary["clusters_by_confidence"]["C2"],
+        "clusters_c3": summary["clusters_by_confidence"]["C3"],
         "duplicates": sum(1 for cl in clusters
                           if (cl.get("kof_triage", {}).get("duplicate_precedent_check")
                               or {}).get("status") == "DUPLICATE"),

@@ -11,10 +11,13 @@ per decision whose `**State:**` line is `PARTIAL`, `BLOCKED` or
 significa divida automaticamente"). Debt only appears with *partial
 state + missing tracking + recurring cost*. So every signal here is
 `C1` — a real structural fact (the normative ledger itself says the
-contract is incomplete), never more. Whether it is tracked is answered
-later by `ownership.py` (DOING.md) and the live duplicate check; the
-recurring-cost part has no deterministic detector yet, so nothing from
-here can reach C3 — the honest result.
+contract is incomplete), never more. Each candidate also carries a
+`qualification` from `decision_evidence.py` (PARTIAL_PROVED /
+STALE_STATE / UNPROVED, from structured ledger fields and files that
+exist) and, when one is expressible, an `exit_condition`. Promotion is
+still `confidence.py`'s job: a partial whose incomplete part is already
+an honest documented gap is TRACKED and never publishes; a STALE_STATE
+(the ledger lags closed entries) is a DOC_CODE_DRIFT finding of its own.
 
 The governing contract is known by construction (it IS the decision),
 so each candidate carries `contract_ids: [<decision id>]`.
@@ -32,6 +35,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import fingerprint  # noqa: E402
 import schema  # noqa: E402
+from detectors import decision_evidence  # noqa: E402
 
 for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
@@ -100,11 +104,31 @@ def _analyzed_sha(root):
     return "UNKNOWN"
 
 
-def _candidate(decision_id, lineno, state, title, analyzed_sha):
-    claim = f"decision {decision_id} is {state} in the normative ledger"
+def section_text(text, header_lineno):
+    """Pure: the decision body from its `## D-...` header (1-based line)
+    up to the next `## ` heading, header excluded."""
+    lines = text.splitlines()
+    body = []
+    for line in lines[header_lineno:]:
+        if line.startswith("## "):
+            break
+        body.append(line)
+    return "\n".join(body)
+
+
+def _candidate(decision_id, lineno, state, title, analyzed_sha, qualification=None):
+    q = qualification or {}
+    stale = q.get("kind") == "STALE_STATE"
+    if stale:
+        # a different debt concept than "partial": the ledger's state is
+        # measurably older than the closed entries that name it
+        claim = (f"decision {decision_id} is still {state} in the normative ledger "
+                 "although every ledger entry naming it is closed")
+    else:
+        claim = f"decision {decision_id} is {state} in the normative ledger"
     finding_fp = fingerprint.finding_fingerprint(RULE_ID, decision_id, claim)
     domain = domain_for(decision_id)
-    return {
+    cand = {
         "schema": 2,
         "candidate_id": finding_fp.split(":", 1)[1][:16],
         "rule_id": RULE_ID,
@@ -131,6 +155,16 @@ def _candidate(decision_id, lineno, state, title, analyzed_sha):
         "evidence": [{"type": "DECISION", "ref": f"{DECISIONS_PATH}:{lineno}",
                       "note": f"{decision_id} — {title}" if title else decision_id}],
     }
+    if stale:
+        cand["taxonomy"].update(debt_type="DOCUMENTATION", mechanism="DOC_CODE_DRIFT")
+    if q:
+        cand["qualification"] = q
+        if q.get("exit_condition"):
+            cand["exit_condition"] = q["exit_condition"]
+        for item in q.get("complete_items", []) + q.get("incomplete_items", []):
+            if item.startswith("docs/"):
+                cand["evidence"].append({"type": "DOC", "ref": item})
+    return cand
 
 
 def scan(root="."):
@@ -141,7 +175,12 @@ def scan(root="."):
     except OSError:
         return []
     sha = _analyzed_sha(root)
-    return [_candidate(d, ln, st, t, sha) for d, ln, st, t in find_incomplete_decisions(text)]
+    index = decision_evidence.RepoIndex(root)
+    out = []
+    for d, ln, st, t in find_incomplete_decisions(text):
+        q = index.qualify(d, st, section_text(text, ln))
+        out.append(_candidate(d, ln, st, t, sha, q))
+    return out
 
 
 # --------------------------------------------------------------------------

@@ -50,7 +50,9 @@ scripts/debt-scout/
 ├── detectors/
 │   ├── README.md          — the fixture convention every detector follows
 │   ├── satd.py            — SATD marker detector (TODO/FIXME/HACK/XXX)
-│   └── partial_decisions.py — PARTIAL/BLOCKED/IN_PROGRESS decisions (C1)
+│   ├── partial_decisions.py — PARTIAL/BLOCKED/IN_PROGRESS decisions (C1)
+│   └── decision_evidence.py — qualifies them from structured ledger fields
+│                            (PARTIAL_PROVED / STALE_STATE / UNPROVED)
 ├── history.py             — git-blame origin (verbatim subject; shallow = NOT_CHECKED)
 ├── ownership.py           — DOING.md active-claim cross-check (RESOLUTION_IN_PROGRESS)
 ├── cluster.py             — root-cause clustering + debt_fingerprint
@@ -76,10 +78,11 @@ write API.** No workflow in `.github/workflows/` grants this system
 ## What does NOT exist yet (do not assume it runs)
 
 The C3 canary publisher (the only thing that would ever open a GitHub
-Issue), any LLM-backed qualification step, the detectors that would
-prove `current_implementation_identified` / `debt_mechanism_proved` /
-`exit_condition_expressible` (so no cluster can reach `C3` yet — the
-honest result), a dedicated skipped-test detector (deliberately NOT
+Issue), any LLM-backed qualification step, a measurement of observed
+*cost* (interest) — so even a `C3` cluster fails the explanation-
+completeness gate (V2 §75) and would not publish; only
+`decision_evidence.py` can prove implementation/mechanism/exit condition
+so far, for decisions only — a dedicated skipped-test detector (deliberately NOT
 built: `scripts/audit-stubs.sh` §5/§6/§12 already owns
 `@Disabled`/`assumeTrue`/weak-green, same division of labor as
 `satd.py`), tombstones/feedback/rule circuit breakers (V2 Wave 4),
