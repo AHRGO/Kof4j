@@ -245,6 +245,14 @@ riscv/aarch path is already static.
 **Acceptance:** `readelf`/ELF parser reports **no `PT_INTERP`**, no `DT_NEEDED`;
 the binary still prints a Kof hello under qemu-user; a sabotage (re-add `-lc`)
 is detected by the linker-script/`DT_NEEDED` assertion.
+**B-1 pre-step (LANDED 22/09, lane `baremetal` 9092):** `kof_plat_thread_create`
+was moved out of the `sync` slice into its own slice — a program that touches the
+allocation-lock futex (`kof_plat_sync`) no longer drags `pthread_create` into the
+link, which is exactly what the freestanding profile needs (and a pruning win for
+every sync-only binary). Proof: `NativeRuntimeSliceRegistryTest` 7/7,
+`ArtifactSizeTest` 6/6 (hello unchanged: 39,432 B/91 syms), `KofConcurrency2Test`
+48/48, `SpawnE2ETest` 10/10, `PlatformSeamSabotageTest` 4/4.
+
 **Depends on:** B-0. **Classification:** M (medium).
 
 ### B-2 — UEFI (x86_64, and later aarch64) · **depends B-1**

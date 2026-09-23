@@ -103,6 +103,7 @@ public final class NativeRuntime {
         RuntimePlat.emitPlatRandom(sb);
         RuntimePlat.emitPlatThreadId(sb);
         RuntimePlat.emitPlatSync(sb);
+        RuntimePlat.emitPlatThreadCreate(sb);
         RuntimePlat.emitPlatIo(sb);
         RuntimePlat.emitPlatNet(sb);
         RuntimePrint.emitPrint(sb);

@@ -107,7 +107,11 @@ public final class RuntimePlat {
                 movq $202, %rax          # futex(uaddr, op, val, timeout)
                 syscall
                 ret
+            """);
+    }
 
+    public static void emitPlatThreadCreate(StringBuilder sb) {
+        sb.append("""
             .globl kof_plat_thread_create
             .type kof_plat_thread_create, @function
             kof_plat_thread_create:

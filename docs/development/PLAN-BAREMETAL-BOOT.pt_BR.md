@@ -250,6 +250,15 @@ riscv/aarch já é estático.
 **Aceitação:** o parser ELF/`readelf` reporta **sem `PT_INTERP`**, sem `DT_NEEDED`;
 o binário ainda imprime um hello Kof sob qemu-user; uma sabotagem (re-adicionar
 `-lc`) é pega pela asserção de `DT_NEEDED`.
+**Pré-passo de B-1 (LANDADO 22/09, lane `baremetal` 9092):** o
+`kof_plat_thread_create` saiu da fatia `sync` para fatia própria — um programa que
+toca o futex do lock de alocação (`kof_plat_sync`) não arrasta mais
+`pthread_create` para o link, que é exatamente o que o perfil freestanding precisa
+(e um ganho de poda para todo binário que só usa sync). Prova:
+`NativeRuntimeSliceRegistryTest` 7/7, `ArtifactSizeTest` 6/6 (hello inalterado:
+39.432 B/91 syms), `KofConcurrency2Test` 48/48, `SpawnE2ETest` 10/10,
+`PlatformSeamSabotageTest` 4/4.
+
 **Depende de:** B-0. **Classificação:** M (médio).
 
 ### B-2 — UEFI (x86_64, e depois aarch64) · **depende de B-1**
