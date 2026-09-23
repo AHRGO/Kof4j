@@ -1909,7 +1909,7 @@ diferente de `List<String>`" (= opção A, rejeição em compile-time) · X8-A �
 | D3 (A) | **plano de design do bare-metal/bootável autorizado** | 1.7: doc de plano em `docs/development/` (lane nativa rascunha, mantenedora revisa) |
 | D4 (A) | **padrão conservador**: todo namespace nasce `experimental`; promoção por-namespace com o DoD do R5 | R5; `docs/backend-parity.md` §Tiers (linha do default adicionada 19/09); **gate de máquina 21/09** — tier em `scripts/stdlib_boundary.txt` + `scripts/check_stdlib_boundary.sh` (recusa tier ausente/inválido e `stable` sem pin) |
 | D5 (B) | **sem sintaxe nova** — recursos escopados = `close()` + `try/finally`; `using` está FORA | 6.5 entrega padrão, não gramática; `future/scoped-resources` segue design-only |
-| D6 (A) | ABI struct/array do R3: **spec escrita primeiro, revisão, depois código** | spec `docs/development/ffi-abi-structs.md` (rascunho da lane docs→plataforma 19/09, design-only); implementação = lane compilador |
+| D6 (A) | ABI struct/array do R3: **spec escrita primeiro, revisão, depois código** | spec `docs/ffi-abi-structs.md` (rascunho da lane docs→plataforma 19/09, design-only); implementação = lane compilador |
 | D7 (A) | value records (TIER 2.7) com **front aberta agora** | fila 2.7.1+ do roadmap §23 ativa — lane compilador (coordenação com Cluster A) |
 | #401 | **bug real**: `List<Int>` atribuído como `List<String>` deve ser REJEITADO em compile-time | Cluster A §270/§271 (`.22`) executa; freeze regra 1 respeitado — o código que compila hoje FALHA no runtime, então apertar casa com o contrato documentado |
 | X8 (A) | runner `kof.test` implementado **exatamente como o roadmap §G6 especifica** | X8 fatia 3 — lane docs→plataforma |
@@ -2649,7 +2649,7 @@ fica por valor read-only; o delta é o `struct` mutável por referência
 (`Buffer(U8)` cobre o out-buffer).
 
 **Escopo:** fecha as questões `D6-1..D6-5` de
-`docs/development/ffi-abi-structs.md` (§4) — a spec que gateia a ABI de
+`docs/ffi-abi-structs.md` (§4) — a spec que gateia a ABI de
 struct/array da FFI (tracker 3.8a/3.8b/3.7). O 3.8a (`AbiLayout`) já pousou
 20/09.
 
@@ -2718,13 +2718,13 @@ própria. Qualquer coisa fora do conjunto decidido continua `FFI001`/`FFI002`
 
 ### Implementação
 
-`docs/development/ffi-abi-structs.md` §6: 3.8a ✅ (pousado), **3.8b = binding
+`docs/ffi-abi-structs.md` §6: 3.8a ✅ (pousado), **3.8b = binding
 JVM (esta frente)** — lane compiler; 3.7 = asm nativo (lane native); fronteira
 JS = decisão própria. Claim no `DOING.md` antes do código (este commit).
 
 ### Evidência
 
-- Spec + layout medido: `docs/development/ffi-abi-structs.md` §1–§3;
+- Spec + layout medido: `docs/ffi-abi-structs.md` §1–§3;
   `AbiLayoutTest` (14 shapes × 3 ABIs, golden GCC 13.3).
 - Prova E2E do 3.8b: `FfiStructE2ETest` (JVM: struct como arg + retorno de
   record via `.so` C real, byte-a-byte vs o oráculo C; Native/JS pinados
@@ -2759,7 +2759,7 @@ mesmo quando um registrador carrega um endereço (R6: nunca silencioso).
 
 - **Destrava:** R3-3.3 → aberta; a fatia de out-buffer/buffer da R3
   (pré-requisito dos Estágios 4–7, todos atrás da R3).
-- **Evidência:** D6-3; `docs/development/ffi-abi-structs.md`.
+- **Evidência:** D6-3; `docs/ffi-abi-structs.md`.
 - **Relações:** `Depends on: D-POLL-19/D6 · Related: R3, R6, R9`.
 
 ---

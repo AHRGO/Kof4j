@@ -1946,7 +1946,7 @@ different from `List<String>`" (= option A, compile-time rejection) · X8-A · L
 | D3 (A) | bare-metal/bootable **design plan authorized** | 1.7: plan doc in `docs/development/` (native lane drafts, maintainer reviews) |
 | D4 (A) | **conservative default**: every namespace is born `experimental`; promotion per-namespace with the R5 DoD | R5; `docs/backend-parity.md` §Stability (default line added 19/09); **machine-gated 21/09** — tier in `scripts/stdlib_boundary.txt` + `scripts/check_stdlib_boundary.sh` (denies missing/invalid tier and unpinned `stable`) |
 | D5 (B) | **no new syntax** — scoped resources = `close()` + `try/finally`; `using` is OFF | 6.5 ships as pattern, not grammar; `future/scoped-resources` stays design-only |
-| D6 (A) | R3 struct/array ABI: **written spec first, review, then code** | spec doc `docs/development/ffi-abi-structs.md` (drafted by docs→platform lane 19/09, design-only); implementation = compiler lane |
+| D6 (A) | R3 struct/array ABI: **written spec first, review, then code** | spec doc `docs/ffi-abi-structs.md` (drafted by docs→platform lane 19/09, design-only); implementation = compiler lane |
 | D7 (A) | value records (TIER 2.7) **front opened now** | roadmap §23 2.7.1+ queue active — compiler lane (needs coordination with Cluster A) |
 | #401 | **real bug**: `List<Int>` assigned as `List<String>` must be REJECTED at compile time | §270/§271 Cluster A (`.22`) executes; freeze rule 1 satisfied — code that compiles today fails at runtime, so tightening matches the documented contract |
 | X8 (A) | `kof.test` runner implemented **exactly as roadmap §G6 specifies** | X8 slice 3 — docs→platform lane |
@@ -2661,7 +2661,7 @@ sides kept). Issues **#572/#573** (slice 3.8b) must align to **B** — `D-FFI-ST
 the delta is the mutable by-ref `struct` (`Buffer(U8)` covers the out-buffer).
 
 **Scope:** closes the `D6-1..D6-5` questions of
-`docs/development/ffi-abi-structs.md` (§4) — the spec that gates the FFI
+`docs/ffi-abi-structs.md` (§4) — the spec that gates the FFI
 struct/array ABI (tracker 3.8a/3.8b/3.7). 3.8a (`AbiLayout`) landed 20/09.
 
 ### Decision
@@ -2710,14 +2710,14 @@ outside the decided set stays `FFI001`/`FFI002` (R6), never silent.
 
 ### Implementation
 
-`docs/development/ffi-abi-structs.md` §6: 3.8a ✅ (landed); **3.8b = JVM
+`docs/ffi-abi-structs.md` §6: 3.8a ✅ (landed); **3.8b = JVM
 binding (this front)** — compile lane (#572/#573, align to A+B); 3.7 = native
 asm (native lane, includes sret); JS boundary = its own decision. The doc is
 promoted to `docs/` only when 3.8 lands (three-states rule).
 
 ### Evidence
 
-- Spec + measured layout: `docs/development/ffi-abi-structs.md` §1–§3;
+- Spec + measured layout: `docs/ffi-abi-structs.md` §1–§3;
   `AbiLayoutTest` (14 shapes × 3 ABIs, GCC 13.3 golden).
 - E2E proof for 3.8b: `FfiStructE2ETest` (JVM: record arg + record return via a
   real C `.so`, byte-for-byte vs the C oracle; Native/JS pinned `FFI001`/
@@ -2753,7 +2753,7 @@ never silent).
 
 - **Unblocks:** R3-3.3 → open; the out-buffer/buffer slice of R3 (prerequisite
   of Stages 4–7, all behind R3).
-- **Evidence:** D6-3; `docs/development/ffi-abi-structs.md`.
+- **Evidence:** D6-3; `docs/ffi-abi-structs.md`.
 - **Relationships:** `Depends on: D-POLL-19/D6 · Related: R3, R6, R9`.
 
 ---
