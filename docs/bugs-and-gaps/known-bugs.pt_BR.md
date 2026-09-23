@@ -12073,3 +12073,32 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Q0 RED→GREEN:** novo `SwitchEmptyDefaultE2ETest` 3/3 (verbatim `3` no JVM, controle `100` de case casado, `3` no JS via node) — os dois testes JVM travavam 30 s (`waitFor` limitado, §418) no código antigo, GREEN após o fix. Vizinhos `KofSwitchExprE2ETest` 32 + `KofPatternMatchingTest` 12 + `SwitchLongDoubleSupportE2ETest` 5 + `SwitchRhsAssignmentE2ETest` 1 + `GuardedPatternSwitchExprE2ETest` 3 = 53/0F, mais o smoke JS via CLI (`lib/kof.jar build --target js`, `node Default.mjs` imprime `3`). `check_500` rc=0 (`SwitchStmtLowerer` 278).
 - **Dono:** lane compilador, sessão 9092 (23/09).
 <!-- en-switch --> **EN:** [§475 (en)](known-bugs.md#475--patterndestructuring-switch-statement-with-an-empty-default-body-compiled-to-a-self-referencing-goto-infinite-loop--hang---fixed-2309-compiler-lane-switchstmtlowerer-dedicated-default-label)
+## §476 — Lista de cases MISTA (pattern + valor) com `default:` VAZIO compila limpo e morre no load do JVM com `VerifyError: Bad type on operand stack` — 🔴 ABERTO 23/09 (achado caçando o fix do #588, sonda adversarial Q4)
+
+**Sintoma (medido 23/09, lane 9093):** switch de destructuring cuja lista MISTURA record pattern com case de VALOR e termina em `default:` VAZIO compila com sucesso em todos os alvos; o run no JVM morre no load: `VerifyError: Bad type on operand stack` (erro real recuperado pelo launcher de reflexão — o launcher `java -cp` o esconde atrás da mensagem JavaFX, pela regra JavaFX). Default não-vazio evita; as formas simples do #588 (só pattern + default vazio) estão CORRIGIDAS (§475) — esta é a face lista-mista que sobreviveu ao fix do §475.
+
+**Repro mínimo (verbatim da sonda, compile=true):**
+```kof
+record Tag(Int n)
+main() {
+    var sum = 0
+    var k = 0
+    while (k < 4) {
+        switch (Tag(k)) {
+            case Tag(var n):
+                sum = sum + n
+            case 99:
+                sum = sum + 99
+            default:
+        }
+        k = k + 1
+    }
+    println(sum)
+}
+```
+Esperado `6`; atual: `VerifyError: Bad type on operand stack` no load.
+
+**Leitura:** mesmo arquivo/família de faces do §475 (#588) e da #587 anunciada (break-em-switch) — todos dentro de `SwitchStmtLowerer`. NÃO corrigido aqui: o arquivo é o próximo passo anunciado da lane compiler (9092, #587 no DOING) — regra de colisão de arquivo; catalogado por Q7/Q4 com o repro para que a unidade corretiva case com a #587.
+
+**Dono:** lane 9092 compiler (casar com a unidade #587). Sinal registrado no DOING 23/09 (lane 9093).
+
