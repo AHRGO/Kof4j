@@ -107,7 +107,7 @@ final class KofCEmitterAarch extends KofCEmitterBase {
     @Override
     protected void emitStoreParam(int argIndex, int slot, int eightbytes) {
         for (int j = 0; j < eightbytes; j++)
-            sb.append("    stur ").append(ARG_REGS[argIndex + j]).append(", [x29, #-").append(offset(slot + j)).append("]\n");
+            sb.append("    stur ").append(ARG_REGS[argIndex + j]).append(", [x29, #-").append(offset(slot - j)).append("]\n");
     }
 
     private int gsize(String type) { int b = structBytes(type); return b == 0 ? 8 : b; }
@@ -248,13 +248,14 @@ final class KofCEmitterAarch extends KofCEmitterBase {
 
     @Override
     protected void emitLoadSecondReturn(Storage storage) {
-        if (storage.local()) sb.append("    ldr x1, [x29, #-").append(offset(storage.slot())).append("\n");
+        if (storage.local()) sb.append("    ldr x1, [x29, #-").append(offset(storage.slot())).append("]\n");
         else { adrp("x9", storage.name()); sb.append("    ldr x1, [x9]\n"); }
     }
 
     @Override
     protected void emitPopArg(int argIndex, int eightbytes) {
-        for (int j = 0; j < eightbytes; j++) sb.append("    ldr ").append(ARG_REGS[argIndex + j]).append(", [sp], #16\n");
+        // último eightbyte pushado = topo da pilha → registra-se do maior para o menor
+        for (int j = eightbytes - 1; j >= 0; j--) sb.append("    ldr ").append(ARG_REGS[argIndex + j]).append(", [sp], #16\n");
     }
 
     @Override

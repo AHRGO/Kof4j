@@ -116,13 +116,15 @@ abstract class KofCEmitterBase implements KofCEmitter {
         for (var g : prog.globals()) varTypes.putIfAbsent(g.name(), g.type());
         for (var p : fn.params()) {
             varTypes.put(p.name(), p.type());
-            localSlots.put(p.name(), nextSlot);
-            nextSlot += slotCount(p.type());
+            // variável de extensão k precisa de slot ≥ k-1 (extent cresce até rbp, nunca além)
+            int k = slotCount(p.type());
+            localSlots.put(p.name(), nextSlot + 2 * k - 2);
+            nextSlot += k + (k - 1);
         }
         collectLocals(fn.body());
         sb.append("    .globl ").append(fn.name()).append("\n");
         sb.append(fn.name()).append(":\n");
-        emitFuncPrologue(localSlots.size());
+        emitFuncPrologue(nextSlot);
         int r = 0;
         for (var prm : fn.params()) {
             int k = slotCount(prm.type());
@@ -132,7 +134,7 @@ abstract class KofCEmitterBase implements KofCEmitter {
         funcEndLabel = label("ret");
         for (var st : fn.body()) emitStmt(st);
         sb.append(funcEndLabel).append(":\n");
-        emitFuncEpilogue(localSlots.size());
+        emitFuncEpilogue(nextSlot);
     }
 
     /** Pré-varre o corpo para dimensionar o frame (declarações em blocos contam). */
@@ -140,8 +142,10 @@ abstract class KofCEmitterBase implements KofCEmitter {
         for (var st : body) {
             if (st instanceof KofCAst.LocalDeclStmt s) {
                 if (!localSlots.containsKey(s.name())) {
-                    localSlots.put(s.name(), nextSlot);
-                    nextSlot += slotCount(s.type());
+                    // variável de extensão k precisa de slot ≥ k-1 (extent cresce até rbp, nunca além)
+                    int k = slotCount(s.type());
+                    localSlots.put(s.name(), nextSlot + 2 * k - 2);
+                    nextSlot += k + (k - 1);
                 }
                 varTypes.put(s.name(), s.type());
             } else if (st instanceof KofCAst.IfStmt s) {
@@ -188,10 +192,10 @@ abstract class KofCEmitterBase implements KofCEmitter {
         } else if (stmt instanceof KofCAst.ReturnStmt s) {
             if (s.value() != null) {
                 emitExpr(s.value());
-                // struct local ≥2 eightbytes: o segundo registro de retorno sai do slot seguinte
+                // struct local ≥2 eightbytes: o segundo registro de retorno sai do slot anterior (low-1) — o struct ocupa k slots a partir de low para baixo
                 if (s.value() instanceof KofCAst.IdentExpr id && structEightbytes(varTypes.get(id.name())) >= 2) {
                     var src = resolve(id.name());
-                    emitLoadSecondReturn(src.local() ? Storage.local(src.slot() + 1) : src);
+                    emitLoadSecondReturn(src.local() ? Storage.local(src.slot() - 1) : src);
                 }
             }
             emitJump(funcEndLabel);
@@ -202,7 +206,7 @@ abstract class KofCEmitterBase implements KofCEmitter {
             if (s.deref()) emitDerefStoreStorage(target);
             else {
                 emitStoreStorage(target);
-                if (two) emitStoreSecondReturn(target.local() ? Storage.local(target.slot() + 1) : target);
+                if (two) emitStoreSecondReturn(target.local() ? Storage.local(target.slot() - 1) : target);
             }
         } else if (stmt instanceof KofCAst.FieldAssignStmt s) {
             emitExpr(s.value());
@@ -256,11 +260,10 @@ abstract class KofCEmitterBase implements KofCEmitter {
                 width[i] = 1;
             }
         }
-        int r = call.args().size();
-        for (int i = call.args().size() - 1; i >= 0; i--) {
-            r -= width[i];
-            emitPopArg(r, width[i]);
-        }
+        int[] pref = new int[call.args().size()];
+        int wsum = 0;
+        for (int i = 0; i < width.length; i++) { pref[i] = wsum; wsum += width[i]; }
+        for (int i = call.args().size() - 1; i >= 0; i--) emitPopArg(pref[i], width[i]);
         emitCall(call.name());
     }
 
@@ -271,7 +274,7 @@ abstract class KofCEmitterBase implements KofCEmitter {
     private boolean twoEightbyteReturn(KofCAst.Expr e) {
         if (!(e instanceof KofCAst.CallExpr c)) return false;
         var callee = findFunc(c.name());
-        return callee != null && structBytes(callee.retType()) >= 16;
+        return callee != null && structEightbytes(callee.retType()) >= 2;
     }
 
     protected Storage resolve(String name) {

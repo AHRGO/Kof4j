@@ -2,8 +2,7 @@
 
 [English](kof-c-cross.md) | [Português](kof-c-cross.pt_BR.md)
 
-**Status:** IN PROGRESS — **C1 + C2 + C3 + C4 LANDED** (22/09). Owner: FFI/kof-c
-front (development/tooling lane).
+**Status:** COMPLETE — **C1 + C2 + C3 + C4 + C3-residual LANDED** (23/09). Owner: FFI/kof-c front. Moved to `docs/` per three-states rule.
 
 ## Why
 
@@ -62,13 +61,11 @@ raw syscalls only, no libc.
   libc `div_t` uses. Grammar: `struct S { int a; int b; };`, `struct S v;`
   (global/local/param) and `v.field`. Honest diagnostics: a struct larger than
   8 bytes, an unknown struct, an unknown field or a field on a non-struct are
-  rejected before any binary is emitted (R6/Q7). Proof: `KofCStructCompilerTest`
-  7/7 on x86_64/riscv64/aarch64 (field round trip, by-value parameter, negative
-  field sign-extension, struct + scalar args mixed, global struct) plus the four
-  rejection cases. **Remaining:** struct **return** by value, structs larger
-  than 8 bytes (memory/pair register path) and the full SysV/AAPCS64/RISCV64
-  multi-eightbyte classification — the fixture's current need (a ≤ 8 B
-  struct parameter) is met.
+   rejected before any binary is emitted (R6/Q7). Proof: `KofCStructCompilerTest`
+   7/7 on x86_64/riscv64/aarch64 (field round trip, by-value parameter, negative
+   field sign-extension, struct + scalar args mixed, global struct) plus the four
+   rejection cases.
+- **C3-residual — LANDED (23/09):** struct **return by value** (≤16 B) + **multi-eightbyte parameters** (≤48 B / 6 eightbytes). Return ≤8 B in the accumulator (`rax`/`a0`/`x0`), 9–16 B in `rax+rdx` / `a0+a1` / `x0+x1` (SysV/LP64/AAPCS64 pair — documented deviation from SysV memory for 16 B, chosen for parity). Parameters classified per eightbyte (INTEGER only — float/HFA → `FFI001`), packed from the Kof `record` fields and popped in stack order. Frame: variable of `k` eightbytes occupies `k` slots at `low = next+2k-2` (extent `k*8` from `low` downwards, never beyond `rbp`); second return chunk at `low-1`. Honest diagnostics: param >48 B or return >16 B → `at most 48/16` (R6). Proof: `KofCStructCompilerTest` now **14/14** on x86_64/riscv64/aarch64 (adds 3-field 12 B, 5-field 20 B mixed, return 8 B/16 B, arg+return combined) plus 4 rejection cases; cross parity byte-identical to x86 oracle.
 - **C4 — LANDED (22/09):** reusable object output plus linking.
   `KofCCompiler.compileObject(cFile, oFile, target)` assembles a standalone
   `.o` — no `_start` and **no `main` requirement** — with every defined function

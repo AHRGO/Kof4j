@@ -77,7 +77,32 @@ class KofCStructCompilerTest {
                     struct Pair { int a; int b; };
                     struct Pair g;
                     void main() { g.a = 11; g.b = 31; print_arg = g.a + g.b; print(); }
-                    """, "42"));
+                    """, "42"),
+            new Prog("3-field struct arg (12B) by value", """
+                    struct Triple { int a; int b; int c; };
+                    int sum3(struct Triple t) { return (t.a + t.b) + t.c; }
+                    void main() { struct Triple t; t.a = 10; t.b = 20; t.c = 30; print_arg = sum3(t); print(); }
+                    """, "60"),
+            new Prog("5-field struct arg (20B) mixed with scalar", """
+                    struct Five { int a; int b; int c; int d; int e; };
+                    int mix(struct Five v, int k) { return (((v.a + v.b) + (v.c + v.d)) + v.e) + k; }
+                    void main() { struct Five v; v.a = 1; v.b = 2; v.c = 3; v.d = 4; v.e = 5; print_arg = mix(v, 7); print(); }
+                    """, "22"),
+            new Prog("struct return 8B", """
+                    struct Pair { int a; int b; };
+                    struct Pair mk(int x, int y) { struct Pair r; r.a = x; r.b = y; return r; }
+                    void main() { struct Pair q; q = mk(2, 3); print_arg = q.a + q.b; print(); }
+                    """, "5"),
+            new Prog("struct return 16B four fields", """
+                    struct Quad { int a; int b; int c; int d; };
+                    struct Quad quad(int k) { struct Quad r; r.a = k; r.b = (k + k); r.c = ((k + k) + k); r.d = (((k + k) + k) + k); return r; }
+                    void main() { struct Quad q; q = quad(1); print_arg = (q.a + q.b) + (q.c + q.d); print(); }
+                    """, "10"),
+            new Prog("struct arg and return combined", """
+                    struct Triple { int a; int b; int c; };
+                    struct Triple bump(struct Triple t, int k) { struct Triple r; r.a = t.a + k; r.b = t.b + k; r.c = t.c + k; return r; }
+                    void main() { struct Triple t; t.a = 1; t.b = 2; t.c = 3; struct Triple u; u = bump(t, 10); print_arg = (u.a + u.b) + u.c; print(); }
+                    """, "36"));
 
     private static boolean has(String... cmds) {
         String path = System.getenv("PATH");

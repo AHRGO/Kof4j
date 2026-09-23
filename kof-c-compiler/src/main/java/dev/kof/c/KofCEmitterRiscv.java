@@ -114,7 +114,7 @@ final class KofCEmitterRiscv extends KofCEmitterBase {
     @Override
     protected void emitStoreParam(int argIndex, int slot, int eightbytes) {
         for (int j = 0; j < eightbytes; j++)
-            sb.append("    sd ").append(ARG_REGS[argIndex + j]).append(", -").append(offset(slot + j)).append("(s0)\n");
+            sb.append("    sd ").append(ARG_REGS[argIndex + j]).append(", -").append(offset(slot - j)).append("(s0)\n");
     }
 
     private int gsize(String type) { int b = structBytes(type); return b == 0 ? 8 : b; }
@@ -242,7 +242,8 @@ final class KofCEmitterRiscv extends KofCEmitterBase {
 
     @Override
     protected void emitPopArg(int argIndex, int eightbytes) {
-        for (int j = 0; j < eightbytes; j++) {
+        // último eightbyte pushado = topo da pilha → registra-se do maior para o menor
+        for (int j = eightbytes - 1; j >= 0; j--) {
             sb.append("    ld ").append(ARG_REGS[argIndex + j]).append(", 0(sp)\n");
             sb.append("    addi sp, sp, 16\n");
         }
