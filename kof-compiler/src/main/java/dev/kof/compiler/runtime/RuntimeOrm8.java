@@ -213,7 +213,7 @@ public final class RuntimeOrm8 {
                 movq %r12, %rdi
                 movl %r15d, %esi
                 call sqlite3_column_double
-                movq %rax, (%r14)
+                movsd %xmm0, (%r14)
                 jmp .Lorm8_fldnext
             .Lorm8_rflt:
                 movq %r12, %rdi

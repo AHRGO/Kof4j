@@ -78,14 +78,16 @@ public final class KofOrm {
      *  F2c1 de {@code RuntimeOrm6}: SELECT * acumulado em
      *  {@code kof_list_new}/{@code kof_list_add}); E-parte-5: {@code where}/
      *  {@code where_op} (peça RtB59, F2c2 de {@code RuntimeOrm7}: whitelist do
-     *  op + bind do value pelo classificador do host); aarch64
-     *  herda pelo tradutor. O que ainda não tem porte cross segue ORM001
-     *  compile-time (R6/R7): {@code page}. */
+     *  op + bind do value pelo classificador do host); E-parte-6: {@code page}
+     *  (peça RtB60, F2c3 de {@code RuntimeOrm8}: LIMIT/OFFSET bindados) —
+     *  row-object de leitura COMPLETO no cross; aarch64
+     *  herda pelo tradutor. MySQL segue runtime honesto no cross (o
+     *  {@code kof_orm_conn} recusa type==2); nenhuma face segue ORM001. */
     private static final java.util.Set<String> CROSS_FACES = java.util.Set.of(
             "kof_orm_delete_all", "kof_orm_count", "kof_orm_create",
             "kof_orm_migrate", "kof_orm_count_where", "kof_orm_delete",
             "kof_orm_save", "kof_orm_save_all", "kof_orm_find", "kof_orm_all",
-            "kof_orm_where", "kof_orm_where_op");
+            "kof_orm_where", "kof_orm_where_op", "kof_orm_page");
 
     /** D-DB-GAPS DB-1 (20/09): faces SQL-puro do Native x86-64, uma por fatia.
      *  F1a = {@code delete_all}, F1b = {@code count}, F1c = {@code migrate}

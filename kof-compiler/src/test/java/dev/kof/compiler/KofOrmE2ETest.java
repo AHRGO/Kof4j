@@ -2193,14 +2193,13 @@ class KofOrmE2ETest {
     }
 
     @Test
-    void rowObjectFechadoNoX86CrossAindaOrm001(@TempDir Path tempDir) throws IOException {
+    void rowObjectCrossFacesAllRealNoOrm001(@TempDir Path tempDir) throws IOException {
         // F2c3 FECHOU o row-object no x86-64 (os dois testes acima provam por
-        // execucao) e as fatias cross A-E ja portaram delete_all/count/create/
-        // migrate/count_where/delete/save/save_all/find/all para riscv64/
-        // aarch64. O pin honesto cobre o que ainda e ORM001 em ORM no cross:
-        // where/where_op e page (compile-time) - o gate da frente recusa a
-        // face REAL, nunca silent (R6/R7). MySQL (runtime) segue pending no
-        // backend via .Lorm_conn (coberto pelo pin existente de dialect).
+        // execucao) e as fatias cross A-F portaram TODAS as faces para
+        // riscv64/aarch64 (delete_all/count/create/migrate/count_where/delete/
+        // save/save_all/find/all/where/where_op/page). Nao ha mais ORM001 de
+        // compile-time em ORM no cross; MySQL (runtime) segue recusado pelo
+        // kof_orm_conn honesto (R6/R7).
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, ENTITY_SRC + """
                 main() {
@@ -2211,9 +2210,10 @@ class KofOrmE2ETest {
                 }
                 """);
         CompilationResult r = driver.compile(source, tempDir.resolve("out"), Target.NATIVE_RISCV64);
-        assertFalse(r.success(), "row-object REAL so no x86-64; riscv64 ainda ORM001 ate a frente cross");
-        assertTrue(r.diagnostics().getDiagnostics().toString().contains("ORM001"),
-                "gate honesto (nunca silent): " + r.diagnostics().getDiagnostics());
+        assertTrue(r.success(), "todas as faces do row-object sao REAIS no riscv64: "
+                + r.diagnostics().getDiagnostics());
+        assertFalse(r.diagnostics().getDiagnostics().toString().contains("ORM001"),
+                "sem ORM001 residual: " + r.diagnostics().getDiagnostics());
     }
 
     /** DB-3/DB-1 cross slice A (22/09): {@code orm.deleteAll} + {@code orm.count}
@@ -2281,9 +2281,9 @@ class KofOrmE2ETest {
             }
             """.formatted(tempDir));
         CompilationResult gated = driver.compile(srcGated, tempDir.resolve("out-gate"), Target.NATIVE_RISCV64);
-        assertFalse(gated.success(), "orm.page segue ORM001 no cross até a fatia F2c3");
-        assertTrue(gated.diagnostics().getDiagnostics().toString().contains("ORM001"),
-                "gate honesto (nunca silent): " + gated.diagnostics().getDiagnostics());
+        assertTrue(gated.success(), "page REAL no cross: nenhuma face ORM segue ORM001");
+        assertFalse(gated.diagnostics().getDiagnostics().toString().contains("ORM001"),
+                "sem ORM001 residual: " + gated.diagnostics().getDiagnostics());
     }
 
     /** DB-3/DB-1 cross slice B (22/09): {@code orm.create} REAL no riscv64/
@@ -2925,6 +2925,78 @@ class KofOrmE2ETest {
                 "oráculo x86-64 (where: =, >=, LIKE, !=, vazio→List vazia, op inválido→throw, "
                         + "campo sem coluna→throw; Bool e Double lidos)");
         assertCrossCreateParity(tempDir, "where", template, oracle);
+    }
+
+    @Test
+    void crossNativeF2c3PageMatchesX86Oracle(@TempDir Path tempDir) throws IOException {
+        assumeTrue(isLinux(), "cross ORM E2E requires Linux + libsqlite3");
+        String template = """
+            entity User {
+                id: Long generated
+                name: String
+                age: Int
+                score: Double
+            }
+            entity Ghost {
+                id: Long generated
+                name: String
+            }
+            main() {
+                var db = db.connect("sqlite:%s/kof.db")
+                println(orm.create<User>(db))
+                db.execute(db, "insert into user (name, age, score) values ('n1', 10, 1.5)")
+                db.execute(db, "insert into user (name, age, score) values ('n2', 20, 2.5)")
+                db.execute(db, "insert into user (name, age, score) values ('n3', 30, 3.5)")
+                db.execute(db, "insert into user (name, age, score) values ('n4', 40, 4.5)")
+                db.execute(db, "insert into user (name, age, score) values ('n5', 50, 5.5)")
+                var a = orm.page<User>(db, 2, 0)
+                println(a.size)
+                for (var u in a) {
+                    println(u.id)
+                    println(u.name)
+                }
+                var b = orm.page<User>(db, 2, 2)
+                println(b.size)
+                for (var u in b) {
+                    println(u.id)
+                    println(u.name)
+                }
+                var c = orm.page<User>(db, 10, 0)
+                println(c.size)
+                var d = orm.page<User>(db, 2, 10)
+                println(d.size)
+                var e = orm.page<User>(db, 0, 0)
+                println(e.size)
+                var lim: Long = 3
+                var off: Long = 1
+                var f = orm.page<User>(db, lim, off)
+                println(f.size)
+                for (var u in f) {
+                    println(u.id)
+                    println(u.name)
+                }
+                var g = orm.page<User>(db, 2.9, 0.0)
+                println(g.size)
+                db.execute(db, "create table ghost (id integer primary key, extra text)")
+                db.execute(db, "insert into ghost (id, extra) values (1, 'x')")
+                try {
+                    var y = orm.page<Ghost>(db, 1, 0)
+                    println(y.size)
+                } catch (String ex) {
+                    println(ex)
+                }
+                println("after-nomatch")
+                db.close(db)
+            }
+            """;
+        String golden = "true\n2\n1\nn1\n2\nn2\n2\n3\nn3\n4\nn4\n5\n0\n0\n3\n"
+                + "2\nn2\n3\nn3\n4\nn4\n2\n"
+                + "sqlite: no column \"name\"\nafter-nomatch";
+        String oracle = runX86CreateOracle(tempDir, "page", template);
+        assertEquals(golden, oracle,
+                "oráculo x86-64 (page: LIMIT/OFFSET, offset além, limit 0, Long→intValue, "
+                        + "Double 2.9→2 truncado, campo sem coluna→throw)");
+        assertCrossCreateParity(tempDir, "page", template, oracle);
     }
 
     /** x86-64: compila e roda o template numa pasta propria (banco limpo) e
