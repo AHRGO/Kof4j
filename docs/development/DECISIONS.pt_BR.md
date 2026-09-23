@@ -944,6 +944,21 @@ Registrado aqui pela lane antes/com a implementação, conforme a regra de
 hierarquia (diretriz posterior explícita da mantenedora supera restrição
 documentada anterior).
 
+**Autorização (23/09, mantenedora via chat, regra de hierarquia):** a
+mantenedora ABRIU o item 2 (**Native**) da fila desta decisão — a frente do
+ABI de caixa marcada (`roadmap.md` §23 TIER 2.6.2, `N2`) — para implementação
+pela lane do compilador (`9092`). A face Native restante é o **print
+polimórfico de referência `Object`**: um record/classe tipado `Object` (`as
+Object` direto ou local tipado `Object`) chega ao `kof_box_to_string`, que só
+decodifica a caixa MAGIC de primitivo e, fora disso, passa o ponteiro cru —
+então `println(o)` imprime vazio em vez do `toString` do record (medido 23/09:
+JVM `Point[x=1, y=2]` vs Native vazio — repro em `NativeObjectBoxPrintE2ETest`).
+O contrato decidido permanece: a caixa é `[MAGIC][tag][valor]` (24 B, §3.9
+`RUNTIME_ABI.md`) e nenhum segundo ABI é criado; a face de referência despacha
+`toString` pela identidade da própria classe (`type_id` no offset 0, o mesmo
+discriminador que o `kof_instanceof` já usa). Registrado aqui pela lane
+antes/com a implementação.
+
 As lanes podem atuar em:
 
 * auditoria SEM048/SEM049;

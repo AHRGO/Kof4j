@@ -8456,7 +8456,7 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 - **Nota:** JVM/Native/Script são afetados (o analyzer é target-agnóstico); o JS
   escapou porque o parser resolvia os tipos no seu próprio caminho.
 
-### §205 — `if`-expression heterogêneo imprime `Object` no Native → SIGSEGV (exit 139) — 🟡 PARCIAL 15/09 (caso direto CORRIGIDO, fatia 1; face boxed-print = §104b-ii)
+### §205 — `if`-expression heterogêneo imprime `Object` no Native → SIGSEGV (exit 139) — ✅ CORRIGIDO 23/09 (fatia 1 caso direto 15/09; fatia 2 face boxed-print 23/09, N2)
 
 - **Sintoma (Native):** `ConformanceMatrixTest#conformanceCoreControl` caso
   `ifexpr-heterogeneous-direct` (`println(if (s == "") 1 else "s")`) sai 139 no
@@ -8485,14 +8485,28 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   `-multi-default`) e linhas da matriz doc (EN+PT, gate DocTest verde). Q0:
   os MESMOS testes dão exit 139 no build pré-fix (provado por stash + rerun).
   `conformanceCoreControl` 1/1 com Native incluído; vizinhos 46/46.
-- **🟡 AINDA ABERTO (fatia 2 = face print do §104b-ii):** `Object` que chega ao
-  print NÃO pela sintaxe direta — `var x = if (c) 1 else "s"; println(x)`
-  (SIGSEGV — o int bruto na pilha não tem tag) e `println(<primitivo> as
-  Object)` (SIGSEGV `7 as Object`; `record as Object` imprime VAZIO vs JVM
-  `P[x=1, y=2]`; `String as Object` imprime por sorte). Estes precisam do box
-  com tag real + dispatch polimórfico `object_to_string` (a fila de ABI §104b-ii,
-  D-NULL/D-NULL-INTENT N2). O fix do caso direto deliberadamente NÃO gateia
-  estes: compilam hoje e continuam compilando (regra 2).
+- **✅ CORRIGIDO 23/09 — fatia 2 (face boxed-print), N2/ABI de caixa com tag (lane compiler 9092):**
+  um valor tipado `Object` agora imprime por conteúdo no Native, seja pela
+  sintaxe direta, por um local ou por `as Object`. O `kof_box_to_string` ganhou
+  a **face de referência**: depois da checagem da caixa MAGIC de primitivo, ele
+  despacha pelo `type_id` de 4 bytes no offset 0 (o MESMO discriminador que o
+  `kof_instanceof` usa) — `type_id == 1` (Kof `String`) passa cru, e qualquer
+  outra referência faz tail-call em `kof_tostring_table[type_id]`, uma tabela
+  `.quad` do lado do programa emitida junto da `kof_super_table`, que guarda os
+  próprios endereços de `toString` que as vtables das classes já referenciam.
+  Sem segundo ABI; entrada `0` (classe sem `toString`) mantém o passthrough
+  anterior (sem regressão). Medido pré-fix = **linha vazia** em `record as
+  Object` (não crash): `println(Point(1,2) as Object)` e
+  `var o: Object = Point(3,4); println(o)`. Prova (Q0/Q1/Q3, mesmo commit):
+  `NativeObjectBoxPrintE2ETest` — oráculo JVM rodado no teste, comparado
+  byte-a-byte em **x86-64 + riscv64 + aarch64** (3/3); corpus cobre o `if`
+  heterogêneo por local (`var x = if (c) 1 else "s"; println(x)`),
+  `Int`/`Long`/`Double`/`Bool` `as Object`, `record as Object` e `String as
+  Object`. VERMELHO provado antes do fix (as duas linhas de record imprimiam
+  vazio nos três targets nativos). Runtime x86 = `RuntimeErasureBox`, riscv
+  espelha em `NativeRiscvAsmRtB49`, aarch64 herda via tradutor.
+  `ArtifactSizeTest`/bateria nativa inalterados. Autorização N2 do
+  `D-NULL-INTENT` registrada (23/09).
 - **Contrato (regra 6):** resolvido por implementação (a opção "implementar o
   dispatch Native" do contrato original — a opção de gate foi rejeitada pela
   mantenedora em 15/09 como quebra de paridade). A célula `ifexpr` era verde

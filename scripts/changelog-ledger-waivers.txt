@@ -2,9 +2,6 @@
 # Formato: <id> <língua> <justificativa>. O gate pula a afirmação mas a
 # mantém registrada — waiver novo exige parágrafo no CHANGELOG EN+PT, e
 # item do ledger que FECHAR deve REMOVER a linha aqui.
-# §205 EN: a linha cita o gate "1 red §205" que a fatia 1 fechou em 15/09;
-#          o §205 do ledger segue vivo por outras faces — não é flip falso.
-205 EN gate-red historico, §205 vivo por outras faces
 # §278 PT: over-gating Android (face db/orm do §278) FECHADO 20/09 pela lane
 #          db/orm; §278 segue vivo pelas demais faces — meia-frase, não flip.
 278 PT face db/orm fechada, §278 vivo p/ as outras

@@ -78,7 +78,7 @@ public final class RiscvSlices {
     /** Externos definidos pelo caminho de programa (medido 12/09: o runtime
      *  riscv referencia exatamente este; ver teste de needs órfãos). */
     public static Set<String> programSideSymbols() {
-        return Set.of("kof_super_table");
+        return Set.of("kof_super_table", "kof_tostring_table");
     }
 
     /** O runtime riscv NÃO referencia rótulos `.L` do programa (medido 12/09:

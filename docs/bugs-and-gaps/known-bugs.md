@@ -8509,7 +8509,7 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
 - **Note:** JVM/Native/Script are affected (the analyzer is target-agnostic); JS
   escaped because the parser resolved the types on its own path.
 
-### §205 — heterogeneous `if`-expression prints `Object` in Native → SIGSEGV (exit 139) — 🟡 PARTIAL 15/09 (direct case FIXED, slice 1; boxed-print face = §104b-ii)
+### §205 — heterogeneous `if`-expression prints `Object` in Native → SIGSEGV (exit 139) — ✅ FIXED 23/09 (slice 1 15/09 direct case; slice 2 23/09 boxed-print face, N2)
 
 - **Symptom (Native):** `ConformanceMatrixTest#conformanceCoreControl` case
   `ifexpr-heterogeneous-direct` (`println(if (s == "") 1 else "s")`) exits 139 on
@@ -8539,14 +8539,27 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   the SAME tests exit 139 on the pre-fix build (proven by stash + rerun).
   `conformanceCoreControl` 1/1 with Native included; neighbors 46/46
   (IfExprBraces/SwitchExpr/EnumSwitch/GuardedPattern/SwitchRhs/MatrixDoc).
-- **🟡 STILL OPEN (slice 2 = §104b-ii face print):** `Object` that reaches the
-  print NOT via the direct syntax — `var x = if (c) 1 else "s"; println(x)`
-  (SIGSEGV — the raw int on the stack has no tag) and `println(<prim> as
-  Object)` (SIGSEGV `7 as Object`; `record as Object` prints EMPTY vs JVM
-  `P[x=1, y=2]`; `String as Object` prints by luck). These need the real
-  tagged-box + `object_to_string` polymorphic dispatch (the §104b-ii ABI
-  queue, D-NULL/D-NULL-INTENT N2). The direct-case fix deliberately does NOT
-  gate them: they compile today and keep compiling (rule 2).
+- **✅ FIXED 23/09 — slice 2 (boxed-print face), N2/tagged-box ABI (lane compiler 9092):**
+  a value typed `Object` now prints by content on Native, whether it reaches the
+  print via the direct syntax, via a local, or via `as Object`.
+  `kof_box_to_string` gained the **reference face**: after the MAGIC primitive
+  box check, it dispatches by the 4-byte `type_id` at offset 0 (the same
+  discriminator `kof_instanceof` uses) — `type_id == 1` (Kof `String`) passes
+  through, and any other reference tail-calls
+  `kof_tostring_table[type_id]`, a program-side `.quad` table emitted next to
+  `kof_super_table` that stores the very `toString` addresses the class vtables
+  already reference. No second ABI; a `0` entry (class without `toString`) keeps
+  the previous passthrough (no regression). The measured pre-fix result was an
+  **empty line** for `record as Object` (not a crash): `println(Point(1,2) as Object)`
+  and `var o: Object = Point(3,4); println(o)`. Proof (Q0/Q1/Q3, same commit):
+  `NativeObjectBoxPrintE2ETest` — JVM oracle run in-test, compared byte-for-byte
+  on **x86-64 + riscv64 + aarch64** (3/3); corpus covers the heterogeneous
+  `if` via local (`var x = if (c) 1 else "s"; println(x)`), `Int`/`Long`/`Double`/
+  `Bool` `as Object`, `record as Object`, `String as Object`. RED proven before
+  the fix (the two record lines printed empty on all three native targets). The
+  x86 runtime is `RuntimeErasureBox`, riscv mirrors it in `NativeRiscvAsmRtB49`,
+  aarch64 inherits through the translator. `ArtifactSizeTest`/native battery
+  unchanged. `D-NULL-INTENT` N2 authorization recorded (23/09).
 - **Contract (rule 6):** resolved by implementation (option "implement the
   Native dispatch" of the original contract — the gate option was rejected by
   the maintainer on 15/09 as a parity break). The `ifexpr` cell was

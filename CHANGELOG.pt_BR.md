@@ -13,6 +13,25 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§205 ✅ CORRIGIDO — valor tipado `Object` agora imprime o próprio
+    `toString` no Native (record/classe que chega ao `println` por `as Object`
+    ou local `Object`)** (23/09, lane compiler 9092; N2/ABI de caixa com tag do
+    `D-NULL-INTENT`): o `kof_box_to_string` ganhou a **face de referência** —
+    depois da checagem da MAGIC de caixa de primitivo, ele lê o `type_id` de 4
+    bytes no offset 0 (o mesmo discriminador que o `kof_instanceof` usa):
+    `type_id == 1` (`String`) passa cru, qualquer outra referência faz tail-call
+    em `kof_tostring_table[type_id]`, uma tabela `.quad` densa emitida junto das
+    classes do programa que guarda o endereço do próprio `toString` de cada
+    classe (o mesmo que a vtable dela já referencia); entrada `0` (sem
+    `toString`) mantém o passthrough anterior. Sem segundo ABI. VERMELHO antes
+    do fix = **linha vazia** em `println(Point(1,2) as Object)` /
+    `var o: Object = Point(3,4); println(o)`. Prova:
+    `NativeObjectBoxPrintE2ETest` 3/3 (oráculo JVM no teste, byte-a-byte em
+    x86-64 + riscv64 + aarch64; corpus cobre `if` heterogêneo por local,
+    `Int`/`Long`/`Double`/`Bool as Object`, `record as Object`, `String as
+    Object`). Autorização N2 registrada no `DECISIONS.pt_BR.md` `D-NULL-INTENT`
+    (23/09); `RUNTIME_ABI.md` §3.9 documenta a face de referência.
+
   - **Ressincronização de `docs/development` — a fila e o allowlist do gate de
     release agora batem com a realidade** (23/09, lane docs/fronteira): a linha
     do `kof-c-cross` (movido para `docs/`, C1–C4 landados) e a do

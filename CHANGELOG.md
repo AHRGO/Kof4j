@@ -13,6 +13,24 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§205 ✅ FIXED — an `Object`-typed value now prints its own `toString` on
+    Native (record/class reference reaching `println` via `as Object` or an
+    `Object` local)** (23/09, lane compiler 9092; N2/tagged-box ABI of
+    `D-NULL-INTENT`): `kof_box_to_string` gained its **reference face** — after
+    the primitive-box MAGIC check it reads the 4-byte `type_id` at offset 0
+    (the same discriminator `kof_instanceof` uses): `type_id == 1` (`String`)
+    passes through raw, any other reference tail-calls
+    `kof_tostring_table[type_id]`, a dense `.quad` table emitted with the
+    program's classes that stores each class's own `toString` address (the very
+    one its vtable already references); entry `0` (no `toString`) keeps the old
+    passthrough. No second ABI. RED before the fix = **empty line** for
+    `println(Point(1,2) as Object)` / `var o: Object = Point(3,4); println(o)`.
+    Proof: `NativeObjectBoxPrintE2ETest` 3/3 (in-test JVM oracle, byte-identical
+    on x86-64 + riscv64 + aarch64; corpus covers the heterogeneous `if` through
+    a local, `Int`/`Long`/`Double`/`Bool as Object`, `record as Object`,
+    `String as Object`). `DECISIONS.md` `D-NULL-INTENT` authorization recorded
+    23/09; `RUNTIME_ABI.md` §3.9 documents the reference face.
+
   - **`docs/development` resync — the queue and the release ALLOWLIST now match
     reality** (23/09, lane docs/frontier): the `kof-c-cross` row (moved to
     `docs/`, C1–C4 all landed) and the `PLAN-BAREMETAL-BOOT` row ("zero code"

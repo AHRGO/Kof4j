@@ -991,6 +991,21 @@ no silent folding) is unchanged. Recorded here by the lane before/with the
 implementation, per the hierarchy rule (a later explicit maintainer directive
 supersedes a documented restriction).
 
+**Authorization (23/09, maintainer via chat, hierarchy rule):** the maintainer
+opened queue item **2 (Native)** of this decision — the tagged-box ABI front
+(`roadmap.md` §23 TIER 2.6.2, `N2`) — for implementation by the compiler lane
+(`9092`). The remaining Native face is the polymorphic **`Object`-reference
+print**: a record/class value typed `Object` (direct `as Object` or an
+`Object`-typed local) is passed to `kof_box_to_string`, which only decodes the
+MAGIC primitive box and otherwise passes the raw pointer, so `println(o)`
+prints empty instead of the record's `toString` (measured 23/09: JVM
+`Point[x=1, y=2]` vs Native empty — repro in `NativeObjectBoxPrintE2ETest`).
+The decided contract stays: the box is `[MAGIC][tag][value]` (24 B, §3.9
+`RUNTIME_ABI.md`) and no second ABI is created; the reference face dispatches
+`toString` through the object's own class identity (`type_id` at offset 0, the
+same discriminator `kof_instanceof` already uses). Recorded here by the lane
+before/with the implementation.
+
 Lanes may work on:
 
 * SEM048/SEM049 audit;

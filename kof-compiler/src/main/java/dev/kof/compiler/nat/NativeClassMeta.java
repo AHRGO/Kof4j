@@ -194,6 +194,36 @@ final class NativeClassMeta {
         return arityMatch != null ? arityMatch.parameterTypes() : java.util.List.of();
     }
 
+    /**
+     * N2 (23/09) — tabela `kof_tostring_table[type_id]` = ponteiro da funcao
+     * `toString` da classe (0 = sem toString). E o alvo do despacho polimorfico
+     * de `kof_box_to_string` para uma REFERENCIA tipada `Object` (record/classe
+     * guardado em local Object ou `X as Object`): sem isto o ponteiro cru caia
+     * no println_string e imprimia vazio. O discriminador e o `type_id` no
+     * offset 0 (o MESMO do `kof_instanceof`), NAO um segundo ABI.
+     * Emitida para x86 (aqui, em emitStringData) e riscv (NativeArchEmitter).
+     */
+    static void emitToStringTable(NativeBackend nb, StringBuilder sb) {
+        int maxId = 0;
+        for (IRClass c : nb.allClassesMap.values()) {
+            if (c.typeId() > maxId) maxId = c.typeId();
+        }
+        String[] table = new String[maxId + 1];
+        for (IRClass c : nb.allClassesMap.values()) {
+            if (c.typeId() <= 0) continue;
+            int idx = findVirtualMethodIndex(nb, c.name(), "toString", List.of());
+            if (idx >= 0) {
+                List<String> methods = collectVirtualMethods(nb, c);
+                if (idx < methods.size()) table[c.typeId()] = methods.get(idx);
+            }
+        }
+        sb.append(".balign 8\n");
+        sb.append("kof_tostring_table:\n");
+        for (int i = 0; i <= maxId; i++) {
+            sb.append("    .quad ").append(table[i] == null ? "0" : table[i]).append("\n");
+        }
+    }
+
     static void emitStringData(NativeBackend nb, StringBuilder sb) {
         for (String[] entry : nb.stringLiterals) {
             String value = entry[0];
@@ -225,6 +255,7 @@ final class NativeClassMeta {
             sb.append("    .long ").append(clazz.typeId()).append(", ").append(superTypeId).append("\n");
         }
         sb.append("    .long 0, 0\n");
+        emitToStringTable(nb, sb);
     }
 
 }
