@@ -207,12 +207,12 @@ public class NativeBackend implements Backend {
     @Override
     public void emit(IRModule module, Path outputDir) throws IOException {
         if (target == Target.NATIVE_RISCV64) {
-            scanExterns(module);
+            NativeFfiCall.scanExterns(this, module);
             emitRiscv(module, outputDir);
             return;
         }
         if (target == Target.NATIVE_AARCH64) {
-            scanExterns(module);
+            NativeFfiCall.scanExterns(this, module);
             emitAarch64(module, outputDir);
             return;
         }
@@ -316,9 +316,7 @@ public class NativeBackend implements Backend {
                             // #431: o extern liga a `library()` declarada no ld
                             // (link-by-use, padrão DB001/sqlite) — sem ela o
                             // `call sym@PLT` não resolve.
-                            ffiLibs.add(NativeFfiCall.libOf(kc));
-                            if (NativeFfiCall.returnsCstr(kc)) ffiUsesCstr = true;
-                            if (NativeFfiCall.usesArrayParam(kc)) ffiUsesArray = true;
+                            NativeFfiCall.noteExtern(this, kc);
                         }
                     }
                 }
@@ -360,16 +358,7 @@ public class NativeBackend implements Backend {
             }
             emitStart(sb, mainClass);
         }
-        if (ffiUsesCstr) {
-            // #431: copy helper char*→String p/ extern com retorno String
-            // (uma definição por programa, no texto do programa — a poda de
-            // runtime não alcança rótulos do programa; chamado via call-site).
-            NativeFfiCall.emitX86CstrHelper(sb);
-        }
-        if (ffiUsesArray) {
-            // D6-2/3.7: empacotador copy-in de array (x86-64).
-            NativeFfiCall.emitX86ArrayPackHelper(sb);
-        }
+        NativeFfiCall.emitHelpers(this, sb);
         if (debugInfo && target == Target.NATIVE) {
             kofDwarf.emit(sb, sourceFile);
         }
@@ -525,27 +514,6 @@ public class NativeBackend implements Backend {
     }
     private void emitStart(StringBuilder sb, IRClass clazz) {
         nativeMethods.emitStart(sb, clazz);
-    }
-
-    /** #431 fatia 2: link-by-use dos externs no cross (mesmo scan do x86 —
-     *  `library()` vira input do ld, retorno String pede o helper cstr). */
-    private void scanExterns(IRModule module) {
-        ffiLibs.clear();
-        ffiUsesCstr = false;
-        ffiUsesArray = false;
-        for (IRClass c : module.classes()) {
-            for (IRMethod m : c.methods()) {
-                for (IRBasicBlock b : m.basicBlocks()) {
-                    for (KofOperation op : b.operations()) {
-                        if (op instanceof KofCall kc && NativeFfiCall.isExternCall(kc)) {
-                            ffiLibs.add(NativeFfiCall.libOf(kc));
-                            if (NativeFfiCall.returnsCstr(kc)) ffiUsesCstr = true;
-                            if (NativeFfiCall.usesArrayParam(kc)) ffiUsesArray = true;
-                        }
-                    }
-                }
-            }
-        }
     }
 
     private void emitRiscv(IRModule module, Path outputDir) throws IOException {

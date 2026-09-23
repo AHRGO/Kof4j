@@ -3,8 +3,13 @@ package dev.kof.compiler.nat;
 import dev.kof.compiler.AbiLayout;
 import dev.kof.compiler.FfiSignature;
 import dev.kof.compiler.FfiStructLayout;
+import dev.kof.compiler.IRBasicBlock;
+import dev.kof.compiler.IRClass;
+import dev.kof.compiler.IRMethod;
+import dev.kof.compiler.IRModule;
 import dev.kof.compiler.KofCall;
 import dev.kof.compiler.KofCallKind;
+import dev.kof.compiler.KofOperation;
 import dev.kof.compiler.Type;
 
 import java.util.ArrayList;
@@ -62,6 +67,37 @@ final class NativeFfiCall {
             if (FfiStructLayout.isArrayPtr(t)) return true;
         }
         return false;
+    }
+
+    /** #431: registra um extern no backend (biblioteca p/ o ld + flags dos
+     *  helpers). Extraído do `NativeBackend` (gate ≤500 regra 7). */
+    static void noteExtern(NativeBackend nb, KofCall kc) {
+        nb.ffiLibs.add(libOf(kc));
+        if (returnsCstr(kc)) nb.ffiUsesCstr = true;
+        if (usesArrayParam(kc)) nb.ffiUsesArray = true;
+    }
+
+    /** Emite os helpers de runtime dos extern x86-64 (uma vez por programa). */
+    static void emitHelpers(NativeBackend nb, StringBuilder sb) {
+        if (nb.ffiUsesCstr) emitX86CstrHelper(sb);
+        if (nb.ffiUsesArray) emitX86ArrayPackHelper(sb);
+    }
+
+    /** #431 fatia 2 / D6-2: link-by-use dos externs no cross (mesmo scan do
+     *  x86 — `library()` vira input do ld, retorno String/array pede o helper). */
+    static void scanExterns(NativeBackend nb, IRModule module) {
+        nb.ffiLibs.clear();
+        nb.ffiUsesCstr = false;
+        nb.ffiUsesArray = false;
+        for (IRClass c : module.classes()) {
+            for (IRMethod m : c.methods()) {
+                for (IRBasicBlock b : m.basicBlocks()) {
+                    for (KofOperation op : b.operations()) {
+                        if (op instanceof KofCall kc && isExternCall(kc)) noteExtern(nb, kc);
+                    }
+                }
+            }
+        }
     }
 
     private static boolean isFloatClass(char c) { return c == 'f' || c == 'd'; }
