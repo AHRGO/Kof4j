@@ -25,6 +25,19 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `GenericWitnessConstructionE2ETest` 10/10 (verbatim repro on JVM/Native
     x86/JS + a mixed record/String/primitive-face program); RED measured by
     stashing only the fix with the test present.
+  - **§478 ✅ FIXED — `break` inside a switch case now terminates the SWITCH,
+    not the enclosing loop (#587)** (23/09, lane 9093): the switch statement
+    registers itself as the innermost breakable context (`breakLabels.push`
+    around default+bodies in both lowering branches) — the documented
+    "accepted (and redundant)" semantics from statements.md §5.5/§6. Proof:
+    `SwitchBreakScopeE2ETest` 8/8 (verbatim `208` on JVM/Native/JS; RED was
+    7 truncated-loop failures) + neighbours 79/0F.
+  - **§476 ✅ FIXED — a PRIMITIVE value case in a pattern switch with a
+    reference subject is refused with SEM035** (23/09, lane 9093, found by
+    the #588 adversarial probe): the mixed case list emitted `if_acmpeq`
+    (reference EQ) over an INT literal = `VerifyError` at JVM load. The
+    refusal reuses the frozen SEM035 wording; String value cases stay legal
+    (control test). No invented equality semantics.
 
   - **§474 — implicit construction `ClassName<T>(...)` dropped the type witness
     (frontend/sem lane, issue #585)** (23/09): the two implicit-construction
@@ -7370,3 +7383,4 @@ tooling:   tools and editor support
 
 The pipeline generates the changelog section from these prefixes
 (`scripts/changelog.sh`).
+

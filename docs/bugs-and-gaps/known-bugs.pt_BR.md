@@ -12073,7 +12073,7 @@ O teste que pinava o gap agora é `logicalValuePositionWithNullableRhsJsMatchesK
 - **Q0 RED→GREEN:** novo `SwitchEmptyDefaultE2ETest` 3/3 (verbatim `3` no JVM, controle `100` de case casado, `3` no JS via node) — os dois testes JVM travavam 30 s (`waitFor` limitado, §418) no código antigo, GREEN após o fix. Vizinhos `KofSwitchExprE2ETest` 32 + `KofPatternMatchingTest` 12 + `SwitchLongDoubleSupportE2ETest` 5 + `SwitchRhsAssignmentE2ETest` 1 + `GuardedPatternSwitchExprE2ETest` 3 = 53/0F, mais o smoke JS via CLI (`lib/kof.jar build --target js`, `node Default.mjs` imprime `3`). `check_500` rc=0 (`SwitchStmtLowerer` 278).
 - **Dono:** lane compilador, sessão 9092 (23/09).
 <!-- en-switch --> **EN:** [§475 (en)](known-bugs.md#475--patterndestructuring-switch-statement-with-an-empty-default-body-compiled-to-a-self-referencing-goto-infinite-loop--hang---fixed-2309-compiler-lane-switchstmtlowerer-dedicated-default-label)
-## §476 — Lista de cases MISTA (pattern + valor) com `default:` VAZIO compila limpo e morre no load do JVM com `VerifyError: Bad type on operand stack` — 🔴 ABERTO 23/09 (achado caçando o fix do #588, sonda adversarial Q4)
+## §476 — Lista de cases MISTA (pattern + valor) com `default:` VAZIO compila limpo e morre no load do JVM com `VerifyError: Bad type on operand stack` — ✅ CORRIGIDO 23/09 (lane 9093, casada com a unidade #587 — a recusa SEM035 existente estendida ao site do case de valor)
 
 **Sintoma (medido 23/09, lane 9093):** switch de destructuring cuja lista MISTURA record pattern com case de VALOR e termina em `default:` VAZIO compila com sucesso em todos os alvos; o run no JVM morre no load: `VerifyError: Bad type on operand stack` (erro real recuperado pelo launcher de reflexão — o launcher `java -cp` o esconde atrás da mensagem JavaFX, pela regra JavaFX). Default não-vazio evita; as formas simples do #588 (só pattern + default vazio) estão CORRIGIDAS (§475) — esta é a face lista-mista que sobreviveu ao fix do §475.
 
@@ -12098,7 +12098,12 @@ main() {
 ```
 Esperado `6`; atual: `VerifyError: Bad type on operand stack` no load.
 
-**Leitura:** mesmo arquivo/família de faces do §475 (#588) e da #587 anunciada (break-em-switch) — todos dentro de `SwitchStmtLowerer`. NÃO corrigido aqui: o arquivo é o próximo passo anunciado da lane compiler (9092, #587 no DOING) — regra de colisão de arquivo; catalogado por Q7/Q4 com o repro para que a unidade corretiva case com a #587.
+**Fix (raiz, semântica inventada zero):** ref×int nunca é par de igualdade válido e NENHUM programa rodou aqui (sempre crashou) — a correção estende a recusa SEM035 CONGELADA existente ("case of primitive type is not supported in pattern matching (use a reference type or the value directly)") ao site de teste de case-valor do ramo pattern: case-valor PRIMITIVO com subject ClassType = recusa nomeada no compile (case de valor STRING segue legal — guard só primitivo, controle incluído). Sem superfície nova, sem semântica de igualdade inventada.
+
+**Prova (mesmo commit):** RED→GREEN em `SwitchBreakScopeE2ETest.mixedCaseListWithPrimitiveValueCaseIsRefusedSem035` (compile falha com SEM035 — a 1ª tentativa mediu `Internal compiler error COMP002` = bug no PRÓPRIO caminho da recusa, corrigido antes de pousar; a recusa tem que ser limpa) + controle `stringValueCaseInsidePatternSwitchStaysLegal` + bateria switch/guard/pattern 79/0F + suíte completa 3156/2F (flakes alheios, fora da face).
+
+**Dono:** lane 9093 (fixada na unidade #587, mesmo arquivo).
+<!-- pt-switch --> **EN:** [§476 (en)](known-bugs.md#476--mixed-patternvalue-case-list-with-an-empty-default-case-tagvar-n--case-99--default-compiles-clean-and-dies-at-jvm-load-with-verifyerror-bad-type-on-operand-stack---fixed-2309-lane-9093-paired-with-the-587-unit--the-existing-sem035-refusal-extended-to-the-value-case-site)
 
 **Dono:** lane 9092 compiler (casar com a unidade #587). Sinal registrado no DOING 23/09 (lane 9093).
 <!-- pt-switch --> **EN:** [§476 (en)](known-bugs.md#476--mixed-patternvalue-case-list-with-an-empty-default-case-tagvar-n--case-99--default-compiles-clean-and-dies-at-jvm-load-with-verifyerror-bad-type-on-operand-stack---open-2309-found-hunting-588s-fix-q4-adversarial-probe)
@@ -12115,3 +12120,14 @@ Esperado `6`; atual: `VerifyError: Bad type on operand stack` no load.
 
 **Dono:** sessão 9092 (23/09), issue #592.
 <!-- pt-switch --> **EN:** [§477 (en)](known-bugs.md#477--generic-top-level-function-returning-bare-t-loses-the-caller-side-checkcast-on-a-reference-instantiation--nosuchmethoderror-on-the-jvm---fixed-2309-session-9092-issue-592)
+## §478 — `break` dentro de um case de switch escapava para o LOOP EXTERNO (truncava o loop em 1 iteração) em vez de terminar o switch — ✅ CORRIGIDO 23/09 (lane 9093 sem — issue #587; o switch statement nunca se registrava como contexto quebrável)
+
+**Sintoma (medido, repro verbatim da issue #587):** `for (var n in nums)` + `switch (n) { case 1: ... break; default: ... break; }` rodava UMA iteração e saía do LOOP (`10` em vez do `208` documentado); mesma truncagem em while/do-while/for clássico e com pattern switches (`1` em vez de `6`), inclusive Native x86_64 e JS. `docs/language-reference/statements.md` §5.5/§6 documenta `break`/`continue` como encerrando "a iteração do loop mais interno (ou switch)" e o §6 diz explicitamente que `break` dentro de case é "aceito (e redundante)" — o switch já auto-termina, então o break deve ser no-op semântico, não saída do loop.
+
+**Causa raiz:** o `break` no `StatementLowerer` espia `driver.breakLabels` — o lowerer de LOOP empurra o label de fim em volta do corpo, mas `SwitchStmtLowerer.lowerSwitchStmt` (AMBOS os ramos: pattern-destructuring e valor) nunca empurrava nada, então o break dentro de um case resolvia para o label de saída do loop externo.
+
+**Fix (raiz, aditivo, contrato documentado):** o switch statement se registra como contexto quebrável mais interno — `driver.breakLabels.push(endLabel)` em volta da emissão de default+corpos nos DOIS ramos, com pop no fim do switch (e no caminho de early-return do SEM035 no loop de corpos, que não pode vazar o label do switch para o contexto externo). O break dentro de um case (ou no corpo do default) agora salta para o próprio fim do switch — alvo byte-idêntico ao salto de auto-término do case, exatamente a semântica "redundante" documentada.
+
+**Prova (mesmo commit, RED→GREEN):** novo `SwitchBreakScopeE2ETest` 8/8 — o repro verbatim (`208`), a forma pattern (`6`), a forma while (`41`), break dentro do CORPO do default, cross Native x86_64 (`208`) e JS (`208`); RED medido ANTES do fix: 7 falhas com as saídas truncadas exatas (`10`/`1`/`41`-como-10/`3`). Vizinhos: bateria switch/guard/pattern/enum 79/0F + `Adv588E2ETest` 5/5 + `SwitchEmptyDefaultE2ETest` 3/3. Suíte completa: 3156 testes, 2 falhas — AMBOS flakes alheios fora desta face (`KofConcurrency2Test.channelWithSpawnCrossArch` segv-139, verde em isolado; `RingPrivilegeE2ETest` flake de boot OVMF CPL1, frente da lane 9092).
+<!-- pt-switch --> **EN:** [§478 (en)](known-bugs.md#478--break-inside-a-switch-case-escaped-the-enclosing-loop-truncated-the-loop-to-one-iteration-instead-of-terminating-the-switch---fixed-2309-lane-9093-sem--issue-587-the-switch-statement-never-registered-itself-as-a-breakable-context)
+

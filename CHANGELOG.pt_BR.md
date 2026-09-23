@@ -25,6 +25,19 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     instância. Prova: `GenericWitnessConstructionE2ETest` 10/10 (repro verbatim
     no JVM/Native x86/JS + programa de faces mistas record/String/primitivo);
     RED medido guardando só o fix com o teste presente.
+  - **§478 ✅ CORRIGIDO — `break` dentro de case de switch agora termina o
+    SWITCH, não o loop externo (#587)** (23/09, lane 9093): o switch statement
+    se registra como contexto quebrável mais interno (`breakLabels.push` em
+    volta de default+corpos nos dois ramos) — a semântica "aceito (e
+    redundante)" documentada em statements.md §5.5/§6. Prova:
+    `SwitchBreakScopeE2ETest` 8/8 (verbatim `208` em JVM/Native/JS; RED eram
+    7 falhas de loop truncado) + vizinhos 79/0F.
+  - **§476 ✅ CORRIGIDO — case de valor PRIMITIVO em pattern switch com subject
+    reference é recusado com SEM035** (23/09, lane 9093, achado pela sonda
+    adversarial do #588): a lista mista emitia `if_acmpeq` (EQ de referência)
+    sobre literal INT = `VerifyError` no load do JVM. A recusa reutiliza a
+    redação SEM035 congelada; case de valor String segue legal (teste de
+    controle). Semântica de igualdade inventada zero.
 
   - **§474 — construção implícita `ClassName<T>(...)` descartava o type-witness
     (lane frontend/sem, issue #585)** (23/09): os dois sites de construção
@@ -5494,3 +5507,4 @@ tooling:   ferramentas e editor support
 
 A pipeline gera a seção do changelog a partir desses prefixos
 (`scripts/changelog.sh`).
+
