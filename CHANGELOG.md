@@ -13,6 +13,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **DB-3/DB-1 cross — `orm.all` is REAL on riscv64/aarch64 (ORM row-object
+    read → `List`, E-parte-4)** (23/09, gaps-db lane): `SELECT * FROM "t"` with
+    no bind, resolving `kof_orm_ctors` once before the row loop; each row is a
+    fresh `kof_alloc` + `kof_init_object` filled by the shared
+    `kof_orm_read_field` (name matching + §397) and appended with
+    `kof_list_add`. An empty table returns the **empty list** (never null), like
+    the host. New piece `NativeRiscvAsmRtB58` (port of `RuntimeOrm6`);
+    `CROSS_FACES` += `kof_orm_all` (10 names). Also fixed the same latent
+    `Double` read bug in `RuntimeOrm6` (see §449). Proof:
+    `KofOrmE2ETest#crossNativeF2c1AllMatchesX86Oracle` (explicit x86 golden:
+    empty list, rowid order independent of insertion, multi-entity, all types
+    incl. zero/null); `KofOrmE2ETest` 69/0F/3skip, focused battery 95/0F/3skip.
+    Still honest `ORM001` on cross: `where`/`where_op` and `page` (R6/R7).
+
   - **DB-3/DB-1 cross — `orm.find` is REAL on riscv64/aarch64 (ORM row-object
     read, E-parte-3)** (23/09, gaps-db lane): the read faces need the
     per-program `kof_orm_ctors` resolver (className→vtable/typeId/size), now

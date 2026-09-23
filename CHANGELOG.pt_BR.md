@@ -13,6 +13,21 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **DB-3/DB-1 cross — `orm.all` REAL no riscv64/aarch64 (leitura row-object
+    do ORM → `List`, E-parte-4)** (23/09, lane gaps-db): `SELECT * FROM "t"` sem
+    bind, resolvendo `kof_orm_ctors` uma vez antes do loop de linhas; cada linha
+    é um `kof_alloc` + `kof_init_object` novo preenchido pelo
+    `kof_orm_read_field` compartilhado (casamento por nome + §397) e acumulado
+    com `kof_list_add`. Tabela vazia devolve a **lista vazia** (nunca null), como
+    o host. Peça nova `NativeRiscvAsmRtB58` (port de `RuntimeOrm6`);
+    `CROSS_FACES` += `kof_orm_all` (10 nomes). Também corrigido o mesmo bug
+    latente de leitura de `Double` no `RuntimeOrm6` (ver §449). Prova:
+    `KofOrmE2ETest#crossNativeF2c1AllMatchesX86Oracle` (golden x86 explícito:
+    lista vazia, ordem rowid independente da inserção, multi-entidade, todos os
+    tipos incl. zero/null); `KofOrmE2ETest` 69/0F/3skip, bateria focada
+    95/0F/3skip. Segue `ORM001` honesto no cross: `where`/`where_op` e `page`
+    (R6/R7).
+
   - **DB-3/DB-1 cross — `orm.find` REAL no riscv64/aarch64 (leitura
     row-object do ORM, E-parte-3)** (23/09, lane gaps-db): as faces de leitura
     precisam do resolver por-programa `kof_orm_ctors`
