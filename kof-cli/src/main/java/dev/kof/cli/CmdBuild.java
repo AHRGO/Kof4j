@@ -214,7 +214,7 @@ final class CmdBuild {
         }
         // B-1: --profile host|freestanding (BuildProfileFlag; R6: só native).
         CompilerDriver driver = new CompilerDriver();
-        String profileErr = BuildProfileFlag.apply(driver, target, profileArg);
+        String profileErr = BuildProfileFlag.apply(driver, "build", target, profileArg);
         if (profileErr != null) {
             System.err.println(profileErr);
             System.exit(1);

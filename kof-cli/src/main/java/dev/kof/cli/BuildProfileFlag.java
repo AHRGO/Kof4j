@@ -30,23 +30,24 @@ final class BuildProfileFlag {
 
     /** Valida o par (target, profile); devolve a mensagem de erro (R6) ou
      *  {@code null} se aceito. Extraído para teste — o caminho de erro do CLI
-     *  faz {@code System.exit}. */
-    static String error(Target target, String profileArg) {
+     *  faz {@code System.exit}. {@code command} é o prefixo da mensagem
+     *  ({@code build}/{@code run}). */
+    static String error(String command, Target target, String profileArg) {
         if (target != Target.NATIVE) {
-            return "build: --profile only applies to --target native (x86_64) (target: "
+            return command + ": --profile only applies to --target native (x86_64) (target: "
                     + TargetMatrix.name(target) + ")";
         }
         if (parse(profileArg) == null) {
-            return "build: --profile invalid: '" + profileArg + "' (expected host|freestanding)";
+            return command + ": --profile invalid: '" + profileArg + "' (expected host|freestanding)";
         }
         return null;
     }
 
     /** Valida e aplica a flag no driver. Devolve a mensagem de erro (R6) ou
      *  {@code null}; {@code profileArg == null} (flag ausente) é no-op. */
-    static String apply(CompilerDriver driver, Target target, String profileArg) {
+    static String apply(CompilerDriver driver, String command, Target target, String profileArg) {
         if (profileArg == null) return null;
-        String err = error(target, profileArg);
+        String err = error(command, target, profileArg);
         if (err != null) return err;
         driver.setNativeProfile(parse(profileArg));
         return null;

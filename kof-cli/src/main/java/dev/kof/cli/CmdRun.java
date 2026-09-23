@@ -23,9 +23,9 @@ final class CmdRun {
     }
 
     static void run(String[] args) {
-        if (args.length < 2) { System.err.println("usage: kof run <file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--release] [--deps] [args...]"); return; }
+        if (args.length < 2) { System.err.println("usage: kof run <file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--profile host|freestanding] [--backend <t>] [--frontend <t>] [--release] [--deps] [args...]"); return; }
         if ("--help".equals(args[1]) || "-h".equals(args[1]) || "--version".equals(args[1])) {
-            System.out.println("usage: kof run <file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--release] [--deps] [args...]");
+            System.out.println("usage: kof run <file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--profile host|freestanding] [--backend <t>] [--frontend <t>] [--release] [--deps] [args...]");
             return;
         }
         // O arquivo é o primeiro arg não-flag; --target/--deps/--release podem
@@ -33,9 +33,11 @@ final class CmdRun {
         int fileIdx = 1;
         while (fileIdx < args.length && args[fileIdx].startsWith("-")) {
             if ((args[fileIdx].equals("--target") || args[fileIdx].equals("--backend")
-                    || args[fileIdx].equals("--frontend")) && fileIdx + 1 < args.length) fileIdx += 2;
+                    || args[fileIdx].equals("--frontend") || args[fileIdx].equals("--profile"))
+                    && fileIdx + 1 < args.length) fileIdx += 2;
             else if (args[fileIdx].startsWith("--target=") || args[fileIdx].startsWith("--backend=")
-                    || args[fileIdx].startsWith("--frontend=")) fileIdx += 1;
+                    || args[fileIdx].startsWith("--frontend=")
+                    || args[fileIdx].startsWith("--profile=")) fileIdx += 1;
             else fileIdx += 1;
         }
         if (fileIdx >= args.length) { System.err.println("usage: kof run <file.kf> [--target ...]"); return; }
@@ -49,6 +51,7 @@ final class CmdRun {
         boolean useDeps = false;
         String backendFlag = null;
         String frontendFlag = null;
+        String profileArg = null;
         int argStart = fileIdx + 1;
         for (int i = 1; i < args.length; i++) {
             if (i == fileIdx) continue;
@@ -73,6 +76,13 @@ final class CmdRun {
                 argStart = i + 1;
             } else if (args[i].equals("--frontend") && i + 1 < args.length) {
                 frontendFlag = args[i + 1];
+                argStart = i + 2;
+                i++;
+            } else if (args[i].startsWith("--profile=")) {
+                profileArg = args[i].substring("--profile=".length());
+                argStart = i + 1;
+            } else if (args[i].equals("--profile") && i + 1 < args.length) {
+                profileArg = args[i + 1];
                 argStart = i + 2;
                 i++;
             } else if (args[i].equals("--release")) {
@@ -121,6 +131,14 @@ final class CmdRun {
                 System.exit(1);
                 return;
             }
+        }
+        // B-1: --profile host|freestanding (BuildProfileFlag; R6: só native).
+        String profileErr = BuildProfileFlag.apply(driver, "run", target, profileArg);
+        if (profileErr != null) {
+            System.err.println(profileErr);
+            KofCliSupport.cleanup(tempDir);
+            System.exit(1);
+            return;
         }
         if (useDeps) {
             try {

@@ -32,13 +32,13 @@ class CmdBuildProfileTest {
 
     @Test
     void profileErrorRefusesNonNativeTargetsAndBadValues() {
-        assertNull(BuildProfileFlag.error(Target.NATIVE, "host"));
-        assertNull(BuildProfileFlag.error(Target.NATIVE, "freestanding"));
-        assertTrue(BuildProfileFlag.error(Target.JVM, "freestanding").contains("--target native"),
+        assertNull(BuildProfileFlag.error("build", Target.NATIVE, "host"));
+        assertNull(BuildProfileFlag.error("build", Target.NATIVE, "freestanding"));
+        assertTrue(BuildProfileFlag.error("build", Target.JVM, "freestanding").contains("--target native"),
                 "perfil em alvo JVM deve ser recusado");
-        assertTrue(BuildProfileFlag.error(Target.NATIVE_RISCV64, "freestanding")
+        assertTrue(BuildProfileFlag.error("build", Target.NATIVE_RISCV64, "freestanding")
                 .contains("--target native"), "perfil no cross deve ser recusado");
-        assertTrue(BuildProfileFlag.error(Target.NATIVE, "resident").contains("invalid"),
+        assertTrue(BuildProfileFlag.error("build", Target.NATIVE, "resident").contains("invalid"),
                 "valor fora de host|freestanding deve ser recusado");
     }
 
