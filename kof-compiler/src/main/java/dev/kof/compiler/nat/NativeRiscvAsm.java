@@ -152,6 +152,10 @@ public final class NativeRiscvAsm {
                 // de RuntimeOrm6) — SELECT * acumulado em kof_list_new/add,
                 // reusa read_field/ctors/parse_schema.
                 .append(NativeRiscvAsmRtB58.RISCV_RUNTIME_ASM_B_58)
+                // DB-3/DB-1 cross slice E-parte-5 (23/09): kof_orm_where /
+                // kof_orm_where_op (F2c2 de RuntimeOrm7) — whitelist do op +
+                // bind do value pelo classificador do host + loop do RtB58.
+                .append(NativeRiscvAsmRtB59.RISCV_RUNTIME_ASM_B_59)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

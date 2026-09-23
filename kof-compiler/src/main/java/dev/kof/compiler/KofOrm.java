@@ -76,13 +76,16 @@ public final class KofOrm {
      *  F2b de {@code RuntimeOrm5}; resolver {@code kof_orm_ctors} por-programa
      *  em {@code NativeRiscvOrmCtors}); E-parte-4: {@code all} (peça RtB58,
      *  F2c1 de {@code RuntimeOrm6}: SELECT * acumulado em
-     *  {@code kof_list_new}/{@code kof_list_add}); aarch64
+     *  {@code kof_list_new}/{@code kof_list_add}); E-parte-5: {@code where}/
+     *  {@code where_op} (peça RtB59, F2c2 de {@code RuntimeOrm7}: whitelist do
+     *  op + bind do value pelo classificador do host); aarch64
      *  herda pelo tradutor. O que ainda não tem porte cross segue ORM001
-     *  compile-time (R6/R7): {@code where}/{@code where_op} e {@code page}. */
+     *  compile-time (R6/R7): {@code page}. */
     private static final java.util.Set<String> CROSS_FACES = java.util.Set.of(
             "kof_orm_delete_all", "kof_orm_count", "kof_orm_create",
             "kof_orm_migrate", "kof_orm_count_where", "kof_orm_delete",
-            "kof_orm_save", "kof_orm_save_all", "kof_orm_find", "kof_orm_all");
+            "kof_orm_save", "kof_orm_save_all", "kof_orm_find", "kof_orm_all",
+            "kof_orm_where", "kof_orm_where_op");
 
     /** D-DB-GAPS DB-1 (20/09): faces SQL-puro do Native x86-64, uma por fatia.
      *  F1a = {@code delete_all}, F1b = {@code count}, F1c = {@code migrate}

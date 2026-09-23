@@ -361,7 +361,7 @@ public final class RuntimeOrm7 {
                 movq %r12, %rdi
                 movl %r15d, %esi
                 call sqlite3_column_double
-                movq %rax, (%r14)
+                movsd %xmm0, (%r14)
                 jmp .Lorm7_fldnext
             .Lorm7_rflt:
                 movq %r12, %rdi

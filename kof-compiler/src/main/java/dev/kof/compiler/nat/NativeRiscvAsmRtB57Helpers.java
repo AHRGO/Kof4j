@@ -1,13 +1,15 @@
 package dev.kof.compiler.nat;
 
 // DB-3/DB-1 cross, slice E-parte-3 (23/09, lane gaps-db): helpers GLOBAIS das
-// faces de LEITURA row-object do ORM no riscv64 (find/all/where/page) —
-// bind do key (box §284 / KofString / null, o mesmo classificador de
-// kof_orm_delete/count_where) e leitura de UMA coluna p/ o slot do record por
-// typeCode (int/long/double/float/string/bool, paridade §397 com o host).
+// faces de LEITURA row-object do ORM no riscv64 (find/all) — bind do key
+// (box §284 / KofString / null, o MESMO classificador do RuntimeOrm5) e leitura
+// de UMA coluna p/ o slot do record por typeCode (paridade §397 com o host).
 //
-// ABIs: kof_orm_bind_key(stmt@a0, key*@a1);
-//       kof_orm_read_field(stmt@a0, colj@a1, slot*@a2, typeCode@a3).
+// ABI: kof_orm_bind_key(stmt@a0, key*@a1);
+//      kof_orm_read_field(stmt@a0, colj@a1, slot*@a2, typeCode@a3).
+// Classificador do bind (EXATO RuntimeOrm5): tag 0=int (sign-ext), 1/2=long,
+// 4=double, 5=float; KofString->text; null->bind_null; qualquer outra coisa
+// (tag 3 bool incluído, shape inválida) -> finalize + throw ORM001, como o x86.
 // Nada de estado vivo em s10 (x16 caller-saved no aarch64 — ver RtB55).
 public final class NativeRiscvAsmRtB57Helpers {
 
@@ -36,15 +38,15 @@ public final class NativeRiscvAsmRtB57Helpers {
                 bne  t0, t1, .L57h_bk_str
                 lw   t1, 8(s1)                     # tag
                 beqz t1, .L57h_bk_int
-                li   t2, 2
+                li   t2, 1
                 beq  t1, t2, .L57h_bk_quad
-                li   t2, 3
+                li   t2, 2
                 beq  t1, t2, .L57h_bk_quad
                 li   t2, 4
                 beq  t1, t2, .L57h_bk_dbl
                 li   t2, 5
                 beq  t1, t2, .L57h_bk_flt
-                j    .L57h_bk_null                 # tag fora -> bind_null
+                j    .L57h_bk_bad                  # tag fora -> throw ORM001 (Orm5)
             .L57h_bk_int:
                 lw   a2, 16(s1)
                 mv   a0, s0
@@ -75,11 +77,11 @@ public final class NativeRiscvAsmRtB57Helpers {
             .L57h_bk_str:
                 lw   t0, 0(s1)                     # KofString (1,0,0)?
                 li   t1, 1
-                bne  t0, t1, .L57h_bk_null
+                bne  t0, t1, .L57h_bk_bad
                 lw   t0, 4(s1)
-                bnez t0, .L57h_bk_null
+                bnez t0, .L57h_bk_bad
                 ld   t0, 8(s1)
-                bnez t0, .L57h_bk_null
+                bnez t0, .L57h_bk_bad
                 addi a2, s1, 24
                 lw   a3, 16(s1)
                 li   a4, -1                        # SQLITE_TRANSIENT
@@ -91,6 +93,14 @@ public final class NativeRiscvAsmRtB57Helpers {
                 mv   a0, s0
                 li   a1, 1
                 call sqlite3_bind_null
+                j    .L57h_bk_ret
+            .L57h_bk_bad:
+                mv   a0, s0
+                call sqlite3_finalize
+                la   a0, .L57h_badv
+                li   a1, 56
+                call kof_string_from_literal
+                call kof_throw_string
             .L57h_bk_ret:
                 ld   ra, 24(sp)
                 ld   s0, 16(sp)
@@ -234,6 +244,9 @@ public final class NativeRiscvAsmRtB57Helpers {
             .section .rodata
             .L57h_magic:
                 .quad 0x4B4F46425F425801
+            .L57h_badv:
+                .ascii "orm.find bind value: unsupported type on Native (ORM001)"
+                .byte 0
             .section .text
             """;
 }

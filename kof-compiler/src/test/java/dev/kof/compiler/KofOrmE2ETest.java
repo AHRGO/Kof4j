@@ -2277,11 +2277,11 @@ class KofOrmE2ETest {
             }
             main() {
                 var db = db.connect("sqlite:%s/gate.db")
-                println(orm.where<User>(db, "age", 30))
+                println(orm.page<User>(db, 1, 0))
             }
             """.formatted(tempDir));
         CompilationResult gated = driver.compile(srcGated, tempDir.resolve("out-gate"), Target.NATIVE_RISCV64);
-        assertFalse(gated.success(), "orm.where segue ORM001 no cross até a fatia F2c2");
+        assertFalse(gated.success(), "orm.page segue ORM001 no cross até a fatia F2c3");
         assertTrue(gated.diagnostics().getDiagnostics().toString().contains("ORM001"),
                 "gate honesto (nunca silent): " + gated.diagnostics().getDiagnostics());
     }
@@ -2739,6 +2739,12 @@ class KofOrmE2ETest {
                     println(e)
                 }
                 println("after-throw")
+                try {
+                    println(orm.find<User>(db, true))
+                } catch (String e) {
+                    println(e)
+                }
+                println("after-bool")
                 db.close(db)
             }
             """;
@@ -2747,7 +2753,8 @@ class KofOrmE2ETest {
                 + "true\n1.5\n2.25\nhello\n7\n5000000000\n"
                 + "Item[id=1, flag=true, ratio=1.5, price=2.25, note=hello, qty=7, big=5000000000]\n"
                 + "false\nnull\nsqlite: no column \"name\"\nafter-nomatch\n"
-                + "unknown db connection: db2\nafter-throw";
+                + "unknown db connection: db2\nafter-throw\n"
+                + "orm.find bind value: unsupported type on Native (ORM001)\nafter-bool";
         String oracle = runX86CreateOracle(tempDir, "find", template);
         assertEquals(golden, oracle,
                 "oráculo x86-64 (find: hit 4 campos, miss→null, Long>int32, negativo, key String, "
@@ -2846,6 +2853,78 @@ class KofOrmE2ETest {
                 "oráculo x86-64 (all: lista vazia→List vazia, 3 linhas ordem rowid independente da "
                         + "inserção, multi-entidade, Item todos os tipos incl. zero/null, id ruim→throw)");
         assertCrossCreateParity(tempDir, "all", template, oracle);
+    }
+
+    @Test
+    void crossNativeF2c2WhereMatchesX86Oracle(@TempDir Path tempDir) throws IOException {
+        assumeTrue(isLinux(), "cross ORM E2E requires Linux + libsqlite3");
+        String template = """
+            entity User {
+                id: Long generated
+                name: String
+                age: Int
+                flag: Bool
+                score: Double
+            }
+            entity Ghost {
+                id: Long generated
+                name: String
+            }
+            main() {
+                var db = db.connect("sqlite:%s/kof.db")
+                println(orm.create<User>(db))
+                db.execute(db, "insert into user (name, age, flag, score) values ('Mel', 30, 1, 9.5)")
+                db.execute(db, "insert into user (name, age, flag, score) values ('Ana', 25, 0, 3.25)")
+                db.execute(db, "insert into user (name, age, flag, score) values ('Bia', 30, 1, 7.0)")
+                var a = orm.where<User>(db, "age", 30)
+                println(a.size)
+                for (var u in a) {
+                    println(u.id)
+                    println(u.name)
+                    println(u.flag)
+                    println(u.score)
+                }
+                var b = orm.where<User>(db, "age", ">=", 26)
+                println(b.size)
+                var c = orm.where<User>(db, "name", "LIKE", "A%%")
+                println(c.size)
+                for (var u in c) {
+                    println(u.name)
+                }
+                var d = orm.where<User>(db, "age", "!=", 30)
+                println(d.size)
+                var e = orm.where<User>(db, "age", 999)
+                println(e.size)
+                try {
+                    var x = orm.where<User>(db, "age", "??", 1)
+                    println(x.size)
+                } catch (String ex) {
+                    println(ex)
+                }
+                println("after-op")
+                db.execute(db, "create table ghost (id integer primary key, extra text)")
+                db.execute(db, "insert into ghost (id, extra) values (1, 'x')")
+                try {
+                    var y = orm.where<Ghost>(db, "id", 1)
+                    println(y.size)
+                } catch (String ex) {
+                    println(ex)
+                }
+                println("after-nomatch")
+                db.close(db)
+            }
+            """;
+        String golden = "true\n2\n"
+                + "1\nMel\ntrue\n9.5\n3\nBia\ntrue\n7.0\n"
+                + "2\n1\nAna\n1\n"
+                + "0\n"
+                + "ORM operator not allowed: ??\nafter-op\n"
+                + "sqlite: no column \"name\"\nafter-nomatch";
+        String oracle = runX86CreateOracle(tempDir, "where", template);
+        assertEquals(golden, oracle,
+                "oráculo x86-64 (where: =, >=, LIKE, !=, vazio→List vazia, op inválido→throw, "
+                        + "campo sem coluna→throw; Bool e Double lidos)");
+        assertCrossCreateParity(tempDir, "where", template, oracle);
     }
 
     /** x86-64: compila e roda o template numa pasta propria (banco limpo) e
