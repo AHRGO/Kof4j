@@ -2654,6 +2654,105 @@ class KofOrmE2ETest {
         assertCrossCreateParity(tempDir, "saveall", template, oracle);
     }
 
+    /** DB-3/DB-1 cross slice E-parte-3 (23/09): {@code orm.find} REAL no
+     *  riscv64/aarch64 (peça RtB57, port de {@code RuntimeOrm5}) — SELECT por
+     *  PK, resolver {@code kof_orm_ctors} por-programa, leitura por NOME/
+     *  typeCode (Int/Long/Bool/Double/Float/String, NULL→null, bool §397).
+     *  Q3: hit 4 campos, miss→null, Long&gt;int32, negativo, key String (coerce
+     *  TEXT↔pk INTEGER), tipos todos (Item), coluna ausente→throw ORM006
+     *  "no column", id ruim→throw. Byte-parity com o oráculo x86-64. */
+    @Test
+    void crossNativeF2bFindMatchesX86Oracle(@TempDir Path tempDir) throws IOException {
+        assumeTrue(isLinux(), "cross ORM E2E requires Linux + libsqlite3");
+        String template = """
+            entity User {
+                id: Long generated
+                name: String
+                email: String unique
+                age: Int
+            }
+            entity Item {
+                id: Long generated
+                flag: Bool
+                ratio: Float
+                price: Double
+                note: String
+                qty: Int
+                big: Long
+            }
+            entity Ghost {
+                id: Long generated
+                name: String
+            }
+            main() {
+                var db = db.connect("sqlite:%s/kof.db")
+                println(orm.create<User>(db))
+                println(orm.create<Item>(db))
+                db.execute(db, "insert into user (name, email, age) values ('Mel', 'm@kof.dev', 30)")
+                db.execute(db, "insert into user (name, email, age) values ('Ana', 'a@kof.dev', 25)")
+                db.execute(db, "insert into user (id, name, email, age) values (5000000000, 'Big', 'big@kof.dev', 7)")
+                db.execute(db, "insert into user (id, name, email, age) values (-7, 'Neg', 'neg@kof.dev', 8)")
+                var mel = orm.find<User>(db, 1)
+                println(mel.id)
+                println(mel.name)
+                println(mel.email)
+                println(mel.age)
+                println(mel)
+                var g = orm.find<User>(db, 999)
+                if (g == null) {
+                    println("null")
+                } else {
+                    println("hit")
+                }
+                println(orm.find<User>(db, 2).name)
+                println(orm.find<User>(db, "1").name)
+                var bigKey: Long = 5000000000
+                println(orm.find<User>(db, bigKey).name)
+                var negKey: Long = -7
+                println(orm.find<User>(db, negKey).name)
+                db.execute(db, "insert into item (flag, ratio, price, note, qty, big) values (1, 1.5, 2.25, 'hello', 7, 5000000000)")
+                db.execute(db, "insert into item (flag, ratio, price, note, qty, big) values (0, 0, 0, NULL, 0, -7)")
+                var i1 = orm.find<Item>(db, 1)
+                println(i1.flag)
+                println(i1.ratio)
+                println(i1.price)
+                println(i1.note)
+                println(i1.qty)
+                println(i1.big)
+                println(i1)
+                var i2 = orm.find<Item>(db, 2)
+                println(i2.flag)
+                println(i2.note)
+                db.execute(db, "create table ghost (id integer primary key, extra text)")
+                db.execute(db, "insert into ghost (id, extra) values (1, 'x')")
+                try {
+                    println(orm.find<Ghost>(db, 1))
+                } catch (String e) {
+                    println(e)
+                }
+                println("after-nomatch")
+                try {
+                    println(orm.find<User>("db2", 1))
+                } catch (String e) {
+                    println(e)
+                }
+                println("after-throw")
+                db.close(db)
+            }
+            """;
+        String golden = "true\ntrue\n1\nMel\nm@kof.dev\n30\n"
+                + "User[id=1, name=Mel, email=m@kof.dev, age=30]\nnull\nAna\nMel\nBig\nNeg\n"
+                + "true\n1.5\n2.25\nhello\n7\n5000000000\n"
+                + "Item[id=1, flag=true, ratio=1.5, price=2.25, note=hello, qty=7, big=5000000000]\n"
+                + "false\nnull\nsqlite: no column \"name\"\nafter-nomatch\n"
+                + "unknown db connection: db2\nafter-throw";
+        String oracle = runX86CreateOracle(tempDir, "find", template);
+        assertEquals(golden, oracle,
+                "oráculo x86-64 (find: hit 4 campos, miss→null, Long>int32, negativo, key String, "
+                        + "Item todos os tipos, coluna ausente→throw, id ruim)");
+        assertCrossCreateParity(tempDir, "find", template, oracle);
+    }
+
     /** x86-64: compila e roda o template numa pasta propria (banco limpo) e
      *  devolve o stdout — o oráculo do contrato D-DB-GAPS. */
     private String runX86CreateOracle(Path tempDir, String label, String template) throws IOException {

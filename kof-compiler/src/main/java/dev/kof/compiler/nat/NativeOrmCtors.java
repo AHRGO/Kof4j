@@ -28,7 +28,15 @@ final class NativeOrmCtors {
         sb.append("            .globl kof_orm_ctors\n");
         sb.append("            .type kof_orm_ctors, @function\n");
         sb.append("        kof_orm_ctors:\n");
-        int n = 0;
+        // F2b (23/09): os dados .ascii são emitidos no FIM (fora do fluxo) —
+        // antes ficavam colados ao rótulo de miss e o fall-through executava
+        // bytes como instrução (quebrava com 2+ entidades). O miss de cada
+        // entrada salta para a próxima; a última cai no retorno 0.
+        int emitted = 0;
+        int total = 0;
+        for (String cn : classNames) {
+            if (findClass(nb, cn) != null) total++;
+        }
         for (String cn : classNames) {
             IRClass clazz = findClass(nb, cn);
             if (clazz == null) continue;
@@ -36,29 +44,39 @@ final class NativeOrmCtors {
             int totalSize = nb.getLayout(clazz).totalSize();
             String vtab = nb.sanitizeName(clazz.name()) + "_vtable";
             byte[] bytes = cn.getBytes(StandardCharsets.UTF_8);
+            String miss = (emitted + 1 < total) ? ".Lormc_t" + (emitted + 1) : ".Lormc_miss";
+            sb.append("        .Lormc_t").append(emitted).append(":\n");
             sb.append("            cmpl $").append(bytes.length).append(", %esi\n");
-            sb.append("            jne .Lormc_n").append(n).append("\n");
+            sb.append("            jne ").append(miss).append("\n");
             sb.append("            movl %esi, %edx\n");
-            sb.append("            leaq .Lormc_b").append(n).append("(%rip), %rsi\n");
+            sb.append("            leaq .Lormc_b").append(emitted).append("(%rip), %r10\n");
             sb.append("            xorl %ecx, %ecx\n");
-            sb.append("        .Lormc_c").append(n).append(":\n");
+            sb.append("        .Lormc_c").append(emitted).append(":\n");
             sb.append("            cmpl %edx, %ecx\n");
-            sb.append("            jge .Lormc_ce").append(n).append("\n");
+            sb.append("            jge .Lormc_ce").append(emitted).append("\n");
             sb.append("            movzbl (%rdi,%rcx), %r8d\n");
-            sb.append("            movzbl (%rsi,%rcx), %r9d\n");
+            sb.append("            movzbl (%r10,%rcx), %r9d\n");
             sb.append("            cmpl %r9d, %r8d\n");
-            sb.append("            jne .Lormc_n").append(n).append("\n");
+            sb.append("            jne ").append(miss).append("\n");
             sb.append("            incl %ecx\n");
-            sb.append("            jmp .Lormc_c").append(n).append("\n");
-            sb.append("        .Lormc_ce").append(n).append(":\n");
+            sb.append("            jmp .Lormc_c").append(emitted).append("\n");
+            sb.append("        .Lormc_ce").append(emitted).append(":\n");
             sb.append("            cmpb $0, (%rdi,%rcx)\n");
-            sb.append("            jne .Lormc_n").append(n).append("\n");
+            sb.append("            jne ").append(miss).append("\n");
             sb.append("            leaq ").append(vtab).append("(%rip), %rax\n");
             sb.append("            movl $").append(typeId).append(", %edx\n");
             sb.append("            movl $").append(totalSize).append(", %ecx\n");
             sb.append("            ret\n");
-            sb.append("        .Lormc_n").append(n).append(":\n");
-            sb.append("        .Lormc_b").append(n).append(":\n");
+            emitted++;
+        }
+        sb.append("        .Lormc_miss:\n");
+        sb.append("            xorl %eax, %eax\n");
+        sb.append("            ret\n");
+        int m = 0;
+        for (String cn : classNames) {
+            if (findClass(nb, cn) == null) continue;
+            byte[] bytes = cn.getBytes(StandardCharsets.UTF_8);
+            sb.append("        .Lormc_b").append(m).append(":\n");
             sb.append("            .ascii \"");
             for (byte b : bytes) {
                 char c = (char) (b & 0xFF);
@@ -66,10 +84,8 @@ final class NativeOrmCtors {
                 sb.append(c);
             }
             sb.append("\"\n");
-            n++;
+            m++;
         }
-        sb.append("            xorl %eax, %eax\n");
-        sb.append("            ret\n");
     }
 
     /** Mesma regra de casamento de {@code NativeOpHelpers.emitNewObject}. */
@@ -82,5 +98,44 @@ final class NativeOrmCtors {
             }
         }
         return null;
+    }
+
+    /** DB-3/DB-1 cross (23/09): coleta os className das faces de leitura ORM
+     *  ({@code kof_orm_find/all/where/page/where_op}) no caminho riscv/aarch64
+     *  — o scan de ops do x86 já faz isso; o cross precisa do mesmo conjunto
+     *  p/ emitir o {@code kof_orm_ctors} por-programa. Mesma janela de 2 ops
+     *  do emissor x86 (className é o literal imediatamente antes do call). */
+    static void collect(NativeBackend nb, java.util.List<dev.kof.compiler.IRClass> classes) {
+        for (dev.kof.compiler.IRClass clazz : classes) {
+            for (dev.kof.compiler.IRMethod method : clazz.methods()) {
+                for (dev.kof.compiler.IRBasicBlock block : method.basicBlocks()) {
+                    java.util.List<dev.kof.compiler.KofOperation> ops = block.operations();
+                    for (int i = 0; i < ops.size(); i++) {
+                        dev.kof.compiler.KofOperation op = ops.get(i);
+                        if (op instanceof dev.kof.compiler.KofCall kc
+                                && kc.methodName().startsWith("kof_orm_")) {
+                            if ((kc.methodName().equals("kof_orm_find")
+                                        && kc.parameterTypes().size() == 5)
+                                    || (kc.methodName().equals("kof_orm_all")
+                                        && kc.parameterTypes().size() == 4)
+                                    || (kc.methodName().equals("kof_orm_where")
+                                        && kc.parameterTypes().size() == 6)
+                                    || (kc.methodName().equals("kof_orm_page")
+                                        && kc.parameterTypes().size() == 6)
+                                    || (kc.methodName().equals("kof_orm_where_op")
+                                        && kc.parameterTypes().size() == 7)) {
+                                for (int j = i - 1; j >= i - 2 && j >= 0; j--) {
+                                    if (ops.get(j) instanceof dev.kof.compiler.KofLoadLiteral lit
+                                            && lit.value() instanceof String s) {
+                                        nb.ormCtorClasses.add(s);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

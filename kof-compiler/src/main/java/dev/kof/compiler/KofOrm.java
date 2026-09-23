@@ -78,7 +78,7 @@ public final class KofOrm {
     private static final java.util.Set<String> CROSS_FACES = java.util.Set.of(
             "kof_orm_delete_all", "kof_orm_count", "kof_orm_create",
             "kof_orm_migrate", "kof_orm_count_where", "kof_orm_delete",
-            "kof_orm_save", "kof_orm_save_all");
+            "kof_orm_save", "kof_orm_save_all", "kof_orm_find");
 
     /** D-DB-GAPS DB-1 (20/09): faces SQL-puro do Native x86-64, uma por fatia.
      *  F1a = {@code delete_all}, F1b = {@code count}, F1c = {@code migrate}

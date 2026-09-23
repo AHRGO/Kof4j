@@ -163,7 +163,11 @@ final class NativeArchEmitter {
         int rtStart = sb.length();
         sb.append(NativeRiscvAsm.RISCV_RUNTIME_ASM).append(NativeRiscvAsm.RISCV_STRN002_ASM).append(NativeRiscvAsm.RISCV_RUNTIME_ASM_B).append(NativeRiscvAsm.RISCV_MAPSET_ASM);
         int rtEnd = sb.length();
-
+        // Fora de [rtStart,rtEnd): o pruner reconstrói a região a partir de
+        // RiscvSlices (peças fixas) e descartaria texto avulso; o resolver
+        // por-programa precisa sobreviver (referenciado pelo RtB57 find).
+        NativeOrmCtors.collect(nb, module.classes());
+        if (!nb.ormCtorClasses.isEmpty()) sb.append(NativeRiscvOrmCtors.emit(nb, nb.ormCtorClasses));
         // NATIVE002-stdlib: http.get/post/status riscv64 (asm puro, syscalls
         // asm-generic — mesmos números do aarch64; aarch64 herda via tradutor).
         for (IRClass c : module.classes()) {
@@ -355,6 +359,10 @@ final class NativeArchEmitter {
         int rtStart = riscvSb.length();
         riscvSb.append(NativeRiscvAsm.RISCV_RUNTIME_ASM).append(NativeRiscvAsm.RISCV_STRN002_ASM).append(NativeRiscvAsm.RISCV_RUNTIME_ASM_B).append(NativeRiscvAsm.RISCV_MAPSET_ASM);
         int rtEnd = riscvSb.length();
+        // Fora de [rtStart,rtEnd): sobrevive ao pruner (ver emitRiscv) e entra
+        // no riscv ANTES do tradutor — o aarch64 herda linha-a-linha.
+        NativeOrmCtors.collect(nb, module.classes());
+        if (!nb.ormCtorClasses.isEmpty()) riscvSb.append(NativeRiscvOrmCtors.emit(nb, nb.ormCtorClasses));
 
         // NATIVE002-stdlib: http riscv64 → aarch64 (traduzido). Mesma detecção
         // de uso do emitRiscv; o aarch64 herda linha-a-linha do riscv64.

@@ -13,6 +13,21 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **DB-3/DB-1 cross — `orm.find` is REAL on riscv64/aarch64 (ORM row-object
+    read, E-parte-3)** (23/09, gaps-db lane): the read faces need the
+    per-program `kof_orm_ctors` resolver (className→vtable/typeId/size), now
+    emitted for the cross by `NativeRiscvOrmCtors` + a target-agnostic
+    `NativeBackend.collectOrmCtorClasses` wired in `NativeArchEmitter` (outside
+    the pruned `[rtStart,rtEnd)` region). New pieces `NativeRiscvAsmRtB57`
+    (`kof_orm_find`, port of `RuntimeOrm5`) and `NativeRiscvAsmRtB57Helpers`
+    (`kof_orm_bind_key`, `kof_orm_read_field`); `CROSS_FACES` += `kof_orm_find`.
+    Two **latent x86 bugs found and fixed** (see §449): `NativeOrmCtors` only
+    worked with a single entity (miss fell through inline data + `%rsi`
+    clobbered), and `RuntimeOrm5` read `Double` via `movq %rax` after
+    `sqlite3_column_double` (returns in `%xmm0`) → always `0.0` (`movsd %xmm0`).
+    Proof: `KofOrmE2ETest#crossNativeF2bFindMatchesX86Oracle` (explicit x86
+    golden, byte-parity riscv64/aarch64); `KofOrmE2ETest` 68/0F/3skip.
+
   - **§446 ✅ FIXED — `check_500` split of the two criticals inherited from
     §280 slices 1–2** (22/09, lane 9093): `TypeChecker` 606→436 and
     `StatementAnalyzer` 600→449 by extracting `SemBinaryResultTyper` (binary

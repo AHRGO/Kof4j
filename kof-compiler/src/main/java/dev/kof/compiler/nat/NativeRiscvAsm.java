@@ -142,6 +142,12 @@ public final class NativeRiscvAsm {
                 // RuntimeOrm10) — loop kof_list_size/kof_list_get sobre
                 // kof_orm_save; reusa o frame/ABI das peças anteriores.
                 .append(NativeRiscvAsmRtB56.RISCV_RUNTIME_ASM_B_56)
+                // DB-3/DB-1 cross slice E-parte-3 (23/09): row-object de LEITURA
+                // — helpers globais bind_key/read_field + kof_orm_find (F2b de
+                // RuntimeOrm5). O resolver kof_orm_ctors é emitido por-programa
+                // pelo NativeArchEmitter (NativeRiscvOrmCtors).
+                .append(NativeRiscvAsmRtB57Helpers.RISCV_RUNTIME_ASM_B_57H)
+                .append(NativeRiscvAsmRtB57.RISCV_RUNTIME_ASM_B_57)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

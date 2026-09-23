@@ -301,7 +301,8 @@ public final class RuntimeOrm5 {
                 movq %r12, %rdi
                 movl %r15d, %esi
                 call sqlite3_column_double
-                movq %rax, (%r14)
+                movsd %xmm0, (%r14)          # F2b (23/09): o retorno vem em
+                                             #   xmm0 (movq %rax lia lixo = 0.0)
                 jmp .Lorm5_fldnext
             .Lorm5_rflt:
                 movq %r12, %rdi
