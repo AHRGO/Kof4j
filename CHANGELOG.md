@@ -13,6 +13,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§484 ✅ FIXED — switch-expression with a bare pattern-bound id in the
+    first case no longer emits a boxed synthetic fallback against int bodies
+    (#601)** (23/09, lane 9093; root cause traced and reported by the issue
+    author): the result-type inference now runs against a throwaway `locals`
+    projection of the cases' pattern bindings — the fallback types as `int`,
+    the merge is int×int. Proof: `SwitchExprPatternBindingE2ETest` 4/4
+    (verbatim `-5`, all-bare-ids, §57/§70 box contract, explicit default);
+    RED measured with only the fix stashed.
+
   - **§483 — generic interface dispatch on Native passed a boxed primitive to
     the concrete method → garbage return (session 9092, TIER 13.2 / §271)**
     (23/09): the §271 repro (`interface Converter<A,B>` +

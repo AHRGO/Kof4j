@@ -13,6 +13,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§484 ✅ CORRIGIDO — switch-expressão com id bound por pattern no
+    primeiro case não emite mais fallback sintético boxado contra corpos int
+    (#601)** (23/09, lane 9093; causa raiz traçada e reportada pelo autor da
+    issue): a inferência do tipo do resultado agora corre contra uma projeção
+    descartável de `locals` com os bindings dos patterns — o fallback tipa
+    `int` e o merge é int×int. Prova: `SwitchExprPatternBindingE2ETest` 4/4
+    (verbatim `-5`, todos-os-ids, contrato de box do §57/§70, default
+    explícito); RED medido com stash só do fix.
+
   - **§483 — dispatch por interface genérica no Native passava um primitivo
     boxed ao método concreto → retorno lixo (sessão 9092, TIER 13.2 / §271)**
     (23/09): o repro da §271 (`interface Converter<A,B>` +
