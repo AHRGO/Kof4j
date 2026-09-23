@@ -145,6 +145,39 @@ class GenericWitnessConstructionE2ETest {
     }
 
     @Test
+    void explicitNewReferenceWitnessMatchesJvm(@TempDir Path tempDir) throws IOException {
+        String ref = """
+                record Point(Int x, Int y)
+
+                class Box<T>(T value) {
+                    get(): T { return value }
+                }
+
+                main() {
+                    var b = new Box<Point>(Point(7, 8))
+                    println(b.get().x() + "," + b.get().y())
+                }
+                """;
+        Path out = compileTo(tempDir, "w585nr", ref, Target.JVM);
+        assertEquals("7,8", runJvm(out), "`new Box<Point>(...)` (witness reference-type via NewExpr)");
+
+        String str = """
+                class Box<T>(T value) {
+                    get(): T { return value }
+                }
+
+                main() {
+                    var a = Box<String>("hello")
+                    var b = new Box<String>("kof")
+                    println(a.get().length())
+                    println(b.get().toUpperCase())
+                }
+                """;
+        Path out2 = compileTo(tempDir, "w585ns", str, Target.JVM);
+        assertEquals("5\nKOF", runJvm(out2), "witness String nas formas implícita e explícita");
+    }
+
+    @Test
     void primitiveWitnessControlStaysGreen(@TempDir Path tempDir) throws IOException {
         String primitive = """
                 record Point(Int x, Int y)
