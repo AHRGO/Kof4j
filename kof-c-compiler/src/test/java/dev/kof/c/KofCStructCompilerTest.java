@@ -152,11 +152,30 @@ class KofCStructCompilerTest {
     }
 
     @Test
-    void oversizedStructIsRejected(@TempDir Path tmp) throws Exception {
-        String src = "struct T { int a; int b; int c; };\nvoid main() { struct T t; t.a = 1; }\n";
-        var res = compile(tmp, src);
-        assertFalse(res.success(), "struct > 8 B não é suportado ainda (R6)");
-        assertTrue(res.diagnostics().contains("at most 8"), res.diagnostics());
+    void structParamAboveSixEightbytesIsRejected(@TempDir Path tmp) throws Exception {
+        StringBuilder sb = new StringBuilder("struct Big { ");
+        for (char c = 'a'; c <= 'm'; c++) sb.append("int ").append(c).append("; ");
+        sb.append("};\nint f(struct Big b) { return b.a; }\nvoid main() { }\n");
+        var res = compile(tmp, sb.toString());
+        assertFalse(res.success(), "struct parâmetro > 48 B não passa nos registradores de argumento (R6)");
+        assertTrue(res.diagnostics().contains("at most 48"), res.diagnostics());
+    }
+
+    @Test
+    void structReturnAboveTwoEightbytesIsRejected(@TempDir Path tmp) throws Exception {
+        StringBuilder sb = new StringBuilder("struct Big { ");
+        for (char c = 'a'; c <= 'e'; c++) sb.append("int ").append(c).append("; ");
+        sb.append("};\nstruct Big mk() { struct Big r; return r; }\nvoid main() { }\n");
+        var res = compile(tmp, sb.toString());
+        assertFalse(res.success(), "struct retorno > 16 B precisa do caminho memória (R6)");
+        assertTrue(res.diagnostics().contains("at most 16"), res.diagnostics());
+    }
+
+    @Test
+    void scalarArgToStructParamIsRejected(@TempDir Path tmp) throws Exception {
+        var res = compile(tmp, "struct Pair { int a; int b; }\nint f(struct Pair p) { return p.a; }\nvoid main() { f(3); }\n");
+        assertFalse(res.success(), "argumento escalar para parâmetro struct deve falhar");
+        assertTrue(res.diagnostics().contains("expects struct Pair"), res.diagnostics());
     }
 
     @Test

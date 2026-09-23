@@ -1,5 +1,7 @@
 [English](DOING.md) | [Português](DOING.pt_BR.md)
 
+> **⚡ EM CURSO (22/09, dono = sessão 9093, lane kof-c/fronteira FFI — ordem da mantenedora "pode"): slice residual de `kof-c-cross.md` — struct multi-eightbyte (parâmetro ≤48B até o teto de registradores de argumento das 3 ISAs) + struct return by value ≤16B (acc + segundo registro de retorno), paridade x86/riscv/aarch.** Passo 1 (este commit): parser — limites `MAX_STRUCT_ARG_BYTES`=48 / `MAX_STRUCT_RET_BYTES`=16, struct return liberado (retorna `<var>` do mesmo tipo), argumento-struct para parâmetro-struct validado, 3 negativos novos (`KofCStructCompilerTest` 9/9). Arquivos: `kof-c-compiler` (parser→emitters), doc `kof-c-cross.md` (+PT).
+
 > **REGRA OPERACIONAL (mantenedora, 22/09/2026):** toda frente `EM CURSO`/`IN
 > PROGRESS` sem commit novo no seu lane há **mais de 4 horas** é considerada
 > **abandonada** — o agente assume (reivindica no DOING, no mesmo commit do

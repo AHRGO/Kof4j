@@ -8,8 +8,10 @@ import java.util.Map;
 public final class KofCParser {
     /** Register-based argument budget shared by the three ISAs (x86_64 SysV has 6). */
     static final int MAX_ARGS = 6;
-    /** Largest struct accepted by value: one eightbyte (int fields ⇒ ≤ 2 fields). */
-    static final int MAX_STRUCT_BYTES = 8;
+    /** Largest struct accepted BY VALUE as a parameter: six eightbytes — the ISA argument-register budget (48 B). */
+    static final int MAX_STRUCT_ARG_BYTES = 48;
+    /** Largest struct RETURNED by value: two eightbytes — accumulator + second return register (16 B). */
+    static final int MAX_STRUCT_RET_BYTES = 16;
     private static final List<String> PRINT_BUILTINS = List.of("print", "print_int", "kof_print");
 
     private final List<KofCToken> toks;
@@ -30,6 +32,8 @@ public final class KofCParser {
             if (check(KofCTokenType.STRUCT)) {
                 if (checkAt(1, KofCTokenType.IDENTIFIER) && checkAt(2, KofCTokenType.LBRACE)) {
                     structs.add(parseStruct());
+                } else if (checkAt(1, KofCTokenType.IDENTIFIER) && checkAt(2, KofCTokenType.IDENTIFIER) && checkAt(3, KofCTokenType.LPAREN)) {
+                    addCallable(parseCallable("struct " + toks.get(pos + 1).text()), funcs, prototypes);
                 } else if (checkAt(1, KofCTokenType.IDENTIFIER) && checkAt(2, KofCTokenType.IDENTIFIER)) {
                     globals.add(parseGlobal("struct"));
                 } else {
@@ -93,13 +97,11 @@ public final class KofCParser {
     /** Definition ({@code int f(...) { ... }}) or prototype ({@code int f(...);}). */
     private Object parseCallable(String retType) {
         advance(); // type
+        if (retType.startsWith("struct ")) advance(); // segundo token do tipo struct
         String name = expect(KofCTokenType.IDENTIFIER).text();
         expect(KofCTokenType.LPAREN);
         List<KofCAst.Param> params = parseParams();
         expect(KofCTokenType.RPAREN);
-        if (!retType.equals("int") && !retType.equals("void")) {
-            error("struct return is not supported yet");
-        }
         if (check(KofCTokenType.SEMI)) { // prototype — resolved at link
             advance();
             return new KofCAst.Prototype(name, retType, params);
@@ -313,6 +315,7 @@ public final class KofCParser {
 
     private void validate(KofCAst.Program program) {
         Map<String, KofCAst.StructDecl> structs = new LinkedHashMap<>();
+        Map<String, Integer> structBytes = new LinkedHashMap<>();
         for (var s : program.structs()) {
             structs.put(s.name(), s);
             int size = 0;
@@ -320,10 +323,22 @@ public final class KofCParser {
                 if (!f.type().equals("int")) { error("struct " + s.name() + " field " + f.name() + " must be int"); }
                 size += 4;
             }
-            if (size > MAX_STRUCT_BYTES) {
-                error("struct " + s.name() + " is " + size + " bytes; the subset supports at most " + MAX_STRUCT_BYTES);
+            structBytes.put(s.name(), size);
+        }
+        for (var fn : program.funcs()) {
+            checkParamBounds(fn.name(), fn.params(), structs, structBytes);
+            if (fn.retType().startsWith("struct ")) {
+                String n = fn.retType().substring("struct ".length());
+                if (structBytes.get(n) > MAX_STRUCT_RET_BYTES) {
+                    error(fn.name() + ": returning " + fn.retType() + " (" + structBytes.get(n)
+                            + " bytes) by value; at most " + MAX_STRUCT_RET_BYTES + " (two eightbytes — accumulator + second return register)");
+                }
             }
         }
+        for (var p : program.prototypes()) checkParamBounds("external " + p.name(), p.params(), structs, structBytes);
+        Map<String, List<String>> calleeParams = new LinkedHashMap<>();
+        for (var fn : program.funcs()) calleeParams.put(fn.name(), fn.params().stream().map(KofCAst.Param::type).toList());
+        for (var p : program.prototypes()) calleeParams.putIfAbsent(p.name(), p.params().stream().map(KofCAst.Param::type).toList());
         for (var g : program.globals()) checkStructType(g.type(), structs);
         Map<String, Integer> arity = new LinkedHashMap<>();
         for (var fn : program.funcs()) arity.put(fn.name(), fn.params().size());
@@ -333,7 +348,20 @@ public final class KofCParser {
             for (var p : fn.params()) { types.put(p.name(), p.type()); checkStructType(p.type(), structs); }
             for (var g : program.globals()) types.putIfAbsent(g.name(), g.type());
             collectLocalTypes(fn.body(), types, structs);
-            for (var st : fn.body()) validateStmt(st, types, structs, arity);
+            for (var st : fn.body()) validateStmt(st, types, structs, arity, fn.retType(), calleeParams);
+        }
+    }
+
+    private void checkParamBounds(String where, List<KofCAst.Param> params,
+                                   Map<String, KofCAst.StructDecl> structs, Map<String, Integer> structBytes) {
+        for (var p : params) {
+            if (p.type().startsWith("struct ")) {
+                String n = p.type().substring("struct ".length());
+                if (structBytes.get(n) > MAX_STRUCT_ARG_BYTES) {
+                    error(where + ": struct parameter " + p.type() + " is " + structBytes.get(n)
+                            + " bytes; at most " + MAX_STRUCT_ARG_BYTES + " (six eightbytes — the ISA argument-register budget)");
+                }
+            }
         }
     }
 
@@ -354,36 +382,55 @@ public final class KofCParser {
     }
 
     private void validateStmt(KofCAst.Stmt stmt, Map<String, String> types,
-                              Map<String, KofCAst.StructDecl> structs, Map<String, Integer> arity) {
+                              Map<String, KofCAst.StructDecl> structs, Map<String, Integer> arity,
+                              String retType, Map<String, List<String>> calleeParams) {
         switch (stmt) {
             case KofCAst.IfStmt s -> {
-                validateExpr(s.cond(), types, structs, arity);
-                for (var st : s.thenBody()) validateStmt(st, types, structs, arity);
+                validateExpr(s.cond(), types, structs, arity, calleeParams);
+                for (var st : s.thenBody()) validateStmt(st, types, structs, arity, retType, calleeParams);
             }
             case KofCAst.WhileStmt s -> {
-                validateExpr(s.cond(), types, structs, arity);
-                for (var st : s.body()) validateStmt(st, types, structs, arity);
+                validateExpr(s.cond(), types, structs, arity, calleeParams);
+                for (var st : s.body()) validateStmt(st, types, structs, arity, retType, calleeParams);
             }
-            case KofCAst.ExprStmt s -> validateExpr(s.expr(), types, structs, arity);
-            case KofCAst.AssignStmt s -> validateExpr(s.value(), types, structs, arity);
+            case KofCAst.ExprStmt s -> validateExpr(s.expr(), types, structs, arity, calleeParams);
+            case KofCAst.AssignStmt s -> validateExpr(s.value(), types, structs, arity, calleeParams);
             case KofCAst.FieldAssignStmt s -> {
                 validateField(s.target(), s.field(), types, structs);
-                validateExpr(s.value(), types, structs, arity);
+                validateExpr(s.value(), types, structs, arity, calleeParams);
             }
-            case KofCAst.ReturnStmt s -> { if (s.value() != null) validateExpr(s.value(), types, structs, arity); }
+            case KofCAst.ReturnStmt s -> {
+                if (retType.startsWith("struct ")) {
+                    if (!(s.value() instanceof KofCAst.IdentExpr id)) {
+                        error(retType + " function needs `return <variable>;`");
+                    } else if (!retType.equals(types.get(id.name()))) {
+                        error("returned variable has type " + types.get(id.name()) + "; expected " + retType);
+                    }
+                }
+                if (s.value() != null) validateExpr(s.value(), types, structs, arity, calleeParams);
+            }
             case KofCAst.AsmStmt ignored -> { }
             case KofCAst.LocalDeclStmt ignored -> { }
         }
     }
 
     private void validateExpr(KofCAst.Expr expr, Map<String, String> types,
-                              Map<String, KofCAst.StructDecl> structs, Map<String, Integer> arity) {
+                              Map<String, KofCAst.StructDecl> structs, Map<String, Integer> arity,
+                              Map<String, List<String>> calleeParams) {
         switch (expr) {
-            case KofCAst.BinaryExpr e -> { validateExpr(e.left(), types, structs, arity); validateExpr(e.right(), types, structs, arity); }
-            case KofCAst.ParenExpr e -> validateExpr(e.inner(), types, structs, arity);
+            case KofCAst.BinaryExpr e -> { validateExpr(e.left(), types, structs, arity, calleeParams); validateExpr(e.right(), types, structs, arity, calleeParams); }
+            case KofCAst.ParenExpr e -> validateExpr(e.inner(), types, structs, arity, calleeParams);
             case KofCAst.FieldExpr e -> validateField(e.base(), e.field(), types, structs);
             case KofCAst.CallExpr e -> {
-                for (var a : e.args()) validateExpr(a, types, structs, arity);
+                var ptypes = calleeParams.getOrDefault(e.name(), List.<String>of());
+                for (var a : e.args()) validateExpr(a, types, structs, arity, calleeParams);
+                for (int ai = 0; ai < e.args().size() && ai < ptypes.size(); ai++) {
+                    String pt = ptypes.get(ai);
+                    if (pt.startsWith("struct ")
+                            && !(e.args().get(ai) instanceof KofCAst.IdentExpr aid && pt.equals(types.get(aid.name())))) {
+                        error("argument " + (ai + 1) + " of " + e.name() + " expects " + pt);
+                    }
+                }
                 if (PRINT_BUILTINS.contains(e.name())) {
                     if (!e.args().isEmpty()) error("print() takes no arguments in the subset");
                 } else if (arity.containsKey(e.name())) {
