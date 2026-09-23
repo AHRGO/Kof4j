@@ -263,7 +263,7 @@ kof_schub_to_decimal:
     popq %rbp
     ret
 
-# ---- kof_schub_format(rdi=f>0, esi=e, edx=sign) -> rax: String* ----
+# ---- kof_schub_format(rdi=f>0, esi=e, edx=sign, ecx=H) -> rax: String* ----
 .globl kof_schub_format
 kof_schub_format:
     pushq %rbp
@@ -277,6 +277,7 @@ kof_schub_format:
     movq %rdi, %rbx
     movl %esi, %r12d
     movl %edx, %r13d
+    movl %ecx, -132(%rbp)
     bsrq %rbx, %rax
     movl $63, %edi
     subl %eax, %edi
@@ -291,14 +292,14 @@ kof_schub_format:
     jb .Lschubf_len_ok
     incl %esi
 .Lschubf_len_ok:
-    movl $17, %edi
+    movl -132(%rbp), %edi
     subl %esi, %edi
     call kof_schub_pow10
     imulq %rax, %rbx
     addl %esi, %r12d
     leaq -48(%rbp), %r10
     movq %rbx, %rax
-    movl $17, %ecx
+    movl -132(%rbp), %ecx
     movl $10, %r8d
 .Lschubf_dig:
     xorl %edx, %edx
@@ -329,7 +330,7 @@ kof_schub_format:
     jnz .Lschubf_p1
     movb $46, (%r14,%r15)
     incq %r15
-    movl $17, %ecx
+    movl -132(%rbp), %ecx
     subl %r12d, %ecx
 .Lschubf_p2:
     movzbl (%r10), %eax
@@ -356,7 +357,7 @@ kof_schub_format:
     decl %ecx
     jnz .Lschubf_z0
 .Lschubf_zskip:
-    movl $17, %ecx
+    movl -132(%rbp), %ecx
 .Lschubf_z1:
     movzbl (%r10), %eax
     movb %al, (%r14,%r15)
@@ -372,7 +373,8 @@ kof_schub_format:
     incq %r15
     movb $46, (%r14,%r15)
     incq %r15
-    movl $16, %ecx
+    movl -132(%rbp), %ecx
+    decl %ecx
 .Lschubf_s1:
     movzbl (%r10), %eax
     movb %al, (%r14,%r15)

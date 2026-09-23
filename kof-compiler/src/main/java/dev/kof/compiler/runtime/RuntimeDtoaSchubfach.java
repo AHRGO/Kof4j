@@ -111,5 +111,6 @@ public final class RuntimeDtoaSchubfach {
         emitTables(sb);
         RuntimeDtoaSchubfachCore.emit(sb);
         RuntimeDtoaSchubfachDouble.emit(sb);
+        RuntimeDtoaSchubfachFloat.emit(sb);
     }
 }

@@ -28,7 +28,6 @@ import dev.kof.compiler.runtime.RuntimeList;
 import dev.kof.compiler.runtime.RuntimeListLookups;
 import dev.kof.compiler.runtime.RuntimeMapLookups;
 import dev.kof.compiler.runtime.RuntimeCollectionToString;
-import dev.kof.compiler.runtime.RuntimeDtoa;
 import dev.kof.compiler.runtime.RuntimeDtoaSchubfach;
 import dev.kof.compiler.runtime.RuntimeLog1;
 import dev.kof.compiler.runtime.RuntimeLog2;
@@ -113,7 +112,6 @@ public final class NativeRuntime {
         RuntimePrintNum.emitPrintInt(sb);
         RuntimePrintNum.emitPrintFloat(sb);
         RuntimePrintNum.emitPrintDouble(sb);
-        RuntimeDtoa.emitDtoa(sb);
         RuntimeDtoaSchubfach.emitCore(sb);
         RuntimeStringConv.emitIntToString(sb);
         RuntimeStringConv.emitCharToString(sb);

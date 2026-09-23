@@ -179,20 +179,12 @@ class FreestandingLinkE2ETest {
     }
 
     @Test
-    void freestandingRefusesFloatPrintWithDiagnostic(@TempDir Path dir) throws Exception {
-        // B-1c (23/09): o Double freestanding JÁ e suportado (dtoa Schubfach
-        // libc-free, ver DtoaParityE2ETest). O que continua recusado e o
-        // Float de 32 bits (`1.5f`), que ainda passa por kof_float_to_string
-        // (snprintf) — recusa honesta NATIVE003, nunca link quebrado.
+    void freestandingFloatPrintMatchesJvmOracle(@TempDir Path dir) throws Exception {
+        // B-1c (23/09): o Float de 32 bits tambem passou ao Schubfach libc-free
+        // (FloatToDecimal, H=9) — a antiga recusa NATIVE003 de float-print
+        // deixou de existir e `1.5f` linka e imprime como o oraculo JVM.
         assumeTrue(hasTool("as") && hasTool("ld"), "x86 toolchain ausente");
-        CompilerDriver driver = new CompilerDriver();
-        Path source = dir.resolve("Main.kf");
-        Files.writeString(source, FLOAT);
-        CompilationResult result = driver.compile(source, dir.resolve("out-flt"),
-                Target.NATIVE, NativeProfile.FREESTANDING);
-        assertFalse(result.success(), "println(Float) freestanding deve ser recusado (float-print/libc)");
-        String diags = result.diagnostics().getDiagnostics().toString();
-        assertTrue(diags.contains("NATIVE003") && diags.contains("float-print"),
-                "recusa de float sem codigo NATIVE003 cru: " + diags);
+        Path bin = build(dir, FLOAT, NativeProfile.FREESTANDING, true);
+        assertEquals(jvmOracle(dir, FLOAT), runBinary(bin), "Float freestanding != oracle JVM");
     }
 }

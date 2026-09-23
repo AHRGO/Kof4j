@@ -54,6 +54,7 @@ kof_double_to_string:
     movq %rax, %rdi
     xorl %esi, %esi
     movl %r13d, %edx
+    movl $17, %ecx
     call kof_schub_format
     jmp .Ld2s_done
 .Ld2s_dec:
@@ -65,6 +66,7 @@ kof_double_to_string:
     movq %rax, %rdi
     movl %ecx, %esi
     movl %r13d, %edx
+    movl $17, %ecx
     call kof_schub_format
     jmp .Ld2s_done
 .Ld2s_sub:
@@ -89,6 +91,7 @@ kof_double_to_string:
     movq %rax, %rdi
     movl %ecx, %esi
     movl %r13d, %edx
+    movl $17, %ecx
     call kof_schub_format
     jmp .Ld2s_done
 .Ld2s_zero:

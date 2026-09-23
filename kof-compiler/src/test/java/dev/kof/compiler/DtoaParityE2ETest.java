@@ -41,6 +41,21 @@ class DtoaParityE2ETest {
             }
             """;
 
+    /** Bordas de Float 32-bit: subnormal mínimo, máximo, notação, fracção. */
+    private static final String FLOAT_CORPUS = """
+            main() {
+                println(1.4E-45f)
+                println(1.5f)
+                println(0.1f)
+                println(3.4028235E38f)
+                println(1.0E7f)
+                println(1.0E-5f)
+                println(1.0f / 3.0f)
+                println(-123.456f)
+                println(0.0f)
+            }
+            """;
+
     private static boolean hasTool(String tool) {
         try {
             Process p = new ProcessBuilder(tool, "--version").start();
@@ -67,12 +82,22 @@ class DtoaParityE2ETest {
 
     @Test
     void freestandingDoublePrintMatchesJvmOracle(@TempDir Path dir) throws Exception {
+        assertFreestandingMatchesOracle(dir, CORPUS, "out-dbl");
+    }
+
+    @Test
+    void freestandingFloatPrintMatchesJvmOracle(@TempDir Path dir) throws Exception {
+        assertFreestandingMatchesOracle(dir, FLOAT_CORPUS, "out-flt");
+    }
+
+    private void assertFreestandingMatchesOracle(Path dir, String program, String sub)
+            throws Exception {
         assumeTrue(hasTool("as") && hasTool("ld") && hasTool("readelf"),
                 "x86 toolchain/readelf ausentes");
         CompilerDriver driver = new CompilerDriver();
         Path src = dir.resolve("Main.kf");
-        Files.writeString(src, CORPUS);
-        Path outDir = dir.resolve("out");
+        Files.writeString(src, program);
+        Path outDir = dir.resolve(sub);
         CompilationResult r = driver.compile(src, outDir, Target.NATIVE, NativeProfile.FREESTANDING);
         assertTrue(r.success(), "compile freestanding: " + r.diagnostics().getDiagnostics());
         Path bin = outDir.resolve("Default/Main");
@@ -88,6 +113,6 @@ class DtoaParityE2ETest {
         String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
                 .replace("\r\n", "\n").trim();
         assertEquals(0, p.waitFor(), "saida nativa: " + out);
-        assertEquals(jvmOracle(dir, CORPUS), out, "dtoa nativo != oráculo JVM");
+        assertEquals(jvmOracle(dir, program), out, "dtoa nativo != oráculo JVM");
     }
 }
