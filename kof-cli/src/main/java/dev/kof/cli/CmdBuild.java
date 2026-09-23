@@ -23,7 +23,7 @@ final class CmdBuild {
     private CmdBuild() {
     }
 
-    private static final String USAGE = "usage: kof build <source-dir|file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--aab] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]] [--min-sdk <n>] [--target-sdk <n>]";
+    private static final String USAGE = "usage: kof build <source-dir|file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--profile host|freestanding] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--aab] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]] [--min-sdk <n>] [--target-sdk <n>]";
 
     static void run(String[] args) {
         if (args.length < 2) { System.err.println(USAGE); return; }
@@ -79,6 +79,7 @@ final class CmdBuild {
         String keyalias = null;
         String minSdkArg = null;
         String targetSdkArg = null;
+        String profileArg = null;
         boolean useDeps = false;
         boolean printSizes = false;
         for (int i = 2; i < args.length; i++) {
@@ -145,6 +146,10 @@ final class CmdBuild {
                 targetSdkArg = arg.substring("--target-sdk=".length());
             } else if (arg.equals("--target-sdk") && i + 1 < args.length) {
                 targetSdkArg = args[++i];
+            } else if (arg.startsWith("--profile=")) {
+                profileArg = arg.substring("--profile=".length());
+            } else if (arg.equals("--profile") && i + 1 < args.length) {
+                profileArg = args[++i];
             } else if (arg.equals("--help") || arg.equals("-h")) {
                 System.out.println(USAGE);
                 return;
@@ -207,7 +212,14 @@ final class CmdBuild {
             System.exit(1);
             return;
         }
+        // B-1: --profile host|freestanding (BuildProfileFlag; R6: só native).
         CompilerDriver driver = new CompilerDriver();
+        String profileErr = BuildProfileFlag.apply(driver, target, profileArg);
+        if (profileErr != null) {
+            System.err.println(profileErr);
+            System.exit(1);
+            return;
+        }
         if (release) driver.setDebugInfoEnabled(false);
         // kof-android Fase 4: minSdk/targetSdk por flag explícita (nunca
         // arquivo mágico). Honesto e cedo (R6): as flags só valem para o

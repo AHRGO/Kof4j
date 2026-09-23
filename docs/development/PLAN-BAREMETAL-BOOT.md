@@ -289,9 +289,7 @@ unresolved-symbol escape hatch. Proof: `FreestandingLinkE2ETest` 4/4 + battery
 with the named `NATIVE003` diagnostic (the freestanding link converts surviving
 libc refs — `snprintf`/`strtod` of dtoa — into the coded refusal) instead of a
 raw `ld` "undefined reference"; proof `FreestandingLinkE2ETest` 5/5 (new
-`freestandingRefusesFloatPrintWithDiagnostic`). **Remaining for B-1:** the CLI
-surface (`--profile`), then the linker script with configurable heap/stack and
-`_end`.
+`freestandingRefusesFloatPrintWithDiagnostic`). **CLI surface (`--profile`) LANDED 23/09 (lane `baremetal` 9092):** `kof build <dir|file.kf> --target native --profile host|freestanding` parses the flag, validates it early (only `--target native`; a value outside `host|freestanding` is refused — R6, never a silent no-op), and threads it through the new public `CompilerDriver.setNativeProfile` to the existing `NativeProfile` plumbing; `--profile freestanding` reproduces the libc-free link (no `PT_INTERP`). Proof: `CmdBuildProfileTest` 4/4 (parse/validate unit + E2E freestanding no `PT_INTERP` that prints `42` + `--profile host` still builds). **Remaining for B-1:** the linker script with configurable heap/stack and `_end`.
 
 **B-1c — libc-free decimal conversion (dtoa) for `Float`/`Double` (opened
 23/09, maintainer's decision: "precisamos dele baremetal").** The maintainer

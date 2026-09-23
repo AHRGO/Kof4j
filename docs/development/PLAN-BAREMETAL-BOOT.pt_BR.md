@@ -296,9 +296,7 @@ controle `HOST` mantém ambos, e freestanding+`spawn` é recusado com `NATIVE003
 nomeado `NATIVE003` (o link freestanding converte refs libc remanescentes —
 `snprintf`/`strtod` do dtoa — na recusa codificada) em vez de um "undefined
 reference" cru do `ld`; prova `FreestandingLinkE2ETest` 5/5 (novo
-`freestandingRefusesFloatPrintWithDiagnostic`). **Restante de B-1:** a superfície
-CLI (`--profile`), e depois o linker script com heap/stack configuráveis e
-`_end`.
+`freestandingRefusesFloatPrintWithDiagnostic`). **Superfície CLI (`--profile`) LANDADA 23/09 (lane `baremetal` 9092):** `kof build <dir|file.kf> --target native --profile host|freestanding` faz o parse da flag, valida cedo (só `--target native`; um valor fora de `host|freestanding` é recusado — R6, nunca no-op silencioso) e a encadeia pelo novo `CompilerDriver.setNativeProfile` público até a plumbing `NativeProfile` existente; `--profile freestanding` reproduz o link libc-free (sem `PT_INTERP`). Prova: `CmdBuildProfileTest` 4/4 (unidade parse/validate + E2E freestanding sem `PT_INTERP` imprimindo `42` + `--profile host` ainda builda). **Restante de B-1:** o linker script com heap/stack configuráveis e `_end`.
 
 **B-1c — conversão decimal (dtoa) libc-free para `Float`/`Double` (aberta
 23/09, decisão da mantenedora: "precisamos dele baremetal").** A mantenedora
