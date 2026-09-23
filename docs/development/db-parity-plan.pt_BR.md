@@ -8,7 +8,7 @@
 > estiver completa.
 
 **Dono:** lane `gaps-db` (repassada 21/09 por ordem da mantenedora, sob `D-DB-PARITY-OWNER`; S0/S1 autorizadas) · **Registros/plano:** lane docs/plataforma
-**Branch:** `beta-0.5.0` · **Estado:** S0 ✅ FEITO (21/09, sessão 9092) — recusa nativa honesta de scheme não suportado com o código nomeado `DB001`, mais link-by-use real (sem link de `libmariadb` para literais não-mysql); **S1 ✅ FEITO no Native x86-64 (23/09, lane gaps-db)** — `mariadb://` é alias do wire `mysql://`; no cross segue `DB001` honesto até o wire mysql ser portado (R7); **S2 ✅ FEITO no JVM/JS/Android (23/09, lane gaps-db)** — driver JDBC ausente agora é diagnóstico `DB001` nomeado (falhas reais de conexão intactas); **S3/S4 ✅ FEITOS 23/09 (lane gaps-db)** — `mongodb://` real no JVM/Android e `DB001` declarado no JS/Native; `oracle` declarado (sem driver/servidor no host)
+**Branch:** `beta-0.5.0` · **Estado:** S0 ✅ FEITO (21/09, sessão 9092) — recusa nativa honesta de scheme não suportado com o código nomeado `DB001`, mais link-by-use real (sem link de `libmariadb` para literais não-mysql); **S1 ✅ FEITO no Native x86-64 (23/09, lane gaps-db)** — `mariadb://` é alias do wire `mysql://`; no cross segue `DB001` honesto até o wire mysql ser portado (R7); **S2 ✅ FEITO no JVM/JS/Android (23/09, lane gaps-db)** — driver JDBC ausente agora é diagnóstico `DB001` nomeado (falhas reais de conexão intactas); **S3/S4 ✅ FEITOS 23/09 (lane gaps-db)** — `mongodb://` real no JVM/Android e `DB001` declarado no JS/Native; `oracle` declarado (sem driver/servidor no host); **S5 (wire cross `mysql://`/`mariadb://`) PLANEJADO — dimensionado 23/09**
 
 ---
 
@@ -135,6 +135,34 @@ por scheme é a prova.
   `DB001` (não é URL JDBC). O Native recusa via S0. *Prova:* os testes de
   diagnóstico do S2 cobrem o caminho driver-ausente genericamente; nenhum E2E
   específico de servidor é possível aqui (declarado, não silencioso).
+- **S5 — wire `mysql://`/`mariadb://` no cross (riscv64/aarch64). PLANEJADO —
+  dimensionado 23/09 (lane gaps-db).** É a frente multi-sessão por trás do `DB001`
+  honesto do cross; o Native fecha por último (R7), então roda depois dos demais.
+
+  **Superfície x86 medida a reproduzir** (o wire vive em `runtime/RuntimeDb*.java`
+  + `RuntimeNet`; o runtime cross hoje só tem a FFI SQLite):
+  | peça x86 | Responsabilidade |
+  |---|---|
+  | `RuntimeNet` (`kof_net_write`/`kof_net_read`) | socket + framing de leitura/escrita TCP |
+  | `RuntimeDb1` (`kof_sec_sha1_*`, `kof_db_mysql_scramble`, `kof_db_mysql_lenenc`, `kof_db_mysql_render`) | SHA1 + scramble de auth + inteiros length-encoded |
+  | `RuntimeDb2` (`kof_db_connect_inner`, `kof_db_mysql_next`, `.Ldb_scheme_*`, `.Ldb_up_*`, `.Ldb_res_parse`) | parse de scheme/URL, leitura do handshake, parse do resultset |
+  | `RuntimeDb3` (`.Ldb_auth_*`, `.Ldb_connect_register`) | auth switch + registro |
+  | `RuntimeDb4` (`kof_db_bind/close/execute/transaction`) | dispatch para os ramos sqlite/mysql |
+  | `RuntimeDb6` (`kof_db_mysql_*`) | tratamento de valor/coluna |
+
+  **Fatias (uma sessão cada, cada uma com a própria prova):**
+  - **S5.1 — camada de socket cross.** Portar `kof_net_*` (socket/connect/read/
+    write/close) para asm riscv64 (aarch64 via tradutor). *Prova:* programa cross
+    conecta em `127.0.0.1:<porta>` sob qemu e lê bytes (greeting ou servidor echo).
+  - **S5.2 — handshake + auth.** Portar SHA1/scramble/lenenc + ler o greeting +
+    enviar o auth switch. *Prova:* connect no MariaDB real sob qemu chega ao pacote OK.
+  - **S5.3 — `COM_QUERY` + resultset texto.** Portar framing + parse do resultado.
+    *Prova:* roundtrip `db.query` sob qemu, byte-idêntico ao x86/JVM.
+  - **S5.4 — bind/prepared + tx + ORM.** Portar o dispatch de prepared/execute/
+    transaction. *Prova:* E2E `orm.*` sob qemu.
+  - **S5.5 — link + teste de paridade.** `-lmariadb` link-by-use no cross + o
+    espelho riscv/aarch de `KofDbE2ETest#nativeMariadbAliasWireProtocol`. Depois
+    disso o `DB001` cross do S1 vira real.
 
 ## Não-objetivos / invariantes
 

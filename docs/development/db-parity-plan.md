@@ -8,7 +8,7 @@
 > when parity is complete.
 
 **Owner:** `gaps-db` lane (handed over 21/09 by order of the maintainer, under `D-DB-PARITY-OWNER`; S0/S1 authorized) · **Records/plan:** docs/plataforma lane
-**Branch:** `beta-0.5.0` · **Status:** S0 ✅ DONE (21/09, session 9092) — honest native refusal of an unsupported scheme with the named `DB001` code, plus real link-by-use (no `libmariadb` link for non-mysql literals); **S1 ✅ DONE on Native x86-64 (23/09, gaps-db lane)** — `mariadb://` is a `mysql://` wire alias; cross stays honest `DB001` until the mysql wire is ported (R7); **S2 ✅ DONE on JVM/JS/Android (23/09, gaps-db lane)** — a missing JDBC driver is now a named `DB001` diagnostic (real connection failures untouched); **S3/S4 ✅ DONE 23/09 (gaps-db lane)** — `mongodb://` real on JVM/Android and declared `DB001` on JS/Native; `oracle` declared (no driver/server on the host)
+**Branch:** `beta-0.5.0` · **Status:** S0 ✅ DONE (21/09, session 9092) — honest native refusal of an unsupported scheme with the named `DB001` code, plus real link-by-use (no `libmariadb` link for non-mysql literals); **S1 ✅ DONE on Native x86-64 (23/09, gaps-db lane)** — `mariadb://` is a `mysql://` wire alias; cross stays honest `DB001` until the mysql wire is ported (R7); **S2 ✅ DONE on JVM/JS/Android (23/09, gaps-db lane)** — a missing JDBC driver is now a named `DB001` diagnostic (real connection failures untouched); **S3/S4 ✅ DONE 23/09 (gaps-db lane)** — `mongodb://` real on JVM/Android and declared `DB001` on JS/Native; `oracle` declared (no driver/server on the host); **S5 (cross `mysql://`/`mariadb://` wire) PLANNED — dimensioned 23/09**
 
 ---
 
@@ -134,6 +134,36 @@ typed roundtrip) produces the **same observable result** on all four targets, or
   named `DB001` fires; bare `oracle://` is a `DB001` (not a JDBC URL). Native
   refuses via S0. *Proof:* the S2 diagnostic tests cover the driver-absent path
   generically; no server-specific E2E is possible here (declared, not silent).
+- **S5 — cross `mysql://`/`mariadb://` wire (riscv64/aarch64). PLANNED —
+  dimensioned 23/09 (gaps-db lane).** This is the multi-session front behind the
+  honest cross `DB001`; Native closes last (R7), so it runs after the others.
+
+  **Measured x86 surface to reproduce** (the wire lives in `runtime/RuntimeDb*.java`
+  + `RuntimeNet`; the cross runtime today has only the SQLite FFI):
+  | x86 piece | Responsibility |
+  |---|---|
+  | `RuntimeNet` (`kof_net_write`/`kof_net_read`) | socket + TCP read/write framing |
+  | `RuntimeDb1` (`kof_sec_sha1_*`, `kof_db_mysql_scramble`, `kof_db_mysql_lenenc`, `kof_db_mysql_render`) | SHA1 + auth scramble + length-encoded ints |
+  | `RuntimeDb2` (`kof_db_connect_inner`, `kof_db_mysql_next`, `.Ldb_scheme_*`, `.Ldb_up_*`, `.Ldb_res_parse`) | scheme/URL parse, handshake read, resultset parse |
+  | `RuntimeDb3` (`.Ldb_auth_*`, `.Ldb_connect_register`) | auth switch + registration |
+  | `RuntimeDb4` (`kof_db_bind/close/execute/transaction`) | dispatch to the sqlite/mysql branches |
+  | `RuntimeDb6` (`kof_db_mysql_*`) | value/column handling |
+
+  **Slices (one session each, each with its own proof):**
+  - **S5.1 — cross socket layer.** Port `kof_net_*` (socket/connect/read/write/
+    close) to riscv64 asm (aarch64 via translator). *Proof:* a cross program
+    connects to `127.0.0.1:<port>` under qemu and reads bytes (greeting or an
+    echo server).
+  - **S5.2 — handshake + auth.** Port SHA1/scramble/lenenc + read the greeting +
+    send the auth switch. *Proof:* connect to the real MariaDB under qemu reaches
+    the OK packet.
+  - **S5.3 — `COM_QUERY` + text resultset.** Port packet framing + result parse.
+    *Proof:* `db.query` roundtrip under qemu, byte-identical to x86/JVM.
+  - **S5.4 — bind/prepared + tx + ORM.** Port the prepared/execute/transaction
+    dispatch. *Proof:* `orm.*` E2E under qemu.
+  - **S5.5 — link + parity test.** `-lmariadb` link-by-use on cross + the riscv/
+    aarch mirror of `KofDbE2ETest#nativeMariadbAliasWireProtocol`. After this the
+    S1 cross `DB001` becomes real.
 
 ## Non-goals / invariants
 
