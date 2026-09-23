@@ -2195,8 +2195,10 @@ class KofOrmE2ETest {
     @Test
     void rowObjectFechadoNoX86CrossAindaOrm001(@TempDir Path tempDir) throws IOException {
         // F2c3 FECHOU o row-object no x86-64 (os dois testes acima provam por
-        // execucao). O pin honesto migrou para o que ainda e ORM001 em ORM:
-        // cross riscv64/aarch64 (compile-time) - o gate da frente recusa a
+        // execucao) e as fatias cross A-E ja portaram delete_all/count/create/
+        // migrate/count_where/delete/save/save_all/find/all para riscv64/
+        // aarch64. O pin honesto cobre o que ainda e ORM001 em ORM no cross:
+        // where/where_op e page (compile-time) - o gate da frente recusa a
         // face REAL, nunca silent (R6/R7). MySQL (runtime) segue pending no
         // backend via .Lorm_conn (coberto pelo pin existente de dialect).
         Path source = tempDir.resolve("Main.kf");
@@ -2275,11 +2277,11 @@ class KofOrmE2ETest {
             }
             main() {
                 var db = db.connect("sqlite:%s/gate.db")
-                println(orm.all<User>(db))
+                println(orm.where<User>(db, "age", 30))
             }
             """.formatted(tempDir));
         CompilationResult gated = driver.compile(srcGated, tempDir.resolve("out-gate"), Target.NATIVE_RISCV64);
-        assertFalse(gated.success(), "orm.all segue ORM001 no cross até a fatia F2");
+        assertFalse(gated.success(), "orm.where segue ORM001 no cross até a fatia F2c2");
         assertTrue(gated.diagnostics().getDiagnostics().toString().contains("ORM001"),
                 "gate honesto (nunca silent): " + gated.diagnostics().getDiagnostics());
     }
@@ -2751,6 +2753,99 @@ class KofOrmE2ETest {
                 "oráculo x86-64 (find: hit 4 campos, miss→null, Long>int32, negativo, key String, "
                         + "Item todos os tipos, coluna ausente→throw, id ruim)");
         assertCrossCreateParity(tempDir, "find", template, oracle);
+    }
+
+    @Test
+    void crossNativeF2c1AllMatchesX86Oracle(@TempDir Path tempDir) throws IOException {
+        assumeTrue(isLinux(), "cross ORM E2E requires Linux + libsqlite3");
+        String template = """
+            entity User {
+                id: Long generated
+                name: String
+                email: String unique
+                age: Int
+            }
+            entity Row {
+                id: Long generated
+                name: String
+                n: Int
+            }
+            entity Item {
+                id: Long generated
+                flag: Bool
+                ratio: Float
+                price: Double
+                note: String
+                qty: Int
+                big: Long
+            }
+            entity Ghost {
+                id: Long generated
+                name: String
+            }
+            main() {
+                var db = db.connect("sqlite:%s/kof.db")
+                println(orm.create<User>(db))
+                println(orm.create<Row>(db))
+                println(orm.create<Item>(db))
+                println(orm.create<Ghost>(db))
+                var empty = orm.all<User>(db)
+                println(empty.size)
+                db.execute(db, "insert into row (id, name, n) values (9, 'nine', 90)")
+                db.execute(db, "insert into row (id, name, n) values (2, 'two', 20)")
+                db.execute(db, "insert into row (id, name, n) values (5, 'five', 50)")
+                var rows = orm.all<Row>(db)
+                println(rows.size)
+                for (var r in rows) {
+                    println(r.id)
+                    println(r.name)
+                    println(r.n)
+                }
+                var ghosts = orm.all<Ghost>(db)
+                println(ghosts.size)
+                db.execute(db, "insert into user (name, email, age) values ('Mel', 'm@kof.dev', 30)")
+                var users = orm.all<User>(db)
+                println(users.size)
+                for (var u in users) {
+                    println(u.id)
+                    println(u.name)
+                    println(u.email)
+                    println(u.age)
+                }
+                db.execute(db, "insert into item (flag, ratio, price, note, qty, big) values (1, 1.5, 2.25, 'hello', 7, 5000000000)")
+                db.execute(db, "insert into item (flag, ratio, price, note, qty, big) values (0, 0, 0, NULL, 0, -7)")
+                var items = orm.all<Item>(db)
+                println(items.size)
+                for (var it in items) {
+                    println(it.id)
+                    println(it.flag)
+                    println(it.ratio)
+                    println(it.price)
+                    println(it.note)
+                    println(it.qty)
+                    println(it.big)
+                }
+                try {
+                    var bad = orm.all<User>("db2")
+                    println(bad.size)
+                } catch (String e) {
+                    println(e)
+                }
+                println("after-throw")
+                db.close(db)
+            }
+            """;
+        String golden = "true\ntrue\ntrue\ntrue\n0\n3\n"
+                + "2\ntwo\n20\n5\nfive\n50\n9\nnine\n90\n"
+                + "0\n1\n1\nMel\nm@kof.dev\n30\n2\n"
+                + "1\ntrue\n1.5\n2.25\nhello\n7\n5000000000\n"
+                + "2\nfalse\n0.0\n0.0\nnull\n0\n-7\n"
+                + "unknown db connection: db2\nafter-throw";
+        String oracle = runX86CreateOracle(tempDir, "all", template);
+        assertEquals(golden, oracle,
+                "oráculo x86-64 (all: lista vazia→List vazia, 3 linhas ordem rowid independente da "
+                        + "inserção, multi-entidade, Item todos os tipos incl. zero/null, id ruim→throw)");
+        assertCrossCreateParity(tempDir, "all", template, oracle);
     }
 
     /** x86-64: compila e roda o template numa pasta propria (banco limpo) e

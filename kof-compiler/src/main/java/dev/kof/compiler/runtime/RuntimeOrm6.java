@@ -184,7 +184,7 @@ public final class RuntimeOrm6 {
                 movq %r12, %rdi
                 movl %r15d, %esi
                 call sqlite3_column_double
-                movq %rax, (%r14)
+                movsd %xmm0, (%r14)
                 jmp .Lorm6_fldnext
             .Lorm6_rflt:
                 movq %r12, %rdi
