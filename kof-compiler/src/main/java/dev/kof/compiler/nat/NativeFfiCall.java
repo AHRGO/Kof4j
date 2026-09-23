@@ -146,6 +146,7 @@ final class NativeFfiCall {
         for (int i = 0; i < n; i++) {
             if (!isArray[i]) continue;
             sb.append("    movq ").append(8 * (n - 1 - i)).append("(%rsp), %rdi\n");
+            sb.append("    movq $").append(arrayElemSize(arrayElem[i])).append(", %rsi\n");
             sb.append("    call kof_ffi_pack_array\n");
             sb.append("    movq %rax, -").append(256 + i * 8).append("(%rbp)\n");
         }
@@ -373,13 +374,24 @@ final class NativeFfiCall {
                 """);
     }
 
+    /** Largura (bytes) do elemento de um array escalar — igual à largura C do
+     *  char ('b'→1, 'i'/'f'→4, 'j'/'d'→8), então o pack é um memcpy direto. */
+    private static int arrayElemSize(char elem) {
+        return switch (elem) {
+            case 'b' -> 1;
+            case 'i', 'f' -> 4;
+            default -> 8;
+        };
+    }
+
     /**
-     * D6-2/3.7: empacota um array Kof (`Long[]`/`Double[]`, 8 B por elemento)
-     * num buffer C contíguo — copy-in por chamada, paridade com o JVM (o array
-     * Kof nunca é mutado pela C; escritas são descartadas). {@code %rdi} =
-     * objeto array; retorno {@code %rax} = buffer ({@code kof_alloc}). Layout
-     * Kof do array: len em 16(obj), elemSize em 20, payload em 24. Definido uma
-     * vez por programa quando um extern recebe array (o call-site o referencia).
+     * D6-2/3.7: empacota um array Kof de escalares num buffer C contíguo —
+     * copy-in por chamada, paridade com o JVM (o array Kof nunca é mutado pela
+     * C; escritas são descartadas). {@code %rdi} = objeto array, {@code %rsi} =
+     * tamanho do elemento em bytes; retorno {@code %rax} = buffer
+     * ({@code kof_alloc}). Layout Kof do array: len em 16(obj), payload em 24.
+     * Definido uma vez por programa quando um extern recebe array (o call-site o
+     * referencia).
      */
     static void emitX86ArrayPackHelper(StringBuilder sb) {
         sb.append("""
@@ -389,25 +401,30 @@ final class NativeFfiCall {
                     pushq %rbx
                     pushq %r12
                     pushq %r13
+                    pushq %r14
+                    subq $8, %rsp
                     movq %rdi, %rbx
+                    movq %rsi, %r13
                     movl 16(%rbx), %r12d
                     movq %r12, %rdi
-                    shlq $3, %rdi
+                    imulq %r13, %rdi
                     testq %rdi, %rdi
                     jne .Lfpa_alloc
                     movq $8, %rdi
                 .Lfpa_alloc:
                     call kof_alloc
-                    movq %rax, %r13
+                    movq %rax, %r14
                     leaq 24(%rbx), %rsi
-                    movq %r13, %rdi
+                    movq %r14, %rdi
                     movq %r12, %rdx
-                    shlq $3, %rdx
+                    imulq %r13, %rdx
                     testq %rdx, %rdx
                     je .Lfpa_done
                     call kof_memcpy
                 .Lfpa_done:
-                    movq %r13, %rax
+                    movq %r14, %rax
+                    addq $8, %rsp
+                    popq %r14
                     popq %r13
                     popq %r12
                     popq %rbx

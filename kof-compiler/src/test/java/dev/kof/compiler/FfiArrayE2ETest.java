@@ -15,7 +15,9 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * FFI array ABI (D6-2 / slice 3.8b fatia 3): um array primitivo Kof (`new Int[n]`)
  * atravessa como `ptr` C no target JVM, com COPY-IN por chamada (o array Java não
  * é pinado nem visto pelo C). Provado com um shim C real; `String[]` (array de
- * ponteiros) segue FFI001 honesto (R6) e Native/JS ficam nos seus gap codes.
+ * ponteiros) segue FFI001 honesto (R6). O Native x86-64 também binda o copy-in
+ * escalar desde a 3.7 (`Long[]`/`Double[]`/`Int[]`/`Float[]`/`Bool[]`), provado
+ * em `FfiNativeArrayE2ETest`; no Native o `String[]`/array cross seguem FFI001.
  */
 class FfiArrayE2ETest {
 
@@ -102,17 +104,17 @@ class FfiArrayE2ETest {
     }
 
     @Test
-    void arrayParamNativeStaysFfi001(@TempDir Path dir) throws IOException {
+    void stringArrayParamNativeStaysFfi001(@TempDir Path dir) throws IOException {
         Path src = dir.resolve("arrnat.kf");
         Files.writeString(src, """
-                extern "libc.so.6" sumn(Int[] xs, Int n): Int
+                extern "libc.so.6" sumn(String[] xs, Int n): Int
 
                 main() {
                     println("hi")
                 }
                 """);
         CompilationResult r = driver.compile(src, dir.resolve("out-arrnat"), Target.NATIVE);
-        assertFalse(r.success(), "Native array ABI is later — must stay unbound");
+        assertFalse(r.success(), "String[] (array de ponteiros) segue não-bindável no Native");
         assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI001"),
                 "expected FFI001 on Native, got: " + r.diagnostics().getDiagnostics());
     }

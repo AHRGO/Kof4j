@@ -13,6 +13,29 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§446 ✅ FIXED — `check_500` split of the two criticals inherited from
+    §280 slices 1–2** (22/09, lane 9093): `TypeChecker` 606→436 and
+    `StatementAnalyzer` 600→449 by extracting `SemBinaryResultTyper` (binary
+    SEM053/SEM062/SEM100/SEM001/SEM002 + arithmetic) and `SemAssignmentAnalyzer`
+    (`analyzeAssignmentStatement`); behavior-preserving, baseline lines removed,
+    `check_500` rc=0. Registered here to close the CHANGELOG×ledger gap left by
+    that commit (the ledger already lists §446 as FIXED).
+
+  - **FFI 3.7 step 2 — `Int[]`/`Float[]`/`Bool[]`→`ptr` on Native x86-64 + JVM
+    `Bool[]` fix (D6-2)** (22/09, FFI/kof-c lane): the scalar-array copy-in now
+    covers every element class whose Kof slot width equals the C width — the
+    same helper copies `len*elemSize` with the element size passed in `%rsi`
+    (`Int`/`Float` 4 B, `Bool` 1 B, `Long`/`Double` 8 B); no narrowing loop was
+    needed. `String[]` (array of pointers) and cross arrays stay `FFI001` at the
+    declaration line (R6). On the way it fixed a **latent JVM crash** (R6):
+    `extern` taking a `Bool[]` compiled on the JVM but died at runtime because
+    `MemorySegment.copy` does not support `bool[]`; `kof_ffi_copy_in` now
+    converts it to `byte[]` 0/1 first. Proof: `FfiNativeArrayE2ETest` 2/2
+    (gcc `.so` shim, golden byte-equal to the JVM oracle incl. empty/negative/
+    `Bool[]` edges) + `String[]`/cross `FFI001` gate pin; three older gap pins
+    updated from `Int[]` to `String[]` (`FfiArrayE2ETest`, `FfiNativeE2ETest`,
+    `FfiE2ETest`); `Ffi*+Native*` 403/0F/165skip.
+
   - **FFI 3.7 step 1 — scalar array `T[]`→`ptr` on Native x86-64 (copy-in per
     call, D6-2)** (22/09, FFI/kof-c lane): `extern` taking `Long[]`→`long*` or
     `Double[]`→`double*` (element slot width == C width, 8 B) now binds on the

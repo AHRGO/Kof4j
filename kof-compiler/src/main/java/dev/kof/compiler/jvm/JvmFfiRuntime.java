@@ -321,6 +321,19 @@ final class JvmFfiRuntime {
                 static java.lang.foreign.MemorySegment kof_ffi_copy_in(
                         java.lang.foreign.Arena arena, Object arr, char e) {
                     int n = java.lang.reflect.Array.getLength(arr);
+                    if (e == 'b') {
+                        // `boolean[]` não é suportado por MemorySegment.copy (só
+                        // byte[]/char[]/short[]/int[]/float[]/long[]/double[]) —
+                        // converte para byte[] 0/1 antes de copiar (paridade _Bool).
+                        byte[] tmp = new byte[n];
+                        boolean[] src = (boolean[]) arr;
+                        for (int i = 0; i < n; i++) tmp[i] = (byte) (src[i] ? 1 : 0);
+                        java.lang.foreign.MemorySegment seg = arena.allocate(
+                                java.lang.foreign.ValueLayout.JAVA_BYTE, n);
+                        java.lang.foreign.MemorySegment.copy(tmp, 0, seg,
+                                java.lang.foreign.ValueLayout.JAVA_BYTE, 0, n);
+                        return seg;
+                    }
                     java.lang.foreign.ValueLayout vl = kof_ffi_layout(e);
                     java.lang.foreign.MemorySegment seg = arena.allocate(vl, n);
                     java.lang.foreign.MemorySegment.copy(arr, 0, seg, vl, 0, n);

@@ -13,6 +13,31 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§446 ✅ FIXED — split do `check_500` dos dois críticos herdados das fatias
+    1–2 do §280** (22/09, lane 9093): `TypeChecker` 606→436 e
+    `StatementAnalyzer` 600→449 com a extração de `SemBinaryResultTyper`
+    (binárias SEM053/SEM062/SEM100/SEM001/SEM002 + aritmética) e
+    `SemAssignmentAnalyzer` (`analyzeAssignmentStatement`); behavior-preserving,
+    linhas do baseline removidas, `check_500` rc=0. Registrado aqui para fechar o
+    gap CHANGELOG×ledger deixado por aquele commit (o ledger já lista §446 como
+    FIXED).
+
+  - **FFI 3.7 passo 2 — `Int[]`/`Float[]`/`Bool[]`→`ptr` no Native x86-64 + fix
+    `Bool[]` no JVM (D6-2)** (22/09, lane FFI/kof-c): o copy-in de array escalar
+    agora cobre toda classe de elemento cuja largura de slot Kof iguala a largura
+    C — o mesmo helper copia `len*elemSize` com o tamanho do elemento passado em
+    `%rsi` (`Int`/`Float` 4 B, `Bool` 1 B, `Long`/`Double` 8 B); não foi preciso
+    loop de estreitamento. `String[]` (array de ponteiros) e arrays no cross
+    seguem `FFI001` na linha da declaração (R6). No caminho, corrigiu um **crash
+    latente do JVM** (R6): um `extern` que recebia `Bool[]` compilava no JVM mas
+    morria em runtime porque `MemorySegment.copy` não suporta `bool[]`;
+    `kof_ffi_copy_in` agora converte para `byte[]` 0/1 antes. Prova:
+    `FfiNativeArrayE2ETest` 2/2 (shim `.so` do gcc, golden byte-a-byte igual ao
+    oráculo JVM incl. bordas vazio/negativo/`Bool[]`) + pin de gate
+    `String[]`/cross `FFI001`; três pins antigos de gap migrados de `Int[]` para
+    `String[]` (`FfiArrayE2ETest`, `FfiNativeE2ETest`, `FfiE2ETest`);
+    `Ffi*+Native*` 403/0F/165skip.
+
   - **FFI 3.7 passo 1 — array escalar `T[]`→`ptr` no Native x86-64 (copy-in
     por chamada, D6-2)** (22/09, lane FFI/kof-c): `extern` que recebe
     `Long[]`→`long*` ou `Double[]`→`double*` (largura de slot do elemento ==

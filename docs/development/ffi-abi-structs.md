@@ -120,7 +120,7 @@ the nested token `(<ret><params>)`. Anything the map does not cover is a
 | callbacks/upcalls (3.4) | ✅ `Linker.upcallStub` | ❌ `FFI001` (no mechanism) | ✅ host |
 | String = `char*` | ✅ in + out | ✅ in (payload off 24) + out (boundary copy) | ✅ |
 | **struct (record, scalar fields)** | ✅ **by value in + out** (`@` token, 3.8b fatias 1–2, 20–21/09) | ◐ **by value param + return, register path *and* sret x86-64** (3.7 fatias 1–2b, 21/09); cross **return** INTEGER ≤ 16 B binds (fatia 3, 22/09); struct param/float/HFA/array/`Buffer` on riscv64/aarch64 → `FFI001` (3.7) | ✅ **by value IN + OUT** (IN: `@<n><chars>` + `__kof_ffi_fields`; OUT: `@<n><chars>` return + `__kof_ffi_from`; bridges 21/09) |
-| **scalar array `T[]`→`ptr`** | ✅ **copy-in per call** (`p<elem>` token, 3.8b fatia 3, 21/09; no write-back) | ❌ FFI001 | ✅ **copy-in per call** (`packArray` bridge, 21/09; no write-back) |
+| **scalar array `T[]`→`ptr`** | ✅ **copy-in per call** (`p<elem>` token, 3.8b fatia 3, 21/09; no write-back) | ◐ **copy-in x86-64** for `Long[]`/`Double[]`/`Int[]`/`Float[]`/`Bool[]` (`FfiNativeArrayE2ETest`, 3.7 steps 1–2, 22/09); `String[]` and cross → `FFI001` | ✅ **copy-in per call** (`packArray` bridge, 21/09; no write-back) |
 | **out-buffer `Buffer(U8)` INOUT** | ✅ **copy-in / call / copy-back** (`B` token + `buffer.alloc`/`Buffer.bytes()`, D6-3, 21/09) | ❌ FFI001 | ✅ **copy-in / call / copy-back** (`B` token + `packBuffer`/copy-back after the downcall, bridge 21/09) |
 | non-scalar array / opaque (e.g. `String[]`/`List<T>`/`Handle`) | ❌ FFI001 | ❌ FFI001 | ❌ FFI002 |
 
@@ -260,19 +260,23 @@ until decided — no silent partial binding.
 The next slice is bigger than one session, decomposed so every step is a
 complete vertical (no half-bound path, R6):
 
-> **Landed 22/09 (3.7 step 1 · `T[]`→`ptr` on x86-64, D6-2):** `Long[]`→
-> `long*` and `Double[]`→`double*` (slot width == C width, 8 B) bind with
-> **copy-in per call** — `FfiStructLayout.arrayPtrType`/`isArrayPtr`/`arrayPtrElem`,
-> gate `CompilerPipeline.nativeExternBound` (x86 only, `j`/`d`), lowering marker
-> in `ExpressionMethodCallLowerer`, x86 pack pre-pass + helper
-> `kof_ffi_pack_array` behind `NativeBackend.ffiUsesArray`. Proof:
-> `FfiNativeArrayE2ETest` 2/2 (gcc `.so` shim, golden byte-equal to the JVM
-> oracle, empty/negative edges) — remaining steps 2–3 below.
+> **Landed 22/09 (3.7 steps 1–2 · `T[]`→`ptr` on x86-64, D6-2):** `Long[]`→
+> `long*`, `Double[]`→`double*`, `Int[]`→`int*`, `Float[]`→`float*` and
+> `Bool[]`→`bool*` bind with **copy-in per call** — the element slot width
+> equals the C width (8/4/1 B), so the pack is a `memcpy` of `len*elemSize`.
+> `FfiStructLayout.arrayPtrType`/`isArrayPtr`/`arrayPtrElem`, gate
+> `CompilerPipeline.nativeExternBound` (x86 only), lowering marker in
+> `ExpressionMethodCallLowerer`, x86 pack pre-pass + helper `kof_ffi_pack_array`
+> (element size in `%rsi`) behind `NativeBackend.ffiUsesArray`. Fixes a latent
+> JVM crash found on the way (R6): `bool[]` is not supported by
+> `MemorySegment.copy`, so `kof_ffi_copy_in` converts it to `byte[]` 0/1 first.
+> Proof: `FfiNativeArrayE2ETest` 2/2 (gcc `.so` shim, golden byte-equal to the
+> JVM oracle, empty/negative/`Bool[]` edges) — step 3 below remaining.
 
 1. **✅ DONE (22/09) — `T[]`→C `ptr` on x86-64, copy-in per call (D6-2).**
    Element classes whose Kof slot width equals the C width copy with a plain
-   `memcpy`: **`Long[]`→`long*`, `Double[]`→`double*`** (8 B). `Int[]`/`Float[]`/`Bool[]`
-   (4/1 B) need a narrowing loop and stay `FFI001` in this cut.
+   `memcpy`: **`Long[]`/`Double[]` (8 B), `Int[]`/`Float[]` (4 B), `Bool[]`
+   (1 B)**. `String[]` (array of pointers) stays `FFI001` in this cut.
    - gate `CompilerPipeline.nativeExternBound`: accept an array param on x86
      when `FfiSignature.arrayElemChar` ∈ {`j`,`d`}.
    - lowering `ExpressionMethodCallLowerer` (native branch): add a synthetic
@@ -283,12 +287,15 @@ complete vertical (no half-bound path, R6):
      like `emitX86CstrHelper`, behind a `ffiUsesArray` backend flag) and pass
      the buffer as one INTEGER register; copy-in only — C writes are dropped,
      exactly as on the JVM (parity, rule 5).
-   - proof: a gcc-built `.o` shim (`long*`/`double*`) linked into the native
+   - proof: a gcc-built `.so` shim (`long*`/`double*`/...) linked into the native
      binary, golden measured against the JVM oracle of the same program
-     (`FfiArrayE2ETest`), plus the `Int[]`→`FFI001` gate pin.
-2. **`Int[]`/`Float[]`/`Bool[]` narrowing pack** — same helper family, element
-   width 4/1 (store the low bytes of each 8 B slot).
-3. **`String[]`→`char**` and `Buffer(U8)` native** — `Buffer` needs the
-   nominal type + runtime on Native first (today JVM/JS only); `String[]` is an
-   array of pointers (distinct from the scalar copy-in). Both stay `FFI001`
-   until their own cut.
+     (`FfiNativeArrayE2ETest`), plus the `String[]`/cross-array→`FFI001` gate pin.
+ 2. **✅ DONE (22/09) — `Int[]`/`Float[]`/`Bool[]` pack.** No narrowing loop was
+    needed: the Kof element width already equals the C width (`Int`/`Float` 4 B,
+    `Bool` 1 B), so the same helper copies `len*elemSize` with the element size
+    passed in `%rsi` from the call-site. Gate accepts all scalar element chars on
+    x86-64 (`String[]` and cross stay `FFI001`).
+ 3. **`String[]`→`char**` and `Buffer(U8)` native** — `Buffer` needs the
+    nominal type + runtime on Native first (today JVM/JS only); `String[]` is an
+    array of pointers (distinct from the scalar copy-in). Both stay `FFI001`
+    until their own cut.

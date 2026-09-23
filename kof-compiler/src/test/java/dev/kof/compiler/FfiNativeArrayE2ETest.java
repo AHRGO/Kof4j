@@ -15,12 +15,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * D6-2 / 3.7 step 1: array escalar {@code T[]}→C {@code ptr} no Native x86-64,
- * com copy-in por chamada (o array Kof nunca é mutado pela C — paridade com o
- * JVM). Este corte cobre apenas classes de elemento cuja largura de slot Kof
- * iguala a largura C: {@code Long[]}→{@code long*} e {@code Double[]}→
- * {@code double*} (8 B). {@code Int[]}/{@code Float[]}/{@code Bool[]} (4/1 B)
- * seguem {@code FFI001} (próximo passo).
+ * D6-2 / 3.7 array {@code T[]}→C {@code ptr} no Native x86-64, com copy-in por
+ * chamada (o array Kof nunca é mutado pela C — paridade com o JVM). A largura de
+ * slot de cada elemento Kof iguala a largura C ({@code Long}→{@code long} 8 B,
+ * {@code Double}→{@code double} 8 B, {@code Int}→{@code int} 4 B,
+ * {@code Float}→{@code float} 4 B, {@code Bool}→{@code bool} 1 B), então o pack
+ * é um {@code memcpy} com o tamanho do elemento. {@code String[]} (array de
+ * ponteiros) e qualquer array no cross seguem {@code FFI001}.
  *
  * <p>Oráculo regra 5: o MESMO fonte roda no JVM (FFM) e no binário nativo e a
  * saída é byte-a-byte igual — a fixture C é um {@code .so} real compilado com
@@ -31,13 +32,20 @@ class FfiNativeArrayE2ETest {
     private final CompilerDriver driver = new CompilerDriver();
 
     private static final String C_SRC = """
+            #include <stdbool.h>
             long suml(long* xs, long n) { long s = 0; for (long i = 0; i < n; i++) s += xs[i]; return s; }
             double sumd(double* xs, long n) { double s = 0; for (long i = 0; i < n; i++) s += xs[i]; return s; }
+            long sumi(int* xs, long n) { long s = 0; for (long i = 0; i < n; i++) s += xs[i]; return s; }
+            double sumf(float* xs, long n) { double s = 0; for (long i = 0; i < n; i++) s += xs[i]; return s; }
+            long sumb(bool* xs, long n) { long s = 0; for (long i = 0; i < n; i++) s += xs[i]; return s; }
             """;
 
     private static final String KOF = """
             extern "%1$s" suml(Long[] xs, Long n): Long
             extern "%1$s" sumd(Double[] xs, Long n): Double
+            extern "%1$s" sumi(Int[] xs, Long n): Int
+            extern "%1$s" sumf(Float[] xs, Long n): Double
+            extern "%1$s" sumb(Bool[] xs, Long n): Int
 
             main() {
                 var ls = new Long[3]
@@ -54,10 +62,24 @@ class FfiNativeArrayE2ETest {
                 ds[0] = 1.5
                 ds[1] = 2.5
                 println(sumd(ds, 2))
+                var is = new Int[3]
+                is[0] = 1
+                is[1] = 2
+                is[2] = 3
+                println(sumi(is, 3))
+                var fs = new Float[2]
+                fs[0] = 1.5 as Float
+                fs[1] = 2.5 as Float
+                println(sumf(fs, 2))
+                var bs = new Bool[3]
+                bs[0] = true
+                bs[1] = false
+                bs[2] = true
+                println(sumb(bs, 3))
             }
             """;
 
-    private static final String GOLDEN = String.join("\n", "42", "2", "0", "4.0");
+    private static final String GOLDEN = String.join("\n", "42", "2", "0", "4.0", "6", "4.0", "2");
 
     private static String buildHostLib(Path dir) throws IOException, InterruptedException {
         assumeTrue(System.getProperty("os.name", "").toLowerCase().contains("linux"),
@@ -133,16 +155,27 @@ class FfiNativeArrayE2ETest {
     }
 
     @Test
-    void intArrayStaysFfi001OnNative(@TempDir Path dir) throws IOException {
-        // Corte atual: Int[] (4 B) exige estreitamento — segue FFI001 honesto (R6).
-        Path src = dir.resolve("IntArray.kf");
-        Files.writeString(src, """
-                extern "libc.so.6" sumi(Int[] xs, Int n): Int
+    void stringArrayAndCrossArrayStayFfi001(@TempDir Path dir) throws IOException {
+        // `String[]` é array de ponteiros (distinto do copy-in escalar) e o
+        // cross ainda não tem o pack — ambos seguem FFI001 honesto (R6).
+        Path str = dir.resolve("StringArray.kf");
+        Files.writeString(str, """
+                extern "libc.so.6" probe(String[] xs, Long n): Int
                 main() { println("gap") }
                 """);
-        CompilationResult r = driver.compile(src, dir.resolve("out-int"), Target.NATIVE);
-        assertFalse(r.success(), "Int[] não pode virar silêncio no Native");
-        assertTrue(r.diagnostics().getDiagnostics().toString().contains("FFI001"),
-                "Int[] → FFI001 honesto na declaração: " + r.diagnostics().getDiagnostics());
+        CompilationResult rs = driver.compile(str, dir.resolve("out-str"), Target.NATIVE);
+        assertFalse(rs.success(), "String[] não pode virar silêncio no Native");
+        assertTrue(rs.diagnostics().getDiagnostics().toString().contains("FFI001"),
+                "String[] → FFI001 honesto: " + rs.diagnostics().getDiagnostics());
+
+        Path cross = dir.resolve("CrossArray.kf");
+        Files.writeString(cross, """
+                extern "libc.so.6" probe(Long[] xs, Long n): Long
+                main() { println("gap") }
+                """);
+        CompilationResult rc = driver.compile(cross, dir.resolve("out-cross"), Target.NATIVE_RISCV64);
+        assertFalse(rc.success(), "array no cross não pode virar silêncio");
+        assertTrue(rc.diagnostics().getDiagnostics().toString().contains("FFI001"),
+                "array cross → FFI001 honesto: " + rc.diagnostics().getDiagnostics());
     }
 }
