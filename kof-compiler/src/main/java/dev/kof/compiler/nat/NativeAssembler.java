@@ -37,7 +37,7 @@ public final class NativeAssembler {
             // `--unresolved-symbols=ignore-all`.
             asmToAssemble = asmFile.resolveSibling(asmFile.getFileName() + ".bare.s");
             Files.writeString(asmToAssemble,
-                    NativeCrossSections.sectionizeTextFunctions(Files.readString(asmFile)));
+                    NativeCrossSections.sectionizeTextFunctions(Files.readString(asmFile), "kof_"));
         }
         System.err.println("NativeBackend: assembling " + asmFile);
         try {

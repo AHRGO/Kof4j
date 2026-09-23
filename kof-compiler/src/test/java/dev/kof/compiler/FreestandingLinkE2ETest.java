@@ -39,6 +39,15 @@ class FreestandingLinkE2ETest {
             }
             """;
 
+    private static final String MULTIFN = """
+            Int twice(Int x) { return x * 2 }
+            Int thrice(Int x) { return x * 3 }
+            main() {
+                println(twice(21))
+                println(thrice(14))
+            }
+            """;
+
     private static final String FLOAT = """
             main() {
                 println(1.5)
@@ -138,6 +147,20 @@ class FreestandingLinkE2ETest {
                 "controle: o perfil host DEVE ter PT_INTERP (senao o detector nao enxerga):\n" + ph);
         assertTrue(dyn.contains("NEEDED"),
                 "controle: o perfil host DEVE ter DT_NEEDED:\n" + dyn);
+    }
+
+    @Test
+    void freestandingMultiFunctionProgramLinksAndRuns(@TempDir Path dir) throws Exception {
+        // B-1b (medido 23/09): o sectionize por funcao movia tambem as funcoes
+        // do PROGRAMA; o `as` rejeitava com "can't resolve .text.<fn> -
+        // <nextFn>" porque o DWARF .debug do x86 expressa o range como
+        // "simbolo_fim - proximo_simbolo" e a diferenca passava a cruzar
+        // secoes. Com 1 funcao (PLAIN) passava; com 2+ quebrava. O fix filtra
+        // por "kof_" (so o runtime poda). Regressao Q1: 2 funcoes de programa.
+        assumeTrue(hasTool("as") && hasTool("ld"), "x86 toolchain ausente");
+        Path bin = build(dir, MULTIFN, NativeProfile.FREESTANDING, true);
+        assertEquals(jvmOracle(dir, MULTIFN), runBinary(bin),
+                "multi-funcao freestanding != oracle JVM");
     }
 
     @Test

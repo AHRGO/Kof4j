@@ -36,6 +36,23 @@ final class NativeCrossSections {
     /** Transforma o texto do subset: `.globl X` + `X:` ganha
      *  `.section .text.X,"ax"` (o par é o candidato; o resto fica como está). */
     static String sectionizeTextFunctions(String text) {
+        return sectionizeTextFunctions(text, null);
+    }
+
+    /** Como {@link #sectionizeTextFunctions(String)}, mas só injeta a seção para
+     *  labels que comecem com {@code onlyPrefix} ({@code null} = todas).
+     *
+     *  <p><b>x86/freestanding (B-1b, medida 23/09):</b> o passe era aplicado ao
+     *  arquivo INTEIRO (programa + runtime) e movia também as funções do
+     *  programa. O `.as` rejeitava (`can't resolve .text.<fn> - <nextFn>`) porque
+     *  o DWARF `.debug` do codegen x86 expressa o range de uma função como
+     *  `símbolo_fim - próximo_símbolo` — com funções em seções diferentes a
+     *  diferença deixa de ser resolvível. Só o RUNTIME precisa da poda (o
+     *  programa é sempre alcançado) → filtrar por {@code "kof_"} mantém as
+     *  funções do programa juntas numa `.text` só e as expressões voltam a
+     *  resolver. O cross (subset puro, sem DWARF) continua chamando o overload
+     *  sem filtro. */
+    static String sectionizeTextFunctions(String text, String onlyPrefix) {
         String[] lines = text.split("\n", -1);
         StringBuilder out = new StringBuilder();
         boolean inText = false;
@@ -55,7 +72,9 @@ final class NativeCrossSections {
             }
             if (inText && s.endsWith(":") && !s.contains(" ") && !s.startsWith(".L")) {
                 String label = s.substring(0, s.length() - 1);
-                if (pendingFn != null && pendingFn.equals(label) && label.matches("[A-Za-z_][A-Za-z0-9_]*")) {
+                boolean selected = onlyPrefix == null || label.startsWith(onlyPrefix);
+                if (pendingFn != null && pendingFn.equals(label) && selected
+                        && label.matches("[A-Za-z_][A-Za-z0-9_]*")) {
                     out.append("    .section .text.").append(label).append(",\"ax\"\n");
                 }
                 pendingFn = null;
