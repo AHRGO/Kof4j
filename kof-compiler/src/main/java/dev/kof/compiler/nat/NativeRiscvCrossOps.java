@@ -131,7 +131,7 @@ public final class NativeRiscvCrossOps {
         // (link-by-use da `library()` no ld cross; `call sym` → PLT). O
         // aarch64 herda via tradução linha-a-linha do texto riscv.
         if (NativeFfiCall.isExternCall(kc)) {
-            NativeFfiCall.emitRiscv(nb, sb, kc);
+            NativeFfiCallRiscv.emitRiscv(nb, sb, kc);
             return;
         }
         Type argType = kc.parameterTypes().isEmpty() ? Type.UnknownType.UNKNOWN : kc.parameterTypes().get(0);
