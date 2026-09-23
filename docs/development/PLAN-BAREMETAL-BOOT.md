@@ -293,6 +293,42 @@ raw `ld` "undefined reference"; proof `FreestandingLinkE2ETest` 5/5 (new
 surface (`--profile`), then the linker script with configurable heap/stack and
 `_end`.
 
+**B-1c — libc-free decimal conversion (dtoa) for `Float`/`Double` (opened
+23/09, maintainer's decision: "precisamos dele baremetal").** The maintainer
+ordered the *complete* path (not the incremental unblock): bare-metal must print
+`Bool`/`Troolean`/`Int`/`Long`/`String` **and** `Float`/`Double` with JVM parity,
+removing the `NATIVE003` float-print refusal. **Measured 23/09:** `Bool`
+(`true`/`false`) and `Int`/`String` already print bare-metal (static strings);
+`Troolean` (`true`/`false`/`null`) is blocked only because `kof_box_to_string`
+statically references `kof_double_to_string`/`kof_float_to_string` (tags 4/5) —
+`gc-sections` cannot prune a *code* reference, so the box printer keeps the dtoa
+alive; a multi-function program exposed a second bug (fixed: the sectionize pass
+moved program functions and broke DWARF range expressions). `Float`/`Double`
+need `RuntimeDtoa`'s `snprintf("%.*e")`/`strtod` replaced.
+
+- **Parity constraint (the hard part).** The host x86_64 picks the shortest
+  precision by looping `snprintf("%.*e", p)` + `strtod` (glibc, round-half-even)
+  and takes the first `p` that round-trips. The bare-metal converter MUST
+  reproduce that digit selection, or the host golden changes — a silent
+  regression (Freeze rule 3). So the libc-free unit is a **correctly-rounded
+  `%.*e` formatter + a correctly-rounded `strtod`**, not an arbitrary
+  shortest-dtoa (e.g. Ryū) whose tie-breaking may differ from glibc.
+- **Recon first (cheap, no asm):** fix the algorithm and *prove* parity in Java
+  against the JVM oracle (and against the glibc-host output) over a large corpus
+  (random bits + edges: subnormals, `±0.0`, `1e308`, `5e-324`, the `1e-3`/`1e7`
+  JDK thresholds, exact ties) **before** writing any assembly. No asm is written
+  until the digit selection is pinned.
+- **Suggested slices (each with proof):** (1) recon/parity harness in Java;
+  (2) exact big-integer core (add/sub/mul-small/shl/cmp/divmod-10) in the x86
+  runtime + end-to-end corpus test; (3) `kof_fmt_sci` (correctly-rounded `%.*e`)
+  replacing `snprintf`; (4) `kof_parse_double` (correctly-rounded) replacing
+  `strtod`; (5) wire `kof_double_to_string`/`kof_float_to_string`, delete the
+  `NATIVE003` float-print refusal, and prove `FreestandingLinkE2ETest` green with
+  a `println(Double)`/`Math.PI` corpus == JVM oracle and no `snprintf`/`strtod`
+  in `nm -u`.
+- **Scope note:** the same `kof_dtoa_format` cross-debt (riscv/aarch use libc
+  `snprintf`/`strtod`) is out of this face; the x86 unit is the reference.
+
 **Depends on:** B-0. **Classification:** M (medium).
 
 ### B-2 — UEFI (x86_64, and later aarch64) · **depends B-1**
