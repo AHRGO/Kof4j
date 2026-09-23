@@ -13,6 +13,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§474 — implicit construction `ClassName<T>(...)` dropped the type witness
+    (frontend/sem lane, issue #585)** (23/09): the two implicit-construction
+    sites in `BuiltinCallTyper` (`infer`/`inferTail`) returned the RAW class
+    (`typeArguments=[]`), so `T` substitution on the receiver no-op'd and
+    `get(): T` emitted a `Methodref java/lang/Object` → `NoSuchMethodError` on
+    the JVM with a reference-type argument (`Box<Point>(Point(5,6))`); the
+    primitive face (§288) masked the hole. Fix (additive, frozen semantics
+    untouched): resolve the witness via `MemberResolver.resolveType` (same idiom
+    as `listOf`/`setOf`) + 3-arg `toType` for the `NewExpr` face. Proof:
+    `GenericWitnessConstructionE2ETest` 5/5 RED→GREEN (verbatim repro `5,6` on
+    JVM/Native x86/JS, chain+annotated, primitive control `42`); independent
+    re-verification (session 9092) added the explicit `new Box<Point>`/`String`
+    cases (6/6).
+
   - **B-2 UEFI profile (baremetal lane): `--profile uefi` emits bootable
     PE32+** (23/09, lane 9093): a new `NativeProfile.UEFI` makes the x86-64
     native backend emit a static, PLT/GOT-free PE32+ image (subsystem 10) that

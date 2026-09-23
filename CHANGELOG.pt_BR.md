@@ -13,6 +13,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§474 — construção implícita `ClassName<T>(...)` descartava o type-witness
+    (lane frontend/sem, issue #585)** (23/09): os dois sites de construção
+    implícita do `BuiltinCallTyper` (`infer`/`inferTail`) devolviam a classe CRUA
+    (`typeArguments=[]`), então a substituição de `T` no receptor virava no-op e
+    `get(): T` emitia `Methodref java/lang/Object` → `NoSuchMethodError` no JVM
+    com argumento reference-type (`Box<Point>(Point(5,6))`); a face primitiva
+    (§288) mascarava o furo. Fix (aditivo, sem tocar semântica congelada):
+    resolve o witness via `MemberResolver.resolveType` (mesmo idioma de
+    `listOf`/`setOf`) + `toType` 3-arg para a face `NewExpr`. Prova:
+    `GenericWitnessConstructionE2ETest` 5/5 RED→GREEN (repro verbatim `5,6` em
+    JVM/Native x86/JS, cadeia+anotada, controle primitivo `42`); re-verificação
+    independente (sessão 9092) somou os casos explícitos `new Box<Point>`/`String`
+    (6/6).
+
   - **Perfil UEFI B-2 (lane baremetal): `--profile uefi` emite PE32+ bootável**
     (23/09, lane 9093): o novo `NativeProfile.UEFI` faz o backend nativo x86-64
     emitir uma imagem PE32+ estática, sem PLT/GOT (subsystem 10), que boota sob
