@@ -135,6 +135,21 @@ targets (the seam is load-bearing, not decorative). **Next slices:** x86_64
 runtime (its `call`/libc sites), spawn/futex (`kof_plat_thread`/`kof_plat_sync`)
 and net sockets (`kof_plat_net_*`); `NATIVE003` stays reserved for the bare
 profiles (B-1+).
+
+**Slice 2 (LANDED 22/09, lane `baremetal` 9092):** the x86_64 runtime crosses
+the same seam — new slice `RuntimePlat` implements `kof_plat_write`,
+`kof_plat_writev`, `kof_plat_exit`, `kof_plat_exit_group` (Linux = raw syscall
+1/20/60/231) and the call sites are routed: `kof_print`/`kof_print_string`
+(write), `kof_panic`/`kof_throw_string`-panic/`kof_process_exit`/JSN004 fatal
+(exit) and the `_start` epilogue (`exit_group`). Proof: x86 host sabotage test
+(`as`/`ld` dynamic, same production flags — sabotage of `kof_plat_write` makes
+the output vanish), `NativeE2ETest` 67/67, `KofConcurrency2Test` 48/48,
+`JsonE2ETest` 18/18, `JsonCompleteE2ETest` 10/10, `KofDbE2ETest` 27/27 (4
+skips), `NullSafetyE2ETest` 14/14, `ProcessResultContentE2ETest` 4/4,
+`NativeNullablePrimitiveContractE2ETest` 42/42, `ArtifactSizeTest` 6/6 with the
+x86 baseline re-measured (39.232→39.304 B, 84→88 syms). **Next slices:**
+x86_64 env surface (time/sleep/mono, entropy, gettid), spawn/futex
+(`kof_plat_thread`/`kof_plat_sync`), net sockets (`kof_plat_net_*`), then B-1.
 **Depends on:** nothing. **Gap:** `NATIVE003` (proposed).
 
 ### B-1 — Freestanding link profile · **depends B-0**

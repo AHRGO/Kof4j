@@ -197,17 +197,15 @@ public final class RuntimeStringBase {
                 jnz .Lkof_print_string_ok
                 leaq .Lkof_null_str(%rip), %rsi
                 movq $4, %rdx
-                movq $1, %rax
                 movq $1, %rdi
-                syscall
+                call kof_plat_write
                 ret
             .Lkof_print_string_ok:
                 movq %rdi, %rsi
                 addq $24, %rsi
                 movl 16(%rdi), %edx
-                movq $1, %rax
                 movq $1, %rdi
-                syscall
+                call kof_plat_write
                 ret
             """);
     }

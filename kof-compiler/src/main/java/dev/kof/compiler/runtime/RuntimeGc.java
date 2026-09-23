@@ -337,9 +337,7 @@ public final class RuntimeGc {
             .globl kof_process_exit
             .type kof_process_exit, @function
             kof_process_exit:
-                movq %rdi, %rdi
-                movq $60, %rax
-                syscall
+                call kof_plat_exit
             """);
     }
 
@@ -362,9 +360,8 @@ public final class RuntimeGc {
             .type kof_panic, @function
             kof_panic:
                 call kof_println
-                movq $60, %rax
                 movq $1, %rdi
-                syscall
+                call kof_plat_exit
             """);
         sb.append("""
             .globl kof_throw_string
@@ -385,9 +382,8 @@ public final class RuntimeGc {
             .Lkof_throw_panic:
                 movq %rsi, %rdi
                 call kof_println_string
-                movq $60, %rax
                 movq $1, %rdi
-                syscall
+                call kof_plat_exit
             """);
     }
 

@@ -442,9 +442,9 @@ final class NativeMethodEmitter {
         }
         // M32.3: SYS_exit_group (231) — SYS_exit (60) só mata a thread
         // chamadora; com threads do driver Vulkan o processo fica pendurado.
-        sb.append("    movq $231, %rax\n");
-        sb.append("    xorq %rdi, %rdi\n");
-        sb.append("    syscall\n");
+        // B-0 (D-BAREMETAL-BOOT): a saída cruza a costura kof_plat_exit_group.
+        sb.append("    xorl %edi, %edi\n");
+        sb.append("    call kof_plat_exit_group\n");
     }
 
 }

@@ -137,6 +137,22 @@ alvos (a costura é load-bearing, não decorativa). **Próximas fatias:** runtim
 x86_64 (os sítios `call`/libc dele), spawn/futex
 (`kof_plat_thread`/`kof_plat_sync`) e sockets de rede (`kof_plat_net_*`);
 `NATIVE003` fica reservado aos perfis bare (B-1+).
+
+**Fatia 2 (LANDADA 22/09, lane `baremetal` 9092):** o runtime x86_64 cruza a
+mesma costura — fatia nova `RuntimePlat` implementa `kof_plat_write`,
+`kof_plat_writev`, `kof_plat_exit`, `kof_plat_exit_group` (Linux = syscall crua
+1/20/60/231) e os sítios são roteados: `kof_print`/`kof_print_string` (write),
+`kof_panic`/panic do `kof_throw_string`/`kof_process_exit`/fatal JSN004 (exit) e
+o epílogo do `_start` (`exit_group`). Prova: teste de sabotagem no host x86
+(`as`/`ld` dinâmico, mesmas flags da produção — sabotar `kof_plat_write` faz a
+saída sumir), `NativeE2ETest` 67/67, `KofConcurrency2Test` 48/48, `JsonE2ETest`
+18/18, `JsonCompleteE2ETest` 10/10, `KofDbE2ETest` 27/27 (4 skips),
+`NullSafetyE2ETest` 14/14, `ProcessResultContentE2ETest` 4/4,
+`NativeNullablePrimitiveContractE2ETest` 42/42, `ArtifactSizeTest` 6/6 com o
+baseline x86 re-medido (39.232→39.304 B, 84→88 syms). **Próximas fatias:**
+superfície de ambiente x86_64 (time/sleep/mono, entropia, gettid), spawn/futex
+(`kof_plat_thread`/`kof_plat_sync`), sockets de rede (`kof_plat_net_*`) e
+então B-1.
 **Depende de:** nada. **Lacuna:** `NATIVE003` (proposta).
 
 ### B-1 — Perfil de link freestanding · **depende de B-0**

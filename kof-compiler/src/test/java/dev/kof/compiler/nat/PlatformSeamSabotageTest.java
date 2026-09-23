@@ -55,6 +55,14 @@ class PlatformSeamSabotageTest {
                 "cross toolchain aarch64 + qemu ausente — pulando (B-0 NATIVE003)");
     }
 
+    private void assumeX86Host() {
+        String arch = System.getProperty("os.arch", "");
+        Assumptions.assumeTrue(arch.equals("amd64") || arch.equals("x86_64"),
+                "host não é x86_64 — pulando a face x86 da costura");
+        Assumptions.assumeTrue(has("as", "ld"),
+                "binutils nativo (as/ld) ausente — pulando a face x86 da costura");
+    }
+
     // Harness: um KofStr "seam" estático (header 24B + dados) impresso via
     // kof_println_string e saída via kof_plat_exit_group — só vocabulário de
     // produção, para o seed da poda achar as peças reais.
@@ -97,6 +105,54 @@ class PlatformSeamSabotageTest {
                 "kof_plat_writev:\n    ret");
         assertNotEquals(s, s2,
                 "sabotagem não encontrou o corpo de kof_plat_write/writev — a costura mudou de forma?");
+        return s2;
+    }
+
+    // Harness x86_64 (AT&T): mesmo contrato do harness riscv — KofStr estático
+    // (header 24B + dados) impresso via kof_println_string e saída pela costura.
+    // O x86 define no lado-PROGRAMA o que a produção define (NativeBackend/
+    // NativeClassMeta): kof_heap_root_start (global) e .Lnewline.
+    private static final String HARNESS_X86 = """
+            .section .data
+            .align 8
+            .globl kof_heap_root_start
+            kof_heap_root_start:
+                .quad 0
+            .section .rodata
+            .align 8
+            .Lseam_msg:
+                .long 1
+                .long 0
+                .quad 0
+                .long 4
+                .long 0
+                .ascii "seam"
+            .Lnewline: .asciz "\\n"
+            .Lkof_str_true: .asciz "true"
+            .Lkof_str_false: .asciz "false"
+            .section .text
+            .globl _start
+            _start:
+                andq $-16, %rsp
+                leaq .Lseam_msg(%rip), %rdi
+                call kof_println_string
+                xorl %edi, %edi
+                call kof_plat_exit_group
+            .globl kof_super_table
+            kof_super_table:
+                .long 0
+            """;
+
+    /** Sabotagem da costura x86: corpo de kof_plat_write/writev vira `ret`. */
+    private static String sabotageSeamX86(String runtime) {
+        String s = runtime.replace(
+                "kof_plat_write:\n    movq $1, %rax\n    syscall\n    ret",
+                "kof_plat_write:\n    ret");
+        String s2 = s.replace(
+                "kof_plat_writev:\n    movq $20, %rax\n    syscall\n    ret",
+                "kof_plat_writev:\n    ret");
+        assertNotEquals(s, s2,
+                "sabotagem não encontrou o corpo x86 de kof_plat_write/writev — a costura mudou de forma?");
         return s2;
     }
 
@@ -147,6 +203,20 @@ class PlatformSeamSabotageTest {
         return runCapture("qemu-aarch64", bin.toString());
     }
 
+    private String buildX86(Path tempDir, String name, boolean sabotaged) throws IOException {
+        String runtime = RuntimeSlices.renderSubset(RuntimeSlices.keepForProgramText(HARNESS_X86));
+        if (sabotaged) runtime = sabotageSeamX86(runtime);
+        Path asm = tempDir.resolve(name + ".s");
+        Files.writeString(asm, HARNESS_X86 + "\n" + runtime);
+        Path obj = tempDir.resolve(name + ".o");
+        Path bin = tempDir.resolve(name);
+        runCapture("as", "-o", obj.toString(), asm.toString());
+        runCapture("ld", "-o", bin.toString(), obj.toString(),
+                "-dynamic-linker", "/lib64/ld-linux-x86-64.so.2", "-lc");
+        bin.toFile().setExecutable(true);
+        return runCapture(bin.toString());
+    }
+
     @Test
     void seamIsLoadBearingRiscv64(@TempDir Path tempDir) throws IOException {
         assumeRiscv64();
@@ -163,6 +233,15 @@ class PlatformSeamSabotageTest {
                 "controle: o runtime traduzido deve imprimir via a costura");
         assertEquals("", buildAarch64(tempDir, "seam_sab", true),
                 "sabotado: kof_plat_writev no-op ⇒ NENHUMA saída (a costura é usada, não decorativa)");
+    }
+
+    @Test
+    void seamIsLoadBearingX86Host(@TempDir Path tempDir) throws IOException {
+        assumeX86Host();
+        assertEquals("seam", buildX86(tempDir, "seam_x86_ctrl", false),
+                "controle: o runtime x86 de produção deve imprimir via a costura");
+        assertEquals("", buildX86(tempDir, "seam_x86_sab", true),
+                "sabotado: kof_plat_write no-op ⇒ NENHUMA saída (a costura é usada, não decorativa)");
     }
 
     /** Regressão (achada na 1ª rodada por `KofRandomTest.randomIntCrossArch`):

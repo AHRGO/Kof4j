@@ -24,10 +24,9 @@ public final class RuntimePrint {
                 incq %rdx
                 jmp .Lkof_print_len
             .Lkof_print_do:
-                movq $1, %rax
                 movq $1, %rdi
                 movq %rbx, %rsi
-                syscall
+                call kof_plat_write
                 popq %rbx
                 ret
             """);

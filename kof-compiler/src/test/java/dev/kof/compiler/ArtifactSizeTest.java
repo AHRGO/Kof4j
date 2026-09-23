@@ -51,8 +51,12 @@ class ArtifactSizeTest {
     // recursivo na x86 = codigo novo legitimo; hello 37.320 -> 39.232 re-medido
     // no host 19/09 (stash-test: byte-identico sem diff desta lane; culpa = codegen
     // do landing, nao o gate). Baseline unilateral como os anteriores.
-    private static final long HELLO_X86_BYTES = 39_232L;
-    private static final int HELLO_X86_SYMS = 84;
+    // B-0.2/PLAN-BAREMETAL-BOOT (22/09, costura HAL x86_64): o roteamento de
+    // print/panic/exit pela costura kof_plat_* acrescentou
+    // kof_plat_write/writev/exit/exit_group ao alcancavel do hello —
+    // 39.232->39.304B (+0,2%), 84->88 syms. Medido no host pos-seam.
+    private static final long HELLO_X86_BYTES = 39_304L;
+    private static final int HELLO_X86_SYMS = 88;
     // Pós-#104 (13/09): o shim globalThis.kof_platform do core JS (erro claro
     // em vez de ReferenceError fora do GraalJS) entrou no préâmbulo always —
     // o hello carrega ~827B a mais. Re-medido neste host: 6.873 → 7.700.
