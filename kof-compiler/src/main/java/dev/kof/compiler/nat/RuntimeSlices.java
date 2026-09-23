@@ -106,17 +106,35 @@ public final class RuntimeSlices {
     private static final Pattern SLICE_CALL =
             Pattern.compile("([A-Za-z][A-Za-z0-9_.]*)\\.([A-Za-z0-9_]+)\\(sb\\)");
 
-    private static volatile List<Slice> cached;
+    private static final java.util.Map<dev.kof.compiler.nat.NativeProfile, List<Slice>> CACHE =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
-    /** Todas as fatias na ordem EXATA de emissão do runtime de produção. */
+    /**
+     * Todas as fatias na ordem EXATA de emissão do runtime de produção.
+     *
+     * <p>B-2: o cache é chaveado POR PERFIL — os corpos da costura
+     * {@code kof_plat_*} dependem do perfil (host/freestanding = syscalls
+     * Linux; UEFI = OutputString/AllocatePool), e o {@code build()} captura o
+     * TEXTO invocando os métodos emit (os guards leem
+     * {@code NativeProfile.active}). Sem a chave, o primeiro compile da JVM
+     * congelava o texto e o próximo compile com OUTRO perfil linkava corpos
+     * do perfil errado (medido: UEFI depois de FREESTANDING linkava write
+     * Linux → undefined {@code kof_efi_save_args}). */
     public static List<Slice> slices() {
-        List<Slice> s = cached;
+        dev.kof.compiler.nat.NativeProfile p = dev.kof.compiler.nat.NativeProfile.active;
+        List<Slice> s = CACHE.get(p);
         if (s == null) {
             synchronized (RuntimeSlices.class) {
-                s = cached;
+                s = CACHE.get(p);
                 if (s == null) {
-                    s = build();
-                    cached = s;
+                    dev.kof.compiler.nat.NativeProfile prev = dev.kof.compiler.nat.NativeProfile.active;
+                    dev.kof.compiler.nat.NativeProfile.active = p;
+                    try {
+                        s = build();
+                    } finally {
+                        dev.kof.compiler.nat.NativeProfile.active = prev;
+                    }
+                    CACHE.put(p, s);
                 }
             }
         }

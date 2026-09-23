@@ -143,14 +143,13 @@ public final class RuntimeMemory {
             .Lkof_alloc_maybe_gc_skip:
                 jmp .Lkof_alloc_mmap
             .Lkof_alloc_mmap:
-                movq $0, %rdi
-                movq %r12, %rsi
-                movq $3, %rdx
-                movq $0x22, %r10
-                movq $-1, %r8
-                movq $0, %r9
-                movq $9, %rax
-                syscall
+                # B-0/B-2: o crescimento do heap cruza a costura
+                # kof_plat_heap_grow (host = mmap syscall; UEFI =
+                # AllocatePool) — o alocador não sabe de plataforma.
+                movq %r12, %rdi
+                subq $8, %rsp          # alinhamento p/ a chamada (frame 24+40 ≡ 8)
+                call kof_plat_heap_grow
+                addq $8, %rsp
                 testq %rax, %rax
                 js .Lkof_alloc_fail
                 movq %r12, 0(%rax)
@@ -202,6 +201,30 @@ public final class RuntimeMemory {
                 leaq .Lstr_alloc_fail(%rip), %rdi
                 call kof_panic
             """);
+        // B-0/B-2: corpo da costura kof_plat_heap_grow POR PERFIL —
+        // host/freestanding = mmap syscall (semântica idêntica ao que estava
+        // inline); UEFI = AllocatePool via RuntimeUefi. O alocador fica
+        // agnóstico de plataforma (o seam é o ponto único de plataforma).
+        if (dev.kof.compiler.nat.NativeProfile.active == dev.kof.compiler.nat.NativeProfile.UEFI) {
+            RuntimeUefi.emitUefiHeapGrow(sb);
+        } else {
+            sb.append("""
+            .section .text
+            .globl kof_plat_heap_grow
+            .type kof_plat_heap_grow, @function
+            kof_plat_heap_grow:
+                # rdi=tamanho -> rax=ptr | -1 (semântica mmap)
+                movq %rdi, %rsi           # mmap(len)
+                movq $0, %rdi             # addr = NULL
+                movq $3, %rdx             # PROT_READ|PROT_WRITE
+                movq $0x22, %r10          # MAP_PRIVATE|MAP_ANONYMOUS
+                movq $-1, %r8             # fd
+                movq $0, %r9              # offset
+                movq $9, %rax             # SYS_mmap
+                syscall
+                ret
+            """);
+        }
     }
 
     public static void emitFree(StringBuilder sb) {

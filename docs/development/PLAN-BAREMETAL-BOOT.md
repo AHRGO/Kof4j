@@ -461,3 +461,5 @@ level is enforced, not decorative.
 5. **G-4/G-5** (collector) — prerequisite for **B-4** (MCU).
 6. **B-4** (32-bit MCU) — the largest, research-class step.
 7. **B-5** — the platform bodies, one per face as each lands.
+
+**B-2 UEFI x86_64 LANDED 23/09 (lane 9093):** `--profile uefi` emits a static, PLT/GOT-free PE32+ (subsystem 10) that boots under OVMF/qemu and prints via `ConOut->OutputString` (ST+64; ST+56 is the handle — measured #UD). Exit = return the EFI_STATUS in RAX to StartImage (calling `gBS->Exit` #UDs the DXE). Runtime costs route through a UEFI branch of the `kof_plat_*` seam (`RuntimeUefi`): write (UTF-16LE+CRLF), writev, thread_id, sync no-op, and `kof_plat_heap_grow` = `gBS->AllocatePool` backing the GC/alloc mmap path. Acceptance: `NativeUefiE2ETest` (PE32+ shape, NATIVE003 inheritance, real OVMF boot printing `KO-UEFI OK` captured on COM1; toolchain guard `~/.local/share/kof-ovmf`). Toolchain: qemu 10.0.13 + OVMF extracted without root. Remaining for B-2: GetTime/Stall, real heap growth, full UTF-8 >1KiB, aarch64 UEFI, rings (B-6). The B-1 linker-script slice is UNBLOCKED (NativeAssembler WIP landed).

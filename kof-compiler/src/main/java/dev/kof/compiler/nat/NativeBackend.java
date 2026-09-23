@@ -131,13 +131,18 @@ public class NativeBackend implements Backend {
     public NativeBackend() { this(Target.NATIVE); }
     public NativeBackend(Target target) { this.target = target; nativeMethods = new NativeMethodEmitter(this); nativeArch = new NativeArchEmitter(this); }
 
-    /** B-1: perfil de link (HOST padrão; FREESTANDING = estático, sem libc no x86_64). */
+    /** B-1: perfil de link (HOST padrão; FREESTANDING = estático, sem libc no x86_64;
+     *  B-2: UEFI = herda o link estático sem libc + entry MS x64 e PE32+). */
     public NativeBackend profile(NativeProfile p) {
-        this.freestanding = p == NativeProfile.FREESTANDING;
+        this.freestanding = p == NativeProfile.FREESTANDING || p == NativeProfile.UEFI;
+        this.uefi = p == NativeProfile.UEFI;
+        NativeProfile.active = p;
         return this;
     }
 
     boolean freestanding = false;
+    /** B-2: perfil UEFI — entry {@code _start} MS x64 + corpos de costura EFI + PE32+. */
+    boolean uefi = false;
 
     String resolveLabel(LabelId id) {
         return labelMap.computeIfAbsent(id, k -> ".Lkof_" + (labelCounter++));
@@ -277,7 +282,7 @@ public class NativeBackend implements Backend {
                             usesDb = true;
                             if (kc.methodName().equals("kof_db_connect")
                                     || kc.methodName().equals("kof_db_connect2")) {
-                                usesMysql |= connectsToMysql(i, ops);
+                                usesMysql |= NativeLinkPolicy.connectsToMysql(i, ops);
                             }
                         }
                         if (op instanceof KofCall kc && kc.methodName().startsWith("kof_orm_")) {
@@ -380,9 +385,8 @@ public class NativeBackend implements Backend {
         Files.createDirectories(asmFile.getParent());
         String fullAsm = RuntimeSlices.pruneRuntime(sb, rtStart, rtEnd);
         Files.writeString(asmFile, fullAsm);
-        try { Files.writeString(java.nio.file.Path.of("/tmp/kof_asm_debug.s"), fullAsm, java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.TRUNCATE_EXISTING); } catch(Exception ignore){}
         System.err.println("NativeBackend: Generated " + asmFile + " (" + Files.size(asmFile) + " bytes)");
-        assemble(asmFile, binFile);
+        NativeLinkPolicy.assemble(this, asmFile, binFile);
     }
 
     void collectStrings(IRClass clazz) {
@@ -442,46 +446,10 @@ public class NativeBackend implements Backend {
 
 
 
-    /** Detecta o protocolo do URL de conexão quando é um literal em
-     *  compile-time (intenção conhecida pelo compilador): mysql/mariadb
-     *  exigem a lib do cliente no link; sqlite, não. URLs dinâmicos
-     *  linkam as duas (default conservador). */
-    private boolean connectsToMysql(int callIndex, List<KofOperation> ops) {
-        for (int j = callIndex - 1; j >= 0 && j >= callIndex - 8; j--) {
-            if (ops.get(j) instanceof KofLoadLiteral lit && lit.value() instanceof String url) {
-                String u = url.toLowerCase();
-                // link-by-use: só o wire mysql exige libmariadb. Scheme literal
-                // sqlite:/jdbc:h2:/etc. não chama o wire (S0 recusa NOMEADA no
-                // runtime), então não linka a lib — desbloqueia a prova do §421
-                // em host sem libmariadb. URL dinâmica segue conservadora (true).
-                return u.startsWith("mysql://") || u.startsWith("mariadb://")
-                        || u.startsWith("jdbc:mysql://");
-            }
-        }
-        return true;
-    }
-
     void runCommand(String[] cmd, String name) throws IOException {
         NativeAssembler.runCommand(cmd, name);
     }
 
-    void assemble(Path asmFile, Path binFile) throws IOException {
-        // B-1: no perfil freestanding (x86_64) o link é estático e sem libc —
-        // qualquer capacidade que precise de libc é RECUSADA com diagnóstico
-        // (nunca um link que falha feio nem um binário que resolve em runtime).
-        if (freestanding && target == Target.NATIVE
-                && (usesDb || usesOrm || usesMysql || usesConcurrency || usesPow || !ffiLibs.isEmpty())) {
-            throw new IOException("NATIVE003: perfil freestanding nao suporta libc (db/mysql/concurrency/pow/ffi) "
-                    + "neste alvo; use o perfil host ou remova a dependencia");
-        }
-        // R2 fatia 1 (20/09): -lm AGORA é by-use como sqlite/mariadb/pthread —
-        // o shim `call pow` do monolito virou WEAK (RuntimeMath `.weak pow`),
-        // então linkar sem libm fecha; usaPow só quando a fonte chama
-        // kof_math_pow (scan acima — único caminho ao shim). A história do
-        // 7f174a6f (arg morto, link incondicional) mora aqui.
-        NativeAssembler.assemble(asmFile, binFile, usesDb || usesOrm, usesMysql,
-                usesConcurrency, ffiLibs, usesPow, freestanding);
-    }
 
     // ---------------------------------------------------------------------
     // NATIVE002 — lowering riscv64 + runtime EM ASSEMBLY PURO (sem C).

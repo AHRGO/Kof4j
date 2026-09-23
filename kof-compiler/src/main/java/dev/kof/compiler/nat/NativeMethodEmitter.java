@@ -391,6 +391,10 @@ final class NativeMethodEmitter {
     }
 
     void emitStart(StringBuilder sb, IRClass clazz) {
+        if (nb.uefi) {
+            emitStartUefi(sb, clazz);
+            return;
+        }
         boolean hasMain = clazz.methods().stream().anyMatch(m -> "main".equals(m.name()));
         if (!hasMain) return;
         boolean mainHasArgs = clazz.methods().stream()
@@ -415,14 +419,7 @@ final class NativeMethodEmitter {
         }
         // #133 (§186): chama cada <clinit> antes do main (ordem de classes no
         // módulo — link-ordem estática; não há dependência dinâmica declarada).
-        for (IRClass c : nb.allClassesMap.values()) {
-            for (IRMethod m : c.methods()) {
-                if ("<clinit>".equals(m.name())) {
-                    sb.append("    call ").append(NativeSymbolMangling.fnSymbol(
-                            c.name(), m.name(), m.parameterTypes(), nb.allClassesMap)).append("\n");
-                }
-            }
-        }
+        emitClinitCalls(sb);
         sb.append("    call ").append(nb.sanitizeName(clazz.name())).append("_main\n");
         // #431: com externs bindados a libc flusha o stdio DA C antes do
         // exit_group cru — puts/printf da lib ficam no buffer do processo e
@@ -444,6 +441,56 @@ final class NativeMethodEmitter {
         // B-0 (D-BAREMETAL-BOOT): a saída cruza a costura kof_plat_exit_group.
         sb.append("    xorl %edi, %edi\n");
         sb.append("    call kof_plat_exit_group\n");
+    }
+
+    private void emitClinitCalls(StringBuilder sb) {
+        for (IRClass c : nb.allClassesMap.values()) {
+            for (IRMethod m : c.methods()) {
+                if ("<clinit>".equals(m.name())) {
+                    sb.append("    call ").append(NativeSymbolMangling.fnSymbol(
+                            c.name(), m.name(), m.parameterTypes(), nb.allClassesMap)).append("\n");
+                }
+            }
+        }
+    }
+
+    /**
+     * B-2 (PLAN-BAREMETAL-BOOT): entry UEFI x86_64 — PE32+ com
+     * {@code objcopy --target=pei-x86-64} (NativeAssembler). UEFI x86_64 é
+     * MS x64: {@code RCX=ImageHandle, RDX=SystemTable} (medição B-2: chamar
+     * OutputString com This/String em RCX/RDX + rsp%16==0 na chamada). O
+     * fim é {@code BootServices->Exit} via a costura ({@code RuntimeUefi}) —
+     * nunca retorna, análogo ao {@code exit_group} do perfil host.
+     */
+    private void emitStartUefi(StringBuilder sb, IRClass clazz) {
+        boolean hasMain = clazz.methods().stream().anyMatch(m -> "main".equals(m.name()));
+        if (!hasMain) return;
+        boolean mainHasArgs = clazz.methods().stream()
+                .filter(m -> "main".equals(m.name()))
+                .anyMatch(m -> !m.parameterTypes().isEmpty());
+        sb.append("\n.globl _start\n");
+        sb.append("_start:\n");
+        // MS x64: RCX=ImageHandle, RDX=SystemTable -> globals (RuntimeUefi).
+        sb.append("    call kof_efi_save_args\n");
+        // G-6b: fundo da pilha do main ANTES do alinhamento (mesmo contrato do host).
+        sb.append("    movq %rsp, kof_main_stack_bottom(%rip)\n");
+        sb.append("    andq $-16, %rsp\n");       // o firmware entra MS: rsp%16==8
+        sb.append("    call kof_plat_thread_id\n");
+        sb.append("    movq %rax, kof_main_tid(%rip)\n");
+        if (mainHasArgs) {
+            // N3: array vazio — mesmo contrato do _start host.
+            sb.append("    xorl %edi, %edi\n");
+            sb.append("    movl $8, %esi\n");
+            sb.append("    call kof_array_alloc\n");
+            sb.append("    movq %rax, %rdi\n");
+        }
+        emitClinitCalls(sb);
+        sb.append("    call ").append(nb.sanitizeName(clazz.name())).append("_main\n");
+        // Saída pela costura: no UEFI o corpo DEVOLVE o status em RAX
+        // (retorno ao StartImage) — o _start termina com ret, nunca cai fora.
+        sb.append("    xorl %edi, %edi\n");
+        sb.append("    call kof_plat_exit_group\n");
+        sb.append("    ret\n");
     }
 
 }

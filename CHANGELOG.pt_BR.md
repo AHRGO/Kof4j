@@ -13,6 +13,19 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **Perfil UEFI B-2 (lane baremetal): `--profile uefi` emite PE32+ bootável**
+    (23/09, lane 9093): o novo `NativeProfile.UEFI` faz o backend nativo x86-64
+    emitir uma imagem PE32+ estática, sem PLT/GOT (subsystem 10), que boota sob
+    OVMF/qemu e imprime via `ConOut->OutputString`. As chamadas de plataforma
+    passam pelo ramo UEFI da costura `kof_plat_*` (`RuntimeUefi`): write/writev
+    (UTF-16LE+CRLF), thread_id, sync no-op e `kof_plat_heap_grow` =
+    `gBS->AllocatePool` por baixo do caminho de GC/alloc; capacidades libc
+    seguem recusadas com o diagnóstico `NATIVE003` herdado. Prova:
+    `NativeUefiE2ETest` 3/0F (shape PE32+, NATIVE003, boot OVMF real imprimindo
+    `KO-UEFI OK` no COM1). O cache de `RuntimeSlices` agora é chaveado por
+    perfil (o 2º perfil não reusa corpos do 1º); o gate <=500 do `NativeBackend`
+    foi pago com a extração de `NativeLinkPolicy` (608->571 linhas).
+
   - **§448 ✅ CORRIGIDO — `toString` de `Double`/`Float` no Native agora casa o
     oráculo JVM nos subnormais (x86 e cross)** (23/09, lane baremetal): o dtoa
     nativo escolhia o decimal **mais curto** em vez do **mais próximo entre os

@@ -116,11 +116,13 @@ class ArtifactSizeTest {
     // print/_start/random pela costura kof_plat_* acrescentou os símbolos
     // kof_plat_write/writev/exit_group/random ao alcançável do hello —
     // 136.048→136.824B (+0,6%), 41→45 syms (+4). Medido no host pós-seam.
-    // §448 (23/09, lane baremetal): o dtoa libc-free Schubfach no riscv
-    // (kof_schub_to_decimal/rop, reusado pelo box printer do hello) entrou no
-    // alcançável — 45→55 syms (+10); bytes estáveis (dentro da tolerância).
-    // Baseline destravado pela lane gaps-db (E-parte-5/6) que mediu o RED no
-    // tip SEM os próprios commits (a148a9557: 55 syms) — §450.
+    // B-1c-3 (23/09, lane 9093, dtoa Schubfach libc-free p/ §448): a fatia
+    // schub_* (11 syms) passa a ser definida (antes: refs externas libc U,
+    // não contadas) e é puxada por box_to_string→double_to_string (§284)
+    // em TODO binário que imprime.
+    // §448/§450 (23/09, lane baremetal/gaps-db): baseline do tip MESCLADO
+    // re-medido em a148a9557 (55 syms; +10 vs 45) — o valor pré-§448 da B-1c-3
+    // (54 syms) fica superseded; a lane re-mede ao pousar o seu código.
     private static final long HELLO_RV_BYTES = 136_824L;
     private static final int HELLO_RV_SYMS = 55;
     // Hello aarch64 (medido 12/09, mesmo caminho: poda S-4 + gc-sections S-5
@@ -129,9 +131,10 @@ class ArtifactSizeTest {
     // aarch64 expande as fatias novas do riscv (movi/adrp-loops) muito acima
     // da média do binário; mesmo caminho de poda (regra 5), medido pós-port.
     // B-0 (22/09): 201.408→202.168B, 41→45 syms (mesma costura do riscv).
-    // §448 (23/09): o dtoa Schubfach riscv atravessa o tradutor aarch64 e entra
-    // no alcançável (aarch herda) — 45→55 syms, bytes estáveis; baseline medido
-    // no tip a148a9557 sem os commits da E-parte-5/6 (§450).
+    // B-1c-3 (23/09, lane 9093): o dtoa Schubfach riscv atravessa o tradutor
+    // aarch64 e entra no alcançável (aarch herda).
+    // §448/§450 (23/09): baseline do tip MESCLADO re-medido (55 syms) —
+    // superseded o valor pré-§448 da B-1c-3 (54); a lane re-mede ao pousar.
     private static final long HELLO_AA_BYTES = 202_168L;
     private static final int HELLO_AA_SYMS = 55;
 

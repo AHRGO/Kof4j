@@ -67,6 +67,27 @@ public final class NativeAssembler {
                 }
                 throw e;
             }
+            // B-2: perfil UEFI — o artefato final é PE32+ (EFI application):
+            // ld produz um ELF estático intermediário e o objcopy converte
+            // (a receita medida no OVMF: seções .text/.rodata/.data/.bss/.reloc,
+            // subsystem 10; o .reloc dummy de 10 bytes vem do runtime
+            // (RuntimeUefi) — o loader EDK2 exige dir de relocs não-vazio).
+            if (NativeProfile.active == NativeProfile.UEFI) {
+                Path elfFile = binFile.resolveSibling(binFile.getFileName() + ".elf");
+                Files.move(binFile, elfFile);
+                try {
+                    runCommand(new String[]{"objcopy",
+                            // globs: o B-1b sectioniza o .text em
+                            // .text.kof_<fn> — o -j é match exato, o glob
+                            // pega as seções por função (medição B-2).
+                            "-j", ".text*", "-j", ".rodata*", "-j", ".data*",
+                            "-j", ".bss*", "-j", ".reloc",
+                            "--target", "pei-x86-64", "--subsystem", "10",
+                            elfFile.toString(), binFile.toString()}, "objcopy");
+                } finally {
+                    Files.deleteIfExists(elfFile);
+                }
+            }
             Files.deleteIfExists(objFile);
             Files.deleteIfExists(asmToAssemble);
             if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);

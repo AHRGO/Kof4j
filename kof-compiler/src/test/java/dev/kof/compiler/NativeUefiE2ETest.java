@@ -1,0 +1,220 @@
+package dev.kof.compiler;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+import dev.kof.compiler.nat.NativeProfile;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+/**
+ * B-2 (PLAN-BAREMETAL-BOOT) — perfil UEFI (x86_64): o compilador emite uma
+ * aplicação PE32+ ({@code objcopy --target=pei-x86-64 --subsystem=10} sobre o
+ * ELF estático do perfil freestanding) com entry MS x64 que imprime via
+ * {@code SystemTable->ConOut->OutputString} e sai via
+ * {@code BootServices->Exit}. Aceitação do plano: o OVMF (TianoCore) dá boot
+ * no {@code \\EFI\\BOOT\\BOOTX64.EFI} num ESP FAT e o hello aparece no console
+ * — prova headless pelo serial capturado do qemu (ConOut do OVMF espelha no
+ * COM1; medição B-2). A capacidade libc (concurrency) continua RECUSADA
+ * (herda o gate NATIVE003 do freestanding).
+ *
+ * <p>Receita de link medida (não derivada): ELF estático sem PLT/GOT (crt0
+ * GNU-EFI via -shared manda a chamada por PLT não-relocado → #UD), dummy
+ * {@code .reloc} de 10 bytes (PageRVA=0, BlockSize=10, uma entrada ABSOLUTE —
+ * o loader EDK2 recusa dir vazio), {@code ConOut = ST+64} (não ST+56 — o
+ * offset 56 é ConsoleOutHandle, um handle, não um ponteiro).
+ */
+class NativeUefiE2ETest {
+
+    private static final String HELLO = """
+            main() {
+                println("KO-UEFI OK")
+            }
+            """;
+
+    private static final String CONCURRENT = """
+            Int compute() { return 42 }
+            main() {
+                val r = spawn compute()
+                println(await r)
+            }
+            """;
+
+    private static boolean hasTool(String tool, String... args) {
+        String[] cmd = new String[args.length + 1];
+        cmd[0] = tool;
+        System.arraycopy(args, 0, cmd, 1, args.length);
+        try {
+            Process p = new ProcessBuilder(cmd).start();
+            return p.waitFor(10, TimeUnit.SECONDS) && p.exitValue() == 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Prefixo do toolchain UEFI extraído sem root (padrão da cross kof-cross),
+     *  ou null se só houver qemu do sistema. */
+    private static Path ovmfPrefix() {
+        String env = System.getenv("KOF_OVMF_HOME");
+        if (env != null && Files.isRegularFile(Path.of(env, "usr/share/OVMF/OVMF_CODE_4M.fd"))) {
+            return Path.of(env);
+        }
+        Path home = Path.of(System.getProperty("user.home"),
+                ".local/share/kof-ovmf");
+        if (Files.isRegularFile(home.resolve("usr/share/OVMF/OVMF_CODE_4M.fd"))) {
+            return home;
+        }
+        return null;
+    }
+
+    private static Path findOvmfCode() {
+        Path p = ovmfPrefix();
+        if (p != null) return p.resolve("usr/share/OVMF/OVMF_CODE_4M.fd");
+        Path sys = Path.of("/usr/share/OVMF/OVMF_CODE_4M.fd");
+        return Files.isRegularFile(sys) ? sys : null;
+    }
+
+    private static Path findQemu() {
+        if (hasTool("qemu-system-x86_64", "--version")) return Path.of("qemu-system-x86_64");
+        Path p = ovmfPrefix();
+        if (p != null) return p.resolve("usr/bin/qemu-system-x86_64");
+        return null;
+    }
+
+    private Path build(Path tempDir, String program, boolean expectSuccess) throws IOException {
+        CompilerDriver driver = new CompilerDriver();
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, program);
+        Path outDir = tempDir.resolve("out");
+        CompilationResult result = driver.compile(source, outDir, Target.NATIVE, NativeProfile.UEFI);
+        assertEquals(expectSuccess, result.success(),
+                "compile UEFI inesperado: " + result.diagnostics().getDiagnostics());
+        return outDir.resolve("Default/Main");
+    }
+
+    /** FAT ESP com \EFI\BOOT\BOOTX64.EFI via mtools (superfloppy — o UEFI
+     *  monta FAT em LBA0 sem partição). */
+    private Path makeEsp(Path tempDir, Path peBinary) throws IOException, InterruptedException {
+        Path esp = tempDir.resolve("esp.img");
+        run(5_000, "mformat", "-i", esp.toString(), "-C", "-T", "16384", "::");
+        run(5_000, "mmd", "-i", esp.toString(), "::/EFI");
+        run(5_000, "mmd", "-i", esp.toString(), "::/EFI/BOOT");
+        run(10_000, "mcopy", "-i", esp.toString(), peBinary.toString(),
+                "::/EFI/BOOT/BOOTX64.EFI");
+        return esp;
+    }
+
+    private void run(long timeoutMs, String... cmd)
+            throws IOException, InterruptedException {
+        Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+        assertTrue(p.waitFor(timeoutMs, TimeUnit.MILLISECONDS) && p.exitValue() == 0,
+                "falhou: " + String.join(" ", cmd));
+    }
+
+    private String serialText(Path log) throws IOException {
+        return Files.readString(log, StandardCharsets.ISO_8859_1).replace("\0", "");
+    }
+
+    @Test
+    void uefiArtifactIsPe32Plus(@TempDir Path tempDir) throws IOException {
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path bin = build(tempDir, HELLO, true);
+        byte[] b = Files.readAllBytes(bin);
+        assertTrue(b.length > 2 && b[0] == 'M' && b[1] == 'Z',
+                "artefato UEFI deveria ser PE32+ (MZ), tem " + b.length + " bytes");
+        int pe = -1;
+        for (int i = 0; i + 4 <= b.length && i < 0x200; i++) {
+            if (b[i] == 'P' && b[i + 1] == 'E' && b[i + 2] == 0 && b[i + 3] == 0) {
+                pe = i;
+                break;
+            }
+        }
+        assertTrue(pe >= 0, "assinatura PE ausente");
+        // PE32+ = OptionalHeader Magic 0x020B (little-endian, logo após COFF header).
+        int magic = (b[pe + 24] & 0xff) | ((b[pe + 25] & 0xff) << 8);
+        assertEquals(0x020b, magic, "OptionalHeader Magic deve ser PE32+ (0x020B)");
+        // Subsystem EFI application = 10 (offset do Subsystem no PE32+:
+        // COFF 20 bytes + OptionalHeader: 112 bytes até Subsystem).
+        int subsystem = (b[pe + 24 + 68] & 0xff) | ((b[pe + 24 + 69] & 0xff) << 8);
+        assertEquals(10, subsystem, "Subsystem deve ser EFI application (10)");
+    }
+
+    @Test
+    void uefiRefusesLibcCapabilityWithDiagnostic(@TempDir Path tempDir) throws IOException {
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        CompilerDriver driver = new CompilerDriver();
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, CONCURRENT);
+        Path outDir = tempDir.resolve("out");
+        CompilationResult result = driver.compile(source, outDir, Target.NATIVE, NativeProfile.UEFI);
+        assertTrue(!result.success(), "concurrency em UEFI deve ser recusada");
+        String diags = result.diagnostics().getDiagnostics().toString();
+        assertTrue(diags.contains("NATIVE003"),
+                "recusa deve citar NATIVE003, veio: " + diags);
+    }
+
+    @Test
+    void uefiHelloPrintsViaConOutUnderOvmf(@TempDir Path tempDir) throws Exception {
+        Path code = findOvmfCode();
+        Path qemu = findQemu();
+        assumeTrue(code != null, "OVMF ausente (KOF_OVMF_HOME ou ~/.local/share/kof-ovmf)");
+        assumeTrue(qemu != null, "qemu-system-x86_64 ausente");
+        assumeTrue(hasTool("mformat", "--help") || hasTool("mformat", "-V"),
+                "mtools ausente");
+        Path bin = build(tempDir, HELLO, true);
+        Path esp = makeEsp(tempDir, bin);
+
+        Path vars = tempDir.resolve("vars.fd");
+        Files.copy(code.resolveSibling("OVMF_VARS_4M.fd"), vars);
+        Path ser = tempDir.resolve("ser.log");
+
+        java.util.List<String> cmd = new java.util.ArrayList<>();
+        boolean prefixQemu = ovmfPrefix() != null && qemu.startsWith(ovmfPrefix());
+        if (prefixQemu) {
+            // qemu do prefixo precisa do ld.so + libs do próprio rootfs
+            // (glibc do host mais velha que a do rootfs = crash no start).
+            cmd.add(ovmfPrefix().resolve("usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2").toString());
+            cmd.add("--library-path");
+            cmd.add(ovmfPrefix().resolve("usr/lib/x86_64-linux-gnu").toString());
+        }
+        cmd.add(qemu.toString());
+        if (ovmfPrefix() != null) cmd.addAll(java.util.List.of(
+                "-L", ovmfPrefix().resolve("usr/share/qemu").toString()));
+        cmd.addAll(java.util.List.of(
+                "-machine", "q35", "-m", "256",
+                "-display", "none", "-nodefaults", "-net", "none",
+                "-serial", "file:" + ser,
+                "-drive", "if=pflash,format=raw,readonly=on,file=" + code,
+                "-drive", "if=pflash,format=raw,file=" + vars,
+                "-drive", "file=" + esp + ",format=raw,media=disk"));
+
+        Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+        String expected = "KO-UEFI OK";
+        try {
+            // Bounded (lição §418): sai assim que a linha aparece no serial —
+            // regressão = timeout + assert, nunca suíte pendurada.
+            long deadline = System.currentTimeMillis() + 150_000;
+            String text = "";
+            while (System.currentTimeMillis() < deadline) {
+                if (Files.exists(ser)) {
+                    text = serialText(ser);
+                    if (text.contains(expected)) break;
+                }
+                Thread.sleep(1_000);
+            }
+            assertTrue(text.contains(expected),
+                    "OVMF nao imprimiu '" + expected + "' no serial. Fim do log: "
+                            + text.substring(Math.max(0, text.length() - 400)));
+        } finally {
+            p.destroyForcibly();
+        }
+    }
+}
