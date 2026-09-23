@@ -34,11 +34,33 @@ public final class KofJsDbBridge {
     private static final ThreadLocal<java.sql.Connection> TX = new ThreadLocal<>();
 
     public static String connect(String url) throws Exception {
-        return register(java.sql.DriverManager.getConnection(url));
+        try {
+            return register(java.sql.DriverManager.getConnection(url));
+        } catch (java.sql.SQLException e) {
+            throw dbDriverGap(url, e);
+        }
     }
 
     public static String connect2(String url, String user, String pass) throws Exception {
-        return register(java.sql.DriverManager.getConnection(url, user, pass));
+        try {
+            return register(java.sql.DriverManager.getConnection(url, user, pass));
+        } catch (java.sql.SQLException e) {
+            throw dbDriverGap(url, e);
+        }
+    }
+
+    /**
+     * DB001 (S2/db-parity): paridade com o caminho JVM — URL JDBC sem driver
+     * no classpath vira diagn\u00f3stico NOMEADO (R6) em vez do {@code SQLException}
+     * cru; falhas reais de conex\u00e3o passam intactas.
+     */
+    private static Exception dbDriverGap(String url, java.sql.SQLException e) {
+        String m = e.getMessage() == null ? "" : e.getMessage();
+        if (m.contains("No suitable driver")) {
+            return new IllegalArgumentException(
+                    "DB001: no JDBC driver for this URL (add the driver to the classpath): " + url);
+        }
+        return e;
     }
 
     private static String register(java.sql.Connection c) {

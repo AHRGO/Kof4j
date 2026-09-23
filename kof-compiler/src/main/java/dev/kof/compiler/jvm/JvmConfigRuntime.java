@@ -249,11 +249,32 @@ public final class JvmConfigRuntime {
                         KOF_MONGO.put(id, database);
                         return id;
                     }
-                    return kof_db_register(java.sql.DriverManager.getConnection(url));
+                    try {
+                        return kof_db_register(java.sql.DriverManager.getConnection(url));
+                    } catch (java.sql.SQLException e) {
+                        throw kof_db_driver_gap(url, e);
+                    }
                 }
 
                 public static String kof_db_connect2(String url, String user, String pass) throws Exception {
-                    return kof_db_register(java.sql.DriverManager.getConnection(url, user, pass));
+                    try {
+                        return kof_db_register(java.sql.DriverManager.getConnection(url, user, pass));
+                    } catch (java.sql.SQLException e) {
+                        throw kof_db_driver_gap(url, e);
+                    }
+                }
+
+                /** DB001 (S2/db-parity): a JDBC URL sem driver no classpath dava
+                 *  um {@code SQLException: No suitable driver} cru — agora vira
+                 *  diagn\u00f3stico NOMEADO (R6), preservando as falhas reais de
+                 *  conex\u00e3o (servidor fora/credencial) intactas. */
+                private static Exception kof_db_driver_gap(String url, java.sql.SQLException e) {
+                    String m = e.getMessage() == null ? "" : e.getMessage();
+                    if (m.contains("No suitable driver")) {
+                        return new IllegalArgumentException(
+                                "DB001: no JDBC driver for this URL (add the driver to the classpath): " + url);
+                    }
+                    return e;
                 }
 
                 private static String kof_db_register(java.sql.Connection c) {

@@ -40,6 +40,22 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `{"id":7,"name":"Alias"}`); `KofDbE2ETest` 28/0F +
     `NativeDbSchemeRefusalAsmTest` 2/2.
 
+  - **DB parity S2 — missing JDBC driver is now a named `DB001` diagnostic on
+    JVM/JS/Android** (23/09, gaps-db lane): a `db.connect` to a JDBC URL whose
+    driver is absent from the classpath used to leak the raw
+    `SQLException: No suitable driver`. `JvmConfigRuntime.kof_db_connect/connect2`
+    (JVM, and Android through the same runtime) and
+    `KofJsDbBridge.connect/connect2` (JS delegate) now map that case to
+    `DB001: no JDBC driver for this URL (add the driver to the classpath): <url>`,
+    while a **real** connection failure (server down / bad credentials) passes
+    through untouched — never masked as `DB001` (R6). Per-driver measurement
+    (h2/sqlite/mariadb/postgres) is already covered by the E2E corpus. Proof:
+    `KofDbE2ETest#jvmMissingJdbcDriverNamesGapNotSilent` +
+    `#jvmRealConnectionFailureIsNotRelabeledDb001` +
+    `#jsMissingJdbcDriverNamesGapNotSilent` +
+    `#jsRealConnectionFailureIsNotRelabeledDb001` (the JVM one RED on the old
+    code); `KofDbE2ETest` 32/0F.
+
   - **§448 ✅ FIXED — `Double`/`Float` `toString` on Native now matches the JVM
     oracle on subnormals (x86 and cross)** (23/09, baremetal lane): the native
     dtoa picked the **shortest** decimal instead of the **closest among the

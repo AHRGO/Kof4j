@@ -38,6 +38,21 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `user:pass@host` e só-host, byte-idêntico `{"id":7,"name":"Alias"}`);
     `KofDbE2ETest` 28/0F + `NativeDbSchemeRefusalAsmTest` 2/2.
 
+  - **Paridade DB S2 — driver JDBC ausente agora é diagnóstico `DB001` nomeado
+    no JVM/JS/Android** (23/09, lane gaps-db): um `db.connect` para URL JDBC cujo
+    driver está ausente do classpath vazava o `SQLException: No suitable driver`
+    cru. `JvmConfigRuntime.kof_db_connect/connect2` (JVM, e Android pelo mesmo
+    runtime) e `KofJsDbBridge.connect/connect2` (delegate JS) agora mapeiam esse
+    caso para `DB001: no JDBC driver for this URL (add the driver to the
+    classpath): <url>`, enquanto uma falha **real** de conexão (servidor fora /
+    credencial ruim) passa intacta — nunca mascarada como `DB001` (R6). A medição
+    por-driver (h2/sqlite/mariadb/postgres) já é coberta pelo corpus E2E. Prova:
+    `KofDbE2ETest#jvmMissingJdbcDriverNamesGapNotSilent` +
+    `#jvmRealConnectionFailureIsNotRelabeledDb001` +
+    `#jsMissingJdbcDriverNamesGapNotSilent` +
+    `#jsRealConnectionFailureIsNotRelabeledDb001` (a do JVM VERMELHA no código
+    antigo); `KofDbE2ETest` 32/0F.
+
   - **§448 ✅ CORRIGIDO — `toString` de `Double`/`Float` no Native agora casa o
     oráculo JVM nos subnormais (x86 e cross)** (23/09, lane baremetal): o dtoa
     nativo escolhia o decimal **mais curto** em vez do **mais próximo entre os

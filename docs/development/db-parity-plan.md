@@ -8,7 +8,7 @@
 > when parity is complete.
 
 **Owner:** `gaps-db` lane (handed over 21/09 by order of the maintainer, under `D-DB-PARITY-OWNER`; S0/S1 authorized) · **Records/plan:** docs/plataforma lane
-**Branch:** `beta-0.5.0` · **Status:** S0 ✅ DONE (21/09, session 9092) — honest native refusal of an unsupported scheme with the named `DB001` code, plus real link-by-use (no `libmariadb` link for non-mysql literals); **S1 ✅ DONE on Native x86-64 (23/09, gaps-db lane)** — `mariadb://` is a `mysql://` wire alias; cross stays honest `DB001` until the mysql wire is ported (R7); S2–S4 follow
+**Branch:** `beta-0.5.0` · **Status:** S0 ✅ DONE (21/09, session 9092) — honest native refusal of an unsupported scheme with the named `DB001` code, plus real link-by-use (no `libmariadb` link for non-mysql literals); **S1 ✅ DONE on Native x86-64 (23/09, gaps-db lane)** — `mariadb://` is a `mysql://` wire alias; cross stays honest `DB001` until the mysql wire is ported (R7); **S2 ✅ DONE on JVM/JS/Android (23/09, gaps-db lane)** — a missing JDBC driver is now a named `DB001` diagnostic (real connection failures untouched); S3–S4 follow
 
 ---
 
@@ -79,9 +79,24 @@ typed roundtrip) produces the **same observable result** on all four targets, or
   — real MariaDB (KOF_MYSQL_PORT), both the `user:pass@host` and the host-only
   form, byte-identical `{"id":7,"name":"Alias"}`; `KofDbE2ETest` 28/0F +
   `NativeDbSchemeRefusalAsmTest` 2/2.
-- **S2 — JDBC scheme parity JVM/JS/Android.** Per-driver measurement (h2, sqlite,
-  mysql, mariadb, postgres) + honest missing-driver diagnostic with the code.
-  *Proof:* E2E per scheme on JVM; JS/Android delegate proof.
+- **S2 — JDBC scheme parity JVM/JS/Android. ✅ DONE 23/09 (gaps-db lane).**
+  Per-driver measurement is already proven by the E2E corpus — `h2`
+  (`KofDbE2ETest` execute/query/typed), `sqlite` (`KofOrmE2ETest` `jdbc:sqlite:`,
+  JVM find/save/page), `mariadb` (`KofOrmE2ETest#mariadbCrud` + the F2d JVM
+  oracle, real server), `postgres` (`KofOrmE2ETest#postgresCrud`, skipped without
+  a server) — all through the same `DriverManager` path that JS/Android delegate
+  to. What was missing was the **diagnostic**: a JDBC URL whose driver is absent
+  leaked a raw `SQLException: No suitable driver`. Now
+  `JvmConfigRuntime.kof_db_connect/connect2` (JVM, and Android through the same
+  runtime) and `KofJsDbBridge.connect/connect2` (JS delegate) map it to a
+  **named** `DB001: no JDBC driver for this URL (add the driver to the
+  classpath): <url>`, while a **real** connection failure (server down / bad
+  credentials) passes through **untouched** — never masked as `DB001`. *Proof:*
+  `KofDbE2ETest#jvmMissingJdbcDriverNamesGapNotSilent` +
+  `#jvmRealConnectionFailureIsNotRelabeledDb001` +
+  `#jsMissingJdbcDriverNamesGapNotSilent` +
+  `#jsRealConnectionFailureIsNotRelabeledDb001` (the JVM one RED on the old code
+  — `No suitable driver`); `KofDbE2ETest` 32/0F.
 - **S3 — `mongodb://` interop-first (R9).** Driver/wire behind the Kof API —
   **never** a home-grown server. Native closure per R7.
   *Proof:* E2E roundtrip, or a declared gap with the code until the driver lands.

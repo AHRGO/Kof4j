@@ -110,6 +110,71 @@ class KofDbE2ETest {
                 "2\n{\"id\":1,\"name\":\"Mel\"}\n{\"id\":2,\"name\":\"Kof\"}");
     }
 
+    // S2/db-parity (23/09): URL JDBC cujo driver NAO esta no classpath dava um
+    // `SQLException: No suitable driver` cru. O connect deve NOMEAR o gap DB001
+    // (R6), sem engolir falhas reais de conexao (teste irmão abaixo).
+    @Test
+    void jvmMissingJdbcDriverNamesGapNotSilent(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var db = db.connect("jdbc:oracle:thin:@127.0.0.1:1521/XE")
+                println("connected")
+            }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "JVM compile should succeed: " + result.diagnostics().getDiagnostics());
+        String output = runJvmExpectFailure(tempDir.resolve("out"), null);
+        assertTrue(output.contains("DB001"), "Recusa deve NOMEAR o gap DB001 (R6), veio: " + output);
+        assertTrue(output.contains("driver"), "Diagnostico deve citar o driver ausente: " + output);
+        assertFalse(output.contains("No suitable driver"), "Nao vazar a mensagem crua do JDBC: " + output);
+    }
+
+    // Edge Q3 (falha real preservada): com o driver mariadb no classpath mas o
+    // servidor fora, a mensagem original ("Connection refused"/timeout) deve
+    // passar INTACTA — o rotulo DB001 e so para driver ausente, nunca engole
+    // erro de conexao legitimo.
+    @Test
+    void jvmRealConnectionFailureIsNotRelabeledDb001(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var db = db.connect("jdbc:mariadb://127.0.0.1:1/kof_none")
+                println("connected")
+            }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "JVM compile should succeed: " + result.diagnostics().getDiagnostics());
+        String output = runJvmExpectFailure(tempDir.resolve("out"), findClasspathJar("mariadb"));
+        assertFalse(output.contains("DB001"),
+                "Falha real de conexao NAO pode virar DB001 (driver existe): " + output);
+    }
+
+    private String runJvmExpectFailure(Path outDir, String extraJar) throws IOException {
+        try {
+            String cp = outDir.toString();
+            if (extraJar != null) cp = cp + java.io.File.pathSeparator + extraJar;
+            ProcessBuilder pb = new ProcessBuilder("java", "-cp", cp, "Default.Main");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+            int ec = p.waitFor();
+            assertNotEquals(0, ec, "URL sem driver / servidor fora nao pode 'conectar': " + output);
+            return output;
+        } catch (InterruptedException e) {
+            throw new IOException("Interrupted while running JVM class", e);
+        }
+    }
+
+    private static String findClasspathJar(String needle) {
+        String cp = System.getProperty("java.class.path");
+        for (String entry : cp.split(java.io.File.pathSeparator)) {
+            if (entry.toLowerCase().contains(needle) && entry.endsWith(".jar")) return entry;
+        }
+        throw new IllegalStateException(needle + " jar not found on test classpath");
+    }
+
     @Test
     void typedQueryBindsRecord(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
@@ -288,6 +353,53 @@ class KofDbE2ETest {
             """);
         runJs(source, tempDir.resolve("out"),
                 "2\n{\"id\":1,\"name\":\"Mel\"}\n{\"id\":2,\"name\":\"Kof\"}");
+    }
+
+    // S2/db-parity (23/09): mesma paridade no delegate JS — driver ausente no
+    // host GraalJS tambem NOMEIA o gap DB001 em vez do SQLException cru.
+    @Test
+    void jsMissingJdbcDriverNamesGapNotSilent(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var db = db.connect("jdbc:oracle:thin:@127.0.0.1:1521/XE")
+                println("connected")
+            }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JS);
+        assertTrue(result.success(), "JS compilation should succeed: " + result.diagnostics().getDiagnostics());
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int ec = dev.kof.runtime.KofJsRunner.run(tempDir.resolve("out/Default.mjs"), out,
+                new java.io.ByteArrayInputStream(new byte[0]), out);
+        String output = out.toString(java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertNotEquals(0, ec, "URL sem driver nao pode 'conectar' no JS: " + output);
+        assertTrue(output.contains("DB001"), "JS deve NOMEAR o gap DB001 (R6), veio: " + output);
+        assertFalse(output.contains("No suitable driver"),
+                "Nao vazar a mensagem crua do JDBC no JS: " + output);
+    }
+
+    // Edge Q3 no JS: falha real de conexao (driver presente, servidor fora)
+    // passa intacta — o rotulo DB001 e so para driver ausente.
+    @Test
+    void jsRealConnectionFailureIsNotRelabeledDb001(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var db = db.connect("jdbc:mariadb://127.0.0.1:1/kof_none")
+                println("connected")
+            }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JS);
+        assertTrue(result.success(), "JS compilation should succeed: " + result.diagnostics().getDiagnostics());
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int ec = dev.kof.runtime.KofJsRunner.run(tempDir.resolve("out/Default.mjs"), out,
+                new java.io.ByteArrayInputStream(new byte[0]), out);
+        String output = out.toString(java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertNotEquals(0, ec, "Servidor fora nao pode 'conectar' no JS: " + output);
+        assertFalse(output.contains("DB001"),
+                "Falha real de conexao NAO pode virar DB001 no JS: " + output);
     }
 
     @Test
