@@ -366,6 +366,13 @@ on a FAT EFI System Partition as `\EFI\BOOT\BOOTX64.EFI`.
 Console Output; a Kof `main` returning non-zero maps to
 `BootServices->Exit` status. **Depends on:** B-1. **Classification:** H (high).
 **Toolchain:** OVMF firmware + `qemu-system-x86_64`.
+**✅ LANDED 23/09 (lane `baremetal` 9093, fatias 1+2):** profile `UEFI`
+(`--profile uefi`), MS-x64 `_start` (RCX=ImageHandle, RDX=SystemTable, ConOut
+`ST+64`), PE/COFF via `objcopy --target=pei-x86-64 --subsystem=10` + a FAT ESP;
+hello boots under OVMF headless and prints `KO-UEFI OK` on the serial
+(`NativeUefiE2ETest` 3/0F). Residual slices (GetTime/Stall, real heap >1 alloc,
+full UTF-8 >1 KiB, aarch64 UEFI) are the owner's follow-up; **B-6 builds on this
+boot path.**
 
 ### B-3 — Legacy BIOS (MBR / real mode) · **depends B-1**
 A 512-byte boot sector (magic `0x55AA`) that loads the Kof payload (custom sector
@@ -410,6 +417,33 @@ level is enforced, not decorative.
 **Depends on:** B-1 + one x86 boot path (B-2 or B-3). **Classification:** H (high).
 **Surface:** the Kof-level API to *target* a ring1 domain is a **rule-6 decision**
 (maintainer); this face lands the enabling machinery first.
+
+**Fatias (decomposition added 23/09 — the face was a single paragraph; each fatia
+is independently provable, machinery first, surface last):**
+
+- **B-6.1 — own descriptor tables + CPL0 proof (machinery, NO Kof surface).**
+  Emit the Kof-owned **GDT** (null + ring0 code/data `0x08`/`0x10` + ring1
+  code/data `0x18`/`0x20` + a 64-bit **TSS** `0x28`), a **TSS** with `rsp0`, and
+  a Kof-owned **IDT** (default gate + `#DE`/`#BP`/`#GP` handlers). In the UEFI
+  `_start` (dedicated sub-profile `uefi-ring`, so today's `UEFI` output is
+  untouched): `lgdt` + far `lretq` to reload `CS` with the Kof selector, then
+  `lidt` + `ltr`. **Falsifiable proof:** a controlled `int3` lands in the Kof
+  ring0 `#BP` handler, which increments a memory counter that `_start` checks —
+  only then does it print `KO-RING IDT OK` via `ConOut`. E2E under OVMF. No
+  language surface (nothing of rule 6 yet). **Toolchain:** OVMF +
+  `qemu-system-x86_64` already extracted root-free by B-2.
+- **B-6.2 — CPL1 entry (needs the rule-6 surface decision FIRST).** `iretq` to
+  `CS=0x18` (RPL=1) with `SS=0x20`, running a "ring1 domain" code region that
+  executes a Kof function and returns; the TSS `rsp0` backs the trap back to
+  CPL0. Proof: state intact after return + the function ran at CPL1.
+- **B-6.3 — `#GP` proof + sabotage.** A privileged instruction (`cli`/`hlt`/
+  `lgdt`) attempted in the ring1 domain must raise **`#GP`** (vector 13),
+  caught by the ring0 handler and reported — never a silent hang. **Sabotage:**
+  removing the ring1 GDT descriptor makes the CPL1 entry fault, proving the
+  level is *enforced*, not decorative. E2E under OVMF.
+
+**Decision needed before B-6.2 (rule 6 + Simplicity Law):** how Kof code
+*targets* a ring1 domain (syntax/API). B-6.1 advances without it; B-6.2 does not.
 
 ## 5. Honest dependencies, blockers and classification
 

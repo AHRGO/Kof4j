@@ -130,7 +130,15 @@ public final class BuiltinCallTyper {
                 // else e continua legal (`Z()` com `class Z {}` e o contrato).
                 reportNoCtorArity(sa, ctorClass, mc);
             }
-            return new Type.ClassType(ctorClass.packageName(), ctorClass.name(), List.of());
+            // #585: o witness do call-site (`Box<Point>(...)`, forma idiomática
+            // de training/idioms/records.md) era descartado — a inferência
+            // devolvia a classe CRUA (typeArguments=[]) e a substituição de `T`
+            // no receptor virava no-op (`get(): T` → Methodref java/lang/Object
+            // → NoSuchMethodError no JVM com argumento reference-type; a face
+            // primitiva §288 mascarava o furo). Resolve o witness como o
+            // listOf/records fazem acima.
+            return new Type.ClassType(ctorClass.packageName(), ctorClass.name(),
+                    resolveWitnessTypeArgs(sa, mc, scope));
         }
         if (mc.receiver() == null && ("println".equals(mc.methodName()) || "print".equals(mc.methodName()))) {
             // #495 (maintainer 19/09: "empty println should not compile"): o
@@ -425,8 +433,12 @@ public final class BuiltinCallTyper {
                 // `Class(args)` sem `new`), fase/visitor irmão.
                 reportNoCtorArity(sa, ctorClass, mc);
             }
-            return new Type.ClassType(ctorClass.packageName(), ctorClass.name(), List.of());
+            // #585: MESMO furo do site irmão acima — o witness descartado aqui
+            // também deixava o receptor cru (visitor inferTail).
+            return new Type.ClassType(ctorClass.packageName(), ctorClass.name(),
+                    resolveWitnessTypeArgs(sa, mc, scope));
         }
+
         for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
         // String API: métodos que devolvem Int (indexOf, lastIndexOf,
         // length, compareTo...) — sem isso o var local infere Unknown
@@ -482,4 +494,16 @@ public final class BuiltinCallTyper {
                     "SEM023");
         }
     }
+    /** #585: resolve os type-arguments explícitos do call-site de construção
+     *  implícita (`ClassName<T>(...)`); sem witness, raw (compat aditivo). */
+    private static List<Type> resolveWitnessTypeArgs(SemanticAnalyzer sa, MethodCallExpr mc,
+            SymbolTable scope) {
+        if (mc.typeArguments().isEmpty()) return List.of();
+        List<Type> resolved = new ArrayList<>();
+        for (var ta : mc.typeArguments()) {
+            resolved.add(MemberResolver.resolveType(sa, ta, scope));
+        }
+        return resolved;
+    }
+
 }

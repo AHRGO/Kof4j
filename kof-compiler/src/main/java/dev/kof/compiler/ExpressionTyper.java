@@ -183,8 +183,11 @@ public final class ExpressionTyper {
                     t = coll;
                 }
                 if (!ne.typeArguments().isEmpty() && t instanceof Type.ClassType cts) {
+                    // #585: resolução ciente do analyzer — o 2-arg podia deixar
+                    // um argumento reference-type sem qualificar (internal "").
                     t = new Type.ClassType(cts.packageName(), cts.name(),
-                            ne.typeArguments().stream().map(n -> CompilerTypes.toType(n, driver.currentUnit)).toList());
+                            ne.typeArguments().stream().map(n -> CompilerTypes.toType(n,
+                                    driver.currentUnit, driver.semanticAnalyzer)).toList());
                 }
                 yield t;
             }
