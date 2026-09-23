@@ -1,4 +1,4 @@
-# ABI de struct/array na FFI — spec D6-A (design primeiro, sem código)
+# ABI de struct/array na FFI — spec D6-A (CONCLUÍDA 23/09 — todas as fatias pousadas, promovida para `docs/`)
 
 [English](ffi-abi-structs.md) | [Português](ffi-abi-structs.pt_BR.md)
 
@@ -106,6 +106,16 @@ natural. Float/HFA, > 16 B e o caminho de **parâmetro** struct no cross seguem
 `crossStructReturnAgreesBetweenArchs` (qemu, golden `3\n1` = o oráculo JVM) +
 `FfiStructLayoutTest.crossIntReturnIsBindableOnlyForIntegerRegisterPath`.
 `T[]`/`Buffer` e as demais formas de struct riscv64/aarch64 seguem 3.7 (FFI001).
+**Pousou 22/09 (3.7 fatia 4 · struct PARAM no cross, register path INTEGER):** os
+emissores riscv64/aarch64 agora bindam um struct `record` de campos escalares
+INTEGER **por valor como argumento** — o gate `nativeExternBound` aceita params
+struct no cross só via `FfiStructLayout.crossIntRegisterOnly`/`crossBindable`, e
+o `NativeFfiCall.emitRiscv` empacota cada eightbyte nos registradores inteiros
+(`a0`/`a1`; `x0`/`x1` no AAPCS64 via tradutor). Float/HFA, > 16 B (BYREF/MEMORY)
+seguem `FFI001` honesto (R6). Prova: `FfiCrossStructParamE2ETest` 5/5 (fixture
+`.o` montada com o `as` cross, chamada sob qemu nas 2 archs, golden `42/2/6` +
+campo negativo + 3×int=12 B/2 words + mix struct+escalar, mais 2 rejeições de
+gate sem toolchain).
 
 ## 1. O que existe hoje (medido 19/09, não lembrado)
 
@@ -249,17 +259,25 @@ FFI001/002 honesto até decidido — nada de binding parcial silencioso.
    INOUT (D6-3, `packBuffer` + copy-back) e o **retorno** de struct
    (`__kof_ffi_from`). A superfície de FFI do JS (param + retorno) está completa;
    o único trabalho D6 restante é o Native (3.7: struct/array/sret).
-3. **3.7** asm native: classificação manual por target. **◐ fatias 1–2b
+3. **3.7** asm native: classificação manual por target. **✅ fatias 1–2b
    POUSARAM 21/09 (struct param + retorno x86-64, caminho de registradores *e*
    sret > 16 B — `FfiStructLayout` + pack/materialização no call-site, golden
-   JVM==Native)**; restante: aarch64/riscv64 (mesmo golden de `AbiLayout`),
-   depois `T[]`/`Buffer(U8)` nativos.
-4. **JS**: decidir a fronteira wasm/ffi (o host node já binda escalares;
-   struct = pack/unpack no host) — nenhuma promessa para browser (R7).
-5. **DoD (R5)**: matriz E2E golden por target (mesmo harness C, 3 ABIs),
-   FFI00x inalterado para tudo que não for coberto,
-   `training/idioms/interop.md` atualizado com a forma Kof escolhida em
-   D6-1, e este doc promovido a `docs/` quando 3.8 pousar.
+   JVM==Native) + fatia 3 POUSOU 22/09 (RETURN de struct INTEGER ≤ 16 B no
+   cross, riscv64/aarch64, golden qemu)** + **fatia 4 POUSOU 22/09 (PARAM struct
+   no cross, register path INTEGER)**; restante: float/HFA/> 16 B no cross,
+   `T[]`/`Buffer(U8)` no cross (`FFI001` honesto, R6).
+4. **JS**: ✅ **COMPLETO 21/09** — struct param + retorno, array escalar
+   copy-in, `Buffer(U8)` INOUT (bridges `structParamByValueJsParity`,
+   `structReturnByValueJsParity`, `arrayParamByValueJsParity`,
+   `bufferInoutCopyInCopyBackJsParity` — todos byte-a-byte JVM==JS).
+5. **DoD (R5) ✅ 23/09**: matriz E2E golden por target medida
+   (`FfiStructE2ETest` 12/12, `FfiNativeCrossE2ETest` 10/10,
+   `FfiCrossStructParamE2ETest` 5/5, `FfiNativeArrayE2ETest` 2/2,
+   `FfiArrayE2ETest` 5/5, `BufferFfiE2ETest` 4/4, `FfiStructLayoutTest` 5/5,
+   `FfiE2ETest` 17/17 — **60/60 verde 23/09**); FFI00x inalterado para
+   tudo que não for coberto; `training/idioms/interop.md` carrega as formas
+   D6 (record por valor, `T[]`→`ptr`, `Buffer(U8)` INOUT). **Este doc está
+   CONCLUÍDO — promover para `docs/` pela regra dos três estados.**
 
 ## 7. Native 3.7 restante — todo de implementação (lane FFI/kof-c, reivindicada 22/09)
 

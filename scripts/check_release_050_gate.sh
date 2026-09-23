@@ -72,7 +72,7 @@ ALLOWLIST="DECISIONS.md DECISIONS.pt_BR.md README.md README.pt_BR.md roadmap.md 
 # D-BAREMETAL-BOOT (maintainer 22/09/2026): PLAN-BAREMETAL-BOOT promoted from
 # future/ (bare-metal + ring0/ring1 scope) — allowlisted the same way: the
 # 0.5.0 cut does not wait for the bare-metal front.
-ALLOWLIST="$ALLOWLIST db-parity-plan.md db-parity-plan.pt_BR.md ffi-abi-structs.md ffi-abi-structs.pt_BR.md kof-c-cross.md kof-c-cross.pt_BR.md PLAN-BAREMETAL-BOOT.md PLAN-BAREMETAL-BOOT.pt_BR.md"
+ALLOWLIST="$ALLOWLIST db-parity-plan.md db-parity-plan.pt_BR.md kof-c-cross.md kof-c-cross.pt_BR.md PLAN-BAREMETAL-BOOT.md PLAN-BAREMETAL-BOOT.pt_BR.md"
 
 # state per condition: GREEN|RED|NEEDS-MEASURE|NEEDS-REVIEW|UNKNOWN
 declare -A STATE DETAIL
@@ -329,7 +329,7 @@ EOF
   # D-RELEASE-0.5.0-SCOPE (maintainer 21/09/2026): (a) an allowlisted
   # in-flight plan is NOT loose_docs RED; (b) an open EG-8 is NOT edges RED —
   # the 1.0-line declaration is decoupled from the 0.5.0 gate.
-  printf 'DECISIONS.md\nffi-abi-structs.md\n' > "$T/loose"
+  printf 'DECISIONS.md\ndb-parity-plan.md\n' > "$T/loose"
   printf 'EG-1\tDONE\nEG-8\tOPEN\n' > "$T/eg"
   R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_PARITY_FILE="$T/parity" \
   R050_STABILITY_FILE="$T/stab" \
