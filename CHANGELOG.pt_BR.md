@@ -27,6 +27,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     independente (sessão 9092) somou os casos explícitos `new Box<Point>`/`String`
     (6/6).
 
+  - **§475 — `default:` vazio em switch de padrão/destructuring compilava para
+    um `goto` auto-referente (loop infinito)** (23/09, lane compilador, sessão
+    9092 — issue #588): em `SwitchStmtLowerer.lowerSwitchStmt` (ramo de padrão)
+    a label do default vazio era aliasada à label de fim, emitindo
+    `KofLabel(end)` imediatamente seguida de `KofJump(end)` na mesma posição —
+    a JVM resolvia o salto para o próprio offset (`25: goto 25`) e o programa
+    travava (timeout de 30 s). A label do default vazio agora é própria (nunca
+    aliasada a `endLabelPat`) com o salto final mantido incondicional, então
+    uma label → uma posição em todo backend. Prova: novo
+    `SwitchEmptyDefaultE2ETest` 3/3 (os dois casos JVM travavam antes do fix;
+    VERDE depois) + vizinhos 53/0F; `check_500` rc=0.
+
   - **Perfil UEFI B-2 (lane baremetal): `--profile uefi` emite PE32+ bootável**
     (23/09, lane 9093): o novo `NativeProfile.UEFI` faz o backend nativo x86-64
     emitir uma imagem PE32+ estática, sem PLT/GOT (subsystem 10), que boota sob

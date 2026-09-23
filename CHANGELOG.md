@@ -27,6 +27,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     re-verification (session 9092) added the explicit `new Box<Point>`/`String`
     cases (6/6).
 
+  - **§475 — empty `default:` in a pattern/destructuring switch compiled to a
+    self-referencing `goto` (infinite loop)** (23/09, compiler lane, session
+    9092 — issue #588): in `SwitchStmtLowerer.lowerSwitchStmt` (pattern
+    branch) the empty-default label was aliased to the end label, emitting
+    `KofLabel(end)` immediately followed by `KofJump(end)` at the same
+    position — the JVM resolved the jump to its own offset (`25: goto 25`) and
+    the program hung (fixed 30 s timeout). The empty-default label is now its
+    own label (never aliased to `endLabelPat`) with the trailing jump kept
+    unconditional, so one label → one position on every backend. Proof: new
+    `SwitchEmptyDefaultE2ETest` 3/3 (both JVM cases hung before the fix; GREEN
+    after) + neighbours 53/0F; `check_500` rc=0.
+
   - **B-2 UEFI profile (baremetal lane): `--profile uefi` emits bootable
     PE32+** (23/09, lane 9093): a new `NativeProfile.UEFI` makes the x86-64
     native backend emit a static, PLT/GOT-free PE32+ image (subsystem 10) that
