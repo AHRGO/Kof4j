@@ -31,6 +31,36 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     aarch64, with a pin that the pruned runtime has no `call snprintf`/`call
     strtod`. Live count 6→5.
 
+  - **DB-3/DB-1 cross — `orm.page` is REAL on riscv64/aarch64 (row-object read
+    COMPLETE, E-parte-6)** (23/09, gaps-db lane): `SELECT * FROM "t" LIMIT ?
+    OFFSET ?` with both params bound after the host's `intValue()` coercion
+    (int direct, long/double/float truncate to int32, KofString = atoi superset,
+    null = 0); same field loop as `all`/`where` (`read_field`, §397). New piece
+    `NativeRiscvAsmRtB60` (port of `RuntimeOrm8`); `CROSS_FACES` +=
+    `kof_orm_page` (13 names). Same latent `Double` read bug in `RuntimeOrm8`
+    fixed (`movsd %xmm0`, §449). **The ORM row-object is now complete on the
+    cross** — `find`/`all`/`where`/`where_op`/`page` all real, no `ORM001`
+    compile-time face left. Proof: `KofOrmE2ETest#crossNativeF2c3PageMatchesX86Oracle`
+    (explicit x86 golden: LIMIT/OFFSET, offset past end, limit 0, Long→intValue,
+    Double 2.9→2, missing column→throw); `KofOrmE2ETest` 71/0F/3skip.
+
+  - **DB-3/DB-1 cross — `orm.where`/`orm.where_op` are REAL on riscv64/aarch64
+    (E-parte-5)** (23/09, gaps-db lane): `SELECT * FROM "t" WHERE "f" <op> ?`
+    with the operator whitelist identical to the host (`==`→`=`, throw
+    `ORM operator not allowed: <op>`; `<`/`>`/`<=`/`>=`/`!=`/`LIKE`), the value
+    bound by `RuntimeOrm7`'s classifier (box §284 / KofString / null) and the
+    `all` field loop. New piece `NativeRiscvAsmRtB59`; `CROSS_FACES` +=
+    `kof_orm_where`, `kof_orm_where_op` (12 names). **Two latent bugs found and
+    fixed while proving it (§449):** `RuntimeOrm7`/`RuntimeOrm8` had the same
+    `Double` read bug (`movq %rax` after `sqlite3_column_double`), and the
+    E-parte-3 `kof_orm_bind_key` diverged from `RuntimeOrm5` (a Bool/unknown box
+    tag must throw `orm.find bind value: unsupported type on Native (ORM001)`,
+    not bind int64/null) — the cross now matches x86, with a Bool-key throw
+    pinned in the `find` test. Proof:
+    `KofOrmE2ETest#crossNativeF2c2WhereMatchesX86Oracle` (=, >=, LIKE, !=,
+    empty→empty list, invalid op→throw, missing column→throw); `KofOrmE2ETest`
+    70/0F/3skip.
+
   - **DB-3/DB-1 cross — `orm.all` is REAL on riscv64/aarch64 (ORM row-object
     read → `List`, E-parte-4)** (23/09, gaps-db lane): `SELECT * FROM "t"` with
     no bind, resolving `kof_orm_ctors` once before the row loop; each row is a
@@ -43,7 +73,8 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `KofOrmE2ETest#crossNativeF2c1AllMatchesX86Oracle` (explicit x86 golden:
     empty list, rowid order independent of insertion, multi-entity, all types
     incl. zero/null); `KofOrmE2ETest` 69/0F/3skip, focused battery 95/0F/3skip.
-    Still honest `ORM001` on cross: `where`/`where_op` and `page` (R6/R7).
+    At that cut, still honest `ORM001` on cross: `where`/`where_op` and `page`
+    (R6/R7) — closed in E-parte-5/6.
 
   - **DB-3/DB-1 cross — `orm.find` is REAL on riscv64/aarch64 (ORM row-object
     read, E-parte-3)** (23/09, gaps-db lane): the read faces need the

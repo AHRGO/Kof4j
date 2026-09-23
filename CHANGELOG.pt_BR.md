@@ -31,6 +31,37 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `Float` é byte-parity em riscv64 **e** aarch64, com um pin de que o runtime
     podado não tem `call snprintf`/`call strtod`. Contagem viva 6→5.
 
+  - **DB-3/DB-1 cross — `orm.page` REAL no riscv64/aarch64 (leitura row-object
+    COMPLETA, E-parte-6)** (23/09, lane gaps-db): `SELECT * FROM "t" LIMIT ?
+    OFFSET ?` com os 2 params bindados após a coerção `intValue()` do host
+    (int direto, long/double/float truncam p/ int32, KofString = atoi superset,
+    null = 0); mesmo loop de campos de `all`/`where` (`read_field`, §397). Peça
+    nova `NativeRiscvAsmRtB60` (port de `RuntimeOrm8`); `CROSS_FACES` +=
+    `kof_orm_page` (13 nomes). Corrigido o mesmo bug latente de leitura de
+    `Double` no `RuntimeOrm8` (`movsd %xmm0`, §449). **O row-object do ORM
+    agora está COMPLETO no cross** — `find`/`all`/`where`/`where_op`/`page`
+    todos reais, nenhuma face `ORM001` compile-time restante. Prova:
+    `KofOrmE2ETest#crossNativeF2c3PageMatchesX86Oracle` (golden x86 explícito:
+    LIMIT/OFFSET, offset além do fim, limit 0, Long→intValue, Double 2.9→2,
+    campo sem coluna→throw); `KofOrmE2ETest` 71/0F/3skip.
+
+  - **DB-3/DB-1 cross — `orm.where`/`orm.where_op` REAIS no riscv64/aarch64
+    (E-parte-5)** (23/09, lane gaps-db): `SELECT * FROM "t" WHERE "f" <op> ?`
+    com a whitelist do operador idêntica ao host (`==`→`=`, throw
+    `ORM operator not allowed: <op>`; `<`/`>`/`<=`/`>=`/`!=`/`LIKE`), o value
+    bindado pelo classificador do `RuntimeOrm7` (box §284 / KofString / null) e
+    o loop de campos do `all`. Peça nova `NativeRiscvAsmRtB59`; `CROSS_FACES` +=
+    `kof_orm_where`, `kof_orm_where_op` (12 nomes). **Dois bugs latentes
+    achados e corrigidos ao provar (§449):** `RuntimeOrm7`/`RuntimeOrm8` tinham
+    o mesmo bug de leitura de `Double` (`movq %rax` após
+    `sqlite3_column_double`), e o `kof_orm_bind_key` da E-parte-3 divergia do
+    `RuntimeOrm5` (tag Bool/desconhecida deve lançar `orm.find bind value:
+    unsupported type on Native (ORM001)`, não bindar int64/null) — o cross
+    agora casa com o x86, com o throw de chave Bool pinado no teste do `find`.
+    Prova: `KofOrmE2ETest#crossNativeF2c2WhereMatchesX86Oracle` (=, >=, LIKE,
+    !=, vazio→lista vazia, op inválido→throw, campo sem coluna→throw);
+    `KofOrmE2ETest` 70/0F/3skip.
+
   - **DB-3/DB-1 cross — `orm.all` REAL no riscv64/aarch64 (leitura row-object
     do ORM → `List`, E-parte-4)** (23/09, lane gaps-db): `SELECT * FROM "t"` sem
     bind, resolvendo `kof_orm_ctors` uma vez antes do loop de linhas; cada linha
@@ -43,8 +74,8 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `KofOrmE2ETest#crossNativeF2c1AllMatchesX86Oracle` (golden x86 explícito:
     lista vazia, ordem rowid independente da inserção, multi-entidade, todos os
     tipos incl. zero/null); `KofOrmE2ETest` 69/0F/3skip, bateria focada
-    95/0F/3skip. Segue `ORM001` honesto no cross: `where`/`where_op` e `page`
-    (R6/R7).
+    95/0F/3skip. Naquele corte seguia `ORM001` honesto no cross:
+    `where`/`where_op` e `page` (R6/R7) — fechados nas E-parte-5/6.
 
   - **DB-3/DB-1 cross — `orm.find` REAL no riscv64/aarch64 (leitura
     row-object do ORM, E-parte-3)** (23/09, lane gaps-db): as faces de leitura
