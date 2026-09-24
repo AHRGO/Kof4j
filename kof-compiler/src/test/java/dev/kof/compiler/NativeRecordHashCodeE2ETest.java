@@ -26,6 +26,8 @@ class NativeRecordHashCodeE2ETest {
             record S(String t)
             record NS(String? t)
             record P(Int i, Long l, Bool b, Char c)
+            record RF(Float f)
+            record RD(Double d)
 
             String? maybe(Int v) {
                 if (v > 0) { return "ab" }
@@ -47,6 +49,11 @@ class NativeRecordHashCodeE2ETest {
                 println(NS(maybe(1)).hashCode())
                 println(P(1, 2, true, 'A').hashCode())
                 println(P(0, 0, false, 'A').hashCode())
+                println(RF(1.5).hashCode())
+                println(RF(-0.0).hashCode())
+                println(RD(2.5).hashCode())
+                println(RD(-0.0).hashCode())
+                println(RD(1.0).hashCode())
             }
             """;
 

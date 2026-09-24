@@ -397,6 +397,18 @@ public final class RuntimeMath {
             .Lv_dmod_nan:
                 movabsq $0x7ff8000000000000, %rax # NaN canônico
                 ret
+
+            # kof_double_hash(rdi=bits do double) -> eax = (int)(bits ^ (bits>>32))
+            # §114 face hash: Double.hashCode do JVM (o campo Double do record
+            # somava 0 na fórmula `31*h + campo`). Bits crus, sem xmm.
+            .globl kof_double_hash
+            .type kof_double_hash, @function
+            kof_double_hash:
+                movq %rdi, %rax
+                shrq $32, %rax
+                xorl %eax, %edi
+                movl %edi, %eax
+                ret
         """);
     }
 }

@@ -123,6 +123,11 @@ public final class CompilerRecordSupport {
         return Type.isString(t);
     }
 
+    private static boolean isDoubleField(Type type) {
+        Type t = type instanceof Type.NullableType n ? n.inner() : type;
+        return t instanceof Type.PrimitiveType pt && "double".equals(pt.name());
+    }
+
     private static boolean isKofObjectField(Type type) {
         Type t = type instanceof Type.NullableType n ? n.inner() : type;
         if (!(t instanceof Type.ClassType)) return false;
@@ -177,6 +182,12 @@ public final class CompilerRecordSupport {
             if (isStringField(f.type())) {
                 ops.add(new KofCall(BuiltinTypes.STRING, "hashCode", List.of(),
                         Type.PrimitiveType.INT, KofCallKind.INSTANCE));
+            } else if (isDoubleField(f.type())) {
+                // §114 face hash: Double.hashCode = (int)(bits ^ (bits>>>32)).
+                // O ADD cru somava 0 (o lowering int não lê o slot de 64 bits).
+                ops.add(new KofCall(Type.PrimitiveType.DOUBLE, "kof_double_hash",
+                        List.of(Type.PrimitiveType.DOUBLE),
+                        Type.PrimitiveType.INT, KofCallKind.FUNCTION));
             }
             ops.add(new KofBinary(KofBinaryOp.ADD, Type.PrimitiveType.INT));
         }
