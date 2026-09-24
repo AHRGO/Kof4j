@@ -13,6 +13,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§104b-ii (face CONTENÇÃO) ✅ FIXED — record/classe dentro de coleção agora
+    compara por CONTEÚDO no Native** (24/09, lane compiler/nat 9092):
+    `listOf(p1).contains(p2)`, `indexOf`/`lastIndexOf`, `setOf(p1).contains(p2)`,
+    dedup do `set.add` e `set.remove` comparavam PONTEIRO (String só por
+    conteúdo) → `false` vs JVM `true`. Adicionado tag 2 = objeto Kof em
+    `CollectionWrites.stringTag`, o runtime `kof_obj_equals` e a tabela densa
+    `kof_equals_table` (irmã da `kof_tostring_table`), despachados pelos helpers
+    de coleção x86 e riscv (aarch herdada via tradutor). Um **bug latente irmão**
+    encontrado na caça Q4 e corrigido na mesma unidade: o `setOf(...)` nunca
+    passava o tag do `kof_set_add`, então o runtime lia registrador sujo (com o
+    tag 2 novo, `setOf(1, 2)` após `println(list)` = SIGSEGV riscv/aarch).
+    Prova: `NativeRecordCollectionEqualityE2ETest` **3/3** (oráculo JVM,
+    byte-idêntico em x86-64 + riscv64 + aarch64).
+
   - **Boot BIOS bare-metal (plano `PLAN-BAREMETAL-BOOT`, B-3b-3) — o payload Kof
     real agora roda bare pelo caminho BIOS legado: o `_start` é ligado na base
     fixa `0x100000`, copiado do staging de modo real (`0xC200`) em protected mode
