@@ -2686,7 +2686,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   `CompilerClassLowering.lowerClass` para os 3 targets Native quando a classe
   não declara `equals` e herda direto de Object. Prova: célula `classequals`
   (4 targets, `false|true|false|true`) — JS/Script/JVM já batiam.
-- **§104b-ii ⏳ ABERTO (Native) — face CONTENÇÃO ✅ FECHADA 24/09 (lane compiler/nat 9092):** `listOf(p1).contains(p2)` / `setOf(p1).contains(p2)` / `indexOf`/`lastIndexOf` / `set.remove` comparavam **PONTEIRO** (só String por conteúdo) → **false** vs JVM **true**. **Fix:** tag 2 = objeto Kof em `CollectionWrites.stringTag` (record/classe conhecida; String=1, primitivo=0, `Object` de fora p/ não comparar box cru) → runtime `kof_obj_equals(a,b)` (a==b→1; nulo→0; String→`kof_string_equals`; senão `kof_equals_table[type_id]`, tabela densa emitida por `NativeClassMeta.emitEqualsTable`, irmã da `kof_tostring_table`), com dispatch nos helpers x86 (`RuntimeList`/`RuntimeListLookups`/`RuntimeSet`) e riscv (`NativeRiscvAsmRtB0`/`Lookups0`/`Mapset0`), aarch herdada via tradutor; `RuntimeSlices`/`RiscvSlices.programSideSymbols` += símbolo. **Bug latente irmão (medido no Q4, corrigido na mesma unidade):** o `setOf(...)` (`ExpressionStaticCallLowerer`) NÃO passava o tag do `kof_set_add` — o runtime lia registrador SUJO; com o tag 2 novo, `setOf(1, 2)` após `println(list)` = **SIGSEGV** riscv/aarch (o golden `nativeCollectionPrintMatchesJvmGolden` do §107 reproduzia; `println(setOf(...))` sozinho passava). Agora passa o tag como o `set.add`. **Prova:** `NativeRecordCollectionEqualityE2ETest` (oráculo JVM, **3/3**: x86+riscv64+aarch64) — record multi-campo, classe=identidade, `setOf(record)`/`setOf(String)` dedup, indexOf/lastIndexOf, String e primitivo. **Face MAP ✅ FECHADA 24/09 (mesma lane):** `kof_map_find` comparava PONTEIRO (tag binária String/raw) → `mapOf(p1,7).get(p2)` = 0/null vs JVM 7; agora tag 2 = objeto Kof → `kof_obj_equals` (x86 `RuntimeEnum.kof_map_find` + riscv `NativeRiscvAsmMapset0.kof_map_find`), com a tag escrita pelos emitters x86 (`NativeX86Calls`) e riscv (`NativeRiscvCrossOps`) via `CollectionWrites.mapKeyTag` — como o Map nativo é VETOR LINEAR, NÃO precisa de `hashCode` de conteúdo. Prova: E2E estendido (`mapOf(Point).get`/`containsKey`/`remove`, chave String não-internada, chave primitiva) 3/3 nos 3 alvos; cluster map/collection 177/0F. **Aberto ainda:** o `println(listOf(p))` cross record aninhado (FLT001, §107) e a face §114 (equals de campo referência). Proibido: fallback silencioso.
+- **§104b-ii ⏳ ABERTO (Native) — face CONTENÇÃO ✅ FECHADA 24/09 (lane compiler/nat 9092):** `listOf(p1).contains(p2)` / `setOf(p1).contains(p2)` / `indexOf`/`lastIndexOf` / `set.remove` comparavam **PONTEIRO** (só String por conteúdo) → **false** vs JVM **true**. **Fix:** tag 2 = objeto Kof em `CollectionWrites.stringTag` (record/classe conhecida; String=1, primitivo=0, `Object` de fora p/ não comparar box cru) → runtime `kof_obj_equals(a,b)` (a==b→1; nulo→0; String→`kof_string_equals`; senão `kof_equals_table[type_id]`, tabela densa emitida por `NativeClassMeta.emitEqualsTable`, irmã da `kof_tostring_table`), com dispatch nos helpers x86 (`RuntimeList`/`RuntimeListLookups`/`RuntimeSet`) e riscv (`NativeRiscvAsmRtB0`/`Lookups0`/`Mapset0`), aarch herdada via tradutor; `RuntimeSlices`/`RiscvSlices.programSideSymbols` += símbolo. **Bug latente irmão (medido no Q4, corrigido na mesma unidade):** o `setOf(...)` (`ExpressionStaticCallLowerer`) NÃO passava o tag do `kof_set_add` — o runtime lia registrador SUJO; com o tag 2 novo, `setOf(1, 2)` após `println(list)` = **SIGSEGV** riscv/aarch (o golden `nativeCollectionPrintMatchesJvmGolden` do §107 reproduzia; `println(setOf(...))` sozinho passava). Agora passa o tag como o `set.add`. **Prova:** `NativeRecordCollectionEqualityE2ETest` (oráculo JVM, **3/3**: x86+riscv64+aarch64) — record multi-campo, classe=identidade, `setOf(record)`/`setOf(String)` dedup, indexOf/lastIndexOf, String e primitivo. **Face MAP ✅ FECHADA 24/09 (mesma lane):** `kof_map_find` comparava PONTEIRO (tag binária String/raw) → `mapOf(p1,7).get(p2)` = 0/null vs JVM 7; agora tag 2 = objeto Kof → `kof_obj_equals` (x86 `RuntimeEnum.kof_map_find` + riscv `NativeRiscvAsmMapset0.kof_map_find`), com a tag escrita pelos emitters x86 (`NativeX86Calls`) e riscv (`NativeRiscvCrossOps`) via `CollectionWrites.mapKeyTag` — como o Map nativo é VETOR LINEAR, NÃO precisa de `hashCode` de conteúdo. Prova: E2E estendido (`mapOf(Point).get`/`containsKey`/`remove`, chave String não-internada, chave primitiva) 3/3 nos 3 alvos; cluster map/collection 177/0F. **Aberto ainda:** só a face `hashCode` de CONTEÚDO residual (bits de Float/Double + record-aninhado — §114) e campos `Object`; o resto do §104b-ii (equals de conteúdo em List/Set, chave de Map, equals/hash de String em record, equals de record-aninhado) está FECHADO (24/09). O `println(listOf(p))` cross record aninhado foi FECHADO pelo §107 (19/09, descritor recursivo no riscv/aarch via tradutor), não era pendência daqui. Proibido: fallback silencioso.
   - **Face primitivo-em-coleção — ✅ CHAR FECHADO 11/09:** o storage da coleção
     asm guarda o valor **cru** (sem box). `println(l.get(i))` com char **SIGSEGV
     (exit=139)**: `kof_list_get` retorna `0x61` e o print dispatchava
@@ -3178,7 +3178,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   sem exclusões + `NativeE2ETest#nativeMultiDimArray` (repro menor do §113
   → `2/7`); suíte completa pós-clean verde. Faces riscv/aarch: port pendente.
 
-### 114. Native: `equals`/`==` de record com campo de REFERÊNCIA (String ou record aninhado) compara PONTEIRO → `false` — ✅ FIXED 24/09 (face String ✅ 11/09; face record-aninhado ✅ 24/09 via `kof_obj_equals`; `hashCode` de CONTEÚDO ainda aberto) — face CONTENÇÃO (record dentro de coleção) ✅ FECHADA 24/09 via §104b-ii (`kof_equals_table`/`kof_obj_equals`, `NativeRecordCollectionEqualityE2ETest` 3/3) (sub-face do §104b-ii, backend-only)
+### 114. Native: `equals`/`==` de record com campo de REFERÊNCIA (String ou record aninhado) compara PONTEIRO → `false` — ✅ FIXED 24/09 (face String ✅ 11/09; face record-aninhado ✅ 24/09 via `kof_obj_equals`; `hashCode` de CONTEÚDO String ✅ 24/09; `hashCode` de Float/Double + aninhado ainda abertos) — face CONTENÇÃO (record dentro de coleção) ✅ FECHADA 24/09 via §104b-ii (`kof_equals_table`/`kof_obj_equals`, `NativeRecordCollectionEqualityE2ETest` 3/3) (sub-face do §104b-ii, backend-only)
 
 - **Menor repro (medido 11/09):**
   `record S(String t)` + `println(S("ab") == S("ab"))` → JVM/Script/JS `true`,
@@ -3222,6 +3222,23 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   x86-64+riscv64+aarch64; cluster record/equality/collection/parity **224/0F**.
   Aberto declarado: `hashCode` de CONTEÚDO (`buildRecordHashCodeMethod` ainda soma
   campos) e campos de tipo `Object`.
+
+- **✅ `hashCode` DE CONTEÚDO DE STRING CORRIGIDO 24/09 (lane compiler/nat 9092):** o
+  `hashCode` sintetizado do Native somava o PONTEIRO do campo String
+  (`record S(String t)`: `S("ab").hashCode()` = `1269465151` vs JVM `3136`).
+  Agora um campo String (nullable desembrulhado via `isStringField`) passa por
+  `String.hashCode` de CONTEÚDO — `kof_string_hash_code` (x86) / `String_hashCode`
+  (riscv), ambos endurecidos null-safe (`null → 0`, espelhando
+  `31*h + (o==null?0:...)`). O mesmo bug de nullable-unwrap estava LATENTE na face
+  EQUALS (campo `String?` caía em `KofBinary(EQ)` de ponteiro); o
+  `buildRecordEqualsMethod` agora usa `isStringField` também. Contrato medido:
+  primitivos Int/Long/Bool/Char já casavam crus (fórmula JVM `31*h + fieldHash`);
+  bits de Float/Double e hash de record-aninhado seguem abertos declarados. Prova:
+  `NativeRecordHashCodeE2ETest` novo (oráculo JVM, **3/3** em
+  x86-64+riscv64+aarch64) — String internada e não-internada, String nullable
+  nulo+não-nulo, regressão de primitivos; `NativeRecordCollectionEqualityE2ETest`
+  += equals de String nullable (nulo==nulo, conteúdo, mismatch); cluster
+  record/string/equality **223/0F**.
 - **Fix (não feito — faces restantes):** mesma infra do §104b-ii (i) — nos campos de referência
   do equals sintetizado, emitir o compare de conteúdo: String →
   `call kof_string_equals` (helper já existe); record aninhado → dispatch vtable

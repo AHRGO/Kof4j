@@ -47,6 +47,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (aninhado, fundo, nullable nulo+não-nulo, classe identidade) **3/3** em
     x86-64+riscv64+aarch64.
 
+  - **§114 (face `hashCode` de conteúdo String) ✅ FIXED — `hashCode()` de record
+    com campo `String` agora hasheia o CONTEÚDO, não o ponteiro** (24/09, lane
+    compiler/nat 9092): `S("ab").hashCode()` dava `1269465151` no Native vs `3136`
+    no JVM. O `hashCode` sintetizado do Native roteia um campo `String` (nullable
+    desembrulhado) por `String.hashCode` (`kof_string_hash_code` / `String_hashCode`,
+    endurecidos null-safe → 0). O mesmo bug de nullable-unwrap estava latente no
+    `equals` (campo `String?` caía em comparação de ponteiro) — corrigido também.
+    Prova: `NativeRecordHashCodeE2ETest` novo + caso de equals String nullable
+    **3/3** em x86-64+riscv64+aarch64.
+
   - **Boot BIOS bare-metal (plano `PLAN-BAREMETAL-BOOT`, B-3b-3) — o payload Kof
     real agora roda bare pelo caminho BIOS legado: o `_start` é ligado na base
     fixa `0x100000`, copiado do staging de modo real (`0xC200`) em protected mode

@@ -46,6 +46,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     extended (nested, deep, nullable null+non-null, class identity) **3/3** on
     x86-64+riscv64+aarch64.
 
+  - **§114 (String-content `hashCode` face) ✅ FIXED — `hashCode()` of a record
+    with a `String` field now hashes the CONTENT, not the pointer** (24/09, lane
+    compiler/nat 9092): `S("ab").hashCode()` gave `1269465151` on Native vs `3136`
+    on the JVM. The synthesized Native `hashCode` routes a `String` field (nullable
+    unwrapped) through `String.hashCode` (`kof_string_hash_code` / `String_hashCode`,
+    hardened null-safe → 0). The same nullable-unwrap bug was latent in `equals`
+    (a `String?` field fell to pointer compare) — fixed too. Proof: new
+    `NativeRecordHashCodeE2ETest` + nullable-String equals case **3/3** on
+    x86-64+riscv64+aarch64.
+
   - **Bare-metal BIOS boot (plan `PLAN-BAREMETAL-BOOT`, B-3b-3) — the real Kof
     payload now runs bare through the legacy BIOS path: `_start` is linked at the
     fixed base `0x100000`, copied from the real-mode staging (`0xC200`) in
