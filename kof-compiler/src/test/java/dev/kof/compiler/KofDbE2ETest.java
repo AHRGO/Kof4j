@@ -45,6 +45,13 @@ class KofDbE2ETest {
         }
     }
 
+    /** #603: um Path entra em LITERAL de string Kof com `/` (SQLite/JDBC
+     *  aceitam `/` no Windows); o path cru com `\` vira `\U`/`\j` (escapes
+     *  colapsam pela regra lexical — o arquivo some e o SQLite dá CANTOPEN). */
+    private static String kofPath(Path p) {
+        return p.toString().replace('\\', '/');
+    }
+
     private static String findH2Jar() {
         String cp = System.getProperty("java.class.path");
         for (String entry : cp.split(java.io.File.pathSeparator)) {
@@ -531,7 +538,7 @@ class KofDbE2ETest {
                 var rows = db.query(db, "select count(*) as n from t")
                 println(rows.get(0))
             }
-            """.formatted(tempDir));
+            """.formatted(kofPath(tempDir)));
         runNative(source, tempDir.resolve("out"), "{\"n\":2}");
     }
 
@@ -555,7 +562,7 @@ class KofDbE2ETest {
                 var rows = db.query(db, "select count(*) as n from t")
                 println(rows.get(0))
             }
-            """.formatted(tempDir));
+            """.formatted(kofPath(tempDir)));
         runNative(source, tempDir.resolve("out"), "caught\n{\"n\":0}");
     }
 
@@ -586,7 +593,7 @@ class KofDbE2ETest {
                 var rows = db.query(db, "select count(*) as n from entries")
                 println(rows.get(0))
             }
-            """.formatted(tempDir));
+            """.formatted(kofPath(tempDir)));
         runNative(source, tempDir.resolve("out"), "caught\n{\"n\":0}");
     }
 
@@ -621,7 +628,7 @@ class KofDbE2ETest {
                 }
                 db.close(db)
             }
-            """.formatted(tempDir));
+            """.formatted(kofPath(tempDir)));
         CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.NATIVE);
         assertTrue(result.success(), "Native compile should succeed: " + result.diagnostics().getDiagnostics());
         Path binFile = tempDir.resolve("out/Default/Main");
@@ -934,7 +941,7 @@ class KofDbE2ETest {
                 }
                 db.close(db)
             }
-            """.formatted(tempDir));
+            """.formatted(kofPath(tempDir)));
         for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
             String arch = t.nativeArch();
             String as = arch.equals("riscv64") ? "riscv64-linux-gnu-as" : "aarch64-linux-gnu-as";

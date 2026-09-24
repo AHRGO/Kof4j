@@ -41,22 +41,60 @@ class KofOrmE2ETest {
         String h2 = findH2Jar();
         String cp = outDir + java.io.File.pathSeparator + h2
                 + (extraJar != null ? java.io.File.pathSeparator + extraJar : "");
+        java.io.File stderrFile = java.io.File.createTempFile("kof-orm-stderr", ".txt");
         try {
             ProcessBuilder pb = new ProcessBuilder("java", "-Dfile.encoding=UTF-8",
                     "-Dstdout.encoding=UTF-8", "--enable-native-access=ALL-UNNAMED",
                     "-cp", cp, "Default.Main");
             // stderr separado: drivers (Mongo/SQLite) podem logar avisos de
-            // inicialização no stderr — o stdout é o output do programa Kof
-            pb.redirectError(java.io.File.createTempFile("kof-orm-stderr", ".txt"));
+            // inicialização no stderr — o stdout é o output do programa Kof;
+            // em falha o stderr vai DENTRO da mensagem (Q3: red diagnosticável
+            // sem re-rodar) e o arquivo temporário é sempre apagado (sem lixo).
+            pb.redirectError(stderrFile);
             Process p = pb.start();
             String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
                 .replace("\r\n", "\n").trim();
             int ec = p.waitFor();
-            assertEquals(0, ec, "Exit code should be 0, output: '" + output + "'");
+            if (ec != 0) {
+                String stderr = Files.exists(stderrFile.toPath())
+                        ? new String(Files.readAllBytes(stderrFile.toPath()),
+                                java.nio.charset.StandardCharsets.UTF_8).trim()
+                        : "";
+                assertEquals(0, ec, "Exit code should be 0, output: '" + output + "'\n"
+                        + "stderr: '" + stderr + "'");
+            }
             assertEquals(expected, output, "Unexpected output");
             return output;
         } catch (InterruptedException e) {
             throw new IOException("Interrupted while running JVM class", e);
+        } finally {
+            Files.deleteIfExists(stderrFile.toPath());
+        }
+    }
+
+    /** #603: um Path entra em LITERAL de string Kof com `/` (SQLite/JDBC
+     *  aceitam `/` no Windows); o path cru com `\` vira `\U`/`\j` (escapes
+     *  colapsam pela regra lexical — o arquivo some e o SQLite dá CANTOPEN). */
+    private static String kofPath(Path p) {
+        return p.toString().replace('\\', '/');
+    }
+
+    /** #603: pular honesto se o Postgres NÃO aceitar as credenciais do teste
+     *  (tcpOpen sozinho passa com Postgres alheio do dev e vira FATAL de
+     *  senha — assumeTrue por credencial real). */
+    private static void assumePostgresReady() {
+        if (!tcpOpen("localhost", 5432)) {
+            org.junit.jupiter.api.Assumptions.assumeTrue(false,
+                    "PostgreSQL not reachable (start it: docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=kof postgres)");
+        }
+        try (java.sql.Connection c = java.sql.DriverManager.getConnection(
+                "jdbc:postgresql://localhost:5432/kof_test?user=postgres&password=kof")) {
+            try (java.sql.Statement s = c.createStatement()) {
+                s.execute("select 1");
+            }
+        } catch (java.sql.SQLException e) {
+            org.junit.jupiter.api.Assumptions.assumeTrue(false,
+                    "PostgreSQL reachable but test credentials rejected: " + e.getMessage());
         }
     }
 
@@ -406,7 +444,7 @@ class KofOrmE2ETest {
                     println(orm.count<User>(db))
                     db.close(db)
                 }
-                """.formatted(tempDir.resolve("orm.db")));
+                """.formatted(kofPath(tempDir.resolve("orm.db"))));
         runJvmWithExtra(source, tempDir.resolve("out"), findDriverJar("sqlite-jdbc", "SQLite"),
                 "Mel\n1");
     }
@@ -1221,8 +1259,7 @@ class KofOrmE2ETest {
 
     @Test
     void postgresCrud(@TempDir Path tempDir) throws Exception {
-        org.junit.jupiter.api.Assumptions.assumeTrue(tcpOpen("localhost", 5432),
-                "PostgreSQL not reachable (start it: docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=kof postgres)");
+        assumePostgresReady();
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, ENTITY_SRC + "\n"
                 + "                main() {\n"
@@ -1263,10 +1300,10 @@ class KofOrmE2ETest {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, ENTITY_SRC + """
                 main() {
-                    var db = db.connect("sqlite:/tmp/orm-test.db")
+                    var db = db.connect("sqlite:%s")
                     orm.save(db, User(1, "Mel", "m@kof.dev", 30))
                 }
-                """);
+                """.formatted(kofPath(tempDir.resolve("orm-test.db"))));
         // F2a (20/09): kof_orm_save REAL no Native x86-64 — compila limpo.
         CompilationResult nativeResult = driver.compile(source, tempDir.resolve("native-out"), Target.NATIVE);
         assertTrue(nativeResult.success(),
@@ -1307,12 +1344,12 @@ class KofOrmE2ETest {
         String expected = "true\nfalse\nmiss=null";
         Path jvmSource = tempDir.resolve("JvmMain.kf");
         Files.writeString(jvmSource,
-                kf.formatted("jdbc:sqlite:" + tempDir.resolve("jvm-flag397.db")));
+                kf.formatted("jdbc:sqlite:" + kofPath(tempDir.resolve("jvm-flag397.db"))));
         runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
                 findDriverJar("sqlite-jdbc", "SQLite"), expected);
         Path nativeSource = tempDir.resolve("NativeMain.kf");
         Files.writeString(nativeSource,
-                kf.formatted("sqlite:" + tempDir.resolve("nat-flag397.db")));
+                kf.formatted("sqlite:" + kofPath(tempDir.resolve("nat-flag397.db"))));
         CompilationResult nr = driver.compile(nativeSource,
                 tempDir.resolve("native-out"), Target.NATIVE);
         assertTrue(nr.success(), "Native deve compilar orm.find (F2b): "
@@ -1355,13 +1392,13 @@ class KofOrmE2ETest {
         String expected = "1\nO'Mel\n1\nMel-2\n1\n9\n2\n1\n{\"id\":1,\"name\":\"Mel-2\"}\n{\"id\":9,\"name\":\"Ana\"}";
         Path jvmSource = tempDir.resolve("JvmMain.kf");
         Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmsave.db") + "\")\n")
+                + ("    var db = db.connect(\"jdbc:sqlite:" + kofPath(tempDir.resolve("jvmsave.db")) + "\")\n")
                 + body);
         runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
                 findDriverJar("sqlite-jdbc", "SQLite"), expected);
         Path nativeSource = tempDir.resolve("NativeMain.kf");
         Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativesave.db") + "\")\n")
+                + ("    var db = db.connect(\"sqlite:" + kofPath(tempDir.resolve("nativesave.db")) + "\")\n")
                 + body);
         CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
         assertTrue(nativeResult.success(), "Native deve compilar orm.save (F2a): "
@@ -1647,13 +1684,13 @@ class KofOrmE2ETest {
         String expected = "true\n{\"n\":0}";
         Path jvmSource = tempDir.resolve("JvmMain.kf");
         Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvma.db") + "\")\n")
+                + ("    var db = db.connect(\"jdbc:sqlite:" + kofPath(tempDir.resolve("jvma.db")) + "\")\n")
                 + body);
         runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
                 findDriverJar("sqlite-jdbc", "SQLite"), expected);
         Path nativeSource = tempDir.resolve("NativeMain.kf");
         Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativea.db") + "\")\n")
+                + ("    var db = db.connect(\"sqlite:" + kofPath(tempDir.resolve("nativea.db")) + "\")\n")
                 + body);
         CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
         assertTrue(nativeResult.success(), "Native deve compilar orm.deleteAll: "
@@ -1714,13 +1751,13 @@ class KofOrmE2ETest {
         String expected = "2\ntrue\n0";
         Path jvmSource = tempDir.resolve("JvmMain.kf");
         Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmb.db") + "\")\n")
+                + ("    var db = db.connect(\"jdbc:sqlite:" + kofPath(tempDir.resolve("jvmb.db")) + "\")\n")
                 + body);
         runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
                 findDriverJar("sqlite-jdbc", "SQLite"), expected);
         Path nativeSource = tempDir.resolve("NativeMain.kf");
         Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativeb.db") + "\")\n")
+                + ("    var db = db.connect(\"sqlite:" + kofPath(tempDir.resolve("nativeb.db")) + "\")\n")
                 + body);
         CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
         assertTrue(nativeResult.success(), "Native deve compilar orm.count: "
@@ -1783,13 +1820,13 @@ class KofOrmE2ETest {
         String expected = "true\ntrue\n1\n{\"email\":\"m@kof.dev\"}\n{\"sql\":\"CREATE TABLE \\\"user\\\" (\\\"id\\\" INTEGER PRIMARY KEY AUTOINCREMENT, \\\"name\\\" VARCHAR(255), \\\"email\\\" VARCHAR(255) UNIQUE, \\\"age\\\" INTEGER)\"}";
         Path jvmSource = tempDir.resolve("JvmMain.kf");
         Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmb.db") + "\")\n")
+                + ("    var db = db.connect(\"jdbc:sqlite:" + kofPath(tempDir.resolve("jvmb.db")) + "\")\n")
                 + body);
         runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
                 findDriverJar("sqlite-jdbc", "SQLite"), expected);
         Path nativeSource = tempDir.resolve("NativeMain.kf");
         Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativeb.db") + "\")\n")
+                + ("    var db = db.connect(\"sqlite:" + kofPath(tempDir.resolve("nativeb.db")) + "\")\n")
                 + body);
         CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
         assertTrue(nativeResult.success(), "Native deve compilar orm.create: "
@@ -1821,13 +1858,13 @@ class KofOrmE2ETest {
         String expected = "true\ntrue\ntrue\n{\"n\":2}\n1";
         Path jvmSource = tempDir.resolve("JvmMain.kf");
         Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmb.db") + "\")\n")
+                + ("    var db = db.connect(\"jdbc:sqlite:" + kofPath(tempDir.resolve("jvmb.db")) + "\")\n")
                 + body);
         runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
                 findDriverJar("sqlite-jdbc", "SQLite"), expected);
         Path nativeSource = tempDir.resolve("NativeMain.kf");
         Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativeb.db") + "\")\n")
+                + ("    var db = db.connect(\"sqlite:" + kofPath(tempDir.resolve("nativeb.db")) + "\")\n")
                 + body);
         CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
         assertTrue(nativeResult.success(), "Native deve compilar orm.migrate: "
@@ -1893,13 +1930,13 @@ class KofOrmE2ETest {
         String expected = "true\n1\n1\n0\n0\n0";
         Path jvmSource = tempDir.resolve("JvmMain.kf");
         Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmb.db") + "\")\n")
+                + ("    var db = db.connect(\"jdbc:sqlite:" + kofPath(tempDir.resolve("jvmb.db")) + "\")\n")
                 + body);
         runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
                 findDriverJar("sqlite-jdbc", "SQLite"), expected);
         Path nativeSource = tempDir.resolve("NativeMain.kf");
         Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativeb.db") + "\")\n")
+                + ("    var db = db.connect(\"sqlite:" + kofPath(tempDir.resolve("nativeb.db")) + "\")\n")
                 + body);
         CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
         assertTrue(nativeResult.success(), "Native deve compilar count com bind: "
@@ -1946,13 +1983,13 @@ class KofOrmE2ETest {
         String expected = "1\nMel\n30\nnull\nAna/25\nMelissa\n{\"n\":2}";
         Path jvmSource = tempDir.resolve("JvmMain.kf");
         Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmfind.db") + "\")\n")
+                + ("    var db = db.connect(\"jdbc:sqlite:" + kofPath(tempDir.resolve("jvmfind.db")) + "\")\n")
                 + body);
         runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
                 findDriverJar("sqlite-jdbc", "SQLite"), expected);
         Path nativeSource = tempDir.resolve("NativeMain.kf");
         Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativefind.db") + "\")\n")
+                + ("    var db = db.connect(\"sqlite:" + kofPath(tempDir.resolve("nativefind.db")) + "\")\n")
                 + body);
         CompilationResult nativeResult = driver.compile(nativeSource, tempDir.resolve("native-out"), Target.NATIVE);
         assertTrue(nativeResult.success(), "Native deve compilar orm.find (F2b): "
@@ -1993,13 +2030,13 @@ class KofOrmE2ETest {
         String expected = "2\nMel\nAna\n0\nempty=0";
         Path jvmSource = tempDir.resolve("JvmMain.kf");
         Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmall.db") + "\")\n")
+                + ("    var db = db.connect(\"jdbc:sqlite:" + kofPath(tempDir.resolve("jvmall.db")) + "\")\n")
                 + body);
         runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
                 findDriverJar("sqlite-jdbc", "SQLite"), expected);
         Path nativeSource = tempDir.resolve("NativeMain.kf");
         Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativeall.db") + "\")\n")
+                + ("    var db = db.connect(\"sqlite:" + kofPath(tempDir.resolve("nativeall.db")) + "\")\n")
                 + body);
         CompilationResult nr = driver.compile(nativeSource,
                 tempDir.resolve("native-out"), Target.NATIVE);
@@ -2053,13 +2090,13 @@ class KofOrmE2ETest {
         String expected = "1\nMel\n0\n2\nMel\nBia\n1\n1\nthrow:[ORM operator not allowed: DROP TABLE user]\n1";
         Path jvmSource = tempDir.resolve("JvmMain.kf");
         Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmwhere.db") + "\")\n")
+                + ("    var db = db.connect(\"jdbc:sqlite:" + kofPath(tempDir.resolve("jvmwhere.db")) + "\")\n")
                 + body);
         runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
                 findDriverJar("sqlite-jdbc", "SQLite"), expected);
         Path nativeSource = tempDir.resolve("NativeMain.kf");
         Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativewhere.db") + "\")\n")
+                + ("    var db = db.connect(\"sqlite:" + kofPath(tempDir.resolve("nativewhere.db")) + "\")\n")
                 + body);
         CompilationResult nr = driver.compile(nativeSource,
                 tempDir.resolve("native-out"), Target.NATIVE);
@@ -2113,13 +2150,13 @@ class KofOrmE2ETest {
         String expected = "true\n2\n1\nMel\n1\nAna\n0\n0\ntrue\n1\n0\ntrue\n1\nAna";
         Path jvmSource = tempDir.resolve("JvmMain.kf");
         Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmc3.db") + "\")\n")
+                + ("    var db = db.connect(\"jdbc:sqlite:" + kofPath(tempDir.resolve("jvmc3.db")) + "\")\n")
                 + body);
         runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
                 findDriverJar("sqlite-jdbc", "SQLite"), expected);
         Path nativeSource = tempDir.resolve("NativeMain.kf");
         Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativec3.db") + "\")\n")
+                + ("    var db = db.connect(\"sqlite:" + kofPath(tempDir.resolve("nativec3.db")) + "\")\n")
                 + body);
         CompilationResult nr = driver.compile(nativeSource,
                 tempDir.resolve("native-out"), Target.NATIVE);
@@ -2168,13 +2205,13 @@ class KofOrmE2ETest {
         String expected = "true\n0\ntrue\n2\n2\nMel\nAna\n0\n1\nAna\ntrue\n1\ntrue\n1";
         Path jvmSource = tempDir.resolve("JvmMain.kf");
         Files.writeString(jvmSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"jdbc:sqlite:" + tempDir.resolve("jvmc3b.db") + "\")\n")
+                + ("    var db = db.connect(\"jdbc:sqlite:" + kofPath(tempDir.resolve("jvmc3b.db")) + "\")\n")
                 + body);
         runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
                 findDriverJar("sqlite-jdbc", "SQLite"), expected);
         Path nativeSource = tempDir.resolve("NativeMain.kf");
         Files.writeString(nativeSource, ENTITY_SRC + "main() {\n"
-                + ("    var db = db.connect(\"sqlite:" + tempDir.resolve("nativec3b.db") + "\")\n")
+                + ("    var db = db.connect(\"sqlite:" + kofPath(tempDir.resolve("nativec3b.db")) + "\")\n")
                 + body);
         CompilationResult nr = driver.compile(nativeSource,
                 tempDir.resolve("native-out"), Target.NATIVE);
@@ -2214,12 +2251,12 @@ class KofOrmE2ETest {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, ENTITY_SRC + """
                 main() {
-                    var db = db.connect("sqlite:/tmp/f2c3-pin.db")
+                    var db = db.connect("sqlite:%s")
                     var p = orm.page<User>(db, 1, 0)
                     var ok = orm.delete<User>(db, 1)
                     println(orm.saveAll<User>(db, listOf(User(0, "Mel", "m@kof.dev", 30))))
                 }
-                """);
+                """.formatted(kofPath(tempDir.resolve("f2c3-pin.db"))));
         CompilationResult r = driver.compile(source, tempDir.resolve("out"), Target.NATIVE_RISCV64);
         assertTrue(r.success(), "todas as faces do row-object sao REAIS no riscv64: "
                 + r.diagnostics().getDiagnostics());
@@ -2495,8 +2532,8 @@ class KofOrmE2ETest {
         Path jvmDir = tempDir.resolve("countwhere-jvm");
         Files.createDirectories(jvmDir);
         Path jvmSource = jvmDir.resolve("Main.kf");
-        Files.writeString(jvmSource, template.formatted(jvmDir)
-                .replace("sqlite:" + jvmDir, "jdbc:sqlite:" + jvmDir));
+        Files.writeString(jvmSource, template.formatted(kofPath(jvmDir))
+                .replace("sqlite:" + kofPath(jvmDir), "jdbc:sqlite:" + kofPath(jvmDir)));
         String goldenJvm = golden.replace(
                 "orm.count bind value: unsupported type on Native (ORM001)", "0");
         runJvmWithExtra(jvmSource, jvmDir.resolve("out"),
