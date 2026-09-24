@@ -159,6 +159,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `GenericInterfaceAssignabilityTest` **10/10** (JVM/Script/JS + Native direto e
     herdado; RED medido com o código sem o fix). Suíte completa 3197/0F/0E.
 
+  - **S5.2 PARCIAL (db-parity, lane gaps-db) — framing do `COM_QUERY` MySQL +
+    classificação da 1ª resposta no cross (peça cross `B67`)** (23/09):
+    `kof_db_mysql_command(fd, sql, buf, buflen)` envia `[0x03][sql]`
+    (comprimento 3 bytes little-endian, seq 0) e devolve o 1º payload de
+    resposta para o chamador classificar (`>=1` = column count, `0x00` = OK,
+    `0xFF` = ERR). Prova: `NativeRiscvDbWireTest` dirige em riscv64 + aarch64
+    sob qemu contra o **MariaDB real** — `SELECT 1` → `1`, `SET @x=1` → `0`,
+    SQL ruim → `255` — mais teste de sabotagem da B67. Falta na próxima fatia:
+    parsear o result set completo (colunas + linhas) em valores Kof.
+
   - **S5.1 SATISFEITA (db-parity, lane gaps-db) — handshake/auth MySQL sobre o
     socket cross (peça cross `B66`)** (23/09): `kof_db_mysql_handshake(fd, user,
     pass, db)` lê o greeting, parseia o seed, calcula o scramble

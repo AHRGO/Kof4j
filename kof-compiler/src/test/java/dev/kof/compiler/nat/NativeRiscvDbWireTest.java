@@ -737,6 +737,178 @@ class NativeRiscvDbWireTest {
                 "a falha deve citar kof_db_mysql_handshake: " + r[0]);
     }
 
+    /**
+     * S5.2 (db-parity-plan, gaps-db lane, 23/09): envia COM_QUERY texto e le o
+     * 1o pacote de resposta para classificar — {@code >=1}=column count de um
+     * resultset, {@code 0x00}=OK, {@code 0xFF}=ERR. Cada comando usa conexao
+     * propria (SELECT gera varios pacotes; uma conexao por comando evita ler
+     * sobras do resultset anterior, que e o escopo do B67 — so a 1a resposta).
+     */
+    private static String mysqlCommandHarness() {
+        int port = mysqlPort();
+        String hi = String.format("0x%02X", (port >> 8) & 0xff);
+        String lo = String.format("0x%02X", port & 0xff);
+        return """
+                .section .data
+                .align 3
+                .Lmq_user:
+                    .zero 16
+                    .word 4
+                    .zero 4
+                    .ascii "root"
+                .align 3
+                .Lmq_pass:
+                    .zero 16
+                    .word 7
+                    .zero 4
+                    .ascii "kofpass"
+                .align 3
+                .Lmq_db:
+                    .zero 16
+                    .word 4
+                    .zero 4
+                    .ascii "test"
+                .align 3
+                .Lmq_sel:
+                    .zero 16
+                    .word 8
+                    .zero 4
+                    .ascii "SELECT 1"
+                .align 3
+                .Lmq_set:
+                    .zero 16
+                    .word 12
+                    .zero 4
+                    .ascii "SET @kof_x=1"
+                .align 3
+                .Lmq_bad:
+                    .zero 16
+                    .word 7
+                    .zero 4
+                    .ascii "SELEC 1"
+                .align 3
+                .Lmq_addr:
+                    .byte 2, 0, PORT_HI, PORT_LO, 127, 0, 0, 1
+                    .zero 8
+                .align 3
+                .Lkof_heap_root_start:
+                .Lkof_heap_root_end:
+                .section .text
+                .globl _start
+                _start:
+                    andi sp, sp, -16
+                    li   t6, 4224
+                    sub  sp, sp, t6
+                    addi s2, sp, 128          # buffer de response (4096)
+                    la   a0, .Lmq_sel
+                    call .Lmq_one
+                    call kof_println_int
+                    la   a0, .Lmq_set
+                    call .Lmq_one
+                    call kof_println_int
+                    la   a0, .Lmq_bad
+                    call .Lmq_one
+                    call kof_println_int
+                    li   a0, 0
+                    li   a7, 93
+                    ecall
+                # a0 = sql KofString -> a0 = byte de classificacao | -1
+                .Lmq_one:
+                    addi sp, sp, -64
+                    sd   ra, 0(sp)
+                    sd   s0, 8(sp)
+                    sd   s1, 16(sp)
+                    sd   s3, 24(sp)
+                    mv   s1, a0
+                    li   a0, 2
+                    li   a1, 1
+                    li   a2, 0
+                    call kof_plat_net_socket
+                    mv   s0, a0
+                    mv   a0, s0
+                    la   a1, .Lmq_addr
+                    li   a2, 16
+                    call kof_plat_net_connect
+                    mv   a0, s0
+                    la   a1, .Lmq_user
+                    la   a2, .Lmq_pass
+                    la   a3, .Lmq_db
+                    call kof_db_mysql_handshake
+                    bnez a0, .Lmq_one_fail
+                    mv   a0, s0
+                    mv   a1, s1
+                    mv   a2, s2
+                    li   a3, 4096
+                    call kof_db_mysql_command
+                    blt  a0, zero, .Lmq_one_fail
+                    lbu  s3, 0(a1)
+                    j    .Lmq_one_close
+                .Lmq_one_fail:
+                    li   s3, -1
+                .Lmq_one_close:
+                    mv   a0, s0
+                    call kof_plat_close
+                    mv   a0, s3
+                    ld   ra, 0(sp)
+                    ld   s0, 8(sp)
+                    ld   s1, 16(sp)
+                    ld   s3, 24(sp)
+                    addi sp, sp, 64
+                    ret
+                .globl kof_super_table
+                kof_super_table:
+                    .word 0
+                """.replace("PORT_HI", hi).replace("PORT_LO", lo);
+    }
+
+    @Test
+    void commandClassifiesResponseAgainstRealMariaDbOnRiscv64(@TempDir Path tempDir) throws Exception {
+        assumeRiscv();
+        assumeMaria();
+        String harness = mysqlCommandHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String out = buildRun("riscv64", tempDir, "cmd_rv", harness + "\n" + runtime);
+        assertEquals("1\n0\n255", out, "COM_QUERY riscv64: SELECT=1, SET=0, SQL ruim=255");
+    }
+
+    @Test
+    void commandClassifiesResponseAgainstRealMariaDbOnAarch64(@TempDir Path tempDir) throws Exception {
+        assumeAarch64();
+        assumeMaria();
+        String harness = mysqlCommandHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String riscv = harness + "\n" + runtime;
+        StringBuilder arm = new StringBuilder();
+        for (String line : riscv.split("\n", -1)) {
+            for (String t : NativeAarch64Translator.translateRiscvToAarch64(line)) arm.append(t).append('\n');
+        }
+        String out = buildRun("aarch64", tempDir, "cmd_aa", arm.toString());
+        assertEquals("1\n0\n255", out, "COM_QUERY aarch64: SELECT=1, SET=0, SQL ruim=255");
+    }
+
+    @Test
+    void withoutCommandPieceLinkFailsSabotage(@TempDir Path tempDir) throws IOException {
+        assumeRiscv();
+        String harness = mysqlCommandHarness();
+        Set<Integer> keep = new LinkedHashSet<>(RiscvSlices.keepForProgramText(harness));
+        int b67 = -1;
+        for (RiscvSlices.Piece p : RiscvSlices.pieces()) {
+            if ("RISCV_RUNTIME_ASM_B_67".equals(p.field())) b67 = p.index();
+        }
+        assertTrue(b67 >= 0, "peça B67 (COM_QUERY) não encontrada no inventário");
+        assertTrue(keep.remove(b67), "B67 deveria estar no keep do harness de COM_QUERY");
+        String runtime = RiscvSlices.renderSubset(keep);
+        Path asm = tempDir.resolve("sab_cmd.s");
+        Files.writeString(asm, harness + "\n" + runtime);
+        Path obj = tempDir.resolve("sab_cmd.o");
+        Path bin = tempDir.resolve("sab_cmd");
+        runCapture("riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
+        String[] r = runAllowFail("riscv64-linux-gnu-ld", "--no-relax", "-o", bin.toString(), obj.toString());
+        assertNotEquals("0", r[1], "sem a B67 o link deveria falhar (undefined kof_db_mysql_command); saída: " + r[0]);
+        assertTrue(r[0].contains("kof_db_mysql_command"),
+                "a falha deve citar kof_db_mysql_command: " + r[0]);
+    }
+
     @Test
     void greetingParseMatchesOracleOnRiscv64(@TempDir Path tempDir) throws Exception {
         assumeRiscv();

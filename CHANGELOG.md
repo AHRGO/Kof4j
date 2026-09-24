@@ -156,6 +156,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     **10/10** (JVM/Script/JS + Native direct and inherited; RED measured with the
     code unfixed). Full suite 3197/0F/0E.
 
+  - **S5.2 PARTIAL (db-parity, gaps-db lane) — MySQL `COM_QUERY` framing +
+    first-response classification on the cross (cross piece `B67`)** (23/09):
+    `kof_db_mysql_command(fd, sql, buf, buflen)` sends `[0x03][sql]` (3-byte
+    little-endian length, seq 0) and returns the first response payload so the
+    caller classifies it (`>=1` = column count, `0x00` = OK, `0xFF` = ERR).
+    Proof: `NativeRiscvDbWireTest` drives it on riscv64 + aarch64 under qemu
+    against the **real MariaDB** — `SELECT 1` → `1`, `SET @x=1` → `0`, bad SQL
+    → `255` — plus a B67 sabotage test. Left for the next slice: parse the full
+    result set (column definitions + rows) into Kof values.
+
   - **S5.1 SATISFIED (db-parity, gaps-db lane) — MySQL handshake/auth over the
     cross socket (cross piece `B66`)** (23/09): `kof_db_mysql_handshake(fd,
     user, pass, db)` reads the greeting, parses the seed, computes the

@@ -8,7 +8,7 @@
 > when parity is complete.
 
 **Owner:** `gaps-db` lane (handed over 21/09 by order of the maintainer, under `D-DB-PARITY-OWNER`; S0/S1 authorized) · **Records/plan:** docs/plataforma lane
-**Branch:** `beta-0.5.0` · **Status:** S0 ✅ DONE (21/09, session 9092) — honest native refusal of an unsupported scheme with the named `DB001` code, plus real link-by-use (no `libmariadb` link for non-mysql literals); **S1 ✅ DONE on Native x86-64 (23/09, gaps-db lane)** — `mariadb://` is a `mysql://` wire alias; cross stays honest `DB001` until the mysql wire is ported (R7); **S2 ✅ DONE on JVM/JS/Android (23/09, gaps-db lane)** — a missing JDBC driver is now a named `DB001` diagnostic (real connection failures untouched); **S3/S4 ✅ DONE 23/09 (gaps-db lane)** — `mongodb://` real on JVM/Android and declared `DB001` on JS/Native; `oracle` declared (no driver/server on the host); **S5.0 (cross socket layer) ✅ SATISFIED 23/09 (measured — already proven by the cross HTTP core)**; **S5.1 (handshake+auth) ✅ SATISFIED 23/09 (pieces `B62`–`B66`): SHA1/bswap + scramble/lenenc + greeting parse + auth-response build + the socket round-trip, proven by `NativeRiscvDbWireTest` on riscv64+aarch64 (qemu, against the JVM oracle and against the REAL MariaDB — the server returns the OK packet; an unknown DB yields Err). The Kof surface (`db.connect` cross) still emits the honest `DB001` until S5.4**
+**Branch:** `beta-0.5.0` · **Status:** S0 ✅ DONE (21/09, session 9092) — honest native refusal of an unsupported scheme with the named `DB001` code, plus real link-by-use (no `libmariadb` link for non-mysql literals); **S1 ✅ DONE on Native x86-64 (23/09, gaps-db lane)** — `mariadb://` is a `mysql://` wire alias; cross stays honest `DB001` until the mysql wire is ported (R7); **S2 ✅ DONE on JVM/JS/Android (23/09, gaps-db lane)** — a missing JDBC driver is now a named `DB001` diagnostic (real connection failures untouched); **S3/S4 ✅ DONE 23/09 (gaps-db lane)** — `mongodb://` real on JVM/Android and declared `DB001` on JS/Native; `oracle` declared (no driver/server on the host); **S5.0 (cross socket layer) ✅ SATISFIED 23/09 (measured — already proven by the cross HTTP core)**; **S5.1 (handshake+auth) ✅ SATISFIED 23/09 (pieces `B62`–`B66`): SHA1/bswap + scramble/lenenc + greeting parse + auth-response build + the socket round-trip, proven by `NativeRiscvDbWireTest` on riscv64+aarch64 (qemu, against the JVM oracle and against the REAL MariaDB — the server returns the OK packet; an unknown DB yields Err). The Kof surface (`db.connect` cross) still emits the honest `DB001` until S5.4**; **S5.2 (`COM_QUERY`) 🟡 PARTIAL 23/09 (piece `B67`) — request framing + first-response classification proven on riscv64+aarch64 (qemu) against the real MariaDB (`SELECT 1`→1, `SET`→0, bad SQL→255); the full result-set parse (columns+rows) is the next slice**
 
 ---
 
@@ -209,7 +209,16 @@ typed roundtrip) produces the **same observable result** on all four targets, or
       by this server (native password is the default) and stays a declared,
       diagnosed path for a later slice if a server negotiates it.
   - **S5.2 — `COM_QUERY` + text resultset.** Port packet framing + result parse.
-    *Proof:* `db.query` roundtrip under qemu, byte-identical to x86/JVM.
+    **Partial ✅ 23/09 (piece `B67`):** the request framing + the first response
+    packet are ported — `kof_db_mysql_command(fd, sql, buf, buflen)` sends
+    `[0x03][sql]` (3-byte little-endian length, seq 0) and returns the first
+    payload so the caller classifies it (`>=1` column count, `0x00` OK, `0xFF`
+    ERR). Proven on riscv64 + aarch64 (qemu) against the **real MariaDB**:
+    `SELECT 1` → `1`, `SET @x=1` → `0`, bad SQL → `255`.
+    *Proof:* `NativeRiscvDbWireTest#commandClassifiesResponseAgainstRealMariaDb*`.
+    Left for the next slice: parse the full result set (column definitions +
+    rows) into Kof values.
+    *Completion criterion:* `db.query` roundtrip under qemu, byte-identical to x86/JVM.
   - **S5.3 — bind/prepared + tx + ORM.** Port the prepared/execute/transaction
     dispatch. *Proof:* `orm.*` E2E under qemu.
   - **S5.4 — link + parity test.** `-lmariadb` link-by-use on cross + the riscv/

@@ -184,6 +184,11 @@ public final class NativeRiscvAsm {
                 // le greeting, scramble, monta/envia a resposta e le o OK (port
                 // do fluxo de RuntimeDb3 sobre as pecas B62..B65 + HAL de socket).
                 .append(NativeRiscvAsmRtB66.RISCV_RUNTIME_ASM_B_66)
+                // S5.2 db-parity (gaps-db lane, 23/09): COM_QUERY texto —
+                // framing do request + leitura do 1o pacote de resposta para
+                // classificacao (port do framing de RuntimeDb2/Db3); aarch64
+                // herda via tradutor.
+                .append(NativeRiscvAsmRtB67.RISCV_RUNTIME_ASM_B_67)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();
