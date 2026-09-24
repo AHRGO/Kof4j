@@ -27,6 +27,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Proof: `NativeRecordCollectionEqualityE2ETest` **3/3** (JVM oracle,
     byte-identical on x86-64 + riscv64 + aarch64).
 
+  - **§104b-ii (face MAP) ✅ FIXED — a record/class KEY in a Native `Map` now
+    matches by CONTENT** (24/09, lane compiler/nat 9092): `mapOf(p1, 7).get(p2)` /
+    `containsKey` / `remove` used POINTER comparison → `0`/`null` vs JVM `7`.
+    Added tag 2 = Kof object to `kof_map_find` (x86 + riscv) dispatched to
+    `kof_obj_equals`, with `CollectionWrites.mapKeyTag` written by the x86/riscv
+    emitters; the native Map is a LINEAR vector, so no content `hashCode` is
+    needed. Proof: `NativeRecordCollectionEqualityE2ETest` extended (record key
+    get/containsKey/remove, non-interned String key, primitive key) **3/3**.
+
   - **Bare-metal BIOS boot (plan `PLAN-BAREMETAL-BOOT`, B-3b-3) — the real Kof
     payload now runs bare through the legacy BIOS path: `_start` is linked at the
     fixed base `0x100000`, copied from the real-mode staging (`0xC200`) in

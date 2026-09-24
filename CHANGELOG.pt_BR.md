@@ -27,6 +27,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Prova: `NativeRecordCollectionEqualityE2ETest` **3/3** (oráculo JVM,
     byte-idêntico em x86-64 + riscv64 + aarch64).
 
+  - **§104b-ii (face MAP) ✅ FIXED — chave record/classe em `Map` nativo agora
+    casa por CONTEÚDO** (24/09, lane compiler/nat 9092): `mapOf(p1, 7).get(p2)` /
+    `containsKey` / `remove` usavam comparação por PONTEIRO → `0`/`null` vs JVM
+    `7`. Adicionado tag 2 = objeto Kof ao `kof_map_find` (x86 + riscv) com
+    despacho para `kof_obj_equals`, e `CollectionWrites.mapKeyTag` escrito pelos
+    emitters x86/riscv; o Map nativo é um vetor LINEAR, então não precisa de
+    `hashCode` de conteúdo. Prova: `NativeRecordCollectionEqualityE2ETest`
+    estendido (get/containsKey/remove com chave record, chave String
+    não-internada, chave primitiva) **3/3**.
+
   - **Boot BIOS bare-metal (plano `PLAN-BAREMETAL-BOOT`, B-3b-3) — o payload Kof
     real agora roda bare pelo caminho BIOS legado: o `_start` é ligado na base
     fixa `0x100000`, copiado do staging de modo real (`0xC200`) em protected mode
