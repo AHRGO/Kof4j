@@ -28,6 +28,14 @@ class NativeRecordHashCodeE2ETest {
             record P(Int i, Long l, Bool b, Char c)
             record RF(Float f)
             record RD(Double d)
+            record Inner(Int v)
+            record Outer(Inner i, String s)
+            record MaybeInner(Inner? i)
+
+            Inner? maybeInner(Int v) {
+                if (v > 0) { return Inner(v) }
+                return null
+            }
 
             String? maybe(Int v) {
                 if (v > 0) { return "ab" }
@@ -54,6 +62,12 @@ class NativeRecordHashCodeE2ETest {
                 println(RD(2.5).hashCode())
                 println(RD(-0.0).hashCode())
                 println(RD(1.0).hashCode())
+                println(Inner(7).hashCode())
+                println(Outer(Inner(7), "z").hashCode())
+                println(Outer(Inner(7), "z").hashCode() == Outer(Inner(7), "z").hashCode())
+                println(Outer(Inner(7), "z").hashCode() == Outer(Inner(8), "z").hashCode())
+                println(MaybeInner(maybeInner(-1)).hashCode())
+                println(MaybeInner(maybeInner(1)).hashCode())
             }
             """;
 

@@ -162,9 +162,10 @@ public final class CompilerRecordSupport {
      * hashCode() nativo de record: 31 * h + campo (bug 42 native). §114 (face
      * hash): campo de REFERENCIA não pode somar o PONTEIRO — o contrato é o
      * JVM (`31*h + o.hashCode()`, `o==null → 0`). String por CONTEÚDO via
-     * `kof_string_hash_code` (`String.hashCode`, código do par de foco,
-     * null-safe 0). Primitivos já casam crus nesta fórmula (Int/Long/Bool/Char,
-     * medido); Float/Double/record-aninhado seguem declarados em §114.
+     * `kof_string_hash_code`; record/classe via `kof_obj_hash` (despacho
+     * `kof_hashcode_table`); Double via `kof_double_hash` (`(int)(bits^(bits>>>32))`).
+     * Int/Long/Bool/Char casam crus; Float casa cru (o slot de 32 bits é
+     * `floatToIntBits`). Medido: todas as faces fechadas (§114).
      */
     static IRMethod buildRecordHashCodeMethod(CompilerDriver driver, String internalName,
                                               List<IRField> fields,
@@ -187,6 +188,14 @@ public final class CompilerRecordSupport {
                 // O ADD cru somava 0 (o lowering int não lê o slot de 64 bits).
                 ops.add(new KofCall(Type.PrimitiveType.DOUBLE, "kof_double_hash",
                         List.of(Type.PrimitiveType.DOUBLE),
+                        Type.PrimitiveType.INT, KofCallKind.FUNCTION));
+            } else if (isKofObjectField(f.type())) {
+                // §114 face hash aninhada: campo record/classe soma o hashCode
+                // de CONTEUDO (kof_obj_hash: null-safe, String por conteúdo,
+                // senão kof_hashcode_table[type_id]); antes somava o PONTEIRO.
+                Type objectType = new Type.ClassType("java.lang", "Object", List.of());
+                ops.add(new KofCall(objectType, "kof_obj_hash",
+                        List.of(objectType),
                         Type.PrimitiveType.INT, KofCallKind.FUNCTION));
             }
             ops.add(new KofBinary(KofBinaryOp.ADD, Type.PrimitiveType.INT));

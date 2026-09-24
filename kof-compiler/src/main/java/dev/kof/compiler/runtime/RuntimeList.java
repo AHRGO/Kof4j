@@ -230,6 +230,29 @@ public final class RuntimeList {
                 xorl %eax, %eax
                 ret
 
+            # §114 (face hash aninhado, 24/09): kof_obj_hash(rdi=obj) -> eax =
+            # hashCode de CONTEUDO (0 se null/sem hashCode; String por
+            # kof_string_hash_code; senão despacho por kof_hashcode_table[type_id]).
+            # Antes o campo record somava o PONTEIRO no hashCode sintetizado.
+            .globl kof_obj_hash
+            .type kof_obj_hash, @function
+            kof_obj_hash:
+                testq %rdi, %rdi
+                jz .Lkoh_zero
+                movl (%rdi), %eax
+                cmpl $1, %eax
+                je .Lkoh_str
+                leaq kof_hashcode_table(%rip), %rcx
+                movq (%rcx,%rax,8), %rax
+                testq %rax, %rax
+                jz .Lkoh_zero
+                jmp *%rax
+            .Lkoh_str:
+                jmp kof_string_hash_code
+            .Lkoh_zero:
+                xorl %eax, %eax
+                ret
+
             .globl kof_list_is_empty
             .type kof_list_is_empty, @function
             kof_list_is_empty:

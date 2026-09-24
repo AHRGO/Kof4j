@@ -96,6 +96,9 @@ class PlatformSeamSabotageTest {
                 .globl kof_equals_table
                 kof_equals_table:
                 .quad 0
+                .globl kof_hashcode_table
+                kof_hashcode_table:
+                .quad 0
             """;
 
     /** Sabotagem da costura: corpo de kof_plat_writev/write vira `ret`. */
@@ -146,6 +149,9 @@ class PlatformSeamSabotageTest {
                 .long 0
                 .globl kof_equals_table
                 kof_equals_table:
+                .quad 0
+                .globl kof_hashcode_table
+                kof_hashcode_table:
                 .quad 0
             """;
 

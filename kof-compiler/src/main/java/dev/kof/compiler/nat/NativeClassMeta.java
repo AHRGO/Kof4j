@@ -258,6 +258,35 @@ final class NativeClassMeta {
         }
     }
 
+    /**
+     * §114 (face hash aninhado, 24/09) — tabela `kof_hashcode_table[type_id]` =
+     * ponteiro do `hashCode()` virtual da classe (0 = sem hashCode). Alvo do
+     * `kof_obj_hash`, que soma por CONTEUDO o campo record/classe no hashCode
+     * sintetizado (antes somava o PONTEIRO). Mesmo discriminador `type_id` no
+     * offset 0 das tabelas toString/equals. Emitida para x86 (em emitStringData)
+     * e riscv (NativeArchEmitter; aarch herda).
+     */
+    static void emitHashCodeTable(NativeBackend nb, StringBuilder sb) {
+        int maxId = 0;
+        for (IRClass c : nb.allClassesMap.values()) {
+            if (c.typeId() > maxId) maxId = c.typeId();
+        }
+        String[] table = new String[maxId + 1];
+        for (IRClass c : nb.allClassesMap.values()) {
+            if (c.typeId() <= 0) continue;
+            int idx = findVirtualMethodIndex(nb, c.name(), "hashCode", java.util.List.of());
+            if (idx >= 0) {
+                List<String> methods = collectVirtualMethods(nb, c);
+                if (idx < methods.size()) table[c.typeId()] = methods.get(idx);
+            }
+        }
+        sb.append(".balign 8\n");
+        sb.append("kof_hashcode_table:\n");
+        for (int i = 0; i <= maxId; i++) {
+            sb.append("    .quad ").append(table[i] == null ? "0" : table[i]).append("\n");
+        }
+    }
+
     static void emitStringData(NativeBackend nb, StringBuilder sb) {
         for (String[] entry : nb.stringLiterals) {
             String value = entry[0];
@@ -291,6 +320,7 @@ final class NativeClassMeta {
         sb.append("    .long 0, 0\n");
         emitToStringTable(nb, sb);
         emitEqualsTable(nb, sb);
+        emitHashCodeTable(nb, sb);
     }
 
 }

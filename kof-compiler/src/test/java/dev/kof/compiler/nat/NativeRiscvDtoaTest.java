@@ -110,7 +110,8 @@ class NativeRiscvDtoaTest {
         sb.append("    li a0, 0\n    li a7, 93\n    ecall\n");
         // externo program-side do runtime (vazio neste harness).
         sb.append(".globl kof_super_table\nkof_super_table:\n    .word 0\n");
-        sb.append(".globl kof_equals_table\nkof_equals_table:\n    .quad 0\n");
+        sb.append(".globl kof_equals_table\nkof_equals_table:\n    .quad 0\n"
+                + ".globl kof_hashcode_table\nkof_hashcode_table:\n    .quad 0\n");
         return sb.toString();
     }
 

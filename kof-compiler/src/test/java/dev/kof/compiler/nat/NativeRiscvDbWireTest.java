@@ -177,6 +177,9 @@ class NativeRiscvDbWireTest {
                     .globl kof_equals_table
                     kof_equals_table:
                     .quad 0
+                    .globl kof_hashcode_table
+                    kof_hashcode_table:
+                    .quad 0
                 """;
     }
 
@@ -246,6 +249,9 @@ class NativeRiscvDbWireTest {
                     .word 0
                     .globl kof_equals_table
                     kof_equals_table:
+                    .quad 0
+                    .globl kof_hashcode_table
+                    kof_hashcode_table:
                     .quad 0
                 """;
     }
@@ -426,6 +432,9 @@ class NativeRiscvDbWireTest {
                     .globl kof_equals_table
                     kof_equals_table:
                     .quad 0
+                    .globl kof_hashcode_table
+                    kof_hashcode_table:
+                    .quad 0
                 """;
     }
 
@@ -550,6 +559,9 @@ class NativeRiscvDbWireTest {
                     .word 0
                     .globl kof_equals_table
                     kof_equals_table:
+                    .quad 0
+                    .globl kof_hashcode_table
+                    kof_hashcode_table:
                     .quad 0
                 """;
     }
@@ -700,6 +712,9 @@ class NativeRiscvDbWireTest {
                     .word 0
                     .globl kof_equals_table
                     kof_equals_table:
+                    .quad 0
+                    .globl kof_hashcode_table
+                    kof_hashcode_table:
                     .quad 0
                 """.replace("PORT_HI", hi).replace("PORT_LO", lo);
     }
@@ -875,6 +890,9 @@ class NativeRiscvDbWireTest {
                     .word 0
                     .globl kof_equals_table
                     kof_equals_table:
+                    .quad 0
+                    .globl kof_hashcode_table
+                    kof_hashcode_table:
                     .quad 0
                 """.replace("PORT_HI", hi).replace("PORT_LO", lo);
     }
@@ -1053,6 +1071,9 @@ class NativeRiscvDbWireTest {
                     .word 0
                     .globl kof_equals_table
                     kof_equals_table:
+                    .quad 0
+                    .globl kof_hashcode_table
+                    kof_hashcode_table:
                     .quad 0
                 """.replace("PORT_HI", hi).replace("PORT_LO", lo);
     }

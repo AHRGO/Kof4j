@@ -97,6 +97,9 @@ class NativeRiscvGcMarkTest {
                 .globl kof_equals_table
                 kof_equals_table:
                 .quad 0
+                .globl kof_hashcode_table
+                kof_hashcode_table:
+                .quad 0
             """;
 
     private String runCapture(String... cmd) throws IOException {
