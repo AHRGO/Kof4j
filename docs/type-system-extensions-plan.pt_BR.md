@@ -2,7 +2,7 @@
 
 # Extensões do sistema de tipos — plano incremental (X5 variance + sealed · X6 reflexão de interop)
 
-> **Estado: APROVADO 21/09 — implementando em fatias com prova** (exec = lane
+> **Estado: IMPLEMENTADO 22/09 — todas as fatias X5/X6 pousadas com prova** (exec = lane
 > compiler). A mantenedora votou X5 = opção C e X6 (incremental) e respondeu as
 > perguntas de superfície do X5 (`DECISIONS.md` §D-TYPE-VARIANCE,
 > §D-INTEROP-REFLECT, §D-X5-SURFACE); o texto abaixo fica como a spec medida.

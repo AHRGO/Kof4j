@@ -2788,7 +2788,7 @@ fixed-arity form stays an explicit documented gap.
 
 ## D-TYPE-VARIANCE — variance + sealed types (multiple-choice, maintainer 21/09/2026)
 
-**Date:** 2026-09-21 · **State:** `OPEN — spec/plan first` · **Option chosen:** **C** (variance + sealed).
+**Date:** 2026-09-21 · **State:** `IMPLEMENTED` (plan approved; X5.1–X5.5 landed 21/09) · **Option chosen:** **C** (variance + sealed).
 
 The maintainer **opens** variance + sealed types as a core type-system front
 (scientific collections + exhaustive `switch`). It is a **frozen-core change
@@ -2796,16 +2796,17 @@ The maintainer **opens** variance + sealed types as a core type-system front
 plan is drafted and reviewed **before any parser/typer diff** — nothing lands
 silently. Type-classes remain rejected (permanent non-goal).
 
-- **Unblocks:** X5 → open (spec-first).
-- **Next deliverable:** an incremental implementation plan (slices + proof per
-  slice) drafted by the agent, reviewed by the maintainer before code.
+- **Unblocks:** X5 → landed (spec-first: plan reviewed, then slices with proof).
+- **Landed:** X5.1–X5.5 (21/09) — `sealed` + exhaustive `switch` (`SEM080`/`SEM081`),
+  declaration-site and use-site variance (`SEM082`); proof `SealedTypeE2ETest`,
+  `TypeVarianceE2ETest`, `UseSiteVarianceE2ETest` (45 tests green).
 - **Relationships:** `Related: rule 6, rule 11, R10, permanent non-goals, D-KOF-FIRST`.
 
 ---
 
 ## D-INTEROP-REFLECT — interop reflection (multiple-choice, maintainer 21/09/2026)
 
-**Date:** 2026-09-21 · **State:** `DECIDED` · **Option chosen:** **A — compile-time intrinsic**.
+**Date:** 2026-09-21 · **State:** `IMPLEMENTED` (X6.0–X6.3 landed 22/09) · **Option chosen:** **A — compile-time intrinsic**.
 
 The maintainer authorized starting X6 (21/09). Surface frozen:
 
@@ -3031,12 +3032,12 @@ Queue: `roadmap.md` §23 `2.2.3` + tracker R4.
 
 ## D-TYPE-VARIANCE / D-INTEROP-REFLECT — plan APPROVED, slices authorized (maintainer 21/09/2026)
 
-**Date:** 2026-09-21 · **State:** `OPEN — implementing` (plan approved; surface pending).
+**Date:** 2026-09-21 · **State:** `IMPLEMENTED` (plan approved; X5+X6 surface landed 22/09).
 
 `future/type-system-extensions-plan.md` (+PT) was reviewed and **APPROVED**. X5
-(variance+sealed, option C) and X6 (interop reflection) start **incremental
-slices, each with its own proof**. The front stays `OPEN` until the surface
-lands, so gate condition 2 remains `NEEDS-REVIEW` meanwhile. The plan is promoted
+(variance+sealed, option C) and X6 (interop reflection) started **incremental
+slices, each with its own proof**. The surface has landed (X5.5 + X6.3, 22/09),
+so gate condition 2 no longer needs review. The plan is promoted
 to `docs/development/` (three-states). Queue: `roadmap.md` §2.8.4/§2.8.5.
 
 ## D-SECRETS — Stage 5 / 3.6 promoted; face 1 authorized (maintainer 21/09/2026)

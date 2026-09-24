@@ -2,7 +2,7 @@
 
 # Type-system extensions — incremental plan (X5 variance + sealed · X6 interop reflection)
 
-> **Status: APPROVED 21/09 — implementing in slices with proof** (exec =
+> **Status: IMPLEMENTED 22/09 — all X5/X6 slices landed with proof** (exec =
 > compiler lane). The maintainer voted X5 = option C and X6 (incremental) and
 > answered the X5 surface questions (`DECISIONS.md` §D-TYPE-VARIANCE,
 > §D-INTEROP-REFLECT, §D-X5-SURFACE); the text below is kept as the measured

@@ -2794,7 +2794,7 @@ sem forma fixa fica como gap documentado explícito.
 
 ## D-TYPE-VARIANCE — variance + sealed types (múltipla escolha, mantenedora 21/09/2026)
 
-**Data:** 2026-09-21 · **Estado:** `ABERTO — spec/plano primeiro` · **Opção escolhida:** **C** (variance + sealed).
+**Data:** 2026-09-21 · **Estado:** `IMPLEMENTADA` (plano aprovado; X5.1–X5.5 pousadas 21/09) · **Opção escolhida:** **C** (variance + sealed).
 
 A mantenedora **abre** variance + sealed types como frente de núcleo do sistema
 de tipos (coleções científicas + `switch` exaustivo). É **mudança de núcleo
@@ -2803,16 +2803,17 @@ design escrito é rascunhado e revisado **antes de qualquer diff** de
 parser/typer — nada pousa em silêncio. Type-classes seguem rejeitadas
 (não-objetivo permanente).
 
-- **Destrava:** X5 → aberta (spec-first).
-- **Próxima entrega:** um plano de implementação incremental (fatias + prova
-  por fatia) rascunhado pelo agente, revisado pela mantenedora antes do código.
+- **Destrava:** X5 → pousada (spec-first: plano revisado, depois fatias com prova).
+- **Pousado:** X5.1–X5.5 (21/09) — `sealed` + `switch` exaustivo (`SEM080`/`SEM081`),
+  variância declaration-site e use-site (`SEM082`); prova `SealedTypeE2ETest`,
+  `TypeVarianceE2ETest`, `UseSiteVarianceE2ETest` (45 testes verdes).
 - **Relações:** `Related: regra 6, regra 11, R10, não-objetivos permanentes, D-KOF-FIRST`.
 
 ---
 
 ## D-INTEROP-REFLECT — reflexão de interop (múltipla escolha, mantenedora 21/09/2026)
 
-**Data:** 2026-09-21 · **Estado:** `DECIDIDA` · **Opção escolhida:** **A — intrínseco de compile-time**.
+**Data:** 2026-09-21 · **Estado:** `IMPLEMENTADA` (X6.0–X6.3 pousadas 22/09) · **Opção escolhida:** **A — intrínseco de compile-time**.
 
 A mantenedora autorizou começar o X6 (21/09). Superfície congelada:
 
@@ -2834,8 +2835,8 @@ A reflexão é autorizada **somente na fronteira de interop** (nunca fundação 
 linguagem). O plano incremental foi rascunhado primeiro (fatias com prova por
 fatia) — o mesmo portão spec-first da D6/X5.
 
-- **Destrava:** X6 → X6.1 (fatia JVM) em andamento.
-- **Próxima entrega:** implementação X6.1 + teste golden.
+- **Destrava:** X6 → X6.1–X6.3 pousadas.
+- **Próxima entrega:** — (concluída; `InteropSchemaE2ETest` 18/18).
 - **Relações:** `Related: regra 6, regra 11, R9, X5, D-KOF-FIRST`.
 
 ---
@@ -3042,14 +3043,14 @@ tracker R4.
 
 ## D-TYPE-VARIANCE / D-INTEROP-REFLECT — plano APROVADO, fatias autorizadas (mantenedora 21/09/2026)
 
-**Data:** 2026-09-21 · **Estado:** `OPEN — implementando` (plano aprovado; superfície pendente).
+**Data:** 2026-09-21 · **Estado:** `IMPLEMENTADA` (plano aprovado; superfície X5+X6 pousada 22/09).
 
 O `future/type-system-extensions-plan.md` (+PT) foi revisado e **APROVADO**. X5
-(variance+sealed, opção C) e X6 (reflexão de interop) começam em **fatias
-incrementais, cada uma com prova própria**. A frente permanece `OPEN` até a
-superfície pousar, então a condição 2 do gate segue `NEEDS-REVIEW` nesse
-intervalo. O plano é promovido para `docs/development/` (três estados). Fila:
-`roadmap.md` §2.8.4/§2.8.5.
+(variance+sealed, opção C) e X6 (reflexão de interop) começaram em **fatias
+incrementais, cada uma com prova própria**. A superfície pousou (X5.5 + X6.3,
+22/09), então a condição 2 do gate não precisa mais de revisão. O plano é
+promovido para `docs/development/` (três estados). Fila: `roadmap.md`
+§2.8.4/§2.8.5.
 
 ## D-SECRETS — Stage 5 / 3.6 promovido; face 1 autorizada (mantenedora 21/09/2026)
 
