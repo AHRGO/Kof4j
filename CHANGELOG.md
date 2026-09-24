@@ -212,6 +212,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     **10/10** (JVM/Script/JS + Native direct and inherited; RED measured with the
     code unfixed). Full suite 3197/0F/0E.
 
+  - **S5.2 PARTIAL (db-parity, gaps-db lane) — MySQL packet reader + text
+    resultset header on the cross (cross pieces `B68`–`B69`)** (23/09):
+    `kof_db_mysql_reset(fd)`/`kof_db_mysql_next()` port the buffered packet
+    reader of `RuntimeDb2`, and `kof_db_mysql_query_text(fd, sql)` sends the
+    `COM_QUERY`, skips the column-definition packets + EOF and returns the
+    column count plus the raw lenenc payload of the first row. Proof:
+    `NativeRiscvDbWireTest` drives it on riscv64 + aarch64 under qemu against
+    the **real MariaDB** — `SELECT 1` → 1 column / `[0x01,'1']`,
+    `SELECT 1,'ab'` → 2 columns / `[0x01,'1',0x02,'a','b']` — plus B68/B69
+    sabotage tests. Left for the next slice: materialise all rows as Kof
+    values.
+
   - **S5.2 PARTIAL (db-parity, gaps-db lane) — MySQL `COM_QUERY` framing +
     first-response classification on the cross (cross piece `B67`)** (23/09):
     `kof_db_mysql_command(fd, sql, buf, buflen)` sends `[0x03][sql]` (3-byte

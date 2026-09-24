@@ -214,6 +214,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `GenericInterfaceAssignabilityTest` **10/10** (JVM/Script/JS + Native direto e
     herdado; RED medido com o código sem o fix). Suíte completa 3197/0F/0E.
 
+  - **S5.2 PARCIAL (db-parity, lane gaps-db) — reader de pacotes MySQL +
+    cabeçalho do resultset texto no cross (peças cross `B68`–`B69`)** (23/09):
+    `kof_db_mysql_reset(fd)`/`kof_db_mysql_next()` portam o reader de pacotes
+    com buffer do `RuntimeDb2`, e `kof_db_mysql_query_text(fd, sql)` envia o
+    `COM_QUERY`, pula as definições de coluna + EOF e devolve o número de
+    colunas mais o payload lenenc cru da primeira linha. Prova:
+    `NativeRiscvDbWireTest` dirige em riscv64 + aarch64 sob qemu contra o
+    **MariaDB real** — `SELECT 1` → 1 coluna / `[0x01,'1']`,
+    `SELECT 1,'ab'` → 2 colunas / `[0x01,'1',0x02,'a','b']` — mais testes de
+    sabotagem da B68/B69. Falta na próxima fatia: materializar todas as linhas
+    como valores Kof.
+
   - **S5.2 PARCIAL (db-parity, lane gaps-db) — framing do `COM_QUERY` MySQL +
     classificação da 1ª resposta no cross (peça cross `B67`)** (23/09):
     `kof_db_mysql_command(fd, sql, buf, buflen)` envia `[0x03][sql]`

@@ -189,6 +189,12 @@ public final class NativeRiscvAsm {
                 // classificacao (port do framing de RuntimeDb2/Db3); aarch64
                 // herda via tradutor.
                 .append(NativeRiscvAsmRtB67.RISCV_RUNTIME_ASM_B_67)
+                // S5.2 db-parity (gaps-db lane, 23/09): reader de pacotes MySQL
+                // (reset/next) — base do parse do resultset (port de RuntimeDb2).
+                .append(NativeRiscvAsmRtB68.RISCV_RUNTIME_ASM_B_68)
+                // S5.2 db-parity (gaps-db lane, 23/09): cabecalho do resultset
+                // texto — COM_QUERY + skip das colunas + 1a linha (ncols/row).
+                .append(NativeRiscvAsmRtB69.RISCV_RUNTIME_ASM_B_69)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

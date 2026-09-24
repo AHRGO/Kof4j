@@ -8,7 +8,7 @@
 > estiver completa.
 
 **Dono:** lane `gaps-db` (repassada 21/09 por ordem da mantenedora, sob `D-DB-PARITY-OWNER`; S0/S1 autorizadas) · **Registros/plano:** lane docs/plataforma
-**Branch:** `beta-0.5.0` · **Estado:** S0 ✅ FEITO (21/09, sessão 9092) — recusa nativa honesta de scheme não suportado com o código nomeado `DB001`, mais link-by-use real (sem link de `libmariadb` para literais não-mysql); **S1 ✅ FEITO no Native x86-64 (23/09, lane gaps-db)** — `mariadb://` é alias do wire `mysql://`; no cross segue `DB001` honesto até o wire mysql ser portado (R7); **S2 ✅ FEITO no JVM/JS/Android (23/09, lane gaps-db)** — driver JDBC ausente agora é diagnóstico `DB001` nomeado (falhas reais de conexão intactas); **S3/S4 ✅ FEITOS 23/09 (lane gaps-db)** — `mongodb://` real no JVM/Android e `DB001` declarado no JS/Native; `oracle` declarado (sem driver/servidor no host); **S5.0 (camada de socket cross) ✅ SATISFEITA 23/09 (medido — já provada pelo core HTTP cross)**; **S5.1 (handshake+auth) ✅ SATISFEITA 23/09 (peças `B62`–`B66`): SHA1/bswap + scramble/lenenc + parse do greeting + montagem da resposta de auth + o round-trip de socket, provados por `NativeRiscvDbWireTest` em riscv64+aarch64 (qemu, contra o oráculo JVM e contra o MariaDB REAL — o servidor devolve o pacote OK; um DB inexistente devolve Err). A superfície Kof (`db.connect` cross) segue emitindo o `DB001` honesto até o S5.4**; **S5.2 (`COM_QUERY`) 🟡 PARCIAL 23/09 (peça `B67`) — framing do request + classificação da 1ª resposta provados em riscv64+aarch64 (qemu) contra o MariaDB real (`SELECT 1`→1, `SET`→0, SQL ruim→255); o parse do result set completo (colunas+linhas) é a próxima fatia**
+**Branch:** `beta-0.5.0` · **Estado:** S0 ✅ FEITO (21/09, sessão 9092) — recusa nativa honesta de scheme não suportado com o código nomeado `DB001`, mais link-by-use real (sem link de `libmariadb` para literais não-mysql); **S1 ✅ FEITO no Native x86-64 (23/09, lane gaps-db)** — `mariadb://` é alias do wire `mysql://`; no cross segue `DB001` honesto até o wire mysql ser portado (R7); **S2 ✅ FEITO no JVM/JS/Android (23/09, lane gaps-db)** — driver JDBC ausente agora é diagnóstico `DB001` nomeado (falhas reais de conexão intactas); **S3/S4 ✅ FEITOS 23/09 (lane gaps-db)** — `mongodb://` real no JVM/Android e `DB001` declarado no JS/Native; `oracle` declarado (sem driver/servidor no host); **S5.0 (camada de socket cross) ✅ SATISFEITA 23/09 (medido — já provada pelo core HTTP cross)**; **S5.1 (handshake+auth) ✅ SATISFEITA 23/09 (peças `B62`–`B66`): SHA1/bswap + scramble/lenenc + parse do greeting + montagem da resposta de auth + o round-trip de socket, provados por `NativeRiscvDbWireTest` em riscv64+aarch64 (qemu, contra o oráculo JVM e contra o MariaDB REAL — o servidor devolve o pacote OK; um DB inexistente devolve Err). A superfície Kof (`db.connect` cross) segue emitindo o `DB001` honesto até o S5.4**; **S5.2 (`COM_QUERY`) 🟡 PARCIAL 23/09 (peças `B67`–`B69`) — framing do request + classificação da 1ª resposta (`SELECT 1`→1, `SET`→0, SQL ruim→255) E o reader de pacotes + cabeçalho do resultset (ncols + payload lenenc da 1ª linha: `SELECT 1`→1col/[01 31], `SELECT 1,'ab'`→2col/[01 31 02 61 62]), provados em riscv64+aarch64 (qemu) contra o MariaDB real; materializar todas as linhas como valores Kof é a próxima fatia**
 
 ---
 
@@ -218,8 +218,15 @@ por scheme é a prova.
     ERR). Provado em riscv64 + aarch64 (qemu) contra o **MariaDB real**:
     `SELECT 1` → `1`, `SET @x=1` → `0`, SQL ruim → `255`.
     *Prova:* `NativeRiscvDbWireTest#commandClassifiesResponseAgainstRealMariaDb*`.
-    Falta na próxima fatia: parsear o result set completo (definições de coluna +
-    linhas) em valores Kof.
+    **Parcial ✅ 23/09 (peças `B68`–`B69`):** o reader de pacotes
+    (`kof_db_mysql_reset`/`next`, port do `RuntimeDb2`) e o parse do cabeçalho do
+    resultset (`kof_db_mysql_query_text(fd, sql)` → `ncols` + o payload cru da
+    primeira linha via células lenenc) estão portados. Provado em riscv64 +
+    aarch64 (qemu) contra o **MariaDB real**: `SELECT 1` → 1 coluna / linha
+    `[0x01,'1']`; `SELECT 1,'ab'` → 2 colunas / linha `[0x01,'1',0x02,'a','b']`.
+    *Prova:* `NativeRiscvDbWireTest#resultsetHeaderAgainstRealMariaDb*`.
+    Falta na próxima fatia: iterar TODAS as linhas e materializá-las como valores
+    Kof (registros JSON) — o resultado em forma de ORM.
     *Critério de conclusão:* roundtrip `db.query` sob qemu, byte-idêntico ao x86/JVM.
   - **S5.3 — bind/prepared + tx + ORM.** Portar o dispatch de prepared/execute/
     transaction. *Prova:* E2E `orm.*` sob qemu.

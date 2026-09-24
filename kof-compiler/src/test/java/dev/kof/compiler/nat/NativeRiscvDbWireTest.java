@@ -909,6 +909,206 @@ class NativeRiscvDbWireTest {
                 "a falha deve citar kof_db_mysql_command: " + r[0]);
     }
 
+    /**
+     * S5.2 (db-parity-plan, gaps-db lane, 23/09): parseia o cabecalho do
+     * resultset texto — ncols + a PRIMEIRA linha (payload cru, celulas lenenc).
+     * Prova contra o MariaDB real: `SELECT 1` → 1 coluna, linha [0x01,'1'];
+     * `SELECT 1,'ab'` → 2 colunas, linha [0x01,'1',0x02,'a','b'].
+     */
+    private static String mysqlResultsetHarness() {
+        int port = mysqlPort();
+        String hi = String.format("0x%02X", (port >> 8) & 0xff);
+        String lo = String.format("0x%02X", port & 0xff);
+        return """
+                .section .data
+                .align 3
+                .Lqt_user:
+                    .zero 16
+                    .word 4
+                    .zero 4
+                    .ascii "root"
+                .align 3
+                .Lqt_pass:
+                    .zero 16
+                    .word 7
+                    .zero 4
+                    .ascii "kofpass"
+                .align 3
+                .Lqt_db:
+                    .zero 16
+                    .word 4
+                    .zero 4
+                    .ascii "test"
+                .align 3
+                .Lqt_sel1:
+                    .zero 16
+                    .word 8
+                    .zero 4
+                    .ascii "SELECT 1"
+                .align 3
+                .Lqt_sel2:
+                    .zero 16
+                    .word 14
+                    .zero 4
+                    .ascii "SELECT 1,'ab'"
+                .align 3
+                .Lqt_addr:
+                    .byte 2, 0, PORT_HI, PORT_LO, 127, 0, 0, 1
+                    .zero 8
+                .align 3
+                .Lkof_heap_root_start:
+                .Lkof_heap_root_end:
+                .section .text
+                .globl _start
+                _start:
+                    andi sp, sp, -16
+                    addi sp, sp, -64
+                    la   a0, .Lqt_sel1
+                    call .Lqt_one
+                    la   a0, .Lqt_sel2
+                    call .Lqt_one
+                    li   a0, 0
+                    li   a7, 93
+                    ecall
+                # a0 = sql -> imprime ncols, rowlen e os bytes da 1a linha
+                .Lqt_one:
+                    addi sp, sp, -96
+                    sd   ra, 0(sp)
+                    sd   s0, 8(sp)
+                    sd   s1, 16(sp)
+                    sd   s2, 24(sp)
+                    sd   s3, 32(sp)
+                    sd   s4, 40(sp)
+                    sd   s5, 48(sp)
+                    mv   s1, a0
+                    li   a0, 2
+                    li   a1, 1
+                    li   a2, 0
+                    call kof_plat_net_socket
+                    mv   s0, a0
+                    mv   a0, s0
+                    la   a1, .Lqt_addr
+                    li   a2, 16
+                    call kof_plat_net_connect
+                    mv   a0, s0
+                    la   a1, .Lqt_user
+                    la   a2, .Lqt_pass
+                    la   a3, .Lqt_db
+                    call kof_db_mysql_handshake
+                    bnez a0, .Lqt_fail
+                    mv   a0, s0
+                    mv   a1, s1
+                    call kof_db_mysql_query_text
+                    blt  a0, zero, .Lqt_fail
+                    mv   s2, a0
+                    mv   s3, a1
+                    mv   s4, a2
+                    mv   a0, s2
+                    call kof_println_int
+                    mv   a0, s4
+                    call kof_println_int
+                    li   s5, 0
+                .Lqt_bytes:
+                    bge  s5, s4, .Lqt_close
+                    add  t0, s3, s5
+                    lbu  a0, 0(t0)
+                    call kof_println_int
+                    addi s5, s5, 1
+                    j    .Lqt_bytes
+                .Lqt_fail:
+                    li   a0, -1
+                    call kof_println_int
+                .Lqt_close:
+                    mv   a0, s0
+                    call kof_plat_close
+                    ld   ra, 0(sp)
+                    ld   s0, 8(sp)
+                    ld   s1, 16(sp)
+                    ld   s2, 24(sp)
+                    ld   s3, 32(sp)
+                    ld   s4, 40(sp)
+                    ld   s5, 48(sp)
+                    addi sp, sp, 96
+                    ret
+                .globl kof_super_table
+                kof_super_table:
+                    .word 0
+                """.replace("PORT_HI", hi).replace("PORT_LO", lo);
+    }
+
+    @Test
+    void resultsetHeaderAgainstRealMariaDbOnRiscv64(@TempDir Path tempDir) throws Exception {
+        assumeRiscv();
+        assumeMaria();
+        String harness = mysqlResultsetHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String out = buildRun("riscv64", tempDir, "rs_rv", harness + "\n" + runtime);
+        assertEquals("1\n2\n1\n49\n2\n5\n1\n49\n2\n97\n98", out,
+                "resultset riscv64: SELECT 1 -> 1 col/[01 31]; SELECT 1,'ab' -> 2 col/[01 31 02 61 62]");
+    }
+
+    @Test
+    void resultsetHeaderAgainstRealMariaDbOnAarch64(@TempDir Path tempDir) throws Exception {
+        assumeAarch64();
+        assumeMaria();
+        String harness = mysqlResultsetHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String riscv = harness + "\n" + runtime;
+        StringBuilder arm = new StringBuilder();
+        for (String line : riscv.split("\n", -1)) {
+            for (String t : NativeAarch64Translator.translateRiscvToAarch64(line)) arm.append(t).append('\n');
+        }
+        String out = buildRun("aarch64", tempDir, "rs_aa", arm.toString());
+        assertEquals("1\n2\n1\n49\n2\n5\n1\n49\n2\n97\n98", out,
+                "resultset aarch64: SELECT 1 -> 1 col/[01 31]; SELECT 1,'ab' -> 2 col/[01 31 02 61 62]");
+    }
+
+    @Test
+    void withoutReaderPieceLinkFailsSabotage(@TempDir Path tempDir) throws IOException {
+        assumeRiscv();
+        String harness = mysqlResultsetHarness();
+        Set<Integer> keep = new LinkedHashSet<>(RiscvSlices.keepForProgramText(harness));
+        int b68 = -1;
+        for (RiscvSlices.Piece p : RiscvSlices.pieces()) {
+            if ("RISCV_RUNTIME_ASM_B_68".equals(p.field())) b68 = p.index();
+        }
+        assertTrue(b68 >= 0, "peça B68 (reader de pacotes) não encontrada no inventário");
+        assertTrue(keep.remove(b68), "B68 deveria estar no keep do harness de resultset");
+        String runtime = RiscvSlices.renderSubset(keep);
+        Path asm = tempDir.resolve("sab_rd.s");
+        Files.writeString(asm, harness + "\n" + runtime);
+        Path obj = tempDir.resolve("sab_rd.o");
+        Path bin = tempDir.resolve("sab_rd");
+        runCapture("riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
+        String[] r = runAllowFail("riscv64-linux-gnu-ld", "--no-relax", "-o", bin.toString(), obj.toString());
+        assertNotEquals("0", r[1], "sem a B68 o link deveria falhar (undefined kof_db_mysql_next); saída: " + r[0]);
+        assertTrue(r[0].contains("kof_db_mysql_next"),
+                "a falha deve citar kof_db_mysql_next: " + r[0]);
+    }
+
+    @Test
+    void withoutResultsetsPieceLinkFailsSabotage(@TempDir Path tempDir) throws IOException {
+        assumeRiscv();
+        String harness = mysqlResultsetHarness();
+        Set<Integer> keep = new LinkedHashSet<>(RiscvSlices.keepForProgramText(harness));
+        int b69 = -1;
+        for (RiscvSlices.Piece p : RiscvSlices.pieces()) {
+            if ("RISCV_RUNTIME_ASM_B_69".equals(p.field())) b69 = p.index();
+        }
+        assertTrue(b69 >= 0, "peça B69 (resultset texto) não encontrada no inventário");
+        assertTrue(keep.remove(b69), "B69 deveria estar no keep do harness de resultset");
+        String runtime = RiscvSlices.renderSubset(keep);
+        Path asm = tempDir.resolve("sab_rs.s");
+        Files.writeString(asm, harness + "\n" + runtime);
+        Path obj = tempDir.resolve("sab_rs.o");
+        Path bin = tempDir.resolve("sab_rs");
+        runCapture("riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
+        String[] r = runAllowFail("riscv64-linux-gnu-ld", "--no-relax", "-o", bin.toString(), obj.toString());
+        assertNotEquals("0", r[1], "sem a B69 o link deveria falhar (undefined kof_db_mysql_query_text); saída: " + r[0]);
+        assertTrue(r[0].contains("kof_db_mysql_query_text"),
+                "a falha deve citar kof_db_mysql_query_text: " + r[0]);
+    }
+
     @Test
     void greetingParseMatchesOracleOnRiscv64(@TempDir Path tempDir) throws Exception {
         assumeRiscv();
