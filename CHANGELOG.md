@@ -13,6 +13,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§488 ✅ FIXED — the x86 MySQL text path emitted NULL as a raw EMPTY string
+    (invalid JSON `{"n":,`) and an empty string cell as a raw number** (24/09,
+    lane compiler 9092; the maintainer authorized the fix in chat — the section
+    was rule-6/maintainer lane). `RuntimeDb5 .Ldb_mysql_null` now emits the
+    JVM-contract literal `null` (4× `kof_json_builder_char`), and the digits-only
+    detector routes `len==0` to `kof_json_encode_string` so an empty string prints
+    `""` — byte-identical to the cross B70 piece and to
+    `JvmConfigRuntime.kof_db_row_to_json`. Proof:
+    `KofDbE2ETest#nativeMysqlNullAndEmptyStringJson` (JVM oracle measured; x86
+    native byte-parity) — RED pre-fix `{"id":1,"n":,"s":"ab"}` /
+    `{"id":2,"n":7,"s":}`, GREEN post-fix `{"id":1,"n":null,"s":"ab"}` /
+    `{"id":2,"n":7,"s":""}`; neighbors green with a live MariaDB:
+    `KofDbE2ETest` 37 (3 skip) + `NativeRiscvDbWireTest` 25.
+
   - **B-5 `kof_plat_random` — real body on both bare-metal faces (RDRAND/TSC
     + xorshift64), `random.*` no longer a refusal** (24/09, lane baremetal
     9092; `D-BAREMETAL-BODIES`). New `RuntimeBareRandom` fills

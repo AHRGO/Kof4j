@@ -13,6 +13,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§488 ✅ CORRIGIDO — o caminho de texto MySQL do x86 emitia NULL como string
+    VAZIA crua (JSON inválido `{"n":,`) e uma célula de string vazia como número
+    cru** (24/09, lane compiler 9092; a mantenedora autorizou o fix no chat — a
+    seção era lane da regra 6/mantenedora). `RuntimeDb5 .Ldb_mysql_null` agora
+    emite o literal `null` do contrato JVM (4× `kof_json_builder_char`), e o
+    detector só-dígitos roteia `len==0` para `kof_json_encode_string`, então uma
+    string vazia sai `""` — byte-idêntico à peça cross B70 e a
+    `JvmConfigRuntime.kof_db_row_to_json`. Prova:
+    `KofDbE2ETest#nativeMysqlNullAndEmptyStringJson` (oráculo JVM medido; x86
+    nativo byte a byte) — RED pré-fix `{"id":1,"n":,"s":"ab"}` /
+    `{"id":2,"n":7,"s":}`, GREEN pós-fix `{"id":1,"n":null,"s":"ab"}` /
+    `{"id":2,"n":7,"s":""}`; vizinhança verde com MariaDB real:
+    `KofDbE2ETest` 37 (3 skip) + `NativeRiscvDbWireTest` 25.
+
   - **B-5 `kof_plat_random` — corpo REAL nas duas faces bare-metal (RDRAND/TSC
     + xorshift64), `random.*` deixa de ser recusa** (24/09, lane baremetal
     9092; `D-BAREMETAL-BODIES`). Novo `RuntimeBareRandom` preenche bytes com o

@@ -774,6 +774,78 @@ class KofDbE2ETest {
         }
     }
 
+    // §488 (24/09): o caminho de texto MySQL do x86 (RuntimeDb5/Ldb_mysql_null)
+    // anexava NULL como uma string VAZIA crua -> JSON invalido `{"n":,`; e uma
+    // celula de STRING VAZIA caia no detector de digitos (len==0 => "todos
+    // digitos") e saia crua tambem. Contrato JVM (kof_db_row_to_json): NULL ->
+    // literal `null`; String -> kof_json_encode_string (vazia -> `""`). O mesmo
+    // oraculo que a peca cross B70 ja cumpre (NativeRiscvDbWireTest
+    // queryAllOracle). Prova: JVM medido (programa identico) e x86 nativo byte
+    // a byte. RED pre-fix: o nativo x86 imprimia `{"id":1,"n":,"s":"ab"}`.
+    @Test
+    void nativeMysqlNullAndEmptyStringJson(@TempDir Path tempDir) throws IOException {
+        assumeTrue(isLinux(), "Native MySQL requires Linux");
+        int port;
+        try { port = Integer.parseInt(System.getenv().getOrDefault("KOF_MYSQL_PORT", "13306")); }
+        catch (NumberFormatException e) { port = 13306; }
+        boolean up;
+        try (java.net.Socket s = new java.net.Socket()) {
+            s.connect(new java.net.InetSocketAddress("127.0.0.1", port), 500);
+            up = s.isConnected();
+        } catch (Exception e) { up = false; }
+        assumeTrue(up, "MariaDB server not reachable on 127.0.0.1:" + port);
+        String program = """
+            main() {
+                var db = db.connect("%s")
+                db.execute(db, "drop table if exists n488")
+                db.execute(db, "create table n488(id int, n int, s varchar(50))")
+                db.execute(db, "insert into n488 values (1, null, 'ab')")
+                db.execute(db, "insert into n488 values (2, 7, '')")
+                var rows = db.query(db, "select id, n, s from n488 order by id")
+                for (var r in rows) { println(r) }
+                db.close(db)
+            }
+            """;
+        String expected = "{\"id\":1,\"n\":null,\"s\":\"ab\"}\n{\"id\":2,\"n\":7,\"s\":\"\"}";
+
+        // Oráculo JVM medido (mesmo programa; JDBC exige a URL `jdbc:`).
+        Path jvm = tempDir.resolve("Oracle.kf");
+        Files.writeString(jvm, program.formatted(
+                "jdbc:mariadb://127.0.0.1:" + port + "/test?user=root&password=kofpass"));
+        CompilationResult jr = driver.compile(jvm, tempDir.resolve("jvm"), Target.JVM);
+        assertTrue(jr.success(), "JVM compile should succeed: " + jr.diagnostics().getDiagnostics());
+        try {
+            String jar = findClasspathJar("mariadb");
+            ProcessBuilder pb = new ProcessBuilder("java", "-cp",
+                    tempDir.resolve("jvm") + java.io.File.pathSeparator + jar, "Default.Main");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String jout = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n").trim();
+            assertEquals(0, p.waitFor(), "oráculo JVM exit code, output: '" + jout + "'");
+            assertEquals(expected, jout, "oráculo JVM (§488: NULL -> null; string vazia -> \"\")");
+        } catch (InterruptedException e) {
+            throw new IOException("Interrupted while running JVM oracle", e);
+        }
+
+        Path source = tempDir.resolve("M.kf");
+        Files.writeString(source, program.formatted("mysql://root:kofpass@127.0.0.1:" + port + "/test"));
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.NATIVE);
+        assertTrue(result.success(), "Native compile should succeed: " + result.diagnostics().getDiagnostics());
+        Path binFile = tempDir.resolve("out/Default/Main");
+        try {
+            ProcessBuilder pb = new ProcessBuilder(binFile.toString());
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n").trim();
+            assertEquals(0, p.waitFor(), "x86 native exit code, output: '" + output + "'");
+            assertEquals(expected, output, "x86 nativo deve bater o oráculo JVM byte a byte (§488)");
+        } catch (InterruptedException e) {
+            throw new IOException("Interrupted while running native binary", e);
+        }
+    }
+
     @Test
     void nativeMysqlPreparedBinary(@TempDir Path tempDir) throws IOException {
         assumeTrue(isLinux(), "Native MySQL requires Linux");

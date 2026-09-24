@@ -14822,7 +14822,7 @@ main() {
 **Owner:** session 9092 (lane compiler), semantic checker + member resolution.
 <!-- pt-switch --> **PT:** [§487 (pt_BR)](known-bugs.pt_BR.md#487--diamante-de-default-nao-resolvido-compilava-limpo-e-estourava-no-class-load-com-incompatibleclasschangeerror-jls-9413-e-defaults-de-mesmo-nome-com-aridades-diferentes-despachavam-para-o-metodo-errado-invokeinterface-deixava-o-argumento-na-stack--verifyerror---corrigido-2309-issue-610)
 
-## §488 — x86 MySQL text path (`RuntimeDb5 .Ldb_mysql_null`) emits NULL as a raw EMPTY string — invalid JSON `{"n":,`, and an EMPTY string cell takes the digits-only path as a raw number (also invalid when empty) — 🔴 OPEN (found 24/09 by the gaps-db lane while porting the B70 cross query)
+## §488 — x86 MySQL text path (`RuntimeDb5 .Ldb_mysql_null`) emits NULL as a raw EMPTY string — invalid JSON `{"n":,`, and an EMPTY string cell takes the digits-only path as a raw number (also invalid when empty) — ✅ FIXED 24/09 (x86 `RuntimeDb5`: NULL → literal `null`; `len==0` → `kof_json_encode_string`; JVM-oracle byte-parity `nativeMysqlNullAndEmptyStringJson`)
 
 **Symptom (measured 24/09, gaps-db lane, `NativeRiscvDbWireTest#queryAllRowsAgainstRealMariaDbOnRiscv64` RED):** `SELECT NULL AS n,'a"b' AS s` on riscv64 produced `1 {"n":,"s":"a\"b"}` — raw-empty value where the JVM contract (`JvmConfigRuntime.kof_db_row_to_json`) emits the literal `null`. The x86 source (`RuntimeDb5.java:425-431`): `.Ldb_mysql_null` calls `kof_io_make_string(nullstr, len=0)` and appends it RAW via `kof_json_builder_str` — zero bytes, no quotes — so the row is `{"n":,` (invalid JSON). Second face: the digits-only detector (`.Ldb_mysql_num`, `RuntimeDb5.java:402-412`) treats `len==0` as "all digits" and appends the empty string raw as well — any empty-string cell hits the same invalid shape.
 
@@ -14832,10 +14832,10 @@ main() {
 
 **Cross position (NOT silent — this section):** the cross B70 piece (`NativeRiscvAsmRtB70`) does NOT copy the bug — it emits the JVM-contract `null` literal (4× `builder_char`) and routes empty cells to `kof_json_encode_string` (`""` quoted), byte-identical to the JVM on riscv64+aarch64 (`NativeRiscvDbWireTest` 3/3). Same posture as the B47 cross-sqlite NULL face. A future x86 fix makes all three faces converge; until then the divergence is declared here.
 
-**Status:** 🔴 OPEN — fix = x86 `RuntimeDb5` (maintainer lane); cross B70 already correct per the JVM contract.
+**Status:** ✅ FIXED 24/09 (lane compiler 9092, authorized by the maintainer in chat — the §488 rule-6 note below is the historical record). **Fix (x86 `RuntimeDb5`):** `.Ldb_mysql_null` emits the JVM-contract literal `null` (4× `kof_json_builder_char`), and the digits detector gets a `len==0` guard routing empty cells to `kof_json_encode_string` (`""` quoted) — byte-identical to the cross B70 and to `JvmConfigRuntime.kof_db_row_to_json`. **Proof:** `KofDbE2ETest#nativeMysqlNullAndEmptyStringJson` (JVM oracle measured; x86 native byte-parity) — RED pre-fix `{"id":1,"n":,"s":"ab"}\n{"id":2,"n":7,"s":}`, GREEN post-fix `{"id":1,"n":null,"s":"ab"}\n{"id":2,"n":7,"s":""}`. Neighbors green with a live MariaDB: `KofDbE2ETest` 37 (3 skip) + `NativeRiscvDbWireTest` 25.
 
 **Owner:** gaps-db lane (found during S5.2 slice 3, B70).
-<!-- pt-switch --> **PT:** [§488 (pt_BR)](known-bugs.pt_BR.md#488--o-caminho-de-texto-mysql-do-x86-runtimedb5-ldb_mysql_null-emite-null-como-string-vazia-crua--json-invalido-n--e-uma-celula-de-string-vazia-segue-o-caminho-so-digitos-como-numero-cru-tambem-invalido-quando-vazia---aberto-achado-2409-pela-lane-gaps-db-ao-portar-a-query-cross-b70)
+<!-- pt-switch --> **PT:** [§488 (pt_BR)](known-bugs.pt_BR.md#488--o-caminho-de-texto-mysql-do-x86-runtimedb5-ldb_mysql_null-emite-null-como-string-vazia-crua--json-invalido-n--e-uma-celula-de-string-vazia-segue-o-caminho-so-digitos-como-numero-cru-tambem-invalido-quando-vazia---corrigido-2409-x86-runtimedb5-null--literal-null-len0--kof_json_encode_string-paridade-byte-a-byte-com-o-oraculo-jvm-nativemysqlnullandemptystringjson)
 
 ## §489 — File.mkdir() and File.mkdirs() were a silent no-op with ClassFormatError on the result; now real aliases of create()/createDirectories(), and unknown io methods are a clean SEM102 — ✅ FIXED 24/09 (issue #617)
 
