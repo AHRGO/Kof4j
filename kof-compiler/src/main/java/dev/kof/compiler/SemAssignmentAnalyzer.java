@@ -64,6 +64,28 @@ public final class SemAssignmentAnalyzer {
             // muta em silêncio. O guard no analyzer alinha os 4 caminhos.
             Type recvType = SemExpressionTyper.inferType(sa, fa.receiver(), scope);
             targetType = recvType;
+            // §491 face (b) — WRITE: pseudo-tipo builtin (File/Path/Directory/
+            // Buffer/Secret/KeyHandle) NÃO tem campo. `SemExpressionTyper` já
+            // rejeita o READ (§491 face a); aqui o alvo é escrito direto e o
+            // analyzer só checava `resolveFieldInHierarchy` — que devolve null
+            // (o pseudo-tipo não é classe do unit) e deixava passar. O lowering
+            // então emitia `putfield kof/io/File.bogus` / `kof/Buffer.bogus` /
+            // `kof/Secret.bogus` contra classe AUSENTE do runtime →
+            // NoClassDefFoundError no load, compilado limpo. `++`/`--` já caíam
+            // no guard do READ (o incremento lê antes); `=` e `+=` caem aqui.
+            if ((KofIo.isIoType(recvType) || KofBuffer.isBufferType(recvType)
+                    || KofSecurity.isSecretType(recvType) || KofSecurity.isKeyHandleType(recvType))
+                    && sa.diagnostics() != null) {
+                String builtinName = KofIo.isDirectory(recvType) ? "Directory"
+                        : KofIo.isPath(recvType) ? "Path"
+                        : KofIo.isFile(recvType) ? "File"
+                        : KofBuffer.isBufferType(recvType) ? "Buffer"
+                        : (KofSecurity.isSecretType(recvType) ? "Secret" : "KeyHandle");
+                sa.diagnostics().error(fa,
+                        "'" + builtinName + "' has no field '" + fa.fieldName()
+                                + "' (this builtin exposes methods, not properties)",
+                        "SEM102");
+            }
             // §246/#269: escrita em campo por receiver NULLABLE tem o mesmo
             // contrato do READ (SEM049 em SemExpressionTyper): o acesso direto
             // seria NPE em runtime. Sem este guard o analyzer aceitava em

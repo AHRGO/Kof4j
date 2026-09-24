@@ -120,6 +120,52 @@ class BuiltinUnknownFieldGuardTest {
             """, tempDir), "path", "File");
     }
 
+    // ---- diagnosis: the WRITE face (§491 face b) also becomes SEM102 ----
+
+    @Test
+    void unknownBufferFieldWriteIsSem102(@TempDir Path tempDir) throws IOException {
+        // simple assignment emitted `putfield kof/Buffer.bogus`.
+        assertSem102Field(compile("""
+            main() {
+                var b = buffer.alloc(8)
+                b.bogus = 1
+            }
+            """, tempDir), "bogus", "Buffer");
+    }
+
+    @Test
+    void unknownFileFieldCompoundWriteIsSem102(@TempDir Path tempDir) throws IOException {
+        // compound assignment (`+=`) went through the same assignment analyzer.
+        assertSem102Field(compile("""
+            main() {
+                var f = File("x")
+                f.bogus += 1
+            }
+            """, tempDir), "bogus", "File");
+    }
+
+    @Test
+    void unknownSecretFieldWriteIsSem102(@TempDir Path tempDir) throws IOException {
+        // a reference RHS (secret) also slipped through.
+        assertSem102Field(compile("""
+            main() {
+                var s = secrets.of("x")
+                s.bogus = secrets.of("y")
+            }
+            """, tempDir), "bogus", "Secret");
+    }
+
+    @Test
+    void unknownBufferFieldIncrementIsSem102(@TempDir Path tempDir) throws IOException {
+        // `++` reads the field first, so it was already caught by the READ guard.
+        assertSem102Field(compile("""
+            main() {
+                var b = buffer.alloc(8)
+                b.bogus++
+            }
+            """, tempDir), "bogus", "Buffer");
+    }
+
     // ---- control: the real property faces still compile ----
 
     @Test
@@ -142,6 +188,26 @@ class BuiltinUnknownFieldGuardTest {
             }
             """, tempDir);
         assertTrue(result.success(), "Valid property faces must compile: "
+                + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void validClassFieldWriteStillCompiles(@TempDir Path tempDir) throws IOException {
+        // control for the WRITE guard: a genuine mutable class field still
+        // accepts `=` and `+=`.
+        CompilationResult result = compile("""
+            class Counter {
+                Int n
+                public constructor(Int n) { this.n = n }
+            }
+            main() {
+                var c = Counter(1)
+                c.n = 5
+                c.n += 2
+                println(c.n)
+            }
+            """, tempDir);
+        assertTrue(result.success(), "Valid class field writes must compile: "
                 + result.diagnostics().getDiagnostics());
     }
 

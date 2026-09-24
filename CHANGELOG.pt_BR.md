@@ -329,10 +329,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `SEM102` (o irmão FIELD do #617/§490 — um gate, os quatro alvos). Prova:
     `BuiltinUnknownFieldGuardTest` 9/9 (RED-first: 7/9 falhando antes); o controle
     `f.path` do `IoUnknownMethodGuardTest` era falso-verde (nunca rodava) e foi
-    corrigido para `f.path()`; `kof-compiler` completo **3273, 0F/0E**. Residual
-    declarado: campo desconhecido em receptores de classe real (`List`/`Map`/
-    `String`) ainda falha ALTO em runtime (`NoSuchFieldError`), postura Bug 34 —
-    não é no-op silencioso.
+    corrigido para `f.path()`; `kof-compiler` completo **3273, 0F/0E**. A face
+    (b), o caminho de ESCRITA (`SemAssignmentAnalyzer`) com o mesmo furo —
+    `b.bogus = 1` / `f.bogus += 1` / `s.bogus = secrets.of("y")` emitiam
+    `putfield` nas mesmas classes ausentes — é coberta pelo mesmo guard `SEM102`
+    (`b.bogus++` já era pego pelo guard de leitura). Residual declarado: campo
+    desconhecido em receptores de classe real (`List`/`Map`/`String`) ainda
+    falha ALTO em runtime (`NoSuchFieldError`), postura Bug 34 — não é no-op
+    silencioso.
 
   - **§490 ✅ CORRIGIDO — método desconhecido num valor builtin `Buffer`/`Secret`/
     `KeyHandle` agora é um `SEM102` limpo** (24/09, lane compiler 9092). Esses

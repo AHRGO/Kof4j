@@ -325,9 +325,13 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     targets). Proof: `BuiltinUnknownFieldGuardTest` 9/9 (RED-first: 7/9 failing
     before); `IoUnknownMethodGuardTest`'s `f.path` control was a false-green
     (never ran) and was corrected to `f.path()`; full `kof-compiler` **3273,
-    0F/0E**. Declared residual: unknown fields on real-class receivers
-    (`List`/`Map`/`String`) still fail LOUD at runtime (`NoSuchFieldError`),
-    the Bug-34 posture — not a silent no-op.
+    0F/0E**. Face (b), the WRITE path (`SemAssignmentAnalyzer`) with the same
+    hole — `b.bogus = 1` / `f.bogus += 1` / `s.bogus = secrets.of("y")` emitted
+    `putfield` on the same absent classes — is covered by the same `SEM102`
+    guard (`b.bogus++` was already caught by the read guard). Declared residual:
+    unknown fields on real-class receivers (`List`/`Map`/`String`) still fail
+    LOUD at runtime (`NoSuchFieldError`), the Bug-34 posture — not a silent
+    no-op.
 
   - **§490 ✅ FIXED — unknown method on a `Buffer`/`Secret`/`KeyHandle` builtin
     value is now a clean `SEM102`** (24/09, lane compiler 9092). Those types
