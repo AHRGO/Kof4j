@@ -178,6 +178,26 @@ public final class SemMethodCallTyper {
                     KofSecurity.instanceMethod(recv, mc.methodName(), mc.arguments().size());
             if (secretCall != null) return secretCall.returnType();
         }
+        // #617 (SEM102): método desconhecido em tipo builtin de kof.io
+        // (File/Path/Directory) — mesmo guard da família SEM028 (array):
+        // aceitar em silêncio deixava o emit sem contrato (retorno UNKNOWN)
+        // e o programa "rodava" como no-op; `.toString()` no valor chegava a
+        // dar ClassFormatError "Illegal class name \"\"" no JVM. O hint
+        // aponta o idioma vivo: para criar diretório é
+        // Directory(path).createDirectories().
+        if (KofIo.isIoType(recv) && sa.diagnostics() != null) {
+            for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
+            SourcePosition mcPos = mc.position();
+            boolean dir = KofIo.isDirectory(recv);
+            String mkdirHint = "mkdir".equals(mc.methodName())
+                    ? "; to create a directory use Directory(path).createDirectories()" : "";
+            sa.diagnostics().error(mcPos != null ? mcPos.file() : "",
+                    mcPos != null ? mcPos.line() : 0, mcPos != null ? mcPos.column() : 0, 0,
+                    "'" + (dir ? "Directory" : "File") + "' has no method '" + mc.methodName()
+                            + "()'" + mkdirHint,
+                    "SEM102");
+            return Type.UnknownType.UNKNOWN;
+        }
         Type builtin = BuiltinCallTyper.infer(sa, mc, scope);
         if (builtin != null) return builtin;
         if (mc.receiver() != null) {
