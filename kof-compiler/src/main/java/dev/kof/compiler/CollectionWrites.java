@@ -130,6 +130,27 @@ public final class CollectionWrites {
      * tag 1; {@code Object} fica de fora porque pode carregar box de primitivo
      * (sem vtable de equals) e o raw {@code cmpq} é o comportamento histórico.
      */
+    /**
+     * §104b-ii (24/09) — tag da CHAVE do Map nativo (header off 40, lido por
+     * {@code kof_map_find}): 2 = objeto Kof (conteúdo via {@code kof_obj_equals}),
+     * 1 = String ({@code kof_string_equals}), 0 = raw. Devolve {@code -1} quando
+     * NENHUM lado é conhecido — o chamador NÃO escreve (mantém o default
+     * histórico 1). Espelha a conjunção receptor×arg do {@link #stringTag}.
+     */
+    public static int mapKeyTag(Type keyType, Type argType) {
+        Type kt = keyType instanceof Type.NullableType knt ? knt.inner() : keyType;
+        Type at = argType instanceof Type.NullableType ant ? ant.inner() : argType;
+        boolean ktKnown = kt != null && !(kt instanceof Type.UnknownType);
+        boolean atKnown = at != null && !(at instanceof Type.UnknownType);
+        if (ktKnown && atKnown) {
+            if (isKofObject(kt) || isKofObject(at)) return 2;
+            return isStringLike(kt) && isStringLike(at) ? 1 : 0;
+        }
+        if (ktKnown) return isKofObject(kt) ? 2 : (isStringLike(kt) ? 1 : 0);
+        if (atKnown) return isKofObject(at) ? 2 : (isStringLike(at) ? 1 : 0);
+        return -1;
+    }
+
     private static boolean isKofObject(Type t) {
         if (t instanceof Type.NullableType nt) t = nt.inner();
         if (!(t instanceof Type.ClassType)) return false;

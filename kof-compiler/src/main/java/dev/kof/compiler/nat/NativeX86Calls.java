@@ -1,5 +1,6 @@
 package dev.kof.compiler.nat;
 import dev.kof.compiler.BuiltinTypes;
+import dev.kof.compiler.CollectionWrites;
 import dev.kof.compiler.KofCall;
 import dev.kof.compiler.KofCallKind;
 import dev.kof.compiler.Type;
@@ -267,22 +268,14 @@ public final class NativeX86Calls {
                 // VALOR como arg explícito (espelho kof_list_contains); escrever
                 // no slot 40 corromperia a tag de chave do mapa (find seguinte).
                 if (collFn.startsWith("kof_map_") && !"kof_map_contains_value".equals(collFn)) {
-                    Type mkt = BuiltinTypes.mapKey(kc.ownerType());
-                    Type mat = argCount >= 1 ? kc.parameterTypes().get(0) : null;
-                    if (mkt instanceof Type.NullableType nt) mkt = nt.inner();
-                    if (mat instanceof Type.NullableType nt) mat = nt.inner();
-                    boolean ktKnown = mkt != null && !(mkt instanceof Type.UnknownType);
-                    boolean atKnown = mat != null && !(mat instanceof Type.UnknownType);
-                    if (ktKnown && atKnown) {
-                        sb.append("    movl $").append(
-                                BuiltinTypes.isString(mkt) && BuiltinTypes.isString(mat) ? 1 : 0)
-                          .append(", 40(%rdi)\n");
-                    } else if (ktKnown) {
-                        sb.append("    movl $").append(BuiltinTypes.isString(mkt) ? 1 : 0)
-                          .append(", 40(%rdi)\n");
-                    } else if (atKnown) {
-                        sb.append("    movl $").append(BuiltinTypes.isString(mat) ? 1 : 0)
-                          .append(", 40(%rdi)\n");
+                    // §104b-ii: tag 2 = objeto Kof (conteudo via kof_obj_equals),
+                    // 1 = String, 0 = raw; -1 = nenhum lado conhecido (nao
+                    // escreve, mantem o default historico 1).
+                    int keyTag = CollectionWrites.mapKeyTag(
+                            BuiltinTypes.mapKey(kc.ownerType()),
+                            argCount >= 1 ? kc.parameterTypes().get(0) : null);
+                    if (keyTag >= 0) {
+                        sb.append("    movl $").append(keyTag).append(", 40(%rdi)\n");
                     }
                 }
                 sb.append("    call ").append(collFn).append("\n");

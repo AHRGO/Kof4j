@@ -63,15 +63,24 @@ public final class NativeRiscvAsmMapset0 {
                 add  t1, t1, t2
                 ld   a0, 0(t1)           # candidato
                 li   t3, 1
-                bne  s3, t3, .Lkmf_raw
+                beq  s3, t3, .Lkmf_str
+                li   t3, 2
+                beq  s3, t3, .Lkmf_obj
+            .Lkmf_raw:
+                bne  a0, s1, .Lkmf_next
+                j    .Lkmf_hit
+            .Lkmf_str:
                 beqz a0, .Lkmf_next
                 mv   a1, s1
                 call kof_string_equals
                 bnez a0, .Lkmf_hit
                 j    .Lkmf_next
-            .Lkmf_raw:
-                bne  a0, s1, .Lkmf_next
-                j    .Lkmf_hit
+            .Lkmf_obj:                      # §104b-ii: tag 2 = objeto Kof
+                beqz a0, .Lkmf_next
+                mv   a1, s1
+                call kof_obj_equals
+                bnez a0, .Lkmf_hit
+                j    .Lkmf_next
             .Lkmf_next:
                 addi s2, s2, 1
                 j    .Lkmf_loop

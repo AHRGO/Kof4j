@@ -1,5 +1,6 @@
 package dev.kof.compiler.nat;
 import dev.kof.compiler.BuiltinTypes;
+import dev.kof.compiler.CollectionWrites;
 import dev.kof.compiler.CompilerClassLowering;
 import dev.kof.compiler.KofBinary;
 import dev.kof.compiler.KofBinaryOp;
@@ -481,20 +482,11 @@ public final class NativeRiscvCrossOps {
             // #386: contains_value carrega a tag do VALOR como arg explícito
             // (espelho x86) — não toca no slot 40 (tag de chave do header).
             if (mn.startsWith("kof_map_") && !"kof_map_contains_value".equals(mn)) {
-                Type mkt = BuiltinTypes.mapKey(kc.ownerType());
-                Type mat = argCount >= 1 ? kc.parameterTypes().get(0) : null;
-                if (mkt instanceof Type.NullableType nt) mkt = nt.inner();
-                if (mat instanceof Type.NullableType nt) mat = nt.inner();
-                boolean ktKnown = mkt != null && !(mkt instanceof Type.UnknownType);
-                boolean atKnown = mat != null && !(mat instanceof Type.UnknownType);
-                int tag = -1;
-                if (ktKnown && atKnown) {
-                    tag = BuiltinTypes.isString(mkt) && BuiltinTypes.isString(mat) ? 1 : 0;
-                } else if (ktKnown) {
-                    tag = BuiltinTypes.isString(mkt) ? 1 : 0;
-                } else if (atKnown) {
-                    tag = BuiltinTypes.isString(mat) ? 1 : 0;
-                }
+                // §104b-ii: tag 2 = objeto Kof (conteudo via kof_obj_equals),
+                // 1 = String, 0 = raw; -1 = nenhum lado conhecido (nao escreve).
+                int tag = CollectionWrites.mapKeyTag(
+                        BuiltinTypes.mapKey(kc.ownerType()),
+                        argCount >= 1 ? kc.parameterTypes().get(0) : null);
                 if (tag >= 0) {
                     sb.append("    li t0, ").append(tag).append("\n");
                     sb.append("    sw t0, 40(a0)\n");

@@ -66,6 +66,19 @@ class NativeRecordCollectionEqualityE2ETest {
                 println(listOf(u1).contains(u1))
                 println(listOf(u1).contains(u2))
 
+                println(mapOf(Point(1, 2), 7).get(Point(1, 2)))
+                println(mapOf(Point(1, 2), 7).containsKey(Point(1, 2)))
+                println(mapOf(Point(1, 2), 7).containsKey(Point(9, 9)))
+                var m = mapOf(Point(1, 2), 7)
+                m.put(Point(3, 4), 9)
+                println(m.get(Point(3, 4)))
+                println(m.remove(Point(1, 2)))
+                println(m.size)
+                var mk = make("hel", "lo")
+                println(mapOf(mk, 5).get("hello"))
+                println(mapOf(1, 2).get(1))
+                println(mapOf(1, 2).containsKey(3))
+
                 println(listOf(1, 2, 3).contains(2))
                 println(listOf(1, 2, 3).indexOf(7))
             }
