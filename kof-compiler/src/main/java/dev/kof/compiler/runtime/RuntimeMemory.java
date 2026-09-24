@@ -207,8 +207,12 @@ public final class RuntimeMemory {
         // agnóstico de plataforma (o seam é o ponto único de plataforma).
         if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()) {
             RuntimeUefi.emitUefiHeapGrow(sb);
-        } else if (dev.kof.compiler.nat.NativeProfile.active == dev.kof.compiler.nat.NativeProfile.FREESTANDING) {
+        } else if (dev.kof.compiler.nat.NativeProfile.active == dev.kof.compiler.nat.NativeProfile.FREESTANDING
+                || dev.kof.compiler.nat.NativeProfile.activeIsBios()) {
             // B-1: sem SO para mmap — a arena vem do linker script.
+            // B-3b-3: no BIOS (bare, sem syscalls) o heap cresce da MESMA arena
+            // do linker (__kof_heap_start..end); o corpo host (syscall mmap)
+            // travava no primeiro alloc (kof_array_alloc do args array do main).
             RuntimeFreestanding.emitHeapGrow(sb);
         } else {
             sb.append("""

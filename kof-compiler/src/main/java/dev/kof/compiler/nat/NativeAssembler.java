@@ -120,6 +120,8 @@ public final class NativeAssembler {
                 } finally {
                     Files.deleteIfExists(elfFile);
                 }
+                // B-3b-3: escreve a contagem de setores no header KOFPAYLD.
+                patchBiosPayloadHeader(binFile);
             }
             Files.deleteIfExists(objFile);
             Files.deleteIfExists(asmToAssemble);
@@ -217,20 +219,82 @@ public final class NativeAssembler {
      *  {@code .org 510} no próprio {@code _start} (NativeMethodEmitter).
      *  B-3b: {@code .payload} é forçado ao LMA {@code 0x7E00} (= setor LBA 1),
      *  para o próprio setor de boot carregá-lo do disco; {@code KEEP} impede o
-     *  gc-sections de descartá-lo. */
+     *  gc-sections de descartá-lo.
+     *  B-3b-3: o PROGRAMA Kof é ligado na VMA {@code 0x100000} (a base fixa
+     *  que o boot mapeia) com LMA em AT(...) — o arquivo flat fica compacto
+     *  (setor 2 em diante) enquanto o código enxerga os endereços finais. A
+     *  arena (heap+pilha) vive no .bss da VMA; o boot mapeia 32 MiB de
+     *  páginas de 2 MiB para cobrir payload+arena. */
     private static String biosLinkerScript() {
+        long heap = freestandingSize("KOF_HEAP_SIZE", "kof.heap.size", 512L * 1024);
+        long stack = freestandingSize("KOF_STACK_SIZE", "kof.stack.size", 64L * 1024);
+        // Layout DUAS FASES (B-3b-3): o stub (.text.boot) carrega o stage2
+        // (.boot2, LBAs 1..4 -> 0x7E00, contíguo ao setor 0) que carrega o
+        // header (.payload, VMA 0xC000 = LBA 34) e o programa (VMA 0x100000 =
+        // arquivo 0xF8400 = LBA 1986). SEM AT(): o ld 2.42 segfaulta com LMA<VMA divergentes; o
+        // objcopy flat usa os próprios VMAs (a imagem tem ~1 MiB de padding de
+        // zeros — aceitável para o disco raw do qemu). O programa enxerga seus
+        // endereços finais direto (VMA = endereço de execução em 0x100000); a
+        // arena (heap+pilha) vive no .bss da VMA.
         return "ENTRY(_start)\n"
                 + "SECTIONS\n{\n"
                 + "  . = 0x7C00;\n"
                 + "  .text.boot : { KEEP(*(.text.boot)) }\n"
                 + "  . = 0x7E00;\n"
+                + "  .boot2 : { KEEP(*(.boot2)) }\n"
+                + "  . = 0xC000;\n"
                 + "  .payload : { KEEP(*(.payload)) }\n"
+                + "  . = 0x100000;\n"
                 + "  .text : { *(.text*) }\n"
                 + "  .rodata : { *(.rodata*) }\n"
                 + "  .data : { *(.data*) }\n"
-                + "  .bss : { *(.bss*) *(COMMON) }\n"
+                + "  .bss : {\n"
+                + "    *(.bss*) *(COMMON)\n"
+                + "    . = ALIGN(16);\n"
+                + "    _end = .;\n"
+                + "    __kof_heap_start = .;\n"
+                + "    . += " + heap + ";\n"
+                + "    __kof_heap_end = .;\n"
+                + "    . = ALIGN(16);\n"
+                + "    __kof_stack_bottom = .;\n"
+                + "    . += " + stack + ";\n"
+                + "    __kof_stack_top = .;\n"
+                + "  }\n"
                 + "  /DISCARD/ : { *(.note*) *(.comment) *(.eh_frame*) }\n"
                 + "}\n";
+    }
+
+    /**
+     * B-3b-3: patch da CONTAGEM de setores do payload no header KOFPAYLD.
+     * O tamanho só existe APÓS o link, então o header (VMA 0xC000 = arquivo
+     * 0x4400 = LBA 34) leva um int LE em +8 escrito depois do objcopy: a
+     * leitura 16-bit do boot usa o campo para ler os setores do programa
+     * (VMA 0x100000 = arquivo 0xF8400 = LBA 1986, em diante). Falha NOMEADA se
+     * a magia sumir (regressão do KEEP/gc) ou o payload estourar o staging de
+     * modo real (< ~584 KiB de 0xC200 a 0xA0000).
+     */
+    private static void patchBiosPayloadHeader(Path binFile) throws IOException {
+        byte[] img = Files.readAllBytes(binFile);
+        int idx = -1;
+        for (int i = 0; i + 8 <= img.length && i < 0x5000; i++) {
+            if (img[i] == 'K' && img[i + 1] == 'O' && img[i + 2] == 'F' && img[i + 3] == 'P'
+                    && img[i + 4] == 'A' && img[i + 5] == 'Y' && img[i + 6] == 'L' && img[i + 7] == 'D') {
+                idx = i;
+                break;
+            }
+        }
+        if (idx < 0) {
+            throw new IOException("KO-BIOS: header KOFPAYLD ausente na imagem flat "
+                    + "(a seção .payload saiu do link? KEEP/gc-sections regressou)");
+        }
+        long payloadBytes = img.length - 0xF8400L;
+        long sectors = (payloadBytes + 511) / 512;
+        if (sectors < 1 || sectors > 0x4FF) {   // 0x4FF*512 ≈ 584 KiB (staging 0xC200..0xA0000)
+            throw new IOException("KO-BIOS: payload de " + payloadBytes + " bytes (" + sectors
+                    + " setores) fora do staging de modo real (< ~584 KiB); KOF_HEAP_SIZE/KOF_STACK_SIZE reduzem a arena");
+        }
+        for (int b = 0; b < 4; b++) img[idx + 8 + b] = (byte) ((sectors >>> (8 * b)) & 0xFF);
+        Files.write(binFile, img);
     }
 
     /** Tamanho da região do script: env → prop → default (sempre > 0). */

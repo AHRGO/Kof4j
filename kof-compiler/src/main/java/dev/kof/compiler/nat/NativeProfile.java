@@ -49,6 +49,9 @@ public enum NativeProfile {
 
     public static boolean activeIsUefi() { return active.isUefi(); }
 
+    /** B-3b-3: o perfil BIOS troca os corpos da costura kof_plat_* (COM1/hlt). */
+    public static boolean activeIsBios() { return active.isBios(); }
+
     /** Aceita {@code host}/{@code freestanding}/{@code uefi}/{@code uefi-ring}; o resto é erro do chamador. */
     public static NativeProfile of(String value) {
         return switch (value == null ? "" : value.trim().toLowerCase()) {

@@ -13,6 +13,25 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **Bare-metal BIOS boot (plan `PLAN-BAREMETAL-BOOT`, B-3b-3) — the real Kof
+    payload now runs bare through the legacy BIOS path: `_start` is linked at the
+    fixed base `0x100000`, copied from the real-mode staging (`0xC200`) in
+    protected mode and jumped to, and the BIOS `kof_plat_*` bodies (write = COM1
+    `0x3F8`, exit = `cli;hlt`, sync = no-op) carry the freestanding runtime; the
+    Kof `main` prints `KO-BIOS PAYLOAD` under SeaBIOS.** (23/09, lane baremetal
+    9092, taken over from 9093): five measurement bugs fixed — (1) `RuntimeMemory`
+    `emitAlloc` sent BIOS to the host `mmap` body (invalid bare) so the first
+    `kof_array_alloc` hung; BIOS now uses the freestanding arena; (2) a debug
+    `call kof_plat_dbg_tx` in the host `_start` (defined only in the BIOS body)
+    would break every native link; (3) an extra `subl $512` under-copied one
+    sector; (4) `kof_plat_writev` used an 8-byte iovec stride instead of 16; (5)
+    the named-failure path (`kof_bios_load_bad`) was assembled under `.code64`, so
+    a 64-bit `movw $sym,%si` mis-decoded in 16-bit and raised `#UD` — `.code16`
+    restored around the real-mode routines. Proof: `BiosBootE2ETest` **5/0F**
+    (positive prints the three markers; a corrupted `KOFPAYLD` magic prints
+    `KO-BIOS LOAD BAD`) + a **127/0F** native battery; `compile` and all doc/size
+    gates green.
+
   - **§205 ✅ FIXED — an `Object`-typed value now prints its own `toString` on
     Native (record/class reference reaching `println` via `as Object` or an
     `Object` local)** (23/09, lane compiler 9092; N2/tagged-box ABI of

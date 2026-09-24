@@ -112,6 +112,17 @@ class BiosBootE2ETest {
         return Files.readString(log, StandardCharsets.ISO_8859_1).replace("\0", "");
     }
 
+    /** B-3b-3: localiza a magia do header do payload ({@code KOFPAYLD}) na imagem flat. */
+    private static int findMagic(byte[] img) {
+        for (int i = 0; i + 8 <= img.length; i++) {
+            if (img[i] == 'K' && img[i + 1] == 'O' && img[i + 2] == 'F' && img[i + 3] == 'P'
+                    && img[i + 4] == 'A' && img[i + 5] == 'Y' && img[i + 6] == 'L' && img[i + 7] == 'D') {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     @Test
     void biosArtifactIsBootableMbr(@TempDir Path tempDir) throws IOException {
         assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
@@ -197,11 +208,12 @@ class BiosBootE2ETest {
         assertTrue(text.contains(MARKER),
                 "payload (LBA 1) nao carregou/magic nao bateu. Log: " + text);
 
-        // (b) payload CORROMPIDO — a magia em LBA 1 deixa de bater e o setor
-        // imprime a falha NOMEADA no serial (nunca um hang silencioso).
+        // (b) payload CORROMPIDO — a magia KOFPAYLD do header deixa de bater e
+        // o stage2 imprime a falha NOMEADA no serial (nunca um hang silencioso).
         byte[] corrupt = Files.readAllBytes(img);
-        assertTrue(corrupt.length >= 520, "imagem deveria ter o setor do payload");
-        corrupt[512] = (byte) 'X';
+        int hdr = findMagic(corrupt);
+        assertTrue(hdr >= 0, "header KOFPAYLD ausente na imagem flat");
+        corrupt[hdr] = (byte) 'X';
         Path bad = tempDir.resolve("badpay.img");
         Files.write(bad, corrupt);
         Path ser2 = tempDir.resolve("ser2.log");
@@ -220,6 +232,42 @@ class BiosBootE2ETest {
                 "payload corrompido deveria imprimir '" + BAD_MARKER + "'. Log: " + text2);
         assertFalse(text2.contains(MARKER),
                 "payload corrompido NAO pode reportar sucesso: " + text2);
+    }
+
+    /** B-3b-3: o PAYLOAD KOF REAL roda bare — o boot carrega os N setores do
+     * programa (header KOFPAYLD), entra em long mode, copia o staging para a
+     * base 0x100000 e salta para {@code kof_payload_entry}; o println do main
+     * sai no COM1 via a costura kof_plat_write (corpo BIOS). Prova: o TEXTO DO
+     * PROGRAMA ("KO-BIOS PAYLOAD") aparece no serial DEPOIS dos marcadores do
+     * boot. */
+    @Test
+    void biosRunsKofMainBare(@TempDir Path tempDir) throws Exception {
+        Path qemu = findQemu();
+        assumeTrue(qemu != null, "qemu-system-x86_64 ausente");
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path img = build(tempDir, HELLO);
+
+        Path ser = tempDir.resolve("ser.log");
+        Process p = new ProcessBuilder(qemuCmd(qemu, img, ser)).redirectErrorStream(true).start();
+        String text = "";
+        try {
+            long deadline = System.currentTimeMillis() + 120_000;
+            while (System.currentTimeMillis() < deadline) {
+                if (Files.exists(ser)) {
+                    text = serialText(ser);
+                    if (text.contains("KO-BIOS PAYLOAD")) break;
+                }
+                Thread.sleep(500);
+            }
+        } finally {
+            p.destroyForcibly();
+        }
+        assertTrue(text.contains(MARKER), "boot deveria imprimir '" + MARKER + "': " + text);
+        assertTrue(text.contains(LM_MARKER), "boot deveria imprimir '" + LM_MARKER + "': " + text);
+        assertTrue(text.contains("KO-BIOS PAYLOAD"),
+                "o main Kof nao rodou bare (println ausente no serial). Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
     }
 
     @Test

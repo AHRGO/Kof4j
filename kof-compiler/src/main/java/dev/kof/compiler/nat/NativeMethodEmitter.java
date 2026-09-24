@@ -508,9 +508,45 @@ final class NativeMethodEmitter {
      * B-3 (PLAN-BAREMETAL-BOOT): entry LEGACY BIOS. A emissão do setor de
      * boot (modo real 16-bit, carga do payload e long mode) vive em
      * {@link NativeBiosBootEmitter} (gate <=500 linhas); aqui só delegamos.
+     * B-3b-3: o entry do PROGRAMA Kof é emitido como {@code kof_payload_entry}
+     * (mesmo corpo do _start freestanding; rótulo distinto evita colisão com
+     * o {@code _start} do setor de boot) — o boot salta para ele após copiar
+     * o staging para a base 0x100000, tornando o programa REACHABLE (o
+     * --gc-sections não poda mais o runtime).
      */
     private void emitStartBios(StringBuilder sb, IRClass clazz) {
         NativeBiosBootEmitter.emit(sb, clazz);
+        emitPayloadEntry(sb, clazz);
+    }
+
+    private void emitPayloadEntry(StringBuilder sb, IRClass clazz) {
+        boolean hasMain = clazz.methods().stream().anyMatch(m -> "main".equals(m.name()));
+        if (!hasMain) return;
+        boolean mainHasArgs = clazz.methods().stream()
+                .filter(m -> "main".equals(m.name()))
+                .anyMatch(m -> !m.parameterTypes().isEmpty());
+        sb.append("\n.section .text\n");
+        sb.append(".globl kof_payload_entry\n");
+        sb.append("kof_payload_entry:\n");
+        // B-1: pilha vinda do linker script (arena de heap+pilha do payload).
+        sb.append("    leaq __kof_stack_top(%rip), %rsp\n");
+        // G-6b: fundo da pilha da thread main — contrato idêntico ao _start.
+        sb.append("    movq %rsp, kof_main_stack_bottom(%rip)\n");
+        sb.append("    call kof_plat_thread_id\n");
+        sb.append("    movq %rax, kof_main_tid(%rip)\n");
+        if (mainHasArgs) {
+            // N3: array vazio — mesmo contrato do _start host.
+            sb.append("    xorl %edi, %edi\n");
+            sb.append("    movl $8, %esi\n");
+            sb.append("    call kof_array_alloc\n");
+            sb.append("    movq %rax, %rdi\n");
+        }
+        emitClinitCalls(sb);
+        sb.append("    call ").append(nb.sanitizeName(clazz.name())).append("_main\n");
+        // B-3b-3: a saída cruza a costura kof_plat_exit_group (corpo BIOS:
+        // cli;hlt — nunca retorna ao boot).
+        sb.append("    xorl %edi, %edi\n");
+        sb.append("    call kof_plat_exit_group\n");
     }
 
 }
