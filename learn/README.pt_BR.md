@@ -92,6 +92,7 @@ Kof é uma linguagem de programação compilada para múltiplas plataformas, for
 | 37 | [KofJS — o caminho da Web](37-kofjs.md) |
 | 38 | [Editores — kof editor](38-editors.md) |
 | 39 | [Standard Library universal](39-stdlib.md) |
+| 40 | [Baixo Nível — FFI, Perfis Native e Bare Metal](40-low-level.pt_BR.md) |
 | — | [Native — Multiplatform](native/README.md) |
 
 ## Ordem recomendada

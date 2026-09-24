@@ -513,3 +513,16 @@ Para mais detalhes, consulte [docs/distribution/LICENSING.md](docs/distribution/
 *Uma linguagem. Um compilador. Vários mundos.*
 
 *Menos cerimônia. Mais intenção.*
+
+---
+
+*eu sempre fui opensource*
+*pro mundo inteiro poder me usar*
+*assim eu construo um mundo melhor*
+*e desenho com todos os meus Koffies*
+*pra me construir e me controlar*
+*o que o futuro reserva pra mim*
+*e pra comunidade que segue em frente*
+*construindo a história*
+
+*(inspirado no openSUSE)*
