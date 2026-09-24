@@ -80,7 +80,7 @@ public final class CompilerRecordSupport {
             ops.add(new KofLoadField(ownerType, f.name(), f.type()));
             ops.add(new KofLoadLocal(ownerType, 1));
             ops.add(new KofLoadField(ownerType, f.name(), f.type()));
-            if (Type.isString(f.type())) {
+            if (isStringField(f.type())) {
                 ops.add(new KofCall(BuiltinTypes.STRING, "kof_string_equals",
                         List.of(BuiltinTypes.STRING, BuiltinTypes.STRING),
                         Type.PrimitiveType.BOOL, KofCallKind.FUNCTION));
@@ -118,6 +118,11 @@ public final class CompilerRecordSupport {
      * em `Object` cru) e `Object` (pode ser box de primitivo, sem `type_id` no
      * offset 0).
      */
+    private static boolean isStringField(Type type) {
+        Type t = type instanceof Type.NullableType n ? n.inner() : type;
+        return Type.isString(t);
+    }
+
     private static boolean isKofObjectField(Type type) {
         Type t = type instanceof Type.NullableType n ? n.inner() : type;
         if (!(t instanceof Type.ClassType)) return false;
@@ -149,7 +154,12 @@ public final class CompilerRecordSupport {
     }
 
     /**
-     * hashCode() nativo de record: 31 * h + campo (bug 42 native).
+     * hashCode() nativo de record: 31 * h + campo (bug 42 native). §114 (face
+     * hash): campo de REFERENCIA não pode somar o PONTEIRO — o contrato é o
+     * JVM (`31*h + o.hashCode()`, `o==null → 0`). String por CONTEÚDO via
+     * `kof_string_hash_code` (`String.hashCode`, código do par de foco,
+     * null-safe 0). Primitivos já casam crus nesta fórmula (Int/Long/Bool/Char,
+     * medido); Float/Double/record-aninhado seguem declarados em §114.
      */
     static IRMethod buildRecordHashCodeMethod(CompilerDriver driver, String internalName,
                                               List<IRField> fields,
@@ -164,6 +174,10 @@ public final class CompilerRecordSupport {
             ops.add(new KofBinary(KofBinaryOp.MUL, Type.PrimitiveType.INT));
             ops.add(new KofLoadLocal(ownerType, 0));
             ops.add(new KofLoadField(ownerType, f.name(), f.type()));
+            if (isStringField(f.type())) {
+                ops.add(new KofCall(BuiltinTypes.STRING, "hashCode", List.of(),
+                        Type.PrimitiveType.INT, KofCallKind.INSTANCE));
+            }
             ops.add(new KofBinary(KofBinaryOp.ADD, Type.PrimitiveType.INT));
         }
         ops.add(new KofReturn(Type.PrimitiveType.INT));

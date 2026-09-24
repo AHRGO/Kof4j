@@ -30,6 +30,7 @@ class NativeRecordCollectionEqualityE2ETest {
             record Outer(Inner i, String s)
             record MaybeInner(Inner? i, String s)
             record L2(Outer o)
+            record MaybeStr(String? t)
 
             class User {
                 String name
@@ -41,6 +42,12 @@ class NativeRecordCollectionEqualityE2ETest {
 
             Inner? maybe(Int v) {
                 if (v > 0) { return Inner(v) }
+                return null
+            }
+
+            String? maybeStr(Int v) {
+                if (v == 1) { return make("a", "b") }
+                if (v == 2) { return make("a", "c") }
                 return null
             }
 
@@ -109,6 +116,11 @@ class NativeRecordCollectionEqualityE2ETest {
                 println(MaybeInner(maybe(-1), "z") == MaybeInner(maybe(-1), "z"))
                 println(L2(Outer(Inner(1), "z")) == L2(Outer(Inner(1), "z")))
                 println(L2(Outer(Inner(1), "z")) == L2(Outer(Inner(2), "z")))
+
+                println(MaybeStr(maybeStr(1)) == MaybeStr(maybeStr(1)))
+                println(MaybeStr(maybeStr(1)) == MaybeStr(maybeStr(2)))
+                println(MaybeStr(maybeStr(-1)) == MaybeStr(maybeStr(-1)))
+                println(MaybeStr(maybeStr(-1)) == MaybeStr(maybeStr(1)))
             }
             """;
 

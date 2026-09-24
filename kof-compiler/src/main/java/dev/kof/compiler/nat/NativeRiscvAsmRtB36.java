@@ -181,6 +181,7 @@ final class NativeRiscvAsmRtB36 {
             # 0..7 (off@0, pend@4), h em 16.
             .globl String_hashCode
             String_hashCode:
+                beqz a0, .Lb6_hc_zero
                 addi sp, sp, -64
                 sd   ra, 56(sp)
                 sd   s0, 48(sp)
@@ -210,6 +211,9 @@ final class NativeRiscvAsmRtB36 {
                 ld   s1, 40(sp)
                 ld   ra, 56(sp)
                 addi sp, sp, 64
+                ret
+            .Lb6_hc_zero:
+                li   a0, 0
                 ret
 
             # String_compareTo(a0=this, a1=other) -> a0=Int — port do
