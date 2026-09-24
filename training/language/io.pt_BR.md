@@ -43,6 +43,8 @@ sobre ler/escrever arquivos, trabalhar com paths e listar diretórios.
 | `File("x").size()` | Long; **lança exceção** se o arquivo não existe (02/09 — sem sentinela `-1`) |
 | `File("x").delete()` | Bool |
 | `File("x").mkdir()` / `.mkdirs()` | aliases POSIX de `create()` / `createDirectories()`: criam o diretório / todo o caminho (Bool) |
+
+**Membro desconhecido é erro em tempo de compilação (`SEM102`, #617):** um método que não está nas tabelas acima num valor `File`/`Directory`/`Path` não compila, com `'File' has no method 'x()'` (hint: `Directory(path).createDirectories()` para criar diretório). Antes do guard, a chamada compilava em silêncio e não fazia nada em runtime — as tabelas de membros aqui SÃO o contrato.
 | `File("x").name()` / `.path()` | String |
 
 Estáticas: `File.exists(p)`, `File.readText(p)`, `File.writeText(p, s)`,

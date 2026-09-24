@@ -22,8 +22,13 @@ main() {
 }
 ```
 
-O compilador gera: construtor canônico, accessors (`name()`), e no JVM
-`toString`/`equals`/`hashCode`.
+O compilador gera: construtor canônico, accessors (`name()`), e
+`toString`/`equals`/`hashCode` em todos os alvos. Igualdade e hash são POR
+CONTEÚDO em todo lugar (§104b-ii/§114, 24/09): dois records com os mesmos
+valores de campo são `==`, têm o mesmo hash, dedup em `Set`, batem como chave
+de `Map` e como valor de `containsValue` — no JVM, Native (x86-64, riscv64,
+aarch64) e JS igualmente. O `equals` sintetizado recursa em campos record/classe
+aninhados; o `hashCode` é por conteúdo para String, Double e records aninhados.
 
 Records podem ter métodos:
 

@@ -76,6 +76,14 @@ String nome = "Mel"
 record Point(Int x, Int y)
 ```
 
+### Troolean (three-valued)
+
+`Bool` has exactly two values; `Troolean` carries `true`/`false`/`unknown`
+(D-TROOL, 0.5.0-beta). `Bool?` written by the user is SEM095 — the pointer
+names `Troolean`. `if (t)` is sugar for `if (t == true)`; `&&`/`||`/`!` follow
+the Kleene tables (unknown persists). Details: `training/language/types.md`
+§Troolean.
+
 ### Classes
 
 ```kf

@@ -188,11 +188,11 @@ public final class RuntimePlat {
     }
 
     public static void emitPlatRandom(StringBuilder sb) {
-        // B-2: família sem corpo UEFI nesta fatia — recusa NOMEADA (R6),
-        // nunca um syscall Linux silencioso que não existe no firmware.
+        // B-5: corpo real por face bare-metal (RDRAND/TSC + xorshift64),
+        // compartilhado BIOS/UEFI — nunca um syscall Linux silencioso.
         if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()
                 || dev.kof.compiler.nat.NativeProfile.activeIsBios()) {
-            RuntimeBios.refuse(sb, "kof_plat_random");
+            RuntimeBareRandom.emit(sb);
             return;
         }
         sb.append("""

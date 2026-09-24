@@ -72,6 +72,32 @@ main() {
 }
 ```
 
+### Interfaces genéricas
+
+```kf
+interface Mapper<T> {
+    map(input: T): String
+}
+
+class Upper implements Mapper<String> {
+    map(input: String): String { return input.upper() }
+}
+```
+
+- `interface I<T>` parseia, e `implements I<Concreto>` apaga os argumentos de
+  tipo em todo ponto de emissão — a variável de tipo leva o BOUND para a
+  chamada (famílias §355–§357, #160).
+- A subclasse herda a entrada genérica do ancestral: `class Sub extends Base`
+  onde `Base implements Runner<Int>` continua despachando como `Runner<Int>`
+  (resolução BFS).
+- Bridges de retorno de método são sintetizadas quando duas interfaces colidem
+  no mesmo membro com retornos diferentes (boxing Int/Boolean, retornos
+  covariantes — §486): record/classe implementando interfaces genéricas
+  funciona em TODOS os alvos.
+- Recusas honestas conhecidas: `SEM098` rejeita array primitivo passado a um
+  slot apagado (decisão só-JVM); `NAT004` recusa `toString` sobre `T` não
+  delimitado no link cross Native (§358).
+
 ### Bounds (planejado)
 
 `extends` em parâmetros de tipo ainda não é resolvido em compile-time.

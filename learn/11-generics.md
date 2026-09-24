@@ -72,6 +72,31 @@ main() {
 }
 ```
 
+### Generic interfaces
+
+```kf
+interface Mapper<T> {
+    map(input: T): String
+}
+
+class Upper implements Mapper<String> {
+    map(input: String): String { return input.upper() }
+}
+```
+
+- `interface I<T>` parses, and `implements I<Concrete>` erases the type
+  arguments at every emit site — the type variable carries its BOUND to the
+  call (§355–§357 families, #160).
+- A subclass inherits the ancestor's generic entry: `class Sub extends Base`
+  where `Base implements Runner<Int>` still dispatches as `Runner<Int>`
+  (BFS resolution).
+- Method-return bridges are synthesized when two interfaces collide on the
+  same member with different returns (Int/Boolean boxing, covariant returns —
+  §486): a record/class implementing generic interfaces works on ALL targets.
+- Known honest refusals: `SEM098` rejects a primitive array passed into an
+  erased slot (JVM-only decision); `NAT004` refuses `toString` on an
+  unbounded `T` in the Native cross link (§358).
+
 ### Bounds (planned)
 
 `extends` on type parameters is not yet resolved at compile-time.

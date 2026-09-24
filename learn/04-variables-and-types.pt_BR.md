@@ -76,6 +76,14 @@ String nome = "Mel"
 record Point(Int x, Int y)
 ```
 
+### Troolean (trivalente)
+
+`Bool` tem exatamente dois valores; `Troolean` carrega `true`/`false`/`unknown`
+(D-TROOL, 0.5.0-beta). `Bool?` escrito pelo usuário é SEM095 — o erro aponta
+`Troolean`. `if (t)` é açúcar para `if (t == true)`; `&&`/`||`/`!` seguem as
+tabelas de Kleene (o unknown persiste). Detalhes: `training/language/types.md`
+§Troolean.
+
 ### Classes
 
 ```kf
