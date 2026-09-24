@@ -318,6 +318,23 @@ public final class CompilerRecordSupport {
                 Type childRet = m.returnType();
                 boolean retDiffer = !childRet.equals(parentRet);
 
+                // §485 — no Native, um bridge de retorno covariante cujos
+                // PARÂMETROS já são idênticos ao slot apagado do pai (sem
+                // box/unbox/checkcast de argumento) e cujo retorno é uma
+                // REFERÊNCIA nas duas pontas é um pass-through de registrador:
+                // a vtable pode apontar direto para o método concreto. Gerar o
+                // bridge aqui só produzia dois símbolos asm idênticos
+                // (`Classe_nome`), porque `NativeSymbolMangling.sigTag` codifica
+                // apenas os TIPOS DE PARÂMETRO — o `as` falhava com "symbol
+                // already defined" (JVM/script/JS verdes; divergência rule 5).
+                // Retornos primitivos NÃO entram (o bridge faz o box e é
+                // REALMENTE necessário) — face catalogada no §485.
+                boolean childPrim = childRet instanceof Type.PrimitiveType;
+                boolean parentPrim = parentRet instanceof Type.PrimitiveType;
+                if (driver.target.isNative() && !paramsDiffer && !childPrim && !parentPrim) {
+                    continue;
+                }
+
                 if ((retDiffer || paramsDiffer)
                         && TypeChecker.isAssignable(driver.semanticAnalyzer, childRet, parentRet)) {
                     // Já existe um método na classe com a MESMA assinatura

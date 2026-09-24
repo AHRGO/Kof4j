@@ -32,6 +32,26 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Object`). Autorização N2 registrada no `DECISIONS.pt_BR.md` `D-NULL-INTENT`
     (23/09); `RUNTIME_ABI.md` §3.9 documenta a face de referência.
 
+  - **Bridge de retorno covariante no Native (§486): a face de retorno
+    referência está pousada, a face de retorno primitivo fica catalogada
+    ABERTA — um bridge covariante cujos parâmetros já batem com o slot apagado
+    do pai colidia com o método concreto num ÚNICO símbolo asm do Native**
+    (23/09, lane compiler 9092; família da §483/TIER 13.2): o
+    `NativeSymbolMangling.sigTag` codifica
+    só os TIPOS DE PARÂMETRO, então um par com mesmo nome+mesmos parâmetros (o
+    bridge e o método concreto) mangleiava para o mesmo `Classe_nome` → `as:
+    symbol 'SBox_get' is already defined` enquanto JVM/Script/JS imprimiam `hi`
+    (divergência rule 5). **Face (a) retorno referência:** no Native o bridge é
+    pulado quando é um pass-through puro de registrador (`!paramsDiffer` E os
+    dois retornos são referências); o slot de vtable aponta direto ao método
+    concreto. Prova: `NativeGenericIfaceBridgeE2ETest` 3/3 (golden do oráculo
+    JVM no teste `hi\nBox: hi\ndirect\n99` em x86-64 + riscv64 + aarch64; RED
+    com o fix revertido = a colisão verbatim), vizinhos 137/0F/0E. A **face (b)
+    retorno primitivo** fica catalogada ABERTA: o bridge faz o box do primitivo
+    e é necessário (pulá-lo dá SIGSEGV, medido) — o fix completo é o mangling
+    ciente do tipo de retorno, que toca os emitters da lane baremetal em curso,
+    então fica para unidade própria.
+
   - **Ressincronização de `docs/development` — a fila e o allowlist do gate de
     release agora batem com a realidade** (23/09, lane docs/fronteira): a linha
     do `kof-c-cross` (movido para `docs/`, C1–C4 landados) e a do

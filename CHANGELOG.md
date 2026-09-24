@@ -31,6 +31,25 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `String as Object`). `DECISIONS.md` `D-NULL-INTENT` authorization recorded
     23/09; `RUNTIME_ABI.md` §3.9 documents the reference face.
 
+  - **Native covariant-return bridge (§486): the reference-return face is
+    landed, the primitive-return face is catalogued OPEN — a covariant-return
+    bridge whose parameters already match the erased parent slot collided with
+    the concrete method on ONE Native asm symbol** (23/09, lane compiler 9092;
+    family of §483/TIER 13.2): `NativeSymbolMangling.sigTag` encodes only
+    PARAMETER types, so a same-name+same-params pair (the bridge and its
+    concrete method) mangled to the same `Class_name` → `as: symbol
+    'SBox_get' is already defined` while JVM/Script/JS printed `hi` (rule-5
+    divergence). **Face (a) reference return:** for Native the bridge is
+    skipped when it is a pure register pass-through (`!paramsDiffer` AND both
+    returns are references); the vtable slot points straight at the concrete
+    method. Proof: `NativeGenericIfaceBridgeE2ETest` 3/3 (in-test JVM oracle
+    golden `hi\nBox: hi\ndirect\n99` on x86-64 + riscv64 + aarch64; RED with
+    the fix reverted = the verbatim collision), neighbors 137/0F/0E. **Face
+    (b) primitive return** is catalogued OPEN: the bridge boxes the primitive
+    and is required (skipping it SIGSEGVs, measured) — the complete fix is
+    return-type-aware native mangling, which touches the baremetal lane's
+    in-progress emitters, so it is deferred to its own unit.
+
   - **`docs/development` resync — the queue and the release ALLOWLIST now match
     reality** (23/09, lane docs/frontier): the `kof-c-cross` row (moved to
     `docs/`, C1–C4 all landed) and the `PLAN-BAREMETAL-BOOT` row ("zero code"
