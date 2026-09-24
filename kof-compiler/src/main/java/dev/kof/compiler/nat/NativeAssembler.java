@@ -217,9 +217,9 @@ public final class NativeAssembler {
      *  ({@code .text.boot}) é a PRIMEIRA seção, carregada pelo firmware em
      *  {@code 0x7C00}; a assinatura {@code 0xAA55} em 0x1FE vem do
      *  {@code .org 510} no próprio {@code _start} (NativeMethodEmitter).
-     *  B-3b: {@code .payload} é forçado ao LMA {@code 0x7E00} (= setor LBA 1),
-     *  para o próprio setor de boot carregá-lo do disco; {@code KEEP} impede o
-     *  gc-sections de descartá-lo.
+     *  B-3b: {@code .boot2} (stage2) é forçado ao LMA {@code 0x7E00} (= setor
+     *  LBA 1), para o próprio setor de boot carregá-lo do disco; {@code KEEP}
+     *  impede o gc-sections de descartá-lo.
      *  B-3b-3: o PROGRAMA Kof é ligado na VMA {@code 0x100000} (a base fixa
      *  que o boot mapeia) com LMA em AT(...) — o arquivo flat fica compacto
      *  (setor 2 em diante) enquanto o código enxerga os endereços finais. A
@@ -238,13 +238,13 @@ public final class NativeAssembler {
         // arena (heap+pilha) vive no .bss da VMA.
         return "ENTRY(_start)\n"
                 + "SECTIONS\n{\n"
-                + "  . = 0x7C00;\n"
+                + "  . = 0x" + Integer.toHexString(NativeBiosBootEmitter.BOOT_BASE) + ";\n"
                 + "  .text.boot : { KEEP(*(.text.boot)) }\n"
                 + "  . = 0x7E00;\n"
                 + "  .boot2 : { KEEP(*(.boot2)) }\n"
-                + "  . = 0xC000;\n"
+                + "  . = 0x" + Integer.toHexString(NativeBiosBootEmitter.HEADER_VMA) + ";\n"
                 + "  .payload : { KEEP(*(.payload)) }\n"
-                + "  . = 0x100000;\n"
+                + "  . = 0x" + Integer.toHexString(NativeBiosBootEmitter.PROGRAM_VMA) + ";\n"
                 + "  .text : { *(.text*) }\n"
                 + "  .rodata : { *(.rodata*) }\n"
                 + "  .data : { *(.data*) }\n"
@@ -287,7 +287,7 @@ public final class NativeAssembler {
             throw new IOException("KO-BIOS: header KOFPAYLD ausente na imagem flat "
                     + "(a seção .payload saiu do link? KEEP/gc-sections regressou)");
         }
-        long payloadBytes = img.length - 0xF8400L;
+        long payloadBytes = img.length - NativeBiosBootEmitter.PROGRAM_FILE_OFF;
         long sectors = (payloadBytes + 511) / 512;
         if (sectors < 1 || sectors > 0x4FF) {   // 0x4FF*512 ≈ 584 KiB (staging 0xC200..0xA0000)
             throw new IOException("KO-BIOS: payload de " + payloadBytes + " bytes (" + sectors

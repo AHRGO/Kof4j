@@ -12,11 +12,12 @@ import dev.kof.compiler.IRClass;
  * um setor — o stage2 a continua.
  *
  * <p><b>Layout do disco flat (medição B-3b-3):</b> LBA 0 = stub; LBA 1..4 =
- * {@code .boot2} (stage2); LBA 5 = {@code .payload} (header KOFPAYLD + contagem
- * de setores, preenchida pelo patch pós-objcopy do NativeAssembler); LBA 6..N =
- * o programa Kof (ligado na VMA {@code 0x100000}, LMA 0xC00). O staging do
- * payload em modo real fica em {@code 0xC000} — DEPOIS das tabelas de página
- * (0x9000..0xBFFF), que o payload não pode clobberear.
+ * {@code .boot2} (stage2, carregado em {@code 0x7E00}); LBA {@code HEADER_LBA}
+ * (34) = {@code .payload} (header KOFPAYLD + contagem de setores, preenchida
+ * pelo patch pós-objcopy do NativeAssembler); LBA {@code PROGRAM_LBA} (1986)..N
+ * = o programa Kof (VMA {@code 0x100000}). O staging do payload em modo real
+ * fica em {@code 0xC000} — DEPOIS das tabelas de página (0x9000..0xBFFF), que o
+ * payload não pode clobberear.
  *
  * <p>Extraído de {@link NativeMethodEmitter} (gate ≤500/≤600 linhas); a
  * responsabilidade aqui é só o assembly do boot.
@@ -24,10 +25,16 @@ import dev.kof.compiler.IRClass;
 final class NativeBiosBootEmitter {
 
     // Layout (linker script do NativeAssembler): o arquivo flat = o espaço VMA
-    // a partir de 0x7C00 — LBA = (VMA - 0x7C00) / 512. O header KOFPAYLD =
-    // VMA 0xC000 (LBA 34); o programa = VMA 0x100000 (LBA 1983).
-    private static final int HEADER_LBA = (0xC000 - 0x7C00) / 512;      // 34
-    private static final int PROGRAM_LBA = (0x100000 - 0x7C00) / 512;   // 1983
+    // a partir de BOOT_BASE (0x7C00) — LBA = (VMA - BOOT_BASE) / 512. Estas
+    // constantes são a fonte única: o linker script e o patch do header derivam
+    // delas (nunca repita o literal do endereço num lado só).
+    static final int BOOT_BASE = 0x7C00;
+    static final int HEADER_VMA = 0xC000;      // header KOFPAYLD
+    static final int PROGRAM_VMA = 0x100000;   // programa Kof
+    static final int HEADER_LBA = (HEADER_VMA - BOOT_BASE) / 512;     // 34
+    static final int PROGRAM_LBA = (PROGRAM_VMA - BOOT_BASE) / 512;   // 1986
+    /** Offset do programa no arquivo flat (= VMA − BOOT_BASE). */
+    static final int PROGRAM_FILE_OFF = PROGRAM_VMA - BOOT_BASE;      // 0xF8400
     /** Setores de stage2 que o stub carrega (fixo, ambos os lados). */
     private static final int BOOT2_SECTORS = 4;
     /** Staging do payload em modo real (header) — após as tabelas de página. */
