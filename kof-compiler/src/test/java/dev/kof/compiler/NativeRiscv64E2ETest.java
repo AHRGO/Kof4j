@@ -185,6 +185,31 @@ class NativeRiscv64E2ETest {
         assertEquals("7\n7\nhi\ntrue", out, "§444: riscv64 deve casar o oráculo JVM");
     }
 
+    // #613 — record + interface genérica + default: sem o bridge de erasure
+    // param-less (`T get()` → `Object get()`) o slot da vtable apontava para o
+    // concreto (`Int get()` lido como Object) → SIGSEGV no x86; no cross a peça
+    // compartilhada é a MESMA (NativeSymbolMangling + collectVirtualMethods),
+    // então o riscv64 tem de casar o oráculo (aarch64 herda via tradutor).
+    @Test
+    void riscv64RecordGenericInterfaceBridge(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String out = runRiscv64(tempDir, """
+            interface Box<T> {
+                T get()
+                default String describe() {
+                    return "Box: " + get()
+                }
+            }
+            record IntBox(Int value) implements Box<Int> {
+                Int get() { return value }
+            }
+            main() {
+                println(IntBox(42).describe())
+            }
+            """);
+        assertEquals("Box: 42", out, "#613: bridge de erasure no record (riscv64)");
+    }
+
     // Arestas do port §359 (add_all riscv + kof_list_cmp→String_compareTo):
     // addAll em dst populado/crescente e o compare-to do sort
     // (prefixo "app"<"apple" + iguais "apple").

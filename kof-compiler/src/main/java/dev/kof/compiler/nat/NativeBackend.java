@@ -343,8 +343,8 @@ public class NativeBackend implements Backend {
         for (IRClass clazz : module.classes()) {
             for (IRMethod method : clazz.methods()) {
                 if ("<clinit>".equals(method.name())) continue;
-                String mangled = NativeSymbolMangling.fnSymbol(clazz.name(), method.name(), method.parameterTypes(), allClassesMap);
-                functionMangleMap.putIfAbsent(NativeSymbolMangling.fnKey(clazz.name(), method.name(), method.parameterTypes(), allClassesMap), mangled);
+                String mangled = NativeSymbolMangling.fnSymbol(clazz.name(), method, allClassesMap);
+                functionMangleMap.putIfAbsent(NativeSymbolMangling.fnKey(clazz.name(), method, allClassesMap), mangled);
             }
         }
         for (IRClass clazz : module.classes()) {

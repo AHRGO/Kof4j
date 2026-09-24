@@ -57,8 +57,8 @@ final class NativeArchEmitter {
         for (IRClass c : module.classes()) {
             for (IRMethod m : c.methods()) {
                 if ("<clinit>".equals(m.name())) continue;
-                String mg = NativeSymbolMangling.fnSymbol(c.name(), m.name(), m.parameterTypes(), nb.allClassesMap);
-                nb.functionMangleMap.putIfAbsent(NativeSymbolMangling.fnKey(c.name(), m.name(), m.parameterTypes(), nb.allClassesMap), mg);
+                String mg = NativeSymbolMangling.fnSymbol(c.name(), m, nb.allClassesMap);
+                nb.functionMangleMap.putIfAbsent(NativeSymbolMangling.fnKey(c.name(), m, nb.allClassesMap), mg);
             }
         }
 
@@ -271,8 +271,8 @@ final class NativeArchEmitter {
         for (IRClass c : module.classes()) {
             for (IRMethod m : c.methods()) {
                 if ("<clinit>".equals(m.name())) continue;
-                String mg = NativeSymbolMangling.fnSymbol(c.name(), m.name(), m.parameterTypes(), nb.allClassesMap);
-                nb.functionMangleMap.putIfAbsent(NativeSymbolMangling.fnKey(c.name(), m.name(), m.parameterTypes(), nb.allClassesMap), mg);
+                String mg = NativeSymbolMangling.fnSymbol(c.name(), m, nb.allClassesMap);
+                nb.functionMangleMap.putIfAbsent(NativeSymbolMangling.fnKey(c.name(), m, nb.allClassesMap), mg);
             }
         }
         StringBuilder riscvSb = new StringBuilder();

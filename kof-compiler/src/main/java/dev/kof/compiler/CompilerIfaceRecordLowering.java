@@ -114,6 +114,21 @@ public final class CompilerIfaceRecordLowering {
             methods.add(CompilerRecordSupport.buildRecordEqualsMethod(driver, internalName, fields, typeParams));
             methods.add(CompilerRecordSupport.buildRecordHashCodeMethod(driver, internalName, fields, typeParams));
         }
+        // #613 (face Native do #608): um record que implementa interface
+        // genérica precisa do bridge de erasure, igual a `lowerClass` (§356/§483)
+        // — `lowerRecord` nunca chamava `generateCovariantReturnBridges`; o
+        // invokeinterface/despacho da interface usa o descritor APAGADO
+        // (`Object get()`), e sem bridge o slot caía no concreto cru (`Int get()`
+        // lido como referência → SIGSEGV no Native). Bridges PRIMEIRO: o slot da
+        // vtable é semeado pela interface (§248) e o bridge precisa ocupá-lo
+        // (§483) antes de o concreto sobrescrever por nome. O mangling dos dois
+        // é desempatado pelo sufixo de retorno do bridge (#613,
+        // NativeSymbolMangling).
+        if (driver.target.isNative()) {
+            List<IRMethod> bridges = CompilerRecordSupport.generateCovariantReturnBridges(
+                    driver, internalName, superName, ifaces, methods);
+            methods.addAll(0, bridges);
+        }
         return new IRClass(internalName, superName, ifaces, access, fields, methods, List.of(), null,
                 typeId, CompilerAnnotations.lowerAnnotations(driver, rec.annotations()));
     }

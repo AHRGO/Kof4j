@@ -297,11 +297,12 @@ public final class NativeRiscvCrossOps {
                     sb.append("    pop a0\n    call kof_bool_to_string\n");
                     other.pushRiscv(sb, "a0");
                 }
-            } else if (BuiltinTypes.isObject(vArgType)) {
-                // §284: Object (erasure) — valor e um box; kof_box_to_string
-                // despacha por MAGIC+tag e passa nao-box cru (paridade com o
-                // ramo equivalente do x86; sem isto o box cru caia em
-                // println_string — SIGSEGV medido no espelho do B.kf).
+            } else if (BuiltinTypes.isObject(vArgType) || vArgType instanceof Type.TypeVariable) {
+                // §284 + §444-cross (#613): Object/T apagado — valor e um box;
+                // kof_box_to_string despacha por MAGIC+tag e passa nao-box cru
+                // (paridade com os ramos equivalentes do x86; sem isto o box
+                // cru caia em println_string/concat — SIGSEGV no espelho do
+                // B.kf e "Box: <lixo>" medido no describe() do record #613).
                 sb.append("    pop a0\n");
                 sb.append("    call kof_box_to_string\n");
                 other.pushRiscv(sb, "a0");

@@ -55,8 +55,7 @@ final class NativeClassMeta {
                 if (!methodNames.contains(m.name())) {
                     methodNames.add(m.name());
                     ifaceSlotNames.add(m.name());
-                    methods.add(NativeSymbolMangling.fnSymbol(ifaceClazz.name(), m.name(),
-                            m.parameterTypes(), nb.allClassesMap));
+                    methods.add(NativeSymbolMangling.fnSymbol(ifaceClazz.name(), m, nb.allClassesMap));
                 }
             }
             for (String iface : ifaceClazz.interfaces()) {
@@ -89,7 +88,7 @@ final class NativeClassMeta {
         // §131 (10a): método sobrecarregado (2+ defs do nome) ganha slot PRÓPRIO
         // por assinatura (fnSymbol tageia) — antes o 2º def sobrescrevia o slot
         // (methods.set) e os 2 .globl colidiam.
-        String sym = NativeSymbolMangling.fnSymbol(ownerName, m.name(), m.parameterTypes(), nb.allClassesMap);
+        String sym = NativeSymbolMangling.fnSymbol(ownerName, m, nb.allClassesMap);
         // §483: um bridge de erasure (ACC_BRIDGE) da classe é o MESMO contrato do
         // slot abstrato vindo da interface — sobrescreve por nome para a chamada
         // via interface cair no bridge (e não no abstrato vazio). Sem isto a
@@ -141,6 +140,10 @@ final class NativeClassMeta {
             if (clazz.name().equals(ownerTypeName) || clazz.name().endsWith("/" + ownerTypeName)
                     || ownerTypeName.endsWith("/" + clazz.name()) || ownerTypeName.equals(nb.sanitizeName(clazz.name()))) {
                 List<String> methods = collectVirtualMethods(nb, clazz);
+                // #613: lookup DELIBERADAMENTE sem o sufixo de bridge (3-arg):
+                // um call site com owner de CLASSE quer o método CONCRETO; a
+                // assinatura apagada (bridge) só é alcançada via owner INTERFACE,
+                // cujos slots usam os símbolos da própria interface (sem sufixo).
                 String mangled = NativeSymbolMangling.fnSymbol(clazz.name(), methodName,
                         methodsForCall(clazz, methodName, argTypes), nb.allClassesMap);
                 int bySig = indexOfSymbol(methods, mangled);
