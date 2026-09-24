@@ -103,6 +103,10 @@ public final class NativeRiscvAsm {
                 .append(NativeRiscvAsmRtB46.RISCV_RUNTIME_ASM_B_46)
                 // DB001 (15/09): runtime kof.db SQLite — port Db2/Db4/Db5 (gerado).
                 .append(NativeRiscvAsmRtB47.RISCV_RUNTIME_ASM_B_47)
+                // S5.4 fatia 2 (24/09): dispatch execute/query do cross —
+                // kof_db_execute[N]/query[N] com o ramo mysql (B71 + B72/B70)
+                // ao lado do sqlite; extraído da B47 p/ não furar o ≤500.
+                .append(NativeRiscvAsmRtB47b.RISCV_RUNTIME_ASM_B_47B)
                 // CONC001 (15/09): helpers de concorrência de alta ordem —
                 // done/poll/cancel/cancelled/selectAny/awaitTimeout (port
                 // RuntimeConcurrency; cancel por TID real via gettid+clone ctid).

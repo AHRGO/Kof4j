@@ -2181,6 +2181,273 @@ class NativeRiscvDbWireTest {
                 "a falha deve citar kof_db_connect_mysql: " + r[0]);
     }
 
+    // ---- S5.4 fatia 2: dispatch type 2 no kof_db_execute/query (B47b) ----
+
+    /** Harness do dispatch: conecta pelo `kof_db_connect`, roda
+     *  `kof_db_execute`/`kof_db_execute2`/`kof_db_query1` pelo HANDLE (não pelo
+     *  fd direto como os harnesses B70/B72) e prova o ramo mysql + close. */
+    private static String dispatchHarness() {
+        int port = mysqlPort();
+        String urlFull = "mysql://root:kofpass@127.0.0.1:" + port + "/test";
+        String urlHost = "mariadb://127.0.0.1:" + port + "/test";
+        String drop = "DROP TABLE IF EXISTS kof_disp";
+        String create = "CREATE TABLE kof_disp (id INT, name VARCHAR(32))";
+        String del = "DELETE FROM kof_disp";
+        String insert = "INSERT INTO kof_disp VALUES (?, ?)";
+        String select = "SELECT id, name FROM kof_disp WHERE id = ?";
+        String alias = "Alias";
+        return """
+                .section .rodata
+                .Ld_raw_urlfull: .ascii "URLFULL"
+                .Ld_raw_urlhost: .ascii "URLHOST"
+                .Ld_raw_drop: .ascii "DROPSQL"
+                .Ld_raw_create: .ascii "CREATESQL"
+                .Ld_raw_del: .ascii "DELSQL"
+                .Ld_raw_insert: .ascii "INSERTSQL"
+                .Ld_raw_select: .ascii "SELECTSQL"
+                .Ld_raw_alias: .ascii "ALIAS"
+                .section .data
+                .align 3
+                .Lkof_heap_root_start:
+                .Lkof_heap_root_end:
+                .section .text
+                .globl _start
+                _start:
+                    andi sp, sp, -16
+                    addi sp, sp, -112
+                    # slots: 0 urlfull 8 urlhost 16 drop 24 create 32 del 40 insert 48 select 56 alias
+                    la   a0, .Ld_raw_urlfull
+                    li   a1, LEN_URLFULL
+                    call kof_io_make_string
+                    sd   a0, 0(sp)
+                    la   a0, .Ld_raw_urlhost
+                    li   a1, LEN_URLHOST
+                    call kof_io_make_string
+                    sd   a0, 8(sp)
+                    la   a0, .Ld_raw_drop
+                    li   a1, LEN_DROP
+                    call kof_io_make_string
+                    sd   a0, 16(sp)
+                    la   a0, .Ld_raw_create
+                    li   a1, LEN_CREATE
+                    call kof_io_make_string
+                    sd   a0, 24(sp)
+                    la   a0, .Ld_raw_del
+                    li   a1, LEN_DEL
+                    call kof_io_make_string
+                    sd   a0, 32(sp)
+                    la   a0, .Ld_raw_insert
+                    li   a1, LEN_INSERT
+                    call kof_io_make_string
+                    sd   a0, 40(sp)
+                    la   a0, .Ld_raw_select
+                    li   a1, LEN_SELECT
+                    call kof_io_make_string
+                    sd   a0, 48(sp)
+                    la   a0, .Ld_raw_alias
+                    li   a1, LEN_ALIAS
+                    call kof_io_make_string
+                    sd   a0, 56(sp)
+                    # h0 = connect(urlfull); type == 2
+                    ld   a0, 0(sp)
+                    call kof_db_connect
+                    mv   s1, a0
+                    mv   a0, s1
+                    call kof_db_type
+                    call kof_println_int
+                    # drop -> 0
+                    mv   a0, s1
+                    ld   a1, 16(sp)
+                    call kof_db_execute
+                    call kof_println_int
+                    # create -> 0
+                    mv   a0, s1
+                    ld   a1, 24(sp)
+                    call kof_db_execute
+                    call kof_println_int
+                    # delete (tabela vazia) -> 0
+                    mv   a0, s1
+                    ld   a1, 32(sp)
+                    call kof_db_execute
+                    call kof_println_int
+                    # execute2(insert, 7, "Alias") -> 1
+                    mv   a0, s1
+                    ld   a1, 40(sp)
+                    li   a2, 7
+                    ld   a3, 56(sp)
+                    call kof_db_execute2
+                    call kof_println_int
+                    # query1(select, 7) -> size 1
+                    mv   a0, s1
+                    ld   a1, 48(sp)
+                    li   a2, 7
+                    li   a3, 0
+                    call kof_db_query1
+                    mv   s2, a0
+                    mv   a0, s2
+                    call kof_list_size
+                    call kof_println_int
+                    # close(h0)
+                    mv   a0, s1
+                    call kof_db_close
+                    # h1 = connect(host-only mariadb:// alias); resolve != 0
+                    ld   a0, 8(sp)
+                    call kof_db_connect
+                    mv   s1, a0
+                    mv   a0, s1
+                    call kof_db_resolve
+                    snez a0, a0
+                    call kof_println_int
+                    # type == 2
+                    mv   a0, s1
+                    call kof_db_type
+                    call kof_println_int
+                    # query1 on h1 -> size 1
+                    mv   a0, s1
+                    ld   a1, 48(sp)
+                    li   a2, 7
+                    li   a3, 0
+                    call kof_db_query1
+                    mv   s2, a0
+                    mv   a0, s2
+                    call kof_list_size
+                    call kof_println_int
+                    mv   a0, s1
+                    call kof_db_close
+                    li   a0, 0
+                    li   a7, 93
+                    ecall
+                .globl kof_super_table
+                kof_super_table:
+                    .word 0
+                .globl kof_equals_table
+                kof_equals_table:
+                    .quad 0
+                .globl kof_hashcode_table
+                kof_hashcode_table:
+                    .quad 0
+                .globl kof_tostring_table
+                kof_tostring_table:
+                    .quad 0
+                .globl sqlite3_open
+                sqlite3_open:
+                    ret
+                .globl sqlite3_prepare_v2
+                sqlite3_prepare_v2:
+                    ret
+                .globl sqlite3_step
+                sqlite3_step:
+                    ret
+                .globl sqlite3_finalize
+                sqlite3_finalize:
+                    ret
+                .globl sqlite3_changes
+                sqlite3_changes:
+                    ret
+                .globl sqlite3_close
+                sqlite3_close:
+                    ret
+                .globl sqlite3_column_count
+                sqlite3_column_count:
+                    ret
+                .globl sqlite3_column_name
+                sqlite3_column_name:
+                    ret
+                .globl sqlite3_column_type
+                sqlite3_column_type:
+                    ret
+                .globl sqlite3_column_int
+                sqlite3_column_int:
+                    ret
+                .globl sqlite3_column_text
+                sqlite3_column_text:
+                    ret
+                .globl sqlite3_bind_text
+                sqlite3_bind_text:
+                    ret
+                .globl sqlite3_bind_int
+                sqlite3_bind_int:
+                    ret
+                """
+                .replace("LEN_DROP", String.valueOf(drop.length()))
+                .replace("LEN_CREATE", String.valueOf(create.length()))
+                .replace("LEN_DEL", String.valueOf(del.length()))
+                .replace("LEN_INSERT", String.valueOf(insert.length()))
+                .replace("LEN_SELECT", String.valueOf(select.length()))
+                .replace("LEN_ALIAS", String.valueOf(alias.length()))
+                .replace("LEN_URLFULL", String.valueOf(urlFull.length()))
+                .replace("LEN_URLHOST", String.valueOf(urlHost.length()))
+                .replace("URLFULL", urlFull)
+                .replace("URLHOST", urlHost)
+                .replace("DROPSQL", drop)
+                .replace("CREATESQL", create)
+                .replace("DELSQL", del)
+                .replace("INSERTSQL", insert)
+                .replace("SELECTSQL", select)
+                .replace("ALIAS", alias);
+    }
+
+    private static String dispatchOracle() {
+        return """
+                2
+                0
+                0
+                0
+                1
+                1
+                1
+                2
+                1""";
+    }
+
+    @Test
+    void dispatchExecuteQueryAgainstRealMariaDbOnRiscv64(@TempDir Path tempDir) throws Exception {
+        assumeRiscv();
+        assumeMaria();
+        String harness = dispatchHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String out = buildRun("riscv64", tempDir, "dp_rv", harness + "\n" + runtime);
+        assertEquals(dispatchOracle(), out, "dispatch mysql riscv64 diverge do oráculo");
+    }
+
+    @Test
+    void dispatchExecuteQueryAgainstRealMariaDbOnAarch64(@TempDir Path tempDir) throws Exception {
+        assumeAarch64();
+        assumeMaria();
+        String harness = dispatchHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String riscv = harness + "\n" + runtime;
+        StringBuilder arm = new StringBuilder();
+        for (String line : riscv.split("\n", -1)) {
+            for (String t : NativeAarch64Translator.translateRiscvToAarch64(line)) arm.append(t).append('\n');
+        }
+        String out = buildRun("aarch64", tempDir, "dp_aa", arm.toString());
+        assertEquals(dispatchOracle(), out, "dispatch mysql aarch64 diverge do oráculo");
+    }
+
+    @Test
+    void withoutDispatchPieceLinkFailsSabotage(@TempDir Path tempDir) throws IOException {
+        assumeRiscv();
+        String harness = dispatchHarness();
+        Set<Integer> keep = new LinkedHashSet<>(RiscvSlices.keepForProgramText(harness));
+        int b47b = -1;
+        for (RiscvSlices.Piece p : RiscvSlices.pieces()) {
+            if ("RISCV_RUNTIME_ASM_B_47B".equals(p.field())) b47b = p.index();
+        }
+        assertTrue(b47b >= 0, "peça B47b (dispatch mysql cross) não encontrada no inventário");
+        assertTrue(keep.remove(b47b), "B47b deveria estar no keep do harness de dispatch");
+        String runtime = RiscvSlices.renderSubset(keep);
+        Path asm = tempDir.resolve("sab_dp.s");
+        Files.writeString(asm, harness + "\n" + runtime);
+        Path obj = tempDir.resolve("sab_dp.o");
+        Path bin = tempDir.resolve("sab_dp");
+        runCapture("riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
+        String[] r = runAllowFail("riscv64-linux-gnu-ld", "--no-relax", "-o", bin.toString(), obj.toString());
+        assertNotEquals("0", r[1], "sem a B47b o link deveria falhar (undefined kof_db_execute/query); saída: " + r[0]);
+        assertTrue(r[0].contains("kof_db_execute") || r[0].contains("kof_db_query"),
+                "a falha deve citar o dispatch kof_db_execute/query: " + r[0]);
+    }
+
     @Test
     void greetingParseMatchesOracleOnRiscv64(@TempDir Path tempDir) throws Exception {
         assumeRiscv();

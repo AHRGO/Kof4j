@@ -13,6 +13,27 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **S5.4 slice 2 (db-parity, gaps-db lane) — the `execute`/`query` MySQL
+    dispatch on the cross + real `transaction { }` (cross piece `B47b`)**
+    (24/09): a resolved type-2 handle now reaches the wire through
+    `db.execute`/`db.query` — the generated `kof_db_execute[N]`/`kof_db_query[N]`
+    dispatch on `kof_db_type` (2 → client-side bind substitution `B71` +
+    `B72`/`B70`, else the sqlite branch) and moved to a new piece `B47b` (the
+    dispatch outgrew the `B47` frame; `B47` keeps resolve/type/connect/close/
+    bind/transaction). `kof_db_connect` zeroes user2/pass2 (the host-only
+    signature) so the URL without userinfo authenticates, and `kof_db_close`
+    closes a type-2 connection via `kof_plat_close`. `transaction { }` rode
+    along: the B47 BEGIN/COMMIT/ROLLBACK call `kof_db_execute`, which now
+    dispatches, so the real commands run over `COM_QUERY`. The `-lmariadb`
+    link-by-use is moot — the cross wire is self-contained (raw sockets + its
+    own SHA1), no external driver is linked. Proof:
+    `KofDbE2ETest#crossNativeMariadbAliasWireProtocol` (riscv64 + aarch64
+    mirror of the x86 alias test, `mariadb://` with userinfo and host-only,
+    real row output) + `#crossNativeMariadbTransactionCommits` /
+    `#...RollsBackOnFailure` + `NativeRiscvDbWireTest#dispatchExecuteQueryAgainstRealMariaDb*`
+    + `withoutDispatchPieceLinkFailsSabotage` under qemu against the real
+    MariaDB.
+
   - **S5.4 slice 1 (db-parity, gaps-db lane) — real MySQL/MariaDB `connect`
     on the cross (cross piece `B73`)** (24/09): `kof_db_connect` now accepts
     `mysql://`/`mariadb://` on riscv64/aarch64 — URL parse

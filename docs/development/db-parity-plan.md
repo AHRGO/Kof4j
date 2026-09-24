@@ -8,7 +8,7 @@
 > when parity is complete.
 
 **Owner:** `gaps-db` lane (handed over 21/09 by order of the maintainer, under `D-DB-PARITY-OWNER`; S0/S1 authorized) · **Records/plan:** docs/plataforma lane
-**Branch:** `beta-0.5.0` · **Status:** S0 ✅ DONE (21/09, session 9092) — honest native refusal of an unsupported scheme with the named `DB001` code, plus real link-by-use (no `libmariadb` link for non-mysql literals); **S1 ✅ DONE on Native x86-64 (23/09, gaps-db lane)** — `mariadb://` is a `mysql://` wire alias; cross stays honest `DB001` until the mysql wire is ported (R7) — **superseded by S5.4 slice 1 (24/09, piece `B73`): `mysql://`/`mariadb://` on the cross now connect for real**; **S2 ✅ DONE on JVM/JS/Android (23/09, gaps-db lane)** — a missing JDBC driver is now a named `DB001` diagnostic (real connection failures untouched); **S3/S4 ✅ DONE 23/09 (gaps-db lane)** — `mongodb://` real on JVM/Android and declared `DB001` on JS/Native; `oracle` declared (no driver/server on the host); **S5.0 (cross socket layer) ✅ SATISFIED 23/09 (measured — already proven by the cross HTTP core)**; **S5.1 (handshake+auth) ✅ SATISFIED 23/09 (pieces `B62`–`B66`): SHA1/bswap + scramble/lenenc + greeting parse + auth-response build + the socket round-trip, proven by `NativeRiscvDbWireTest` on riscv64+aarch64 (qemu, against the JVM oracle and against the REAL MariaDB — the server returns the OK packet; an unknown DB yields Err). The Kof surface (`db.connect` cross) now connects for real (S5.4 slice 1, piece `B73`) and only refuses non-ported schemes with the honest `DB001`**; **S5.2 (`COM_QUERY`) 🟡 PARTIAL 23/09 (pieces `B67`–`B69`) — request framing + first-response classification (`SELECT 1`→1, `SET`→0, bad SQL→255) AND the packet reader + resultset header (ncols + first-row lenenc payload: `SELECT 1`→1col/[01 31], `SELECT 1,'ab'`→2col/[01 31 02 61 62]), proven on riscv64+aarch64 (qemu) against the real MariaDB; materialising all rows as Kof values is the next slice**
+**Branch:** `beta-0.5.0` · **Status:** S0 ✅ DONE (21/09, session 9092) — honest native refusal of an unsupported scheme with the named `DB001` code, plus real link-by-use (no `libmariadb` link for non-mysql literals); **S1 ✅ DONE on Native x86-64 (23/09, gaps-db lane)** — `mariadb://` is a `mysql://` wire alias; cross stays honest `DB001` until the mysql wire is ported (R7) — **superseded by S5.4 slice 1 (24/09, piece `B73`): `mysql://`/`mariadb://` on the cross now connect for real**; **S2 ✅ DONE on JVM/JS/Android (23/09, gaps-db lane)** — a missing JDBC driver is now a named `DB001` diagnostic (real connection failures untouched); **S3/S4 ✅ DONE 23/09 (gaps-db lane)** — `mongodb://` real on JVM/Android and declared `DB001` on JS/Native; `oracle` declared (no driver/server on the host); **S5.0 (cross socket layer) ✅ SATISFIED 23/09 (measured — already proven by the cross HTTP core)**; **S5.1 (handshake+auth) ✅ SATISFIED 23/09 (pieces `B62`–`B66`): SHA1/bswap + scramble/lenenc + greeting parse + auth-response build + the socket round-trip, proven by `NativeRiscvDbWireTest` on riscv64+aarch64 (qemu, against the JVM oracle and against the REAL MariaDB — the server returns the OK packet; an unknown DB yields Err). The Kof surface (`db.connect` cross) now connects for real (S5.4 slice 1, piece `B73`) and only refuses non-ported schemes with the honest `DB001`**; **S5.2 (`COM_QUERY`) 🟡 PARTIAL 23/09 (pieces `B67`–`B69`) — request framing + first-response classification (`SELECT 1`→1, `SET`→0, bad SQL→255) AND the packet reader + resultset header (ncols + first-row lenenc payload: `SELECT 1`→1col/[01 31], `SELECT 1,'ab'`→2col/[01 31 02 61 62]), proven on riscv64+aarch64 (qemu) against the real MariaDB; materialising all rows as Kof values is the next slice**; **S5.2 ✅ 24/09 (pieces `B70` resultset-as-Kof-rows, `B72` OK/affected `COM_QUERY`); S5.3 ✅ 24/09 (piece `B71` client-side bind substitution); S5.4 ✅ 24/09 (piece `B73` real cross `connect`, piece `B47b` the `execute`/`query` mysql dispatch + `transaction { }`; the scheme-parity front is done); S5.5 (ORM over mysql on the cross) OPEN — `kof.orm` row-object faces are still sqlite-only on the cross**
 
 ---
 
@@ -273,10 +273,33 @@ typed roundtrip) produces the **same observable result** on all four targets, or
     + `withoutConnectPieceLinkFailsSabotage` (riscv64 + aarch64, qemu, real
     MariaDB — both the userinfo and the host-only `kof_db_connect2` form
     authenticate) + `KofDbE2ETest#crossNativeUnsupportedSchemeNamesTruthfulDb001`.
-    **Left:** the `executeN`/`queryN` mysql dispatch in the B47 bodies (so a
-    resolved type-2 handle reaches the wire through `db.execute`/`db.query`) +
-    tx + the `#nativeMariadbAliasWireProtocol` mirror + `-lmariadb`
-    link-by-use, then move this plan to `docs/stdlib/`.
+    **Slice 2 ✅ 24/09 (piece `B47b`, gaps-db lane):** the `executeN`/`queryN`
+    mysql dispatch — a resolved type-2 handle now reaches the wire through
+    `db.execute`/`db.query` (the bodies dispatch on `kof_db_type`: 2 → B71
+    substitute + B72/B70, else the sqlite branch; the dispatch outgrew the B47
+    frame, so it lives in `B47b` and B47 keeps resolve/type/connect/close/bind/
+    transaction). `kof_db_connect` zeroes user2/pass2 (host-only signature) so
+    the URL form without userinfo authenticates; `kof_db_close` closes type 2 via
+    `kof_plat_close`. **`transaction { }` rode along for free** — the B47
+    BEGIN/COMMIT/ROLLBACK call `kof_db_execute`, which now dispatches. `-lmariadb`
+    is **moot**: the cross wire is self-contained (raw sockets + own SHA1), no
+    external driver is linked. *Proof:* `KofDbE2ETest#crossNativeMariadbAliasWireProtocol`
+    (the riscv/aarch mirror, userinfo + host-only `mariadb://`, real row output) +
+    `#crossNativeMariadbTransactionCommits` / `#...RollsBackOnFailure` (real
+    BEGIN/COMMIT/ROLLBACK over COM_QUERY) + `NativeRiscvDbWireTest#dispatchExecuteQueryAgainstRealMariaDb*`
+    + `withoutDispatchPieceLinkFailsSabotage` (riscv64 + aarch64, qemu, real
+    MariaDB). **S5.4 complete; the scheme-parity front is done.**
+  - **S5.5 — `kof.orm` over the mysql wire on the cross (NEW, 24/09).** The
+    cross row-object faces (`RtB55`/`RtB55Helpers`/`RtB57`…) call `sqlite3_*`
+    directly on the handle from `kof_orm_conn`, which refuses anything but type 1
+    (`kof_orm_conn` throws `unknown db connection: db1` for a type-2 handle —
+    measured 24/09). Compile is clean (no `ORM001`); the refusal is honest but
+    **misnamed** and the mysql ORM is absent. Scope: make `kof_orm_conn` accept
+    type 2 and branch the row-object faces on the connection type (or rebuild
+    them over `kof_db_execute`/`kof_db_query`, which already dispatch — the
+    DB-1 option-A intent). *Proof when done:* `orm.*` E2E over `mysql://` under
+    qemu on both cross targets. Until then this stays a **declared interim
+    gap** (never a silent accept).
 
 ## Non-goals / invariants
 

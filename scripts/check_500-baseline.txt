@@ -40,7 +40,6 @@
 553	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmMapset0.java
 598	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmRt0.java
 581	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmRtB33.java
-586	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmRtB47.java
 502	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmRtB54.java
 510	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmRtB55.java
 517	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvCrossEmit.java

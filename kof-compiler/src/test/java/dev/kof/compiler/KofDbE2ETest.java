@@ -1138,6 +1138,168 @@ class KofDbE2ETest {
         }
     }
 
+    // S5.4 fatia 2 (24/09): o espelho cross do `nativeMariadbAliasWireProtocol`
+    // — o MESMO programa Kof (execute com binds + query com bind) agora roda de
+    // verdade no riscv64/aarch64 contra o MariaDB real. Prova a cadeia inteira:
+    // `db.connect` (B73) + dispatch type 2 no `kof_db_execute`/`kof_db_query`
+    // (B47b) + substituição client-side B71 + B72/B70.
+    @Test
+    void crossNativeMariadbAliasWireProtocol(@TempDir Path tempDir) throws IOException {
+        int port;
+        try { port = Integer.parseInt(System.getenv().getOrDefault("KOF_MYSQL_PORT", "13306")); }
+        catch (NumberFormatException e) { port = 13306; }
+        boolean up;
+        try (java.net.Socket s = new java.net.Socket()) {
+            s.connect(new java.net.InetSocketAddress("127.0.0.1", port), 500);
+            up = s.isConnected();
+        } catch (Exception e) { up = false; }
+        assumeTrue(up, "MariaDB server not reachable on 127.0.0.1:" + port);
+        Path source = tempDir.resolve("CrossAlias.kf");
+        Files.writeString(source, """
+            main() {
+                var db = db.connect("mariadb://root:kofpass@127.0.0.1:%d/test")
+                db.execute(db, "create table if not exists kof_xalias(id int, name varchar(50))")
+                db.execute(db, "delete from kof_xalias")
+                db.execute(db, "insert into kof_xalias values (?, ?)", 7, "Alias")
+                var rows = db.query(db, "select id, name from kof_xalias where id = ?", 7)
+                for (var r in rows) { println(r) }
+                db.close(db)
+                var db2 = db.connect("mariadb://127.0.0.1:%d/test")
+                var rows2 = db.query(db2, "select id, name from kof_xalias where id = ?", 7)
+                for (var r in rows2) { println(r) }
+                db.close(db2)
+            }
+            """.formatted(port, port));
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            String as = arch.equals("riscv64") ? "riscv64-linux-gnu-as" : "aarch64-linux-gnu-as";
+            String ld = arch.equals("riscv64") ? "riscv64-linux-gnu-ld" : "aarch64-linux-gnu-ld";
+            assumeTrue(has(as, ld, "qemu-" + arch), "cross toolchain " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sysrootOrNull(arch) != null,
+                    "sysroot cross " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sqliteAvailable(arch),
+                    "libsqlite3 " + arch + " ausente no sysroot — pulando");
+            Path out = tempDir.resolve("out-alias-" + t);
+            CompilationResult r = driver.compile(source, out, t);
+            assertTrue(r.success(), t + " deveria compilar (mariadb:// alias): " + r.diagnostics().getDiagnostics());
+            Path binFile = out.resolve("Default/Main");
+            assertTrue(Files.exists(binFile), "binário " + t + " deveria existir");
+            ProcessBuilder pb = new ProcessBuilder("qemu-" + arch, binFile.toString());
+            String prefix = qemuPrefix(arch);
+            if (prefix != null) pb.environment().put("QEMU_LD_PREFIX", prefix);
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n").trim();
+            int ec;
+            try {
+                ec = p.waitFor();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted running " + t + " binary", e);
+            }
+            assertEquals(0, ec, t + " exit code, output: '" + output + "'");
+            assertEquals("{\"id\":7,\"name\":\"Alias\"}\n{\"id\":7,\"name\":\"Alias\"}", output,
+                    t + " mariadb:// alias (userinfo + host-only) no cross");
+        }
+    }
+
+    // S5.4 fatia 2 (24/09): `transaction { }` no cross mysql. O BEGIN/COMMIT/
+    // ROLLBACK da B47 chamam `kof_db_execute`, que agora despacha por tipo — a
+    // transação real roda no wire (COM_QUERY "begin"/"commit"/"rollback").
+    @Test
+    void crossNativeMariadbTransactionCommits(@TempDir Path tempDir) throws IOException {
+        int port = crossMariaPort();
+        assertCrossMariaOutput(tempDir, """
+            main() {
+                var db = db.connect("mysql://root:kofpass@127.0.0.1:%d/test")
+                db.execute(db, "drop table if exists kof_tx")
+                db.execute(db, "create table kof_tx(x int)")
+                transaction {
+                    db.execute(db, "insert into kof_tx values (1)")
+                    db.execute(db, "insert into kof_tx values (2)")
+                }
+                var rows = db.query(db, "select count(*) as n from kof_tx")
+                for (var r in rows) { println(r) }
+                db.close(db)
+            }
+            """.formatted(port), "{\"n\":2}");
+    }
+
+    @Test
+    void crossNativeMariadbTransactionRollsBackOnFailure(@TempDir Path tempDir) throws IOException {
+        int port = crossMariaPort();
+        assertCrossMariaOutput(tempDir, """
+            main() {
+                var db = db.connect("mysql://root:kofpass@127.0.0.1:%d/test")
+                db.execute(db, "drop table if exists kof_tx")
+                db.execute(db, "create table kof_tx(x int)")
+                db.execute(db, "insert into kof_tx values (1)")
+                try {
+                    transaction {
+                        db.execute(db, "insert into kof_tx values (2)")
+                        throw "abort"
+                    }
+                } catch (String e) {
+                    println("caught:" + e)
+                }
+                var rows = db.query(db, "select count(*) as n from kof_tx")
+                for (var r in rows) { println(r) }
+                db.close(db)
+            }
+            """.formatted(port), "caught:abort\n{\"n\":1}");
+    }
+
+    /** Porta do MariaDB (assume viva) — espelho do guard dos E2E cross mysql. */
+    private static int crossMariaPort() {
+        int port;
+        try { port = Integer.parseInt(System.getenv().getOrDefault("KOF_MYSQL_PORT", "13306")); }
+        catch (NumberFormatException e) { port = 13306; }
+        boolean up;
+        try (java.net.Socket s = new java.net.Socket()) {
+            s.connect(new java.net.InetSocketAddress("127.0.0.1", port), 500);
+            up = s.isConnected();
+        } catch (Exception e) { up = false; }
+        assumeTrue(up, "MariaDB server not reachable on 127.0.0.1:" + port);
+        return port;
+    }
+
+    /** Compila e roda no riscv64+aarch64 (qemu) exigindo o MariaDB real. */
+    private void assertCrossMariaOutput(Path tempDir, String source, String expected) throws IOException {
+        Path kf = tempDir.resolve("CrossTx.kf");
+        Files.writeString(kf, source);
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            String as = arch.equals("riscv64") ? "riscv64-linux-gnu-as" : "aarch64-linux-gnu-as";
+            String ld = arch.equals("riscv64") ? "riscv64-linux-gnu-ld" : "aarch64-linux-gnu-ld";
+            assumeTrue(has(as, ld, "qemu-" + arch), "cross toolchain " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sysrootOrNull(arch) != null,
+                    "sysroot cross " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sqliteAvailable(arch),
+                    "libsqlite3 " + arch + " ausente no sysroot — pulando");
+            Path out = tempDir.resolve("out-tx-" + arch);
+            CompilationResult r = driver.compile(kf, out, t);
+            assertTrue(r.success(), t + " deveria compilar: " + r.diagnostics().getDiagnostics());
+            Path binFile = out.resolve("Default/Main");
+            ProcessBuilder pb = new ProcessBuilder("qemu-" + arch, binFile.toString());
+            String prefix = qemuPrefix(arch);
+            if (prefix != null) pb.environment().put("QEMU_LD_PREFIX", prefix);
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n").trim();
+            int ec;
+            try {
+                ec = p.waitFor();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted running " + t + " binary", e);
+            }
+            assertEquals(0, ec, t + " exit code, output: '" + output + "'");
+            assertEquals(expected, output, t + " transação mysql cross diverge do esperado");
+        }
+    }
+
     /** has() do padrão dos testes cross (command -v). */
     private static boolean has(String... cmds) {
         for (String c : cmds) {
