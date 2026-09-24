@@ -2686,13 +2686,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   `CompilerClassLowering.lowerClass` para os 3 targets Native quando a classe
   não declara `equals` e herda direto de Object. Prova: célula `classequals`
   (4 targets, `false|true|false|true`) — JS/Script/JVM já batiam.
-- **§104b-ii ⏳ ABERTO (Native):** (ii) record em coleção:
-  `kof_list_contains`/`kof_set_contains` comparam ponteiro (ou só String) —
-  `setOf(p1).contains(p2)` = **false** vs JVM **true**; `println(listOf(p1))`
-  imprime vazio (helper não conhece handle Kof p/ toString). Exige equals/
-  hash genérico por vtable nos helpers asm (x86+riscv+aarch) — unidade
-  própria, célula `objmethods` mantém Native excluído. Proibido: fallback
-  silencioso.
+- **§104b-ii ⏳ ABERTO (Native) — face CONTENÇÃO ✅ FECHADA 24/09 (lane compiler/nat 9092):** `listOf(p1).contains(p2)` / `setOf(p1).contains(p2)` / `indexOf`/`lastIndexOf` / `set.remove` comparavam **PONTEIRO** (só String por conteúdo) → **false** vs JVM **true**. **Fix:** tag 2 = objeto Kof em `CollectionWrites.stringTag` (record/classe conhecida; String=1, primitivo=0, `Object` de fora p/ não comparar box cru) → runtime `kof_obj_equals(a,b)` (a==b→1; nulo→0; String→`kof_string_equals`; senão `kof_equals_table[type_id]`, tabela densa emitida por `NativeClassMeta.emitEqualsTable`, irmã da `kof_tostring_table`), com dispatch nos helpers x86 (`RuntimeList`/`RuntimeListLookups`/`RuntimeSet`) e riscv (`NativeRiscvAsmRtB0`/`Lookups0`/`Mapset0`), aarch herdada via tradutor; `RuntimeSlices`/`RiscvSlices.programSideSymbols` += símbolo. **Bug latente irmão (medido no Q4, corrigido na mesma unidade):** o `setOf(...)` (`ExpressionStaticCallLowerer`) NÃO passava o tag do `kof_set_add` — o runtime lia registrador SUJO; com o tag 2 novo, `setOf(1, 2)` após `println(list)` = **SIGSEGV** riscv/aarch (o golden `nativeCollectionPrintMatchesJvmGolden` do §107 reproduzia; `println(setOf(...))` sozinho passava). Agora passa o tag como o `set.add`. **Prova:** `NativeRecordCollectionEqualityE2ETest` (oráculo JVM, **3/3**: x86+riscv64+aarch64) — record multi-campo, classe=identidade, `setOf(record)`/`setOf(String)` dedup, indexOf/lastIndexOf, String e primitivo. **Aberto ainda:** `map.get`/`containsKey` por CONTEÚDO (exige hashCode de conteúdo — próxima unidade), o `println(listOf(p))` cross record aninhado (FLT001, §107) e a face §114 (equals de campo referência). Proibido: fallback silencioso.
   - **Face primitivo-em-coleção — ✅ CHAR FECHADO 11/09:** o storage da coleção
     asm guarda o valor **cru** (sem box). `println(l.get(i))` com char **SIGSEGV
     (exit=139)**: `kof_list_get` retorna `0x61` e o print dispatchava
@@ -3184,7 +3178,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   sem exclusões + `NativeE2ETest#nativeMultiDimArray` (repro menor do §113
   → `2/7`); suíte completa pós-clean verde. Faces riscv/aarch: port pendente.
 
-### 114. Native: `equals`/`==` de record com campo de REFERÊNCIA (String ou record aninhado) compara PONTEIRO → `false` — ⏳ PARCIAL 11/09 (face String ✅; record-aninhado/hash/coleção = §104b-ii) (sub-face do §104b-ii (i), backend-only)
+### 114. Native: `equals`/`==` de record com campo de REFERÊNCIA (String ou record aninhado) compara PONTEIRO → `false` — ⏳ PARCIAL 11/09 (face String ✅; record-aninhado/hash ainda abertos) — face CONTENÇÃO (record dentro de coleção) ✅ FECHADA 24/09 via §104b-ii (`kof_equals_table`/`kof_obj_equals`, `NativeRecordCollectionEqualityE2ETest` 3/3) (sub-face do §104b-ii, backend-only)
 
 - **Menor repro (medido 11/09):**
   `record S(String t)` + `println(S("ab") == S("ab"))` → JVM/Script/JS `true`,
