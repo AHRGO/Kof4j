@@ -129,6 +129,16 @@ public final class CompilerIfaceRecordLowering {
                     driver, internalName, superName, ifaces, methods);
             methods.addAll(0, bridges);
         }
+        // #608 (face JVM — PR #609/#614, autoria Publio Santos, conteúdo d5455124):
+        // mesma lacuna do gate Native acima, no JVM — o invokeinterface do call
+        // site usa o descritor APAGADO da interface (`Object get()`); sem o
+        // bridge, o slot fica sem implementação → AbstractMethodError no
+        // load/1ª chamada. Os gates são complementares (JVM × Native).
+        if (driver.target == Target.JVM) {
+            List<IRMethod> bridges = CompilerRecordSupport.generateCovariantReturnBridges(
+                    driver, internalName, superName, ifaces, methods);
+            methods.addAll(bridges);
+        }
         return new IRClass(internalName, superName, ifaces, access, fields, methods, List.of(), null,
                 typeId, CompilerAnnotations.lowerAnnotations(driver, rec.annotations()));
     }

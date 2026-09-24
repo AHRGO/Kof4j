@@ -244,6 +244,34 @@ class GenericIfaceEmitE2ETest {
         assertEquals("Box: 42", out, "#613: record + interface genérica + default no Native");
     }
 
+    // ---- #608 (face JVM — PR #609/#614, autoria Publio Santos): record (não
+    //      class) implementando interface genérica também precisa da bridge no
+    //      JVM — o invokeinterface do default usa o descritor apagado ----
+
+    @Test
+    void recordImplementingGenericInterfaceGetsErasureBridgeOnJvm(@TempDir Path tmp) throws IOException {
+        // RED pré-fix (medido 23/09, tip 99419aa0c): AbstractMethodError
+        // `Method IntBox.get()Ljava/lang/Object; is abstract` — o invokeinterface
+        // de describe() dispara pelo slot apagado da interface e o record só
+        // tinha `Int get()`. Mesma face do §356/#385 para classes; o lowerRecord
+        // nunca chamava generateCovariantReturnBridges no gate JVM.
+        String out = runJvm(tmp, """
+                interface Box<T> {
+                    T get()
+                    default String describe() {
+                        return "Box: " + get()
+                    }
+                }
+                record IntBox(Int value) implements Box<Int> {
+                    Int get() { return value }
+                }
+                main() {
+                    println(IntBox(42).describe())
+                }
+                """);
+        assertEquals("Box: 42", out, "#608: record implementando interface genérica sem bridge de erasure (JVM)");
+    }
+
     @Test
     void classParamLessCovariantReturnRunsOnNative(@TempDir Path tmp) throws IOException {
         // RED pré-fix (medido 23/09): o bridge JÁ era gerado (lowerClass) mas o
