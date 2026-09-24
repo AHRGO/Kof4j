@@ -2,7 +2,7 @@
 
 # Bare-metal / bootable Kof — HAL seam + freestanding, legacy BIOS, UEFI, MCU and privilege rings (ring0/ring1)
 
-**Status:** **IN DEVELOPMENT — promoted from `future/` 22/09/2026** (maintainer order; `DECISIONS.md` §D-BAREMETAL-BOOT, queue 1.7) — enabling face **B-0** not landed yet (zero code)
+**Status:** **IN DEVELOPMENT — promoted from `future/` 22/09/2026** (maintainer order; `DECISIONS.md` §D-BAREMETAL-BOOT, queue 1.7) — the executable faces **B-0..B-3 + B-6 are LANDED** (the legacy BIOS path runs the real Kof `main` bare, end-to-end; `BiosBootE2ETest` 5/0F). What remains is **B-4 (MCU ARM/riscv32)** — blocked on the collector G-4/G-5 — and **B-5 (per-face platform bodies)**, both **rule-6 gated** (maintainer decision); there is **no open code slice** today.
 **Type:** implementation plan (promoted; execution order of the bare-metal front)
 **Date:** September 15, 2026 · **promoted:** September 22, 2026
 **Source:** `../../architecture/UNIVERSAL-PLATFORM-VISION.md` §8.2 (Native: "deploy/edge/systems") ·
