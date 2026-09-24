@@ -54,6 +54,21 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `time.sleep` imprime o `KOF BIOS ... kof_plat_sleep` legível e para) +
     bateria nativa **103/0** + `RingPrivilegeE2ETest` 5/0.
 
+  - **§490 ✅ CORRIGIDO — método desconhecido num valor builtin `Buffer`/`Secret`/
+    `KeyHandle` agora é um `SEM102` limpo** (24/09, lane compiler 9092). Esses
+    tipos têm ramo de typer dedicado, mas nome/aridade fora da tabela ao vivo
+    caía no fall-through sem contrato: `secrets.of("x").bogus()` /
+    `buffer.alloc(8).bogus()` compilavam limpo e devolviam o PRÓPRIO receptor
+    (no-op silencioso), e `secrets.of("x").bogus(1, 2)` /
+    `secrets.keyFromHex("00").bogus()` compilavam limpo e abortavam no load com
+    `ClassFormatError: Illegal class name ""`. O guard `SEM102` do #617 foi
+    generalizado de `kof.io` para esses pseudo-tipos — um gate, os quatro alvos.
+    Prova: `BuiltinUnknownMethodGuardTest` 6/6 (RED-first: 5/6 falhando antes),
+    cluster verde (`SecretE2ETest` 7/7, `KeyHandleE2ETest` 5/5, `BufferE2ETest`
+    4/4, `KofSecurityTest` 42/42). Residual declarado: método desconhecido em
+    `String` ainda falha ALTO em runtime (`NoSuchMethodError`, postura histórica
+    do Bug 34) — não é no-op silencioso.
+
   - **§489 (#617) ✅ CORRIGIDO — `File.mkdir()`/`.mkdirs()` são aliases reais de
     `create()`/`createDirectories()`; métodos `kof.io` desconhecidos dão `SEM102`
     limpo** (24/09, lane compiler 9092; ordem da mantenedora "nada de stub,

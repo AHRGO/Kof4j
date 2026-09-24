@@ -52,6 +52,21 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `time.sleep` prints the readable `KOF BIOS ... kof_plat_sleep` and halts) +
     native battery **103/0** + `RingPrivilegeE2ETest` 5/0.
 
+  - **§490 ✅ FIXED — unknown method on a `Buffer`/`Secret`/`KeyHandle` builtin
+    value is now a clean `SEM102`** (24/09, lane compiler 9092). Those types
+    have a dedicated typer branch, but a name/arity outside their live table
+    fell through with no contract: `secrets.of("x").bogus()` /
+    `buffer.alloc(8).bogus()` compiled clean and returned the RECEIVER (silent
+    no-op), and `secrets.of("x").bogus(1, 2)` /
+    `secrets.keyFromHex("00").bogus()` compiled clean then aborted at load with
+    `ClassFormatError: Illegal class name ""`. The #617 `SEM102` guard is
+    generalized from `kof.io` to these pseudo-types — one gate, all four
+    targets. Proof: `BuiltinUnknownMethodGuardTest` 6/6 (RED-first: 5/6 failing
+    before), cluster green (`SecretE2ETest` 7/7, `KeyHandleE2ETest` 5/5,
+    `BufferE2ETest` 4/4, `KofSecurityTest` 42/42). Declared residual: unknown
+    method on `String` still fails LOUD at runtime (`NoSuchMethodError`,
+    historical Bug-34 posture) — not a silent no-op.
+
   - **§489 (#617) ✅ FIXED — `File.mkdir()`/`.mkdirs()` are real aliases of
     `create()`/`createDirectories()`; unknown `kof.io` methods get a clean
     `SEM102`** (24/09, lane compiler 9092; maintainer order "nada de stub,

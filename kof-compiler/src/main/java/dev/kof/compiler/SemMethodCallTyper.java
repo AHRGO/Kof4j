@@ -178,6 +178,26 @@ public final class SemMethodCallTyper {
                     KofSecurity.instanceMethod(recv, mc.methodName(), mc.arguments().size());
             if (secretCall != null) return secretCall.returnType();
         }
+        // #490 (SEM102): método desconhecido em tipo builtin de kof.buffer /
+        // kof.security (Buffer/Secret/KeyHandle). Os ramos acima só devolvem os
+        // métodos da TABELA ao vivo; sem este guard o fall-through não tinha
+        // contrato — o emit devolvia o PRÓPRIO receptor (no-op silencioso:
+        // `secrets.of("x").bogus()` imprimia o Secret) ou vazava um UNKNOWN cujo
+        // nome de classe vazio abortava o load (`ClassFormatError: Illegal class
+        // name ""`: `s.bogus(1,2)`). É o mesmo mecanismo do #617 (kof.io), uma
+        // família ao lado. A mensagem nomeia o tipo e o método.
+        if ((KofBuffer.isBufferType(recv) || KofSecurity.isSecretType(recv)
+                || KofSecurity.isKeyHandleType(recv)) && sa.diagnostics() != null) {
+            for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
+            String builtinName = KofBuffer.isBufferType(recv) ? "Buffer"
+                    : (KofSecurity.isSecretType(recv) ? "Secret" : "KeyHandle");
+            SourcePosition mcPos = mc.position();
+            sa.diagnostics().error(mcPos != null ? mcPos.file() : "",
+                    mcPos != null ? mcPos.line() : 0, mcPos != null ? mcPos.column() : 0, 0,
+                    "'" + builtinName + "' has no method '" + mc.methodName() + "()'",
+                    "SEM102");
+            return Type.UnknownType.UNKNOWN;
+        }
         // #617 (SEM102): método desconhecido em tipo builtin de kof.io
         // (File/Path/Directory) — mesmo guard da família SEM028 (array):
         // aceitar em silêncio deixava o emit sem contrato (retorno UNKNOWN)

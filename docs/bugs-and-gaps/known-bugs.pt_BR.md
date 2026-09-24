@@ -12384,3 +12384,21 @@ main() {
 
 **Dono:** sessão 9092 (lane compiler), tabela de métodos kof.io; guard SEM102 do fix da lane issues (`aed5fe7b`).
 <!-- en-switch --> **EN:** [§488 (en)](known-bugs.md#489--filemkdir-and-filemkdirs-were-a-silent-no-op-with-classformaterror-on-the-result-now-real-aliases-of-createcreatedirectories-and-unknown-io-methods-are-a-clean-sem102---fixed-2409-issue-617)
+
+
+## §490 — Método desconhecido num valor builtin de kof.buffer / kof.security (Buffer / Secret / KeyHandle) compilava em silêncio como no-op do receptor ou ClassFormatError; agora é SEM102 limpo — ✅ CORRIGIDO 24/09
+
+**Sintoma (medido 24/09, lane compiler 9092, contra o tip `0b37c4a2`):** `Buffer`/`Secret`/`KeyHandle` têm um ramo de typer dedicado, mas um método fora da tabela ao vivo caía no fall-through sem contrato — duas faces, ambas R6. **(a) no-op silencioso:** `secrets.of("x").bogus()` compilava limpo e imprimia o Secret (`Secret(*** )`); `buffer.alloc(8).bogus()` compilava limpo e imprimia o Buffer (`Buffer[8]`). **(b) ClassFormatError:** `secrets.of("x").bogus(1, 2)` e `secrets.keyFromHex("00").bogus()` compilavam limpo e a JVM abortava no load com `ClassFormatError: Illegal class name ""`. Um método VIVO com aridade errada também passava: `s.reveal(1)` (reveal não recebe args) imprimia o Secret.
+
+**Causa raiz:** o `SemMethodCallTyper` espelha o emit para `KofBuffer`/`KofSecurity` e só retorna cedo quando `instanceMethod` acha nome/aridade. Quando ele devolve null (nome desconhecido OU aridade errada), a chamada caía na resolução genérica, cujo lowerer não guardava contrato: devolvia o próprio receptor (no-op de identidade) ou um `UNKNOWN` cujo nome de classe vazio vazava para o constant pool. É exatamente o mecanismo que o guard `SEM102` do #617 fechou para `kof.io` (`File/Path/Directory`) — `kof.buffer`/`kof.security` eram uma família ao lado.
+
+**Fix (medido 24/09, lane compiler 9092):** o guard do #617 foi generalizado no `SemMethodCallTyper` para os valores builtin `Buffer`/`Secret`/`KeyHandle`. Quando o receptor é um deles e a tabela ao vivo não resolve nome/aridade, o typer compartilhado emite um `SEM102` limpo nomeando o tipo e o método — nunca um sentinela, nunca um no-op do receptor. Um gate, os quatro alvos (o typer é independente de alvo).
+
+**Prova (Q0/Q1/Q3):** RED primeiro — `BuiltinUnknownMethodGuardTest` **5/6 falhando** antes do fix (as cinco faces compilavam limpo); GREEN agora **6/6** (5 faces de diagnóstico = `SEM102`, sem `ClassFormatError` + o controle: `buffer.alloc(4).bytes()`, `s.reveal()`, `s.redacted()`, `secrets.keyFromHex("00").rotate()` ainda compilam). Sem regressão no cluster: `SecretE2ETest` 7/7, `KeyHandleE2ETest` 5/5, `BufferE2ETest` 4/4, `BufferFfiE2ETest` 4/4, `KofSecurityTest` 42/42, `KofSecurityG9Test` 3/3, `IoUnknownMethodGuardTest` 5/5.
+
+**Residual (declarado, NÃO silencioso):** método desconhecido em `String` (`"x".bogus()`) ainda compila e falha ALTO em runtime (`NoSuchMethodError`) — a postura histórica do Bug 34 para builtins, distinta do `ClassFormatError` daqui; não é no-op silencioso, então está fora deste fix e fica declarado.
+
+**Status:** ✅ CORRIGIDO 24/09.
+
+**Dono:** sessão 9092 (lane compiler), typer de membros compartilhado; família de guard do #617 (`aed5fe7b`).
+<!-- en-switch --> **EN:** [§490 (en)](known-bugs.md#490--unknown-method-on-a-kofbuffer--kofsecurity-builtin-value-buffer--secret--keyhandle-was-silently-compiled-as-a-receiver-no-op-or-a-classformaterror-now-a-clean-sem102---fixed-2409)
