@@ -302,16 +302,12 @@ public final class RuntimeUefi {
                 call kof_plat_write
                 xorl %edi, %edi
                 call kof_plat_exit_group
+            .Lkof_uefi_time_fail_halt:
+                jmp .Lkof_uefi_time_fail_halt
             """);
-        String fmsg = "KOF UEFI: GetTime falhou!";
-        StringBuilder words = new StringBuilder();
-        for (int i = 0; i < fmsg.length(); i++) {
-            if (i > 0) words.append(',');
-            char c = fmsg.charAt(i);
-            words.append(c == '\'' ? "'\\''" : "'" + c + "'");
-        }
+        String fmsg = "KOF UEFI: GetTime falhou!\n";
         sb.append("        .section .rodata\n")
-          .append(".Lkof_uefi_gettime_fail: .word ").append(words).append('\n')
+          .append(".Lkof_uefi_gettime_fail: .ascii \"").append(fmsg).append("\"\n")
           .append(".Lkof_uefi_gettime_fail_end:\n")
           .append("        .section .text\n");
     }
@@ -351,17 +347,15 @@ public final class RuntimeUefi {
      *  própria costura de write e sai via {@code kof_plat_exit_group} —
      *  nunca um corpo syscall-Linux que não existe no firmware. */
     public static void emitUefiRefuse(StringBuilder sb, String symbols) {
-        String msg = "KOF UEFI: capacidade nao suportada nesta fatia (B-2): " + symbols + "\r\n";
+        String msg = "KOF UEFI: capacidade nao suportada nesta fatia (B-5): " + symbols + "\n";
         String tag = symbols.split(", ")[0].replace("kof_plat_", "");
-        StringBuilder words = new StringBuilder();
-        for (int i = 0; i < msg.length(); i++) {
-            if (i > 0) words.append(',');
-            char c = msg.charAt(i);
-            words.append(c == '\'' ? "'\\''" : "'" + c + "'");
-        }
         String lbl = ".Lkof_uefi_refuse_" + tag;
+        String halt = ".Lkof_uefi_refuse_halt_" + tag;
+        // kof_plat_write converte ASCII->UTF-16; passar um .word UTF-16 aqui
+        // (desenho antigo) corrompia a mensagem — a fonte é ASCII.
         sb.append("        .section .rodata\n")
-          .append(lbl).append(": .word ").append(words).append('\n')
+          .append(lbl).append(": .ascii \"").append(msg.replace("\\", "\\\\").replace("\"", "\\\""))
+          .append("\"\n")
           .append(lbl).append("_end:\n")
           .append("        .section .text\n");
         for (String sym : symbols.split(", ")) {
@@ -375,6 +369,13 @@ public final class RuntimeUefi {
           .append("        movq $").append(lbl).append("_end - ").append(lbl).append(", %rdx\n")
           .append("        call kof_plat_write\n")
           .append("        xorl %edi, %edi\n")
-          .append("        call kof_plat_exit_group\n");
+          .append("        call kof_plat_exit_group\n")
+          // kof_plat_exit_group RETORNA no UEFI (devolve o status ao StartImage
+          // pelo `ret`); sem este spin a recusa cairia no texto seguinte e
+          // crasharia o app (o bug latente do random). BIOS usa cli;hlt; aqui
+          // um spin puro (sem instrução privilegiada) garante o "nunca
+          // continua" sem fall-through.
+          .append(halt).append(":\n")
+          .append("        jmp ").append(halt).append('\n');
     }
 }

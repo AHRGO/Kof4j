@@ -4,9 +4,10 @@ package dev.kof.compiler.runtime;
  * B-5 (D-BAREMETAL-BODIES): corpos da costura {@code kof_plat_*} da face BIOS
  * (x86_64, bare legacy — SeaBIOS/MPC). Mesma ABI SysV dos corpos Linux de
  * {@code RuntimePlat}; o que muda é a fala com a plataforma: no BIOS não há
- * syscalls — o relógio de parede vem do RTC CMOS (portas 0x70/0x71) e a saída
- * de diagnóstico sai em ASCII pelo COM1. Famílias ainda sem corpo (mono/sleep,
- * random, I/O, rede, threads) recusam de forma NOMEADA (R6), nunca stub.
+ * syscalls — o relógio de parede vem do RTC CMOS (portas 0x70/0x71), o
+ * monotônico do TSC calibrado pelo PIT, e a saída de diagnóstico sai em ASCII
+ * pelo COM1. Famílias ainda sem corpo (I/O, rede, threads) recusam de forma
+ * NOMEADA (R6), nunca stub.
  *
  * <p>Extraído de {@code RuntimePlat} para manter o gate ≤500 (o corpo do RTC é
  * grande); a classe+método continua sendo a granularidade de fatia do podador
@@ -57,7 +58,7 @@ public final class RuntimeBios {
      *  status B), trata 12h/24h, resolve o ano (século 0x32, senão infere
      *  19xx/20xx) e devolve {@code ts[0]=tv_sec} (epoch) +
      *  {@code ts[1]=tv_nsec=0} — a ABI que {@code kof_now}→{@code time.now()}
-     *  já consome. Mono/sleep ainda sem corpo viram recusa legível. */
+     *  já consome. Mono/sleep têm corpo próprio (TSC/PIT) nesta fatia. */
     static void emitTime(StringBuilder sb) {
         RuntimeCivilEpoch.emit(sb);
         sb.append("""
@@ -198,7 +199,7 @@ public final class RuntimeBios {
                 ret
             """);
         emitSleep(sb);
-        emitRefuse(sb, "kof_plat_time_mono");
+        emitMono(sb);
     }
 
     /** B-5 (D-BAREMETAL-BODIES): {@code kof_plat_sleep} no BIOS pelo PIT
@@ -211,9 +212,16 @@ public final class RuntimeBios {
      *  <p>Mono ainda sem corpo → recusa legível (fatia seguinte). */
     static void emitSleep(StringBuilder sb) {
         sb.append("""
+            .section .data
+            .globl kof_plat_pit_ready
+            kof_plat_pit_ready: .byte 0
+
             .section .text
             .type kof_plat_pit_init, @function
             kof_plat_pit_init:
+                cmpb $0, kof_plat_pit_ready(%rip)
+                jne .Lkof_pit_init_done
+                movb $1, kof_plat_pit_ready(%rip)
                 movw $0x43, %dx
                 movb $0x34, %al          # canal 0, lo/hi, modo 2, binario
                 outb %al, %dx
@@ -221,6 +229,7 @@ public final class RuntimeBios {
                 xorl %eax, %eax
                 outb %al, %dx            # reload lo = 0
                 outb %al, %dx            # reload hi = 0 -> 65536
+            .Lkof_pit_init_done:
                 ret
 
             .type kof_plat_pit_read, @function
@@ -280,6 +289,94 @@ public final class RuntimeBios {
                 cmpq %r13, %r12
                 jb .Lkof_sleep_loop
             .Lkof_sleep_done:
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                ret
+            """);
+    }
+
+    /** B-5 (D-BAREMETAL-BODIES): {@code kof_plat_time_mono} no BIOS.
+     *  O PIT de 16 bits dá a volta a cada 54.9 ms — um delta único entre duas
+     *  chamadas distantes perderia wraps. A fonte monotônica é o <b>TSC</b>
+     *  ({@code rdtsc}, 64 bits, sem wrap na prática); a frequência é
+     *  <b>calibrada uma vez</b> contra o PIT (mede-se o delta do TSC sobre
+     *  100000 ticks = ~83.8 ms) e o resultado vira {@code ts[0]=tv_sec} +
+     *  {@code ts[1]=tv_nsec} — a ABI que {@code kof_obs_mono_nanos} consome.
+     *  Nunca stub: o primeiro call calibra, os seguintes usam a base. */
+    static void emitMono(StringBuilder sb) {
+        sb.append("""
+            .section .data
+            kof_plat_mono_base: .quad 0
+            kof_plat_mono_freq: .quad 0
+            kof_plat_mono_ready: .byte 0
+
+            .section .text
+            .globl kof_plat_time_mono
+            .type kof_plat_time_mono, @function
+            kof_plat_time_mono:
+                pushq %rbx
+                pushq %r12
+                pushq %r13
+                pushq %r14
+                pushq %r15
+                movq %rdi, %rbx                 # ts
+                cmpb $0, kof_plat_mono_ready(%rip)
+                jne .Lkof_mono_go
+                call kof_plat_pit_init
+                call kof_plat_pit_read
+                movl %eax, %r14d                # prev
+                xorl %r15d, %r15d               # acumulado
+                rdtsc
+                shlq $32, %rdx
+                orq %rdx, %rax
+                movq %rax, %r12                 # t0
+            .Lkof_mono_cal_loop:
+                call kof_plat_pit_read
+                movl %r14d, %ecx
+                movl %eax, %r14d
+                movl %ecx, %edx
+                subl %eax, %edx                 # delta = prev - cur
+                cmpl %eax, %ecx
+                jae .Lkof_mono_cal_nowrap
+                addl $65536, %edx
+            .Lkof_mono_cal_nowrap:
+                movl %edx, %edx
+                addq %rdx, %r15
+                cmpq $100000, %r15              # ~83.8 ms de PIT
+                jb .Lkof_mono_cal_loop
+                rdtsc
+                shlq $32, %rdx
+                orq %rdx, %rax
+                subq %r12, %rax                 # delta TSC na janela
+                movq %rax, %rcx
+                movq $1193182, %rax
+                imulq %rcx, %rax                # delta*1193182
+                xorl %edx, %edx
+                movq $100000, %rcx
+                divq %rcx                       # freq = TSC por segundo
+                movq %rax, kof_plat_mono_freq(%rip)
+                rdtsc
+                shlq $32, %rdx
+                orq %rdx, %rax
+                movq %rax, kof_plat_mono_base(%rip)
+                movb $1, kof_plat_mono_ready(%rip)
+            .Lkof_mono_go:
+                rdtsc
+                shlq $32, %rdx
+                orq %rdx, %rax
+                subq kof_plat_mono_base(%rip), %rax   # delta TSC
+                movq $1000000000, %rcx
+                mulq %rcx                       # rdx:rax = delta*1e9
+                movq kof_plat_mono_freq(%rip), %rcx
+                divq %rcx                       # rax = ns totais
+                xorl %edx, %edx
+                movq $1000000000, %rcx
+                divq %rcx                       # rax=sec, rdx=nsec
+                movq %rax, 0(%rbx)
+                movq %rdx, 8(%rbx)
+                popq %r15
                 popq %r14
                 popq %r13
                 popq %r12

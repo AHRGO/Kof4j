@@ -76,6 +76,17 @@ class NativeUefiE2ETest {
             }
             """;
 
+    /** B-5: uma família ainda sem corpo no UEFI (rede → kof_plat_net_*) recusa
+     *  de forma NOMEADA (R6) e o app PARA — o spin da recusa impede o
+     *  fall-through que crashava o OVMF. */
+    private static final String NET_REFUSE = """
+            main() {
+                println("BEFORE")
+                println(http.get("http://example.com"))
+                println("AFTER")
+            }
+            """;
+
     private static boolean hasTool(String tool, String... args) {
         String[] cmd = new String[args.length + 1];
         cmd[0] = tool;
@@ -297,5 +308,18 @@ class NativeUefiE2ETest {
         assertTrue(!text.contains("false"),
                 "random.* no UEFI colidiu/sem entropia. Log: "
                         + text.substring(Math.max(0, text.length() - 400)));
+    }
+
+    @Test
+    void uefiNetRefusalStopsWithDiagnostic(@TempDir Path tempDir) throws Exception {
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path bin = build(tempDir, NET_REFUSE, true);
+        String text = bootUnderOvmf(tempDir, bin, "kof_plat_net");
+        String tail = text.substring(Math.max(0, text.length() - 600));
+        assertTrue(text.contains("kof_plat_net"),
+                "recusa NOMEADA da rede no UEFI nao apareceu. Log: " + tail);
+        assertTrue(!text.contains("AFTER"),
+                "a recusa UEFI nao PAROU o app (fall-through / crash). Log: " + tail);
     }
 }

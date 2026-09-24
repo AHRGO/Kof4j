@@ -13,6 +13,25 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **B-5 `kof_plat_time_mono` — REAL no BIOS (TSC calibrado pelo PIT) +
+    fall-through da recusa NOMEADA corrigido no UEFI** (24/09, lane baremetal
+    9092; `D-BAREMETAL-BODIES`). O monotônico do BIOS não pode usar um delta
+    único do PIT (o contador de 16 bits dá a volta a cada 54.9 ms), então
+    `kof_plat_time_mono` lê o **TSC** (64 bits, `rdtsc`) e calibra a frequência
+    **uma vez** contra o PIT (delta do TSC sobre 100000 ticks ≈ 83.8 ms),
+    emitindo `ts[0]=tv_sec`/`ts[1]=tv_nsec` — exatamente o que
+    `kof_obs_mono_nanos` consome; o init do PIT ganhou guarda de idempotência
+    compartilhada com o `sleep`. No UEFI o corpo de recusa é corrigido: emitia
+    um array `.word` UTF-16 para `kof_plat_write` (que já converte
+    ASCII→UTF-16) e, como `kof_plat_exit_group` *retorna* no UEFI, caía no
+    texto seguinte e **crashava o app sob OVMF** — agora a mensagem é ASCII e
+    um spin garante o "nunca continua". Prova: `BiosBootE2ETest` **10/0** (novo
+    `biosMonoSpanDuration`: um `time.sleep` de 60 ms entre
+    `spanStart`/`spanEnd` dá `durationMicros >= 10000`; a recusa de `http.get`
+    é alcançável em runtime) + `NativeUefiE2ETest` **7/0** (novo
+    `uefiNetRefusalStopsWithDiagnostic`: a recusa nomeada imprime e o app para,
+    sem fall-through).
+
   - **§488 ✅ CORRIGIDO — o caminho de texto MySQL do x86 emitia NULL como string
     VAZIA crua (JSON inválido `{"n":,`) e uma célula de string vazia como número
     cru** (24/09, lane compiler 9092; a mantenedora autorizou o fix no chat — a

@@ -342,9 +342,9 @@ class BiosBootE2ETest {
     }
 
     /** B-5 (D-BAREMETAL-BODIES): capacidade ainda SEM corpo no BIOS
-     *  ({@code observability.spanStart} → {@code kof_plat_time_mono}) recusa de
-     *  forma NOMEADA (R6) com diagnóstico **ASCII legível** no COM1 — nunca
-     *  stub silencioso nem a forma UTF-16 do UEFI. O programa para na recusa. */
+     *  ({@code http.get} → {@code kof_plat_net_*}) recusa de forma NOMEADA
+     *  (R6) com diagnóstico **ASCII legível** no COM1 — nunca stub silencioso
+     *  nem a forma UTF-16 do UEFI. O programa para na recusa. */
     @Test
     void biosUnsupportedCapabilityPrintsReadableRefusal(@TempDir Path tempDir) throws Exception {
         Path qemu = findQemu();
@@ -354,7 +354,7 @@ class BiosBootE2ETest {
         Path img = build(tempDir, """
                 main() {
                     println("BEFORE")
-                    var h = observability.spanStart("op")
+                    println(http.get("http://example.com"))
                     println("AFTER")
                 }
                 """);
@@ -367,7 +367,7 @@ class BiosBootE2ETest {
             while (System.currentTimeMillis() < deadline) {
                 if (Files.exists(ser)) {
                     text = serialText(ser);
-                    if (text.contains("kof_plat_time_mono")) break;
+                    if (text.contains("kof_plat_net")) break;
                 }
                 Thread.sleep(500);
             }
@@ -376,11 +376,57 @@ class BiosBootE2ETest {
         }
         assertTrue(text.contains("BEFORE"),
                 "o programa nao comecou a rodar antes da recusa. Log: " + text);
-        assertTrue(text.contains("KOF BIOS") && text.contains("kof_plat_time_mono"),
-                "recusa nomeada ilegivel no COM1 (esperado ASCII 'KOF BIOS ... kof_plat_time_mono'). Log: "
+        assertTrue(text.contains("KOF BIOS") && text.contains("kof_plat_net"),
+                "recusa nomeada ilegivel no COM1 (esperado ASCII 'KOF BIOS ... kof_plat_net'). Log: "
                         + text.substring(Math.max(0, text.length() - 400)));
         assertFalse(text.contains("AFTER"),
-                "a recusa deveria PARAR o programa (nada apos spanStart). Log: " + text);
+                "a recusa deveria PARAR o programa (nada apos http.get). Log: " + text);
+    }
+
+    /** B-5 (D-BAREMETAL-BODIES): {@code kof_plat_time_mono} no BIOS é REAL
+     *  (TSC calibrado pelo PIT) — provado pelo span: dormir 60 ms entre
+     *  {@code spanStart}/{@code spanEnd} produz {@code durationMicros >= 10000}
+     *  no JSON (se o mono fosse stub/recusa, não haveria duração ou seria ~0). */
+    @Test
+    void biosMonoSpanDuration(@TempDir Path tempDir) throws Exception {
+        Path qemu = findQemu();
+        assumeTrue(qemu != null, "qemu-system-x86_64 ausente");
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path img = build(tempDir, """
+                main() {
+                    var h = observability.spanStart("op")
+                    time.sleep(60)
+                    var j = observability.spanEnd(h)
+                    println(j)
+                }
+                """);
+
+        Path ser = tempDir.resolve("ser.log");
+        Process p = new ProcessBuilder(qemuCmd(qemu, img, ser)).redirectErrorStream(true).start();
+        String text = "";
+        try {
+            long deadline = System.currentTimeMillis() + 120_000;
+            while (System.currentTimeMillis() < deadline) {
+                if (Files.exists(ser)) {
+                    text = serialText(ser);
+                    if (text.contains("durationMicros")) break;
+                }
+                Thread.sleep(500);
+            }
+        } finally {
+            p.destroyForcibly();
+        }
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("\"durationMicros\"\\s*:\\s*(\\d+)").matcher(text);
+        assertTrue(m.find(),
+                "spanEnd nao trouxe durationMicros no BIOS. Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+        long us = Long.parseLong(m.group(1));
+        assertTrue(us >= 10000,
+                "mono do BIOS nao mediu o sleep de 60 ms (durationMicros=" + us
+                        + ", esperado >= 10000). Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
     }
 
     /** B-5 (D-BAREMETAL-BODIES): {@code random.*} no BIOS tem corpo REAL
