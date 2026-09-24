@@ -1925,6 +1925,262 @@ class NativeRiscvDbWireTest {
                 "a falha deve citar kof_db_mysql_execute: " + r[0]);
     }
 
+    // ---- S5.4 (gaps-db lane, 24/09): connect real no cross (peça B73) ----
+
+    /** Harness do connect cross: builda as 3 formas de URL (userinfo completa,
+     *  alias `mariadb://` e host-only + `kof_db_connect2`) mais as SQLs no heap
+     *  e prova que o handle resolvido é type 2 e a conexão está AUTENTICADA
+     *  (CREATE/INSERT pela B72 sobre o fd resolvido). O `@` e o `:` das URLs
+     *  não conflitam com `.ascii`. */
+    private static String connectHarness() {
+        int port = mysqlPort();
+        String urlFull = "mysql://root:kofpass@127.0.0.1:" + port + "/test";
+        String urlMaria = "mariadb://root:kofpass@127.0.0.1:" + port + "/test";
+        String urlHostOnly = "mysql://127.0.0.1:" + port + "/test";
+        String create = "CREATE TEMPORARY TABLE kof_b73 (id INT, name VARCHAR(16))";
+        String insert = "INSERT INTO kof_b73 VALUES (7, 's5')";
+        String select1 = "SELECT 1";
+        return """
+                .section .rodata
+                .Lc73_raw_urlfull:
+                    .ascii "URLFULL"
+                .Lc73_raw_urlmaria:
+                    .ascii "URLMARIA"
+                .Lc73_raw_urlhost:
+                    .ascii "URLHOST"
+                .Lc73_raw_create:
+                    .ascii "CREATESQL"
+                .Lc73_raw_insert:
+                    .ascii "INSERTSQL"
+                .Lc73_raw_select1:
+                    .ascii "SELECTSQL"
+                .section .data
+                .align 3
+                .Lc73_user:
+                    .zero 16
+                    .word 4
+                    .zero 4
+                    .ascii "root"
+                .align 3
+                .Lc73_pass:
+                    .zero 16
+                    .word 7
+                    .zero 4
+                    .ascii "kofpass"
+                .align 3
+                .Lkof_heap_root_start:
+                .Lkof_heap_root_end:
+                .section .text
+                .globl _start
+                _start:
+                    andi sp, sp, -16
+                    addi sp, sp, -96
+                    # SQLs no HEAP (kof_io_make_string): 0:create 8:insert 16:select1
+                    la   a0, .Lc73_raw_create
+                    li   a1, LEN_CREATE
+                    call kof_io_make_string
+                    sd   a0, 0(sp)
+                    la   a0, .Lc73_raw_insert
+                    li   a1, LEN_INSERT
+                    call kof_io_make_string
+                    sd   a0, 8(sp)
+                    la   a0, .Lc73_raw_select1
+                    li   a1, LEN_SELECT
+                    call kof_io_make_string
+                    sd   a0, 16(sp)
+                    # URLs no heap
+                    la   a0, .Lc73_raw_urlfull
+                    li   a1, LEN_URLFULL
+                    call kof_io_make_string
+                    sd   a0, 24(sp)
+                    la   a0, .Lc73_raw_urlmaria
+                    li   a1, LEN_URLMARIA
+                    call kof_io_make_string
+                    sd   a0, 32(sp)
+                    la   a0, .Lc73_raw_urlhost
+                    li   a1, LEN_URLHOST
+                    call kof_io_make_string
+                    sd   a0, 40(sp)
+                    # h0 = kof_db_connect(url full); type == 2
+                    ld   a0, 24(sp)
+                    call kof_db_connect
+                    mv   s1, a0
+                    mv   a0, s1
+                    call kof_db_type
+                    call kof_println_int
+                    # fd = resolve(h0); != 0
+                    mv   a0, s1
+                    call kof_db_resolve
+                    mv   s0, a0
+                    snez a0, s0
+                    call kof_println_int
+                    # CREATE TEMPORARY + INSERT pela B72 (fd real autenticado)
+                    mv   a0, s0
+                    ld   a1, 0(sp)
+                    call kof_db_mysql_execute
+                    call kof_println_int
+                    mv   a0, s0
+                    ld   a1, 8(sp)
+                    call kof_db_mysql_execute
+                    call kof_println_int
+                    # h1 = kof_db_connect(mariadb:// alias); type == 2 + SELECT 1
+                    ld   a0, 32(sp)
+                    call kof_db_connect
+                    mv   s2, a0
+                    mv   a0, s2
+                    call kof_db_type
+                    call kof_println_int
+                    mv   a0, s2
+                    call kof_db_resolve
+                    ld   a1, 16(sp)
+                    call kof_db_mysql_execute
+                    call kof_println_int
+                    # h2 = kof_db_connect2(host-only, user, pass); type == 2
+                    ld   a0, 40(sp)
+                    la   a1, .Lc73_user
+                    la   a2, .Lc73_pass
+                    call kof_db_connect2
+                    mv   s2, a0
+                    mv   a0, s2
+                    call kof_db_type
+                    call kof_println_int
+                    # SELECT 1 sobre h2 (auth host-only OK)
+                    mv   a0, s2
+                    call kof_db_resolve
+                    ld   a1, 16(sp)
+                    call kof_db_mysql_execute
+                    call kof_println_int
+                    li   a0, 0
+                    li   a7, 93
+                    ecall
+                .globl kof_super_table
+                kof_super_table:
+                    .word 0
+                .globl kof_equals_table
+                kof_equals_table:
+                    .quad 0
+                .globl kof_hashcode_table
+                kof_hashcode_table:
+                    .quad 0
+                .globl kof_tostring_table
+                kof_tostring_table:
+                    .quad 0
+                # B47 (execute/query sqlite) e' arrastada pelo kof_db_connect;
+                # os simbolos sqlite3_* nunca sao chamados neste harness mysql.
+                .globl sqlite3_open
+                sqlite3_open:
+                    ret
+                .globl sqlite3_prepare_v2
+                sqlite3_prepare_v2:
+                    ret
+                .globl sqlite3_step
+                sqlite3_step:
+                    ret
+                .globl sqlite3_finalize
+                sqlite3_finalize:
+                    ret
+                .globl sqlite3_changes
+                sqlite3_changes:
+                    ret
+                .globl sqlite3_close
+                sqlite3_close:
+                    ret
+                .globl sqlite3_column_count
+                sqlite3_column_count:
+                    ret
+                .globl sqlite3_column_name
+                sqlite3_column_name:
+                    ret
+                .globl sqlite3_column_type
+                sqlite3_column_type:
+                    ret
+                .globl sqlite3_column_int
+                sqlite3_column_int:
+                    ret
+                .globl sqlite3_column_text
+                sqlite3_column_text:
+                    ret
+                .globl sqlite3_bind_text
+                sqlite3_bind_text:
+                    ret
+                .globl sqlite3_bind_int
+                sqlite3_bind_int:
+                    ret
+                """
+                .replace("LEN_CREATE", String.valueOf(create.length()))
+                .replace("LEN_INSERT", String.valueOf(insert.length()))
+                .replace("LEN_SELECT", String.valueOf(select1.length()))
+                .replace("LEN_URLFULL", String.valueOf(urlFull.length()))
+                .replace("LEN_URLMARIA", String.valueOf(urlMaria.length()))
+                .replace("LEN_URLHOST", String.valueOf(urlHostOnly.length()))
+                .replace("URLFULL", urlFull)
+                .replace("URLMARIA", urlMaria)
+                .replace("URLHOST", urlHostOnly)
+                .replace("CREATESQL", create)
+                .replace("INSERTSQL", insert)
+                .replace("SELECTSQL", select1);
+    }
+
+    private static String connectOracle() {
+        return """
+                2
+                1
+                0
+                1
+                2
+                0
+                2
+                0""";
+    }
+
+    @Test
+    void connectMysqlAgainstRealMariaDbOnRiscv64(@TempDir Path tempDir) throws Exception {
+        assumeRiscv();
+        assumeMaria();
+        String harness = connectHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String out = buildRun("riscv64", tempDir, "cn_rv", harness + "\n" + runtime);
+        assertEquals(connectOracle(), out, "connect mysql riscv64 diverge do oráculo");
+    }
+
+    @Test
+    void connectMysqlAgainstRealMariaDbOnAarch64(@TempDir Path tempDir) throws Exception {
+        assumeAarch64();
+        assumeMaria();
+        String harness = connectHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String riscv = harness + "\n" + runtime;
+        StringBuilder arm = new StringBuilder();
+        for (String line : riscv.split("\n", -1)) {
+            for (String t : NativeAarch64Translator.translateRiscvToAarch64(line)) arm.append(t).append('\n');
+        }
+        String out = buildRun("aarch64", tempDir, "cn_aa", arm.toString());
+        assertEquals(connectOracle(), out, "connect mysql aarch64 diverge do oráculo");
+    }
+
+    @Test
+    void withoutConnectPieceLinkFailsSabotage(@TempDir Path tempDir) throws IOException {
+        assumeRiscv();
+        String harness = connectHarness();
+        Set<Integer> keep = new LinkedHashSet<>(RiscvSlices.keepForProgramText(harness));
+        int b73 = -1;
+        for (RiscvSlices.Piece p : RiscvSlices.pieces()) {
+            if ("RISCV_RUNTIME_ASM_B_73".equals(p.field())) b73 = p.index();
+        }
+        assertTrue(b73 >= 0, "peça B73 (connect mysql cross) não encontrada no inventário");
+        assertTrue(keep.remove(b73), "B73 deveria estar no keep do harness de connect");
+        String runtime = RiscvSlices.renderSubset(keep);
+        Path asm = tempDir.resolve("sab_cn.s");
+        Files.writeString(asm, harness + "\n" + runtime);
+        Path obj = tempDir.resolve("sab_cn.o");
+        Path bin = tempDir.resolve("sab_cn");
+        runCapture("riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
+        String[] r = runAllowFail("riscv64-linux-gnu-ld", "--no-relax", "-o", bin.toString(), obj.toString());
+        assertNotEquals("0", r[1], "sem a B73 o link deveria falhar (undefined kof_db_connect_mysql); saída: " + r[0]);
+        assertTrue(r[0].contains("kof_db_connect_mysql"),
+                "a falha deve citar kof_db_connect_mysql: " + r[0]);
+    }
+
     @Test
     void greetingParseMatchesOracleOnRiscv64(@TempDir Path tempDir) throws Exception {
         assumeRiscv();

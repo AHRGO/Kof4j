@@ -3,9 +3,9 @@ package dev.kof.compiler.nat;
 // DB001 fatia 1 (15/09, dono = 192.168.100.18): runtime kof.db SQLite no
 // cross riscv64/aarch64 (aarch64 herda via tradutor). Port do subconjunto
 // SQLite do x86 — RuntimeDb2 (resolve/type/connect), RuntimeDb4 (close/
-// execute/transaction/bind) e RuntimeDb5 (query). Os caminhos MySQL (Db1/
-// Db3/Db6/NativeDbPrepared) ficam de fora: connect só aceita "sqlite:*" e
-// devolve 0 (null handle) para qualquer outra URL.
+// execute/transaction/bind) e RuntimeDb5 (query). O connect aceita "sqlite:*"
+// aqui e delega mysql:// / mariadb:// para a peça B73 (wire TCP real, registra
+// o fd como type 2 nas tabelas .Ldb_* daqui); outro esquema vira DB001 em B73.
 //
 // Divergências honestas vs x86 (catalogadas, não silenciosas):
 // - kof_db_bind classifica Int×String pela JANELA DO HEAP cross
@@ -300,25 +300,25 @@ public final class NativeRiscvAsmRtB47 {
                     # prefixo "sqlite:" em data[0..6] (offsets 24..30)
                     lbu  t0, 24(a0)
                     li   t1, 115
-                    bne  t0, t1, .Lconn_unsupported
+                    bne  t0, t1, .Lconn_other
                     lbu  t0, 25(a0)
                     li   t1, 113
-                    bne  t0, t1, .Lconn_unsupported
+                    bne  t0, t1, .Lconn_other
                     lbu  t0, 26(a0)
                     li   t1, 108
-                    bne  t0, t1, .Lconn_unsupported
+                    bne  t0, t1, .Lconn_other
                     lbu  t0, 27(a0)
                     li   t1, 105
-                    bne  t0, t1, .Lconn_unsupported
+                    bne  t0, t1, .Lconn_other
                     lbu  t0, 28(a0)
                     li   t1, 116
-                    bne  t0, t1, .Lconn_unsupported
+                    bne  t0, t1, .Lconn_other
                     lbu  t0, 29(a0)
                     li   t1, 101
-                    bne  t0, t1, .Lconn_unsupported
+                    bne  t0, t1, .Lconn_other
                     lbu  t0, 30(a0)
                     li   t1, 58
-                    bne  t0, t1, .Lconn_unsupported
+                    bne  t0, t1, .Lconn_other
                     # sqlite3_open(data+7, &slot@96(sp))
                     sd   zero, 96(sp)
                     addi a0, a0, 31
@@ -387,10 +387,10 @@ public final class NativeRiscvAsmRtB47 {
                     sd   s4, 0(t0)
                     mv   a0, s4
                     j    .Lconn_out
-                .Lconn_unsupported:
-                    la   a0, .Ldb_unsupported_str
-                    call kof_throw_string
-                    j    .Lconn_bad
+                .Lconn_other:
+                    # mysql:// | mariadb:// -> B73; outro -> DB001 nomeado lá.
+                    call kof_db_connect_mysql
+                    j    .Lconn_out
                 .Lconn_bad:
                     li   a0, 0
                 .Lconn_out:
@@ -565,18 +565,8 @@ public final class NativeRiscvAsmRtB47 {
                     .long 8
                     .long 0
                     .asciz "rollback"
-                # S0/§421: scheme fora do contrato cross (sqlite:) -> recusa
-                # nomeada DB001, nunca handle nulo silencioso (R6).
-                .align 2
-                .Ldb_unsupported_str:
-                    .long 1
-                    .long 0
-                    .quad 0
-                    .long .Ldb_unsupported_len
-                    .long 0
-                .Ldb_unsupported_body:
-                    .asciz "DB001: unsupported db scheme (native cross: sqlite: only here; mysql:// / mariadb:// wire is x86-64 only)"
-                    .set .Ldb_unsupported_len, . - .Ldb_unsupported_body - 1
+                # S0/§421: o esquema fora do contrato agora é recusado na B73
+                # (kof_db_connect_mysql) com DB001 nomeado — nunca handle nulo.
                 .section .text
 
                 """);

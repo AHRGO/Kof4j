@@ -208,6 +208,11 @@ public final class NativeRiscvAsm {
                 // kof_db_mysql_execute (COM_QUERY via B67 + affected-rows do
                 // OK-packet; port da cauda de execute de RuntimeDb4/Db5 x86).
                 .append(NativeRiscvAsmRtB72.RISCV_RUNTIME_ASM_B_72)
+                // S5.4 db-parity (gaps-db lane, 24/09): connect real MySQL/
+                // MariaDB no cross — URL parse + socket/connect (HAL) +
+                // handshake B66 + registro do fd como type 2 (kof_db_connect
+                // da B47 delega aqui o que não é "sqlite:").
+                .append(NativeRiscvAsmRtB73.RISCV_RUNTIME_ASM_B_73)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

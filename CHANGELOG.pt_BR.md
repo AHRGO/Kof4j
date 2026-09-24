@@ -13,6 +13,23 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **S5.4 fatia 1 (db-parity, lane gaps-db) — `connect` MySQL/MariaDB REAL
+    no cross (peça cross `B73`)** (24/09): `kof_db_connect` agora aceita
+    `mysql://`/`mariadb://` no riscv64/aarch64 — parse da URL
+    (`[user[:pass]@]host[:port][/db]`, IPv4 dotted com o mesmo fallback
+    127.0.0.1 do x86), `socket`+`connect` pela HAL, o handshake/auth da B66 e
+    o registro do fd como type 2 (handle `db<N>`) nas tabelas da B47. Tanto a
+    forma `db.connect` com userinfo quanto a host-only via `kof_db_connect2`
+    autenticam contra o servidor real; a recusa DB001 passa a listar com
+    VERDADE `sqlite:, mysql://, mariadb://` (esquema não portado, como
+    `postgres://`, segue lançando no connect). Prova:
+    `NativeRiscvDbWireTest#connectMysqlAgainstRealMariaDb*` +
+    `withoutConnectPieceLinkFailsSabotage` no riscv64 + aarch64 sob qemu
+    contra o **MariaDB real** (type 2, fd resolvido, CREATE/INSERT pelo fd
+    resolvido, alias `mariadb://` e forma host-only autenticam)
+    + `KofDbE2ETest#crossNativeUnsupportedSchemeNamesTruthfulDb001` (binários
+    reais nomeiam DB001 para `postgres://`).
+
   - **B-5 `kof_plat_time_mono` — agora REAL também no UEFI (TSC calibrado por
     `BootServices->Stall`)** (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`).
     Mesma fonte monotônica do BIOS (64 bits, `rdtsc`), mas a frequência é

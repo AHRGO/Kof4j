@@ -8,7 +8,7 @@
 > estiver completa.
 
 **Dono:** lane `gaps-db` (repassada 21/09 por ordem da mantenedora, sob `D-DB-PARITY-OWNER`; S0/S1 autorizadas) · **Registros/plano:** lane docs/plataforma
-**Branch:** `beta-0.5.0` · **Estado:** S0 ✅ FEITO (21/09, sessão 9092) — recusa nativa honesta de scheme não suportado com o código nomeado `DB001`, mais link-by-use real (sem link de `libmariadb` para literais não-mysql); **S1 ✅ FEITO no Native x86-64 (23/09, lane gaps-db)** — `mariadb://` é alias do wire `mysql://`; no cross segue `DB001` honesto até o wire mysql ser portado (R7); **S2 ✅ FEITO no JVM/JS/Android (23/09, lane gaps-db)** — driver JDBC ausente agora é diagnóstico `DB001` nomeado (falhas reais de conexão intactas); **S3/S4 ✅ FEITOS 23/09 (lane gaps-db)** — `mongodb://` real no JVM/Android e `DB001` declarado no JS/Native; `oracle` declarado (sem driver/servidor no host); **S5.0 (camada de socket cross) ✅ SATISFEITA 23/09 (medido — já provada pelo core HTTP cross)**; **S5.1 (handshake+auth) ✅ SATISFEITA 23/09 (peças `B62`–`B66`): SHA1/bswap + scramble/lenenc + parse do greeting + montagem da resposta de auth + o round-trip de socket, provados por `NativeRiscvDbWireTest` em riscv64+aarch64 (qemu, contra o oráculo JVM e contra o MariaDB REAL — o servidor devolve o pacote OK; um DB inexistente devolve Err). A superfície Kof (`db.connect` cross) segue emitindo o `DB001` honesto até o S5.4**; **S5.2 (`COM_QUERY`) 🟡 PARCIAL 23/09 (peças `B67`–`B69`) — framing do request + classificação da 1ª resposta (`SELECT 1`→1, `SET`→0, SQL ruim→255) E o reader de pacotes + cabeçalho do resultset (ncols + payload lenenc da 1ª linha: `SELECT 1`→1col/[01 31], `SELECT 1,'ab'`→2col/[01 31 02 61 62]), provados em riscv64+aarch64 (qemu) contra o MariaDB real; materializar todas as linhas como valores Kof é a próxima fatia**
+**Branch:** `beta-0.5.0` · **Estado:** S0 ✅ FEITO (21/09, sessão 9092) — recusa nativa honesta de scheme não suportado com o código nomeado `DB001`, mais link-by-use real (sem link de `libmariadb` para literais não-mysql); **S1 ✅ FEITO no Native x86-64 (23/09, lane gaps-db)** — `mariadb://` é alias do wire `mysql://`; no cross segue `DB001` honesto até o wire mysql ser portado (R7) — **superado pelo S5.4 fatia 1 (24/09, peça `B73`): `mysql://`/`mariadb://` no cross agora conectam de verdade**; **S2 ✅ FEITO no JVM/JS/Android (23/09, lane gaps-db)** — driver JDBC ausente agora é diagnóstico `DB001` nomeado (falhas reais de conexão intactas); **S3/S4 ✅ FEITOS 23/09 (lane gaps-db)** — `mongodb://` real no JVM/Android e `DB001` declarado no JS/Native; `oracle` declarado (sem driver/servidor no host); **S5.0 (camada de socket cross) ✅ SATISFEITA 23/09 (medido — já provada pelo core HTTP cross)**; **S5.1 (handshake+auth) ✅ SATISFEITA 23/09 (peças `B62`–`B66`): SHA1/bswap + scramble/lenenc + parse do greeting + montagem da resposta de auth + o round-trip de socket, provados por `NativeRiscvDbWireTest` em riscv64+aarch64 (qemu, contra o oráculo JVM e contra o MariaDB REAL — o servidor devolve o pacote OK; um DB inexistente devolve Err). A superfície Kof (`db.connect` cross) agora conecta de verdade (S5.4 fatia 1, peça `B73`) e só recusa esquemas não portados com o `DB001` honesto**; **S5.2 (`COM_QUERY`) 🟡 PARCIAL 23/09 (peças `B67`–`B69`) — framing do request + classificação da 1ª resposta (`SELECT 1`→1, `SET`→0, SQL ruim→255) E o reader de pacotes + cabeçalho do resultset (ncols + payload lenenc da 1ª linha: `SELECT 1`→1col/[01 31], `SELECT 1,'ab'`→2col/[01 31 02 61 62]), provados em riscv64+aarch64 (qemu) contra o MariaDB real; materializar todas as linhas como valores Kof é a próxima fatia**
 
 ---
 
@@ -264,7 +264,19 @@ por scheme é a prova.
     `orm.*` sob qemu.
   - **S5.4 — link + teste de paridade.** `-lmariadb` link-by-use no cross + o
     espelho riscv/aarch de `KofDbE2ETest#nativeMariadbAliasWireProtocol`. Depois
-    disso o `DB001` cross do S1 vira real.
+    disso o `DB001` cross do S1 vira real. **Fatia 1 ✅ 24/09 (peça `B73`, lane
+    gaps-db):** o `connect` cross real — parse de `mysql://`/`mariadb://`
+    (`[user[:pass]@]host[:port][/db]`, IPv4 dotted + fallback 127.0.0.1 do
+    x86), socket/connect pela HAL, handshake da B66 e registro do fd como type
+    2 nas tabelas da B47; o `DB001` honesto agora lista só os esquemas
+    portados. *Prova:* `NativeRiscvDbWireTest#connectMysqlAgainstRealMariaDb*`
+    + `withoutConnectPieceLinkFailsSabotage` (riscv64 + aarch64, qemu, MariaDB
+    real — formas userinfo e host-only `kof_db_connect2` autenticam) +
+    `KofDbE2ETest#crossNativeUnsupportedSchemeNamesTruthfulDb001`.
+    **Falta:** o dispatch mysql no `executeN`/`queryN` dos corpos da B47 (para
+    um handle type-2 resolvido chegar ao wire via `db.execute`/`db.query`) +
+    tx + o espelho `#nativeMariadbAliasWireProtocol` + `-lmariadb`
+    link-by-use, depois mover este plano para `docs/stdlib/`.
 
 ## Não-objetivos / invariantes
 

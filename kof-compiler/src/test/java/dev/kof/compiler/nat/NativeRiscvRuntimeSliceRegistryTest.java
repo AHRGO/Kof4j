@@ -71,19 +71,21 @@ class NativeRiscvRuntimeSliceRegistryTest {
         assertTrue(uni.size() <= 10, "piso riscv deveria ser ~7 peças, veio " + uni.size());
     }
 
-    /** R6/S1 (23/09): a mensagem DB001 do runtime CROSS tem de ser VERDADEIRA —
-     *  ao contrario do texto x86 (que lista sqlite/mysql/mariadb porque lá o wire
-     *  existe), o cross recusa `sqlite:`-fora e NAO pode ANUNCIAR `mysql://` como
-     *  suportado (isso esconderia o gap R7). Medido no runtime de produção. */
+    /** R6/S5.4 (24/09): a mensagem DB001 do runtime CROSS passou a anunciar
+     *  o que JÁ existe (sqlite:, mysql://, mariadb://) — o wire mysql foi
+     *  portado (peça `B73`); esquemas fora disso seguem recusados no connect
+     *  com código NOMEADO, nunca handle nulo. Medido no runtime de produção. */
     @Test
-    void crossDb001MessageDoesNotAdvertiseUnportedMysql() {
+    void crossDb001MessageAdvertisesPortedSchemesOnly() {
         String asm = NativeRiscvAsm.RISCV_RUNTIME_ASM_B;
         assertTrue(asm.contains("DB001: unsupported db scheme"),
                 "constante do diagnostico DB001 ausente no runtime cross");
-        assertTrue(asm.contains("mysql:// / mariadb:// wire is x86-64 only"),
-                "o cross deve DECLARAR que mysql/mariadb nao estao portados aqui (R7/R6)");
+        assertTrue(asm.contains("native cross: sqlite:, mysql://, mariadb://"),
+                "o cross deve anunciar os esquemas que REALMENTE aceita (R6/S5.4)");
         assertFalse(asm.contains("(native: sqlite:, mysql://)"),
-                "a mensagem cross nao pode anunciar mysql:// como suportado (ele e recusado)");
+                "a mensagem cross nao pode ser a do x86 (contrato distinto)");
+        assertTrue(asm.contains("kof_db_connect_mysql"),
+                "a peca B73 (connect mysql/mariadb cross) deve estar no runtime");
     }
 
     @Test

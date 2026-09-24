@@ -1088,16 +1088,16 @@ class KofDbE2ETest {
         }
     }
 
-    // S1/honestidade (23/09): a recusa DB001 do cross e' VERDADEIRA e roda de
-    // fato nos binarios riscv64/aarch64 (nao so' no texto do asm): um programa
-    // com mysql:// sai != 0 e imprime a mensagem corrigida (sqlite-only; mysql
-    // wire x86-only) — nunca anuncia mysql:// como suportado (R6/R7).
+    // S5.4/honestidade (24/09): a recusa DB001 do cross agora vale para os
+    // esquemas que REALMENTE nao existem lá (sqlite:/mysql:///mariadb:// ja
+    // foram portados): um programa com postgres:// sai != 0 e imprime a
+    // mensagem VERDADEIRA — nunca anuncia um esquema como suportado (R6/R7).
     @Test
-    void crossNativeMysqlRefusalNamesTruthfulDb001(@TempDir Path tempDir) throws IOException {
+    void crossNativeUnsupportedSchemeNamesTruthfulDb001(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("CrossRefuse.kf");
         Files.writeString(source, """
             main() {
-                var db = db.connect("mysql://root@127.0.0.1:3306/x")
+                var db = db.connect("postgres://root@127.0.0.1:5432/x")
                 println("connected")
             }
             """);
@@ -1112,7 +1112,7 @@ class KofDbE2ETest {
                     "libsqlite3 " + arch + " ausente no sysroot — pulando");
             Path out = tempDir.resolve("out-refuse-" + t);
             CompilationResult r = driver.compile(source, out, t);
-            assertTrue(r.success(), t + " deveria compilar (connect mysql://): " + r.diagnostics().getDiagnostics());
+            assertTrue(r.success(), t + " deveria compilar (connect postgres://): " + r.diagnostics().getDiagnostics());
             Path binFile = out.resolve("Default/Main");
             assertTrue(Files.exists(binFile), "binário " + t + " deveria existir");
             ProcessBuilder pb = new ProcessBuilder("qemu-" + arch, binFile.toString());
@@ -1129,12 +1129,12 @@ class KofDbE2ETest {
                 Thread.currentThread().interrupt();
                 throw new IOException("Interrupted running " + t + " binary", e);
             }
-            assertNotEquals(0, ec, t + " mysql:// no cross nao pode 'conectar': " + output);
+            assertNotEquals(0, ec, t + " postgres:// no cross nao pode 'conectar': " + output);
             assertTrue(output.contains("DB001"), t + " recusa deve NOMEAR DB001, veio: " + output);
-            assertTrue(output.contains("mysql:// / mariadb:// wire is x86-64 only"),
-                    t + " mensagem deve ser VERDADEIRA (sqlite-only; mysql x86-only), veio: " + output);
+            assertTrue(output.contains("native cross: sqlite:, mysql://, mariadb://"),
+                    t + " mensagem deve ser VERDADEIRA (esquemas realmente portados), veio: " + output);
             assertFalse(output.contains("(native: sqlite:, mysql://)"),
-                    t + " mensagem nao pode anunciar mysql:// como suportado, veio: " + output);
+                    t + " mensagem nao pode ser a do x86, veio: " + output);
         }
     }
 
