@@ -513,3 +513,16 @@ For more details, see [docs/distribution/LICENSING.md](docs/distribution/LICENSI
 *One language. One compiler. Many worlds.*
 
 *Less ceremony. More intention.*
+
+---
+
+*i'm aways opensource*
+*so the whole world can use me*
+*so i can build a better world*
+*and draw with all my Koffies*
+*to build me and control me*
+*what's the future hold for me*
+*and the community that soldiers on*
+*to build the story*
+
+*(inspired by openSUSE)*
