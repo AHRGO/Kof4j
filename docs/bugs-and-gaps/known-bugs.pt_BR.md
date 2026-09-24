@@ -3178,7 +3178,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   sem exclusões + `NativeE2ETest#nativeMultiDimArray` (repro menor do §113
   → `2/7`); suíte completa pós-clean verde. Faces riscv/aarch: port pendente.
 
-### 114. Native: `equals`/`==` de record com campo de REFERÊNCIA (String ou record aninhado) compara PONTEIRO → `false` — ✅ FIXED 24/09 (face String ✅ 11/09; face record-aninhado ✅ 24/09 via `kof_obj_equals`; `hashCode` de CONTEÚDO String ✅ 24/09; `hashCode` de Float/Double + aninhado ainda abertos) — face CONTENÇÃO (record dentro de coleção) ✅ FECHADA 24/09 via §104b-ii (`kof_equals_table`/`kof_obj_equals`, `NativeRecordCollectionEqualityE2ETest` 3/3) (sub-face do §104b-ii, backend-only)
+### 114. Native: `equals`/`==` de record com campo de REFERÊNCIA (String ou record aninhado) compara PONTEIRO → `false` — ✅ FIXED 24/09 (face String ✅ 11/09; face record-aninhado ✅ 24/09 via `kof_obj_equals`; `hashCode` de CONTEÚDO String ✅ 24/09; `hashCode` de Double ✅ 24/09; `hashCode` de aninhado ainda aberto) — face CONTENÇÃO (record dentro de coleção) ✅ FECHADA 24/09 via §104b-ii (`kof_equals_table`/`kof_obj_equals`, `NativeRecordCollectionEqualityE2ETest` 3/3) (sub-face do §104b-ii, backend-only)
 
 - **Menor repro (medido 11/09):**
   `record S(String t)` + `println(S("ab") == S("ab"))` → JVM/Script/JS `true`,
@@ -3239,6 +3239,17 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   nulo+não-nulo, regressão de primitivos; `NativeRecordCollectionEqualityE2ETest`
   += equals de String nullable (nulo==nulo, conteúdo, mismatch); cluster
   record/string/equality **223/0F**.
+
+- **✅ `hashCode` DE DOUBLE CORRIGIDO 24/09 (lane compiler/nat 9092):** um campo
+  Double contribuía `0` no hash nativo do record (`RD(2.5).hashCode()` = `31` vs JVM
+  `1074003999`) — o `KofBinary(ADD, INT)` cru não lê o slot de 64 bits. Agora o campo
+  passa por `kof_double_hash(bits) = (int)(bits ^ (bits>>>32))` (helper novo: x86
+  `RuntimeMath`, riscv `NativeRiscvAsmRtB5`; aarch via tradutor). **Float já casava
+  cru** (o slot de 32 bits JÁ É `floatToIntBits` — medido `RF(1.5)`/`RF(-0.0)`
+  byte-a-byte antes de qualquer mudança). Prova: `NativeRecordHashCodeE2ETest` +=
+  `RFloat`/`RDouble` incl. `-0.0` — **3/3** em x86-64+riscv64+aarch64; cluster
+  record/hash/math/double/float **177/0F**. Aberto declarado: `hashCode` de
+  record-aninhado.
 - **Fix (não feito — faces restantes):** mesma infra do §104b-ii (i) — nos campos de referência
   do equals sintetizado, emitir o compare de conteúdo: String →
   `call kof_string_equals` (helper já existe); record aninhado → dispatch vtable

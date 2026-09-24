@@ -3177,7 +3177,7 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   without exclusions + `NativeE2ETest#nativeMultiDimArray` (minimal repro of §113
   → `2/7`); full suite post-clean green. riscv/aarch faces: port pending.
 
-### 114. Native: `equals`/`==` of a record with a REFERENCE field (String or nested record) compares POINTER → `false` — ✅ FIXED 24/09 (String face ✅ 11/09; nested-reference face ✅ 24/09 via `kof_obj_equals`; String-content `hashCode` ✅ 24/09; Float/Double + nested `hashCode` still open) — face CONTAINMENT (record dentro de coleção) ✅ FECHADA 24/09 via §104b-ii (`kof_equals_table`/`kof_obj_equals`, `NativeRecordCollectionEqualityE2ETest` 3/3) (sub-face de §104b-ii, backend-only)
+### 114. Native: `equals`/`==` of a record with a REFERENCE field (String or nested record) compares POINTER → `false` — ✅ FIXED 24/09 (String face ✅ 11/09; nested-reference face ✅ 24/09 via `kof_obj_equals`; String-content `hashCode` ✅ 24/09; Double `hashCode` ✅ 24/09; nested `hashCode` still open) — face CONTAINMENT (record dentro de coleção) ✅ FECHADA 24/09 via §104b-ii (`kof_equals_table`/`kof_obj_equals`, `NativeRecordCollectionEqualityE2ETest` 3/3) (sub-face de §104b-ii, backend-only)
 
 - **Minimal repro (measured 11/09):**
   `record S(String t)` + `println(S("ab") == S("ab"))` → JVM/Script/JS `true`,
@@ -3236,6 +3236,17 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   String null+non-null, primitive regression; `NativeRecordCollectionEqualityE2ETest`
   += nullable-String equals (null==null, content, mismatch); cluster
   record/string/equality **223/0F**.
+
+- **✅ DOUBLE `hashCode` FIXED 24/09 (lane compiler/nat 9092):** a Double field
+  contributed `0` to the Native record hash (`RD(2.5).hashCode()` = `31` vs JVM
+  `1074003999`) — the raw `KofBinary(ADD, INT)` does not read the 64-bit slot. The
+  field now passes through `kof_double_hash(bits) = (int)(bits ^ (bits>>>32))`
+  (new helper: x86 `RuntimeMath`, riscv `NativeRiscvAsmRtB5`; aarch via translator).
+  **Float already matched raw** (the 32-bit slot IS `floatToIntBits` — measured
+  `RF(1.5)`/`RF(-0.0)` byte-identical before any change). Proof:
+  `NativeRecordHashCodeE2ETest` += `RFloat`/`RDouble` incl. `-0.0` — **3/3** on
+  x86-64+riscv64+aarch64; cluster record/hash/math/double/float **177/0F**.
+  Remaining declared-open: nested-record `hashCode`.
 - **Fix (not done — remaining faces):** same infrastructure as §104b-ii (i) — in the reference fields
   of the synthesized equals, emit the content compare: String →
   `call kof_string_equals` (helper already exists); nested record → vtable dispatch

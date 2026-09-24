@@ -57,6 +57,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Prova: `NativeRecordHashCodeE2ETest` novo + caso de equals String nullable
     **3/3** em x86-64+riscv64+aarch64.
 
+  - **§114 (face `hashCode` de Double) ✅ FIXED — `hashCode()` de record com campo
+    `Double`** (24/09, lane compiler/nat 9092): `RD(2.5).hashCode()` dava `31` no
+    Native vs `1074003999` no JVM (o campo contribuía `0`). Agora o campo passa por
+    `kof_double_hash(bits) = (int)(bits ^ (bits>>>32))` (helper novo x86
+    `RuntimeMath` / riscv `NativeRiscvAsmRtB5`). **Float já casava cru** (o slot de
+    32 bits JÁ É `floatToIntBits`). Prova: `NativeRecordHashCodeE2ETest` +=
+    `RFloat`/`RDouble` incl. `-0.0` **3/3** em x86-64+riscv64+aarch64.
+
   - **Boot BIOS bare-metal (plano `PLAN-BAREMETAL-BOOT`, B-3b-3) — o payload Kof
     real agora roda bare pelo caminho BIOS legado: o `_start` é ligado na base
     fixa `0x100000`, copiado do staging de modo real (`0xC200`) em protected mode

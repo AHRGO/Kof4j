@@ -56,6 +56,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `NativeRecordHashCodeE2ETest` + nullable-String equals case **3/3** on
     x86-64+riscv64+aarch64.
 
+  - **§114 (Double `hashCode` face) ✅ FIXED — `hashCode()` of a record with a
+    `Double` field** (24/09, lane compiler/nat 9092): `RD(2.5).hashCode()` gave `31`
+    on Native vs `1074003999` on the JVM (the field contributed `0`). The field now
+    passes through `kof_double_hash(bits) = (int)(bits ^ (bits>>>32))` (new helper
+    x86 `RuntimeMath` / riscv `NativeRiscvAsmRtB5`). **Float already matched raw**
+    (its 32-bit slot IS `floatToIntBits`). Proof: `NativeRecordHashCodeE2ETest` +=
+    `RFloat`/`RDouble` incl. `-0.0` **3/3** on x86-64+riscv64+aarch64.
+
   - **Bare-metal BIOS boot (plan `PLAN-BAREMETAL-BOOT`, B-3b-3) — the real Kof
     payload now runs bare through the legacy BIOS path: `_start` is linked at the
     fixed base `0x100000`, copied from the real-mode staging (`0xC200`) in
