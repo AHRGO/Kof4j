@@ -13,7 +13,7 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
-  - **§488 (#617) ✅ FIXED — `File.mkdir()`/`.mkdirs()` are real aliases of
+  - **§489 (#617) ✅ FIXED — `File.mkdir()`/`.mkdirs()` are real aliases of
     `create()`/`createDirectories()`; unknown `kof.io` methods get a clean
     `SEM102`** (24/09, lane compiler 9092; maintainer order "nada de stub,
     implementação real"). They now create the directory for real (gated

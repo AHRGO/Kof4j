@@ -13,7 +13,7 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
-  - **§488 (#617) ✅ CORRIGIDO — `File.mkdir()`/`.mkdirs()` são aliases reais de
+  - **§489 (#617) ✅ CORRIGIDO — `File.mkdir()`/`.mkdirs()` são aliases reais de
     `create()`/`createDirectories()`; métodos `kof.io` desconhecidos dão `SEM102`
     limpo** (24/09, lane compiler 9092; ordem da mantenedora "nada de stub,
     implementação real"). Agora criam o diretório de verdade (runtime gateado
