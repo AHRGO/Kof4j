@@ -342,9 +342,9 @@ class BiosBootE2ETest {
     }
 
     /** B-5 (D-BAREMETAL-BODIES): capacidade ainda SEM corpo no BIOS
-     *  ({@code random} → {@code kof_plat_random}) recusa de forma NOMEADA
-     *  (R6) com diagnóstico **ASCII legível** no COM1 — nunca stub silencioso
-     *  nem a forma UTF-16 do UEFI. O programa para na recusa (nada após ela). */
+     *  ({@code observability.spanStart} → {@code kof_plat_time_mono}) recusa de
+     *  forma NOMEADA (R6) com diagnóstico **ASCII legível** no COM1 — nunca
+     *  stub silencioso nem a forma UTF-16 do UEFI. O programa para na recusa. */
     @Test
     void biosUnsupportedCapabilityPrintsReadableRefusal(@TempDir Path tempDir) throws Exception {
         Path qemu = findQemu();
@@ -354,7 +354,7 @@ class BiosBootE2ETest {
         Path img = build(tempDir, """
                 main() {
                     println("BEFORE")
-                    println(random.randomBoolean())
+                    var h = observability.spanStart("op")
                     println("AFTER")
                 }
                 """);
@@ -367,7 +367,7 @@ class BiosBootE2ETest {
             while (System.currentTimeMillis() < deadline) {
                 if (Files.exists(ser)) {
                     text = serialText(ser);
-                    if (text.contains("kof_plat_random")) break;
+                    if (text.contains("kof_plat_time_mono")) break;
                 }
                 Thread.sleep(500);
             }
@@ -376,11 +376,54 @@ class BiosBootE2ETest {
         }
         assertTrue(text.contains("BEFORE"),
                 "o programa nao comecou a rodar antes da recusa. Log: " + text);
-        assertTrue(text.contains("KOF BIOS") && text.contains("kof_plat_random"),
-                "recusa nomeada ilegivel no COM1 (esperado ASCII 'KOF BIOS ... kof_plat_random'). Log: "
+        assertTrue(text.contains("KOF BIOS") && text.contains("kof_plat_time_mono"),
+                "recusa nomeada ilegivel no COM1 (esperado ASCII 'KOF BIOS ... kof_plat_time_mono'). Log: "
                         + text.substring(Math.max(0, text.length() - 400)));
         assertFalse(text.contains("AFTER"),
-                "a recusa deveria PARAR o programa (nada apos random). Log: " + text);
+                "a recusa deveria PARAR o programa (nada apos spanStart). Log: " + text);
+    }
+
+    /** B-5 (D-BAREMETAL-BODIES): {@code random.*} no BIOS tem corpo REAL
+     *  (RDRAND/TSC + xorshift64) — não a recusa. Provado por: o programa chega
+     *  ao fim ({@code AFTER}) e duas amostras de 10^9 não colidem (a chance de
+     *  falso-vermelho é 10^-9). */
+    @Test
+    void biosRandomRunsBare(@TempDir Path tempDir) throws Exception {
+        Path qemu = findQemu();
+        assumeTrue(qemu != null, "qemu-system-x86_64 ausente");
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path img = build(tempDir, """
+                main() {
+                    var a = random.randomInt(1000000000)
+                    var b = random.randomInt(1000000000)
+                    println(a != b)
+                    println("AFTER")
+                }
+                """);
+
+        Path ser = tempDir.resolve("ser.log");
+        Process p = new ProcessBuilder(qemuCmd(qemu, img, ser)).redirectErrorStream(true).start();
+        String text = "";
+        try {
+            long deadline = System.currentTimeMillis() + 120_000;
+            while (System.currentTimeMillis() < deadline) {
+                if (Files.exists(ser)) {
+                    text = serialText(ser);
+                    if (text.contains("AFTER")) break;
+                }
+                Thread.sleep(500);
+            }
+        } finally {
+            p.destroyForcibly();
+        }
+        assertTrue(text.contains(MARKER), "boot nao imprimiu '" + MARKER + "': " + text);
+        assertTrue(text.contains("AFTER"),
+                "random.* no BIOS nao chegou ao fim (ainda recusa?). Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+        assertTrue(text.contains("true"),
+                "random.randomInt(10^9) no BIOS deu valores colidentes/sem entropia. Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
     }
 
     /** B-5 (D-BAREMETAL-BODIES): {@code time.sleep} no BIOS é REAL (PIT canal 0),

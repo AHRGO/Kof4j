@@ -13,6 +13,19 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **B-5 `kof_plat_random` — real body on both bare-metal faces (RDRAND/TSC
+    + xorshift64), `random.*` no longer a refusal** (24/09, lane baremetal
+    9092; `D-BAREMETAL-BODIES`). New `RuntimeBareRandom` fills
+    `getrandom`-contract bytes on BIOS and UEFI: seeds from `RDRAND` when the
+    CPU exposes it (`CPUID.01H:ECX[30]`), else `rdtsc`, then xorshift64
+    (non-cryptographic — `random.*`, distinct from `security.*`, which stays
+    bare-gap). Fixes the latent UEFI crash: since `kof_plat_exit_group`
+    *returns* on UEFI, the old refusal body fell through and crashed the app
+    under OVMF. Proof: `BiosBootE2ETest` **9/0** (new `biosRandomRunsBare`:
+    two 10^9 draws differ → `true`) + `NativeUefiE2ETest` **6/0** (new
+    `uefiRandomRunsBareUnderOvmf`) + refusal test repointed at the still-explicit
+    `observability.spanStart` → `kof_plat_time_mono` (`biosUnsupportedCapabilityPrintsReadableRefusal`).
+
   - **B-5 UEFI `kof_plat_sleep` — `time.sleep()` blocks for real via
     `BootServices->Stall` (`gBS+248`)** (24/09, lane baremetal 9092;
     `D-BAREMETAL-BODIES`); the timespec becomes `us = sec*1e6 + nsec/1000` and

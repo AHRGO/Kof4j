@@ -65,6 +65,17 @@ class NativeUefiE2ETest {
             }
             """;
 
+    /** B-5: random.* pela face UEFI tem corpo REAL (RDRAND/TSC + xorshift64),
+     *  não a recusa que travava o app. Duas amostras de 10^9 não colidem
+     *  (falso-vermelho ~10^-9). */
+    private static final String RANDOM = """
+            main() {
+                var a = random.randomInt(1000000000)
+                var b = random.randomInt(1000000000)
+                println(a != b)
+            }
+            """;
+
     private static boolean hasTool(String tool, String... args) {
         String[] cmd = new String[args.length + 1];
         cmd[0] = tool;
@@ -270,6 +281,21 @@ class NativeUefiE2ETest {
                         + text.substring(Math.max(0, text.length() - 400)));
         assertTrue(!text.contains("false"),
                 "time.sleep retornou cedo demais no UEFI. Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+    }
+
+    @Test
+    void uefiRandomRunsBareUnderOvmf(@TempDir Path tempDir) throws Exception {
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path bin = build(tempDir, RANDOM, true);
+        String text = bootUnderOvmf(tempDir, bin, null);
+        assertTrue(text.contains("true"),
+                "random.randomInt(10^9) no UEFI deu valores colidentes/sem entropia "
+                        + "(ou o app ainda recusa/crasha). Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+        assertTrue(!text.contains("false"),
+                "random.* no UEFI colidiu/sem entropia. Log: "
                         + text.substring(Math.max(0, text.length() - 400)));
     }
 }
