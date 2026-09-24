@@ -149,7 +149,8 @@ public final class RuntimePlat {
         // ainda sem corpo UEFI viram recusa NOMEADA (R6), nunca stub.
         if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()) {
             RuntimeUefi.emitUefiTime(sb);
-            RuntimeUefi.emitUefiRefuse(sb, "kof_plat_time_mono, kof_plat_sleep");
+            RuntimeUefi.emitUefiSleep(sb);
+            RuntimeUefi.emitUefiRefuse(sb, "kof_plat_time_mono");
             return;
         }
         // B-5 (D-BAREMETAL-BODIES, 24/09): no BIOS o relógio de parede vem do

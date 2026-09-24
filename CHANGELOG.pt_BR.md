@@ -13,6 +13,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **B-5 `kof_plat_sleep` no UEFI — `time.sleep()` bloqueia de verdade por
+    `BootServices->Stall` (`gBS+248`)** (24/09, lane baremetal 9092;
+    `D-BAREMETAL-BODIES`); o timespec vira `us = sec*1e6 + nsec/1000` e é
+    entregue ao firmware — fim da recusa na face UEFI.
+    `kof_plat_time_mono` segue recusa NOMEADA. Prova: `NativeUefiE2ETest` **5/0**
+    (novo `uefiSleepAdvancesWallClock`: após `time.sleep(1100)` o RTC avançou
+    ≥1 s → `true` sob OVMF) + `BiosBootE2ETest` **8/0** + bateria nativa **97/0**.
+
   - **B-5 `kof_plat_sleep` no BIOS — sleep REAL pelo PIT (canal 0, modo 2),
     não recusa** (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`).
     `time.sleep(ms)` agora espera de verdade no BIOS legado: o PIT é

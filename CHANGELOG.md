@@ -13,6 +13,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **B-5 UEFI `kof_plat_sleep` — `time.sleep()` blocks for real via
+    `BootServices->Stall` (`gBS+248`)** (24/09, lane baremetal 9092;
+    `D-BAREMETAL-BODIES`); the timespec becomes `us = sec*1e6 + nsec/1000` and
+    is handed to the firmware — no more refusal on the UEFI face.
+    `kof_plat_time_mono` stays a named refusal. Proof: `NativeUefiE2ETest` **5/0**
+    (new `uefiSleepAdvancesWallClock`: after `time.sleep(1100)` the RTC advanced
+    ≥1 s → `true` under OVMF) + `BiosBootE2ETest` **8/0** + native battery **97/0**.
+
   - **B-5 BIOS `kof_plat_sleep` — a real PIT-based sleep (channel 0, mode 2),
     not a refusal** (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`).
     `time.sleep(ms)` now actually waits on legacy BIOS: the PIT is reprogrammed

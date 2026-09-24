@@ -54,6 +54,17 @@ class NativeUefiE2ETest {
             }
             """;
 
+    /** B-5: time.sleep() pela face UEFI dorme de verdade (BootServices->Stall) —
+     *  provado pela parede: dormir 1.1 s tem de avançar o RTC em >= 1 s. */
+    private static final String TIME_SLEEP = """
+            main() {
+                var before = time.now()
+                time.sleep(1100)
+                var after = time.now()
+                println(after - before >= 1000)
+            }
+            """;
+
     private static boolean hasTool(String tool, String... args) {
         String[] cmd = new String[args.length + 1];
         cmd[0] = tool;
@@ -245,6 +256,20 @@ class NativeUefiE2ETest {
                         + text.substring(Math.max(0, text.length() - 400)));
         assertTrue(!text.contains("false"),
                 "time.now() retornou epoch invalido/antigo no UEFI. Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+    }
+
+    @Test
+    void uefiSleepAdvancesWallClock(@TempDir Path tempDir) throws Exception {
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path bin = build(tempDir, TIME_SLEEP, true);
+        String text = bootUnderOvmf(tempDir, bin, null);
+        assertTrue(text.contains("true"),
+                "time.sleep(1100) no UEFI nao avancou o RTC em >= 1 s (Stall nao dormiu). Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+        assertTrue(!text.contains("false"),
+                "time.sleep retornou cedo demais no UEFI. Log: "
                         + text.substring(Math.max(0, text.length() - 400)));
     }
 }

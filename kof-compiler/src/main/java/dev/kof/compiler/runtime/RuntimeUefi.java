@@ -316,9 +316,39 @@ public final class RuntimeUefi {
           .append("        .section .text\n");
     }
 
+    /** B-5 (D-BAREMETAL-BODIES): {@code kof_plat_sleep} no UEFI via
+     *  {@code BootServices->Stall} ({@code gBS+248}) — bloqueia o número de
+     *  microssegundos pedido. O timespec ({@code ts[0]=tv_sec},
+     *  {@code ts[1]=tv_nsec}) vira {@code us = sec*1e6 + nsec/1000}. */
+    public static void emitUefiSleep(StringBuilder sb) {
+        sb.append("""
+            .section .text
+            .globl kof_plat_sleep
+            .type kof_plat_sleep, @function
+            kof_plat_sleep:
+                pushq %rbx
+                movq (%rdi), %rbx            # tv_sec
+                movq 8(%rdi), %rax           # tv_nsec
+                movq $1000000, %rcx
+                imulq %rcx, %rbx             # sec*1e6
+                xorl %edx, %edx
+                movq $1000, %rcx
+                divq %rcx                    # nsec/1000
+                addq %rax, %rbx              # microssegundos
+                movq kof_efi_st(%rip), %rax
+                movq 96(%rax), %rax          # BootServices
+                movq 248(%rax), %rdi         # fn = BS->Stall
+                movq %rbx, %rsi              # a1 = Microseconds
+                xorl %edx, %edx
+                call kof_efi_call3
+                popq %rbx
+                ret
+            """);
+    }
+
     /** Recusa NOMEADA (R6) para famílias de costura sem corpo UEFI nesta
      *  fatia (time/random/sync/threads/io/net): imprime o diagnóstico pela
-     *  própria costura de write e sai via {@code BootServices->Exit} —
+     *  própria costura de write e sai via {@code kof_plat_exit_group} —
      *  nunca um corpo syscall-Linux que não existe no firmware. */
     public static void emitUefiRefuse(StringBuilder sb, String symbols) {
         String msg = "KOF UEFI: capacidade nao suportada nesta fatia (B-2): " + symbols + "\r\n";
