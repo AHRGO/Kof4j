@@ -303,6 +303,7 @@ public class SemanticAnalyzer {
             }
         }
         ImplementationChecker.checkInterfaceImplementation(this, cls, classScope);
+        ImplementationChecker.checkConflictingDefaults(this, cls, classScope);
         ImplementationChecker.checkOverrideReturnCompatibility(this, cls);
         MemberResolver.checkAbstractClassImplementation(this, cls);
         currentScope = prevScope;

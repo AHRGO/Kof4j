@@ -302,6 +302,15 @@ public final class MemberCallTyper {
         }
         if (recvType instanceof Type.ClassType ct) {
             SymbolTable.Symbol m = MemberResolver.resolveInHierarchy(sa, ct.name(), mc.methodName());
+            // #610b: o primeiro símbolo por nome pode ter aridade de OUTRO
+            // overload (defaults em interfaces irmãs) — nesse caso procura
+            // o candidato certo em toda a hierarquia antes de resolver.
+            if (m instanceof SymbolTable.MethodSymbol single
+                    && single.parameterTypes().size() != mc.arguments().size()) {
+                SymbolTable.Symbol alt = MemberResolver.resolveMethodsInHierarchy(
+                        sa, ct.name(), mc.methodName());
+                if (alt != null) m = alt;
+            }
             // §131 (10a): MethodSet = sobrecarga por assinatura; seleciona
             // por aridade + compatibilidade de args.
             if (m instanceof SymbolTable.MethodSet set) {

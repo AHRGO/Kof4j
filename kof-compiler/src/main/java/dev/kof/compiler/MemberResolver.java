@@ -27,6 +27,40 @@ public final class MemberResolver {
         return null;
     }
 
+    /**
+     * #610b: coleta TODOS os métodos com {@code methodName} na hierarquia
+     * (classe + supers + interfaces), para seleção por aridade/args. O
+     * {@link #resolveInHierarchy} devolve o PRIMEIRO por nome e perde os
+     * overloads que vivem em interfaces irmãs — `C().greet("mel")` com
+     * `A.greet()`/`B.greet(String)` resolvia para o default de A (aridade
+     * errada) e o JVM estourava em VerifyError. Devolve um único símbolo
+     * quando só há um candidato, senão um MethodSet (select por aridade).
+     */
+    static SymbolTable.Symbol resolveMethodsInHierarchy(SemanticAnalyzer sa,
+            String className, String methodName) {
+        java.util.Set<String> visited = new java.util.HashSet<>();
+        java.util.Queue<String> queue = new java.util.LinkedList<>();
+        queue.add(className);
+        visited.add(className);
+        java.util.LinkedHashMap<String, SymbolTable.MethodSymbol> bySig = new java.util.LinkedHashMap<>();
+        while (!queue.isEmpty()) {
+            String current = queue.poll();
+            SymbolTable.ClassSymbol cs = sa.getClass(current);
+            if (cs == null) continue;
+            SymbolTable.Symbol s = cs.members().resolve(methodName);
+            java.util.List<SymbolTable.MethodSymbol> methods = new java.util.ArrayList<>();
+            if (s instanceof SymbolTable.MethodSymbol m) methods.add(m);
+            else if (s instanceof SymbolTable.MethodSet set) methods.addAll(set.methods());
+            for (SymbolTable.MethodSymbol m : methods) {
+                bySig.putIfAbsent(m.parameterTypes().toString(), m);
+            }
+            enqueueAncestors(cs, visited, queue);
+        }
+        if (bySig.isEmpty()) return null;
+        if (bySig.size() == 1) return bySig.values().iterator().next();
+        return new SymbolTable.MethodSet(new java.util.ArrayList<>(bySig.values()));
+    }
+
     /** BFS pela hierarquia buscando campo com prioridade sobre métodos de mesmo nome. */
     static SymbolTable.Symbol resolveFieldInHierarchy(SemanticAnalyzer sa, String className, String fieldName) {
         java.util.Set<String> visited = new java.util.HashSet<>();
