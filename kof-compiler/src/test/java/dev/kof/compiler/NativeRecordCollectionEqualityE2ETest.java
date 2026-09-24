@@ -26,13 +26,23 @@ class NativeRecordCollectionEqualityE2ETest {
     private static final String PROGRAM = """
             record Point(Int x, Int y)
             record Box(Double d, Bool ok)
+            record Inner(Int v)
+            record Outer(Inner i, String s)
+            record MaybeInner(Inner? i, String s)
+            record L2(Outer o)
 
             class User {
                 String name
                 public constructor(String name) { this.name = name }
             }
+            record HasUser(User u)
 
             String make(String a, String b) { return a + b }
+
+            Inner? maybe(Int v) {
+                if (v > 0) { return Inner(v) }
+                return null
+            }
 
             main() {
                 println(listOf(Point(1, 2)).contains(Point(1, 2)))
@@ -81,6 +91,18 @@ class NativeRecordCollectionEqualityE2ETest {
 
                 println(listOf(1, 2, 3).contains(2))
                 println(listOf(1, 2, 3).indexOf(7))
+
+                println(Outer(Inner(1), "z") == Outer(Inner(1), "z"))
+                println(Outer(Inner(1), "z") == Outer(Inner(1), "y"))
+                println(Outer(Inner(1), "z") == Outer(Inner(2), "z"))
+                println(Inner(1) == Inner(1))
+                println(HasUser(u1) == HasUser(u1))
+                println(HasUser(u1) == HasUser(u2))
+
+                println(MaybeInner(maybe(1), "z") == MaybeInner(maybe(1), "z"))
+                println(MaybeInner(maybe(-1), "z") == MaybeInner(maybe(-1), "z"))
+                println(L2(Outer(Inner(1), "z")) == L2(Outer(Inner(1), "z")))
+                println(L2(Outer(Inner(1), "z")) == L2(Outer(Inner(2), "z")))
             }
             """;
 

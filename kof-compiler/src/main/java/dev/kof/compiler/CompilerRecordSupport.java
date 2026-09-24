@@ -84,6 +84,15 @@ public final class CompilerRecordSupport {
                 ops.add(new KofCall(BuiltinTypes.STRING, "kof_string_equals",
                         List.of(BuiltinTypes.STRING, BuiltinTypes.STRING),
                         Type.PrimitiveType.BOOL, KofCallKind.FUNCTION));
+            } else if (isKofObjectField(f.type())) {
+                // §114 face aninhada: campo record/classe compara por CONTEÚDO
+                // (kof_obj_equals: null-safe, String por conteúdo, senão
+                // despacho na kof_equals_table — identidade p/ classe). Antes o
+                // EQ de ponteiro fazia Outer(Inner(1),"z") != Outer(Inner(1),"z").
+                Type objectType = new Type.ClassType("java.lang", "Object", List.of());
+                ops.add(new KofCall(objectType, "kof_obj_equals",
+                        List.of(objectType, objectType),
+                        Type.PrimitiveType.BOOL, KofCallKind.FUNCTION));
             } else {
                 ops.add(new KofBinary(KofBinaryOp.EQ, f.type()));
             }
@@ -99,6 +108,21 @@ public final class CompilerRecordSupport {
         ops.add(new KofReturn(Type.PrimitiveType.BOOL));
         return new IRMethod("equals", Type.PrimitiveType.BOOL, List.of(ownerType), AccessFlags.PUBLIC,
                 List.of(), List.of(new IRBasicBlock(0, ops)), locals);
+    }
+
+    /**
+     * §114: campo de record que é REFERÊNCIA Kof (classe/record) compara por
+     * conteúdo via `kof_obj_equals`. Ficam de fora String (já usa
+     * `kof_string_equals`), primitivos, arrays e type-vars (identidade — o
+     * mesmo contrato de `Objects.equals` no JVM, que não desce em arrays nem
+     * em `Object` cru) e `Object` (pode ser box de primitivo, sem `type_id` no
+     * offset 0).
+     */
+    private static boolean isKofObjectField(Type type) {
+        Type t = type instanceof Type.NullableType n ? n.inner() : type;
+        if (!(t instanceof Type.ClassType)) return false;
+        if (Type.isString(t)) return false;
+        return !BuiltinTypes.isObject(t);
     }
 
     /**
