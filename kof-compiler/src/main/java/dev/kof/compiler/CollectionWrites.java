@@ -99,6 +99,9 @@ public final class CollectionWrites {
         Type et = elemType instanceof Type.NullableType ent ? ent.inner() : elemType;
         boolean etKnown = et != null && !(et instanceof Type.UnknownType);
         boolean atKnown = at != null && !(at instanceof Type.UnknownType);
+        boolean etObj = etKnown && isKofObject(et);
+        boolean atObj = atKnown && isKofObject(at);
+        if (etObj || atObj) return 2;
         if (etKnown && atKnown) {
             return isStringLike(et) && isStringLike(at) ? 1 : 0;
         }
@@ -118,6 +121,19 @@ public final class CollectionWrites {
      */
     private static boolean isStringLike(Type t) {
         return BuiltinTypes.isString(t);
+    }
+
+    /**
+     * §104b-ii (24/09): referência Kof (record/classe) conhecida → tag 2, para
+     * o Native comparar por CONTEÚDO via {@code kof_obj_equals} (que despacha o
+     * equals virtual da classe gravado em {@code kof_equals_table}). String é
+     * tag 1; {@code Object} fica de fora porque pode carregar box de primitivo
+     * (sem vtable de equals) e o raw {@code cmpq} é o comportamento histórico.
+     */
+    private static boolean isKofObject(Type t) {
+        if (t instanceof Type.NullableType nt) t = nt.inner();
+        if (!(t instanceof Type.ClassType)) return false;
+        return !BuiltinTypes.isString(t) && !BuiltinTypes.isObject(t);
     }
 
     public static String typeNameFor(Type t) {

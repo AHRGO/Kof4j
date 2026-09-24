@@ -180,33 +180,57 @@ public final class NativeRiscvAsmRtB0 {
 
             .globl kof_list_contains
             kof_list_contains:
-                addi sp, sp, -32
-                sd   ra, 24(sp)
-                sd   s0, 16(sp)
-                sd   s1, 8(sp)
+                addi sp, sp, -48
+                sd   ra, 40(sp)
+                sd   s0, 32(sp)
+                sd   s1, 24(sp)
+                sd   s2, 16(sp)
+                sd   s3, 8(sp)
                 mv   s0, a0
                 mv   s1, a1
-                li   t0, 0
+                mv   s2, a2            # tag: 0=raw, 1=String, 2=objeto Kof
+                li   s3, 0
             .Llc_loop:
                 lw   t1, 16(s0)
-                bge  t0, t1, .Llc_no
+                bge  s3, t1, .Llc_no
                 ld   t2, 24(s0)
-                slli t3, t0, 3
+                slli t3, s3, 3
                 add  t2, t2, t3
                 ld   t2, 0(t2)
-                bne  t2, s1, .Llc_next
+                li   t4, 1
+                beq  s2, t4, .Llc_str
+                li   t4, 2
+                beq  s2, t4, .Llc_obj
+                beq  t2, s1, .Llc_yes
+                j    .Llc_next
+            .Llc_str:
+                beqz t2, .Llc_next
+                mv   a0, t2
+                mv   a1, s1
+                call kof_string_equals
+                bnez a0, .Llc_yes
+                j    .Llc_next
+            .Llc_obj:
+                beqz t2, .Llc_next
+                mv   a0, t2
+                mv   a1, s1
+                call kof_obj_equals
+                bnez a0, .Llc_yes
+            .Llc_next:
+                addi s3, s3, 1
+                j    .Llc_loop
+            .Llc_yes:
                 li   a0, 1
                 j    .Llc_ret
-            .Llc_next:
-                addi t0, t0, 1
-                j    .Llc_loop
             .Llc_no:
                 li   a0, 0
             .Llc_ret:
-                ld   s0, 16(sp)
-                ld   s1, 8(sp)
-                ld   ra, 24(sp)
-                addi sp, sp, 32
+                ld   s0, 32(sp)
+                ld   s1, 24(sp)
+                ld   s2, 16(sp)
+                ld   s3, 8(sp)
+                ld   ra, 40(sp)
+                addi sp, sp, 48
                 ret
 
             .globl kof_obj_equals

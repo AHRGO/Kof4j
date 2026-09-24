@@ -351,12 +351,21 @@ public final class NativeRiscvAsmLookups0 {
                 ld   t2, 0(t0)
                 li   t0, 1
                 beq  s2, t0, .Llio_str
+                li   t0, 2
+                beq  s2, t0, .Llio_obj
                 bne  t2, s1, .Llio_next
                 j    .Llio_hit
             .Llio_str:
                 mv   a0, t2
                 mv   a1, s1
                 call kof_string_equals
+                bnez a0, .Llio_hit
+                j    .Llio_next
+            .Llio_obj:
+                beqz t2, .Llio_next
+                mv   a0, t2
+                mv   a1, s1
+                call kof_obj_equals
                 bnez a0, .Llio_hit
             .Llio_next:
                 addi s3, s3, 1
@@ -398,15 +407,25 @@ public final class NativeRiscvAsmLookups0 {
                 add  t0, t0, t1
                 ld   t2, 0(t0)
                 li   t0, 1
-                bne  s2, t0, .Lllo_raw
+                beq  s2, t0, .Lllo_str
+                li   t0, 2
+                beq  s2, t0, .Lllo_obj
+            .Lllo_raw:
+                bne  t2, s1, .Lllo_next
+                j    .Lllo_hit
+            .Lllo_str:
                 mv   a0, t2
                 mv   a1, s1
                 call kof_string_equals
                 bnez a0, .Lllo_hit
                 j    .Lllo_next
-            .Lllo_raw:
-                bne  t2, s1, .Lllo_next
-                j    .Lllo_hit
+            .Lllo_obj:
+                beqz t2, .Lllo_next
+                mv   a0, t2
+                mv   a1, s1
+                call kof_obj_equals
+                bnez a0, .Lllo_hit
+                j    .Lllo_next
             .Lllo_next:
                 addi s3, s3, -1
                 j    .Lllo_loop

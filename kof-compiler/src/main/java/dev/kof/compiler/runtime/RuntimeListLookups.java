@@ -173,6 +173,8 @@ public final class RuntimeListLookups {
                 movq (%rax,%rcx,8), %r15
                 cmpl $1, %r13d
                 je .Llio_str
+                cmpl $2, %r13d
+                je .Llio_obj
                 cmpq %r12, %r15
                 je .Llio_hit
                 jmp .Llio_next
@@ -180,6 +182,15 @@ public final class RuntimeListLookups {
                 movq %r15, %rdi
                 movq %r12, %rsi
                 call kof_string_equals
+                testl %eax, %eax
+                jnz .Llio_hit
+                jmp .Llio_next
+            .Llio_obj:
+                testq %r15, %r15
+                jz .Llio_next
+                movq %r15, %rdi
+                movq %r12, %rsi
+                call kof_obj_equals
                 testl %eax, %eax
                 jnz .Llio_hit
             .Llio_next:
@@ -222,6 +233,8 @@ public final class RuntimeListLookups {
                 movq (%rax,%rcx,8), %r15
                 cmpl $1, %r13d
                 je .Lllo_str
+                cmpl $2, %r13d
+                je .Lllo_obj
                 cmpq %r12, %r15
                 je .Lllo_hit
                 jmp .Lllo_next
@@ -229,6 +242,15 @@ public final class RuntimeListLookups {
                 movq %r15, %rdi
                 movq %r12, %rsi
                 call kof_string_equals
+                testl %eax, %eax
+                jnz .Lllo_hit
+                jmp .Lllo_next
+            .Lllo_obj:
+                testq %r15, %r15
+                jz .Lllo_next
+                movq %r15, %rdi
+                movq %r12, %rsi
+                call kof_obj_equals
                 testl %eax, %eax
                 jnz .Lllo_hit
             .Lllo_next:

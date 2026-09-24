@@ -154,6 +154,8 @@ public final class RuntimeList {
                 movq (%rax,%r15,8), %rax
                 cmpl $1, %r13d
                 je .Lkof_list_contains_str
+                cmpl $2, %r13d
+                je .Lkof_list_contains_obj
                 cmpq %r12, %rax
                 je .Lkof_list_contains_yes
                 jmp .Lkof_list_contains_next
@@ -161,6 +163,15 @@ public final class RuntimeList {
                 movq %rax, %rdi
                 movq %r12, %rsi
                 call kof_string_equals
+                testl %eax, %eax
+                jnz .Lkof_list_contains_yes
+                jmp .Lkof_list_contains_next
+            .Lkof_list_contains_obj:
+                testq %rax, %rax
+                jz .Lkof_list_contains_next
+                movq %rax, %rdi
+                movq %r12, %rsi
+                call kof_obj_equals
                 testl %eax, %eax
                 jnz .Lkof_list_contains_yes
             .Lkof_list_contains_next:

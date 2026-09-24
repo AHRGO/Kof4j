@@ -429,6 +429,8 @@ public final class NativeRiscvAsmMapset0 {
                 ld   t3, 0(t1)           # candidato
                 li   t4, 1
                 beq  s2, t4, .Lksc_str
+                li   t4, 2
+                beq  s2, t4, .Lksc_obj
                 beq  t3, s1, .Lksc_yes   # pointer
                 j    .Lksc_next
             .Lksc_str:
@@ -436,6 +438,13 @@ public final class NativeRiscvAsmMapset0 {
                 mv   a0, t3
                 mv   a1, s1
                 call kof_string_equals
+                bnez a0, .Lksc_yes
+                j    .Lksc_next
+            .Lksc_obj:
+                beqz t3, .Lksc_next
+                mv   a0, t3
+                mv   a1, s1
+                call kof_obj_equals
                 bnez a0, .Lksc_yes
             .Lksc_next:
                 addi s3, s3, 1
@@ -504,6 +513,8 @@ public final class NativeRiscvAsmMapset0 {
                 ld   t3, 0(t1)
                 li   t4, 1
                 beq  s2, t4, .Lksr_str
+                li   t4, 2
+                beq  s2, t4, .Lksr_obj
                 beq  t3, s1, .Lksr_found
                 j    .Lksr_next
             .Lksr_str:
@@ -511,6 +522,13 @@ public final class NativeRiscvAsmMapset0 {
                 mv   a0, t3
                 mv   a1, s1
                 call kof_string_equals
+                bnez a0, .Lksr_found
+                j    .Lksr_next
+            .Lksr_obj:
+                beqz t3, .Lksr_next
+                mv   a0, t3
+                mv   a1, s1
+                call kof_obj_equals
                 bnez a0, .Lksr_found
             .Lksr_next:
                 addi s3, s3, 1
