@@ -14700,16 +14700,30 @@ Expected `6`; actual: `VerifyError: Bad type on operand stack` at load.
 **Proof (same commit, RED→GREEN):** new `SwitchExprPatternBindingE2ETest` 4/4 — the verbatim recursive eval (`-5`), the all-bare-ids shape (`6\n9`), the §57/§70 mixed-branch box contract (no regression) and the explicit-default face (`9\n-1`); RED measured by stashing ONLY the fix (1F = the verbatim). Neighbours: the whole switch cluster 56/0F (expr+stmt+guard+empty-default+break-scope+long/double+rhs).
 <!-- pt-switch --> **PT:** [§484 (pt_BR)](known-bugs.pt_BR.md#484--switch-expressao-cujo-primeiro-case-tem-como-corpo-o-proprio-identificador-bound-pelo-pattern-case-litvar-v---v-inferia-resulttype-unknown--o-tail-sintetico-do-fallback-exaustivo-era-emitido-boxado-contra-corpos-int--verifyerror-bad-type-on-operand-stack-no-load---corrigido-2309-lane-9093-sem--issue-601-causa-raiz-tracada-e-reportada-pelo-autor-da-issue-fix-pousado-aqui)
 
-## §485 — native CROSS `KofConcurrency2Test#channelWithSpawnCrossArch` segfaults under FULL-SUITE load (`qemu: uncaught target signal 11`, exit 139) while green in isolation — INTERMITTENT flake in the channel/spawn native path (§423/B61) — OPEN (found by the gaps-db lane full-suite run, 23/09 session 9092)
+## §485 — native CROSS `KofConcurrency2Test#channelWithSpawnCrossArch` segfaulted under FULL-SUITE load (`qemu: uncaught target signal 11`, exit 139) — ✅ FIXED 23/09: `kof_channel_receive` drained the queue without resetting `tail` (stale tail → head=0 with count>0 → NULL deref), in the channel/spawn native path (§423/B61) AND x86_64 native
 
-**Status** OPEN — intermittent; registered by the gaps-db lane 23/09 (owner: channel/spawn native path, §423/B61).
+**Status** ✅ FIXED 23/09 — root cause in the channel RECEIVE runtime, present in BOTH native faces (cross riscv64/aarch64 via `NativeRiscvAsmRtB61`, and x86_64 via `RuntimeChannel`). Owner: channel/spawn native path (§423/B61).
 
-**Symptom (measured):** the full suite (23/09, `s5_1e`) reported `KofConcurrency2Test` `Failures: 1` — `channelWithSpawnCrossArch` died at `NativeRiscv64E2ETest.runQemu` with `Exit code should be 0, output: 'qemu: uncaught target signal 11 (Segmentation fault) - core dumped'` (exit 139). The same test passes 3/3 in isolation and the whole class passes 49/49 twice on the same tree.
+**Symptom (measured):** `KofConcurrency2Test#channelWithSpawnCrossArch` died at `NativeRiscv64E2ETest.runQemu` with `qemu: uncaught target signal 11 (Segmentation fault) - core dumped` (exit 139) under full-suite / CPU load, while green in isolation. Reproduced on both riscv64 and aarch64 with a load-stressed repro (~1.5% of runs); `qemu -strace` showed the crash right after the empty-queue `nanosleep`, with `si_code=1, si_addr=NULL` (NULL deref) and the fault PC inside `kof_channel_receive`.
 
-**Repro:** run the full reactor suite (CPU contention, many qemu processes at once) — the flake is load-sensitive and does NOT reproduce in the isolated class/test runs above.
+**Root cause (deterministic — no thread race required):** `kof_channel_receive` advanced `head = next` and `count--` but NEVER reset `tail` when the queue drained (when `next == 0`, `head` becomes NULL). `tail` kept pointing at the node just `kof_free`d. The NEXT `send` then saw `tail != 0`, took the non-empty branch, linked the new node onto the STALE (already-freed) tail and did NOT set `head` → the channel ended up with `head == 0` and `count == 1`. The following `receive` read `count > 0`, loaded `head` (NULL) and dereferenced it → SIGSEGV. The load-sensitivity is only WHICH interleaving is hit: `channelWithSpawnCrossArch` drains one item before the worker's second `send` only under the rarer schedule.
 
-**Not introduced by the S5.1 work:** the channel test prunes the new B62–B66 pieces (appended after B61 but not referenced by the channel program) and is green in isolation on the same commit; the failing path is the native channel/spawn runtime (§423, piece `B61`). Recorded per the freeze (red gate with no cause in the own change), for the channel owner. The JVM/JS faces of the same test are green — only the qemu-native face segfaults, under load.
-<!-- pt-dbwire-485 --> **PT:** [§485 (pt_BR)](known-bugs.pt_BR.md#485--no-cross-nativo-o-kofconcurrency2testchannelwithspawncrossarch-estoura-com-sigsegv-sob-carga-de-suite-completa-qemu-uncaught-target-signal-11-exit-139-mas-fica-verde-isolado--flake-intermitente-no-caminho-nativo-de-channelspawn-423b61--aberto-achado-no-full-suite-da-lane-gaps-db-2309-sessao-9092)
+**Repro (verbatim, single-thread — fails 100% before the fix on x86_64, riscv64 and aarch64, rc=139):**
+```kof
+main() {
+    val c = channel<Int>()
+    c.send(1)
+    val a = c.receive()   // drains the queue: head=0, tail left stale
+    c.send(2)             // appends via the stale tail → head stays 0
+    val b = c.receive()   // dereferences head==0 → SIGSEGV
+    println("a=" + a + " b=" + b)
+}
+```
+
+**Fix (landed 23/09):** in `kof_channel_receive`, after `head = next`, reset `tail = 0` when `next == 0` (queue empty again) — so the next `send` takes the empty branch and sets `head = tail = no`. Homed in BOTH native runtimes because the SAME defect existed in each: cross `NativeRiscvAsmRtB61` (`bnez t1, …; sd zero, 8(s0)`, aarch64 via the translator) and x86_64 `RuntimeChannel.emitChannel` (`testq %rbx,%rbx; jne …; movq $0,8(%r13)`). JVM (`LinkedBlockingQueue`) and JS (array push/shift) were already correct — no change.
+
+**Proof (Q0/Q1/Q3):** new deterministic test `channelDrainThenSendNative` (x86_64 + riscv64 + aarch64 under qemu) — RED pre-fix on all three (rc=139, measured), GREEN post-fix (`a=1 b=2`); `KofConcurrency2Test` 50/0F; native battery `NativeE2ETest` 68 + `NativeRiscv64E2ETest` 56 + `NativeAarch64E2ETest` 54 = 178/0F (2 optional-toolchain skips); load-stressed stochastic repro 0 crashes / 300 runs per arch (was ~1.5%).
+<!-- pt-dbwire-485 --> **PT:** [§485 (pt_BR)](known-bugs.pt_BR.md#485--no-cross-nativo-o-kofconcurrency2testchannelwithspawncrossarch-estourava-com-sigsegv-sob-carga-de-suite-completa-qemu-uncaught-target-signal-11-exit-139---corrigido-2309-kof_channel_receive-drenava-a-fila-sem-zerar-tail-cauda-obsoleta--head0-com-count0--deref-null-no-caminho-nativo-de-channelspawn-423b61-e-no-x86_64-nativo)
 
 ## §486 — covariant-return bridge on Native: the erased bridge and its concrete method collided on ONE asm symbol (`NativeSymbolMangling.sigTag` encodes only PARAMETER types) — ✅ FIXED 23/09 (face (a) reference return skipped as a register pass-through; face (b) primitive return via return-suffixed bridge mangling, #613)
 

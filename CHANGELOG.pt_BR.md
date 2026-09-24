@@ -71,6 +71,23 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     regressão agora carrega também o repro de retorno primitivo e prova as duas
     faces 3/3.
 
+  - **O receive do canal drenava a fila sem zerar `tail` (§485) — SIGSEGV
+    (exit 139) no Native (x86_64 e o cross riscv64/aarch64) no primeiro `send`
+    depois de a fila esvaziar** (23/09, lane 9092; apareceu como o flake
+    sensível a carga `KofConcurrency2Test#channelWithSpawnCrossArch` sob a
+    suíte completa, `si_addr=NULL`). `kof_channel_receive` avançava
+    `head = next` e `count--` mas nunca zerava `tail` quando a fila esvaziava
+    (`next == 0`), então `tail` seguia apontando para o nó recém-liberado; o
+    `send` seguinte via `tail != 0`, anexava na cauda OBSOLETA (liberada) e NÃO
+    punha `head` → o canal ficava com `head == 0` e `count == 1`, e o `receive`
+    seguinte dereferenciava `head == NULL`. **Fix:** zerar `tail = 0` quando
+    `next == 0` em `NativeRiscvAsmRtB61` (aarch64 via o tradutor) e em
+    `RuntimeChannel.emitChannel` (x86_64); as faces JVM (`LinkedBlockingQueue`)
+    e JS (array push/shift) já estavam corretas. Prova: novo determinístico
+    `channelDrainThenSendNative` (x86_64 + riscv64 + aarch64; RED pre-fix =
+    rc=139, GREEN = `a=1 b=2`), `KofConcurrency2Test` 50/0F, bateria nativa
+    178/0F (2 skips de toolchain opcional).
+
   - **Diamante de `default` conflitante + overload por aridade em interfaces
     (§487):** uma classe concreta que herda dois `default` de MESMA assinatura
     de interfaces não-relacionadas compilava limpo e estourava no class-LOAD

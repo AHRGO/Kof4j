@@ -124,6 +124,13 @@ public final class RuntimeChannel {
                 movq 0(%rax), %r12               # value
                 movq 8(%rax), %rbx               # next
                 movq %rbx, 0(%r13)               # head = next
+                testq %rbx, %rbx                 # §485: a fila esvaziou?
+                jne .Lchan_recv_hastail
+                movq $0, 8(%r13)                 # tail = 0 (sem isto a cauda
+                                                 #  fica apontando p/ o nó
+                                                 #  liberado e o próximo send
+                                                 #  anexa sem por head → NULL)
+            .Lchan_recv_hastail:
                 decl 16(%r13)                    # count--
                 movq %rax, %rdi
                 call kof_free                    # libera o no

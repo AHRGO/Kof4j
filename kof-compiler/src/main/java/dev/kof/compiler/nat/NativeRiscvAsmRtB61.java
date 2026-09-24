@@ -124,6 +124,9 @@ public final class NativeRiscvAsmRtB61 {
                 ld   s2, 0(s1)              # value = no.value
                 ld   t1, 8(s1)              # next
                 sd   t1, 0(s0)              # head = next
+                bnez t1, .Lrchan_recv_notempty
+                sd   zero, 8(s0)            # §485: fila esvaziou -> tail = 0
+            .Lrchan_recv_notempty:
                 lw   t0, 16(s0)
                 addi t0, t0, -1
                 sw   t0, 16(s0)             # count--

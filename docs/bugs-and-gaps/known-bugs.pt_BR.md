@@ -12231,16 +12231,30 @@ Esperado `6`; atual: `VerifyError: Bad type on operand stack` no load.
 **Prova (mesmo commit, RED→GREEN):** novo `SwitchExprPatternBindingE2ETest` 4/4 — o eval recursivo verbatim (`-5`), o formato todos-os-ids (`6\n9`), o contrato de box do §57/§70 para ramos mistos (zero regressão) e a face com `default` explícito (`9\n-1`); RED medido com stash SÓ do fix (1F = o verbatim). Vizinhos: o cluster switch inteiro 56/0F (expr+stmt+guard+empty-default+break-scope+long/double+rhs).
 <!-- pt-switch --> **EN:** [§484 (en)](known-bugs.md#484--switch-expression-whose-first-case-body-is-a-bare-pattern-bound-identifier-case-litvar-v---v-inferred-resulttype-unknown--the-synthetic-exhaustive-fallback-tail-was-emitted-boxed-against-int-case-bodies--verifyerror-bad-type-on-operand-stack-at-load---fixed-2309-lane-9093-sem--issue-601-root-cause-traced-and-reported-by-the-issue-author-fix-landed-here)
 
-## §485 — no CROSS nativo o `KofConcurrency2Test#channelWithSpawnCrossArch` estoura com SIGSEGV sob CARGA de suíte completa (`qemu: uncaught target signal 11`, exit 139) mas fica verde isolado — FLAKE INTERMITENTE no caminho nativo de channel/spawn (§423/B61) — ABERTO (achado no full-suite da lane gaps-db, 23/09 sessão 9092)
+## §485 — no CROSS nativo o `KofConcurrency2Test#channelWithSpawnCrossArch` estourava com SIGSEGV sob CARGA de suíte completa (`qemu: uncaught target signal 11`, exit 139) — ✅ CORRIGIDO 23/09: `kof_channel_receive` drenava a fila sem zerar `tail` (cauda obsoleta → head=0 com count>0 → deref NULL), no caminho nativo de channel/spawn (§423/B61) E no x86_64 nativo
 
-**Status** ABERTO — intermitente; registrado pela lane gaps-db 23/09 (dono: caminho nativo de channel/spawn, §423/B61).
+**Status** ✅ CORRIGIDO 23/09 — causa raiz no runtime de RECEIVE do canal, presente nas DUAS faces nativas (cross riscv64/aarch64 via `NativeRiscvAsmRtB61`, e x86_64 via `RuntimeChannel`). Dono: caminho nativo de channel/spawn (§423/B61).
 
-**Sintoma (medido):** a suíte completa (23/09, `s5_1e`) reportou `KofConcurrency2Test` `Failures: 1` — `channelWithSpawnCrossArch` morreu em `NativeRiscv64E2ETest.runQemu` com `Exit code should be 0, output: 'qemu: uncaught target signal 11 (Segmentation fault) - core dumped'` (exit 139). O mesmo teste passa 3/3 isolado e a classe inteira passa 49/49 duas vezes na mesma árvore.
+**Sintoma (medido):** `KofConcurrency2Test#channelWithSpawnCrossArch` morreu em `NativeRiscv64E2ETest.runQemu` com `qemu: uncaught target signal 11 (Segmentation fault) - core dumped` (exit 139) sob carga de suíte completa / CPU, mas verde isolado. Reproduzido em riscv64 e aarch64 com um repro sob carga (~1,5% das execuções); `qemu -strace` mostrou o crash logo após o `nanosleep` da fila vazia, com `si_code=1, si_addr=NULL` (deref NULL) e o PC do fault dentro de `kof_channel_receive`.
 
-**Repro:** rodar a suíte completa do reactor (contenção de CPU, muitos processos qemu ao mesmo tempo) — o flake é sensível a carga e NÃO reproduz nas execuções isoladas acima.
+**Causa raiz (determinística — sem corrida de threads):** `kof_channel_receive` avançava `head = next` e `count--` mas NUNCA zerava `tail` quando a fila esvaziava (quando `next == 0`, `head` vira NULL). O `tail` continuava apontando para o nó recém-`kof_free`ado. O `send` seguinte via `tail != 0`, tomava o ramo não-vazio, ligava o novo nó na cauda OBSOLETA (já liberada) e NÃO punha `head` → o canal ficava com `head == 0` e `count == 1`. O `receive` seguinte lia `count > 0`, carregava `head` (NULL) e dereferenciava → SIGSEGV. A sensibilidade a carga é só QUAL interleaving ocorre: o `channelWithSpawnCrossArch` drena um item antes do segundo `send` do worker apenas na escala mais rara.
 
-**Não foi introduzido pelo trabalho de S5.1:** o teste de channel poda as peças novas B62–B66 (anexadas depois de B61 mas não referenciadas pelo programa de channel) e fica verde isolado no mesmo commit; o caminho que falha é o runtime nativo de channel/spawn (§423, peça `B61`). Registrado conforme o freeze (gate vermelho sem causa na própria mudança), para o dono do channel. As faces JVM/JS do mesmo teste estão verdes — só a face qemu-nativa segfaulta, sob carga.
-<!-- pt-dbwire-485 --> **EN:** [§485 (en)](known-bugs.md#485--native-cross-kofconcurrency2testchannelwithspawncrossarch-segfaults-under-full-suite-load-qemu-uncaught-target-signal-11-exit-139-while-green-in-isolation--intermittent-flake-in-the-channelspawn-native-path-423b61--open-found-by-the-gaps-db-lane-full-suite-run-2309-session-9092)
+**Repro (verbatim, single-thread — falha 100% antes do fix em x86_64, riscv64 e aarch64, rc=139):**
+```kof
+main() {
+    val c = channel<Int>()
+    c.send(1)
+    val a = c.receive()   // drena a fila: head=0, tail fica obsoleto
+    c.send(2)             // anexa pela cauda obsoleta → head segue 0
+    val b = c.receive()   // dereferencia head==0 → SIGSEGV
+    println("a=" + a + " b=" + b)
+}
+```
+
+**Fix (landed 23/09):** em `kof_channel_receive`, após `head = next`, zerar `tail = 0` quando `next == 0` (fila vazia de novo) — assim o `send` seguinte toma o ramo vazio e faz `head = tail = no`. Aplicado nos DOIS runtimes nativos porque o MESMO defeito existia em cada um: cross `NativeRiscvAsmRtB61` (`bnez t1, …; sd zero, 8(s0)`, aarch64 via o tradutor) e x86_64 `RuntimeChannel.emitChannel` (`testq %rbx,%rbx; jne …; movq $0,8(%r13)`). JVM (`LinkedBlockingQueue`) e JS (array push/shift) já estavam corretos — sem mudança.
+
+**Prova (Q0/Q1/Q3):** novo teste determinístico `channelDrainThenSendNative` (x86_64 + riscv64 + aarch64 sob qemu) — RED pre-fix nos três (rc=139, medido), GREEN pós-fix (`a=1 b=2`); `KofConcurrency2Test` 50/0F; bateria nativa `NativeE2ETest` 68 + `NativeRiscv64E2ETest` 56 + `NativeAarch64E2ETest` 54 = 178/0F (2 skips de toolchain opcional); repro estocástico sob carga 0 crashes / 300 por arq (era ~1,5%).
+<!-- pt-dbwire-485 --> **EN:** [§485 (en)](known-bugs.md#485--native-cross-kofconcurrency2testchannelwithspawncrossarch-segfaulted-under-full-suite-load-qemu-uncaught-target-signal-11-exit-139---fixed-2309-kof_channel_receive-drained-the-queue-without-resetting-tail-stale-tail--head0-with-count0--null-deref-in-the-channelspawn-native-path-423b61-and-x86_64-native)
 
 ## §486 — bridge de retorno covariante no Native: o bridge apagado e o método concreto colidiam num ÚNICO símbolo asm (o `NativeSymbolMangling.sigTag` codifica só os TIPOS DE PARÂMETRO) — ✅ CORRIGIDO 23/09 (face (a) retorno referência pulado como pass-through de registrador; face (b) retorno primitivo via mangling do bridge com sufixo do retorno, #613)
 

@@ -70,6 +70,23 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     regression test now carries the primitive-return repro too and proves both
     faces 3/3.
 
+  - **Channel receive drained the queue without resetting `tail` (§485) —
+    Native (x86_64 and the cross riscv64/aarch64) SIGSEGV (exit 139) on the
+    first `send` after the queue empties** (23/09, lane 9092; surfaced as the
+    load-sensitive `KofConcurrency2Test#channelWithSpawnCrossArch` flake under
+    full-suite load, `si_addr=NULL`). `kof_channel_receive` advanced
+    `head = next` and `count--` but never reset `tail` when the queue drained
+    (`next == 0`), so `tail` kept pointing at the node just freed; the next
+    `send` saw `tail != 0`, linked onto the stale (freed) tail and did NOT set
+    `head` → the channel had `head == 0` with `count == 1`, and the following
+    `receive` dereferenced `head == NULL`. **Fix:** reset `tail = 0` when
+    `next == 0` in `NativeRiscvAsmRtB61` (aarch64 via the translator) and
+    `RuntimeChannel.emitChannel` (x86_64); the JVM (`LinkedBlockingQueue`) and
+    JS (array push/shift) faces were already correct. Proof: new deterministic
+    `channelDrainThenSendNative` (x86_64 + riscv64 + aarch64; RED pre-fix =
+    rc=139, GREEN = `a=1 b=2`), `KofConcurrency2Test` 50/0F, native battery
+    178/0F (2 optional-toolchain skips).
+
   - **Conflicting default-method diamond + arity overload on interfaces
     (§487):** a concrete class inheriting two `default` methods with the SAME
     signature from unrelated interfaces compiled clean and crashed at
