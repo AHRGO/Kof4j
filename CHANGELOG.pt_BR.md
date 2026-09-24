@@ -37,6 +37,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     estendido (get/containsKey/remove com chave record, chave String
     não-internada, chave primitiva) **3/3**.
 
+  - **§114 (face record-aninhado) ✅ FIXED — `equals`/`==` de record com campo
+    record/classe aninhado agora compara por CONTEÚDO** (24/09, lane compiler/nat
+    9092): `Outer(Inner(1),"z") == Outer(Inner(1),"z")` dava `false` no Native vs
+    `true` no oráculo JVM (compara ponteiro). O `equals` sintetizado do Native agora
+    emite `kof_obj_equals` (helper null-safe do §104b-ii) para campos `ClassType`;
+    primitivos, arrays, type-vars e `Object` mantêm identidade (contrato
+    `Objects.equals`). Prova: `NativeRecordCollectionEqualityE2ETest` estendido
+    (aninhado, fundo, nullable nulo+não-nulo, classe identidade) **3/3** em
+    x86-64+riscv64+aarch64.
+
   - **Boot BIOS bare-metal (plano `PLAN-BAREMETAL-BOOT`, B-3b-3) — o payload Kof
     real agora roda bare pelo caminho BIOS legado: o `_start` é ligado na base
     fixa `0x100000`, copiado do staging de modo real (`0xC200`) em protected mode

@@ -3177,7 +3177,7 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   without exclusions + `NativeE2ETest#nativeMultiDimArray` (minimal repro of §113
   → `2/7`); full suite post-clean green. riscv/aarch faces: port pending.
 
-### 114. Native: `equals`/`==` of a record with a REFERENCE field (String or nested record) compares POINTER → `false` — ⏳ PARTIAL 11/09 (String face ✅; nested-record/hash still open) — face CONTAINMENT (record dentro de coleção) ✅ FECHADA 24/09 via §104b-ii (`kof_equals_table`/`kof_obj_equals`, `NativeRecordCollectionEqualityE2ETest` 3/3) (sub-face de §104b-ii, backend-only)
+### 114. Native: `equals`/`==` of a record with a REFERENCE field (String or nested record) compares POINTER → `false` — ✅ FIXED 24/09 (String face ✅ 11/09; nested-reference face ✅ 24/09 via `kof_obj_equals`; CONTENT `hashCode` still open) — face CONTAINMENT (record dentro de coleção) ✅ FECHADA 24/09 via §104b-ii (`kof_equals_table`/`kof_obj_equals`, `NativeRecordCollectionEqualityE2ETest` 3/3) (sub-face de §104b-ii, backend-only)
 
 - **Minimal repro (measured 11/09):**
   `record S(String t)` + `println(S("ab") == S("ab"))` → JVM/Script/JS `true`,
@@ -3200,6 +3200,26 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   null-pointer; remains true by content). Proof: `recordstrfield` cell
   4/4 without exclusion (`S("ab")==S("ab")` true, mismatch false, mixed field
   Int+String) + full 4-module suite green (1337+30+5+127).
+
+- **✅ NESTED-REFERENCE FACE FIXED 24/09 (lane compiler/nat 9092):** a non-String
+  reference field now compares by CONTENT via the §104b-ii runtime helper
+  `kof_obj_equals(a,b)` (null-safe by construction — `a==b`→1, either null→0,
+  String→`kof_string_equals`, else `kof_equals_table[type_id]` dispatch; class
+  without equals → identity). `CompilerRecordSupport.isKofObjectField` gates it:
+  `ClassType` non-String/non-`Object` (nullable unwrapped); primitives, arrays,
+  type-vars and `Object` keep `KofBinary(EQ)` — the same contract as
+  `Objects.equals`, which does not descend into arrays nor raw `Object` (avoids
+  deref'ing a list/box MAGIC as a `type_id`). No extra jumps in the synthesized
+  equals, so riscv/aarch work by construction (JVM/JS keep their own emitters —
+  no JS reconstructor change). Reuses the §104b-ii `kof_equals_table`; the slice
+  is pulled automatically by the `call kof_obj_equals` text seed. Proof:
+  `NativeRecordCollectionEqualityE2ETest` extended — `Outer(Inner(1),"z") ==
+  Outer(Inner(1),"z")` (RED before: Native `false` vs JVM `true`), mismatch false,
+  `Inner(1)==Inner(1)`, deep `L2(Outer(...))`, nullable field null+non-null,
+  class field identity (`HasUser`) — **3/3** byte-identical on
+  x86-64+riscv64+aarch64; cluster record/equality/collection/parity **224/0F**.
+  Remaining declared-open: content `hashCode` (`buildRecordHashCodeMethod` still
+  sums fields) and `Object`-typed fields.
 - **Fix (not done — remaining faces):** same infrastructure as §104b-ii (i) — in the reference fields
   of the synthesized equals, emit the content compare: String →
   `call kof_string_equals` (helper already exists); nested record → vtable dispatch
