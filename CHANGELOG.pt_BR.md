@@ -65,6 +65,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     32 bits JÁ É `floatToIntBits`). Prova: `NativeRecordHashCodeE2ETest` +=
     `RFloat`/`RDouble` incl. `-0.0` **3/3** em x86-64+riscv64+aarch64.
 
+  - **§114 (face `hashCode` de record-aninhado) ✅ FIXED — `hashCode()` de record
+    com campo record/classe aninhado agora hasheia o CONTEÚDO** (24/09, lane
+    compiler/nat 9092): o campo contribuía o ponteiro. Adicionado `kof_obj_hash`
+    (despacho null-safe) + a tabela densa `kof_hashcode_table` (espelho da
+    `kof_equals_table`, emitida nos 3 sítios de dados). Prova:
+    `NativeRecordHashCodeE2ETest` += aninhado/fundo/nullable **3/3** em
+    x86-64+riscv64+aarch64. O `hashCode` do §114 está agora completo para todos os
+    tipos de conteúdo.
+
   - **Boot BIOS bare-metal (plano `PLAN-BAREMETAL-BOOT`, B-3b-3) — o payload Kof
     real agora roda bare pelo caminho BIOS legado: o `_start` é ligado na base
     fixa `0x100000`, copiado do staging de modo real (`0xC200`) em protected mode

@@ -64,6 +64,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (its 32-bit slot IS `floatToIntBits`). Proof: `NativeRecordHashCodeE2ETest` +=
     `RFloat`/`RDouble` incl. `-0.0` **3/3** on x86-64+riscv64+aarch64.
 
+  - **§114 (nested-record `hashCode` face) ✅ FIXED — `hashCode()` of a record with
+    a nested record/class field now hashes the CONTENT** (24/09, lane compiler/nat
+    9092): the field contributed its pointer. Added `kof_obj_hash` (null-safe
+    dispatch) + the dense `kof_hashcode_table` (mirror of `kof_equals_table`,
+    emitted at all 3 data sites). Proof: `NativeRecordHashCodeE2ETest` +=
+    nested/deep/nullable **3/3** on x86-64+riscv64+aarch64. §114 `hashCode` is now
+    complete for all content types.
+
   - **Bare-metal BIOS boot (plan `PLAN-BAREMETAL-BOOT`, B-3b-3) — the real Kof
     payload now runs bare through the legacy BIOS path: `_start` is linked at the
     fixed base `0x100000`, copied from the real-mode staging (`0xC200`) in

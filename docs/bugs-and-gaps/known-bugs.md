@@ -3179,7 +3179,7 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   without exclusions + `NativeE2ETest#nativeMultiDimArray` (minimal repro of §113
   → `2/7`); full suite post-clean green. riscv/aarch faces: port pending.
 
-### 114. Native: `equals`/`==` of a record with a REFERENCE field (String or nested record) compares POINTER → `false` — ✅ FIXED 24/09 (String face ✅ 11/09; nested-reference face ✅ 24/09 via `kof_obj_equals`; String-content `hashCode` ✅ 24/09; Double `hashCode` ✅ 24/09; nested `hashCode` still open) — face CONTAINMENT (record dentro de coleção) ✅ FECHADA 24/09 via §104b-ii (`kof_equals_table`/`kof_obj_equals`, `NativeRecordCollectionEqualityE2ETest` 3/3) (sub-face de §104b-ii, backend-only)
+### 114. Native: `equals`/`==` of a record with a REFERENCE field (String or nested record) compares POINTER → `false` — ✅ FIXED 24/09 (String face ✅ 11/09; nested-reference face ✅ 24/09 via `kof_obj_equals`; String-content `hashCode` ✅ 24/09; Double `hashCode` ✅ 24/09; nested-record `hashCode` ✅ 24/09 — ALL content faces closed) — face CONTAINMENT (record dentro de coleção) ✅ FECHADA 24/09 via §104b-ii (`kof_equals_table`/`kof_obj_equals`, `NativeRecordCollectionEqualityE2ETest` 3/3) (sub-face de §104b-ii, backend-only)
 
 - **Minimal repro (measured 11/09):**
   `record S(String t)` + `println(S("ab") == S("ab"))` → JVM/Script/JS `true`,
@@ -3249,6 +3249,19 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   `NativeRecordHashCodeE2ETest` += `RFloat`/`RDouble` incl. `-0.0` — **3/3** on
   x86-64+riscv64+aarch64; cluster record/hash/math/double/float **177/0F**.
   Remaining declared-open: nested-record `hashCode`.
+  x86-64+riscv64+aarch64; cluster record/hash/math/double/float **177/0F**.
+- **✅ NESTED-RECORD `hashCode` FIXED 24/09 (lane compiler/nat 9092):** a record/class
+  field contributed its POINTER (`Outer(Inner(7),"z").hashCode()` = a raw address vs
+  the JVM content value). Added `kof_obj_hash` (null-safe: `null→0`, String→
+  `String.hashCode`, else dispatch `kof_hashcode_table[type_id]`, 0 if none) and the
+  dense `kof_hashcode_table` emitted at all 3 data sites (x86 `NativeClassMeta.
+  emitStringData`, riscv `NativeArchEmitter`, aarch64 translator) — mirror of
+  `kof_equals_table`. `kof_obj_hash` lives in the B36 slice beside `String_hashCode`
+  so it adds no `B0→B36` edge (the podable-floor closure stays ~7). Proof:
+  `NativeRecordHashCodeE2ETest` += `Inner`/`Outer`/nullable `MaybeInner` —
+  **3/3** on x86-64+riscv64+aarch64; cluster record/hash/math/double/float/slice
+  **297/0F**. §114 `hashCode` is now complete for all content types
+  (Int/Long/Bool/Char/Float raw, Double bits, String, nested record).
 - **Fix (not done — remaining faces):** same infrastructure as §104b-ii (i) — in the reference fields
   of the synthesized equals, emit the content compare: String →
   `call kof_string_equals` (helper already exists); nested record → vtable dispatch

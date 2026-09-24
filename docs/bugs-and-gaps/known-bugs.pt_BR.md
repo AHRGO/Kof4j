@@ -3180,7 +3180,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   sem exclusões + `NativeE2ETest#nativeMultiDimArray` (repro menor do §113
   → `2/7`); suíte completa pós-clean verde. Faces riscv/aarch: port pendente.
 
-### 114. Native: `equals`/`==` de record com campo de REFERÊNCIA (String ou record aninhado) compara PONTEIRO → `false` — ✅ FIXED 24/09 (face String ✅ 11/09; face record-aninhado ✅ 24/09 via `kof_obj_equals`; `hashCode` de CONTEÚDO String ✅ 24/09; `hashCode` de Double ✅ 24/09; `hashCode` de aninhado ainda aberto) — face CONTENÇÃO (record dentro de coleção) ✅ FECHADA 24/09 via §104b-ii (`kof_equals_table`/`kof_obj_equals`, `NativeRecordCollectionEqualityE2ETest` 3/3) (sub-face do §104b-ii, backend-only)
+### 114. Native: `equals`/`==` de record com campo de REFERÊNCIA (String ou record aninhado) compara PONTEIRO → `false` — ✅ FIXED 24/09 (face String ✅ 11/09; face record-aninhado ✅ 24/09 via `kof_obj_equals`; `hashCode` de CONTEÚDO String ✅ 24/09; `hashCode` de Double ✅ 24/09; `hashCode` de record-aninhado ✅ 24/09 — TODAS as faces de conteúdo fechadas) — face CONTENÇÃO (record dentro de coleção) ✅ FECHADA 24/09 via §104b-ii (`kof_equals_table`/`kof_obj_equals`, `NativeRecordCollectionEqualityE2ETest` 3/3) (sub-face do §104b-ii, backend-only)
 
 - **Menor repro (medido 11/09):**
   `record S(String t)` + `println(S("ab") == S("ab"))` → JVM/Script/JS `true`,
@@ -3252,6 +3252,20 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   `RFloat`/`RDouble` incl. `-0.0` — **3/3** em x86-64+riscv64+aarch64; cluster
   record/hash/math/double/float **177/0F**. Aberto declarado: `hashCode` de
   record-aninhado.
+  record/hash/math/double/float **177/0F**.
+- **✅ `hashCode` DE RECORD-ANINHADO CORRIGIDO 24/09 (lane compiler/nat 9092):** um
+  campo record/classe contribuía o PONTEIRO (`Outer(Inner(7),"z").hashCode()` = um
+  endereço cru vs o valor de conteúdo do JVM). Adicionado `kof_obj_hash` (null-safe:
+  `null→0`, String→`String.hashCode`, senão despacho `kof_hashcode_table[type_id]`,
+  0 se ausente) e a tabela densa `kof_hashcode_table` emitida nos 3 sítios de dados
+  (x86 `NativeClassMeta.emitStringData`, riscv `NativeArchEmitter`, aarch64 tradutor)
+  — espelho da `kof_equals_table`. O `kof_obj_hash` fica na fatia B36 junto de
+  `String_hashCode` para não criar aresta `B0→B36` (o fecho do piso podável fica ~7).
+  Prova: `NativeRecordHashCodeE2ETest` += `Inner`/`Outer`/`MaybeInner` nullable —
+  **3/3** em x86-64+riscv64+aarch64; cluster
+  record/hash/math/double/float/slice **297/0F**. O `hashCode` do §114 está agora
+  COMPLETO para todos os tipos de conteúdo (Int/Long/Bool/Char/Float crus, bits de
+  Double, String, record-aninhado).
 - **Fix (não feito — faces restantes):** mesma infra do §104b-ii (i) — nos campos de referência
   do equals sintetizado, emitir o compare de conteúdo: String →
   `call kof_string_equals` (helper já existe); record aninhado → dispatch vtable
