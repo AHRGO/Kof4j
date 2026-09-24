@@ -39,7 +39,7 @@ class StringMethodTargetCoverageTest {
 
     /** §424 — aceitos no typer, SEM lowering no JS (caem no default → membro JS inexistente). */
     private static final Set<String> JS_KNOWN_GAP = Set.of(
-            "matches", "replaceAll", "replaceFirst", "toCharArray", "compareToIgnoreCase");
+            "matches", "replaceAll", "replaceFirst", "compareToIgnoreCase");
 
     private static Set<String> registryMethods() throws Exception {
         String src = Files.readString(
@@ -122,7 +122,7 @@ class StringMethodTargetCoverageTest {
     @Test
     @DisplayName("o gap JS do §424 e exatamente o conjunto documentado — nao cresce nem some")
     void knownJsGapIsPinnedToTheDocumentedSet() throws Exception {
-        assertEquals(Set.of("matches", "replaceAll", "replaceFirst", "toCharArray",
+        assertEquals(Set.of("matches", "replaceAll", "replaceFirst",
                 "compareToIgnoreCase"), JS_KNOWN_GAP);
     }
 

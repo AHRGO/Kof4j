@@ -448,6 +448,14 @@ void handleStringOp(MethodCtx ctx, List<Object> stack,
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofStringCompareTo"),
                         List.of(receiver, args.get(0))));
             }
+            // D-FULL-PARITY-050 row 11: String.prototype NÃO tem toCharArray →
+            // o default gerava TypeError. Helper kofToCharArray (array de code
+            // units UTF-16, igual ao JVM).
+            case "toCharArray" -> {
+                ctx.lc.registerRuntime("kofToCharArray");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofToCharArray"),
+                        List.of(receiver)));
+            }
             case "split" -> {
                 // §111: JS String.prototype.split PRESERVA vazios trailing
                 // ("a,".split(",")=["a",""]) mas o contrato é o Java

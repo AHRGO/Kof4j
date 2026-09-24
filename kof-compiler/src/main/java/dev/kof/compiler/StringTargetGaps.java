@@ -3,19 +3,26 @@ package dev.kof.compiler;
 import java.util.Set;
 
 /**
- * §424: five {@code String} methods are accepted by the typer
- * ({@link StringMethodRegistry}) but have no lowering on JS or Native —
+ * §424: {@code String} methods accepted by the typer ({@link StringMethodRegistry})
+ * but with no lowering on JS or Native. Originally five —
  * {@code matches}/{@code replaceAll}/{@code replaceFirst}/{@code toCharArray}/
  * {@code compareToIgnoreCase}. On JS the default emitter produced a direct
  * {@code receiver.<m>(...)} call (a nonexistent {@code String.prototype}
  * member → runtime {@code TypeError}, or the literal-vs-regex divergence of
  * {@code replaceAll}); on Native the unhandled call was mangled into
  * {@code java_lang_String_<m>} and surfaced only as a cryptic {@code ld}
- * undefined-reference. JVM implements all five.
+ * undefined-reference.
  *
  * <p>§424 chooses the honest backstop (the JS/Native faces are not ported):
  * refuse at compile time with {@code STR003}, never a silent runtime break
  * (R6). A future per-target implementation replaces this gate.
+ *
+ * <p>D-FULL-PARITY-050 (24/09, row 11): {@code toCharArray} was ported to
+ * JS + Native x86-64 + Native riscv64/aarch64 and left this gate. The three
+ * regex members remain (a regex engine on those targets is a separate
+ * maintainer decision), as does {@code compareToIgnoreCase} (its JVM-exact
+ * Unicode per-code-unit case folding on freestanding targets is the open
+ * decision).
  */
 final class StringTargetGaps {
 
@@ -25,7 +32,7 @@ final class StringTargetGaps {
 
     /** Accepted by the typer, not lowered on JS/Native. */
     private static final Set<String> INCOMPLETE = Set.of(
-            "matches", "replaceAll", "replaceFirst", "toCharArray", "compareToIgnoreCase");
+            "matches", "replaceAll", "replaceFirst", "compareToIgnoreCase");
 
     static boolean isIncompleteMethod(String method) {
         return INCOMPLETE.contains(method);

@@ -36,7 +36,7 @@
 | 8 | `time.*` faces novas golden cross + `addDays`/`diffDays` cross | ✅ | ✅ x86 | ❌ `TIME002` | ⏳ (`collect` = `TIME004`) | `TIME002`/`TIME004` | lane stdlib |
 | 9 | `cache.*`/`config.*`/`log.*` golden cross; `log` interpretador | ✅ (log ⏳ interp) | ✅ x86 | ⏳ golden + `CONF001` | ✅ | `CONF001` | lane stdlib |
 | 10 | `math.pow` cross (estático, sem libc) | ✅ | ✅ (libm `-lm`) | ❌ `MATH001` | ✅ | `MATH001` | lane native cross |
-| 11 | `strings.reverse` não-ASCII (UTF-16 vs byte) + cinco métodos de `String` | ✅ | ❌ `NAT-STR01`/`STR003` | ❌ `STR003` | ❌ `STR003` | `NAT-STR01`/`STR003` | lanes native/js |
+| 11 | `strings.reverse` não-ASCII (UTF-16 vs byte) + `String.matches`/`replaceAll`/`replaceFirst`/`compareToIgnoreCase` | ✅ | ❌ `NAT-STR01`/`STR003` | ❌ `STR003` | ❌ `STR003` | `NAT-STR01`/`STR003` | lanes native/js |
 | 12 | web T1 (faces do `kof.http.server`) no native/cross | ✅ | ⏳ | ❌ `WEB002`–`WEB006` | ✅ | `WEB00x` | lane web |
 | 13 | faces de arquivo do `kof.io` no cross | ✅ | ✅ x86 | ❌ `NAT006`/`NAT007` | ✅ | `NAT006`/`NAT007` | lane native cross |
 | 14 | família security no cross/native (faces bcrypt/argon2/keystore) | ✅ | parcial | ❌ `SECN001`/`003`/`004`/`005` | ⏳ | `SECN00x` | lane security |
@@ -70,6 +70,10 @@ prova = casos std* do `ConformanceMatrixTest` + o E2E nomeado por linha:
 - **`json.encode`/`decode<T>`** — 4 alvos (o Native compõe em compile-time).
 - **`kof.ui`** — cores/widgets/janelas nos 4 alvos (regra: a plataforma
   renderiza).
+- **`String.toCharArray`** (linha 11, portado 24/09) — 4 alvos; array de code
+  units UTF-16 (astral = high/low surrogate), paridade byte-a-byte
+  JVM/x86/cross. Prova: `KofStringsTest#toCharArrayJvmJsNative` (JVM/JS/x86) +
+  `NativeStringToCharArrayCrossTest` (riscv64/aarch64 sob qemu).
 
 Uma entrada aqui só SAI quando a prova é nomeada; o runner
 `ConformanceMatrixTest` re-executa a cada passagem do gate de release

@@ -404,6 +404,10 @@ public final class NativeRiscvCrossOps {
                 case "toLowerCase" -> "kof_string_to_lower";
                 case "lastIndexOf" -> "kof_string_last_index_of";
                 case "equalsIgnoreCase" -> "kof_string_equals_ignore_case";
+                // D-FULL-PARITY-050 row 11 (NativeRiscvAsmStrToCharArray): toCharArray → Char[] (code
+                // units UTF-16, paridade JVM). Sem entry caía no fallback
+                // genérico → java_lang_String_toCharArray (link-fail).
+                case "toCharArray" -> "kof_string_to_char_array";
                 // §97 cross (B36): métodos declarados no reference (equals/
                 // compareTo/hashCode). Sem entry aqui caíam no fallback
                 // genérico (pop só de a0 → receiver fica na pilha, link-fail

@@ -66,6 +66,7 @@ import dev.kof.compiler.runtime.RuntimeStringBase;
 import dev.kof.compiler.runtime.RuntimeStringConv;
 import dev.kof.compiler.runtime.RuntimeStringEdit;
 import dev.kof.compiler.runtime.RuntimeStringOps;
+import dev.kof.compiler.runtime.RuntimeStringToCharArray;
 import dev.kof.compiler.runtime.RuntimeStringParse;
 import dev.kof.compiler.runtime.RuntimeStringParseOrDefault;
 import dev.kof.compiler.runtime.RuntimeStringParseFp;
@@ -154,6 +155,8 @@ public final class NativeRuntime {
         RuntimeStringBase.emitPrintString(sb);
         RuntimeStringBase.emitPrintlnString(sb);
         RuntimeStringOps.emitStringCharAt(sb);
+        // D-FULL-PARITY-050 row 11: String.toCharArray() → Char[] UTF-16.
+        RuntimeStringToCharArray.emitStringToCharArray(sb);
         RuntimeStringOps.emitStringSubstring(sb);
         RuntimeStringSearch.emitStringContains(sb);
         RuntimeStringSearch.emitStringStartsWith(sb);

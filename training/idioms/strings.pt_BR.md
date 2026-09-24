@@ -26,6 +26,7 @@ s.toLowerCase()
 s.trim()
 s.equalsIgnoreCase("hello world")
 s.split(" ")                // String[]
+s.toCharArray()             // Char[] — code units UTF-16 (char astral = 2 elementos)
 var a = "x"
 var b = "y"
 a == b                      // comparação de CONTEÚDO (não referência)

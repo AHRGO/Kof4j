@@ -194,6 +194,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     + `withoutDispatchPieceLinkFailsSabotage` under qemu against the real
     MariaDB.
 
+  - **D-FULL-PARITY-050 row 11 (native-cross lane) — `String.toCharArray()`
+    ported to JS + Native x86-64 + Native riscv64/aarch64.** The method left the
+    honest `STR003` gate: JS (`JsRuntimeCore.kofToCharArray`), x86-64
+    (`RuntimeStringToCharArray` + `NativeX86StringCalls`) and cross
+    (`NativeRiscvAsmStrToCharArray` + `NativeRiscvCrossOps`) now return a `Char[]` with
+    the UTF-16 code units (astral char = high/low surrogate pair), single pass,
+    byte-identical to the JVM oracle. Proof: `KofStringsTest#toCharArrayJvmJsNative`
+    (JVM/JS/x86) + `NativeStringToCharArrayCrossTest` (riscv64/aarch64 under qemu).
+    `matches`/`replaceAll`/`replaceFirst` (regex engine) and `compareToIgnoreCase`
+    (Unicode folding) remain under `STR003`.
+
   - **S5.4 slice 1 (db-parity, gaps-db lane) — real MySQL/MariaDB `connect`
     on the cross (cross piece `B73`)** (24/09): `kof_db_connect` now accepts
     `mysql://`/`mariadb://` on riscv64/aarch64 — URL parse

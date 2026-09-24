@@ -36,7 +36,7 @@
 | 8 | `time.*` new faces cross golden + `addDays`/`diffDays` cross | ✅ | ✅ x86 | ❌ `TIME002` | ⏳ (`collect` = `TIME004`) | `TIME002`/`TIME004` | stdlib lane |
 | 9 | `cache.*`/`config.*`/`log.*` cross golden; `log` interpreter | ✅ (log ⏳ interp) | ✅ x86 | ⏳ golden + `CONF001` | ✅ | `CONF001` | stdlib lane |
 | 10 | `math.pow` cross (static, no libc) | ✅ | ✅ (libm `-lm`) | ❌ `MATH001` | ✅ | `MATH001` | native cross lane |
-| 11 | `strings.reverse` non-ASCII (UTF-16 vs byte) + five `String` methods | ✅ | ❌ `NAT-STR01`/`STR003` | ❌ `STR003` | ❌ `STR003` | `NAT-STR01`/`STR003` | native/js lanes |
+| 11 | `strings.reverse` non-ASCII (UTF-16 vs byte) + `String.matches`/`replaceAll`/`replaceFirst`/`compareToIgnoreCase` | ✅ | ❌ `NAT-STR01`/`STR003` | ❌ `STR003` | ❌ `STR003` | `NAT-STR01`/`STR003` | native/js lanes |
 | 12 | web T1 (`kof.http.server` faces) on native/cross | ✅ | ⏳ | ❌ `WEB002`–`WEB006` | ✅ | `WEB00x` | web lane |
 | 13 | `kof.io` file faces on cross | ✅ | ✅ x86 | ❌ `NAT006`/`NAT007` | ✅ | `NAT006`/`NAT007` | native cross lane |
 | 14 | security family on cross/native (bcrypt/argon2/keystore faces) | ✅ | partial | ❌ `SECN001`/`003`/`004`/`005` | ⏳ | `SECN00x` | security lane |
@@ -68,6 +68,10 @@ proof = `ConformanceMatrixTest` std* cases + the E2E named per row:
   `putIfAbsent`, sort/indexOf/subList) — 4 targets.
 - **`json.encode`/`decode<T>`** — 4 targets (Native composes at compile time).
 - **`kof.ui`** — colors/widgets/windows on the 4 targets (rule: platform renders).
+- **`String.toCharArray`** (row 11, ported 24/09) — 4 targets; array of UTF-16
+  code units (astral = high/low surrogate), byte-parity JVM/x86/cross. Proof:
+  `KofStringsTest#toCharArrayJvmJsNative` (JVM/JS/x86) +
+  `NativeStringToCharArrayCrossTest` (riscv64/aarch64 under qemu).
 
 An entry here only MOVES when its proof is named; the `ConformanceMatrixTest`
 runner is re-run at every release-gate execution (condition 1), so a
