@@ -16,7 +16,7 @@ The CLI is the central tool of the Kof platform.
 | `kof build <dir> --target=native.arm` | Compiles to aarch64 ELF |
 | `kof build <dir> --target=js` | Compiles to ES Modules |
 | `kof build <dir> --target=android` | Generates a Maven project + APK (Phase 1: host Activity in Kof; `mvn verify` / `--apk` with the SDK) |
-| `kof run <file.kf> [--target jvm|native|native.risc|native.arm|js]` | Compiles and runs |
+| `kof run <file.kf> [--target jvm|native|native.risc|native.arm|js]` | Compiles and runs. The file's **directory is the module**: every sibling `.kf` is compiled with it (cross-file top-level functions resolve like one package — `PKG005` duplicate name / `PKG002` duplicate `main()` then apply). Independent files that merely share a directory belong in their own directory; per-file isolation is `kof test` by design (cross-file is `kof build`'s domain) |
 | `kof script <file.ks|kf> [--watch] [--target ...]` | Direct KofScript (pure Kof; top-level `var`/`val` → `KofScriptGlobals`) + diagnostics with file:line |
 | `kof repl` | Incremental KofScript REPL (type `exit` to quit) |
 | `kof c <file.c> [--run] [--output <bin>]` | KofC C subset → native-only x86-64 ELF |
