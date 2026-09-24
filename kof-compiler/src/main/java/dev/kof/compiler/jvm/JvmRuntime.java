@@ -1,5 +1,6 @@
 package dev.kof.compiler.jvm;
 import dev.kof.compiler.IRClass;
+import dev.kof.compiler.Target;
 
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
@@ -85,11 +86,16 @@ public static boolean hasRuntimeFn(String methodName) {
     }
 
     static public void ensureCompiled(Path outputDir, List<IRClass> classes, boolean usesVk, boolean usesExtern) throws IOException {
+        ensureCompiled(outputDir, classes, usesVk, usesExtern, Target.JVM);
+    }
+
+    static public void ensureCompiled(Path outputDir, List<IRClass> classes, boolean usesVk, boolean usesExtern,
+            Target target) throws IOException {
         Path runtimeDir = outputDir.resolve("dev/kof/runtime");
         if (Files.exists(runtimeDir.resolve("KofRuntime.class"))) return;
         Files.createDirectories(runtimeDir);
         Path sourceFile = outputDir.resolve("KofRuntime.java");
-        Files.writeString(sourceFile, source(classes, usesVk, usesExtern));
+        Files.writeString(sourceFile, source(classes, usesVk, usesExtern, target));
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         if (compiler == null) {
             throw new IOException("JVM runtime requires a full JDK (javac not available)");
@@ -121,6 +127,10 @@ public static boolean hasRuntimeFn(String methodName) {
 
 
     private static String source(List<IRClass> classes, boolean usesVk, boolean usesExtern) {
+        return source(classes, usesVk, usesExtern, Target.JVM);
+    }
+
+    private static String source(List<IRClass> classes, boolean usesVk, boolean usesExtern, Target target) {
         StringBuilder decoders = new StringBuilder();
         for (IRClass clazz : classes) {
             String internal = clazz.name();
@@ -148,7 +158,9 @@ public static boolean hasRuntimeFn(String methodName) {
                 + JvmTimeRuntime.source()
                 + JvmStringRuntime.source()
                 + (usesExtern ? JvmFfiRuntime.source() : "")
-                + (usesVk ? JvmVkRuntime.source() : "\n            }");
+                + (usesVk
+                        ? (target == Target.ANDROID ? JvmVkStubRuntime.source() : JvmVkRuntime.source())
+                        : "\n            }");
     }
 
     private static String sourceCore(String decoders) {

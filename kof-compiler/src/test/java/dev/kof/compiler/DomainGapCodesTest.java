@@ -349,11 +349,14 @@ class DomainGapCodesTest {
      * over-gating of §278 was closed 20/09 by D-DB-GAPS DB-2 ("android is
      * JVM", byte-identical emission), so db now compiles clean on Android
      * (asserted right here AND byte-pinned in {@code KofDbE2ETest}). The
-     * security gates stay honest refusals: §278 keeps SECN/GPU open (rule 6
-     * — separate decisions not taken), so the doc gate still covers Android.
+     * security half was closed 23/09 (D-TECHDEBT-23/09). The gpu half is
+     * closed here: the over-gating was removed (the JVM runtime needs FFM,
+     * absent on ART, so Android gets the FFM-free stub at runtime — the
+     * front/IR is unchanged and the {@code Main.class} stays byte-identical;
+     * see {@code GpuAndroidE2ETest}). No false gap hides a parity error.
      */
     @Test
-    void androidCompilesDbAndCryptoLikeJvm(@TempDir Path tmp) throws Exception {
+    void androidCompilesDbCryptoAndGpuLikeJvm(@TempDir Path tmp) throws Exception {
         Path file = tmp.resolve("Db-" + System.nanoTime() + ".kf");
         Files.writeString(file, """
             main() {
@@ -375,6 +378,17 @@ class DomainGapCodesTest {
         CompilationResult rc = driver.compile(crypto, tmp.resolve("out-crypto"), Target.ANDROID);
         assertTrue(rc.success(), "android compila kof.security desde §278: "
                 + rc.diagnostics().getDiagnostics());
+        // §278 face gpu: anda junto com o JVM (mesmo backend/IR); o runtime
+        // Android e o stub sem FFM (GPU001 nao e mais emitido no Android).
+        Path gpu = tmp.resolve("Gpu-" + System.nanoTime() + ".kf");
+        Files.writeString(gpu, """
+            main() {
+                println(gpu.available())
+            }
+            """);
+        CompilationResult rg = driver.compile(gpu, tmp.resolve("out-gpu"), Target.ANDROID);
+        assertTrue(rg.success(), "android compila kof.gpu desde §278: "
+                + rg.diagnostics().getDiagnostics());
     }
 
     /**

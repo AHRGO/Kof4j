@@ -2,12 +2,6 @@
 # Formato: <id> <língua> <justificativa>. O gate pula a afirmação mas a
 # mantém registrada — waiver novo exige parágrafo no CHANGELOG EN+PT, e
 # item do ledger que FECHAR deve REMOVER a linha aqui.
-# §278 PT: over-gating Android (face db/orm do §278) FECHADO 20/09 pela lane
-#          db/orm; §278 segue vivo pelas demais faces — meia-frase, não flip.
-278 PT face db/orm fechada, §278 vivo p/ as outras
-# §278 EN: meia-face db/orm do over-gating Android FECHADA 20/09 (D-DB-GAPS
-#          DB-2); §278 segue vivo pelas demais faces — mesmo caso ja isento PT.
-278 EN face db/orm fechada; demais faces vivas
 # Forma de escrever: 'item 268' e nao '§268' quando o texto so CITA a historia de um
 # id ainda vivo na MESMA linha que carrega token de fechamento — o gate pareia
 # §NNN->token por proximidade e a citação vira afirmação (21/09: ele pegou a

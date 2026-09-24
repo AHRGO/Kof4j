@@ -10110,7 +10110,7 @@ O corpus (`backend-parity.md` linha de mídia + `stdlib-web.md` ×3 + mensagem A
   pós-fix ambos `true`. Native de compilação única continua linkando e
   rodando (`nm`: `T kof_Function1_int_int_invoke`; binário imprime `7`/`14`).
 
-### §278 — Android (`--target android`) recusa `kof.db`/`kof.security`/`kof.gpu` com `DB001`/`SECN00x`/`GPU001`, que o corpus nunca atribui ao Android — 🟡 PARCIAL (achado 17/09, lane bugs-and-gaps `.15`; **face `kof.db`/`kof.orm` CORRIGIDA 20/09 por D-DB-GAPS DB-2**; **face `kof.security` CORRIGIDA 23/09, `D-TECHDEBT-23/09` = "portar as pilhas"**; recusa `kof.gpu` segue ABERTA — sua pilha JVM exige FFM, ausente no Android)
+### §278 — Android (`--target android`) recusa `kof.db`/`kof.security`/`kof.gpu` com `DB001`/`SECN00x`/`GPU001`, que o corpus nunca atribui ao Android — ✅ FIXED (achado 17/09, lane bugs-and-gaps `.15`; **face `kof.db`/`kof.orm` CORRIGIDA 20/09 por D-DB-GAPS DB-2**; **face `kof.security` CORRIGIDA 23/09, `D-TECHDEBT-23/09` = "portar as pilhas"**; **face `kof.gpu` CORRIGIDA 24/09 — Android compila como o JVM e o runtime usa o stub sem FFM**)
 
 `--target android` reusa o backend JVM (`CompilerPipeline.java:186` → `new JvmBackend()`) e o `ExternalClasspath` do JVM (`:438`), então emite o mesmo bytecode que `--target jvm`. Mas vários gates de `supportedOn` listam só `JVM`/`JS`/`isNative()` e portanto **excluem `ANDROID`**, então o compilador recusa chamadas que o alvo JVM aceita, com códigos que o corpus atribui a outros alvos:
 
@@ -10133,7 +10133,7 @@ opção (b) "over-gating" foi confirmada pela mantenedora ("android é JVM").
 **paridade por construção** — `KofDbE2ETest.androidDbEmitsTheSameBytecodeAsJvm`
 compila o mesmo programa entity+create+count nos dois alvos e afirma que o
 `Default/Main.class` emitido é byte-idêntico. O pin antigo virou:
-`DomainGapCodesTest.androidCompilesDbAndCryptoLikeJvm` (db + crypto compilam
+`DomainGapCodesTest.androidCompilesDbCryptoAndGpuLikeJvm` (db + crypto compilam
 limpos).
 
 **CORRIGIDO — metade security (23/09, `D-TECHDEBT-23/09` "portar as pilhas",
@@ -10149,12 +10149,19 @@ gate: `SECN003`/`SECN001`/`SECN008` recusados no ANDROID, GREEN depois. Pins
 virados: `DomainGapCodesTest`, `StdParityGapAuditTest.security*` (ANDROID fora
 dos conjuntos de gap), loop Android de `SecretE2ETest`/`KeyHandleE2ETest`.
 
-**Segue ABERTA — metade gpu (regra 6):** `kof.gpu` no Android continua
-`GPU001`. Sua pilha JVM exige FFM (`java.lang.foreign` — `JvmVkRuntime`/
-`JvmVkInitRuntime`/`JvmVkBuildRuntime`/`JvmVkDispatchRuntime`), que **não existe
-no Android** (sem Project Panama). "Portar" exige um caminho GPU próprio do
-Android — decisão de design, não virada de gate; `KofGpu.supportedOn` segue
-excluindo `ANDROID` até lá.
+**CORRIGIDO — metade gpu (24/09, lane compiler 9092; ordem da mantenedora no
+chat: "faz funcionar no android… e não esconda erros claros de paridade atrás
+de gaps novamente"):** `KofGpu.supportedOn` agora inclui `ANDROID` — `GPU001`
+deixa de ser emitido no Android. O front/IR não mudou: o `Main.class` do
+Android é **byte-a-byte idêntico ao do JVM**
+(`GpuAndroidE2ETest.androidGpuEmitsByteIdenticalMainToJvm`). Como o ART não tem
+FFM (`java.lang.foreign`), o runtime injetado no Android é o
+`JvmVkStubRuntime` — **zero referências a `java.lang.foreign`** (afirmado sobre
+o `KofRuntime.class` emitido), com `available()=false` e dispatch devolvendo o
+fallback CPU (não-zero) — o mesmo contrato honesto dos alvos nativos: roda,
+degrada e nunca mente (R6). Prova: `GpuAndroidE2ETest` 3/3 +
+`DomainGapCodesTest.androidCompilesDbCryptoAndGpuLikeJvm` +
+`StdParityGapAuditTest` (`GPU001` agora só JS/SCRIPT).
 
 ### §279 — KofJS: um `if` sobre **primitivo nulável** cuja condição o otimizador dobra deixa o marcador `KofStatementIf` do §267 órfão → `COMP002 unexpected op in expression statement` (ICE) — ✅ CORREGIDO (achado 18/09 na triagem da ISSUE-LANE `.22`, re-medido pela lane bugs-and-gaps `.15`; dono do fix = lane KofJS `.18` — regressão do marcador do §267; ICE do JS sumiu desde o #278 `495445cd`, re-medido + travado 18/09 pela `.18`)
 

@@ -131,7 +131,7 @@
 | `native.risc` (riscv64) / `native.arm` (aarch64) | — | **core completo (02-03/09)**: plumbing + codegen/runtimes asm puro + qemu — `NativeRiscv64E2ETest 13/13` + `NativeAarch64E2ETest 13/13` (core: classes/arrays/List/switch/try-catch/pattern/Strings/recursão) — SUPERSEDIDO pela re-auditagem 12/09; estado por arco indexado na seção "Native por arco" abaixo — `docs/native-multiarch.md` | — | target separation 0.2.0 |
 | `kof fmt` (formatter parser real, idempotente) | ✅ 31/08 | ✅ | ✅ | `KofFormatter` (2c3e794) |
 | **KofJS no browser real** (`kof.ui` renderizando DOM via ES Modules) | — | — | ✅ 01/09 (`KofJsBrowserE2ETest` — Chrome headless + HTTP + captura de DOM; pula se Chrome ausente) | ESM via HTTP local (módulos não carregam via `file://`); `KofJsRunner` serve `appDir` em `127.0.0.1` |
-| Android (Fase 1: `kof build --target android` → projeto Maven + APK, host Activity em Kof) | ✅ (bytecode JVM) | — | — | gaps `AND00x` em compile-time; `kof.db`/`kof.orm` são **paridade JVM desde 20/09** (D-DB-GAPS DB-2 — gates `supportedOn` incluem `ANDROID`, `Main.class` byte-idêntico ao JVM); `kof.security` é **paridade `ANDROID` desde 23/09** (`D-TECHDEBT-23/09` "portar as pilhas" — `KofSecurity.supportedOn` trata `ANDROID` como `JVM`, shims JCA, `Main.class` byte-idêntico); `kof.gpu` segue **`GPU001`** até existir um caminho próprio do Android (sua pilha JVM exige FFM, ausente no Android — §278 PARCIAL) |
+| Android (Fase 1: `kof build --target android` → projeto Maven + APK, host Activity em Kof) | ✅ (bytecode JVM) | — | — | gaps `AND00x` em compile-time; `kof.db`/`kof.orm` são **paridade JVM desde 20/09** (D-DB-GAPS DB-2 — gates `supportedOn` incluem `ANDROID`, `Main.class` byte-idêntico ao JVM); `kof.security` é **paridade `ANDROID` desde 23/09** (`D-TECHDEBT-23/09` "portar as pilhas" — `KofSecurity.supportedOn` trata `ANDROID` como `JVM`, shims JCA, `Main.class` byte-idêntico); `kof.gpu` é **paridade `ANDROID` desde 24/09** (§278 — Android compila como o JVM, `Main.class` byte-idêntico; runtime = `JvmVkStubRuntime`, sem FFM no ART, `available()=false` + fallback CPU) |
 
 ### Native por arco (x86_64 · riscv64 · aarch64) — face (4) do multiarch, 19/09
 
@@ -266,15 +266,13 @@ sempre `true`), `SCHED001` (`KofScheduler` só gateia `at(cron)`, como
 emitidos — o diagnóstico só aparece quando um alvo fica de fato sem suporte
 (R6: nunca silencioso, e nunca fantasma também).
 
-**Android é um alvo gateado de verdade (medido 17/09).** `--target android`
-reusa o `JvmBackend`, mas vários checks de `supportedOn` excluem `ANDROID`,
-então o compilador recusa honestamente em compile-time: `DB001` (`db.connect`),
-`SECN000` / `SECN001` (`passwords.hash`) / `SECN002` (chacha) / `SECN003`
-(`crypto.sha512`) / `SECN004` (`jwt.create`) / `SECN006` / `SECN007`
-(`kof.security`), `GPU001` (`kof.gpu`) e `AND002`/`AND004`. Se a exclusão é
-intencional (ART sem JDBC/JCA em runtime) ou over-gating é decisão da lane do
-compilador (§278); os códigos ficam listados aqui para a matriz não mentir
-sobre o que o Android aceita.
+**Android é um alvo gateado de verdade.** `--target android` reusa o
+`JvmBackend`, e a §278 resolveu o over-gating: `kof.db`/`kof.orm` (20/09),
+`kof.security` (23/09) e `kof.gpu` (24/09) agora compilam como o JVM
+(`Main.class` byte-idêntico; o runtime gpu do Android é o `JvmVkStubRuntime`
+sem FFM). As recusas genuinamente intencionais seguem `AND002` (servidor
+embutido) e `AND004` (android.jar ausente do `ExternalClasspath`); ficam
+listadas para a matriz não mentir sobre o que o Android aceita.
 
 Regra (R6): gap de domínio sempre tem **código + entrada nesta matriz** —
 nunca stub silencioso, nunca fallback fraco, nunca "paridade parcial" sem

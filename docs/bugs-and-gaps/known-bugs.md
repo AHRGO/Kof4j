@@ -10628,7 +10628,7 @@ The corpus (`backend-parity.md` media row + `stdlib-web.md` ×3 + `KofCliSupport
   post-fix both `true`. Single-compile native still links and runs
   (`nm`: `T kof_Function1_int_int_invoke`; binary prints `7`/`14`).
 
-### §278 — Android (`--target android`) refuses `kof.db`/`kof.security`/`kof.gpu` with `DB001`/`SECN00x`/`GPU001`, which the corpus never attributes to Android — 🟡 PARTIAL (found 17/09, lane bugs-and-gaps `.15`; **`kof.db`/`kof.orm` face FIXED 20/09 by D-DB-GAPS DB-2**; **`kof.security` face FIXED 23/09, `D-TECHDEBT-23/09` = "port the stacks"**; `kof.gpu` refusal stays OPEN — its JVM stack needs FFM, absent on Android)
+### §278 — Android (`--target android`) refuses `kof.db`/`kof.security`/`kof.gpu` with `DB001`/`SECN00x`/`GPU001`, which the corpus never attributes to Android — ✅ FIXED (found 17/09, lane bugs-and-gaps `.15`; **`kof.db`/`kof.orm` face FIXED 20/09 by D-DB-GAPS DB-2**; **`kof.security` face FIXED 23/09, `D-TECHDEBT-23/09` = "port the stacks"**; **`kof.gpu` face FIXED 24/09 — Android compiles like the JVM and the runtime uses the FFM-free stub**)
 
 `--target android` reuses the JVM backend (`CompilerPipeline.java:186` → `new JvmBackend()`) and the JVM `ExternalClasspath` (`:438`), so it emits the same bytecode as `--target jvm`. But several `supportedOn` gates list only `JVM`/`JS`/`isNative()` and therefore **exclude `ANDROID`**, so the compiler refuses calls the JVM target accepts, under codes the corpus attributes to other targets:
 
@@ -10651,7 +10651,7 @@ The corpus (`backend-parity.md` media row + `stdlib-web.md` ×3 + `KofCliSupport
 **parity by construction** — `KofDbE2ETest.androidDbEmitsTheSameBytecodeAsJvm`
 compiles the same entity+create+count program on both targets and asserts the
 emitted `Default/Main.class` is byte-identical. The old pin flipped:
-`DomainGapCodesTest.androidCompilesDbAndCryptoLikeJvm` (db + crypto compile
+`DomainGapCodesTest.androidCompilesDbCryptoAndGpuLikeJvm` (db + crypto compile
 clean).
 
 **FIXED — security half (23/09, `D-TECHDEBT-23/09` "port the stacks", GAPS-DB
@@ -10667,12 +10667,19 @@ the gate stashed: `SECN003`/`SECN001`/`SECN008` refused on ANDROID, GREEN after.
 Pins flipped: `DomainGapCodesTest`, `StdParityGapAuditTest.security*` (ANDROID
 removed from the gap sets), `SecretE2ETest`/`KeyHandleE2ETest` Android loop.
 
-**Still OPEN — gpu half (rule 6):** `kof.gpu` on Android stays `GPU001`. Its
-JVM runtime needs FFM (`java.lang.foreign` — `JvmVkRuntime`/`JvmVkInitRuntime`/
-`JvmVkBuildRuntime`/`JvmVkDispatchRuntime`), which **does not exist on Android**
-(no Project Panama). "Porting" it requires a separate Android GPU path — a
-design decision, not a gate flip; `KofGpu.supportedOn` keeps excluding
-`ANDROID` until then.
+**FIXED — gpu half (24/09, lane compiler 9092; maintainer order in chat: "faz
+funcionar no android… e não esconda erros claros de paridade atrás de gaps
+novamente"):** `KofGpu.supportedOn` now includes `ANDROID` — `GPU001` is no
+longer emitted on Android. The front/IR did not change: the Android
+`Main.class` is **byte-for-byte identical to the JVM**
+(`GpuAndroidE2ETest.androidGpuEmitsByteIdenticalMainToJvm`). Because ART has no
+FFM (`java.lang.foreign`), the runtime injected on Android is
+`JvmVkStubRuntime` — **zero references to `java.lang.foreign`** (asserted on
+the emitted `KofRuntime.class`), with `available()=false` and dispatch
+returning the CPU fallback (non-zero) — the same honest contract as the native
+targets: it runs, degrades, and never lies (R6). Proof: `GpuAndroidE2ETest`
+3/3 + `DomainGapCodesTest.androidCompilesDbCryptoAndGpuLikeJvm` +
+`StdParityGapAuditTest` (`GPU001` now JS/SCRIPT only).
 
 ### §279 — KofJS: an `if` on a **nullable primitive** whose condition the optimizer folds leaves the §267 `KofStatementIf` marker orphaned → `COMP002 unexpected op in expression statement` (ICE) — ✅ FIXED (found 18/09 in the `.22` ISSUE-LANE triage, re-measured by lane bugs-and-gaps `.15`; fix owner = KofJS lane `.18` — regression of the §267 marker; JS ICE gone since #278 `495445cd`, re-measured + pinned 18/09 by `.18`)
 

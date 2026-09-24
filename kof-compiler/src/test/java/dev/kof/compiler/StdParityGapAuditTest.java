@@ -76,9 +76,9 @@ class StdParityGapAuditTest {
     }
 
     @Test
-    @DisplayName("gpu: JS + ANDROID + SCRIPT gated (GPU001 emitido no call-site)")
-    void gpuGatesJsAndroidScript() {
-        assertEquals(Set.of(Target.JS, Target.ANDROID, Target.SCRIPT),
+    @DisplayName("gpu: JS + SCRIPT gated (GPU001 emitido no call-site); ANDROID compila (§278)")
+    void gpuGatesJsAndScript() {
+        assertEquals(Set.of(Target.JS, Target.SCRIPT),
                 unsupported(KofGpu::supportedOn));
     }
 

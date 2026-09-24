@@ -183,7 +183,7 @@ public final class CompilerPipeline {
             case JS -> new JsBackend();
             // Android: ART executa bytecode dex'd — a emissão é a mesma do
             // backend JVM; o alvo vive nas validações AND* e no empacotamento
-            case ANDROID -> CompilerPipeline.backendWithClasspath(driver, new JvmBackend());
+            case ANDROID -> CompilerPipeline.backendWithClasspath(driver, new JvmBackend(Target.ANDROID));
             // SCRIPT não emite artefato — é interpretado (interpret()). O
             // chamador (lowerAndEmit) bloqueia antes; isto é defensivo.
             case SCRIPT -> throw new IllegalStateException("SCRIPT has no backend");

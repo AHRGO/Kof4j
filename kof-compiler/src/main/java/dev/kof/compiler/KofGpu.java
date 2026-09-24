@@ -31,8 +31,12 @@ public final class KofGpu {
 
     static boolean supportedOn(@SuppressWarnings("unused") Target target) {
         // JVM: FFM real. Nativos: stubs asm (available=false, dispatch=1).
+        // ANDROID: roda o MESMO backend JVM, mas o ART nao tem FFM
+        //   (java.lang.foreign) -> o runtime injetado e o stub sem FFM
+        //   (JvmVkStubRuntime: available=false, CPU fallback), como os nativos.
+        //   O front nao muda; a paridade do Main.class e byte-a-byte com o JVM.
         // JS: sem suporte (GPU001).
-        return target.isNative() || target == Target.JVM;
+        return target.isNative() || target == Target.JVM || target == Target.ANDROID;
     }
 
 /** X10 fatia 3: nomes aceitos pelo dispatch real (catálogo p/ LSP).

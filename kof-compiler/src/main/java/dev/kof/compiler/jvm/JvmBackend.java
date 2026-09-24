@@ -16,6 +16,7 @@ import dev.kof.compiler.KofLoadLocal;
 import dev.kof.compiler.KofOperation;
 import dev.kof.compiler.LabelId;
 import dev.kof.compiler.SourcePosition;
+import dev.kof.compiler.Target;
 import dev.kof.compiler.Type;
 
 import org.objectweb.asm.ClassWriter;
@@ -34,6 +35,17 @@ import static org.objectweb.asm.Opcodes.*;
 
 
 public class JvmBackend implements Backend {
+
+    /** Alvo de emissao: JVM (FFM real) ou ANDROID (mesmo backend, sem FFM). */
+    private final Target target;
+
+    public JvmBackend() {
+        this(Target.JVM);
+    }
+
+    public JvmBackend(Target target) {
+        this.target = target;
+    }
 
     /** Classpath externo para computar ancestrais comuns de frames (android.*). */
     private ExternalClasspath externalTypes;
@@ -107,7 +119,7 @@ public class JvmBackend implements Backend {
             emitClass(clazz, outputDir);
         }
         if (usesJson || usesVk || usesExtern) {
-            JvmRuntime.ensureCompiled(outputDir, module.classes(), usesVk, usesExtern);
+            JvmRuntime.ensureCompiled(outputDir, module.classes(), usesVk, usesExtern, target);
         }
     }
 

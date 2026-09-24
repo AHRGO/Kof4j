@@ -72,6 +72,19 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     nested/deep/nullable **3/3** on x86-64+riscv64+aarch64. §114 `hashCode` is now
     complete for all content types.
 
+  - **§278 ✅ FIXED (gpu half) — `kof.gpu` now compiles and runs on `--target
+    android`; no clear parity error is hidden behind a gap** (24/09, lane
+    compiler 9092; maintainer order in chat). Android reuses `JvmBackend`, so
+    the front/IR is unchanged and the Android `Default/Main.class` is
+    **byte-for-byte identical to the JVM** (`GpuAndroidE2ETest`). Because ART
+    has no FFM (`java.lang.foreign`), the gpu runtime injected on Android is
+    `JvmVkStubRuntime` — zero `java.lang.foreign` references (asserted on the
+    emitted `KofRuntime.class`), `available()=false` and dispatch returning the
+    CPU fallback (non-zero): the same honest contract as the native targets.
+    `KofGpu.supportedOn` now includes `ANDROID`; `GPU001` remains only for
+    JS/SCRIPT. Pins flipped in `StdParityGapAuditTest` + `DomainGapCodesTest`;
+    `known-bugs.md` §278 FIXED (live set **1→0**).
+
   - **Bare-metal BIOS boot (plan `PLAN-BAREMETAL-BOOT`, B-3b-3) — the real Kof
     payload now runs bare through the legacy BIOS path: `_start` is linked at the
     fixed base `0x100000`, copied from the real-mode staging (`0xC200`) in
