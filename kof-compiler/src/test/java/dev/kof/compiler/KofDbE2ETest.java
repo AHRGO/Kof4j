@@ -31,7 +31,7 @@ class KofDbE2ETest {
         assertTrue(result.success(), "Compilation should succeed: " + result.diagnostics().getDiagnostics());
         String h2 = findH2Jar();
         try {
-            ProcessBuilder pb = new ProcessBuilder("java", "-cp", outDir + ":" + h2, "Default.Main");
+            ProcessBuilder pb = new ProcessBuilder("java", "-cp", outDir + java.io.File.pathSeparator + h2, "Default.Main");
             pb.redirectErrorStream(true);
             Process p = pb.start();
             String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)

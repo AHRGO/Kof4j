@@ -86,7 +86,7 @@ class ExternalConstructorE2ETest {
         assertTrue(r.success(), "compilação deve passar (SEM015 falso não pode aparecer): "
                 + r.diagnostics().getDiagnostics());
         ProcessBuilder pb = new ProcessBuilder("java", "-cp",
-                tempDir.resolve(outName).toString() + ":" + jar, "Default.Main");
+                tempDir.resolve(outName).toString() + java.io.File.pathSeparator + jar, "Default.Main");
         pb.redirectErrorStream(true);
         Process p = pb.start();
         String out = new String(p.getInputStream().readAllBytes()).trim();

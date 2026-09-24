@@ -296,7 +296,7 @@ class AndroidInteropE2ETest {
         assertTrue(result.success(), "Compilation should succeed: " + result.diagnostics().getDiagnostics());
 
         ProcessBuilder pb2 = new ProcessBuilder("java", "-cp",
-                tempDir.resolve("out").toString() + ":" + jar, "Default.Main");
+                tempDir.resolve("out").toString() + java.io.File.pathSeparator + jar, "Default.Main");
         pb2.redirectErrorStream(true);
         Process p2 = pb2.start();
         String output = new String(p2.getInputStream().readAllBytes()).trim();

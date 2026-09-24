@@ -63,7 +63,7 @@ class ExternalClasspathE2ETest {
         assertTrue(r.success(), "compilação deve passar (PKG006/SEM011 não podem aparecer): "
                 + r.diagnostics().getDiagnostics());
         ProcessBuilder pb = new ProcessBuilder("java", "-cp",
-                tempDir.resolve("out").toString() + ":" + jar, "Default.Main");
+                tempDir.resolve("out").toString() + java.io.File.pathSeparator + jar, "Default.Main");
         pb.redirectErrorStream(true);
         Process p = pb.start();
         String out = new String(p.getInputStream().readAllBytes()).trim();
