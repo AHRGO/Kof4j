@@ -409,6 +409,30 @@ public final class RuntimeMath {
                 xorl %eax, %edi
                 movl %edi, %eax
                 ret
+
+            # kof_obj_hash(rdi=obj) -> eax = hashCode de CONTEUDO
+            # (§114 face hash aninhado). 0 se null/sem hashCode; String por
+            # kof_string_hash_code; senão despacho por kof_hashcode_table[type_id].
+            # Fica NESTA fatia (não na RuntimeList, que o hello já puxa) para não
+            # entrar em todo binário — gate ArtifactSizeTest.
+            .globl kof_obj_hash
+            .type kof_obj_hash, @function
+            kof_obj_hash:
+                testq %rdi, %rdi
+                jz .Lkoh_zero
+                movl (%rdi), %eax
+                cmpl $1, %eax
+                je .Lkoh_str
+                leaq kof_hashcode_table(%rip), %rcx
+                movq (%rcx,%rax,8), %rax
+                testq %rax, %rax
+                jz .Lkoh_zero
+                jmp *%rax
+            .Lkoh_str:
+                jmp kof_string_hash_code
+            .Lkoh_zero:
+                xorl %eax, %eax
+                ret
         """);
     }
 }

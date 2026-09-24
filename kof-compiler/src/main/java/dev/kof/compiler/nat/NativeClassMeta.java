@@ -280,6 +280,11 @@ final class NativeClassMeta {
                 if (idx < methods.size()) table[c.typeId()] = methods.get(idx);
             }
         }
+        // §114: emitida SEMPRE (como toString/equals) — o `kof_obj_hash` (fatia
+        // RuntimeMath/B36, puxada por math/strings) referencia o símbolo; emitir
+        // condicionalmente quebrava o link de programas sem record (LinkByUseTest,
+        // KofMathTest). Para o hello não inchar, o `kof_obj_hash` fica em fatia
+        // on-demand (não na RuntimeList, que o hello puxa) — gate ArtifactSizeTest.
         sb.append(".balign 8\n");
         sb.append("kof_hashcode_table:\n");
         for (int i = 0; i <= maxId; i++) {

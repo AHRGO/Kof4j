@@ -75,8 +75,15 @@ class ArtifactSizeTest {
     // quando não há Double: hello freestanding fica sem kof_schub_*), então o
     // hello x86 host cresceu 39.432→52.096B, 91→100 syms. Medido no host.
     // Follow-up (otimização, não correção): podar a fatia dtoa por uso no host.
+    // §114 (face hash de record-aninhado, 24/09): a tabela densa
+    // `kof_hashcode_table` (`.quad` por type_id, ao lado de toString/equals)
+    // entra no .data do PROGRAMA — +1 símbolo no hello (106; bytes estáveis,
+    // 52.096B inalterado). O `kof_obj_hash` que a consome ficou FORA do
+    // alcançável do hello (movido da RuntimeList, que o hello puxa, para a
+    // fatia RuntimeMath on-demand) justamente para não somar mais símbolos.
+    // Baseline re-medido no host (mesmo processo do #104/B-1c).
     private static final long HELLO_X86_BYTES = 52_096L;
-    private static final int HELLO_X86_SYMS = 100;
+    private static final int HELLO_X86_SYMS = 106;
     // Pós-#104 (13/09): o shim globalThis.kof_platform do core JS (erro claro
     // em vez de ReferenceError fora do GraalJS) entrou no préâmbulo always —
     // o hello carrega ~827B a mais. Re-medido neste host: 6.873 → 7.700.
