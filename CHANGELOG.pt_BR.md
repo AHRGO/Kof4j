@@ -30,6 +30,19 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     + `KofDbE2ETest#crossNativeUnsupportedSchemeNamesTruthfulDb001` (binários
     reais nomeiam DB001 para `postgres://`).
 
+  - **B-4.1 — primeiro slice MCU RV32I roda bare sob `qemu-system-riscv32`
+    (`main(){ println("KO-MCU OK") }` imprime pela UART e desliga pelo test
+    device)** (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`). Novo
+    `Target.NATIVE_RISCV32` + `dev.kof.compiler.nat.mcu.NativeMcuRiscv32`: só
+    `System.out.print/println(String literal)` no `main` é aceito (mais o op
+    no-op `String.valueOf` que o lowering de print emite), rebaixado a escritas
+    na UART (`0x10000000`) + poweroff (`0x100000`); qualquer outra op falha com
+    diagnóstico limpo `NATIVE002` (R6/Q7 — nunca um artefato que finge rodar).
+    Sem semihosting (este build do qemu não reconhece `ebreak`). Toolchain sem
+    root: novo `scripts/provision-mcu-qemu.sh`. Prova: `NativeMcuE2ETest`
+    **4/0** (hello pela UART, ordem/newlines, ELF32 RISC-V `e_machine` 243,
+    recusa `NATIVE002` de `println(42)`).
+
   - **B-5 `kof_plat_time_mono` — agora REAL também no UEFI (TSC calibrado por
     `BootServices->Stall`)** (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`).
     Mesma fonte monotônica do BIOS (64 bits, `rdtsc`), mas a frequência é

@@ -224,6 +224,10 @@ public class NativeBackend implements Backend {
             emitAarch64(module, outputDir);
             return;
         }
+        if (target == Target.NATIVE_RISCV32) {
+            dev.kof.compiler.nat.mcu.NativeMcuRiscv32.emit(module, outputDir);
+            return;
+        }
         if (module.classes().isEmpty()) return;
         labelCounter = 0;
         labelMap.clear();

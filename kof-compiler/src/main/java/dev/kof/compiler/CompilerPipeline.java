@@ -91,6 +91,14 @@ public final class CompilerPipeline {
                         e.getMessage(), "FLT001");
                 return new CompilationResult(false, diagnostics, outputDir);
             }
+            if (e.getMessage() != null && e.getMessage().startsWith("NATIVE002")) {
+                // NATIVE002: op fora do subset de um emissor nativo (ex.: o
+                // slice mínimo do MCU RV32I, B-4) — diagnóstico honesto, nunca
+                // um artefato que finge rodar (R6, Q7).
+                diagnostics.error(sources.get(0).toString(), 0, 0, 0,
+                        e.getMessage(), "NATIVE002");
+                return new CompilationResult(false, diagnostics, outputDir);
+            }
             e.printStackTrace();
             diagnostics.error(sources.get(0).toString(), 0, 0, 0,
                     "Internal compiler error: " + e.getMessage(), "COMP002");
@@ -180,6 +188,7 @@ public final class CompilerPipeline {
             case NATIVE -> new NativeBackend(Target.NATIVE).profile(driver.nativeProfile);
             case NATIVE_RISCV64 -> new NativeBackend(Target.NATIVE_RISCV64).profile(driver.nativeProfile);
             case NATIVE_AARCH64 -> new NativeBackend(Target.NATIVE_AARCH64).profile(driver.nativeProfile);
+            case NATIVE_RISCV32 -> new NativeBackend(Target.NATIVE_RISCV32).profile(driver.nativeProfile);
             case JS -> new JsBackend();
             // Android: ART executa bytecode dex'd — a emissão é a mesma do
             // backend JVM; o alvo vive nas validações AND* e no empacotamento
