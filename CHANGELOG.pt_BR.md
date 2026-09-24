@@ -13,6 +13,23 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **B-5 `kof_plat_time` no BIOS — `time.now()` agora roda bare pelo RTC CMOS;
+    capacidades sem corpo no BIOS recusam com diagnóstico ASCII LEGÍVEL**
+    (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`, autorizado pela
+    mantenedora). A face BIOS da HAL ganhou seu primeiro corpo de plataforma
+    real: `RuntimeBios` lê o RTC (portas `0x70`/`0x71`), aguarda o UIP, converte
+    BCD→binário, trata 12h/24h, resolve o século e preenche o timespec
+    (`tv_sec` epoch + `tv_nsec=0`) que a ABI já espera — então um `time.now()`
+    Kof devolve um epoch moderno sob SeaBIOS em vez de uma recusa. Capacidades
+    ainda sem corpo no BIOS (`time.sleep`, `random`, I/O, rede, threads) mantêm
+    a **recusa NOMEADA** (R6) mas agora em **ASCII** no COM1 (a forma UTF-16 do
+    UEFI saía como lixo com NULs intercalados). Sem mudança de superfície Kof —
+    só os corpos `kof_plat_*`. Prova: `BiosBootE2ETest` **7/0** (novo
+    `biosTimeNowRunsBare`: serial lê `true` para `time.now() > 2020`, RED
+    pré-fix `false`; novo `biosUnsupportedCapabilityPrintsReadableRefusal`:
+    `time.sleep` imprime o `KOF BIOS ... kof_plat_sleep` legível e para) +
+    bateria nativa **103/0** + `RingPrivilegeE2ETest` 5/0.
+
   - **§489 (#617) ✅ CORRIGIDO — `File.mkdir()`/`.mkdirs()` são aliases reais de
     `create()`/`createDirectories()`; métodos `kof.io` desconhecidos dão `SEM102`
     limpo** (24/09, lane compiler 9092; ordem da mantenedora "nada de stub,

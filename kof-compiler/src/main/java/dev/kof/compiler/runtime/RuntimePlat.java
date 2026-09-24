@@ -39,7 +39,6 @@ public final class RuntimePlat {
             """);
     }
 
-
     public static void emitPlatWrite(StringBuilder sb) {
         // B-2: no perfil UEFI os syscalls Linux não existem — a costura fala
         // com o firmware (OutputString/Exit) via RuntimeUefi.
@@ -145,12 +144,16 @@ public final class RuntimePlat {
     }
 
     public static void emitPlatTime(StringBuilder sb) {
-        // B-2: família sem corpo UEFI nesta fatia — recusa NOMEADA (R6),
+        // B-2: família UEFI sem corpo nesta fatia — recusa NOMEADA (R6),
         // nunca um syscall Linux silencioso que não existe no firmware.
-        // B-3b-3: idem no BIOS (relógio bare = RTC/PIT — fatia futura B-2).
-        if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()
-                || dev.kof.compiler.nat.NativeProfile.activeIsBios()) {
+        if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()) {
             RuntimeUefi.emitUefiRefuse(sb, "kof_plat_time, kof_plat_time_mono, kof_plat_sleep");
+            return;
+        }
+        // B-5 (D-BAREMETAL-BODIES, 24/09): no BIOS o relógio de parede vem do
+        // RTC CMOS (portas 0x70/0x71) — time.now() roda bare de verdade.
+        if (dev.kof.compiler.nat.NativeProfile.activeIsBios()) {
+            RuntimeBios.emitTime(sb);
             return;
         }
         sb.append("""
@@ -186,7 +189,7 @@ public final class RuntimePlat {
         // nunca um syscall Linux silencioso que não existe no firmware.
         if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()
                 || dev.kof.compiler.nat.NativeProfile.activeIsBios()) {
-            RuntimeUefi.emitUefiRefuse(sb, "kof_plat_random");
+            RuntimeBios.refuse(sb, "kof_plat_random");
             return;
         }
         sb.append("""
@@ -243,7 +246,7 @@ public final class RuntimePlat {
         // nunca um syscall Linux silencioso que não existe no firmware.
         if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()
                 || dev.kof.compiler.nat.NativeProfile.activeIsBios()) {
-            RuntimeUefi.emitUefiRefuse(sb, "kof_plat_thread_create");
+            RuntimeBios.refuse(sb, "kof_plat_thread_create");
             return;
         }
         sb.append("""
@@ -259,7 +262,7 @@ public final class RuntimePlat {
         // nunca um syscall Linux silencioso que não existe no firmware.
         if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()
                 || dev.kof.compiler.nat.NativeProfile.activeIsBios()) {
-            RuntimeUefi.emitUefiRefuse(sb, "kof_plat_read, kof_plat_close");
+            RuntimeBios.refuse(sb, "kof_plat_read, kof_plat_close");
             return;
         }
         sb.append("""
@@ -284,7 +287,7 @@ public final class RuntimePlat {
         // nunca um syscall Linux silencioso que não existe no firmware.
         if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()
                 || dev.kof.compiler.nat.NativeProfile.activeIsBios()) {
-            RuntimeUefi.emitUefiRefuse(sb, "kof_plat_net_socket, kof_plat_net_connect, kof_plat_net_bind, kof_plat_net_listen, kof_plat_net_accept, kof_plat_net_send");
+            RuntimeBios.refuse(sb, "kof_plat_net_socket, kof_plat_net_connect, kof_plat_net_bind, kof_plat_net_listen, kof_plat_net_accept, kof_plat_net_send");
             return;
         }
         sb.append("""

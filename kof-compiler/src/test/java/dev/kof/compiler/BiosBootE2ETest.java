@@ -299,4 +299,87 @@ class BiosBootE2ETest {
                 "codigo 64-bit nao rodou (long mode nao entrou). Log: "
                         + text.substring(Math.max(0, text.length() - 400)));
     }
+
+    /** B-5 (D-BAREMETAL-BODIES): o relógio de parede do BIOS vem do RTC CMOS —
+     *  {@code time.now()} roda bare e devolve um epoch MODERNO (> 2020), não
+     *  zero/lixo. Prova a leitura do RTC + a conversão data→epoch (BCD, 12h/24h,
+     *  século) pela costura {@code kof_plat_time}; mono/sleep seguem recusas
+     *  nomeadas. */
+    @Test
+    void biosTimeNowRunsBare(@TempDir Path tempDir) throws Exception {
+        Path qemu = findQemu();
+        assumeTrue(qemu != null, "qemu-system-x86_64 ausente");
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path img = build(tempDir, """
+                main() {
+                    println(time.now() > 1600000000000)
+                }
+                """);
+
+        Path ser = tempDir.resolve("ser.log");
+        Process p = new ProcessBuilder(qemuCmd(qemu, img, ser)).redirectErrorStream(true).start();
+        String text = "";
+        try {
+            long deadline = System.currentTimeMillis() + 120_000;
+            while (System.currentTimeMillis() < deadline) {
+                if (Files.exists(ser)) {
+                    text = serialText(ser);
+                    if (text.contains("true") || text.contains("false")) break;
+                }
+                Thread.sleep(500);
+            }
+        } finally {
+            p.destroyForcibly();
+        }
+        assertTrue(text.contains(MARKER), "boot nao imprimiu '" + MARKER + "': " + text);
+        assertTrue(text.contains("true"),
+                "time.now() no BIOS nao leu um epoch moderno do RTC. Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+        assertFalse(text.contains("false"),
+                "time.now() retornou epoch invalido/antigo no BIOS (RTC mal lido). Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+    }
+
+    /** B-5 (D-BAREMETAL-BODIES): capacidade ainda SEM corpo no BIOS
+     *  ({@code time.sleep} → {@code kof_plat_sleep}) recusa de forma NOMEADA
+     *  (R6) com diagnóstico **ASCII legível** no COM1 — nunca stub silencioso
+     *  nem a forma UTF-16 do UEFI. O programa para na recusa (nada após ela). */
+    @Test
+    void biosUnsupportedCapabilityPrintsReadableRefusal(@TempDir Path tempDir) throws Exception {
+        Path qemu = findQemu();
+        assumeTrue(qemu != null, "qemu-system-x86_64 ausente");
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path img = build(tempDir, """
+                main() {
+                    println("BEFORE")
+                    time.sleep(1)
+                    println("AFTER")
+                }
+                """);
+
+        Path ser = tempDir.resolve("ser.log");
+        Process p = new ProcessBuilder(qemuCmd(qemu, img, ser)).redirectErrorStream(true).start();
+        String text = "";
+        try {
+            long deadline = System.currentTimeMillis() + 120_000;
+            while (System.currentTimeMillis() < deadline) {
+                if (Files.exists(ser)) {
+                    text = serialText(ser);
+                    if (text.contains("kof_plat_sleep")) break;
+                }
+                Thread.sleep(500);
+            }
+        } finally {
+            p.destroyForcibly();
+        }
+        assertTrue(text.contains("BEFORE"),
+                "o programa nao comecou a rodar antes da recusa. Log: " + text);
+        assertTrue(text.contains("KOF BIOS") && text.contains("kof_plat_sleep"),
+                "recusa nomeada ilegivel no COM1 (esperado ASCII 'KOF BIOS ... kof_plat_sleep'). Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+        assertFalse(text.contains("AFTER"),
+                "a recusa deveria PARAR o programa (nada apos kof_plat_sleep). Log: " + text);
+    }
 }
