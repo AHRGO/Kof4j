@@ -93,6 +93,9 @@ class PlatformSeamSabotageTest {
             .globl kof_super_table
             kof_super_table:
                 .word 0
+                .globl kof_equals_table
+                kof_equals_table:
+                .quad 0
             """;
 
     /** Sabotagem da costura: corpo de kof_plat_writev/write vira `ret`. */
@@ -141,6 +144,9 @@ class PlatformSeamSabotageTest {
             .globl kof_super_table
             kof_super_table:
                 .long 0
+                .globl kof_equals_table
+                kof_equals_table:
+                .quad 0
             """;
 
     /** Sabotagem da costura x86: corpo de kof_plat_write/writev vira `ret`. */

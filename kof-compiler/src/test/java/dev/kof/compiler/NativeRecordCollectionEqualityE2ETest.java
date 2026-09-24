@@ -42,6 +42,9 @@ class NativeRecordCollectionEqualityE2ETest {
                 println(listOf(Box(1.5, true)).contains(Box(1.5, true)))
                 println(listOf(Box(1.5, true)).contains(Box(1.5, false)))
 
+                println(setOf(Point(1, 2), Point(1, 2)).size)
+                println(setOf("dup", make("du", "p")).size)
+
                 var s = setOf(Point(1, 2))
                 println(s.contains(Point(1, 2)))
                 s.add(Point(1, 2))

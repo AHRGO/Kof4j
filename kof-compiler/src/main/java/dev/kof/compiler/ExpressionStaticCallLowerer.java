@@ -483,10 +483,21 @@ if ("setOf".equals(mc.methodName()) && mc.receiver() == null) {
     for (ExpressionNode arg : mc.arguments()) {
         ops.add(new KofDup());
         localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
+        Type argType = ExpressionTyper.inferExprType(driver, arg, locals);
+        List<Type> addArgs = new ArrayList<>(List.of(argType));
+        if (driver.target.isNative()) {
+            // §104b-ii (24/09): MESMA convenção do set.add (CollectionCallLowerer)
+            // — sem o tag o runtime lia um registrador SUJO (a2/edx) e o tag 2
+            // (objeto Kof) disparava despacho indevido (SIGSEGV riscv em
+            // `setOf(1, 2)` depois de um println de lista; dedup de String
+            // também dependia da sujeira).
+            addArgs.add(Type.PrimitiveType.INT);
+            ops.add(new KofLoadLiteral(Type.PrimitiveType.INT,
+                    CollectionWrites.stringTag(elemType, List.of(argType), 0)));
+        }
         // VOID na construção: o backend descarta o bool e o set
         // duplicado continua na pilha para o próximo append
-        ops.add(new KofCall(setType, "kof_set_add",
-                List.of(ExpressionTyper.inferExprType(driver, arg, locals)), Type.PrimitiveType.VOID, KofCallKind.INSTANCE));
+        ops.add(new KofCall(setType, "kof_set_add", addArgs, Type.PrimitiveType.VOID, KofCallKind.INSTANCE));
     }
     return localIdx;
 }
