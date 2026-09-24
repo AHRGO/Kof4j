@@ -13,6 +13,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **B-5 `kof_plat_time_mono` — agora REAL também no UEFI (TSC calibrado por
+    `BootServices->Stall`)** (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`).
+    Mesma fonte monotônica do BIOS (64 bits, `rdtsc`), mas a frequência é
+    calibrada uma vez com um `Stall` de 50 ms (`1e6/50000 = 20`); emite
+    `ts[0]=tv_sec`/`ts[1]=tv_nsec`, a ABI que `kof_obs_mono_nanos` consome — fim
+    da recusa. Prova: `NativeUefiE2ETest` **8/0** (novo `uefiMonoSpanDuration`:
+    um `time.sleep` de 60 ms entre `spanStart`/`spanEnd` dá
+    `durationMicros >= 10000` sob OVMF).
+
   - **B-5 `kof_plat_time_mono` — REAL no BIOS (TSC calibrado pelo PIT) +
     fall-through da recusa NOMEADA corrigido no UEFI** (24/09, lane baremetal
     9092; `D-BAREMETAL-BODIES`). O monotônico do BIOS não pode usar um delta

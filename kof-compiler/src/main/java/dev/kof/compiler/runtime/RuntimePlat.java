@@ -145,12 +145,12 @@ public final class RuntimePlat {
 
     public static void emitPlatTime(StringBuilder sb) {
         // B-5 (D-BAREMETAL-BODIES, 24/09): no UEFI o relógio de parede vem de
-        // RuntimeServices->GetTime — time.now() roda bare de verdade. Mono/sleep
-        // ainda sem corpo UEFI viram recusa NOMEADA (R6), nunca stub.
+        // RuntimeServices->GetTime (time.now()) e o monotônico do TSC calibrado
+        // por BootServices->Stall; sleep por Stall — nada de recusa, roda bare.
         if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()) {
             RuntimeUefi.emitUefiTime(sb);
             RuntimeUefi.emitUefiSleep(sb);
-            RuntimeUefi.emitUefiRefuse(sb, "kof_plat_time_mono");
+            RuntimeUefi.emitUefiMono(sb);
             return;
         }
         // B-5 (D-BAREMETAL-BODIES, 24/09): no BIOS o relógio de parede vem do

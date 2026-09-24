@@ -342,6 +342,70 @@ public final class RuntimeUefi {
             """);
     }
 
+    /** B-5 (D-BAREMETAL-BODIES): {@code kof_plat_time_mono} no UEFI — mesma
+     *  fonte do BIOS ({@code rdtsc}, 64 bits, sem wrap), mas a calibração da
+     *  frequência usa {@code BootServices->Stall} (50 ms) no lugar do PIT.
+     *  Emite {@code ts[0]=tv_sec}/{@code ts[1]=tv_nsec} — a ABI que
+     *  {@code kof_obs_mono_nanos} consome. Nunca stub. */
+    public static void emitUefiMono(StringBuilder sb) {
+        sb.append("""
+            .section .data
+            kof_plat_uefi_mono_base: .quad 0
+            kof_plat_uefi_mono_freq: .quad 0
+            kof_plat_uefi_mono_ready: .byte 0
+
+            .section .text
+            .globl kof_plat_time_mono
+            .type kof_plat_time_mono, @function
+            kof_plat_time_mono:
+                pushq %rbx
+                pushq %r12
+                pushq %r13
+                movq %rdi, %rbx                 # ts
+                cmpb $0, kof_plat_uefi_mono_ready(%rip)
+                jne .Luefi_mono_go
+                rdtsc
+                shlq $32, %rdx
+                orq %rdx, %rax
+                movq %rax, %r12                 # t0
+                movq kof_efi_st(%rip), %rax
+                movq 96(%rax), %rax             # BootServices
+                movq 248(%rax), %rdi            # fn = BS->Stall
+                movq $50000, %rsi               # 50 ms
+                xorl %edx, %edx
+                call kof_efi_call3
+                rdtsc
+                shlq $32, %rdx
+                orq %rdx, %rax
+                subq %r12, %rax                 # delta TSC em 50 ms
+                imulq $20, %rax, %rax           # freq = delta * (1e6/50000)
+                movq %rax, kof_plat_uefi_mono_freq(%rip)
+                rdtsc
+                shlq $32, %rdx
+                orq %rdx, %rax
+                movq %rax, kof_plat_uefi_mono_base(%rip)
+                movb $1, kof_plat_uefi_mono_ready(%rip)
+            .Luefi_mono_go:
+                rdtsc
+                shlq $32, %rdx
+                orq %rdx, %rax
+                subq kof_plat_uefi_mono_base(%rip), %rax   # delta TSC
+                movq $1000000000, %rcx
+                mulq %rcx                       # rdx:rax = delta*1e9
+                movq kof_plat_uefi_mono_freq(%rip), %rcx
+                divq %rcx                       # rax = ns totais
+                xorl %edx, %edx
+                movq $1000000000, %rcx
+                divq %rcx                       # rax=sec, rdx=nsec
+                movq %rax, 0(%rbx)
+                movq %rdx, 8(%rbx)
+                popq %r13
+                popq %r12
+                popq %rbx
+                ret
+            """);
+    }
+
     /** Recusa NOMEADA (R6) para famílias de costura sem corpo UEFI nesta
      *  fatia (time/random/sync/threads/io/net): imprime o diagnóstico pela
      *  própria costura de write e sai via {@code kof_plat_exit_group} —

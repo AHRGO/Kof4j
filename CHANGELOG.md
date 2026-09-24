@@ -13,6 +13,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **B-5 `kof_plat_time_mono` — now real on UEFI too (TSC calibrated by
+    `BootServices->Stall`)** (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`).
+    Same monotonic source as the BIOS (64-bit `rdtsc`), but the frequency is
+    calibrated once with a 50 ms `Stall` (`1e6/50000 = 20`); emits
+    `ts[0]=tv_sec`/`ts[1]=tv_nsec`, the ABI `kof_obs_mono_nanos` consumes — no
+    more refusal. Proof: `NativeUefiE2ETest` **8/0** (new `uefiMonoSpanDuration`:
+    a 60 ms `time.sleep` inside `spanStart`/`spanEnd` yields
+    `durationMicros >= 10000` under OVMF).
+
   - **B-5 `kof_plat_time_mono` — real on BIOS (TSC calibrated by the PIT) +
     named-refusal fall-through fixed on UEFI** (24/09, lane baremetal 9092;
     `D-BAREMETAL-BODIES`). The BIOS monotonic clock cannot use a single PIT

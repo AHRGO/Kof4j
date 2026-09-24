@@ -87,6 +87,17 @@ class NativeUefiE2ETest {
             }
             """;
 
+    /** B-5: kof_plat_time_mono no UEFI é real (TSC calibrado por Stall) —
+     *  dormir 60 ms dentro de um span dá durationMicros >= 10000. */
+    private static final String MONO = """
+            main() {
+                var h = observability.spanStart("op")
+                time.sleep(60)
+                var j = observability.spanEnd(h)
+                println(j)
+            }
+            """;
+
     private static boolean hasTool(String tool, String... args) {
         String[] cmd = new String[args.length + 1];
         cmd[0] = tool;
@@ -321,5 +332,21 @@ class NativeUefiE2ETest {
                 "recusa NOMEADA da rede no UEFI nao apareceu. Log: " + tail);
         assertTrue(!text.contains("AFTER"),
                 "a recusa UEFI nao PAROU o app (fall-through / crash). Log: " + tail);
+    }
+
+    @Test
+    void uefiMonoSpanDuration(@TempDir Path tempDir) throws Exception {
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path bin = build(tempDir, MONO, true);
+        String text = bootUnderOvmf(tempDir, bin, "durationMicros");
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("\"durationMicros\"\\s*:\\s*(\\d+)").matcher(text);
+        String tail = text.substring(Math.max(0, text.length() - 400));
+        assertTrue(m.find(), "spanEnd nao trouxe durationMicros no UEFI. Log: " + tail);
+        long us = Long.parseLong(m.group(1));
+        assertTrue(us >= 10000,
+                "mono do UEFI nao mediu o sleep de 60 ms (durationMicros=" + us
+                        + ", esperado >= 10000). Log: " + tail);
     }
 }
