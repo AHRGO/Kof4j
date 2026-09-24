@@ -1362,6 +1362,180 @@ class NativeRiscvDbWireTest {
                 "a falha deve citar kof_db_mysql_query: " + r[0]);
     }
 
+    /**
+     * S5.3 (db-parity-plan, gaps-db lane, 24/09): bind client-side do wire
+     * MySQL — {@code kof_db_mysql_render} (valor → literal SQL) +
+     * {@code kof_db_mysql_replace_q} (troca o 1º `?` pelo literal). Port do
+     * fallback `.Ldb_exec_subst` do x86 (COM_QUERY não suporta `?`).
+     * Prova por harness: Int → decimais; String → `'escaped'`
+     * (`'`→`''`, `\`→`\\`); vazio → `''`; sem `?` devolve o sql inalterado;
+     * só o 1º `?` é trocado. O caso negativo documenta a divergência honesta
+     * vs x86 (janela do heap cross → ramo int correto `-5`; o x86 cai no ramo
+     * string por comparação unsigned).
+     */
+    private static String bindHarness() {
+        return """
+                .section .rodata
+                .Lb_raw_ab:
+                    .ascii "ab"
+                .Lb_raw_quote:
+                    .ascii "a'b"
+                .Lb_raw_bs:
+                    .ascii "a\\\\b"
+                .Lb_raw_x:
+                    .ascii "x"
+                .Lb_raw_sql2:
+                    .ascii "SELECT ? + ?"
+                .Lb_raw_sql0:
+                    .ascii "no binds"
+                .section .data
+                .align 3
+                .Lkof_heap_root_start:
+                .Lkof_heap_root_end:
+                .section .text
+                .globl _start
+                _start:
+                    andi sp, sp, -16
+                    # KofStrings no HEAP via kof_io_make_string: a classificacao
+                    # do render usa a janela do heap (como em producao, onde os
+                    # literais sao heap) — literais estaticos cairiam no ramo int.
+                    la   a0, .Lb_raw_ab
+                    li   a1, 2
+                    call kof_io_make_string
+                    mv   s0, a0
+                    la   a0, .Lb_raw_quote
+                    li   a1, 3
+                    call kof_io_make_string
+                    mv   s1, a0
+                    la   a0, .Lb_raw_bs
+                    li   a1, 3
+                    call kof_io_make_string
+                    mv   s2, a0
+                    la   a0, .Lb_raw_ab
+                    li   a1, 0
+                    call kof_io_make_string
+                    mv   s3, a0
+                    la   a0, .Lb_raw_x
+                    li   a1, 1
+                    call kof_io_make_string
+                    mv   s4, a0
+                    la   a0, .Lb_raw_sql2
+                    li   a1, 12
+                    call kof_io_make_string
+                    mv   s5, a0
+                    la   a0, .Lb_raw_sql0
+                    li   a1, 8
+                    call kof_io_make_string
+                    mv   s6, a0
+                    li   a0, 42
+                    call kof_db_mysql_render
+                    call kof_println_string
+                    mv   a0, s0
+                    call kof_db_mysql_render
+                    call kof_println_string
+                    mv   a0, s1
+                    call kof_db_mysql_render
+                    call kof_println_string
+                    mv   a0, s2
+                    call kof_db_mysql_render
+                    call kof_println_string
+                    mv   a0, s3
+                    call kof_db_mysql_render
+                    call kof_println_string
+                    li   a0, 0
+                    call kof_db_mysql_render
+                    call kof_println_string
+                    li   a0, -5
+                    call kof_db_mysql_render
+                    call kof_println_string
+                    mv   a0, s4
+                    call kof_db_mysql_render
+                    mv   s7, a0
+                    mv   a0, s5
+                    mv   a1, s7
+                    call kof_db_mysql_replace_q
+                    call kof_println_string
+                    mv   a0, s6
+                    mv   a1, s7
+                    call kof_db_mysql_replace_q
+                    call kof_println_string
+                    li   a0, 0
+                    li   a7, 93
+                    ecall
+                .globl kof_super_table
+                kof_super_table:
+                    .word 0
+                .globl kof_equals_table
+                kof_equals_table:
+                    .quad 0
+                .globl kof_hashcode_table
+                kof_hashcode_table:
+                    .quad 0
+                .globl kof_tostring_table
+                kof_tostring_table:
+                    .quad 0
+                """;
+    }
+
+    private static String bindOracle() {
+        return """
+                42
+                'ab'
+                'a''b'
+                'a\\\\b'
+                ''
+                0
+                -5
+                SELECT 'x' + ?
+                no binds""";
+    }
+
+    @Test
+    void bindRenderReplaceMatchesOracleOnRiscv64(@TempDir Path tempDir) throws Exception {
+        assumeRiscv();
+        String harness = bindHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String out = buildRun("riscv64", tempDir, "bind_rv", harness + "\n" + runtime);
+        assertEquals(bindOracle(), out, "bind riscv64 diverge do oráculo");
+    }
+
+    @Test
+    void bindRenderReplaceMatchesOracleOnAarch64(@TempDir Path tempDir) throws Exception {
+        assumeAarch64();
+        String harness = bindHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String riscv = harness + "\n" + runtime;
+        StringBuilder arm = new StringBuilder();
+        for (String line : riscv.split("\n", -1)) {
+            for (String t : NativeAarch64Translator.translateRiscvToAarch64(line)) arm.append(t).append('\n');
+        }
+        String out = buildRun("aarch64", tempDir, "bind_aa", arm.toString());
+        assertEquals(bindOracle(), out, "bind aarch64 diverge do oráculo");
+    }
+
+    @Test
+    void withoutBindPieceLinkFailsSabotage(@TempDir Path tempDir) throws IOException {
+        assumeRiscv();
+        String harness = bindHarness();
+        Set<Integer> keep = new LinkedHashSet<>(RiscvSlices.keepForProgramText(harness));
+        int b71 = -1;
+        for (RiscvSlices.Piece p : RiscvSlices.pieces()) {
+            if ("RISCV_RUNTIME_ASM_B_71".equals(p.field())) b71 = p.index();
+        }
+        assertTrue(b71 >= 0, "peça B71 (bind client-side) não encontrada no inventário");
+        assertTrue(keep.remove(b71), "B71 deveria estar no keep do harness de bind");
+        String runtime = RiscvSlices.renderSubset(keep);
+        Path asm = tempDir.resolve("sab_bind.s");
+        Files.writeString(asm, harness + "\n" + runtime);
+        Path obj = tempDir.resolve("sab_bind.o");
+        Path bin = tempDir.resolve("sab_bind");
+        runCapture("riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
+        String[] r = runAllowFail("riscv64-linux-gnu-ld", "--no-relax", "-o", bin.toString(), obj.toString());
+        assertNotEquals("0", r[1], "sem a B71 o link deveria falhar (undefined kof_db_mysql_render); saída: " + r[0]);
+        assertTrue(r[0].contains("kof_db_mysql_render"),
+                "a falha deve citar kof_db_mysql_render: " + r[0]);
+    }
+
     @Test
     void greetingParseMatchesOracleOnRiscv64(@TempDir Path tempDir) throws Exception {
         assumeRiscv();

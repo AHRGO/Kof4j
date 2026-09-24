@@ -244,7 +244,13 @@ por scheme é a prova.
     Faltam nas próximas fatias: prepared/tx/ORM (S5.3) + link/paridade (S5.4).
     *Critério de conclusão:* roundtrip `db.query` sob qemu, byte-idêntico ao x86/JVM.
   - **S5.3 — bind/prepared + tx + ORM.** Portar o dispatch de prepared/execute/
-    transaction. *Prova:* E2E `orm.*` sob qemu.
+    transaction. **Fatia 1 ✅ 24/09 (peça `B71`, lane gaps-db):** os helpers de
+    bind client-side — `kof_db_mysql_render(val)` (Int → decimais, KofString →
+    `'escaped'`) + `kof_db_mysql_replace_q(sql, literal)` (só o 1º `?`) — port
+    do fallback do x86 em `RuntimeDb1`/`RuntimeDb2`/`RuntimeDb4`.
+    *Prova:* `NativeRiscvDbWireTest#bindRenderReplaceMatchesOracle*` + sabotagem
+    da B71 (riscv64 + aarch64, qemu). Falta: o dispatch mysql de executeN/queryN
+    + tx + ORM. *Prova:* E2E `orm.*` sob qemu.
   - **S5.4 — link + teste de paridade.** `-lmariadb` link-by-use no cross + o
     espelho riscv/aarch de `KofDbE2ETest#nativeMariadbAliasWireProtocol`. Depois
     disso o `DB001` cross do S1 vira real.

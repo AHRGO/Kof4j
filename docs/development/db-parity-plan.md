@@ -242,7 +242,13 @@ typed roundtrip) produces the **same observable result** on all four targets, or
     Left for the next slices: prepared/tx/ORM (S5.3) + link/parity (S5.4).
     *Completion criterion:* `db.query` roundtrip under qemu, byte-identical to x86/JVM.
   - **S5.3 — bind/prepared + tx + ORM.** Port the prepared/execute/transaction
-    dispatch. *Proof:* `orm.*` E2E under qemu.
+    dispatch. **Slice 1 ✅ 24/09 (piece `B71`, gaps-db lane):** the client-side
+    bind helpers — `kof_db_mysql_render(val)` (Int → decimals, KofString →
+    `'escaped'`) + `kof_db_mysql_replace_q(sql, literal)` (first `?` only) —
+    port of the x86 fallback in `RuntimeDb1`/`RuntimeDb2`/`RuntimeDb4`.
+    *Proof:* `NativeRiscvDbWireTest#bindRenderReplaceMatchesOracle*` + B71
+    sabotage (riscv64 + aarch64, qemu). Left: the executeN/queryN mysql dispatch
+    + tx + ORM. *Proof:* `orm.*` E2E under qemu.
   - **S5.4 — link + parity test.** `-lmariadb` link-by-use on cross + the riscv/
     aarch mirror of `KofDbE2ETest#nativeMariadbAliasWireProtocol`. After this the
     S1 cross `DB001` becomes real.

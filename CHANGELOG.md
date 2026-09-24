@@ -313,6 +313,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     **10/10** (JVM/Script/JS + Native direct and inherited; RED measured with the
     code unfixed). Full suite 3197/0F/0E.
 
+  - **S5.3 slice 1 (db-parity, gaps-db lane) — client-side bind of the MySQL
+    wire on the cross (cross piece `B71`)** (24/09): `kof_db_mysql_render(val)`
+    renders a bind to an SQL literal (Int → decimals via `kof_int_to_string`;
+    KofString → `'escaped'` with `'`→`''` and `\`→`\\`) and
+    `kof_db_mysql_replace_q(sql, literal)` swaps the FIRST `?` for it (no `?`
+    → unchanged SQL) — port of the x86 `.Ldb_exec_subst` fallback in
+    `RuntimeDb1`/`RuntimeDb2`/`RuntimeDb4` (`COM_QUERY` has no `?`). Honest
+    divergence (same posture as the B47 window): Int×String by the cross heap
+    window instead of the `0x1000000` x86 mmap limit; negative Int takes the
+    correct int branch here (the x86 falls in the string branch by unsigned
+    compare). Proof: `NativeRiscvDbWireTest` 3/3 (Int, quoted, backslash,
+    empty, zero, negative, first-`?`-only, no-`?` + B71 sabotage) on
+    riscv64 + aarch64 under qemu.
+
   - **S5.2 PARTIAL (db-parity, gaps-db lane) — full MySQL text query on the
     cross (cross piece `B70`)** (24/09): `kof_db_mysql_query(fd, sql)` sends
     `COM_QUERY`, reads the column definitions, iterates ALL rows and returns a

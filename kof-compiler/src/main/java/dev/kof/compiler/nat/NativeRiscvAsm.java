@@ -199,6 +199,11 @@ public final class NativeRiscvAsm {
                 // COM_QUERY + colunas + todas as linhas como registros JSON
                 // numa List<KofString> (port de kof_db_query x86).
                 .append(NativeRiscvAsmRtB70.RISCV_RUNTIME_ASM_B_70)
+                // S5.3 db-parity (gaps-db lane, 24/09): bind client-side do
+                // wire MySQL — kof_db_mysql_render (valor -> literal SQL) +
+                // kof_db_mysql_replace_q (troca o 1o `?` pelo literal); o
+                // fallback do COM_QUERY (port de RuntimeDb1/Db2 x86).
+                .append(NativeRiscvAsmRtB71.RISCV_RUNTIME_ASM_B_71)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();
