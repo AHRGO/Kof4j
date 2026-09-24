@@ -270,7 +270,7 @@ carry libc calls from functions *not reached* in the same object
 libc, here they stay unresolved and are only fatal if the program reaches the libc
 path — which the refused capabilities cover. Removing the refs at the source
 (per-function sections + `gc-sections`) is the **B-1b** follow-up.
-> **Face (i) LANDED (22/09, lane 9093 — claimed after coordination with 9092):** the panic path no longer reaches the generic dispatcher — `kof_panic` now prints via `kof_println_string` (every panic message is a static `.asciz`). Measured: hello/plain/numeric programs without floats carry no `snprintf`/`strtod` anymore (`nm -u` of the gc-linked binary: present on the old code, gone on the fix). Proof: new `FreestandingLinkE2ETest.freestandingHelloCarriesNoLibcFormatRefs` (RED on the old code) + class 4/4 + native battery 101/0F (`NativeE2ETest` 67, `NullSafety` 14, `ArrayBounds` 10, catches/prints 10). Face (ii) — libc-free dtoa through the seam — still OPEN, owner lane 9092.
+> **Face (i) LANDED (22/09, lane 9093 — claimed after coordination with 9092):** the panic path no longer reaches the generic dispatcher — `kof_panic` now prints via `kof_println_string` (every panic message is a static `.asciz`). Measured: hello/plain/numeric programs without floats carry no `snprintf`/`strtod` anymore (`nm -u` of the gc-linked binary: present on the old code, gone on the fix). Proof: new `FreestandingLinkE2ETest.freestandingHelloCarriesNoLibcFormatRefs` (RED on the old code) + class 4/4 + native battery 101/0F (`NativeE2ETest` 67, `NullSafety` 14, `ArrayBounds` 10, catches/prints 10). Face (ii) — libc-free dtoa through the seam — LANDED 23/09 (B-1c: x86 `RuntimeDtoaSchubfach` + cross `NativeRiscvSchubfach`; §448 FECHADO).
 
 **B-1b (LANDED 22/09, lane `baremetal` 9092): the freestanding x86_64 link is
 libc-free and closes without `--unresolved-symbols=ignore-all`.** With face (i)
@@ -352,8 +352,7 @@ need `RuntimeDtoa`'s `snprintf("%.*e")`/`strtod` replaced.
   `snprintf`/`strtod` in `nm -u`, byte-for-byte == the measured JVM oracle;
   `FreestandingLinkE2ETest` 6/6; `ConformanceMatrixTest` 14/0F; compiler suite
   3111/2F where the 2 red are the sibling UEFI lane's WIP, not this face.
-  §448 x86 `Double`+`Float` **FECHADOS**; residual = **cross** dtoa (rv/aa,
-  `NativeRiscvAsmRtB45`), explicitly out of this face per the scope note below.
+  §448 x86 `Double`+`Float` **FECHADOS**; o **cross** (rv/aarch64, `NativeRiscvSchubfach`) também FECHADO 23/09 (a nota de "out of this face" foi superada pela fatia cross).
 
 **Depends on:** B-0. **Classification:** M (medium).
 

@@ -276,7 +276,7 @@ alcançadas* no mesmo objeto (`snprintf`/`strtod` do dtoa, `pthread_*`, `usleep`
 no host elas resolvem pela libc, aqui ficam sem resolução e só são fatais se o
 programa alcançar o caminho libc — coberto pelas capacidades recusadas. Remover
 as refs na origem (seções por função + `gc-sections`) é o próximo passo **B-1b**.
-> **Face (i) LANDED (22/09, lane 9093 — reivindicado após coordenação com a 9092):** o caminho de panic não alcança mais o dispatcher genérico — o `kof_panic` imprime via `kof_println_string` (toda mensagem de panic é um `.asciz` estático). Medido: programas hello/plain/numéricos sem float não carregam mais `snprintf`/`strtod` (`nm -u` do binário linkado com gc: presente no código antigo, ausente com o fix). Prova: novo `FreestandingLinkE2ETest.freestandingHelloCarriesNoLibcFormatRefs` (RED no código antigo) + classe 4/4 + bateria nativa 101/0F (`NativeE2ETest` 67, `NullSafety` 14, `ArrayBounds` 10, catches/prints 10). Face (ii) — dtoa libc-free pela costura — ainda ABERTA, dona lane 9092.
+> **Face (i) LANDED (22/09, lane 9093 — reivindicado após coordenação com a 9092):** o caminho de panic não alcança mais o dispatcher genérico — o `kof_panic` imprime via `kof_println_string` (toda mensagem de panic é um `.asciz` estático). Medido: programas hello/plain/numéricos sem float não carregam mais `snprintf`/`strtod` (`nm -u` do binário linkado com gc: presente no código antigo, ausente com o fix). Prova: novo `FreestandingLinkE2ETest.freestandingHelloCarriesNoLibcFormatRefs` (RED no código antigo) + classe 4/4 + bateria nativa 101/0F (`NativeE2ETest` 67, `NullSafety` 14, `ArrayBounds` 10, catches/prints 10). Face (ii) — dtoa libc-free pela costura — LANDADA 23/09 (B-1c: x86 `RuntimeDtoaSchubfach` + cross `NativeRiscvSchubfach`; §448 FECHADO).
 
 **B-1b (LANDADA 22/09, lane `baremetal` 9092): o link freestanding x86_64 fica
 livre de libc e fecha SEM `--unresolved-symbols=ignore-all`.** Com a face (i)
@@ -361,8 +361,7 @@ expressões de range do DWARF). `Float`/`Double` exigem substituir o
   freestanding, sem `snprintf`/`strtod` no `nm -u`, byte-a-byte == oráculo JVM
   medido; `FreestandingLinkE2ETest` 6/6; `ConformanceMatrixTest` 14/0F; suíte do
   compilador 3111/2F, sendo os 2 red o WIP da lane UEFI irmã, não esta face.
-  §448 x86 `Double`+`Float` **FECHADOS**; residual = dtoa **cross** (rv/aa,
-  `NativeRiscvAsmRtB45`), fora desta face pela nota de escopo abaixo.
+  §448 x86 `Double`+`Float` **FECHADOS**; o **cross** (rv/aarch64, `NativeRiscvSchubfach`) também FECHADO 23/09 (a nota de "fora desta face" foi superada pela fatia cross).
 
 **Depende de:** B-0. **Classificação:** M (médio).
 
