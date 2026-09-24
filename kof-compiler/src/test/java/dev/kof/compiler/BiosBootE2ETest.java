@@ -342,7 +342,7 @@ class BiosBootE2ETest {
     }
 
     /** B-5 (D-BAREMETAL-BODIES): capacidade ainda SEM corpo no BIOS
-     *  ({@code time.sleep} → {@code kof_plat_sleep}) recusa de forma NOMEADA
+     *  ({@code random} → {@code kof_plat_random}) recusa de forma NOMEADA
      *  (R6) com diagnóstico **ASCII legível** no COM1 — nunca stub silencioso
      *  nem a forma UTF-16 do UEFI. O programa para na recusa (nada após ela). */
     @Test
@@ -354,7 +354,7 @@ class BiosBootE2ETest {
         Path img = build(tempDir, """
                 main() {
                     println("BEFORE")
-                    time.sleep(1)
+                    println(random.randomBoolean())
                     println("AFTER")
                 }
                 """);
@@ -367,7 +367,7 @@ class BiosBootE2ETest {
             while (System.currentTimeMillis() < deadline) {
                 if (Files.exists(ser)) {
                     text = serialText(ser);
-                    if (text.contains("kof_plat_sleep")) break;
+                    if (text.contains("kof_plat_random")) break;
                 }
                 Thread.sleep(500);
             }
@@ -376,10 +376,52 @@ class BiosBootE2ETest {
         }
         assertTrue(text.contains("BEFORE"),
                 "o programa nao comecou a rodar antes da recusa. Log: " + text);
-        assertTrue(text.contains("KOF BIOS") && text.contains("kof_plat_sleep"),
-                "recusa nomeada ilegivel no COM1 (esperado ASCII 'KOF BIOS ... kof_plat_sleep'). Log: "
+        assertTrue(text.contains("KOF BIOS") && text.contains("kof_plat_random"),
+                "recusa nomeada ilegivel no COM1 (esperado ASCII 'KOF BIOS ... kof_plat_random'). Log: "
                         + text.substring(Math.max(0, text.length() - 400)));
         assertFalse(text.contains("AFTER"),
-                "a recusa deveria PARAR o programa (nada apos kof_plat_sleep). Log: " + text);
+                "a recusa deveria PARAR o programa (nada apos random). Log: " + text);
+    }
+
+    /** B-5 (D-BAREMETAL-BODIES): {@code time.sleep} no BIOS é REAL (PIT canal 0),
+     *  não a recusa — provado pela parede: dormir 1.1 s tem de avançar o RTC em
+     *  >= 1 s (se o sleep retornasse na hora, o delta seria 0 e sairia `false`). */
+    @Test
+    void biosSleepAdvancesWallClock(@TempDir Path tempDir) throws Exception {
+        Path qemu = findQemu();
+        assumeTrue(qemu != null, "qemu-system-x86_64 ausente");
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path img = build(tempDir, """
+                main() {
+                    var before = time.now()
+                    time.sleep(1100)
+                    var after = time.now()
+                    println(after - before >= 1000)
+                }
+                """);
+
+        Path ser = tempDir.resolve("ser.log");
+        Process p = new ProcessBuilder(qemuCmd(qemu, img, ser)).redirectErrorStream(true).start();
+        String text = "";
+        try {
+            long deadline = System.currentTimeMillis() + 120_000;
+            while (System.currentTimeMillis() < deadline) {
+                if (Files.exists(ser)) {
+                    text = serialText(ser);
+                    if (text.contains("true") || text.contains("false")) break;
+                }
+                Thread.sleep(500);
+            }
+        } finally {
+            p.destroyForcibly();
+        }
+        assertTrue(text.contains(MARKER), "boot nao imprimiu '" + MARKER + "': " + text);
+        assertTrue(text.contains("true"),
+                "time.sleep(1100) no BIOS nao avancou o RTC em >= 1 s (PIT nao dormiu). Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+        assertFalse(text.contains("false"),
+                "time.sleep retornou cedo demais no BIOS. Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
     }
 }

@@ -197,6 +197,94 @@ public final class RuntimeBios {
                 popq %rbx
                 ret
             """);
-        emitRefuse(sb, "kof_plat_time_mono, kof_plat_sleep");
+        emitSleep(sb);
+        emitRefuse(sb, "kof_plat_time_mono");
+    }
+
+    /** B-5 (D-BAREMETAL-BODIES): {@code kof_plat_sleep} no BIOS pelo PIT
+     *  (canal 0, 1.193182 MHz). Reprograma o canal 0 para modo 2 (rate
+     *  generator, reload 65536) — o contador passa a decrescer 1 por clock e
+     *  "dá a volta" a cada 54.9 ms; a leitura é latch (0x43←0x00) + lo/hi
+     *  (0x40). O laço acumula ticks com detecção de wrap (cur > prev) e para
+     *  no alvo ({@code us*1193182/1000000}). Sleep real, sem libc.
+     *
+     *  <p>Mono ainda sem corpo → recusa legível (fatia seguinte). */
+    static void emitSleep(StringBuilder sb) {
+        sb.append("""
+            .section .text
+            .type kof_plat_pit_init, @function
+            kof_plat_pit_init:
+                movw $0x43, %dx
+                movb $0x34, %al          # canal 0, lo/hi, modo 2, binario
+                outb %al, %dx
+                movw $0x40, %dx
+                xorl %eax, %eax
+                outb %al, %dx            # reload lo = 0
+                outb %al, %dx            # reload hi = 0 -> 65536
+                ret
+
+            .type kof_plat_pit_read, @function
+            kof_plat_pit_read:
+                movw $0x43, %dx
+                xorl %eax, %eax
+                outb %al, %dx            # latch canal 0
+                movw $0x40, %dx
+                inb %dx, %al
+                movzbl %al, %ecx
+                inb %dx, %al
+                movzbl %al, %eax
+                shll $8, %eax
+                orl %ecx, %eax           # eax = contador (16 bits)
+                ret
+
+            .globl kof_plat_sleep
+            .type kof_plat_sleep, @function
+            kof_plat_sleep:
+                pushq %rbx
+                pushq %r12
+                pushq %r13
+                pushq %r14
+                movq (%rdi), %r12        # tv_sec
+                movq 8(%rdi), %r13       # tv_nsec
+                movq $1000000, %rax
+                imulq %rax, %r12         # sec*1e6
+                movq %r13, %rax
+                xorl %edx, %edx
+                movq $1000, %rcx
+                divq %rcx                # nsec/1000
+                addq %rax, %r12          # us total
+                movq $1193182, %rax
+                imulq %r12, %rax
+                xorl %edx, %edx
+                movq $1000000, %rcx
+                divq %rcx
+                movq %rax, %r13          # alvo (ticks)
+                testq %r13, %r13
+                jz .Lkof_sleep_done
+                call kof_plat_pit_init
+                call kof_plat_pit_read
+                movl %eax, %r14d         # prev
+                xorq %r12, %r12          # total
+            .Lkof_sleep_loop:
+                call kof_plat_pit_read
+                movl %r14d, %ecx
+                movl %eax, %r14d         # prev = cur
+                movl %ecx, %edx
+                subl %eax, %edx          # delta = prev - cur
+                cmpl %eax, %ecx
+                jae .Lkof_sleep_nowrap
+                addl $65536, %edx        # deu a volta
+            .Lkof_sleep_nowrap:
+                movl %edx, %edx
+                addq %rdx, %r12
+                cmpq %r13, %r12
+                jb .Lkof_sleep_loop
+            .Lkof_sleep_done:
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                ret
+            """);
     }
 }

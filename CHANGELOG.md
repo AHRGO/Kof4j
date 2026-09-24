@@ -13,6 +13,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **B-5 BIOS `kof_plat_sleep` — a real PIT-based sleep (channel 0, mode 2),
+    not a refusal** (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`).
+    `time.sleep(ms)` now actually waits on legacy BIOS: the PIT is reprogrammed
+    to the rate generator (1.193182 MHz, reload 65536) and the loop accumulates
+    latched ticks (wrap-aware) up to `us*1193182/1000000`. `kof_plat_time_mono`
+    stays a named refusal (next slice). Proof: `BiosBootE2ETest` **8/0** (new
+    `biosSleepAdvancesWallClock`: after `time.sleep(1100)` the RTC advanced ≥1 s
+    → `true`; RED pre-fix timeout/false) + native battery **102/0**.
+
   - **B-5 UEFI `kof_plat_time` — `time.now()` now runs bare from
     `RuntimeServices->GetTime`** (24/09, lane baremetal 9092;
     `D-BAREMETAL-BODIES`). The UEFI face fills its wall-clock body (`RT = ST+88`,

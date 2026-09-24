@@ -13,6 +13,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **B-5 `kof_plat_sleep` no BIOS — sleep REAL pelo PIT (canal 0, modo 2),
+    não recusa** (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`).
+    `time.sleep(ms)` agora espera de verdade no BIOS legado: o PIT é
+    reprogramado para rate generator (1.193182 MHz, reload 65536) e o laço
+    acumula ticks latchados (ciente de wrap) até `us*1193182/1000000`.
+    `kof_plat_time_mono` segue recusa NOMEADA (próxima fatia). Prova:
+    `BiosBootE2ETest` **8/0** (novo `biosSleepAdvancesWallClock`: após
+    `time.sleep(1100)` o RTC avançou ≥1 s → `true`; RED pré-fix timeout/false) +
+    bateria nativa **102/0**.
+
   - **B-5 UEFI `kof_plat_time` — `time.now()` agora roda bare por
     `RuntimeServices->GetTime`** (24/09, lane baremetal 9092;
     `D-BAREMETAL-BODIES`). A face UEFI ganha o corpo do relógio de parede
