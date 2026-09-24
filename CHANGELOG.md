@@ -78,6 +78,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     (`KOF_ISSUES_AGENT_YML`). Scope: `beta-0.5.0` only — `main` (which runs
     issue events) is intentionally left for a maintainer-approved landing.
 
+  - **`codeql-gate.sh` judges CodeQL alerts/analyses only, and works under Git
+    Bash (#604/#605)** (23/09, lane CI — `35cfb5493`): since the Debt Scout
+    started uploading SARIF, `code-scanning` stopped meaning CodeQL — its
+    note-level findings turned the gate RED on every `beta-0.5.0` PR, and its
+    analysis could bind the verdict to a SHA CodeQL never analyzed. A
+    `$TOOL`/`tool_name` filter was added to the three queries (list, per-branch
+    union, analyses), and the endpoints dropped the leading slash
+    (`repos/$REPO/...`) so MSYS no longer rewrites them into filesystem paths
+    under Git Bash. Proof: `scripts/tests/codeql-gate-test.sh` **13/13** green
+    (scenarios 11–13).
+
   - **§484 ✅ FIXED — switch-expression with a bare pattern-bound id in the
     first case no longer emits a boxed synthetic fallback against int bodies
     (#601)** (23/09, lane 9093; root cause traced and reported by the issue

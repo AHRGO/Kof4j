@@ -80,6 +80,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `beta-0.5.0` — o `main` (que roda os eventos de issue) fica intocado, para
     um pouso aprovado pela mantenedora.
 
+  - **O `codeql-gate.sh` julga só alertas/análises do CodeQL e funciona no Git
+    Bash (#604/#605)** (23/09, lane CI — `35cfb5493`): desde que o Debt Scout
+    passou a subir SARIF, `code-scanning` deixou de significar CodeQL — as
+    notas dele deixavam o gate VERMELHO em toda PR contra a `beta-0.5.0`, e a
+    análise dele podia amarrar o veredito a um SHA que o CodeQL nunca analisou.
+    Um filtro `$TOOL`/`tool_name` foi adicionado às três consultas (lista, união
+    por branch, análises), e os endpoints perderam a barra inicial
+    (`repos/$REPO/...`) para o MSYS não reescrevê-los como caminho de arquivo no
+    Git Bash. Prova: `scripts/tests/codeql-gate-test.sh` **13/13** verde
+    (cenários 11–13).
+
   - **§484 ✅ CORRIGIDO — switch-expressão com id bound por pattern no
     primeiro case não emite mais fallback sintético boxado contra corpos int
     (#601)** (23/09, lane 9093; causa raiz traçada e reportada pelo autor da
