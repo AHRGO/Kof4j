@@ -1536,6 +1536,395 @@ class NativeRiscvDbWireTest {
                 "a falha deve citar kof_db_mysql_render: " + r[0]);
     }
 
+    /**
+     * S5.3 (db-parity-plan, gaps-db lane, 24/09): execute COM_QUERY no cross —
+     * {@code kof_db_mysql_execute(fd, sql)} (COM_QUERY via B67 + affected-rows
+     * do OK-packet; port da cauda de execute de RuntimeDb4/Db5 x86) com binds
+     * substituídos pela B71, mais a query com binds (B71 + B70). Prova por
+     * harness contra o MariaDB real, numa ÚNICA conexão (a tabela TEMPORARY
+     * vive nela): CREATE (0), INSERT com binds Int+String (1), INSERT com
+     * quote no bind (escape, 1), UPDATE com 2 binds (1), DELETE sem match (0),
+     * DELETE com match (1), SQL inválido (ERR → 0), SELECT via execute
+     * (resultset → 0, contrato `.Ldb_exec_bad` do x86) e a query com bind
+     * provando a coerência execute→query.
+     */
+    private static String execBindHarness() {
+        int port = mysqlPort();
+        String hi = String.format("0x%02X", (port >> 8) & 0xff);
+        String lo = String.format("0x%02X", port & 0xff);
+        // Q4: bulk multi-VALUES INSERT (300 linhas, ids 100..399) — o
+        // affected-rows 300 força o caminho FC (0xFC+2LE) do OK-packet, que o
+        // corpus pequeno (0/1) nunca exercita. SQL gerado (~4.5KB, abaixo do
+        // limite 8000 da B67); '"' não aparece (GAS proíbe em .ascii).
+        StringBuilder bulk = new StringBuilder("INSERT INTO kof_b72 VALUES ");
+        for (int i = 100; i < 400; i++) {
+            if (i > 100) bulk.append(',');
+            bulk.append('(').append(i).append(",'r").append(i).append("')");
+        }
+        String bulkSql = bulk.toString();
+        String head = """
+                .section .rodata
+                .Le_raw_create:
+                    .ascii "CREATE TEMPORARY TABLE kof_b72 (id INT PRIMARY KEY, name VARCHAR(32))"
+                .Le_raw_insert:
+                    .ascii "INSERT INTO kof_b72 VALUES (?, ?)"
+                .Le_raw_bulk:
+                    .ascii \"""";
+        String tail = """
+                .Le_raw_update:
+                    .ascii "UPDATE kof_b72 SET name = ? WHERE id = ?"
+                .Le_raw_delete:
+                    .ascii "DELETE FROM kof_b72 WHERE id = ?"
+                .Le_raw_badsql:
+                    .ascii "THIS IS NOT SQL"
+                .Le_raw_select1:
+                    .ascii "SELECT 1"
+                .Le_raw_selbind:
+                    .ascii "SELECT id, name FROM kof_b72 WHERE id = ?"
+                .Le_raw_seven:
+                    .ascii "seven"
+                .Le_raw_obrien:
+                    .ascii "o'brien"
+                .Le_raw_n7:
+                    .ascii "n7"
+                .section .data
+                .align 3
+                .Le_user:
+                    .zero 16
+                    .word 4
+                    .zero 4
+                    .ascii "root"
+                .align 3
+                .Le_pass:
+                    .zero 16
+                    .word 7
+                    .zero 4
+                    .ascii "kofpass"
+                .align 3
+                .Le_db:
+                    .zero 16
+                    .word 4
+                    .zero 4
+                    .ascii "test"
+                .align 3
+                .Le_addr:
+                    .byte 2, 0, PORT_HI, PORT_LO, 127, 0, 0, 1
+                    .zero 8
+                .align 3
+                .Lkof_heap_root_start:
+                .Lkof_heap_root_end:
+                .section .text
+                .globl _start
+                _start:
+                    andi sp, sp, -16
+                    addi sp, sp, -160
+                    # strings no HEAP via kof_io_make_string (o render da B71
+                    # classifica pela janela do heap, como em producao):
+                    # slots 0:create 8:insert 16:update 24:delete 32:badsql
+                    # 40:select1 48:selbind 56:seven 64:obrien 72:n7 80:bulk
+                    la   a0, .Le_raw_create
+                    li   a1, 69
+                    call kof_io_make_string
+                    sd   a0, 0(sp)
+                    la   a0, .Le_raw_insert
+                    li   a1, 33
+                    call kof_io_make_string
+                    sd   a0, 8(sp)
+                    la   a0, .Le_raw_bulk
+                    li   a1, BULKLEN
+                    call kof_io_make_string
+                    sd   a0, 80(sp)
+                    la   a0, .Le_raw_update
+                    li   a1, 40
+                    call kof_io_make_string
+                    sd   a0, 16(sp)
+                    la   a0, .Le_raw_delete
+                    li   a1, 32
+                    call kof_io_make_string
+                    sd   a0, 24(sp)
+                    la   a0, .Le_raw_badsql
+                    li   a1, 15
+                    call kof_io_make_string
+                    sd   a0, 32(sp)
+                    la   a0, .Le_raw_select1
+                    li   a1, 8
+                    call kof_io_make_string
+                    sd   a0, 40(sp)
+                    la   a0, .Le_raw_selbind
+                    li   a1, 41
+                    call kof_io_make_string
+                    sd   a0, 48(sp)
+                    la   a0, .Le_raw_seven
+                    li   a1, 5
+                    call kof_io_make_string
+                    sd   a0, 56(sp)
+                    la   a0, .Le_raw_obrien
+                    li   a1, 7
+                    call kof_io_make_string
+                    sd   a0, 64(sp)
+                    la   a0, .Le_raw_n7
+                    li   a1, 2
+                    call kof_io_make_string
+                    sd   a0, 72(sp)
+                    # socket + connect + handshake (s0 = fd)
+                    li   a0, 2
+                    li   a1, 1
+                    li   a2, 0
+                    call kof_plat_net_socket
+                    mv   s0, a0
+                    mv   a0, s0
+                    la   a1, .Le_addr
+                    li   a2, 16
+                    call kof_plat_net_connect
+                    mv   a0, s0
+                    la   a1, .Le_user
+                    la   a2, .Le_pass
+                    la   a3, .Le_db
+                    call kof_db_mysql_handshake
+                    bnez a0, .Le_fail
+                    ld   a0, 0(sp)
+                    call .Le_x0
+                    ld   a0, 8(sp)
+                    li   a1, 7
+                    ld   a2, 56(sp)
+                    call .Le_x2
+                    ld   a0, 8(sp)
+                    li   a1, 8
+                    ld   a2, 64(sp)
+                    call .Le_x2
+                    ld   a0, 80(sp)
+                    call .Le_x0
+                    ld   a0, 16(sp)
+                    ld   a1, 72(sp)
+                    li   a2, 7
+                    call .Le_x2
+                    ld   a0, 24(sp)
+                    li   a1, 999
+                    call .Le_x1
+                    ld   a0, 24(sp)
+                    li   a1, 8
+                    call .Le_x1
+                    ld   a0, 32(sp)
+                    call .Le_x0
+                    ld   a0, 40(sp)
+                    call .Le_x0
+                    ld   a0, 48(sp)
+                    li   a1, 7
+                    call .Le_q1
+                    mv   a0, s0
+                    call kof_plat_close
+                    li   a0, 0
+                    li   a7, 93
+                    ecall
+                .Le_fail:
+                    li   a0, -1
+                    call kof_println_int
+                    mv   a0, s0
+                    call kof_plat_close
+                    li   a0, 0
+                    li   a7, 93
+                    ecall
+                # a0 = sql -> execute + println(affected)
+                .Le_x0:
+                    addi sp, sp, -32
+                    sd   ra, 0(sp)
+                    sd   s0, 8(sp)
+                    sd   s1, 16(sp)
+                    mv   s1, a0
+                    mv   a0, s0
+                    mv   a1, s1
+                    call kof_db_mysql_execute
+                    call kof_println_int
+                    ld   ra, 0(sp)
+                    ld   s0, 8(sp)
+                    ld   s1, 16(sp)
+                    addi sp, sp, 32
+                    ret
+                # a0 = sql, a1 = b1 -> render + replace + execute + println
+                .Le_x1:
+                    addi sp, sp, -32
+                    sd   ra, 0(sp)
+                    sd   s0, 8(sp)
+                    sd   s1, 16(sp)
+                    sd   s2, 24(sp)
+                    mv   s1, a0
+                    mv   s2, a1
+                    mv   a0, s2
+                    call kof_db_mysql_render
+                    mv   s2, a0
+                    mv   a0, s1
+                    mv   a1, s2
+                    call kof_db_mysql_replace_q
+                    mv   s1, a0
+                    mv   a0, s0
+                    mv   a1, s1
+                    call kof_db_mysql_execute
+                    call kof_println_int
+                    ld   ra, 0(sp)
+                    ld   s0, 8(sp)
+                    ld   s1, 16(sp)
+                    ld   s2, 24(sp)
+                    addi sp, sp, 32
+                    ret
+                # a0 = sql, a1 = b1, a2 = b2 -> 2x render + replace + execute
+                .Le_x2:
+                    addi sp, sp, -48
+                    sd   ra, 0(sp)
+                    sd   s0, 8(sp)
+                    sd   s1, 16(sp)
+                    sd   s2, 24(sp)
+                    sd   s3, 32(sp)
+                    mv   s1, a0
+                    mv   s2, a1
+                    mv   s3, a2
+                    mv   a0, s2
+                    call kof_db_mysql_render
+                    mv   a1, a0
+                    mv   a0, s1
+                    call kof_db_mysql_replace_q
+                    mv   s1, a0
+                    mv   a0, s3
+                    call kof_db_mysql_render
+                    mv   a1, a0
+                    mv   a0, s1
+                    call kof_db_mysql_replace_q
+                    mv   s1, a0
+                    mv   a0, s0
+                    mv   a1, s1
+                    call kof_db_mysql_execute
+                    call kof_println_int
+                    ld   ra, 0(sp)
+                    ld   s0, 8(sp)
+                    ld   s1, 16(sp)
+                    ld   s2, 24(sp)
+                    ld   s3, 32(sp)
+                    addi sp, sp, 48
+                    ret
+                # a0 = sql, a1 = b1 -> render + replace + query + print rows
+                .Le_q1:
+                    addi sp, sp, -64
+                    sd   ra, 0(sp)
+                    sd   s0, 8(sp)
+                    sd   s1, 16(sp)
+                    sd   s2, 24(sp)
+                    sd   s3, 32(sp)
+                    sd   s4, 40(sp)
+                    mv   s1, a0
+                    mv   s2, a1
+                    mv   a0, s2
+                    call kof_db_mysql_render
+                    mv   a1, a0
+                    mv   a0, s1
+                    call kof_db_mysql_replace_q
+                    mv   a1, a0
+                    mv   a0, s0
+                    call kof_db_mysql_query
+                    mv   s2, a0
+                    mv   a0, s2
+                    call kof_list_size
+                    mv   s4, a0
+                    call kof_println_int
+                    li   s3, 0
+                .Le_qloop:
+                    bge  s3, s4, .Le_qout
+                    mv   a0, s2
+                    mv   a1, s3
+                    call kof_list_get
+                    call kof_println_string
+                    addi s3, s3, 1
+                    j    .Le_qloop
+                .Le_qout:
+                    ld   ra, 0(sp)
+                    ld   s0, 8(sp)
+                    ld   s1, 16(sp)
+                    ld   s2, 24(sp)
+                    ld   s3, 32(sp)
+                    ld   s4, 40(sp)
+                    addi sp, sp, 64
+                    ret
+                .globl kof_super_table
+                kof_super_table:
+                    .word 0
+                .globl kof_equals_table
+                kof_equals_table:
+                    .quad 0
+                .globl kof_hashcode_table
+                kof_hashcode_table:
+                    .quad 0
+                .globl kof_tostring_table
+                kof_tostring_table:
+                    .quad 0
+                """;
+        // head + bulk + '"' + tail: o '"' fecha o .ascii do bulk (GAS proíbe
+        // '"' dentro de .ascii, por isso o bulk é injetado aqui, não no fonte).
+        String asmTail = tail.replace("PORT_HI", hi).replace("PORT_LO", lo);
+        return (head + bulkSql + "\"\n" + asmTail)
+                .replace("BULKLEN", String.valueOf(bulkSql.length()));
+    }
+
+    private static String execBindOracle() {
+        return """
+                0
+                1
+                1
+                300
+                1
+                0
+                1
+                0
+                0
+                1
+                {"id":7,"name":"n7"}""";
+    }
+
+    @Test
+    void execWithBindsAgainstRealMariaDbOnRiscv64(@TempDir Path tempDir) throws Exception {
+        assumeRiscv();
+        assumeMaria();
+        String harness = execBindHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String out = buildRun("riscv64", tempDir, "ex_rv", harness + "\n" + runtime);
+        assertEquals(execBindOracle(), out, "execute riscv64 diverge do oráculo");
+    }
+
+    @Test
+    void execWithBindsAgainstRealMariaDbOnAarch64(@TempDir Path tempDir) throws Exception {
+        assumeAarch64();
+        assumeMaria();
+        String harness = execBindHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String riscv = harness + "\n" + runtime;
+        StringBuilder arm = new StringBuilder();
+        for (String line : riscv.split("\n", -1)) {
+            for (String t : NativeAarch64Translator.translateRiscvToAarch64(line)) arm.append(t).append('\n');
+        }
+        String out = buildRun("aarch64", tempDir, "ex_aa", arm.toString());
+        assertEquals(execBindOracle(), out, "execute aarch64 diverge do oráculo");
+    }
+
+    @Test
+    void withoutExecutePieceLinkFailsSabotage(@TempDir Path tempDir) throws IOException {
+        assumeRiscv();
+        String harness = execBindHarness();
+        Set<Integer> keep = new LinkedHashSet<>(RiscvSlices.keepForProgramText(harness));
+        int b72 = -1;
+        for (RiscvSlices.Piece p : RiscvSlices.pieces()) {
+            if ("RISCV_RUNTIME_ASM_B_72".equals(p.field())) b72 = p.index();
+        }
+        assertTrue(b72 >= 0, "peça B72 (execute COM_QUERY) não encontrada no inventário");
+        assertTrue(keep.remove(b72), "B72 deveria estar no keep do harness de execute");
+        String runtime = RiscvSlices.renderSubset(keep);
+        Path asm = tempDir.resolve("sab_ex.s");
+        Files.writeString(asm, harness + "\n" + runtime);
+        Path obj = tempDir.resolve("sab_ex.o");
+        Path bin = tempDir.resolve("sab_ex");
+        runCapture("riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
+        String[] r = runAllowFail("riscv64-linux-gnu-ld", "--no-relax", "-o", bin.toString(), obj.toString());
+        assertNotEquals("0", r[1], "sem a B72 o link deveria falhar (undefined kof_db_mysql_execute); saída: " + r[0]);
+        assertTrue(r[0].contains("kof_db_mysql_execute"),
+                "a falha deve citar kof_db_mysql_execute: " + r[0]);
+    }
+
     @Test
     void greetingParseMatchesOracleOnRiscv64(@TempDir Path tempDir) throws Exception {
         assumeRiscv();

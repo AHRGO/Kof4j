@@ -435,6 +435,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     3/3 (Int, aspas, backslash, vazio, zero, negativo, só-1º-`?`, sem-`?` +
     sabotagem da B71) em riscv64 + aarch64 sob qemu.
 
+  - **S5.3 fatia 2 (db-parity, lane gaps-db) — execute COM_QUERY no cross
+    (peça cross `B72`)** (24/09): `kof_db_mysql_execute(fd, sql)` envia o
+    comando texto via B67 e devolve as affected-rows do OK-packet (1 byte /
+    FC+2LE / FD+3LE) — port da cauda de execute do x86 (subst de `RuntimeDb4` +
+    done/afc/afd/bad de `RuntimeDb5`); erro de I/O, pacote ERR ou first byte de
+    resultset → 0. Query com binds não precisa de peça nova (B71 substitui +
+    B70 consulta). Prova: `NativeRiscvDbWireTest#execWithBindsAgainstRealMariaDb*`
+    + sabotagem da B72 em riscv64 + aarch64 sob qemu contra o **MariaDB real**
+    (CREATE 0, INSERT×2 com binds Int/String incl. escape de quote 1, UPDATE 1,
+    DELETE sem-match 0 / com-match 1, SQL ruim 0, SELECT-via-execute 0,
+    coerência da query com bind `{"id":7,"name":"n7"}`).
+
   - **S5.2 PARCIAL (db-parity, lane gaps-db) — query texto MySQL completa no
     cross (peça cross `B70`)** (24/09): `kof_db_mysql_query(fd, sql)` envia o
     `COM_QUERY`, lê as definições de coluna, itera TODAS as linhas e devolve

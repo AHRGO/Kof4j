@@ -247,8 +247,18 @@ typed roundtrip) produces the **same observable result** on all four targets, or
     `'escaped'`) + `kof_db_mysql_replace_q(sql, literal)` (first `?` only) —
     port of the x86 fallback in `RuntimeDb1`/`RuntimeDb2`/`RuntimeDb4`.
     *Proof:* `NativeRiscvDbWireTest#bindRenderReplaceMatchesOracle*` + B71
-    sabotage (riscv64 + aarch64, qemu). Left: the executeN/queryN mysql dispatch
-    + tx + ORM. *Proof:* `orm.*` E2E under qemu.
+    sabotage (riscv64 + aarch64, qemu). **Slice 2 ✅ 24/09 (piece `B72`,
+    gaps-db lane):** `kof_db_mysql_execute(fd, sql)` — COM_QUERY via B67 +
+    affected-rows from the OK packet (1-byte / FC+2LE / FD+3LE), port of the
+    x86 execute tail (`RuntimeDb4` subst + `RuntimeDb5` done/afc/afd/bad);
+    error/ERR/resultset → 0. Query with binds needs no new piece (B71
+    substitute + B70 query). *Proof:*
+    `NativeRiscvDbWireTest#execWithBindsAgainstRealMariaDb*` + B72 sabotage
+    (riscv64 + aarch64, qemu, real MariaDB: CREATE 0, INSERT×2 with Int/String
+    binds incl. quote-escape 1, UPDATE 1, DELETE no-match 0 / match 1, bad SQL
+    0, SELECT-via-execute 0, bound query coherence). Left: the executeN/queryN
+    mysql dispatch in the B47 bodies (lands with the S5.4 link, when a mysql
+    fd can reach them) + tx + ORM. *Proof:* `orm.*` E2E under qemu.
   - **S5.4 — link + parity test.** `-lmariadb` link-by-use on cross + the riscv/
     aarch mirror of `KofDbE2ETest#nativeMariadbAliasWireProtocol`. After this the
     S1 cross `DB001` becomes real.

@@ -427,6 +427,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     empty, zero, negative, first-`?`-only, no-`?` + B71 sabotage) on
     riscv64 + aarch64 under qemu.
 
+  - **S5.3 slice 2 (db-parity, gaps-db lane) — COM_QUERY execute on the cross
+    (cross piece `B72`)** (24/09): `kof_db_mysql_execute(fd, sql)` sends the
+    text command via B67 and returns the OK-packet affected-rows (1-byte /
+    FC+2LE / FD+3LE) — port of the x86 execute tail (`RuntimeDb4` subst +
+    `RuntimeDb5` done/afc/afd/bad); I/O error, ERR packet or a resultset first
+    byte → 0. Query with binds needs no new piece (B71 substitute + B70
+    query). Proof: `NativeRiscvDbWireTest#execWithBindsAgainstRealMariaDb*` +
+    B72 sabotage on riscv64 + aarch64 under qemu against the **real MariaDB**
+    (CREATE 0, INSERT×2 with Int/String binds incl. quote escape 1, UPDATE 1,
+    DELETE no-match 0 / match 1, bad SQL 0, SELECT-via-execute 0, bound-query
+    coherence `{"id":7,"name":"n7"}`).
+
   - **S5.2 PARTIAL (db-parity, gaps-db lane) — full MySQL text query on the
     cross (cross piece `B70`)** (24/09): `kof_db_mysql_query(fd, sql)` sends
     `COM_QUERY`, reads the column definitions, iterates ALL rows and returns a
