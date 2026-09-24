@@ -115,6 +115,24 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `time.sleep` prints the readable `KOF BIOS ... kof_plat_sleep` and halts) +
     native battery **103/0** + `RingPrivilegeE2ETest` 5/0.
 
+  - **§491 ✅ FIXED — unknown FIELD on a `File`/`Path`/`Directory`/
+    `Buffer`/`Secret`/`KeyHandle` builtin is now a clean `SEM102`** (24/09, lane
+    compiler 9092). Those pseudo-types have no property form (accessors are
+    methods), but an unknown field compiled clean and emitted a `getfield`
+    against a class absent from the runtime — `File("x").bogus` →
+    `getfield kof/io/File.bogus`, `buffer.alloc(8).bogus` → `getfield
+    kof/Buffer.bogus`, `secrets.of("x").bogus` → `getfield kof/Secret.bogus`
+    (even `File("x").path`, whose API is the method `path()`) — aborting the
+    class load with `NoClassDefFoundError`, hidden behind the JavaFX launcher
+    message, with no diagnostic. `SemExpressionTyper`'s field path gains the
+    `SEM102` guard (the FIELD sibling of #617/§490 — one gate, all four
+    targets). Proof: `BuiltinUnknownFieldGuardTest` 9/9 (RED-first: 7/9 failing
+    before); `IoUnknownMethodGuardTest`'s `f.path` control was a false-green
+    (never ran) and was corrected to `f.path()`; full `kof-compiler` **3273,
+    0F/0E**. Declared residual: unknown fields on real-class receivers
+    (`List`/`Map`/`String`) still fail LOUD at runtime (`NoSuchFieldError`),
+    the Bug-34 posture — not a silent no-op.
+
   - **§490 ✅ FIXED — unknown method on a `Buffer`/`Secret`/`KeyHandle` builtin
     value is now a clean `SEM102`** (24/09, lane compiler 9092). Those types
     have a dedicated typer branch, but a name/arity outside their live table

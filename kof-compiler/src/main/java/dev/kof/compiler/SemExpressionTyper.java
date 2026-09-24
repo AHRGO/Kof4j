@@ -321,6 +321,31 @@ public final class SemExpressionTyper {
                 if (Type.isString(recvType) && ("name".equals(fa.fieldName()) || "path".equals(fa.fieldName()))) {
                     yield BuiltinTypes.STRING;
                 }
+                // §491 (SEM102, R6): pseudo-tipo builtin com ramo próprio de typer
+                // (Buffer/Secret/KeyHandle e File/Path/Directory) NÃO tem forma de
+                // PROPRIEDADE — os acessores são métodos. Um campo desconhecido
+                // caía no caminho genérico de ClassType (não é classe do unit nem
+                // external) e o emit gerava `getfield <receiver>.<nome>` contra uma
+                // classe INEXISTENTE no runtime (kof/Buffer, kof/Secret,
+                // kof/io/File) — NoClassDefFoundError no load, compilado limpo
+                // (escondido atrás da mensagem do launcher JavaFX). Mesma família
+                // de #617/§490, agora a face FIELD. O acesso válido é o método
+                // (`File("x").path()`, `.size()`, `buffer.alloc(n).bytes()`,
+                // `secret.reveal()`).
+                if ((KofIo.isIoType(recvType) || KofBuffer.isBufferType(recvType)
+                        || KofSecurity.isSecretType(recvType) || KofSecurity.isKeyHandleType(recvType))
+                        && sa.diagnostics() != null) {
+                    String builtinName = KofIo.isDirectory(recvType) ? "Directory"
+                            : KofIo.isPath(recvType) ? "Path"
+                            : KofIo.isFile(recvType) ? "File"
+                            : KofBuffer.isBufferType(recvType) ? "Buffer"
+                            : (KofSecurity.isSecretType(recvType) ? "Secret" : "KeyHandle");
+                    sa.diagnostics().error(fa,
+                            "'" + builtinName + "' has no field '" + fa.fieldName()
+                                    + "' (this builtin exposes methods, not properties)",
+                            "SEM102");
+                    yield Type.UnknownType.UNKNOWN;
+                }
                 // #375/§355 (rio da erasure): receiver é type-variable COM bound
                 // (`item.name` com `item: T: Animal`) — o membro resolve no
                 // BOUND, como javac após a erasure. Sem isto o tipo caía em

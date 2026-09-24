@@ -90,6 +90,10 @@ class IoUnknownMethodGuardTest {
     void validIoMethodsStillCompile(@TempDir Path tempDir) throws IOException {
         // control: the whole live table keeps compiling — the guard must not
         // reject a legitimate member (exists/delete/createDirectories/mkdir/path).
+        // `path` is a METHOD (`File("x").path()`); the field form was a
+        // false-green (it compiled clean but emitted `getfield kof/io/File.path`
+        // against a class absent from the runtime → NoClassDefFoundError at
+        // load; now SEM102, §491).
         CompilationResult result = compile("""
             main() {
                 var f = File("/tmp/opencode/io_guard_d.txt")
@@ -97,7 +101,7 @@ class IoUnknownMethodGuardTest {
                 var d = Directory("/tmp/opencode/io_guard_d")
                 println(d.createDirectories())
                 println(d.mkdir())
-                println(f.path)
+                println(f.path())
             }
             """, tempDir);
         assertTrue(result.success(), "Valid io members must compile: "

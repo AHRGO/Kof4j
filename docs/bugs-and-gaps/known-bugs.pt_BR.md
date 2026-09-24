@@ -12402,3 +12402,22 @@ main() {
 
 **Dono:** sessão 9092 (lane compiler), typer de membros compartilhado; família de guard do #617 (`aed5fe7b`).
 <!-- en-switch --> **EN:** [§490 (en)](known-bugs.md#490--unknown-method-on-a-kofbuffer--kofsecurity-builtin-value-buffer--secret--keyhandle-was-silently-compiled-as-a-receiver-no-op-or-a-classformaterror-now-a-clean-sem102---fixed-2409)
+
+---
+
+## §491 — Campo desconhecido num valor builtin de kof.io / kof.buffer / kof.security (File / Path / Directory / Buffer / Secret / KeyHandle) compilava limpo e emitia getfield contra classe inexistente (NoClassDefFoundError); agora é SEM102 limpo — ✅ CORRIGIDO 24/09
+
+**Sintoma (medido 24/09, lane compiler 9092):** os pseudo-tipos com ramo de typer dedicado NÃO têm forma de propriedade — os acessores são métodos. Um acesso a campo desconhecido compilava limpo e o bytecode emitido referenciava uma classe que não existe no runtime: `File("x").bogus` → `getfield kof/io/File.bogus:Ljava/lang/Object;`, `buffer.alloc(8).bogus` → `getfield kof/Buffer.bogus:...`, `secrets.of("x").bogus` → `getfield kof/Secret.bogus:...`. Nenhuma de `kof/io/File`, `kof/Buffer`, `kof/Secret` é embarcada, então a classe abortava no load com `NoClassDefFoundError` — escondido atrás da mensagem do launcher JavaFX no `kof run`, sem nenhum diagnóstico de compilação. Até o plausível `File("x").path` (a API documentada é o método `path()`) emitia `getfield kof/io/File.path` e morria do mesmo jeito.
+
+**Causa raiz:** o `SemExpressionTyper` (`case FieldAccessExpr`) valida campos só quando o receptor resolve para uma classe do unit ou externa (`isKnownReceiver`) — os builtins sintéticos não são nenhum dos dois. O ramo deles caía em `yield UNKNOWN`, e o lowerer de campo usava o nome da classe do receptor como owner do `getfield`. É o irmão FIELD do #617/§490: a mesma família de pseudo-tipos, uma forma de acesso ao lado.
+
+**Fix (medido 24/09, lane compiler 9092):** o `SemExpressionTyper` ganha o guard `SEM102` para acesso a campo em `File`/`Path`/`Directory` (`KofIo`) e `Buffer`/`Secret`/`KeyHandle` (`KofBuffer`/`KofSecurity`): campo desconhecido → diagnóstico limpo nomeando o tipo e o campo (`'File' has no field 'bogus' (this builtin exposes methods, not properties)`), nunca bytecode inválido. Um gate, os quatro alvos (typer independente de alvo). Uma superfície de alias de propriedade (ex.: `File.path` como açúcar de `path()`) seria decisão de superfície da linguagem (regra 6/11) e NÃO é introduzida aqui.
+
+**Prova (Q0/Q1/Q3):** RED primeiro — `BuiltinUnknownFieldGuardTest` **7/9 falhando** antes do fix (as sete faces de diagnóstico compilavam limpo); GREEN agora **9/9** (7 faces de diagnóstico = `SEM102`, sem `ClassFormatError` + 2 controles: `s.length`/`s.name`/`s.path`, `list.size`, `map.size`, `new Int[3].length`, campo de record `p.x`, e os métodos acessores io `f.path()`/`f.size()`/`p.path()` ainda compilam). O controle do `IoUnknownMethodGuardTest` usava `f.path` (CAMPO) e era FALSO-VERDE — só checava sucesso de compilação, nunca rodava; corrigido para a forma de método `f.path()` (o corpus documenta `.path()`, `training/language/io.md:47`). Sem regressão: módulo `kof-compiler` completo **3273 testes, 0F/0E, 308 skip**.
+
+**Residual (declarado, NÃO silencioso):** campo desconhecido em receptores de classe real (`List`/`Map`/`Set`/`String`/`ProcessResult`) ainda falha ALTO em runtime (`NoSuchFieldError` numa classe que EXISTE), a postura histórica do Bug 34; não é no-op silencioso e está fora deste fix.
+
+**Status:** ✅ CORRIGIDO 24/09.
+
+**Dono:** sessão 9092 (lane compiler), caminho de campo do `SemExpressionTyper`; família de guard do #617/§490.
+<!-- en-switch --> **EN:** [§491 (en)](known-bugs.md#491--unknown-field-on-a-kofio--kofbuffer--kofsecurity-builtin-value-file--path--directory--buffer--secret--keyhandle-compiled-clean-and-emitted-a-getfield-against-a-class-absent-from-the-runtime-now-a-clean-sem102---fixed-2409)

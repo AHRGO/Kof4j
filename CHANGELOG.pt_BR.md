@@ -118,6 +118,24 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `time.sleep` imprime o `KOF BIOS ... kof_plat_sleep` legível e para) +
     bateria nativa **103/0** + `RingPrivilegeE2ETest` 5/0.
 
+  - **§491 ✅ CORRIGIDO — campo desconhecido num builtin `File`/`Path`/`Directory`/
+    `Buffer`/`Secret`/`KeyHandle` agora é um `SEM102` limpo** (24/09, lane compiler
+    9092). Esses pseudo-tipos não têm forma de propriedade (os acessores são
+    métodos), mas um campo desconhecido compilava limpo e emitia um `getfield`
+    contra uma classe ausente do runtime — `File("x").bogus` →
+    `getfield kof/io/File.bogus`, `buffer.alloc(8).bogus` → `getfield
+    kof/Buffer.bogus`, `secrets.of("x").bogus` → `getfield kof/Secret.bogus`
+    (até `File("x").path`, cuja API é o método `path()`) — abortando o load com
+    `NoClassDefFoundError`, escondido atrás da mensagem do launcher JavaFX, sem
+    diagnóstico. O caminho de campo do `SemExpressionTyper` ganha o guard
+    `SEM102` (o irmão FIELD do #617/§490 — um gate, os quatro alvos). Prova:
+    `BuiltinUnknownFieldGuardTest` 9/9 (RED-first: 7/9 falhando antes); o controle
+    `f.path` do `IoUnknownMethodGuardTest` era falso-verde (nunca rodava) e foi
+    corrigido para `f.path()`; `kof-compiler` completo **3273, 0F/0E**. Residual
+    declarado: campo desconhecido em receptores de classe real (`List`/`Map`/
+    `String`) ainda falha ALTO em runtime (`NoSuchFieldError`), postura Bug 34 —
+    não é no-op silencioso.
+
   - **§490 ✅ CORRIGIDO — método desconhecido num valor builtin `Buffer`/`Secret`/
     `KeyHandle` agora é um `SEM102` limpo** (24/09, lane compiler 9092). Esses
     tipos têm ramo de typer dedicado, mas nome/aridade fora da tabela ao vivo
