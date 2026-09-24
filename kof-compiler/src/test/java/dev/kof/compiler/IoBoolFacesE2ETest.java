@@ -41,8 +41,8 @@ class IoBoolFacesE2ETest {
                 println(f.readText())
                 println(f.delete())
                 println(f.delete())
-                val d = File("__BASE__/deep/dir")
-                println(d.dirCreateDirs() == "__BASE__/deep/dir")
+                val d = Directory("__BASE__/deep/dir")
+                println(d.createDirectories())
                 println(d.isDirectory())
                 println(f.writeText("x"))
                 println(f.delete())
@@ -61,12 +61,17 @@ class IoBoolFacesE2ETest {
 
     // Oracle = medido 20/09 no tip com o fix (JVM == JS byte a byte):
     //   writeText true | appendText true | readText "oi!" | delete true |
-    //   delete-miss false | dirCreateDirs==path true | isDirectory false
+    //   delete-miss false | createDirectories true | isDirectory true
     //   (mesma face nos 2 motores — contrato compartilhado, não §382) |
     //   writeText pós-delete true | delete true | writeBytes true |
     //   appendBytes true | size 3 | delete true.
+    // #617 (24/09): a linha antiga usava `File.dirCreateDirs()` — método que
+    // NÃO existe no kof.io (o typer aceitava em silêncio → no-op; o
+    // `isDirectory()` seguinte dava `false`). A face real é
+    // `Directory(p).createDirectories()` (training/language/io.md), que devolve
+    // Bool e cria de verdade → o `isDirectory()` passa a `true`.
     private static final String EXPECTED =
-            "true\ntrue\noi!\ntrue\nfalse\ntrue\nfalse\ntrue\ntrue\ntrue\ntrue\n3\ntrue\n";
+            "true\ntrue\noi!\ntrue\nfalse\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\n3\ntrue\n";
 
     private Run runJvm(Path src, Path out, String base) throws Exception {
         Files.writeString(src, PROGRAM.replace("__BASE__", base));
