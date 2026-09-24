@@ -21,10 +21,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * O bridge é um pass-through de registrador desnecessário no Native; a vtable
  * aponta direto para o método concreto. O oráculo é o JVM, rodado no teste.
  *
- * <p>A face de retorno PRIMITIVO ({@code Holder<Int>.get() → Int}) segue aberta
- * (§485) — o bridge lá faz o box e é realmente necessário; o símbolo colide pelo
- * mesmo motivo e o fix exige o mangling ciente do tipo de retorno (arquivos do
- * backend nativo). Aqui só se prova a face fechada + a não-regressão do §483.
+ * <p>A face de retorno PRIMITIVO ({@code Holder<Int>.get() → Int}) era a face
+ * aberta (§485 face (b)): o bridge faz o box e é realmente necessário, e o
+ * símbolo colidia pelo mesmo motivo. O fix de mangling ciente do retorno do
+ * §613/#608 (bridge ganha sufixo do retorno apagado) resolve os dois lados —
+ * esta classe agora prova as DUAS faces.
  */
 class NativeGenericIfaceBridgeE2ETest {
 
@@ -38,6 +39,10 @@ class NativeGenericIfaceBridgeE2ETest {
                 constructor(s: String) { v = s }
                 get(): String { return v }
             }
+            interface Holder<T> { get(): T }
+            class IntHolder implements Holder<Int> {
+                get(): Int { return 42 }
+            }
             interface Converter<A, B> { convert(input: A): B }
             class IntToString implements Converter<Int, String> {
                 convert(input: Int): String { return input.toString() }
@@ -48,12 +53,14 @@ class NativeGenericIfaceBridgeE2ETest {
                 println(b.describe())
                 var s = SBox("direct")
                 println(s.get())
+                var h: Holder<Int> = IntHolder()
+                println(h.get())
                 val cv: Converter<Int, String> = IntToString()
                 println(cv.convert(99))
             }
             """;
 
-    private static final String EXPECTED = "hi\nBox: hi\ndirect\n99";
+    private static final String EXPECTED = "hi\nBox: hi\ndirect\n42\n99";
 
     private static CompilationResult compile(Path tmp, String name, Target t) throws IOException {
         Path file = tmp.resolve("Main-" + name + ".kf");

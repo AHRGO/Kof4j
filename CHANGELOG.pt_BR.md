@@ -51,11 +51,10 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Object`). Autorização N2 registrada no `DECISIONS.pt_BR.md` `D-NULL-INTENT`
     (23/09); `RUNTIME_ABI.md` §3.9 documenta a face de referência.
 
-  - **Bridge de retorno covariante no Native (§486): a face de retorno
-    referência está pousada, a face de retorno primitivo fica catalogada
-    ABERTA — um bridge covariante cujos parâmetros já batem com o slot apagado
-    do pai colidia com o método concreto num ÚNICO símbolo asm do Native**
-    (23/09, lane compiler 9092; família da §483/TIER 13.2): o
+  - **Bridge de retorno covariante no Native (§486): as duas faces
+    corrigidas — um bridge covariante cujos parâmetros já batem com o slot
+    apagado do pai colidia com o método concreto num ÚNICO símbolo asm do
+    Native** (23/09, lane compiler 9092; família da §483/TIER 13.2): o
     `NativeSymbolMangling.sigTag` codifica
     só os TIPOS DE PARÂMETRO, então um par com mesmo nome+mesmos parâmetros (o
     bridge e o método concreto) mangleiava para o mesmo `Classe_nome` → `as:
@@ -64,12 +63,32 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     pulado quando é um pass-through puro de registrador (`!paramsDiffer` E os
     dois retornos são referências); o slot de vtable aponta direto ao método
     concreto. Prova: `NativeGenericIfaceBridgeE2ETest` 3/3 (golden do oráculo
-    JVM no teste `hi\nBox: hi\ndirect\n99` em x86-64 + riscv64 + aarch64; RED
-    com o fix revertido = a colisão verbatim), vizinhos 137/0F/0E. A **face (b)
-    retorno primitivo** fica catalogada ABERTA: o bridge faz o box do primitivo
-    e é necessário (pulá-lo dá SIGSEGV, medido) — o fix completo é o mangling
-    ciente do tipo de retorno, que toca os emitters da lane baremetal em curso,
-    então fica para unidade própria.
+    JVM no teste `hi\nBox: hi\ndirect\n42\n99` em x86-64 + riscv64 + aarch64;
+    RED com o fix revertido = a colisão verbatim), vizinhos 137/0F/0E. A **face
+    (b) retorno primitivo** foi corrigida no mesmo dia pelo mangling do bridge
+    com sufixo do retorno (`43f2833a`, #613): o bridge e o concreto deixam de
+    colidir (`IntBox_get` vs `IntBox_get_B_java_lang_Object`); o teste de
+    regressão agora carrega também o repro de retorno primitivo e prova as duas
+    faces 3/3.
+
+  - **Diamante de `default` conflitante + overload por aridade em interfaces
+    (§487):** uma classe concreta que herda dois `default` de MESMA assinatura
+    de interfaces não-relacionadas compilava limpo e estourava no class-LOAD
+    com `IncompatibleClassChangeError: Conflicting default methods` (JLS
+    9.4.1.3); e um `default` de mesmo nome com aridade diferente numa interface
+    irmã fazia `C().greet("mel")` resolver para o método errado
+    (`invokeinterface A.greet()` com o argumento deixado na stack →
+    `VerifyError`). (23/09, lane compiler 9092, issue #610). **Fix:** novo
+    `ImplementationChecker.checkConflictingDefaults` reporta `SEM101` nomeando
+    as duas interfaces não-relacionadas e o método (override explícito, ou par
+    sub/super-interface com o default mais específico, não é conflito; classes
+    abstratas deferem para a subclasse concreta), e o novo
+    `MemberResolver.resolveMethodsInHierarchy` deixa o `MemberCallTyper`
+    escolher o overload por aridade/args na hierarquia. Prova:
+    `ConflictingDefaultMethodsE2ETest` 6/6 (as duas faces RED antes do fix; o
+    corpus cobre o diamante, override explícito, sub-interface mais específica,
+    aridade diferente, deferral abstrato, paridade Native+JS); suíte completa do
+    reactor 3816 testes, 0F/0E.
 
   - **Ressincronização de `docs/development` — a fila e o allowlist do gate de
     release agora batem com a realidade** (23/09, lane docs/fronteira): a linha

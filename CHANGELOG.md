@@ -64,10 +64,30 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     method. Proof: `NativeGenericIfaceBridgeE2ETest` 3/3 (in-test JVM oracle
     golden `hi\nBox: hi\ndirect\n99` on x86-64 + riscv64 + aarch64; RED with
     the fix reverted = the verbatim collision), neighbors 137/0F/0E. **Face
-    (b) primitive return** is catalogued OPEN: the bridge boxes the primitive
-    and is required (skipping it SIGSEGVs, measured) — the complete fix is
-    return-type-aware native mangling, which touches the baremetal lane's
-    in-progress emitters, so it is deferred to its own unit.
+    (b) primitive return** was fixed the same day by the return-suffixed
+    bridge mangling (`43f2833a`, #613): the bridge and its concrete method no
+    longer collide (`IntBox_get` vs `IntBox_get_B_java_lang_Object`); the
+    regression test now carries the primitive-return repro too and proves both
+    faces 3/3.
+
+  - **Conflicting default-method diamond + arity overload on interfaces
+    (§487):** a concrete class inheriting two `default` methods with the SAME
+    signature from unrelated interfaces compiled clean and crashed at
+    class-LOAD with `IncompatibleClassChangeError: Conflicting default
+    methods` (JLS 9.4.1.3); and a same-name `default` with a different arity
+    in a sibling interface made `C().greet("mel")` resolve to the wrong
+    method (`invokeinterface A.greet()` with the argument left on the stack →
+    `VerifyError`). (23/09, lane compiler 9092, issue #610). **Fix:** new
+    `ImplementationChecker.checkConflictingDefaults` reports `SEM101` naming
+    the two unrelated interfaces and the method (an explicit override, or a
+    sub/super-interface pair where the most-specific default wins, is not a
+    conflict; abstract classes defer to the concrete subclass), and new
+    `MemberResolver.resolveMethodsInHierarchy` lets `MemberCallTyper` pick the
+    overload by arity/args across the hierarchy. Proof:
+    `ConflictingDefaultMethodsE2ETest` 6/6 (both faces RED before the fix;
+    corpus covers the diamond, explicit override, sub-interface most-specific,
+    different arity, abstract deferral, Native+JS compile parity); full
+    reactor suite 3816 tests, 0F/0E.
 
   - **`docs/development` resync — the queue and the release ALLOWLIST now match
     reality** (23/09, lane docs/frontier): the `kof-c-cross` row (moved to
