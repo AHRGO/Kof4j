@@ -188,6 +188,37 @@ public final class RuntimeList {
             kof_list_contains_tag:
                 jmp kof_list_contains
 
+            .globl kof_obj_equals
+            .type kof_obj_equals, @function
+            # §104b-ii (24/09): igualdade por CONTEUDO de referencia Kof
+            # (record/classe). rdi=a, rsi=b -> eax 1/0. a==b (inclui null==null)
+            # -> 1; um nulo -> 0; String (type_id==1) -> kof_string_equals;
+            # senao despacha o equals virtual da classe por
+            # kof_equals_table[type_id] (0 -> 0 = sem equals).
+            kof_obj_equals:
+                cmpq %rsi, %rdi
+                je .Lkoe_yes
+                testq %rdi, %rdi
+                jz .Lkoe_no
+                testq %rsi, %rsi
+                jz .Lkoe_no
+                movl (%rdi), %eax
+                cmpl $1, %eax
+                je .Lkoe_str
+                leaq kof_equals_table(%rip), %rcx
+                movq (%rcx,%rax,8), %rax
+                testq %rax, %rax
+                jz .Lkoe_no
+                jmp *%rax
+            .Lkoe_str:
+                jmp kof_string_equals
+            .Lkoe_yes:
+                movl $1, %eax
+                ret
+            .Lkoe_no:
+                xorl %eax, %eax
+                ret
+
             .globl kof_list_is_empty
             .type kof_list_is_empty, @function
             kof_list_is_empty:

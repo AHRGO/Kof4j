@@ -227,6 +227,37 @@ final class NativeClassMeta {
         }
     }
 
+    /**
+     * §104b-ii (24/09) — tabela `kof_equals_table[type_id]` = ponteiro do
+     * `equals(Owner)` virtual da classe (0 = sem equals). E o alvo do
+     * `kof_obj_equals`, que faz a contencao por CONTEUDO em colecao (o
+     * `kof_list_contains` comparava ponteiro; records ja tem equals sintetico
+     * de conteudo — §114). Mesmo discriminador `type_id` no offset 0 da
+     * `kof_tostring_table` (§205 N2), NAO um segundo ABI. Emitida para x86
+     * (aqui, em emitStringData) e riscv (NativeArchEmitter; aarch herda).
+     */
+    static void emitEqualsTable(NativeBackend nb, StringBuilder sb) {
+        int maxId = 0;
+        for (IRClass c : nb.allClassesMap.values()) {
+            if (c.typeId() > maxId) maxId = c.typeId();
+        }
+        String[] table = new String[maxId + 1];
+        for (IRClass c : nb.allClassesMap.values()) {
+            if (c.typeId() <= 0) continue;
+            int idx = findVirtualMethodIndex(nb, c.name(), "equals",
+                    java.util.List.of(Type.UnknownType.UNKNOWN));
+            if (idx >= 0) {
+                List<String> methods = collectVirtualMethods(nb, c);
+                if (idx < methods.size()) table[c.typeId()] = methods.get(idx);
+            }
+        }
+        sb.append(".balign 8\n");
+        sb.append("kof_equals_table:\n");
+        for (int i = 0; i <= maxId; i++) {
+            sb.append("    .quad ").append(table[i] == null ? "0" : table[i]).append("\n");
+        }
+    }
+
     static void emitStringData(NativeBackend nb, StringBuilder sb) {
         for (String[] entry : nb.stringLiterals) {
             String value = entry[0];
@@ -259,6 +290,7 @@ final class NativeClassMeta {
         }
         sb.append("    .long 0, 0\n");
         emitToStringTable(nb, sb);
+        emitEqualsTable(nb, sb);
     }
 
 }

@@ -116,6 +116,7 @@ final class NativeArchEmitter {
         }
         sb.append("    .word 0, 0\n");
         NativeClassMeta.emitToStringTable(nb, sb);
+        NativeClassMeta.emitEqualsTable(nb, sb);
         // vtables por classe (offset 8 do header aponta para elas)
         for (IRClass c : module.classes()) {
             nb.currentClass = c;
@@ -319,6 +320,7 @@ final class NativeArchEmitter {
         }
         riscvSb.append("    .word 0, 0\n");
         NativeClassMeta.emitToStringTable(nb, riscvSb);
+        NativeClassMeta.emitEqualsTable(nb, riscvSb);
         for (IRClass c : module.classes()) {
             nb.currentClass = c;
             nb.crossEmit().emitMethodTableRiscv(riscvSb, c);

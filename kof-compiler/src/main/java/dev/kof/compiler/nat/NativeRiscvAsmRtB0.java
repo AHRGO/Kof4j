@@ -209,6 +209,34 @@ public final class NativeRiscvAsmRtB0 {
                 addi sp, sp, 32
                 ret
 
+            .globl kof_obj_equals
+            # §104b-ii (24/09): igualdade por CONTEUDO de referencia Kof
+            # (record/classe). a0=a, a1=b -> a0 1/0. a==b (inclui null==null)
+            # -> 1; um nulo -> 0; String (type_id==1) -> kof_string_equals;
+            # senao despacha o equals virtual por kof_equals_table[type_id]
+            # (0 -> 0 = sem equals).
+            kof_obj_equals:
+                beq  a0, a1, .Lkoe_yes
+                beqz a0, .Lkoe_no
+                beqz a1, .Lkoe_no
+                lw   t0, 0(a0)
+                li   t1, 1
+                beq  t0, t1, .Lkoe_str
+                la   t2, kof_equals_table
+                slli t0, t0, 3
+                add  t2, t2, t0
+                ld   t3, 0(t2)
+                beqz t3, .Lkoe_no
+                jr   t3
+            .Lkoe_str:
+                j    kof_string_equals
+            .Lkoe_yes:
+                li   a0, 1
+                ret
+            .Lkoe_no:
+                li   a0, 0
+                ret
+
             .globl kof_list_is_empty
             kof_list_is_empty:
                 lw   t0, 16(a0)

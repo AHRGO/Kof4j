@@ -91,7 +91,7 @@ public final class RuntimeSlices {
         // #113: o root_start passou a ser emitido na abertura do .data do
         // PROGRAMA (NativeBackend.emit), nao no preambulo do runtime — a fatia
         // GC o referencia via leaq e o needs só fecha se ele for extern.
-        return Set.of("kof_super_table", "kof_heap_root_start", "kof_tostring_table");
+        return Set.of("kof_super_table", "kof_heap_root_start", "kof_tostring_table", "kof_equals_table");
     }
 
     /** Rótulos locais `.L*` definidos pelo CAMINHO DE PROGRAMA (Main.s) e
