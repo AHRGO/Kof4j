@@ -223,8 +223,23 @@ typed roundtrip) produces the **same observable result** on all four targets, or
     against the **real MariaDB**: `SELECT 1` → 1 column / row `[0x01,'1']`;
     `SELECT 1,'ab'` → 2 columns / row `[0x01,'1',0x02,'a','b']`.
     *Proof:* `NativeRiscvDbWireTest#resultsetHeaderAgainstRealMariaDb*`.
-    Left for the next slice: iterate ALL rows and materialise them as Kof values
-    (JSON records) — the ORM-shaped result.
+    **Done ✅ 24/09 (piece `B70`, gaps-db lane):** full text query —
+    `kof_db_mysql_query(fd, sql)` sends `COM_QUERY`, reads the column
+    definitions (names), iterates ALL rows and materialises one JSON object
+    `{"col":value,…}` per row into a `List<KofString>` (port of the x86
+    `kof_db_query` in `RuntimeDb5/Db6`). Value rules follow the JVM contract
+    (`kof_db_row_to_json` in `JvmConfigRuntime`, the Kof oracle): NULL →
+    the bare `null` literal; digits-only → raw number; everything else
+    (including the empty string) → `json_encode_string`. Proven on
+    riscv64+aarch64 (qemu) against the **real MariaDB**: `SELECT 1` →
+    `{"1":1}`; `SELECT 1,'ab'` → `{"1":1,"ab":"ab"}`; `UNION ALL` → 2 rows;
+    `SELECT NULL AS n,'a"b' AS s` → `{"n":null,"s":"a\"b"}`.
+    *Proof:* `NativeRiscvDbWireTest#queryAllRowsAgainstRealMariaDb*` +
+    the B70 sabotage test. **Honest divergence found on the way (§488, OPEN):**
+    the x86 MySQL path (`RuntimeDb5 .Ldb_mysql_null`) emits NULL as a raw
+    EMPTY string (invalid JSON `{"n":,`); B70 does NOT copy the bug — same
+    posture as the B47 cross-sqlite NULL face.
+    Left for the next slices: prepared/tx/ORM (S5.3) + link/parity (S5.4).
     *Completion criterion:* `db.query` roundtrip under qemu, byte-identical to x86/JVM.
   - **S5.3 — bind/prepared + tx + ORM.** Port the prepared/execute/transaction
     dispatch. *Proof:* `orm.*` E2E under qemu.

@@ -195,6 +195,10 @@ public final class NativeRiscvAsm {
                 // S5.2 db-parity (gaps-db lane, 23/09): cabecalho do resultset
                 // texto — COM_QUERY + skip das colunas + 1a linha (ncols/row).
                 .append(NativeRiscvAsmRtB69.RISCV_RUNTIME_ASM_B_69)
+                // S5.2 db-parity (gaps-db lane, 23/09): query texto completa —
+                // COM_QUERY + colunas + todas as linhas como registros JSON
+                // numa List<KofString> (port de kof_db_query x86).
+                .append(NativeRiscvAsmRtB70.RISCV_RUNTIME_ASM_B_70)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

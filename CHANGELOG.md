@@ -284,6 +284,17 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     **10/10** (JVM/Script/JS + Native direct and inherited; RED measured with the
     code unfixed). Full suite 3197/0F/0E.
 
+  - **S5.2 PARTIAL (db-parity, gaps-db lane) — full MySQL text query on the
+    cross (cross piece `B70`)** (24/09): `kof_db_mysql_query(fd, sql)` sends
+    `COM_QUERY`, reads the column definitions, iterates ALL rows and returns a
+    `List<KofString>` of JSON records, following the JVM contract
+    (`kof_db_row_to_json`): NULL → bare `null`, digits-only → raw number, the
+    rest (incl. empty string) → `json_encode_string`. Proof:
+    `NativeRiscvDbWireTest` on riscv64 + aarch64 under qemu against the
+    **real MariaDB** (`SELECT 1`, 2-column, `UNION ALL` 2-row, NULL+escape) +
+    B70 sabotage. **§488 catalogued OPEN:** the x86 MySQL path emits NULL as a
+    raw empty string (invalid JSON); B70 does NOT copy the bug.
+
   - **S5.2 PARTIAL (db-parity, gaps-db lane) — MySQL packet reader + text
     resultset header on the cross (cross pieces `B68`–`B69`)** (23/09):
     `kof_db_mysql_reset(fd)`/`kof_db_mysql_next()` port the buffered packet

@@ -289,6 +289,17 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `GenericInterfaceAssignabilityTest` **10/10** (JVM/Script/JS + Native direto e
     herdado; RED medido com o código sem o fix). Suíte completa 3197/0F/0E.
 
+  - **S5.2 PARCIAL (db-parity, lane gaps-db) — query texto MySQL completa no
+    cross (peça cross `B70`)** (24/09): `kof_db_mysql_query(fd, sql)` envia o
+    `COM_QUERY`, lê as definições de coluna, itera TODAS as linhas e devolve
+    `List<KofString>` de registros JSON, seguindo o contrato JVM
+    (`kof_db_row_to_json`): NULL → `null` sem aspas, só-dígitos → número cru,
+    resto (incl. string vazia) → `json_encode_string`. Prova:
+    `NativeRiscvDbWireTest` em riscv64 + aarch64 sob qemu contra o
+    **MariaDB real** (`SELECT 1`, 2 colunas, `UNION ALL` 2 linhas, NULL+escape)
+    + sabotagem da B70. **§488 catalogada ABERTA:** o caminho mysql do x86
+    emite NULL como string vazia crua (JSON inválido); a B70 NÃO copia o bug.
+
   - **S5.2 PARCIAL (db-parity, lane gaps-db) — reader de pacotes MySQL +
     cabeçalho do resultset texto no cross (peças cross `B68`–`B69`)** (23/09):
     `kof_db_mysql_reset(fd)`/`kof_db_mysql_next()` portam o reader de pacotes

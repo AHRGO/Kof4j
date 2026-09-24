@@ -1151,6 +1151,217 @@ class NativeRiscvDbWireTest {
                 "a falha deve citar kof_db_mysql_query_text: " + r[0]);
     }
 
+    /**
+     * S5.2 (db-parity-plan, gaps-db lane, 23/09): query texto COMPLETA —
+     * {@code kof_db_mysql_query} itera todas as linhas e devolve
+     * {@code List<KofString>} de registros JSON, seguindo o contrato JVM
+     * (`kof_db_row_to_json`: digits->numero cru, NULL->literal `null`,
+     * string vazia->`""`, aspas/escape via json_encode_string). Prova contra o MariaDB real: 1 coluna, 2 colunas,
+     * 2 linhas (UNION) e NULL+escape.
+     */
+    private static String mysqlQueryAllHarness() {
+        int port = mysqlPort();
+        String hi = String.format("0x%02X", (port >> 8) & 0xff);
+        String lo = String.format("0x%02X", port & 0xff);
+        return """
+                .section .data
+                .align 3
+                .Lfq_user:
+                    .zero 16
+                    .word 4
+                    .zero 4
+                    .ascii "root"
+                .align 3
+                .Lfq_pass:
+                    .zero 16
+                    .word 7
+                    .zero 4
+                    .ascii "kofpass"
+                .align 3
+                .Lfq_db:
+                    .zero 16
+                    .word 4
+                    .zero 4
+                    .ascii "test"
+                .align 3
+                .Lfq_q1:
+                    .zero 16
+                    .word 8
+                    .zero 4
+                    .ascii "SELECT 1"
+                .align 3
+                .Lfq_q2:
+                    .zero 16
+                    .word 13
+                    .zero 4
+                    .ascii "SELECT 1,'ab'"
+                .align 3
+                .Lfq_q3:
+                    .zero 16
+                    .word 27
+                    .zero 4
+                    .ascii "SELECT 1 UNION ALL SELECT 2"
+                .align 3
+                .Lfq_q4:
+                    .zero 16
+                    .word 27
+                    .zero 4
+                    .ascii "SELECT NULL AS n,'a\\042b' AS s"
+                .align 3
+                .Lfq_addr:
+                    .byte 2, 0, PORT_HI, PORT_LO, 127, 0, 0, 1
+                    .zero 8
+                .align 3
+                .Lkof_heap_root_start:
+                .Lkof_heap_root_end:
+                .section .text
+                .globl _start
+                _start:
+                    andi sp, sp, -16
+                    addi sp, sp, -64
+                    la   a0, .Lfq_q1
+                    call .Lfq_one
+                    la   a0, .Lfq_q2
+                    call .Lfq_one
+                    la   a0, .Lfq_q3
+                    call .Lfq_one
+                    la   a0, .Lfq_q4
+                    call .Lfq_one
+                    li   a0, 0
+                    li   a7, 93
+                    ecall
+                # a0 = sql -> imprime size + cada registro JSON da linha
+                .Lfq_one:
+                    addi sp, sp, -112
+                    sd   ra, 0(sp)
+                    sd   s0, 8(sp)
+                    sd   s1, 16(sp)
+                    sd   s2, 24(sp)
+                    sd   s3, 32(sp)
+                    sd   s4, 40(sp)
+                    mv   s1, a0
+                    li   a0, 2
+                    li   a1, 1
+                    li   a2, 0
+                    call kof_plat_net_socket
+                    mv   s0, a0
+                    mv   a0, s0
+                    la   a1, .Lfq_addr
+                    li   a2, 16
+                    call kof_plat_net_connect
+                    mv   a0, s0
+                    la   a1, .Lfq_user
+                    la   a2, .Lfq_pass
+                    la   a3, .Lfq_db
+                    call kof_db_mysql_handshake
+                    bnez a0, .Lfq_fail
+                    mv   a0, s0
+                    mv   a1, s1
+                    call kof_db_mysql_query
+                    mv   s2, a0
+                    mv   a0, s2
+                    call kof_list_size
+                    mv   s4, a0
+                    call kof_println_int
+                    li   s3, 0
+                .Lfq_loop:
+                    bge  s3, s4, .Lfq_close
+                    mv   a0, s2
+                    mv   a1, s3
+                    call kof_list_get
+                    call kof_println_string
+                    addi s3, s3, 1
+                    j    .Lfq_loop
+                .Lfq_fail:
+                    li   a0, -1
+                    call kof_println_int
+                .Lfq_close:
+                    mv   a0, s0
+                    call kof_plat_close
+                    ld   ra, 0(sp)
+                    ld   s0, 8(sp)
+                    ld   s1, 16(sp)
+                    ld   s2, 24(sp)
+                    ld   s3, 32(sp)
+                    ld   s4, 40(sp)
+                    addi sp, sp, 112
+                    ret
+                .globl kof_super_table
+                kof_super_table:
+                    .word 0
+                .globl kof_equals_table
+                kof_equals_table:
+                    .quad 0
+                .globl kof_hashcode_table
+                kof_hashcode_table:
+                    .quad 0
+                .globl kof_tostring_table
+                kof_tostring_table:
+                    .quad 0
+                """.replace("PORT_HI", hi).replace("PORT_LO", lo);
+    }
+
+    private static String queryAllOracle() {
+        return """
+                1
+                {"1":1}
+                1
+                {"1":1,"ab":"ab"}
+                2
+                {"1":1}
+                {"1":2}
+                1
+                {"n":null,"s":"a\\\"b"}""";
+    }
+
+    @Test
+    void queryAllRowsAgainstRealMariaDbOnRiscv64(@TempDir Path tempDir) throws Exception {
+        assumeRiscv();
+        assumeMaria();
+        String harness = mysqlQueryAllHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String out = buildRun("riscv64", tempDir, "qa_rv", harness + "\n" + runtime);
+        assertEquals(queryAllOracle(), out, "query riscv64: registros JSON devem seguir o contrato JVM");
+    }
+
+    @Test
+    void queryAllRowsAgainstRealMariaDbOnAarch64(@TempDir Path tempDir) throws Exception {
+        assumeAarch64();
+        assumeMaria();
+        String harness = mysqlQueryAllHarness();
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String riscv = harness + "\n" + runtime;
+        StringBuilder arm = new StringBuilder();
+        for (String line : riscv.split("\n", -1)) {
+            for (String t : NativeAarch64Translator.translateRiscvToAarch64(line)) arm.append(t).append('\n');
+        }
+        String out = buildRun("aarch64", tempDir, "qa_aa", arm.toString());
+        assertEquals(queryAllOracle(), out, "query aarch64: registros JSON devem seguir o contrato JVM");
+    }
+
+    @Test
+    void withoutQueryPieceLinkFailsSabotage(@TempDir Path tempDir) throws IOException {
+        assumeRiscv();
+        String harness = mysqlQueryAllHarness();
+        Set<Integer> keep = new LinkedHashSet<>(RiscvSlices.keepForProgramText(harness));
+        int b70 = -1;
+        for (RiscvSlices.Piece p : RiscvSlices.pieces()) {
+            if ("RISCV_RUNTIME_ASM_B_70".equals(p.field())) b70 = p.index();
+        }
+        assertTrue(b70 >= 0, "peça B70 (query texto completa) não encontrada no inventário");
+        assertTrue(keep.remove(b70), "B70 deveria estar no keep do harness de query");
+        String runtime = RiscvSlices.renderSubset(keep);
+        Path asm = tempDir.resolve("sab_qa.s");
+        Files.writeString(asm, harness + "\n" + runtime);
+        Path obj = tempDir.resolve("sab_qa.o");
+        Path bin = tempDir.resolve("sab_qa");
+        runCapture("riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
+        String[] r = runAllowFail("riscv64-linux-gnu-ld", "--no-relax", "-o", bin.toString(), obj.toString());
+        assertNotEquals("0", r[1], "sem a B70 o link deveria falhar (undefined kof_db_mysql_query); saída: " + r[0]);
+        assertTrue(r[0].contains("kof_db_mysql_query"),
+                "a falha deve citar kof_db_mysql_query: " + r[0]);
+    }
+
     @Test
     void greetingParseMatchesOracleOnRiscv64(@TempDir Path tempDir) throws Exception {
         assumeRiscv();

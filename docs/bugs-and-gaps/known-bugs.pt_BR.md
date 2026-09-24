@@ -12354,3 +12354,18 @@ main() {
 
 **Dono:** sessão 9092 (lane compiler), semantic checker + resolução de membros.
 <!-- en-switch --> **EN:** [§487 (en)](known-bugs.md#487--unresolved-default-method-diamond-compiled-clean-then-crashed-at-class-load-with-incompatibleclasschangeerror-jls-9413-and-same-name-different-arity-defaults-dispatched-to-the-wrong-method-invokeinterface-with-the-argument-left-on-the-stack--verifyerror---fixed-2309-issue-610)
+
+## §488 — o caminho de texto MySQL do x86 (`RuntimeDb5 .Ldb_mysql_null`) emite NULL como string VAZIA crua — JSON inválido `{"n":,` — e uma célula de string vazia segue o caminho só-dígitos como número cru (também inválido quando vazia) — 🔴 ABERTO (achado 24/09 pela lane gaps-db ao portar a query cross B70)
+
+**Sintoma (medido 24/09, lane gaps-db, `NativeRiscvDbWireTest#queryAllRowsAgainstRealMariaDbOnRiscv64` RED):** `SELECT NULL AS n,'a"b' AS s` no riscv64 produziu `1 {"n":,"s":"a\"b"}` — valor vazio cru onde o contrato JVM (`JvmConfigRuntime.kof_db_row_to_json`) emite o literal `null`. A fonte x86 (`RuntimeDb5.java:425-431`): `.Ldb_mysql_null` chama `kof_io_make_string(nullstr, len=0)` e anexa CRU via `kof_json_builder_str` — zero bytes, sem aspas — então a linha sai `{"n":,` (JSON inválido). Segunda face: o detector só-dígitos (`.Ldb_mysql_num`, `RuntimeDb5.java:402-412`) trata `len==0` como "tudo dígito" e anexa a string vazia crua também — qualquer célula de string vazia cai na mesma forma inválida.
+
+**Causa raiz:** o ramo NULL reusa o valor string-vazia em vez do literal `null` de 4 bytes (o `"null"` já existe como `.Ldb_mysql_nullstr` em `RuntimeDb1.java:78` — ele é passado com `xorl %esi,%esi`, isto é, comprimento 0, então o literal nunca é de fato emitido). O loop só-dígitos não tem guarda `len==0 → string`.
+
+**Fix (regra 6 — caminho x86 congelado, NÃO é edit de agente sem a mantenedora):** o fix pertence ao `RuntimeDb5` (emitir o literal `"null"` com comprimento 4 via `builder_str`, ou 4× `builder_char`; e rotear `len==0` para `kof_json_encode_string` para `""` sair com aspas). A face E2E que provaria isso nunca exercitou NULL: `KofDbE2ETest#nativeMariadbAliasWireProtocol` só consulta colunas não-nulas.
+
+**Posição cross (NÃO silenciosa — esta seção):** a peça cross B70 (`NativeRiscvAsmRtB70`) NÃO copia o bug — ela emite o literal `null` do contrato JVM (4× `builder_char`) e roteia células vazias para `kof_json_encode_string` (`""` com aspas), byte-idêntico à JVM no riscv64+aarch64 (`NativeRiscvDbWireTest` 3/3). Mesma postura da face NULL do cross-sqlite B47. Um futuro fix do x86 converge as três faces; até lá a divergência fica declarada aqui.
+
+**Status:** 🔴 ABERTO — fix = `RuntimeDb5` do x86 (lane da mantenedora); o cross B70 já está correto pelo contrato JVM.
+
+**Dono:** lane gaps-db (achado durante a S5.2 fatia 3, B70).
+<!-- en-switch --> **EN:** [§488 (en)](known-bugs.md#488--x86-mysql-text-path-runtimedb5-ldb_mysql_null-emits-null-as-a-raw-empty-string--invalid-json-n-and-an-empty-string-cell-takes-the-digits-only-path-as-a-raw-number-also-invalid-when-empty---open-found-2409-by-the-gaps-db-lane-while-porting-the-b70-cross-query)

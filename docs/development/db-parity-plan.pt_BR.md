@@ -225,8 +225,23 @@ por scheme é a prova.
     aarch64 (qemu) contra o **MariaDB real**: `SELECT 1` → 1 coluna / linha
     `[0x01,'1']`; `SELECT 1,'ab'` → 2 colunas / linha `[0x01,'1',0x02,'a','b']`.
     *Prova:* `NativeRiscvDbWireTest#resultsetHeaderAgainstRealMariaDb*`.
-    Falta na próxima fatia: iterar TODAS as linhas e materializá-las como valores
-    Kof (registros JSON) — o resultado em forma de ORM.
+    **Feita ✅ 24/09 (peça `B70`, lane gaps-db):** query texto completa —
+    `kof_db_mysql_query(fd, sql)` envia o `COM_QUERY`, lê as definições de
+    coluna (nomes), itera TODAS as linhas e materializa um JSON object
+    `{"col":valor,…}` por linha numa `List<KofString>` (port do `kof_db_query`
+    x86 em `RuntimeDb5/Db6`). Regras de valor seguem o contrato JVM
+    (`kof_db_row_to_json` em `JvmConfigRuntime`, o oráculo Kof): NULL →
+    literal `null` sem aspas; só-dígitos → número cru; resto (incl. string
+    vazia) → `json_encode_string`. Provado em riscv64+aarch64 (qemu) contra o
+    **MariaDB real**: `SELECT 1` → `{"1":1}`; `SELECT 1,'ab'` →
+    `{"1":1,"ab":"ab"}`; `UNION ALL` → 2 linhas;
+    `SELECT NULL AS n,'a"b' AS s` → `{"n":null,"s":"a\"b"}`.
+    *Prova:* `NativeRiscvDbWireTest#queryAllRowsAgainstRealMariaDb*` +
+    o teste de sabotagem da B70. **Divergência honesta achada no caminho
+    (§488, ABERTA):** o caminho mysql do x86 (`RuntimeDb5 .Ldb_mysql_null`)
+    emite NULL como string VAZIA crua (JSON inválido `{"n":,`); a B70 NÃO
+    copia o bug — mesma postura da face NULL do cross-sqlite B47.
+    Faltam nas próximas fatias: prepared/tx/ORM (S5.3) + link/paridade (S5.4).
     *Critério de conclusão:* roundtrip `db.query` sob qemu, byte-idêntico ao x86/JVM.
   - **S5.3 — bind/prepared + tx + ORM.** Portar o dispatch de prepared/execute/
     transaction. *Prova:* E2E `orm.*` sob qemu.
