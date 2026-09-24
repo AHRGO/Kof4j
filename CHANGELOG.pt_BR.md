@@ -13,6 +13,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **B-5 UEFI `kof_plat_time` — `time.now()` agora roda bare por
+    `RuntimeServices->GetTime`** (24/09, lane baremetal 9092;
+    `D-BAREMETAL-BODIES`). A face UEFI ganha o corpo do relógio de parede
+    (`RT = ST+88`, `GetTime = RT+24`, um `EFI_TIME` de 16B na pilha, civil→epoch
+    COMPARTILHADO com o RTC do BIOS via o novo `RuntimeCivilEpoch`), então um
+    `time.now()` Kof devolve um epoch moderno sob OVMF em vez de uma recusa;
+    falha do `GetTime` é diagnóstico NOMEADO, nunca epoch silencioso.
+    `kof_plat_time_mono`/`kof_plat_sleep` seguem recusas honestas (próxima
+    fatia). O corpo RTC do BIOS foi refatorado para reusar o helper
+    compartilhado (sem mudança de comportamento). Prova: `NativeUefiE2ETest`
+    **4/0** (novo `uefiTimeNowRunsBareUnderOvmf`: serial lê `true`, RED pré-fix
+    `false`) + `BiosBootE2ETest` **7/0** (regressão do refactor) + bateria
+    nativa **108/0**.
+
   - **B-5 `kof_plat_time` no BIOS — `time.now()` agora roda bare pelo RTC CMOS;
     capacidades sem corpo no BIOS recusam com diagnóstico ASCII LEGÍVEL**
     (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`, autorizado pela

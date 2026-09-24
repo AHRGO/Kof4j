@@ -46,6 +46,14 @@ class NativeUefiE2ETest {
             }
             """;
 
+    /** B-5 (D-BAREMETAL-BODIES): time.now() pela face UEFI lê um epoch MODERNO
+     *  (> 2020) via RuntimeServices->GetTime — não a recusa da fatia anterior. */
+    private static final String TIME = """
+            main() {
+                println(time.now() > 1600000000000)
+            }
+            """;
+
     private static boolean hasTool(String tool, String... args) {
         String[] cmd = new String[args.length + 1];
         cmd[0] = tool;
@@ -161,15 +169,16 @@ class NativeUefiE2ETest {
                 "recusa deve citar NATIVE003, veio: " + diags);
     }
 
-    @Test
-    void uefiHelloPrintsViaConOutUnderOvmf(@TempDir Path tempDir) throws Exception {
+    /** Bota o PE32+ num ESP FAT sob OVMF e devolve o serial capturado, parando
+     *  assim que {@code expected} aparece (bounded — lição §418: nunca suíte
+     *  pendurada). */
+    private String bootUnderOvmf(Path tempDir, Path bin, String expected) throws Exception {
         Path code = findOvmfCode();
         Path qemu = findQemu();
         assumeTrue(code != null, "OVMF ausente (KOF_OVMF_HOME ou ~/.local/share/kof-ovmf)");
         assumeTrue(qemu != null, "qemu-system-x86_64 ausente");
         assumeTrue(hasTool("mformat", "--help") || hasTool("mformat", "-V"),
                 "mtools ausente");
-        Path bin = build(tempDir, HELLO, true);
         Path esp = makeEsp(tempDir, bin);
 
         Path vars = tempDir.resolve("vars.fd");
@@ -197,24 +206,45 @@ class NativeUefiE2ETest {
                 "-drive", "file=" + esp + ",format=raw,media=disk"));
 
         Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
-        String expected = "KO-UEFI OK";
         try {
-            // Bounded (lição §418): sai assim que a linha aparece no serial —
-            // regressão = timeout + assert, nunca suíte pendurada.
             long deadline = System.currentTimeMillis() + 150_000;
             String text = "";
             while (System.currentTimeMillis() < deadline) {
                 if (Files.exists(ser)) {
                     text = serialText(ser);
-                    if (text.contains(expected)) break;
+                    if (expected == null ? text.contains("true") || text.contains("false")
+                            : text.contains(expected)) break;
                 }
                 Thread.sleep(1_000);
             }
-            assertTrue(text.contains(expected),
-                    "OVMF nao imprimiu '" + expected + "' no serial. Fim do log: "
-                            + text.substring(Math.max(0, text.length() - 400)));
+            return text;
         } finally {
             p.destroyForcibly();
         }
+    }
+
+    @Test
+    void uefiHelloPrintsViaConOutUnderOvmf(@TempDir Path tempDir) throws Exception {
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path bin = build(tempDir, HELLO, true);
+        String text = bootUnderOvmf(tempDir, bin, "KO-UEFI OK");
+        assertTrue(text.contains("KO-UEFI OK"),
+                "OVMF nao imprimiu 'KO-UEFI OK' no serial. Fim do log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+    }
+
+    @Test
+    void uefiTimeNowRunsBareUnderOvmf(@TempDir Path tempDir) throws Exception {
+        assumeTrue(hasTool("as", "--version") && hasTool("ld", "--version")
+                && hasTool("objcopy", "--version"), "toolchain binutils ausente");
+        Path bin = build(tempDir, TIME, true);
+        String text = bootUnderOvmf(tempDir, bin, null);
+        assertTrue(text.contains("true"),
+                "time.now() no UEFI nao leu um epoch moderno de GetTime. Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
+        assertTrue(!text.contains("false"),
+                "time.now() retornou epoch invalido/antigo no UEFI. Log: "
+                        + text.substring(Math.max(0, text.length() - 400)));
     }
 }

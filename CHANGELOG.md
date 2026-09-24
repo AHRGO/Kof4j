@@ -13,6 +13,19 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **B-5 UEFI `kof_plat_time` — `time.now()` now runs bare from
+    `RuntimeServices->GetTime`** (24/09, lane baremetal 9092;
+    `D-BAREMETAL-BODIES`). The UEFI face fills its wall-clock body (`RT = ST+88`,
+    `GetTime = RT+24`, a 16-byte `EFI_TIME` on the stack, civil→epoch shared with
+    the BIOS RTC via the new `RuntimeCivilEpoch`), so a Kof `time.now()` returns
+    a modern epoch under OVMF instead of a refusal; a `GetTime` failure is a
+    named diagnostic, never a silent epoch. `kof_plat_time_mono`/`kof_plat_sleep`
+    stay honest refusals (next slice). The BIOS RTC body was refactored to reuse
+    the shared civil→epoch helper (no behavior change). Proof: `NativeUefiE2ETest`
+    **4/0** (new `uefiTimeNowRunsBareUnderOvmf`: serial reads `true`, RED pre-fix
+    `false`) + `BiosBootE2ETest` **7/0** (refactor regression) + native battery
+    **108/0**.
+
   - **B-5 BIOS `kof_plat_time` — `time.now()` now runs bare from the CMOS RTC;
     unsupported BIOS capabilities refuse with a READABLE ASCII diagnostic**
     (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`, maintainer-authorized).

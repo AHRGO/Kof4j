@@ -59,10 +59,8 @@ public final class RuntimeBios {
      *  {@code ts[1]=tv_nsec=0} — a ABI que {@code kof_now}→{@code time.now()}
      *  já consome. Mono/sleep ainda sem corpo viram recusa legível. */
     static void emitTime(StringBuilder sb) {
+        RuntimeCivilEpoch.emit(sb);
         sb.append("""
-            .section .rodata
-            .align 4
-            .Lkof_dbom: .long 0,0,31,59,90,120,151,181,212,243,273,304,334
             .section .text
             .type kof_plat_cmos_read, @function
             kof_plat_cmos_read:
@@ -172,40 +170,24 @@ public final class RuntimeBios {
             .Lkof_year_20:
                 addl $2000, %r9d
             .Lkof_year_ready:
-                # doy = dbom[month] + (day-1); +1 se (month>2 && bissexto)
-                leaq .Lkof_dbom(%rip), %rcx
-                movl (%rcx,%r8,4), %eax
-                leal -1(%r15), %edx
-                addl %edx, %eax
-                cmpl $2, %r8d
-                jle .Lkof_no_leapadd
-                testl $3, %r9d
-                jnz .Lkof_no_leapadd
-                incl %eax
-            .Lkof_no_leapadd:
-                # days = 365*(year-1970) + ((year-1)/4 - 492) + doy
-                movl %r9d, %ecx
-                subl $1970, %ecx
-                imull $365, %ecx, %ecx
-                addl %eax, %ecx
-                movl %r9d, %eax
-                decl %eax
-                shrl $2, %eax
-                subl $492, %eax
-                addl %eax, %ecx                 # ecx = dias desde 1970-01-01
-                # epoch_s = days*86400 + hour*3600 + min*60 + sec
-                movslq %ecx, %rax
+                # dias = kof_civil_to_epoch(ano, mes, dia)
+                movl %r9d, %edi
+                movl %r8d, %esi
+                movl %r15d, %edx
+                call kof_civil_to_epoch
+                # epoch_s = dias*86400 + hora*3600 + min*60 + sec
+                movq %rax, %rcx
                 movq $86400, %rdx
-                imulq %rdx, %rax
+                imulq %rdx, %rcx
                 movslq %r14d, %rdx
                 imulq $3600, %rdx, %rdx
-                addq %rdx, %rax
+                addq %rdx, %rcx
                 movslq %r13d, %rdx
                 imulq $60, %rdx, %rdx
-                addq %rdx, %rax
+                addq %rdx, %rcx
                 movslq %r12d, %rdx
-                addq %rdx, %rax
-                movq %rax, 0(%rbx)              # ts[0] = tv_sec
+                addq %rdx, %rcx
+                movq %rcx, 0(%rbx)              # ts[0] = tv_sec
                 movq $0, 8(%rbx)                # ts[1] = tv_nsec
                 addq $8, %rsp
                 popq %r15

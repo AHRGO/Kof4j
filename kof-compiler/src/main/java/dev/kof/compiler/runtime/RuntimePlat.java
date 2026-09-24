@@ -144,10 +144,12 @@ public final class RuntimePlat {
     }
 
     public static void emitPlatTime(StringBuilder sb) {
-        // B-2: família UEFI sem corpo nesta fatia — recusa NOMEADA (R6),
-        // nunca um syscall Linux silencioso que não existe no firmware.
+        // B-5 (D-BAREMETAL-BODIES, 24/09): no UEFI o relógio de parede vem de
+        // RuntimeServices->GetTime — time.now() roda bare de verdade. Mono/sleep
+        // ainda sem corpo UEFI viram recusa NOMEADA (R6), nunca stub.
         if (dev.kof.compiler.nat.NativeProfile.activeIsUefi()) {
-            RuntimeUefi.emitUefiRefuse(sb, "kof_plat_time, kof_plat_time_mono, kof_plat_sleep");
+            RuntimeUefi.emitUefiTime(sb);
+            RuntimeUefi.emitUefiRefuse(sb, "kof_plat_time_mono, kof_plat_sleep");
             return;
         }
         // B-5 (D-BAREMETAL-BODIES, 24/09): no BIOS o relógio de parede vem do

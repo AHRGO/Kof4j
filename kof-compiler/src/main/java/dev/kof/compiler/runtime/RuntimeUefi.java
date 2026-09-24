@@ -234,6 +234,88 @@ public final class RuntimeUefi {
             """);
     }
 
+    /** B-5 (D-BAREMETAL-BODIES): relógio de parede no UEFI via
+     *  {@code SystemTable->RuntimeServices->GetTime} — {@code RT = ST+88},
+     *  {@code GetTime = RT+24} (UEFI 2.x; o {@code EFI_TABLE_HEADER} tem 24B).
+     *  Preenche um {@code EFI_TIME} de 16B na pilha (UTC), converte civil→epoch
+     *  com o helper COMPARTILHADO ({@code RuntimeCivilEpoch}, mesma regra do
+     *  RTC do BIOS) e devolve {@code ts[0]=tv_sec}/{@code ts[1]=tv_nsec} — a ABI
+     *  que {@code kof_now}→{@code time.now()} já consome. Se {@code GetTime}
+     *  falha (status ≠ 0), emite diagnóstico NOMEADO (R6) e sai — nunca um
+     *  epoch silencioso. Mono/sleep seguem recusas legíveis (fatia seguinte). */
+    public static void emitUefiTime(StringBuilder sb) {
+        RuntimeCivilEpoch.emit(sb);
+        sb.append("""
+            .section .text
+            .globl kof_plat_time
+            .type kof_plat_time, @function
+            kof_plat_time:
+                pushq %rbx
+                pushq %r12
+                pushq %r13
+                pushq %r14
+                pushq %r15
+                subq $16, %rsp               # EFI_TIME (16B)
+                movq %rdi, %rbx              # ts
+                movq kof_efi_st(%rip), %rax
+                movq 88(%rax), %rax          # RuntimeServices
+                movq 24(%rax), %rdi          # fn = RT->GetTime
+                movq %rsp, %rsi              # a1 = &EFI_TIME
+                xorl %edx, %edx              # a2 = Capabilities = NULL
+                call kof_efi_call3
+                testq %rax, %rax
+                jnz .Lkof_uefi_time_fail
+                movzwl 0(%rsp), %edi         # Year (u16)
+                movzbl 2(%rsp), %esi         # Month
+                movzbl 3(%rsp), %edx         # Day
+                movzbl 4(%rsp), %r12d        # Hour
+                movzbl 5(%rsp), %r13d        # Minute
+                movzbl 6(%rsp), %r14d        # Second
+                movl 8(%rsp), %r15d          # Nanosecond (u32)
+                call kof_civil_to_epoch      # rax = dias desde 1970
+                movq %rax, %rcx
+                movq $86400, %rdx
+                imulq %rdx, %rcx
+                movslq %r12d, %rdx
+                imulq $3600, %rdx, %rdx
+                addq %rdx, %rcx
+                movslq %r13d, %rdx
+                imulq $60, %rdx, %rdx
+                addq %rdx, %rcx
+                movslq %r14d, %rdx
+                addq %rdx, %rcx
+                movq %rcx, 0(%rbx)           # ts[0] = tv_sec
+                movslq %r15d, %rdx
+                movq %rdx, 8(%rbx)           # ts[1] = tv_nsec
+                addq $16, %rsp
+                popq %r15
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                ret
+            .Lkof_uefi_time_fail:
+                subq $8, %rsp
+                movl $1, %edi
+                leaq .Lkof_uefi_gettime_fail(%rip), %rsi
+                movq $.Lkof_uefi_gettime_fail_end - .Lkof_uefi_gettime_fail, %rdx
+                call kof_plat_write
+                xorl %edi, %edi
+                call kof_plat_exit_group
+            """);
+        String fmsg = "KOF UEFI: GetTime falhou!";
+        StringBuilder words = new StringBuilder();
+        for (int i = 0; i < fmsg.length(); i++) {
+            if (i > 0) words.append(',');
+            char c = fmsg.charAt(i);
+            words.append(c == '\'' ? "'\\''" : "'" + c + "'");
+        }
+        sb.append("        .section .rodata\n")
+          .append(".Lkof_uefi_gettime_fail: .word ").append(words).append('\n')
+          .append(".Lkof_uefi_gettime_fail_end:\n")
+          .append("        .section .text\n");
+    }
+
     /** Recusa NOMEADA (R6) para famílias de costura sem corpo UEFI nesta
      *  fatia (time/random/sync/threads/io/net): imprime o diagnóstico pela
      *  própria costura de write e sai via {@code BootServices->Exit} —
