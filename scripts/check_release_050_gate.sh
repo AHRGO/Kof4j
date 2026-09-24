@@ -156,6 +156,27 @@ c_decisions() {
   fi
 }
 
+# D-FULL-PARITY-050 (24/09): condicao 8 — o ledger de paridade total nao pode
+# ter linha aberta. Ledger ausente/ilegivel = UNKNOWN, nunca GREEN (R6/Q5).
+# Linha aberta = linha de tabela no bloco "Open rows" cujo primeiro campo e
+# numerado (`| N |`); o bloco vai de "## Open rows" ate "## Closed".
+c_full_parity() {
+  local f="${R050_PARITY_GAPS_FILE:-docs/development/parity/PARITY-GAPS.md}"
+  if [ ! -r "$f" ]; then
+    STATE[full_parity]=UNKNOWN; DETAIL[full_parity]="parity ledger unreadable: $f"; return
+  fi
+  local n
+  n="$(sed -n '/^## Open rows/,/^## Closed/p' "$f" | grep -cE '^\| *[0-9]+ *\|')"
+  case "$n" in
+    ''|*[!0-9]*) STATE[full_parity]=UNKNOWN; DETAIL[full_parity]="parity ledger unparsable (no Open rows table)"; return ;;
+  esac
+  if [ "$n" -eq 0 ]; then
+    STATE[full_parity]=GREEN; DETAIL[full_parity]="full parity ledger: 0 open rows"
+  else
+    STATE[full_parity]=RED; DETAIL[full_parity]="$n open parity row(s) — D-FULL-PARITY-050 blocker"
+  fi
+}
+
 c_loose_docs() {
   local list extra
   if [ -n "$LOOSE_MD_FILE" ]; then
@@ -318,6 +339,7 @@ if [ "${1:-}" = "--selftest" ]; then
   printf '0\n' > "$T/pending"
   printf 'DECISIONS.md\nroadmap.md\n' > "$T/loose"
   : > "$T/spec"
+  printf '# ledger\n\n## Open rows\n\n| # | x |\n|---|---|\n\n## Closed\n' > "$T/pgaps"
   cat > "$T/kb" <<'EOF'
 EN open/partial (0): 
 PT open/partial (0): 
@@ -325,10 +347,11 @@ EOF
   R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_PARITY_FILE="$T/parity" \
   R050_STABILITY_FILE="$T/stab" \
   R050_PENDING_FILE="$T/pending" R050_LOOSE_MD_FILE="$T/loose" R050_SPEC_GAPS_FILE="$T/spec" \
-  R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 \
+  R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 R050_PARITY_GAPS_FILE="$T/pgaps" \
     bash "$0" > "$T/out"; rc=$?
   [ "$rc" -eq 0 ] || fail "clean fixture should be exit 0, got $rc"
   grep -q 'parity .*GREEN' "$T/out" || fail "clean parity not GREEN"
+  grep -q 'full_parity .*GREEN' "$T/out" || fail "clean full_parity not GREEN"
   grep -q 'bugs_gaps .*GREEN' "$T/out" || fail "clean bugs_gaps not GREEN"
 
   # D-RELEASE-0.5.0-SCOPE (maintainer 21/09/2026): (a) an allowlisted
@@ -339,7 +362,7 @@ EOF
   R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_PARITY_FILE="$T/parity" \
   R050_STABILITY_FILE="$T/stab" \
   R050_PENDING_FILE="$T/pending" R050_LOOSE_MD_FILE="$T/loose" R050_SPEC_GAPS_FILE="$T/spec" \
-  R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 \
+  R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 R050_PARITY_GAPS_FILE="$T/pgaps" \
     bash "$0" > "$T/out_scope"; rc=$?
   [ "$rc" -eq 0 ] || fail "scope fixture should be exit 0, got $rc"
   grep -q 'loose_docs .*GREEN' "$T/out_scope" || fail "allowlisted doc made loose_docs not GREEN"
@@ -354,6 +377,7 @@ EOF
   printf 'DECISIONS.md\nmakealive-plan.md\n' > "$T/loose"
   printf 'EN open/partial (19): 188 192\nPT open/partial (19): 188 192\n' > "$T/kb"
   printf '🟡\n' > "$T/spec"
+  printf '# ledger\n\n## Open rows\n\n| 1 | x |\n|---|---|\n| 2 | y |\n\n## Closed\n' > "$T/pgaps2"
   R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_PARITY_FILE="$T/parity" \
   R050_STABILITY_FILE="$T/stab" \
   R050_PENDING_FILE="$T/pending" R050_LOOSE_MD_FILE="$T/loose" R050_SPEC_GAPS_FILE="$T/spec" \
@@ -364,6 +388,7 @@ EOF
   grep -q 'bug_issues .*RED' "$T/out2" || fail "dirty bug_issues not RED"
   grep -q 'edges .*RED' "$T/out2" || fail "dirty edges not RED"
   grep -q 'loose_docs .*RED' "$T/out2" || fail "dirty loose_docs not RED"
+  grep -q 'full_parity .*RED' "$T/out2" || fail "dirty full_parity not RED"
   grep -q 'bugs_gaps .*RED' "$T/out2" || fail "dirty bugs_gaps not RED"
 
   # inconclusive fixture -> exit 2 (no RED, but NEEDS-*)
@@ -375,7 +400,7 @@ EOF
   R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_LOOSE_MD_FILE="$T/loose" \
   R050_SPEC_GAPS_FILE="$T/spec" R050_DECISIONS_MD="$T/dec_ok" \
   R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 \
-  R050_MATRIX_CMD=: KOF_SUITE_LOG= \
+  R050_MATRIX_CMD=: KOF_SUITE_LOG= R050_PARITY_GAPS_FILE="$T/pgaps" \
     bash "$0" > "$T/out3"; rc=$?
   [ "$rc" -eq 2 ] || fail "inconclusive fixture should be exit 2, got $rc"
   grep -q 'NEEDS-MEASURE' "$T/out3" || fail "inconclusive run should surface NEEDS-MEASURE"
@@ -389,7 +414,7 @@ EOF
   R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_LOOSE_MD_FILE="$T/loose" \
   R050_SPEC_GAPS_FILE="$T/spec" R050_DECISIONS_MD="$T/dec_open" \
   R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 \
-  R050_MATRIX_CMD=: KOF_SUITE_LOG= \
+  R050_MATRIX_CMD=: KOF_SUITE_LOG= R050_PARITY_GAPS_FILE="$T/pgaps" \
     bash "$0" > "$T/out3b"; rc=$?
   [ "$rc" -eq 2 ] || fail "State: OPEN fixture should be exit 2, got $rc"
   grep -q 'decisions .*NEEDS-REVIEW' "$T/out3b" || fail "State: OPEN decisions should be NEEDS-REVIEW"
@@ -401,7 +426,7 @@ EOF
   R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_TSV="$T/eg" R050_LOOSE_MD_FILE="$T/loose" \
   R050_SPEC_GAPS_FILE="$T/spec" R050_DECISIONS_MD="$T/dec_two" \
   R050_KNOWN_BUGS_CMD="cat $T/kb" R050_OPEN_BLOCKS=0 \
-  R050_MATRIX_CMD=: KOF_SUITE_LOG= \
+  R050_MATRIX_CMD=: KOF_SUITE_LOG= R050_PARITY_GAPS_FILE="$T/pgaps" \
     bash "$0" > "$T/out3c"; rc=$?
   grep -q '2 State: OPEN' "$T/out3c" || fail "combined heading should count 2 decisions"
   grep -q 'D-A' "$T/out3c" && grep -q 'D-B' "$T/out3c" \
@@ -413,14 +438,14 @@ EOF
   R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_ROADMAP="$T/rm" \
   R050_LOOSE_MD_FILE="$T/loose" R050_SPEC_GAPS_FILE="$T/spec" R050_DECISIONS_MD="$T/dec_ok" \
   R050_KNOWN_BUGS_CMD="cat $T/kb" R050_BLOCKS_CMD="echo boom; exit 3" \
-  R050_MATRIX_CMD=: KOF_SUITE_LOG= \
+  R050_MATRIX_CMD=: KOF_SUITE_LOG= R050_PARITY_GAPS_FILE="$T/pgaps" \
     bash "$0" > "$T/out4" 2>/dev/null
   grep -q 'edges .*UNKNOWN' "$T/out4" || fail "EG fechado + blocks sem resposta devia ser UNKNOWN"
   # e quando a query responde 0, edges fica GREEN
   R050_OPEN_ISSUES_TSV="$T/issues" R050_EG_ROADMAP="$T/rm" \
   R050_LOOSE_MD_FILE="$T/loose" R050_SPEC_GAPS_FILE="$T/spec" R050_DECISIONS_MD="$T/dec_ok" \
   R050_KNOWN_BUGS_CMD="cat $T/kb" R050_BLOCKS_CMD='echo "-- 0 open 1.0-blocks"' \
-  R050_MATRIX_CMD=: KOF_SUITE_LOG= \
+  R050_MATRIX_CMD=: KOF_SUITE_LOG= R050_PARITY_GAPS_FILE="$T/pgaps" \
     bash "$0" > "$T/out5" 2>/dev/null
   grep -q 'edges .*GREEN' "$T/out5" || fail "EG fechado + 0 blocks devia ser GREEN"
 
@@ -428,9 +453,9 @@ EOF
   exit 0
 fi
 
-c_parity; c_decisions; c_loose_docs; c_stability; c_bug_issues; c_edges; c_bugs_gaps
+c_parity; c_full_parity; c_decisions; c_loose_docs; c_stability; c_bug_issues; c_edges; c_bugs_gaps
 
-ORDER=(parity decisions loose_docs stability bug_issues edges bugs_gaps)
+ORDER=(parity full_parity decisions loose_docs stability bug_issues edges bugs_gaps)
 red=0; incon=0
 echo "== 0.5.0 release gate (D-RELEASE-0.5.0-GATE) =="
 for k in "${ORDER[@]}"; do

@@ -3521,3 +3521,49 @@ commit; **B-5 BIOS time = first slice** (proof: `BiosBootE2ETest` boots a Kof
 decision).
 
 - **Relationships:** `Related: D-BAREMETAL-BOOT, D-UNIVERSAL, D-BOOTSTRAP, rule 6, rule 11, R6, R7, R12`.
+
+## D-FULL-PARITY-050 — Full platform parity is the ABSOLUTE rule of every plan and an 0.5.0 BLOCKER: the release does not cut while `docs/development/parity/PARITY-GAPS.md` has an open row (maintainer 24/09/2026)
+
+**Date:** 2026-09-24 · **State:** `DECIDED` (maintainer messages in the chat,
+this session, 24/09) · **Extends:** `D-UNIVERSAL`, `D-RELEASE-0.5.0-SCOPE`,
+platform invariant R7 ("honest scope per target")
+
+**Decision (maintainer's words, in order):** *"A PLATAFORMA UNIVERSAL TA
+IMPLEMENTADA SÓ PRA JVM? ISSO É INACEITAVEL. TUDO TEM QUE TER PARIDADE TOTAL.
+DOCUMENTE ISSO COMO IMPEDITIVO PARA 0.5.0"*; *"A REGRA ABSOLUTA PRA QUALQUER
+PLANO É A PARIDADE TOTAL"*; *"APROVEITA E PESQUISA TUDO QUE TA COM PARIDADE
+PARCIAL E BOTA EM docs/development/parity PARIDADE TOTAL É INDISPENSAVEL"*.
+
+**What was decided:**
+
+1. **Full parity (JVM/Script ≡ Native x86-64 ≡ Native riscv64/aarch64 ≡ JS,
+   byte/golden vs the JVM oracle) is the ABSOLUTE rule for every plan** — a
+   new front that lands JVM-first MUST carry its parity plan in the same
+   queue item; "declared gap" is a tracking state, never an acceptance state.
+2. **0.5.0 release condition 8 (full_parity) is a BLOCKER:** the ledger
+   `docs/development/parity/PARITY-GAPS.md`(+PT) must have **0 open rows** at
+   cut. The ledger was created measured (24/09) with the 16 open rows below
+   (gap codes from `DomainGapCodesTest`, `Kof*.java`, the stdlib parity table
+   and `known-bugs.md`): process/shell (`PROC001`), ssh (no code yet —
+   catalog), media (`MEDIA001`/`MEDIA003`), mq (`MQ001`), gpu JS + cross
+   golden (`GPU001`), observability cross golden (`OBS003`), time cross
+   (`TIME002`/`TIME004`), cache/config/log cross golden + interpreter log
+   (`CONF001`), `math.pow` cross (`MATH001`), `strings.reverse` non-ASCII +
+   five String methods (`NAT-STR01`/`STR003`), web T1 native (`WEB00x`),
+   `kof.io` cross (`NAT006`/`NAT007`), security cross (`SECN001/003/004/005`),
+   `orm.*` native (`ORM001`), `db.*` native query/prepared (`DB001`).
+3. **Existing release condition 1 (100% parity) measured on the CONFORMANCE
+   MATRIX stays** — the ledger ADDS the long tail the matrix never covered
+   (unmeasured goldens count as OPEN, Q5: no false green).
+4. **Definition of done per row:** face compiles + golden/E2E byte parity +
+   docs tables updated in the SAME commit + row removed in the SAME commit.
+5. **Every FUTURE plan document inherits the rule:** a plan without a parity
+   section (targets × proof) is misclassified (three-states rule) — agents
+   must add it or route the gap to this ledger.
+
+**Evidence:** maintainer messages 24/09/2026 (chat, this session); ledger
+created with the full measured state in the same commit; machine gate wired
+in `scripts/check_release_050_gate.sh` (`full_parity`).
+
+- **Relationships:** `Related: D-UNIVERSAL, D-RELEASE-0.5.0-SCOPE, D-DB-GAPS,
+  D-GRAFICOS-GAMING, R6, R7, Q5, rule 6`.

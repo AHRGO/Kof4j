@@ -3546,3 +3546,52 @@ registrado aqui **antes** de qualquer código de B-5/B-4 (rule 6: não se ataca
 frente sem decisão travada).
 
 - **Relacionados:** `Related: D-BAREMETAL-BOOT, D-UNIVERSAL, D-BOOTSTRAP, rule 6, rule 11, R6, R7, R12`.
+
+## D-FULL-PARITY-050 — Paridade total da plataforma é a regra ABSOLUTA de todo plano e IMPEDITIVO da 0.5.0: a release não corta enquanto `docs/development/parity/PARITY-GAPS.pt_BR.md` tiver linha aberta (mantenedora 24/09/2026)
+
+**Data:** 2026-09-24 · **Estado:** `DECIDIDO` (mensagens da mantenedora no
+chat, nesta sessão, 24/09) · **Estende:** `D-UNIVERSAL`,
+`D-RELEASE-0.5.0-SCOPE`, invariante de plataforma R7
+
+**Decisão (palavras da mantenedora, em ordem):** *"A PLATAFORMA UNIVERSAL TA
+IMPLEMENTADA SÓ PRA JVM? ISSO É INACEITAVEL. TUDO TEM QUE TER PARIDADE TOTAL.
+DOCUMENTE ISSO COMO IMPEDITIVO PARA 0.5.0"*; *"A REGRA ABSOLUTA PRA QUALQUER
+PLANO É A PARIDADE TOTAL"*; *"APROVEITA E PESQUISA TUDO QUE TA COM PARIDADE
+PARCIAL E BOTA EM docs/development/parity PARIDADE TOTAL É INDISPENSAVEL"*.
+
+**O que foi decidido:**
+
+1. **Paridade total (JVM/Script ≡ Native x86-64 ≡ Native riscv64/aarch64 ≡
+   JS, byte/golden vs o oráculo JVM) é a regra ABSOLUTA de todo plano** — uma
+   frente nova que pousar JVM-first DEVE carregar o plano de paridade no
+   mesmo item da fila; "gap declarado" é estado de rastreio, nunca de
+   aceitação.
+2. **Condição 8 da release 0.5.0 (full_parity) é IMPEDITIVA:** o ledger
+   `docs/development/parity/PARITY-GAPS.md`(+PT) precisa ter **0 linhas
+   abertas** no corte. O ledger foi criado medido (24/09) com as 16 linhas
+   abertas (códigos de `DomainGapCodesTest`, `Kof*.java`, tabela de paridade
+   da stdlib e `known-bugs.md`): process/shell (`PROC001`), ssh (sem código
+   ainda — catalogar), media (`MEDIA001`/`MEDIA003`), mq (`MQ001`), gpu JS +
+   golden cross (`GPU001`), observability golden cross (`OBS003`), time cross
+   (`TIME002`/`TIME004`), cache/config/log golden cross + log interpretador
+   (`CONF001`), `math.pow` cross (`MATH001`), `strings.reverse` não-ASCII +
+   cinco métodos de String (`NAT-STR01`/`STR003`), web T1 native (`WEB00x`),
+   `kof.io` cross (`NAT006`/`NAT007`), security cross
+   (`SECN001/003/004/005`), `orm.*` nativo (`ORM001`), `db.*` nativo
+   query/prepared (`DB001`).
+3. **A condição 1 existente (paridade 100%) medida na MATRIZ DE CONFORMIDADE
+   permanece** — o ledger ACRESCENTA a cauda longa que a matriz nunca cobriu
+   (golden não medido conta como ABERTO, Q5: sem falso verde).
+4. **Definition of done por linha:** face compila + golden/E2E byte a byte +
+   tabelas de docs atualizadas no MESMO commit + linha removida no MESMO
+   commit.
+5. **Todo plano FUTURO herda a regra:** plano sem seção de paridade (alvos ×
+   prova) está mal classificado (regra dos três estados) — o agente adiciona
+   ou roteia o gap para este ledger.
+
+**Evidência:** mensagens da mantenedora 24/09/2026 (chat, esta sessão);
+ledger criado com o estado completo medido no mesmo commit; gate de máquina
+ligado no `scripts/check_release_050_gate.sh` (`full_parity`).
+
+- **Relacionamentos:** `Relaciona: D-UNIVERSAL, D-RELEASE-0.5.0-SCOPE,
+  D-DB-GAPS, D-GRAFICOS-GAMING, R6, R7, Q5, regra 6`.

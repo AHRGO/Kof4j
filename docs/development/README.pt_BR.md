@@ -27,6 +27,12 @@
 > **anda**; uma decisão tomada vive em `DECISIONS.md` (regra 6: uma frente sem
 > linha ali não é atacada).
 
+**`parity/` (24/09, `D-FULL-PARITY-050`):** o ledger impeditivo de paridade
+total (`PARITY-GAPS.pt_BR.md`(+EN)) — cada linha de paridade parcial medida
+(superfície × alvo × código de gap × lane dona). Condição 8 da release
+(`full_parity`): a 0.5.0 NÃO corta com linha aberta. A regra ABSOLUTA de
+qualquer plano: paridade total.
+
 **Fontes de verdade que NÃO estão aqui (não são backlog):** `docs/status.md`
 (o que funciona + gate da suíte), `docs/backend-parity.md` (matriz de
 paridade com gaps honestos), `docs/bugs-and-gaps/specification-gaps.md`

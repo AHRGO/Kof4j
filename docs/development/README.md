@@ -27,6 +27,11 @@
 > **moves**; a taken decision lives in `DECISIONS.md` (rule 6: a front without a line
 > there is not attacked).
 
+**`parity/` (24/09, `D-FULL-PARITY-050`):** the full-parity blocker ledger
+(`PARITY-GAPS.md`(+PT)) — every measured partial-parity row (surface ×
+target × gap code × owner lane). Release condition 8 (`full_parity`): 0.5.0
+does NOT cut with an open row. The ABSOLUTE rule of any plan: full parity.
+
 **Sources of truth that are NOT here (they are not backlog):** `docs/status.md`
 (what works + the suite gate), `docs/backend-parity.md` (parity
 matrix with honest gaps), `docs/bugs-and-gaps/specification-gaps.md`
