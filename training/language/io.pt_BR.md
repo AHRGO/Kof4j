@@ -42,6 +42,7 @@ sobre ler/escrever arquivos, trabalhar com paths e listar diretórios.
 | Params de bytes e impressão de um `Int[]` (§388) | Os params de bytes pedem **array primitivo** — `writeBytes(listOf(65,66))` é erro em tempo de compilação (`SEM099`, §388-A); imprimir o array inteiro usa o formato de container §107: `println(f.readBytes())` → `[65, 66]` (voto da mantenedora 21/09, §388-B) |
 | `File("x").size()` | Long; **lança exceção** se o arquivo não existe (02/09 — sem sentinela `-1`) |
 | `File("x").delete()` | Bool |
+| `File("x").mkdir()` / `.mkdirs()` | aliases POSIX de `create()` / `createDirectories()`: criam o diretório / todo o caminho (Bool) |
 | `File("x").name()` / `.path()` | String |
 
 Estáticas: `File.exists(p)`, `File.readText(p)`, `File.writeText(p, s)`,
@@ -54,6 +55,7 @@ Estáticas: `File.exists(p)`, `File.readText(p)`, `File.writeText(p, s)`,
 | `Directory("d").exists()` | Bool |
 | `Directory("d").create()` | cria; falha se já existe |
 | `Directory("d").createDirectories()` | cria recursivamente |
+| `Directory("d").mkdir()` / `.mkdirs()` | aliases POSIX de `create()` / `createDirectories()` |
 | `Directory("d").list()` | `List<String>` dos nomes (ordenado) |
 | `Directory("d").delete()` | remove diretório vazio |
 

@@ -14836,3 +14836,18 @@ main() {
 
 **Owner:** gaps-db lane (found during S5.2 slice 3, B70).
 <!-- pt-switch --> **PT:** [§488 (pt_BR)](known-bugs.pt_BR.md#488--o-caminho-de-texto-mysql-do-x86-runtimedb5-ldb_mysql_null-emite-null-como-string-vazia-crua--json-invalido-n--e-uma-celula-de-string-vazia-segue-o-caminho-so-digitos-como-numero-cru-tambem-invalido-quando-vazia---aberto-achado-2409-pela-lane-gaps-db-ao-portar-a-query-cross-b70)
+
+## §489 — File.mkdir() and File.mkdirs() were a silent no-op with ClassFormatError on the result; now real aliases of create()/createDirectories(), and unknown io methods are a clean SEM102 — ✅ FIXED 24/09 (issue #617)
+
+**Symptom (measured 24/09, lane compiler 9092, against tip `f946a313`):** `File("/x").mkdir()` compiled and ran but never created the directory (`ls` → no such file); `println(File("/x").mkdir().toString())` died at class-load with `ClassFormatError: Illegal class name "" in class file Default/Main` (the launcher hid it behind "main method not found"). The same pattern with `exists()` worked fine.
+
+**Root cause:** `mkdir` was absent from the `kof.io` method table (`KofIo.instanceMethod`), so the typer returned `UNKNOWN`, the lowering left the receiver untouched (no-op) and the `UNKNOWN` type reached the emit, mapping to an empty JVM internal name → empty class/method name in the constant pool.
+
+**Fix (landed 24/09, maintainer order "nada de stub, implementação real"):** `mkdir`/`mkdirs` are now real methods on File/Path/Directory (and statics on File/Directory) — POSIX-style aliases of `create()`/`createDirectories()`, reusing the gated `kof_io_dir_create`/`kof_io_dir_create_dirs` runtime on every target (NAT006 still guards riscv64/aarch64). The crash root is closed too: any OTHER unknown method on a `kof.io` builtin is a clean compile-time `SEM102` (guard from the lane-issues fix `aed5fe7b`), so `UNKNOWN` can no longer reach the constant pool as an empty class name. The §382 JS golden (`IoBoolFacesE2ETest`) was corrected to use the real `createDirectories()` instead of the internal bridge name `dirCreateDirs()` it accidentally probed.
+
+**Proof (Q0/Q1/Q3):** `IoUnknownMethodGuardTest` **5/5** (mkdir/mkdirs compile; unknown method → SEM102, no ClassFormatError); `IoE2ETest` **25/25** (JVM + x86-64 native: new `directoryMkdirAliases` — mkdir creates, second mkdir false, `mkdir().toString()` → `false`, mkdirs recurses); `IoBoolFacesE2ETest` green after the correction. Corpus `training/language/io.md` (+pt_BR) updated.
+
+**Status:** ✅ FIXED 24/09 (issue #617).
+
+**Owner:** session 9092 (lane compiler), kof.io method table; SEM102 guard by the lane-issues fix (`aed5fe7b`).
+<!-- pt-switch --> **PT:** [§488 (pt_BR)](known-bugs.pt_BR.md#489--filemkdir-e-filemkdirs-eram-no-op-silencioso-com-classformaterror-no-resultado-agora-sao-aliases-reais-de-createcreatedirectories-e-metodos-io-desconhecidos-dao-sem102-limpo---corrigido-2409-issue-617)

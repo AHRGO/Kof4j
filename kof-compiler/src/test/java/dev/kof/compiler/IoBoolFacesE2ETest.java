@@ -59,7 +59,7 @@ class IoBoolFacesE2ETest {
             }
             """;
 
-    // Oracle = medido 20/09 no tip com o fix (JVM == JS byte a byte):
+    // Oracle = medido 25/09 no tip com o fix (JVM == JS byte a byte):
     //   writeText true | appendText true | readText "oi!" | delete true |
     //   delete-miss false | createDirectories true | isDirectory true
     //   (mesma face nos 2 motores — contrato compartilhado, não §382) |

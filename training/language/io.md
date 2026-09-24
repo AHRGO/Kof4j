@@ -43,6 +43,7 @@ about reading/writing files, working with paths and listing directories.
 | Bytes params and printing an `Int[]` (§388) | The bytes params take a **primitive array** — `writeBytes(listOf(65,66))` is a compile-time error (`SEM099`, §388-A); printing a whole array uses the §107 container format: `println(f.readBytes())` → `[65, 66]` (maintainer vote 21/09, §388-B) |
 | `File("x").size()` | Long; **throws an exception** if the file does not exist (02/09 — no `-1` sentinel) |
 | `File("x").delete()` | Bool |
+| `File("x").mkdir()` / `.mkdirs()` | POSIX-style aliases of `create()` / `createDirectories()`: create the directory / the whole path (Bool) |
 | `File("x").name()` / `.path()` | String |
 
 Statics: `File.exists(p)`, `File.readText(p)`, `File.writeText(p, s)`,
@@ -55,6 +56,7 @@ Statics: `File.exists(p)`, `File.readText(p)`, `File.writeText(p, s)`,
 | `Directory("d").exists()` | Bool |
 | `Directory("d").create()` | creates; fails if it already exists |
 | `Directory("d").createDirectories()` | creates recursively |
+| `Directory("d").mkdir()` / `.mkdirs()` | POSIX-style aliases of `create()` / `createDirectories()` |
 | `Directory("d").list()` | `List<String>` of the names (sorted) |
 | `Directory("d").delete()` | removes an empty directory |
 

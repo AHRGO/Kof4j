@@ -13,6 +13,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§488 (#617) ✅ FIXED — `File.mkdir()`/`.mkdirs()` are real aliases of
+    `create()`/`createDirectories()`; unknown `kof.io` methods get a clean
+    `SEM102`** (24/09, lane compiler 9092; maintainer order "nada de stub,
+    implementação real"). They now create the directory for real (gated
+    `kof_io_dir_create`/`kof_io_dir_create_dirs`, NAT006 preserved for
+    riscv64/aarch64) instead of the old silent no-op, and any OTHER unknown
+    method on File/Path/Directory is rejected at compile time (guard `aed5fe7b`)
+    so `UNKNOWN` no longer leaks an empty class name → no more `ClassFormatError`
+    on `.toString()`. The §382 JS golden `IoBoolFacesE2ETest` now uses the real
+    `createDirectories()`. Proof: `IoUnknownMethodGuardTest` 5/5 +
+    `IoE2ETest` 25/25 (JVM + x86-64 native `directoryMkdirAliases`).
+
   - **§104b-ii (face CONTENÇÃO) ✅ FIXED — record/class inside a collection now
     compares by CONTENT on Native** (24/09, lane compiler/nat 9092):
     `listOf(p1).contains(p2)`, `indexOf`/`lastIndexOf`, `setOf(p1).contains(p2)`,

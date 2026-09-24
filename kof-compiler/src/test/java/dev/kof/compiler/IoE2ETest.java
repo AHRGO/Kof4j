@@ -232,6 +232,26 @@ class IoE2ETest {
     }
 
     @Test
+    void directoryMkdirAliases(@TempDir Path tempDir) throws IOException {
+        // GitHub #617: mkdir()/mkdirs() are POSIX-style aliases of create()/
+        // createDirectories() and must really create the directory on both
+        // targets — never the old silent no-op, and `.toString()` on the Bool
+        // result must not crash class-load.
+        both(tempDir, "dirMkdir", """
+            var f = File("%s/mkdir_d")
+            println(f.exists())
+            println(f.mkdir())
+            println(f.exists())
+            println(f.isDirectory())
+            println(f.mkdir())
+            println(f.mkdir().toString())
+            var deep = File("%s/mkdirs/a/b/c")
+            println(deep.mkdirs())
+            println(Directory("%s/mkdirs/a/b/c").isDirectory())
+            """, "false\ntrue\ntrue\ntrue\nfalse\nfalse\ntrue\ntrue");
+    }
+
+    @Test
     void directoryList(@TempDir Path tempDir) throws IOException {
         both(tempDir, "dirList", """
             var d = Directory("%s/listing")
