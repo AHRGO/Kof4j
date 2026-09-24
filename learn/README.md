@@ -93,6 +93,7 @@ Kof is a programming language compiled for multiple platforms, strongly typed, o
 | 38 | [Editors — kof editor](38-editors.md) |
 | 39 | [Universal Standard Library](39-stdlib.md) |
 | 40 | [Low Level — FFI, Native Profiles and Bare Metal](40-low-level.md) |
+| 41 | [Android](41-android.md) |
 | — | [Standard Library — per namespace](stdlib/README.md) |
 | — | [Native — Multiplatform](native/README.md) |
 
