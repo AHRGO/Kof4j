@@ -3482,3 +3482,37 @@ session), option "Built-in marker function (Recommended)"; recorded here before
 any B-6.2 code (rule 6: a front is not attacked without a locked decision).
 
 - **Relationships:** `Related: D-BAREMETAL-BOOT, D-UNIVERSAL, D-BOOTSTRAP, rule 6, rule 11, R6, R7`.
+
+## D-BAREMETAL-BODIES — B-5 platform bodies authorized (BIOS time via RTC first) and B-4 (MCU) authorized with its collector prerequisite (maintainer 24/09/2026)
+
+**Date:** 2026-09-24 · **State:** `DECIDED` (maintainer answer in the chat,
+this session: "autorizo 1 e 2") · **Extends:** `D-BAREMETAL-BOOT` (the front's
+plan `PLAN-BAREMETAL-BOOT` §B-4 / §B-5)
+
+**Decision (maintainer's words):** *"autorizo 1 e 2"* —
+
+1. **B-5 (platform bodies)** may be implemented, starting with the **BIOS**
+   face: `kof_plat_time` filled from the CMOS **RTC** (I/O ports `0x70`/`0x71`),
+   returning the epoch time the existing ABI already expects (`ts[0]=tv_sec`,
+   `ts[1]=tv_nsec`), so a Kof `time.now()` runs bare under SeaBIOS. Capabilities
+   that still have no body stay **named refusals** (R6), never a silent stub;
+   a BIOS refusal must print a **readable ASCII** diagnostic (not the UEFI
+   UTF-16 form, which COM1 renders as interleaved-NUL garbage).
+2. **B-4 (MCU)** is authorized as a front; it remains **blocked by its hard
+   prerequisite** — the GC collector `native-multiarch.md` **G-4/G-5**
+   (KB-scale RAM) — which is developed **first**, in slices.
+
+**Not relaxed:** nothing. The **Kof surface/semantics are untouched** — only the
+`kof_plat_*` HAL bodies behind the existing ABI change (no grammar, operator,
+type-model or frozen-contract change); every still-missing path keeps a **named
+diagnostic** (R6/R7); the B-6 ring `#GP`/CPL semantics are unchanged.
+
+**Queue:** `roadmap.md` §23 (baremetal front) + a DOING claim in the same
+commit; **B-5 BIOS time = first slice** (proof: `BiosBootE2ETest` boots a Kof
+`time.now()` under SeaBIOS); **B-4 follows the collector G-4/G-5**.
+
+**Evidence:** maintainer message 24/09/2026 (chat, this session); recorded here
+**before** any B-5/B-4 code (rule 6: a front is not attacked without a locked
+decision).
+
+- **Relationships:** `Related: D-BAREMETAL-BOOT, D-UNIVERSAL, D-BOOTSTRAP, rule 6, rule 11, R6, R7, R12`.

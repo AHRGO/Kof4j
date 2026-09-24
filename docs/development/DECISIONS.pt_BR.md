@@ -3505,3 +3505,39 @@ antes de qualquer código do B-6.2 (rule 6: não se ataca frente sem decisão
 travada).
 
 - **Relacionados:** `Related: D-BAREMETAL-BOOT, D-UNIVERSAL, D-BOOTSTRAP, rule 6, rule 11, R6, R7`.
+
+## D-BAREMETAL-BODIES — corpos de plataforma B-5 autorizados (tempo no BIOS via RTC primeiro) e B-4 (MCU) autorizado com seu pré-requisito de coletor (mantenedora 24/09/2026)
+
+**Data:** 2026-09-24 · **Estado:** `DECIDED` (resposta da mantenedora no chat,
+esta sessão: "autorizo 1 e 2") · **Estende:** `D-BAREMETAL-BOOT` (o plano da
+frente `PLAN-BAREMETAL-BOOT` §B-4 / §B-5)
+
+**Decisão (palavras da mantenedora):** *"autorizo 1 e 2"* —
+
+1. **B-5 (corpos de plataforma)** pode ser implementado, começando pela face
+   **BIOS**: `kof_plat_time` preenchido pelo **RTC** CMOS (portas de E/S
+   `0x70`/`0x71`), devolvendo o tempo epoch que a ABI já espera
+   (`ts[0]=tv_sec`, `ts[1]=tv_nsec`), de modo que um `time.now()` Kof rode bare
+   sob SeaBIOS. Capacidades que ainda não têm corpo permanecem **recusas
+   NOMEADAS** (R6), nunca stub silencioso; uma recusa no BIOS deve imprimir
+   diagnóstico **ASCII legível** (não a forma UTF-16 do UEFI, que o COM1
+   renderiza como lixo com NULs intercalados).
+2. **B-4 (MCU)** é autorizado como frente; segue **bloqueado pelo seu
+   pré-requisito duro** — o coletor de GC `native-multiarch.md` **G-4/G-5**
+   (RAM em escala de KB) — que é desenvolvido **primeiro**, em fatias.
+
+**Nada relaxado:** a **superfície/semântica Kof não muda** — só os corpos da
+HAL `kof_plat_*` atrás da ABI existente (sem mudança de gramática, operador,
+modelo de tipos ou contrato congelado); todo caminho ainda ausente mantém
+**diagnóstico nomeado** (R6/R7); a semântica de anéis `#GP`/CPL do B-6 fica
+inalterada.
+
+**Fila:** `roadmap.md` §23 (frente baremetal) + claim no DOING no mesmo commit;
+**B-5 tempo no BIOS = primeira fatia** (prova: `BiosBootE2ETest` bota um
+`time.now()` Kof sob SeaBIOS); **B-4 segue o coletor G-4/G-5**.
+
+**Evidência:** mensagem da mantenedora 24/09/2026 (chat, esta sessão);
+registrado aqui **antes** de qualquer código de B-5/B-4 (rule 6: não se ataca
+frente sem decisão travada).
+
+- **Relacionados:** `Related: D-BAREMETAL-BOOT, D-UNIVERSAL, D-BOOTSTRAP, rule 6, rule 11, R6, R7, R12`.
