@@ -49,7 +49,7 @@
 
 > | Old "08/09 sweep" (apocryphal — corrected 12/09) | the "open" 39/62/63/64/46/48/50/59/61 are ✅ FIXED in their own headers (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 honest gap JSN004/FFI001); real count on the line above. |
 > | Interpreter × compiled parity (`==` semantics frozen — rule 6) | **0** — bug 94 ✅ FIXED 13/09 (EQ/NE of Double/Float in the interpreter now IEEE; the "decision" was to align with what was expected, which the 3 compiled targets + corpus already defined) |
-> | Backend-only parity (rule 5, attackable in the Native lane) | **2** — §107 (println collection → garbage; **scalar face ✅ FIXED 12/09 in the 3 native targets** — x86 `f3b3821c` + cross B39, golden JVM byte-identical; **record/nested x86 ✅ FIXED 19/09** descritor recursivo `.rodata` (a premissa "até §104b-ii" era errada: print nunca precisou do storage-box — basta o tipo estático do typer); o `?` de record/aninhado sobe apenas no CROSS riscv/aarch, face catalogada no multiarch, FP-cross=FLT001; §107-JS 11/09), §104b-ii (content equals for record + primitive box in asm storage; **char face ✅ CLOSED 11/09** — `mapgetprim` 4/4) |
+> | Backend-only parity (rule 5, attackable in the Native lane) | **2** — §107 (println collection → garbage; **scalar face ✅ FIXED 12/09 in the 3 native targets** — x86 `f3b3821c` + cross B39, golden JVM byte-identical; **record/nested ✅ FIXED 19/09 nos 4 alvos** — x86 descritor recursivo `.rodata`; CROSS riscv/aarch face (4) com a MESMA gramática na slice B39, aarch via tradutor (re-medido 24/09: `NativeRiscv64/Aarch64E2ETest#nativeCollectionPrintRecordNestedMatchesJvmGolden` VERDES sob qemu — sem `?`, sem ponteiro; a premissa "até §104b-ii" era errada: print nunca precisou do storage-box, basta o tipo estático do typer); §107-JS 11/09), §104b-ii (content equals for record + primitive box in asm storage; **containment List/Set + chave-de-Map ✅ CLOSED 24/09** — ver a seção; **char face ✅ CLOSED 11/09** — `mapgetprim` 4/4) |
 > | NaN cross relational operators (frozen — rule 6) | **1** — bug 101 (`<`/`<=`/`>=` with NaN: riscv IEEE vs x86/JVM quirk `dcmpg`) |
 > | **Fixed in the absolute parity session 11/09** | **15** — bugs 96 (SEM052), 98 (SEM053), 100 (SEM051+fold), 44-residual, 102 (from-idx), 103 (SEM054), 104a (KofObj equals/hash/toString in the interpreter), 104b-i (LINK_FAIL inherited `Object.equals` in Native), 104c (record membership by content in JS — `kofValEq`), 107-JS (`kofFormat` in JS), 109 (JVM CRASH in the primitive `map.get` guard), 110 (`-0.0` collapsed to `+0.0` in the JVM literal emitter), 111 (trailing-empties in Native/JS `split` + `substring` sentinel 0→-1; ✅ cross riscv/aarch B36/B37 11/09 — CLOSED in the 5 targets), 112 (prev of `put`/`remove` for primitive: JVM VerifyError/NPE + Native SIGSEGV due to unbalanced stack + interpreter `set.add` + **JS closed in the same unit** — `?? default` + `KofPop` preserves the wrapped side-effect; 4/4 targets), **104b-ii CHAR FACE** (SIGSEGV/`a` in `println(char-in-collection)`; 3 holes: unwrap `Nullable(CHAR)` in the JVM-coherent print-lowering `unboxDescriptor` (char→`Integer`, not `Character`/`charValue`) + `as Char` repair in `SemExpressionTyper` — `mapgetprim` 4/4) — all with proof in the matrix/suite |
 > | **Fixed in the cross-arch proof 11/09 (MATH001/TIME002/B33)** | **3** — bugs 101→recorded (relational NaN, OPEN rule 6), MATH001 (Double math B32), TIME002 (ISO add/diff B33), 105 (random.int loop — renumbered from 102, collided with §102 indexOf) |
@@ -2998,12 +2998,14 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
     the updated scalar golden (`[[1], [2]]`). NOTE: the §104b-ii premise was
     WRONG for printing — print needed no storage-box, only static-type
     direction; §104b-ii (content EQUALS in asm storage) stays open, separate.
-  - **`?` record/nested in CROSS riscv/aarch (remains, catalogued):** the
-    cross helpers (slice B39) keep the legacy immediate tag; the riscv/aarch
-    goldens pin `[?, ?]` and carry the pointer. Porting the descriptor to
-    B39 requires a host with riscv64/aarch64 binutils+qemu (this maintainer
-    host has neither — `assumeToolchain` skips; CI `cross-native` is the
-    referee). Face listed in `docs/native-multiarch.md`.
+  - **✅ `?` record/nested in CROSS riscv/aarch FIXED 19/09 (face (4)):** the
+    cross helpers (slice B39) now receive the SAME recursive `.rodata`
+    descriptor grammar as x86, aarch64 inheriting via the translator.
+    RE-MEASURED 24/09 on this host (riscv64/aarch64 binutils+qemu present):
+    `NativeRiscv64E2ETest`/`NativeAarch64E2ETest#nativeCollectionPrint-
+    RecordNestedMatchesJvmGolden` both GREEN under qemu — the cross goldens pin
+    the REAL JVM output (`[Point[x=1, y=2]]`, `[[1, 2], [3]]`,
+    `{k=Point[x=7, y=8]}`, `[[1]]`, `[{a=1}]`, `[[[4]]]`), no `?`, no pointer.
   - **Double/Float in cross:** **✅ CLOSED 15/09** — `println`/`valueOf`/concat
     and collections (tags 4/5) convert FP→string via `kof_dtoa` (slice `RtB45`,
     libc `snprintf`/`strtod`, dynamic link); x86 already had it.
