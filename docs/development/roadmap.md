@@ -1040,11 +1040,15 @@ the order. **DEPRIORITIZED 15/09 (maintainer): TIER 3–5 is not current work.**
 FFI) · `2.2 codegen hook` → `infra`/gRPC stubs · **TIER 1 (SYSTEMS) closes
 before ANY Tier 6+ (R12).**
 
-### TIER 13 — Tech-debt ledger queue (OPEN 23/09, `D-TECHDEBT-23/09`)
+### TIER 13 — Tech-debt ledger queue (OPEN 23/09, `D-TECHDEBT-23/09`; **LEDGER KILLED 24/09** — debt measured zeroed)
 
-Ordered queue from the maintainer's multiple-choice rulings 23/09 (source:
-`docs/development/tech-debt.md` §5; decision: `DECISIONS.md`
-`D-TECHDEBT-23/09`). Claim in `DOING.md` before code; one item = one owner
+Ordered queue from the maintainer's multiple-choice rulings 23/09. **24/09,
+maintainer order: the `tech-debt.md` ledger is KILLED** — every live §NNN it
+tracked was re-measured ✅ in `known-bugs.md` (§205/§248/§271/§283/§423 23/09;
+§278 24/09) and the `check_500` size gate is green; the ledger, the
+`technical-debt/` scout contract and the `debt-scout` tooling were removed.
+13.6 continues below as its own front (it was never ledger debt — it is the
+FFI struct spec). Claim in `DOING.md` before code; one item = one owner
 + one proof.
 
 | # | Item | Owner lane | Proof |
@@ -1059,7 +1063,7 @@ Ordered queue from the maintainer's multiple-choice rulings 23/09 (source:
 ## 24. KOF 1.0 EXIT GATE — contract stabilization (RATIFIED 09/20/2026, `DECISIONS.md` §D-RELEASE-1.0; edges closed by `D-1.0-EDGES`)
 
 Development meta until the first RC: **no bug ships, no edge stays open.** The
-normative text is `docs/development/PROPOSAL-1.0-EXIT-GATE.md` (+`.pt_BR.md`)
+normative text is `docs/PROPOSAL-1.0-EXIT-GATE.md` (+`.pt_BR.md`)
 §§8–20; the order of execution is its §23 queue. Done here (ratification pass):
 steps 1–4 — active branch `beta-0.5.0` confirmed, `DECISIONS.md`/`AGENTS.md`
 re-read, `D-RELEASE-1.0` recorded, EN/PT synchronized (doc promoted from

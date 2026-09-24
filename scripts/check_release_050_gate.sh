@@ -62,9 +62,11 @@ R050_SPEC_GAPS_FILE="${R050_SPEC_GAPS_FILE:-}"
 
 # docs that are living/meta by nature and stay in docs/development (the
 # three-states rule keeps them there while the phase is open).
-# tech-debt.md (maintainer-owned ledger, opened 23/09) is living the same
-# way: it never "concludes" into docs/ while the project has open debt.
-ALLOWLIST="DECISIONS.md DECISIONS.pt_BR.md README.md README.pt_BR.md roadmap.md roadmap.pt_BR.md PROPOSAL-1.0-EXIT-GATE.md PROPOSAL-1.0-EXIT-GATE.pt_BR.md PROPOSAL-VERSIONING-RELEASE.md PROPOSAL-VERSIONING-RELEASE.pt_BR.md release-beta-0.5.0-prep.md release-beta-0.5.0-prep.pt_BR.md tech-debt.md tech-debt.pt_BR.md"
+# tech-debt.md was KILLED 24/09 by the maintainer (debt measured zeroed:
+# the 6 live §NNN all ✅ in known-bugs, size gate green) — tooling removed.
+# The two ratified PROPOSALs were promoted out of development/ the same day
+# (exit-gate -> docs/, versioning record -> docs/distribution/).
+ALLOWLIST="DECISIONS.md DECISIONS.pt_BR.md README.md README.pt_BR.md roadmap.md roadmap.pt_BR.md release-beta-0.5.0-prep.md release-beta-0.5.0-prep.pt_BR.md"
 # D-RELEASE-0.5.0-SCOPE (maintainer 21/09/2026): the in-flight OWNED plans
 # still loose are allowlisted — 0.5.0 does not wait for db to conclude;
 # each keeps its owner and stays tracked in the README queue.
@@ -123,7 +125,7 @@ c_decisions() {
   if [ -d docs/development/decision-pending ]; then
     STATE[decisions]=RED; DETAIL[decisions]="decision-pending/ folder exists"
   else
-    local prop=docs/development/PROPOSAL-1.0-EXIT-GATE.md
+    local prop=docs/PROPOSAL-1.0-EXIT-GATE.md
     # PROPOSAL ausente/ilegivel NAO pode virar "sem [? MEL]" verde — UNKNOWN (R6/Q5).
     [ -r "$prop" ] || { STATE[decisions]=UNKNOWN; DETAIL[decisions]="decision source unreadable: $prop"; return; }
     local open

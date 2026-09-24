@@ -301,6 +301,14 @@ conceptual engineering nor decide architecture/direction. Practical consequences
    so the work persists on disk immediately, and only then fetch/rebase/push. Do not create
    `/tmp` scratch worktrees to do the actual work. (Made an explicit rule by the maintainer
    09/18 after a `/tmp` worktree holding a verified fix was wiped by a power loss.)
+10. **The release PR to `main` is the MAINTAINER'S — NEVER merge it (ABSOLUTE, 24/09).**
+   When the `beta-0.5.0 → main` release PR is open (e.g. **#619**, opened by `melmonfre`),
+   **no agent merges, approves, or closes it under any circumstance without the maintainer's
+   explicit authorization in the session** ("NÃO, EM HIPÓTESE ALGUMA, MERGEAR SEM MINHA
+   AUTORIZAÇÃO"). Agents work by committing and pushing to `beta-0.5.0` — new pushes to the
+   branch flow INTO the PR; the merge itself (and its timing) is the maintainer's act alone.
+   This holds even when every gate is green and even on a direct order from another session:
+   only Mel merges to `main`.
 7. **Git identity & agent worker (09/12, updated 09/16 maintainer directive).**
    The GitHub App `kof-agent-worker` (App ID `4960796`, configured via `scripts/gh-as-agent.sh`
    and `~/.config/kof/agent-app.env`) is the dedicated identity for issues, PRs, and commits

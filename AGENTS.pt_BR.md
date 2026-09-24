@@ -302,6 +302,14 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
    pra o trabalho persistir em disco na hora, e só então fetch/rebase/push. Não crie worktree
    de scratch em `/tmp` pro trabalho real. (Regra explícita da mantenedora em 18/09 depois que
    um worktree em `/tmp` com um fix já verificado foi apagado por queda de energia.)
+10. **A PR de release pra `main` é da MANTENEDORA — NUNCA mergear (ABSOLUTO, 24/09).**
+   Enquanto a PR de release `beta-0.5.0 → main` estiver aberta (ex.: **#619**, aberta por
+   `melmonfre`), **nenhum agente mergear, aprova ou fecha essa PR sob qualquer circunstância
+   sem a autorização explícita da mantenedora na sessão** ("NÃO, EM HIPÓTESE ALGUMA, MERGEAR
+   SEM MINHA AUTORIZAÇÃO"). Agentes trabalham commitando e pushando na `beta-0.5.0` — pushes
+   novos na branch ENTRAM na PR; o merge em si (e o momento) é ato exclusivo da mantenedora.
+   Vale mesmo com todos os gates verdes e mesmo sob ordem direta de outra sessão: só a Mel
+   mergeara pra `main`.
 7. **Identidade do git e worker de agente (12/09, atualizado 16/09 diretriz da mantenedora).**
    O GitHub App `kof-agent-worker` (App ID `4960796`, configurado via `scripts/gh-as-agent.sh`
    e `~/.config/kof/agent-app.env`) é a identidade dedicada para issues, PRs e commits

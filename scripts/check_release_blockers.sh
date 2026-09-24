@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # check_release_blockers.sh — machine gate of the KOF 1.0 EXIT GATE for the
 # "zero OPEN release-blockers" item (normative text:
-# docs/development/PROPOSAL-1.0-EXIT-GATE.md §11; decision D-RELEASE-1.0).
+# docs/PROPOSAL-1.0-EXIT-GATE.md §11; decision D-RELEASE-1.0).
 #
 # Why: "the absence of a label called release-blocker" proves nothing (§11).
 # Every OPEN issue must be EXPLICITLY in exactly one of five categories:

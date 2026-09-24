@@ -2427,7 +2427,7 @@ correspondentes e não houver nenhuma aresta aberta".
 **Decided:**
 - The proposal becomes the normative contract, recorded here as
   `D-RELEASE-1.0`. The document was promoted from `future/` to
-  `docs/development/PROPOSAL-1.0-EXIT-GATE.md` (+`.pt_BR.md`), its §22
+  `docs/PROPOSAL-1.0-EXIT-GATE.md` (+`.pt_BR.md`), its §22
   approval block filled as the mechanical record of this chat approval (her
   words quoted as evidence), and the header status switched to RATIFIED.
 - **The EXIT GATE (§8 + the D-BRANCH-0.5.0 complement) is binding**: a build
@@ -3311,7 +3311,7 @@ candidate is evaluated; it does not cut a release by itself.
 current state and points here; `D-RELEASE` keeps its history with a
 relationship note; `D-RELEASE-0.5.0-GATE` and `D-RELEASE-1.0` are unchanged.
 
-**Evidence:** `docs/development/PROPOSAL-VERSIONING-RELEASE.md` (+PT) — the
+**Evidence:** `docs/distribution/PROPOSAL-VERSIONING-RELEASE.md` (+PT) — the
 KOF-first evidence block and external grounding; maintainer approval (PR #582
 merged 22/09/2026; closed-issue record).
 
@@ -3347,6 +3347,11 @@ D6-1=B = open now.
 - **Relationships:** `Related: tech-debt.md §5, rule 6, rule 11, R6, D-FFI-STRUCT-B, D-RELEASE-0.5.0-GATE (cond. 2/7).`
 
 ## D-DEBT-SCOUT — KOF Technical Debt Scout front opens: Wave 1 (deterministic, shadow-only) only, no Issue-publish capability (user-directed, 23/09/2026)
+
+> **24/09/2026 — KILLED by the maintainer:** the debt was measured zeroed
+> (every live §NNN the ledger tracked is ✅ in `known-bugs.md`; size gate
+> green) and the `tech-debt`/`technical-debt`/`debt-scout` tooling, workflow
+> and tests were removed by her order. This decision stays as history.
 
 **Date:** 2026-09-23 · **State:** `DECIDED` (scope, not implementation
 detail) · **Source:** two research documents supplied by the user in this

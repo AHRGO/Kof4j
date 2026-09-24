@@ -1042,12 +1042,16 @@ ordem. **DESPRIORIZADO 15/09 (mantenedora): TIER 3–5 não é trabalho atual.**
 FFI) · `2.2 codegen hook` → `infra`/gRPC stubs · **TIER 1 (SYSTEMS) fecha
 antes de QUALQUER Tier 6+ (R12).**
 
-### TIER 13 — Fila do ledger de dívida técnica (ABERTA 23/09, `D-TECHDEBT-23/09`)
+### TIER 13 — Fila do ledger de dívida técnica (ABERTA 23/09, `D-TECHDEBT-23/09`; **LEDGER MORTO 24/09** — dívida medida zerada)
 
-Fila ordenada dos vereditos de múltipla escolha da mantenedora 23/09 (fonte:
-`docs/development/tech-debt.pt_BR.md` §5; decisão: `DECISIONS.pt_BR.md`
-`D-TECHDEBT-23/09`). Claim no `DOING.md` antes do código; um item = um dono
-+ uma prova.
+Fila ordenada dos vereditos de múltipla escolha da mantenedora 23/09. **24/09,
+ordem da mantenedora: o ledger `tech-debt.md` está MORTO** — todo §NNN vivo
+que ele rastreava foi re-medido ✅ no `known-bugs.md` (§205/§248/§271/§283/§423
+23/09; §278 24/09) e o gate de tamanho `check_500` está verde; o ledger, o
+contrato do scout em `technical-debt/` e a ferramenta `debt-scout` foram
+removidos. A 13.6 segue abaixo como frente própria (nunca foi dívida do
+ledger — é a spec de struct da FFI). Claim no `DOING.md` antes do código; um
+item = um dono + uma prova.
 
 | # | Item | Lane dona | Prova |
 |---|---|---|---|
@@ -1061,7 +1065,7 @@ Fila ordenada dos vereditos de múltipla escolha da mantenedora 23/09 (fonte:
 ## 24. KOF 1.0 EXIT GATE — estabilização dos contratos (RATIFICADO 20/09/2026, `DECISIONS.md` §D-RELEASE-1.0; arestas fechadas por `D-1.0-EDGES`)
 
 Meta de desenvolvimento até o primeiro RC: **nenhum bug embarca, nenhuma aresta
-fica aberta.** O texto normativo é `docs/development/PROPOSAL-1.0-EXIT-GATE.md`
+fica aberta.** O texto normativo é `docs/PROPOSAL-1.0-EXIT-GATE.md`
 (+par PT) §§8–20; a ordem de execução é a fila da §23 dele. Feito aqui (passo da
 ratificação): itens 1–4 — branch ativa `beta-0.5.0` confirmada,
 `DECISIONS.md`/`AGENTS.md` relidos, `D-RELEASE-1.0` registrado, EN/PT

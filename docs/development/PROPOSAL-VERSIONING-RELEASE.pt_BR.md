@@ -2,6 +2,8 @@
 
 # KOF — Proposta de consolidação da política de versionamento e corte de releases
 
+**Status:** `RATIFICADO — aprovado pela mantenedora (PR #582 mergeada 22/09/2026); MATERIALIZADO como D-VERSIONING-RELEASE (22/09/2026). **24/09: promovido para fora de `docs/development/` — a REGRA operante é o [`VERSIONING.pt_BR.md`](VERSIONING.pt_BR.md) (+EN) neste diretório; este documento é o registro da decisão/justificativa ratificada.**
+
 **Status:** `RATIFICADA — aprovada pela mantenedora (PR #582 mergeado em 22/09/2026); MATERIALIZADA como D-VERSIONING-RELEASE (22/09/2026)`
 **Branch-base:** `beta-0.5.0`
 **Tip revalidado na elaboração:** `6c9aeb847f167e97ed48c21a9e4453028198da63`
@@ -38,7 +40,7 @@ Revalidado no tip `6c9aeb847f167e97ed48c21a9e4453028198da63` (branch `beta-0.5.0
 3. `docs/distribution/VERSIONING.md` e `.pt_BR.md` — lidos; confirma o drift descrito na §2.1: a seção "Current stage" ainda afirma `0.0.x` / Alpha e "every commit on main generates the next Alpha version (PATCH increment)", que não descreve o estado medido (`VERSION` = `0.5.0-beta`, branch dedicada `beta-0.5.0`).
 4. `docs/distribution/release-naming.md` e `.pt_BR.md` — lidos; já usa `MAJOR.MINOR.PATCH-<stage>` e a tabela de codenames; nenhuma contradição normativa com a proposta.
 5. `docs/development/release-beta-0.5.0-prep.md` e `.pt_BR.md` — lidos; checklist de preparação do corte 0.5.0, ortogonal a esta proposta (não é alterado aqui).
-6. `docs/development/PROPOSAL-1.0-EXIT-GATE.md` e `.pt_BR.md` — lido; `D-RELEASE-1.0`/EXIT GATE confirmado `RATIFIED`, tratado como intocável por esta proposta (§6).
+6. `docs/PROPOSAL-1.0-EXIT-GATE.md` e `.pt_BR.md` — lido; `D-RELEASE-1.0`/EXIT GATE confirmado `RATIFIED`, tratado como intocável por esta proposta (§6).
 7. `DOING.md` — nenhuma claim ativa (`EM CURSO`) sobre os arquivos desta frente na medição feita.
 8. `VERSION` — `0.5.0-beta` no tip acima.
 9. Branch ativa `beta-0.5.0`; última release publicada medida por tag: `kof-0.4.9-beta-linux-x86_64` (e pares windows/macos).
