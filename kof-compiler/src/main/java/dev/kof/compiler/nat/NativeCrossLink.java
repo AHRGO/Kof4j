@@ -44,7 +44,7 @@ public final class NativeCrossLink {
             "snprintf", "strtod", "printf", "malloc", "calloc", "realloc", "free",
             "pow", "sqrt", "fmod", "dlopen", "dlsym", "dlclose",
             "fopen", "fclose", "fwrite", "fread", "memcpy", "memset",
-            "strlen", "strcmp", "strncmp", "open", "read", "write");
+            "strlen", "strcmp", "strncmp", "open", "read", "write", "execvp");
 
     /** true se o texto asm (pós-poda) chama algum símbolo de libc. */
     static boolean needsLibc(String asmText) {
