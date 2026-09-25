@@ -15019,3 +15019,19 @@ println(Directory("probe").delete())   // JVM: true (recursive); x86-64: false (
 
 **Owner:** session 9092 (lane compiler), `SemExpressionTyper` field path + `MemberCallNamespaces` web branch; guard family of §495/§496/#126/§490.
 <!-- pt-switch --> **PT:** [§498 (pt_BR)](known-bugs.pt_BR.md#498--campo-desconhecido-em-tipos-kofui-palettebogus-colorbogus-themebogus-e-metodo-desconhecido-em-web-webbogus-compilavam-limpo--getfield---no-op-silencioso-agora-sem079sem025---corrigido-2509)
+---
+
+## §499 — Unknown static method on a builtin type name (`String.bogus()`, `Int.bogus()`, …) compiles clean and emits `invokestatic <Owner>.bogus` → NoSuchMethodError — 🟡 OPEN (catalogued)
+
+**Symptom (measured 25/09, lane compiler 9092):** a method call on a builtin type name compiles clean and the emitted call references a method that does not exist: `String.bogus()` → `invokestatic java/lang/String.bogus:()Ljava/lang/Object;`, `Int.bogus()` → `java/lang/Integer.bogus`, same for `Bool`/`Long`/`Double`/`Float`; `Char.bogus()` → `invokevirtual "".bogus` (empty owner). The artifact aborts at runtime with `NoSuchMethodError` (or a class-load failure for the empty owner) — hidden behind the JavaFX launcher message.
+
+**Root cause:** Kof supports real JDK statics on builtin type names (`String.valueOf`/`join`/`format`, `Long.parseLong`, `Double.isNaN`/`isInfinite`/`isFinite`, `Bool.parseBoolean`, `Object.keys`/`values`, `Char.toString`, …) through `ExpressionInstanceCallLowerer` (uppercase non-local UNKNOWN receiver → JDK owner; `externalClasspath.resolveMethod` when the owner is known, plus a small fallback for `valueOf`/`isNaN`/`isInfinite`/`isFinite`). When the method is unknown there is no semantic gate: the typer leaves the receiver UNKNOWN and the lowerer still emits a `KofCall` under that owner → invalid bytecode. A blanket `isBuiltinTypeName` guard is NOT safe here (it would reject every valid interop static), so the fix needs a curated whitelist (or `resolveMethod`-based validation) shared by typer and lowerer — a design-sensitive change (rule 6/11), deliberately left for a dedicated unit.
+
+**Impact / honesty (R6/Q7):** silent invalid bytecode on a plausible typo; catalogued, not silently shipped.
+
+**Repro (verbatim):** `main() { println(String.bogus()) }` → `kof check` clean; `kof build` + run → `NoSuchMethodError: 'java.lang.Object java.lang.String.bogus()'`.
+
+**Status:** 🟡 OPEN — catalogued (Q7).
+
+**Owner:** session 9092 (lane compiler), `SemMethodCallTyper` + `ExpressionInstanceCallLowerer` (JDK-owner static path); guard family of §495/§496/§498.
+<!-- pt-switch --> **PT:** [§499 (pt_BR)](known-bugs.pt_BR.md#499--metodo-estatico-desconhecido-em-nome-de-tipo-builtin-stringbogus-intbogus--compila-limpo-e-emite-invokestatic-ownerbogus--nosuchmethoderror---aberto-catalogado)

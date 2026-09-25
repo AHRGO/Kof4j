@@ -12552,3 +12552,19 @@ println(Directory("probe").delete())   // JVM: true (recursivo); x86-64: false (
 
 **Dono:** sessão 9092 (lane compiler), caminho de campo do `SemExpressionTyper` + ramo web do `MemberCallNamespaces`; família de guarda do §495/§496/#126/§490.
 <!-- en-switch --> **EN:** [§498](known-bugs.md#498--unknown-field-on-kofui-types-palettebogus-colorbogus-themebogus-and-unknown-method-on-web-webbogus-compiled-clean--getfield---silent-no-op-now-sem079sem025---fixed-2509)
+---
+
+## §499 — Método estático desconhecido em nome de tipo builtin (`String.bogus()`, `Int.bogus()`, …) compila limpo e emite `invokestatic <Owner>.bogus` → NoSuchMethodError — 🟡 ABERTO (catalogado)
+
+**Sintoma (medido 25/09, lane compiler 9092):** uma chamada de método em um nome de tipo builtin compila limpo e a chamada emitida referencia um método inexistente: `String.bogus()` → `invokestatic java/lang/String.bogus:()Ljava/lang/Object;`, `Int.bogus()` → `java/lang/Integer.bogus`, idem `Bool`/`Long`/`Double`/`Float`; `Char.bogus()` → `invokevirtual "".bogus` (owner vazio). O artefato aborta em runtime com `NoSuchMethodError` (ou falha de load no owner vazio) — escondido atrás da mensagem do launcher JavaFX.
+
+**Causa-raiz:** o Kof suporta estáticos REAIS do JDK em nomes de tipo builtin (`String.valueOf`/`join`/`format`, `Long.parseLong`, `Double.isNaN`/`isInfinite`/`isFinite`, `Bool.parseBoolean`, `Object.keys`/`values`, `Char.toString`, …) via `ExpressionInstanceCallLowerer` (receiver UNKNOWN maiúsculo não-local → owner JDK; `externalClasspath.resolveMethod` quando o owner é conhecido, mais um fallback pequeno para `valueOf`/`isNaN`/`isInfinite`/`isFinite`). Quando o método é desconhecido não há gate semântico: o typer deixa o receiver UNKNOWN e o lowerer ainda emite um `KofCall` sob aquele owner → bytecode inválido. Uma guarda blanket de `isBuiltinTypeName` NÃO é segura aqui (rejeitaria todo estático de interop válido), então o fix exige uma whitelist curada (ou validação por `resolveMethod`) compartilhada entre typer e lowerer — mudança sensível a design (regra 6/11), deixada deliberadamente para uma unidade dedicada.
+
+**Impacto / honestidade (R6/Q7):** bytecode inválido silencioso num typo plausível; catalogado, não embarcado em silêncio.
+
+**Repro (verbatim):** `main() { println(String.bogus()) }` → `kof check` limpo; `kof build` + run → `NoSuchMethodError: 'java.lang.Object java.lang.String.bogus()'`.
+
+**Status:** 🟡 ABERTO — catalogado (Q7).
+
+**Dono:** sessão 9092 (lane compiler), `SemMethodCallTyper` + `ExpressionInstanceCallLowerer` (caminho estático com owner JDK); família de guarda do §495/§496/§498.
+<!-- en-switch --> **EN:** [§499](known-bugs.md#499--unknown-static-method-on-a-builtin-type-name-stringbogus-intbogus--compiles-clean-and-emits-invokestatic-ownerbogus--nosuchmethoderror---open-catalogued)
