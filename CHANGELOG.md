@@ -13,6 +13,22 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **B4-GC-1 (baremetal MCU) — 32-bit allocator for the MCU collector
+    (`NativeMcuGcRiscv32` + `NativeMcuGcTest`)** (25/09): first slice of the
+    `native-multiarch.md` G-4/G-5 collector ported to 32-bit, per
+    `D-BAREMETAL-MCU-GC`. `kof_alloc(size)` with a **16-byte** header (size /
+    free_next / gc_next / flags), first-fit free-list, bump over the heap
+    **sized by the linker script** (`_kof_heap_start.._kof_heap_end`, KB-scale),
+    GC-list insertion, `kof_free`, `kof_gc_dump` (`gc <size> <flags>`) and
+    `kof_memstats` — **pure RV32I** (no `div`/`rem`: decimal via repeated
+    subtraction). Heap OOM panics with a named `out of memory` (R6/Q7). Proof:
+    `NativeMcuGcTest` 3/3 under `qemu-system-riscv32 -M virt` with a raw asm
+    harness (4 allocs → `gc 32 0` ×4, `allocs: 4`, `live bytes: 128`;
+    free-then-alloc reuse → one block, `allocs: 2`/`frees: 1`/`live bytes: 32`;
+    OOM → `out of memory`). Mark/sweep (B4-GC-2/3), the long-running proof
+    (B4-GC-4), the Cortex-M3 mirror (B4-GC-5) and the SysTick time bodies
+    (B4-TIME) follow.
+
   - **S5.5 slice 5d (db-parity, gaps-db lane) — `orm.page` over the MySQL wire on
     the cross (pieces `B81` + `B81Helpers`)** (24/09): `kof_orm_page` branches on
     `kof_db_type == 2` and tail-calls `kof_orm_page_mysql` —
