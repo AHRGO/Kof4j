@@ -139,13 +139,32 @@ jobs:
           { echo "# Kof $VERSION (${{ matrix.target }})"; echo ""; cat /tmp/changelog-section.md; } > release-notes.md
           cat release-notes.md
 
+      - name: Compute release version (pre-release gets date, VERSION file unchanged)
+        id: relver
+        shell: bash
+        run: |
+          VER=$(cat VERSION)
+          if [ "${{ github.ref_name }}" != "main" ]; then
+            DATE=$(date +%Y.%m.%d)
+            VER="${VER}+${DATE}"
+            echo "pre-release $VER from $(cat VERSION) on ${{ github.ref_name }}"
+            for f in dist/kof-$(cat VERSION)-*.tar.gz dist/kof-$(cat VERSION)-*.zip; do
+              [ -f "$f" ] || continue
+              mv "$f" "${f/kof-$(cat VERSION)-/kof-${VER}-}"
+            done
+            (cd dist && rm -f SHA256SUMS && sha256sum kof-${VER}-* > SHA256SUMS 2>/dev/null || shasum -a 256 kof-${VER}-* > SHA256SUMS)
+            ls -lh dist/
+          fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release (${{ matrix.target }})
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: kof-${{ needs.validate-candidate.outputs.version }}-${{ matrix.target }}
-          name: Kof ${{ needs.validate-candidate.outputs.version }} (${{ matrix.target }})
+          tag_name: kof-${{ steps.relver.outputs.version }}-${{ matrix.target }}
+          name: Kof ${{ steps.relver.outputs.version }} (${{ matrix.target }})
           target_commitish: ${{ needs.validate-candidate.outputs.candidate_sha }}
           body_path: release-notes.md
+          prerelease: ${{ github.ref_name != 'main' }}
           files: |
             dist/*.tar.gz
             dist/*.zip

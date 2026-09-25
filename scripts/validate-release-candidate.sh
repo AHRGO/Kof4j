@@ -56,7 +56,7 @@ if [ "$SHA" != "$EXPECTED_SHA" ]; then
     exit 1
 fi
 
-for TARGET in linux-x86_64 windows-x86_64 macos-arm64; do
+for TARGET in linux-x86_64 windows-x86_64 macos-arm64 macos-x86_64; do
     TAG="kof-${VERSION}-${TARGET}"
     if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
         echo "::error::release tag already exists: $TAG" >&2
