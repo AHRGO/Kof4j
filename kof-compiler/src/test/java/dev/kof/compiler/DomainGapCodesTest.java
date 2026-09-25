@@ -177,13 +177,14 @@ class DomainGapCodesTest {
     void ioOnCrossIsNat006(@TempDir Path tmp) throws Exception {
         // §427: the File/Path/Directory runtime is x86_64-only on Native; the
         // cross only has kof_io_strlen/make_string internals. D-FULL-PARITY-050
-        // row 13 ported exists()/isFile()/isDirectory() (NativeRiscvAsmIoStat);
-        // the read/write/dir faces still refuse with the honest NAT006.
+        // row 13 ported exists()/isFile()/isDirectory() (slice 1) and
+        // readText()/writeText()/appendText() (slice 2); delete/bytes/dir stay
+        // under the honest NAT006.
         for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
             assertGap(tmp, t, "NAT006", """
                 main() {
                     val f = File("/tmp/kof-io-probe")
-                    println(f.readText())
+                    println(f.delete())
                 }
                 """);
         }
@@ -202,6 +203,9 @@ class DomainGapCodesTest {
                     println(f.exists())
                     println(f.isFile())
                     println(f.isDirectory())
+                    println(f.writeText("x"))
+                    println(f.readText())
+                    println(f.appendText("y"))
                 }
                 """);
             CompilationResult r = driver.compile(f, tmp.resolve("out-" + t + "-" + System.nanoTime()), t);

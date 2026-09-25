@@ -21,7 +21,8 @@ final class ExpressionBuiltinInstanceCalls {
      * com gate honesto NAT006 (§427) — nunca um link break silencioso (R6).
      */
     private static final Set<String> CROSS_IO_READY = Set.of(
-            "kof_io_file_exists", "kof_io_file_is_file", "kof_io_file_is_dir");
+            "kof_io_file_exists", "kof_io_file_is_file", "kof_io_file_is_dir",
+            "kof_io_read_text", "kof_io_write_text", "kof_io_append_text");
 
     /** Diagnóstico de gap honesto (R6) numa chamada kof.web. */
     private static void webGap(CompilerDriver driver, MethodCallExpr mc, String msg, String code) {

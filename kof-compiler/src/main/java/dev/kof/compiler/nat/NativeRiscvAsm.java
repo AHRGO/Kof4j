@@ -256,6 +256,9 @@ public final class NativeRiscvAsm {
                 // D-FULL-PARITY-050 row 13 (native cross lane, 24/09): faces de
                 // estat de kof.io no cross — exists()/isFile()/isDirectory().
                 .append(NativeRiscvAsmIoStat.RISCV_RUNTIME_ASM_IO_STAT)
+                // D-FULL-PARITY-050 row 13 slice 2 (native cross lane, 24/09):
+                // readText()/writeText()/appendText() no cross.
+                .append(NativeRiscvAsmIoText.RISCV_RUNTIME_ASM_IO_TEXT)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();
