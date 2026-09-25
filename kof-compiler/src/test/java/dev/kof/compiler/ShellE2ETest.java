@@ -191,18 +191,43 @@ class ShellE2ETest {
     }
 
     @Test
-    void runOnNativeIsHonestProc001() throws Exception {
-        assertGap(Target.NATIVE, "PROC001", """
+    void runOnNativeMatchesJvmGolden() throws Exception {
+        // D-FULL-PARITY-050 row 2 slice A: shell.run emits kof_process_run on
+        // the x86-64 native target — byte parity vs the JVM oracle.
+        assertNativeParity("""
             main() {
                 var r = shell.run("echo", listOf("hi"))
                 println(r.stdout)
+                println(r.exitCode)
             }
-            """);
+            """, "hi\n\n0\n");
     }
 
     @Test
-    void cmdOnNativeIsHonestProc001() throws Exception {
-        assertGap(Target.NATIVE, "PROC001", """
+    void cmdOnNativeBuildsArgv() throws Exception {
+        // cmd = the RuntimeShell argv prepend ([program, args...]) — the JVM
+        // oracle is exactly this (no splitting).
+        assertNativeParity("""
+            main() {
+                var a = shell.cmd("echo", listOf("hi"))
+                println(a.size())
+                println(a.get(0))
+                println(a.get(1))
+            }
+            """, "2\necho\nhi\n");
+    }
+
+    @Test
+    void runOnCrossIsHonestProc001() throws Exception {
+        // row 1 fix: the cross has no kof_process_run slice yet — the refusal
+        // must be compile-time (R6), never an ld undefined-reference.
+        assertGap(Target.NATIVE_RISCV64, "PROC001", """
+            main() {
+                var r = process.run("echo", "hi")
+                println(r.stdout)
+            }
+            """);
+        assertGap(Target.NATIVE_AARCH64, "PROC001", """
             main() {
                 var a = shell.cmd("echo", listOf("hi"))
                 println(a.size())
@@ -313,6 +338,34 @@ class ShellE2ETest {
                 println(r.exitCode)
             }
             """);
+    }
+
+    /** Compiles the SAME source for JVM (reflection stdout capture) and
+     *  NATIVE (real binary) and demands byte-identical stdout. */
+    private void assertNativeParity(String source, String expected) throws Exception {
+        Files.writeString(tmp.resolve("P.kf"), source);
+        var jvmOut = new java.io.ByteArrayOutputStream();
+        CompilationResult jr = driver.compile(tmp.resolve("P.kf"), tmp.resolve("o-jvm"), Target.JVM);
+        assertTrue(jr.success(), "JVM must compile: " + jr.diagnostics().getDiagnostics());
+        var oldOut = System.out;
+        System.setOut(new java.io.PrintStream(jvmOut, true, java.nio.charset.StandardCharsets.UTF_8));
+        String jvm;
+        try {
+            var cl = new java.net.URLClassLoader(new java.net.URL[]{tmp.resolve("o-jvm").toUri().toURL()},
+                    getClass().getClassLoader());
+            Class.forName("Default.Main", true, cl)
+                    .getMethod("main", String[].class).invoke(null, (Object) new String[0]);
+        } finally {
+            System.setOut(oldOut);
+        }
+        jvm = jvmOut.toString(java.nio.charset.StandardCharsets.UTF_8);
+        assertEquals(expected, jvm, "JVM golden");
+        CompilationResult nr = driver.compile(tmp.resolve("P.kf"), tmp.resolve("o-nat"), Target.NATIVE);
+        assertTrue(nr.success(), "NATIVE must compile: " + nr.diagnostics().getDiagnostics());
+        Process p = new ProcessBuilder(tmp.resolve("o-nat").resolve("Default/Main").toString())
+                .redirectErrorStream(false).start();
+        String nat = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        assertEquals(expected, nat, "NATIVE must match the JVM golden byte-for-byte");
     }
 
     private void assertGap(Target target, String code, String source) throws Exception {

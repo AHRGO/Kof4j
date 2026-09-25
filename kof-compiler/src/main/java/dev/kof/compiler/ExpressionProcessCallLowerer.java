@@ -50,17 +50,25 @@ public final class ExpressionProcessCallLowerer {
         return localIdx;
     }
     if (procCall != null) {
-        if (driver.target.isNative() && "kof_process_spawn".equals(procCall.function())) {
-            // F10 slice B: o spawn (stdin/stdout vivos + handle ops) segue
-            // PROC001 no Native até a fatia B (run já fechou a linha 1 do
-            // ledger). JVM (incl. Android) e JS (KofJsProcessBridge) já têm
-            // o contrato inteiro.
+        // D-FULL-PARITY-050 row 1 slice A: run/exit emit for real ONLY on the
+        // x86-64 native target (RuntimeProcess). The cross (riscv64/aarch64)
+        // has no kof_process_run slice yet — emitting there would be a raw
+        // call ending in an ld undefined-reference (R6) — and spawn stays
+        // slice B everywhere (interactive stdin/stdout + handle ops). JVM
+        // (incl. Android) and JS (KofJsProcessBridge) carry the full contract.
+        boolean cross = driver.target == Target.NATIVE_RISCV64
+                || driver.target == Target.NATIVE_AARCH64;
+        if (driver.target.isNative() && (cross
+                || "kof_process_spawn".equals(procCall.function()))) {
             if (driver.currentDiagnostics != null) {
                 driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
                         mc.position() != null ? mc.position().line() : 0,
                         mc.position() != null ? mc.position().column() : 0,
                         0,
-                        "process.spawn: interactive stdin/stdout is supported on the JVM and JS targets; Native is an honest PROC001 gap",
+                        (cross ? "process on the riscv64/aarch64 native targets: "
+                                : "process.spawn: interactive stdin/stdout is supported on")
+                                + (cross ? "not landed yet (PROC001); x86-64 native has run/exit"
+                                : " the JVM and JS targets; Native is an honest PROC001 gap (slice B)"),
                         "PROC001");
             }
             return localIdx;

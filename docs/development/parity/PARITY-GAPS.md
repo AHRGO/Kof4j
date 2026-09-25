@@ -27,7 +27,7 @@
 | # | Surface | JVM/Script | Native x86-64 | Native riscv64/aarch64 | JS | Gap code | Tracker / owner lane |
 |---|---------|------------|----------------|--------------------------|----|----------|----------------------|
 | 1 | `process.run`/`spawn`/`exit` | ✅ | ✅ x86 `run`/`exit` (`spawn` = slice B, `PROC001`; whole-record `println(r)`/`"x"+r` = `PROC001`, access `.stdout`/`.stderr`/`.exitCode`) | ❌ | ✅ (KofJsRunner) | `PROC001` (spawn + cross + whole-record print) | native lane (run x86 ✅ 25/09) |
-| 2 | `shell.cmd`/`run`/`runWith`/`pipeline`/`ok` | ✅ | ❌ | ❌ | ✅ (host runner) | `PROC001` | native lane |
+| 2 | `shell.cmd`/`run`/`runWith`/`pipeline`/`ok` | ✅ | ✅ x86 `run`/`cmd`/`ok` (`pipeline`/`runWith` = slice B) | ❌ | ✅ (host runner) | `PROC001` (slice B + cross) | native lane (slice A ✅ 25/09) |
 | 3 | `ssh.cmd`/`run`/`ok` | ✅ | ❌ (no dispatch) | ❌ | ❌ | (no gap code yet — catalog) | native/js lane |
 | 4 | media: `Image.open`/`Audio.openWav`/`Video.open`/`Mic.record`/`list` | ✅ | ❌ | ❌ | ❌ | `MEDIA001`/`MEDIA003` | media front |
 | 5 | `mq.*` | ✅ | partial (`MQ001` faces) | ⏳ golden | ⏳ | `MQ001` | infra lane |

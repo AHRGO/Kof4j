@@ -35,18 +35,28 @@ public final class ExpressionShellCallLowerer {
             return localIdx;
         }
         if (driver.target.isNative()) {
-            // every shell call ends in process territory (run/pipeline) or in
-            // a Result the Native driver can never produce — same gap as
-            // process.run (PROC001), reported once, at compile time, never a
-            // silent stub (R6).
-            if (driver.currentDiagnostics != null) {
-                driver.currentDiagnostics.error(posFile(mc), posLine(mc), posCol(mc), 0,
-                        "shell." + mc.methodName() + ": not supported on the Native"
-                                + " driver.target yet (JVM and JS support the shell surface;"
-                                + " Native waits for process.run)",
-                        "PROC001");
+            boolean cross = driver.target == Target.NATIVE_RISCV64
+                    || driver.target == Target.NATIVE_AARCH64;
+            // D-FULL-PARITY-050 row 2 slice A: run/cmd/ok emit for real on the
+            // x86-64 native target (run reuses kof_process_run, ok is pure IR,
+            // cmd is the RuntimeShell argv prepend). pipeline/runWith are
+            // slice B (chained pipes / cwd+env) and the whole cross surface is
+            // still PROC001 — every refusal names the face that landed, never
+            // a raw call that ends in an ld error (R6).
+            boolean sliceB = mc.methodName().equals("pipeline")
+                    || mc.methodName().equals("runWith");
+            if (cross || sliceB) {
+                if (driver.currentDiagnostics != null) {
+                    driver.currentDiagnostics.error(posFile(mc), posLine(mc), posCol(mc), 0,
+                            "shell." + mc.methodName() + ": " + (cross
+                                    ? "not available on the riscv64/aarch64 native targets yet"
+                                    : "chained-pipes/cwd+env faces are slice B")
+                                    + " (JVM and JS support the full shell surface;"
+                                    + " Native x86-64 landed run/cmd/ok)",
+                            "PROC001");
+                }
+                return localIdx;
             }
-            return localIdx;
         }
         switch (mc.methodName()) {
             case "run" -> {

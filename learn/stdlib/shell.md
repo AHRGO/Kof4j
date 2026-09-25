@@ -2,7 +2,9 @@
 
 # kof.shell — dynamic argv and pipelines
 
-> **Status: JVM + JS ✅ (byte parity through `runWith`) · Native = honest gap.**
+> **Status: JVM + JS ✅ (byte parity through `runWith`) · Native x86-64:
+> `run`/`cmd`/`ok` ✅ (D-FULL-PARITY-050 row 2 slice A) — `pipeline`/`runWith`
+> = `PROC001` (slice B) · cross riscv64/aarch64: `PROC001`.**
 
 | Function | Form |
 |----------|------|
