@@ -363,6 +363,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     NAT006 gate still covers the remaining faces (modifiedTime/name/copy/move/
     dir delete/symlink/path_*).
 
+  - **D-FULL-PARITY-050 row 13 slice 9 (native-cross lane) — `kof.io` pure
+    path faces on the riscv64/aarch64 cross.** The new cross piece
+    `NativeRiscvAsmIoPath` implements `kof_io_strip_trailing`,
+    `kof_io_file_name`, `kof_io_path_file_name`, `kof_io_path_parent`,
+    `kof_io_path_extension` and `kof_io_path_is_absolute` (string only, no
+    syscalls). Proof: `NativeIoPathCrossTest` (`c.txt/c.txt/txt//a/true/false`,
+    JVM==riscv64==aarch64).
+
   - **S5.4 slice 1 (db-parity, gaps-db lane) — real MySQL/MariaDB `connect`
     on the cross (cross piece `B73`)** (24/09): `kof_db_connect` now accepts
     `mysql://`/`mariadb://` on riscv64/aarch64 — URL parse

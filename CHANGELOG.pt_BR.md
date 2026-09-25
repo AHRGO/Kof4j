@@ -362,6 +362,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     NAT006 ainda cobre as faces restantes (modifiedTime/name/copy/move/
     delete de dir/symlink/path_*).
 
+  - **D-FULL-PARITY-050 linha 13 fatia 9 (lane native-cross) — faces PURAS de
+    path do `kof.io` no cross riscv64/aarch64.** A peça cross nova
+    `NativeRiscvAsmIoPath` implementa `kof_io_strip_trailing`, `kof_io_file_name`,
+    `kof_io_path_file_name`, `kof_io_path_parent`, `kof_io_path_extension` e
+    `kof_io_path_is_absolute` (só string, sem syscall). Prova:
+    `NativeIoPathCrossTest` (`c.txt/c.txt/txt//a/true/false`,
+    JVM==riscv64==aarch64).
+
   - **S5.4 fatia 1 (db-parity, lane gaps-db) — `connect` MySQL/MariaDB REAL
     no cross (peça cross `B73`)** (24/09): `kof_db_connect` agora aceita
     `mysql://`/`mariadb://` no riscv64/aarch64 — parse da URL
