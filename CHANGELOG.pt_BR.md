@@ -343,6 +343,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `NativeIoBytesCrossTest` (reusa o golden JVM `IoE2ETest.fileBytes`:
     `true/4/65/0/255/true/8`, JVM==riscv64==aarch64).
 
+  - **D-FULL-PARITY-050 linha 13 fatia 7 (lane native-cross) — `kof.io`
+    `Directory.list()` no cross riscv64/aarch64.** A peça cross nova
+    `NativeRiscvAsmIoDirList` implementa `kof_io_dir_list` (`getdents64` num
+    buffer de 8 KiB, pula `.`/`..`, monta lista de String e insertion-sort
+    bytewise para bater com o `Files.list().sorted()` do JVM). Abre com
+    `O_RDONLY`, NÃO `O_DIRECTORY` — este é arch-divergente (riscv64 `0x10000` ×
+    arm64 `0x4000`), então a asm cross compartilhada não pode usá-lo (no aarch64
+    dava `EINVAL`/SEGV até achar). Prova: `NativeIoDirListCrossTest`
+    (`true/true/true/2/a.txt/b.txt`, JVM==riscv64==aarch64).
+
   - **S5.4 fatia 1 (db-parity, lane gaps-db) — `connect` MySQL/MariaDB REAL
     no cross (peça cross `B73`)** (24/09): `kof_db_connect` agora aceita
     `mysql://`/`mariadb://` no riscv64/aarch64 — parse da URL
