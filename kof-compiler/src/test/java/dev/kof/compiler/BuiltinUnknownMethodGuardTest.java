@@ -138,6 +138,66 @@ class BuiltinUnknownMethodGuardTest {
             """, tempDir), "bogus", "web");
     }
 
+    // ---- §499: unknown static method on a builtin type name ----
+
+    private void assertSem074(CompilationResult result, String method, String type) {
+        assertFalse(result.success(), type + "." + method + "() must fail to compile (SEM074)");
+        String diags = result.diagnostics().getDiagnostics().toString();
+        assertTrue(diags.contains("SEM074"), "Expected SEM074, was: " + diags);
+        assertTrue(diags.contains(method), "Diagnostic must name the method, was: " + diags);
+        assertFalse(diags.contains("NoSuchMethodError"),
+                "Must be a compile diagnostic, not a runtime crash: " + diags);
+    }
+
+    @Test
+    void unknownStringStaticMethodFailsWithSem074(@TempDir Path tempDir) throws IOException {
+        // `String.bogus()` compiled clean and emitted
+        // `invokestatic java/lang/String.bogus` → NoSuchMethodError.
+        assertSem074(compile("""
+            main() {
+                println(String.bogus())
+            }
+            """, tempDir), "bogus", "String");
+    }
+
+    @Test
+    void unknownStaticMethodOnOtherBuiltinTypesFailsWithSem074(@TempDir Path tempDir) throws IOException {
+        assertSem074(compile("main() { println(Int.bogus()) }\n", tempDir), "bogus", "Int");
+        assertSem074(compile("main() { println(Long.bogus()) }\n", tempDir), "bogus", "Long");
+        assertSem074(compile("main() { println(Float.bogus()) }\n", tempDir), "bogus", "Float");
+        assertSem074(compile("main() { println(Double.bogus()) }\n", tempDir), "bogus", "Double");
+        assertSem074(compile("main() { println(Bool.bogus()) }\n", tempDir), "bogus", "Bool");
+        assertSem074(compile("main() { println(Char.bogus()) }\n", tempDir), "bogus", "Char");
+        assertSem074(compile("main() { println(Byte.bogus()) }\n", tempDir), "bogus", "Byte");
+        assertSem074(compile("main() { println(Short.bogus()) }\n", tempDir), "bogus", "Short");
+        assertSem074(compile("main() { println(Object.bogus()) }\n", tempDir), "bogus", "Object");
+    }
+
+    @Test
+    void unknownStaticMethodWithWrongArityFailsWithSem074(@TempDir Path tempDir) throws IOException {
+        // `String.valueOf` exists with 1 arg; 4 args must not silently emit.
+        assertSem074(compile("""
+            main() {
+                println(String.valueOf(1, 2, 3, 4))
+            }
+            """, tempDir), "valueOf", "String");
+    }
+
+    @Test
+    void validJdkStaticsOnBuiltinTypesStillCompile(@TempDir Path tempDir) throws IOException {
+        CompilationResult result = compile("""
+            main() {
+                println(String.valueOf(42))
+                println(String.join(",", listOf("a", "b")))
+                println(Long.parseLong("5"))
+                println(Double.isNaN(1.0))
+                println(Bool.parseBoolean("true"))
+            }
+            """, tempDir);
+        assertTrue(result.success(), "Valid JDK statics on builtin types must compile: "
+                + result.diagnostics().getDiagnostics());
+    }
+
     // ---- control: the live tables still compile ----
 
     @Test

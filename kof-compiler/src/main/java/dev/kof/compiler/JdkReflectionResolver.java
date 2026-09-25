@@ -102,6 +102,29 @@ final class JdkReflectionResolver {
     }
 
     /**
+     * §499: existe método público do JDK com este nome e aridade, ciente de
+     * varargs (`String.format(String, Object...)` casa com 1..N argumentos)?
+     * É a pergunta que o gate de método estático desconhecido em nome de tipo
+     * builtin precisa — `resolveJdkMethod` exige `getParameterCount() == argc`
+     * e por isso não vê varargs.
+     */
+    static boolean hasJdkMethod(String ownerInternalName, String methodName, int argumentCount) {
+        if (!isJdkClass(ownerInternalName)) return false;
+        try {
+            Class<?> cls = Class.forName(ownerInternalName.replace('/', '.'));
+            for (Method m : cls.getMethods()) {
+                if (!m.getName().equals(methodName)) continue;
+                int pc = m.getParameterCount();
+                if (pc == argumentCount) return true;
+                if (m.isVarArgs() && argumentCount >= pc - 1) return true;
+            }
+        } catch (Throwable t) {
+            return false;
+        }
+        return false;
+    }
+
+    /**
      * §393 (#568): construtor PUBLICO do JDK com a aridade dada via reflexao
      * (`getConstructors` = so publicos; classe abstrata nao entrega
      * construtor). Retorno sempre "V" — construtor nunca tem valor.

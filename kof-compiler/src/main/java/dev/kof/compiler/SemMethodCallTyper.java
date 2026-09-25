@@ -218,6 +218,33 @@ public final class SemMethodCallTyper {
                     "SEM102");
             return Type.UnknownType.UNKNOWN;
         }
+        // §499 (SEM074): método estático desconhecido em nome de tipo builtin
+        // (`String.bogus()`, `Int.bogus()`, ...). O Kof expõe os estáticos REAIS
+        // do JDK nesses nomes (String.valueOf/join/format, Long.parseLong,
+        // Double.isNaN, Bool.parseBoolean, ...), resolvidos por reflexão no
+        // lowerer (`ExpressionInstanceCallLowerer` + `JdkReflectionResolver`).
+        // Quando o método não existe, sem este gate o typer deixava UNKNOWN e o
+        // lowerer emitia `invokestatic <Owner>.bogus` → NoSuchMethodError
+        // (compilava limpo). Só rejeita quando o owner JDK é conhecido E o
+        // método é ausente — sem falso-positivo em interop indisponível.
+        if (mc.receiver() instanceof IdentifierExpr typeRecv
+                && !typeRecv.name().isEmpty()
+                && Character.isUpperCase(typeRecv.name().charAt(0))
+                && sa.diagnostics() != null) {
+            String jdkOwner = jdkStaticOwner(typeRecv.name());
+            if (jdkOwner != null
+                    && JdkReflectionResolver.isJdkClass(jdkOwner)
+                    && !JdkReflectionResolver.hasJdkMethod(jdkOwner, mc.methodName(),
+                            mc.arguments().size())) {
+                for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
+                SourcePosition mcPos = mc.position();
+                sa.diagnostics().error(mcPos != null ? mcPos.file() : "",
+                        mcPos != null ? mcPos.line() : 0, mcPos != null ? mcPos.column() : 0, 0,
+                        "'" + typeRecv.name() + "' has no static method '" + mc.methodName() + "()'",
+                        "SEM074");
+                return Type.UnknownType.UNKNOWN;
+            }
+        }
         Type builtin = BuiltinCallTyper.infer(sa, mc, scope);
         if (builtin != null) return builtin;
         if (mc.receiver() != null) {
@@ -225,5 +252,28 @@ public final class SemMethodCallTyper {
             if (member != null) return member;
         }
         return BuiltinCallTyper.inferTail(sa, mc, scope);
+    }
+
+    /**
+     * §499: nome interno JDK dos tipos builtin usados como receiver estático.
+     * Reproduz o mapa do emit em {@code ExpressionInstanceCallLowerer} para os
+     * que ele mapeia e estende Char/Byte/Short/Object — todos os nomes de tipo
+     * builtin, para que o gate valide o membro estático em qualquer um deles.
+     */
+    private static String jdkStaticOwner(String name) {
+        return switch (name) {
+            case "String", "string" -> "java/lang/String";
+            case "Int", "int", "Integer" -> "java/lang/Integer";
+            case "Long", "long" -> "java/lang/Long";
+            case "Float", "float" -> "java/lang/Float";
+            case "Double", "double" -> "java/lang/Double";
+            case "Bool", "bool", "boolean", "Boolean" -> "java/lang/Boolean";
+            case "Char", "char" -> "java/lang/Character";
+            case "Byte", "byte" -> "java/lang/Byte";
+            case "Short", "short" -> "java/lang/Short";
+            case "Object" -> "java/lang/Object";
+            case "Troolean", "troolean" -> "java/lang/Boolean";
+            default -> null;
+        };
     }
 }
