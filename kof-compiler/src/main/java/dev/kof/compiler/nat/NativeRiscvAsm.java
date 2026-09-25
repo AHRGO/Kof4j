@@ -286,6 +286,9 @@ public final class NativeRiscvAsm {
                 // D-FULL-PARITY-050 row 13 slice 11 (native cross lane, 24/09):
                 // kof_io_path_normalize (colapsa . / .. / // ; barra final; raiz).
                 .append(NativeRiscvAsmIoNormalize.RISCV_RUNTIME_ASM_IO_NORMALIZE)
+                // D-FULL-PARITY-050 row 13 slice 12 (native cross lane, 24/09):
+                // kof_io_path_to_absolute (getcwd + resolve).
+                .append(NativeRiscvAsmIoToAbsolute.RISCV_RUNTIME_ASM_IO_TOABSOLUTE)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();
