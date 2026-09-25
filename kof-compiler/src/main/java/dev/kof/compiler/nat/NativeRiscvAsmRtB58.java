@@ -38,6 +38,11 @@ public final class NativeRiscvAsmRtB58 {
                 sd   a1, 0(sp)                     # table
                 sd   a2, 8(sp)                     # schema
                 sd   a3, 16(sp)                    # className
+                sd   a0, 88(sp)                    # id (temp p/ dispatch)
+                call kof_db_type
+                li   t0, 2
+                beq  a0, t0, .L58_all_mysql
+                ld   a0, 88(sp)
                 call kof_orm_conn                  # a0 = id
                 sd   a0, 80(sp)                    # conn
                 ld   a0, 8(sp)
@@ -229,6 +234,24 @@ public final class NativeRiscvAsmRtB58 {
                 ld   s8, 112(sp)
                 addi sp, sp, 192
                 ret
+            # ---- dispatch mysql (type 2): tail-call kof_orm_all_mysql ----
+            .L58_all_mysql:
+                ld   a0, 88(sp)                    # id
+                ld   a1, 0(sp)                     # table
+                ld   a2, 8(sp)                     # schema
+                ld   a3, 16(sp)                    # className
+                ld   ra, 184(sp)
+                ld   s0, 176(sp)
+                ld   s1, 168(sp)
+                ld   s2, 160(sp)
+                ld   s3, 152(sp)
+                ld   s4, 144(sp)
+                ld   s5, 136(sp)
+                ld   s6, 128(sp)
+                ld   s7, 120(sp)
+                ld   s8, 112(sp)
+                addi sp, sp, 192
+                j    kof_orm_all_mysql
 
             .section .rodata
             .L58_s1:

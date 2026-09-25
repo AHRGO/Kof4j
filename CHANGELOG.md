@@ -13,6 +13,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **S5.5 slice 5b (db-parity, gaps-db lane) — `orm.all` over the MySQL wire on
+    the cross (cross piece `B79`)** (24/09): `kof_orm_all` branches on
+    `kof_db_type == 2` and tail-calls the new `kof_orm_all_mysql`, the same
+    packet walk as `find` but with `SELECT * FROM \`t\`` (no bind), resolving
+    `kof_orm_ctors` once before the loop and accumulating one record per row via
+    `kof_list_new`/`kof_list_add` — **empty list** (never null) when there are no
+    rows; dead/ERR/`no column` → throw (R6). Proof:
+    `KofOrmE2ETest#crossNativeMariadbAllMatchesOracles` — JVM + x86-64 +
+    riscv64 + aarch64 byte-identical (`3\nMel/30\nAna/25\nLeo/40\n2\nMel\nLeo\n0`);
+    `KofOrmE2ETest` 80/0F/2skip, `NativeRiscvDbWireTest` 41/0F,
+    `NativeRiscvRuntimeSliceRegistryTest` 9/9.
+
   - **S5.5 slice 5a (db-parity, gaps-db lane) — `orm.find` over the MySQL wire
     on the cross (cross piece `B78`)** (24/09): `kof_orm_find` branches on
     `kof_db_type == 2` and tail-calls the new `kof_orm_find_mysql`, which sends

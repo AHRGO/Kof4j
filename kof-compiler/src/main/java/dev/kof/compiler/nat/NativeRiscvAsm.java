@@ -241,6 +241,8 @@ public final class NativeRiscvAsm {
                 // Helpers de celula (atoi/bool) do orm row-object mysql,
                 // extraidos da B78 pelo gate 500.
                 .append(NativeRiscvAsmRtB78Helpers.RISCV_RUNTIME_ASM_B_78H)
+                // S5.5 fatia 5b: orm.all sobre o wire MySQL (dispatch na B58).
+                .append(NativeRiscvAsmRtB79.RISCV_RUNTIME_ASM_B_79)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();
