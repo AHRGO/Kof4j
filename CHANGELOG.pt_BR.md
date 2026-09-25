@@ -353,6 +353,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     dava `EINVAL`/SEGV até achar). Prova: `NativeIoDirListCrossTest`
     (`true/true/true/2/a.txt/b.txt`, JVM==riscv64==aarch64).
 
+  - **D-FULL-PARITY-050 linha 13 fatia 8 (lane native-cross) — `kof.io`
+    `readRange(offset, len)` no cross riscv64/aarch64.** A peça cross nova
+    `NativeRiscvAsmIoReadRange` implementa `kof_io_read_range`/`read_range_path`
+    (`openat` + `pread64`, `Int[]` via `kof_array_alloc`, zero-extendido). Prova:
+    `NativeIoReadRangeCrossTest` escreve 5 bytes e lê o range (1,3):
+    `true/3/20/30/40`, JVM==riscv64==aarch64. A linha 13 NÃO fechou: o gate
+    NAT006 ainda cobre as faces restantes (modifiedTime/name/copy/move/
+    delete de dir/symlink/path_*).
+
   - **S5.4 fatia 1 (db-parity, lane gaps-db) — `connect` MySQL/MariaDB REAL
     no cross (peça cross `B73`)** (24/09): `kof_db_connect` agora aceita
     `mysql://`/`mariadb://` no riscv64/aarch64 — parse da URL
