@@ -43,6 +43,15 @@ class BuiltinUnknownMethodGuardTest {
                 "Must be a compile diagnostic, not a crash: " + diags);
     }
 
+    private void assertSem025(CompilationResult result, String method, String ns) {
+        assertFalse(result.success(), ns + "." + method + "() must fail to compile (SEM025)");
+        String diags = result.diagnostics().getDiagnostics().toString();
+        assertTrue(diags.contains("SEM025"), "Expected SEM025, was: " + diags);
+        assertTrue(diags.contains(method), "Diagnostic must name the method, was: " + diags);
+        assertFalse(diags.contains("VerifyError"),
+                "Must be a compile diagnostic, not a crash: " + diags);
+    }
+
     // ---- diagnosis: the silent/ClassFormatError faces become SEM102 ----
 
     @Test
@@ -101,7 +110,37 @@ class BuiltinUnknownMethodGuardTest {
             """, tempDir), "reveal", "Secret");
     }
 
+    // ---- §494: the same guard, for the `scheduler` NAMESPACE ----
+
+    @Test
+    void unknownSchedulerMethodFailsWithSem025(@TempDir Path tempDir) throws IOException {
+        // symptom: `scheduler.bogus()` compiled clean; the lowerer returned
+        // without emitting anything and the JVM aborted at load with
+        // `VerifyError: Operand stack underflow`.
+        assertSem025(compile("""
+            main() {
+                println(scheduler.bogus())
+            }
+            """, tempDir), "bogus", "scheduler");
+    }
+
     // ---- control: the live tables still compile ----
+
+    @Test
+    void validSchedulerMethodsStillCompile(@TempDir Path tempDir) throws IOException {
+        CompilationResult result = compile("""
+            main() {
+                var h = scheduler.every(1000) { println("tick") }
+                println(h)
+                scheduler.cancel(h)
+                var c = scheduler.at("0 3 * * *", () -> println("cron"))
+                println(c)
+            }
+            """, tempDir);
+        assertTrue(result.success(), "Valid scheduler.every/cancel/at must compile: "
+                + result.diagnostics().getDiagnostics());
+    }
+
 
     @Test
     void validBufferAndSecretMethodsStillCompile(@TempDir Path tempDir) throws IOException {

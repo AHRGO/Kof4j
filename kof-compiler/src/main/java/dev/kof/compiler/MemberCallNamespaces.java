@@ -218,6 +218,20 @@ final class MemberCallNamespaces {
             }
             return unknown(sa, rid.name(), mc.methodName());
         }
+        // §494: o namespace `scheduler` não passava pelo gate central de
+        // namespaces — `scheduler.bogus()` inferia UNKNOWN em silêncio e o
+        // lowering (ExpressionSchedulerCallLowerer, schedCall == null)
+        // devolvia sem emitir nada → operand stack underflow (VerifyError no
+        // load), o mesmo R6/Q7 do #126 (json) e do §490. Agora é SEM025,
+        // igual a math/strings/db/log/orm.
+        if (mc.receiver() instanceof IdentifierExpr rid && !SemExpressionTyper.isLocalName(scope, rid.name())
+                && KofScheduler.isSchedulerNamespace(rid.name())) {
+            List<Type> argTypes = new ArrayList<>();
+            for (ExpressionNode arg : mc.arguments()) argTypes.add(SemExpressionTyper.inferType(sa, arg, scope));
+            KofScheduler.SchedulerCall sc = KofScheduler.staticCall(mc.methodName(), argTypes);
+            if (sc != null) return sc.returnType();
+            return unknown(sa, "scheduler", mc.methodName());
+        }
         if (mc.receiver() instanceof IdentifierExpr rid && !SemExpressionTyper.isLocalName(scope, rid.name()) && KofWeb.isWebNamespace(rid.name())
                 && "app".equals(mc.methodName()) && mc.arguments().isEmpty()) {
             return KofWeb.APP;
