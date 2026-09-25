@@ -3547,6 +3547,43 @@ frente sem decisão travada).
 
 - **Relacionados:** `Related: D-BAREMETAL-BOOT, D-UNIVERSAL, D-BOOTSTRAP, rule 6, rule 11, R6, R7, R12`.
 
+## D-BAREMETAL-MCU-GC — o B-4 NÃO fecha antes de o coletor G-4/G-5 ser portado para 32-bit; `kof_plat_time` no MCU = recusa NOMEADA do wall + mono via SysTick (mantenedora 24/09/2026)
+
+**Data:** 2026-09-24 · **Estado:** `DECIDIDO` (respostas da mantenedora no chat,
+nesta sessão, 24/09) · **Estende:** `D-BAREMETAL-BODIES` (o item 2 deixou o B-4
+bloqueado pelo coletor; este trava o critério de fechamento e a semântica de
+tempo do MCU)
+
+**Decisão (respostas da mantenedora, em ordem):**
+
+1. **O B-4 ainda NÃO fecha.** O slice mínimo print-only do MCU (hello + reset
+   path da vector table asserido nas duas arches riscv32 e Cortex-M3, o resto
+   recusado honestamente com `NATIVE002`/`CONC003`) satisfaz o aceite literal do
+   §B-4, mas **não** é o critério de fechamento: o coletor `native-multiarch.md`
+   **G-4/G-5** precisa ser **portado para o MCU 32-bit** (alocação + mark/sweep +
+   uma prova long-running que recicla sob `qemu-system-riscv32 -M virt` e/ou
+   `qemu-system-arm -M mps2-an385`) antes de o `PLAN-BAREMETAL-BOOT` sair de
+   `docs/development/`. O heap é dimensionado pelo linker script (escala de KB),
+   não pela arena fixa de 262 144 B em `.bss`.
+2. **Semântica do `kof_plat_time` no MCU** (um MCU sem RTC): o relógio **wall**
+   (`time.now()`) é **recusa NOMEADA** (R6/R7) — nunca uma epoch falsa; o
+   caminho **monotônico** (`kof_plat_time_mono`, e `time.sleep` onde couber) é
+   fornecido pelo contador **SysTick** com `boot = 0`.
+
+**Nada relaxado:** nada. A **superfície/semântica Kof não muda** — só internos do
+runtime 32-bit e os corpos da HAL `kof_plat_*` atrás da ABI existente; todo
+caminho ainda ausente mantém **diagnóstico nomeado** (R6/R7).
+
+**Fila:** `roadmap.md` §23 (frente baremetal) + claim no DOING no mesmo commit;
+**primeira fatia = o port do alocador + coletor 32-bit** (prova sob qemu), depois
+os corpos de tempo do MCU.
+
+**Evidência:** respostas da mantenedora 24/09/2026 (chat, esta sessão), às duas
+opções apresentadas após o pouso do B-4.3 sl.1; registrado aqui **antes** de
+qualquer código de coletor/tempo-MCU (regra 6).
+
+- **Relacionados:** `Related: D-BAREMETAL-BOOT, D-BAREMETAL-BODIES, D-UNIVERSAL, D-BOOTSTRAP, rule 6, rule 11, R6, R7`.
+
 ## D-FULL-PARITY-050 — Paridade total da plataforma é a regra ABSOLUTA de todo plano e IMPEDITIVO da 0.5.0: a release não corta enquanto `docs/development/parity/PARITY-GAPS.pt_BR.md` tiver linha aberta (mantenedora 24/09/2026)
 
 **Data:** 2026-09-24 · **Estado:** `DECIDIDO` (mensagens da mantenedora no

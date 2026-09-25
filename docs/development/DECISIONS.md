@@ -3522,6 +3522,43 @@ decision).
 
 - **Relationships:** `Related: D-BAREMETAL-BOOT, D-UNIVERSAL, D-BOOTSTRAP, rule 6, rule 11, R6, R7, R12`.
 
+## D-BAREMETAL-MCU-GC — B-4 does NOT close before the collector G-4/G-5 is ported to 32-bit; MCU `kof_plat_time` = named wall refusal + SysTick monotonic (maintainer 24/09/2026)
+
+**Date:** 2026-09-24 · **State:** `DECIDED` (maintainer answers in the chat,
+this session, 24/09) · **Extends:** `D-BAREMETAL-BODIES` (its item 2 left B-4
+blocked by the collector; this locks the closure criterion and the MCU time
+semantics)
+
+**Decision (maintainer's answers, in order):**
+
+1. **B-4 does NOT close yet.** The minimal print-only MCU slice (hello +
+   vector-table reset path asserted on both riscv32 and Cortex-M3, everything
+   else honestly refused with `NATIVE002`/`CONC003`) satisfies the literal
+   §B-4 acceptance, but it is **not** the closing criterion: the collector
+   `native-multiarch.md` **G-4/G-5** must be **ported to the 32-bit MCU**
+   (allocation + mark/sweep + a long-running proof that recycles under
+   `qemu-system-riscv32 -M virt` and/or `qemu-system-arm -M mps2-an385`) before
+   `PLAN-BAREMETAL-BOOT` leaves `docs/development/`. The heap is sized by the
+   linker script (KB-scale), not the fixed 262 144 B `.bss` arena.
+2. **MCU `kof_plat_time` semantics** (an RTC-less MCU): the **wall** clock
+   (`time.now()`) is a **named refusal** (R6/R7) — never a fake epoch; the
+   **monotonic** path (`kof_plat_time_mono`, and `time.sleep` where it applies)
+   is provided by the **SysTick** counter with `boot = 0`.
+
+**Not relaxed:** nothing. The **Kof surface/semantics are untouched** — only
+32-bit runtime internals and the `kof_plat_*` HAL bodies behind the existing
+ABI; every still-missing path keeps a **named diagnostic** (R6/R7).
+
+**Queue:** `roadmap.md` §23 (baremetal front) + a DOING claim in the same
+commit; **first slice = the 32-bit allocator + collector port** (proof under
+qemu), then the MCU time bodies.
+
+**Evidence:** maintainer answers 24/09/2026 (chat, this session), to the two
+options presented after the B-4.3 sl.1 landing; recorded here **before** any
+collector/MCU-time code (rule 6).
+
+- **Relationships:** `Related: D-BAREMETAL-BOOT, D-BAREMETAL-BODIES, D-UNIVERSAL, D-BOOTSTRAP, rule 6, rule 11, R6, R7`.
+
 ## D-FULL-PARITY-050 — Full platform parity is the ABSOLUTE rule of every plan and an 0.5.0 BLOCKER: the release does not cut while `docs/development/parity/PARITY-GAPS.md` has an open row (maintainer 24/09/2026)
 
 **Date:** 2026-09-24 · **State:** `DECIDED` (maintainer messages in the chat,
