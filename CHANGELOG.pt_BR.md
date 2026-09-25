@@ -13,6 +13,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **B4-GC-2 (baremetal MCU) — mark conservador do coletor do MCU
+    (`NativeMcuGcRiscv32`)** (25/09): o mark do `native-multiarch.md` G-3
+    portado para RV32I sobre o header de 16 bytes. `kof_gc_try_mark` restringe
+    candidatos a `[_kof_heap_start,_kof_heap_end)` + alinhamento de 4 bytes,
+    localiza o bloco-dono na gc-list e seta o bit de mark (flags bit0);
+    `kof_gc_mark_transitive` varre o payload de um bloco recém-marcado word a
+    word e recorre (fecho conservador); `kof_gc_mark` derrama os s0-s11 e varre
+    as raízes estáticas `.Lkof_heap_root_start..end` mais o intervalo de pilha
+    `[sp,_stack_top)` (sem depender de frame pointer). Prova: `NativeMcuGcTest`
+    4/4 sob `qemu-system-riscv32 -M virt` — o grafo alcançável (raiz estática A,
+    raiz de pilha B, A.payload[0]→D) volta marcado `gc 32 1, gc 32 0, gc 32 1,
+    gc 32 1` (LIFO D,C,B,A) com a C inalcançável em 0, provando as raízes
+    estática/pilha e o fecho transitivo. Segue o sweep/reuso (B4-GC-3).
+
   - **B4-GC-1 (baremetal MCU) — alocador 32-bit do coletor do MCU
     (`NativeMcuGcRiscv32` + `NativeMcuGcTest`)** (25/09): primeira fatia do
     coletor `native-multiarch.md` G-4/G-5 portado para 32-bit, por

@@ -14,8 +14,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * B4-GC-1 (PLAN-BAREMETAL-BOOT B-4 + {@code D-BAREMETAL-MCU-GC}): alocador do
- * MCU RV32I provado por harness asm cru sob {@code qemu-system-riscv32 -M virt}
+ * B4-GC-1/2 (PLAN-BAREMETAL-BOOT B-4 + {@code D-BAREMETAL-MCU-GC}): alocador +
+ * mark conservador do MCU RV32I provados por harness asm cru sob
+ * {@code qemu-system-riscv32 -M virt}
  * — mesmo padrão do {@code NativeRiscvGcSweepTest} do cross: o runtime de
  * PRODUÇÃO ({@link NativeMcuGcRiscv32#runtimeAsm()}) é concatenado a um harness
  * que chama {@code kof_alloc}/{@code kof_free}/{@code kof_gc_dump}/
@@ -43,6 +44,24 @@ class NativeMcuGcTest {
         assertTrue(out.contains("allocs: 4"), "allocs deveria ser 4: " + out);
         assertTrue(out.contains("frees: 0"), "frees deveria ser 0: " + out);
         assertTrue(out.contains("live bytes: 128"), "live bytes deveria ser 128: " + out);
+    }
+
+    @Test
+    void mcuGcMarkMarksRootsTransitively(@TempDir Path tempDir) throws Exception {
+        assumeToolchain();
+        // A = raiz ESTÁTICA (.Lroot_a); B = raiz de PILHA (abaixo de _stack_top);
+        // C = inalcançável; D = alcançável só via A.payload[0] (fecho transitivo).
+        String out = run(tempDir, "gc4", body(
+                "    li   a0, 16\n    call kof_alloc\n    la   t0, .Lroot_a\n    sw   a0, 0(t0)\n"
+                + "    addi sp, sp, -16\n"
+                + "    li   a0, 16\n    call kof_alloc\n    sw   a0, 0(sp)\n"
+                + "    li   a0, 16\n    call kof_alloc\n"
+                + "    li   a0, 16\n    call kof_alloc\n    mv   t1, a0\n"
+                + "    la   t0, .Lroot_a\n    lw   t2, 0(t0)\n    sw   t1, 0(t2)\n"
+                + "    call kof_gc_mark\n    call kof_gc_dump\n"), HEAP);
+        assertEquals(java.util.List.of("gc 32 1", "gc 32 0", "gc 32 1", "gc 32 1"),
+                gcLines(out),
+                "gc-list LIFO D,C,B,A: D/A transitivo e B pilha marcados (1); C morto fica 0: " + out);
     }
 
     @Test
@@ -111,6 +130,16 @@ class NativeMcuGcTest {
                 .Le_halt:
                     j    .Le_halt
                 """;
+    }
+
+    private static java.util.List<String> gcLines(String out) {
+        java.util.List<String> list = new java.util.ArrayList<>();
+        for (String line : out.split("\n")) {
+            if (line.startsWith("gc ")) {
+                list.add(line.trim());
+            }
+        }
+        return list;
     }
 
     private static int count(String haystack, String needle) {
