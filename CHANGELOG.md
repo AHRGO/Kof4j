@@ -120,6 +120,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     the resolved fd, `mariadb://` alias and host-only form all authenticate)
     + `KofDbE2ETest#crossNativeUnsupportedSchemeNamesTruthfulDb001` (real
     binaries name DB001 for `postgres://`).
+  - **B-4.3 slice 0 — Cortex-M3 toolchain + boot recipe de-risked**
+    (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`). `scripts/provision-mcu-qemu.sh`
+    now also downloads `binutils-arm-none-eabi` and runs a Cortex-M3 self-test
+    (`arm-none-eabi-as -mcpu=cortex-m3 -mthumb` + `qemu-system-arm -M mps2-an385`)
+    that requires `KO-CM3 OK`, mirroring the B-4.1 de-risk. Measured recipe:
+    vector table at `0x0` (`[0]`=SP, `[1]`=`Reset_Handler|1`), CMSDK UART at
+    `0x40004000` (CTRL `0x08`=3 enables TX/RX — without it DATA is dropped;
+    STATE `0x04` bit0 TXFULL; DATA `0x00`), stack at `0x00080000` (4 MB SSRAM1
+    at `0x0`). Proof: running the script prints both `== OK` lines.
+
   - **B-4.2 slice 2 — MCU `kof_plat_thread_id`/`kof_plat_random` bodies +
     `CONC003` for concurrency** (24/09, lane baremetal 9092;
     `D-BAREMETAL-BODIES`). `NativeMcuRiscv32` emits `kof_plat_thread_id`

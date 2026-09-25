@@ -17,12 +17,13 @@ trap 'rm -rf "$WORK"' EXIT
 
 QEMU_PKGS=(qemu-system-misc qemu-system-arm qemu-system-common)
 LIB_PKGS=(libfdt1 libpmem1 libslirp0 libndctl6 libdaxctl1 librdmacm1t64)
+TOOL_PKGS=(binutils-arm-none-eabi)
 
 echo "== prefix: $PREFIX"
 mkdir -p "$PREFIX/usr/bin" "$PREFIX/usr/lib/x86_64-linux-gnu"
 
 echo "== baixando pacotes (apt-get download, sem root)"
-( cd "$WORK" && apt-get download "${QEMU_PKGS[@]}" "${LIB_PKGS[@]}" 2>&1 | tail -3 )
+( cd "$WORK" && apt-get download "${QEMU_PKGS[@]}" "${LIB_PKGS[@]}" "${TOOL_PKGS[@]}" 2>&1 | tail -3 )
 
 echo "== extraindo"
 for deb in "$WORK"/*.deb; do dpkg-deb -x "$deb" "$PREFIX"; done
@@ -93,6 +94,65 @@ if grep -q "KO-MCU OK" "$S/ser.log"; then
 else
     echo "== FALHA: o self-test nao imprimiu 'KO-MCU OK'" >&2
     exit 1
+fi
+
+echo "== self-test Cortex-M3 (Thumb-2 + UART do mps2-an385)"
+A="$PREFIX/usr/bin/arm-none-eabi-as"
+AL="$PREFIX/usr/bin/arm-none-eabi-ld"
+QA="$PREFIX/usr/bin/qemu-system-arm"
+if [ ! -x "$A" ] || [ ! -x "$AL" ] || [ ! -x "$QA" ]; then
+    echo "AVISO: toolchain ARM/qemu-system-arm ausente — self-test Cortex-M3 pulado." >&2
+else
+    cat > "$S/cm3.s" <<'ASM'
+.syntax unified
+.thumb
+.section .vectors,"a"
+.word 0x00080000
+.word Reset_Handler + 1
+.space 0x100-8, 0
+.text
+.align 2
+.thumb_func
+.globl Reset_Handler
+Reset_Handler:
+    ldr r4, =0x40004000
+    movs r1, #3
+    str r1, [r4, #8]
+    ldr r5, =msg
+1:  ldrb r0, [r5]
+    cbz r0, 9f
+2:  ldr r1, [r4, #4]
+    tst r1, #1
+    bne 2b
+    str r0, [r4]
+    adds r5, r5, #1
+    b 1b
+9:  b 9b
+.pool
+.section .rodata
+msg: .asciz "KO-CM3 OK\n"
+ASM
+    cat > "$S/cm3.ld" <<'LD'
+ENTRY(Reset_Handler)
+SECTIONS {
+  . = 0x00000000;
+  .vectors : { KEEP(*(.vectors)) }
+  .text : { *(.text*) *(.rodata*) }
+  . = ALIGN(8);
+  _stack_top = 0x00080000;
+}
+LD
+    "$A" -mcpu=cortex-m3 -mthumb -o "$S/cm3.o" "$S/cm3.s"
+    "$AL" -T "$S/cm3.ld" -o "$S/cm3.elf" "$S/cm3.o"
+    timeout 15 env LD_LIBRARY_PATH="$LIBDIR" "$QA" \
+        -M mps2-an385 -display none -serial "file:$S/cm3.log" \
+        -kernel "$S/cm3.elf" >/dev/null 2>&1 || true
+    if grep -q "KO-CM3 OK" "$S/cm3.log"; then
+        echo "== OK: qemu-system-arm bootou o hello Cortex-M3 ('KO-CM3 OK')"
+    else
+        echo "== FALHA: o self-test Cortex-M3 nao imprimiu 'KO-CM3 OK'" >&2
+        exit 1
+    fi
 fi
 
 echo

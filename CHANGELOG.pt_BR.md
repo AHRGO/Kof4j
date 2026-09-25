@@ -123,6 +123,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     + `KofDbE2ETest#crossNativeUnsupportedSchemeNamesTruthfulDb001` (binários
     reais nomeiam DB001 para `postgres://`).
 
+  - **B-4.3 fatia 0 — toolchain Cortex-M3 + recipe de boot de-riscados**
+    (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`). O
+    `scripts/provision-mcu-qemu.sh` agora baixa também `binutils-arm-none-eabi` e
+    roda um self-test Cortex-M3 (`arm-none-eabi-as -mcpu=cortex-m3 -mthumb` +
+    `qemu-system-arm -M mps2-an385`) que exige `KO-CM3 OK`, espelhando o de-risco
+    do B-4.1. Recipe medido: vector table em `0x0` (`[0]`=SP, `[1]`=`Reset_Handler|1`),
+    UART CMSDK em `0x40004000` (CTRL `0x08`=3 habilita TX/RX — sem isso o DATA é
+    descartado; STATE `0x04` bit0 TXFULL; DATA `0x00`), stack em `0x00080000`
+    (SSRAM1 de 4 MB em `0x0`). Prova: rodar o script imprime as duas linhas `== OK`.
+
   - **B-4.2 fatia 2 — corpos `kof_plat_thread_id`/`kof_plat_random` do MCU +
     `CONC003` para concorrência** (24/09, lane baremetal 9092;
     `D-BAREMETAL-BODIES`). O `NativeMcuRiscv32` emite `kof_plat_thread_id`
