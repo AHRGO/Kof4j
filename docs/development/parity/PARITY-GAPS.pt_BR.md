@@ -38,7 +38,7 @@
 | 10 | `math.pow` cross (estático, sem libc) | ✅ | ✅ (libm `-lm`) | ❌ `MATH001` | ✅ | `MATH001` | lane native cross |
 | 11 | `strings.reverse` não-ASCII (UTF-16 vs byte) + `String.matches`/`replaceAll`/`replaceFirst`/`compareToIgnoreCase` | ✅ | ❌ `NAT-STR01`/`STR003` | ❌ `STR003` | ❌ `STR003` | `NAT-STR01`/`STR003` | lanes native/js |
 | 12 | web T1 (faces do `kof.http.server`) no native/cross | ✅ | ⏳ | ❌ `WEB002`–`WEB006` | ✅ | `WEB00x` | lane web |
-| 13 | faces de arquivo do `kof.io` no cross | ✅ | ✅ x86 | 🟡 parcial — estat (`exists`/`isFile`/`isDirectory`) ✅ (`NativeRiscvAsmIoStat`); read/write/dir ❌ `NAT006` | ✅ | `NAT006`/`NAT007` | lane native cross |
+| 13 | faces de arquivo do `kof.io` no cross | ✅ | ✅ x86 | 🟡 parcial — estat+texto (`exists`/`isFile`/`isDirectory`/`readText`/`writeText`/`appendText`) ✅ (`NativeRiscvAsmIoStat`/`NativeRiscvAsmIoText`); delete/bytes/dir ❌ `NAT006` | ✅ | `NAT006`/`NAT007` | lane native cross |
 | 14 | família security no cross/native (faces bcrypt/argon2/keystore) | ✅ | parcial | ❌ `SECN001`/`003`/`004`/`005` | ⏳ | `SECN00x` | lane security |
 
 > **As linhas 15 (`orm.*` nativo) e 16 (`db.*` nativo) foram FECHADAS em 24/09

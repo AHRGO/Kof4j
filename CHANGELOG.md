@@ -263,6 +263,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     byte-identical) + `DomainGapCodesTest#ioStatOnCrossHasNoGap` and the
     re-pointed `#ioOnCrossIsNat006` (now `readText`).
 
+  - **D-FULL-PARITY-050 row 13 slice 2 (native-cross lane) — `kof.io`
+    `readText()`/`writeText()`/`appendText()` on the riscv64/aarch64 cross.** The
+    new cross piece `NativeRiscvAsmIoText` implements `kof_io_read_text`
+    (`openat`/`fstat`/`read`/`close`, header KofStr, missing file = null like the
+    JVM) and `kof_io_write_text`/`append_text` (`openat` +`write`+`close`,
+    `O_TRUNC`/`O_APPEND`, 0644). `ExpressionBuiltinInstanceCalls.lowerIo` now
+    emits them on the cross. Proof: `NativeIoTextCrossTest` (JVM oracle measured
+    at runtime + riscv64 + aarch64 under qemu, byte-identical round-trip).
+
   - **S5.4 slice 1 (db-parity, gaps-db lane) — real MySQL/MariaDB `connect`
     on the cross (cross piece `B73`)** (24/09): `kof_db_connect` now accepts
     `mysql://`/`mariadb://` on riscv64/aarch64 — URL parse
