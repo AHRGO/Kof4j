@@ -12472,3 +12472,36 @@ main() {
 
 **Owner:** lane native-cross (D-FULL-PARITY-050 linha 13) + fila de semântica; afeta `JvmRuntimeIo` (JVM), `RuntimeIo2` (x86) e `NativeRiscvAsmIoSize` (cross).
 <!-- pt-switch --> **EN:** [§494 (en)](known-bugs.md#494--jvm-and-native-diverge-on-the-kofio-size-error-message-jvm-throws-file-not-found-path-native-x86-64-and-the-cross-throw-size-file-not-found-path---open-contract-decision)
+---
+
+## §495 — Método desconhecido no namespace `scheduler` compilava limpo e o lowerer não emitia nada → `VerifyError: Operand stack underflow` no JVM; agora é SEM025 limpo — ✅ CORRIGIDO 25/09
+
+**Sintoma (medido 25/09, lane compiler 9092):** `scheduler.bogus()` passava no `kof check` ("no errors") e o artefato abortava no load com `VerifyError: Operand stack underflow` — escondido atrás da mensagem do launcher JavaFX sob `kof run`. O bytecode tinha `getstatic System.out` e logo `invokestatic String.valueOf` sem nada empilhado entre eles (a chamada desconhecida de `scheduler` não emitia NADA). `math.bogus()` já dava erro limpo; só o `scheduler` estava exposto.
+
+**Causa-raiz:** o gate semântico de namespaces `MemberCallNamespaces.inferStatic` roteava db/log/orm/std/validation/observability/tetris/media mas NÃO tinha ramo para `scheduler`. Logo `scheduler.X` caía no fallback UNKNOWN sem diagnóstico; o lowering `ExpressionSchedulerCallLowerer.lower` então batia em `KofScheduler.staticCall(...) == null` e retornava em silêncio (nada emitido). É exatamente a família R6+Q7 do #126 (json) / §490 (Buffer/Secret/KeyHandle): membro desconhecido em builtin, no-op silencioso em vez de diagnóstico.
+
+**Fix (medido 25/09, lane compiler 9092):** `MemberCallNamespaces.inferStatic` ganhou o ramo do scheduler espelhando os demais — `KofScheduler.staticCall(name, argTypes)`; quando devolve null, o `unknown(sa, "scheduler", method)` compartilhado emite `SEM025` em vez de cair no fallback. Só frontend, um gate, os quatro alvos.
+
+**Prova (Q0/Q1/Q3):** RED primeiro — `BuiltinUnknownMethodGuardTest#unknownSchedulerMethodFailsWithSem025` falha no código pré-fix (a chamada compila: `result.success() == true`); GREEN depois, **8/8** na classe. Controle `validSchedulerMethodsStillCompile` trava `scheduler.every(1000) { … }` / `scheduler.cancel(h)` / `scheduler.at("0 3 * * *", () -> …)` compilando.
+
+**Status:** ✅ CORRIGIDO 25/09.
+
+**Dono:** sessão 9092 (lane compiler), `MemberCallNamespaces.java`; família de guarda do #126/§490.
+<!-- en-switch --> **EN:** [§495 (en)](known-bugs.md#495--unknown-method-on-the-scheduler-namespace-compiled-clean-and-the-lowerer-emitted-nothing--jvm-verifyerror-operand-stack-underflow-now-a-clean-sem025---fixed-2509)
+
+---
+
+## §496 — Campo desconhecido em QUALQUER namespace builtin (`math.bogus`, até `math.PI`) compilava limpo e emitia `getfield` contra uma classe chamada "?" → NoClassDefFoundError — 🟡 ABERTO (catalogado)
+
+**Sintoma (medido 25/09, lane compiler 9092):** um acesso a CAMPO em um identificador de namespace builtin compila limpo e o bytecode emitido referencia uma classe cujo nome é a string vazia: `math.bogus` → `getfield "?".bogus:Ljava/lang/Object;`, `math.PI` → `getfield "?".PI:...`, e o mesmo para `strings.EMPTY`, `time.EPOCH`, `db.bogus`, `orm.bogus`, `log.bogus`, `cache.bogus`, `config.bogus`, `security.bogus`, `gpu.bogus`. Nenhuma classe `kof.<ns>` é embarcada, então a classe aborta no load com `NoClassDefFoundError: ?` — escondido atrás da mensagem do launcher JavaFX. NÃO existem constantes de namespace, então todos esses são inválidos.
+
+**Causa-raiz (suspeita, a confirmar no fix):** `SemExpressionTyper` (`case FieldAccessExpr`) valida campos só para PSEUDO-TIPOS builtin (§491: File/Path/Directory/Buffer/Secret/KeyHandle) e para classes conhecidas; um identificador de namespace não é nenhum dos dois, então cai no `yield UNKNOWN` e o emitter usa o nome de classe (vazio) resolvido como owner do `getfield`. É a face CAMPO da mesma família de namespaces do §495.
+
+**Impacto / honestidade (R6):** bytecode inválido silencioso num typo plausível (`math.PI`), não um diagnóstico limpo. NÃO corrigido nesta unidade (o caminho de campo é compartilhado com acessos a campos de UI/constantes de enum como `Color.Red`, então a guarda precisa de um predicado de namespace que exclua esses — mudança sensível à regra 11/regressão, deixada deliberadamente para uma unidade dedicada).
+
+**Repro (verbatim):** `main() { println(math.bogus) }` → `kof check` limpo; `kof build` + run → `NoClassDefFoundError: ?`.
+
+**Status:** 🟡 ABERTO — catalogado (Q7), não embarcado em silêncio.
+
+**Dono:** sessão 9092 (lane compiler), caminho de campo do `SemExpressionTyper`; família de guarda do §491/§495.
+<!-- en-switch --> **EN:** [§496 (en)](known-bugs.md#496--unknown-field-on-any-builtin-namespace-mathbogus-even-mathpi-compiled-clean-and-emitted-getfield-against-a-class-named---noclassdeffounderror---open-catalogued)

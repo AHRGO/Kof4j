@@ -13,6 +13,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§495 — unknown method on the `scheduler` namespace is a clean SEM025**
+    (25/09): `scheduler.bogus()` passed `kof check` and aborted at load with
+    `VerifyError: Operand stack underflow` (the lowering emitted nothing).
+    The semantic namespace gate `MemberCallNamespaces.inferStatic` covered
+    db/log/orm/std/... but not `scheduler`; it now routes through
+    `KofScheduler.staticCall` and emits SEM025 on an unknown method (same
+    family as #126/§490). RED→GREEN:
+    `BuiltinUnknownMethodGuardTest#unknownSchedulerMethodFailsWithSem025`
+    (+ control `validSchedulerMethodsStillCompile`), 8/8.
+
   - **B4-TIME (baremetal MCU) — MCU time bodies: named wall refusal + monotonic
     counter (`NativeMcuTimeRiscv32`)** (25/09): per `D-BAREMETAL-MCU-GC` item 2,
     on an RTC-less MCU `kof_plat_time` (`time.now()`) is a **named refusal**
