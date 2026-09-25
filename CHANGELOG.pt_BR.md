@@ -327,6 +327,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     fim a path completa). Prova: `NativeIoMkdirsCrossTest` (oráculo JVM medido em
     runtime + riscv64 + aarch64 sob qemu, byte-idêntico).
 
+  - **D-FULL-PARITY-050 linha 13 fatia 5 (lane native-cross) — `kof.io`
+    `size()` no cross riscv64/aarch64.** A peça cross nova `NativeRiscvAsmIoSize`
+    implementa `kof_io_file_size` (`newfstatat`, `st_size`; em miss LANÇA — exceção
+    recuperável, sem sentinela — espelhando a mensagem do x86
+    `size: file not found: <path>`; o JVM usa `file not found: <path>`, divergência
+    JVM×x86 pré-existente catalogada como §494). Prova: `NativeIoSizeCrossTest`
+    (caminho de sucesso JVM==riscv64==aarch64; as duas mensagens de erro pinadas).
+
   - **S5.4 fatia 1 (db-parity, lane gaps-db) — `connect` MySQL/MariaDB REAL
     no cross (peça cross `B73`)** (24/09): `kof_db_connect` agora aceita
     `mysql://`/`mariadb://` no riscv64/aarch64 — parse da URL

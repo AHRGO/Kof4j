@@ -12456,3 +12456,19 @@ main() {
 
 **Dono:** lane gaps-db (fila de decisão); afeta `RuntimeOrmMysql`/`RuntimeDb*` (x86), `JvmConfigRuntime.kof_db_execute_n` (JVM) e `RtB75`/`RtB72` (cross).
 <!-- en-switch --> **EN:** [§493 (en)](known-bugs.md#493--jvm-and-native-diverge-on-the-ormdeleteormdeleteall-error-path-over-mysql-the-jvm-throws-a-sqlexception-string-while-native-x86-64-and-the-cross-return-true---open-contract-decision)
+
+
+## §494 — JVM e Native divergem na mensagem de erro do `kof.io` `size()`: o JVM lança `file not found: <path>`, o Native x86-64 e o cross lançam `size: file not found: <path>` — 🟡 OPEN (decisão de contrato)
+
+**Sintoma (medido 24/09, lane native-cross, D-FULL-PARITY-050 linha 13 fatia 5):** `File(missing).size()` dentro de um `try/catch (String e)` imprime mensagem diferente por alvo: JVM `file not found: <path>`; Native x86-64 `size: file not found: <path>`. O cross (riscv64/aarch64) espelha o x86 — foi implementado 24/09 exatamente sobre o template do x86 (`RuntimeIo2.kof_io_file_size`), então a paridade Native↔cross vale e a divergência é JVM↔Native, PRÉ-EXISTENTE (não introduzida pela linha 13).
+
+**Causa raiz:** duas implementações da mesma face congelada discordam na String lançada, não no valor. (a) `JvmRuntimeIo.kof_io_file_size` captura `IOException` e lança `new RuntimeException("file not found: " + path)`. (b) `RuntimeIo2.kof_io_file_size` (x86) monta `.Lstr_io_size_prefix` = `"size: file not found: "` e chama `kof_throw_string`. O cross `NativeRiscvAsmIoSize` reproduz (b) byte a byte. Só o texto difere; o caminho de sucesso (`st_size`) é byte-idêntico nos três alvos.
+
+**Impacto / honestidade (R6):** um programa que ramifica sobre a mensagem capturada (ou a loga) se comporta diferente no JVM vs Native. Se o contrato congelado quer `"file not found: "` (JVM) ou `"size: file not found: "` (x86/cross) é **decisão de design do mantenedor (rule 6)**, não edição de agente — alinhar qualquer lado muda a mensagem de erro de uma face congelada. Mesma família da §493.
+
+**Prova (medido 24/09):** `NativeIoSizeCrossTest` pina a mensagem do JVM (`file not found: `) e a do x86/cross (`size: file not found: `) separadamente, então os dois contratos ficam travados; o caminho de sucesso é checado JVM==riscv64==aarch64 (6/6 verde).
+
+**Status:** 🟡 OPEN — decisão de contrato (rule 6); o cross foi construído intencionalmente com a mensagem do x86.
+
+**Owner:** lane native-cross (D-FULL-PARITY-050 linha 13) + fila de semântica; afeta `JvmRuntimeIo` (JVM), `RuntimeIo2` (x86) e `NativeRiscvAsmIoSize` (cross).
+<!-- pt-switch --> **EN:** [§494 (en)](known-bugs.md#494--jvm-and-native-diverge-on-the-kofio-size-error-message-jvm-throws-file-not-found-path-native-x86-64-and-the-cross-throw-size-file-not-found-path--open-contract-decision)
