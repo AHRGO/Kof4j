@@ -22,7 +22,8 @@ final class ExpressionBuiltinInstanceCalls {
      */
     private static final Set<String> CROSS_IO_READY = Set.of(
             "kof_io_file_exists", "kof_io_file_is_file", "kof_io_file_is_dir",
-            "kof_io_read_text", "kof_io_write_text", "kof_io_append_text");
+            "kof_io_read_text", "kof_io_write_text", "kof_io_append_text",
+            "kof_io_delete", "kof_io_dir_create");
 
     /** Diagnóstico de gap honesto (R6) numa chamada kof.web. */
     private static void webGap(CompilerDriver driver, MethodCallExpr mc, String msg, String code) {
