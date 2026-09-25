@@ -12525,6 +12525,8 @@ println(Directory("probe").delete())   // JVM: true (recursivo); x86-64: false (
 
 **Impacto / honestidade (R6/Q7):** catalogado, não enviado em silêncio. O `dir_delete` é bug de paridade rule 5; as quatro faces ausentes são lacunas de cobertura nativa. O `dir_delete` correto (recursivo `getdents64`+`unlinkat` no cross, `getdents64`+`unlink`+`rmdir` no x86-64) deixa o cross MAIS capaz que o x86-64 de hoje, então a recursão do x86-64 tem de pousar na mesma unidade para os alvos ficarem alinhados.
 
+**ATUALIZAÇÃO 26/09:** o `dir_delete` recursivo POUSOU no cross riscv64/aarch64 (fatia 13, `NativeRiscvAsmIoDirDelete`); a recursão do x86-64 e as quatro faces ausentes seguem abertas.
+
 **Status:** 🟡 OPEN — catalogado (Q7).
 
 **Dono:** lane native-cross (recursão x86-64 em `RuntimeIo3.java` + fatia cross nova); família do ledger `NAT006` da linha 13.
