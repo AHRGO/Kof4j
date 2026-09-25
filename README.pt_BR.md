@@ -354,9 +354,10 @@ Kof é uma **distribuição**: instale e receba compilador, CLI, runtime,
 stdlib, tooling, editor support e um OpenJDK embutido. **Nenhuma instalação
 externa de Java é necessária** — e não precisa saber a versão para instalar.
 
-1. Baixe o pacote do **seu** sistema em
-   [GitHub Releases](https://github.com/KofLang/Kof4j/releases/latest):
-   `linux-x86_64.tar.gz` / `macos-arm64.tar.gz` / `windows-x86_64.zip`.
+1. Baixe o pacote do **seu** sistema:
+   - **Releases** (estáveis, `main`): [GitHub Releases](https://github.com/KofLang/Kof4j/releases)
+   - **Pre-releases** (beta, `beta-*`): [Pre-releases](https://github.com/KofLang/Kof4j/releases?q=prerelease%3Atrue) — ex. `kof-0.5.0-beta+2026.09.17`
+   Variantes: `linux-x86_64.tar.gz` / `macos-arm64.tar.gz` / `macos-x86_64.tar.gz` (Intel) / `windows-x86_64.zip`.
 2. Extraia e adicione o `bin` ao `PATH`:
 
 ```bash
@@ -367,6 +368,10 @@ export PATH="$PWD/$(ls -d kof-*-linux-x86_64 | head -1)/bin:$PATH"
 # macOS (Apple Silicon)
 tar -xzf kof-*-macos-arm64.tar.gz
 export PATH="$PWD/$(ls -d kof-*-macos-arm64 | head -1)/bin:$PATH"
+
+# macOS (Intel)
+tar -xzf kof-*-macos-x86_64.tar.gz
+export PATH="$PWD/$(ls -d kof-*-macos-x86_64 | head -1)/bin:$PATH"
 
 # Windows (PowerShell)
 Expand-Archive .\kof-*-windows-x86_64.zip
