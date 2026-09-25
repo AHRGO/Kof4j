@@ -292,6 +292,9 @@ public final class NativeRiscvAsm {
                 // D-FULL-PARITY-050 row 13 slice 13 (native cross lane, 26/09):
                 // kof_io_dir_delete recursivo (getdents64 + unlinkat).
                 .append(NativeRiscvAsmIoDirDelete.RISCV_RUNTIME_ASM_IO_DIRDELETE)
+                // D-FULL-PARITY-050 row 13 slice 15 (native cross lane, 26/09):
+                // metadata (modifiedTime + isSymlink).
+                .append(NativeRiscvAsmIoMeta.RISCV_RUNTIME_ASM_IO_META)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();
