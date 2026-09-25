@@ -2,8 +2,9 @@
 
 # kof.orm — records como linhas, sem cerimônia SQL
 
-> **Status: JVM-first (fila `D-DB-GAPS`) — as entradas nativas `kof_orm_*`
-> são a fatia de gap medida e diagnosticada.**
+> **Status: paridade total de plataforma (D-DB-GAPS FECHADO 24/09) — as 13
+> faces rodam byte-idênticas em JVM, Native x86-64, riscv64/aarch64 (SQLite)
+> e no wire MySQL; JS desde 18/09 (`KofJsOrmBridge`). Prova: `KofOrmE2ETest`.**
 
 | Função | Forma |
 |--------|-------|

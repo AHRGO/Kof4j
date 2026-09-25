@@ -44,6 +44,10 @@ public final class NativeRiscvAsmRtB60 {
                 sd   a4, 8(sp)                     # schema
                 sd   a5, 16(sp)                    # className
                 ld   a0, 128(sp)
+                call kof_db_type
+                li   t0, 2
+                beq  a0, t0, .L60_page_mysql
+                ld   a0, 128(sp)
                 call kof_orm_conn
                 sd   a0, 120(sp)                   # conn
                 ld   a0, 8(sp)
@@ -252,6 +256,26 @@ public final class NativeRiscvAsmRtB60 {
                 ld   s8, 160(sp)
                 addi sp, sp, 240
                 ret
+            # ---- dispatch mysql (type 2): tail-call kof_orm_page_mysql ----
+            .L60_page_mysql:
+                ld   a0, 128(sp)                   # id
+                ld   a1, 24(sp)                    # limit box
+                ld   a2, 32(sp)                    # offset box
+                ld   a3, 0(sp)                     # table
+                ld   a4, 8(sp)                     # schema
+                ld   a5, 16(sp)                    # className
+                ld   ra, 232(sp)
+                ld   s0, 224(sp)
+                ld   s1, 216(sp)
+                ld   s2, 208(sp)
+                ld   s3, 200(sp)
+                ld   s4, 192(sp)
+                ld   s5, 184(sp)
+                ld   s6, 176(sp)
+                ld   s7, 168(sp)
+                ld   s8, 160(sp)
+                addi sp, sp, 240
+                j    kof_orm_page_mysql
 
             # ---------------------------------------------------------------
             # .L60_pv(a0=box) -> a0 = (int) valor, sign-extended (intValue()

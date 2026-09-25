@@ -13,6 +13,21 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **S5.5 slice 5d (db-parity, gaps-db lane) — `orm.page` over the MySQL wire on
+    the cross (pieces `B81` + `B81Helpers`)** (24/09): `kof_orm_page` branches on
+    `kof_db_type == 2` and tail-calls `kof_orm_page_mysql` —
+    ``SELECT * FROM \`t\` LIMIT <lim> OFFSET <off>`` with the lim/off boxes
+    converted as the host (`((Number)x).intValue()`, box Long included) by
+    `kof_orm_mysql_pv` → `kof_long_to_string`; same packet walk/record
+    materialisation, empty page = empty list. **S5.5 COMPLETE** — all row faces
+    (`find`/`all`/`where`/`where_op`/`page`) and the writes
+    (`save`/`saveAll`/`delete`/`deleteAll`/`count`/`count_where`) now run
+    byte-identical on JVM + x86-64 + riscv64 + aarch64 over the MySQL wire;
+    `PARITY-GAPS` rows 15 (`orm.*`) and 16 (`db.*`) closed. Proof:
+    `KofOrmE2ETest#crossNativeMariadbPageMatchesOracles` — JVM + x86-64 +
+    riscv64 + aarch64 byte-identical; `KofOrmE2ETest` 82/0F/2skip,
+    `NativeRiscvDbWireTest` 41/0F, `NativeRiscvRuntimeSliceRegistryTest` 9/9.
+
   - **S5.5 slice 5c (db-parity, gaps-db lane) — `orm.where`/`where_op` over the
     MySQL wire on the cross (pieces `B80` + `B80Helpers`)** (24/09):
     `kof_orm_where`/`kof_orm_where_op` branch on `kof_db_type == 2` and

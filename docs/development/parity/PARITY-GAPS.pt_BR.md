@@ -40,8 +40,10 @@
 | 12 | web T1 (faces do `kof.http.server`) no native/cross | ✅ | ⏳ | ❌ `WEB002`–`WEB006` | ✅ | `WEB00x` | lane web |
 | 13 | faces de arquivo do `kof.io` no cross | ✅ | ✅ x86 | ❌ `NAT006`/`NAT007` | ✅ | `NAT006`/`NAT007` | lane native cross |
 | 14 | família security no cross/native (faces bcrypt/argon2/keystore) | ✅ | parcial | ❌ `SECN001`/`003`/`004`/`005` | ⏳ | `SECN00x` | lane security |
-| 15 | `orm.*` nativo (`kof_orm_*`) | ✅ | ❌ | ❌ | ❌ | `ORM001` (fila D-DB-GAPS) | lane gaps-db |
-| 16 | `db.*` paridade nativa query/prepared | ✅ | parcial (wire MySQL ✅; query/prepared pendente) | ❌ `DB001` | ❌ | `DB001` (D-DB-GAPS) | lane gaps-db |
+
+> **As linhas 15 (`orm.*` nativo) e 16 (`db.*` nativo) foram FECHADAS em 24/09
+> pela lane gaps-db (S5.5)** — o cross (riscv64/aarch64) eram as últimas células
+> abertas; as provas estão na seção Fechadas.
 
 ## Já em paridade total (verificado — a revisão do que está FEITO, 24/09)
 
@@ -82,7 +84,22 @@ do freeze).
 
 ## Fechados (prova registrada aqui quando a linha esvazia)
 
-- (nenhum ainda — o ledger foi criado com o estado completo medido)
+- **Linha 15 — `orm.*` nativo (`kof_orm_*`)** — fechada 24/09 (lane gaps-db,
+  S5.5). As 13 faces (`create`/`migrate`/`count`/`count_where`/`save`/
+  `saveAll`/`find`/`all`/`where`/`where_op`/`page`/`delete`/`deleteAll`) rodam
+  byte-idênticas em JVM + Native x86-64 + riscv64 + aarch64 sobre **os dois**
+  SQLite e wire MySQL (os últimos gaps do cross — MySQL `save`/`saveAll`/
+  `find`/`all`/`where`/`where_op`/`page` — landaram na S5.5, `RtB76`–`RtB81`,
+  helpers `RtB78Helpers`/`RtB80Helpers`/`RtB81Helpers`); JS fechado 18/09
+  (`KofJsOrmBridge`, mesmo SQL do `JvmOrmRuntime`). Prova: `KofOrmE2ETest`
+  82/0F — incl. `crossNativeMariadb{Save,SaveAll,Find,All,Where,Page}MatchesOracles`
+  (goldens byte JVM == x86-64 == riscv64 == aarch64) — + `NativeRiscvDbWireTest`
+  41/0F + `NativeRiscvRuntimeSliceRegistryTest` 9/9.
+- **Linha 16 — `db.*` paridade nativa query/prepared** — fechada 24/09 (lane
+  gaps-db). O cross agora carrega o wire untyped completo (connect/handshake/
+  COM_QUERY/execute/query/scalar, SQLite + MySQL, binds preparados — `RtB62`–
+  `RtB73` + `RtB47b`); x86-64 real desde F1–F2; JS fechado 16/09 (DB001,
+  `KofJsDbBridge`). Prova: `KofDbE2ETest` 40/0F + `NativeRiscvDbWireTest` 41/0F.
 
 ## Definition of done para TODA linha
 

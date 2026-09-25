@@ -40,8 +40,10 @@
 | 12 | web T1 (`kof.http.server` faces) on native/cross | ✅ | ⏳ | ❌ `WEB002`–`WEB006` | ✅ | `WEB00x` | web lane |
 | 13 | `kof.io` file faces on cross | ✅ | ✅ x86 | ❌ `NAT006`/`NAT007` | ✅ | `NAT006`/`NAT007` | native cross lane |
 | 14 | security family on cross/native (bcrypt/argon2/keystore faces) | ✅ | partial | ❌ `SECN001`/`003`/`004`/`005` | ⏳ | `SECN00x` | security lane |
-| 15 | `orm.*` native (`kof_orm_*`) | ✅ | ❌ | ❌ | ❌ | `ORM001` (D-DB-GAPS queue) | gaps-db lane |
-| 16 | `db.*` native query/prepared parity | ✅ | partial (MySQL wire ✅; query/prepared pending) | ❌ `DB001` | ❌ | `DB001` (D-DB-GAPS) | gaps-db lane |
+
+> **Rows 15 (`orm.*` native) and 16 (`db.*` native) CLOSED 24/09 by the
+> gaps-db lane (S5.5)** — the cross (riscv64/aarch64) was the last open cells;
+> see the Closed section for the proofs.
 
 ## Already at full parity (verified — the review of what is DONE, 24/09)
 
@@ -79,7 +81,22 @@ regression re-opens the row (zero regression, freeze rule 1).
 
 ## Closed (proof recorded here when a row empties)
 
-- (none yet — the ledger was created with the full measured state)
+- **Row 15 — `orm.*` native (`kof_orm_*`)** — closed 24/09 (gaps-db lane,
+  S5.5). All 13 faces (`create`/`migrate`/`count`/`count_where`/`save`/
+  `saveAll`/`find`/`all`/`where`/`where_op`/`page`/`delete`/`deleteAll`) run
+  byte-identical on JVM + Native x86-64 + riscv64 + aarch64 over **both**
+  SQLite and the MySQL wire (the last cross gaps — MySQL `save`/`saveAll`/
+  `find`/`all`/`where`/`where_op`/`page` — landed in S5.5, `RtB76`–`RtB81`,
+  with helpers `RtB78Helpers`/`RtB80Helpers`/`RtB81Helpers`); JS closed 18/09
+  (`KofJsOrmBridge`, same SQL as `JvmOrmRuntime`). Proof: `KofOrmE2ETest`
+  82/0F — incl. `crossNativeMariadb{Save,SaveAll,Find,All,Where,Page}MatchesOracles`
+  (JVM == x86-64 == riscv64 == aarch64 byte goldens) — + `NativeRiscvDbWireTest`
+  41/0F + `NativeRiscvRuntimeSliceRegistryTest` 9/9.
+- **Row 16 — `db.*` native query/prepared parity** — closed 24/09 (gaps-db
+  lane). The cross now carries the full untyped wire (connect/handshake/
+  COM_QUERY/execute/query/scalar, SQLite + MySQL, prepared binds — `RtB62`–
+  `RtB73` + `RtB47b`); x86-64 real since F1–F2; JS closed 16/09 (DB001,
+  `KofJsDbBridge`). Proof: `KofDbE2ETest` 40/0F + `NativeRiscvDbWireTest` 41/0F.
 
 ## Definition of done for EVERY row
 

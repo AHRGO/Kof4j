@@ -2,8 +2,9 @@
 
 # kof.orm — records as rows, no SQL ceremony
 
-> **Status: JVM-first (`D-DB-GAPS` queue) — native `kof_orm_*` entries are
-> the measured, diagnosed gap slice.**
+> **Status: full platform parity (D-DB-GAPS CLOSED 24/09) — all 13 faces run
+> byte-identical on JVM, Native x86-64, riscv64/aarch64 (SQLite) and the MySQL
+> wire; JS since 18/09 (`KofJsOrmBridge`). Proof: `KofOrmE2ETest`.**
 
 | Function | Form |
 |----------|------|

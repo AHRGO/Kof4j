@@ -349,7 +349,7 @@ main() {
   compatible reflection (`Bson`/`Class`, no ClientSession); E2E test with a
   real container (conditional skip; Mongo service in CI).
 - Versioned migrations: table `kof_migrations`, each migration runs once.
-- Native reports `ORM001`; JS CLOSED 18/09 (`KofJsOrmBridge`, same SQL as JVM, byte-parity E2E).
+- Native CLOSED 24/09 (cross riscv64/aarch64 over SQLite + MySQL wire, D-DB-GAPS S5.5 `RtB76`–`RtB81`; x86-64 real since 22/09 F2d1–F2d7); JS CLOSED 18/09 (`KofJsOrmBridge`, same SQL as JVM, byte-parity E2E).
  - Tests: `KofDbE2ETest` (9), `KofOrmE2ETest` (31; MariaDB/PostgreSQL/MongoDB
    with conditional skip when the container is not up).
  - Docs: `docs/stdlib/DATABASE_VISION.md` (levels 0-4 implemented, including
