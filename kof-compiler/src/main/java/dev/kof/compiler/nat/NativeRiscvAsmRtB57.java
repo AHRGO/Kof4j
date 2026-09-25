@@ -38,6 +38,11 @@ public final class NativeRiscvAsmRtB57 {
                 sd   a2, 8(sp)                     # table
                 sd   a3, 16(sp)                    # schema
                 sd   a4, 24(sp)                    # className
+                sd   a0, 88(sp)                    # id (temporario)
+                call kof_db_type
+                li   t0, 2
+                beq  a0, t0, .L57_find_mysql
+                ld   a0, 88(sp)
                 call kof_orm_conn                  # a0 = id
                 sd   a0, 88(sp)                    # conn
                 ld   a0, 16(sp)
@@ -238,6 +243,25 @@ public final class NativeRiscvAsmRtB57 {
                 li   a1, 46
                 call kof_string_from_literal
                 call kof_throw_string
+            # ---- dispatch mysql (type 2): peca B78 ------------------------
+            .L57_find_mysql:
+                ld   a0, 88(sp)
+                ld   a1, 0(sp)
+                ld   a2, 8(sp)
+                ld   a3, 16(sp)
+                ld   a4, 24(sp)
+                ld   ra, 184(sp)
+                ld   s0, 176(sp)
+                ld   s1, 168(sp)
+                ld   s2, 160(sp)
+                ld   s3, 152(sp)
+                ld   s4, 144(sp)
+                ld   s5, 136(sp)
+                ld   s6, 128(sp)
+                ld   s7, 120(sp)
+                ld   s8, 112(sp)
+                addi sp, sp, 192
+                j    kof_orm_find_mysql
             .L57_ret:
                 ld   ra, 184(sp)
                 ld   s0, 176(sp)

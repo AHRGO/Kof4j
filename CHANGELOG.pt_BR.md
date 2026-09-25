@@ -13,6 +13,24 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **S5.5 fatia 5a (db-parity, lane gaps-db) — `orm.find` sobre o wire MySQL no
+    cross (peça cross `B78`)** (24/09): o `kof_orm_find` desvia em
+    `kof_db_type == 2` e faz tail-call para o novo `kof_orm_find_mysql`, que
+    envia ``SELECT * FROM `t` WHERE `pk` = ?`` (o key vira literal por
+    `kof_orm_mysql_lit`/`B75` + `kof_db_mysql_replace_q`/`B71`), percorre o
+    resultset com o reader `B68` + lenenc `B63`, casa as colunas por **nome**
+    com o schema e converte cada célula pelo **typeCode**
+    (`kof_orm_mysql_atoi`, `kof_orm_mysql_bool` §397, `kof_io_make_string`,
+    `kof_string_to_double`/`kof_string_to_float`; NULL → 0/null/false). Nenhuma
+    primitiva nova de wire foi necessária — a ABI de coluna tipada mora dentro do
+    walk. Miss → `null`; ERR do servidor → `mysql: <msg>`; campo do schema sem
+    coluna → `mysql: no column <nome>` (R6). Prova:
+    `KofOrmE2ETest#crossNativeMariadbFindMatchesOracles` — JVM + x86-64 +
+    riscv64 + aarch64 byte-idênticos (`1\nMel\nm@kof.dev\n30\nnull\nAna/25\nAna/25\nMel`);
+    `KofOrmE2ETest` 79/0F/2skip, `NativeRiscvDbWireTest` 41/0F,
+    `NativeRiscvRuntimeSliceRegistryTest` 9/9. As faces restantes
+    (`all`/`where`/`where_op`/`page`) reusam o mesmo reader.
+
   - **B-4.3 fatia 1 (baremetal MCU) — emissor Cortex-M3/Thumb-2 `NativeMcuArm`
     + `Target.NATIVE_MCU_ARM`** (24/09): o segundo codegen bare-metal 32-bit,
     irmão da fatia RV32I. `main` com `print`/`println` de literal String baixa

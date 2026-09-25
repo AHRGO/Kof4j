@@ -233,6 +233,14 @@ public final class NativeRiscvAsm {
                 // nova instancia; UPDATE hit; UPDATE miss -> upsert), dialeto
                 // backtick e literais por typeCode (port de RuntimeOrmMysqlSave).
                 .append(NativeRiscvAsmRtB77.RISCV_RUNTIME_ASM_B_77)
+                // S5.5 fatia 5 (gaps-db lane, 24/09): orm.find sobre o wire
+                // mysql cross — SELECT por pk com o key como literal, rows
+                // casadas por NOME e lidas por typeCode (port de
+                // RuntimeOrmMysqlFind).
+                .append(NativeRiscvAsmRtB78.RISCV_RUNTIME_ASM_B_78)
+                // Helpers de celula (atoi/bool) do orm row-object mysql,
+                // extraidos da B78 pelo gate 500.
+                .append(NativeRiscvAsmRtB78Helpers.RISCV_RUNTIME_ASM_B_78H)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();
