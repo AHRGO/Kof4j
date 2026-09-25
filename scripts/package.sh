@@ -58,9 +58,9 @@ case "$OS" in
     mingw*|msys*|cygwin*) OS=windows ;;
 esac
 
-ARCH="$(uname -m)"
+ARCH="${KOF_ARCH:-$(uname -m)}"
 case "$ARCH" in
-    x86_64|amd64) ARCH=x86_64 ;;
+    x86_64|amd64|x64) ARCH=x86_64 ;;
     aarch64|arm64) ARCH=arm64 ;;
 esac
 

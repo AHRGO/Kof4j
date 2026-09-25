@@ -63,12 +63,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target: linux-x86_64
+            arch: x86_64
           - os: windows-latest
             target: windows-x86_64
+            arch: x86_64
           - os: macos-latest
             target: macos-arm64
-          - os: macos-13
+            arch: arm64
+          - os: macos-15
             target: macos-x86_64
+            arch: x86_64
     steps:
       - name: Checkout (release candidate)
         uses: actions/checkout@v7
@@ -105,6 +109,8 @@ jobs:
         run: mvn clean package -DskipTests
 
       - name: Package with embedded JDK
+        env:
+          KOF_ARCH: ${{ matrix.arch }}
         shell: bash
         run: |
           scripts/package.sh --jdk || { echo "package --jdk failed, retry without JDK"; scripts/package.sh; }
