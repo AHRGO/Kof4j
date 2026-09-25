@@ -11,6 +11,19 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ## [0.5.0-beta] - unreleased (branch `beta-0.5.0`)
 
+  - **`process.run` no CROSS nativo riscv64/aarch64 (`D-FULL-PARITY-050` linha 1, fatia C)**
+    (26/09): `process.run` agora compila e roda nos 2 alvos cross. Nova fatia
+    `NativeRiscvAsmProcess`: `clone(220, SIGCHLD)` (riscv64 nao tem `fork`),
+    filho `dup3`->1/2 e stdin `/dev/null`, `List`->`argv` montado na pilha do
+    filho, `execvp` da libc para PATH, pai drena os 2 pipes com `ppoll`
+    (mascara `0x19`) + `wait4`; exec falho = `("", msg, -1)`. Buffers de dreno
+    estaticos de 1 MiB no `.bss` da fatia (a arena GC cross segue 256 KiB);
+    `execvp` no `NativeCrossLink.LIBC_SYMBOLS` (link dinamico so quando a fatia
+    e alcancavel) e o gate `PROC001` agora recusa so `process.spawn` no cross.
+    RED->GREEN: `ProcessRunCrossE2ETest` 4/4, JVM==riscv64==aarch64 byte-a-byte
+    (echo/PATH, exit!=0, separacao stdout/stderr, 29 KB de stdout sem deadlock,
+    programa inexistente -1). `spawn` cross segue `PROC001` honesto (fatia B).
+
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
   - **§498 — membro desconhecido em tipos kof.ui / no namespace `web` vira diagnóstico**

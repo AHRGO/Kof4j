@@ -26,7 +26,7 @@
 
 | # | Superfície | JVM/Script | Native x86-64 | Native riscv64/aarch64 | JS | Código | Fila / lane dona |
 |---|------------|------------|----------------|--------------------------|----|--------|------------------|
-| 1 | `process.run`/`spawn`/`exit` | ✅ | ✅ x86 `run`/`exit` (`spawn` = fatia B, `PROC001`; whole-record `println(r)`/`"x"+r` = `PROC001`, acesso `.stdout`/`.stderr`/`.exitCode`) | ❌ | ✅ (KofJsRunner) | `PROC001` (spawn + cross + whole-record print) | lane native (`run` x86 ✅ 25/09) |
+| 1 | `process.run`/`spawn`/`exit` | ✅ | ✅ x86 `run`/`exit` (`spawn` = fatia B, `PROC001`; whole-record `println(r)`/`"x"+r` = `PROC001`, acesso `.stdout`/`.stderr`/`.exitCode`) | ✅ cross `run` 26/09 (`spawn` = fatia B, `PROC001`) | ✅ (KofJsRunner) | `PROC001` (spawn + whole-record print) | lane native-cross (`run` x86 ✅ 25/09, cross ✅ 26/09; `spawn` = fatia B) |
 | 2 | `shell.cmd`/`run`/`runWith`/`pipeline`/`ok` | ✅ | ✅ x86 `run`/`cmd`/`ok` (`pipeline`/`runWith` = fatia B) | ❌ | ✅ (host runner) | `PROC001` (fatia B + cross) | lane native (fatia A ✅ 25/09) |
 | 3 | `ssh.cmd`/`run`/`ok` | ✅ | ❌ (sem dispatch) | ❌ | ❌ | (sem código de gap ainda — catalogar) | lane native/js |
 | 4 | media: `Image.open`/`Audio.openWav`/`Video.open`/`Mic.record`/`list` | ✅ | ❌ | ❌ | ❌ | `MEDIA001`/`MEDIA003` | frente media |

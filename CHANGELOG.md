@@ -11,6 +11,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ## [0.5.0-beta] - unreleased (branch `beta-0.5.0`)
 
+  - **`process.run` on the riscv64/aarch64 native CROSS (`D-FULL-PARITY-050` row 1, slice C)**
+    (26/09): `process.run` now compiles and runs on both cross targets. New
+    `NativeRiscvAsmProcess` slice: `clone(220, SIGCHLD)` (riscv64 has no `fork`),
+    child `dup3`->1/2 and `/dev/null` stdin, `List`->`argv` built on the child
+    stack, libc `execvp` for PATH resolution, parent drains both pipes with
+    `ppoll` (mask `0x19`) then `wait4`; exec failure = `("", msg, -1)`.
+    Capture buffers are static 1 MiB in the slice `.bss` (the cross GC arena
+    stays 256 KiB); `execvp` added to `NativeCrossLink.LIBC_SYMBOLS` (dynamic
+    link only when the slice is reachable) and the `PROC001` gate now refuses
+    only `process.spawn` on cross. RED->GREEN: `ProcessRunCrossE2ETest` 4/4,
+    JVM==riscv64==aarch64 byte-for-byte (echo/PATH, exit!=0, stdout/stderr
+    split, 29 KB stdout without deadlock, missing program -1). `spawn` cross
+    remains the honest `PROC001` (slice B).
+
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
   - **§498 — unknown member on kof.ui types / the `web` namespace is a diagnostic**
