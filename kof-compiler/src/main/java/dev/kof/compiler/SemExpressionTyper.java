@@ -264,7 +264,20 @@ public final class SemExpressionTyper {
             case MethodCallExpr mc -> SemMethodCallTyper.infer(sa, mc, scope);
             case NewExpr ne -> SemNewExprTyper.infer(sa, ne, scope);
             case FieldAccessExpr fa -> {
-                if (fa.receiver() instanceof IdentifierExpr pId && KofUi.isPalette(pId.name()) && KofUi.paletteColor(fa.fieldName()) != null) yield KofUi.COLOR;
+                if (fa.receiver() instanceof IdentifierExpr pId && KofUi.isPalette(pId.name())) {
+                    if (KofUi.paletteColor(fa.fieldName()) != null) yield KofUi.COLOR;
+                    // §498: `Palette.bogus` caía no caminho genérico e o emit
+                    // gerava `getfield "?".bogus` (NoClassDefFoundError: "?" no
+                    // load, compilado limpo). Paleta é CONSTANTE — membro
+                    // desconhecido é SEM079, como nos token namespaces.
+                    if (sa.diagnostics() != null) {
+                        sa.diagnostics().error(fa,
+                                "'Palette." + fa.fieldName() + "' is not a palette color "
+                                        + "(use a named color, e.g. Palette.red)",
+                                "SEM079");
+                    }
+                    yield KofUi.COLOR;
+                }
                 if (fa.receiver() instanceof IdentifierExpr tid && KofUiTokens.isTokenNamespace(tid.name())) {
                     if (KofUiTokens.tokenValue(tid.name(), fa.fieldName()) == null && sa.diagnostics() != null) {
                         sa.diagnostics().error(fa,
@@ -316,6 +329,23 @@ public final class SemExpressionTyper {
                                     + "'" + fa.fieldName() + "' (namespaces expose functions, "
                                     + "not properties — use " + nId.name() + ".someFunction(...))",
                             "SEM102");
+                    yield Type.UnknownType.UNKNOWN;
+                }
+                // §498: acesso a CAMPO em um TIPO kof.ui (Color/Theme e demais
+                // construtores UI). Eles expõem FUNÇÕES (`Color.rgba(...)`,
+                // `Theme.light()`), não campos — `Color.bogus` compilava limpo e
+                // o emit gerava `getfield "?".bogus`. Só dispara se o receiver
+                // não virou tipo declarado (recvType UNKNOWN), preservando uma
+                // classe do usuário homônima.
+                if (recvType instanceof Type.UnknownType
+                        && fa.receiver() instanceof IdentifierExpr uId
+                        && KofUi.isConstructor(uId.name())
+                        && sa.diagnostics() != null) {
+                    sa.diagnostics().error(fa,
+                            "'" + uId.name() + "' has no field '" + fa.fieldName()
+                                    + "' (UI types expose functions, e.g. Color.rgba(...), "
+                                    + "Theme.light())",
+                            "SEM079");
                     yield Type.UnknownType.UNKNOWN;
                 }
                 // SG-005: deref de T? sem narrowing é erro (espelha SEM049 de

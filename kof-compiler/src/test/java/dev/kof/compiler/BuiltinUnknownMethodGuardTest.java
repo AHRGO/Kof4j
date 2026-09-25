@@ -124,7 +124,34 @@ class BuiltinUnknownMethodGuardTest {
             """, tempDir), "bogus", "scheduler");
     }
 
+    // ---- §498: unknown method on the `web` namespace ----
+
+    @Test
+    void unknownWebNamespaceMethodFailsWithSem025(@TempDir Path tempDir) throws IOException {
+        // `web.bogus()` compiled clean; the lowering emitted nothing (silent
+        // no-op as a statement; as an expression the operand stack underflowed
+        // and the JVM aborted at load with VerifyError).
+        assertSem025(compile("""
+            main() {
+                println(web.bogus())
+            }
+            """, tempDir), "bogus", "web");
+    }
+
     // ---- control: the live tables still compile ----
+
+    @Test
+    void validWebAppStillCompiles(@TempDir Path tempDir) throws IOException {
+        CompilationResult result = compile("""
+            main() {
+                var app = web.app()
+                println(app)
+            }
+            """, tempDir);
+        assertTrue(result.success(), "web.app() must still compile: "
+                + result.diagnostics().getDiagnostics());
+    }
+
 
     @Test
     void validSchedulerMethodsStillCompile(@TempDir Path tempDir) throws IOException {

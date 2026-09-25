@@ -232,9 +232,17 @@ final class MemberCallNamespaces {
             if (sc != null) return sc.returnType();
             return unknown(sa, "scheduler", mc.methodName());
         }
-        if (mc.receiver() instanceof IdentifierExpr rid && !SemExpressionTyper.isLocalName(scope, rid.name()) && KofWeb.isWebNamespace(rid.name())
-                && "app".equals(mc.methodName()) && mc.arguments().isEmpty()) {
-            return KofWeb.APP;
+        // §498: o namespace `web` só expõe `web.app()`. Um método desconhecido
+        // (`web.bogus()`) caía em webInstance com recvType UNKNOWN, que devolve
+        // null — sem diagnóstico — e o lowering não emitia nada (no-op silencioso;
+        // como expressão, operand stack underflow → VerifyError no load). Mesma
+        // família R6/Q7 do §495/#126.
+        if (mc.receiver() instanceof IdentifierExpr rid && !SemExpressionTyper.isLocalName(scope, rid.name())
+                && KofWeb.isWebNamespace(rid.name())) {
+            if ("app".equals(mc.methodName()) && mc.arguments().isEmpty()) {
+                return KofWeb.APP;
+            }
+            return unknown(sa, "web", mc.methodName());
         }
         return webInstance(sa, mc, scope, recvType);
     }

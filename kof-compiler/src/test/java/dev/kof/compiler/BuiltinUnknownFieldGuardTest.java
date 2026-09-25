@@ -277,6 +277,61 @@ class BuiltinUnknownFieldGuardTest {
                 + result.diagnostics().getDiagnostics());
     }
 
+    // ---- diagnosis: the kof.ui field face (§498) also becomes SEM079 ----
+
+    private void assertUiFieldIsSem079(CompilationResult result, String field, String type) {
+        assertFalse(result.success(), type + "." + field + " must fail to compile (SEM079)");
+        String diags = result.diagnostics().getDiagnostics().toString();
+        assertTrue(diags.contains("SEM079"), "Expected SEM079, was: " + diags);
+        assertTrue(diags.contains(field), "Diagnostic must name the field, was: " + diags);
+        assertFalse(diags.contains("ClassFormatError"),
+                "Must be a compile diagnostic, not a crash: " + diags);
+    }
+
+    @Test
+    void unknownPaletteMemberIsSem079(@TempDir Path tempDir) throws IOException {
+        // `Palette.bogus` fell through to the generic path and emitted
+        // `getfield "?".bogus`.
+        assertUiFieldIsSem079(compile("""
+            main() {
+                println(Palette.bogus)
+            }
+            """, tempDir), "bogus", "Palette");
+    }
+
+    @Test
+    void unknownColorFieldIsSem079(@TempDir Path tempDir) throws IOException {
+        // Color is a UI constructor (Color.rgba(...)); it has no fields.
+        assertUiFieldIsSem079(compile("""
+            main() {
+                println(Color.bogus)
+            }
+            """, tempDir), "bogus", "Color");
+    }
+
+    @Test
+    void unknownThemeFieldIsSem079(@TempDir Path tempDir) throws IOException {
+        // Theme is a UI constructor (Theme.light()/dark()); it has no fields.
+        assertUiFieldIsSem079(compile("""
+            main() {
+                println(Theme.bogus)
+            }
+            """, tempDir), "bogus", "Theme");
+    }
+
+    @Test
+    void validUiFacesStillCompile(@TempDir Path tempDir) throws IOException {
+        CompilationResult result = compile("""
+            main() {
+                println(Palette.red)
+                println(Color.rgba(1, 2, 3, 4))
+                println(Theme.light())
+            }
+            """, tempDir);
+        assertTrue(result.success(), "Valid Palette/Color/Theme faces must compile: "
+                + result.diagnostics().getDiagnostics());
+    }
+
     @Test
     void ioAccessorsAsMethodsStillCompile(@TempDir Path tempDir) throws IOException {
         CompilationResult result = compile("""
