@@ -26,6 +26,13 @@ class StdParityGapAuditTest {
     private static Set<Target> unsupported(Predicate<Target> supported) {
         var s = new LinkedHashSet<Target>();
         for (var t : Target.values()) {
+            // NATIVE_RISCV32 (B-4 MCU slice) is deliberately OUTSIDE the stdlib
+            // parity matrix: it is a minimal RV32I codegen slice whose every
+            // non-slice path is rejected at emit time with a clean NATIVE002
+            // diagnostic (never a silent gate). It is not one of the six
+            // stdlib-parity targets, so it is excluded here rather than
+            // pretending a stdlib surface it does not have.
+            if (t == Target.NATIVE_RISCV32) continue;
             if (!supported.test(t)) {
                 s.add(t);
             }
