@@ -282,7 +282,7 @@ public class Parser {
             if (t == TokenType.LESS) depth++;
             else if (t == TokenType.GREATER || t == TokenType.GREATER_GREATER
                     || t == TokenType.GREATER_GREATER_GREATER) {
-                // #617: `List<List<Int>>` — o lexer emite `>>` como UM token
+                // #620: `List<List<Int>>` — o lexer emite `>>` como UM token
                 // (maximal munch); sem contar seu fechamento duplo, esta
                 // varredura nunca via depth chegar a 0 e devolvia false —
                 // `List<List<Int>> nest()` era mal-interpretado como
@@ -298,7 +298,7 @@ public class Parser {
                     // lookahead exigia IDENTIFIER+LPAREN IMEDIATAMENTE após
                     // o `>`/`>>`/`>>>` — `List<Int>? maybeList()` (sem
                     // aninhamento nenhum) já falhava por essa lacuna, não
-                    // só o caso aninhado do #617.
+                    // só o caso aninhado do #620.
                     int j = i + 1;
                     while (j + 1 < ctx.tokens.size() - ctx.pos) {
                         TokenType nt = ctx.tokens.get(ctx.pos + j).type();

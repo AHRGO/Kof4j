@@ -24,7 +24,7 @@ public class TypeParser {
         StringBuilder sb = new StringBuilder();
         int depth = 0;
         while (!ctx.atEnd()) {
-            // #617: `>>`/`>>>` fecham DOIS/TRÊS níveis de generics aninhados
+            // #620: `>>`/`>>>` fecham DOIS/TRÊS níveis de generics aninhados
             // (`List<List<Int>>`), mas o lexer emite um único token
             // GREATER_GREATER/GREATER_GREATER_GREATER (maximal munch) — sem
             // separar antes de checar TokenType.GREATER, o depth nunca
