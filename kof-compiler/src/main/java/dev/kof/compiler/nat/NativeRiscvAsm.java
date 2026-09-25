@@ -217,6 +217,9 @@ public final class NativeRiscvAsm {
                 // handshake B66 + registro do fd como type 2 (kof_db_connect
                 // da B47 delega aqui o que não é "sqlite:").
                 .append(NativeRiscvAsmRtB73.RISCV_RUNTIME_ASM_B_73)
+                // S5.5 db-parity (gaps-db lane, 24/09): scalar do wire mysql no
+                // cross (1a linha/1a coluna como Long) — base do orm.count.
+                .append(NativeRiscvAsmRtB74.RISCV_RUNTIME_ASM_B_74)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

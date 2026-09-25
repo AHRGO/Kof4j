@@ -6,16 +6,20 @@ package dev.kof.compiler.nat;
 // -lsqlite3 via NativeCrossLink). aarch64 herda via tradutor.
 //
 // Semântica espelhada do x86 (a referência do contrato, D-DB-GAPS):
-// - id ruim/nulo/type != 1 (não-sqlite) -> lança a MESMA mensagem do
-//   .Lorm_conn (prefixo "unknown db connection: " + id; id nulo -> só o
-//   prefixo). MySQL não tem handle no cross (`kof_db_connect` recusa o
-//   scheme no connect), então o ramo type==2 é inalcançável por construção
-//   — não carregamos o .Lorm_mysql_pending (Simplicity Law).
+// - id ruim/nulo/type fora de {1,2} -> lança a MESMA mensagem do .Lorm_conn
+//   (prefixo "unknown db connection: " + id; id nulo -> só o prefixo).
 // - delete_all: prepare falhou ou step != SQLITE_DONE -> false; sucesso ->
 //   true (espelho do rc do sqlite3_exec do x86 — SQL error nunca lança).
 // - count: prepare falhou/erro/zero-row -> 0 (no x86 o callback nunca roda);
 //   valor exato por sqlite3_column_int64 (COUNT é INTEGER; o x86 usa
 //   texto+atol — mesmo valor, sem perda).
+//
+// S5.5 fatia 1 (24/09, lane gaps-db): com o wire mysql REAL no cross (S5.4),
+// o handle type 2 chegou ao ORM. `kof_orm_count` agora ramifica por
+// `kof_db_type`: type 2 -> `kof_db_mysql_scalar_int(fd, sql)` com a citação
+// de DIALETO mysql (backtick — medido: `FROM "t"` = ERROR 1064 no MariaDB);
+// o ramo sqlite segue idêntico. As demais faces seguem sqlite-only (S5.5
+// fatias 2-4); o type 2 delas permanece recusa honesta.
 //
 // ABI: kof_orm_delete_all(id@a0, table@a1, schema@a2) -> Bool a0;
 //      kof_orm_count(id@a0, table@a1, schema@a2) -> Long a0.
@@ -142,6 +146,11 @@ public final class NativeRiscvAsmRtB50 {
                 sd   s4, 16(sp)
                 mv   s0, a0
                 mv   s1, a1
+                mv   a0, s0
+                call kof_db_type                  # S5.5: type 2 -> wire mysql
+                li   t0, 2
+                beq  a0, t0, .L50_cnt_mysql
+                mv   a0, s0
                 call .L50_conn
                 mv   s2, a0
                 la   a0, .L50_cnt_pre
@@ -185,6 +194,27 @@ public final class NativeRiscvAsmRtB50 {
                 call sqlite3_finalize
             .L50_cnt_zero:
                 li   a0, 0
+                j    .L50_cnt_out
+            # S5.5 fatia 1: SELECT COUNT(*) FROM `table` pelo wire mysql.
+            .L50_cnt_mysql:
+                la   a0, .L50_cnt_pre_bt
+                li   a1, 22
+                call kof_string_from_literal
+                mv   s3, a0
+                mv   a0, s3
+                mv   a1, s1
+                call kof_string_concat
+                mv   s3, a0
+                la   a0, .L50_bt
+                li   a1, 1
+                call kof_string_from_literal
+                mv   a1, a0
+                mv   a0, s3
+                call kof_string_concat
+                mv   a1, a0                        # sql (backtick)
+                mv   a0, s0
+                call kof_db_resolve
+                call kof_db_mysql_scalar_int
             .L50_cnt_out:
                 ld   ra, 56(sp)
                 ld   s0, 48(sp)
@@ -204,6 +234,10 @@ public final class NativeRiscvAsmRtB50 {
                 .ascii "SELECT COUNT(*) FROM \\""
             .L50_quote:
                 .ascii "\\""
+            .L50_cnt_pre_bt:
+                .ascii "SELECT COUNT(*) FROM `"
+            .L50_bt:
+                .ascii "`"
             .section .text
             """;
 }

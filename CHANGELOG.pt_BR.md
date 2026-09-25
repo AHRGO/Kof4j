@@ -13,6 +13,21 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **S5.5 fatia 1 (db-parity, lane gaps-db) — `orm.count` sobre o wire MySQL
+    no cross (peças cross `B74` + `B50`)** (24/09): um handle type-2 resolvido
+    agora chega ao `kof.orm` — o `kof_orm_count` despacha por `kof_db_type`
+    (2 → um scalar novo `kof_db_mysql_scalar_int(fd, sql)` sobre
+    `COM_QUERY`/B69, `.L50_conn`/sqlite inalterados). O dialeto MySQL exige
+    identificador com backtick (`SELECT COUNT(*) FROM \`table\``), **medido**:
+    o MariaDB rejeita a citação do sqlite (`SELECT COUNT(*) FROM "t"` → `ERROR
+    1064`), então o ramo type-2 monta o próprio SQL. As demais faces
+    row-object (`count_where`, `save`/`delete`, `find`/`all`/`page`) seguem
+    sqlite-only — gaps interinos declarados (S5.5 fatias 2–4), nunca aceite
+    silencioso. Prova:
+    `KofOrmE2ETest#crossNativeMariadbCountMatchesX86Oracle` — byte-parity com o
+    oráculo x86-64 em riscv64 + aarch64 sob qemu contra o MariaDB real
+    (`3` → `2` após um `DELETE` bindado).
+
   - **S5.4 fatia 2 (db-parity, lane gaps-db) — o dispatch mysql do
     `execute`/`query` no cross + `transaction { }` real (peça cross `B47b`)**
     (24/09): um handle type-2 resolvido agora chega ao wire via

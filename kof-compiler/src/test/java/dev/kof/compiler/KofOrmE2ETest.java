@@ -2334,6 +2334,63 @@ class KofOrmE2ETest {
                 "sem ORM001 residual: " + gated.diagnostics().getDiagnostics());
     }
 
+    /** S5.5 fatia 1 (24/09): {@code orm.count} sobre o wire mysql REAL no
+     *  cross (peça RtB74: {@code kof_db_mysql_scalar_int}) — prova byte-parity
+     *  com o oráculo x86-64 (que já tinha F2d2). Dialeto mysql: a peça B50
+     *  cita com backtick (medido: {@code FROM "t"} = ERROR 1064 no MariaDB). */
+    @Test
+    void crossNativeMariadbCountMatchesX86Oracle(@TempDir Path tempDir) throws IOException {
+        assumeTrue(isLinux(), "cross ORM E2E requires Linux + qemu");
+        int port;
+        try { port = Integer.parseInt(System.getenv().getOrDefault("KOF_MYSQL_PORT", "13306")); }
+        catch (NumberFormatException e) { port = 13306; }
+        org.junit.jupiter.api.Assumptions.assumeTrue(tcpOpen("127.0.0.1", port),
+                "MySQL/MariaDB not reachable on 127.0.0.1:" + port);
+        String body = """
+                    db.execute(db, "drop table if exists `user`")
+                    db.execute(db, "create table `user` (id int, name varchar(50), age int)")
+                    db.execute(db, "insert into `user` values (?, ?, ?)", 1, "Mel", 30)
+                    db.execute(db, "insert into `user` values (?, ?, ?)", 2, "Ana", 25)
+                    db.execute(db, "insert into `user` values (?, ?, ?)", 3, "Bia", 41)
+                    println(orm.count<User>(db))
+                    db.execute(db, "delete from `user` where id = ?", 2)
+                    println(orm.count<User>(db))
+                    db.close(db)
+                }
+                """;
+        String expected = "3\n2";
+        Path source = tempDir.resolve("OrmMysqlCross.kf");
+        Files.writeString(source, """
+            entity User {
+                id: Long generated
+                name: String
+                age: Int
+            }
+            main() {
+                var db = db.connect("mysql://root:kofpass@127.0.0.1:%d/test")
+            %s
+            """.formatted(port, body));
+        Path x86out = tempDir.resolve("out-x86");
+        CompilationResult xo = driver.compile(source, x86out, Target.NATIVE);
+        assumeTrue(xo.success(), "x86-64 oracle should compile: " + xo.diagnostics().getDiagnostics());
+        String oracle = runNativeBinary(x86out.resolve("Default/Main"), null);
+        assertEquals(expected, oracle, "oráculo x86-64 (F2d2 count mysql; 3 -> 2)");
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            String as = arch.equals("riscv64") ? "riscv64-linux-gnu-as" : "aarch64-linux-gnu-as";
+            String ld = arch.equals("riscv64") ? "riscv64-linux-gnu-ld" : "aarch64-linux-gnu-ld";
+            assumeTrue(has(as, ld, "qemu-" + arch), "cross toolchain " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sysrootOrNull(arch) != null,
+                    "sysroot cross " + arch + " ausente — pulando");
+            Path out = tempDir.resolve("out-" + t);
+            CompilationResult r = driver.compile(source, out, t);
+            assertTrue(r.success(), t + " deveria compilar orm.count mysql cross: "
+                    + r.diagnostics().getDiagnostics());
+            String got = runNativeBinary(out.resolve("Default/Main"), "qemu-" + arch);
+            assertEquals(oracle, got, t + " byte-parity com o oráculo x86-64 (count mysql)");
+        }
+    }
+
     /** DB-3/DB-1 cross slice B (22/09): {@code orm.create} REAL no riscv64/
      *  aarch64 (peça RtB51, port de RuntimeOrm2) — parser de schema + DDL
      *  byte-idêntico ao x86-64 (o golden LÊ o sql gravado no sqlite_master:

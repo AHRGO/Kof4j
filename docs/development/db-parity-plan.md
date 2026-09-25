@@ -290,16 +290,35 @@ typed roundtrip) produces the **same observable result** on all four targets, or
     + `withoutDispatchPieceLinkFailsSabotage` (riscv64 + aarch64, qemu, real
     MariaDB). **S5.4 complete; the scheme-parity front is done.**
   - **S5.5 — `kof.orm` over the mysql wire on the cross (NEW, 24/09).** The
-    cross row-object faces (`RtB55`/`RtB55Helpers`/`RtB57`…) call `sqlite3_*`
-    directly on the handle from `kof_orm_conn`, which refuses anything but type 1
-    (`kof_orm_conn` throws `unknown db connection: db1` for a type-2 handle —
-    measured 24/09). Compile is clean (no `ORM001`); the refusal is honest but
-    **misnamed** and the mysql ORM is absent. Scope: make `kof_orm_conn` accept
-    type 2 and branch the row-object faces on the connection type (or rebuild
-    them over `kof_db_execute`/`kof_db_query`, which already dispatch — the
-    DB-1 option-A intent). *Proof when done:* `orm.*` E2E over `mysql://` under
-    qemu on both cross targets. Until then this stays a **declared interim
-    gap** (never a silent accept).
+    cross row-object faces (`RtB50`/`RtB53`/`RtB55`/`RtB55Helpers`/`RtB57`/
+    `RtB58`…) call `sqlite3_*` directly on the handle from `kof_orm_conn`, which
+    refuses anything but type 1 (`kof_orm_conn` throws `unknown db connection:
+    db1` for a type-2 handle — measured 24/09). Compile is clean (no `ORM001`);
+    the refusal is honest but **misnamed** and the mysql ORM is absent. The x86
+    reference is the `RuntimeOrmMysql*` family (`RuntimeOrmMysqlDdl`,
+    `RuntimeOrmMysqlCountWhere`, `RuntimeOrmMysqlSave`,
+    `RuntimeOrmMysqlFieldLit`) — **the dialect matters**: MariaDB rejects the
+    sqlite `"table"` quoting (measured: `SELECT COUNT(*) FROM "q"` → `ERROR
+    1064`); the mysql path must quote with backticks (`` `table` ``).
+    **Slices (each with qemu proof on riscv64 + aarch64):**
+    1. **scalar + `orm.count`** — new cross primitive
+       `kof_db_mysql_scalar_int(fd, sql) -> Long` (COM_QUERY → first row's first
+       column) + `kof_orm_count` branches type 2 → backtick `SELECT COUNT(*)
+       FROM `table``. *Proof:* `orm.count<User>` over `mysql://` cross.
+       **DONE 24/09** — piece `RtB74` (`kof_db_mysql_scalar_int`, reuses
+       `kof_db_mysql_query_text`/B69) + `RtB50` type-2 branch with backtick
+       dialect; E2E `KofOrmE2ETest#crossNativeMariadbCountMatchesX86Oracle`
+       green on x86-64 oracle + riscv64 + aarch64 (`3` → `2` after a bound
+       `DELETE`).
+    2. **`orm.count_where`** — bind substitution (B71) + the mysql quoting, with
+       the null bind handled (B71 renders a 0 pointer as Int 0 today).
+    3. **`orm.save`/`delete`/`deleteAll`** — execute path; generated-key needs
+       `SELECT LAST_INSERT_ID()` (same scalar primitive).
+    4. **`orm.find`/`all`/`where`/`where_op`/`page`** — row materialisation; needs
+       a typed column ABI (B70 returns JSON, not columns) and the mysql dialect.
+    Until each lands this stays a **declared interim gap** (never a silent
+    accept), and `kof_orm_conn`'s message should name the real cause (mysql ORM
+    not yet ported) instead of `unknown db connection`.
 
 ## Non-goals / invariants
 

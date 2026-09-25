@@ -13,6 +13,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **S5.5 slice 1 (db-parity, gaps-db lane) — `orm.count` over the MySQL wire
+    on the cross (cross pieces `B74` + `B50`)** (24/09): a resolved type-2
+    handle now reaches `kof.orm` — `kof_orm_count` dispatches on `kof_db_type`
+    (2 → a new `kof_db_mysql_scalar_int(fd, sql)` scalar over
+    `COM_QUERY`/B69, `.L50_conn`/sqlite unchanged). The MySQL dialect needs
+    backtick identifiers (`SELECT COUNT(*) FROM \`table\``), **measured**:
+    MariaDB rejects the sqlite quoting (`SELECT COUNT(*) FROM "t"` → `ERROR
+    1064`), so the type-2 branch builds its own SQL. The other row-object faces
+    (`count_where`, `save`/`delete`, `find`/`all`/`page`) remain sqlite-only —
+    declared interim gaps (S5.5 slices 2–4), never a silent accept. Proof:
+    `KofOrmE2ETest#crossNativeMariadbCountMatchesX86Oracle` — byte-parity with
+    the x86-64 oracle on riscv64 + aarch64 under qemu against the real MariaDB
+    (`3` → `2` after a bound `DELETE`).
+
   - **S5.4 slice 2 (db-parity, gaps-db lane) — the `execute`/`query` MySQL
     dispatch on the cross + real `transaction { }` (cross piece `B47b`)**
     (24/09): a resolved type-2 handle now reaches the wire through
