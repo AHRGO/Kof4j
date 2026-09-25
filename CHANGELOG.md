@@ -37,6 +37,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     x86 == riscv64 == aarch64); `KofOrmE2ETest` 77/0F/2skip,
     `NativeRiscvDbWireTest` 41/0F, `NativeRiscvRuntimeSliceRegistryTest` 9/9.
 
+  - **S5.5 slice 4c (db-parity, gaps-db lane) — `orm.saveAll` over the MySQL
+    cross** (24/09): no new runtime piece was needed — `kof_orm_save_all`
+    (`B56`) only loops and delegates to `kof_orm_save`, which now dispatches
+    `kof_db_type == 2` to `B77`, so the batch INSERT (generated PKs) and the
+    batch UPDATE by PK work over mysql. Proof:
+    `KofOrmE2ETest#crossNativeMariadbSaveAllMatchesOracles` — JVM + x86-64 +
+    riscv64 + aarch64 byte-identical
+    (`true\n2\n{"name":"Mel"}\n{"name":"Ana"}\ntrue\n2\n{"name":"Mel2"}\ntrue\n2`).
+
   - **S5.5 slice 4a (db-parity, gaps-db lane) — the throwing exec primitive for
     `orm.save` on the MySQL cross (cross piece `B76`)** (24/09):
     `kof_orm_mysql_exec(fd, sql) -> affected | throw` sends the COM_QUERY

@@ -376,7 +376,12 @@ typed roundtrip) produces the **same observable result** on all four targets, or
         `KofOrmE2ETest#crossNativeMariadbSaveMatchesOracles` — JVM + x86-64 +
         riscv64 + aarch64 byte-identical (`1\n1\n1\n1\n{"name":"Mel2"}\n7\n2\n8\n3`)
         — and `#crossNativeMariadbSaveErrorMatchesX86Oracle` (missing table
-        throws on x86 == riscv64 == aarch64).
+        throws on x86 == riscv64 == aarch64). **Slice 4c DONE 24/09** —
+        `orm.saveAll` over mysql came for free: `kof_orm_save_all` (`B56`) only
+        loops and delegates to `kof_orm_save`, which now dispatches type 2 to
+        `B77`. *Proof:* `KofOrmE2ETest#crossNativeMariadbSaveAllMatchesOracles`
+        — JVM + x86-64 + riscv64 + aarch64 byte-identical
+        (`true\n2\n{"name":"Mel"}\n{"name":"Ana"}\ntrue\n2\n{"name":"Mel2"}\ntrue\n2`).
     5. **`orm.find`/`all`/`where`/`where_op`/`page`** — row materialisation; needs
        a typed column ABI (B70 returns JSON, not columns) and the mysql dialect.
     Until each lands this stays a **declared interim gap** (never a silent

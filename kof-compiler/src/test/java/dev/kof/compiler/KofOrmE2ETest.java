@@ -2658,6 +2658,84 @@ class KofOrmE2ETest {
         }
     }
 
+    /** S5.5 fatia 4c (24/09): {@code orm.saveAll} sobre o wire mysql no cross —
+     *  3 oráculos (JVM/JDBC, x86-64, riscv64/aarch64 sob qemu). O
+     *  {@code kof_orm_save_all} (B56) só faz o loop e delega ao
+     *  {@code kof_orm_save}, que agora ramifica para a peça B77 no type 2 —
+     *  o lote INSERT (PKs geradas) e o lote UPDATE por pk, com lista vazia. */
+    @Test
+    void crossNativeMariadbSaveAllMatchesOracles(@TempDir Path tempDir) throws Exception {
+        assumeTrue(isLinux(), "cross ORM E2E requires Linux + qemu");
+        int port;
+        try { port = Integer.parseInt(System.getenv().getOrDefault("KOF_MYSQL_PORT", "13306")); }
+        catch (NumberFormatException e) { port = 13306; }
+        org.junit.jupiter.api.Assumptions.assumeTrue(tcpOpen("127.0.0.1", port),
+                "MySQL/MariaDB not reachable on 127.0.0.1:" + port);
+        String body = """
+                    db.execute(db, "drop table if exists `user`")
+                    db.execute(db, "create table `user` (id int primary key auto_increment, name varchar(50), email varchar(80), age int)")
+                    var l1 = new List<User>()
+                    l1.add(User(0, "Mel", "m@kof.dev", 30))
+                    l1.add(User(0, "Ana", "a@kof.dev", 25))
+                    println(orm.saveAll<User>(db, l1))
+                    println(orm.count<User>(db))
+                    println(db.query(db, "select name from `user` order by id").get(0))
+                    println(db.query(db, "select name from `user` order by id").get(1))
+                    var l2 = new List<User>()
+                    l2.add(User(1, "Mel2", "m2@kof.dev", 31))
+                    l2.add(User(2, "Ana2", "a2@kof.dev", 26))
+                    println(orm.saveAll<User>(db, l2))
+                    println(orm.count<User>(db))
+                    println(db.query(db, "select name from `user` where id = 1").get(0))
+                    var empty = new List<User>()
+                    println(orm.saveAll<User>(db, empty))
+                    println(orm.count<User>(db))
+                    db.close(db)
+                }
+                """;
+        String expected = "true\n2\n{\"name\":\"Mel\"}\n{\"name\":\"Ana\"}\n"
+                + "true\n2\n{\"name\":\"Mel2\"}\ntrue\n2";
+        String entitySrc = """
+            entity User {
+                id: Long generated
+                name: String
+                email: String unique
+                age: Int
+            }
+            """;
+        Path jvmSource = tempDir.resolve("JvmMain.kf");
+        Files.writeString(jvmSource, entitySrc + "main() {\n"
+                + ("    var db = db.connect(\"jdbc:mariadb://127.0.0.1:" + port
+                   + "/test?user=root&password=kofpass&allowMultiQueries=true\")\n")
+                + body);
+        runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
+                findDriverJar("mariadb", "MariaDB"), expected);
+
+        Path source = tempDir.resolve("OrmMysqlCross.kf");
+        Files.writeString(source, entitySrc + "main() {\n"
+                + ("    var db = db.connect(\"mysql://root:kofpass@127.0.0.1:" + port + "/test\")\n")
+                + body);
+        Path x86out = tempDir.resolve("out-x86");
+        CompilationResult xo = driver.compile(source, x86out, Target.NATIVE);
+        assumeTrue(xo.success(), "x86-64 oracle should compile: " + xo.diagnostics().getDiagnostics());
+        String oracle = runNativeBinary(x86out.resolve("Default/Main"), null);
+        assertEquals(expected, oracle, "oráculo x86-64 (saveAll mysql; lote INSERT, lote UPDATE, vazio)");
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            String as = arch.equals("riscv64") ? "riscv64-linux-gnu-as" : "aarch64-linux-gnu-as";
+            String ld = arch.equals("riscv64") ? "riscv64-linux-gnu-ld" : "aarch64-linux-gnu-ld";
+            assumeTrue(has(as, ld, "qemu-" + arch), "cross toolchain " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sysrootOrNull(arch) != null,
+                    "sysroot cross " + arch + " ausente — pulando");
+            Path out = tempDir.resolve("out-" + t);
+            CompilationResult r = driver.compile(source, out, t);
+            assertTrue(r.success(), t + " deveria compilar orm.saveAll mysql cross: "
+                    + r.diagnostics().getDiagnostics());
+            String got = runNativeBinary(out.resolve("Default/Main"), "qemu-" + arch);
+            assertEquals(oracle, got, t + " byte-parity com os oráculos (saveAll mysql)");
+        }
+    }
+
     /** S5.5 fatia 4b (24/09): o ERR do servidor no `orm.save` mysql **LANÇA**
      *  tanto no x86 quanto no cross (peça B77 + `kof_orm_mysql_exec`/B76) —
      *  diferente de delete/deleteAll (§493). Testa paridade Native↔cross

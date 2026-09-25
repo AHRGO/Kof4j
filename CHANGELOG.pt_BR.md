@@ -36,6 +36,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     em x86 == riscv64 == aarch64); `KofOrmE2ETest` 77/0F/2skip,
     `NativeRiscvDbWireTest` 41/0F, `NativeRiscvRuntimeSliceRegistryTest` 9/9.
 
+  - **S5.5 fatia 4c (db-parity, lane gaps-db) — `orm.saveAll` sobre o cross
+    MySQL** (24/09): nenhuma peça nova de runtime foi necessária — o
+    `kof_orm_save_all` (`B56`) só faz o loop e delega ao `kof_orm_save`, que
+    agora desvia `kof_db_type == 2` para a `B77`, então o lote INSERT (PKs
+    geradas) e o lote UPDATE por PK funcionam sobre mysql. Prova:
+    `KofOrmE2ETest#crossNativeMariadbSaveAllMatchesOracles` — JVM + x86-64 +
+    riscv64 + aarch64 byte-idênticos
+    (`true\n2\n{"name":"Mel"}\n{"name":"Ana"}\ntrue\n2\n{"name":"Mel2"}\ntrue\n2`).
+
   - **S5.5 fatia 4a (db-parity, lane gaps-db) — a primitiva exec que lança para
     o `orm.save` no cross MySQL (peça cross `B76`)** (24/09):
     `kof_orm_mysql_exec(fd, sql) -> affected | throw` envia o COM_QUERY (mesmo
