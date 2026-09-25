@@ -12533,3 +12533,22 @@ println(Directory("probe").delete())   // JVM: true (recursivo); x86-64: false (
 
 **Dono:** lane native-cross (recursão x86-64 em `RuntimeIo3.java` + fatia cross nova); família do ledger `NAT006` da linha 13.
 <!-- pt-switch --> **EN:** [§497](known-bugs.md#497--native-kofio-gaps-directorydelete-is-non-recursive-on-x86-64-and-copytomovetomodifiedtimeissymlink-have-no-native-impl---open-catalogued)
+
+---
+
+## §498 — Campo desconhecido em tipos kof.ui (`Palette.bogus`, `Color.bogus`, `Theme.bogus`) e método desconhecido em `web` (`web.bogus()`) compilavam limpo → `getfield "?"` / no-op silencioso; agora SEM079/SEM025 — ✅ CORRIGIDO 25/09
+
+**Sintoma (medido 25/09, lane compiler 9092):** três faces silenciosas da família de membro-desconhecido do §495/§496/#126/§490:
+1. `Palette.bogus`, `Color.bogus`, `Theme.bogus` compilavam limpo e emitiam `getfield "?".bogus:Ljava/lang/Object;` → `NoClassDefFoundError: "?"` no load (escondido atrás da mensagem do launcher JavaFX).
+2. `web.bogus()` compilava limpo; o lowering não emitia NADA — no-op silencioso como statement, e como expressão (`println(web.bogus())`) a operand stack underflow → `VerifyError` no load.
+
+**Causa-raiz:** `Palette` é um namespace de CONSTANTES (`KofUi.isPalette`), mas o ramo de paleta do `FieldAccessExpr` só devolvia `COLOR` quando `paletteColor(campo) != null` e, senão, CAÍA no caminho genérico (owner `"?"`). `Color`/`Theme` são tipos construtores kof.ui (funções `Color.rgba(...)`, `Theme.light()`), então um campo também caía. No lado do método, o `MemberCallNamespaces` só tratava `web.app()` e delegava o resto ao `webInstance`, que devolve `null` para o receiver `web` nu — sem diagnóstico, sem op.
+
+**Fix (medido 25/09, lane compiler 9092):** o ramo da paleta agora diagnostica uma cor desconhecida com `SEM079` (Palette é constantes — mesmo código dos token namespaces); uma nova guarda no `FieldAccessExpr` rejeita campo em QUALQUER tipo construtor kof.ui (`KofUi.isConstructor`) com `SEM079`, disparando só quando `recvType` é UNKNOWN (uma classe do usuário chamada `Color` é preservada). O ramo `web` do `MemberCallNamespaces` agora devolve `unknown(sa, "web", método)` → `SEM025` para qualquer método além do `web.app()` de 0 args.
+
+**Prova (Q0/Q1/Q3):** RED primeiro — `unknownPaletteMemberIsSem079`, `unknownColorFieldIsSem079`, `unknownThemeFieldIsSem079` (classe de campo) e `unknownWebNamespaceMethodFailsWithSem025` (classe de método) falham 4/4 no código pré-fix (compila limpo: `result.success() == true`); GREEN depois, **23/23** e **10/10** respectivamente. Controles `validUiFacesStillCompile` (`Palette.red`/`Color.rgba`/`Theme.light`) e `validWebAppStillCompile` travam as faces vivas.
+
+**Status:** ✅ CORRIGIDO 25/09.
+
+**Dono:** sessão 9092 (lane compiler), caminho de campo do `SemExpressionTyper` + ramo web do `MemberCallNamespaces`; família de guarda do §495/§496/#126/§490.
+<!-- en-switch --> **EN:** [§498](known-bugs.md#498--unknown-field-on-kofui-types-palettebogus-colorbogus-themebogus-and-unknown-method-on-web-webbogus-compiled-clean--getfield---silent-no-op-now-sem079sem025---fixed-2509)

@@ -13,6 +13,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§498 — unknown member on kof.ui types / the `web` namespace is a diagnostic**
+    (25/09): `Palette.bogus`, `Color.bogus`, `Theme.bogus` (fields) compiled
+    clean and emitted `getfield "?".bogus`; `web.bogus()` compiled clean and
+    the lowering emitted nothing (silent no-op; as an expression,
+    `VerifyError`). The palette branch now diagnoses an unknown color and a
+    new UI-constructor field guard both emit `SEM079`; the `web` namespace
+    method now emits `SEM025`. RED→GREEN: `BuiltinUnknownFieldGuardTest`
+    23/23 + `BuiltinUnknownMethodGuardTest` 10/10; controls Palette.red /
+    Color.rgba / Theme.light / web.app compile. Same family as §495/§496.
+
   - **§496 — unknown FIELD on a builtin namespace is a clean SEM102**
     (25/09): `math.bogus` (and even `math.PI`, `strings.EMPTY`, `time.EPOCH`,
     `db.bogus`, …) compiled clean; the receiver is neither a local nor a type,

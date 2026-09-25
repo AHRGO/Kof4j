@@ -13,6 +13,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§498 — membro desconhecido em tipos kof.ui / no namespace `web` vira diagnóstico**
+    (25/09): `Palette.bogus`, `Color.bogus`, `Theme.bogus` (campos) compilavam
+    limpo e emitiam `getfield "?".bogus`; `web.bogus()` compilava limpo e o
+    lowering não emitia nada (no-op silencioso; como expressão, `VerifyError`).
+    O ramo da paleta agora diagnostica cor desconhecida e uma nova guarda de
+    campo em tipo construtor UI emitem `SEM079`; o método no namespace `web`
+    agora emite `SEM025`. RED→GREEN: `BuiltinUnknownFieldGuardTest` 23/23 +
+    `BuiltinUnknownMethodGuardTest` 10/10; controles Palette.red / Color.rgba /
+    Theme.light / web.app compilam. Mesma família do §495/§496.
+
   - **§496 — campo desconhecido em namespace builtin é um SEM102 limpo**
     (25/09): `math.bogus` (e até `math.PI`, `strings.EMPTY`, `time.EPOCH`,
     `db.bogus`, …) compilava limpo; o receiver não é local nem tipo, então o
