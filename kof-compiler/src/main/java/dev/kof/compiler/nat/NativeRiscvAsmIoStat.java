@@ -21,13 +21,15 @@ public final class NativeRiscvAsmIoStat {
             # ---------------------------------------------------------------
             # kof_io_stat_mode(path@a0) -> st_mode | -1
             # newfstatat(AT_FDCWD=-100, path, statbuf, flags=0); struct stat
-            # (128B nas duas archs) na pilha, st_mode em +16.
+            # (128B nas duas archs) na pilha, st_mode em +16 (riscv64/aarch64;
+            # x86_64 e +24). a0 = KofString OBJETO -> os bytes UTF-8 ficam em
+            # a0+24 (mesmo contrato do x86, RuntimeIo1).
             # ---------------------------------------------------------------
             .globl kof_io_stat_mode
             .type kof_io_stat_mode, @function
             kof_io_stat_mode:
                 addi sp, sp, -144
-                mv   a1, a0                 # pathname
+                addi a1, a0, 24             # pathname (bytes da KofString)
                 li   a0, -100               # AT_FDCWD
                 mv   a2, sp                 # statbuf
                 li   a3, 0                  # flags
