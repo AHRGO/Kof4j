@@ -393,6 +393,13 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `NativeIoNormalizeCrossTest` (`/a/c`, `a/b`, `c`, `/a/b`, `/`, `.`, `x`;
     JVM==riscv64==aarch64).
 
+  - **D-FULL-PARITY-050 linha 13 fatia 14 (lane native x86-64) — `Directory.delete()`
+    recursivo no x86-64.** O `RuntimeIo3.kof_io_dir_delete` agora faz stat do path,
+    percorre a árvore com `getdents64` e recursa em cada filho (`path + "/" + name`,
+    montado via `kof_string_concat`), depois `rmdir`; arquivos vão por `unlink`.
+    Igual ao contrato recursivo `Files.walk` da JVM. Prova:
+    `IoE2ETest.directoryDeleteRecursive` (JVM==x86-64).
+
   - **D-FULL-PARITY-050 linha 13 fatia 13 (lane native-cross) — `Directory.delete()`
     recursivo no cross riscv64/aarch64.** A peça cross nova `NativeRiscvAsmIoDirDelete`
     implementa `kof_io_dir_delete` com `getdents64` + `unlinkat` (`AT_REMOVEDIR`),

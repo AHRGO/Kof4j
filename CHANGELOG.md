@@ -394,6 +394,13 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Proof: `NativeIoNormalizeCrossTest` (`/a/c`, `a/b`, `c`, `/a/b`, `/`, `.`, `x`;
     JVM==riscv64==aarch64).
 
+  - **D-FULL-PARITY-050 row 13 slice 14 (native x86-64 lane) — recursive
+    `Directory.delete()` on x86-64.** `RuntimeIo3.kof_io_dir_delete` now stats the
+    path, walks the tree with `getdents64` and recurses on each child
+    (`path + "/" + name`, built via `kof_string_concat`), then `rmdir`; files go
+    through `unlink`. Matches the JVM `Files.walk` recursive contract.
+    Proof: `IoE2ETest.directoryDeleteRecursive` (JVM==x86-64).
+
   - **D-FULL-PARITY-050 row 13 slice 13 (native-cross lane) — recursive
     `Directory.delete()` on the riscv64/aarch64 cross.** The new cross piece
     `NativeRiscvAsmIoDirDelete` implements `kof_io_dir_delete` with `getdents64` +
