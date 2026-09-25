@@ -393,6 +393,12 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `NativeIoNormalizeCrossTest` (`/a/c`, `a/b`, `c`, `/a/b`, `/`, `.`, `x`;
     JVM==riscv64==aarch64).
 
+  - **§497 catalogado (lane native-cross) — gaps nativos do `kof.io`.** `Directory.delete()`
+    é recursivo na JVM mas um `rmdir` cru no x86-64 (não recursivo) e ausente no cross
+    riscv64/aarch64; `copyTo`/`moveTo`/`modifiedTime`/`isSymlink` não têm implementação
+    nativa em nenhum alvo (só JVM). Catalogado (Q7) em `known-bugs.md §497`; família do
+    ledger `NAT006` da linha 13.
+
   - **D-FULL-PARITY-050 linha 13 fatia 12 (lane native-cross) — `Path.toAbsolute`
     no cross riscv64/aarch64.** A peça cross nova `NativeRiscvAsmIoToAbsolute` porta
     `kof_io_path_to_absolute` (path absoluto devolvido como está, senão `getcwd`

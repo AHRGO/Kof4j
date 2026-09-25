@@ -394,6 +394,12 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Proof: `NativeIoNormalizeCrossTest` (`/a/c`, `a/b`, `c`, `/a/b`, `/`, `.`, `x`;
     JVM==riscv64==aarch64).
 
+  - **§497 catalogued (native-cross lane) — native `kof.io` gaps.** `Directory.delete()`
+    is recursive on the JVM but a bare `rmdir` on x86-64 (non-recursive) and absent
+    on the riscv64/aarch64 cross; `copyTo`/`moveTo`/`modifiedTime`/`isSymlink` have no
+    native implementation on any target (JVM-only). Catalogued (Q7) in
+    `known-bugs.md §497`; row-13 `NAT006` ledger family.
+
   - **D-FULL-PARITY-050 row 13 slice 12 (native-cross lane) — `Path.toAbsolute`
     on the riscv64/aarch64 cross.** The new cross piece
     `NativeRiscvAsmIoToAbsolute` ports `kof_io_path_to_absolute` (absolute path

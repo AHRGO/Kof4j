@@ -14972,3 +14972,27 @@ main() {
 
 **Owner:** session 9092 (lane compiler), `SemExpressionTyper` field path; guard family of §491/§495.
 <!-- pt-switch --> **PT:** [§496 (pt_BR)](known-bugs.pt_BR.md#496--campo-desconhecido-em-qualquer-namespace-builtin-mathbogus-ate-mathpi-compilava-limpo-e-emitia-getfield-contra-uma-classe-chamada---noclassdeffounderror---aberto-catalogado)
+
+---
+
+## §497 — Native kof.io gaps: Directory.delete is non-recursive on x86-64 and copyTo/moveTo/modifiedTime/isSymlink have no native impl — 🟡 OPEN (catalogued)
+
+**Symptom / evidence (source-measured 26/09, lane native-cross):** the `kof.io` surface advertises faces that do not behave the same on the native backends:
+
+1. **`Directory("d").delete()` (0-arg → `kof_io_dir_delete`) is NOT recursive on x86-64.** The JVM contract (`JvmRuntimeIo.java:232-248`) walks the tree (`Files.walk` + `reverseOrder` + `deleteIfExists`) and returns `1` for a non-empty directory; the x86-64 implementation (`RuntimeIo3.java:237-251`) is a bare `rmdir` syscall (84) — on a non-empty directory it fails and returns `0`. A silent native × JVM divergence (rule 5) hidden behind the boolean. The riscv64/aarch64 cross has no `kof_io_dir_delete` at all (NAT006-gated).
+
+2. **`copyTo`/`moveTo`/`modifiedTime`/`isSymlink` have NO native implementation.** `kof_io_file_copy_to`/`kof_io_file_move_to`/`kof_io_file_modified_time`/`kof_io_file_is_symlink` exist only in `JvmRuntimeIo.java` (JVM); a `grep` of `runtime/` (x86-64) and `nat/` (cross) finds no definition — only the `KofIo` mappings. On native they cannot run (undefined symbol / NAT006 gate), while the JVM supports all four.
+
+**Minimal repro (Kof):**
+```
+Directory("probe").create()
+File("probe/f.txt").writeText("x")
+println(Directory("probe").delete())   // JVM: true (recursive); x86-64: false (rmdir on a non-empty dir)
+```
+
+**Impact / honesty (R6/Q7):** catalogued, not silently shipped. `dir_delete` is a rule-5 parity bug; the four missing faces are native coverage gaps. The correct `dir_delete` (recursive `getdents64`+`unlinkat` on the cross, `getdents64`+`unlink`+`rmdir` on x86-64) makes the cross MORE capable than today's x86-64, so the x86-64 recursion must land in the same unit to keep the targets aligned.
+
+**Status:** 🟡 OPEN — catalogued (Q7).
+
+**Owner:** lane native-cross (`RuntimeIo3.java` x86-64 recursion + new cross slice); row-13 `NAT006` ledger family.
+<!-- pt-switch --> **PT:** [§497 (pt_BR)](known-bugs.pt_BR.md#497--gaps-nativos-do-kofio-directorydelete-nao-e-recursivo-no-x86-64-e-copytomovetomodifiedtimeissymlink-nao-tem-implementacao-nativa---open-catalogado)
