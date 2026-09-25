@@ -144,7 +144,17 @@ jobs:
         shell: bash
         run: |
           VERSION=$(cat VERSION)
-          scripts/changelog.sh > /tmp/changelog-section.md
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            # release final: changelog desde a última release estável (sem +date), não desde a última pre-release
+            SINCE=$(git tag -l 'kof-*-linux-x86_64' --sort=-v:refname | grep -v '\+' | head -1 || true)
+            if [ -n "$SINCE" ]; then
+              scripts/changelog.sh "$SINCE" > /tmp/changelog-section.md
+            else
+              scripts/changelog.sh > /tmp/changelog-section.md
+            fi
+          else
+            scripts/changelog.sh > /tmp/changelog-section.md
+          fi
           { echo "# Kof $VERSION (${{ matrix.target }})"; echo ""; cat /tmp/changelog-section.md; } > release-notes.md
           cat release-notes.md
 
