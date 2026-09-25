@@ -13,6 +13,20 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **S5.5 fatia 4a (db-parity, lane gaps-db) — a primitiva exec que lança para
+    o `orm.save` no cross MySQL (peça cross `B76`)** (24/09):
+    `kof_orm_mysql_exec(fd, sql) -> affected | throw` envia o COM_QUERY (mesmo
+    framing B67/B72) e classifica a resposta como o x86
+    `RuntimeOrmMysqlExec`/`.Lorm_sa_exec`: OK (1º byte `0x00`) → `affectedRows`
+    lenenc (1B / `0xFC`+2LE / `0xFD`+3LE); ERR do servidor (`0xFF`) → lança
+    `mysql: <msg>` (mensagem em `payload+9`, teto 400); perda/resposta estranha →
+    lança `mysql: connection lost`. É a **única** face ORM que lança (o
+    `delete`/`deleteAll` x86 usam o exec genérico sem throw), então é exatamente
+    o que o `orm.save` precisa e nada mais. Prova: `NativeRiscvDbWireTest` —
+    harness em riscv64 + aarch64 sob qemu contra o MariaDB real
+    (`0\n1\n1\n1\n0\n1`) mais o throw do ERR (`mysql: …`, exit 1) e a
+    sabotagem do link sem a B76; `NativeRiscvRuntimeSliceRegistryTest` 9/9.
+
   - **S5.5 fatia 3 (db-parity, lane gaps-db) — `orm.delete`/`deleteAll` sobre o
     wire MySQL no cross (peça cross `B75` + dispatch `B50`/`B54`)** (24/09):
     `kof_orm_delete_mysql(id,key,table,schema)` e

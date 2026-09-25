@@ -224,6 +224,10 @@ public final class NativeRiscvAsm {
                 // mysql cross — literal compartilhado (kof_orm_mysql_lit) e
                 // delete/deleteAll (exec genérico B72, sem throw, como o x86).
                 .append(NativeRiscvAsmRtB75.RISCV_RUNTIME_ASM_B_75)
+                // S5.5 fatia 4a (gaps-db lane, 24/09): exec que LANCA no erro
+                // do servidor — pre-requisito do orm.save (port do x86
+                // RuntimeOrmMysqlExec/.Lorm_sa_exec).
+                .append(NativeRiscvAsmRtB76.RISCV_RUNTIME_ASM_B_76)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

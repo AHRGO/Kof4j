@@ -1902,6 +1902,288 @@ class NativeRiscvDbWireTest {
         assertEquals(execBindOracle(), out, "execute aarch64 diverge do oráculo");
     }
 
+    // ---- S5.5 fatia 4a (gaps-db lane, 24/09): exec que LANCA (peca B76) ----
+
+    /** Harness do {@code kof_orm_mysql_exec} (peca B76, port do x86
+     *  {@code RuntimeOrmMysqlExec}/{@code .Lorm_sa_exec}) contra o MariaDB
+     *  real: uma conexao, CREATE TEMPORARY (affected 0), INSERT (1),
+     *  INSERT (1), UPDATE casado (1), DELETE sem match (0) e DELETE casado (1).
+     *  As strings vao para o HEAP (como em producao). {@code badSql}, quando
+     *  nao-vazio, substitui a ultima operacao (prova do throw). */
+    private static String ormExecHarness(String badSql) {
+        int port = mysqlPort();
+        String hi = String.format("0x%02X", (port >> 8) & 0xff);
+        String lo = String.format("0x%02X", port & 0xff);
+        String create = "CREATE TEMPORARY TABLE kof_b76 (id INT PRIMARY KEY, name VARCHAR(16))";
+        String i1 = "INSERT INTO kof_b76 VALUES (1,'a')";
+        String i2 = "INSERT INTO kof_b76 VALUES (2,'b')";
+        String upd = "UPDATE kof_b76 SET name='c' WHERE id=1";
+        String d0 = "DELETE FROM kof_b76 WHERE id=999";
+        String d1 = "DELETE FROM kof_b76 WHERE id=2";
+        String bad = badSql == null || badSql.isEmpty() ? "THIS IS NOT SQL" : badSql;
+        return """
+                .section .rodata
+                .Lq76_raw_create:
+                    .ascii "@CREATE@"
+                .Lq76_raw_i1:
+                    .ascii "@I1@"
+                .Lq76_raw_i2:
+                    .ascii "@I2@"
+                .Lq76_raw_upd:
+                    .ascii "@UPD@"
+                .Lq76_raw_d0:
+                    .ascii "@D0@"
+                .Lq76_raw_d1:
+                    .ascii "@D1@"
+                .Lq76_raw_bad:
+                    .ascii "@BAD@"
+                .section .data
+                .align 3
+                .Lq76_user:
+                    .zero 16
+                    .word 4
+                    .zero 4
+                    .ascii "root"
+                .align 3
+                .Lq76_pass:
+                    .zero 16
+                    .word 7
+                    .zero 4
+                    .ascii "kofpass"
+                .align 3
+                .Lq76_db:
+                    .zero 16
+                    .word 4
+                    .zero 4
+                    .ascii "test"
+                .align 3
+                .Lq76_addr:
+                    .byte 2, 0, PORT_HI, PORT_LO, 127, 0, 0, 1
+                    .zero 8
+                .align 3
+                .Lkof_heap_root_start:
+                .Lkof_heap_root_end:
+                .section .text
+                .globl _start
+                _start:
+                    andi sp, sp, -16
+                    addi sp, sp, -96
+                    # strings no heap: 0:create 8:i1 16:i2 24:upd 32:d0 40:d1 48:bad
+                    la   a0, .Lq76_raw_create
+                    li   a1, @LEN_CREATE@
+                    call kof_io_make_string
+                    sd   a0, 0(sp)
+                    la   a0, .Lq76_raw_i1
+                    li   a1, @LEN_I1@
+                    call kof_io_make_string
+                    sd   a0, 8(sp)
+                    la   a0, .Lq76_raw_i2
+                    li   a1, @LEN_I2@
+                    call kof_io_make_string
+                    sd   a0, 16(sp)
+                    la   a0, .Lq76_raw_upd
+                    li   a1, @LEN_UPD@
+                    call kof_io_make_string
+                    sd   a0, 24(sp)
+                    la   a0, .Lq76_raw_d0
+                    li   a1, @LEN_D0@
+                    call kof_io_make_string
+                    sd   a0, 32(sp)
+                    la   a0, .Lq76_raw_d1
+                    li   a1, @LEN_D1@
+                    call kof_io_make_string
+                    sd   a0, 40(sp)
+                    la   a0, .Lq76_raw_bad
+                    li   a1, @LEN_BAD@
+                    call kof_io_make_string
+                    sd   a0, 48(sp)
+                    # socket + connect + handshake (s0 = fd)
+                    li   a0, 2
+                    li   a1, 1
+                    li   a2, 0
+                    call kof_plat_net_socket
+                    mv   s0, a0
+                    mv   a0, s0
+                    la   a1, .Lq76_addr
+                    li   a2, 16
+                    call kof_plat_net_connect
+                    mv   a0, s0
+                    la   a1, .Lq76_user
+                    la   a2, .Lq76_pass
+                    la   a3, .Lq76_db
+                    call kof_db_mysql_handshake
+                    bnez a0, .Lq76_fail
+                    ld   a0, 0(sp)
+                    call .Lq76_x
+                    ld   a0, 8(sp)
+                    call .Lq76_x
+                    ld   a0, 16(sp)
+                    call .Lq76_x
+                    ld   a0, 24(sp)
+                    call .Lq76_x
+                    ld   a0, 32(sp)
+                    call .Lq76_x
+                    ld   a0, 40(sp)
+                    call .Lq76_x
+                    @BAD_CALL@
+                    mv   a0, s0
+                    call kof_plat_close
+                    li   a0, 0
+                    li   a7, 93
+                    ecall
+                .Lq76_fail:
+                    li   a0, -1
+                    call kof_println_int
+                    mv   a0, s0
+                    call kof_plat_close
+                    li   a0, 0
+                    li   a7, 93
+                    ecall
+                # a0 = sql -> kof_orm_mysql_exec(fd, sql) + println(affected)
+                .Lq76_x:
+                    addi sp, sp, -32
+                    sd   ra, 0(sp)
+                    sd   s0, 8(sp)
+                    sd   s1, 16(sp)
+                    mv   s1, a0
+                    mv   a0, s0
+                    mv   a1, s1
+                    call kof_orm_mysql_exec
+                    call kof_println_int
+                    ld   ra, 0(sp)
+                    ld   s0, 8(sp)
+                    ld   s1, 16(sp)
+                    addi sp, sp, 32
+                    ret
+                .globl kof_super_table
+                kof_super_table:
+                    .word 0
+                .globl kof_equals_table
+                kof_equals_table:
+                    .quad 0
+                .globl kof_hashcode_table
+                kof_hashcode_table:
+                    .quad 0
+                .globl kof_tostring_table
+                kof_tostring_table:
+                    .quad 0
+                """
+                .replace("PORT_HI", hi).replace("PORT_LO", lo)
+                .replace("@CREATE@", create).replace("@I1@", i1).replace("@I2@", i2)
+                .replace("@UPD@", upd).replace("@D0@", d0).replace("@D1@", d1)
+                .replace("@BAD@", bad)
+                .replace("@LEN_CREATE@", String.valueOf(create.length()))
+                .replace("@LEN_I1@", String.valueOf(i1.length()))
+                .replace("@LEN_I2@", String.valueOf(i2.length()))
+                .replace("@LEN_UPD@", String.valueOf(upd.length()))
+                .replace("@LEN_D0@", String.valueOf(d0.length()))
+                .replace("@LEN_D1@", String.valueOf(d1.length()))
+                .replace("@LEN_BAD@", String.valueOf(bad.length()))
+                .replace("@BAD_CALL@", (badSql != null && !badSql.isEmpty())
+                        ? "                    ld   a0, 48(sp)\n                    call .Lq76_x\n"
+                        : "");
+    }
+
+    private static String ormExecOracle() {
+        return """
+                0
+                1
+                1
+                1
+                0
+                1""";
+    }
+
+    @Test
+    void ormExecAgainstRealMariaDbOnRiscv64(@TempDir Path tempDir) throws Exception {
+        assumeRiscv();
+        assumeMaria();
+        String harness = ormExecHarness(null);
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String out = buildRun("riscv64", tempDir, "ormex_rv", harness + "\n" + runtime);
+        assertEquals(ormExecOracle(), out, "kof_orm_mysql_exec riscv64 diverge do oraculo");
+    }
+
+    @Test
+    void ormExecAgainstRealMariaDbOnAarch64(@TempDir Path tempDir) throws Exception {
+        assumeAarch64();
+        assumeMaria();
+        String harness = ormExecHarness(null);
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String riscv = harness + "\n" + runtime;
+        StringBuilder arm = new StringBuilder();
+        for (String line : riscv.split("\n", -1)) {
+            for (String t : NativeAarch64Translator.translateRiscvToAarch64(line)) arm.append(t).append('\n');
+        }
+        String out = buildRun("aarch64", tempDir, "ormex_aa", arm.toString());
+        assertEquals(ormExecOracle(), out, "kof_orm_mysql_exec aarch64 diverge do oraculo");
+    }
+
+    /** O ERR do servidor no exec do save deve LANÇAR (`mysql: <msg>`), nao
+     *  devolver 0 como a B72 — RED sem a peca. Sem handler, o throw imprime a
+     *  KofString e sai 1 (paridade x86). */
+    @Test
+    void ormExecErrorThrowsAgainstRealMariaDbOnRiscv64(@TempDir Path tempDir) throws Exception {
+        assumeRiscv();
+        assumeMaria();
+        String harness = ormExecHarness("THIS IS NOT SQL");
+        String runtime = RiscvGcTestRuntimes.prunedFor(harness);
+        String out = buildRunAllowFail("riscv64", tempDir, "ormex_err", harness + "\n" + runtime);
+        String[] lines = out.split("\n", -1);
+        assertTrue(lines.length >= 1 && lines[lines.length - 1].startsWith("mysql: "),
+                "o ERR deve lancar 'mysql: ...' (nao 0); saida: " + out);
+    }
+
+    @Test
+    void withoutOrmExecPieceLinkFailsSabotage(@TempDir Path tempDir) throws IOException {
+        assumeRiscv();
+        String harness = ormExecHarness(null);
+        Set<Integer> keep = new LinkedHashSet<>(RiscvSlices.keepForProgramText(harness));
+        int b76 = -1;
+        for (RiscvSlices.Piece p : RiscvSlices.pieces()) {
+            if ("RISCV_RUNTIME_ASM_B_76".equals(p.field())) b76 = p.index();
+        }
+        assertTrue(b76 >= 0, "peça B76 (exec que lança) não encontrada no inventário");
+        assertTrue(keep.remove(b76), "B76 deveria estar no keep do harness de orm.exec");
+        String runtime = RiscvSlices.renderSubset(keep);
+        Path asm = tempDir.resolve("sab_ormex.s");
+        Files.writeString(asm, harness + "\n" + runtime);
+        Path obj = tempDir.resolve("sab_ormex.o");
+        Path bin = tempDir.resolve("sab_ormex");
+        runCapture("riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
+        String[] r = runAllowFail("riscv64-linux-gnu-ld", "--no-relax", "-o", bin.toString(), obj.toString());
+        assertNotEquals("0", r[1], "sem a B76 o link deveria falhar (undefined kof_orm_mysql_exec); saída: " + r[0]);
+        assertTrue(r[0].contains("kof_orm_mysql_exec"),
+                "a falha deve citar kof_orm_mysql_exec: " + r[0]);
+    }
+
+    private String buildRunAllowFail(String arch, Path tempDir, String name, String asmText) throws IOException {
+        Path asm = tempDir.resolve(name + ".s");
+        Files.writeString(asm, asmText);
+        Path obj = tempDir.resolve(name + ".o");
+        Path bin = tempDir.resolve(name);
+        String as = arch.equals("riscv64") ? "riscv64-linux-gnu-as" : "aarch64-linux-gnu-as";
+        String ld = arch.equals("riscv64") ? "riscv64-linux-gnu-ld" : "aarch64-linux-gnu-ld";
+        if (arch.equals("riscv64")) {
+            runCapture(as, "-mno-relax", "-o", obj.toString(), asm.toString());
+        } else {
+            runCapture(as, "-o", obj.toString(), asm.toString());
+        }
+        runCapture(ld, "--no-relax", "-o", bin.toString(), obj.toString());
+        bin.toFile().setExecutable(true);
+        ProcessBuilder pb = new ProcessBuilder("qemu-" + arch, bin.toString());
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        try {
+            p.waitFor();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException(e);
+        }
+        return out;
+    }
+
     @Test
     void withoutExecutePieceLinkFailsSabotage(@TempDir Path tempDir) throws IOException {
         assumeRiscv();
