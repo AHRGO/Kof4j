@@ -78,6 +78,20 @@ class IoE2ETest {
         return dir.replace("\\", "\\\\");
     }
 
+    // D-FULL-PARITY-050 row 13 slice 14: Directory.delete() recursivo (JVM==x86-64).
+    @Test
+    void directoryDeleteRecursive(@TempDir Path tempDir) throws IOException {
+        both(tempDir, "dirDeleteRec", """
+            var d = Directory("%s/tree")
+            d.create()
+            File("%s/tree/a.txt").writeText("x")
+            Directory("%s/tree/sub").create()
+            File("%s/tree/sub/b.txt").writeText("y")
+            println(d.delete())
+            println(File("%s/tree").exists())
+            """, "true\nfalse");
+    }
+
     // G-ORG-002 (copyTo/moveTo/modifiedTime/isSymlink) só tem implementação
     // JVM nesta PR (ver docs/stdlib/IO.md e KofIo.java) — Native fica de fora
     // deliberadamente, então estes casos não passam por both().
