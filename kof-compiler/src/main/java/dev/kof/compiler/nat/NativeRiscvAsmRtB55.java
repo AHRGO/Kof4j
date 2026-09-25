@@ -51,9 +51,14 @@ public final class NativeRiscvAsmRtB55 {
                 sd   s9, 72(sp)
                 sd   s10, 64(sp)
                 sd   s11, 56(sp)
+                mv   s0, a0                        # id (temporario)
                 mv   s1, a1
                 mv   s2, a2
                 mv   s3, a3
+                call kof_db_type                   # a0 = id ainda
+                li   t0, 2
+                beq  a0, t0, .L55_save_mysql
+                mv   a0, s0
                 call kof_orm_conn
                 mv   s0, a0                        # conn
                 mv   a0, s3
@@ -120,6 +125,28 @@ public final class NativeRiscvAsmRtB55 {
                 ld   t0, 8(sp)
                 beqz t0, .L55_path_insert
                 j    .L55_path_update
+
+            # ---- dispatch mysql (type 2): peca B77 ------------------------
+            .L55_save_mysql:
+                mv   a0, s0
+                mv   a1, s1
+                mv   a2, s2
+                mv   a3, s3
+                ld   ra, 152(sp)
+                ld   s0, 144(sp)
+                ld   s1, 136(sp)
+                ld   s2, 128(sp)
+                ld   s3, 120(sp)
+                ld   s4, 112(sp)
+                ld   s5, 104(sp)
+                ld   s6, 96(sp)
+                ld   s7, 88(sp)
+                ld   s8, 80(sp)
+                ld   s9, 72(sp)
+                ld   s10, 64(sp)
+                ld   s11, 56(sp)
+                addi sp, sp, 160
+                j    kof_orm_save_mysql
 
             # ---- path INSERT (nova instancia) / upsert (mesma) ------------
             .L55_path_insert:

@@ -13,6 +13,30 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **S5.5 slice 4b (db-parity, gaps-db lane) — `orm.save` over the MySQL wire
+    on the cross (cross piece `B77`)** (24/09): `kof_orm_save` branches on
+    `kof_db_type == 2` **before** `kof_orm_conn` (which refuses type ≠ 1) and
+    tail-calls the new `kof_orm_save_mysql`, mirroring the three measured host
+    outcomes: (1) PK null/0 → INSERT **without** the PK column +
+    `SELECT LAST_INSERT_ID()` (`kof_db_mysql_scalar_int`/`B74`) and a **new
+    instance** with the PK patched (`kof_alloc` + `kof_init_object` +
+    `kof_memcpy`); (2) PK != 0 → ``UPDATE `t` SET `f` = <lit>,… WHERE `pk` =
+    <lit>`` → same pointer when rows are found; (3) UPDATE 0 rows → full-column
+    INSERT (upsert) → same pointer. The PK criterion mirrors the x86 (int/long
+    == 0, double/float truncated == 0 with the `INT64_MIN`/`MAX` sentinels,
+    String null → INSERT, bool never). Identifiers use the backtick dialect
+    (`kof_orm_mysql_bt_str`/`bt_raw`); field values are rendered by the schema
+    `typeCode` (`kof_orm_mysql_field_lit`, port of `RuntimeOrmMysqlFieldLit` —
+    int sign-extended, long/bool `kof_long_to_string`, double/float
+    `kof_double_to_string` with the float widened, KofString via
+    `kof_db_mysql_render`, null → `NULL`, other type → ORM001); the exec is the
+    throwing `kof_orm_mysql_exec` (`B76`). Proof:
+    `KofOrmE2ETest#crossNativeMariadbSaveMatchesOracles` — JVM + x86-64 +
+    riscv64 + aarch64 byte-identical (`1\n1\n1\n1\n{"name":"Mel2"}\n7\n2\n8\n3`)
+    — and `#crossNativeMariadbSaveErrorMatchesX86Oracle` (missing table throws on
+    x86 == riscv64 == aarch64); `KofOrmE2ETest` 77/0F/2skip,
+    `NativeRiscvDbWireTest` 41/0F, `NativeRiscvRuntimeSliceRegistryTest` 9/9.
+
   - **S5.5 slice 4a (db-parity, gaps-db lane) — the throwing exec primitive for
     `orm.save` on the MySQL cross (cross piece `B76`)** (24/09):
     `kof_orm_mysql_exec(fd, sql) -> affected | throw` sends the COM_QUERY

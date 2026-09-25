@@ -228,6 +228,11 @@ public final class NativeRiscvAsm {
                 // do servidor — pre-requisito do orm.save (port do x86
                 // RuntimeOrmMysqlExec/.Lorm_sa_exec).
                 .append(NativeRiscvAsmRtB76.RISCV_RUNTIME_ASM_B_76)
+                // S5.5 fatia 4b (gaps-db lane, 24/09): orm.save no wire mysql
+                // cross — 3 saidas do host (INSERT gerado + LAST_INSERT_ID +
+                // nova instancia; UPDATE hit; UPDATE miss -> upsert), dialeto
+                // backtick e literais por typeCode (port de RuntimeOrmMysqlSave).
+                .append(NativeRiscvAsmRtB77.RISCV_RUNTIME_ASM_B_77)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

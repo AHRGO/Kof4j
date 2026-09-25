@@ -8,7 +8,7 @@
 > when parity is complete.
 
 **Owner:** `gaps-db` lane (handed over 21/09 by order of the maintainer, under `D-DB-PARITY-OWNER`; S0/S1 authorized) · **Records/plan:** docs/plataforma lane
-**Branch:** `beta-0.5.0` · **Status:** S0 ✅ DONE (21/09, session 9092) — honest native refusal of an unsupported scheme with the named `DB001` code, plus real link-by-use (no `libmariadb` link for non-mysql literals); **S1 ✅ DONE on Native x86-64 (23/09, gaps-db lane)** — `mariadb://` is a `mysql://` wire alias; cross stays honest `DB001` until the mysql wire is ported (R7) — **superseded by S5.4 slice 1 (24/09, piece `B73`): `mysql://`/`mariadb://` on the cross now connect for real**; **S2 ✅ DONE on JVM/JS/Android (23/09, gaps-db lane)** — a missing JDBC driver is now a named `DB001` diagnostic (real connection failures untouched); **S3/S4 ✅ DONE 23/09 (gaps-db lane)** — `mongodb://` real on JVM/Android and declared `DB001` on JS/Native; `oracle` declared (no driver/server on the host); **S5.0 (cross socket layer) ✅ SATISFIED 23/09 (measured — already proven by the cross HTTP core)**; **S5.1 (handshake+auth) ✅ SATISFIED 23/09 (pieces `B62`–`B66`): SHA1/bswap + scramble/lenenc + greeting parse + auth-response build + the socket round-trip, proven by `NativeRiscvDbWireTest` on riscv64+aarch64 (qemu, against the JVM oracle and against the REAL MariaDB — the server returns the OK packet; an unknown DB yields Err). The Kof surface (`db.connect` cross) now connects for real (S5.4 slice 1, piece `B73`) and only refuses non-ported schemes with the honest `DB001`**; **S5.2 (`COM_QUERY`) 🟡 PARTIAL 23/09 (pieces `B67`–`B69`) — request framing + first-response classification (`SELECT 1`→1, `SET`→0, bad SQL→255) AND the packet reader + resultset header (ncols + first-row lenenc payload: `SELECT 1`→1col/[01 31], `SELECT 1,'ab'`→2col/[01 31 02 61 62]), proven on riscv64+aarch64 (qemu) against the real MariaDB; materialising all rows as Kof values is the next slice**; **S5.2 ✅ 24/09 (pieces `B70` resultset-as-Kof-rows, `B72` OK/affected `COM_QUERY`); S5.3 ✅ 24/09 (piece `B71` client-side bind substitution); S5.4 ✅ 24/09 (piece `B73` real cross `connect`, piece `B47b` the `execute`/`query` mysql dispatch + `transaction { }`; the scheme-parity front is done); S5.5 (ORM over mysql on the cross) 🟡 IN PROGRESS 24/09 — `orm.count` (fatia 1, `RtB74`/`RtB50`), `orm.count_where` (fatia 2, `RtB53`) and `orm.delete`/`deleteAll` (fatia 3, `RtB75`/`RtB50`/`RtB54`) are REAL on the cross (x86-64 + riscv64 + aarch64, qemu); `orm.save` (fatia 4a ✅: throwing exec `kof_orm_mysql_exec`/`RtB76`, proven on riscv64+aarch64 qemu — the `save` body and `LAST_INSERT_ID` patch are 4b) and the row-object faces (`find`/`all`/`where`/`page`, typed-column ABI) remain sqlite-only on the cross**
+**Branch:** `beta-0.5.0` · **Status:** S0 ✅ DONE (21/09, session 9092) — honest native refusal of an unsupported scheme with the named `DB001` code, plus real link-by-use (no `libmariadb` link for non-mysql literals); **S1 ✅ DONE on Native x86-64 (23/09, gaps-db lane)** — `mariadb://` is a `mysql://` wire alias; cross stays honest `DB001` until the mysql wire is ported (R7) — **superseded by S5.4 slice 1 (24/09, piece `B73`): `mysql://`/`mariadb://` on the cross now connect for real**; **S2 ✅ DONE on JVM/JS/Android (23/09, gaps-db lane)** — a missing JDBC driver is now a named `DB001` diagnostic (real connection failures untouched); **S3/S4 ✅ DONE 23/09 (gaps-db lane)** — `mongodb://` real on JVM/Android and declared `DB001` on JS/Native; `oracle` declared (no driver/server on the host); **S5.0 (cross socket layer) ✅ SATISFIED 23/09 (measured — already proven by the cross HTTP core)**; **S5.1 (handshake+auth) ✅ SATISFIED 23/09 (pieces `B62`–`B66`): SHA1/bswap + scramble/lenenc + greeting parse + auth-response build + the socket round-trip, proven by `NativeRiscvDbWireTest` on riscv64+aarch64 (qemu, against the JVM oracle and against the REAL MariaDB — the server returns the OK packet; an unknown DB yields Err). The Kof surface (`db.connect` cross) now connects for real (S5.4 slice 1, piece `B73`) and only refuses non-ported schemes with the honest `DB001`**; **S5.2 (`COM_QUERY`) 🟡 PARTIAL 23/09 (pieces `B67`–`B69`) — request framing + first-response classification (`SELECT 1`→1, `SET`→0, bad SQL→255) AND the packet reader + resultset header (ncols + first-row lenenc payload: `SELECT 1`→1col/[01 31], `SELECT 1,'ab'`→2col/[01 31 02 61 62]), proven on riscv64+aarch64 (qemu) against the real MariaDB; materialising all rows as Kof values is the next slice**; **S5.2 ✅ 24/09 (pieces `B70` resultset-as-Kof-rows, `B72` OK/affected `COM_QUERY`); S5.3 ✅ 24/09 (piece `B71` client-side bind substitution); S5.4 ✅ 24/09 (piece `B73` real cross `connect`, piece `B47b` the `execute`/`query` mysql dispatch + `transaction { }`; the scheme-parity front is done); S5.5 (ORM over mysql on the cross) 🟡 IN PROGRESS 24/09 — `orm.count` (fatia 1, `RtB74`/`RtB50`), `orm.count_where` (fatia 2, `RtB53`) and `orm.delete`/`deleteAll` (fatia 3, `RtB75`/`RtB50`/`RtB54`) and `orm.save` (fatias 4a+4b, `RtB76`/`RtB77` — generated-PK INSERT + `LAST_INSERT_ID` patch, UPDATE hit, UPDATE miss → upsert) are REAL on the cross (x86-64 + riscv64 + aarch64, qemu); the row-object faces (`find`/`all`/`where`/`page`, typed-column ABI) remain sqlite-only on the cross**
 
 ---
 
@@ -359,11 +359,24 @@ typed roundtrip) produces the **same observable result** on all four targets, or
        `mysql: connection lost`). *Proof:* `NativeRiscvDbWireTest` — harness on
        riscv64 + aarch64 under qemu against the real MariaDB
        (`0\n1\n1\n1\n0\n1`) plus the ERR throw (`mysql: …`, exit 1) and the
-       link-without-B76 sabotage. **Slice 4b (OPEN):** the `kof_orm_save` body
-       itself — the three measured outcomes (generated-PK INSERT + new instance
-       with the patched PK via `LAST_INSERT_ID`; `PK != 0` UPDATE returning the
-       same pointer; UPDATE 0 rows → full-column INSERT), branching on
-       `kof_db_type == 2` and reusing `kof_orm_mysql_lit`/`RtB76`.
+        link-without-B76 sabotage. **Slice 4b DONE 24/09** — the `kof_orm_save`
+        body was landed as `RtB77` (`kof_orm_save_mysql`), branching on
+        `kof_db_type == 2` at the top of `kof_orm_save` (before `kof_orm_conn`,
+        which refuses type≠1). It mirrors the three measured outcomes: (1) PK
+        null/0 → INSERT **without** the PK column + `SELECT LAST_INSERT_ID()`
+        (`kof_db_mysql_scalar_int`/`RtB74`) and a **new instance** with the PK
+        patched (`kof_alloc` + `kof_init_object` + `kof_memcpy`); (2) PK != 0 →
+        ``UPDATE `t` SET `f` = <lit>,… WHERE `pk` = <lit>`` → same pointer when
+        rows are found; (3) UPDATE 0 rows → full-column INSERT (upsert) → same
+        pointer. PK decision mirrors x86 (int/long == 0, double/float truncated
+        == 0 with the INT64_MIN/MAX sentinels, String null → INSERT, bool never).
+        Field literals are schema-`typeCode`-driven (`kof_orm_mysql_field_lit`)
+        with backtick quoting (mysql dialect); exec is the throwing
+        `kof_orm_mysql_exec` (`RtB76`). *Proof:*
+        `KofOrmE2ETest#crossNativeMariadbSaveMatchesOracles` — JVM + x86-64 +
+        riscv64 + aarch64 byte-identical (`1\n1\n1\n1\n{"name":"Mel2"}\n7\n2\n8\n3`)
+        — and `#crossNativeMariadbSaveErrorMatchesX86Oracle` (missing table
+        throws on x86 == riscv64 == aarch64).
     5. **`orm.find`/`all`/`where`/`where_op`/`page`** — row materialisation; needs
        a typed column ABI (B70 returns JSON, not columns) and the mysql dialect.
     Until each lands this stays a **declared interim gap** (never a silent
