@@ -23,6 +23,7 @@ import dev.kof.compiler.runtime.RuntimeIo2;
 import dev.kof.compiler.runtime.RuntimeIo3;
 import dev.kof.compiler.runtime.RuntimeIoMeta;
 import dev.kof.compiler.runtime.RuntimeIoMove;
+import dev.kof.compiler.runtime.RuntimeIoCopy;
 import dev.kof.compiler.runtime.RuntimeJsonArrayDecode1;
 import dev.kof.compiler.runtime.RuntimeJsonArrayDecode2;
 import dev.kof.compiler.runtime.RuntimeJsonBuilder;
@@ -199,6 +200,7 @@ public final class NativeRuntime {
         RuntimeIo3.emit(sb);
         RuntimeIoMeta.emit(sb);
         RuntimeIoMove.emit(sb);
+        RuntimeIoCopy.emit(sb);
         RuntimeUi.emitUiColorFunctions(sb);
         RuntimeUi.emitUiWindowFunctions(sb);
         RuntimeNet.emitNetSocket(sb);

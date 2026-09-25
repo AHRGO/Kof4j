@@ -182,18 +182,21 @@ class DomainGapCodesTest {
     }
 
     @Test
-    void ioOnCrossIsNat006(@TempDir Path tmp) throws Exception {
-        // §427: the File/Path/Directory runtime is x86_64-only on Native; the
-        // cross only has kof_io_strlen/make_string internals. D-FULL-PARITY-050
-        // row 13 ported the whole kof.io face set except the copy family; the
-        // remaining faces (copyTo/moveTo) stay under NAT006.
+    void ioCopyOnCrossHasNoGap(@TempDir Path tmp) throws Exception {
+        // D-FULL-PARITY-050 row 13: the whole kof.io face set (incl. copyTo) now
+        // compiles AND runs on the riscv64/aarch64 cross (proof of execution in
+        // NativeIoCopyCrossTest); here we pin that the compiler emits no gap.
         for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
-            assertGap(tmp, t, "NAT006", """
+            Path f = tmp.resolve("Main-" + t + "-" + System.nanoTime() + ".kf");
+            Files.writeString(f, """
                 main() {
                     val f = File("/tmp/kof-io-probe")
                     println(f.copyTo("/tmp/kof-io-probe2"))
                 }
                 """);
+            CompilationResult r = driver.compile(f, tmp.resolve("out-" + t + "-" + System.nanoTime()), t);
+            assertTrue(r.success(), t + " copyTo must compile on cross: "
+                    + r.diagnostics().getDiagnostics());
         }
     }
 

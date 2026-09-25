@@ -296,6 +296,7 @@ public final class NativeRiscvAsm {
                 // metadata (modifiedTime + isSymlink).
                 .append(NativeRiscvAsmIoMeta.RISCV_RUNTIME_ASM_IO_META)
                 .append(NativeRiscvAsmIoMove.RISCV_RUNTIME_ASM_IO_MOVE)
+                .append(NativeRiscvAsmIoCopy.RISCV_RUNTIME_ASM_IO_COPY)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();
