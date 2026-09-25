@@ -15037,3 +15037,19 @@ println(Directory("probe").delete())   // JVM: true (recursive); x86-64: false (
 
 **Owner:** session 9092 (lane compiler), `SemMethodCallTyper` + `JdkReflectionResolver`; guard family of §495/§496/§498.
 <!-- pt-switch --> **PT:** [§499 (pt_BR)](known-bugs.pt_BR.md#499--metodo-estatico-desconhecido-em-nome-de-tipo-builtin-stringbogus-intbogus--compilava-limpo-e-emitia-invokestatic-ownerbogus--nosuchmethoderror---corrigido)
+---
+
+## §500 — Static method/field on an imported external class name that does not resolve emits an empty-owner call (`invokevirtual "".asList` / `"".bogus`) → class-load failure — 🟡 OPEN (catalogued)
+
+**Symptom (measured 26/09, lane compiler 9092):** with `import java.util.Arrays`, `Arrays.bogus(1)` AND the valid `Arrays.asList(1, 2)` compile clean and emit `invokevirtual "".asList:(II)Ljava/lang/Object;` / `"".bogus:(I)` — empty owner and `invokevirtual` (not `invokestatic`). The artifact then fails at load (`Default.Main` not found / `ClassFormatError: Illegal class name ""`). A static FIELD does the same: `import java.lang.System` + `System.bogusField` compiles clean. Contrast (the path is not wholly broken): `Objects.requireNonNull("x")` resolves correctly (`invokestatic java/util/Objects.requireNonNull`), and an unknown INSTANCE method (`ArrayList().bogus()`) is already `SEM025`.
+
+**Root cause:** an imported class name used as a static receiver infers UNKNOWN; when the resolution (`ExternalClasspath` / `MemberCallTyper`) does not answer, the generic path emits an empty-owner instance call. Two faces share the root: (a) the method genuinely does not exist; (b) the method exists but resolution fails — `ExternalClasspath.resolveMethodWithArgs` matches by fixed arity and has no `ACC_VARARGS` handling, so `Arrays.asList(Object...)` (and `System.bogusField` static fields) fall through.
+
+**Impact / honesty (R6/Q7):** silent invalid bytecode, on unknown AND on valid-but-varargs external statics/fields — hidden behind the launcher message.
+
+**Repro (verbatim):** `import java.util.Arrays` + `main() { println(Arrays.bogus(1)) }` → `kof check` clean; build → `invokevirtual "".bogus`; class fails to load. Same for `Arrays.asList(1,2)` (valid) and `System.bogusField`.
+
+**Status:** 🟡 OPEN — catalogued (Q7).
+
+**Owner:** session 9092 (lane compiler), `SemMethodCallTyper`/`MemberCallTyper` + `ExternalClasspath` (varargs/static-field awareness); family of §491/§495/§496/§499.
+<!-- pt-switch --> **PT:** [§500 (pt_BR)](known-bugs.pt_BR.md#500--metodocampo-estatico-em-nome-de-classe-externa-importada-que-nao-resolve-emite-chamada-de-owner-vazio-invokevirtual-aslist--bogus--falha-de-load-da-classe---aberto-catalogado)
