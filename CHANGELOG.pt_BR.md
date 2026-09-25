@@ -28,6 +28,15 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **§499 — método estático desconhecido em nome de tipo builtin agora é `SEM074`
+    ([FECHADO](docs/bugs-and-gaps/known-bugs.pt_BR.md#499--metodo-estatico-desconhecido-em-nome-de-tipo-builtin-stringbogus-intbogus--compilava-limpo-e-emitia-invokestatic-ownerbogus--nosuchmethoderror---corrigido))** (26/09): `String.bogus()`, `Int.bogus()`,
+    `Bool`/`Long`/`Double`/`Float`/`Char`/`Byte`/`Short`/`Object.bogus()` compilavam limpo e emitiam
+    `invokestatic <Owner>.bogus` (`Char`: owner vazio) → `NoSuchMethodError` em
+    runtime. O typer agora confirma o método contra o owner JDK com o novo
+    `JdkReflectionResolver.hasJdkMethod` ciente de varargs e recusa um ausente em
+    compile time — estáticos reais de interop (`String.valueOf`/`join`/`format`,
+    `Long.parseLong`, `Double.isNaN`, …) seguem compilando. RED 3/3 → GREEN
+    `BuiltinUnknownMethodGuardTest` 14/14; suíte 4016 0F/0E.
   - **§498 — membro desconhecido em tipos kof.ui / no namespace `web` vira diagnóstico**
     (25/09): `Palette.bogus`, `Color.bogus`, `Theme.bogus` (campos) compilavam
     limpo e emitiam `getfield "?".bogus`; `web.bogus()` compilava limpo e o

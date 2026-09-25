@@ -29,6 +29,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§499 — an unknown static method on a builtin type name is now `SEM074`
+    ([FECHADO](docs/bugs-and-gaps/known-bugs.md#499--unknown-static-method-on-a-builtin-type-name-stringbogus-intbogus--compiled-clean-and-emitted-invokestatic-ownerbogus--nosuchmethoderror---fixed))** (26/09): `String.bogus()`, `Int.bogus()`,
+    `Bool`/`Long`/`Double`/`Float`/`Char`/`Byte`/`Short`/`Object.bogus()` compiled clean and emitted
+    `invokestatic <Owner>.bogus` (`Char`: empty owner) → `NoSuchMethodError` at
+    runtime. The typer now confirms the method against the JDK owner with the
+    new varargs-aware `JdkReflectionResolver.hasJdkMethod` and refuses an absent
+    one at compile time — real interop statics (`String.valueOf`/`join`/`format`,
+    `Long.parseLong`, `Double.isNaN`, …) keep compiling. RED 3/3 → GREEN
+    `BuiltinUnknownMethodGuardTest` 14/14; suite 4016 0F/0E.
   - **§498 — unknown member on kof.ui types / the `web` namespace is a diagnostic**
     (25/09): `Palette.bogus`, `Color.bogus`, `Theme.bogus` (fields) compiled
     clean and emitted `getfield "?".bogus`; `web.bogus()` compiled clean and
