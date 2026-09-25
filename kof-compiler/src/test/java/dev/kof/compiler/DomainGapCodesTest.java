@@ -187,13 +187,13 @@ class DomainGapCodesTest {
         // cross only has kof_io_strlen/make_string internals. D-FULL-PARITY-050
         // row 13 ported exists()/isFile()/isDirectory() (slice 1),
         // readText()/writeText()/appendText() (slice 2), delete()/mkdir()
-        // (slice 3) and createDirectories()/mkdirs() (slice 4); size/bytes/
-        // listing stay under NAT006.
+        // (slice 3), createDirectories()/mkdirs() (slice 4) and size()
+        // (slice 5); bytes/listing stay under NAT006.
         for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
             assertGap(tmp, t, "NAT006", """
                 main() {
                     val f = File("/tmp/kof-io-probe")
-                    println(f.size())
+                    println(f.readBytes())
                 }
                 """);
         }
