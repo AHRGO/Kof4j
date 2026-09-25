@@ -149,6 +149,11 @@ public final class NativeMcuRiscv32 {
         sb.append(".globl _start\n");
         sb.append("_start:\n");
         sb.append("    la sp, _stack_top\n");
+        // Trap vector: an unexpected trap halts honestly instead of running off
+        // to mtvec=0. The reset path itself is _start at the load base (asserted
+        // in NativeMcuE2ETest#mcuResetEntryIsAtLoadBase).
+        sb.append("    la t0, .Lmcu_trap\n");
+        sb.append("    csrw mtvec, t0\n");
         for (int i = 0; i < output.size(); i++) {
             byte[] b = output.get(i).getBytes(StandardCharsets.UTF_8);
             sb.append("    la a0, .Lmcu_str_").append(i).append('\n');
@@ -182,6 +187,9 @@ public final class NativeMcuRiscv32 {
         sb.append("    sw t0, 0(t1)\n");
         sb.append(".Lmcu_exit_halt:\n");
         sb.append("    j .Lmcu_exit_halt\n\n");
+        sb.append(".align 2\n");
+        sb.append(".Lmcu_trap:\n");
+        sb.append("    j .Lmcu_trap\n\n");
         sb.append(".section .rodata\n");
         for (int i = 0; i < output.size(); i++) {
             sb.append(".Lmcu_str_").append(i).append(":\n");

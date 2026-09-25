@@ -83,6 +83,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     + `KofDbE2ETest#crossNativeUnsupportedSchemeNamesTruthfulDb001` (binários
     reais nomeiam DB001 para `postgres://`).
 
+  - **B-4.4 fatia 1 — vetor de trap do MCU + reset path asserido na imagem**
+    (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`). O `_start` do
+    `NativeMcuRiscv32` instala `mtvec` apontando para `.Lmcu_trap` (um halt
+    honesto — um trap inesperado para em vez de correr para `mtvec=0`), e o
+    reset path (`_start` na base de carga `0x80000000` do `-M virt`) fica
+    asserido. Prova: `NativeMcuE2ETest` **6/0** (novo `mcuResetEntryIsAtLoadBase`
+    exige `80000000 T _start` via `nm`, mais os cinco casos anteriores).
+
   - **B-4.2 fatia 1 — o hello MCU passa a sair por uma HAL real
     (`kof_plat_write`/`kof_plat_exit`)** (24/09, lane baremetal 9092;
     `D-BAREMETAL-BODIES`). `NativeMcuRiscv32` emite `kof_plat_write(buf,len)`

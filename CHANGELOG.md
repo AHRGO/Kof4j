@@ -81,6 +81,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     the resolved fd, `mariadb://` alias and host-only form all authenticate)
     + `KofDbE2ETest#crossNativeUnsupportedSchemeNamesTruthfulDb001` (real
     binaries name DB001 for `postgres://`).
+  - **B-4.4 slice 1 — MCU trap vector + reset path asserted in the image**
+    (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`). `NativeMcuRiscv32._start`
+    installs `mtvec` pointing at `.Lmcu_trap` (an honest halt — an unexpected
+    trap stops instead of running off to `mtvec=0`), and the reset path
+    (`_start` at the `-M virt` load base `0x80000000`) is asserted. Proof:
+    `NativeMcuE2ETest` **6/0** (new `mcuResetEntryIsAtLoadBase` requires
+    `80000000 T _start` via `nm`, plus the five earlier cases).
+
   - **B-4.2 slice 1 — the MCU hello now goes through a real HAL
     (`kof_plat_write`/`kof_plat_exit`)** (24/09, lane baremetal 9092;
     `D-BAREMETAL-BODIES`). `NativeMcuRiscv32` emits `kof_plat_write(buf,len)`

@@ -74,6 +74,17 @@ class NativeMcuE2ETest {
     }
 
     @Test
+    void mcuResetEntryIsAtLoadBase(@TempDir Path tempDir) throws Exception {
+        assumeTrue(hasTool("riscv64-linux-gnu-nm", "--version"), "binutils nm ausente");
+        Path bin = build(tempDir, HELLO, true);
+        String syms = capture("riscv64-linux-gnu-nm", bin.toString());
+        // Reset path: _start must be the first instruction at the load base
+        // (0x80000000 for -M virt), i.e. the CPU's reset entry.
+        assertTrue(syms.matches("(?s).*\\b80000000 T _start\\b.*"),
+                "o reset path (_start @ 0x80000000) deveria estar asserido na imagem:\n" + syms);
+    }
+
+    @Test
     void mcuRejectsUnsupportedOpWithDiagnostic(@TempDir Path tempDir) throws Exception {
         CompilerDriver driver = new CompilerDriver();
         Path source = tempDir.resolve("Main.kf");
