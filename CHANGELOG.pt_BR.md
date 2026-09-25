@@ -393,6 +393,13 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `NativeIoNormalizeCrossTest` (`/a/c`, `a/b`, `c`, `/a/b`, `/`, `.`, `x`;
     JVM==riscv64==aarch64).
 
+  - **D-FULL-PARITY-050 linha 13 fatia 16a (lane native) — `moveTo` em todos
+    os alvos nativos.** `RuntimeIoMove` novo (x86-64, `rename`) e
+    `NativeRiscvAsmIoMove` (cross, `renameat2(276, flags=0)` — `renameat(38)`
+    e correto no kernel mas o qemu-riscv64 8.2.2 nao o despacha). Contrato
+    JVM G-ORG-002 mantido: sem sobrescrever (dest existe -> 0). Prova:
+    `NativeIoMoveCrossTest` (JVM==x86-64==riscv64==aarch64).
+
   - **D-FULL-PARITY-050 linha 13 fatia 15 (lane native) — `modifiedTime` +
     `isSymlink` em todos os alvos nativos.** `RuntimeIoMeta` novo (x86-64) e
     `NativeRiscvAsmIoMeta` (cross) implementam `kof_io_file_modified_time` (millis

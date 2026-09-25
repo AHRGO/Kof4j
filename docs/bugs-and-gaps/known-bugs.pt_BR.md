@@ -12514,7 +12514,7 @@ main() {
 
 1. **`Directory("d").delete()` (0-arg → `kof_io_dir_delete`) NÃO é recursivo no x86-64.** O contrato JVM (`JvmRuntimeIo.java:232-248`) percorre a árvore (`Files.walk` + `reverseOrder` + `deleteIfExists`) e devolve `1` para diretório não-vazio; a implementação x86-64 (`RuntimeIo3.java`) era um `rmdir` cru (syscall 84) — num diretório não-vazio falhava e devolvia `0` (**CORRIGIDO 26/09**, fatia 14: agora recursivo `getdents64`+`unlink`+`rmdir`). Divergência nativo × JVM silenciosa (rule 5) escondida atrás do booleano. O cross riscv64/aarch64 não tem `kof_io_dir_delete` nenhum (gate NAT006).
 
-2. **`copyTo`/`moveTo` NÃO têm implementação nativa.** `kof_io_file_copy_to`/`kof_io_file_move_to` só existem em `JvmRuntimeIo.java` (JVM); um `grep` de `runtime/` (x86-64) e `nat/` (cross) não acha definição — só os mapeamentos do `KofIo`. No native não rodam (símbolo indefinido / gate NAT006), enquanto a JVM suporta as duas. (`modifiedTime`/`isSymlink` estavam nessa família e agora foram portadas — ver ATUALIZAÇÃO.)
+2. **`copyTo` NÃO tem implementação nativa.** `kof_io_file_copy_to` só existe em `JvmRuntimeIo.java` (JVM); um `grep` de `runtime/` (x86-64) e `nat/` (cross) não acha definição — só o mapeamento do `KofIo`. No native não roda (símbolo indefinido / gate NAT006), enquanto a JVM suporta. (`modifiedTime`/`isSymlink`/`moveTo` estavam nessa família e agora foram portadas — ver ATUALIZAÇÃO.)
 
 **Repro mínimo (Kof):**
 ```
@@ -12525,7 +12525,7 @@ println(Directory("probe").delete())   // JVM: true (recursivo); x86-64: false (
 
 **Impacto / honestidade (R6/Q7):** catalogado, não enviado em silêncio. O `dir_delete` é bug de paridade rule 5; as quatro faces ausentes são lacunas de cobertura nativa. O `dir_delete` correto (recursivo `getdents64`+`unlinkat` no cross, `getdents64`+`unlink`+`rmdir` no x86-64) deixa o cross MAIS capaz que o x86-64 de hoje, então a recursão do x86-64 tem de pousar na mesma unidade para os alvos ficarem alinhados.
 
-**ATUALIZAÇÃO 26/09:** o `dir_delete` recursivo POUSOU no cross riscv64/aarch64 (fatia 13, `NativeRiscvAsmIoDirDelete`) **e** no x86-64 (fatia 14, `RuntimeIo3`); `modifiedTime`+`isSymlink` POUSARAM em todos os alvos nativos (fatia 15: x86-64 `RuntimeIoMeta`, cross `NativeRiscvAsmIoMeta`). Só `copyTo`/`moveTo` seguem abertos.
+**ATUALIZAÇÃO 26/09:** o `dir_delete` recursivo POUSOU no cross riscv64/aarch64 (fatia 13, `NativeRiscvAsmIoDirDelete`) **e** no x86-64 (fatia 14, `RuntimeIo3`); `modifiedTime`+`isSymlink` POUSARAM em todos os alvos nativos (fatia 15: x86-64 `RuntimeIoMeta`, cross `NativeRiscvAsmIoMeta`); `moveTo` POUSOU em todos os alvos nativos (fatia 16a, `renameat2`). Só `copyTo` segue aberto.
 
 **Status:** 🟡 OPEN — catalogado (Q7).
 
