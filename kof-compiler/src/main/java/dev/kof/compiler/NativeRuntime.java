@@ -2,6 +2,7 @@ package dev.kof.compiler;
 import dev.kof.compiler.runtime.RuntimeArray;
 import dev.kof.compiler.runtime.RuntimeProcess;
 import dev.kof.compiler.runtime.RuntimeShell;
+import dev.kof.compiler.runtime.RuntimeSsh;
 import dev.kof.compiler.runtime.RuntimeCache;
 import dev.kof.compiler.runtime.RuntimeStringCompare;
 import dev.kof.compiler.runtime.RuntimeEncoding;
@@ -141,6 +142,7 @@ public final class NativeRuntime {
         RuntimeChannel.emitChannel(sb);
         RuntimeProcess.emit(sb);
         RuntimeShell.emit(sb);
+        RuntimeSsh.emit(sb);
         RuntimeScheduler.emitScheduler(sb);
         RuntimeMq.emitMq(sb);
         RuntimeGc.emitProcessExit(sb);

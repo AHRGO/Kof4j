@@ -32,15 +32,17 @@ public final class ExpressionSshCallLowerer {
             }
             return localIdx;
         }
-        if (driver.target.isNative()) {
-            // every ssh call ends in the process territory (run) or in a Result
-            // the Native driver can never produce — same gap as process.run
-            // (PROC001), reported once at compile time, never a silent stub (R6).
+        if (driver.target.isNative() && driver.target != Target.NATIVE) {
+            // Row 3 slice A: the x86-64 native target now emits (kof_ssh_argv /
+            // kof_ssh_run → kof_process_run, RuntimeSsh). The cross targets (and
+            // the freestanding MCU) still have no ssh runtime — same honest
+            // PROC001 as process.run before row 1 slice C, reported once at
+            // compile time, never a silent ld undefined (R6).
             if (driver.currentDiagnostics != null) {
                 driver.currentDiagnostics.error(posFile(mc), posLine(mc), posCol(mc), 0,
-                        "ssh." + mc.methodName() + ": not supported on the Native"
-                                + " driver.target yet (JVM and JS support kof.ssh;"
-                                + " Native waits for process.run)",
+                        "ssh." + mc.methodName() + ": not supported on the "
+                                + driver.target + " native target yet (JVM, JS and"
+                                + " Native x86-64 support kof.ssh)",
                         "PROC001");
             }
             return localIdx;

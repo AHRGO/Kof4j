@@ -93,6 +93,12 @@ class SshE2ETest {
         assertEquals(jvm.output(), js.output(), "§2.3 JVM/JS parity broken");
     }
 
+    private void assertCompiles(Target target, String source) throws Exception {
+        Files.writeString(tmp.resolve("C.kf"), source);
+        CompilationResult r = driver.compile(tmp.resolve("C.kf"), tmp.resolve("o-c-" + target), target);
+        assertTrue(r.success(), target + " must compile: " + diags(r));
+    }
+
     private void assertGap(Target target, String code, String source) throws Exception {
         Files.writeString(tmp.resolve("G.kf"), source);
         CompilationResult r = driver.compile(tmp.resolve("G.kf"), tmp.resolve("o-" + target), target);
@@ -180,23 +186,53 @@ class SshE2ETest {
     }
 
     @Test
-    void cmdOnNativeIsHonestProc001() throws Exception {
-        assertGap(Target.NATIVE, "PROC001", """
+    void cmdAndRunLandedOnX86() throws Exception {
+        assertCompiles(Target.NATIVE, """
             main() {
                 var a = ssh.cmd("host", "hi")
                 println(a.size)
+                var r = ssh.run("host", "hi")
+                println(r.exitCode)
             }
             """);
     }
 
     @Test
-    void runOnNativeIsHonestProc001() throws Exception {
-        assertGap(Target.NATIVE, "PROC001", """
+    void sshOnCrossIsHonestProc001() throws Exception {
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            assertGap(t, "PROC001", """
+                main() {
+                    var a = ssh.cmd("host", "hi")
+                    println(a.size)
+                }
+                """);
+        }
+    }
+
+    @Test
+    void cmdArgvMatchesJvmOnX86() throws Exception {
+        String src = """
             main() {
-                var r = ssh.run("host", "hi")
-                println(r.stdout)
+                var a = ssh.cmd("user@host", "uname -a")
+                println(a.size)
+                println(a.get(0))
+                println(a.get(1))
+                println(a.get(2))
+                println(a.get(3))
+                println(a.get(4))
+                println(a.get(5))
+                println(a.get(6))
             }
-            """);
+            """;
+        Files.writeString(tmp.resolve("N.kf"), src);
+        Run jvm = runJvm(tmp.resolve("N.kf"), tmp.resolve("o-n-jvm"));
+        assertTrue(jvm.ok(), () -> "JVM failed: " + jvm.output());
+        CompilationResult nr = driver.compile(tmp.resolve("N.kf"), tmp.resolve("o-n-nat"), Target.NATIVE);
+        assertTrue(nr.success(), "NATIVE must compile: " + diags(nr));
+        Process p = new ProcessBuilder(tmp.resolve("o-n-nat").resolve("Default/Main").toString()).start();
+        String nat = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        assertEquals(0, p.waitFor(), "native exit, output: " + nat);
+        assertEquals(jvm.output(), nat, "x86 ssh.cmd argv must match the JVM golden byte-for-byte");
     }
 
     @Test
