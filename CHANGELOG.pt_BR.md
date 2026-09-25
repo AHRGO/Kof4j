@@ -13,6 +13,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **B4-TIME (baremetal MCU) — corpos de tempo do MCU: recusa NOMEADA do wall +
+    contador monotônico (`NativeMcuTimeRiscv32`)** (25/09): por
+    `D-BAREMETAL-MCU-GC` item 2, num MCU sem RTC o `kof_plat_time` (`time.now()`)
+    é **recusa NOMEADA** (escreve `NATIVE002: time.now() unavailable on MCU
+    (no RTC)` e sai(1) — nunca epoch falsa, R6/R7); `kof_plat_time_mono` lê o
+    contador `time` do RISC-V (`boot=0`, `ts[0]=0`, `ts[4]=contador` — um
+    CONTADOR, não ns calibrados, como sancionado) e `kof_plat_sleep` faz
+    busy-wait nele. O emissor (`NativeMcuRiscv32`) agora emite esses corpos.
+    Prova: `NativeMcuTimeTest` 2/2 sob `qemu-system-riscv32 -M virt` (a mensagem
+    de recusa do wall é observada; duas leituras de `kof_plat_time_mono` voltam
+    não-decrescentes), `NativeMcuE2ETest` 7/7 inalterado.
+
   - **B4-GC-3/4 (baremetal MCU) — sweep + reuso long-running do coletor do MCU**
     (25/09): o sweep do `native-multiarch.md` G-4 portado para RV32I em
     `NativeMcuGcRiscv32Sweep` (mark==1 → limpa o mark; mark==0 e !free →

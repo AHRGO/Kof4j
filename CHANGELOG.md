@@ -13,6 +13,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **B4-TIME (baremetal MCU) — MCU time bodies: named wall refusal + monotonic
+    counter (`NativeMcuTimeRiscv32`)** (25/09): per `D-BAREMETAL-MCU-GC` item 2,
+    on an RTC-less MCU `kof_plat_time` (`time.now()`) is a **named refusal**
+    (writes `NATIVE002: time.now() unavailable on MCU (no RTC)` and exits(1) —
+    never a fake epoch, R6/R7); `kof_plat_time_mono` reads the RISC-V `time`
+    counter (`boot=0`, `ts[0]=0`, `ts[4]=counter` — a counter, not calibrated ns,
+    as sanctioned) and `kof_plat_sleep` busy-waits on it. The emitter
+    (`NativeMcuRiscv32`) now emits these bodies. Proof: `NativeMcuTimeTest` 2/2
+    under `qemu-system-riscv32 -M virt` (the wall refusal message is observed;
+    two `kof_plat_time_mono` reads come back non-decreasing), `NativeMcuE2ETest`
+    7/7 unchanged.
+
   - **B4-GC-3/4 (baremetal MCU) — sweep + long-running reuse for the MCU
     collector** (25/09): the `native-multiarch.md` G-4 sweep ported to RV32I in
     `NativeMcuGcRiscv32Sweep` (mark==1 → clears the mark; mark==0 and !free →

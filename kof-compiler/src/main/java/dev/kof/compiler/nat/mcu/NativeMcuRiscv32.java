@@ -216,8 +216,8 @@ public final class NativeMcuRiscv32 {
         // §3 HAL bodies (unambiguous on a single-hart MCU). kof_plat_thread_id
         // is the hart id (mhartid, 0 on single-hart virt); kof_plat_random fills
         // buf(a0)..buf+a1 from a xorshift32 seeded by the cycle counter — pure
-        // RV32I, no division. kof_plat_time (wall vs monotonic semantics on an
-        // RTC-less MCU) stays a rule-6 question, deliberately not emitted here.
+        // RV32I, no division. kof_plat_time* is B4-TIME (see
+        // NativeMcuTimeRiscv32: wall refusal + monotonic counter).
         sb.append(".globl kof_plat_thread_id\n");
         sb.append("kof_plat_thread_id:\n");
         sb.append("    csrr a0, mhartid\n");
@@ -242,6 +242,10 @@ public final class NativeMcuRiscv32 {
         sb.append(".align 2\n");
         sb.append(".Lmcu_trap:\n");
         sb.append("    j .Lmcu_trap\n\n");
+        // B4-TIME (D-BAREMETAL-MCU-GC item 2): wall = recusa nomeada; mono =
+        // contador `time` (boot=0); sleep = busy-wait. Mesmo fragmento provado
+        // por NativeMcuTimeTest.
+        sb.append(NativeMcuTimeRiscv32.runtimeAsm());
         sb.append(".section .rodata\n");
         for (int i = 0; i < output.size(); i++) {
             sb.append(".Lmcu_str_").append(i).append(":\n");
