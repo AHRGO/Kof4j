@@ -83,6 +83,16 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     + `KofDbE2ETest#crossNativeUnsupportedSchemeNamesTruthfulDb001` (binários
     reais nomeiam DB001 para `postgres://`).
 
+  - **B-4.2 fatia 1 — o hello MCU passa a sair por uma HAL real
+    (`kof_plat_write`/`kof_plat_exit`)** (24/09, lane baremetal 9092;
+    `D-BAREMETAL-BODIES`). `NativeMcuRiscv32` emite `kof_plat_write(buf,len)`
+    (a UART do virt `0x10000000`, laço por comprimento) e `kof_plat_exit(code)`
+    (test device `0x100000` + halt) como funções RV32I `.globl`, e o `_start`
+    as chama em vez de inlinar as escritas na UART (os literais viraram
+    `.ascii` com comprimento explícito). Prova: `NativeMcuE2ETest` **5/0** (novo
+    `mcuImageDefinesHalSymbols` exige `T kof_plat_write`/`T kof_plat_exit` via
+    `nm`, mais os quatro casos anteriores).
+
   - **B-4.1 — primeiro slice MCU RV32I roda bare sob `qemu-system-riscv32`
     (`main(){ println("KO-MCU OK") }` imprime pela UART e desliga pelo test
     device)** (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`). Novo

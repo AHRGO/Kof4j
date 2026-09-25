@@ -63,6 +63,17 @@ class NativeMcuE2ETest {
     }
 
     @Test
+    void mcuImageDefinesHalSymbols(@TempDir Path tempDir) throws Exception {
+        assumeTrue(hasTool("riscv64-linux-gnu-nm", "--version"), "binutils nm ausente");
+        Path bin = build(tempDir, HELLO, true);
+        String syms = capture("riscv64-linux-gnu-nm", bin.toString());
+        assertTrue(syms.matches("(?s).*\\bT kof_plat_write\\b.*"),
+                "imagem MCU deveria definir kof_plat_write:\n" + syms);
+        assertTrue(syms.matches("(?s).*\\bT kof_plat_exit\\b.*"),
+                "imagem MCU deveria definir kof_plat_exit:\n" + syms);
+    }
+
+    @Test
     void mcuRejectsUnsupportedOpWithDiagnostic(@TempDir Path tempDir) throws Exception {
         CompilerDriver driver = new CompilerDriver();
         Path source = tempDir.resolve("Main.kf");
@@ -119,6 +130,13 @@ class NativeMcuE2ETest {
 
     private static boolean hasAs() {
         return hasTool("riscv64-linux-gnu-as", "--version");
+    }
+
+    private static String capture(String... cmd) throws IOException, InterruptedException {
+        Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+        String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        p.waitFor(20, TimeUnit.SECONDS);
+        return out;
     }
 
     private static boolean hasTool(String tool, String... args) {

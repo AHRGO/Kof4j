@@ -81,6 +81,16 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     the resolved fd, `mariadb://` alias and host-only form all authenticate)
     + `KofDbE2ETest#crossNativeUnsupportedSchemeNamesTruthfulDb001` (real
     binaries name DB001 for `postgres://`).
+  - **B-4.2 slice 1 — the MCU hello now goes through a real HAL
+    (`kof_plat_write`/`kof_plat_exit`)** (24/09, lane baremetal 9092;
+    `D-BAREMETAL-BODIES`). `NativeMcuRiscv32` emits `kof_plat_write(buf,len)`
+    (the virt UART `0x10000000`, looped by length) and `kof_plat_exit(code)`
+    (test device `0x100000` + halt) as `.globl` RV32I functions, and `_start`
+    calls them instead of inlining the UART writes (literals became `.ascii`
+    with an explicit length). Proof: `NativeMcuE2ETest` **5/0** (new
+    `mcuImageDefinesHalSymbols` asserts `T kof_plat_write`/`T kof_plat_exit`
+    via `nm`, plus the four earlier cases).
+
   - **B-4.1 — first MCU RV32I slice runs bare under `qemu-system-riscv32`
     (`main(){ println("KO-MCU OK") }` prints via UART and powers off the test
     device)** (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`). New

@@ -150,46 +150,57 @@ public final class NativeMcuRiscv32 {
         sb.append("_start:\n");
         sb.append("    la sp, _stack_top\n");
         for (int i = 0; i < output.size(); i++) {
+            byte[] b = output.get(i).getBytes(StandardCharsets.UTF_8);
             sb.append("    la a0, .Lmcu_str_").append(i).append('\n');
-            sb.append("    call kof_mcu_puts\n");
+            sb.append("    li a1, ").append(b.length).append('\n');
+            sb.append("    call kof_plat_write\n");
         }
+        sb.append("    li a0, 0\n");
+        sb.append("    call kof_plat_exit\n");
+        sb.append(".Lmcu_halt:\n");
+        sb.append("    j .Lmcu_halt\n\n");
+        // MCU HAL bodies (PLAN-BAREMETAL-BOOT §3): kof_plat_write(buf,len) to the
+        // virt UART and kof_plat_exit(code) via the test device. sync/thread are
+        // absent on the single-core MCU (CONC003), never stubbed.
+        sb.append(".globl kof_plat_write\n");
+        sb.append("kof_plat_write:\n");
+        sb.append("    add t2, a0, a1\n");
+        sb.append("    mv t0, a0\n");
+        sb.append("    li t1, ").append(UART0).append('\n');
+        sb.append(".Lmcu_write_loop:\n");
+        sb.append("    bgeu t0, t2, .Lmcu_write_done\n");
+        sb.append("    lbu a0, 0(t0)\n");
+        sb.append("    sb a0, 0(t1)\n");
+        sb.append("    addi t0, t0, 1\n");
+        sb.append("    j .Lmcu_write_loop\n");
+        sb.append(".Lmcu_write_done:\n");
+        sb.append("    ret\n\n");
+        sb.append(".globl kof_plat_exit\n");
+        sb.append("kof_plat_exit:\n");
         sb.append("    li t1, ").append(TEST_DEV).append('\n');
         sb.append("    li t0, 0x5555\n");
         sb.append("    sw t0, 0(t1)\n");
-        sb.append(".Lmcu_halt:\n");
-        sb.append("    j .Lmcu_halt\n\n");
-        sb.append("kof_mcu_puts:\n");
-        sb.append("    mv t0, a0\n");
-        sb.append("    li t1, ").append(UART0).append('\n');
-        sb.append(".Lmcu_put_loop:\n");
-        sb.append("    lbu a0, 0(t0)\n");
-        sb.append("    beqz a0, .Lmcu_put_done\n");
-        sb.append("    sb a0, 0(t1)\n");
-        sb.append("    addi t0, t0, 1\n");
-        sb.append("    j .Lmcu_put_loop\n");
-        sb.append(".Lmcu_put_done:\n");
-        sb.append("    ret\n\n");
+        sb.append(".Lmcu_exit_halt:\n");
+        sb.append("    j .Lmcu_exit_halt\n\n");
         sb.append(".section .rodata\n");
         for (int i = 0; i < output.size(); i++) {
             sb.append(".Lmcu_str_").append(i).append(":\n");
-            sb.append("    .asciz ").append(asmString(output.get(i))).append('\n');
+            sb.append("    .ascii ").append(asmBytes(output.get(i))).append('\n');
         }
         return sb.toString();
     }
 
-    private static String asmString(String s) {
+    private static String asmBytes(String s) {
+        byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
         StringBuilder b = new StringBuilder("\"");
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
+        for (byte value : bytes) {
+            int c = value & 0xFF;
             switch (c) {
                 case '\\' -> b.append("\\\\");
                 case '"' -> b.append("\\\"");
-                case '\n' -> b.append("\\n");
-                case '\r' -> b.append("\\r");
-                case '\t' -> b.append("\\t");
                 default -> {
-                    if (c >= 32 && c < 127) b.append(c);
-                    else b.append(String.format("\\%03o", (int) c & 0xFF));
+                    if (c >= 32 && c < 127) b.append((char) c);
+                    else b.append(String.format("\\%03o", c));
                 }
             }
         }
