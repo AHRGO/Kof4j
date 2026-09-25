@@ -13,6 +13,20 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **B4-GC-3/4 (baremetal MCU) — sweep + long-running reuse for the MCU
+    collector** (25/09): the `native-multiarch.md` G-4 sweep ported to RV32I in
+    `NativeMcuGcRiscv32Sweep` (mark==1 → clears the mark; mark==0 and !free →
+    free-list + frees/free_bytes; no lock — the MCU has no `spawn`/threads per §6
+    of the plan). `kof_alloc` now, on OOM, runs one `kof_gc_collect_now`
+    (mark+sweep) and retries the free-list exactly once before the named panic
+    (R6) — the hook that recycles the heap. Proof: `NativeMcuGcTest` 8/8 under
+    `qemu-system-riscv32 -M virt` — sweep recovers the dead C (`gc 32 0, gc 32 2,
+    gc 32 0, gc 32 0`, `frees: 1`, `live bytes: 96`); a cycle A<->E terminates
+    and both survive; a loop of 10000 allocations of 16B over a 64 KB heap
+    completes (`allocs: 10000`) by recycling; and the sabotage (removing the OOM
+    collect hook) reproduces the exhaustion (`out of memory`), proving the
+    collector is not vacuous.
+
   - **B4-GC-2 (baremetal MCU) — conservative mark for the MCU collector
     (`NativeMcuGcRiscv32`)** (25/09): the `native-multiarch.md` G-3 mark ported
     to RV32I over the 16-byte header. `kof_gc_try_mark` restricts candidates to

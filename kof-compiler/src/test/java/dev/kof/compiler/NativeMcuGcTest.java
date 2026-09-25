@@ -14,8 +14,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * B4-GC-1/2 (PLAN-BAREMETAL-BOOT B-4 + {@code D-BAREMETAL-MCU-GC}): alocador +
- * mark conservador do MCU RV32I provados por harness asm cru sob
+ * B4-GC-1/2/3 (PLAN-BAREMETAL-BOOT B-4 + {@code D-BAREMETAL-MCU-GC}): alocador +
+ * mark conservador + sweep do MCU RV32I provados por harness asm cru sob
  * {@code qemu-system-riscv32 -M virt}
  * — mesmo padrão do {@code NativeRiscvGcSweepTest} do cross: o runtime de
  * PRODUÇÃO ({@link NativeMcuGcRiscv32#runtimeAsm()}) é concatenado a um harness
@@ -62,6 +62,79 @@ class NativeMcuGcTest {
         assertEquals(java.util.List.of("gc 32 1", "gc 32 0", "gc 32 1", "gc 32 1"),
                 gcLines(out),
                 "gc-list LIFO D,C,B,A: D/A transitivo e B pilha marcados (1); C morto fica 0: " + out);
+    }
+
+    @Test
+    void mcuGcSweepRecoversDeadAndKeepsLive(@TempDir Path tempDir) throws Exception {
+        assumeToolchain();
+        // Mesmo grafo do mark; collect_now = mark+sweep. A/B/D vivos (flags
+        // voltam a 0), C morta vai p/ a free-list (flags 2) e conta frees: 1.
+        String out = run(tempDir, "gc5", body(
+                "    li   a0, 16\n    call kof_alloc\n    la   t0, .Lroot_a\n    sw   a0, 0(t0)\n"
+                + "    addi sp, sp, -16\n"
+                + "    li   a0, 16\n    call kof_alloc\n    sw   a0, 0(sp)\n"
+                + "    li   a0, 16\n    call kof_alloc\n"
+                + "    li   a0, 16\n    call kof_alloc\n    mv   t1, a0\n"
+                + "    la   t0, .Lroot_a\n    lw   t2, 0(t0)\n    sw   t1, 0(t2)\n"
+                + "    call kof_gc_collect_now\n    call kof_gc_dump\n    call kof_memstats\n"),
+                HEAP);
+        assertEquals(java.util.List.of("gc 32 0", "gc 32 2", "gc 32 0", "gc 32 0"),
+                gcLines(out),
+                "sweep deve limpar o mark de D/A/B e pôr C (flags 2) na free-list: " + out);
+        assertTrue(out.contains("frees: 1"), "C deveria contar uma free: " + out);
+        assertTrue(out.contains("live bytes: 96"), "128 alocados - 32 recuperados = 96: " + out);
+    }
+
+    @Test
+    void mcuGcMarkHandlesCycles(@TempDir Path tempDir) throws Exception {
+        assumeToolchain();
+        // A<->E em ciclo, ambos alcançáveis de A: o mark para no já-marcado
+        // (guard de ciclo) e o sweep mantém os dois vivos.
+        String out = run(tempDir, "gc6", body(
+                "    li   a0, 16\n    call kof_alloc\n    la   t0, .Lroot_a\n    sw   a0, 0(t0)\n"
+                + "    li   a0, 16\n    call kof_alloc\n    mv   s0, a0\n"
+                + "    la   t0, .Lroot_a\n    lw   t1, 0(t0)\n    sw   s0, 0(t1)\n"
+                + "    sw   t1, 0(s0)\n"
+                + "    call kof_gc_collect_now\n    call kof_gc_dump\n    call kof_memstats\n"),
+                HEAP);
+        assertEquals(java.util.List.of("gc 32 0", "gc 32 0"), gcLines(out),
+                "ciclo A<->E termina e os dois sobrevivem (flags 0): " + out);
+        assertTrue(out.contains("frees: 0"), "nada deve morrer no ciclo: " + out);
+        assertTrue(out.contains("live bytes: 64"), "os dois blocos seguem vivos: " + out);
+    }
+
+    @Test
+    void mcuGcLongAllocLoopIsRecycled(@TempDir Path tempDir) throws Exception {
+        assumeToolchain();
+        // 10000 allocs de 16B com só a última viva. Heap de 64KB ≈ 2048 blocos:
+        // SEM coletor o bump estoura e panica; COM o B4-GC-3 o OOM do kof_alloc
+        // roda collect+retry e o laço completa — fecho do vazamento.
+        String out = run(tempDir, "gc7", body(loopOps(10000)), HEAP);
+        assertTrue(out.contains("allocs: 10000"),
+                "o laço deveria completar 10000 allocs reciclando o heap: " + out);
+        assertTrue(out.matches("(?s).*frees: [1-9][0-9]*.*"),
+                "o coletor deveria ter liberado blocos mortos: " + out);
+    }
+
+    @Test
+    void mcuGcLongAllocLoopOomsWithoutCollector(@TempDir Path tempDir) throws Exception {
+        assumeToolchain();
+        // Sabotagem: removido o hook do coletor no OOM → o bump esgota e panica.
+        String sabotaged = NativeMcuGcRiscv32.all().replace("call kof_gc_collect_now\n", "");
+        String out = runWith(tempDir, "gc8", body(loopOps(10000)), HEAP, sabotaged);
+        assertTrue(out.contains("out of memory"),
+                "SEM coletor o laço DEVERIA estourar o heap e panicar (não-vacuidade): " + out);
+        assertTrue(!out.contains("allocs: 10000"),
+                "sem coletor o laço NÃO deveria completar: " + out);
+    }
+
+    private static String loopOps(int n) {
+        return "    li   s0, " + n + "\n"
+                + ".Lloop:\n"
+                + "    li   a0, 16\n    call kof_alloc\n"
+                + "    la   t0, .Lroot_a\n    sw   a0, 0(t0)\n"
+                + "    addi s0, s0, -1\n    bnez s0, .Lloop\n"
+                + "    call kof_memstats\n";
     }
 
     @Test
@@ -153,11 +226,16 @@ class NativeMcuGcTest {
     }
 
     private String run(Path tempDir, String name, String program, long heapBytes) throws Exception {
+        return runWith(tempDir, name, program, heapBytes, NativeMcuGcRiscv32.all());
+    }
+
+    private String runWith(Path tempDir, String name, String program, long heapBytes, String runtime)
+            throws Exception {
         Path asm = tempDir.resolve(name + ".s");
         Path ld = tempDir.resolve(name + ".ld");
         Path obj = tempDir.resolve(name + ".o");
         Path bin = tempDir.resolve(name);
-        Files.writeString(asm, program + "\n" + NativeMcuGcRiscv32.runtimeAsm());
+        Files.writeString(asm, program + "\n" + runtime);
         Files.writeString(ld, NativeMcuGcRiscv32.linkerScript(heapBytes));
         capture("riscv64-linux-gnu-as", "-march=rv32i", "-mabi=ilp32", "-o", obj.toString(),
                 asm.toString());

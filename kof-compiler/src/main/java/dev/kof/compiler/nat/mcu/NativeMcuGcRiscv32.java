@@ -13,11 +13,14 @@ package dev.kof.compiler.nat.mcu;
  * escala de KB), não da arena fixa de 256 KB em {@code .bss}.
  *
  * <p>Fatias entregues: <b>B4-GC-1</b> (alloc + free + gc-list + dump +
- * memstats) e <b>B4-GC-2</b> (mark conservador: {@code kof_gc_try_mark} /
+ * memstats), <b>B4-GC-2</b> (mark conservador: {@code kof_gc_try_mark} /
  * {@code kof_gc_mark_transitive} / {@code kof_gc_mark}, raízes estáticas +
- * pilha {@code [sp,_stack_top)}). Sem sweep ainda — B4-GC-3. Prova:
- * {@code NativeMcuGcTest}, harness asm cru sob {@code qemu-system-riscv32 -M virt},
- * no mesmo padrão do {@code NativeRiscvGcSweepTest} do cross.
+ * pilha {@code [sp,_stack_top)}) e <b>B4-GC-3</b> (sweep + reuso: o
+ * {@code kof_gc_collect_now} vive em {@link NativeMcuGcRiscv32Sweep}; o
+ * {@code kof_alloc} em OOM roda um collect e re-tenta UMA vez antes de panicar
+ * — o que recicla o heap ao longo do tempo). Prova: {@code NativeMcuGcTest},
+ * harness asm cru sob {@code qemu-system-riscv32 -M virt}, no mesmo padrão do
+ * {@code NativeRiscvGcSweepTest} do cross.
  */
 public final class NativeMcuGcRiscv32 {
 
@@ -57,6 +60,8 @@ public final class NativeMcuGcRiscv32 {
                     addi s0, a0, 15
                     andi s0, s0, -16
                     addi s0, s0, 16          # total = align16(size)+header
+                    li   s3, 0               # já coletou nesta chamada?
+                .Lalloc_retry:
                     la   s1, .Lkof_free_head
                     lw   s2, 0(s1)           # cur
                     mv   t5, zero            # prev
@@ -111,6 +116,15 @@ public final class NativeMcuGcRiscv32 {
                     addi a0, t0, 16
                     j    .Lalloc_done
                 .Lalloc_oom:
+                    # B4-GC-3: UM collect (mark+sweep) e UMA nova tentativa;
+                    # ainda sem espaço -> panic nomeado (R6). Seguro porque o
+                    # kof_gc_mark derrama os s0-s11 e varre a pilha: todo
+                    # temporário vivo (inclusive o bloco em exame em s2) é visto.
+                    bnez s3, .Lalloc_panic
+                    li   s3, 1
+                    call kof_gc_collect_now
+                    j    .Lalloc_retry
+                .Lalloc_panic:
                     la   a0, .Lgc_oom
                     call kof_panic
                 .Lalloc_done:
@@ -456,6 +470,11 @@ public final class NativeMcuGcRiscv32 {
 
                 .section .text
                 """;
+    }
+
+    /** Runtime COMPLETO do coletor MCU (core + sweep) — entry point p/ link. */
+    public static String all() {
+        return runtimeAsm() + NativeMcuGcRiscv32Sweep.runtimeAsm();
     }
 
     /** Linker script do harness: heap dimensionado entre os símbolos do B-4. */
