@@ -166,6 +166,72 @@ class BuiltinUnknownFieldGuardTest {
             """, tempDir), "bogus", "Buffer");
     }
 
+    // ---- diagnosis: the NAMESPACE field face (§496) also becomes SEM102 ----
+
+    private void assertNamespaceFieldIsSem102(CompilationResult result, String ns, String field) {
+        assertFalse(result.success(), ns + "." + field + " must fail to compile (SEM102)");
+        String diags = result.diagnostics().getDiagnostics().toString();
+        assertTrue(diags.contains("SEM102"), "Expected SEM102, was: " + diags);
+        assertTrue(diags.contains(ns), "Diagnostic must name the namespace, was: " + diags);
+        assertTrue(diags.contains(field), "Diagnostic must name the field, was: " + diags);
+        assertFalse(diags.contains("ClassFormatError"),
+                "Must be a compile diagnostic, not a crash: " + diags);
+    }
+
+    @Test
+    void unknownMathFieldIsSem102(@TempDir Path tempDir) throws IOException {
+        // `math.bogus` compiled clean and emitted `getfield "?".bogus`.
+        assertNamespaceFieldIsSem102(compile("""
+            main() {
+                println(math.bogus)
+            }
+            """, tempDir), "math", "bogus");
+    }
+
+    @Test
+    void plausibleButInvalidNamespaceConstantIsSem102(@TempDir Path tempDir) throws IOException {
+        // There is no namespace constant: `math.PI` is as invalid as `.bogus`.
+        assertNamespaceFieldIsSem102(compile("""
+            main() {
+                println(math.PI)
+            }
+            """, tempDir), "math", "PI");
+    }
+
+    @Test
+    void unknownStringsNamespaceFieldIsSem102(@TempDir Path tempDir) throws IOException {
+        assertNamespaceFieldIsSem102(compile("""
+            main() {
+                println(strings.EMPTY)
+            }
+            """, tempDir), "strings", "EMPTY");
+    }
+
+    @Test
+    void unknownTimeNamespaceFieldIsSem102(@TempDir Path tempDir) throws IOException {
+        assertNamespaceFieldIsSem102(compile("""
+            main() {
+                println(time.EPOCH)
+            }
+            """, tempDir), "time", "EPOCH");
+    }
+
+    @Test
+    void namespaceMethodCallsStillCompile(@TempDir Path tempDir) throws IOException {
+        // control: the FUNCTION surface of the namespaces is untouched — only the
+        // field form is rejected.
+        CompilationResult result = compile("""
+            main() {
+                println(math.sqrt(4.0))
+                println(math.abs(-1))
+                println(strings.capitalize("hi"))
+                println(time.now())
+            }
+            """, tempDir);
+        assertTrue(result.success(), "Namespace method calls must compile: "
+                + result.diagnostics().getDiagnostics());
+    }
+
     // ---- control: the real property faces still compile ----
 
     @Test

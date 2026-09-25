@@ -297,6 +297,27 @@ public final class SemExpressionTyper {
                             "SEM050");
                     yield Type.UnknownType.UNKNOWN;
                 }
+                // §496: acesso a CAMPO em um NAMESPACE builtin (math.bogus, e
+                // até `math.PI` — não há constante de namespace). O receiver
+                // não é local nem tipo (vira UNKNOWN), então caía no caminho
+                // genérico e o emit gerava `getfield "?".<nome>` contra uma
+                // classe vazia → NoClassDefFoundError: "?" no load, compilado
+                // limpo (escondido atrás da mensagem do launcher JavaFX). É a
+                // face FIELD da família §495/#126/§490. Enum/paleta (`Color.Red`
+                // via KofUi.isPalette), tokens (KofUiTokens) e constantes de
+                // enum já retornaram acima, e o receiver tem de ser UNKNOWN
+                // (um local chamado `math` tem tipo próprio) — sem falso positivo.
+                if (recvType instanceof Type.UnknownType
+                        && fa.receiver() instanceof IdentifierExpr nId
+                        && SemUndefinedVarGuard.isBuiltinNamespace(nId.name())
+                        && sa.diagnostics() != null) {
+                    sa.diagnostics().error(fa,
+                            "'" + nId.name() + "' is a builtin namespace; it has no field "
+                                    + "'" + fa.fieldName() + "' (namespaces expose functions, "
+                                    + "not properties — use " + nId.name() + ".someFunction(...))",
+                            "SEM102");
+                    yield Type.UnknownType.UNKNOWN;
+                }
                 // SG-005: deref de T? sem narrowing é erro (espelha SEM049 de
                 // method call) — `s.length` em String? seria NPE em runtime.
                 if (recvType instanceof Type.NullableType && sa.diagnostics() != null) {
