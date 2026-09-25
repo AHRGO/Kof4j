@@ -321,6 +321,13 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `NativeIoFsCrossTest` (JVM oracle measured at runtime + riscv64 + aarch64
     under qemu, byte-identical).
 
+  - **D-FULL-PARITY-050 row 13 slice 4 (native-cross lane) — `kof.io`
+    `createDirectories()`/`mkdirs()` (mkdir -p) on the riscv64/aarch64 cross.**
+    The new cross piece `NativeRiscvAsmIoMkdirs` implements `kof_io_dir_create_dirs`
+    (walk the path, `mkdirat` each non-empty prefix, `EEXIST` tolerated, then the
+    full path). Proof: `NativeIoMkdirsCrossTest` (JVM oracle measured at runtime +
+    riscv64 + aarch64 under qemu, byte-identical).
+
   - **S5.4 slice 1 (db-parity, gaps-db lane) — real MySQL/MariaDB `connect`
     on the cross (cross piece `B73`)** (24/09): `kof_db_connect` now accepts
     `mysql://`/`mariadb://` on riscv64/aarch64 — URL parse

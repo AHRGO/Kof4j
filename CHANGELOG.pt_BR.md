@@ -320,6 +320,13 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `NativeIoFsCrossTest` (oráculo JVM medido em runtime + riscv64 + aarch64 sob
     qemu, byte-idêntico).
 
+  - **D-FULL-PARITY-050 linha 13 fatia 4 (lane native-cross) — `kof.io`
+    `createDirectories()`/`mkdirs()` (mkdir -p) no cross riscv64/aarch64.** A
+    peça cross nova `NativeRiscvAsmIoMkdirs` implementa `kof_io_dir_create_dirs`
+    (percorre a path, `mkdirat` cada prefixo não-vazio, `EEXIST` tolerado, e no
+    fim a path completa). Prova: `NativeIoMkdirsCrossTest` (oráculo JVM medido em
+    runtime + riscv64 + aarch64 sob qemu, byte-idêntico).
+
   - **S5.4 fatia 1 (db-parity, lane gaps-db) — `connect` MySQL/MariaDB REAL
     no cross (peça cross `B73`)** (24/09): `kof_db_connect` agora aceita
     `mysql://`/`mariadb://` no riscv64/aarch64 — parse da URL
