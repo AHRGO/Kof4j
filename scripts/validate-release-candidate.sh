@@ -79,10 +79,28 @@ else
     if [ -n "$LAST_TAG" ]; then
         LAST="${LAST_TAG#kof-}"
         LAST="${LAST%-linux-x86_64}"
-        HIGHER="$(printf '%s\n%s\n' "$LAST" "$VERSION" | sort -V | tail -1)"
-        if [ "$VERSION" = "$LAST" ] || [ "$VERSION" != "$HIGHER" ]; then
+        # semver: 0.5.0 > 0.5.0-beta+date, mas sort -V acha o contrário — tratar -beta/+date
+        LAST_NOPLUS="${LAST%%+*}"
+        VER_NOPLUS="${VERSION%%+*}"
+        LAST_HAS_BETA=0; [[ "$LAST" == *"-beta"* ]] && LAST_HAS_BETA=1
+        VER_HAS_BETA=0; [[ "$VERSION" == *"-beta"* ]] && VER_HAS_BETA=1
+        LAST_BASE="${LAST_NOPLUS%%-beta*}"
+        VER_BASE="${VER_NOPLUS%%-beta*}"
+        HIGHER_BASE="$(printf '%s\n%s\n' "$LAST_BASE" "$VER_BASE" | sort -V | tail -1)"
+        if [ "$VER_BASE" != "$HIGHER_BASE" ]; then
             echo "::error::VERSION $VERSION is not newer than last release $LAST" >&2
             exit 1
+        fi
+        if [ "$VER_BASE" = "$LAST_BASE" ]; then
+            if [ "$VER_HAS_BETA" = "1" ] && [ "$LAST_HAS_BETA" = "0" ]; then
+                echo "::error::VERSION $VERSION is not newer than last release $LAST (beta < final)" >&2
+                exit 1
+            fi
+            if [ "$VERSION" = "$LAST" ]; then
+                echo "::error::VERSION $VERSION is not newer than last release $LAST" >&2
+                exit 1
+            fi
+            # 0.5.0 > 0.5.0-beta+date é ok (final > beta da mesma base)
         fi
     fi
 fi
