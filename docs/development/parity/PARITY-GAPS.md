@@ -33,7 +33,7 @@
 | 5 | `mq.*` | ✅ | partial (`MQ001` faces) | ⏳ golden | ⏳ | `MQ001` | infra lane |
 | 6 | `gpu.*` (JS face) + cross golden | ✅ | ✅ | ⏳ golden | ❌ `GPU001` | `GPU001` | gpu/native lanes |
 | 7 | `observability.*` cross golden + `OBS003` | ✅ | ✅ x86 | ⏳ golden | ⏳ (spans ✅, OBS003 pinned) | `OBS003` | obs lane |
-| 9 | `cache.*`/`config.*`/`log.*` cross golden; `log` interpreter | ✅ (log ⏳ interp) | ✅ x86 | `cache.*` ✅ 26/09 (`KofCacheCrossTest`, riscv64+aarch64 — `cache.ttl` −1 parity fixed, §501); `log` ⏳ interp; `config` ❌ `CONF001` | ✅ | `CONF001` | lane parity (cache ✅ 26/09) / stdlib lane |
+| 9 | `cache.*`/`config.*`/`log.*` cross golden; `log` interpreter | ✅ (log ⏳ interp) | ✅ x86 | `cache.*` ✅ 26/09 (`KofCacheCrossTest`, riscv64+aarch64 — `cache.ttl` −1 parity fixed, §501); `log` ⏳ (nível+timestamp+rótulo JVM); `config` ❌ `CONF001` | ✅ | `CONF001` | lane parity (cache ✅ 26/09) / stdlib lane |
 | 10 | `math.pow` cross (static, no libc) | ✅ | ✅ (libm `-lm`) | ❌ `MATH001` | ✅ | `MATH001` | native cross lane |
 | 11 | `strings.reverse` non-ASCII (UTF-16 vs byte) + `String.matches`/`replaceAll`/`replaceFirst`/`compareToIgnoreCase` | ✅ | ❌ `NAT-STR01`/`STR003` | ❌ `STR003` | ❌ `STR003` | `NAT-STR01`/`STR003` | native/js lanes |
 | 12 | web T1 (`kof.http.server` faces) on native/cross | ✅ | ⏳ | ❌ `WEB002`–`WEB006` | ✅ | `WEB00x` | web lane |
