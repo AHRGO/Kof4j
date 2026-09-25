@@ -106,6 +106,24 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `KofJsE2ETest` 40/40,
     `JsRuntimePruneWriterTest`/`JsRuntimeSliceRegistryTest` 12/12.
 
+  - **B4 follow-up (a) (baremetal MCU) — espelho Cortex-M3 do coletor e dos
+    corpos de tempo (`NativeMcuArmGc`/`NativeMcuArmGcSweep`/`NativeMcuArmTime`)**
+    (25/09): o coletor G-4/G-5 do `native-multiarch.md` e os corpos
+    `kof_plat_time*` foram portados de RV32I para Thumb-2/AAPCS (mesmo header de
+    16 B, payload `block+16`; sem `udiv` — decimal por subtração repetida;
+    callee-saved r4-r11; o guard do mark perde o limiar fixo 4096 do RV32I, já
+    que no CM3 o heap começa abaixo dele (~0x5e0)). Bug raiz pego pelo teste
+    (Q0): a posição bruta do SysTick (`0xFFFFFF-SYST_CVR`) volta a zero no wrap
+    de 2^24, quebrando o contrato monotônico — o fix acumula os deltas
+    `(last-CVR) mod 2^24` num contador de 32 bits (`boot=0`, só dá a volta em
+    2^32). `NativeMcuArmTime` está ligado ao `NativeMcuArm.renderAsm` para
+    paridade riscv32/cortex-m. Prova: `NativeMcuArmGcTest` 8/8 (alloc/dump, mark
+    transitivo, sweep/ciclo, laço de 10000 allocs reciclando, free-reuse, OOM
+    nomeado e a sabotagem que remove o hook do coletor → `out of memory`) +
+    `NativeMcuArmTimeTest` 2/2 + `NativeMcuArmE2ETest` 6/6 (agora também
+    asserindo `kof_plat_time`/`kof_plat_time_mono` na imagem) sob
+    `qemu-system-arm -M mps2-an385`.
+
   - **B4-TIME (baremetal MCU) — corpos de tempo do MCU: recusa NOMEADA do wall +
     contador monotônico (`NativeMcuTimeRiscv32`)** (25/09): por
     `D-BAREMETAL-MCU-GC` item 2, num MCU sem RTC o `kof_plat_time` (`time.now()`)

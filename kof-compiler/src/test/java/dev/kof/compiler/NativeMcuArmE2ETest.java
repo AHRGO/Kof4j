@@ -84,7 +84,8 @@ class NativeMcuArmE2ETest {
         assumeTrue(Files.isRegularFile(bin), "binário ARM ausente (assemble/link falhou)");
         String syms = capture(nm, bin.toString());
         for (String sym : new String[]{"kof_plat_write", "kof_plat_exit",
-                "kof_plat_thread_id", "kof_plat_random"}) {
+                "kof_plat_thread_id", "kof_plat_random",
+                "kof_plat_time", "kof_plat_time_mono"}) {
             assertTrue(syms.matches("(?s).*\\bT " + sym + "\\b.*"),
                     "imagem MCU ARM deveria definir " + sym + ":\n" + syms);
         }

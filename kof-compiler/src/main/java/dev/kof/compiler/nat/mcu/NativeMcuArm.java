@@ -255,6 +255,9 @@ public final class NativeMcuArm {
             sb.append(".Lmcu_str_").append(i).append(":\n");
             sb.append("    .ascii ").append(asmBytes(output.get(i))).append('\n');
         }
+        // B-4/item 2: os corpos kof_plat_time* (recusa de wall + mono SysTick),
+        // no mesmo degrau do NativeMcuRiscv32 (paridade riscv32/cortex-m).
+        sb.append(NativeMcuArmTime.runtimeAsm());
         return sb.toString();
     }
 
