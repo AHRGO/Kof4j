@@ -243,6 +243,9 @@ public final class NativeRiscvAsm {
                 .append(NativeRiscvAsmRtB78Helpers.RISCV_RUNTIME_ASM_B_78H)
                 // S5.5 fatia 5b: orm.all sobre o wire MySQL (dispatch na B58).
                 .append(NativeRiscvAsmRtB79.RISCV_RUNTIME_ASM_B_79)
+                // S5.5 fatia 5c: orm.where/where_op sobre o wire MySQL (dispatch na B59).
+                .append(NativeRiscvAsmRtB80.RISCV_RUNTIME_ASM_B_80)
+                .append(NativeRiscvAsmRtB80Helpers.RISCV_RUNTIME_ASM_B_80H)
                 // D-FULL-PARITY-050 row 11 (native cross lane, 24/09):
                 // String.toCharArray() no cross — Char[] (code units UTF-16,
                 // paridade JVM/x86); fecha a face cross do STR003.

@@ -13,6 +13,21 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **S5.5 slice 5c (db-parity, gaps-db lane) — `orm.where`/`where_op` over the
+    MySQL wire on the cross (pieces `B80` + `B80Helpers`)** (24/09):
+    `kof_orm_where`/`kof_orm_where_op` branch on `kof_db_type == 2` and
+    tail-call `kof_orm_where_mysql` — ``SELECT * FROM \`t\` WHERE \`f\` <op> ?``,
+    value literal via `kof_orm_mysql_lit` + `kof_db_mysql_replace_q`. The op
+    whitelist is the mysql port of `RuntimeOrmMysqlOp` (`kof_orm_mysql_op`:
+    `==`→`=`, `>` `<` `>=` `<=` `!=` `LIKE`, else throw
+    `ORM operator not allowed: <op>`; the `where` face defaults to `=`). Same
+    packet walk/record materialisation; empty list if nothing matches. Proof:
+    `KofOrmE2ETest#crossNativeMariadbWhereMatchesOracles` — JVM + x86-64 +
+    riscv64 + aarch64 byte-identical (incl. exact throw and empty list);
+    `KofOrmE2ETest` 81/0F/2skip, `NativeRiscvDbWireTest` 41/0F,
+    `NativeRiscvRuntimeSliceRegistryTest` 9/9. The last face (`page`) reuses the
+    same reader.
+
   - **S5.5 slice 5b (db-parity, gaps-db lane) — `orm.all` over the MySQL wire on
     the cross (cross piece `B79`)** (24/09): `kof_orm_all` branches on
     `kof_db_type == 2` and tail-calls the new `kof_orm_all_mysql`, the same

@@ -80,6 +80,10 @@ public final class NativeRiscvAsmRtB59 {
                 sd   t0, 48(sp)                    # opLen
             .L59_body:
                 ld   a0, 128(sp)
+                call kof_db_type
+                li   t0, 2
+                beq  a0, t0, .L59_where_mysql
+                ld   a0, 128(sp)
                 call kof_orm_conn
                 sd   a0, 120(sp)                   # conn
                 ld   a0, 8(sp)
@@ -436,6 +440,27 @@ public final class NativeRiscvAsmRtB59 {
                 ld   s8, 160(sp)
                 addi sp, sp, 240
                 ret
+            # ---- dispatch mysql (type 2): tail-call kof_orm_where_mysql ----
+            .L59_where_mysql:
+                ld   a0, 128(sp)                   # id
+                ld   a1, 24(sp)                    # field
+                ld   a2, 32(sp)                    # value
+                ld   a3, 136(sp)                   # op KofString* (0 = where)
+                ld   a4, 0(sp)                     # table
+                ld   a5, 8(sp)                     # schema
+                ld   a6, 16(sp)                    # className
+                ld   ra, 232(sp)
+                ld   s0, 224(sp)
+                ld   s1, 216(sp)
+                ld   s2, 208(sp)
+                ld   s3, 200(sp)
+                ld   s4, 192(sp)
+                ld   s5, 184(sp)
+                ld   s6, 176(sp)
+                ld   s7, 168(sp)
+                ld   s8, 160(sp)
+                addi sp, sp, 240
+                j    kof_orm_where_mysql
 
             .section .rodata
             .L59_s1:
