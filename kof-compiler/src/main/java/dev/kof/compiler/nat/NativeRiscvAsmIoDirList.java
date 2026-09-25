@@ -3,13 +3,18 @@ package dev.kof.compiler.nat;
 // D-FULL-PARITY-050 (row 13, native cross lane, 24/09): fatia 7 — dir listing
 // (kof.io Directory.list()) no cross (riscv64 + aarch64; aarch64 herda pelo
 // tradutor). Port de RuntimeIo3.kof_io_dir_list:
-//   openat(AT_FDCWD, path+24, O_DIRECTORY=65536, 0); loop getdents64(=61) num
+//   openat(AT_FDCWD, path+24, O_RDONLY=0, 0); loop getdents64(=61) num
 //   buffer kof_alloc(8192); para cada linux_dirent64 pula "."/".." e adiciona o
 //   nome (kof_io_strlen + kof_io_make_string + kof_list_add); fecha; insertion
 //   sort no backing array (ponteiros 8B, igual x86) com comparacao byte-a-byte
 //   unsigned (.Lkof_iodl_less). Em erro de openat retorna 0 (null), como o JVM.
 // List layout (RtB0): size@16, backing ptr@24, stride 8.
 // Syscalls riscv64/aarch64: openat=56, close=57, getdents64=61.
+//
+// NAO usar O_DIRECTORY aqui: o valor e ARCH-DIVERGENTE (riscv64 generic
+// 0x10000 x arm64 0x4000). Como a mesma asm serve as duas arches, abrimos com
+// O_RDONLY (0) — getdents64 funciona num diretorio aberto O_RDONLY em ambas;
+// com 0x10000 no aarch64 o openat da EINVAL (achado 24/09, NativeIoDirListCrossTest).
 public final class NativeRiscvAsmIoDirList {
 
     private NativeRiscvAsmIoDirList() {}
@@ -33,7 +38,7 @@ public final class NativeRiscvAsmIoDirList {
                 mv   s0, a0
                 li   a0, -100
                 addi a1, s0, 24
-                li   a2, 65536              # O_DIRECTORY
+                li   a2, 0                  # O_RDONLY
                 li   a3, 0
                 li   a7, 56
                 ecall
