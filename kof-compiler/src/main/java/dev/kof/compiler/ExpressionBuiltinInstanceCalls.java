@@ -25,7 +25,7 @@ final class ExpressionBuiltinInstanceCalls {
             "kof_io_read_text", "kof_io_write_text", "kof_io_append_text",
             "kof_io_delete", "kof_io_dir_create", "kof_io_dir_create_dirs",
             "kof_io_file_size", "kof_io_read_bytes", "kof_io_write_bytes",
-            "kof_io_append_bytes");
+            "kof_io_append_bytes", "kof_io_dir_list");
 
     /** Diagnóstico de gap honesto (R6) numa chamada kof.web. */
     private static void webGap(CompilerDriver driver, MethodCallExpr mc, String msg, String code) {
