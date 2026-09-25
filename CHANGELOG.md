@@ -394,6 +394,13 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Proof: `NativeIoNormalizeCrossTest` (`/a/c`, `a/b`, `c`, `/a/b`, `/`, `.`, `x`;
     JVM==riscv64==aarch64).
 
+  - **D-FULL-PARITY-050 row 13 slice 12 (native-cross lane) — `Path.toAbsolute`
+    on the riscv64/aarch64 cross.** The new cross piece
+    `NativeRiscvAsmIoToAbsolute` ports `kof_io_path_to_absolute` (absolute path
+    returned as-is, else `getcwd` via `__NR_getcwd`=17 + `kof_io_path_resolve`).
+    Proof: `NativeIoToAbsoluteCrossTest` (`/abs/x`, `<cwd>/rel/x`, `<cwd>/a/../b`;
+    JVM==riscv64==aarch64).
+
   - **S5.4 slice 1 (db-parity, gaps-db lane) — real MySQL/MariaDB `connect`
     on the cross (cross piece `B73`)** (24/09): `kof_db_connect` now accepts
     `mysql://`/`mariadb://` on riscv64/aarch64 — URL parse
