@@ -30,6 +30,12 @@ if (("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc
     if (!driver.fpSupportedOnNative(printedType, mc.position())) {
         return localIdx;
     }
+    if (ProcessResultPrintGuard.refuseWholeResult(driver, printedType,
+            mc.position() != null ? mc.position().file() : "",
+            mc.position() != null ? mc.position().line() : 0,
+            mc.position() != null ? mc.position().column() : 0)) {
+        return localIdx;
+    }
     // §205 (Native): `println(if/switch com ramos de tipos distintos)` — o
     // join #183 dá `Object`, e o print de um `Object` não despacha no Native
     // (sem boxed-ABI polimórfico = §104b-ii). Em vez de gate (quebra a

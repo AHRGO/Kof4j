@@ -20,6 +20,7 @@ public final class ExpressionBinaryLowerer {
      * `String.valueOf(c)` (§27). Os demais primitivos mantêm o box.
      */
     static void emitOperandToString(CompilerDriver driver, List<KofOperation> ops, Type type) {
+        if (ProcessResultPrintGuard.refuseWholeResult(driver, type, "", 0, 0)) return;
         Type check = type instanceof Type.NullableType nt ? nt.inner() : type;
         boolean isChar = check instanceof Type.PrimitiveType p
                 && "char".equals(Type.canonicalPrimitiveName(p.name()));
