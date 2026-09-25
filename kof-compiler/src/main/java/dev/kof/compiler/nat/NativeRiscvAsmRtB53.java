@@ -122,74 +122,8 @@ public final class NativeRiscvAsmRtB53 {
                 addi sp, sp, 32
                 ret
 
-            # .L53_lit(a0=value*) -> a0=KofString* literal SQL (mysql)
-            # espelha o Orm3/x86: box §284 (0=int,2=long,3=bool,4=double,
-            # 5=float), KofString via B71 (quote+escape), null -> "NULL",
-            # outra forma -> throw ORM001 (mesma mensagem do .L53_bad)
-            .L53_lit:
-                addi sp, sp, -48
-                sd   ra, 40(sp)
-                sd   s0, 32(sp)
-                mv   s0, a0
-                beqz s0, .L53_lit_null
-                la   t0, .L53_magic
-                ld   t0, 0(t0)
-                ld   t1, 0(s0)
-                bne  t0, t1, .L53_lit_strchk
-                lw   t1, 8(s0)                     # tag
-                beqz t1, .L53_lit_int
-                li   t2, 2
-                beq  t1, t2, .L53_lit_long
-                li   t2, 3
-                beq  t1, t2, .L53_lit_bool
-                li   t2, 4
-                beq  t1, t2, .L53_lit_dbl
-                li   t2, 5
-                beq  t1, t2, .L53_lit_flt
-                j    .L53_bad
-            .L53_lit_int:
-                lw   a0, 16(s0)                    # sign-extend (movslq do x86)
-                call kof_int_to_string
-                j    .L53_lit_out
-            .L53_lit_long:
-                ld   a0, 16(s0)
-                call kof_long_to_string
-                j    .L53_lit_out
-            .L53_lit_bool:
-                lw   a0, 16(s0)                    # box bool guarda 1/0
-                call kof_int_to_string
-                j    .L53_lit_out
-            .L53_lit_dbl:
-                ld   t0, 16(s0)
-                fmv.d.x fa0, t0
-                call kof_double_to_string
-                j    .L53_lit_out
-            .L53_lit_flt:
-                lw   t0, 16(s0)
-                fmv.w.x fa0, t0
-                fcvt.d.s fa0, fa0                  # widen como o setFloat x86
-                call kof_double_to_string
-                j    .L53_lit_out
-            .L53_lit_strchk:
-                lw   t0, 0(s0)                     # KofString tag (1,0,0)?
-                li   t1, 1
-                bne  t0, t1, .L53_bad
-                lw   t0, 4(s0)
-                bnez t0, .L53_bad
-                ld   t0, 8(s0)
-                bnez t0, .L53_bad
-                mv   a0, s0
-                call kof_db_mysql_render
-                j    .L53_lit_out
-            .L53_lit_null:
-                la   a0, .L53_nullv
-                li   a1, 4
-                call kof_string_from_literal
-            .L53_lit_out:
-                ld   ra, 40(sp)
-                ld   s0, 32(sp)
-                addi sp, sp, 48
-                ret
+            # .L53_lit foi promovido para kof_orm_mysql_lit na peça B75
+            # (S5.5 fatia 3 — uma cópia só do renderizador, regra 11).
 
             # ---------------------------------------------------------------
             # kof_orm_count_where(id*, field*, value*, table*, schema*) -> Long
@@ -351,7 +285,7 @@ public final class NativeRiscvAsmRtB53 {
             # mysql, com o value renderizado em LITERAL (sem bind `?`).
             .L53_cw_mysql:
                 mv   a0, s2
-                call .L53_lit                      # s8 = literal (KofString*)
+                call kof_orm_mysql_lit             # literal (peça B75, compartilhado)
                 mv   s8, a0
                 # cap = 24(hdr) + 36(const) + tblLen + fldLen + litLen
                 lw   t0, 16(s3)

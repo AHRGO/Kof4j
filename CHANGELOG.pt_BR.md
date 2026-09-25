@@ -13,6 +13,32 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **S5.5 fatia 3 (db-parity, lane gaps-db) — `orm.delete`/`deleteAll` sobre o
+    wire MySQL no cross (peça cross `B75` + dispatch `B50`/`B54`)** (24/09):
+    `kof_orm_delete_mysql(id,key,table,schema)` e
+    `kof_orm_delete_all_mysql(id,table,schema)` montam ``DELETE FROM
+    `t`[ WHERE `pk` = <lit>]`` (dialeto backtick) e despacham via
+    `kof_db_resolve` + `kof_db_mysql_execute` (B72); o `kof_orm_delete_all` e o
+    `kof_orm_delete` ramificam em `kof_db_type == 2`. O renderizador de literal
+    da fatia 2 foi **promovido a global compartilhado** (`kof_orm_mysql_lit`, na
+    `B75`) para uma cópia só servir `count_where` e `delete` (`.L53_lit`
+    removido), o bind nulo rende `NULL` e outra forma de box lança ORM001. **A
+    semântica espelha o x86 (a referência do contrato, D-DB-GAPS): o
+    `delete`/`deleteAll` x86 usa o `kof_db_execute` genérico (sem throw,
+    `affected >= 0` → `true` no sucesso *e* no ERR), então o cross reusa a B72**
+    — sem exec que lança aqui; a divergência JVM↔Native no caminho de erro é
+    pré-existente e está catalogada `§493` (regra 6, decisão de contrato do
+    maintainer; não mudada em silêncio). Também corrigiu um off-by-one no ramo
+    mysql novo da `B54`: ele lia `key`/`table`/`schema` de slots da pilha
+    derramados *antes* dos args serem atribuídos (os regs velhos do chamador) →
+    ORM001/segfault; agora lê os `s2`/`s3`/`s4` vivos. Prova:
+    `KofOrmE2ETest#crossNativeMariadbDeleteAndDeleteAllMatchesOracles` — JVM +
+    x86-64 + riscv64 + aarch64 byte-idênticos em hit / miss / negativo /
+    idempotente (`3\ntrue\n2\ntrue\n2\ntrue\n2\ntrue\ntrue\n0`) — e
+    `#crossNativeMariadbDeleteErrorMatchesX86Oracle` (Native x86 == riscv64 ==
+    aarch64 no ERR de tabela inexistente); regressão verde (`KofOrmE2ETest`
+    75/0F, `KofDbE2ETest` 40/0F).
+
   - **S5.5 fatia 2 (db-parity, lane gaps-db) — `orm.count_where` sobre o wire
     MySQL no cross (peça `B53`) + fix latente do bind bool x86 (`§492`)**
     (24/09): o ramo type-2 do `kof_orm_count_where` monta `SELECT COUNT(*) FROM

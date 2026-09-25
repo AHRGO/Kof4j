@@ -12438,3 +12438,18 @@ main() {
 
 **Dono:** lane gaps-db (`RuntimeOrmMysqlCountWhere`, backend VM x86); mesma família de classificador do `RuntimeOrm3`/cross `RtB53`.
 <!-- en-switch --> **EN:** [§492 (en)](known-bugs.md#492--native-x86-64-ormcount_where-over-mysql-threw-orm001-on-a-boolean-bind-the-284-box-tag-was-checked-as-1-string-instead-of-3-bool-so-tag-3-fell-into-the-unsupported-type-throw---fixed-2409)
+
+## §493 — JVM e Native divergem no caminho de erro do `orm.delete`/`orm.deleteAll` no MySQL: o JVM lança uma String de SQLException, o Native x86-64 e o cross devolvem `true` — 🟡 ABERTO (decisão de contrato)
+
+**Sintoma (medido 24/09, lane gaps-db, S5.5 fatia 3):** em uma conexão `mysql://`, `orm.delete<T>(db, k)` e `orm.deleteAll<T>(db)` contra tabela inexistente (ou qualquer erro SQL) comportam-se de forma diferente por alvo: o host JVM lança uma `String` com a mensagem do `SQLException` do JDBC; o Native x86-64 e o cross (riscv64/aarch64) devolvem `true` (`affectedRows >= 0`). O mesmo programa expõe o erro no JVM e o engole no Native. É só o caminho de erro — o caminho de sucesso é byte-idêntico nos três.
+
+**Causa-raiz:** não é um bug, e sim uma **divergência de contrato** entre duas implementações da mesma face congelada. (a) O JVM `kof_db_execute_n` no JDBC propaga o `SQLException` como `String` do Kof (throw). (b) O x86 `RuntimeOrmMysql` `delete`/`deleteAll` chamam o `kof_db_execute` **genérico**, cujo `.Ldb_exec_bad` devolve `0` (`affectedRows`) e **NÃO** lança — então o `>= 0` do chamador resulta em `true`. Só o `save`/`saveAll` x86 usa o `RuntimeOrmMysqlExec`/`.Lorm_sa_exec` que lança. O cross `RtB75` espelha o x86 exatamente (B72 `kof_db_mysql_execute`, sem throw), então a paridade Native↔cross se mantém; a divergência é JVM↔Native e PRÉ-EXISTE à S5.5 (não é introduzida aqui).
+
+**Impacto / honestidade (R6):** a face Native reporta sucesso (`true`) para um DELETE que o servidor rejeitou — falha silenciosa no wire. Se o contrato congelado quer a semântica do JVM (throw) ou a do Native (devolver `affectedRows`) é **decisão de projeto do maintainer (regra 6)**, não edição de agente: alinhar qualquer lado muda o contrato de erro de uma face congelada. Registrado aqui e em `docs/development/db-parity-plan.md` para a divergência ficar visível e nunca "documentada em volta".
+
+**Prova (medido 24/09):** `KofOrmE2ETest#crossNativeMariadbDeleteErrorMatchesX86Oracle` trava Native x86-64 == riscv64 == aarch64 no caso tabela-inexistente (todos `true`); o teste de caminho-feliz da fatia 3 `crossNativeMariadbDeleteAndDeleteAllMatchesOracles` trava o sucesso contra o oráculo JVM. Nenhum teste de erro incluindo o JVM é adicionado enquanto a semântica não é decidida.
+
+**Status:** 🟡 ABERTO — decisão de contrato (regra 6); nenhuma mudança de semântica feita pelo agente.
+
+**Dono:** lane gaps-db (fila de decisão); afeta `RuntimeOrmMysql`/`RuntimeDb*` (x86), `JvmConfigRuntime.kof_db_execute_n` (JVM) e `RtB75`/`RtB72` (cross).
+<!-- en-switch --> **EN:** [§493 (en)](known-bugs.md#493--jvm-and-native-diverge-on-the-ormdeleteormdeleteall-error-path-over-mysql-the-jvm-throws-a-sqlexception-string-while-native-x86-64-and-the-cross-return-true---open-contract-decision)

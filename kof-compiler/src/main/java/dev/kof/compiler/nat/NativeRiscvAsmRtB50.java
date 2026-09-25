@@ -84,6 +84,11 @@ public final class NativeRiscvAsmRtB50 {
                 sd   s4, 16(sp)
                 mv   s0, a0
                 mv   s1, a1
+                mv   a0, s0
+                call kof_db_type                   # S5.5 fatia 3: type 2 -> mysql
+                li   t0, 2
+                beq  a0, t0, .L50_da_mysql
+                mv   a0, s0
                 call .L50_conn
                 mv   s2, a0                        # handle
                 la   a0, .L50_da_pre
@@ -130,6 +135,22 @@ public final class NativeRiscvAsmRtB50 {
                 ld   s4, 16(sp)
                 addi sp, sp, 64
                 ret
+            # S5.5 fatia 3: DELETE FROM `t` pelo wire mysql (peça B75).
+            # Espelha o x86 `.Lorm_da_my`: exec genérico (affected|0), NÃO lança
+            # no ERR — a divergência JVM↔Native é pré-existente (§493).
+            .L50_da_mysql:
+                mv   t0, s0
+                mv   t1, s1
+                ld   ra, 56(sp)
+                ld   s0, 48(sp)
+                ld   s1, 40(sp)
+                ld   s2, 32(sp)
+                ld   s3, 24(sp)
+                ld   s4, 16(sp)
+                addi sp, sp, 64
+                mv   a0, t0
+                mv   a1, t1
+                j    kof_orm_delete_all_mysql
 
             # ---------------------------------------------------------------
             # kof_orm_count(id*, table*, schema*) -> Long

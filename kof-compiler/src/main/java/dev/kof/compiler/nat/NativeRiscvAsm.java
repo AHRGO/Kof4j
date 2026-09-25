@@ -220,6 +220,10 @@ public final class NativeRiscvAsm {
                 // S5.5 db-parity (gaps-db lane, 24/09): scalar do wire mysql no
                 // cross (1a linha/1a coluna como Long) — base do orm.count.
                 .append(NativeRiscvAsmRtB74.RISCV_RUNTIME_ASM_B_74)
+                // S5.5 fatia 3 (gaps-db lane, 24/09): escrita do ORM no wire
+                // mysql cross — literal compartilhado (kof_orm_mysql_lit) e
+                // delete/deleteAll (exec genérico B72, sem throw, como o x86).
+                .append(NativeRiscvAsmRtB75.RISCV_RUNTIME_ASM_B_75)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

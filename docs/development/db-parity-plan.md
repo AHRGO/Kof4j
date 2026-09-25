@@ -8,7 +8,7 @@
 > when parity is complete.
 
 **Owner:** `gaps-db` lane (handed over 21/09 by order of the maintainer, under `D-DB-PARITY-OWNER`; S0/S1 authorized) · **Records/plan:** docs/plataforma lane
-**Branch:** `beta-0.5.0` · **Status:** S0 ✅ DONE (21/09, session 9092) — honest native refusal of an unsupported scheme with the named `DB001` code, plus real link-by-use (no `libmariadb` link for non-mysql literals); **S1 ✅ DONE on Native x86-64 (23/09, gaps-db lane)** — `mariadb://` is a `mysql://` wire alias; cross stays honest `DB001` until the mysql wire is ported (R7) — **superseded by S5.4 slice 1 (24/09, piece `B73`): `mysql://`/`mariadb://` on the cross now connect for real**; **S2 ✅ DONE on JVM/JS/Android (23/09, gaps-db lane)** — a missing JDBC driver is now a named `DB001` diagnostic (real connection failures untouched); **S3/S4 ✅ DONE 23/09 (gaps-db lane)** — `mongodb://` real on JVM/Android and declared `DB001` on JS/Native; `oracle` declared (no driver/server on the host); **S5.0 (cross socket layer) ✅ SATISFIED 23/09 (measured — already proven by the cross HTTP core)**; **S5.1 (handshake+auth) ✅ SATISFIED 23/09 (pieces `B62`–`B66`): SHA1/bswap + scramble/lenenc + greeting parse + auth-response build + the socket round-trip, proven by `NativeRiscvDbWireTest` on riscv64+aarch64 (qemu, against the JVM oracle and against the REAL MariaDB — the server returns the OK packet; an unknown DB yields Err). The Kof surface (`db.connect` cross) now connects for real (S5.4 slice 1, piece `B73`) and only refuses non-ported schemes with the honest `DB001`**; **S5.2 (`COM_QUERY`) 🟡 PARTIAL 23/09 (pieces `B67`–`B69`) — request framing + first-response classification (`SELECT 1`→1, `SET`→0, bad SQL→255) AND the packet reader + resultset header (ncols + first-row lenenc payload: `SELECT 1`→1col/[01 31], `SELECT 1,'ab'`→2col/[01 31 02 61 62]), proven on riscv64+aarch64 (qemu) against the real MariaDB; materialising all rows as Kof values is the next slice**; **S5.2 ✅ 24/09 (pieces `B70` resultset-as-Kof-rows, `B72` OK/affected `COM_QUERY`); S5.3 ✅ 24/09 (piece `B71` client-side bind substitution); S5.4 ✅ 24/09 (piece `B73` real cross `connect`, piece `B47b` the `execute`/`query` mysql dispatch + `transaction { }`; the scheme-parity front is done); S5.5 (ORM over mysql on the cross) OPEN — `kof.orm` row-object faces are still sqlite-only on the cross**
+**Branch:** `beta-0.5.0` · **Status:** S0 ✅ DONE (21/09, session 9092) — honest native refusal of an unsupported scheme with the named `DB001` code, plus real link-by-use (no `libmariadb` link for non-mysql literals); **S1 ✅ DONE on Native x86-64 (23/09, gaps-db lane)** — `mariadb://` is a `mysql://` wire alias; cross stays honest `DB001` until the mysql wire is ported (R7) — **superseded by S5.4 slice 1 (24/09, piece `B73`): `mysql://`/`mariadb://` on the cross now connect for real**; **S2 ✅ DONE on JVM/JS/Android (23/09, gaps-db lane)** — a missing JDBC driver is now a named `DB001` diagnostic (real connection failures untouched); **S3/S4 ✅ DONE 23/09 (gaps-db lane)** — `mongodb://` real on JVM/Android and declared `DB001` on JS/Native; `oracle` declared (no driver/server on the host); **S5.0 (cross socket layer) ✅ SATISFIED 23/09 (measured — already proven by the cross HTTP core)**; **S5.1 (handshake+auth) ✅ SATISFIED 23/09 (pieces `B62`–`B66`): SHA1/bswap + scramble/lenenc + greeting parse + auth-response build + the socket round-trip, proven by `NativeRiscvDbWireTest` on riscv64+aarch64 (qemu, against the JVM oracle and against the REAL MariaDB — the server returns the OK packet; an unknown DB yields Err). The Kof surface (`db.connect` cross) now connects for real (S5.4 slice 1, piece `B73`) and only refuses non-ported schemes with the honest `DB001`**; **S5.2 (`COM_QUERY`) 🟡 PARTIAL 23/09 (pieces `B67`–`B69`) — request framing + first-response classification (`SELECT 1`→1, `SET`→0, bad SQL→255) AND the packet reader + resultset header (ncols + first-row lenenc payload: `SELECT 1`→1col/[01 31], `SELECT 1,'ab'`→2col/[01 31 02 61 62]), proven on riscv64+aarch64 (qemu) against the real MariaDB; materialising all rows as Kof values is the next slice**; **S5.2 ✅ 24/09 (pieces `B70` resultset-as-Kof-rows, `B72` OK/affected `COM_QUERY`); S5.3 ✅ 24/09 (piece `B71` client-side bind substitution); S5.4 ✅ 24/09 (piece `B73` real cross `connect`, piece `B47b` the `execute`/`query` mysql dispatch + `transaction { }`; the scheme-parity front is done); S5.5 (ORM over mysql on the cross) 🟡 IN PROGRESS 24/09 — `orm.count` (fatia 1, `RtB74`/`RtB50`), `orm.count_where` (fatia 2, `RtB53`) and `orm.delete`/`deleteAll` (fatia 3, `RtB75`/`RtB50`/`RtB54`) are REAL on the cross (x86-64 + riscv64 + aarch64, qemu); `orm.save` (throwing exec + `LAST_INSERT_ID`) and the row-object faces (`find`/`all`/`where`/`page`, typed-column ABI) remain sqlite-only on the cross**
 
 ---
 
@@ -313,33 +313,58 @@ typed roundtrip) produces the **same observable result** on all four targets, or
     2. **`orm.count_where`** — bind substitution (B71) + the mysql quoting, with
        the null bind handled (B71 renders a 0 pointer as Int 0 today).
        **DONE 24/09** — `RtB53` type-2 branch builds `SELECT COUNT(*) FROM
-       `t` WHERE `f` = <literal>` with backtick names and a `.L53_lit` renderer
-       (box §284 int/long/bool/double/float → `kof_*_to_string`, KofString via
-       `kof_db_mysql_render`, null → `NULL`, else ORM001). The same unit fixed
+       `t` WHERE `f` = <literal>` with backtick names, dispatching the literal
+       to the shared renderer `kof_orm_mysql_lit` (box §284 int/long/bool/
+       double/float → `kof_*_to_string`, KofString via `kof_db_mysql_render`,
+       null → `NULL`, else ORM001) — promoted to a global in `RtB75` (fatia 3)
+       so a single copy serves `count_where` and `delete`. The same unit fixed
        a latent **x86** bug: `RuntimeOrmMysqlCountWhere` checked the box tag as
        1 instead of 3 for Bool → ORM001 on any boolean bind (catalogued §492).
        *Proof:* `KofOrmE2ETest#crossNativeMariadbCountWhereMatchesOracles` —
        JVM + x86-64 + riscv64 + aarch64 byte-identical on string/miss/injection/
        negative/positive/bool (`1\n0\n0\n1\n0\n1\n1\n1`).
-    3. **`orm.save`/`delete`/`deleteAll`** — execute path; generated-key needs
-       `SELECT LAST_INSERT_ID()` (same scalar primitive). **Design note
-       (24/09):** the ORM faces must **throw** on a server ERR (host/JVM and x86
-       `kof_orm_delete*` return `affectedRows >= 0`, true on success, and throw
-       on error — `JvmOrmRuntime` lines 362/396), but the existing cross
-       `kof_db_mysql_execute` (B72) returns **0 on ERR** because `db.execute`
-       semantics require it (S5.4 test pins `SQL inválido → 0`). So fatia 3
-       needs its own throwing exec primitive (`kof_orm_mysql_exec`, a port of
-       the x86 `RuntimeOrmMysqlExec`/`.Lorm_sa_exec` that throws `mysql: <msg>`
-       on ERR, `mysql: connection lost` on loss) — do **not** reuse B72 for the
-       ORM faces. `delete`/`deleteAll` build `DELETE FROM \`t\`[ WHERE \`pk\` =
-       <lit>]` (the `<lit>` via the fatia-2 renderer, promoted to a shared
-       global) and return `affected >= 0`; `save` adds `SELECT
-       LAST_INSERT_ID()`.
-    4. **`orm.find`/`all`/`where`/`where_op`/`page`** — row materialisation; needs
+    3. **`orm.delete`/`deleteAll` over mysql** (part of fatia 3).
+       **DONE 24/09** — new piece `RtB75`: `kof_orm_delete_mysql(id,key,table,
+       schema)` and `kof_orm_delete_all_mysql(id,table,schema)` build ``DELETE
+       FROM `t`[ WHERE `pk` = <lit>]`` (the `<lit>` from the shared renderer)
+       and dispatch via `kof_db_resolve` + `kof_db_mysql_execute` (B72). `RtB50`
+       (`delete_all`) and `RtB54` (`delete`) branch on `kof_db_type == 2`. The
+       **semantics mirror the x86, which is the contract reference (D-DB-GAPS)**:
+       the x86 `.Lorm_da_my`/`.Lorm_del_my` run the **generic** `kof_db_execute`
+       (`.Ldb_exec_bad` → `0`, no throw) and the caller returns `affected >= 0`
+       → `true` on success **and on ERR**. So the cross reuses B72 (no throw) —
+       it does **not** need a throwing exec here. `RtB54` also fixed an
+       off-by-one in its own new mysql branch: the prologue spills callee-saved
+       regs **before** assigning the args, so `key`/`table`/`schema` must be
+       read from the live `s2`/`s3`/`s4`, not from the stack slots (the first
+       attempt read the caller's stale regs → ORM001/segfault; isolated with a
+       scratch run under qemu `-strace`/`-d in_asm`). The JVM↔Native divergence
+       on the **error** path (JVM throws, Native returns `true`) is
+       **pre-existing** and catalogued **§493** — left for the maintainer's
+       contract decision, not silently changed.
+       *Proof:* `KofOrmE2ETest#crossNativeMariadbDeleteAndDeleteAllMatchesOracles`
+       — JVM + x86-64 + riscv64 + aarch64 byte-identical on hit/miss/negative/
+       idempotent (`3\ntrue\n2\ntrue\n2\ntrue\n2\ntrue\ntrue\n0`) — and
+       `#crossNativeMariadbDeleteErrorMatchesX86Oracle` (Native x86 == riscv64 ==
+       aarch64 on the missing-table ERR, all `true`).
+    4. **`orm.save`** — INSERT path; the generated key needs
+       `SELECT LAST_INSERT_ID()` (the `RtB74` scalar) and the field literals.
+       This is the **only** face whose x86 reference **throws** on ERR
+       (`RuntimeOrmMysqlExec`/`.Lorm_sa_exec`), so it is the one that needs a
+       throwing cross exec primitive (`kof_orm_mysql_exec`, port of that
+       reference) — see the design note below.
+    5. **`orm.find`/`all`/`where`/`where_op`/`page`** — row materialisation; needs
        a typed column ABI (B70 returns JSON, not columns) and the mysql dialect.
     Until each lands this stays a **declared interim gap** (never a silent
     accept), and `kof_orm_conn`'s message should name the real cause (mysql ORM
     not yet ported) instead of `unknown db connection`.
+
+    **Design note (corrected 24/09):** the throwing cross exec
+    (`kof_orm_mysql_exec`) belongs to **`orm.save` only** — the x86
+    `delete`/`deleteAll` do **not** throw (they use the generic `kof_db_execute`),
+    so porting a throw there would *diverge* from the x86 contract. The JVM's
+    `orm.delete`/`deleteAll` do throw (JDBC), which is precisely the
+    **JVM↔Native divergence catalogued §493** (rule 6 — maintainer's decision).
 
 ## Non-goals / invariants
 

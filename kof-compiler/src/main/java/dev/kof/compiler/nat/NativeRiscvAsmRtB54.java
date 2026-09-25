@@ -320,6 +320,11 @@ public final class NativeRiscvAsmRtB54 {
                 mv   s2, a1                        # key (box/KofString/null)
                 mv   s3, a2                        # table
                 mv   s4, a3                        # schema
+                sd   a0, 8(sp)                     # id (S5.5 fatia 3)
+                call kof_db_type                   # 2 -> wire mysql
+                li   t0, 2
+                beq  a0, t0, .L54_del_mysql
+                ld   a0, 8(sp)
                 call .L54_conn
                 mv   s0, a0                        # conn
                 mv   a0, s4
@@ -483,6 +488,31 @@ public final class NativeRiscvAsmRtB54 {
                 ld   s10, 16(sp)
                 addi sp, sp, 112
                 ret
+            # S5.5 fatia 3: DELETE FROM `t` WHERE `pk` = <lit> no wire mysql
+            # (peça B75; o literal do key sai do renderizador compartilhado).
+            .L54_del_mysql:
+                ld   t0, 8(sp)                     # id (spill pós-atribuição)
+                mv   t1, s2                        # key (vivo; o spill em 80(sp)
+                mv   t2, s3                        # é do s2 do CALLER)
+                mv   t3, s4                        # table / schema vivos
+                ld   ra, 104(sp)
+                ld   s0, 96(sp)
+                ld   s1, 88(sp)
+                ld   s2, 80(sp)
+                ld   s3, 72(sp)
+                ld   s4, 64(sp)
+                ld   s5, 56(sp)
+                ld   s6, 48(sp)
+                ld   s7, 40(sp)
+                ld   s8, 32(sp)
+                ld   s9, 24(sp)
+                ld   s10, 16(sp)
+                addi sp, sp, 112
+                mv   a0, t0
+                mv   a1, t1
+                mv   a2, t2
+                mv   a3, t3
+                j    kof_orm_delete_mysql
 
             .section .rodata
             .L54_bc_pre:

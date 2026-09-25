@@ -13,6 +13,31 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **S5.5 slice 3 (db-parity, gaps-db lane) — `orm.delete`/`deleteAll` over the
+    MySQL wire on the cross (cross piece `B75` + `B50`/`B54` dispatch)**
+    (24/09): `kof_orm_delete_mysql(id,key,table,schema)` and
+    `kof_orm_delete_all_mysql(id,table,schema)` build ``DELETE FROM
+    `t`[ WHERE `pk` = <lit>]`` (backtick dialect) and dispatch via
+    `kof_db_resolve` + `kof_db_mysql_execute` (B72); `kof_orm_delete_all` and
+    `kof_orm_delete` branch on `kof_db_type == 2`. The literal renderer from slice
+    2 was **promoted to a shared global** (`kof_orm_mysql_lit`, in `B75`) so one
+    copy serves `count_where` and `delete` (`.L53_lit` removed), the null bind
+    renders `NULL`, any other box shape throws ORM001. **Semantics mirror the x86
+    (the contract reference, D-DB-GAPS): the x86 `delete`/`deleteAll` use the
+    generic `kof_db_execute` (no throw, `affected >= 0` → `true` on success *and*
+    on ERR), so the cross reuses B72** — no throwing exec here; the JVM↔Native
+    divergence on the error path is pre-existing and catalogued `§493` (rule 6,
+    maintainer's contract decision; not silently changed). Also fixed an
+    off-by-one in `B54`'s new mysql branch: it read `key`/`table`/`schema` from
+    stack slots spilled *before* the args were assigned (the caller's stale
+    regs) → ORM001/segfault; now it reads the live `s2`/`s3`/`s4`. Proof:
+    `KofOrmE2ETest#crossNativeMariadbDeleteAndDeleteAllMatchesOracles` — JVM +
+    x86-64 + riscv64 + aarch64 byte-identical on hit / miss / negative /
+    idempotent (`3\ntrue\n2\ntrue\n2\ntrue\n2\ntrue\ntrue\n0`) — and
+    `#crossNativeMariadbDeleteErrorMatchesX86Oracle` (Native x86 == riscv64 ==
+    aarch64 on the missing-table ERR); regression green (`KofOrmE2ETest` 75/0F,
+    `KofDbE2ETest` 40/0F).
+
   - **S5.5 slice 2 (db-parity, gaps-db lane) — `orm.count_where` over the MySQL
     wire on the cross (cross piece `B53`) + latent x86 bool-bind fix (`§492`)**
     (24/09): the type-2 branch of `kof_orm_count_where` builds `SELECT COUNT(*)
