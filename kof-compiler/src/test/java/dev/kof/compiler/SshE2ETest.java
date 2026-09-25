@@ -198,8 +198,20 @@ class SshE2ETest {
     }
 
     @Test
-    void sshOnCrossIsHonestProc001() throws Exception {
-        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+    void sshFacesLandedOnAllNative() throws Exception {
+        for (Target t : new Target[]{Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            assertCompiles(t, """
+                main() {
+                    var a = ssh.cmd("host", "hi")
+                    println(a.size)
+                }
+                """);
+        }
+    }
+
+    @Test
+    void sshOnMcuIsHonestProc001() throws Exception {
+        for (Target t : new Target[]{Target.NATIVE_RISCV32, Target.NATIVE_MCU_ARM}) {
             assertGap(t, "PROC001", """
                 main() {
                     var a = ssh.cmd("host", "hi")

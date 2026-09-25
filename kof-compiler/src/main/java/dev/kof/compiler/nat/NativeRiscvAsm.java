@@ -299,6 +299,7 @@ public final class NativeRiscvAsm {
                 .append(NativeRiscvAsmIoCopy.RISCV_RUNTIME_ASM_IO_COPY)
                 .append(NativeRiscvAsmProcess.RISCV_RUNTIME_ASM_PROCESS)
                 .append(NativeRiscvAsmShell.RISCV_RUNTIME_ASM_SHELL)
+                .append(NativeRiscvAsmSsh.RISCV_RUNTIME_ASM_SSH)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

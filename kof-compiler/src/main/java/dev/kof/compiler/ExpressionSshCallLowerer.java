@@ -32,20 +32,22 @@ public final class ExpressionSshCallLowerer {
             }
             return localIdx;
         }
-        if (driver.target.isNative() && driver.target != Target.NATIVE) {
-            // Row 3 slice A: the x86-64 native target now emits (kof_ssh_argv /
-            // kof_ssh_run → kof_process_run, RuntimeSsh). The cross targets (and
-            // the freestanding MCU) still have no ssh runtime — same honest
-            // PROC001 as process.run before row 1 slice C, reported once at
-            // compile time, never a silent ld undefined (R6).
-            if (driver.currentDiagnostics != null) {
+        if (driver.target.isNative()) {
+            // Rows 3 slice A (x86-64) + slice B (cross): kof_ssh_argv /
+            // kof_ssh_run → kof_process_run land on x86-64 and riscv64/aarch64.
+            // The freestanding MCU has no process layer — honest PROC001, never
+            // a silent ld undefined (R6).
+            boolean landed = driver.target == Target.NATIVE
+                    || driver.target == Target.NATIVE_RISCV64
+                    || driver.target == Target.NATIVE_AARCH64;
+            if (!landed && driver.currentDiagnostics != null) {
                 driver.currentDiagnostics.error(posFile(mc), posLine(mc), posCol(mc), 0,
                         "ssh." + mc.methodName() + ": not supported on the "
                                 + driver.target + " native target yet (JVM, JS and"
-                                + " Native x86-64 support kof.ssh)",
+                                + " Native x86-64/riscv64/aarch64 support kof.ssh)",
                         "PROC001");
             }
-            return localIdx;
+            if (!landed) return localIdx;
         }
         switch (mc.methodName()) {
             case "cmd" -> {
