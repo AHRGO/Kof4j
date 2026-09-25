@@ -235,6 +235,18 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `matches`/`replaceAll`/`replaceFirst` (regex engine) and `compareToIgnoreCase`
     (Unicode folding) remain under `STR003`.
 
+  - **D-FULL-PARITY-050 row 13 slice 1 (native-cross lane) — `kof.io`
+    `exists()`/`isFile()`/`isDirectory()` on the riscv64/aarch64 cross.** The
+    stat faces left the honest `NAT006` gate: the new cross piece
+    `NativeRiscvAsmIoStat` implements `kof_io_stat_mode`/`kof_io_file_exists`/
+    `kof_io_file_is_file`/`kof_io_file_is_dir` with the Linux generic syscall
+    `newfstatat` (`AT_FDCWD`, `st_mode` at +16 on riscv64/aarch64), and
+    `ExpressionBuiltinInstanceCalls.lowerIo` now emits those three faces on the
+    cross while the read/write/dir faces keep the honest `NAT006`. Proof:
+    `NativeIoStatCrossTest` (JVM oracle + riscv64 + aarch64 under qemu,
+    byte-identical) + `DomainGapCodesTest#ioStatOnCrossHasNoGap` and the
+    re-pointed `#ioOnCrossIsNat006` (now `readText`).
+
   - **S5.4 slice 1 (db-parity, gaps-db lane) — real MySQL/MariaDB `connect`
     on the cross (cross piece `B73`)** (24/09): `kof_db_connect` now accepts
     `mysql://`/`mariadb://` on riscv64/aarch64 — URL parse

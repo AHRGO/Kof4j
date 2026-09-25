@@ -236,6 +236,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `matches`/`replaceAll`/`replaceFirst` (motor de regex) e `compareToIgnoreCase`
     (folding Unicode) seguem sob `STR003`.
 
+  - **D-FULL-PARITY-050 linha 13 fatia 1 (lane native-cross) — `kof.io`
+    `exists()`/`isFile()`/`isDirectory()` no cross riscv64/aarch64.** As faces
+    de estat saíram do gate honesto `NAT006`: a peça cross nova
+    `NativeRiscvAsmIoStat` implementa `kof_io_stat_mode`/`kof_io_file_exists`/
+    `kof_io_file_is_file`/`kof_io_file_is_dir` com o syscall genérico do Linux
+    `newfstatat` (`AT_FDCWD`, `st_mode` em +16 no riscv64/aarch64), e o
+    `ExpressionBuiltinInstanceCalls.lowerIo` passa a emitir essas três faces no
+    cross enquanto as faces de read/write/dir mantêm o `NAT006` honesto. Prova:
+    `NativeIoStatCrossTest` (oráculo JVM + riscv64 + aarch64 sob qemu,
+    byte-idêntico) + `DomainGapCodesTest#ioStatOnCrossHasNoGap` e o
+    `#ioOnCrossIsNat006` repontado (agora `readText`).
+
   - **S5.4 fatia 1 (db-parity, lane gaps-db) — `connect` MySQL/MariaDB REAL
     no cross (peça cross `B73`)** (24/09): `kof_db_connect` agora aceita
     `mysql://`/`mariadb://` no riscv64/aarch64 — parse da URL
