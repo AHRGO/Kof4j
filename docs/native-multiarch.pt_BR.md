@@ -288,7 +288,7 @@
 > **Além do GC (promovido a desenvolvimento 22/09):** a diretiva da mantenedora de
 > 15/09 ("todo código nativo deve se comunicar direto com barebones — código
 > bootável para microcontroladores, legado e UEFI com Kof") está decomposta em
-> `docs/development/PLAN-BAREMETAL-BOOT.md` (faces B-0…B-6: costura HAL
+> `docs/PLAN-BAREMETAL-BOOT.md` (faces B-0…B-6: costura HAL
 > `kof_plat_*` + perfil freestanding + UEFI/BIOS/MCU + anéis x86_64 ring0/ring1)
 > — **EM DESENVOLVIMENTO** desde 22/09 (`D-BAREMETAL-BOOT`, ordem da
 > mantenedora). A face MCU depende do coletor (G-4/G-5) acima.
@@ -541,4 +541,4 @@ compila e roda **idêntico** em `x86_64`, `aarch64 (qemu)`, `riscv64 (qemu)` e
   O runtime riscv64/aarch64 em asm puro (sem libc) é a base natural, mas os
   emitters estão fixados a `ecall`/`syscall` Linux e a uma ABI `_start`, e não há
   perfil de link freestanding. EM DESENVOLVIMENTO desde 22/09:
-  `docs/development/PLAN-BAREMETAL-BOOT.md` (faces B-0…B-6).
+  `docs/PLAN-BAREMETAL-BOOT.md` (faces B-0…B-6).

@@ -125,7 +125,7 @@ domínio novo. **Este estágio fecha antes de qualquer Tier 6+ (R12).**
 
 | # | Item | Status | Dono | Prova / nota |
 |---|------|--------|------|--------------|
-| 1.7.1 | Seam HAL `kof_plat_*` + perfil freestanding (faces B-0…B-6) | 🟡 | lane baremetal (sessão 9092) | `docs/development/PLAN-BAREMETAL-BOOT.md`; **EM DESENVOLVIMENTO — promovido 22/09** (`D-BAREMETAL-BOOT`); B-0 é a primeira fatia executável; MCU depende de 1.2 |
+| 1.7.1 | Seam HAL `kof_plat_*` + perfil freestanding (faces B-0…B-6) | 🟡 | lane baremetal (sessão 9092) | `docs/PLAN-BAREMETAL-BOOT.md`; **EM DESENVOLVIMENTO — promovido 22/09** (`D-BAREMETAL-BOOT`); B-0 é a primeira fatia executável; MCU depende de 1.2 |
 | 1.7.2 | Agendamento das faces bare-metal | ✅ | — | **`D3-A` 19/09 + `D-BAREMETAL-BOOT` 22/09: frente ABERTA, R12 sobreposto**; escopo ordenado = bare-metal com ring0/ring1 (B-6); a ordem do §7 do plano governa |
 
 ---

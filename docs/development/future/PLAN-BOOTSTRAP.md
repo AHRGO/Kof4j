@@ -21,7 +21,7 @@ to artifacts that are **byte-identical** to the ones the Java implementation
 produces today — and then compiles **itself** (fixed point, §6). After that,
 "Kof as its own cloud" closes end-to-end: the compiler compiles itself,
 provisions its infrastructure (Makealive, stage 7), runs on it (Native /
-bare-metal per `../PLAN-BAREMETAL-BOOT.md`), and self-hosts its packages
+bare-metal per `../../PLAN-BAREMETAL-BOOT.md`), and self-hosts its packages
 (`kof deps`, stage 1.4).
 
 ## 2. Entry conditions (execution may not be claimed before ALL hold)

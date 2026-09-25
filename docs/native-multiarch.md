@@ -290,7 +290,7 @@ Each step: commit with the complete cross suite green + DOING.md on the line.
 > **Beyond the GC (promoted to development 22/09):** the maintainer directive of
 > 15/09 ("all native code must also talk directly to barebones — bootable code
 > for microcontrollers, legacy and UEFI with Kof") is decomposed in
-> `docs/development/PLAN-BAREMETAL-BOOT.md` (faces
+> `docs/PLAN-BAREMETAL-BOOT.md` (faces
 > B-0…B-6: `kof_plat_*` HAL seam + freestanding profile + UEFI/BIOS/MCU + x86_64
 > ring0/ring1) — **IN DEVELOPMENT** since 22/09 (`D-BAREMETAL-BOOT`, maintainer
 > order). The MCU face depends on the collector (G-4/G-5) above.
@@ -542,4 +542,4 @@ compiles and runs **identical** on `x86_64`, `aarch64 (qemu)`, `riscv64 (qemu)` 
   pure-asm riscv64/aarch64 runtime (no libc) is the natural base, but the emitters
   are hardwired to Linux `ecall`/`syscall` and a `_start` ABI, and there is no
   freestanding link profile. IN DEVELOPMENT since 22/09:
-  `docs/development/PLAN-BAREMETAL-BOOT.md` (faces B-0…B-6).
+  `docs/PLAN-BAREMETAL-BOOT.md` (faces B-0…B-6).

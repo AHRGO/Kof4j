@@ -74,10 +74,11 @@ ALLOWLIST="DECISIONS.md DECISIONS.pt_BR.md README.md README.pt_BR.md roadmap.md 
 # on 21/09; type-system-extensions-plan concluded (X5+X6) and moved to docs/
 # on 22/09; kof-c-cross concluded (C1–C4 + C3-residual) and moved to docs/ on
 # 23/09 — none is loose, hence not listed here.)
-# D-BAREMETAL-BOOT (maintainer 22/09/2026): PLAN-BAREMETAL-BOOT promoted from
-# future/ (bare-metal + ring0/ring1 scope) — allowlisted the same way: the
-# 0.5.0 cut does not wait for the bare-metal front.
-ALLOWLIST="$ALLOWLIST db-parity-plan.md db-parity-plan.pt_BR.md PLAN-BAREMETAL-BOOT.md PLAN-BAREMETAL-BOOT.pt_BR.md"
+# D-BAREMETAL-BOOT (maintainer 22/09/2026): PLAN-BAREMETAL-BOOT was promoted
+# from future/ (bare-metal + ring0/ring1 scope) and allowlisted the same way.
+# It CONCLUDED 25/09 (B-4 closed on riscv32) and moved to docs/ — no longer
+# loose, hence no longer listed here.
+ALLOWLIST="$ALLOWLIST db-parity-plan.md db-parity-plan.pt_BR.md"
 
 # state per condition: GREEN|RED|NEEDS-MEASURE|NEEDS-REVIEW|UNKNOWN
 declare -A STATE DETAIL

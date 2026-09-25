@@ -264,7 +264,7 @@ requirement ("the solution cannot depend on a monolithic runtime").
 **Route now recorded (15/09 maintainer directive):** the three measured blockers
 above are decomposed as faces **B-0…B-5** (HAL seam `kof_plat_*` + freestanding
 profile + UEFI/BIOS/MCU + x86_64 ring0/ring1) in
-`docs/development/PLAN-BAREMETAL-BOOT.md` — **IN DEVELOPMENT since 22/09**
+`docs/PLAN-BAREMETAL-BOOT.md` — **IN DEVELOPMENT since 22/09**
 (`D-BAREMETAL-BOOT`; R12 overridden for this front).
 
 ### T4 — JVM (low priority, honesty)

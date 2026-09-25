@@ -264,7 +264,7 @@ briefing ("a solução não pode depender de runtime monolítico").
 **Rota agora registada (diretiva da mantenedora 15/09):** os três bloqueios
 medidos acima estão decompostos em faces **B-0…B-5** (costura HAL `kof_plat_*` +
 perfil freestanding + UEFI/BIOS/MCU + anéis x86_64 ring0/ring1) em
-`docs/development/PLAN-BAREMETAL-BOOT.md` — **EM DESENVOLVIMENTO desde 22/09**
+`docs/PLAN-BAREMETAL-BOOT.md` — **EM DESENVOLVIMENTO desde 22/09**
 (`D-BAREMETAL-BOOT`; R12 sobreposto só para esta frente).
 
 ### T4 — JVM (baixa prioridade, honestidade)
