@@ -381,6 +381,12 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     syscalls). Proof: `NativeIoPathCrossTest` (`c.txt/c.txt/txt//a/true/false`,
     JVM==riscv64==aarch64).
 
+  - **D-FULL-PARITY-050 row 13 slice 10 (native-cross lane) — `Path.resolve`
+    on the riscv64/aarch64 cross.** The new cross piece `NativeRiscvAsmIoResolve`
+    implements `kof_io_path_resolve` (absolute child, empty base, base ending in
+    `/`, else `base + "/" + child`). Proof: `NativeIoResolveCrossTest`
+    (`/a/b/c/d`, `/a/b/c`, `/x`; JVM==riscv64==aarch64).
+
   - **S5.4 slice 1 (db-parity, gaps-db lane) — real MySQL/MariaDB `connect`
     on the cross (cross piece `B73`)** (24/09): `kof_db_connect` now accepts
     `mysql://`/`mariadb://` on riscv64/aarch64 — URL parse
