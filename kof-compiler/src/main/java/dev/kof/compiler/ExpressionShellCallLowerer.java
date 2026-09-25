@@ -37,22 +37,23 @@ public final class ExpressionShellCallLowerer {
         if (driver.target.isNative()) {
             boolean cross = driver.target == Target.NATIVE_RISCV64
                     || driver.target == Target.NATIVE_AARCH64;
-            // D-FULL-PARITY-050 row 2 slice A: run/cmd/ok emit for real on the
-            // x86-64 native target (run reuses kof_process_run, ok is pure IR,
-            // cmd is the RuntimeShell argv prepend). pipeline/runWith are
-            // slice B (chained pipes / cwd+env) and the whole cross surface is
-            // still PROC001 — every refusal names the face that landed, never
-            // a raw call that ends in an ld error (R6).
+            // D-FULL-PARITY-050 row 2: run/cmd/ok emit for real on the x86-64
+            // native target (run reuses kof_process_run, ok is pure IR, cmd is
+            // the argv prepend) and, since row 1 slice C landed process.run on
+            // the cross, also on riscv64/aarch64 (NativeRiscvAsmShell provides
+            // kof_shell_argv). pipeline/runWith are slice B (chained pipes /
+            // cwd+env) everywhere — every refusal names the face that landed,
+            // never a raw call that ends in an ld error (R6).
             boolean sliceB = mc.methodName().equals("pipeline")
                     || mc.methodName().equals("runWith");
-            if (cross || sliceB) {
+            if (sliceB) {
                 if (driver.currentDiagnostics != null) {
                     driver.currentDiagnostics.error(posFile(mc), posLine(mc), posCol(mc), 0,
                             "shell." + mc.methodName() + ": " + (cross
                                     ? "not available on the riscv64/aarch64 native targets yet"
                                     : "chained-pipes/cwd+env faces are slice B")
                                     + " (JVM and JS support the full shell surface;"
-                                    + " Native x86-64 landed run/cmd/ok)",
+                                    + " Native x86-64 and riscv64/aarch64 landed run/cmd/ok)",
                             "PROC001");
                 }
                 return localIdx;

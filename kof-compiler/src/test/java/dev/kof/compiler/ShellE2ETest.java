@@ -218,19 +218,42 @@ class ShellE2ETest {
     }
 
     @Test
-    void runOnCrossIsHonestProc001() throws Exception {
-        // row 1 fix: the cross has no kof_process_run slice yet — the refusal
-        // must be compile-time (R6), never an ld undefined-reference.
-        assertGap(Target.NATIVE_RISCV64, "PROC001", """
+    void crossProcessAndShellFacesLanded() throws Exception {
+        // D-FULL-PARITY-050 row 1 slice C + row 2: process.run AND shell.run/
+        // cmd/ok now emit on the cross (NativeRiscvAsmProcess + NativeRiscvAsmShell);
+        // pipeline/runWith stay the honest compile-time PROC001 (R6).
+        assertCompiles(Target.NATIVE_RISCV64, """
             main() {
                 var r = process.run("echo", "hi")
+                var s = shell.run("echo", listOf("hi"))
+                var a = shell.cmd("echo", listOf("hi"))
                 println(r.stdout)
+                println(s.stdout)
+                println(shell.ok(s))
+                println(a.size())
+            }
+            """);
+        assertCompiles(Target.NATIVE_AARCH64, """
+            main() {
+                var s = shell.run("echo", listOf("hi"))
+                println(s.stdout)
+            }
+            """);
+    }
+
+    @Test
+    void pipelineOnCrossIsHonestProc001() throws Exception {
+        // slice B faces stay gated on the cross too — never an ld undefined.
+        assertGap(Target.NATIVE_RISCV64, "PROC001", """
+            main() {
+                var p = shell.pipeline(listOf(listOf("echo", "hi"), listOf("wc", "-l")))
+                println(p.stdout)
             }
             """);
         assertGap(Target.NATIVE_AARCH64, "PROC001", """
             main() {
-                var a = shell.cmd("echo", listOf("hi"))
-                println(a.size())
+                var p = shell.runWith(listOf("pwd"), "/tmp", mapOf())
+                println(p.stdout)
             }
             """);
     }
@@ -368,8 +391,13 @@ class ShellE2ETest {
         assertEquals(expected, nat, "NATIVE must match the JVM golden byte-for-byte");
     }
 
-    private void assertGap(Target target, String code, String source) throws Exception {
-        Files.writeString(tmp.resolve("G.kf"), source);
+    private void assertCompiles(Target target, String source) throws Exception {
+        Files.writeString(tmp.resolve("C.kf"), source);
+        CompilationResult r = driver.compile(tmp.resolve("C.kf"), tmp.resolve("o-c-" + target), target);
+        assertTrue(r.success(), target + " must compile: " + diags(r));
+    }
+
+    private void assertGap(Target target, String code, String source) throws Exception {        Files.writeString(tmp.resolve("G.kf"), source);
         CompilationResult r = driver.compile(tmp.resolve("G.kf"), tmp.resolve("o-" + target), target);
         assertFalse(r.success(), target + " must refuse the call (" + code + ")");
         Set<String> codes = new LinkedHashSet<>();
