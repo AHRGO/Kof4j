@@ -11,6 +11,18 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ## [0.5.0-beta] - unreleased (branch `beta-0.5.0`)
 
+  - **`shell.run`/`cmd`/`ok` no CROSS nativo riscv64/aarch64 (`D-FULL-PARITY-050` linha 2)**
+    (26/09): `shell.run` reusa `kof_process_run` (linha 1 fatia C), `shell.ok` e
+    IR puro sobre o acesso `exitCode` e `shell.cmd` usa a peca nova
+    `NativeRiscvAsmShell` (`kof_shell_argv` = prepend do program — o oraculo JVM
+    exato, sem split); `pipeline`/`runWith` seguem `PROC001` honesto (fatia B).
+    Corrige tambem um pin STALE do `ShellE2ETest` que ainda exigia `process.run`
+    cross = `PROC001` depois da linha 1 fatia C. RED->GREEN: `ShellCrossE2ETest`
+    3/3 byte-parity JVM==riscv64==aarch64 (run/cmd/ok), `ShellE2ETest` 18/18.
+    Bug medido no caminho: a peca nao trocava p/ `.section .text` e caia no
+    `.bss` herdado -> `kof_shell_argv` nao-executavel (SIGSEGV 139); fix =
+    `.section .text`.
+
   - **`process.run` no CROSS nativo riscv64/aarch64 (`D-FULL-PARITY-050` linha 1, fatia C)**
     (26/09): `process.run` agora compila e roda nos 2 alvos cross. Nova fatia
     `NativeRiscvAsmProcess`: `clone(220, SIGCHLD)` (riscv64 nao tem `fork`),

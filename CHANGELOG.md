@@ -11,6 +11,19 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ## [0.5.0-beta] - unreleased (branch `beta-0.5.0`)
 
+  - **`shell.run`/`cmd`/`ok` on the riscv64/aarch64 native CROSS (`D-FULL-PARITY-050` row 2)**
+    (26/09): `shell.run` reuses `kof_process_run` (row 1 slice C), `shell.ok` is
+    pure IR over the `exitCode` accessor and `shell.cmd` uses the new
+    `NativeRiscvAsmShell` cross slice (`kof_shell_argv` prepends the program —
+    the exact JVM oracle, no splitting); `pipeline`/`runWith` stay the honest
+    compile-time `PROC001` (slice B). Also fixes a stale `ShellE2ETest` pin
+    that still expected cross `process.run` = `PROC001` after row 1 slice C
+    landed. RED->GREEN: `ShellCrossE2ETest` 3/3 byte-parity
+    JVM==riscv64==aarch64 (run/cmd/ok), `ShellE2ETest` 18/18. Root cause found
+    on the way: the slice did not switch to `.section .text` and fell into the
+    `.bss` carried over from the process slice, so `kof_shell_argv` was
+    non-executable (SIGSEGV 139); fix = `.section .text`.
+
   - **`process.run` on the riscv64/aarch64 native CROSS (`D-FULL-PARITY-050` row 1, slice C)**
     (26/09): `process.run` now compiles and runs on both cross targets. New
     `NativeRiscvAsmProcess` slice: `clone(220, SIGCHLD)` (riscv64 has no `fork`),
