@@ -386,6 +386,13 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     em `/`, senão `base + "/" + child`). Prova: `NativeIoResolveCrossTest`
     (`/a/b/c/d`, `/a/b/c`, `/x`; JVM==riscv64==aarch64).
 
+  - **D-FULL-PARITY-050 linha 13 fatia 11 (lane native-cross) — `Path.normalize`
+    no cross riscv64/aarch64.** A peça cross nova `NativeRiscvAsmIoNormalize` porta
+    `kof_io_path_normalize` (colapsa `.`/`..`, separadores repetidos e barra final;
+    preserva a raiz `/`; resultado relativo vazio vira `.`). Prova:
+    `NativeIoNormalizeCrossTest` (`/a/c`, `a/b`, `c`, `/a/b`, `/`, `.`, `x`;
+    JVM==riscv64==aarch64).
+
   - **S5.4 fatia 1 (db-parity, lane gaps-db) — `connect` MySQL/MariaDB REAL
     no cross (peça cross `B73`)** (24/09): `kof_db_connect` agora aceita
     `mysql://`/`mariadb://` no riscv64/aarch64 — parse da URL
