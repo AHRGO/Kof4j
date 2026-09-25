@@ -120,6 +120,21 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     the resolved fd, `mariadb://` alias and host-only form all authenticate)
     + `KofDbE2ETest#crossNativeUnsupportedSchemeNamesTruthfulDb001` (real
     binaries name DB001 for `postgres://`).
+  - **B-4.2 slice 2 — MCU `kof_plat_thread_id`/`kof_plat_random` bodies +
+    `CONC003` for concurrency** (24/09, lane baremetal 9092;
+    `D-BAREMETAL-BODIES`). `NativeMcuRiscv32` emits `kof_plat_thread_id`
+    (`csrr mhartid`, 0 on single-hart virt) and `kof_plat_random(buf,len)`
+    (xorshift32 seeded by `rdcycle`, pure RV32I, no division) as `.globl`
+    bodies; concurrency on the single-core MCU is refused with `CONC003`
+    (pre-scan of the ops, since the `spawn` lowering emits a `KofNewObject`
+    first; new `CONC003` branch in `compileSources`, mirroring
+    `NATIVE002`/`FLT001`). `kof_plat_time` on the MCU is deliberately left out
+    of this slice (wall-vs-monotonic semantics on an RTC-less MCU is a rule-6
+    decision, not an agent fix). Proof: `NativeMcuE2ETest` **7/0**
+    (`mcuImageDefinesHalSymbols` now requires `T kof_plat_write/_exit/
+    _thread_id/_random`, new `mcuRejectsConcurrencyWithConc003`) +
+    `StdParityGapAuditTest` 16/0.
+
   - **B-4.4 slice 1 — MCU trap vector + reset path asserted in the image**
     (24/09, lane baremetal 9092; `D-BAREMETAL-BODIES`). `NativeMcuRiscv32._start`
     installs `mtvec` pointing at `.Lmcu_trap` (an honest halt — an unexpected

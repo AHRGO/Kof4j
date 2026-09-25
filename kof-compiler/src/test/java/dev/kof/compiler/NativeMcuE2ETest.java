@@ -71,6 +71,10 @@ class NativeMcuE2ETest {
                 "imagem MCU deveria definir kof_plat_write:\n" + syms);
         assertTrue(syms.matches("(?s).*\\bT kof_plat_exit\\b.*"),
                 "imagem MCU deveria definir kof_plat_exit:\n" + syms);
+        assertTrue(syms.matches("(?s).*\\bT kof_plat_thread_id\\b.*"),
+                "imagem MCU deveria definir kof_plat_thread_id:\n" + syms);
+        assertTrue(syms.matches("(?s).*\\bT kof_plat_random\\b.*"),
+                "imagem MCU deveria definir kof_plat_random:\n" + syms);
     }
 
     @Test
@@ -82,6 +86,19 @@ class NativeMcuE2ETest {
         // (0x80000000 for -M virt), i.e. the CPU's reset entry.
         assertTrue(syms.matches("(?s).*\\b80000000 T _start\\b.*"),
                 "o reset path (_start @ 0x80000000) deveria estar asserido na imagem:\n" + syms);
+    }
+
+    @Test
+    void mcuRejectsConcurrencyWithConc003(@TempDir Path tempDir) throws Exception {
+        CompilerDriver driver = new CompilerDriver();
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, "main() { spawn { println(\"x\") } }");
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"),
+                Target.NATIVE_RISCV32, NativeProfile.FREESTANDING);
+        assertTrue(!result.success(), "spawn no MCU single-core deve ser recusado");
+        String diags = result.diagnostics().getDiagnostics().toString();
+        assertTrue(diags.contains("CONC003"),
+                "recusa deve citar CONC003 (nunca stub), veio: " + diags);
     }
 
     @Test

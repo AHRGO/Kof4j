@@ -99,6 +99,13 @@ public final class CompilerPipeline {
                         e.getMessage(), "NATIVE002");
                 return new CompilationResult(false, diagnostics, outputDir);
             }
+            if (e.getMessage() != null && e.getMessage().startsWith("CONC003")) {
+                // CONC003: concorrência ausente num alvo single-core (ex.: o
+                // MCU RV32I, B-4) — diagnóstico honesto, nunca stub (R6).
+                diagnostics.error(sources.get(0).toString(), 0, 0, 0,
+                        e.getMessage(), "CONC003");
+                return new CompilationResult(false, diagnostics, outputDir);
+            }
             e.printStackTrace();
             diagnostics.error(sources.get(0).toString(), 0, 0, 0,
                     "Internal compiler error: " + e.getMessage(), "COMP002");

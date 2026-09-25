@@ -94,6 +94,17 @@ public final class NativeMcuRiscv32 {
      * subset → {@code NATIVE002}.
      */
     private static List<String> collectPrints(IRMethod main) {
+        // Pre-scan: concurrency on a single-core MCU is a hard CONC003 (the §3
+        // table), regardless of the closure object the lowering emits first.
+        for (IRBasicBlock bb : main.basicBlocks()) {
+            for (KofOperation op : bb.operations()) {
+                if (op instanceof KofCall conc && isConcurrency(conc.methodName())) {
+                    throw new IllegalStateException("CONC003: '" + conc.methodName()
+                            + "' is absent on the single-core MCU (no threads/channels/"
+                            + "scheduler), never stubbed on the riscv32 target");
+                }
+            }
+        }
         List<String> out = new ArrayList<>();
         String pending = null;
         for (IRBasicBlock bb : main.basicBlocks()) {
@@ -131,10 +142,25 @@ public final class NativeMcuRiscv32 {
                         || op instanceof dev.kof.compiler.KofReturn) {
                     continue;
                 }
+                if (op instanceof KofCall conc && isConcurrency(conc.methodName())) {
+                    // Single-core MCU: no threads/channels/scheduler. The §3
+                    // table is explicit — CONC003, never a silent stub.
+                    throw new IllegalStateException("CONC003: '" + conc.methodName()
+                            + "' is absent on the single-core MCU (no threads/channels/"
+                            + "scheduler), never stubbed on the riscv32 target");
+                }
                 throw unsupported(op.getClass().getSimpleName());
             }
         }
         return out;
+    }
+
+    private static boolean isConcurrency(String name) {
+        if (name == null) return false;
+        return name.startsWith("kof_spawn") || name.startsWith("kof_await")
+                || name.startsWith("kof_channel") || name.startsWith("kof_scheduler")
+                || name.equals("kof_plat_sync") || name.equals("kof_plat_thread")
+                || name.equals("kof_plat_thread_create");
     }
 
     private static IllegalStateException unsupported(String what) {
@@ -187,6 +213,32 @@ public final class NativeMcuRiscv32 {
         sb.append("    sw t0, 0(t1)\n");
         sb.append(".Lmcu_exit_halt:\n");
         sb.append("    j .Lmcu_exit_halt\n\n");
+        // §3 HAL bodies (unambiguous on a single-hart MCU). kof_plat_thread_id
+        // is the hart id (mhartid, 0 on single-hart virt); kof_plat_random fills
+        // buf(a0)..buf+a1 from a xorshift32 seeded by the cycle counter — pure
+        // RV32I, no division. kof_plat_time (wall vs monotonic semantics on an
+        // RTC-less MCU) stays a rule-6 question, deliberately not emitted here.
+        sb.append(".globl kof_plat_thread_id\n");
+        sb.append("kof_plat_thread_id:\n");
+        sb.append("    csrr a0, mhartid\n");
+        sb.append("    ret\n\n");
+        sb.append(".globl kof_plat_random\n");
+        sb.append("kof_plat_random:\n");
+        sb.append("    csrr t2, cycle\n");
+        sb.append(".Lmcu_rand_loop:\n");
+        sb.append("    beqz a1, .Lmcu_rand_done\n");
+        sb.append("    slli t3, t2, 13\n");
+        sb.append("    xor t2, t2, t3\n");
+        sb.append("    srli t3, t2, 17\n");
+        sb.append("    xor t2, t2, t3\n");
+        sb.append("    slli t3, t2, 5\n");
+        sb.append("    xor t2, t2, t3\n");
+        sb.append("    sb t2, 0(a0)\n");
+        sb.append("    addi a0, a0, 1\n");
+        sb.append("    addi a1, a1, -1\n");
+        sb.append("    j .Lmcu_rand_loop\n");
+        sb.append(".Lmcu_rand_done:\n");
+        sb.append("    ret\n\n");
         sb.append(".align 2\n");
         sb.append(".Lmcu_trap:\n");
         sb.append("    j .Lmcu_trap\n\n");
