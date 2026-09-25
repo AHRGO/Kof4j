@@ -12421,3 +12421,20 @@ main() {
 
 **Dono:** sessão 9092 (lane compiler), caminho de campo do `SemExpressionTyper`; família de guard do #617/§490.
 <!-- en-switch --> **EN:** [§491 (en)](known-bugs.md#491--unknown-field-on-a-kofio--kofbuffer--kofsecurity-builtin-value-file--path--directory--buffer--secret--keyhandle-compiled-clean-and-emitted-a-getfield-against-a-class-absent-from-the-runtime-now-a-clean-sem102---fixed-2409)
+
+---
+
+## §492 — `orm.count_where` MySQL no Native x86-64 lançava ORM001 no bind booleano: o tag §284 do box era checado como 1 (String) em vez de 3 (Bool), então o `tag 3` caía no throw de tipo não suportado — ✅ CORRIGIDO 24/09
+
+**Sintoma (medido 24/09, lane gaps-db):** `orm.count<User>(db, "active", true)` sobre `mysql://` no Native x86-64 compilava limpo e abortava em runtime com `orm.count bind value: unsupported type on Native (ORM001)` — depois das chamadas `count_where` anteriores já terem impresso. O mesmo bind funciona na JVM e na face SQLite do mesmo backend (o `RuntimeOrm3` checa o tag 3). O bind `false` falha igual. O E2E x86 `countWhereMysqlNativeMatchesJvm` nunca cobria bool, então a divergência passou em silêncio (R6/regra 5).
+
+**Causa raiz:** o `RuntimeOrmMysqlCountWhere.emit` classificava o box de erasure §284 com `cmpl $1, %eax; je .Lcw_bbool` para booleano — mas o tag §284 de Bool é **3** (`NativeBoxTags.collectionTag` bool → 3; `kof_box_bool` grava `movl $3, 8(%rax)`). O tag 1 é o tag de String da coleção e é inalcançável num box com MAGIC (String não é boxada com MAGIC), então o ramo de bool era MORTO e o tag 3 caía em `.Lcw_bad` → ORM001. O `RuntimeOrm3` (SQLite) e o cross `RtB53` (S5.5) usam o tag 3 correto.
+
+**Fix (medido 24/09, lane gaps-db):** `cmpl $1` → `cmpl $3` no `RuntimeOrmMysqlCountWhere`; o corpo do `.Lcw_bbool` (`testl`/`setne`/`kof_long_to_string`) fica inalterado. Correção de classificador de uma linha; a forma do SQL (`SELECT COUNT(*) FROM \`t\` WHERE \`f\` = <literal>`) e os demais tags não mudam.
+
+**Prova (Q0/Q1/Q3/Q4):** RED primeiro — `KofOrmE2ETest#crossNativeMariadbCountWhereMatchesOracles` imprimiu `1` e então `orm.count bind value: unsupported type on Native (ORM001)` (exit 1) ANTES do fix. GREEN agora: o mesmo teste pina **três oráculos numa execução** — o host JVM (JDBC), o Native x86-64 e riscv64 + aarch64 sob qemu — byte-idênticos numa matriz com string, ausente, injeção, int negativo, int positivo e **bool true/false** (`1\n0\n0\n1\n0\n1\n1\n1`). Sem regressão: `KofOrmE2ETest` 73/0F + `KofDbE2ETest` 40/0F; a face SQLite `crossNativeF3aCountWhereMatchesX86Oracle` e o x86 `countWhereMysqlNativeMatchesJvm` seguem verdes.
+
+**Status:** ✅ CORRIGIDO 24/09.
+
+**Dono:** lane gaps-db (`RuntimeOrmMysqlCountWhere`, backend VM x86); mesma família de classificador do `RuntimeOrm3`/cross `RtB53`.
+<!-- en-switch --> **EN:** [§492 (en)](known-bugs.md#492--native-x86-64-ormcount_where-over-mysql-threw-orm001-on-a-boolean-bind-the-284-box-tag-was-checked-as-1-string-instead-of-3-bool-so-tag-3-fell-into-the-unsupported-type-throw---fixed-2409)

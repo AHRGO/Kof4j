@@ -104,6 +104,93 @@ public final class NativeRiscvAsmRtB53 {
                 addi sp, sp, 32
                 ret
 
+            # .L53_bt(a0=KofString*): emite `payload` com backticks (dialeto mysql)
+            .L53_bt:
+                addi sp, sp, -32
+                sd   ra, 24(sp)
+                sd   s0, 16(sp)
+                mv   s0, a0
+                li   a0, 96
+                call .L53_ch
+                addi a0, s0, 24
+                lw   a1, 16(s0)
+                call .L53_ap
+                li   a0, 96
+                call .L53_ch
+                ld   ra, 24(sp)
+                ld   s0, 16(sp)
+                addi sp, sp, 32
+                ret
+
+            # .L53_lit(a0=value*) -> a0=KofString* literal SQL (mysql)
+            # espelha o Orm3/x86: box §284 (0=int,2=long,3=bool,4=double,
+            # 5=float), KofString via B71 (quote+escape), null -> "NULL",
+            # outra forma -> throw ORM001 (mesma mensagem do .L53_bad)
+            .L53_lit:
+                addi sp, sp, -48
+                sd   ra, 40(sp)
+                sd   s0, 32(sp)
+                mv   s0, a0
+                beqz s0, .L53_lit_null
+                la   t0, .L53_magic
+                ld   t0, 0(t0)
+                ld   t1, 0(s0)
+                bne  t0, t1, .L53_lit_strchk
+                lw   t1, 8(s0)                     # tag
+                beqz t1, .L53_lit_int
+                li   t2, 2
+                beq  t1, t2, .L53_lit_long
+                li   t2, 3
+                beq  t1, t2, .L53_lit_bool
+                li   t2, 4
+                beq  t1, t2, .L53_lit_dbl
+                li   t2, 5
+                beq  t1, t2, .L53_lit_flt
+                j    .L53_bad
+            .L53_lit_int:
+                lw   a0, 16(s0)                    # sign-extend (movslq do x86)
+                call kof_int_to_string
+                j    .L53_lit_out
+            .L53_lit_long:
+                ld   a0, 16(s0)
+                call kof_long_to_string
+                j    .L53_lit_out
+            .L53_lit_bool:
+                lw   a0, 16(s0)                    # box bool guarda 1/0
+                call kof_int_to_string
+                j    .L53_lit_out
+            .L53_lit_dbl:
+                ld   t0, 16(s0)
+                fmv.d.x fa0, t0
+                call kof_double_to_string
+                j    .L53_lit_out
+            .L53_lit_flt:
+                lw   t0, 16(s0)
+                fmv.w.x fa0, t0
+                fcvt.d.s fa0, fa0                  # widen como o setFloat x86
+                call kof_double_to_string
+                j    .L53_lit_out
+            .L53_lit_strchk:
+                lw   t0, 0(s0)                     # KofString tag (1,0,0)?
+                li   t1, 1
+                bne  t0, t1, .L53_bad
+                lw   t0, 4(s0)
+                bnez t0, .L53_bad
+                ld   t0, 8(s0)
+                bnez t0, .L53_bad
+                mv   a0, s0
+                call kof_db_mysql_render
+                j    .L53_lit_out
+            .L53_lit_null:
+                la   a0, .L53_nullv
+                li   a1, 4
+                call kof_string_from_literal
+            .L53_lit_out:
+                ld   ra, 40(sp)
+                ld   s0, 32(sp)
+                addi sp, sp, 48
+                ret
+
             # ---------------------------------------------------------------
             # kof_orm_count_where(id*, field*, value*, table*, schema*) -> Long
             # slot: 0 &stmt
@@ -123,10 +210,16 @@ public final class NativeRiscvAsmRtB53 {
                 sd   s7, 24(sp)
                 sd   s8, 16(sp)
                 sd   s9, 8(sp)
+                mv   s9, a0                        # id (S5.5: dispatch type)
                 mv   s1, a1                        # field
                 mv   s2, a2                        # value (box/KofString/null)
                 mv   s3, a3                        # table
                 mv   s4, a4                        # schema (não lido, igual x86)
+                mv   a0, s9
+                call kof_db_type                   # S5.5: type 2 -> wire mysql
+                li   t0, 2
+                beq  a0, t0, .L53_cw_mysql
+                mv   a0, s9
                 call .L53_conn
                 mv   s0, a0                        # conn
                 # cap = 88 + tblLen + fldLen
@@ -253,6 +346,52 @@ public final class NativeRiscvAsmRtB53 {
                 call sqlite3_finalize
             .L53_zero:
                 li   a0, 0
+                j    .L53_out
+            # S5.5 fatia 2: SELECT COUNT(*) FROM `t` WHERE `f` = <lit> no wire
+            # mysql, com o value renderizado em LITERAL (sem bind `?`).
+            .L53_cw_mysql:
+                mv   a0, s2
+                call .L53_lit                      # s8 = literal (KofString*)
+                mv   s8, a0
+                # cap = 24(hdr) + 36(const) + tblLen + fldLen + litLen
+                lw   t0, 16(s3)
+                lw   t1, 16(s1)
+                add  t0, t0, t1
+                lw   t1, 16(s8)
+                add  t0, t0, t1
+                addi a0, t0, 60
+                call kof_alloc
+                mv   s5, a0                        # base
+                li   t0, 1
+                sw   t0, 0(s5)
+                sw   zero, 4(s5)
+                sd   zero, 8(s5)
+                sw   zero, 20(s5)
+                addi s6, s5, 24                    # cursor
+                la   a0, .L53_s1
+                li   a1, 21
+                call .L53_ap
+                mv   a0, s3
+                call .L53_bt                       # `table`
+                la   a0, .L53_s2
+                li   a1, 7
+                call .L53_ap
+                mv   a0, s1
+                call .L53_bt                       # `field`
+                la   a0, .L53_s4
+                li   a1, 3
+                call .L53_ap
+                addi a0, s8, 24
+                lw   a1, 16(s8)
+                call .L53_ap                       # <lit>
+                sb   zero, 0(s6)
+                addi t0, s5, 24
+                sub  t0, s6, t0
+                sw   t0, 16(s5)                    # len = cursor - payload
+                mv   a0, s9
+                call kof_db_resolve
+                mv   a1, s5
+                call kof_db_mysql_scalar_int
             .L53_out:
                 ld   ra, 88(sp)
                 ld   s0, 80(sp)
@@ -277,6 +416,10 @@ public final class NativeRiscvAsmRtB53 {
                 .ascii " WHERE "
             .L53_s3:
                 .ascii " = ?"
+            .L53_s4:
+                .ascii " = "
+            .L53_nullv:
+                .ascii "NULL"
             .L53_badv:
                 .ascii "orm.count bind value: unsupported type on Native (ORM001)"
             .L53_magic:

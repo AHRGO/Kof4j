@@ -313,6 +313,16 @@ por scheme é a prova.
        bindado).
     2. **`orm.count_where`** — substituição de bind (B71) + a citação mysql, com
        o bind nulo tratado (a B71 rende ponteiro 0 como Int 0 hoje).
+       **FEITO 24/09** — o ramo type-2 da `RtB53` monta `SELECT COUNT(*) FROM
+       `t` WHERE `f` = <literal>` com nomes em backtick e um renderizador
+       `.L53_lit` (box §284 int/long/bool/double/float → `kof_*_to_string`,
+       KofString via `kof_db_mysql_render`, null → `NULL`, senão ORM001). A
+       mesma unidade corrigiu um bug **x86** latente: o
+       `RuntimeOrmMysqlCountWhere` checava o tag do box como 1 em vez de 3 para
+       Bool → ORM001 em qualquer bind booleano (catalogado §492).
+       *Prova:* `KofOrmE2ETest#crossNativeMariadbCountWhereMatchesOracles` —
+       JVM + x86-64 + riscv64 + aarch64 byte-idênticos em string/ausente/
+       injeção/negativo/positivo/bool (`1\n0\n0\n1\n0\n1\n1\n1`).
     3. **`orm.save`/`delete`/`deleteAll`** — caminho execute; chave gerada
        precisa de `SELECT LAST_INSERT_ID()` (mesma primitiva scalar).
     4. **`orm.find`/`all`/`where`/`where_op`/`page`** — materialização de linhas;

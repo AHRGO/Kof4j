@@ -312,6 +312,15 @@ typed roundtrip) produces the **same observable result** on all four targets, or
        `DELETE`).
     2. **`orm.count_where`** — bind substitution (B71) + the mysql quoting, with
        the null bind handled (B71 renders a 0 pointer as Int 0 today).
+       **DONE 24/09** — `RtB53` type-2 branch builds `SELECT COUNT(*) FROM
+       `t` WHERE `f` = <literal>` with backtick names and a `.L53_lit` renderer
+       (box §284 int/long/bool/double/float → `kof_*_to_string`, KofString via
+       `kof_db_mysql_render`, null → `NULL`, else ORM001). The same unit fixed
+       a latent **x86** bug: `RuntimeOrmMysqlCountWhere` checked the box tag as
+       1 instead of 3 for Bool → ORM001 on any boolean bind (catalogued §492).
+       *Proof:* `KofOrmE2ETest#crossNativeMariadbCountWhereMatchesOracles` —
+       JVM + x86-64 + riscv64 + aarch64 byte-identical on string/miss/injection/
+       negative/positive/bool (`1\n0\n0\n1\n0\n1\n1\n1`).
     3. **`orm.save`/`delete`/`deleteAll`** — execute path; generated-key needs
        `SELECT LAST_INSERT_ID()` (same scalar primitive).
     4. **`orm.find`/`all`/`where`/`where_op`/`page`** — row materialisation; needs

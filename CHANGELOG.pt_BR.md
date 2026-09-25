@@ -13,6 +13,24 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **S5.5 fatia 2 (db-parity, lane gaps-db) — `orm.count_where` sobre o wire
+    MySQL no cross (peça `B53`) + fix latente do bind bool x86 (`§492`)**
+    (24/09): o ramo type-2 do `kof_orm_count_where` monta `SELECT COUNT(*) FROM
+    \`t\` WHERE \`f\` = <literal>` (dialeto backtick, sem `?`) com um
+    renderizador novo `.L53_lit` — box §284 int/long/**bool**/double/float via
+    `kof_*_to_string`, KofString via `kof_db_mysql_render` (aspas+escape),
+    null → `NULL`, outra forma → ORM001. A mesma unidade corrigiu um bug
+    **x86** latente: o `RuntimeOrmMysqlCountWhere` classificava o tag do box
+    como 1 (String, inalcançável) em vez de 3 para Bool, então o
+    `orm.count_where` sobre `mysql://` lançava ORM001 em **todo** bind
+    booleano, enquanto a face SQLite e a JVM funcionavam (catalogado em
+    `known-bugs.md §492`). Prova:
+    `KofOrmE2ETest#crossNativeMariadbCountWhereMatchesOracles` — o host JVM
+    (JDBC) + Native x86-64 + riscv64 + aarch64 sob qemu, byte-idênticos em
+    string / ausente / injeção / int negativo / int positivo / bool
+    (`1\n0\n0\n1\n0\n1\n1\n1`); a face SQLite cross e o teste mysql x86 seguem
+    verdes (`KofOrmE2ETest` 73/0F, `KofDbE2ETest` 40/0F).
+
   - **S5.5 fatia 1 (db-parity, lane gaps-db) — `orm.count` sobre o wire MySQL
     no cross (peças cross `B74` + `B50`)** (24/09): um handle type-2 resolvido
     agora chega ao `kof.orm` — o `kof_orm_count` despacha por `kof_db_type`

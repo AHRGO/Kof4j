@@ -2391,6 +2391,78 @@ class KofOrmE2ETest {
         }
     }
 
+    /** S5.5 fatia 2 (24/09): {@code orm.count_where} sobre o wire mysql no
+     *  cross — os 3 oráculos juntos (JVM via JDBC, x86-64 nativo, riscv64/
+     *  aarch64 sob qemu). Inclui o bind BOOL: o classificador x86 mysql
+     *  checava o tag §284 errado (1 em vez de 3) e lançava ORM001 — o cross
+     *  usa o mapa correto (RuntimeOrm3) e o teste trava a paridade dos 3. */
+    @Test
+    void crossNativeMariadbCountWhereMatchesOracles(@TempDir Path tempDir) throws Exception {
+        assumeTrue(isLinux(), "cross ORM E2E requires Linux + qemu");
+        int port;
+        try { port = Integer.parseInt(System.getenv().getOrDefault("KOF_MYSQL_PORT", "13306")); }
+        catch (NumberFormatException e) { port = 13306; }
+        org.junit.jupiter.api.Assumptions.assumeTrue(tcpOpen("127.0.0.1", port),
+                "MySQL/MariaDB not reachable on 127.0.0.1:" + port);
+        String body = """
+                    db.execute(db, "drop table if exists `user`")
+                    db.execute(db, "create table `user` (id int primary key, name varchar(50), email varchar(80), active int)")
+                    db.execute(db, "insert into `user` values (?, ?, ?, ?)", 1, "Mel", "m@kof.dev", 1)
+                    db.execute(db, "insert into `user` values (?, ?, ?, ?)", 2, "Ana", "a@kof.dev", 0)
+                    println(orm.count<User>(db, "name", "Mel"))
+                    println(orm.count<User>(db, "name", "x' OR 1=1 --"))
+                    println(orm.count<User>(db, "email", "nope@x.io"))
+                    println(orm.count<User>(db, "email", "m@kof.dev"))
+                    println(orm.count<User>(db, "id", -7))
+                    println(orm.count<User>(db, "id", 2))
+                    println(orm.count<User>(db, "active", true))
+                    println(orm.count<User>(db, "active", false))
+                    db.close(db)
+                }
+                """;
+        String expected = "1\n0\n0\n1\n0\n1\n1\n1";
+
+        String entitySrc = """
+            entity User {
+                id: Long generated
+                name: String
+                email: String unique
+                active: Bool
+            }
+            """;
+        Path jvmSource = tempDir.resolve("JvmMain.kf");
+        Files.writeString(jvmSource, entitySrc + "main() {\n"
+                + ("    var db = db.connect(\"jdbc:mariadb://127.0.0.1:" + port
+                   + "/test?user=root&password=kofpass&allowMultiQueries=true\")\n")
+                + body);
+        runJvmWithExtra(jvmSource, tempDir.resolve("jvm-out"),
+                findDriverJar("mariadb", "MariaDB"), expected);
+
+        Path source = tempDir.resolve("OrmMysqlCross.kf");
+        Files.writeString(source, entitySrc + "main() {\n"
+                + ("    var db = db.connect(\"mysql://root:kofpass@127.0.0.1:" + port + "/test\")\n")
+                + body);
+        Path x86out = tempDir.resolve("out-x86");
+        CompilationResult xo = driver.compile(source, x86out, Target.NATIVE);
+        assumeTrue(xo.success(), "x86-64 oracle should compile: " + xo.diagnostics().getDiagnostics());
+        String oracle = runNativeBinary(x86out.resolve("Default/Main"), null);
+        assertEquals(expected, oracle, "oráculo x86-64 (count_where mysql; string/int/miss/neg/bool)");
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            String as = arch.equals("riscv64") ? "riscv64-linux-gnu-as" : "aarch64-linux-gnu-as";
+            String ld = arch.equals("riscv64") ? "riscv64-linux-gnu-ld" : "aarch64-linux-gnu-ld";
+            assumeTrue(has(as, ld, "qemu-" + arch), "cross toolchain " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sysrootOrNull(arch) != null,
+                    "sysroot cross " + arch + " ausente — pulando");
+            Path out = tempDir.resolve("out-" + t);
+            CompilationResult r = driver.compile(source, out, t);
+            assertTrue(r.success(), t + " deveria compilar orm.count_where mysql cross: "
+                    + r.diagnostics().getDiagnostics());
+            String got = runNativeBinary(out.resolve("Default/Main"), "qemu-" + arch);
+            assertEquals(oracle, got, t + " byte-parity com os oráculos (count_where mysql)");
+        }
+    }
+
     /** DB-3/DB-1 cross slice B (22/09): {@code orm.create} REAL no riscv64/
      *  aarch64 (peça RtB51, port de RuntimeOrm2) — parser de schema + DDL
      *  byte-idêntico ao x86-64 (o golden LÊ o sql gravado no sqlite_master:

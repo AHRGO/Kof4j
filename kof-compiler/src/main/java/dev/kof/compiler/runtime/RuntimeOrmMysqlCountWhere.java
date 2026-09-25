@@ -9,7 +9,10 @@ package dev.kof.compiler.runtime;
  * `t` WHERE `f` = <literal>} (dialeto backtick do host; o schema nao entra
  * no SQL, como no host) com o value em LITERAL SQL — box §284
  * (int/long/bool/double/float), KofString via {@code kof_db_mysql_render},
- * null → {@code NULL}; tipo fora do contrato → ORM001 (R6). A query roda no
+ * null → {@code NULL}; tipo fora do contrato → ORM001 (R6). <b>Corr. 24/09
+ * (S5.5 fatia 2):</b> o check do bool usava o tag 1 (String, inalcançável no
+ * box) — o contrato §284 é tag 3 ({@code kof_box_bool}); com o tag errado o
+ * bind bool caía no ORM001 (paridade x86 mysql × sqlite quebrada). A query roda no
  * executor de 1 coluna ja medido do {@code RuntimeOrmMysql}
  * ({@code .Lorm_count_mysql}: erro/NULL/sem linha → 0). id invalido →
  * {@code .Lorm_bad_conn} (mesma string do host). Chama de
@@ -85,7 +88,7 @@ public final class RuntimeOrmMysqlCountWhere {
                 movl 8(%r13), %eax           # tag do box §284
                 cmpl $0, %eax
                 je .Lcw_bint
-                cmpl $1, %eax
+                cmpl $3, %eax
                 je .Lcw_bbool
                 cmpl $2, %eax
                 je .Lcw_bquad
