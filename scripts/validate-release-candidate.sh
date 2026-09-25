@@ -64,18 +64,26 @@ for TARGET in linux-x86_64 windows-x86_64 macos-arm64 macos-x86_64; do
     fi
 done
 
-# The linux tag family anchors "the last published version" (same anchor the
-# old inline bump logic used) — kept here deliberately; a single canonical
-# tag per version is a later slice (see R2/R3 in the exact-artifact doc), not
-# this one.
+# Pre-releases (qualquer branch != main) podem ter várias 0.5.0 com mesma VERSION
+# base — o workflow cria tag com +DATE (kof-0.5.0-beta+2026.09.17-...) sem mudar
+# VERSION, então não pode enroscar em tag nem em "is not newer". Final 0.5.0
+# na main deve ser considerado mais novo que 0.5.0-beta+date (sort -V já faz).
 LAST_TAG="$(git tag -l 'kof-*-linux-x86_64' --sort=-v:refname | head -1 || true)"
-if [ -n "$LAST_TAG" ]; then
-    LAST="${LAST_TAG#kof-}"
-    LAST="${LAST%-linux-x86_64}"
-    HIGHER="$(printf '%s\n%s\n' "$LAST" "$VERSION" | sort -V | tail -1)"
-    if [ "$VERSION" = "$LAST" ] || [ "$VERSION" != "$HIGHER" ]; then
-        echo "::error::VERSION $VERSION is not newer than last release $LAST" >&2
-        exit 1
+if [ "${GITHUB_REF_NAME:-main}" != "main" ]; then
+    echo "validate: pre-release on ${GITHUB_REF_NAME:-unknown} — skip newer gate for $VERSION (last $LAST_TAG)" >&2
+else
+    # The linux tag family anchors "the last published version" (same anchor the
+    # old inline bump logic used) — kept here deliberately; a single canonical
+    # tag per version is a later slice (see R2/R3 in the exact-artifact doc), not
+    # this one.
+    if [ -n "$LAST_TAG" ]; then
+        LAST="${LAST_TAG#kof-}"
+        LAST="${LAST%-linux-x86_64}"
+        HIGHER="$(printf '%s\n%s\n' "$LAST" "$VERSION" | sort -V | tail -1)"
+        if [ "$VERSION" = "$LAST" ] || [ "$VERSION" != "$HIGHER" ]; then
+            echo "::error::VERSION $VERSION is not newer than last release $LAST" >&2
+            exit 1
+        fi
     fi
 fi
 
