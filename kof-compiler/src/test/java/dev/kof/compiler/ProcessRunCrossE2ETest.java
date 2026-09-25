@@ -142,4 +142,32 @@ class ProcessRunCrossE2ETest {
             }
             """, "true\ntrue\n-1\n");
     }
+
+    /** C2/Q4: os DOIS pipes enchem ao mesmo tempo — se o drain não for
+     *  concorrente (ppoll), um filho bloqueado no write do stderr trava o
+     *  read do stdout e o `wait4` nunca chega (deadlock clássico de pipe). */
+    @Test
+    void runBothStreamsLargeDrainsConcurrently(@TempDir Path tmp) throws IOException {
+        assertAllTargets(tmp, "both", """
+            main() {
+                val r = process.run("sh", "-c", "seq 1 4000; seq 1 2000 >&2")
+                println(r.stdout.length)
+                println(r.stderr.length)
+                println(r.exitCode)
+            }
+            """, "18893\n8893\n0\n");
+    }
+
+    /** C3: o argv é elemento-a-elemento (nunca reinterpretado por shell); um
+     *  argumento com espaços permanece UM elemento. */
+    @Test
+    void runKeepsSpacedArgumentsAsSingleElement(@TempDir Path tmp) throws IOException {
+        assertAllTargets(tmp, "spaces", """
+            main() {
+                val r = process.run("echo", "a b", "c")
+                println(r.stdout)
+                println(r.exitCode)
+            }
+            """, "a b c\n\n0\n");
+    }
 }

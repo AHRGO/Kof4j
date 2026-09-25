@@ -20,9 +20,11 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     estaticos de 1 MiB no `.bss` da fatia (a arena GC cross segue 256 KiB);
     `execvp` no `NativeCrossLink.LIBC_SYMBOLS` (link dinamico so quando a fatia
     e alcancavel) e o gate `PROC001` agora recusa so `process.spawn` no cross.
-    RED->GREEN: `ProcessRunCrossE2ETest` 4/4, JVM==riscv64==aarch64 byte-a-byte
+    RED->GREEN: `ProcessRunCrossE2ETest` 6/6, JVM==riscv64==aarch64 byte-a-byte
     (echo/PATH, exit!=0, separacao stdout/stderr, 29 KB de stdout sem deadlock,
-    programa inexistente -1). `spawn` cross segue `PROC001` honesto (fatia B).
+    programa inexistente -1), mais drain concorrente dos 2 streams grandes
+    (`seq 1 4000` + `seq 1 2000` no stderr, sem deadlock) e pin de argv com
+    espaços (`echo "a b" c`). `spawn` cross segue `PROC001` honesto (fatia B).
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 

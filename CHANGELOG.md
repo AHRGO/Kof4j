@@ -20,9 +20,11 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Capture buffers are static 1 MiB in the slice `.bss` (the cross GC arena
     stays 256 KiB); `execvp` added to `NativeCrossLink.LIBC_SYMBOLS` (dynamic
     link only when the slice is reachable) and the `PROC001` gate now refuses
-    only `process.spawn` on cross. RED->GREEN: `ProcessRunCrossE2ETest` 4/4,
+    only `process.spawn` on cross. RED->GREEN: `ProcessRunCrossE2ETest` 6/6,
     JVM==riscv64==aarch64 byte-for-byte (echo/PATH, exit!=0, stdout/stderr
-    split, 29 KB stdout without deadlock, missing program -1). `spawn` cross
+    split, 29 KB stdout without deadlock, missing program -1) plus a
+    concurrent both-streams drain (`seq 1 4000` + `seq 1 2000` on stderr, no
+    deadlock) and a spaced-argv element pin (`echo "a b" c`). `spawn` cross
     remains the honest `PROC001` (slice B).
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
