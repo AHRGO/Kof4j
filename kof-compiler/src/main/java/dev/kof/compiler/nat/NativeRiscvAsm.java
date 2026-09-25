@@ -295,6 +295,7 @@ public final class NativeRiscvAsm {
                 // D-FULL-PARITY-050 row 13 slice 15 (native cross lane, 26/09):
                 // metadata (modifiedTime + isSymlink).
                 .append(NativeRiscvAsmIoMeta.RISCV_RUNTIME_ASM_IO_META)
+                .append(NativeRiscvAsmIoMove.RISCV_RUNTIME_ASM_IO_MOVE)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();
