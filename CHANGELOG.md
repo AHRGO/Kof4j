@@ -11,6 +11,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ## [0.5.0-beta] - unreleased (branch `beta-0.5.0`)
 
+  - **`ssh.cmd`/`run`/`ok` on x86-64 (`D-FULL-PARITY-050` row 3 slice A)**
+    (26/09): new `RuntimeSsh` emits `kof_ssh_argv` (exact JVM oracle
+    `[ssh,-o,BatchMode=yes,-o,ConnectTimeout=5,host,command]`) and
+    `kof_ssh_run` (reuses `kof_process_run`); `ExpressionSshCallLowerer` now
+    emits on x86-64 and keeps the honest `PROC001` on the cross. The former
+    `SshE2ETest` native pins became the positive. `SshE2ETest` 9/9 (x86 argv
+    byte-identical to the JVM oracle, host and command stay one element each).
+
   - **`shell.run`/`cmd`/`ok` on the riscv64/aarch64 native CROSS (`D-FULL-PARITY-050` row 2)**
     (26/09): `shell.run` reuses `kof_process_run` (row 1 slice C), `shell.ok` is
     pure IR over the `exitCode` accessor and `shell.cmd` uses the new

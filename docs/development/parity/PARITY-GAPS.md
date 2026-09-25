@@ -28,7 +28,7 @@
 |---|---------|------------|----------------|--------------------------|----|----------|----------------------|
 | 1 | `process.run`/`spawn`/`exit` | ✅ | ✅ x86 `run`/`exit` (`spawn` = slice B, `PROC001`; whole-record `println(r)`/`"x"+r` = `PROC001`, access `.stdout`/`.stderr`/`.exitCode`) | ✅ cross `run` 26/09 (`spawn` = slice B, `PROC001`) | ✅ (KofJsRunner) | `PROC001` (spawn + whole-record print) | native-cross lane (run x86 ✅ 25/09, cross ✅ 26/09; `spawn` = slice B) |
 | 2 | `shell.cmd`/`run`/`runWith`/`pipeline`/`ok` | ✅ | ✅ x86 `run`/`cmd`/`ok` (`pipeline`/`runWith` = slice B) | ✅ cross `run`/`cmd`/`ok` 26/09 (`pipeline`/`runWith` = slice B, `PROC001`) | ✅ (host runner) | `PROC001` (slice B) | native-cross lane (x86 ✅ 25/09, cross ✅ 26/09) |
-| 3 | `ssh.cmd`/`run`/`ok` | ✅ | ❌ (no dispatch) | ❌ | ❌ | (no gap code yet — catalog) | native/js lane |
+| 3 | `ssh.cmd`/`run`/`ok` | ✅ | ✅ x86 `run`/`cmd`/`ok` 26/09 | ❌ | ❌ | `PROC001` (cross + JS) | native-cross lane (x86 ✅ 26/09) |
 | 4 | media: `Image.open`/`Audio.openWav`/`Video.open`/`Mic.record`/`list` | ✅ | ❌ | ❌ | ❌ | `MEDIA001`/`MEDIA003` | media front |
 | 5 | `mq.*` | ✅ | partial (`MQ001` faces) | ⏳ golden | ⏳ | `MQ001` | infra lane |
 | 6 | `gpu.*` (JS face) + cross golden | ✅ | ✅ | ⏳ golden | ❌ `GPU001` | `GPU001` | gpu/native lanes |

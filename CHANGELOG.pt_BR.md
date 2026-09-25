@@ -11,6 +11,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ## [0.5.0-beta] - unreleased (branch `beta-0.5.0`)
 
+  - **`ssh.cmd`/`run`/`ok` no x86-64 (`D-FULL-PARITY-050` linha 3 fatia A)**
+    (26/09): nova `RuntimeSsh` emite `kof_ssh_argv` (oraculo JVM exato
+    `[ssh,-o,BatchMode=yes,-o,ConnectTimeout=5,host,command]`) e `kof_ssh_run`
+    (reusa `kof_process_run`); o `ExpressionSshCallLowerer` agora emite no
+    x86-64 e mantem o `PROC001` honesto no cross. Os pins nativos antigos do
+    `SshE2ETest` viraram o positivo. `SshE2ETest` 9/9 (argv x86 == JVM
+    byte-a-byte, host e comando = 1 elemento cada).
+
   - **`shell.run`/`cmd`/`ok` no CROSS nativo riscv64/aarch64 (`D-FULL-PARITY-050` linha 2)**
     (26/09): `shell.run` reusa `kof_process_run` (linha 1 fatia C), `shell.ok` e
     IR puro sobre o acesso `exitCode` e `shell.cmd` usa a peca nova
