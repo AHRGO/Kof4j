@@ -336,6 +336,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     pre-existing JVM×x86 divergence catalogued as §494). Proof:
     `NativeIoSizeCrossTest` (size path JVM==riscv64==aarch64; both error messages pinned).
 
+  - **D-FULL-PARITY-050 row 13 slice 6 (native-cross lane) — `kof.io`
+    `readBytes()`/`writeBytes()`/`appendBytes()` on the riscv64/aarch64 cross.**
+    The new cross piece `NativeRiscvAsmIoBytes` implements the three byte faces
+    (openat O_RDONLY/O_TRUNC/O_APPEND, `Int[]` via `kof_array_alloc`, byte
+    values zero-extended to match the JVM's `& 0xFF`). Proof:
+    `NativeIoBytesCrossTest` (reuses the JVM golden `IoE2ETest.fileBytes`:
+    `true/4/65/0/255/true/8`, JVM==riscv64==aarch64).
+
   - **S5.4 slice 1 (db-parity, gaps-db lane) — real MySQL/MariaDB `connect`
     on the cross (cross piece `B73`)** (24/09): `kof_db_connect` now accepts
     `mysql://`/`mariadb://` on riscv64/aarch64 — URL parse
