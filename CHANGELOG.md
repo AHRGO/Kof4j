@@ -287,6 +287,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     emits them on the cross. Proof: `NativeIoTextCrossTest` (JVM oracle measured
     at runtime + riscv64 + aarch64 under qemu, byte-identical round-trip).
 
+  - **D-FULL-PARITY-050 row 13 slice 3 (native-cross lane) — `kof.io`
+    `delete()`/`create()`/`mkdir()` on the riscv64/aarch64 cross.** The new cross
+    piece `NativeRiscvAsmIoFs` implements `kof_io_delete` (`unlinkat`, stat first,
+    `AT_REMOVEDIR` for a directory, absent = false like the JVM) and
+    `kof_io_dir_create` (`mkdirat`, 0755, `EEXIST` = false). Proof:
+    `NativeIoFsCrossTest` (JVM oracle measured at runtime + riscv64 + aarch64
+    under qemu, byte-identical).
+
   - **S5.4 slice 1 (db-parity, gaps-db lane) — real MySQL/MariaDB `connect`
     on the cross (cross piece `B73`)** (24/09): `kof_db_connect` now accepts
     `mysql://`/`mariadb://` on riscv64/aarch64 — URL parse

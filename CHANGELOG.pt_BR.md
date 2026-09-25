@@ -286,6 +286,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     a emiti-las no cross. Prova: `NativeIoTextCrossTest` (oráculo JVM medido em
     runtime + riscv64 + aarch64 sob qemu, round-trip byte-idêntico).
 
+  - **D-FULL-PARITY-050 linha 13 fatia 3 (lane native-cross) — `kof.io`
+    `delete()`/`create()`/`mkdir()` no cross riscv64/aarch64.** A peça cross nova
+    `NativeRiscvAsmIoFs` implementa `kof_io_delete` (`unlinkat`, stat primeiro,
+    `AT_REMOVEDIR` para diretório, ausente = false como o JVM) e
+    `kof_io_dir_create` (`mkdirat`, 0755, `EEXIST` = false). Prova:
+    `NativeIoFsCrossTest` (oráculo JVM medido em runtime + riscv64 + aarch64 sob
+    qemu, byte-idêntico).
+
   - **S5.4 fatia 1 (db-parity, lane gaps-db) — `connect` MySQL/MariaDB REAL
     no cross (peça cross `B73`)** (24/09): `kof_db_connect` agora aceita
     `mysql://`/`mariadb://` no riscv64/aarch64 — parse da URL
