@@ -20,7 +20,7 @@
     {
       "login": "kof-agent-worker[bot]",
       "name": "kof-agent-worker[bot]",
-      "avatar_url": "https://github.com/kof-agent-worker%5Bbot%5D.png",
+      "avatar_url": "https://avatars.githubusercontent.com/in/4960796?s=100&v=4",
       "profile": "https://github.com/apps/kof-agent-worker",
       "contributions": ["code", "test", "infra", "doc"]
     },
@@ -41,7 +41,7 @@
     {
       "login": "dependabot[bot]",
       "name": "dependabot[bot]",
-      "avatar_url": "https://github.com/dependabot%5Bbot%5D.png",
+      "avatar_url": "https://avatars.githubusercontent.com/in/496992?s=100&v=4",
       "profile": "https://github.com/apps/dependabot",
       "contributions": ["infra", "security"]
     },
