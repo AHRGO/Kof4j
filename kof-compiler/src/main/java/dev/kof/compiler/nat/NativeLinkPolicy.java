@@ -23,8 +23,8 @@ final class NativeLinkPolicy {
         // (nunca um link que falha feio nem um binário que resolve em runtime).
         if (backend.freestanding && backend.target == dev.kof.compiler.Target.NATIVE
                 && (backend.usesDb || backend.usesOrm || backend.usesMysql || backend.usesConcurrency
-                        || backend.usesPow || !backend.ffiLibs.isEmpty())) {
-            throw new IOException("NATIVE003: perfil freestanding nao suporta libc (db/mysql/concurrency/pow/ffi) "
+                        || backend.usesPow || backend.usesProcess || !backend.ffiLibs.isEmpty())) {
+            throw new IOException("NATIVE003: perfil freestanding nao suporta libc (db/mysql/concurrency/pow/ffi/process) "
                     + "neste alvo; use o perfil host ou remova a dependencia");
         }
         // R2 fatia 1 (20/09): -lm AGORA é by-use como sqlite/mariadb/pthread —

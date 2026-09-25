@@ -34,13 +34,20 @@ class DomainGapCodesTest {
     private static final Pattern GAP_CODE = Pattern.compile("\"([A-Z]{2,6}[0-9]{3})\"");
 
     @Test
-    void processRunOnNativeIsProc001(@TempDir Path tmp) throws Exception {
-        assertGap(tmp, Target.NATIVE, "PROC001", """
+    void processRunOnNativeCompiles(@TempDir Path tmp) throws Exception {
+        // D-FULL-PARITY-050 linha 1 (RuntimeProcess): process.run agora tem
+        // paridade JVM=NATIVE x86-64 (golden em ProcessRunNativeE2ETest).
+        // O spawn continua PROC001 (slice B: handles interativos).
+        Path file = tmp.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, """
             main() {
                 val r = process.run("echo", "hi")
                 println(r.stdout)
             }
             """);
+        CompilationResult result = driver.compile(file, tmp.resolve("out"), Target.NATIVE);
+        assertTrue(result.success(), "NATIVE process.run must compile: "
+                + result.diagnostics().getDiagnostics());
     }
 
     @Test
@@ -57,7 +64,8 @@ class DomainGapCodesTest {
     void processSpawnOnJsHasNoGap(@TempDir Path tmp) throws Exception {
         // JS face landed 19/09 (KofJsProcessBridge host binding, F10 parity):
         // process.spawn must compile on JS now — the E2E parity lives in
-        // ProcessSpawnE2ETest. Native keeps the PROC001 pin above.
+        // ProcessSpawnE2ETest. Native keeps the PROC001 pin above (run ja
+        // fechou a linha 1 do ledger; spawn e slice B).
         Path file = tmp.resolve("Main-" + System.nanoTime() + ".kf");
         Files.writeString(file, """
             main() {

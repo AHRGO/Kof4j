@@ -362,8 +362,17 @@ public final class ExpressionLowerer {
                 Type faType = ExpressionTyper.inferExprType(driver, fa.receiver(), locals);
                 if (KofProcess.isResult(faType) && KofProcess.isField(fa.fieldName())) {
                     localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
-                    ops.add(new KofLoadField(KofProcess.RESULT, fa.fieldName(),
-                            KofProcess.fieldType(fa.fieldName())));
+                    if (driver.target.isNative()) {
+                        // Native: Result é objeto opaco do RuntimeProcess — os
+                        // campos baixam para os accessors (o KofLoadField não
+                        // tem layout de classe builtin no backend asm).
+                        Type ft = KofProcess.fieldType(fa.fieldName());
+                        ops.add(new KofCall(ft, "kof_process_result_" + fa.fieldName(),
+                                List.of(KofProcess.RESULT), ft, KofCallKind.FUNCTION));
+                    } else {
+                        ops.add(new KofLoadField(KofProcess.RESULT, fa.fieldName(),
+                                KofProcess.fieldType(fa.fieldName())));
+                    }
                     yield localIdx;
                 }
                 if (KofUi.isWindow(faType) && "title".equals(fa.fieldName())) {

@@ -26,7 +26,7 @@
 
 | # | Superfície | JVM/Script | Native x86-64 | Native riscv64/aarch64 | JS | Código | Fila / lane dona |
 |---|------------|------------|----------------|--------------------------|----|--------|------------------|
-| 1 | `process.run`/`spawn`/`exit` | ✅ | ❌ | ❌ | ✅ (KofJsRunner) | `PROC001` | lane native |
+| 1 | `process.run`/`spawn`/`exit` | ✅ | ✅ x86 `run`/`exit` (`spawn` = fatia B, `PROC001`) | ❌ | ✅ (KofJsRunner) | `PROC001` (spawn + cross) | lane native (`run` x86 ✅ 25/09) |
 | 2 | `shell.cmd`/`run`/`runWith`/`pipeline`/`ok` | ✅ | ❌ | ❌ | ✅ (host runner) | `PROC001` | lane native |
 | 3 | `ssh.cmd`/`run`/`ok` | ✅ | ❌ (sem dispatch) | ❌ | ❌ | (sem código de gap ainda — catalogar) | lane native/js |
 | 4 | media: `Image.open`/`Audio.openWav`/`Video.open`/`Mic.record`/`list` | ✅ | ❌ | ❌ | ❌ | `MEDIA001`/`MEDIA003` | frente media |

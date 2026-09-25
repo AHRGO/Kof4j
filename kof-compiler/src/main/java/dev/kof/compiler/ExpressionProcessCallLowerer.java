@@ -50,19 +50,24 @@ public final class ExpressionProcessCallLowerer {
         return localIdx;
     }
     if (procCall != null) {
-        if (driver.target.isNative()) {
+        if (driver.target.isNative() && "kof_process_spawn".equals(procCall.function())) {
+            // F10 slice B: o spawn (stdin/stdout vivos + handle ops) segue
+            // PROC001 no Native até a fatia B (run já fechou a linha 1 do
+            // ledger). JVM (incl. Android) e JS (KofJsProcessBridge) já têm
+            // o contrato inteiro.
             if (driver.currentDiagnostics != null) {
                 driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
                         mc.position() != null ? mc.position().line() : 0,
                         mc.position() != null ? mc.position().column() : 0,
                         0,
-                        "process.run: not supported on the Native driver.target yet (JVM supports it)",
+                        "process.spawn: interactive stdin/stdout is supported on the JVM and JS targets; Native is an honest PROC001 gap",
                         "PROC001");
             }
             return localIdx;
         }
         // process.run(program, args...) →
-        // kof_process_run(program, List<String>)
+        // kof_process_run(program, List<String>) — TODOS os targets
+        // (Native x86-64: RuntimeProcess, linha 1 do ledger D-FULL-PARITY-050)
         localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(0), ops, owner, localIdx, locals);
         Type listType = KofProcess.STRING_LIST;
         ops.add(new KofCall(listType, "kof_list_new", List.of(), listType, KofCallKind.FUNCTION));
