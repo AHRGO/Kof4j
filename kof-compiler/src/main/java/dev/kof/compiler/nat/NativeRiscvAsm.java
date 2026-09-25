@@ -253,6 +253,9 @@ public final class NativeRiscvAsm {
                 // String.toCharArray() no cross — Char[] (code units UTF-16,
                 // paridade JVM/x86); fecha a face cross do STR003.
                 .append(NativeRiscvAsmStrToCharArray.RISCV_RUNTIME_ASM_STR_TO_CHAR_ARRAY)
+                // D-FULL-PARITY-050 row 13 (native cross lane, 24/09): faces de
+                // estat de kof.io no cross — exists()/isFile()/isDirectory().
+                .append(NativeRiscvAsmIoStat.RISCV_RUNTIME_ASM_IO_STAT)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

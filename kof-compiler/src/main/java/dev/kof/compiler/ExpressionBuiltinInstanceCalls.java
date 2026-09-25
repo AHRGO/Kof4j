@@ -2,6 +2,7 @@ package dev.kof.compiler;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Chamadas de instância em receivers BUILTIN por domínio (enum name / kof.web /
@@ -13,6 +14,14 @@ import java.util.List;
 final class ExpressionBuiltinInstanceCalls {
 
     private ExpressionBuiltinInstanceCalls() {}
+
+    /**
+     * D-FULL-PARITY-050 row 13: faces de kof.io JA portadas para o cross
+     * riscv64/aarch64 (fatia {@code NativeRiscvAsmIoStat}). As demais seguem
+     * com gate honesto NAT006 (§427) — nunca um link break silencioso (R6).
+     */
+    private static final Set<String> CROSS_IO_READY = Set.of(
+            "kof_io_file_exists", "kof_io_file_is_file", "kof_io_file_is_dir");
 
     /** Diagnóstico de gap honesto (R6) numa chamada kof.web. */
     private static void webGap(CompilerDriver driver, MethodCallExpr mc, String msg, String code) {
@@ -213,17 +222,23 @@ final class ExpressionBuiltinInstanceCalls {
             // riscv64/aarch64 cross — only the kof_io_strlen/make_string
             // internals exist there (sqlite/JSON). Emitting the call is a loud
             // `ld` undefined-reference, so refuse honestly at compile time
-            // (NAT006), never a link break (R6).
-            if (driver.target == Target.NATIVE_RISCV64 || driver.target == Target.NATIVE_AARCH64) {
+            // (NAT006), never a link break (R6). D-FULL-PARITY-050 row 13:
+            // exists()/isFile()/isDirectory() ARE ported (NativeRiscvAsmIoStat)
+            // — those emit; every other face keeps the honest NAT006.
+            boolean crossIo = driver.target == Target.NATIVE_RISCV64
+                    || driver.target == Target.NATIVE_AARCH64;
+            if (crossIo && !CROSS_IO_READY.contains(ioCall.function())) {
                 if (driver.currentDiagnostics != null) {
                     SourcePosition ioPos = mc.position();
                     driver.currentDiagnostics.error(
                             ioPos != null ? ioPos.file() : "",
                             ioPos != null ? ioPos.line() : 0,
                             ioPos != null ? ioPos.column() : 0, 0,
-                            "kof.io: not available on the riscv64/aarch64 native targets yet"
-                                    + " (NAT006) — the File/Path/Directory runtime is x86_64-only;"
-                                    + " use --target native or the JVM/JS/Script drivers",
+                            "kof.io: '" + mc.methodName() + "' is not available on the"
+                                    + " riscv64/aarch64 native targets yet (NAT006) — the"
+                                    + " read/write/dir faces are x86_64-only (exists/isFile/"
+                                    + "isDirectory are ported); use --target native or the"
+                                    + " JVM/JS/Script drivers",
                             "NAT006");
                 }
                 return localIdx;
