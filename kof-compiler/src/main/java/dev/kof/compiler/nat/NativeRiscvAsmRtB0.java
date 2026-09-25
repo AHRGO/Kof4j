@@ -273,12 +273,11 @@ public final class NativeRiscvAsmRtB0 {
                 sw   t0, 16(a0)
                 ret
 
-            # ---- kof.log: LEVEL + msg + newline; KOF_LOG_LEVEL filtra; stderr
-            # para warn/error, stdout para info/debug. Contrato JVM/x86
-            # (NativeLogE2ETest). Fatia 2a (26/09, D-FULL-PARITY-050 linha 9):
-            # interpretador de nível + rótulo JVM (`INFO`, sem colchetes).
-            # Fatia 2b (timestamp `yyyy-MM-dd HH:mm:ss.SSS` UTC) fica p/ a
-            # próxima unidade — enquanto isso o golden cross cobre nível/fd/rótulo.
+            # ---- kof.log: timestamp `yyyy-MM-dd HH:mm:ss.SSS` (UTC) + rótulo
+            # JVM + msg + newline; KOF_LOG_LEVEL filtra; stderr para warn/error,
+            # stdout para info/debug. Contrato JVM/x86 (NativeLogE2ETest).
+            # Fatias 2a/2b (26/09, D-FULL-PARITY-050 linha 9): nível/fd/rótulo
+            # + timestamp civil Hinnant, espelhando RuntimeLog1/2 do x86.
             .globl kof_log_debug
             kof_log_debug:
                 li   a1, 0
@@ -297,12 +296,13 @@ public final class NativeRiscvAsmRtB0 {
                 j    kof_log_write_lvl
             # helper: a0=msg*, a1=level (0..3)
             kof_log_write_lvl:
-                addi sp, sp, -48
-                sd   ra, 40(sp)
-                sd   s0, 32(sp)      # msg
-                sd   s1, 24(sp)      # level
-                sd   s2, 16(sp)      # fd
-                sd   s3, 8(sp)       # label len
+                addi sp, sp, -96
+                sd   ra, 88(sp)
+                sd   s0, 80(sp)      # msg
+                sd   s1, 72(sp)      # level
+                sd   s2, 64(sp)      # fd
+                sd   s3, 56(sp)      # label ptr
+                sd   s4, 48(sp)      # label len
                 mv   s0, a0
                 mv   s1, a1
                 # threshold lazy: 0=debug 1=info 2=warn 3=error 4=off
@@ -320,30 +320,42 @@ public final class NativeRiscvAsmRtB0 {
                 li   t0, 2
                 bge  s1, t0, .Llw_stderr
                 li   s2, 1
-                j    .Llw_write
+                j    .Llw_pick_lbl
             .Llw_stderr:
                 li   s2, 2
-            .Llw_write:
-                # escolhe label (t0) + comprimento (s3) — palavras do contrato JVM
-                la   t0, .Llog_lbl_info
-                li   s3, 4
+            .Llw_pick_lbl:
+                # escolhe rótulo (s3) + comprimento (s4) — palavras do contrato JVM
+                la   s3, .Llog_lbl_info
+                li   s4, 4
                 beqz s1, .Llw_lbl_debug
                 li   t1, 1
-                beq  s1, t1, .Llw_have_lbl
-                la   t0, .Llog_lbl_warn
+                beq  s1, t1, .Llw_ts
+                la   s3, .Llog_lbl_warn
                 li   t1, 2
-                beq  s1, t1, .Llw_have_lbl
-                la   t0, .Llog_lbl_error
-                li   s3, 5
-                j    .Llw_have_lbl
+                beq  s1, t1, .Llw_ts
+                la   s3, .Llog_lbl_error
+                li   s4, 5
+                j    .Llw_ts
             .Llw_lbl_debug:
-                la   t0, .Llog_lbl_debug
-                li   s3, 5
-            .Llw_have_lbl:
-                # write(fd, label, s3)
+                la   s3, .Llog_lbl_debug
+                li   s4, 5
+            .Llw_ts:
+                # timestamp de 23 bytes em sp+0..22 e write(fd, sp, 23)
+                mv   a0, sp
+                call .Llog_format_ts
                 mv   a0, s2
-                mv   a1, t0
-                mv   a2, s3
+                mv   a1, sp
+                li   a2, 23
+                call kof_plat_write
+                # write(fd, " ", 1)
+                mv   a0, s2
+                la   a1, .Lstr_space
+                li   a2, 1
+                call kof_plat_write
+                # write(fd, label, s4)
+                mv   a0, s2
+                mv   a1, s3
+                mv   a2, s4
                 call kof_plat_write
                 # write(fd, " ", 1)
                 mv   a0, s2
@@ -363,12 +375,181 @@ public final class NativeRiscvAsmRtB0 {
                 li   a2, 1
                 call kof_plat_write
             .Llw_suppressed:
-                ld   s3, 8(sp)
-                ld   s2, 16(sp)
-                ld   s1, 24(sp)
-                ld   s0, 32(sp)
-                ld   ra, 40(sp)
-                addi sp, sp, 48
+                ld   s4, 48(sp)
+                ld   s3, 56(sp)
+                ld   s2, 64(sp)
+                ld   s1, 72(sp)
+                ld   s0, 80(sp)
+                ld   ra, 88(sp)
+                addi sp, sp, 96
+                ret
+
+            # .Llog_format_ts(a0=destino) — escreve 23 bytes
+            # "yyyy-MM-dd HH:mm:ss.SSS" (UTC) a partir de kof_time_now().
+            # Conversão civil Hinnant (dias desde epoch -> y/m/d), como o x86.
+            # Slots: 40 ms | 36 ss | 32 mi | 28 hh | 24 day | 20 mon | 16 year.
+            .Llog_format_ts:
+                addi sp, sp, -80
+                sd   ra, 72(sp)
+                sd   s5, 64(sp)
+                mv   s5, a0                  # cursor
+                call kof_time_now            # a0 = epoch-ms
+                li   t0, 1000
+                rem  t1, a0, t0
+                sw   t1, 40(sp)              # ms
+                div  t1, a0, t0              # epoch sec
+                li   t0, 86400
+                rem  t2, t1, t0              # sec do dia
+                div  t3, t1, t0              # dias
+                li   t0, 3600
+                div  t4, t2, t0
+                sw   t4, 28(sp)              # hh
+                rem  t2, t2, t0
+                li   t0, 60
+                div  t4, t2, t0
+                sw   t4, 32(sp)              # mi
+                rem  t4, t2, t0
+                sw   t4, 36(sp)              # ss
+                # z = dias + 719468
+                li   t0, 719468
+                add  t3, t3, t0
+                li   t0, 146097
+                div  t4, t3, t0              # era
+                rem  t5, t3, t0              # doe
+                li   t0, 1460
+                div  t6, t5, t0
+                li   t0, 36524
+                div  a1, t5, t0
+                li   t0, 146096
+                div  a0, t5, t0
+                sub  t6, t5, t6
+                add  t6, t6, a1
+                sub  t6, t6, a0
+                li   t0, 365
+                div  t6, t6, t0              # yoe
+                li   t0, 400
+                mul  a0, t4, t0
+                add  a0, a0, t6              # year
+                sw   a0, 16(sp)
+                # doy = doe - (365*yoe + yoe/4 - yoe/100)
+                li   t0, 365
+                mul  a1, t6, t0
+                srli a2, t6, 2
+                add  a1, a1, a2
+                li   t0, 100
+                div  a2, t6, t0
+                sub  a1, a1, a2
+                sub  a1, t5, a1              # doy
+                # mp = (5*doy + 2)/153
+                li   t0, 5
+                mul  a2, a1, t0
+                addi a2, a2, 2
+                li   t0, 153
+                div  a3, a2, t0              # mp
+                # day = doy - (153*mp+2)/5 + 1
+                li   t0, 153
+                mul  a2, a3, t0
+                addi a2, a2, 2
+                li   t0, 5
+                div  a2, a2, t0
+                sub  a2, a1, a2
+                addi a2, a2, 1
+                sw   a2, 24(sp)              # day
+                # mon = mp + 3 - 12*(mp/10)
+                li   t0, 10
+                div  a4, a3, t0
+                li   t0, 12
+                mul  a4, a4, t0
+                addi a5, a3, 3
+                sub  a5, a5, a4
+                sw   a5, 20(sp)              # mon
+                li   t0, 2
+                bgt  a5, t0, .Lts_yok
+                lw   a0, 16(sp)
+                addi a0, a0, 1
+                sw   a0, 16(sp)
+            .Lts_yok:
+                # yyyy
+                lw   a0, 16(sp)
+                li   t0, 1000
+                div  t1, a0, t0
+                addi t1, t1, 48
+                sb   t1, 0(s5)
+                rem  a0, a0, t0
+                li   t0, 100
+                div  t1, a0, t0
+                addi t1, t1, 48
+                sb   t1, 1(s5)
+                rem  a0, a0, t0
+                li   t0, 10
+                div  t1, a0, t0
+                addi t1, t1, 48
+                sb   t1, 2(s5)
+                rem  t1, a0, t0
+                addi t1, t1, 48
+                sb   t1, 3(s5)
+                li   t0, 45
+                sb   t0, 4(s5)               # '-'
+                addi s5, s5, 5
+                lw   a0, 20(sp)
+                call .Lts_put2
+                li   t0, 45
+                sb   t0, 0(s5)               # '-'
+                addi s5, s5, 1
+                lw   a0, 24(sp)
+                call .Lts_put2
+                li   t0, 32
+                sb   t0, 0(s5)
+                addi s5, s5, 1
+                lw   a0, 28(sp)
+                call .Lts_put2
+                li   t0, 58
+                sb   t0, 0(s5)               # ':'
+                addi s5, s5, 1
+                lw   a0, 32(sp)
+                call .Lts_put2
+                li   t0, 58
+                sb   t0, 0(s5)               # ':'
+                addi s5, s5, 1
+                lw   a0, 36(sp)
+                call .Lts_put2
+                li   t0, 46
+                sb   t0, 0(s5)               # '.'
+                addi s5, s5, 1
+                lw   a0, 40(sp)
+                call .Lts_put3
+                ld   s5, 64(sp)
+                ld   ra, 72(sp)
+                addi sp, sp, 80
+                ret
+
+            # .Lts_put2(a0=0..99): escreve 2 dígitos no cursor s5 e avança.
+            .Lts_put2:
+                li   t0, 10
+                div  t1, a0, t0
+                addi t1, t1, 48
+                sb   t1, 0(s5)
+                rem  t1, a0, t0
+                addi t1, t1, 48
+                sb   t1, 1(s5)
+                addi s5, s5, 2
+                ret
+
+            # .Lts_put3(a0=0..999): escreve 3 dígitos no cursor s5 e avança.
+            .Lts_put3:
+                li   t0, 100
+                div  t1, a0, t0
+                addi t1, t1, 48
+                sb   t1, 0(s5)
+                rem  a0, a0, t0
+                li   t0, 10
+                div  t1, a0, t0
+                addi t1, t1, 48
+                sb   t1, 1(s5)
+                rem  t1, a0, t0
+                addi t1, t1, 48
+                sb   t1, 2(s5)
+                addi s5, s5, 3
                 ret
 
             # .Llog_parse_level -> a0 = threshold (0..4); default 1 (info).

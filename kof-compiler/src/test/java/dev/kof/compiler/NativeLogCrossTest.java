@@ -12,15 +12,18 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * D-FULL-PARITY-050 (row 9, fatia 2a) — {@code kof.log} nos cross-arch
- * (riscv64/aarch64): o interpretador de {@code KOF_LOG_LEVEL} e o rótulo do
- * contrato JVM/x86 ({@code INFO}/{@code DEBUG}/...). Mesmo estilo do
+ * D-FULL-PARITY-050 (row 9, fatias 2a/2b) — {@code kof.log} nos cross-arch
+ * (riscv64/aarch64): o interpretador de {@code KOF_LOG_LEVEL}, o rótulo do
+ * contrato JVM/x86 ({@code INFO}/{@code DEBUG}/...) e o timestamp
+ * {@code yyyy-MM-dd HH:mm:ss.SSS} (UTC). Mesmo estilo do
  * {@link NativeLogE2ETest} (x86): default info, debug só sob KOF_LOG_LEVEL=debug,
  * error suprime info, off suprime tudo, warn/error vão para stderr, e o parse
- * do nível é case-insensitive. O timestamp ({@code yyyy-MM-dd HH:mm:ss.SSS} UTC)
- * é a fatia 2b — ainda NÃO coberto aqui (o golden não o exige).
+ * do nível é case-insensitive.
  */
 class NativeLogCrossTest {
+
+    private static final java.util.regex.Pattern TS_INFO_LINE = java.util.regex.Pattern.compile(
+            "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3} INFO hello from kof$");
 
     private final CompilerDriver driver = new CompilerDriver();
 
@@ -155,5 +158,16 @@ class NativeLogCrossTest {
                 "cross toolchain + qemu ausente — pulando (NATIVE002)");
         assertBothArches(tempDir, LOG_PROGRAM, "DEBUG", (out, arch) ->
                 assertTrue(out[0].contains("DEBUG detail message"), arch + " stdout: " + out[0]));
+    }
+
+    @Test
+    void timestampHasCivilFormatBothArches(@TempDir Path tempDir) throws IOException {
+        Assumptions.assumeTrue(
+                has("riscv64-linux-gnu-as", "riscv64-linux-gnu-ld", "qemu-riscv64")
+                        && has("aarch64-linux-gnu-as", "aarch64-linux-gnu-ld", "qemu-aarch64"),
+                "cross toolchain + qemu ausente — pulando (NATIVE002)");
+        assertBothArches(tempDir, LOG_PROGRAM, null, (out, arch) ->
+                assertTrue(TS_INFO_LINE.matcher(out[0]).matches(),
+                        arch + " stdout (esperado 'yyyy-MM-dd HH:mm:ss.SSS INFO hello from kof'): " + out[0]));
     }
 }
