@@ -13,6 +13,21 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **§496 — unknown FIELD on a builtin namespace is a clean SEM102**
+    (25/09): `math.bogus` (and even `math.PI`, `strings.EMPTY`, `time.EPOCH`,
+    `db.bogus`, …) compiled clean; the receiver is neither a local nor a type,
+    so `FieldAccessExpr` inferred UNKNOWN and the emitter used the empty class
+    name as the `getfield` owner → `getfield "?".bogus` →
+    `NoClassDefFoundError: "?"` at load (hidden behind the JavaFX launcher).
+    New `SemUndefinedVarGuard.isBuiltinNamespace(name)` centralizes the pure
+    namespace families (excluding palettes/tokens/enum/Theme/interop, which
+    keep their own path) and `SemExpressionTyper`'s `FieldAccessExpr` case now
+    emits `SEM102`. RED→GREEN: `BuiltinUnknownFieldGuardTest`
+    (`unknownMathFieldIsSem102`, `plausibleButInvalidNamespaceConstantIsSem102`
+    for `math.PI`, `unknownStringsNamespaceFieldIsSem102`,
+    `unknownTimeNamespaceFieldIsSem102`) 4/4 fail pre-fix; 19/19 after
+    (control `namespaceMethodCallsStillCompile`). FIELD face of §495/#126/§490.
+
   - **§495 — unknown method on the `scheduler` namespace is a clean SEM025**
     (25/09): `scheduler.bogus()` passed `kof check` and aborted at load with
     `VerifyError: Operand stack underflow` (the lowering emitted nothing).

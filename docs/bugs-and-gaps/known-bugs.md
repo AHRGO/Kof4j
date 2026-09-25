@@ -14958,20 +14958,22 @@ main() {
 
 ---
 
-## §496 — Unknown FIELD on ANY builtin namespace (`math.bogus`, even `math.PI`) compiled clean and emitted `getfield` against a class named `"?"` → NoClassDefFoundError — 🟡 OPEN (catalogued)
+## §496 — Unknown FIELD on ANY builtin namespace (`math.bogus`, even `math.PI`) compiled clean and emitted `getfield` against a class named `"?"` → NoClassDefFoundError; now a clean SEM102 — ✅ FIXED 25/09
 
-**Symptom (measured 25/09, lane compiler 9092):** a field access on a builtin namespace identifier compiles clean and the emitted bytecode references a class whose name is the empty string: `math.bogus` → `getfield "?".bogus:Ljava/lang/Object;`, `math.PI` → `getfield "?".PI:...`, and the same for `strings.EMPTY`, `time.EPOCH`, `db.bogus`, `orm.bogus`, `log.bogus`, `cache.bogus`, `config.bogus`, `security.bogus`, `gpu.bogus`. No `kof.<ns>` class is shipped, so the class aborts at load with `NoClassDefFoundError: ?` — hidden behind the JavaFX launcher message. There are NO namespace constants, so every one of these is invalid.
+**Symptom (measured 25/09, lane compiler 9092):** a field access on a builtin namespace identifier compiled clean and the emitted bytecode referenced a class whose name is the empty string: `math.bogus` → `getfield "?".bogus:Ljava/lang/Object;`, `math.PI` → `getfield "?".PI:...`, and the same for `strings.EMPTY`, `time.EPOCH`, `db.bogus`, `orm.bogus`, `log.bogus`, `cache.bogus`, `config.bogus`, `security.bogus`, `gpu.bogus`. No `kof.<ns>` class is shipped, so the class aborted at load with `NoClassDefFoundError: ?` — hidden behind the JavaFX launcher message. There are NO namespace constants, so every one of these is invalid.
 
-**Root cause (suspected, to confirm on the fix):** `SemExpressionTyper` (`case FieldAccessExpr`) validates fields only for builtin PSEUDO-TYPES (§491: File/Path/Directory/Buffer/Secret/KeyHandle) and for known classes; a namespace identifier is neither, so it falls through to `yield UNKNOWN` and the emitter uses the (empty) resolved class name as the `getfield` owner. It is the FIELD face of the same namespace family as §495.
+**Root cause:** `SemExpressionTyper` (`case FieldAccessExpr`) validated fields only for builtin PSEUDO-TYPES (§491: File/Path/Directory/Buffer/Secret/KeyHandle) and for known classes; a namespace identifier is neither, so it fell through to `yield UNKNOWN` and the emitter used the (empty) resolved class name as the `getfield` owner. FIELD face of the same namespace family as §495/#126/§490.
 
-**Impact / honesty (R6):** silent invalid bytecode on a plausible typo (`math.PI`), not a clean diagnostic. NOT fixed in this unit (the field path is shared with UI/enum-constant field accesses such as `Color.Red`, so the guard needs a namespace predicate that excludes those — a `Rule 11`/regression-sensitive change, deliberately left for a dedicated unit).
+**Fix (measured 25/09, lane compiler 9092):** new `SemUndefinedVarGuard.isBuiltinNamespace(name)` centralizes the pure namespace families (math/strings/time/db/orm/log/cache/config/security/gpu/buffer/encoding/net/random/rng/uuid/validation/std/observability/http/mq/tetris/media/web, plus json/process/shell/ssh) — deliberately excluding palettes, tokens, enum constants, `Theme` and interop (they qualify names/constants and have their own path, so a blanket guard would break them). `SemExpressionTyper`'s `FieldAccessExpr` case now diagnoses `recvType == UNKNOWN && receiver is IdentifierExpr && isBuiltinNamespace(name)` with `SEM102` and yields UNKNOWN. A local named `math` has a real type, so it is untouched.
 
-**Repro (verbatim):** `main() { println(math.bogus) }` → `kof check` clean; `kof build` + run → `NoClassDefFoundError: ?`.
+**Proof (Q0/Q1/Q3):** RED first — `BuiltinUnknownFieldGuardTest` (`unknownMathFieldIsSem102`, `plausibleButInvalidNamespaceConstantIsSem102` for `math.PI`, `unknownStringsNamespaceFieldIsSem102`, `unknownTimeNamespaceFieldIsSem102`) fails 4/4 on the pre-fix code (compiles clean: `result.success() == true`); GREEN after, **19/19** in the class. Control `namespaceMethodCallsStillCompile` pins `math.sqrt`/`math.abs`/`strings.capitalize`/`time.now` still compiling. Full suite **3981** 0F/0E; `target-matrix` PARITY 100%.
 
-**Status:** 🟡 OPEN — catalogued (Q7), not silently shipped.
+**Repro (verbatim, pre-fix):** `main() { println(math.bogus) }` → `kof check` clean; `kof build` + run → `NoClassDefFoundError: ?`.
 
-**Owner:** session 9092 (lane compiler), `SemExpressionTyper` field path; guard family of §491/§495.
-<!-- pt-switch --> **PT:** [§496 (pt_BR)](known-bugs.pt_BR.md#496--campo-desconhecido-em-qualquer-namespace-builtin-mathbogus-ate-mathpi-compilava-limpo-e-emitia-getfield-contra-uma-classe-chamada---noclassdeffounderror---aberto-catalogado)
+**Status:** ✅ FIXED 25/09.
+
+**Owner:** session 9092 (lane compiler), `SemExpressionTyper` field path + `SemUndefinedVarGuard.isBuiltinNamespace`; guard family of §491/§495.
+<!-- pt-switch --> **PT:** [§496 (pt_BR)](known-bugs.pt_BR.md#496--campo-desconhecido-em-qualquer-namespace-builtin-mathbogus-ate-mathpi-compilava-limpo-e-emitia-getfield-contra-uma-classe-chamada---noclassdeffounderror-agora-e-sem102-limpo---corrigido-2509)
 
 ---
 
