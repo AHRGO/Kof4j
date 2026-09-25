@@ -394,6 +394,14 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Proof: `NativeIoNormalizeCrossTest` (`/a/c`, `a/b`, `c`, `/a/b`, `/`, `.`, `x`;
     JVM==riscv64==aarch64).
 
+  - **D-FULL-PARITY-050 row 13 slice 15 (native lane) — `modifiedTime` +
+    `isSymlink` on all native targets.** New `RuntimeIoMeta` (x86-64) and
+    `NativeRiscvAsmIoMeta` (cross) implement `kof_io_file_modified_time` (millis
+    from `stat` `st_mtime`; throws `file not found: ` on miss, like the JVM) and
+    `kof_io_file_is_symlink` (`lstat` `AT_SYMLINK_NOFOLLOW`). The NAT006 probe
+    moved to the still-gated `copyTo`.
+    Proof: `NativeIoMetadataE2ETest` (JVM==x86-64==riscv64==aarch64).
+
   - **D-FULL-PARITY-050 row 13 slice 14 (native x86-64 lane) — recursive
     `Directory.delete()` on x86-64.** `RuntimeIo3.kof_io_dir_delete` now stats the
     path, walks the tree with `getdents64` and recurses on each child
