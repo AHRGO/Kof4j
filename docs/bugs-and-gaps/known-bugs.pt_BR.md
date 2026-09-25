@@ -12566,7 +12566,7 @@ println(Directory("probe").delete())   // JVM: true (recursivo); x86-64: false (
 
 **Repro:** `main() { println(String.bogus()) }` → agora `SEM074` no compile (antes: `check` limpo + `NoSuchMethodError` em runtime).
 
-**Status:** ✅ CORRIGIDO (26/09) — commit `35041b6d`.
+**Status:** ✅ CORRIGIDO (26/09) — commit `ed10cd1e`.
 
 **Dono:** sessão 9092 (lane compiler), `SemMethodCallTyper` + `JdkReflectionResolver`; família de guarda do §495/§496/§498.
 <!-- en-switch --> **EN:** [§499](known-bugs.md#499--unknown-static-method-on-a-builtin-type-name-stringbogus-intbogus--compiled-clean-and-emitted-invokestatic-ownerbogus--nosuchmethoderror---fixed)

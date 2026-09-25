@@ -15033,7 +15033,7 @@ println(Directory("probe").delete())   // JVM: true (recursive); x86-64: false (
 
 **Repro:** `main() { println(String.bogus()) }` → now `SEM074` at compile (before: clean `check` + `NoSuchMethodError` at runtime).
 
-**Status:** ✅ FIXED (26/09) — commit `35041b6d`.
+**Status:** ✅ FIXED (26/09) — commit `ed10cd1e`.
 
 **Owner:** session 9092 (lane compiler), `SemMethodCallTyper` + `JdkReflectionResolver`; guard family of §495/§496/§498.
 <!-- pt-switch --> **PT:** [§499 (pt_BR)](known-bugs.pt_BR.md#499--metodo-estatico-desconhecido-em-nome-de-tipo-builtin-stringbogus-intbogus--compilava-limpo-e-emitia-invokestatic-ownerbogus--nosuchmethoderror---corrigido)
