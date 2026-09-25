@@ -15053,3 +15053,16 @@ println(Directory("probe").delete())   // JVM: true (recursive); x86-64: false (
 
 **Owner:** session 9092 (lane compiler), `SemMethodCallTyper`/`MemberCallTyper` + `ExternalClasspath` (varargs/static-field awareness); family of §491/§495/§496/§499.
 <!-- pt-switch --> **PT:** [§500 (pt_BR)](known-bugs.pt_BR.md#500--metodocampo-estatico-em-nome-de-classe-externa-importada-que-nao-resolve-emite-chamada-de-owner-vazio-invokevirtual-aslist--bogus--falha-de-load-da-classe---aberto-catalogado)
+
+## §501 — Native riscv64/aarch64 `cache.ttl` returned 0 where the JVM/x86-64 oracle returns -1 (missing key, no TTL, expired) — ✅ FIXED 26/09
+
+**Symptom (measured 26/09, lane parity — ledger row 9):** `cache.ttl("k")` on riscv64/aarch64 returned `0` in three cases where the JVM/x86-64 oracle (`RuntimeCache.java`, labels `.kof_cache_ttl_miss`/`_noexp`/`_expired` → `movq $-1, %rax`) returns `-1`: (a) missing key, (b) key set without TTL, (c) expired key. The value silently looked like a legitimate "0 seconds left" — a rule-5 parity bug hidden behind a plausible number (R6).
+
+**Root cause:** `NativeRiscvAsmRtB2.kof_cache_ttl` routed all three cases to the shared `.Lct_miss` label whose body was `li a0, 0`. The scan miss (`bgeu s1,t5,.Lct_miss`), the no-TTL branch (`beqz t4,.Lct_miss`) and the expired branch (`blez t4,.Lct_miss`) all returned 0.
+
+**Fix:** `.Lct_miss` now returns `-1` (`li a0, -1`), byte-matching the x86-64/JVM oracle; the stale "0 default" comment was corrected. (`cache.get` already returned `null` on expiry — unchanged.)
+
+**Proof:** new `KofCacheCrossTest` (riscv64+aarch64 under qemu) pins the JVM oracle: faces `Mel/null/v2/null/2/null/true` and TTL expiry `true/x/null/true`. RED before the fix — 4/4 failed (`false` where the oracle says `true`); GREEN after. `KofCacheE2ETest` 5/5 unchanged.
+
+**Owner:** lane parity (row 9), `NativeRiscvAsmRtB2`.
+<!-- pt-switch --> **PT:** [§501 (pt_BR)](known-bugs.pt_BR.md#501--native-riscv64aarch64-cachettl-retornava-0-onde-o-oraculo-jvmx86-64-devolve--1-chave-ausente-sem-ttl-expirada---corrigido-2609)

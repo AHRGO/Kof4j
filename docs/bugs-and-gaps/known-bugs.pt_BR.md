@@ -12586,3 +12586,16 @@ println(Directory("probe").delete())   // JVM: true (recursivo); x86-64: false (
 
 **Dono:** sessão 9092 (lane compiler), `SemMethodCallTyper`/`MemberCallTyper` + `ExternalClasspath` (ciente de varargs/campos estáticos); família do §491/§495/§496/§499.
 <!-- en-switch --> **EN:** [§500](known-bugs.md#500--static-methodfield-on-an-imported-external-class-name-that-does-not-resolve-emits-an-empty-owner-call-invokevirtual-aslist--bogus--class-load-failure---open-catalogued)
+
+## §501 — Native riscv64/aarch64 `cache.ttl` retornava 0 onde o oráculo JVM/x86-64 devolve -1 (chave ausente, sem TTL, expirada) — ✅ CORRIGIDO 26/09
+
+**Sintoma (medido 26/09, lane parity — linha 9 do ledger):** `cache.ttl("k")` no riscv64/aarch64 retornava `0` em três casos em que o oráculo JVM/x86-64 (`RuntimeCache.java`, labels `.kof_cache_ttl_miss`/`_noexp`/`_expired` → `movq $-1, %rax`) devolve `-1`: (a) chave ausente, (b) chave sem TTL, (c) chave expirada. O valor parecia silenciosamente um legítimo "0 segundos restantes" — bug de paridade (regra 5) escondido atrás de um número plausível (R6).
+
+**Causa-raiz:** `NativeRiscvAsmRtB2.kof_cache_ttl` roteava os três casos para o label compartilhado `.Lct_miss`, cujo corpo era `li a0, 0`. O miss da varredura (`bgeu s1,t5,.Lct_miss`), o ramo sem-TTL (`beqz t4,.Lct_miss`) e o ramo expirado (`blez t4,.Lct_miss`) devolviam 0.
+
+**Fix:** `.Lct_miss` agora devolve `-1` (`li a0, -1`), byte-a-byte com o oráculo x86-64/JVM; o comentário obsoleto "0 default" foi corrigido. (`cache.get` já devolvia `null` na expiração — inalterado.)
+
+**Prova:** novo `KofCacheCrossTest` (riscv64+aarch64 sob qemu) fixa o oráculo JVM: faces `Mel/null/v2/null/2/null/true` e expiração TTL `true/x/null/true`. RED antes do fix — 4/4 falharam (`false` onde o oráculo diz `true`); GREEN depois. `KofCacheE2ETest` 5/5 inalterado.
+
+**Dono:** lane parity (linha 9), `NativeRiscvAsmRtB2`.
+<!-- en-switch --> **EN:** [§501](known-bugs.md#501--native-riscv64aarch64-cachettl-returned-0-where-the-jvmx86-64-oracle-returns--1-missing-key-no-ttl-expired---fixed-2609)
