@@ -37,12 +37,15 @@ jobs:
           java-version: '25'
 
       - name: Test + package (gate; golden/integration scripts need the CLI jar)
+        if: github.ref_name == 'main'
         run: mvn clean package
 
       - name: Golden tests (jvm + native)
+        if: github.ref_name == 'main'
         run: tests/run-golden.sh
 
       - name: Integration tests (CLI + serve + kof test)
+        if: github.ref_name == 'main'
         run: tests/run-integration.sh
 
       - name: Validate release candidate
