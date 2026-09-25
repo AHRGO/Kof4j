@@ -322,7 +322,19 @@ typed roundtrip) produces the **same observable result** on all four targets, or
        JVM + x86-64 + riscv64 + aarch64 byte-identical on string/miss/injection/
        negative/positive/bool (`1\n0\n0\n1\n0\n1\n1\n1`).
     3. **`orm.save`/`delete`/`deleteAll`** — execute path; generated-key needs
-       `SELECT LAST_INSERT_ID()` (same scalar primitive).
+       `SELECT LAST_INSERT_ID()` (same scalar primitive). **Design note
+       (24/09):** the ORM faces must **throw** on a server ERR (host/JVM and x86
+       `kof_orm_delete*` return `affectedRows >= 0`, true on success, and throw
+       on error — `JvmOrmRuntime` lines 362/396), but the existing cross
+       `kof_db_mysql_execute` (B72) returns **0 on ERR** because `db.execute`
+       semantics require it (S5.4 test pins `SQL inválido → 0`). So fatia 3
+       needs its own throwing exec primitive (`kof_orm_mysql_exec`, a port of
+       the x86 `RuntimeOrmMysqlExec`/`.Lorm_sa_exec` that throws `mysql: <msg>`
+       on ERR, `mysql: connection lost` on loss) — do **not** reuse B72 for the
+       ORM faces. `delete`/`deleteAll` build `DELETE FROM \`t\`[ WHERE \`pk\` =
+       <lit>]` (the `<lit>` via the fatia-2 renderer, promoted to a shared
+       global) and return `affected >= 0`; `save` adds `SELECT
+       LAST_INSERT_ID()`.
     4. **`orm.find`/`all`/`where`/`where_op`/`page`** — row materialisation; needs
        a typed column ABI (B70 returns JSON, not columns) and the mysql dialect.
     Until each lands this stays a **declared interim gap** (never a silent

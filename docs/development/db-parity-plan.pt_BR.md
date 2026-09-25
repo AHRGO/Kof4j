@@ -324,7 +324,19 @@ por scheme é a prova.
        JVM + x86-64 + riscv64 + aarch64 byte-idênticos em string/ausente/
        injeção/negativo/positivo/bool (`1\n0\n0\n1\n0\n1\n1\n1`).
     3. **`orm.save`/`delete`/`deleteAll`** — caminho execute; chave gerada
-       precisa de `SELECT LAST_INSERT_ID()` (mesma primitiva scalar).
+       precisa de `SELECT LAST_INSERT_ID()` (mesma primitiva scalar). **Nota de
+       design (24/09):** as faces ORM devem **lançar** num ERR do servidor (o
+       host/JVM e o x86 `kof_orm_delete*` devolvem `affectedRows >= 0`, true no
+       sucesso, e lançam no erro — `JvmOrmRuntime` linhas 362/396), mas a
+       `kof_db_mysql_execute` cross existente (B72) devolve **0 no ERR** porque
+       a semântica do `db.execute` exige (o teste S5.4 pina `SQL inválido →
+       0`). Então a fatia 3 precisa de uma primitiva exec própria que lança
+       (`kof_orm_mysql_exec`, port do `RuntimeOrmMysqlExec`/`.Lorm_sa_exec` x86
+       que lança `mysql: <msg>` no ERR e `mysql: connection lost` na perda) —
+       **não** reusar a B72 para as faces ORM. `delete`/`deleteAll` montam
+       `DELETE FROM \`t\`[ WHERE \`pk\` = <lit>]` (o `<lit>` pelo renderizador
+       da fatia 2, promovido a global) e devolvem `affected >= 0`; `save` soma
+       `SELECT LAST_INSERT_ID()`.
     4. **`orm.find`/`all`/`where`/`where_op`/`page`** — materialização de linhas;
        precisa de uma ABI de coluna tipada (a B70 devolve JSON, não colunas) e do
        dialeto mysql.
