@@ -14938,4 +14938,4 @@ main() {
 **Status:** 🟡 OPEN — contract decision (rule 6); the cross was intentionally built to the x86 message.
 
 **Owner:** lane native-cross (D-FULL-PARITY-050 row 13) + semantics queue; affects `JvmRuntimeIo` (JVM), `RuntimeIo2` (x86) and `NativeRiscvAsmIoSize` (cross).
-<!-- pt-switch --> **PT:** [§494 (pt_BR)](known-bugs.pt_BR.md#494--jvm-e-native-divergem-na-mensagem-de-erro-do-kofio-size-o-jvm-lanca-file-not-found-path-o-native-x86-64-e-o-cross-lancam-size-file-not-found-path---aberto-decisao-de-contrato)
+<!-- pt-switch --> **PT:** [§494 (pt_BR)](known-bugs.pt_BR.md#494--jvm-e-native-divergem-na-mensagem-de-erro-do-kofio-size-o-jvm-lanca-file-not-found-path-o-native-x86-64-e-o-cross-lancam-size-file-not-found-path---open-decisao-de-contrato)
