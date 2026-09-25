@@ -274,6 +274,9 @@ public final class NativeRiscvAsm {
                 // D-FULL-PARITY-050 row 13 slice 7 (native cross lane, 24/09):
                 // dir listing (Directory.list()).
                 .append(NativeRiscvAsmIoDirList.RISCV_RUNTIME_ASM_IO_DIRLIST)
+                // D-FULL-PARITY-050 row 13 slice 8 (native cross lane, 24/09):
+                // readRange(offset, len).
+                .append(NativeRiscvAsmIoReadRange.RISCV_RUNTIME_ASM_IO_READRANGE)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();
