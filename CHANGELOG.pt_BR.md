@@ -19,6 +19,22 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `SshE2ETest` viraram o positivo. `SshE2ETest` 9/9 (argv x86 == JVM
     byte-a-byte, host e comando = 1 elemento cada).
 
+  - **§501 CORRIGIDO — `cache.ttl` no Native riscv64/aarch64 devolvia 0 onde o
+    oráculo JVM/x86-64 devolve -1** (26/09, lane parity — linha 9 do ledger):
+    `NativeRiscvAsmRtB2.kof_cache_ttl` roteava os casos chave-ausente, sem-TTL e
+    expirado para um rótulo compartilhado `.Lct_miss` cujo corpo devolvia `0` —
+    um "0 segundos restantes" plausível que escondia o bug de paridade (R6).
+    `.Lct_miss` agora devolve `-1`, byte-a-byte com o oráculo JVM/x86-64. Novo
+    `KofCacheCrossTest` (riscv64+aarch64 sob qemu) era RED antes (4/4 falhas) e
+    GREEN depois; `KofCacheE2ETest` 5/5 inalterado.
+
+  - **`ssh.cmd`/`run`/`ok` no cross riscv64/aarch64 (`D-FULL-PARITY-050` linha 3
+    fatia B)** (26/09): nova `NativeRiscvAsmSsh` emite o mesmo argv-oraculo JVM e
+    reusa o `kof_process_run` cross; o lowerer agora emite em todo nativo exceto
+    MCU/riscv32. `SshE2ETest` 10/10 + novo `SshCrossE2ETest` 2/2 — argv == JVM
+    byte-a-byte nos 3 nativos e host inalcancavel = `Result` honesto
+    (exitCode != 0), nunca crash.
+
   - **`shell.run`/`cmd`/`ok` no CROSS nativo riscv64/aarch64 (`D-FULL-PARITY-050` linha 2)**
     (26/09): `shell.run` reusa `kof_process_run` (linha 1 fatia C), `shell.ok` e
     IR puro sobre o acesso `exitCode` e `shell.cmd` usa a peca nova

@@ -28,7 +28,7 @@
 |---|------------|------------|----------------|--------------------------|----|--------|------------------|
 | 1 | `process.run`/`spawn`/`exit` | ✅ | ✅ x86 `run`/`exit` (`spawn` = fatia B, `PROC001`; whole-record `println(r)`/`"x"+r` = `PROC001`, acesso `.stdout`/`.stderr`/`.exitCode`) | ✅ cross `run` 26/09 (`spawn` = fatia B, `PROC001`) | ✅ (KofJsRunner) | `PROC001` (spawn + whole-record print) | lane native-cross (`run` x86 ✅ 25/09, cross ✅ 26/09; `spawn` = fatia B) |
 | 2 | `shell.cmd`/`run`/`runWith`/`pipeline`/`ok` | ✅ | ✅ x86 `run`/`cmd`/`ok` (`pipeline`/`runWith` = fatia B) | ✅ cross `run`/`cmd`/`ok` 26/09 (`pipeline`/`runWith` = fatia B, `PROC001`) | ✅ (host runner) | `PROC001` (fatia B) | lane native-cross (x86 ✅ 25/09, cross ✅ 26/09) |
-| 3 | `ssh.cmd`/`run`/`ok` | ✅ | ✅ x86 `run`/`cmd`/`ok` 26/09 | ❌ | ❌ | `PROC001` (cross + JS) | lane native-cross (x86 ✅ 26/09) |
+| 3 | `ssh.cmd`/`run`/`ok` | ✅ | ✅ x86 + riscv64/aarch64 26/09 | ❌ | ❌ | `PROC001` (MCU/riscv32; JS sem dispatch) | lane native-cross (nativo ✅ 26/09) |
 | 4 | media: `Image.open`/`Audio.openWav`/`Video.open`/`Mic.record`/`list` | ✅ | ❌ | ❌ | ❌ | `MEDIA001`/`MEDIA003` | frente media |
 | 5 | `mq.*` | ✅ | parcial (faces `MQ001`) | ⏳ golden | ⏳ | `MQ001` | lane infra |
 | 6 | `gpu.*` (face JS) + golden cross | ✅ | ✅ | ⏳ golden | ❌ `GPU001` | `GPU001` | lanes gpu/native |

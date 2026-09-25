@@ -19,6 +19,22 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `SshE2ETest` native pins became the positive. `SshE2ETest` 9/9 (x86 argv
     byte-identical to the JVM oracle, host and command stay one element each).
 
+  - **§501 FIXED — Native riscv64/aarch64 `cache.ttl` returned 0 where the
+    JVM/x86-64 oracle returns -1** (26/09, lane parity — ledger row 9):
+    `NativeRiscvAsmRtB2.kof_cache_ttl` routed the missing-key, no-TTL and
+    expired cases to a shared `.Lct_miss` label whose body returned `0` — a
+    plausible-looking "0 seconds left" that hid the parity bug (R6). `.Lct_miss`
+    now returns `-1`, byte-matching the JVM/x86-64 oracle. New
+    `KofCacheCrossTest` (riscv64+aarch64 under qemu) was RED before the fix
+    (4/4 failed) and GREEN after; `KofCacheE2ETest` 5/5 unchanged.
+
+  - **`ssh.cmd`/`run`/`ok` on cross riscv64/aarch64 (`D-FULL-PARITY-050` row 3
+    slice B)** (26/09): new `NativeRiscvAsmSsh` emits the same JVM argv oracle
+    and reuses the cross `kof_process_run`; the lowerer now emits on every
+    native except MCU/riscv32. `SshE2ETest` 10/10 + new `SshCrossE2ETest` 2/2 —
+    argv byte-identical to the JVM oracle on all three natives and an
+    unreachable host is an honest `Result` (exitCode != 0), never a crash.
+
   - **`shell.run`/`cmd`/`ok` on the riscv64/aarch64 native CROSS (`D-FULL-PARITY-050` row 2)**
     (26/09): `shell.run` reuses `kof_process_run` (row 1 slice C), `shell.ok` is
     pure IR over the `exitCode` accessor and `shell.cmd` uses the new
