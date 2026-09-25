@@ -13,6 +13,33 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preserved — changes here are additive or with a deliberate bump.
 
+  - **B-4.3 slice 1 (baremetal MCU) — Cortex-M3/Thumb-2 emitter `NativeMcuArm`
+    + `Target.NATIVE_MCU_ARM`** (24/09): the second 32-bit bare-metal codegen,
+    sibling of the RV32I slice. `main` with `print`/`println` of a String
+    literal lowers to CMSDK UART writes (UART0 `0x40004000`, `CTRL` `+0x08`=3
+    TXEN|RXEN, `STATE` `+0x04` bit0 TXFULL, `DATA` `+0x00`) and halts; the image
+    carries a **vector table** at `0x0` (`[0]`=`_stack_top` `0x00080000`,
+    `[1]`=`Reset_Handler|1`, `[3]`=`HardFault_Handler` → honest halt). HAL
+    bodies `kof_plat_write/_exit/_thread_id/_random` are emitted in Thumb-2
+    (random = xorshift32 with a non-zero seed). Any op outside the subset →
+    `NATIVE002`; concurrency → `CONC003` (single-core, never stubbed). Tools
+    resolve from `KOF_MCU_AS`/`KOF_MCU_LD` or the root-free prefix
+    `~/.local/share/kof-mcu` (`arm-none-eabi-as/ld`). No CLI surface yet
+    (programmatic machinery, like the RV32I slice). Proof: `NativeMcuArmE2ETest`
+    6/6 under `qemu-system-arm -M mps2-an385` (hello over UART, print order/
+    newlines, vector-table reset path == the real `Reset_Handler`, HAL symbols
+    in `nm`, `CONC003`/`NATIVE002`), plus `NativeMcuE2ETest` 7/7 +
+    `StdParityGapAuditTest` 16/0 (both MCU slices stay outside the stdlib parity
+    matrix).
+
+  - **Live-record resync (docs) — README + release-prep §493** (24/09):
+    `§493` (JVM vs Native diverge on the `orm.delete`/`deleteAll` MySQL error
+    path, catalogued by the gaps-db lane) put the live set at 1 while
+    `README.md`/`README.pt_BR.md` and `release-beta-0.5.0-prep` EN/PT still
+    declared 0. The four declarations now match the authority
+    (`scripts/check_known_bugs_status.sh`); `scripts/check_live_records.sh`
+    rc=0.
+
   - **S5.5 slice 4b (db-parity, gaps-db lane) — `orm.save` over the MySQL wire
     on the cross (cross piece `B77`)** (24/09): `kof_orm_save` branches on
     `kof_db_type == 2` **before** `kof_orm_conn` (which refuses type ≠ 1) and

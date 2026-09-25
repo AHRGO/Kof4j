@@ -93,6 +93,9 @@ public class NativeBackend implements Backend {
      *  resolver {@code kof_orm_ctors} que constrói o record no runtime). */
     final Set<String> ormCtorClasses = new LinkedHashSet<>();
     boolean usesHttp = false;
+
+    /** kof.process no nativo (RuntimeProcess): execvp/PATH = libc do host. */
+    boolean usesProcess = false;
     boolean usesMysql = false;
     boolean usesConcurrency = false;
     boolean usesPow = false;
@@ -228,6 +231,10 @@ public class NativeBackend implements Backend {
             dev.kof.compiler.nat.mcu.NativeMcuRiscv32.emit(module, outputDir);
             return;
         }
+        if (target == Target.NATIVE_MCU_ARM) {
+            dev.kof.compiler.nat.mcu.NativeMcuArm.emit(module, outputDir);
+            return;
+        }
         if (module.classes().isEmpty()) return;
         labelCounter = 0;
         labelMap.clear();
@@ -286,6 +293,10 @@ public class NativeBackend implements Backend {
                         KofOperation op = ops.get(i);
                         if (op instanceof KofCall kc && kc.methodName().startsWith("kof_http_")) {
                             usesHttp = true;
+                        }
+                        if (op instanceof KofCall kc && (kc.methodName().equals("kof_process_run")
+                                    || kc.methodName().equals("kof_process_spawn"))) {
+                            usesProcess = true;
                         }
                         if (op instanceof KofCall kc && kc.methodName().equals("kof_math_pow")) {
                             usesPow = true; // R2: unico caminho ao shim (KofMath.pow; recusado no cross)

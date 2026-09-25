@@ -13,6 +13,33 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 (0.2.6) preservada — mudanças aqui são aditivas ou com bump deliberado.
 
+  - **B-4.3 fatia 1 (baremetal MCU) — emissor Cortex-M3/Thumb-2 `NativeMcuArm`
+    + `Target.NATIVE_MCU_ARM`** (24/09): o segundo codegen bare-metal 32-bit,
+    irmão da fatia RV32I. `main` com `print`/`println` de literal String baixa
+    para escritas na UART CMSDK (UART0 `0x40004000`, `CTRL` `+0x08`=3
+    TXEN|RXEN, `STATE` `+0x04` bit0 TXFULL, `DATA` `+0x00`) e faz halt; a imagem
+    carrega uma **vector table** em `0x0` (`[0]`=`_stack_top` `0x00080000`,
+    `[1]`=`Reset_Handler|1`, `[3]`=`HardFault_Handler` → halt honesto). Os
+    corpos HAL `kof_plat_write/_exit/_thread_id/_random` são emitidos em Thumb-2
+    (random = xorshift32 com semente não-zero). Qualquer op fora do subset →
+    `NATIVE002`; concorrência → `CONC003` (single-core, nunca stub). As
+    ferramentas resolvem por `KOF_MCU_AS`/`KOF_MCU_LD` ou pelo prefixo sem root
+    `~/.local/share/kof-mcu` (`arm-none-eabi-as/ld`). Sem superfície CLI ainda
+    (machinery programática, como a fatia RV32I). Prova: `NativeMcuArmE2ETest`
+    6/6 sob `qemu-system-arm -M mps2-an385` (hello pela UART, ordem/newlines do
+    print, reset path da vector table == o `Reset_Handler` real, símbolos HAL no
+    `nm`, `CONC003`/`NATIVE002`), mais `NativeMcuE2ETest` 7/7 +
+    `StdParityGapAuditTest` 16/0 (as duas fatias MCU ficam fora da matriz de
+    paridade da stdlib).
+
+  - **Ressincronização da contagem viva (docs) — README + release-prep §493**
+    (24/09): o `§493` (JVM e Native divergem no caminho de erro do
+    `orm.delete`/`deleteAll` MySQL, catalogado pela lane gaps-db) pôs o conjunto
+    vivo em 1, mas `README.md`/`README.pt_BR.md` e `release-beta-0.5.0-prep`
+    EN/PT ainda declaravam 0. As quatro declarações agora batem com a autoridade
+    (`scripts/check_known_bugs_status.sh`); `scripts/check_live_records.sh`
+    rc=0.
+
   - **S5.5 fatia 4b (db-parity, lane gaps-db) — `orm.save` sobre o wire MySQL no
     cross (peça cross `B77`)** (24/09): o `kof_orm_save` desvia em
     `kof_db_type == 2` **antes** do `kof_orm_conn` (que recusa type ≠ 1) e faz

@@ -196,6 +196,7 @@ public final class CompilerPipeline {
             case NATIVE_RISCV64 -> new NativeBackend(Target.NATIVE_RISCV64).profile(driver.nativeProfile);
             case NATIVE_AARCH64 -> new NativeBackend(Target.NATIVE_AARCH64).profile(driver.nativeProfile);
             case NATIVE_RISCV32 -> new NativeBackend(Target.NATIVE_RISCV32).profile(driver.nativeProfile);
+            case NATIVE_MCU_ARM -> new NativeBackend(Target.NATIVE_MCU_ARM).profile(driver.nativeProfile);
             case JS -> new JsBackend();
             // Android: ART executa bytecode dex'd — a emissão é a mesma do
             // backend JVM; o alvo vive nas validações AND* e no empacotamento

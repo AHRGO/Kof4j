@@ -13,6 +13,16 @@ public enum Target {
      * stub silencioso). Sem superfície CLI ainda (machinery programática).
      */
     NATIVE_RISCV32,
+    /**
+     * B-4.3 (PLAN-BAREMETAL-BOOT): MCU ARM Cortex-M3 (Thumb-2, bare-metal,
+     * sem SO). Mesmo contrato do RV32I: {@code main} com
+     * {@code print/println} de literal String, saída pela UART CMSDK do
+     * {@code qemu-system-arm -M mps2-an385} (0x40004000) e encerramento por
+     * halt; vector table em 0x0 ({@code [0]=SP}, {@code [1]=Reset_Handler|1}).
+     * Ops fora do subset → NATIVE002, concorrência → CONC003 (R6, nunca
+     * stub silencioso). Sem superfície CLI ainda (machinery programática).
+     */
+    NATIVE_MCU_ARM,
     JS,
     ANDROID,
     /**
@@ -25,7 +35,7 @@ public enum Target {
 
     public boolean isNative() {
         return this == NATIVE || this == NATIVE_RISCV64 || this == NATIVE_AARCH64
-                || this == NATIVE_RISCV32;
+                || this == NATIVE_RISCV32 || this == NATIVE_MCU_ARM;
     }
 
     public boolean isScript() {
@@ -38,6 +48,7 @@ public enum Target {
             case NATIVE_RISCV64 -> "riscv64";
             case NATIVE_AARCH64 -> "aarch64";
             case NATIVE_RISCV32 -> "riscv32";
+            case NATIVE_MCU_ARM -> "cortex-m";
             default -> "unknown";
         };
     }

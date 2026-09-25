@@ -63,7 +63,8 @@ public final class KofHttp {
     // ExpressionHttpCallLowerer:19-30 becomes live (gapCode wired here).
     static boolean supportedOn(Target target) {
         return switch (target) {
-            case JVM, NATIVE, NATIVE_RISCV64, NATIVE_AARCH64, NATIVE_RISCV32, JS, ANDROID, SCRIPT -> true;
+            case JVM, NATIVE, NATIVE_RISCV64, NATIVE_AARCH64, NATIVE_RISCV32, NATIVE_MCU_ARM,
+                    JS, ANDROID, SCRIPT -> true;
         };
     }
 
