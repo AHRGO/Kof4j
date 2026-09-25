@@ -33,7 +33,6 @@
 | 5 | `mq.*` | ✅ | partial (`MQ001` faces) | ⏳ golden | ⏳ | `MQ001` | infra lane |
 | 6 | `gpu.*` (JS face) + cross golden | ✅ | ✅ | ⏳ golden | ❌ `GPU001` | `GPU001` | gpu/native lanes |
 | 7 | `observability.*` cross golden + `OBS003` | ✅ | ✅ x86 | ⏳ golden | ⏳ (spans ✅, OBS003 pinned) | `OBS003` | obs lane |
-| 8 | `time.*` new faces cross golden + `addDays`/`diffDays` cross | ✅ | ✅ x86 | ❌ `TIME002` | ⏳ (`collect` = `TIME004`) | `TIME002`/`TIME004` | stdlib lane |
 | 9 | `cache.*`/`config.*`/`log.*` cross golden; `log` interpreter | ✅ (log ⏳ interp) | ✅ x86 | ⏳ golden + `CONF001` | ✅ | `CONF001` | stdlib lane |
 | 10 | `math.pow` cross (static, no libc) | ✅ | ✅ (libm `-lm`) | ❌ `MATH001` | ✅ | `MATH001` | native cross lane |
 | 11 | `strings.reverse` non-ASCII (UTF-16 vs byte) + `String.matches`/`replaceAll`/`replaceFirst`/`compareToIgnoreCase` | ✅ | ❌ `NAT-STR01`/`STR003` | ❌ `STR003` | ❌ `STR003` | `NAT-STR01`/`STR003` | native/js lanes |
@@ -81,6 +80,24 @@ regression re-opens the row (zero regression, freeze rule 1).
 
 ## Closed (proof recorded here when a row empties)
 
+- **Row 8 — `time.*` (new faces + `addDays`/`diffDays` + `collect`)** — closed
+  25/09 (lane parity). The cross cell was STALE: `addDays`/`diffDays` were
+  already ported to riscv64/aarch64 on 11/09 (`NativeRiscvAsmRtB33`, fatia B33,
+  reusing `kdv_valid`/`kdv_epoch`; `aarch64` via the translator), and the "new
+  faces" (`todayIso`/`formatDateIso`/`isToday`/`hoursBetween`/`parseDateIso`)
+  too. **Measured at the tip:** `KofTimeE2ETest` **44/44 with 0 skipped** under
+  the cross toolchain (the existing `...CrossArch` goldens execute, not skip) +
+  `NativeRiscv64E2ETest`/`NativeAarch64E2ETest` stdtime2. The only real open
+  cell was JS `time.collect` (`TIME004`) — and §426's gate was a fallback, not
+  the end state (`D-FULL-PARITY-050`: an honest gap is never the sanctioned END
+  state). It is now a **real** face: `kof_gc_collect_now` is recognized by
+  `JsRuntimeOps.isRuntimeOp` (the true root of the old `ReferenceError` — the
+  emitter produced a raw call because the mapping was never reached),
+  `JsRuntimeTime` exports `kofGcCollectNow`, and `KofJsRunner` exposes
+  `kof_platform.gcCollect` → `System.gc()` (exact JVM/SCRIPT semantics).
+  Proof: `KofTimeE2ETest#collectJsRunsOnHost` (compiles AND runs) +
+  `DomainGapCodesTest.collectOnJsHasNoGap`/`collectOnJvmAndX86HasNoGap` (cross
+  arches included) 25/25 + `KofJsE2ETest` 40/40.
 - **Row 15 — `orm.*` native (`kof_orm_*`)** — closed 24/09 (gaps-db lane,
   S5.5). All 13 faces (`create`/`migrate`/`count`/`count_where`/`save`/
   `saveAll`/`find`/`all`/`where`/`where_op`/`page`/`delete`/`deleteAll`) run

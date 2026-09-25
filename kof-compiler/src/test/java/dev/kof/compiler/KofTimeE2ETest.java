@@ -699,6 +699,23 @@ class KofTimeE2ETest {
         }
     }
 
+    /**
+     * §426 (improved 25/09): time.collect() on JS is a REAL host GC request
+     * (kof_platform.gcCollect -> System.gc()), not the old compile-time
+     * TIME004 gate. The JS program must compile AND run to completion (the
+     * old path compiled clean but failed at module load — the export was
+     * missing).
+     */
+    @Test
+    void collectJsRunsOnHost(@TempDir Path tempDir) throws IOException {
+        runJs(tempDir, """
+                main() {
+                    time.collect()
+                    println("collected")
+                }
+                """, "collected");
+    }
+
     // ── STDLIB S7e (D-STDLIB ratificado 13/09): todayIso/formatDateIso/
     // isToday — UTC-only (D1), formato zero-DSL com invalidade => "" (D4),
     // isToday = igualdade com a data UTC de now() (D5). Vetores

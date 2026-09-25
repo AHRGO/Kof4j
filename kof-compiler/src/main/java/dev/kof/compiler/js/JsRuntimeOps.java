@@ -47,6 +47,7 @@ boolean isRuntimeOp(KofCall kc) {
                 || name.equals("kof_poll") || name.equals("kof_done")
                 || name.equals("kof_cancel") || name.equals("kof_cancelled")
                 || name.equals("kof_await_timeout")
+                || name.equals("kof_gc_collect_now")
                 || name.equals("kof_select_any")
                 || name.equals("kof_list_map") || name.equals("kof_list_filter")
                 || name.equals("kof_list_reduce")

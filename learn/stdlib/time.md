@@ -34,6 +34,6 @@ time.addDays("2026-09-24", 7)  // 2026-10-01
 ```
 ```
 
-> Parity: new faces: cross golden ⏳, `addDays`/`diffDays` cross `TIME002`, JS `collect` `TIME004` — ledger row 8.
+> Parity: **4/4 targets.** New faces + `addDays`/`diffDays` cross golden measured (`KofTimeE2ETest` cross-arch, 0 skip); JS `collect` is real since 25/09 (host GC request, §426 improved). `D-FULL-PARITY-050` ledger row 8 CLOSED.
 
 **See also:** [39 — Universal Standard Library](../39-stdlib.md) — the full story and the honest parity table.

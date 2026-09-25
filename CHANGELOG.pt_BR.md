@@ -64,6 +64,27 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `BuiltinUnknownMethodGuardTest#unknownSchedulerMethodFailsWithSem025`
     (+ controle `validSchedulerMethodsStillCompile`), 8/8.
 
+  - **`time.collect()` é real no JS — linha 8 do D-FULL-PARITY-050 FECHADA;
+    §426 melhorado** (25/09): o antigo gate `TIME004` em compile-time era um
+    fallback, não o estado final. A raiz de fato do `ReferenceError` histórico
+    era o `JsRuntimeOps.isRuntimeOp` não reconhecer `kof_gc_collect_now`, então
+    o emitter produzia uma chamada crua `kof_gc_collect_now(...)` (o mapeamento
+    do nome nunca era alcançado). Agora: `isRuntimeOp` reconhece,
+    `JsRuntimeTime` EXPORTA `kofGcCollectNow`, e `KofJsRunner` expõe
+    `kof_platform.gcCollect` → `System.gc()` — a semântica exata do
+    `kof_gc_collect_now` do JVM/SCRIPT (um pedido de GC, não garantia); um
+    runtime sem host (browser) lança erro honesto (R7), nunca no-op silencioso.
+    O gate é removido do `KofTime` (`supportedOn`/`gapCode`), a linha de gap
+    documentado TIME004 do `backend-parity.md` cai, e
+    `DomainGapCodesTest.collectOnJsIsTime004` virou
+    `collectOnJsHasNoGap`/`collectOnJvmAndX86HasNoGap` (com as arches cross).
+    Verificado no tip que a célula cross da linha 8 estava OBSOLETA:
+    `addDays`/`diffDays` + as faces novas já eram golden em riscv64/aarch64
+    (`KofTimeE2ETest` cross-arch, **44/44, 0 skip**). Prova:
+    `KofTimeE2ETest#collectJsRunsOnHost` (JS compila E roda até o fim),
+    `KofJsE2ETest` 40/40,
+    `JsRuntimePruneWriterTest`/`JsRuntimeSliceRegistryTest` 12/12.
+
   - **B4-TIME (baremetal MCU) — corpos de tempo do MCU: recusa NOMEADA do wall +
     contador monotônico (`NativeMcuTimeRiscv32`)** (25/09): por
     `D-BAREMETAL-MCU-GC` item 2, num MCU sem RTC o `kof_plat_time` (`time.now()`)

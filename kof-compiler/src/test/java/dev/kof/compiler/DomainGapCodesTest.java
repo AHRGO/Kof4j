@@ -156,19 +156,29 @@ class DomainGapCodesTest {
     }
 
     @Test
-    void collectOnJsIsTime004(@TempDir Path tmp) throws Exception {
-        // §426: JS runtime has no manual-GC face (kofGcCollectNow was imported
-        // but never exported -> load failure); honest compile-time refusal.
-        assertGap(tmp, Target.JS, "TIME004", """
+    void collectOnJsHasNoGap(@TempDir Path tmp) throws Exception {
+        // §426 (improved 25/09): the JS runtime now EXPORTS kofGcCollectNow
+        // (host GC request via KofJsRunner kof_platform.gcCollect); the old
+        // compile-time TIME004 gate is lifted. Execution is proven in
+        // KofTimeE2ETest#collectJsRunsOnHost.
+        Path file = tmp.resolve("Main-js-" + System.nanoTime() + ".kf");
+        Files.writeString(file, """
             main() {
                 time.collect()
             }
             """);
+        CompilationResult r = driver.compile(file, tmp.resolve("out-js-" + System.nanoTime()), Target.JS);
+        // A TIME004 gate was an error diagnostic, so success() already proves
+        // the gate is gone (no need to re-spell the code literal here — the
+        // R6 matrix guard reads every gap-code-shaped string in this file as a pin).
+        assertTrue(r.success(), "JS time.collect must compile (real host GC face): "
+                + r.diagnostics().getDiagnostics());
     }
 
     @Test
     void collectOnJvmAndX86HasNoGap(@TempDir Path tmp) throws Exception {
-        for (Target t : new Target[]{Target.JVM, Target.NATIVE}) {
+        for (Target t : new Target[]{Target.JVM, Target.NATIVE,
+                Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
             Path file = tmp.resolve("Main-" + t + "-" + System.nanoTime() + ".kf");
             Files.writeString(file, """
                 main() {

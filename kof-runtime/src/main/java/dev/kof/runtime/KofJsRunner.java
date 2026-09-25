@@ -185,6 +185,15 @@ public final class KofJsRunner {
             return 0;
         });
         KofJsProcessBridge.install(platform);
+        // §426 (improved 25/09): time.collect() on JS — real host GC request.
+        // System.gc() is the exact semantics of the JVM/SCRIPT runtime's
+        // kof_gc_collect_now (a request, not a guarantee); a no-op would be a
+        // silent stub (R6). Browser/hostless never reaches here -> the JS
+        // runtime throws an honest error (R7).
+        platform.put("gcCollect", (ProxyExecutable) args -> {
+            System.gc();
+            return 0;
+        });
         // §239 (JS): String.format — ponte p/ o host java.lang.String.format
         // (paridade byte-a-byte). Os varargs chegam como array JS (o lowering
         // compart. empacota em Object[]); reconstruímos o boxed type de cada
