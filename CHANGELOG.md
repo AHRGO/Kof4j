@@ -394,6 +394,13 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     Proof: `NativeIoNormalizeCrossTest` (`/a/c`, `a/b`, `c`, `/a/b`, `/`, `.`, `x`;
     JVM==riscv64==aarch64).
 
+  - **D-FULL-PARITY-050 row 13 slice 16b (native lane, LAST) — `copyTo` on
+    all native targets, closing row 13.** New `RuntimeIoCopy` (x86-64) and
+    `NativeRiscvAsmIoCopy` (cross): `Files.copy(src,dst,COPY_ATTRIBUTES)`
+    contract, no overwrite via `O_EXCL`, plus `fchmod`/`utimensat`; `NAT006`
+    removed from `CROSS_IO_READY`. Proof: `NativeIoCopyCrossTest`
+    (JVM==x86-64==riscv64==aarch64). `§497` FIXED (live 4→3).
+
   - **D-FULL-PARITY-050 row 13 slice 16a (native lane) — `moveTo` on all
     native targets.** New `RuntimeIoMove` (x86-64, `rename`) and
     `NativeRiscvAsmIoMove` (cross, `renameat2(276, flags=0)` — `renameat(38)`

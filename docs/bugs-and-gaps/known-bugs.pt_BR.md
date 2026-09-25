@@ -12527,7 +12527,7 @@ println(Directory("probe").delete())   // JVM: true (recursivo); x86-64: false (
 
 **ATUALIZAÇÃO 26/09:** o `dir_delete` recursivo POUSOU no cross riscv64/aarch64 (fatia 13, `NativeRiscvAsmIoDirDelete`) **e** no x86-64 (fatia 14, `RuntimeIo3`); `modifiedTime`+`isSymlink` POUSARAM em todos os alvos nativos (fatia 15: x86-64 `RuntimeIoMeta`, cross `NativeRiscvAsmIoMeta`); `moveTo` POUSOU em todos os alvos nativos (fatia 16a, `renameat2`). Só `copyTo` segue aberto.
 
-**Status:** 🟡 OPEN — catalogado (Q7).
+**Status:** ✅ FIXED (26/09, D-FULL-PARITY-050 linha 13 fatias 13–16b) — todas as faces nativas do `kof.io` portadas para x86-64 e riscv64/aarch64 e provadas por execução (`NativeIoDirDeleteCrossTest`, `NativeIoMetadataE2ETest`, `NativeIoMoveCrossTest`, `NativeIoCopyCrossTest`); `NAT006` fechado.
 
 **Dono:** lane native-cross (recursão x86-64 em `RuntimeIo3.java` + fatia cross nova); família do ledger `NAT006` da linha 13.
 <!-- pt-switch --> **EN:** [§497](known-bugs.md#497--native-kofio-gaps-directorydelete-is-non-recursive-on-x86-64-and-copytomovetomodifiedtimeissymlink-have-no-native-impl---open-catalogued)

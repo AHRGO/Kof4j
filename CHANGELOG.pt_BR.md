@@ -393,6 +393,14 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
     `NativeIoNormalizeCrossTest` (`/a/c`, `a/b`, `c`, `/a/b`, `/`, `.`, `x`;
     JVM==riscv64==aarch64).
 
+  - **D-FULL-PARITY-050 linha 13 fatia 16b (lane native, ÚLTIMA) — `copyTo` em
+    todos os alvos nativos, fechando a linha 13.** `RuntimeIoCopy` novo (x86-64)
+    e `NativeRiscvAsmIoCopy` (cross): contrato
+    `Files.copy(src,dst,COPY_ATTRIBUTES)`, sem sobrescrever via `O_EXCL`, mais
+    `fchmod`/`utimensat`; `NAT006` removido do `CROSS_IO_READY`. Prova:
+    `NativeIoCopyCrossTest` (JVM==x86-64==riscv64==aarch64). `§497` FECHADO
+    (vivos 4→3).
+
   - **D-FULL-PARITY-050 linha 13 fatia 16a (lane native) — `moveTo` em todos
     os alvos nativos.** `RuntimeIoMove` novo (x86-64, `rename`) e
     `NativeRiscvAsmIoMove` (cross, `renameat2(276, flags=0)` — `renameat(38)`
