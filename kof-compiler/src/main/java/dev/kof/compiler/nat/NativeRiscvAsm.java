@@ -268,6 +268,9 @@ public final class NativeRiscvAsm {
                 // D-FULL-PARITY-050 row 13 slice 5 (native cross lane, 24/09):
                 // size() (kof_io_file_size, lanca em miss como o x86).
                 .append(NativeRiscvAsmIoSize.RISCV_RUNTIME_ASM_IO_SIZE)
+                // D-FULL-PARITY-050 row 13 slice 6 (native cross lane, 24/09):
+                // bytes (readBytes/writeBytes/appendBytes).
+                .append(NativeRiscvAsmIoBytes.RISCV_RUNTIME_ASM_IO_BYTES)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();
