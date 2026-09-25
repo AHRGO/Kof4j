@@ -426,6 +426,8 @@ public final class NativeRiscvAsmRtB4 {
 
             .section .data
             kof_alloc_ptr: .quad _kof_heap
+            .align 3
+            .Llog_threshold: .quad -1
             .align 16
             .section .bss
             .align 3
@@ -491,9 +493,18 @@ public final class NativeRiscvAsmRtB4 {
             .Lstr_nl: .asciz "\\n"
             .Lstr_count: .asciz "_count"
             .Lstr_sum: .asciz "_sum"
-            .Llog_lbl_debug: .ascii "[DEBUG] "
-            .Llog_lbl_info:  .ascii "[INFO ] "
-            .Llog_lbl_warn:  .ascii "[WARN ] "
-            .Llog_lbl_error: .ascii "[ERROR] "
+            .Llog_lbl_debug: .asciz "DEBUG"
+            .Llog_lbl_info:  .asciz "INFO"
+            .Llog_lbl_warn:  .asciz "WARN"
+            .Llog_lbl_error: .asciz "ERROR"
+            # fatia 2a (26/09): interpretador de KOF_LOG_LEVEL (contrato JVM/x86)
+            .Llog_proc_environ: .asciz "/proc/self/environ"
+            .Llog_env_name:     .asciz "KOF_LOG_LEVEL="
+            .Llog_w_debug:      .asciz "debug"
+            .Llog_w_info:       .asciz "info"
+            .Llog_w_warn:       .asciz "warn"
+            .Llog_w_warning:    .asciz "warning"
+            .Llog_w_error:      .asciz "error"
+            .Llog_w_off:        .asciz "off"
             """;
 }

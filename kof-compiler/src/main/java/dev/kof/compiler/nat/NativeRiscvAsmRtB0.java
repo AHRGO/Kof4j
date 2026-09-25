@@ -273,7 +273,12 @@ public final class NativeRiscvAsmRtB0 {
                 sw   t0, 16(a0)
                 ret
 
-            # ---- kof.log: label [LEVEL] + msg + newline; stderr para warn/error, stdout para info/debug ----
+            # ---- kof.log: LEVEL + msg + newline; KOF_LOG_LEVEL filtra; stderr
+            # para warn/error, stdout para info/debug. Contrato JVM/x86
+            # (NativeLogE2ETest). Fatia 2a (26/09, D-FULL-PARITY-050 linha 9):
+            # interpretador de nível + rótulo JVM (`INFO`, sem colchetes).
+            # Fatia 2b (timestamp `yyyy-MM-dd HH:mm:ss.SSS` UTC) fica p/ a
+            # próxima unidade — enquanto isso o golden cross cobre nível/fd/rótulo.
             .globl kof_log_debug
             kof_log_debug:
                 li   a1, 0
@@ -292,12 +297,25 @@ public final class NativeRiscvAsmRtB0 {
                 j    kof_log_write_lvl
             # helper: a0=msg*, a1=level (0..3)
             kof_log_write_lvl:
-                addi sp, sp, -32
-                sd   ra, 24(sp)
-                sd   s0, 16(sp)      # msg
-                sd   s1, 8(sp)       # level
+                addi sp, sp, -48
+                sd   ra, 40(sp)
+                sd   s0, 32(sp)      # msg
+                sd   s1, 24(sp)      # level
+                sd   s2, 16(sp)      # fd
+                sd   s3, 8(sp)       # label len
                 mv   s0, a0
                 mv   s1, a1
+                # threshold lazy: 0=debug 1=info 2=warn 3=error 4=off
+                la   t0, .Llog_threshold
+                ld   t1, 0(t0)
+                li   t2, -1
+                bne  t1, t2, .Llw_have_thresh
+                call .Llog_parse_level
+                la   t0, .Llog_threshold
+                sd   a0, 0(t0)
+                mv   t1, a0
+            .Llw_have_thresh:
+                blt  s1, t1, .Llw_suppressed
                 # fd = level >= 2 ? 2(stderr) : 1(stdout)
                 li   t0, 2
                 bge  s1, t0, .Llw_stderr
@@ -306,22 +324,31 @@ public final class NativeRiscvAsmRtB0 {
             .Llw_stderr:
                 li   s2, 2
             .Llw_write:
-                # escolhe label
-                la   t0, .Llog_lbl_debug
-                li   t1, 0
-                beq  s1, t1, .Llw_have_lbl
+                # escolhe label (t0) + comprimento (s3) — palavras do contrato JVM
                 la   t0, .Llog_lbl_info
+                li   s3, 4
+                beqz s1, .Llw_lbl_debug
                 li   t1, 1
                 beq  s1, t1, .Llw_have_lbl
                 la   t0, .Llog_lbl_warn
                 li   t1, 2
                 beq  s1, t1, .Llw_have_lbl
                 la   t0, .Llog_lbl_error
+                li   s3, 5
+                j    .Llw_have_lbl
+            .Llw_lbl_debug:
+                la   t0, .Llog_lbl_debug
+                li   s3, 5
             .Llw_have_lbl:
-                # write(fd, label, 8)
+                # write(fd, label, s3)
                 mv   a0, s2
                 mv   a1, t0
-                li   a2, 8
+                mv   a2, s3
+                call kof_plat_write
+                # write(fd, " ", 1)
+                mv   a0, s2
+                la   a1, .Lstr_space
+                li   a2, 1
                 call kof_plat_write
                 # write(fd, msg.data, msg.len)
                 beqz s0, .Llw_skip_msg
@@ -330,15 +357,186 @@ public final class NativeRiscvAsmRtB0 {
                 mv   a0, s2
                 call kof_plat_write
             .Llw_skip_msg:
-                # newline (usar .Lnewline)
+                # newline
                 mv   a0, s2
                 la   a1, .Lnewline
                 li   a2, 1
                 call kof_plat_write
-                ld   s1, 8(sp)
-                ld   s0, 16(sp)
-                ld   ra, 24(sp)
-                addi sp, sp, 32
+            .Llw_suppressed:
+                ld   s3, 8(sp)
+                ld   s2, 16(sp)
+                ld   s1, 24(sp)
+                ld   s0, 32(sp)
+                ld   ra, 40(sp)
+                addi sp, sp, 48
+                ret
+
+            # .Llog_parse_level -> a0 = threshold (0..4); default 1 (info).
+            # Lê /proc/self/environ e procura "KOF_LOG_LEVEL=" (valor
+            # case-insensitive: DEBUG/Info/WARN/WARNING/ERROR/OFF). Autocontido
+            # (sem getenv); espelha o x86 RuntimeLog1.
+            # frame: saves em 0..32(sp), buffer de 16 KiB em 64(sp) — offsets
+            # pequenos (addi/ld/st riscv são imediatos de 12 bits e estouram
+            # com 16 KB). O buffer entra por registrador (sp+64).
+            .Llog_parse_level:
+                li   t0, 16448
+                sub  sp, sp, t0
+                sd   ra, 0(sp)
+                sd   s0, 8(sp)
+                sd   s1, 16(sp)
+                sd   s2, 24(sp)
+                sd   s3, 32(sp)
+                # openat(AT_FDCWD=-100, "/proc/self/environ", O_RDONLY=0, 0)
+                li   a0, -100
+                la   a1, .Llog_proc_environ
+                li   a2, 0
+                li   a3, 0
+                li   a7, 56
+                ecall
+                bltz a0, .Lpl_default
+                mv   s0, a0                 # fd
+                # read(fd, buf=sp+64, 16384)
+                mv   a0, s0
+                addi a1, sp, 64
+                li   a2, 16384
+                li   a7, 63
+                ecall
+                mv   s1, a0                 # n
+                # close(fd)
+                mv   a0, s0
+                li   a7, 57
+                ecall
+                li   t0, 15
+                blt  s1, t0, .Lpl_default
+                li   s2, 0                  # i
+            .Lpl_scan:
+                li   t0, 14
+                sub  t0, s1, t0             # n-14
+                bge  s2, t0, .Lpl_default
+                li   t2, 0                  # j
+                la   t3, .Llog_env_name
+            .Lpl_cmp:
+                li   t0, 14
+                bge  t2, t0, .Lpl_found
+                add  t4, sp, s2
+                add  t4, t4, t2
+                addi t4, t4, 64
+                lbu  t5, 0(t4)
+                add  t6, t3, t2
+                lbu  t6, 0(t6)
+                bne  t5, t6, .Lpl_advance
+                addi t2, t2, 1
+                j    .Lpl_cmp
+            .Lpl_advance:
+                addi s2, s2, 1
+                j    .Lpl_scan
+            .Lpl_found:
+                add  t0, sp, s2
+                addi t0, t0, 64
+                addi t0, t0, 14             # valor*
+                mv   s2, t0
+                li   s3, 0                  # len até NUL
+            .Lpl_vlen:
+                add  t2, s2, s3
+                addi t5, sp, 64
+                sub  t4, t2, t5
+                bge  t4, s1, .Lpl_vdone
+                lbu  t2, 0(t2)
+                beqz t2, .Lpl_vdone
+                addi s3, s3, 1
+                j    .Lpl_vlen
+            .Lpl_vdone:
+                # dispatch pelo comprimento (debug5 info4 warn4 warning7 error5 off3)
+                li   t0, 7
+                beq  s3, t0, .Lpl_7
+                li   t0, 5
+                beq  s3, t0, .Lpl_5
+                li   t0, 4
+                beq  s3, t0, .Lpl_4
+                li   t0, 3
+                beq  s3, t0, .Lpl_3
+                j    .Lpl_default
+            .Lpl_7:
+                la   a0, .Llog_w_warning
+                mv   a1, s2
+                mv   a2, s3
+                call .Llog_ci_eq
+                bnez a0, .Lpl_warn
+                j    .Lpl_default
+            .Lpl_5:
+                la   a0, .Llog_w_debug
+                mv   a1, s2
+                mv   a2, s3
+                call .Llog_ci_eq
+                bnez a0, .Lpl_debug
+                la   a0, .Llog_w_error
+                mv   a1, s2
+                mv   a2, s3
+                call .Llog_ci_eq
+                bnez a0, .Lpl_error
+                j    .Lpl_default
+            .Lpl_4:
+                la   a0, .Llog_w_info
+                mv   a1, s2
+                mv   a2, s3
+                call .Llog_ci_eq
+                bnez a0, .Lpl_default
+                la   a0, .Llog_w_warn
+                mv   a1, s2
+                mv   a2, s3
+                call .Llog_ci_eq
+                bnez a0, .Lpl_warn
+                j    .Lpl_default
+            .Lpl_3:
+                la   a0, .Llog_w_off
+                mv   a1, s2
+                mv   a2, s3
+                call .Llog_ci_eq
+                bnez a0, .Lpl_off
+                j    .Lpl_default
+            .Lpl_debug:
+                li   a0, 0
+                j    .Lpl_exit
+            .Lpl_warn:
+                li   a0, 2
+                j    .Lpl_exit
+            .Lpl_error:
+                li   a0, 3
+                j    .Lpl_exit
+            .Lpl_off:
+                li   a0, 4
+                j    .Lpl_exit
+            .Lpl_default:
+                li   a0, 1
+            .Lpl_exit:
+                ld   s3, 32(sp)
+                ld   s2, 24(sp)
+                ld   s1, 16(sp)
+                ld   s0, 8(sp)
+                ld   ra, 0(sp)
+                li   t0, 16448
+                add  sp, sp, t0
+                ret
+
+            # .Llog_ci_eq(a0=candidato lowercase, a1=bytes, a2=len) -> a0=1 se igual
+            .Llog_ci_eq:
+                li   t0, 0
+            .Llog_ci_loop:
+                bge  t0, a2, .Llog_ci_yes
+                add  t1, a0, t0
+                lbu  t2, 0(t1)
+                add  t3, a1, t0
+                lbu  t4, 0(t3)
+                ori  t2, t2, 0x20
+                ori  t4, t4, 0x20
+                bne  t2, t4, .Llog_ci_no
+                addi t0, t0, 1
+                j    .Llog_ci_loop
+            .Llog_ci_yes:
+                li   a0, 1
+                ret
+            .Llog_ci_no:
+                li   a0, 0
                 ret
 
             # ---- kof.config (minimal — retorna default / 0 / false) ----
